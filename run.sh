@@ -3,7 +3,7 @@
 
 echo
 echo Compiling
-g++ -o ./bin/midge -lX11 ./src/main.cpp
+g++ -o ./bin/midge -lX11 -I./src ./src/main.cpp
 
 echo Running
 ./bin/midge
