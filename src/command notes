@@ -1,3 +1,32 @@
+
+
+
+
+corePrintLine
+Midge midge
+midge.print
+Cpx c = a.get()
+int a = 3+4
+midge->child->print
+
+
+
+:>instance(string dataType, string instanceName)
+:>print(string line)
+:>set(int index, string instanceName)
+:>invoke(int inIndex, string child, int outIndex)
+:>
+setTemp(0)
+coreInvoke(string instanceName, string methodName, args...)
+coreCreateVariable(string type, string name)
+coreMathAdd(3, 4, 
+#####################################################
+#####################################################
+#####################################################
+#####################################################
+
+
+
 mvproto
 
 from main : do a corelangfile load and process each command
@@ -12,17 +41,11 @@ cmd 3: registers func 2 to main:init
 this func calls 
 prints out 3 + 6
 
-attach a function to a core::init event
-have the function load a file with an add function in it
-load the function in the file dynamically
-call that function afterwards
 
 
 #####################################################
-#####################################################
-#####################################################
-#####################################################
-#####################################################
+
+
 
 
 
