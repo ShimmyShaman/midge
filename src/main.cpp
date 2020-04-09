@@ -1,6 +1,7 @@
 /* main.cpp */
 
 #include <stdlib.h>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -14,12 +15,12 @@ const int BUILD_NUMBER = 0;
 const char *fileText =
     "[class:Midge{"
     "[method:print:void:(){"
-    "printLine(Hello Universe);"
+    "print(Hello Universe\n);"
     "}]"
     "}]"
     "[entry:run:void:(){"
-    "instance(Midge, midge)"
-    "invoke(midge, print)"
+    "instance(Midge,midge);"
+    "invoke(print,midge);"
     "}]";
 
 struct Code
@@ -128,8 +129,10 @@ struct Type
   enum Kind
   {
     Null,
+    Unknown,
     Void,
     Class,
+    Pointer,
     Int32,
   } kind;
   string name;
@@ -138,6 +141,56 @@ struct Type
   {
     kind = pKind;
     name = "";
+  }
+
+  static bool isPrimitive(Type::Kind kind)
+  {
+    switch (kind)
+    {
+    case Class:
+    case Unknown:
+      return false;
+    case Int32:
+      return true;
+    case Pointer:
+    case Void:
+    default:
+      return true;
+    }
+  }
+
+  static Type::Kind parseKind(string str)
+  {
+    switch (str[0])
+    {
+    case 'i':
+      return Int32;
+    case 'v':
+      return Void;
+    default:
+      return Unknown;
+    }
+  }
+
+  static string toString(Type::Kind kind)
+  {
+    switch (kind)
+    {
+    case Null:
+      return "Null";
+    case Unknown:
+      return "Unknown";
+    case Void:
+      return "Void";
+    case Class:
+      return "ClassDefinition";
+    case Pointer:
+      return "Pointer";
+    case Int32:
+      return "Int32";
+    default:
+      return "unknown";
+    }
   }
 };
 
@@ -148,11 +201,14 @@ struct Method
   Type *returnType;
 };
 
-struct Object
+class DataPoint;
+
+struct ClassDefinition
 {
   Type type;
+  vector<Type *> attributes;
   vector<Method *> methods;
-  Object() : type(Type(Type::Class)) {}
+  ClassDefinition() : type(Type(Type::Class)) {}
 };
 
 int findDefinitionPartEnd(const char *fileText, int *startIndex)
@@ -200,7 +256,7 @@ int parseMethodDetails(Method *func)
   return 0;
 }
 
-int parseClassMethod(Object *obj)
+int parseClassMethod(ClassDefinition *obj)
 {
   Method *method = new Method();
   parseMethodDetails(method);
@@ -209,7 +265,7 @@ int parseClassMethod(Object *obj)
   return 0;
 }
 
-int parseClassMember(Object *obj)
+int parseClassMember(ClassDefinition *obj)
 {
   switch (peekChar())
   {
@@ -231,11 +287,15 @@ int parseClassMember(Object *obj)
   return 0;
 }
 
+Method *entryMethod;
+map<string, ClassDefinition *> classDefinitions;
+
 int parseClass()
 {
-  Object *obj = new Object();
+  ClassDefinition *obj = new ClassDefinition();
   obj->type = Type(Type::Class);
   obj->type.name = parseIdentifier();
+  classDefinitions[obj->type.name] = obj;
 
   parsePast('{');
 
@@ -286,6 +346,7 @@ void parseRoot()
       // Class
       parsePast("class:");
       parseClass();
+      //cout << "--class parsed" << endl;
     }
     break;
     case 'e':
@@ -295,43 +356,89 @@ void parseRoot()
 
       entryMethod = new Method();
       parseMethodDetails(entryMethod);
+      //cout << "--entryMethod parsed" << endl;
     }
     break;
     default:
     {
       cout << "parseNext() : unhandled letter=" << peekChar() << endl;
+      throw 1306;
     }
     }
   }
 }
 
-class InstancedObject
+class DataPoint
 {
 public:
-  Object *object;
-
-  map<string, void *> attributes;
+  Type::Kind type;
+  void *data;
+  DataPoint() : type(Type::Kind::Unknown) {}
+  DataPoint(Type::Kind pType, void *pData = nullptr)
+      : type(pType), data(pData) {}
 };
 
-class HeirarchicalMemory
+class InstancedClass
 {
 public:
-  HeirarchicalMemory *parent;
-  map<string, InstancedObject *> data;
-  HeirarchicalMemory(HeirarchicalMemory *pParent = nullptr)
-      : parent(pParent) {}
+  ClassDefinition *definition;
+
+  map<string, DataPoint *> attributes;
 };
 
-Method *entryMethod;
-map<string, Object *> dataTypes;
+class MethodMemory
+{
+public:
+  map<string, DataPoint *> *global, *local;
+  InstancedClass *instance;
 
-void processMethod(HeirarchicalMemory *memory, Method *method);
+  InstancedClass *getInstance(string identifier)
+  {
+    DataPoint *dp = getValue(identifier);
+    if (!dp)
+      return nullptr;
+
+    // Check
+    if (dp->type != Type::Class)
+    {
+      cout << "RequestedClass:" << identifier << " Got:" << Type::toString(dp->type) << endl;
+      throw 1070;
+    }
+
+    // Return
+    return static_cast<InstancedClass *>(dp->data);
+  }
+  DataPoint *getValue(string identifier)
+  {
+    map<string, DataPoint *>::iterator it = local->find(identifier);
+    if (it == local->end())
+    {
+      if (instance)
+        it = instance->attributes.find(identifier);
+      if (!instance || it == instance->attributes.end())
+      {
+        it = global->find(identifier);
+        if (it == global->end())
+          return nullptr;
+      }
+    }
+    // Return
+    return it->second;
+  }
+  MethodMemory(map<string, DataPoint *> *pGlobal, InstancedClass *pInstance,
+               map<string, DataPoint *> *pLocal)
+      : global(pGlobal), instance(pInstance), local(pLocal) {}
+};
+
+DataPoint *processMethod(Method *method, map<string, DataPoint *> *global, InstancedClass *instance,
+                         map<string, DataPoint *> *local);
+void processStatement(MethodMemory *memory, string &statement);
 
 int main(void)
 {
   code.text = fileText;
   code.pos = 0;
-  code.length = 122;
+  code.length = strlen(fileText);
 
   try
   {
@@ -360,58 +467,220 @@ int main(void)
     return e;
   }
 
-  HeirarchicalMemory memory;
-  processMethod(&memory, entryMethod);
-
-  // cout << "> ";
-  // string str;
-  // getline(cin, str);
-
-  // if (str.substr(0, 3) != "ca ")
-  // {
-  //   cout << "error1" << endl;
-  //   return 1;
-  // }
-  // map<string, DataPoint *> data;
-
-  // int a = str.find(' ', 3);
-  // int b = str.find(' ', a + 1);
-
-  // if (str.substr(3, a - 3) == "int")
-  // {
-  //   int *x = new int();
-  //   *x = stoi(str.substr(b + 1, str.length() - b - 1));
-  //   DataPoint *dp = new DataPoint();
-  //   dp->tc = 1;
-  //   dp->p = static_cast<void *>(x);
-  //   data[str.substr(a + 1, b - a - 1)] = dp;
-  //   cout << "int created" << endl;
-  // }
-  // else
-  // {
-  //   cout << "error2" << endl;
-  //   return 1;
-  // }
-
-  // cout << "> ";
-  // getline(cin, str);
-
-  // if (str.substr(0, 6) == "print ")
-  // {
-  //   string s = str.substr(6, str.length() - 6);
-  //   cout << s << "(" << data[s]->tc << ")"
-  //        << "=" << *(static_cast<int *>(data[s]->p)) << endl;
-  //   return 1;
-  // }
-
-  // cout << "error3" << endl;
+  try
+  {
+    map<string, DataPoint *> global, local;
+    DataPoint *result = processMethod(entryMethod, &global, nullptr, &local);
+  }
+  catch (int e)
+  {
+    cout << "Exception:" << e << endl;
+    return e;
+  }
   return 0;
 }
 
-void processMethod(HeirarchicalMemory *memory, Method *method)
+DataPoint *processMethod(Method *method, map<string, DataPoint *> *global, InstancedClass *instance,
+                         map<string, DataPoint *> *local)
 {
-  HeirarchicalMemory localMemory;
-  localMemory.parent = memory;
+  cout << "MethodCall:" << method->name << endl;
+  MethodMemory memory(global, instance, local);
 
+  for (int i = 0; i < method->statements.size(); ++i)
+    processStatement(&memory, method->statements[i]);
 
+  if (method->returnType->kind == Type::Void)
+    return new DataPoint(Type::Void);
+
+  map<string, DataPoint *>::iterator it = memory.local->find("return");
+  if (it == memory.local->end())
+    return nullptr;
+
+  return it->second;
+}
+
+void processStatement(MethodMemory *memory, string &statement)
+{
+  switch (statement[0])
+  {
+  case 'i':
+  {
+    if (statement[1] != 'n')
+      throw 1201;
+    switch (statement[2])
+    {
+    case 's':
+    {
+      // instance
+      int ix = statement.find('(', 0) + 1;
+      int iy = statement.find(',');
+      string dataTypeStr = statement.substr(ix, iy - ix);
+      string instanceName = statement.substr(iy + 1, statement.size() - 1 - iy - 1);
+
+      DataPoint *dp = new DataPoint();
+      dp->type = Type::parseKind(dataTypeStr);
+      if (dp->type == Type::Unknown)
+      {
+        // Assume class-name specified
+        dp->type = Type::Class;
+      }
+      if (!Type::isPrimitive(dp->type))
+      {
+        map<string, ClassDefinition *>::iterator it = classDefinitions.find(dataTypeStr);
+        if (it == classDefinitions.end())
+        {
+          cout << "processStatement() NonPrimitiveUnspecifiedType:" << dataTypeStr << endl;
+          throw 1202;
+        }
+
+        ClassDefinition *definition = it->second;
+        InstancedClass *obj = new InstancedClass();
+        obj->definition = definition;
+        for (int i = 0; i < definition->attributes.size(); ++i)
+        {
+          DataPoint *attdp = new DataPoint();
+          attdp->type = definition->attributes[i]->kind;
+          switch (attdp->type)
+          {
+          case Type::Kind::Class:
+          {
+            attdp->data = static_cast<void *>(nullptr);
+          }
+          break;
+          case Type::Kind::Int32:
+          {
+            int *value = new int();
+            attdp->data = static_cast<void *>(value);
+          }
+          break;
+          default:
+            cout << "processStatement() UnexpectedAttributeType:" << Type::toString(attdp->type) << endl;
+            throw 1203;
+            break;
+          }
+          obj->attributes[definition->attributes[i]->name] = attdp;
+        }
+        dp->data = static_cast<void *>(obj);
+      }
+      else
+      {
+        switch (dp->type)
+        {
+        case Type::Kind::Int32:
+        {
+          int *value = new int();
+          dp->data = static_cast<void *>(value);
+        }
+        break;
+        default:
+          cout << "processStatement() Unexpected Primitive Type:" << Type::toString(dp->type) << endl;
+          throw 1204;
+          break;
+        }
+      }
+
+      map<string, DataPoint *>::iterator it = memory->local->find(instanceName);
+      if (it != memory->local->end())
+      {
+        cout << "processStatement() OverwritingPreviousMemoryWithoutDeleting:" << dataTypeStr << endl;
+        throw 1205;
+      }
+      (*memory->local)[instanceName] = dp;
+    }
+    break;
+    /*case 'd':
+    {
+      // indent
+    }
+    break;*/
+    /*case 'i':
+    {
+      // init
+    }
+    break;*/
+    case 'v':
+    {
+      // invoke
+      bool argsRemain = true;
+      int ix = statement.find('(', 0) + 1;
+      int iy = statement.find(',');
+      if (iy == string::npos)
+      {
+        argsRemain = false;
+        iy = statement.find(')', ix);
+      }
+      string memberName = statement.substr(ix, iy - ix);
+
+      InstancedClass *instance = nullptr;
+      if (argsRemain)
+      {
+        ix = iy + 1;
+        iy = statement.find(',', ix);
+        if (iy == string::npos)
+        {
+          argsRemain = false;
+          iy = statement.find(')', ix);
+        }
+        string instanceName = statement.substr(ix, iy - ix);
+
+        //cout << "memberName:" << memberName << " instanceName:" << instanceName << endl;
+
+        if (instanceName.length() == 0)
+          throw 1241; // TODO use indents
+
+        instance = memory->getInstance(instanceName);
+      }
+      else
+        throw 1242;
+
+      if (!instance)
+        throw 1243;
+
+      Method *method = nullptr;
+      for (int i = 0; i < instance->definition->methods.size(); ++i)
+        if (instance->definition->methods[i]->name == memberName)
+        {
+          method = instance->definition->methods[i];
+          break;
+        }
+      if (!method)
+        throw 1244;
+
+      map<string, DataPoint *> parameters;
+      while (argsRemain)
+      {
+        ix = iy + 1;
+        iy = statement.find(',', ix);
+        if (iy == string::npos)
+        {
+          argsRemain = false;
+          iy = statement.find(')', ix);
+        }
+
+        string parameterString = iy < 0 ? "" : statement.substr(ix, iy - ix);
+
+        throw 1245; // TODO
+      }
+
+      // Invoke
+      DataPoint *result = processMethod(method, memory->global, instance, &parameters);
+      (*memory->local)["return"] = result;
+    }
+    break;
+    default:
+    {
+      cout << "processStatement() UnexpectedStatement beginsWithI:" << statement << endl;
+      throw 1296;
+    }
+    break;
+    }
+  }
+  break;
+  default:
+  {
+    cout << "processStatement() UnexpectedStatement:" << statement << endl;
+    throw 1302;
+  }
+  break;
+  }
 }

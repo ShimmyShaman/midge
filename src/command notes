@@ -5,21 +5,39 @@
 corePrintLine
 Midge midge
 midge.print
+
 Cpx c = a.get()
-int a = 3+4
-midge->child->print
+  indent()
+    invoke(get, a)
+  initI(Cpx, c)
+  
+  int a = 3+4+5
+  indent()
+    indent()
+      mathAdd(0, 4, 5)
+    mathAddI(0, 3)
+  assignnewI(int, a)
+
+midge->child->printer->print
+  indent()
+    indent()
+      invoke(child,midge)
+    invokeI(printer)
+  invokeI(print)
 
 
 
-:>instance(string dataType, string instanceName)
-:>print(string line)
-:>set(int index, string instanceName)
-:>invoke(int inIndex, string child, int outIndex)
-:>
-setTemp(0)
-coreInvoke(string instanceName, string methodName, args...)
-coreCreateVariable(string type, string name)
-coreMathAdd(3, 4, 
+:>instance(dataType, instanceName)
+    ~ Cpx c;
+:>init(dataType,instanceName,*valueInstanceName)
+    ~ int c = a
+:>assign(instanceName,*instanceName)
+    ~ c = a
+:>print(text)
+:>printattr(*instanceName)
+:>invoke(memberName,*instanceName)
+:>mathAdd(instanceName,*instanceName)
+    ~ The others... subtract,etc.
 #####################################################
 #####################################################
 #####################################################
