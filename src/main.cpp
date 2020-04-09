@@ -15,7 +15,7 @@ const int BUILD_NUMBER = 0;
 const char *fileText =
     "[class:Midge{"
     "[method:print:void:(){"
-    "print(Hello Universe\n);"
+    "print(\nHello Universe\n\n);"
     "}]"
     "}]"
     "[entry:run:void:(){"
@@ -676,6 +676,37 @@ void processStatement(MethodMemory *memory, string &statement)
     }
   }
   break;
+  case 'p':
+  {
+      // print
+      bool argsRemain = true;
+      int ix = statement.find('(', 0) + 1;
+      int iy = statement.find(',');
+      if (iy == string::npos)
+      {
+        argsRemain = false;
+        iy = statement.find(')', ix);
+      }
+      string text = statement.substr(ix, iy - ix);
+
+      map<string, DataPoint *> parameters;
+      while (argsRemain)
+      {
+        ix = iy + 1;
+        iy = statement.find(',', ix);
+        if (iy == string::npos)
+        {
+          argsRemain = false;
+          iy = statement.find(')', ix);
+        }
+
+        string parameterString = iy < 0 ? "" : statement.substr(ix, iy - ix);
+
+        throw 1321; // TODO
+      }
+
+      cout << text;
+  }break;
   default:
   {
     cout << "processStatement() UnexpectedStatement:" << statement << endl;
