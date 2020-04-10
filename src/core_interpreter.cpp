@@ -1,5 +1,6 @@
 /* core_interpreter.cpp */
 
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <stdlib.h>
@@ -9,89 +10,279 @@
 
 using namespace std;
 
-bool CoreInterpreter::update_core(const char *pCommandFilename, int pBuildNumber)
+void CoreInterpreter::parsePast(char c)
 {
-  int loaded_command_count = 0;
-  size_t loaded_hash;
-  hash<string> hasher;
-  const char *filename = "word";
-  filename = "eon";
+  if (code.pos >= code.length)
+    throw 1001;
 
-  // Determine command count & hash
-  fstream command_file;
-  command_file.open(pCommandFilename, ios::in);
-  if (command_file.is_open())
+  if (code.text[code.pos] != c)
   {
-    string tp;
-    while (std::getline(command_file, tp))
-    {
-      if (tp == "word")
-      {
-      }
-      cout << tp << "\n";
-      ++loaded_command_count;
-      loaded_hash *= hasher(tp);
-    }
-    command_file.close();
+    cout << "1002: [" << code.pos << "] expected:" << c << " actual:" << code.text[code.pos] << endl;
+    throw 1002;
   }
 
-  if (CoreInterpreter::PROCESSED_COMMAND_COUNT == loaded_command_count && CoreInterpreter::PROCESSED_HASH == loaded_hash)
-    return false;
+  ++code.pos;
+}
 
-  // Redo the source
-  // Redo this base executable
-  // ~ main.cpp ~
-  command_file.open("main.cpp", fstream::out);
-  command_file << "/* main.cpp */" << endl;
-  command_file << endl;
-  command_file << "#include <stdlib.h>" << endl;
-  command_file << "#include <iostream>" << endl;
-  command_file << "#include <fstream>" << endl;
-  command_file << "#include <string>" << endl;
-  command_file << "#include <vector>" << endl;
-  command_file << endl;
-  command_file << "#include \"midge.h\"" << endl;
-  command_file << endl;
-  command_file << "using namespace std;" << endl;
-  command_file << endl;
-  command_file << "const int BUILD_NUMBER = " << std::to_string(pBuildNumber + 1) << ";" << endl;
-  command_file << endl;
-  command_file << "int main(void) {" << endl;
-  command_file << "  CoreInterpreter interpret;" << endl;
-  command_file << "  if (interpret.update_core(\"mdmd.txt\", BUILD_NUMBER))" << endl;
-  command_file << "  {" << endl;
-  command_file << "    cout << \"Executable updated to build:\" << BUILD_NUMBER + 1 << endl;" << endl;
-  command_file << "    return 0" << endl;
-  command_file << "  }" << endl;
-  command_file << endl;
-  command_file << "  Midge midge;" << endl;
-  command_file << "  return midge.run();" << endl;
-  command_file << "}" << endl;
-  command_file.close();
+void CoreInterpreter::parsePast(string s)
+{
+  for (int i = 0; i < s.length(); ++i)
+  {
+    if (code.pos >= code.length)
+      throw 1003;
+    if (code.text[code.pos] != s[i])
+      throw 1004;
 
-  // ~core_interpreter.h~
-  command_file << "/* core_interpreter.h */" << endl;
-  command_file << endl;
-  command_file << "#ifndef CORE_INTERPRETER_H" << endl;
-  command_file << "#define CORE_INTERPRETER_H" << endl;
-  command_file << endl;
-  command_file << "class CoreInterpreter" << endl;
-  command_file << "{" << endl;
-  command_file << "public:" << endl;
-  command_file << "  static const int PROCESSED_COMMAND_COUNT = " << std::to_string(loaded_command_count) << ";" << endl;
-  command_file << "  static const int PROCESSED_HASH = " << std::to_string(loaded_hash) << ";" << endl;
-  command_file << endl;
-  command_file << "bool update_core(const char *pCommandFilename, int pBuildNumber);" << endl;
-  command_file << "};" << endl;
-  command_file << endl;
-  command_file << "#endif // CORE_INTERPRETER_H" << endl;
+    ++code.pos;
+  }
+}
 
-  // ~ midge.h ~
+char CoreInterpreter::peekChar()
+{
+  if (code.pos >= code.length)
+    throw 1005;
+  return code.text[code.pos];
+}
 
-  // ~ midge.cpp ~
+char CoreInterpreter::parseChar()
+{
+  if (code.pos >= code.length)
+    throw 1006;
+  return code.text[code.pos++];
+}
 
-  // ~ run.sh ~
+string CoreInterpreter::parseIdentifier()
+{
+  if (code.pos >= code.length)
+    throw 1007;
 
-  // Compile recreated source
-  return true;
+  int i = code.pos;
+  while (code.pos < code.length)
+  {
+    if (code.text[code.pos] >= 'a' && code.text[code.pos] <= 'z' || code.text[code.pos] >= 'A' && code.text[code.pos] <= 'z')
+    {
+      code.pos++;
+      continue;
+    }
+    if (code.pos > i && code.text[code.pos] >= '0' && code.text[code.pos] <= '9')
+    {
+      code.pos++;
+      continue;
+    }
+
+    // Unacceptable character
+    if (code.pos - i == 0)
+      // Zero-Length string
+      throw 1008;
+
+    return string(code.text, i, code.pos - i);
+  }
+
+  throw 1009;
+}
+
+string CoreInterpreter::parseStatement()
+{
+  if (code.pos >= code.length)
+    throw 1010;
+
+  int i = code.pos;
+  while (code.pos < code.length)
+  {
+    if (code.text[code.pos] == ';')
+    {
+      if (code.pos - i == 0)
+        // Zero-Length string
+        throw 1011;
+
+      code.pos++;
+      return string(code.text, i, code.pos - i - 1);
+    }
+    code.pos++;
+  }
+
+  throw 1012;
+}
+
+void CoreInterpreter::parseRoot()
+{
+  while (code.pos < code.length)
+  {
+    if (peekChar() != '[')
+      break;
+
+    // Find the begin of the next section
+    parsePast('[');
+
+    // Find the type of the next section
+    switch (peekChar())
+    {
+    case 'c':
+    {
+      // Class
+      parsePast("class:");
+      parseClass();
+      //cout << "--class parsed" << endl;
+    }
+    break;
+    case 'e':
+    {
+      // Entry Method
+      parsePast("entry:");
+
+      app->entryMethod = new Method();
+      parseMethodDetails(app->entryMethod);
+      //cout << "--entryMethod parsed" << endl;
+    }
+    break;
+    default:
+    {
+      cout << "parseNext() : unhandled letter=" << peekChar() << endl;
+      throw 1306;
+    }
+    }
+  }
+}
+
+void CoreInterpreter::parseClass()
+{
+  ClassDefinition *obj = new ClassDefinition();
+  obj->type = Type(Type::Class);
+  obj->type.name = parseIdentifier();
+  app->classDefinitions[obj->type.name] = obj;
+
+  parsePast('{');
+
+  bool loop = true;
+  while (loop)
+    switch (peekChar())
+    {
+    case '[':
+    {
+      parsePast("[");
+      parseClassMember(obj);
+    }
+    break;
+    case '}':
+    {
+      loop = false;
+    }
+    break;
+    default:
+    {
+      cout << "parseClass() switch error=" << peekChar() << endl;
+      throw 1110;
+    }
+    break;
+    }
+
+  parsePast('}');
+  parsePast(']');
+}
+
+int CoreInterpreter::parseClassMember(ClassDefinition *obj)
+{
+  switch (peekChar())
+  {
+  case 'm':
+  {
+    // method
+    parsePast("method:");
+    parseClassMethod(obj);
+  }
+  break;
+  default:
+  {
+    cout << "parseClassMember() switch error=" << peekChar() << endl;
+    throw 1100;
+  }
+  break;
+  }
+
+  return 0;
+}
+
+int CoreInterpreter::parseClassMethod(ClassDefinition *obj)
+{
+  Method *method = new Method();
+  parseMethodDetails(method);
+  obj->methods.push_back(method);
+
+  return 0;
+}
+
+int CoreInterpreter::parseMethodDetails(Method *func)
+{
+  func->name = parseIdentifier();
+  parsePast(':');
+
+  // Parse return type
+  switch (peekChar())
+  {
+  case 'v':
+  {
+    // Void
+    parsePast("void:");
+    func->returnType = new Type(Type::Void);
+  }
+  break;
+  default:
+  {
+    cout << "parseMethodDetails() switch error=" << peekChar() << endl;
+    return 1;
+  }
+  break;
+  }
+
+  // Parse Arguments
+  parsePast('(');
+  parsePast(')');
+  parsePast('{');
+
+  // Parse statements
+  while (peekChar() != '}')
+    func->statements.push_back(parseStatement());
+  parsePast('}');
+  parsePast(']');
+  return 0;
+}
+
+MidgeApp *CoreInterpreter::interpret(const char *text)
+{
+  code.text = text;
+  code.pos = 0;
+  code.length = strlen(text);
+
+  app = new MidgeApp();
+
+  try
+  {
+    parseRoot();
+  }
+  catch (int e)
+  {
+    cout << "Exception:" << e << endl;
+    string s;
+    for (int i = -5; i < 6; ++i)
+    {
+      if (i < 0)
+      {
+        s += "-";
+        continue;
+      }
+      if (i == 0)
+        s += "|";
+
+      s += code.text[code.pos + i];
+
+      if (i == 0)
+        s += "|";
+    }
+    cout << "Code:" << s << endl;
+    delete (app);
+    app = nullptr;
+
+    throw e;
+  }
+  return app;
 }

@@ -25,6 +25,10 @@ midge->child->printer->print
     invokeI(printer)
   invokeI(print)
 
+bindinginvoke
+blocks
+branching
+pointers
 
 
 :>instance(dataType, instanceName)
