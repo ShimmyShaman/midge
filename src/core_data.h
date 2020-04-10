@@ -1,4 +1,4 @@
-/* core_data_structures.h */
+/* core_data.h */
 
 #ifndef CORE_DATA_STRUCTURES_H
 #define CORE_DATA_STRUCTURES_H
