@@ -3,7 +3,7 @@
 
 echo
 echo Compiling
-g++ -o ./bin/midge -lX11 -I./src ./src/main.cpp
+g++ -o ./bin/midge -lX11 -I./src $(find . -type f -iregex ".*\.cpp") 
 
 retval=$?
 if [ $retval -ne 0 ]; then

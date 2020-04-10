@@ -6,49 +6,74 @@
 #include <iostream>
 #include <string>
 
-#include "core_data_structures.h"
+#include "core_data.h"
 
-class LocalMemory
+class MidgeApp;
+
+class MethodCall
 {
+    friend class MethodCallStack;
+
+private:
+    DataValue *returnValue;
+    std::map<std::string, DataValue *> *global;
+    DataManager *dataManager;
+    InstancedClass *instance;
+    std::vector<std::map<std::string, DataValue *>> local;
+    int localUsage;
+
+protected:
+    void clear();
+
 public:
-    LocalMemory *outer;
-    std::map<std::string, DataPoint *> current;
+    MethodInfo *method;
 
-    DataPoint *get(std::string identifier);
+    void pushLocalMemoryBlock();
+    void popLocalMemoryBlock();
 
-    LocalMemory() : outer(nullptr) {}
+    DataValue *getValue(std::string identifier);
+    DataValue **getPointerToValue(std::string identifier);
+    void instanceValue(std::string identifier, DataValue *dp);
+    void assignValue(std::string identifier, DataValue *dp);
+
+    DataValue *takeReturnValue();
+    void setReturnValue(DataValue *value);
+
+    MethodCall();
 };
 
-class MethodMemory
+class MethodCallStack
 {
-public:
-    std::map<std::string, DataPoint *> *global;
-    InstancedClass *instance;
-    LocalMemory local;
+private:
+    std::vector<MethodCall> stack;
+    int stackCapacity, stackUsage;
 
-    InstancedClass *getInstance(std::string identifier);
-    DataPoint *getValue(std::string identifier);
-    MethodMemory() {}
-    MethodMemory(std::map<std::string, DataPoint *> *pGlobal,
-                 InstancedClass *pInstance,
-                 std::map<std::string, DataPoint *> *pLocal)
-        : global(pGlobal), instance(pInstance), local(pLocal) {}
+public:
+    MethodCall *increment(MethodInfo *method, InstancedClass *instance);
+    void decrement(MethodCall **finishedMethod);
+
+    MethodCallStack(MidgeApp *midgeApp);
 };
 
 class MidgeApp
 {
 private:
-    std::map<std::string, DataPoint *> global_memory;
+    MethodCallStack *callStack;
 
-    DataPoint *processMethod(Method *method, InstancedClass *instance,
-                             LocalMemory *local);
-    void processStatement(MethodMemory *memory, std::string &statement);
+    void processMethod(MethodCall *methodCall);
+    void processStatementBlock(MethodCall *methodCall, int nextStatementIndex);
+    void processStatement(MethodCall *memory, std::string &statement);
 
 public:
-    Method *entryMethod;
+    DataManager dataManager;
+    std::map<std::string, DataValue *> globalMemory;
+
+    MethodInfo *entryMethod;
     std::map<std::string, ClassDefinition *> classDefinitions;
 
     int run();
+    MidgeApp();
+    ~MidgeApp();
 };
 
 #endif // MIDGE_APP_H

@@ -4,76 +4,196 @@
 
 using namespace std;
 
-DataPoint *LocalMemory::get(std::string identifier)
+void MethodCall::pushLocalMemoryBlock()
 {
-    std::map<std::string, DataPoint *>::iterator it = current.find(identifier);
-    if (it == current.end())
-    {
-        if (outer)
-            return outer->get(identifier);
-        return nullptr;
-    }
-
-    return it->second;
+    ++localUsage;
+    if (localUsage >= local.size())
+        local.resize(localUsage + localUsage / 3 + 4);
 }
 
-InstancedClass *MethodMemory::getInstance(std::string identifier)
+void MethodCall::popLocalMemoryBlock()
 {
-    DataPoint *dp = getValue(identifier);
-    if (!dp)
-        return nullptr;
-
-    // Check
-    if (dp->type != Type::Class)
+    --localUsage;
+    std::map<std::string, DataValue *>::iterator it = local[localUsage].begin();
+    while (it != local[localUsage].end())
     {
-        std::cout << "RequestedClass:" << identifier << " Got:" << Type::toString(dp->type) << endl;
-        throw 1070;
+        dataManager->deleteData(it->second);
+        it++;
     }
-
-    // Return
-    return static_cast<InstancedClass *>(dp->data);
+    local[localUsage].clear();
 }
 
-DataPoint *MethodMemory::getValue(std::string identifier)
+DataValue *MethodCall::getValue(std::string identifier)
 {
-    DataPoint *dp = local.get(identifier);
-    if (dp)
-        return dp;
+    DataValue **pdp = getPointerToValue(identifier);
+    if (!pdp)
+        return nullptr;
+    return dataManager->cloneData(*pdp);
+}
+
+DataValue **MethodCall::getPointerToValue(std::string identifier)
+{
+    int i = localUsage - 1;
+    std::map<std::string, DataValue *>::iterator it = local[i].find(identifier);
+    while (true)
+    {
+        if (it != local[i].end())
+            return &it->second;
+        --i;
+        if (i < 0)
+            break;
+        it = local[i].find(identifier);
+    }
 
     if (instance)
     {
-        std::map<std::string, DataPoint *>::iterator it = instance->attributes.find(identifier);
+        it = instance->attributes.find(identifier);
         if (it != instance->attributes.end())
-            return it->second;
+            return &it->second;
     }
 
-    std::map<std::string, DataPoint *>::iterator it = global->find(identifier);
+    it = global->find(identifier);
     if (it == global->end())
         return nullptr;
-    return it->second;
+    return &it->second;
 }
 
-DataPoint *MidgeApp::processMethod(Method *method, InstancedClass *instance,
-                                   LocalMemory *local)
+void MethodCall::instanceValue(std::string identifier, DataValue *dp)
 {
-    cout << "MethodCall:" << method->name << endl;
+    DataValue *existing = getValue(identifier);
+    if (existing)
+        throw 3947;
 
-    // Set Functional Memory
-    MethodMemory memory;
-    memory.global = &global_memory;
-    memory.instance = instance;
-    memory.local.outer = local;
-
-    for (int i = 0; i < method->statements.size(); ++i)
-        processStatement(&memory, method->statements[i]);
-
-    if (method->returnType->kind == Type::Void)
-        return new DataPoint(Type::Void);
-
-    return memory.local.get("return");
+    local[localUsage - 1][identifier] = dp;
 }
 
-void MidgeApp::processStatement(MethodMemory *memory, string &statement)
+void MethodCall::assignValue(std::string identifier, DataValue *dp)
+{
+    // Find the key
+    int i = localUsage - 1;
+    std::map<std::string, DataValue *>::iterator it = local[i].find(identifier);
+    while (true)
+    {
+        if (it != local[i].end())
+        {
+            it->second = dp;
+            return;
+        }
+        --i;
+        if (i < 0)
+            break;
+        it = local[i].find(identifier);
+    }
+
+    if (instance)
+    {
+        it = instance->attributes.find(identifier);
+        if (it != instance->attributes.end())
+        {
+            it->second = dp;
+            return;
+        }
+    }
+
+    it = global->find(identifier);
+    if (it != global->end())
+    {
+        it->second = dp;
+        return;
+    }
+
+    throw 3941;
+}
+
+DataValue *MethodCall::takeReturnValue()
+{
+    DataValue *ret = returnValue;
+    returnValue = nullptr;
+    return ret;
+}
+
+void MethodCall::setReturnValue(DataValue *value)
+{
+    returnValue = value;
+}
+
+void MethodCall::clear()
+{
+    if (returnValue)
+    {
+        dataManager->deleteData(returnValue);
+        returnValue = nullptr;
+    }
+
+    method = nullptr;
+
+    while (localUsage > 0)
+        popLocalMemoryBlock();
+    localUsage = 1;
+}
+
+MethodCall::MethodCall()
+{
+    // Permanent Parameters Slot
+    pushLocalMemoryBlock();
+}
+
+MethodCall *MethodCallStack::increment(MethodInfo *method, InstancedClass *instance)
+{
+    if (stackUsage + 1 >= stackCapacity)
+        throw 9989;
+
+    MethodCall *methodCall = &stack[stackUsage];
+    methodCall->method = method;
+    methodCall->instance = instance;
+
+    ++stackUsage;
+    return methodCall;
+}
+
+void MethodCallStack::decrement(MethodCall **finishedMethod)
+{
+    (*finishedMethod)->clear();
+
+    finishedMethod = nullptr;
+}
+
+MethodCallStack::MethodCallStack(MidgeApp *midgeApp)
+{
+    stackCapacity = 60;
+    stack.resize(stackCapacity);
+    stackUsage = 0;
+
+    for (int i = 0; i < stackCapacity; ++i)
+    {
+        stack[i].global = &midgeApp->globalMemory;
+        stack[i].dataManager = &midgeApp->dataManager;
+    }
+}
+
+void MidgeApp::processMethod(MethodCall *methodCall)
+{
+    cout << "MethodCall:" << methodCall->method->name << endl;
+
+    methodCall->pushLocalMemoryBlock();
+    processStatementBlock(methodCall, 0);
+    methodCall->popLocalMemoryBlock();
+}
+
+void MidgeApp::processStatementBlock(MethodCall *methodCall, int nextStatementIndex)
+{
+    throw 343;
+    // for (int i = nextStatementIndex; i < methodCall->method->statements.size(); ++i)
+
+    //     switch (methodCall->method->statements[i][0])
+    //     {
+    //     default:
+    //         processStatement(methodCall)
+    //     }
+    // processStatement(&memory, method->statements[i]);
+}
+
+void MidgeApp::processStatement(MethodCall *methodCall, string &statement)
 {
     switch (statement[0])
     {
@@ -91,14 +211,14 @@ void MidgeApp::processStatement(MethodMemory *memory, string &statement)
             string dataTypeStr = statement.substr(ix, iy - ix);
             string instanceName = statement.substr(iy + 1, statement.size() - 1 - iy - 1);
 
-            DataPoint *dp = new DataPoint();
-            dp->type = Type::parseKind(dataTypeStr);
-            if (dp->type == Type::Unknown)
+            DataValue *dp = nullptr;
+            DataType dataType = Type::parseKind(dataTypeStr);
+            if (dataType == DataType::Unknown)
             {
                 // Assume class-name specified
-                dp->type = Type::Class;
+                dataType = DataType::Class;
             }
-            if (!Type::isPrimitive(dp->type))
+            if (!Type::isPrimitive(dataType))
             {
                 map<string, ClassDefinition *>::iterator it = classDefinitions.find(dataTypeStr);
                 if (it == classDefinitions.end())
@@ -112,54 +232,49 @@ void MidgeApp::processStatement(MethodMemory *memory, string &statement)
                 obj->definition = definition;
                 for (int i = 0; i < definition->attributes.size(); ++i)
                 {
-                    DataPoint *attdp = new DataPoint();
-                    attdp->type = definition->attributes[i]->kind;
-                    switch (attdp->type)
+                    DataType attrType = definition->attributes[i]->kind;
+                    void *attrData = nullptr;
+                    switch (definition->attributes[i]->kind)
                     {
-                    case Type::Kind::Class:
+                    case DataType::Class:
                     {
-                        attdp->data = static_cast<void *>(nullptr);
+                        attrData = static_cast<void *>(nullptr);
                     }
                     break;
-                    case Type::Kind::Int32:
+                    case DataType::Int32:
                     {
                         int *value = new int();
-                        attdp->data = static_cast<void *>(value);
+                        attrData = static_cast<void *>(value);
                     }
                     break;
                     default:
-                        cout << "processStatement() UnexpectedAttributeType:" << Type::toString(attdp->type) << endl;
+                        cout << "processStatement() UnexpectedAttributeType:" << Type::toString(attrType) << endl;
                         throw 1203;
                         break;
                     }
-                    obj->attributes[definition->attributes[i]->name] = attdp;
+                    obj->attributes[definition->attributes[i]->name] = dataManager.createData(definition->attributes[i]->kind,
+                                                                                              attrData);
                 }
-                dp->data = static_cast<void *>(obj);
+                dp = dataManager.createData(dataType, static_cast<void *>(obj));
             }
             else
             {
-                switch (dp->type)
+                switch (dataType)
                 {
-                case Type::Kind::Int32:
+                case DataType::Int32:
                 {
                     int *value = new int();
-                    dp->data = static_cast<void *>(value);
+                    dp = dataManager.createData(dataType, static_cast<void *>(value));
                 }
                 break;
                 default:
-                    cout << "processStatement() Unexpected Primitive Type:" << Type::toString(dp->type) << endl;
+                    cout << "processStatement() Unexpected Primitive Type:" << Type::toString(dp->type()) << endl;
                     throw 1204;
                     break;
                 }
             }
 
-            map<string, DataPoint *>::iterator it = memory->local->find(instanceName);
-            if (it != memory->local->end())
-            {
-                cout << "processStatement() OverwritingPreviousMemoryWithoutDeleting:" << dataTypeStr << endl;
-                throw 1205;
-            }
-            (*memory->local)[instanceName] = dp;
+            methodCall->instanceValue(instanceName, dp);
         }
         break;
         /*case 'd':
@@ -202,15 +317,18 @@ void MidgeApp::processStatement(MethodMemory *memory, string &statement)
                 if (instanceName.length() == 0)
                     throw 1241; // TODO use indents
 
-                instance = memory->getInstance(instanceName);
+                DataValue **pInstance = methodCall->getPointerToValue(instanceName);
+                if (!pInstance)
+                    throw 1242;
+                instance = static_cast<InstancedClass *>((*pInstance)->data());
             }
             else
-                throw 1242;
-
-            if (!instance)
                 throw 1243;
 
-            Method *method = nullptr;
+            if (!instance)
+                throw 1244;
+
+            MethodInfo *method = nullptr;
             for (int i = 0; i < instance->definition->methods.size(); ++i)
                 if (instance->definition->methods[i]->name == memberName)
                 {
@@ -218,9 +336,9 @@ void MidgeApp::processStatement(MethodMemory *memory, string &statement)
                     break;
                 }
             if (!method)
-                throw 1244;
+                throw 1245;
 
-            map<string, DataPoint *> parameters;
+            map<string, DataValue *> parameters;
             while (argsRemain)
             {
                 ix = iy + 1;
@@ -233,12 +351,15 @@ void MidgeApp::processStatement(MethodMemory *memory, string &statement)
 
                 string parameterString = iy < 0 ? "" : statement.substr(ix, iy - ix);
 
-                throw 1245; // TODO
+                throw 1246; // TODO
             }
 
             // Invoke
-            DataPoint *result = processMethod(method, instance, nullptr);
-            (*memory->local)["return"] = result;
+            MethodCall *subcall = callStack->increment(method, instance);
+            processMethod(subcall);
+            callStack->decrement(&subcall);
+
+            // TODO -- indent?
         }
         break;
         default:
@@ -263,7 +384,7 @@ void MidgeApp::processStatement(MethodMemory *memory, string &statement)
         }
         string text = statement.substr(ix, iy - ix);
 
-        map<string, DataPoint *> parameters;
+        map<string, DataValue *> parameters;
         while (argsRemain)
         {
             ix = iy + 1;
@@ -295,7 +416,10 @@ int MidgeApp::run()
 {
     try
     {
-        DataPoint *result = processMethod(entryMethod, nullptr, nullptr);
+        MethodCall *methodCall = callStack->increment(entryMethod, nullptr);
+        processMethod(methodCall);
+        DataValue *result = methodCall->takeReturnValue();
+        callStack->decrement(&methodCall);
     }
     catch (int e)
     {
@@ -303,4 +427,15 @@ int MidgeApp::run()
         return e;
     }
     return 0;
+}
+
+MidgeApp::MidgeApp()
+{
+    callStack = new MethodCallStack(this);
+}
+
+MidgeApp::~MidgeApp()
+{
+    if (callStack)
+        delete callStack;
 }

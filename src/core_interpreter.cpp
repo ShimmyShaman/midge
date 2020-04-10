@@ -127,10 +127,10 @@ void CoreInterpreter::parseRoot()
     break;
     case 'e':
     {
-      // Entry Method
+      // Entry MethodInfo
       parsePast("entry:");
 
-      app->entryMethod = new Method();
+      app->entryMethod = new MethodInfo();
       parseMethodDetails(app->entryMethod);
       //cout << "--entryMethod parsed" << endl;
     }
@@ -147,7 +147,7 @@ void CoreInterpreter::parseRoot()
 void CoreInterpreter::parseClass()
 {
   ClassDefinition *obj = new ClassDefinition();
-  obj->type = Type(Type::Class);
+  obj->type = Type(DataType::Class);
   obj->type.name = parseIdentifier();
   app->classDefinitions[obj->type.name] = obj;
 
@@ -204,14 +204,14 @@ int CoreInterpreter::parseClassMember(ClassDefinition *obj)
 
 int CoreInterpreter::parseClassMethod(ClassDefinition *obj)
 {
-  Method *method = new Method();
+  MethodInfo *method = new MethodInfo();
   parseMethodDetails(method);
   obj->methods.push_back(method);
 
   return 0;
 }
 
-int CoreInterpreter::parseMethodDetails(Method *func)
+int CoreInterpreter::parseMethodDetails(MethodInfo *func)
 {
   func->name = parseIdentifier();
   parsePast(':');
@@ -223,7 +223,7 @@ int CoreInterpreter::parseMethodDetails(Method *func)
   {
     // Void
     parsePast("void:");
-    func->returnType = new Type(Type::Void);
+    func->returnType = new Type(DataType::Void);
   }
   break;
   default:

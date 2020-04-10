@@ -3,7 +3,7 @@
 #ifndef CORE_INTERPRETER_H
 #define CORE_INTERPRETER_H
 
-#include "core_data_structures.h"
+#include "core_data.h"
 #include "midge_app.h"
 
 class CoreInterpreter
@@ -26,7 +26,7 @@ class CoreInterpreter
     void parseClass();
     int parseClassMember(ClassDefinition *obj);
     int parseClassMethod(ClassDefinition *obj);
-    int parseMethodDetails(Method *func);
+    int parseMethodDetails(MethodInfo *func);
 
     MidgeApp *app;
 

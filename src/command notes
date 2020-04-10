@@ -25,6 +25,7 @@ midge->child->printer->print
     invokeI(printer)
   invokeI(print)
 
+indent
 bindinginvoke
 blocks
 branching
