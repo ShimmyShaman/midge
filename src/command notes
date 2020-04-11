@@ -6,6 +6,14 @@ corePrintLine
 Midge midge
 midge.print
 
+global.field = Obsequence()
+
+maccess(field, &0, global)
+maccess(other, &1)
+assignm(&0,&1)
+
+
+
 Cpx c = a.get()
   indent()
     invoke(get, a)
@@ -25,7 +33,7 @@ midge->child->printer->print
     invokeI(printer)
   invokeI(print)
 
-indent
+
 bindinginvoke
 blocks
 branching

@@ -1,7 +1,7 @@
 /* core_data.h */
 
-#ifndef CORE_DATA_STRUCTURES_H
-#define CORE_DATA_STRUCTURES_H
+#ifndef CORE_DATA_H
+#define CORE_DATA_H
 
 #include <map>
 #include <string>
@@ -78,4 +78,4 @@ public:
     std::map<std::string, DataValue *> attributes;
 };
 
-#endif // CORE_DATA_STRUCTURES_H
+#endif // CORE_DATA_H

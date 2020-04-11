@@ -10,6 +10,7 @@
 
 #include "core_interpreter.h"
 #include "midge_app.h"
+#include "core_bindings.h"
 
 using namespace std;
 
@@ -23,21 +24,14 @@ const char *fileText =
     "}]"
     "[entry:run:void:(){"
     "instance(Global,global);"
-    "invoke(print,midge);"
-    "binvoke(printCrap,\"Shorty\")"
+    "invoke(print,global);"
+    // "binvoke(printCrap,\"Shorty\")"
     "}]";
-
-int findDefinitionPartEnd(const char *fileText, int *startIndex)
-{
-  int i = *startIndex;
-  while (fileText[i] != '{' && fileText[i] != ':')
-    ++i;
-
-  return i;
-}
 
 int main(void)
 {
+  CoreBindings::bindFunctions();
+
   CoreInterpreter interpreter;
   MidgeApp *app = interpreter.interpret(fileText);
 
