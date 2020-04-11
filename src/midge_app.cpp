@@ -425,7 +425,7 @@ void MidgeApp::processStatement(MethodCall *methodCall, int nextStatementIndex)
       {
         // TODO find the end of literal string
 
-        string *stringLiteral = new string(parameterString);
+        string *stringLiteral = new string(parameterString.substr(1, parameterString.length() - 2));
         DataValue *dv = dataManager.createData(DataType::String,
                                                static_cast<void *>(stringLiteral));
         methodCall->addBlockMemory(dv);
