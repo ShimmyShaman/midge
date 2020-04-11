@@ -16,6 +16,7 @@ enum DataType
     Class,
     Pointer,
     Int32,
+    String,
 };
 
 struct Type

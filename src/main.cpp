@@ -25,7 +25,7 @@ const char *fileText =
     "[entry:run:void:(){"
     "instance(Global,global);"
     "invoke(print,global);"
-    // "binvoke(printCrap,\"Shorty\")"
+    "binvoke(printCrap,\"Shorty\");"
     "}]";
 
 int main(void)

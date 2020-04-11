@@ -12,14 +12,12 @@ typedef void *(*methodPtr)(void **, int);
 
 class Bindings
 {
-public:
+private:
     static Bindings &getInstance()
     {
         static Bindings instance;
         return instance;
     }
-
-private:
     Bindings() {}
     Bindings(Bindings const &);       // Don't Implement.
     void operator=(Bindings const &); // Don't implement

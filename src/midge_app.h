@@ -20,6 +20,7 @@ private:
     DataManager *dataManager;
     InstancedClass *instance;
     std::vector<std::map<std::string, DataValue *>> local;
+    std::vector<std::vector<DataValue *>> localTemp;
     int localUsage;
 
 protected:
@@ -35,6 +36,8 @@ public:
     DataValue **getPointerToValue(std::string identifier);
     void instanceValue(std::string identifier, DataValue *dp);
     void assignValue(std::string identifier, DataValue *dp);
+
+    void addBlockMemory(DataValue *value);
 
     DataValue *takeReturnValue();
     void setReturnValue(DataValue *value);

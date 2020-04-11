@@ -10,6 +10,7 @@ bool Type::isPrimitive(DataType kind)
     case DataType::Unknown:
         return false;
     case DataType::Int32:
+    case DataType::String:
         return true;
     case DataType::Pointer:
     case DataType::Void:
@@ -20,15 +21,14 @@ bool Type::isPrimitive(DataType kind)
 
 DataType Type::parseKind(std::string str)
 {
-    switch (str[0])
-    {
-    case 'i':
+    if (str == "int")
         return DataType::Int32;
-    case 'v':
+    else if (str == "void")
         return DataType::Void;
-    default:
+    else if (str == "string")
+        return DataType::String;
+    else
         return DataType::Unknown;
-    }
 }
 
 std::string Type::toString(DataType kind)
@@ -47,6 +47,8 @@ std::string Type::toString(DataType kind)
         return "Pointer";
     case DataType::Int32:
         return "Int32";
+    case DataType::String:
+        return "String";
     default:
         return "unknown";
     }
