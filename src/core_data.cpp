@@ -42,7 +42,7 @@ std::string Type::toString(DataType kind)
     case DataType::Void:
         return "Void";
     case DataType::Class:
-        return "ClassDefinition";
+        return "Class";
     case DataType::Pointer:
         return "Pointer";
     case DataType::Int32:
@@ -54,7 +54,9 @@ std::string Type::toString(DataType kind)
 
 DataValue *DataManager::createData(DataType pType, void *pData)
 {
-    throw 9997;
+    DataValue *dv = new DataValue(pType, pData);
+    ++createdDataValues;
+    return dv;
 }
 
 DataValue *DataManager::cloneData(DataValue *data)
@@ -64,6 +66,7 @@ DataValue *DataManager::cloneData(DataValue *data)
         switch (data->_type)
         {
         default:
+            std::cout << "No case to clone primitive:" << Type::toString(data->_type) << std::endl;
             throw 9998;
         }
     }
@@ -72,6 +75,7 @@ DataValue *DataManager::cloneData(DataValue *data)
         switch (data->_type)
         {
         default:
+            std::cout << "No case to clone class:" << Type::toString(data->_type) << std::endl;
             throw 9999;
         }
     }
@@ -79,5 +83,6 @@ DataValue *DataManager::cloneData(DataValue *data)
 
 void DataManager::deleteData(DataValue *data)
 {
-    throw 9997;
+    --createdDataValues;
+    delete (data);
 }

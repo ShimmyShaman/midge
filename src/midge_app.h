@@ -62,7 +62,7 @@ private:
 
     void processMethod(MethodCall *methodCall);
     void processStatementBlock(MethodCall *methodCall, int nextStatementIndex);
-    void processStatement(MethodCall *memory, std::string &statement);
+    void processStatement(MethodCall *memory, int nextStatementIndex);
 
 public:
     DataManager dataManager;

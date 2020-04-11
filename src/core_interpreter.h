@@ -26,7 +26,9 @@ class CoreInterpreter
     void parseClass();
     int parseClassMember(ClassDefinition *obj);
     int parseClassMethod(ClassDefinition *obj);
-    int parseMethodDetails(MethodInfo *func);
+    int parseMethodDetails(MethodInfo *method);
+    int parseStatementBlock(MethodInfo *method);
+
 
     MidgeApp *app;
 

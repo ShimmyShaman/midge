@@ -211,9 +211,9 @@ int CoreInterpreter::parseClassMethod(ClassDefinition *obj)
   return 0;
 }
 
-int CoreInterpreter::parseMethodDetails(MethodInfo *func)
+int CoreInterpreter::parseMethodDetails(MethodInfo *method)
 {
-  func->name = parseIdentifier();
+  method->name = parseIdentifier();
   parsePast(':');
 
   // Parse return type
@@ -223,7 +223,7 @@ int CoreInterpreter::parseMethodDetails(MethodInfo *func)
   {
     // Void
     parsePast("void:");
-    func->returnType = new Type(DataType::Void);
+    method->returnType = new Type(DataType::Void);
   }
   break;
   default:
@@ -237,14 +237,40 @@ int CoreInterpreter::parseMethodDetails(MethodInfo *func)
   // Parse Arguments
   parsePast('(');
   parsePast(')');
-  parsePast('{');
 
-  // Parse statements
-  while (peekChar() != '}')
-    func->statements.push_back(parseStatement());
-  parsePast('}');
+  parseStatementBlock(method);
   parsePast(']');
   return 0;
+}
+
+int CoreInterpreter::parseStatementBlock(MethodInfo *method)
+{
+  method->statements.push_back("{");
+  parsePast('{');
+
+  while (true)
+  {
+    // Parse statements
+    switch (peekChar())
+    {
+    case '}':
+    {
+      method->statements.push_back("}");
+      parsePast('}');
+      return 0;
+    }
+    case '{':
+    {
+      parseStatementBlock(method);
+    }
+    break;
+    default:
+      method->statements.push_back(parseStatement());
+      break;
+    }
+  }
+
+  throw 35333;
 }
 
 MidgeApp *CoreInterpreter::interpret(const char *text)

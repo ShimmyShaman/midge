@@ -60,7 +60,7 @@ DataValue **MethodCall::getPointerToValue(std::string identifier)
 
 void MethodCall::instanceValue(std::string identifier, DataValue *dp)
 {
-    DataValue *existing = getValue(identifier);
+    DataValue **existing = getPointerToValue(identifier);
     if (existing)
         throw 3947;
 
@@ -175,28 +175,39 @@ void MidgeApp::processMethod(MethodCall *methodCall)
 {
     cout << "MethodCall:" << methodCall->method->name << endl;
 
-    methodCall->pushLocalMemoryBlock();
     processStatementBlock(methodCall, 0);
-    methodCall->popLocalMemoryBlock();
 }
 
 void MidgeApp::processStatementBlock(MethodCall *methodCall, int nextStatementIndex)
 {
-    throw 343;
-    // for (int i = nextStatementIndex; i < methodCall->method->statements.size(); ++i)
+    if (nextStatementIndex >= methodCall->method->statements.size())
+        throw 845;
+    if (methodCall->method->statements[nextStatementIndex] != "{")
+        throw 846;
+    ++nextStatementIndex;
 
-    //     switch (methodCall->method->statements[i][0])
-    //     {
-    //     default:
-    //         processStatement(methodCall)
-    //     }
-    // processStatement(&memory, method->statements[i]);
+    methodCall->pushLocalMemoryBlock();
+    for (; nextStatementIndex < methodCall->method->statements.size(); ++nextStatementIndex)
+        switch (methodCall->method->statements[nextStatementIndex][0])
+        {
+        case '}':
+            methodCall->popLocalMemoryBlock();
+            return;
+        default:
+            processStatement(methodCall, nextStatementIndex);
+            break;
+        }
+    throw 847;
 }
 
-void MidgeApp::processStatement(MethodCall *methodCall, string &statement)
+void MidgeApp::processStatement(MethodCall *methodCall, int nextStatementIndex)
 {
+    string &statement = methodCall->method->statements[nextStatementIndex];
     switch (statement[0])
     {
+    case '{':
+        processStatementBlock(methodCall, nextStatementIndex);
+        break;
     case 'i':
     {
         if (statement[1] != 'n')
@@ -205,12 +216,14 @@ void MidgeApp::processStatement(MethodCall *methodCall, string &statement)
         {
         case 's':
         {
+            cout << "here1" << endl;
             // instance
             int ix = statement.find('(', 0) + 1;
             int iy = statement.find(',');
             string dataTypeStr = statement.substr(ix, iy - ix);
             string instanceName = statement.substr(iy + 1, statement.size() - 1 - iy - 1);
 
+            cout << "here2" << endl;
             DataValue *dp = nullptr;
             DataType dataType = Type::parseKind(dataTypeStr);
             if (dataType == DataType::Unknown)
@@ -227,6 +240,7 @@ void MidgeApp::processStatement(MethodCall *methodCall, string &statement)
                     throw 1202;
                 }
 
+                cout << "here3" << endl;
                 ClassDefinition *definition = it->second;
                 InstancedClass *obj = new InstancedClass();
                 obj->definition = definition;
@@ -255,6 +269,7 @@ void MidgeApp::processStatement(MethodCall *methodCall, string &statement)
                     obj->attributes[definition->attributes[i]->name] = dataManager.createData(definition->attributes[i]->kind,
                                                                                               attrData);
                 }
+                cout << "here4" << endl;
                 dp = dataManager.createData(dataType, static_cast<void *>(obj));
             }
             else
@@ -273,7 +288,7 @@ void MidgeApp::processStatement(MethodCall *methodCall, string &statement)
                     break;
                 }
             }
-
+            cout << "here5" << endl;
             methodCall->instanceValue(instanceName, dp);
         }
         break;
@@ -384,6 +399,15 @@ void MidgeApp::processStatement(MethodCall *methodCall, string &statement)
         }
         string text = statement.substr(ix, iy - ix);
 
+        if (text[0] != '"')
+            throw 1321;
+        else
+        {
+            if (text[text.length() - 1] != '"')
+                throw 1322;
+            text = text.substr(1, text.length() - 2);
+        }
+
         map<string, DataValue *> parameters;
         while (argsRemain)
         {
@@ -397,7 +421,7 @@ void MidgeApp::processStatement(MethodCall *methodCall, string &statement)
 
             string parameterString = iy < 0 ? "" : statement.substr(ix, iy - ix);
 
-            throw 1321; // TODO
+            throw 1323; // TODO
         }
 
         cout << text;

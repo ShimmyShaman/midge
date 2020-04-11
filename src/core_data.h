@@ -3,9 +3,11 @@
 #ifndef CORE_DATA_H
 #define CORE_DATA_H
 
+#include <iostream>
 #include <map>
 #include <string>
 #include <vector>
+
 enum DataType
 {
     Null,
@@ -49,10 +51,14 @@ public:
 
 class DataManager
 {
+private:
+    int createdDataValues;
+
 public:
     DataValue *createData(DataType pType, void *pData);
     DataValue *cloneData(DataValue *data);
     void deleteData(DataValue *data);
+    ~DataManager() { std::cout << "Undeleted DataValues:" << createdDataValues << std::endl; }
 };
 
 struct MethodInfo
