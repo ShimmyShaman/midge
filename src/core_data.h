@@ -39,14 +39,14 @@ class DataValue
     friend class DataManager;
 
 private:
-    DataType _type;
+    DataType _dataType;
     void *_data;
 
     DataValue(DataType pType, void *pData = nullptr)
-        : _type(pType), _data(pData) {}
+        : _dataType(pType), _data(pData) {}
 
 public:
-    DataType type() { return _type; }
+    DataType dataType() { return _dataType; }
     void *data() { return _data; }
 };
 
@@ -59,14 +59,14 @@ public:
     DataValue *createData(DataType pType, void *pData);
     DataValue *cloneData(DataValue *data);
     void deleteData(DataValue *data);
-    ~DataManager() { std::cout << "Undeleted DataValues:" << createdDataValues << std::endl; }
+    ~DataManager();
 };
 
 struct MethodInfo
 {
     std::string name;
     std::vector<std::string> statements;
-    Type *returnType;
+    Type *returnDataType;
 };
 
 struct ClassDefinition

@@ -33,10 +33,20 @@ midge->child->printer->print
     invokeI(printer)
   invokeI(print)
 
+bool flag = false;
+print(flag)
 
-bindinginvoke
-blocks
+if(flag)
+print("flag was true")
+else
+binvoke
+
+
+:>conditional
+
+
 branching
+conditional on instance member
 pointers
 
 

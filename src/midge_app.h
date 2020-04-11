@@ -18,7 +18,6 @@ private:
     DataValue *returnValue;
     std::map<std::string, DataValue *> *global;
     DataManager *dataManager;
-    InstancedClass *instance;
     std::vector<std::map<std::string, DataValue *>> local;
     std::vector<std::vector<DataValue *>> localTemp;
     int localUsage;
@@ -28,6 +27,7 @@ protected:
 
 public:
     MethodInfo *method;
+    InstancedClass *instance;
 
     void pushLocalMemoryBlock();
     void popLocalMemoryBlock();

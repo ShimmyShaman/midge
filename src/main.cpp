@@ -18,14 +18,13 @@ const int BUILD_NUMBER = 0;
 
 const char *fileText =
     "[class:Global{"
-    "[method:print:void:(){"
-    "print(\"\nHello Universe\n\n\");"
+    "[method:initialize:void:(){"
+    "binvoke(printCrap,\"Shorty\");"
     "}]"
     "}]"
     "[entry:run:void:(){"
     "instance(Global,global);"
-    "invoke(print,global);"
-    "binvoke(printCrap,\"Shorty\");"
+    "invoke(initialize,global);"
     "}]";
 
 int main(void)

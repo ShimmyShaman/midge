@@ -186,7 +186,10 @@ MethodCallStack::MethodCallStack(MidgeApp *midgeApp)
 
 void MidgeApp::processMethod(MethodCall *methodCall)
 {
-  cout << "MethodCall:" << methodCall->method->name << endl;
+  cout << "MethodCall:";
+  if (methodCall->instance)
+    cout << methodCall->instance->definition->type.name << "::";
+  cout << methodCall->method->name << endl;
 
   processStatementBlock(methodCall, 0);
 }
@@ -292,7 +295,7 @@ void MidgeApp::processStatement(MethodCall *methodCall, int nextStatementIndex)
         }
         break;
         default:
-          cout << "processStatement() Unexpected Primitive Type:" << Type::toString(dp->type()) << endl;
+          cout << "processStatement() Unexpected Primitive Type:" << Type::toString(dp->dataType()) << endl;
           throw 1204;
           break;
         }

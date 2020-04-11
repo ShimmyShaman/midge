@@ -63,21 +63,21 @@ DataValue *DataManager::createData(DataType pType, void *pData)
 
 DataValue *DataManager::cloneData(DataValue *data)
 {
-    if (Type::isPrimitive(data->_type))
+    if (Type::isPrimitive(data->_dataType))
     {
-        switch (data->_type)
+        switch (data->_dataType)
         {
         default:
-            std::cout << "No case to clone primitive:" << Type::toString(data->_type) << std::endl;
+            std::cout << "No case to clone primitive:" << Type::toString(data->_dataType) << std::endl;
             throw 9998;
         }
     }
     else
     {
-        switch (data->_type)
+        switch (data->_dataType)
         {
         default:
-            std::cout << "No case to clone class:" << Type::toString(data->_type) << std::endl;
+            std::cout << "No case to clone class:" << Type::toString(data->_dataType) << std::endl;
             throw 9999;
         }
     }
@@ -87,4 +87,10 @@ void DataManager::deleteData(DataValue *data)
 {
     --createdDataValues;
     delete (data);
+}
+
+DataManager::~DataManager()
+{
+    if (createdDataValues)
+        std::cout << "Undeleted DataValues:" << createdDataValues << std::endl;
 }
