@@ -1,5 +1,8 @@
 /* midge_app.cpp */
 
+#include <cstring>
+
+#include "core_interpreter.h"
 #include "midge_app.h"
 #include "core_bindings.h"
 
@@ -506,6 +509,19 @@ void MidgeApp::processStatement(MethodCall *methodCall, int nextStatementIndex)
 
 int MidgeApp::run()
 {
+  const char *entryMethodText =
+      "createClass(Global);"
+      "addClassMethod(Global,initialize,void);"
+      "addClassMethodCode(Global,initialize,\"binvoke(printCrap,\"Shorty\");\");"
+      "instanceData(Global,global);"
+      "invokeMethod(initialize,global);";
+
+  MethodInfo entryMethod;
+  entryMethod.name = "entryMethod";
+  entryMethod.returnDataType = DataType::Int32;
+
+  int entryMethodTextLen = strlen(entryMethodText);
+  std::string for (int i = 0; i < entryMethodTextLen; ++i) if ()
   try
   {
     MethodCall *methodCall = callStack->increment(entryMethod, nullptr);

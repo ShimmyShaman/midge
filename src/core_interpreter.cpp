@@ -273,13 +273,13 @@ int CoreInterpreter::parseStatementBlock(MethodInfo *method)
   throw 35333;
 }
 
-MidgeApp *CoreInterpreter::interpret(const char *text)
+void CoreInterpreter::interpretText(MidgeApp *midgeApp, const char *text)
 {
+  this->app = midgeApp;
+
   code.text = text;
   code.pos = 0;
   code.length = strlen(text);
-
-  app = new MidgeApp();
 
   try
   {
@@ -305,10 +305,7 @@ MidgeApp *CoreInterpreter::interpret(const char *text)
         s += "|";
     }
     cout << "Code:" << s << endl;
-    delete (app);
-    app = nullptr;
 
     throw e;
   }
-  return app;
 }

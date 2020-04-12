@@ -29,11 +29,10 @@ class CoreInterpreter
     int parseMethodDetails(MethodInfo *method);
     int parseStatementBlock(MethodInfo *method);
 
-
     MidgeApp *app;
 
 public:
-    MidgeApp *interpret(const char *text);
+    void interpretText(MidgeApp *app, const char *text);
 };
 
 #endif // CORE_INTERPRETER_H

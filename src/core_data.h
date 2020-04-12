@@ -66,7 +66,7 @@ struct MethodInfo
 {
     std::string name;
     std::vector<std::string> statements;
-    Type *returnDataType;
+    DataType *returnDataType;
 };
 
 struct ClassDefinition

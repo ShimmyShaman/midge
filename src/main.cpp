@@ -8,34 +8,16 @@
 #include <map>
 #include <vector>
 
-#include "core_interpreter.h"
 #include "midge_app.h"
 #include "core_bindings.h"
 
 using namespace std;
 
-const int BUILD_NUMBER = 0;
-
-const char *fileText =
-    "[class:Global{"
-    "[method:initialize:void:(){"
-    "binvoke(printCrap,\"Shorty\");"
-    "}]"
-    "}]"
-    "[entry:run:void:(){"
-    "instance(Global,global);"
-    "invoke(initialize,global);"
-    "}]";
-
 int main(void)
 {
   CoreBindings::bindFunctions();
 
-  CoreInterpreter interpreter;
-  MidgeApp *app = interpreter.interpret(fileText);
+  MidgeApp midgeApp;
 
-  int result = app->run();
-
-  delete (app);
-  return result;
+  return midgeApp.run();
 }
