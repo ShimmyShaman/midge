@@ -56,7 +56,7 @@ protected:
 
         std::string crap = *static_cast<std::string *>(args[0]);
 
-        std::cout << crap << std::endl;
+        std::cout << "> " << crap << std::endl;
         return nullptr;
     }
 

@@ -223,7 +223,7 @@ int CoreInterpreter::parseMethodDetails(MethodInfo *method)
   {
     // Void
     parsePast("void:");
-    method->returnDataType = new Type(DataType::Void);
+    method->returnDataType = DataType::Void;
   }
   break;
   default:

@@ -61,6 +61,7 @@ pointers
 :>invoke(memberName,*instanceName)
 :>mathAdd(instanceName,*instanceName)
     ~ The others... subtract,etc.
+:>createClass(className)
 #####################################################
 #####################################################
 #####################################################

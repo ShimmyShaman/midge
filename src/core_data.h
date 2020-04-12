@@ -29,6 +29,12 @@ struct Type
         kind = pKind;
         name = "";
     }
+
+    Type(DataType pKind, std::string pName)
+    {
+        kind = pKind;
+        name = pName;
+    }
     static bool isPrimitive(DataType kind);
     static DataType parseKind(std::string str);
     static std::string toString(DataType kind);
@@ -48,6 +54,13 @@ private:
 public:
     DataType dataType() { return _dataType; }
     void *data() { return _data; }
+
+    int *int32()
+    {
+        if (_dataType != DataType::Int32)
+            throw 221;
+        return static_cast<int *>(_data);
+    }
 };
 
 class DataManager
@@ -59,14 +72,16 @@ public:
     DataValue *createData(DataType pType, void *pData);
     DataValue *cloneData(DataValue *data);
     void deleteData(DataValue *data);
+    DataManager() { createdDataValues = 0; }
     ~DataManager();
 };
 
 struct MethodInfo
 {
     std::string name;
+    DataType returnDataType;
+    std::vector<Type *> arguments;
     std::vector<std::string> statements;
-    DataType *returnDataType;
 };
 
 struct ClassDefinition
@@ -75,6 +90,13 @@ struct ClassDefinition
     std::vector<Type *> attributes;
     std::vector<MethodInfo *> methods;
     ClassDefinition() : type(Type(DataType::Class)) {}
+    ~ClassDefinition()
+    {
+        // for (int i = 0; i < attributes.size(); ++i)
+        //     delete (attributes[i]);
+        // for (int i = 0; i < methods.size(); ++i)
+        //     delete (methods[i]);
+    }
 };
 
 class InstancedClass

@@ -64,8 +64,21 @@ private:
     MethodCallStack *callStack;
 
     void processMethod(MethodCall *methodCall);
-    void processStatementBlock(MethodCall *methodCall, int nextStatementIndex);
+    void processStatementBlock(MethodCall *methodCall, int nextStatementIndex,
+                               bool skipBlockCheck = false);
     void processStatement(MethodCall *memory, int nextStatementIndex);
+
+    void getCallArgsFromStatement(std::vector<std::string> *args, std::string &statement);
+
+    void processCall_addClassMethod(MethodCall *methodCall, std::string &statement);
+    void processCall_addClassMethodCode(MethodCall *methodCall, std::string &statement);
+    void processCall_bindingInvoke(MethodCall *methodCall, std::string &statement);
+    void processCall_createClass(MethodCall *methodCall, std::string &statement);
+    void processCall_instance(MethodCall *methodCall, std::string &statement);
+    void processCall_invoke(MethodCall *methodCall, std::string &statement);
+    void processCall_print(MethodCall *methodCall, std::string &statement);
+
+    int callMethodFromFile(std::string filePath, std::string methodName);
 
 public:
     DataManager dataManager;
