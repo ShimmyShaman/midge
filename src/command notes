@@ -41,6 +41,15 @@ print("flag was true")
 else
 binvoke
 
+addClassAttribute(Node,Node*,parent);
+a->part->num = b->num
+{
+ref1(part,a)
+ref1(num,$1)
+ref2(num,b)
+assign($1,$2)
+}
+
 
 :>conditional
 
@@ -48,6 +57,7 @@ binvoke
 branching
 conditional on instance member
 pointers
+
 
 
 :>instance(dataType, instanceName)

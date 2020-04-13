@@ -28,6 +28,7 @@ protected:
 public:
     MethodInfo *method;
     InstancedClass *instance;
+    int statementProcessingIndex;
 
     void pushLocalMemoryBlock();
     void popLocalMemoryBlock();
@@ -64,9 +65,8 @@ private:
     MethodCallStack *callStack;
 
     void processMethod(MethodCall *methodCall);
-    void processStatementBlock(MethodCall *methodCall, int nextStatementIndex,
-                               bool skipBlockCheck = false);
-    void processStatement(MethodCall *memory, int nextStatementIndex);
+    void processStatementBlock(MethodCall *methodCall, bool skipBlockCheck = false);
+    void processStatement(MethodCall *memory);
 
     void getCallArgsFromStatement(std::vector<std::string> *args, std::string &statement);
 

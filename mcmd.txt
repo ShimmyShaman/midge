@@ -1,5 +1,6 @@
-createClass(Global);
-addClassMethod(Global,initialize,void);
-addClassMethodCode(Global,initialize,{bInvoke(printCrap,"Shorty");});
-instanceData(Global,global);
-invokeMethod(initialize,global);
+createClass(Node);
+instanceData(Node,global);
+{
+print("global:");
+printLine(global);
+}
