@@ -1,6 +1,29 @@
-createClass(Node);
-instanceData(Node,global);
+createClass(Node)
+createAttribute(Node,name,string)
+createClass(VisualNode)
+addClassSuperClass(VisualNode,Node)
+addClassMethod(Node,init)
+addClassMethodCode(Node,init,{return "rootNode"})
+instanceData(VisualNode,root)
 {
-print("global:");
-printLine(global);
+  assign($1,name,root)
+  invoke(2,init,root)
+  assign($1,$2)
 }
+{
+  assign($1,name,root)
+  print("root.name:")
+  printLine($1)
+}
+
+createClass(OpenGLRenderer)
+addClassMethod(OpenGLRenderer,renderLoop)
+addClassMethodCode(OpenGLRenderer,renderLoop,{
+  assign(1,shouldExit,thread)
+  assignNot($1,$1)
+  while($1) {
+    invoke(0,sleep,thread,1)
+  }
+})
+initializeDefault(OpenGLRenderer,renderer,%global)
+thread("renderthread",renderLoop,renderer)

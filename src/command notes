@@ -54,24 +54,30 @@ assign($1,$2)
 :>conditional
 
 
+threading
 branching
 conditional on instance member
 pointers
+type memory and method memory (statics/consts)
+create bound types
 
 
-
-:>instance(dataType, instanceName)
+:>initializeDefault(dataType, instanceName)
     ~ Cpx c;
-:>init(dataType,instanceName,*valueInstanceName)
+:>initalize(dataType,instanceName,valueInstanceName)
     ~ int c = a
-:>assign(instanceName,*instanceName)
+:>assign(instanceName,valueInstanceNameOrLiteralValue)
     ~ c = a
+:>assign(instanceName,valueMemberName,valueInstanceName)
 :>print(text)
-:>printattr(*instanceName)
-:>invoke(memberName,*instanceName)
-:>mathAdd(instanceName,*instanceName)
+:>invoke(memberName,valueInstanceName)
+:>mathAdd(instanceName,valueInstanceName)
     ~ The others... subtract,etc.
 :>createClass(className)
+:>createAttribute(className,attributeName,type)
+:>addClassMethod(className,methodName,returnType,[argType,argName]...)
+:>addClassMethodCode(className,methodName,{code})
+:>addClassSuperClass(className,superClassName)
 #####################################################
 #####################################################
 #####################################################

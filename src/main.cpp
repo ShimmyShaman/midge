@@ -19,5 +19,5 @@ int main(void)
 
   MidgeApp midgeApp;
 
-  return midgeApp.run();
+  exit(midgeApp.run());
 }

@@ -629,6 +629,12 @@ void MidgeApp::processCall_print(MethodCall *methodCall, string &statement)
     case DataType::String:
       cout << *static_cast<string *>((*valueInstance)->data());
       break;
+    case DataType::Class:
+    {
+      InstancedClass *instancedClass = static_cast<InstancedClass *>((*valueInstance)->data());
+      cout << "<Class=" << instancedClass->definition->type.name << ">";
+    }
+    break;
     default:
       cout << Type::toString((*valueInstance)->dataType());
       break;
@@ -682,11 +688,12 @@ int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
         else if (c == '}')
           --blockDepth;
       }
-      if (!blockDepth && c == ';')
+      if (!blockDepth && c == ')')
       {
+        line.append(1, c);
         if (line.length() == 0)
           continue;
-        cout << "pushback line:" << line << endl;
+        //cout << "pushback line:" << line << endl;
         fileMethod.statements.push_back(line);
         line.clear();
         reading = false;
@@ -697,7 +704,7 @@ int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
         if (c == '{' || c == '}')
         {
           line.append(1, c);
-          cout << "pushback line:" << line << endl;
+          //cout << "pushback line:" << line << endl;
           fileMethod.statements.push_back(line);
           line.clear();
           continue;
