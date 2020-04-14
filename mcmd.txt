@@ -1,3 +1,4 @@
+/*
 createClass(Node)
 createAttribute(Node,name,string)
 createClass(VisualNode)
@@ -15,9 +16,10 @@ instanceData(VisualNode,root)
   print("root.name:")
   printLine($1)
 }
+*/
 
 createClass(OpenGLRenderer)
-addClassMethod(OpenGLRenderer,renderLoop)
+addClassMethod(OpenGLRenderer,renderLoop,void)
 addClassMethodCode(OpenGLRenderer,renderLoop,{
   assign(1,shouldExit,thread)
   assignNot($1,$1)

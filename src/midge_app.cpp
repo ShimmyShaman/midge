@@ -9,188 +9,6 @@
 
 using namespace std;
 
-void MethodCall::pushLocalMemoryBlock()
-{
-  ++localUsage;
-  if (localUsage >= local.size())
-  {
-    local.resize(localUsage + localUsage / 3 + 4);
-    localTemp.resize(local.size());
-  }
-}
-
-void MethodCall::popLocalMemoryBlock()
-{
-  --localUsage;
-  std::map<std::string, DataValue *>::iterator it = local[localUsage].begin();
-  while (it != local[localUsage].end())
-  {
-    dataManager->deleteData(it->second);
-    it++;
-  }
-  local[localUsage].clear();
-
-  for (int i = 0; i < localTemp[localUsage].size(); ++i)
-    dataManager->deleteData(localTemp[localUsage][i]);
-  localTemp[localUsage].clear();
-}
-
-DataValue *MethodCall::getValue(std::string identifier)
-{
-  DataValue **pdp = getPointerToValue(identifier);
-  if (!pdp)
-    return nullptr;
-  return dataManager->cloneData(*pdp);
-}
-
-DataValue **MethodCall::getPointerToValue(std::string identifier)
-{
-  int i = localUsage - 1;
-  std::map<std::string, DataValue *>::iterator it = local[i].find(identifier);
-  while (true)
-  {
-    if (it != local[i].end())
-      return &it->second;
-    --i;
-    if (i < 0)
-      break;
-    it = local[i].find(identifier);
-  }
-
-  if (instance)
-  {
-    it = instance->attributes.find(identifier);
-    if (it != instance->attributes.end())
-      return &it->second;
-  }
-
-  it = global->find(identifier);
-  if (it == global->end())
-    return nullptr;
-  return &it->second;
-}
-
-void MethodCall::instanceValue(std::string identifier, DataValue *dp)
-{
-  DataValue **existing = getPointerToValue(identifier);
-  if (existing)
-    throw 3947;
-
-  local[localUsage - 1][identifier] = dp;
-}
-
-void MethodCall::assignValue(std::string identifier, DataValue *dp)
-{
-  // Find the key
-  int i = localUsage - 1;
-  std::map<std::string, DataValue *>::iterator it = local[i].find(identifier);
-  while (true)
-  {
-    if (it != local[i].end())
-    {
-      it->second = dp;
-      return;
-    }
-    --i;
-    if (i < 0)
-      break;
-    it = local[i].find(identifier);
-  }
-
-  if (instance)
-  {
-    it = instance->attributes.find(identifier);
-    if (it != instance->attributes.end())
-    {
-      it->second = dp;
-      return;
-    }
-  }
-
-  it = global->find(identifier);
-  if (it != global->end())
-  {
-    it->second = dp;
-    return;
-  }
-
-  throw 3941;
-}
-
-void MethodCall::addBlockMemory(DataValue *dp)
-{
-  localTemp[localUsage - 1].push_back(dp);
-}
-
-DataValue *MethodCall::takeReturnValue()
-{
-  DataValue *ret = returnValue;
-  returnValue = nullptr;
-  return ret;
-}
-
-void MethodCall::setReturnValue(DataValue *value)
-{
-  returnValue = value;
-}
-
-void MethodCall::clear()
-{
-  if (returnValue)
-  {
-    dataManager->deleteData(returnValue);
-    returnValue = nullptr;
-  }
-
-  method = nullptr;
-
-  while (localUsage > 0)
-    popLocalMemoryBlock();
-  localUsage = 1;
-}
-
-MethodCall::MethodCall()
-{
-  returnValue == nullptr;
-
-  // Permanent Parameters Slot
-  pushLocalMemoryBlock();
-}
-
-MethodCall *MethodCallStack::increment(MethodInfo *method, InstancedClass *instance)
-{
-  if (stackUsage + 1 >= stackCapacity)
-    throw 9989;
-
-  MethodCall *methodCall = &stack[stackUsage];
-  methodCall->method = method;
-  methodCall->instance = instance;
-  methodCall->statementProcessingIndex = 0;
-
-  ++stackUsage;
-  return methodCall;
-}
-
-void MethodCallStack::decrement(MethodCall **finishedMethod)
-{
-  (*finishedMethod)->clear();
-
-  finishedMethod = nullptr;
-}
-
-MethodCallStack::MethodCallStack(MidgeApp *midgeApp)
-{
-  stackCapacity = 60;
-  stack.resize(stackCapacity);
-  stackUsage = 0;
-
-  for (int i = 0; i < stackCapacity; ++i)
-  {
-    stack[i].global = &midgeApp->globalMemory;
-    stack[i].dataManager = &midgeApp->dataManager;
-  }
-}
-
 void MidgeApp::processMethod(MethodCall *methodCall)
 {
   cout << "MethodCall:";
@@ -202,7 +20,7 @@ void MidgeApp::processMethod(MethodCall *methodCall)
 
 void MidgeApp::processStatementBlock(MethodCall *methodCall, bool skipBlockCheck)
 {
-  //cout << "processStatementBlock(" << methodCall->method->statements.size() << " statements)" << endl;
+  cout << "processStatementBlock(" << methodCall->method->statements.size() << " statements)" << endl;
   if (methodCall->statementProcessingIndex >= methodCall->method->statements.size())
     throw 845;
   if (!skipBlockCheck)
@@ -238,7 +56,7 @@ void MidgeApp::processStatementBlock(MethodCall *methodCall, bool skipBlockCheck
 void MidgeApp::processStatement(MethodCall *methodCall)
 {
   string statement = methodCall->method->statements[methodCall->statementProcessingIndex];
-  //cout << "processStatement(" << statement << ")" << endl;
+  cout << "processStatement(" << statement << ")" << endl;
 
   // By Method-Name
   string methodName = statement.substr(0, statement.find('('));
@@ -273,13 +91,18 @@ void MidgeApp::processStatement(MethodCall *methodCall)
       processCall_createClass(methodCall, statement);
       return;
     }
+    else if (methodName == "createAttribute")
+    {
+      processCall_createAttribute(methodCall, statement);
+      return;
+    }
   }
   break;
   case 'i':
   {
-    if (methodName == "instanceData")
+    if (methodName == "initializeDefault")
     {
-      processCall_instance(methodCall, statement);
+      processCall_initializeDefault(methodCall, statement);
       return;
     }
     else if (methodName == "invoke")
@@ -307,7 +130,7 @@ void MidgeApp::processStatement(MethodCall *methodCall)
   default:
     break;
   }
-  cout << "processStatement() UnexpectedStatement:" << statement << endl;
+  cout << "processStatement() UnhandledStatement:" << statement << endl;
   throw 1302;
 }
 
@@ -323,6 +146,8 @@ void MidgeApp::getCallArgsFromStatement(vector<string> *args, string &statement)
     {
       if (statement[i] == '}')
         --blockDepth;
+      else if (statement[i] == '{')
+        ++blockDepth;
       if (blockDepth)
         continue;
 
@@ -368,12 +193,12 @@ void MidgeApp::processCall_addClassMethod(MethodCall *methodCall, string &statem
   if (args.size() < 3)
     throw 2121;
 
-  if (classDefinitions.count(args[0]) != 1)
+  map<string, ClassDefinition *>::iterator classit = classDefinitions.find(args[0]);
+  if (classit == classDefinitions.end())
     throw 2122;
-  ClassDefinition *classDefinition = classDefinitions[args[0]];
 
-  for (int i = 0; i < classDefinition->methods.size(); ++i)
-    if (classDefinition->methods[i]->name == args[1])
+  for (int i = 0; i < classit->second->methods.size(); ++i)
+    if (classit->second->methods[i]->name == args[1])
     {
       cout << "Error! Cannot have two methods with the same name in class spec" << endl;
       throw 2124;
@@ -389,7 +214,7 @@ void MidgeApp::processCall_addClassMethod(MethodCall *methodCall, string &statem
     method->arguments.push_back(new Type(dataType, args[3 + i * 2 + 1]));
   }
 
-  classDefinition->methods.push_back(method);
+  classit->second->methods.push_back(method);
 }
 
 void MidgeApp::processCall_addClassMethodCode(MethodCall *methodCall, string &statement)
@@ -422,7 +247,55 @@ void MidgeApp::processCall_addClassMethodCode(MethodCall *methodCall, string &st
   if (args[2][0] != '{' && args[2][args[2].length() - 1] != '}')
     throw 2135;
 
-  method->statements.push_back(args[2].substr(1, args[2].length() - 2));
+  // argument may contain many statements
+  {
+    int t = 1;
+    bool reading = false;
+    int blockDepth = 0;
+    string line = "";
+    while (t < args[2].length() - 1)
+    {
+      char c = args[2][t++];
+      if (reading)
+      {
+        if (c == '{')
+          ++blockDepth;
+        else if (c == '}')
+          --blockDepth;
+      }
+      if (!blockDepth && c == ')')
+      {
+        line.append(1, c);
+        if (line.length() == 0)
+          continue;
+        cout << "methodStatement:" << line << endl;
+        method->statements.push_back(line);
+        line.clear();
+        reading = false;
+        continue;
+      }
+      if (!reading)
+      {
+        if (c == '{' || c == '}')
+        {
+          line.append(1, c);
+          cout << "methodStatement:" << line << endl;
+          method->statements.push_back(line);
+          line.clear();
+          continue;
+        }
+
+        if (c >= 'a' && c <= 'z')
+        {
+          reading = true;
+        }
+        else
+          continue;
+      }
+
+      line.append(1, c);
+    }
+  }
 }
 
 void MidgeApp::processCall_bindingInvoke(MethodCall *methodCall, string &statement)
@@ -475,6 +348,26 @@ void MidgeApp::processCall_bindingInvoke(MethodCall *methodCall, string &stateme
   void *retValue = method(&bindingArgs[0], args.size() - 1);
 }
 
+void MidgeApp::processCall_createAttribute(MethodCall *methodCall, string &statement)
+{
+  // create attribute
+  vector<string> args;
+  getCallArgsFromStatement(&args, statement);
+
+  // argument check
+  if (args.size() != 3)
+    throw 2141;
+
+  map<string, ClassDefinition *>::iterator it = classDefinitions.find(args[0]);
+  if (it == classDefinitions.end())
+    throw 2142;
+
+  DataType dataType = Type::parseKind(args[2]);
+  Type *attribute = new Type(dataType, args[1]);
+
+  it->second->attributes.push_back(attribute);
+}
+
 void MidgeApp::processCall_createClass(MethodCall *methodCall, string &statement)
 {
   // create class
@@ -494,16 +387,18 @@ void MidgeApp::processCall_createClass(MethodCall *methodCall, string &statement
   classDefinitions[classDefinition->type.name] = classDefinition;
 }
 
-void MidgeApp::processCall_instance(MethodCall *methodCall, string &statement)
+void MidgeApp::processCall_initializeDefault(MethodCall *methodCall, string &statement)
 {
-  // instance
-  int ix = statement.find('(', 0) + 1;
-  int iy = statement.find(',');
-  string dataTypeStr = statement.substr(ix, iy - ix);
-  string instanceName = statement.substr(iy + 1, statement.size() - 1 - iy - 1);
+  // initialize to default value
+  vector<string> args;
+  getCallArgsFromStatement(&args, statement);
+
+  // argument check
+  if (args.size() < 2 || args.size() > 3)
+    throw 2111;
 
   DataValue *dp = nullptr;
-  DataType dataType = Type::parseKind(dataTypeStr);
+  DataType dataType = Type::parseKind(args[0]);
   if (dataType == DataType::Unknown)
   {
     // Assume class-name specified
@@ -511,10 +406,10 @@ void MidgeApp::processCall_instance(MethodCall *methodCall, string &statement)
   }
   if (!Type::isPrimitive(dataType))
   {
-    map<string, ClassDefinition *>::iterator it = classDefinitions.find(dataTypeStr);
+    map<string, ClassDefinition *>::iterator it = classDefinitions.find(args[0]);
     if (it == classDefinitions.end())
     {
-      cout << "processStatement() NonPrimitiveUnspecifiedType:" << dataTypeStr << endl;
+      cout << "processStatement() NonPrimitiveUnspecifiedType:" << args[0] << endl;
       throw 1202;
     }
 
@@ -564,7 +459,31 @@ void MidgeApp::processCall_instance(MethodCall *methodCall, string &statement)
       break;
     }
   }
-  methodCall->instanceValue(instanceName, dp);
+
+  if (args.size() == 2)
+  {
+    // Default to local block initialization
+    methodCall->instanceValue(args[1], dp, VariableScope::BLOCK);
+    return;
+  }
+
+  if (args[2][0] != '%')
+    throw 1205; // FormatException
+
+  switch (args[2][1])
+  {
+  case 'g': //global
+    methodCall->instanceValue(args[1], dp, VariableScope::GLOBAL);
+    break;
+  case 'i':     // class instance
+  case 's':     // class static
+  case 'm':     // method scope
+  case 't':     // method static
+  case 'b':     // current block
+    throw 1206; // NotYetImplemented
+  default:
+    throw 1207;
+  }
 }
 
 void MidgeApp::processCall_invoke(MethodCall *methodCall, string &statement)
@@ -650,6 +569,19 @@ void MidgeApp::processCall_print(MethodCall *methodCall, string &statement)
   }
 }
 
+void MidgeApp::processCall_thread(MethodCall *methodCall, string &statement)
+{
+  // print
+  vector<string> args;
+  getCallArgsFromStatement(&args, statement);
+
+  // argument check
+  if (args.size() < 2 && args.size() > 3)
+    throw 1371;
+
+  throw 1372;
+}
+
 int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
 {
   MethodInfo fileMethod;
@@ -676,18 +608,53 @@ int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
   try
   {
     string line;
-    bool reading = true;
+    bool reading = false;
     int blockDepth = 0;
+    char p = '\0';
+    int inComment = 0;
     while (file.good())
     {
       char c = static_cast<char>(file.get());
       if (reading)
       {
-        if (c == '{')
+        switch (c)
+        {
+        case '{':
           ++blockDepth;
-        else if (c == '}')
+          break;
+        case '}':
           --blockDepth;
+          break;
+        }
       }
+      else
+      {
+        // Comments
+        if (c == '/')
+        {
+          if (p = '*')
+          {
+            inComment = 0;
+          }
+          else if (p = '/')
+            inComment = 2;
+        }
+        else if (c == '*')
+        {
+          if (p == '/')
+            inComment = 1;
+        }
+        else if (c == '\n')
+        {
+          if (inComment == 2)
+            inComment = false;
+        }
+
+        p = c;
+        if (inComment)
+          continue;
+      }
+
       if (!blockDepth && c == ')')
       {
         line.append(1, c);

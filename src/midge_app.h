@@ -7,57 +7,7 @@
 #include <string>
 
 #include "core_data.h"
-
-class MidgeApp;
-
-class MethodCall
-{
-    friend class MethodCallStack;
-
-private:
-    DataValue *returnValue;
-    std::map<std::string, DataValue *> *global;
-    DataManager *dataManager;
-    std::vector<std::map<std::string, DataValue *>> local;
-    std::vector<std::vector<DataValue *>> localTemp;
-    int localUsage;
-
-protected:
-    void clear();
-
-public:
-    MethodInfo *method;
-    InstancedClass *instance;
-    int statementProcessingIndex;
-
-    void pushLocalMemoryBlock();
-    void popLocalMemoryBlock();
-
-    DataValue *getValue(std::string identifier);
-    DataValue **getPointerToValue(std::string identifier);
-    void instanceValue(std::string identifier, DataValue *dp);
-    void assignValue(std::string identifier, DataValue *dp);
-
-    void addBlockMemory(DataValue *value);
-
-    DataValue *takeReturnValue();
-    void setReturnValue(DataValue *value);
-
-    MethodCall();
-};
-
-class MethodCallStack
-{
-private:
-    std::vector<MethodCall> stack;
-    int stackCapacity, stackUsage;
-
-public:
-    MethodCall *increment(MethodInfo *method, InstancedClass *instance);
-    void decrement(MethodCall **finishedMethod);
-
-    MethodCallStack(MidgeApp *midgeApp);
-};
+#include "method_call.h"
 
 class MidgeApp
 {
@@ -73,10 +23,12 @@ private:
     void processCall_addClassMethod(MethodCall *methodCall, std::string &statement);
     void processCall_addClassMethodCode(MethodCall *methodCall, std::string &statement);
     void processCall_bindingInvoke(MethodCall *methodCall, std::string &statement);
+    void processCall_createAttribute(MethodCall *methodCall, std::string &statement);
     void processCall_createClass(MethodCall *methodCall, std::string &statement);
-    void processCall_instance(MethodCall *methodCall, std::string &statement);
+    void processCall_initializeDefault(MethodCall *methodCall, std::string &statement);
     void processCall_invoke(MethodCall *methodCall, std::string &statement);
     void processCall_print(MethodCall *methodCall, std::string &statement);
+    void processCall_thread(MethodCall *methodCall, std::string &statement);
 
     int callMethodFromFile(std::string filePath, std::string methodName);
 
