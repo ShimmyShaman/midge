@@ -166,37 +166,3 @@ MethodCall::MethodCall()
   // Permanent Parameters Slot
   pushLocalMemoryBlock();
 }
-
-MethodCall *MethodCallStack::increment(MethodInfo *method, InstancedClass *instance)
-{
-  if (stackUsage + 1 >= stackCapacity)
-    throw 9989;
-
-  MethodCall *methodCall = &stack[stackUsage];
-  methodCall->method = method;
-  methodCall->instance = instance;
-  methodCall->statementProcessingIndex = 0;
-
-  ++stackUsage;
-  return methodCall;
-}
-
-void MethodCallStack::decrement(MethodCall **finishedMethod)
-{
-  (*finishedMethod)->clear();
-
-  finishedMethod = nullptr;
-}
-
-MethodCallStack::MethodCallStack(MidgeApp *midgeApp)
-{
-  stackCapacity = 60;
-  stack.resize(stackCapacity);
-  stackUsage = 0;
-
-  for (int i = 0; i < stackCapacity; ++i)
-  {
-    stack[i].global = &midgeApp->globalMemory;
-    stack[i].dataManager = &midgeApp->dataManager;
-  }
-}

@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <fstream>
+#include <time.h>
 
 #include "core_interpreter.h"
 #include "midge_app.h"
@@ -9,7 +10,9 @@
 
 using namespace std;
 
-void MidgeApp::processMethod(MethodCall *methodCall)
+std::map<std::string, MethodCallStack *> MethodCallStack::threads;
+
+void MethodCallStack::processMethod(MethodCall *methodCall)
 {
   cout << "MethodCall:";
   if (methodCall->instance)
@@ -18,7 +21,7 @@ void MidgeApp::processMethod(MethodCall *methodCall)
   processStatementBlock(methodCall, true);
 }
 
-void MidgeApp::processStatementBlock(MethodCall *methodCall, bool skipBlockCheck)
+void MethodCallStack::processStatementBlock(MethodCall *methodCall, bool skipBlockCheck)
 {
   cout << "processStatementBlock(" << methodCall->method->statements.size() << " statements)" << endl;
   if (methodCall->statementProcessingIndex >= methodCall->method->statements.size())
@@ -53,7 +56,7 @@ void MidgeApp::processStatementBlock(MethodCall *methodCall, bool skipBlockCheck
   throw 847;
 }
 
-void MidgeApp::processStatement(MethodCall *methodCall)
+void MethodCallStack::processStatement(MethodCall *methodCall)
 {
   string statement = methodCall->method->statements[methodCall->statementProcessingIndex];
   cout << "processStatement(" << statement << ")" << endl;
@@ -127,6 +130,15 @@ void MidgeApp::processStatement(MethodCall *methodCall)
     }
   }
   break;
+  case 't':
+  {
+    if (methodName == "thread")
+    {
+      processCall_thread(methodCall, statement);
+      return;
+    }
+  }
+  break;
   default:
     break;
   }
@@ -134,7 +146,7 @@ void MidgeApp::processStatement(MethodCall *methodCall)
   throw 1302;
 }
 
-void MidgeApp::getCallArgsFromStatement(vector<string> *args, string &statement)
+void MethodCallStack::getCallArgsFromStatement(vector<string> *args, string &statement)
 {
   bool argsRemain = true;
   int ix = statement.find('(', 0) + 1;
@@ -183,7 +195,7 @@ void MidgeApp::getCallArgsFromStatement(vector<string> *args, string &statement)
   throw 1977;
 }
 
-void MidgeApp::processCall_addClassMethod(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_addClassMethod(MethodCall *methodCall, string &statement)
 {
   // create class
   vector<string> args;
@@ -193,8 +205,8 @@ void MidgeApp::processCall_addClassMethod(MethodCall *methodCall, string &statem
   if (args.size() < 3)
     throw 2121;
 
-  map<string, ClassDefinition *>::iterator classit = classDefinitions.find(args[0]);
-  if (classit == classDefinitions.end())
+  map<string, ClassDefinition *>::iterator classit = classDefinitions->find(args[0]);
+  if (classit == classDefinitions->end())
     throw 2122;
 
   for (int i = 0; i < classit->second->methods.size(); ++i)
@@ -217,7 +229,7 @@ void MidgeApp::processCall_addClassMethod(MethodCall *methodCall, string &statem
   classit->second->methods.push_back(method);
 }
 
-void MidgeApp::processCall_addClassMethodCode(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_addClassMethodCode(MethodCall *methodCall, string &statement)
 {
   // create class
   vector<string> args;
@@ -227,9 +239,9 @@ void MidgeApp::processCall_addClassMethodCode(MethodCall *methodCall, string &st
   if (args.size() != 3)
     throw 2131;
 
-  if (classDefinitions.count(args[0]) != 1)
+  if (classDefinitions->count(args[0]) != 1)
     throw 2132;
-  ClassDefinition *classDefinition = classDefinitions[args[0]];
+  ClassDefinition *classDefinition = (*classDefinitions)[args[0]];
 
   MethodInfo *method = nullptr;
   for (int i = 0; i < classDefinition->methods.size(); ++i)
@@ -298,7 +310,7 @@ void MidgeApp::processCall_addClassMethodCode(MethodCall *methodCall, string &st
   }
 }
 
-void MidgeApp::processCall_bindingInvoke(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_bindingInvoke(MethodCall *methodCall, string &statement)
 {
   // binding invoke
   vector<string> args;
@@ -328,8 +340,8 @@ void MidgeApp::processCall_bindingInvoke(MethodCall *methodCall, string &stateme
       // TODO find the end of literal string
 
       string *stringLiteral = new string(args[i].substr(1, args[i].length() - 2));
-      DataValue *dv = dataManager.createData(DataType::String,
-                                             static_cast<void *>(stringLiteral));
+      DataValue *dv = dataManager->createData(DataType::String,
+                                              static_cast<void *>(stringLiteral));
       methodCall->addBlockMemory(dv);
       bindingArgs[i - 1] = dv->data();
     }
@@ -348,7 +360,7 @@ void MidgeApp::processCall_bindingInvoke(MethodCall *methodCall, string &stateme
   void *retValue = method(&bindingArgs[0], args.size() - 1);
 }
 
-void MidgeApp::processCall_createAttribute(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_createAttribute(MethodCall *methodCall, string &statement)
 {
   // create attribute
   vector<string> args;
@@ -358,8 +370,8 @@ void MidgeApp::processCall_createAttribute(MethodCall *methodCall, string &state
   if (args.size() != 3)
     throw 2141;
 
-  map<string, ClassDefinition *>::iterator it = classDefinitions.find(args[0]);
-  if (it == classDefinitions.end())
+  map<string, ClassDefinition *>::iterator it = classDefinitions->find(args[0]);
+  if (it == classDefinitions->end())
     throw 2142;
 
   DataType dataType = Type::parseKind(args[2]);
@@ -368,7 +380,7 @@ void MidgeApp::processCall_createAttribute(MethodCall *methodCall, string &state
   it->second->attributes.push_back(attribute);
 }
 
-void MidgeApp::processCall_createClass(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_createClass(MethodCall *methodCall, string &statement)
 {
   // create class
   vector<string> args;
@@ -378,16 +390,16 @@ void MidgeApp::processCall_createClass(MethodCall *methodCall, string &statement
   if (args.size() != 1)
     throw 2111;
 
-  if (classDefinitions.count(args[0]))
+  if (classDefinitions->count(args[0]))
     throw 2112;
 
   ClassDefinition *classDefinition = new ClassDefinition();
   classDefinition->type.kind = DataType::Class;
   classDefinition->type.name = args[0];
-  classDefinitions[classDefinition->type.name] = classDefinition;
+  (*classDefinitions)[classDefinition->type.name] = classDefinition;
 }
 
-void MidgeApp::processCall_initializeDefault(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_initializeDefault(MethodCall *methodCall, string &statement)
 {
   // initialize to default value
   vector<string> args;
@@ -406,8 +418,8 @@ void MidgeApp::processCall_initializeDefault(MethodCall *methodCall, string &sta
   }
   if (!Type::isPrimitive(dataType))
   {
-    map<string, ClassDefinition *>::iterator it = classDefinitions.find(args[0]);
-    if (it == classDefinitions.end())
+    map<string, ClassDefinition *>::iterator it = classDefinitions->find(args[0]);
+    if (it == classDefinitions->end())
     {
       cout << "processStatement() NonPrimitiveUnspecifiedType:" << args[0] << endl;
       throw 1202;
@@ -438,10 +450,10 @@ void MidgeApp::processCall_initializeDefault(MethodCall *methodCall, string &sta
         throw 1203;
         break;
       }
-      obj->attributes[definition->attributes[i]->name] = dataManager.createData(definition->attributes[i]->kind,
-                                                                                attrData);
+      obj->attributes[definition->attributes[i]->name] = dataManager->createData(definition->attributes[i]->kind,
+                                                                                 attrData);
     }
-    dp = dataManager.createData(dataType, static_cast<void *>(obj));
+    dp = dataManager->createData(dataType, static_cast<void *>(obj));
   }
   else
   {
@@ -450,7 +462,7 @@ void MidgeApp::processCall_initializeDefault(MethodCall *methodCall, string &sta
     case DataType::Int32:
     {
       int *value = new int();
-      dp = dataManager.createData(dataType, static_cast<void *>(value));
+      dp = dataManager->createData(dataType, static_cast<void *>(value));
     }
     break;
     default:
@@ -486,7 +498,7 @@ void MidgeApp::processCall_initializeDefault(MethodCall *methodCall, string &sta
   }
 }
 
-void MidgeApp::processCall_invoke(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_invoke(MethodCall *methodCall, string &statement)
 {
   vector<string> args;
   getCallArgsFromStatement(&args, statement);
@@ -520,12 +532,12 @@ void MidgeApp::processCall_invoke(MethodCall *methodCall, string &statement)
     throw 1245;
 
   // Invoke
-  MethodCall *subcall = callStack->increment(method, instance);
+  MethodCall *subcall = incrementCallStack(method, instance);
   processMethod(subcall);
-  callStack->decrement(&subcall);
+  decrementCallStack(&subcall);
 }
 
-void MidgeApp::processCall_print(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_print(MethodCall *methodCall, string &statement)
 {
   // print
   vector<string> args;
@@ -569,24 +581,115 @@ void MidgeApp::processCall_print(MethodCall *methodCall, string &statement)
   }
 }
 
-void MidgeApp::processCall_thread(MethodCall *methodCall, string &statement)
+void MethodCallStack::processCall_thread(MethodCall *methodCall, string &statement)
 {
-  // print
   vector<string> args;
   getCallArgsFromStatement(&args, statement);
 
   // argument check
-  if (args.size() < 2 && args.size() > 3)
+  if (args.size() != 3)
     throw 1371;
 
-  throw 1372;
+  InstancedClass *instance = nullptr;
+  {
+    DataValue **pInstance = methodCall->getPointerToValue(args[2]);
+    if (!pInstance)
+      throw 1372;
+    instance = static_cast<InstancedClass *>((*pInstance)->data());
+  }
+
+  if (!instance)
+    throw 1373;
+
+  if (args[1] == "null")
+    throw 1374; // Implement global static methods?
+
+  MethodInfo *method = nullptr;
+  for (int i = 0; i < instance->definition->methods.size(); ++i)
+    if (instance->definition->methods[i]->name == args[1])
+    {
+      method = instance->definition->methods[i];
+      break;
+    }
+  if (!method)
+    throw 1375;
+
+  // Invoke
+  MethodCallStack *anotherThread = new MethodCallStack();
+  anotherThread->initialize(dataManager, globalMemory, classDefinitions);
+
+  cout << "args[0]=" << args[0] << endl;
+  void *threadArgs[3];
+  threadArgs[0] = static_cast<void *>(new string(args[0]));
+  threadArgs[1] = static_cast<void *>(anotherThread);
+  threadArgs[2] = static_cast<void *>(instance);
+  threadArgs[3] = static_cast<void *>(method);
+
+  pthread_t thread_id;
+  int err = pthread_create(&thread_id, NULL, &MethodCallStack::execute, &threadArgs[0]);
+
+  if (err)
+    throw 1376;
+
+  nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
 }
 
-int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
+void *MethodCallStack::execute(void *arg)
 {
-  MethodInfo fileMethod;
-  fileMethod.name = methodName;
-  fileMethod.returnDataType = DataType::Int32;
+  string *threadName = nullptr;
+  MethodCallStack *callStack = nullptr;
+  DataValue *result = nullptr;
+  try
+  {
+    // State
+    void **pThreadArgs = static_cast<void **>(arg);
+    threadName = static_cast<string *>(pThreadArgs[0]);
+    callStack = static_cast<MethodCallStack *>(pThreadArgs[1]);
+    InstancedClass *instance = static_cast<InstancedClass *>(pThreadArgs[2]);
+    MethodInfo *method = static_cast<MethodInfo *>(pThreadArgs[3]);
+
+    // Register
+    cout << "Thread Began:" << *threadName << endl;
+    MethodCallStack::threads[*threadName] = callStack;
+
+    // Invoke
+    MethodCall *methodCall = callStack->incrementCallStack(method, instance);
+    callStack->processMethod(methodCall);
+    result = methodCall->takeReturnValue();
+    callStack->decrementCallStack(&methodCall);
+  }
+  catch (int e)
+  {
+    std::cout << "Exception(thread:" << *threadName << "):" << e << std::endl;
+
+    // Deregister
+    MethodCallStack::threads.erase(*threadName);
+    cout << "Thread Ended:" << *threadName << endl;
+
+    // Cleanup
+    if (threadName)
+      delete (threadName);
+    if (callStack)
+      delete (callStack);
+  }
+
+  // Return
+  if (result)
+  {
+    void *returnValue = result->data();
+    delete (result);
+    return returnValue;
+    pthread_exit(returnValue);
+  }
+
+  pthread_exit(nullptr);
+}
+
+MethodInfo *MethodCallStack::loadMethodFromFile(string filePath, std::string methodName)
+{
+  MethodInfo *fileMethod = new MethodInfo();
+  fileMethod->name = methodName;
+  fileMethod->returnDataType = DataType::Int32;
 
   ifstream file;
   try
@@ -595,14 +698,16 @@ int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
     if (!file.is_open())
     {
       cout << "Failure to open file:" << filePath << endl;
-      throw 244;
+      delete (fileMethod);
+      throw 897;
     }
   }
   catch (const std::exception &e)
   {
     cout << "ERROR failed to open file:" << filePath << endl;
     std::cerr << e.what() << '\n';
-    return -1;
+    delete (fileMethod);
+    throw 898;
   }
 
   try
@@ -661,7 +766,7 @@ int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
         if (line.length() == 0)
           continue;
         //cout << "pushback line:" << line << endl;
-        fileMethod.statements.push_back(line);
+        fileMethod->statements.push_back(line);
         line.clear();
         reading = false;
         continue;
@@ -672,7 +777,7 @@ int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
         {
           line.append(1, c);
           //cout << "pushback line:" << line << endl;
-          fileMethod.statements.push_back(line);
+          fileMethod->statements.push_back(line);
           line.clear();
           continue;
         }
@@ -692,29 +797,78 @@ int MidgeApp::callMethodFromFile(string filePath, std::string methodName)
   catch (const std::exception &e)
   {
     std::cerr << e.what() << '\n';
-    return -2;
+    delete (fileMethod);
+    throw 899;
   }
 
-  MethodCall *methodCall = callStack->increment(&fileMethod, nullptr);
-  processMethod(methodCall);
-  DataValue *result = methodCall->takeReturnValue();
-  callStack->decrement(&methodCall);
+  return fileMethod;
+}
 
-  if (result)
+MethodCall *MethodCallStack::incrementCallStack(MethodInfo *method, InstancedClass *instance)
+{
+  if (stackUsage + 1 >= stackCapacity)
+    throw 9989;
+
+  MethodCall *methodCall = &stack[stackUsage];
+  methodCall->method = method;
+  methodCall->instance = instance;
+  methodCall->statementProcessingIndex = 0;
+
+  ++stackUsage;
+  return methodCall;
+}
+
+void MethodCallStack::decrementCallStack(MethodCall **finishedMethod)
+{
+  (*finishedMethod)->clear();
+
+  finishedMethod = nullptr;
+}
+
+void MethodCallStack::initialize(DataManager *pDataManager, std::map<std::string, DataValue *> *pGlobalMemory,
+                                 std::map<std::string, ClassDefinition *> *pClassDefinitions)
+{
+  dataManager = pDataManager;
+  globalMemory = pGlobalMemory;
+  classDefinitions = pClassDefinitions;
+
+  stackCapacity = 60;
+  stack.resize(stackCapacity);
+  stackUsage = 0;
+
+  for (int i = 0; i < stackCapacity; ++i)
   {
-    int returnValue = *result->int32();
-    delete (result);
-    return returnValue;
+    stack[i].global = globalMemory;
+    stack[i].dataManager = dataManager;
   }
+}
 
-  return 0;
+MethodCallStack::MethodCallStack()
+{
 }
 
 int MidgeApp::run()
 {
   try
   {
-    return callMethodFromFile("./mcmd.txt", "entryMethod");
+    MethodInfo *method = loadMethodFromFile("./mcmd.txt", "entryMethod");
+
+    MethodCall *methodCall = incrementCallStack(method, nullptr);
+    processMethod(methodCall);
+    DataValue *result = methodCall->takeReturnValue();
+    decrementCallStack(&methodCall);
+
+    if (result)
+    {
+      int returnValue = *result->int32();
+      delete (result);
+      return returnValue;
+    }
+
+    if (threads.size())
+      cout << "Concern! Active Threads At Shutdown=" << threads.size() << endl;
+
+    return 0;
   }
   catch (int e)
   {
@@ -725,16 +879,13 @@ int MidgeApp::run()
 
 MidgeApp::MidgeApp()
 {
-  callStack = new MethodCallStack(this);
+  initialize(new DataManager(), new map<string, DataValue *>(), new map<string, ClassDefinition *>());
 }
 
 MidgeApp::~MidgeApp()
 {
-  if (callStack)
-    delete callStack;
-
-  // map<string, ClassDefinition *>::iterator it = classDefinitions.begin();
-  // while (it != classDefinitions.end())
+  // map<string, ClassDefinition *>::iterator it = classDefinitions->begin();
+  // while (it != classDefinitions->end())
   // {
   //   delete(it->second);
   // }

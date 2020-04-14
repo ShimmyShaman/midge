@@ -9,10 +9,19 @@
 #include "core_data.h"
 #include "method_call.h"
 
-class MidgeApp
+class MethodCallStack
 {
 private:
-    MethodCallStack *callStack;
+    std::vector<MethodCall> stack;
+    int stackCapacity, stackUsage;
+
+    DataManager *dataManager;
+    std::map<std::string, DataValue *> *globalMemory;
+    std::map<std::string, ClassDefinition *> *classDefinitions;
+
+protected:
+    static std::map<std::string, MethodCallStack *> threads;
+    static void *execute(void *arg);
 
     void processMethod(MethodCall *methodCall);
     void processStatementBlock(MethodCall *methodCall, bool skipBlockCheck = false);
@@ -30,16 +39,23 @@ private:
     void processCall_print(MethodCall *methodCall, std::string &statement);
     void processCall_thread(MethodCall *methodCall, std::string &statement);
 
-    int callMethodFromFile(std::string filePath, std::string methodName);
+    MethodInfo *loadMethodFromFile(std::string filePath, std::string methodName);
 
 public:
-    DataManager dataManager;
-    std::map<std::string, DataValue *> globalMemory;
+    MethodCall *incrementCallStack(MethodInfo *method, InstancedClass *instance);
+    void decrementCallStack(MethodCall **finishedMethod);
 
-    MethodInfo *entryMethod;
-    std::map<std::string, ClassDefinition *> classDefinitions;
+    void initialize(DataManager *pDataManager, std::map<std::string, DataValue *> *pGlobalMemory,
+                    std::map<std::string, ClassDefinition *> *pClassDefinitions);
 
+    MethodCallStack();
+};
+
+class MidgeApp : public MethodCallStack
+{
+public:
     int run();
+
     MidgeApp();
     ~MidgeApp();
 };

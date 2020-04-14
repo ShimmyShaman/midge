@@ -1,38 +1,38 @@
-/* core_interpreter.h */
+// /* core_interpreter.h */
 
-#ifndef CORE_INTERPRETER_H
-#define CORE_INTERPRETER_H
+// #ifndef CORE_INTERPRETER_H
+// #define CORE_INTERPRETER_H
 
-#include "core_data.h"
-#include "midge_app.h"
+// #include "core_data.h"
+// #include "midge_app.h"
 
-class CoreInterpreter
-{
-    struct Code
-    {
-        const char *text;
-        int pos;
-        int length;
-    } code;
+// class CoreInterpreter
+// {
+//     struct Code
+//     {
+//         const char *text;
+//         int pos;
+//         int length;
+//     } code;
 
-    void parsePast(char c);
-    void parsePast(std::string s);
-    char peekChar();
-    char parseChar();
-    std::string parseIdentifier();
-    std::string parseStatement();
+//     void parsePast(char c);
+//     void parsePast(std::string s);
+//     char peekChar();
+//     char parseChar();
+//     std::string parseIdentifier();
+//     std::string parseStatement();
 
-    void parseRoot();
-    void parseClass();
-    int parseClassMember(ClassDefinition *obj);
-    int parseClassMethod(ClassDefinition *obj);
-    int parseMethodDetails(MethodInfo *method);
-    int parseStatementBlock(MethodInfo *method);
+//     void parseRoot();
+//     void parseClass();
+//     int parseClassMember(ClassDefinition *obj);
+//     int parseClassMethod(ClassDefinition *obj);
+//     int parseMethodDetails(MethodInfo *method);
+//     int parseStatementBlock(MethodInfo *method);
 
-    MidgeApp *app;
+//     MidgeApp *app;
 
-public:
-    void interpretText(MidgeApp *app, const char *text);
-};
+// public:
+//     void interpretText(MidgeApp *app, const char *text);
+// };
 
-#endif // CORE_INTERPRETER_H
+// #endif // CORE_INTERPRETER_H

@@ -57,17 +57,4 @@ public:
     MethodCall();
 };
 
-class MethodCallStack
-{
-private:
-    std::vector<MethodCall> stack;
-    int stackCapacity, stackUsage;
-
-public:
-    MethodCall *increment(MethodInfo *method, InstancedClass *instance);
-    void decrement(MethodCall **finishedMethod);
-
-    MethodCallStack(MidgeApp *midgeApp);
-};
-
 #endif // METHOD_CALL_H
