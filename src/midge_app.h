@@ -38,6 +38,7 @@ protected:
 
     void processCall_addClassMethod(MethodCall *methodCall, std::string &statement);
     void processCall_addClassMethodCode(MethodCall *methodCall, std::string &statement);
+    void processCall_assign(MethodCall *methodCall, std::string &statement);
     void processCall_bindingInvoke(MethodCall *methodCall, std::string &statement);
     void processCall_createAttribute(MethodCall *methodCall, std::string &statement);
     void processCall_createClass(MethodCall *methodCall, std::string &statement);

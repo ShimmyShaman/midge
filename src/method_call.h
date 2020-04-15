@@ -50,6 +50,7 @@ public:
     void assignValue(std::string identifier, DataValue *dp);
 
     void addBlockMemory(DataValue *value);
+    void addBlockMemory(int slot, DataValue *value);
 
     DataValue *takeReturnValue();
     void setReturnValue(DataValue *value);

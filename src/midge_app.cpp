@@ -77,6 +77,11 @@ void MethodCallStack::processStatement(MethodCall *methodCall)
       processCall_addClassMethodCode(methodCall, statement);
       return;
     }
+    else if (methodName == "assign")
+    {
+      processCall_assign(methodCall, statement);
+      return;
+    }
   }
   case 'b':
   {
@@ -310,6 +315,62 @@ void MethodCallStack::processCall_addClassMethodCode(MethodCall *methodCall, str
   }
 }
 
+void MethodCallStack::processCall_assign(MethodCall *methodCall, string &statement)
+{
+  // create class
+  vector<string> args;
+  getCallArgsFromStatement(&args, statement);
+
+  // argument check
+  if (args.size() < 2 || args.size() > 3)
+    throw 2151;
+
+  DataValue *assignmentValue;
+  if (args.size() == 2)
+  {
+    // assign(instanceName,valueInstanceNameOrLiteralValue)
+    //   ~ c = a
+    throw 2152;
+  }
+  else
+  {
+    // assign(instanceName,valueMemberName,valueInstanceName)
+    //   ~ c = b.a
+    DataValue **instancePtr = methodCall->getPointerToValue(args[2]);
+    if (!instancePtr)
+    {
+      cout << "valueInstanceName:" << args[2] << " not found!" << endl;
+      throw 2153;
+    }
+    if ((*instancePtr)->dataType() != DataType::Class)
+      throw 2154;
+    InstancedClass *instance = static_cast<InstancedClass *>((*instancePtr)->data());
+
+    cout << "here2" << endl;
+    map<string, DataValue *>::iterator it = instance->attributes.find(args[1]);
+    if (it == instance->attributes.end())
+      throw 2155;
+
+    cout << "here3" << endl;
+    DataValue *dv = dataManager->cloneData(it->second);
+    if (args[0][0] >= '0' && args[0][0] <= '9')
+    {
+      for (int i = 1; i < args[0].length(); ++i)
+        if (args[0][i] < '0' || args[0][i] > '9')
+          throw 2157;
+
+      cout << "here4" << endl;
+      // Temporary Field
+      methodCall->addBlockMemory(stoi(args[0]), dv);
+    }
+    else
+    {
+      methodCall->assignValue(args[0], dv);
+    }
+    cout << "here5" << endl;
+  }
+}
+
 void MethodCallStack::processCall_bindingInvoke(MethodCall *methodCall, string &statement)
 {
   // binding invoke
@@ -318,46 +379,24 @@ void MethodCallStack::processCall_bindingInvoke(MethodCall *methodCall, string &
 
   // argument check
   if (args.size() < 1)
-    throw 1246;
+    throw 1261;
 
-  bool argsRemain = true;
-  int ix = statement.find('(', 0) + 1;
-  int iy = statement.find(',');
-  if (iy == string::npos)
+  BoundMethodInfo *binding = Bindings::getMethod(args[0]);
+  if (!binding)
+    throw 1263;
+
+  void **bindingArgs = nullptr;
+  int bindingArgCount = 0;
+  if (args.size() > 1)
   {
-    argsRemain = false;
-    iy = statement.find(')', ix);
+    throw 1264;
   }
-  string methodIdentity = statement.substr(ix, iy - ix);
-
-  void *bindingArgs[args.size() - 1];
-  for (int i = 1; i < args.size(); ++i)
-  {
-    switch (args[i][0])
-    {
-    case '"':
-    {
-      // TODO find the end of literal string
-
-      string *stringLiteral = new string(args[i].substr(1, args[i].length() - 2));
-      DataValue *dv = dataManager->createData(DataType::String,
-                                              static_cast<void *>(stringLiteral));
-      methodCall->addBlockMemory(dv);
-      bindingArgs[i - 1] = dv->data();
-    }
-    break;
-    default:
-      throw 1246;
-    }
-  }
-
-  methodPtr method = Bindings::getMethod(methodIdentity);
-  if (!method)
-    throw 1249;
 
   // Invoke
+  binding->method(bindingArgs, bindingArgCount);
+
   // TODO return values
-  void *retValue = method(&bindingArgs[0], args.size() - 1);
+  //void *retValue = method(&bindingArgs[0], args.size() - 1);
 }
 
 void MethodCallStack::processCall_createAttribute(MethodCall *methodCall, string &statement)
@@ -648,7 +687,6 @@ void MethodCallStack::meaninglessPrint()
 
 void *MethodCallStack::execute(void *arg)
 {
-  nanosleep((const struct timespec[]){{0, 200000000L}}, NULL);
   string *threadName = nullptr;
   MethodCallStack *callStack = nullptr;
   DataValue *result = nullptr;

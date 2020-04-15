@@ -4,6 +4,7 @@
             "name": "Linux",
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
+            "includePath": ["/home/daniel/midge/src"],
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "clang-x64"

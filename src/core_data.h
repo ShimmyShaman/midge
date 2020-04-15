@@ -17,6 +17,7 @@ enum DataType
     Pointer,
     Int32,
     String,
+    Long,
 };
 
 struct Type
@@ -24,12 +25,16 @@ struct Type
     DataType kind;
     std::string name;
 
+    Type()
+    {
+        kind = DataType::Null;
+        name = "";
+    }
     Type(DataType pKind)
     {
         kind = pKind;
         name = "";
     }
-
     Type(DataType pKind, std::string pName)
     {
         kind = pKind;

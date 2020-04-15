@@ -69,6 +69,7 @@ create bound types
 :>assign(instanceName,valueInstanceNameOrLiteralValue)
     ~ c = a
 :>assign(instanceName,valueMemberName,valueInstanceName)
+	~ c = b.a
 :>print(text)
 :>invoke(memberName,valueInstanceName)
 :>mathAdd(instanceName,valueInstanceName)
@@ -78,6 +79,8 @@ create bound types
 :>addClassMethod(className,methodName,returnType,[argType,argName]...)
 :>addClassMethodCode(className,methodName,{code})
 :>addClassSuperClass(className,superClassName)
+:>bindingInvoke()
+    ~ bindingInvoke(methodName,argsIdentifierOrLiteral...)
 #####################################################
 #####################################################
 #####################################################

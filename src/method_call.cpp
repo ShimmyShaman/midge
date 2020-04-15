@@ -89,6 +89,7 @@ void MethodCall::instanceValue(std::string identifier, DataValue *dp, VariableSc
   }
 }
 
+/* assigns value (does not create a clone of the value) */
 void MethodCall::assignValue(std::string identifier, DataValue *dp)
 {
   // Find the key
@@ -130,6 +131,18 @@ void MethodCall::assignValue(std::string identifier, DataValue *dp)
 void MethodCall::addBlockMemory(DataValue *dp)
 {
   localTemp[localUsage - 1].push_back(dp);
+}
+
+void MethodCall::addBlockMemory(int slot, DataValue *dp)
+{
+  string slotIdentity("$" + to_string(slot));
+  map<string, DataValue *>::iterator it = local[localUsage - 1].find(slotIdentity);
+  if (it != local[localUsage - 1].end())
+  {
+    dataManager->deleteData(it->second);
+  }
+
+  local[localUsage - 1][slotIdentity] = dp;
 }
 
 DataValue *MethodCall::takeReturnValue()
