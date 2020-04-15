@@ -10,7 +10,7 @@
 
 using namespace std;
 
-std::map<std::string, MethodCallStack *> MethodCallStack::threads;
+std::map<std::string, MethodCallStack::Thread *> MethodCallStack::threads;
 
 void MethodCallStack::processMethod(MethodCall *methodCall)
 {
@@ -590,19 +590,22 @@ void MethodCallStack::processCall_thread(MethodCall *methodCall, string &stateme
   if (args.size() != 3)
     throw 1371;
 
+  if (threads.count(args[0]))
+    throw 1372;
+
   InstancedClass *instance = nullptr;
   {
     DataValue **pInstance = methodCall->getPointerToValue(args[2]);
     if (!pInstance)
-      throw 1372;
+      throw 1373;
     instance = static_cast<InstancedClass *>((*pInstance)->data());
   }
 
   if (!instance)
-    throw 1373;
+    throw 1374;
 
   if (args[1] == "null")
-    throw 1374; // Implement global static methods?
+    throw 1375; // Implement global static methods?
 
   MethodInfo *method = nullptr;
   for (int i = 0; i < instance->definition->methods.size(); ++i)
@@ -612,30 +615,40 @@ void MethodCallStack::processCall_thread(MethodCall *methodCall, string &stateme
       break;
     }
   if (!method)
-    throw 1375;
+    throw 1376;
 
   // Invoke
-  MethodCallStack *anotherThread = new MethodCallStack();
-  anotherThread->initialize(dataManager, globalMemory, classDefinitions);
+  MethodCallStack *anotherCallStack = new MethodCallStack();
+  anotherCallStack->initialize(dataManager, globalMemory, classDefinitions);
 
-  cout << "args[0]=" << args[0] << endl;
-  void *threadArgs[3];
+  MethodCallStack::Thread *thread = new MethodCallStack::Thread();
+  thread->callStack = anotherCallStack;
+  threads[args[0]] = thread;
+
+  void **threadArgs = new void *[4];
   threadArgs[0] = static_cast<void *>(new string(args[0]));
-  threadArgs[1] = static_cast<void *>(anotherThread);
+  threadArgs[1] = static_cast<void *>(anotherCallStack);
   threadArgs[2] = static_cast<void *>(instance);
   threadArgs[3] = static_cast<void *>(method);
 
-  pthread_t thread_id;
-  int err = pthread_create(&thread_id, NULL, &MethodCallStack::execute, &threadArgs[0]);
-
+  int err = pthread_create(&(thread->threadId), NULL, &MethodCallStack::execute, threadArgs);
   if (err)
-    throw 1376;
+  {
+    cout << "pthread_create error=" << err << endl;
+    threads.erase(args[0]);
+    delete (thread);
+    throw 1377;
+  }
+}
 
-  nanosleep((const struct timespec[]){{0, 500000000L}}, NULL);
+void MethodCallStack::meaninglessPrint()
+{
+  cout << "meaninglessprint()" << endl;
 }
 
 void *MethodCallStack::execute(void *arg)
 {
+  nanosleep((const struct timespec[]){{0, 200000000L}}, NULL);
   string *threadName = nullptr;
   MethodCallStack *callStack = nullptr;
   DataValue *result = nullptr;
@@ -647,10 +660,10 @@ void *MethodCallStack::execute(void *arg)
     callStack = static_cast<MethodCallStack *>(pThreadArgs[1]);
     InstancedClass *instance = static_cast<InstancedClass *>(pThreadArgs[2]);
     MethodInfo *method = static_cast<MethodInfo *>(pThreadArgs[3]);
+    delete (pThreadArgs);
 
     // Register
     cout << "Thread Began:" << *threadName << endl;
-    MethodCallStack::threads[*threadName] = callStack;
 
     // Invoke
     MethodCall *methodCall = callStack->incrementCallStack(method, instance);
@@ -663,7 +676,10 @@ void *MethodCallStack::execute(void *arg)
     std::cout << "Exception(thread:" << *threadName << "):" << e << std::endl;
 
     // Deregister
+    MethodCallStack::Thread *threadHandle = MethodCallStack::threads[*threadName];
     MethodCallStack::threads.erase(*threadName);
+    if (threadHandle)
+      delete (threadHandle);
     cout << "Thread Ended:" << *threadName << endl;
 
     // Cleanup
@@ -865,6 +881,13 @@ int MidgeApp::run()
       return returnValue;
     }
 
+    int threadWaitingTime = 0;
+    const long ONE_MILLISECOND = 1000000L;
+    while (threads.size() && threadWaitingTime < 500)
+    {
+      ++threadWaitingTime;
+      nanosleep((const struct timespec[]){{0, ONE_MILLISECOND}}, NULL);
+    }
     if (threads.size())
       cout << "Concern! Active Threads At Shutdown=" << threads.size() << endl;
 

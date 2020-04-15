@@ -20,8 +20,15 @@ private:
     std::map<std::string, ClassDefinition *> *classDefinitions;
 
 protected:
-    static std::map<std::string, MethodCallStack *> threads;
+    struct Thread
+    {
+        pthread_t threadId;
+        MethodCallStack *callStack;
+    };
+    static std::map<std::string, Thread *> threads;
     static void *execute(void *arg);
+
+    void meaninglessPrint();
 
     void processMethod(MethodCall *methodCall);
     void processStatementBlock(MethodCall *methodCall, bool skipBlockCheck = false);
