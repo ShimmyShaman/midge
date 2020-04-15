@@ -750,6 +750,10 @@ void *MethodCallStack::threadStart(void *arg)
   DataValue *result = nullptr;
   try
   {
+    // TODO -- this doesn't allow forced cancellation of this thread.
+    // Have to find out what does.
+    pthread_setcanceltype(PTHREAD_CANCEL_DISABLE, NULL);
+
     // State
     void **pThreadArgs = static_cast<void **>(arg);
     threadName = static_cast<string *>(pThreadArgs[0]);
