@@ -9,6 +9,20 @@
 #include "core_data.h"
 #include "method_call.h"
 
+class MethodCallStack;
+struct Thread
+{
+    pthread_t threadId;
+    MethodCallStack *callStack;
+    bool shouldExit;
+    Thread()
+    {
+        threadId = 0;
+        shouldExit = false;
+        callStack = nullptr;
+    }
+};
+
 class MethodCallStack
 {
 private:
@@ -20,13 +34,8 @@ private:
     std::map<std::string, ClassDefinition *> *classDefinitions;
 
 protected:
-    struct Thread
-    {
-        pthread_t threadId;
-        MethodCallStack *callStack;
-    };
     static std::map<std::string, Thread *> threads;
-    static void *execute(void *arg);
+    static void *threadStart(void *arg);
 
     void meaninglessPrint();
 

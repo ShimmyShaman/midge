@@ -10,7 +10,7 @@
 
 using namespace std;
 
-std::map<std::string, MethodCallStack::Thread *> MethodCallStack::threads;
+std::map<std::string, Thread *> MethodCallStack::threads;
 
 void MethodCallStack::processMethod(MethodCall *methodCall)
 {
@@ -718,7 +718,7 @@ void MethodCallStack::processCall_thread(MethodCall *methodCall, string &stateme
   MethodCallStack *anotherCallStack = new MethodCallStack();
   anotherCallStack->initialize(dataManager, globalMemory, classDefinitions);
 
-  MethodCallStack::Thread *thread = new MethodCallStack::Thread();
+  Thread *thread = new Thread();
   thread->callStack = anotherCallStack;
   threads[args[0]] = thread;
 
@@ -728,7 +728,7 @@ void MethodCallStack::processCall_thread(MethodCall *methodCall, string &stateme
   threadArgs[2] = static_cast<void *>(instance);
   threadArgs[3] = static_cast<void *>(method);
 
-  int err = pthread_create(&(thread->threadId), NULL, &MethodCallStack::execute, threadArgs);
+  int err = pthread_create(&(thread->threadId), NULL, &MethodCallStack::threadStart, threadArgs);
   if (err)
   {
     cout << "pthread_create error=" << err << endl;
@@ -743,7 +743,7 @@ void MethodCallStack::meaninglessPrint()
   cout << "meaninglessprint()" << endl;
 }
 
-void *MethodCallStack::execute(void *arg)
+void *MethodCallStack::threadStart(void *arg)
 {
   string *threadName = nullptr;
   MethodCallStack *callStack = nullptr;
@@ -772,8 +772,8 @@ void *MethodCallStack::execute(void *arg)
     std::cout << "Exception(thread:" << *threadName << "):" << e << std::endl;
 
     // Deregister
-    MethodCallStack::Thread *threadHandle = MethodCallStack::threads[*threadName];
-    MethodCallStack::threads.erase(*threadName);
+    Thread *threadHandle = threads[*threadName];
+    threads.erase(*threadName);
     if (threadHandle)
       delete (threadHandle);
     cout << "Thread Ended:" << *threadName << endl;
@@ -977,15 +977,59 @@ int MidgeApp::run()
       return returnValue;
     }
 
-    int threadWaitingTime = 0;
-    const long ONE_MILLISECOND = 1000000L;
-    while (threads.size() && threadWaitingTime < 500)
-    {
-      ++threadWaitingTime;
-      nanosleep((const struct timespec[]){{0, ONE_MILLISECOND}}, NULL);
-    }
     if (threads.size())
-      cout << "Concern! Active Threads At Shutdown=" << threads.size() << endl;
+    {
+      // Elegant Shutdown
+      cout << "Issuing Shutdown order to " << threads.size() << " active threads." << endl;
+      map<string, Thread *>::iterator it = threads.begin();
+      while (it != threads.end())
+      {
+        try
+        {
+          it->second->shouldExit = true;
+        }
+        catch (const std::exception &e)
+        {
+          std::cerr << e.what() << endl;
+        }
+        ++it;
+      }
+
+      int threadWaitingTime = 0;
+      const long ONE_MILLISECOND = 1000000L;
+      while (threads.size() && threadWaitingTime < 1000)
+      {
+        ++threadWaitingTime;
+        nanosleep((const struct timespec[]){{0, ONE_MILLISECOND}}, NULL);
+      }
+
+      // Brute Shutdown
+      cout << "Forcing Shutdown of " << threads.size() << " active threads." << endl;
+      it = threads.begin();
+      while (it != threads.end())
+      {
+        try
+        {
+          int result = pthread_cancel(it->second->threadId);
+          cout << "thread_cancel=" << result << endl;
+        }
+        catch (const std::exception &e)
+        {
+          std::cerr << e.what() << endl;
+        }
+        ++it;
+      }
+      threadWaitingTime = 0;
+      while (threads.size() && threadWaitingTime < 1000)
+      {
+        ++threadWaitingTime;
+        nanosleep((const struct timespec[]){{0, ONE_MILLISECOND}}, NULL);
+      }
+
+      // Concern message
+      if (threads.size())
+        cout << "Concern! Active Threads At Shutdown=" << threads.size() << endl;
+    }
 
     return 0;
   }

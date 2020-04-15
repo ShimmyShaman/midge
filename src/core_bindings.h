@@ -91,21 +91,18 @@ protected:
 
     static void *_nanosleep(void **args, int argCount)
     {
-        if (argCount == 0)
-        {
-            nanosleep((const struct timespec[]){{0, 10000000000L}}, NULL);
-            return nullptr;
-        }
-
         timespec time;
         time.tv_sec = 0;
-        if (argCount == 0)
-            time.tv_nsec = 1000000L; // 1 millisecond
-        else
+        time.tv_nsec = 1000000L; // 1 millisecond
+        if (argCount > 0)
             time.tv_nsec = *static_cast<long *>(args[0]);
-        nanosleep(&time, NULL);
+        if (argCount > 1)
+            time.tv_sec = *static_cast<long *>(args[1]);
 
-        throw - 1;
+        nanosleep(&time, NULL);
+        //cout << "sleeping:" << time.tv_nsec / 1000000L << "ms" << endl;
+
+        return nullptr;
     }
 
 public:
@@ -119,6 +116,7 @@ public:
         method = new BoundMethodInfo();
         method->method = &_nanosleep;
         method->argumentTypes.push_back(new Argument(DataType::Int64, "nanoseconds", true));
+        method->argumentTypes.push_back(new Argument(DataType::Int64, "seconds", true));
         Bindings::addMethodBinding("nanosleep", method);
     }
 };

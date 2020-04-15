@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <map>
+#include <time.h>
 #include <vector>
 
 #include "midge_app.h"

@@ -18,7 +18,7 @@ instanceData(VisualNode,root)
 }
 */
 
-/*bindingInvoke(printCrap,"\nYou ain't seen nothing yet!\n\n")*/
+bindingInvoke(printCrap,"\nYou ain't seen nothing yet!\n\n")
 createClass(OpenGLRenderer)
 addClassMethod(OpenGLRenderer,renderLoop,void)
 addClassMethodCode(OpenGLRenderer,renderLoop,{
@@ -26,8 +26,8 @@ addClassMethodCode(OpenGLRenderer,renderLoop,{
 })
 initializeDefault(OpenGLRenderer,renderer,%global)
 thread("renderthread",renderLoop,renderer)
+bindingInvoke(nanosleep,0,2)
 
-bindingInvoke(nanosleep)
 /*
   assign(1,shouldExit,thread)
   assignNot($1,$1)
