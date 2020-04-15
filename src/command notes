@@ -62,16 +62,18 @@ type memory and method memory (statics/consts)
 create bound types
 
 
-:>initializeDefault(dataType, instanceName)
+:>initializePointer(dataType,pointerName)
+    ~ <Cpx *> c;
+:>initializeDefault(dataType,instanceName,scope=LocalBlock)
     ~ Cpx c;
-:>initalize(dataType,instanceName,valueInstanceName)
+:>initalize(dataType,instanceName,valueInstanceName,scope=LocalBlock)
     ~ int c = a
 :>assign(instanceName,valueInstanceNameOrLiteralValue)
     ~ c = a
 :>assign(instanceName,valueMemberName,valueInstanceName)
 	~ c = b.a
 :>print(text)
-:>invoke(memberName,valueInstanceName)
+:>invoke(resultInstanceName,memberName,valueInstanceName,[args]...)
 :>mathAdd(instanceName,valueInstanceName)
     ~ The others... subtract,etc.
 :>createClass(className)

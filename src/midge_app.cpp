@@ -542,6 +542,12 @@ void MethodCallStack::processCall_initializeDefault(MethodCall *methodCall, stri
         attrData = static_cast<void *>(value);
       }
       break;
+      case DataType::String:
+      {
+        string *value = new string("");
+        attrData = static_cast<void *>(value);
+      }
+      break;
       default:
         cout << "processStatement() UnexpectedAttributeType:" << Type::toString(attrType) << endl;
         throw 1203;
