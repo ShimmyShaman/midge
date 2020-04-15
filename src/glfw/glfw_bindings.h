@@ -148,7 +148,9 @@ public:
 public:
     static void bindFunctions()
     {
-        Bindings::addMethodBinding("runTriangle", &runTriangle, new vector<Argument *>(0));
+        BoundMethodInfo *method = new BoundMethodInfo();
+        method->method = &runTriangle;
+        Bindings::addMethodBinding("runTriangle", method);
     }
 };
 

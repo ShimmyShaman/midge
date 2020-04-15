@@ -17,7 +17,7 @@ enum DataType
     Pointer,
     Int32,
     String,
-    Long,
+    Int64,
 };
 
 struct Type
@@ -76,6 +76,7 @@ private:
 public:
     DataValue *createData(DataType pType, void *pData);
     DataValue *cloneData(DataValue *data);
+    DataValue *cloneData(DataType pType, void *pData);
     void deleteData(DataValue *data);
     DataManager() { createdDataValues = 0; }
     ~DataManager();

@@ -61,25 +61,39 @@ DataValue *DataManager::createData(DataType pType, void *pData)
     return dv;
 }
 
-DataValue *DataManager::cloneData(DataValue *data)
+DataValue *DataManager::cloneData(DataValue *dv)
 {
-    if (Type::isPrimitive(data->_dataType))
+    return cloneData(dv->dataType(), dv->data());
+}
+
+DataValue *DataManager::cloneData(DataType dataType, void *data)
+{
+    switch (dataType)
     {
-        switch (data->_dataType)
-        {
-        default:
-            std::cout << "No case to clone primitive:" << Type::toString(data->_dataType) << std::endl;
-            throw 9998;
-        }
+    case DataType::String:
+    {
+        std::string *arg = static_cast<std::string *>(data);
+        void *var = static_cast<void *>(new std::string(*arg));
+        DataValue *dv = createData(DataType::String, var);
+        return dv;
     }
-    else
+    case DataType::Int32:
     {
-        switch (data->_dataType)
-        {
-        default:
-            std::cout << "No case to clone class:" << Type::toString(data->_dataType) << std::endl;
-            throw 9999;
-        }
+        int *arg = static_cast<int *>(data);
+        void *var = static_cast<void *>(new int(*arg));
+        DataValue *dv = createData(DataType::Int32, var);
+        return dv;
+    }
+    case DataType::Int64:
+    {
+        long *arg = static_cast<long *>(data);
+        void *var = static_cast<void *>(new long(*arg));
+        DataValue *dv = createData(DataType::Int64, var);
+        return dv;
+    }
+    default:
+        std::cout << "Unhandled cloneData Type:" << Type::toString(dataType) << std::endl;
+        throw 9998;
     }
 }
 

@@ -385,15 +385,73 @@ void MethodCallStack::processCall_bindingInvoke(MethodCall *methodCall, string &
   if (!binding)
     throw 1263;
 
-  void **bindingArgs = nullptr;
+  void **bindingArgs = new void *[args.size() - 1];
   int bindingArgCount = 0;
   if (args.size() > 1)
   {
-    throw 1264;
+    for (int i = 1; i < args.size(); ++i)
+    {
+      int p = i - 1;
+      if (binding->argumentTypes.size() < p)
+        throw 1264;
+      switch (binding->argumentTypes[p]->dataType)
+      {
+      case DataType::String:
+      {
+        if (args[i].size() < 2 || args[i][0] != '"' || args[i][args[i].size() - 1] != '"')
+          throw 1265;
+
+        string *str = new string(args[i].substr(1, args[i].size() - 2));
+        DataValue *dv = dataManager->createData(DataType::String, static_cast<void *>(str));
+        methodCall->addBlockMemory(dv);
+
+        bindingArgs[p] = dv->data();
+        ++bindingArgCount;
+      }
+      break;
+      case DataType::Int32:
+      {
+        for (int j = 0; j < args[i].size(); ++j)
+          if (args[i][j] < '0' || args[i][j] > '9')
+            throw 1266;
+
+        int var = stoi(args[i]);
+        DataValue *dv = dataManager->cloneData(DataType::Int32, static_cast<void *>(&var));
+        methodCall->addBlockMemory(dv);
+
+        bindingArgs[p] = dv->data();
+        ++bindingArgCount;
+      }
+      break;
+      case DataType::Int64:
+      {
+        for (int j = 0; j < args[i].size(); ++j)
+          if (args[i][j] < '0' || args[i][j] > '9')
+          {
+            cout << "J:" << args[i][j] << endl;
+            throw 1267;
+          }
+
+        long var = stol(args[i]);
+        DataValue *dv = dataManager->cloneData(DataType::Int64, static_cast<void *>(&var));
+        methodCall->addBlockMemory(dv);
+
+        bindingArgs[p] = dv->data();
+        ++bindingArgCount;
+      }
+      break;
+      default:
+        throw 1268;
+      }
+    }
   }
 
   // Invoke
-  binding->method(bindingArgs, bindingArgCount);
+  void *result = binding->method(bindingArgs, bindingArgCount);
+  if (result)
+    throw 1269; // NotYetImplemented
+
+  delete (bindingArgs);
 
   // TODO return values
   //void *retValue = method(&bindingArgs[0], args.size() - 1);

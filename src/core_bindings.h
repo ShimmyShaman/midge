@@ -15,13 +15,13 @@ typedef void *(*methodPtr)(void **, int);
 
 struct Argument
 {
-    DataType type;
+    DataType dataType;
     string name;
     bool canDefault;
 
-    Argument(DataType pType, string pName, bool pCanDefault = false)
+    Argument(DataType pDataType, string pName, bool pCanDefault = false)
     {
-        type = pType;
+        dataType = pDataType;
         name = pName;
         pCanDefault = canDefault;
     }
@@ -30,7 +30,7 @@ struct Argument
 struct BoundMethodInfo
 {
     methodPtr method;
-    vector<Argument *> *argumentTypes;
+    vector<Argument *> argumentTypes;
 };
 
 struct SleepTimeSpec
@@ -55,7 +55,7 @@ protected:
     std::map<std::string, BoundMethodInfo *> bindings;
 
 public:
-    static void addMethodBinding(std::string identity, methodPtr method, vector<Argument *> *argumentTypes)
+    static void addMethodBinding(std::string identity, BoundMethodInfo *methodInfo)
     {
         if (getInstance().bindings.count(identity) > 0)
         {
@@ -63,11 +63,7 @@ public:
             throw 111;
         }
 
-        BoundMethodInfo *info = new BoundMethodInfo();
-        info->method = method;
-        info->argumentTypes = argumentTypes;
-
-        getInstance().bindings[identity] = info;
+        getInstance().bindings[identity] = methodInfo;
     }
 
     static BoundMethodInfo *getMethod(std::string identity)
@@ -85,7 +81,7 @@ protected:
     static void *printCrap(void **args, int argCount)
     {
         if (argCount != 1)
-            throw 112;
+            throw - 1;
 
         std::string crap = *static_cast<std::string *>(args[0]);
 
@@ -101,19 +97,29 @@ protected:
             return nullptr;
         }
 
-        throw 112;
+        timespec time;
+        time.tv_sec = 0;
+        if (argCount == 0)
+            time.tv_nsec = 1000000L; // 1 millisecond
+        else
+            time.tv_nsec = *static_cast<long *>(args[0]);
+        nanosleep(&time, NULL);
+
+        throw - 1;
     }
 
 public:
     static void bindFunctions()
     {
-        vector<Argument *> *args = new vector<Argument *>();
-        args->push_back(new Argument(DataType::String, "message"));
-        Bindings::addMethodBinding("printCrap", &printCrap, args);
+        BoundMethodInfo *method = new BoundMethodInfo();
+        method->method = &printCrap;
+        method->argumentTypes.push_back(new Argument(DataType::String, "message"));
+        Bindings::addMethodBinding("printCrap", method);
 
-        args = new vector<Argument *>();
-        args->push_back(new Argument(DataType::Long, "nanoseconds", true));
-        Bindings::addMethodBinding("nanosleep", &_nanosleep, args);
+        method = new BoundMethodInfo();
+        method->method = &_nanosleep;
+        method->argumentTypes.push_back(new Argument(DataType::Int64, "nanoseconds", true));
+        Bindings::addMethodBinding("nanosleep", method);
     }
 };
 
