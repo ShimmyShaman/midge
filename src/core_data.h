@@ -49,6 +49,35 @@ struct Type
     static std::string toString(DataType kind);
 };
 
+class DataValue
+{
+    friend class DataManager;
+
+private:
+    Type _dataType;
+    void *_data;
+
+    DataValue(Type pType, void *pData = nullptr)
+        : _dataType(pType), _data(pData) {}
+
+public:
+    Type dataType() { return _dataType; }
+    void *data() { return _data; }
+
+    int *int32()
+    {
+        if (_dataType.kind != DataType::Int32)
+            throw 221;
+        return static_cast<int *>(_data);
+    }
+};
+
+struct DataValueArray
+{
+    DataValue **data = nullptr;
+    int capacity = 0;
+};
+
 struct FieldInfo
 {
     Type type;
@@ -81,29 +110,6 @@ struct ClassDefinition
         //     delete (attributes[i]);
         // for (int i = 0; i < methods.size(); ++i)
         //     delete (methods[i]);
-    }
-};
-
-class DataValue
-{
-    friend class DataManager;
-
-private:
-    Type _dataType;
-    void *_data;
-
-    DataValue(Type pType, void *pData = nullptr)
-        : _dataType(pType), _data(pData) {}
-
-public:
-    Type dataType() { return _dataType; }
-    void *data() { return _data; }
-
-    int *int32()
-    {
-        if (_dataType.kind != DataType::Int32)
-            throw 221;
-        return static_cast<int *>(_data);
     }
 };
 

@@ -105,6 +105,12 @@ DataValue *DataManager::createClass(ClassDefinition *definition)
       attrData = static_cast<void *>(value);
     }
     break;
+    case DataType::Array:
+    {
+      DataValueArray *ary = new DataValueArray();
+      attrData = static_cast<void *>(ary);
+    }
+    break;
     default:
       std::cout << "DataManager::createClass() UnexpectedAttributeType:" << Type::toString(attrType) << std::endl;
       throw 1991;
