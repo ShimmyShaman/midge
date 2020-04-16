@@ -342,7 +342,7 @@ void MethodCallStack::processCall_assign(MethodCall *methodCall, string &stateme
       cout << "valueInstanceName:" << args[2] << " not found!" << endl;
       throw 2153;
     }
-    if ((*instancePtr)->dataType() != DataType::Class)
+    if ((*instancePtr)->dataType().kind != DataType::Class)
       throw 2154;
     InstancedClass *instance = static_cast<InstancedClass *>((*instancePtr)->data());
 
@@ -471,8 +471,13 @@ void MethodCallStack::processCall_createAttribute(MethodCall *methodCall, string
   if (it == classDefinitions->end())
     throw 2142;
 
-  DataType dataType = Type::parseKind(args[2]);
-  Type *attribute = new Type(dataType, args[1]);
+  Type type(Type::parseKind(args[2]));
+  if (type.kind == DataType::Unknown)
+  {
+    type.kind = DataType::Class;
+    type.name = args[2];
+  }
+  FieldInfo *attribute = new FieldInfo(type, args[1]);
 
   it->second->attributes.push_back(attribute);
 }
@@ -521,42 +526,9 @@ void MethodCallStack::processCall_initializeDefault(MethodCall *methodCall, stri
       cout << "processStatement() NonPrimitiveUnspecifiedType:" << args[0] << endl;
       throw 1202;
     }
-
     ClassDefinition *definition = it->second;
-    InstancedClass *obj = new InstancedClass();
-    obj->definition = definition;
-    for (int i = 0; i < definition->attributes.size(); ++i)
-    {
-      DataType attrType = definition->attributes[i]->kind;
-      void *attrData = nullptr;
-      switch (definition->attributes[i]->kind)
-      {
-      case DataType::Class:
-      {
-        attrData = static_cast<void *>(nullptr);
-      }
-      break;
-      case DataType::Int32:
-      {
-        int *value = new int();
-        attrData = static_cast<void *>(value);
-      }
-      break;
-      case DataType::String:
-      {
-        string *value = new string("");
-        attrData = static_cast<void *>(value);
-      }
-      break;
-      default:
-        cout << "processStatement() UnexpectedAttributeType:" << Type::toString(attrType) << endl;
-        throw 1203;
-        break;
-      }
-      obj->attributes[definition->attributes[i]->name] = dataManager->createData(definition->attributes[i]->kind,
-                                                                                 attrData);
-    }
-    dp = dataManager->createData(dataType, static_cast<void *>(obj));
+
+    dp = dataManager->createClass(definition);
   }
   else
   {
@@ -569,8 +541,8 @@ void MethodCallStack::processCall_initializeDefault(MethodCall *methodCall, stri
     }
     break;
     default:
-      cout << "processStatement() Unexpected Primitive Type:" << Type::toString(dp->dataType()) << endl;
-      throw 1204;
+      cout << "processStatement() Unexpected Primitive Type:" << dp->dataType().toString() << endl;
+      throw 1205;
       break;
     }
   }
@@ -583,7 +555,7 @@ void MethodCallStack::processCall_initializeDefault(MethodCall *methodCall, stri
   }
 
   if (args[2][0] != '%')
-    throw 1205; // FormatException
+    throw 1206; // FormatException
 
   switch (args[2][1])
   {
@@ -595,9 +567,9 @@ void MethodCallStack::processCall_initializeDefault(MethodCall *methodCall, stri
   case 'm':     // method scope
   case 't':     // method static
   case 'b':     // current block
-    throw 1206; // NotYetImplemented
+    throw 1207; // NotYetImplemented
   default:
-    throw 1207;
+    throw 1208;
   }
 }
 
@@ -655,7 +627,7 @@ void MethodCallStack::processCall_print(MethodCall *methodCall, string &statemen
     DataValue **valueInstance = methodCall->getPointerToValue(args[0]);
     if (!valueInstance)
       throw 1322; // Can't find it
-    switch ((*valueInstance)->dataType())
+    switch ((*valueInstance)->dataType().kind)
     {
     case DataType::Int32:
       cout << *(*valueInstance)->int32();
@@ -670,7 +642,7 @@ void MethodCallStack::processCall_print(MethodCall *methodCall, string &statemen
     }
     break;
     default:
-      cout << Type::toString((*valueInstance)->dataType());
+      cout << (*valueInstance)->dataType().toString();
       break;
     }
   }
@@ -1052,7 +1024,8 @@ int MidgeApp::run()
 
 MidgeApp::MidgeApp()
 {
-  initialize(new DataManager(), new map<string, DataValue *>(), new map<string, ClassDefinition *>());
+  map<string, ClassDefinition *> *cd = new map<string, ClassDefinition *>();
+  initialize(new DataManager(cd), new map<string, DataValue *>(), cd);
 }
 
 MidgeApp::~MidgeApp()

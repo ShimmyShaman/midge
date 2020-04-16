@@ -54,7 +54,7 @@ assign($1,$2)
 :>conditional
 
 
-threading
+errorCodes
 branching
 conditional on instance member
 pointers
@@ -64,10 +64,19 @@ create bound types
 
 :>initializePointer(dataType,pointerName)
     ~ <Cpx *> c;
+	~ Smart Pointers (instanced value deleted with 0 pointers left)
 :>initializeDefault(dataType,instanceName,scope=LocalBlock)
     ~ Cpx c;
 :>initalize(dataType,instanceName,valueInstanceName,scope=LocalBlock)
     ~ int c = a
+:>operation(instanceName,op,left=null,right=null)
+	~ c++
+	~ a = 2 * 4
+:>if(left,comparator=null,right=null)
+	> followed by [singleStatement OR block]
+	> followed by *else [condition OR block]...
+:>arraySet(arrayInstanceName,index,value)
+:>arrayResize(items,amount)
 :>assign(instanceName,valueInstanceNameOrLiteralValue)
     ~ c = a
 :>assign(instanceName,valueMemberName,valueInstanceName)

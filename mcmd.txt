@@ -1,14 +1,15 @@
 createClass(List)
-createAttribute(List,items,Array)
+createAttribute(List,items,array)
 createAttribute(List,count,int)
 addClassMethod(List,add,void,pointer,item)
 addClassMethodCode(List,add,{
   operation($1,+,count,1)
-  if(items.length,<=,$1,{
+  if(items.length,<=,$1)
+  {
     operation($1,+,4,count)
     operation($1,+,count,$1)
     arrayResize(items,$1)
-  })
+  }
   arraySet(items,count,item)
   operation(count,++)
 })
