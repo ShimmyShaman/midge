@@ -33,10 +33,24 @@ struct BoundMethodInfo
     vector<Argument *> argumentTypes;
 };
 
+struct BoundClassInfo
+{
+    BoundMethodInfo *construct;
+    vector<BoundMethodInfo *> methods;
+};
+
 struct SleepTimeSpec
 {
     long seconds;
     long nanoseconds;
+};
+
+class BoundClass
+{
+    int a;
+
+public:
+    static BoundClass *create() { return new BoundClass(); }
 };
 
 class Bindings

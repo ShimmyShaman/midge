@@ -1,4 +1,9 @@
-createClass(List)
+createClass(Object)
+{
+  initializeDefault()
+}
+
+/*createClass(List)
 createAttribute(List,items,array)
 createAttribute(List,count,int)
 addClassMethod(List,add,void,pointer,item)
@@ -30,6 +35,7 @@ initializeDefault(VisualNode,rootNode,%global)
   print($1)
   printLine(" (should be 1)")
 }
+*/
 /*
 addClassMethod(Node,init)
 addClassMethodCode(Node,init,{return "rootNode"})
