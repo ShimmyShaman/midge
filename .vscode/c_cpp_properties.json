@@ -4,7 +4,12 @@
             "name": "Linux",
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
-            "includePath": ["/home/daniel/midge/src"],
+            "includePath": [
+                "/home/daniel/midge/src",
+                "/home/daniel/cling/src/tools/cling/include",
+                "/home/daniel/cling/obj/include",
+                "/home/daniel/cling/src/include"
+            ],
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "clang-x64"
