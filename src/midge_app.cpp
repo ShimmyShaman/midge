@@ -8,6 +8,11 @@
 #include "midge_app.h"
 #include "core_bindings.h"
 
+#include "cling/Interpreter/Interpreter.h"
+#include "cling/Interpreter/Transaction.h"
+#include "cling/Interpreter/Value.h"
+#include "cling/Utils/Casting.h"
+
 using namespace std;
 
 std::map<std::string, Thread *> MethodCallStack::threads;
@@ -940,12 +945,85 @@ void MethodCallStack::initialize(DataManager *pDataManager, std::map<std::string
 MethodCallStack::MethodCallStack()
 {
 }
-
-int MidgeApp::run()
+#include <unistd.h>
+int MidgeApp::run(int argc, const char *const *argv)
 {
   try
   {
-    MethodInfo *method = loadMethodFromFile("./mcmd.txt", "entryMethod");
+    // Create the Interpreter. LLVMDIR is provided as -D during compilation.
+    const char *LLVMDIR = "/home/daniel/cling/obj";
+    cling::Interpreter interp(argc, argv, LLVMDIR);
+
+    // char buffer[200];
+    // getcwd(buffer, 200);
+    // cout << "cwd:" << std::string(buffer) << endl;
+
+    interp.process("#include <iostream>");
+
+    interp.process("class Node {"
+                   "public:"
+                   "  Node *parent;"
+                   "  Node() {"
+                   "    parent = nullptr;"
+                   "    std::cout << \"Node()\" << std::endl;"
+                   "  }"
+                   "  ~Node() {"
+                   "    std::cout << \"~Node()\" << std::endl;"
+                   "  }"
+                   "};");
+    const cling::Transaction *nodeDeclTransaction = interp.getLatestTransaction();
+
+    interp.process("Node *rootNode = new Node();");
+
+    void *rootNode = interp.getAddressOfGlobal("rootNode");
+    cout << "rootNodeGetAddress=" << rootNode << endl;
+
+    cout << "nodeDeclTransaction=" << nodeDeclTransaction->getUniqueID() << endl;
+    cout << "latestTransaction=" << interp.getLatestTransaction()->getUniqueID() << endl;
+
+    interp.unload(1 + interp.getLatestTransaction()->getUniqueID() - nodeDeclTransaction->getUniqueID());
+
+    rootNode = interp.getAddressOfGlobal("rootNode");
+    cout << "rootNodeGetAddress=" << rootNode << endl;
+
+    cout << "latestTransaction=" << interp.getLatestTransaction()->getUniqueID() << endl;
+
+    interp.process("#include <string>");
+    interp.process("class Node {"
+                   "public:"
+                   "  Node *parent;"
+                   "  std::string name;"
+                   "  Node(std::string pName) {"
+                   "    name = pName;"
+                   "    std::cout << \"Node()\" << std::endl;"
+                   "  }"
+                   "  ~Node() {"
+                   "    std::cout << \"~Node()\" << std::endl;"
+                   "  }"
+                   "};");
+
+    interp.process("Node *rootNode = new Node(\"global\");");
+
+    rootNode = interp.getAddressOfGlobal("rootNode");
+    cout << "rootNodeGetAddress=" << rootNode << endl;
+
+    // interp.unload()
+
+    // interp.AddIncludePath("src/glfw/glfw_bindings.h");
+    // interp.process("#include <iostream>");
+    // interp.process("#include <unistd.h>");
+    // interp.process("chdir(\"/home/daniel/midge/src\");");
+    // interp.process("char buffer[200];");
+    // interp.process("getcwd(buffer, 200);");
+    // interp.process("std::cout << \"cwd:\" << std::string(buffer) << std::endl;");
+    // interp.AddIncludePath("/home/daniel/midge/src");
+    // interp.process("#include \"glfw/glfw_bindings.h\"");
+    // // interp.declare("class GLFWBindings;");
+    // // interp.declare("void *GLFWBindings::runTriangle(void **args, int argCount);");
+    // interp.process("GLFWBindings::runTriangle(nullptr, 0);");
+    return 0;
+
+    /*MethodInfo *method = loadMethodFromFile("./mcmd.txt", "entryMethod");
 
     MethodCall *methodCall = incrementCallStack(method, nullptr);
     processMethod(methodCall);
@@ -957,7 +1035,7 @@ int MidgeApp::run()
       int returnValue = *result->int32();
       delete (result);
       return returnValue;
-    }
+    }*/
 
     if (threads.size())
     {

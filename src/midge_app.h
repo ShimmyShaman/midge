@@ -71,7 +71,7 @@ public:
 class MidgeApp : public MethodCallStack
 {
 public:
-    int run();
+    int run(int argc, const char *const *argv);
 
     MidgeApp();
     ~MidgeApp();

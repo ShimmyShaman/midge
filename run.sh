@@ -15,6 +15,7 @@ g++ -g -o ./bin/midge                                           \
     -I./src                                                     \
     -I/home/daniel/cling/src/include                            \
     -I/home/daniel/cling/src/tools/cling/include                \
+    -I/home/daniel/cling/src/tools/clang/include                \
     -I/home/daniel/cling/obj/include                            \
     /home/daniel/cling/obj/lib/libcling.so                      \
     /home/daniel/cling/obj/lib/libcling.so.5                    \
