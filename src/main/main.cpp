@@ -31,10 +31,10 @@ int main(int argc, const char *const *argv)
     interp->AddIncludePath("/home/daniel/cling/src/tools/clang/include");
     interp->AddIncludePath("/home/daniel/cling/obj/include");
 
-    interp->declare("cling::Interpreter *clint;");
+    //interp->declare("cling::Interpreter *clint;");
+    interp->loadFile("midge.h");
     interp->process("clint = (cling::Interpreter *)" + std::to_string((long)interp) + ";");
 
-    interp->loadFile("midge.h");
     interp->process("run()");
 
     delete (interp);
