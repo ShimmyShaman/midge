@@ -7,20 +7,33 @@
 
 echo
 echo Compiling
+#g++ -Iglfw/glad/glad.h glfw/glad/glad.cpp -fPIC -o ./bin/glad.o
+
+# export PKG_CONFIG_PATH='/usr/local/lib64/pkgconfig/'
+# g++ -g -o ./bin/midge                                           \
+#     `pkg-config --cflags glfw3`                                 \
+#     -lGL -lX11 -lpthread -lXrandr -lXi -ldl                     \
+#     -I./src                                                     \
+#     -I/home/daniel/cling/src/include                            \
+#     -I/home/daniel/cling/src/tools/cling/include                \
+#     -I/home/daniel/cling/src/tools/clang/include                \
+#     -I/home/daniel/cling/obj/include                            \
+#     /home/daniel/cling/obj/lib/libcling.so                      \
+#     /home/daniel/cling/obj/lib/libcling.so.5                    \
+#     /home/daniel/cling/obj/lib/libLLVMSupport.a                 \
+#     $(find . -type f -iregex ".*\.cpp")                         \
+#     `pkg-config --static --libs glfw3`
+
 export LD_LIBRARY_PATH='/home/daniel/cling/obj/lib'
-export PKG_CONFIG_PATH='/usr/local/lib64/pkgconfig/'
-g++ -g -o ./bin/midge                                           \
-    `pkg-config --cflags glfw3`                                 \
-    -lGL -lX11 -lpthread -lXrandr -lXi -ldl                     \
-    -I./src                                                     \
-    -I/home/daniel/cling/src/include                            \
-    -I/home/daniel/cling/src/tools/cling/include                \
-    -I/home/daniel/cling/src/tools/clang/include                \
-    -I/home/daniel/cling/obj/include                            \
-    /home/daniel/cling/obj/lib/libcling.so                      \
-    /home/daniel/cling/obj/lib/libcling.so.5                    \
-    $(find . -type f -iregex ".*\.cpp")                         \
-    `pkg-config --static --libs glfw3`
+g++ -fPIC src/main/main.cpp                                \
+    -I/home/daniel/cling/src/include                  \
+    -I/home/daniel/cling/src/tools/cling/include      \
+    -I/home/daniel/cling/src/tools/clang/include      \
+    -I/home/daniel/cling/obj/include                  \
+    /home/daniel/cling/obj/lib/libcling.so            \
+    -o bin/midge
+    # /home/daniel/cling/obj/lib/libcling.so.5          \
+    # /home/daniel/cling/obj/lib/libLLVMSupport.a       \
 
 retval=$?
 if [ $retval -ne 0 ]; then
