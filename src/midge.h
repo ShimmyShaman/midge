@@ -15,7 +15,7 @@
 
 #include "opengl/gl_loop.h"
 
-extern "C" static cling::Interpreter *clint;
+static cling::Interpreter *clint;
 
 // std::vector<cling::Transaction *> transactions;
 // std::map<std::string, cling::Transaction *> definedTypes;
@@ -57,8 +57,6 @@ extern "C" static cling::Interpreter *clint;
 
 extern "C" void run()
 {
-clint->process("3 + 8");
-
   // Initialize data structures
   /*defineType("Node", "struct Node {"
                      "  Node *parent = nullptr;"
@@ -68,12 +66,19 @@ clint->process("3 + 8");
 
   // std::cout << "midge welcomes you" << std::endl;
 
-  // cling::Interpreter::CompilationResult result;
-  // result = clint->loadLibrary("glfw3");
-  // std::cout << "glfw3:" << result << std::endl;
-  // result = clint->loadLibrary("dep/glad.o");
-  // std::cout << "dep/glad.o:" << result << std::endl;
-  // runTriangle(nullptr, 0);
+  // clint->process("runTrian");
+
+  try
+  {
+    // glfwCreateWindow(400, 300, "hone", nullptr, nullptr);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << e.what() << '\n';
+  }
+
+  //runTriangle(nullptr, 0);
+  clint->process("runTriangle(nullptr, 0)");
 
   // Initiate GL Loop
   //interp->process("#include \"glfw/glfw_bindings.h\"");

@@ -35,7 +35,9 @@ static void *runTriangle(void **args, int argCount)
     // glfw window creation
     // --------------------
     const char *title = windowName.c_str();
+    std::cout << title << std::endl;
     *window = glfwCreateWindow(screenWidth, screenHeight, title, NULL, NULL);
+    std::cout << "here3" << std::endl;
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -43,6 +45,7 @@ static void *runTriangle(void **args, int argCount)
         *result = -1;
         return static_cast<void *>(result);
     }
+    std::cout << "here" << std::endl;
 
     glfwMakeContextCurrent(*window);
     glfwSetFramebufferSizeCallback(*window, framebuffer_size_callback);
