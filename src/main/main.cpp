@@ -19,7 +19,30 @@ cling::Interpreter *clint;
 #include "opengl/gl_loop.h"
 int main(int argc, const char *const *argv)
 {
-    runTriangle(nullptr, 0);
+    GLFWwindow **window;
+
+    // glfw: initialize and configure
+    // ------------------------------
+    if (!glfwInit())
+    {
+        std::cout << "glfwInit() failed!" << std::endl;
+        exit(-1);
+    }
+    std::cout << "passed init" << std::endl;
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    glfwSetErrorCallback(error_callback);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
+#endif
+
+    // glfw window creation
+    // --------------------
+    *window = glfwCreateWindow(800, 540, "titleWords", NULL, NULL);
+    std::cout << "passed createWindow()" << std::endl;
+    // runTriangle(nullptr, 0);
 
     /*char buffer[200];
     getcwd(buffer, 200);

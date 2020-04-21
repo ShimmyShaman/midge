@@ -23,18 +23,21 @@ echo Compiling
 #     /home/daniel/cling/obj/lib/libLLVMSupport.a                 \
 #     $(find . -type f -iregex ".*\.cpp")                         \
 #     `pkg-config --static --libs glfw3`
-export LD_LIBRARY_PATH='/home/daniel/cling/obj/lib'
+export LD_LIBRARY_PATH='/home/daniel/cling/obj/lib;/usr/local/lib64'
+export PKG_CONFIG_PATH='/usr/local/lib64/pkgconfig/'
 g++ -fPIC src/main/main.cpp                           \
-    src/opengl/glad/glad.cpp \
+    src/opengl/glad/glad.cpp                          \
     -I./src                                           \
-    -I./src/opengl/glad.h \
-    -lglfw3 -lGL -lX11 -lpthread -lXrandr -lXi -ldl    \
+    -I./src/opengl/glad.h                             \
+    -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl   \
     -I/home/daniel/cling/src/include                  \
     -I/home/daniel/cling/src/tools/cling/include      \
     -I/home/daniel/cling/src/tools/clang/include      \
     -I/home/daniel/cling/obj/include                  \
     /home/daniel/cling/obj/lib/libcling.so            \
-    -o bin/midge
+    -o bin/midge               
+    #`pkg-config --cflags glfw3` \                   
+    #`pkg-config --libs glfw3`
     # ./dep/glad.o \
 
 # export LD_LIBRARY_PATH='/home/daniel/cling/obj/lib;/home/daniel/midge/dep'

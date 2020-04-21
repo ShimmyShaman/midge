@@ -12,6 +12,10 @@
 
 static void processInput(GLFWwindow *window);
 static void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void error_callback(int error, const char *description)
+{
+    fprintf(stderr, "Error %d: %s\n", error, description);
+}
 
 static void *runTriangle(void **args, int argCount)
 {
@@ -27,6 +31,8 @@ static void *runTriangle(void **args, int argCount)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    glfwSetErrorCallback(error_callback);
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
