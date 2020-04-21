@@ -25,7 +25,7 @@ echo Compiling
 #     `pkg-config --static --libs glfw3`
 export LD_LIBRARY_PATH='/home/daniel/cling/obj/lib;/usr/local/lib64'
 export PKG_CONFIG_PATH='/usr/local/lib64/pkgconfig/'
-g++ -fPIC src/main/main.cpp                           \
+g++ -g -fPIC src/main/main.cpp                           \
     src/opengl/glad/glad.cpp                          \
     -I./src                                           \
     -I./src/opengl/glad.h                             \

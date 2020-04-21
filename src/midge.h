@@ -13,8 +13,6 @@
 #include "cling/Interpreter/Interpreter.h"
 #include "cling/Interpreter/Transaction.h"
 
-#include "opengl/gl_loop.h"
-
 static cling::Interpreter *clint;
 
 // std::vector<cling::Transaction *> transactions;
@@ -66,21 +64,12 @@ extern "C" void run()
 
   // std::cout << "midge welcomes you" << std::endl;
 
-  // clint->process("runTrian");
-
   try
   {
-    // glfwCreateWindow(400, 300, "hone", nullptr, nullptr);
   }
   catch (const std::exception &e)
   {
     std::cerr << e.what() << '\n';
   }
-
-  //runTriangle(nullptr, 0);
-  clint->process("runTriangle(nullptr, 0)");
-
-  // Initiate GL Loop
-  //interp->process("#include \"glfw/glfw_bindings.h\"");
 }
 #endif // MIDGE_H

@@ -1,1 +1,0 @@
-g++ -fPIC -Isrc/opengl/glad/ src/opengl/glad/glad.cpp -shared -o dep/glad.o
