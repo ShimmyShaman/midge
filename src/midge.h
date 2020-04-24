@@ -73,7 +73,12 @@ void run()
     // Libraries
     clint->loadLibrary("vulkan");
 
-    beginRenderThread();
+    ThreadInfo *renderThread = 0;
+    beginRenderThread(&renderThread);
+
+    usleep(2800000);
+
+    endRenderThread(renderThread);
   }
   catch (const std::exception &e)
   {
