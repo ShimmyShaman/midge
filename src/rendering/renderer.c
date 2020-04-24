@@ -1,3 +1,4 @@
+/* renderer.c */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,7 +7,7 @@
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
-void *myThreadFun(void *vargp)
+void *renderThread(void *vargp)
 {
     sleep(1);
     printf("Printing GeeksQuiz from Thread \n");
@@ -17,7 +18,7 @@ int beginRenderThread()
 {
     pthread_t thread_id;
     printf("Before Thread\n");
-    pthread_create(&thread_id, NULL, myThreadFun, NULL);
+    pthread_create(&thread_id, NULL, renderThread, NULL);
     pthread_join(thread_id, NULL);
     printf("After Thread\n");
     exit(0);
