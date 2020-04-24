@@ -53,8 +53,6 @@ static cling::Interpreter *clint;
 //   }
 // }
 
-extern "C" int createDevice();
-
 extern "C" void run()
 {
   // Initialize data structures
@@ -71,7 +69,7 @@ extern "C" void run()
   {
     clint->loadLibrary("vulkan");
 
-    clint->loadFile("vulkanexp.c");
+    clint->loadFile("vulkanExp.c");
     
     clint->process("createDevice();");
   }
