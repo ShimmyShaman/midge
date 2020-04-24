@@ -34,7 +34,6 @@ g++ src/main/main.cpp                             \
 -I/home/jason/cling/inst/include                  \
 /home/jason/cling/obj/lib/libcling.so             \
 -o bin/midge
-rm a.out
 
 # # export LD_LIBRARY_PATH='/home/daniel/cling/obj/lib;/home/daniel/midge/dep'
 # # g++ -fPIC src/main/main.cpp                           \

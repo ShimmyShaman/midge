@@ -53,6 +53,8 @@ static cling::Interpreter *clint;
 //   }
 // }
 
+extern "C" int createDevice();
+
 extern "C" void run()
 {
   // Initialize data structures
@@ -62,10 +64,16 @@ extern "C" void run()
 
   interp->process("Node global");*/
 
-  // std::cout << "midge welcomes you" << std::endl;
+  //std::cout << "~~midge welcomes you~~" << std::endl;
+  //std::cout << "~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
 
   try
   {
+    clint->loadLibrary("vulkan");
+
+    clint->loadFile("vulkanexp.c");
+    
+    clint->process("createDevice();");
   }
   catch (const std::exception &e)
   {

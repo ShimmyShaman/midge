@@ -3,8 +3,8 @@
 
 #include <vulkan/vulkan.h>
 
-int main(int argc, char *argv[]) {
-
+int createDevice()
+{
     VkInstanceCreateInfo vk_info;
     VkInstance inst = 0;
     VkResult res;
@@ -25,9 +25,10 @@ int main(int argc, char *argv[]) {
 
     res = vkCreateInstance(&vk_info, NULL, &inst);
 
-    if (res != VK_SUCCESS) {
+    if (res != VK_SUCCESS)
+    {
         // Error!
-        printf("Error %d\n", res);        
+        printf("Error %d\n", res);
         return 1;
     };
 
