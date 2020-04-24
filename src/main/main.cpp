@@ -23,14 +23,19 @@ int main(int argc, const char *const *argv)
     getcwd(buffer, 200);
     cout << "cwd:" << std::string(buffer) << endl;
 
-    const char *LLVMDIR = "/home/daniel/cling/obj";
+    const char *LLVMDIR = "/home/jason/cling/inst";
+    cout << "string" << endl;
     clint = new cling::Interpreter(argc, argv, LLVMDIR);
 
-    clint->AddIncludePath("/home/daniel/midge/src");
-    clint->AddIncludePath("/home/daniel/cling/src/include");
-    clint->AddIncludePath("/home/daniel/cling/src/tools/cling/include");
-    clint->AddIncludePath("/home/daniel/cling/src/tools/clang/include");
-    clint->AddIncludePath("/home/daniel/cling/obj/include");
+    cout << "rope" << endl;
+    clint->process("838 + 181");
+    return 1;
+
+    clint->AddIncludePath("/home/jason/midge/src");
+    // clint->AddIncludePath("/home/jason/cling/src/include");
+    // clint->AddIncludePath("/home/jason/cling/src/tools/cling/include");
+    // clint->AddIncludePath("/home/jason/cling/src/tools/clang/include");
+    clint->AddIncludePath("/home/jason/cling/inst/include");
 
     // cling::Interpreter::CompilationResult result;
     // clint->AddIncludePath("/usr/local/include/");
@@ -40,8 +45,8 @@ int main(int argc, const char *const *argv)
     // result = clint->loadLibrary(clint->lookupFileOrLibrary("glfw"));
     // //result = clint->loadLibrary("libglfw3.a");
     // std::cout << "glfw3:" << result << std::endl;
-    // // clint->AddIncludePath("/home/daniel/midge/dep/");
-    // result = clint->loadLibrary("/home/daniel/midge/dep/glad.o");
+    // // clint->AddIncludePath("/home/jason/midge/dep/");
+    // result = clint->loadLibrary("/home/jason/midge/dep/glad.o");
     // std::cout << "dep/glad.o:" << result << std::endl;
     // result = clint->loadLibrary("X11");
     // std::cout << "X11:" << result << std::endl;

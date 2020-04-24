@@ -3,24 +3,15 @@
     // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
-        /*{
-            "type": "shell",
-            "label": "compile.sh",
-            "command": "/home/gdp/midge/compile_godot.sh",
-            "args": [],
-            "options": {},
-            "problemMatcher": [],
-            "group": "build"
-        },*/
         {
             "type": "shell",
             "label": "run.sh",
-            "command": "/home/daniel/midge/run.sh",
+            "command": "/home/jason/midge/run.sh",
             "args": [],
             "options": {},
             "problemMatcher": [],
             "group": {
-                "kind": "test",
+                "kind": "build",
                 "isDefault": true
             }
         }

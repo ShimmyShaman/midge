@@ -5,11 +5,9 @@
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "includePath": [
-                "/home/daniel/midge/src",
-                "/home/daniel/cling/src/tools/cling/include",
-                "/home/daniel/cling/src/tools/clang/include",
-                "/home/daniel/cling/obj/include",
-                "/home/daniel/cling/src/include"
+                "/home/jason/midge/src",
+                "/home/jason/cling/inst/include",
+                "/usr/include"
             ],
             "cStandard": "c11",
             "cppStandard": "c++17",
