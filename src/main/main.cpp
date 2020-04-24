@@ -21,8 +21,6 @@ int main(int argc, const char *const *argv)
 {
     char buffer[200];
     getcwd(buffer, 200);
-    //cout << "cwd:" << std::string(buffer) << endl;
-
     const char *LLVMDIR = "/home/jason/cling/inst";
     clint = new cling::Interpreter(argc, argv, LLVMDIR);
 
