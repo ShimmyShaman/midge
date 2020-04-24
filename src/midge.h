@@ -73,10 +73,8 @@ void run()
     // Libraries
     clint->loadLibrary("vulkan");
 
-    ThreadInfo *renderThread = 0;
+    mthread_info *renderThread = 0;
     beginRenderThread(&renderThread);
-
-    usleep(2800000);
 
     endRenderThread(renderThread);
   }

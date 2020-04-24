@@ -59,6 +59,8 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "bitset": "cpp",
-        "*.gen": "cpp"
+        "*.gen": "cpp",
+        "xproto.h": "c",
+        "shared_mutex": "c"
     }
 }

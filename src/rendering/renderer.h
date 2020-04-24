@@ -5,16 +5,22 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h> //Header file for sleep(). man 3 sleep for details.
+#include <unistd.h>
 #include <stdbool.h>
 #include <pthread.h>
+
+#include <vulkan/vulkan.h>
 
 typedef struct {
     pthread_t threadId;
     bool shouldExit, hasConcluded;
-} ThreadInfo;
+} mthread_info;
 
-int beginRenderThread(ThreadInfo **pThreadInfo);
-int endRenderThread(ThreadInfo *pThreadInfo);
+typedef struct {
 
-#endif
+} mrender_info;
+
+int beginRenderThread(mthread_info **pThreadInfo);
+int endRenderThread(mthread_info *pThreadInfo);
+
+#endif // RENDERER_H
