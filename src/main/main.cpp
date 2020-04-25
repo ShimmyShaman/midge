@@ -32,5 +32,9 @@ int main(int argc, const char *const *argv)
 
   clint->process("run()");
 
+  // clint->loadLibrary("vulkan");
+  // clint->loadFile("/home/jason/midge/src/vulkanExp.c");
+  // clint->process("createDevice()");
+
   delete (clint);
 }

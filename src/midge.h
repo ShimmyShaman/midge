@@ -142,7 +142,7 @@ void run()
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
     printf("</AppSourceLoading>\n\n");
 
-    clint->declare("void updateUI() { int ms = 0; while(ms < 8000) { ++ms; usleep(1000); } }");
+    clint->declare("void updateUI() { int ms = 0; while(ms < 4000) { ++ms; usleep(1000); } }");
 
     // Run App
     clint->process("mthread_info rthr;");
