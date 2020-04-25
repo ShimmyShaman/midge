@@ -4,6 +4,7 @@
 #define XCB_WINDOW_H
 
 #include <xcb/xproto.h>
+#include <vulkan/vulkan.h>
 
 // typedef xcb_connection_t xcb_connection_t;
 // typedef xcb_screen_t xcb_screen_t;
@@ -17,9 +18,13 @@ typedef struct {
 	xcb_intern_atom_reply_t *xcb_atom_window_reply;
 } mxcb_window_info;
 
-int initOSWindow(mxcb_window_info **mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
+extern "C" int initOSWindow(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
 void initOSSurface(mxcb_window_info *mcxbWindowInfo, VkInstance vulkanInstance, VkSurfaceKHR *surface);
 
+int updateOSWindow(mxcb_window_info *mcxbWindowInfo);
+
+void deInitOSWindow(mxcb_window_info *mcxbWindowInfo);
+void deInitOSSurface(VkInstance vulkanInstance, VkSurfaceKHR *surface);
 
 // /* -----------------------------------------------------
 // This source code is public domain ( CC0 )

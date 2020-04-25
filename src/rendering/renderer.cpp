@@ -2,8 +2,16 @@
 
 #include <vector>
 
+#include <vulkan/vulkan_xcb.h>
+
 #include "renderer.h"
 #include "xcbwindow.h"
+
+int initVulkan(vk_render_state *p_vkstate);
+int initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions,
+                       VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo, VkInstance *vulkanInstance);
+int initDevice(vk_render_state *p_vkstate);
+void deInitVulkan(vk_render_state *p_vkstate);
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
@@ -11,36 +19,40 @@ void *renderThread(void *vargp)
 {
   mthread_info *thr = (mthread_info *)vargp;
 
-  mrender_info rnd;
+  vk_render_state vkrs;
 
   // Platform
   // initPlatform();
 
   // Renderer
-  initVulkan();
+  initVulkan(&vkrs);
 
   // Window
-  initOSWindow();
-  initOSSurface();
+  mxcb_window_info wnd;
+  // initOSWindow(&wnd, 800, 480);
+  // initOSSurface(&wnd, vkrs.instance, &vkrs.surface);
 
-  _UpdateOSWindow();
+  // while (!thr->shouldExit)
+  // {
+  //   usleep(1);
+  //   updateOSWindow(&wnd);
+  // }
 
-  while (!thr->shouldExit)
-    usleep(1);
+  // deInitOSSurface(vkrs.instance, &vkrs.surface);
+  // deInitOSWindow(&wnd);
+
+  deInitVulkan(&vkrs);
 
   thr->hasConcluded = 1;
   return 0;
 }
 
-int beginRenderThread(mthread_info **pThreadInfo)
+int beginRenderThread(mthread_info *pThreadInfo)
 {
-  if ((*pThreadInfo = (mthread_info *)malloc(sizeof *pThreadInfo)) != NULL)
+  pThreadInfo->shouldExit = 0;
+  pThreadInfo->hasConcluded = 0;
+  if (pthread_create(&pThreadInfo->threadId, NULL, renderThread, (void *)pThreadInfo))
   {
-    (*pThreadInfo)->shouldExit = 0;
-    (*pThreadInfo)->hasConcluded = 0;
-
-    pthread_create(&(*pThreadInfo)->threadId, NULL, renderThread, (void *)*pThreadInfo);
-
     return 0;
   }
   return -1;
@@ -50,24 +62,23 @@ int endRenderThread(mthread_info *pThreadInfo)
 {
   pThreadInfo->shouldExit = 1;
 
-  const int MAX_ITERATIONS = 500000;
+  const int MAX_ITERATIONS = 1000;
   int iterations = 0;
   while (!pThreadInfo->hasConcluded)
   {
-    usleep(1);
+    usleep(1000);
     ++iterations;
     if (iterations >= MAX_ITERATIONS)
     {
-      printf("TODO -- Thread-Handling for unresponsive thread:: renderer.c");
+      printf("TODO -- Thread-Handling for unresponsive thread:: renderer.c\n");
       return -1;
     }
   }
 
-  free(pThreadInfo);
   return 0;
 }
 
-int initVulkan()
+int initVulkan(vk_render_state *p_vkstate)
 {
   // Set up layers ...?
   std::vector<const char *> instanceLayers;
@@ -82,14 +93,16 @@ int initVulkan()
   VkDebugReportCallbackCreateInfoEXT debugCallbackCreateInfo;
   // setupDebug(&debugReport, &debugCallbackCreateInfo, &instanceLayers, &instanceExtensions);
 
-  VkInstance *vkInstance;
-  initVulkanInstance(&instanceLayers, &instanceExtensions, &debugCallbackCreateInfo, &vkInstance);
+  int err = initVulkanInstance(&instanceLayers, &instanceExtensions, &debugCallbackCreateInfo, &p_vkstate->instance);
+  if (!err)
+    return err;
+
   // initDebug();
-  initDevice();
+  return initDevice(p_vkstate);
 }
 
-void initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions,
-                        VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo, VkInstance **vulkanInstance)
+int initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions,
+                       VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo, VkInstance *vulkanInstance)
 {
   VkApplicationInfo application_info;
   application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -106,17 +119,15 @@ void initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<c
   instance_create_info.ppEnabledExtensionNames = instanceExtensions->data();
   instance_create_info.pNext = debugCallbackCreateInfo;
 
-  if (vkCreateInstance(&instance_create_info, nullptr, *vulkanInstance) != VK_SUCCESS)
+  if (vkCreateInstance(&instance_create_info, nullptr, vulkanInstance) != VK_SUCCESS)
   {
-    throw 114;
+    return -1;
   }
+  return 0;
 }
 
-void initDevice(vk_render_state *p_vkstate)
+int initDevice(vk_render_state *p_vkstate)
 {
-  VkPhysicalDevice gpu;
-  VkPhysicalDeviceProperties gpu_properties;
-  uint32_t graphics_family_index;
   std::vector<const char *> device_extensions; // TODO -- does this get filled with values anywhere?
 
   {
@@ -124,14 +135,14 @@ void initDevice(vk_render_state *p_vkstate)
     vkEnumeratePhysicalDevices(p_vkstate->instance, &gpu_count, nullptr);
     std::vector<VkPhysicalDevice> gpu_list(gpu_count);
     vkEnumeratePhysicalDevices(p_vkstate->instance, &gpu_count, gpu_list.data());
-    gpu = gpu_list[0];
-    vkGetPhysicalDeviceProperties(gpu, &gpu_properties);
+    p_vkstate->gpu = gpu_list[0];
+    vkGetPhysicalDeviceProperties(p_vkstate->gpu, &p_vkstate->gpu_properties);
   }
   {
     uint32_t family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(gpu, &family_count, nullptr);
+    vkGetPhysicalDeviceQueueFamilyProperties(p_vkstate->gpu, &family_count, nullptr);
     std::vector<VkQueueFamilyProperties> family_property_list(family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(gpu, &family_count, family_property_list.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(p_vkstate->gpu, &family_count, family_property_list.data());
 
     bool found = false;
     for (uint32_t i = 0; i < family_count; ++i)
@@ -139,20 +150,20 @@ void initDevice(vk_render_state *p_vkstate)
       if (family_property_list[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
       {
         found = true;
-        graphics_family_index = i;
+        p_vkstate->graphics_family_index = i;
       }
     }
     if (!found)
     {
       // assert(0 && "Vulkan ERROR: Queue family supporting graphics not found.");
-      std::exit(-1);
+      return -1;
     }
   }
 
   float queue_priorities[]{1.0f};
   VkDeviceQueueCreateInfo device_queue_create_info{};
   device_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-  device_queue_create_info.queueFamilyIndex = graphics_family_index;
+  device_queue_create_info.queueFamilyIndex = p_vkstate->graphics_family_index;
   device_queue_create_info.queueCount = 1;
   device_queue_create_info.pQueuePriorities = queue_priorities;
 
@@ -165,13 +176,14 @@ void initDevice(vk_render_state *p_vkstate)
   device_create_info.enabledExtensionCount = device_extensions.size();
   device_create_info.ppEnabledExtensionNames = device_extensions.data();
 
-  if(vkCreateDevice(gpu, &device_create_info, nullptr, &p_vkstate->device) != VK_SUCCESS)
+  if (vkCreateDevice(p_vkstate->gpu, &device_create_info, nullptr, &p_vkstate->device) != VK_SUCCESS)
   {
     printf("unhandled error 8258528");
-    return;
+    return -1;
   }
 
-  vkGetDeviceQueue(device, graphics_family_index, 0, &queue);
+  vkGetDeviceQueue(p_vkstate->device, p_vkstate->graphics_family_index, 0, &p_vkstate->queue);
+  return 0;
 }
 
 // void setupDebug(VkDebugReportCallbackEXT *debugReport, VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo, std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions)
@@ -247,3 +259,14 @@ void initDevice(vk_render_state *p_vkstate)
 
 //   return false;
 // }
+
+void deInitVulkan(vk_render_state *p_vkrs)
+{
+  vkDestroyDevice(p_vkrs->device, NULL);
+  p_vkrs->device = NULL;
+
+  // deInitDebug() TODO
+
+  vkDestroyInstance(p_vkrs->instance, NULL);
+  p_vkrs->instance = NULL;
+}
