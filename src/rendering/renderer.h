@@ -17,8 +17,9 @@ typedef struct {
 } mthread_info;
 
 typedef struct {
-
-} mrender_info;
+    VkInstance instance;
+VkDevice device;
+} vk_render_state;
 
 int beginRenderThread(mthread_info **pThreadInfo);
 int endRenderThread(mthread_info *pThreadInfo);

@@ -126,32 +126,38 @@ void deinitOSWindow(mxcb_window_info *mcxbWindowInfo)
 
 int updateOSWindow(mxcb_window_info *mcxbWindowInfo)
 {
-	auto event = xcb_poll_for_event( mcxbWindowInfo->xcb_connection );
+    auto event = xcb_poll_for_event(mcxbWindowInfo->xcb_connection);
 
-	// if there is no event, event will be NULL
-	// need to check for event == NULL to prevent segfault
-	if( !event )
-		return;
+    // if there is no event, event will be NULL
+    // need to check for event == NULL to prevent segfault
+    if (!event)
+        return;
 
-	switch( event->response_type & ~0x80 ) {
-	case XCB_CLIENT_MESSAGE:
-		if( ( (xcb_client_message_event_t*)event )->data.data32[ 0 ] == mcxbWindowInfo->xcb_atom_window_reply->atom ) {
-			Close();
-		}
-		break;
-	default:
-		break;
-	}
-	free( event );
+    switch (event->response_type & ~0x80)
+    {
+    case XCB_CLIENT_MESSAGE:
+        if (((xcb_client_message_event_t *)event)->data.data32[0] == mcxbWindowInfo->xcb_atom_window_reply->atom)
+        {
+            Close();
+        }
+        break;
+    default:
+        break;
+    }
+    free(event);
 }
 
-void initOSSurface(mxcb_window_info *mcxbWindowInfo)
+void initOSSurface(mxcb_window_info *mcxbWindowInfo, VkInstance vulkanInstance, VkSurfaceKHR *surface)
 {
-	VkXcbSurfaceCreateInfoKHR create_info;
-	create_info.sType			= VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-	create_info.connection		= mcxbWindowInfo->xcb_connection;
-	create_info.window			= mcxbWindowInfo->xcb_window;
-    ErrorCheck( vkCreateXcbSurfaceKHR( _renderer->GetVulkanInstance(), &create_info, NULL, &_surface ) );
+    VkXcbSurfaceCreateInfoKHR create_info;
+    create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    create_info.connection = mcxbWindowInfo->xcb_connection;
+    create_info.window = mcxbWindowInfo->xcb_window;
+
+    if (vkCreateXcbSurfaceKHR(vulkanInstance, &create_info, NULL, surface) != VK_SUCCESS)
+    {
+        printf("error54252");
+    }
 }
 
 #endif

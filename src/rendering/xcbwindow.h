@@ -17,6 +17,10 @@ typedef struct {
 	xcb_intern_atom_reply_t *xcb_atom_window_reply;
 } mxcb_window_info;
 
+int initOSWindow(mxcb_window_info **mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
+void initOSSurface(mxcb_window_info *mcxbWindowInfo, VkInstance vulkanInstance, VkSurfaceKHR *surface);
+
+
 // /* -----------------------------------------------------
 // This source code is public domain ( CC0 )
 // The code is provided as-is without limitations, requirements and responsibilities.
