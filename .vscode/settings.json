@@ -61,6 +61,8 @@
         "bitset": "cpp",
         "*.gen": "cpp",
         "xproto.h": "c",
-        "shared_mutex": "c"
+        "shared_mutex": "c",
+        "buggle.h": "c",
+        "xcbwindow.h": "c"
     }
 }

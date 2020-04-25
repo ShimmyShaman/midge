@@ -99,6 +99,17 @@ void loadSourceFiles(const char *name, int indent)
   closedir(dir);
 }
 
+void loadLibrary(const char *name)
+{
+  cling::Interpreter::CompilationResult result = clint->loadLibrary(name);
+  if (result == cling::Interpreter::kSuccess)
+    return;
+
+  printf("Failure! %i = loadLibrary(\"%s\")", result, name);
+
+  exit(-1);
+}
+
 void run()
 {
   // Initialize data structures
@@ -117,7 +128,8 @@ void run()
     // clint->AddIncludePath("/usr/include");
 
     // Libraries
-    clint->loadLibrary("vulkan");
+    loadLibrary("vulkan");
+    loadLibrary("xcb");
 
     // Load App source
     printf("<AppSourceLoading>\n");
@@ -130,10 +142,17 @@ void run()
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
     printf("</AppSourceLoading>\n\n");
 
+    clint->declare("void updateUI() { int ms = 0; while(ms < 8000) { ++ms; usleep(1000); } }");
+
     // Run App
     clint->process("mthread_info rthr;");
+    printf("process(begin)\n");
     clint->process("beginRenderThread(&rthr);");
+    printf("process(updateUI)\n");
+    clint->process("updateUI();");
+    printf("process(end)\n");
     clint->process("endRenderThread(&rthr);");
+    printf("midgeH Done\n");
   }
   catch (const std::exception &e)
   {

@@ -4,8 +4,8 @@
 
 #include <vulkan/vulkan_xcb.h>
 
-#include "renderer.h"
-#include "xcbwindow.h"
+#include "rendering/renderer.h"
+#include "rendering/xcbwindow.h"
 
 int initVulkan(vk_render_state *p_vkstate);
 int initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions,
@@ -17,6 +17,7 @@ void deInitVulkan(vk_render_state *p_vkstate);
 // when its name is specified in pthread_create()
 void *renderThread(void *vargp)
 {
+  printf("renderThread\n");
   mthread_info *thr = (mthread_info *)vargp;
 
   vk_render_state vkrs;
@@ -25,30 +26,42 @@ void *renderThread(void *vargp)
   // initPlatform();
 
   // Renderer
-  initVulkan(&vkrs);
+  printf("initVulkan\n");
+  if (!initVulkan(&vkrs))
+  {
+    printf("Failed to initialize Vulkan\n");
+    thr->hasConcluded = 1;
+    return NULL;
+  }
 
   // Window
   mxcb_window_info wnd;
-  // initOSWindow(&wnd, 800, 480);
+  wnd.shouldExit = 0;
+  printf("initOSWindow\n");
+  initOSWindow(&wnd, 800, 480);
   // initOSSurface(&wnd, vkrs.instance, &vkrs.surface);
 
-  // while (!thr->shouldExit)
+  // while (!thr->shouldExit && !wnd.shouldExit)
   // {
   //   usleep(1);
   //   updateOSWindow(&wnd);
   // }
 
   // deInitOSSurface(vkrs.instance, &vkrs.surface);
-  // deInitOSWindow(&wnd);
+  printf("deInitOSWindow\n");
+  deInitOSWindow(&wnd);
 
+  printf("deInitVulkan\n");
   deInitVulkan(&vkrs);
 
+  printf("hasConcluded\n");
   thr->hasConcluded = 1;
   return 0;
 }
 
 int beginRenderThread(mthread_info *pThreadInfo)
 {
+  printf("beginRenderThread\n");
   pThreadInfo->shouldExit = 0;
   pThreadInfo->hasConcluded = 0;
   if (pthread_create(&pThreadInfo->threadId, NULL, renderThread, (void *)pThreadInfo))
@@ -102,7 +115,7 @@ int initVulkan(vk_render_state *p_vkstate)
 }
 
 int initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions,
-                       VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo, VkInstance *vulkanInstance)
+                       VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo, VkInstance *p_vk_instance)
 {
   VkApplicationInfo application_info;
   application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -117,12 +130,19 @@ int initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<co
   instance_create_info.ppEnabledLayerNames = instanceLayers->data();
   instance_create_info.enabledExtensionCount = instanceExtensions->size();
   instance_create_info.ppEnabledExtensionNames = instanceExtensions->data();
-  instance_create_info.pNext = debugCallbackCreateInfo;
+  // instance_create_info.pNext = debugCallbackCreateInfo;
 
-  if (vkCreateInstance(&instance_create_info, nullptr, vulkanInstance) != VK_SUCCESS)
+  printf("here2\n");
+  vk_render_state vkrs;
+  // vkrs = (vk_render_state){.instance = VkInstance()};
+  vkrs.instance = VkInstance();
+  VkInstance vkInstance;
+  if (vkCreateInstance(&instance_create_info, NULL, &vkrs.instance) != VK_SUCCESS)
   {
+    printf("Failed to create vulkan instance!\n");
     return -1;
   }
+  printf("here1\n");
   return 0;
 }
 

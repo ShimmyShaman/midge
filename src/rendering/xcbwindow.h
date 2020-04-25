@@ -16,10 +16,11 @@ typedef struct {
 	xcb_screen_t *xcb_screen;
 	xcb_window_t xcb_window;
 	xcb_intern_atom_reply_t *xcb_atom_window_reply;
+	bool shouldExit;
 } mxcb_window_info;
 
-extern "C" int initOSWindow(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
-void initOSSurface(mxcb_window_info *mcxbWindowInfo, VkInstance vulkanInstance, VkSurfaceKHR *surface);
+int initOSWindow(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
+int initOSSurface(mxcb_window_info *mcxbWindowInfo, VkInstance vulkanInstance, VkSurfaceKHR *surface);
 
 int updateOSWindow(mxcb_window_info *mcxbWindowInfo);
 
