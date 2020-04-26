@@ -128,11 +128,13 @@ int initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<co
   instance_create_info.ppEnabledExtensionNames = instanceExtensions->data();
   // instance_create_info.pNext = debugCallbackCreateInfo;
 
+  printf("aboutToVkCreateInstance()\n");
   if (vkCreateInstance(&instance_create_info, NULL, inst) != VK_SUCCESS)
   {
     printf("Failed to create vulkan instance!\n");
     return -1;
   }
+  printf("vkCreateInstance(SUCCESS)\n");
   return 0;
 }
 

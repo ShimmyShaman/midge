@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#include <vulkan/vulkan.h>
+#include "rendering/mvk_core.h"
 
 typedef struct
 {

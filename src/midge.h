@@ -134,6 +134,7 @@ void run()
     // Load App source
     printf("<AppSourceLoading>\n");
     // loadSourceFiles("/home/jason/midge/src", 0);
+    clint->loadFile("/home/jason/midge/src/rendering/mvk_core.h");
     clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.c");
     clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.h");
     clint->loadFile("/home/jason/midge/src/rendering/renderer.h");
