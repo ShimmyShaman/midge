@@ -32,10 +32,8 @@ typedef struct
 int beginRenderThread(mthread_info *pThreadInfo);
 int endRenderThread(mthread_info *pThreadInfo);
 
-int initVulkan(vk_render_state *p_vkstate);
-int initVulkanInstance(std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions,
-                       VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo, VkInstance *vulkanInstance);
-int initDevice(vk_render_state *p_vkstate);
+VkResult initVulkan(vk_render_state *p_vkrs, mxcb_window_info *p_wnfo);
+VkResult initDevice(vk_render_state *p_vkstate);
 void deInitVulkan(vk_render_state *p_vkstate);
 
 #endif // RENDERER_H
