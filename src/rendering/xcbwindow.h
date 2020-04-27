@@ -3,15 +3,15 @@
 #ifndef XCB_WINDOW_H
 #define XCB_WINDOW_H
 
-#include <xcb/xproto.h>
-#include <vulkan/vulkan.h>
+#include "rendering/mvk_core.h"
 
 // typedef xcb_connection_t xcb_connection_t;
 // typedef xcb_screen_t xcb_screen_t;
 // typedef xcb_window_t xcb_window_t;
 // typedef xcb_intern_atom_reply_t xcb_intern_atom_reply_t;
 
-typedef struct {
+typedef struct
+{
 	xcb_connection_t *xcb_connection;
 	xcb_screen_t *xcb_screen;
 	xcb_window_t xcb_window;

@@ -5,17 +5,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <stdbool.h>
-#include <pthread.h>
 
 #include "rendering/mvk_core.h"
-
-typedef struct
-{
-    pthread_t threadId;
-    bool shouldExit, hasConcluded;
-} mthread_info;
+#include "rendering/xcbwindow.h"
 
 typedef struct
 {
@@ -28,9 +21,6 @@ typedef struct
     VkPhysicalDeviceProperties gpu_properties;
     uint32_t graphics_family_index;
 } vk_render_state;
-
-int beginRenderThread(mthread_info *pThreadInfo);
-int endRenderThread(mthread_info *pThreadInfo);
 
 VkResult initVulkan(vk_render_state *p_vkrs, mxcb_window_info *p_wnfo);
 VkResult initDevice(vk_render_state *p_vkstate);

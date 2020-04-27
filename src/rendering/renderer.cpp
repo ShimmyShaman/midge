@@ -2,14 +2,13 @@
 
 #include <vector>
 
-#include <vulkan/vulkan_xcb.h>
-
 #include "rendering/renderer.h"
 #include "rendering/xcbwindow.h"
+#include "m_threads.h"
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
-void *renderThread(void *vargp)
+void *midge_render_thread(void *vargp)
 {
   printf("renderThread\n");
   mthread_info *thr = (mthread_info *)vargp;
@@ -26,11 +25,11 @@ void *renderThread(void *vargp)
   if (initVulkan(&vkrs, &wnd))
   {
     printf("Failed to initialize Vulkan\n");
-    thr->hasConcluded = 1;
+    thr->has_concluded = 1;
     return NULL;
   }
 
-  while (!thr->shouldExit && !wnd.shouldExit)
+  while (!thr->should_exit && !wnd.shouldExit)
   {
     usleep(1);
     updateOSWindow(&wnd);
@@ -44,39 +43,7 @@ void *renderThread(void *vargp)
   deInitVulkan(&vkrs);
 
   printf("hasConcluded\n");
-  thr->hasConcluded = 1;
-  return 0;
-}
-
-int beginRenderThread(mthread_info *pThreadInfo)
-{
-  printf("beginRenderThread\n");
-  pThreadInfo->shouldExit = 0;
-  pThreadInfo->hasConcluded = 0;
-  if (pthread_create(&pThreadInfo->threadId, NULL, renderThread, (void *)pThreadInfo))
-  {
-    return 0;
-  }
-  return -1;
-}
-
-int endRenderThread(mthread_info *pThreadInfo)
-{
-  pThreadInfo->shouldExit = 1;
-
-  const int MAX_ITERATIONS = 1000;
-  int iterations = 0;
-  while (!pThreadInfo->hasConcluded)
-  {
-    usleep(1000);
-    ++iterations;
-    if (iterations >= MAX_ITERATIONS)
-    {
-      printf("TODO -- Thread-Handling for unresponsive thread:: renderer.c\n");
-      return -1;
-    }
-  }
-
+  thr->has_concluded = 1;
   return 0;
 }
 
@@ -88,108 +55,111 @@ VkResult vk_init_layers_extensions(std::vector<const char *> *instanceLayers, st
 
   return VK_SUCCESS;
 }
+/*
+https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#vkCreateInstance
+https://github.com/LunarG/VulkanSamples/blob/master/API-Samples/utils/util_init.cpp
+https://github.com/LunarG/VulkanSamples/blob/master/API-Samples/15-draw_cube/15-draw_cube.cpp
+*/
+// VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count) {
+//     uint32_t const U_ASSERT_ONLY req_count = gpu_count;
+//     VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
+//     assert(gpu_count);
+//     info.gpus.resize(gpu_count);
 
+//     res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());
+//     assert(!res && gpu_count >= req_count);
 
-VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count) {
-    uint32_t const U_ASSERT_ONLY req_count = gpu_count;
-    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
-    assert(gpu_count);
-    info.gpus.resize(gpu_count);
+//     vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, NULL);
+//     assert(info.queue_family_count >= 1);
 
-    res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, info.gpus.data());
-    assert(!res && gpu_count >= req_count);
+//     info.queue_props.resize(info.queue_family_count);
+//     vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, info.queue_props.data());
+//     assert(info.queue_family_count >= 1);
 
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, NULL);
-    assert(info.queue_family_count >= 1);
+//     /* This is as good a place as any to do this */
+//     vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
+//     vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
+//     /* query device extensions for enabled layers */
+//     for (auto &layer_props : info.instance_layer_properties) {
+//         init_device_extension_properties(info, layer_props);
+//     }
 
-    info.queue_props.resize(info.queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(info.gpus[0], &info.queue_family_count, info.queue_props.data());
-    assert(info.queue_family_count >= 1);
+//     return res;
+// }
 
-    /* This is as good a place as any to do this */
-    vkGetPhysicalDeviceMemoryProperties(info.gpus[0], &info.memory_properties);
-    vkGetPhysicalDeviceProperties(info.gpus[0], &info.gpu_props);
-    /* query device extensions for enabled layers */
-    for (auto &layer_props : info.instance_layer_properties) {
-        init_device_extension_properties(info, layer_props);
-    }
+// void init_swapchain_extension(vk_render_state *p_vkrs, mxcb_window_info *p_mwinfo)
+// {
+//   VkResult res;
 
-    return res;
-}
+//   // Iterate over each queue to learn whether it supports presenting:
+//   VkBool32 *pSupportsPresent = (VkBool32 *)malloc(p_vkrs-> queue_family_count * sizeof(VkBool32));
+//   for (uint32_t i = 0; i < info.queue_family_count; i++)
+//   {
+//     vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface, &pSupportsPresent[i]);
+//   }
 
-void init_swapchain_extension(vk_render_state *p_vkrs, mxcb_window_info *p_mwinfo)
-{
-  VkResult res;
+//   // Search for a graphics and a present queue in the array of queue
+//   // families, try to find one that supports both
+//   info.graphics_queue_family_index = UINT32_MAX;
+//   info.present_queue_family_index = UINT32_MAX;
+//   for (uint32_t i = 0; i < info.queue_family_count; ++i)
+//   {
+//     if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+//     {
+//       if (info.graphics_queue_family_index == UINT32_MAX)
+//         info.graphics_queue_family_index = i;
 
-  // Iterate over each queue to learn whether it supports presenting:
-  VkBool32 *pSupportsPresent = (VkBool32 *)malloc(p_vkrs-> queue_family_count * sizeof(VkBool32));
-  for (uint32_t i = 0; i < info.queue_family_count; i++)
-  {
-    vkGetPhysicalDeviceSurfaceSupportKHR(info.gpus[0], i, info.surface, &pSupportsPresent[i]);
-  }
+//       if (pSupportsPresent[i] == VK_TRUE)
+//       {
+//         info.graphics_queue_family_index = i;
+//         info.present_queue_family_index = i;
+//         break;
+//       }
+//     }
+//   }
 
-  // Search for a graphics and a present queue in the array of queue
-  // families, try to find one that supports both
-  info.graphics_queue_family_index = UINT32_MAX;
-  info.present_queue_family_index = UINT32_MAX;
-  for (uint32_t i = 0; i < info.queue_family_count; ++i)
-  {
-    if ((info.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-    {
-      if (info.graphics_queue_family_index == UINT32_MAX)
-        info.graphics_queue_family_index = i;
+//   if (info.present_queue_family_index == UINT32_MAX)
+//   {
+//     // If didn't find a queue that supports both graphics and present, then
+//     // find a separate present queue.
+//     for (size_t i = 0; i < info.queue_family_count; ++i)
+//       if (pSupportsPresent[i] == VK_TRUE)
+//       {
+//         info.present_queue_family_index = i;
+//         break;
+//       }
+//   }
+//   free(pSupportsPresent);
 
-      if (pSupportsPresent[i] == VK_TRUE)
-      {
-        info.graphics_queue_family_index = i;
-        info.present_queue_family_index = i;
-        break;
-      }
-    }
-  }
+//   // Generate error if could not find queues that support graphics
+//   // and present
+//   if (info.graphics_queue_family_index == UINT32_MAX || info.present_queue_family_index == UINT32_MAX)
+//   {
+//     std::cout << "Could not find a queues for both graphics and present";
+//     exit(-1);
+//   }
 
-  if (info.present_queue_family_index == UINT32_MAX)
-  {
-    // If didn't find a queue that supports both graphics and present, then
-    // find a separate present queue.
-    for (size_t i = 0; i < info.queue_family_count; ++i)
-      if (pSupportsPresent[i] == VK_TRUE)
-      {
-        info.present_queue_family_index = i;
-        break;
-      }
-  }
-  free(pSupportsPresent);
-
-  // Generate error if could not find queues that support graphics
-  // and present
-  if (info.graphics_queue_family_index == UINT32_MAX || info.present_queue_family_index == UINT32_MAX)
-  {
-    std::cout << "Could not find a queues for both graphics and present";
-    exit(-1);
-  }
-
-  // Get the list of VkFormats that are supported:
-  uint32_t formatCount;
-  res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, NULL);
-  assert(res == VK_SUCCESS);
-  VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
-  res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, surfFormats);
-  assert(res == VK_SUCCESS);
-  // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
-  // the surface has no preferred format.  Otherwise, at least one
-  // supported format will be returned.
-  if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
-  {
-    info.format = VK_FORMAT_B8G8R8A8_UNORM;
-  }
-  else
-  {
-    assert(formatCount >= 1);
-    info.format = surfFormats[0].format;
-  }
-  free(surfFormats);
-}
+//   // Get the list of VkFormats that are supported:
+//   uint32_t formatCount;
+//   res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, NULL);
+//   assert(res == VK_SUCCESS);
+//   VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+//   res = vkGetPhysicalDeviceSurfaceFormatsKHR(info.gpus[0], info.surface, &formatCount, surfFormats);
+//   assert(res == VK_SUCCESS);
+//   // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
+//   // the surface has no preferred format.  Otherwise, at least one
+//   // supported format will be returned.
+//   if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
+//   {
+//     info.format = VK_FORMAT_B8G8R8A8_UNORM;
+//   }
+//   else
+//   {
+//     assert(formatCount >= 1);
+//     info.format = surfFormats[0].format;
+//   }
+//   free(surfFormats);
+// }
 
 VkResult initVulkan(vk_render_state *p_vkrs, mxcb_window_info *p_wnfo)
 {
@@ -246,7 +216,7 @@ VkResult initVulkan(vk_render_state *p_vkrs, mxcb_window_info *p_wnfo)
   // printf("initOSWindow\n");
   initOSWindow(p_wnfo, 800, 480);
   initOSSurface(p_wnfo, p_vkrs->instance, &p_vkrs->surface);
-  init_swapchain_extension(p_vkrs, p_wnfo);
+  // init_swapchain_extension(p_vkrs, p_wnfo);
   return VK_SUCCESS;
 }
 

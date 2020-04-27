@@ -146,14 +146,14 @@ void run()
     clint->declare("void updateUI() { int ms = 0; while(ms < 4000) { ++ms; usleep(1000); } }");
 
     // Run App
-    clint->process("mthread_info rthr;");
-    printf("process(begin)\n");
-    clint->process("beginRenderThread(&rthr);");
-    printf("process(updateUI)\n");
+    clint->process("mthread_info *rthr;");
+    // printf("process(begin)\n");
+    clint->process("begin_mthread(midge_render_thread, &rthr);");
+    // printf("process(updateUI)\n");
     clint->process("updateUI();");
-    printf("process(end)\n");
-    clint->process("endRenderThread(&rthr);");
-    printf("midgeH Done\n");
+    // printf("process(end)\n");
+    clint->process("end_mthread(rthr);");
+    printf("\n! MIDGE COMPLETE !\n");
   }
   catch (const std::exception &e)
   {
