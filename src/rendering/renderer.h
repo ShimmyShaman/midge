@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "rendering/mvk_core.h"
+#include "m_threads.h"
+
+#include "rendering/mvk_init_util.h"
 #include "rendering/xcbwindow.h"
 
 typedef struct

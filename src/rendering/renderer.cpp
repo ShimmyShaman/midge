@@ -1,17 +1,21 @@
-/* renderer.c */
-
-#include <vector>
+/* renderer.cpp */
 
 #include "rendering/renderer.h"
-#include "rendering/xcbwindow.h"
-#include "m_threads.h"
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
 void *midge_render_thread(void *vargp)
 {
-  printf("renderThread\n");
   mthread_info *thr = (mthread_info *)vargp;
+
+  VkResult result;
+  std::vector<layer_properties> vk_layers;
+  result = init_global_layer_properties(&vk_layers);
+  if (result != VK_SUCCESS)
+  {
+    printf("midge_render_thread> init_global_layer_properties error");
+    return NULL;
+  }
 
   vk_render_state vkrs = {
       .instance = NULL,
