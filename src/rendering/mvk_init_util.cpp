@@ -99,20 +99,18 @@ VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_
   app_info.apiVersion = VK_API_VERSION_1_0;
 
   // -- Layers & Extensions --
-  std::vector<const char *> instance_layers;
-  std::vector<const char *> instance_extensions;
-  instance_extensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-  instance_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+  p_vkrs->instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+  p_vkrs->instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
   VkInstanceCreateInfo inst_info = {};
   inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   inst_info.pNext = NULL;
   inst_info.flags = 0;
   inst_info.pApplicationInfo = &app_info;
-  inst_info.enabledLayerCount = instance_layers.size();
-  inst_info.ppEnabledLayerNames = instance_layers.size() ? instance_layers.data() : NULL;
-  inst_info.enabledExtensionCount = instance_extensions.size();
-  inst_info.ppEnabledExtensionNames = instance_extensions.data();
+  inst_info.enabledLayerCount = p_vkrs->instance_layer_names.size();
+  inst_info.ppEnabledLayerNames = p_vkrs->instance_layer_names.size() ? p_vkrs->instance_layer_names.data() : NULL;
+  inst_info.enabledExtensionCount = p_vkrs->instance_extension_names.size();
+  inst_info.ppEnabledExtensionNames = p_vkrs->instance_extension_names.data();
 
   printf("aboutToVkCreateInstance()\n");
   VkResult res = vkCreateInstance(&inst_info, NULL, &p_vkrs->inst);
@@ -182,4 +180,93 @@ VkResult init_enumerate_device(vk_render_state *p_vkrs, const uint32_t required_
   }
 
   return res;
+}
+
+VkResult init_swapchain_extension(vk_render_state *p_vkrs)
+{
+  VkResult res;
+
+  // Construct the surface description
+  VkXcbSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+  createInfo.pNext = NULL;
+  createInfo.connection = p_vkrs->xcb_winfo->connection;
+  createInfo.window = p_vkrs->xcb_winfo->window;
+  res = vkCreateXcbSurfaceKHR(p_vkrs->inst, &createInfo, NULL, &p_vkrs->surface);
+  assert(res == VK_SUCCESS);
+
+  // Iterate over each queue to learn whether it supports presenting:
+  VkBool32 *pSupportsPresent = (VkBool32 *)malloc(p_vkrs->queue_family_count * sizeof(VkBool32));
+  for (uint32_t i = 0; i < p_vkrs->queue_family_count; i++)
+  {
+    vkGetPhysicalDeviceSurfaceSupportKHR(p_vkrs->gpus[0], i, p_vkrs->surface, &pSupportsPresent[i]);
+  }
+
+  // Search for a graphics and a present queue in the array of queue
+  // families, try to find one that supports both
+  p_vkrs->graphics_queue_family_index = UINT32_MAX;
+  p_vkrs->present_queue_family_index = UINT32_MAX;
+  for (uint32_t i = 0; i < p_vkrs->queue_family_count; ++i)
+  {
+    if ((p_vkrs->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+    {
+      if (p_vkrs->graphics_queue_family_index == UINT32_MAX)
+        p_vkrs->graphics_queue_family_index = i;
+
+      if (pSupportsPresent[i] == VK_TRUE)
+      {
+        p_vkrs->graphics_queue_family_index = i;
+        p_vkrs->present_queue_family_index = i;
+        break;
+      }
+    }
+  }
+
+  if (p_vkrs->present_queue_family_index == UINT32_MAX)
+  {
+    // If didn't find a queue that supports both graphics and present, then
+    // find a separate present queue.
+    for (size_t i = 0; i < p_vkrs->queue_family_count; ++i)
+      if (pSupportsPresent[i] == VK_TRUE)
+      {
+        p_vkrs->present_queue_family_index = i;
+        break;
+      }
+  }
+  free(pSupportsPresent);
+
+  // Generate error if could not find queues that support graphics
+  // and present
+  if (p_vkrs->graphics_queue_family_index == UINT32_MAX)
+    return (VkResult)MVK_GRAPHIC_QUEUE_NOT_FOUND;
+  if (p_vkrs->present_queue_family_index == UINT32_MAX)
+    return (VkResult)MVK_PRESENT_QUEUE_NOT_FOUND;
+
+  // Get the list of VkFormats that are supported:
+  uint32_t formatCount;
+  res = vkGetPhysicalDeviceSurfaceFormatsKHR(p_vkrs->gpus[0], p_vkrs->surface, &formatCount, NULL);
+  assert(res == VK_SUCCESS);
+  VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
+  res = vkGetPhysicalDeviceSurfaceFormatsKHR(p_vkrs->gpus[0], p_vkrs->surface, &formatCount, surfFormats);
+  assert(res == VK_SUCCESS);
+  // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
+  // the surface has no preferred format.  Otherwise, at least one
+  // supported format will be returned.
+  if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
+  {
+    p_vkrs->format = VK_FORMAT_B8G8R8A8_UNORM;
+  }
+  else
+  {
+    assert(formatCount >= 1);
+    p_vkrs->format = surfFormats[0].format;
+  }
+  free(surfFormats);
+}
+
+void destroy_swap_chain(vk_render_state *p_vkrs) {
+    for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++) {
+        vkDestroyImageView(p_vkrs->device, p_vkrs->buffers[i].view, NULL);
+    }
+    vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain, NULL);
 }

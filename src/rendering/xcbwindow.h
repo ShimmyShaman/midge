@@ -12,9 +12,9 @@
 
 typedef struct
 {
-	xcb_connection_t *xcb_connection;
+	xcb_connection_t *connection;
 	xcb_screen_t *xcb_screen;
-	xcb_window_t xcb_window;
+	xcb_window_t window;
 	xcb_intern_atom_reply_t *xcb_atom_window_reply;
 	bool shouldExit;
 } mxcb_window_info;

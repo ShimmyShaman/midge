@@ -35,6 +35,7 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_instance(&vkrs, "midge"));
   MRT_RUN(init_enumerate_device(&vkrs, 1));
   initOSWindow(&winfo, vkrs.window_width, vkrs.window_height);
+  MRT_RUN(init_swapchain_extension(&vkrs));
 
   // -- Update
   while (!thr->should_exit && !winfo.shouldExit)
@@ -44,6 +45,7 @@ void *midge_render_thread(void *vargp)
   }
 
   // -- Cleanup
+  destroy_swap_chain(info);
   deInitOSWindow(&winfo);
   vkDestroyInstance(vkrs.inst, NULL);
   printf("hasConcluded(SUCCESS)\n");

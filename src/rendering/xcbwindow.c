@@ -36,14 +36,14 @@ int initOSWindow(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
   xcb_screen_iterator_t iter;
   int screen = 0;
 
-  p_wnfo->xcb_connection = xcb_connect(0, &screen);
-  if (!p_wnfo->xcb_connection)
+  p_wnfo->connection = xcb_connect(0, &screen);
+  if (!p_wnfo->connection)
   {
     printf("Cannot find a compatible Vulkan ICD.\n");
     return -1;
   }
 
-  setup = xcb_get_setup(p_wnfo->xcb_connection);
+  setup = xcb_get_setup(p_wnfo->connection);
   iter = xcb_setup_roots_iterator(setup);
   while (screen-- > 0)
   {
@@ -67,13 +67,13 @@ int initOSWindow(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
 
   uint32_t value_mask, value_list[32];
 
-  p_wnfo->xcb_window = xcb_generate_id(p_wnfo->xcb_connection);
+  p_wnfo->window = xcb_generate_id(p_wnfo->connection);
 
   value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
   value_list[0] = p_wnfo->xcb_screen->black_pixel;
   value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE;
 
-  xcb_create_window(p_wnfo->xcb_connection, XCB_COPY_FROM_PARENT, p_wnfo->xcb_window,
+  xcb_create_window(p_wnfo->connection, XCB_COPY_FROM_PARENT, p_wnfo->window,
                     p_wnfo->xcb_screen->root, dimensions.offset.x, dimensions.offset.y,
                     dimensions.extent.width, dimensions.extent.height, 0,
                     XCB_WINDOW_CLASS_INPUT_OUTPUT, p_wnfo->xcb_screen->root_visual,
@@ -81,28 +81,28 @@ int initOSWindow(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
 
   /* Magic code that will send notification when window is destroyed */
   xcb_intern_atom_cookie_t cookie =
-      xcb_intern_atom(p_wnfo->xcb_connection, 1, 12, "WM_PROTOCOLS");
+      xcb_intern_atom(p_wnfo->connection, 1, 12, "WM_PROTOCOLS");
   xcb_intern_atom_reply_t *reply =
-      xcb_intern_atom_reply(p_wnfo->xcb_connection, cookie, 0);
+      xcb_intern_atom_reply(p_wnfo->connection, cookie, 0);
 
   xcb_intern_atom_cookie_t cookie2 =
-      xcb_intern_atom(p_wnfo->xcb_connection, 0, 16, "WM_DELETE_WINDOW");
+      xcb_intern_atom(p_wnfo->connection, 0, 16, "WM_DELETE_WINDOW");
   p_wnfo->xcb_atom_window_reply =
-      xcb_intern_atom_reply(p_wnfo->xcb_connection, cookie2, 0);
+      xcb_intern_atom_reply(p_wnfo->connection, cookie2, 0);
 
-  xcb_change_property(p_wnfo->xcb_connection, XCB_PROP_MODE_REPLACE, p_wnfo->xcb_window,
+  xcb_change_property(p_wnfo->connection, XCB_PROP_MODE_REPLACE, p_wnfo->window,
                       (*reply).atom, 4, 32, 1,
                       &(*p_wnfo->xcb_atom_window_reply).atom);
   free(reply);
 
-  xcb_map_window(p_wnfo->xcb_connection, p_wnfo->xcb_window);
+  xcb_map_window(p_wnfo->connection, p_wnfo->window);
 
   // Force the x/y coordinates to 100,100 results are identical in consecutive
   // runs
   const uint32_t coords[] = {100, 100};
-  xcb_configure_window(p_wnfo->xcb_connection, p_wnfo->xcb_window,
+  xcb_configure_window(p_wnfo->connection, p_wnfo->window,
                        XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
-  xcb_flush(p_wnfo->xcb_connection);
+  xcb_flush(p_wnfo->connection);
 
   /*
     xcb_generic_event_t *e;
@@ -115,24 +115,24 @@ int initOSWindow(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
   return 0;
 }
 
-int initOSSurface(mxcb_window_info *p_wnfo, VkInstance vulkanInstance, VkSurfaceKHR *surface)
-{
-  VkXcbSurfaceCreateInfoKHR create_info;
-  create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-  create_info.connection = p_wnfo->xcb_connection;
-  create_info.window = p_wnfo->xcb_window;
+// int initOSSurface(mxcb_window_info *p_wnfo, VkInstance vulkanInstance, VkSurfaceKHR *surface)
+// {
+//   VkXcbSurfaceCreateInfoKHR create_info;
+//   create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+//   create_info.connection = p_wnfo->xcb_connection;
+//   create_info.window = p_wnfo->xcb_window;
 
-  if (vkCreateXcbSurfaceKHR(vulkanInstance, &create_info, NULL, surface) != VK_SUCCESS)
-  {
-    printf("error54252");
-    return -1;
-  }
-  return 0;
-}
+//   if (vkCreateXcbSurfaceKHR(vulkanInstance, &create_info, NULL, surface) != VK_SUCCESS)
+//   {
+//     printf("error54252");
+//     return -1;
+//   }
+//   return 0;
+// }
 
 int updateOSWindow(mxcb_window_info *p_wnfo)
 {
-  xcb_generic_event_t *event = xcb_poll_for_event(p_wnfo->xcb_connection);
+  xcb_generic_event_t *event = xcb_poll_for_event(p_wnfo->connection);
 
   // if there is no event, event will be NULL
   // need to check for event == NULL to prevent segfault
@@ -157,16 +157,16 @@ int updateOSWindow(mxcb_window_info *p_wnfo)
 
 void deInitOSWindow(mxcb_window_info *p_wnfo)
 {
-  xcb_destroy_window(p_wnfo->xcb_connection, p_wnfo->xcb_window);
-  xcb_disconnect(p_wnfo->xcb_connection);
-  p_wnfo->xcb_window = 0;
-  p_wnfo->xcb_connection = NULL;
+  xcb_destroy_window(p_wnfo->connection, p_wnfo->window);
+  xcb_disconnect(p_wnfo->connection);
+  p_wnfo->window = 0;
+  p_wnfo->connection = NULL;
 }
 
-void deInitOSSurface(VkInstance vulkanInstance, VkSurfaceKHR *surface)
-{
-  vkDestroySurfaceKHR(vulkanInstance, *surface, NULL);
-  surface = NULL;
-}
+// void deInitOSSurface(VkInstance vulkanInstance, VkSurfaceKHR *surface)
+// {
+//   vkDestroySurfaceKHR(vulkanInstance, *surface, NULL);
+//   surface = NULL;
+// }
 
 // #endif
