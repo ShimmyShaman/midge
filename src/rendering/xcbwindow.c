@@ -28,7 +28,7 @@ hodasemi (XCB validation)
 #include "rendering/xcbwindow.h"
 #include <vulkan/vulkan_xcb.h>
 
-int initOSWindow(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
+int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
 {
   // create connection to X11 server
   const xcb_setup_t *setup = 0;
@@ -130,7 +130,7 @@ int initOSWindow(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
 //   return 0;
 // }
 
-int updateOSWindow(mxcb_window_info *p_wnfo)
+int mxcb_update_window(mxcb_window_info *p_wnfo)
 {
   xcb_generic_event_t *event = xcb_poll_for_event(p_wnfo->connection);
 
@@ -155,7 +155,7 @@ int updateOSWindow(mxcb_window_info *p_wnfo)
   return 0;
 }
 
-void deInitOSWindow(mxcb_window_info *p_wnfo)
+void mxcb_destroy_window(mxcb_window_info *p_wnfo)
 {
   xcb_destroy_window(p_wnfo->connection, p_wnfo->window);
   xcb_disconnect(p_wnfo->connection);

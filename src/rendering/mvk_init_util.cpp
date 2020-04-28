@@ -3,7 +3,7 @@
 #include "rendering/mvk_init_util.h"
 
 /*
- * TODO: function description here
+ * Initializes a discovered global extension property.
  */
 VkResult mvk_init_global_extension_properties(layer_properties &layer_props)
 {
@@ -34,7 +34,8 @@ VkResult mvk_init_global_extension_properties(layer_properties &layer_props)
 }
 
 /*
- * TODO: function description here
+ * Enumerates through all globally accessible instance layers and fills a vector with their retrieved
+ * properties.
  */
 VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_layers)
 {
@@ -120,7 +121,7 @@ VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_
   return res;
 }
 
-void init_device_extension_names(vk_render_state *p_vkrs)
+void mvk_init_device_extension_names(vk_render_state *p_vkrs)
 {
   p_vkrs->device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 }
@@ -153,7 +154,40 @@ VkResult init_device_extension_properties(vk_render_state *p_vkrs, layer_propert
   return res;
 }
 
-VkResult init_enumerate_device(vk_render_state *p_vkrs, const uint32_t required_gpu_count)
+/*
+ * Initialize the graphics device.
+ */
+VkResult mvk_init_device(vk_render_state *p_vkrs)
+{
+  VkResult res;
+  VkDeviceQueueCreateInfo queue_info = {};
+
+  float queue_priorities[1] = {0.0};
+  queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  queue_info.pNext = NULL;
+  queue_info.queueCount = 1;
+  queue_info.pQueuePriorities = queue_priorities;
+  queue_info.queueFamilyIndex = p_vkrs->graphics_queue_family_index;
+
+  VkDeviceCreateInfo device_info = {};
+  device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  device_info.pNext = NULL;
+  device_info.queueCreateInfoCount = 1;
+  device_info.pQueueCreateInfos = &queue_info;
+  device_info.enabledExtensionCount = p_vkrs->device_extension_names.size();
+  device_info.ppEnabledExtensionNames = device_info.enabledExtensionCount ? p_vkrs->device_extension_names.data() : NULL;
+  device_info.pEnabledFeatures = NULL;
+
+  res = vkCreateDevice(p_vkrs->gpus[0], &device_info, NULL, &p_vkrs->device);
+  assert(res == VK_SUCCESS);
+
+  return res;
+}
+
+/*
+ * Enumerates through the available graphics devices.
+ */
+VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, const uint32_t required_gpu_count)
 {
   uint32_t gpu_count = required_gpu_count;
   VkResult res = vkEnumeratePhysicalDevices(p_vkrs->inst, &gpu_count, NULL);
@@ -182,7 +216,10 @@ VkResult init_enumerate_device(vk_render_state *p_vkrs, const uint32_t required_
   return res;
 }
 
-VkResult init_swapchain_extension(vk_render_state *p_vkrs)
+/*
+ * Constructs the surface, finds a graphics and present queue for it as well as a supported format.
+*/
+VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
 {
   VkResult res;
 
@@ -249,6 +286,7 @@ VkResult init_swapchain_extension(vk_render_state *p_vkrs)
   VkSurfaceFormatKHR *surfFormats = (VkSurfaceFormatKHR *)malloc(formatCount * sizeof(VkSurfaceFormatKHR));
   res = vkGetPhysicalDeviceSurfaceFormatsKHR(p_vkrs->gpus[0], p_vkrs->surface, &formatCount, surfFormats);
   assert(res == VK_SUCCESS);
+
   // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
   // the surface has no preferred format.  Otherwise, at least one
   // supported format will be returned.
@@ -262,11 +300,26 @@ VkResult init_swapchain_extension(vk_render_state *p_vkrs)
     p_vkrs->format = surfFormats[0].format;
   }
   free(surfFormats);
+
+  return VK_SUCCESS;
 }
 
-void destroy_swap_chain(vk_render_state *p_vkrs) {
-    for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++) {
-        vkDestroyImageView(p_vkrs->device, p_vkrs->buffers[i].view, NULL);
-    }
-    vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain, NULL);
+void mvk_destroy_swap_chain(vk_render_state *p_vkrs)
+{
+  for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++)
+  {
+    vkDestroyImageView(p_vkrs->device, p_vkrs->buffers[i].view, NULL);
+  }
+  vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain, NULL);
+}
+
+void mvk_destroy_device(vk_render_state *p_vkrs)
+{
+  vkDeviceWaitIdle(p_vkrs->device);
+  vkDestroyDevice(p_vkrs->device, NULL);
+}
+
+void mvk_destroy_instance(vk_render_state *p_vkrs)
+{
+  vkDestroyInstance(p_vkrs->inst, NULL);
 }

@@ -29,25 +29,27 @@ void *midge_render_thread(void *vargp)
   // -- Initialization
   VkResult result;
   MRT_RUN(mvk_init_global_layer_properties(&vkrs.instance_layer_properties));
-  init_device_extension_names(&vkrs);
+  mvk_init_device_extension_names(&vkrs);
 
   // -- Renderer
   MRT_RUN(mvk_init_instance(&vkrs, "midge"));
-  MRT_RUN(init_enumerate_device(&vkrs, 1));
-  initOSWindow(&winfo, vkrs.window_width, vkrs.window_height);
-  MRT_RUN(init_swapchain_extension(&vkrs));
+  MRT_RUN(mvk_init_enumerate_device(&vkrs, 1));
+  mxcb_init_window(&winfo, vkrs.window_width, vkrs.window_height);
+  MRT_RUN(mvk_init_swapchain_extension(&vkrs));
+  MRT_RUN(mvk_init_device(&vkrs));
 
   // -- Update
   while (!thr->should_exit && !winfo.shouldExit)
   {
     usleep(1);
-    updateOSWindow(&winfo);
+    mxcb_update_window(&winfo);
   }
 
   // -- Cleanup
-  destroy_swap_chain(info);
-  deInitOSWindow(&winfo);
-  vkDestroyInstance(vkrs.inst, NULL);
+  mvk_destroy_swap_chain(&vkrs);
+  mxcb_destroy_window(&winfo);
+  mvk_destroy_device(&vkrs);
+  mvk_destroy_instance(&vkrs);
   printf("hasConcluded(SUCCESS)\n");
   thr->has_concluded = 1;
   return 0;

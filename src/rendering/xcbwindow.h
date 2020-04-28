@@ -19,13 +19,11 @@ typedef struct
 	bool shouldExit;
 } mxcb_window_info;
 
-int initOSWindow(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
-int initOSSurface(mxcb_window_info *mcxbWindowInfo, VkInstance vulkanInstance, VkSurfaceKHR *surface);
+int mxcb_init_window(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
 
-int updateOSWindow(mxcb_window_info *mcxbWindowInfo);
+int mxcb_update_window(mxcb_window_info *mcxbWindowInfo);
 
-void deInitOSWindow(mxcb_window_info *mcxbWindowInfo);
-void deInitOSSurface(VkInstance vulkanInstance, VkSurfaceKHR *surface);
+void mxcb_destroy_window(mxcb_window_info *mcxbWindowInfo);
 
 // /* -----------------------------------------------------
 // This source code is public domain ( CC0 )
