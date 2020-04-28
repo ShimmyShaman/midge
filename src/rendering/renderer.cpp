@@ -14,37 +14,41 @@
 // when its name is specified in pthread_create()
 void *midge_render_thread(void *vargp)
 {
+  // -- Arguments
   mthread_info *thr = (mthread_info *)vargp;
 
+  // -- States
+  mxcb_window_info winfo = {
+      .shouldExit = 0,
+  };
   vk_render_state vkrs;
+  vkrs.window_width = 1024;
+  vkrs.window_height = 640;
+  vkrs.xcb_winfo = &winfo;
 
+  // -- Initialization
   VkResult result;
-  // std::vector<layer_properties> vk_layers;
   MRT_RUN(mvk_init_global_layer_properties(&vkrs.instance_layer_properties));
   init_device_extension_names(&vkrs);
 
-  // vkrs.instance_layer_properties = vk_layers;
-  mxcb_window_info wnd = {
-      .shouldExit = 0,
-  };
-
-  // Renderer
+  // -- Renderer
   MRT_RUN(mvk_init_instance(&vkrs, "midge"));
   MRT_RUN(init_enumerate_device(&vkrs, 1));
-  MRT_RUN(init_window(&vkrs, 1024, 640));
+  initOSWindow(&winfo, vkrs.window_width, vkrs.window_height);
 
-  // init_enumerate_device(info);
+  // -- Update
+  while (!thr->should_exit && !winfo.shouldExit)
+  {
+    usleep(1);
+    updateOSWindow(&winfo);
+  }
 
+  // -- Cleanup
+  deInitOSWindow(&winfo);
   vkDestroyInstance(vkrs.inst, NULL);
   printf("hasConcluded(SUCCESS)\n");
   thr->has_concluded = 1;
   return 0;
-
-  // while (!thr->should_exit && !wnd.shouldExit)
-  // {
-  //   usleep(1);
-  //   updateOSWindow(&wnd);
-  // }
 
   // deInitOSSurface(vkrs.instance, &vkrs.surface);
   // printf("deInitOSWindow\n");

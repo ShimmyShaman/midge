@@ -183,13 +183,3 @@ VkResult init_enumerate_device(vk_render_state *p_vkrs, const uint32_t required_
 
   return res;
 }
-
-VkResult init_window(vk_render_state *p_vkrs, uint32_t window_width, uint32_t window_height)
-{
-  if (!initOSWindow(&p_vkrs->xcb_winfo, window_width, window_height))
-  {
-    return VK_ERROR_UNKNOWN;
-  }
-
-  return VK_SUCCESS;
-}
