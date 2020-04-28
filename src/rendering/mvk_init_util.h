@@ -7,6 +7,9 @@
 
 #include "rendering/xcbwindow.h"
 
+/* Amount of time, in nanoseconds, to wait for a command buffer to complete */
+#define FENCE_TIMEOUT 100000000
+
 typedef enum MVkResult
 {
     MVK_GRAPHIC_QUEUE_NOT_FOUND = -1700,
@@ -51,8 +54,8 @@ typedef struct
     // std::vector<VkExtensionProperties> device_extension_properties;
     std::vector<VkPhysicalDevice> gpus;
     VkDevice device;
-    // VkQueue graphics_queue;
-    // VkQueue present_queue;
+    VkQueue graphics_queue;
+    VkQueue present_queue;
     uint32_t graphics_queue_family_index;
     uint32_t present_queue_family_index;
     VkPhysicalDeviceProperties gpu_props;
@@ -69,6 +72,17 @@ typedef struct
     std::vector<swap_chain_buffer> buffers;
     // VkSemaphore imageAcquiredSemaphore;
 
+    VkCommandPool cmd_pool;
+
+    // Buffer for initialization commands
+    VkCommandBuffer cmd;
+    // VkPipelineLayout pipeline_layout;
+    // std::vector<VkDescriptorSetLayout> desc_layout;
+    // VkPipelineCache pipelineCache;
+    // VkRenderPass render_pass;
+    // VkPipeline pipeline;
+
+    uint32_t current_buffer;
     uint32_t queue_family_count;
 } vk_render_state;
 
@@ -76,9 +90,18 @@ VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_la
 void mvk_init_device_extension_names(vk_render_state *p_vkrs);
 VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_name);
 VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, uint32_t required_gpu_count);
-VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
 VkResult mvk_init_device(vk_render_state *p_vkrs);
+VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
+VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_image_usage_flags);
+VkResult mvk_init_command_pool(vk_render_state *p_vkrs);
+VkResult mvk_init_command_buffer(vk_render_state *p_vkrs);
+VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
+VkResult mvk_execute_end_command_buffer(vk_render_state *p_vkrs);
+VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
+void mvk_init_device_queue(vk_render_state *p_vkrs);
 
+void mvk_destroy_command_buffer(vk_render_state *p_vkrs);
+void mvk_destroy_command_pool(vk_render_state *p_vkrs);
 void mvk_destroy_swap_chain(vk_render_state *p_vkrs);
 void mvk_destroy_device(vk_render_state *p_vkrs);
 void mvk_destroy_instance(vk_render_state *p_vkrs);
