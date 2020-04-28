@@ -3,6 +3,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+
+#include <assert.h>
 
 #include <xcb/xproto.h>
 #include <vulkan/vulkan.h>
