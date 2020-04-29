@@ -5,6 +5,10 @@
 
 #include <vector>
 
+#define GLM_FORCE_RADIANS
+#include "glm/glm.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "rendering/xcbwindow.h"
 
 /* Amount of time, in nanoseconds, to wait for a command buffer to complete */
@@ -88,6 +92,12 @@ typedef struct
         VkDeviceMemory mem;
         VkImageView view;
     } depth;
+
+    glm::mat4 Projection;
+    glm::mat4 View;
+    glm::mat4 Model;
+    glm::mat4 Clip;
+    glm::mat4 MVP;
 
     // Buffer for initialization commands
     VkCommandBuffer cmd;

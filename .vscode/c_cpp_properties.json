@@ -6,6 +6,7 @@
             "compilerPath": "/usr/bin/gcc",
             "includePath": [
                 "/home/jason/midge/src",
+                "/home/jason/midge/dep/glm",
                 "/home/jason/cling/inst/include",
                 "/usr/include"
             ],

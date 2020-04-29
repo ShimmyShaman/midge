@@ -31,6 +31,7 @@ echo Compiling
 export LD_LIBRARY_PATH='/home/jason/cling/inst/lib'
 g++ src/main/main.cpp                             \
 -Isrc                                             \
+-Idep/glm                                         \
 -I/home/jason/cling/inst/include                  \
 /home/jason/cling/obj/lib/libcling.so             \
 -o bin/midge

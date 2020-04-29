@@ -126,6 +126,7 @@ void run()
   {
     // Include Paths
     // clint->AddIncludePath("/usr/include");
+    clint->AddIncludePath("/home/jason/midge/dep/glm");
 
     // Libraries
     loadLibrary("vulkan");
