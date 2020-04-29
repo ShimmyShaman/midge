@@ -115,7 +115,7 @@ typedef struct
     VkPipelineLayout pipeline_layout;
     std::vector<VkDescriptorSetLayout> desc_layout;
     // VkPipelineCache pipelineCache;
-    // VkRenderPass render_pass;
+    VkRenderPass render_pass;
     // VkPipeline pipeline;
 
     uint32_t current_buffer;
@@ -133,6 +133,7 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_image_usage_flags);
 VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool use_texture, VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags);
+VkResult mvk_init_renderpass(vk_render_state *p_vkrs, bool include_depth, bool clear, VkImageLayout finalLayout, VkImageLayout initialLayout);
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs);
 VkResult mvk_init_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
@@ -146,6 +147,7 @@ void mvk_destroy_command_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_command_pool(vk_render_state *p_vkrs);
 void mvk_destroy_depth_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_swap_chain(vk_render_state *p_vkrs);
+void mvk_destroy_renderpass(vk_render_state *p_vkrs);
 void mvk_destroy_device(vk_render_state *p_vkrs);
 void mvk_destroy_instance(vk_render_state *p_vkrs);
 

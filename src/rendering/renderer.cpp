@@ -47,6 +47,7 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_depth_buffer(&vkrs));
   MRT_RUN(mvk_init_uniform_buffer(&vkrs));
   MRT_RUN(mvk_init_descriptor_and_pipeline_layouts(&vkrs, false, 0));
+  MRT_RUN(mvk_init_renderpass(&vkrs, true, true, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED));
 
   // -- Update
   while (!thr->should_exit && !winfo.shouldExit)
@@ -56,6 +57,7 @@ void *midge_render_thread(void *vargp)
   }
 
   // -- Cleanup
+  mvk_destroy_renderpass(&vkrs);
   mvk_destroy_descriptor_and_pipeline_layouts(&vkrs);
   mvk_destroy_uniform_buffer(&vkrs);
   mvk_destroy_depth_buffer(&vkrs);

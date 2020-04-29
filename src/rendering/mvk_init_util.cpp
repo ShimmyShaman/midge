@@ -720,6 +720,82 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
   return res;
 }
 
+VkResult mvk_init_renderpass(vk_render_state *p_vkrs, bool include_depth, bool clear, VkImageLayout finalLayout,
+                     VkImageLayout initialLayout) {
+    /* DEPENDS on init_swap_chain() and init_depth_buffer() */
+
+    assert(clear || (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED));
+
+    VkResult res;
+    /* Need attachments for render target and depth buffer */
+    VkAttachmentDescription attachments[2];
+    attachments[0].format = p_vkrs->format;
+    attachments[0].samples = NUM_SAMPLES;
+    attachments[0].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachments[0].initialLayout = initialLayout;
+    attachments[0].finalLayout = finalLayout;
+    attachments[0].flags = 0;
+
+    if (include_depth) {
+        attachments[1].format = p_vkrs->depth.format;
+        attachments[1].samples = NUM_SAMPLES;
+        attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments[1].flags = 0;
+    }
+
+    VkAttachmentReference color_reference = {};
+    color_reference.attachment = 0;
+    color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depth_reference = {};
+    depth_reference.attachment = 1;
+    depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.flags = 0;
+    subpass.inputAttachmentCount = 0;
+    subpass.pInputAttachments = NULL;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_reference;
+    subpass.pResolveAttachments = NULL;
+    subpass.pDepthStencilAttachment = include_depth ? &depth_reference : NULL;
+    subpass.preserveAttachmentCount = 0;
+    subpass.pPreserveAttachments = NULL;
+
+    // Subpass dependency to wait for wsi image acquired semaphore before starting layout transition
+    VkSubpassDependency subpass_dependency = {};
+    subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    subpass_dependency.dstSubpass = 0;
+    subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    subpass_dependency.srcAccessMask = 0;
+    subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    subpass_dependency.dependencyFlags = 0;
+
+    VkRenderPassCreateInfo rp_info = {};
+    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rp_info.pNext = NULL;
+    rp_info.attachmentCount = include_depth ? 2 : 1;
+    rp_info.pAttachments = attachments;
+    rp_info.subpassCount = 1;
+    rp_info.pSubpasses = &subpass;
+    rp_info.dependencyCount = 1;
+    rp_info.pDependencies = &subpass_dependency;
+
+    res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->render_pass);
+    assert(res == VK_SUCCESS);
+    return res;
+}
+
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs)
 {
   /* DEPENDS on init_swapchain_extension() */
@@ -870,6 +946,8 @@ void mvk_destroy_swap_chain(vk_render_state *p_vkrs)
   }
   vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain, NULL);
 }
+
+void mvk_destroy_renderpass(vk_render_state *p_vkrs) { vkDestroyRenderPass(p_vkrs->device, p_vkrs->render_pass, NULL); }
 
 void mvk_destroy_device(vk_render_state *p_vkrs)
 {
