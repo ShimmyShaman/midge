@@ -10,10 +10,16 @@
 /* Amount of time, in nanoseconds, to wait for a command buffer to complete */
 #define FENCE_TIMEOUT 100000000
 
+/* Number of samples needs to be the same at image creation,
+ * renderpass creation and pipeline creation.
+ */
+#define NUM_SAMPLES VK_SAMPLE_COUNT_1_BIT
+
 typedef enum MVkResult
 {
-    MVK_GRAPHIC_QUEUE_NOT_FOUND = -1700,
-    MVK_PRESENT_QUEUE_NOT_FOUND = -1700,
+    MVK_ERROR_GRAPHIC_QUEUE_NOT_FOUND = -1900,
+    MVK_ERROR_PRESENT_QUEUE_NOT_FOUND,
+    MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT,
 } MVkResult;
 
 /*
@@ -74,6 +80,15 @@ typedef struct
 
     VkCommandPool cmd_pool;
 
+    struct
+    {
+        VkFormat format;
+
+        VkImage image;
+        VkDeviceMemory mem;
+        VkImageView view;
+    } depth;
+
     // Buffer for initialization commands
     VkCommandBuffer cmd;
     // VkPipelineLayout pipeline_layout;
@@ -90,7 +105,9 @@ VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_la
 void mvk_init_device_extension_names(vk_render_state *p_vkrs);
 VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_name);
 VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, uint32_t required_gpu_count);
+VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_device(vk_render_state *p_vkrs);
+VkResult init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_image_usage_flags);
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs);
@@ -102,6 +119,7 @@ void mvk_init_device_queue(vk_render_state *p_vkrs);
 
 void mvk_destroy_command_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_command_pool(vk_render_state *p_vkrs);
+void mvk_destroy_depth_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_swap_chain(vk_render_state *p_vkrs);
 void mvk_destroy_device(vk_render_state *p_vkrs);
 void mvk_destroy_instance(vk_render_state *p_vkrs);

@@ -3,6 +3,29 @@
 #include "rendering/mvk_init_util.h"
 
 /*
+ * Obtains the memory type from the available properties, returning false if no memory type was matched.
+ */
+bool memory_type_from_properties(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
+{
+  // Search memtypes to find first index with those properties
+  for (uint32_t i = 0; i < p_vkrs->memory_properties.memoryTypeCount; i++)
+  {
+    if ((typeBits & 1) == 1)
+    {
+      // Type is available, does it match user properties?
+      if ((p_vkrs->memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask)
+      {
+        *typeIndex = i;
+        return true;
+      }
+    }
+    typeBits >>= 1;
+  }
+  // No memory types matched, return failure
+  return false;
+}
+
+/*
  * Initializes a discovered global extension property.
  */
 VkResult mvk_init_global_extension_properties(layer_properties &layer_props)
@@ -216,6 +239,109 @@ VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, const uint32_t requi
   return res;
 }
 
+VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
+{
+  VkResult res;
+  bool pass;
+  VkImageCreateInfo image_info = {};
+  VkFormatProperties props;
+
+  /* allow custom depth formats */
+  if (p_vkrs->depth.format == VK_FORMAT_UNDEFINED)
+    p_vkrs->depth.format = VK_FORMAT_D16_UNORM;
+
+  const VkFormat depth_format = p_vkrs->depth.format;
+  vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], depth_format, &props);
+  if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+  {
+    image_info.tiling = VK_IMAGE_TILING_LINEAR;
+  }
+  else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+  {
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+  }
+  else
+  {
+    /* Try other depth formats? */
+    printf("depth_format:%i is unsupported", depth_format);
+    return (VkResult)MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT;
+  }
+
+  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  image_info.pNext = NULL;
+  image_info.imageType = VK_IMAGE_TYPE_2D;
+  image_info.format = depth_format;
+  image_info.extent.width = p_vkrs->window_width;
+  image_info.extent.height = p_vkrs->window_height;
+  image_info.extent.depth = 1;
+  image_info.mipLevels = 1;
+  image_info.arrayLayers = 1;
+  image_info.samples = NUM_SAMPLES;
+  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  image_info.queueFamilyIndexCount = 0;
+  image_info.pQueueFamilyIndices = NULL;
+  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  image_info.flags = 0;
+
+  VkMemoryAllocateInfo mem_alloc = {};
+  mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  mem_alloc.pNext = NULL;
+  mem_alloc.allocationSize = 0;
+  mem_alloc.memoryTypeIndex = 0;
+
+  VkImageViewCreateInfo view_info = {};
+  view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  view_info.pNext = NULL;
+  view_info.image = VK_NULL_HANDLE;
+  view_info.format = depth_format;
+  view_info.components.r = VK_COMPONENT_SWIZZLE_R;
+  view_info.components.g = VK_COMPONENT_SWIZZLE_G;
+  view_info.components.b = VK_COMPONENT_SWIZZLE_B;
+  view_info.components.a = VK_COMPONENT_SWIZZLE_A;
+  view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  view_info.subresourceRange.baseMipLevel = 0;
+  view_info.subresourceRange.levelCount = 1;
+  view_info.subresourceRange.baseArrayLayer = 0;
+  view_info.subresourceRange.layerCount = 1;
+  view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  view_info.flags = 0;
+
+  if (depth_format == VK_FORMAT_D16_UNORM_S8_UINT || depth_format == VK_FORMAT_D24_UNORM_S8_UINT ||
+      depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+  {
+    view_info.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+  }
+
+  VkMemoryRequirements mem_reqs;
+
+  /* Create image */
+  res = vkCreateImage(p_vkrs->device, &image_info, NULL, &p_vkrs->depth.image);
+  assert(res == VK_SUCCESS);
+
+  vkGetImageMemoryRequirements(p_vkrs->device, p_vkrs->depth.image, &mem_reqs);
+
+  mem_alloc.allocationSize = mem_reqs.size;
+  /* Use the memory properties to determine the type of memory required */
+  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &mem_alloc.memoryTypeIndex);
+  assert(pass);
+
+  /* Allocate memory */
+  res = vkAllocateMemory(p_vkrs->device, &mem_alloc, NULL, &p_vkrs->depth.mem);
+  assert(res == VK_SUCCESS);
+
+  /* Bind memory */
+  res = vkBindImageMemory(p_vkrs->device, p_vkrs->depth.image, p_vkrs->depth.mem, 0);
+  assert(res == VK_SUCCESS);
+
+  /* Create image view */
+  view_info.image = p_vkrs->depth.image;
+  res = vkCreateImageView(p_vkrs->device, &view_info, NULL, &p_vkrs->depth.view);
+  assert(res == VK_SUCCESS);
+
+  return res;
+}
+
 /*
  * Constructs the surface, finds a graphics and present queue for it as well as a supported format.
 */
@@ -275,9 +401,9 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
   // Generate error if could not find queues that support graphics
   // and present
   if (p_vkrs->graphics_queue_family_index == UINT32_MAX)
-    return (VkResult)MVK_GRAPHIC_QUEUE_NOT_FOUND;
+    return (VkResult)MVK_ERROR_GRAPHIC_QUEUE_NOT_FOUND;
   if (p_vkrs->present_queue_family_index == UINT32_MAX)
-    return (VkResult)MVK_PRESENT_QUEUE_NOT_FOUND;
+    return (VkResult)MVK_ERROR_PRESENT_QUEUE_NOT_FOUND;
 
   // Get the list of VkFormats that are supported:
   uint32_t formatCount;
@@ -596,6 +722,12 @@ void mvk_destroy_command_buffer(vk_render_state *p_vkrs)
 void mvk_destroy_command_pool(vk_render_state *p_vkrs)
 {
   vkDestroyCommandPool(p_vkrs->device, p_vkrs->cmd_pool, NULL);
+}
+
+void destroy_depth_buffer(vk_render_state *p_vkrs) {
+    vkDestroyImageView(p_vkrs->device, p_vkrs->depth.view, NULL);
+    vkDestroyImage(p_vkrs->device, p_vkrs->depth.image, NULL);
+    vkFreeMemory(p_vkrs->device, p_vkrs->depth.mem, NULL);
 }
 
 void mvk_destroy_swap_chain(vk_render_state *p_vkrs)
