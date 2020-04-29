@@ -602,71 +602,73 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_i
   return VK_SUCCESS;
 }
 
-// void init_uniform_buffer(vk_render_state *p_vkrs)
-// {
-//   VkResult res;
-//   bool pass;
-//   float fov = glm::radians(45.0f);
-//   if (p_vkrs->window_width > p_vkrs->window_height)
-//   {
-//     fov *= static_cast<float>(p_vkrs->window_height) / static_cast<float>(p_vkrs->window_width);
-//   }
-//   p_vkrs->Projection = glm::perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f);
-//   p_vkrs->View = glm::lookAt(glm::vec3(-5, 3, -10), // Camera is at (-5,3,-10), in World Space
-//                              glm::vec3(0, 0, 0),    // and looks at the origin
-//                              glm::vec3(0, -1, 0)    // Head is up (set to 0,-1,0 to look upside-down)
-//   );
-//   p_vkrs->Model = glm::mat4(1.0f);
-//   // Vulkan clip space has inverted Y and half Z.
-//   p_vkrs->Clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
+VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
+{
+  VkResult res;
+  bool pass;
+  float fov = glm::radians(45.0f);
+  if (p_vkrs->window_width > p_vkrs->window_height)
+  {
+    fov *= static_cast<float>(p_vkrs->window_height) / static_cast<float>(p_vkrs->window_width);
+  }
+  p_vkrs->Projection = glm::perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f);
+  p_vkrs->View = glm::lookAt(glm::vec3(-5, 3, -10), // Camera is at (-5,3,-10), in World Space
+                             glm::vec3(0, 0, 0),    // and looks at the origin
+                             glm::vec3(0, -1, 0)    // Head is up (set to 0,-1,0 to look upside-down)
+  );
+  p_vkrs->Model = glm::mat4(1.0f);
+  // Vulkan clip space has inverted Y and half Z.
+  p_vkrs->Clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
 
-//   p_vkrs->MVP = p_vkrs->Clip * p_vkrs->Projection * p_vkrs->View * p_vkrs->Model;
+  p_vkrs->MVP = p_vkrs->Clip * p_vkrs->Projection * p_vkrs->View * p_vkrs->Model;
 
-//   /* VULKAN_KEY_START */
-//   VkBufferCreateInfo buf_info = {};
-//   buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-//   buf_info.pNext = NULL;
-//   buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-//   buf_info.size = sizeof(p_vkrs->MVP);
-//   buf_info.queueFamilyIndexCount = 0;
-//   buf_info.pQueueFamilyIndices = NULL;
-//   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-//   buf_info.flags = 0;
-//   res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->uniform_data.buf);
-//   assert(res == VK_SUCCESS);
+  /* VULKAN_KEY_START */
+  VkBufferCreateInfo buf_info = {};
+  buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buf_info.pNext = NULL;
+  buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+  buf_info.size = sizeof(p_vkrs->MVP);
+  buf_info.queueFamilyIndexCount = 0;
+  buf_info.pQueueFamilyIndices = NULL;
+  buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  buf_info.flags = 0;
+  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->uniform_data.buf);
+  assert(res == VK_SUCCESS);
 
-//   VkMemoryRequirements mem_reqs;
-//   vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->uniform_data.buf, &mem_reqs);
+  VkMemoryRequirements mem_reqs;
+  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->uniform_data.buf, &mem_reqs);
 
-//   VkMemoryAllocateInfo alloc_info = {};
-//   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-//   alloc_info.pNext = NULL;
-//   alloc_info.memoryTypeIndex = 0;
+  VkMemoryAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.pNext = NULL;
+  alloc_info.memoryTypeIndex = 0;
 
-//   alloc_info.allocationSize = mem_reqs.size;
-//   pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-//                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-//                                      &alloc_info.memoryTypeIndex);
-//   assert(pass && "No mappable, coherent memory");
+  alloc_info.allocationSize = mem_reqs.size;
+  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
+                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                     &alloc_info.memoryTypeIndex);
+  assert(pass && "No mappable, coherent memory");
 
-//   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->uniform_data.mem));
-//   assert(res == VK_SUCCESS);
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->uniform_data.mem));
+  assert(res == VK_SUCCESS);
 
-//   uint8_t *pData;
-//   res = vkMapMemory(p_vkrs->device, p_vkrs->uniform_data.mem, 0, mem_reqs.size, 0, (void **)&pData);
-//   assert(res == VK_SUCCESS);
+  uint8_t *pData;
+  res = vkMapMemory(p_vkrs->device, p_vkrs->uniform_data.mem, 0, mem_reqs.size, 0, (void **)&pData);
+  assert(res == VK_SUCCESS);
 
-//   memcpy(pData, &p_vkrs->MVP, sizeof(p_vkrs->MVP));
+  memcpy(pData, &p_vkrs->MVP, sizeof(p_vkrs->MVP));
 
-//   vkUnmapMemory(p_vkrs->device, p_vkrs->uniform_data.mem);
+  vkUnmapMemory(p_vkrs->device, p_vkrs->uniform_data.mem);
 
-//   res = vkBindBufferMemory(p_vkrs->device, p_vkrs->uniform_data.buf, p_vkrs->uniform_data.mem, 0);
-//   assert(res == VK_SUCCESS);
+  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->uniform_data.buf, p_vkrs->uniform_data.mem, 0);
+  assert(res == VK_SUCCESS);
 
-//   p_vkrs->uniform_data.buffer_p_vkrs->buffer = p_vkrs->uniform_data.buf;
-//   p_vkrs->uniform_data.buffer_p_vkrs->offset = 0;
-//   p_vkrs->uniform_data.buffer_p_vkrs->range = sizeof(p_vkrs->MVP);
-// }
+  p_vkrs->uniform_data.buffer_info.buffer = p_vkrs->uniform_data.buf;
+  p_vkrs->uniform_data.buffer_info.offset = 0;
+  p_vkrs->uniform_data.buffer_info.range = sizeof(p_vkrs->MVP);
+
+  return res;
+}
 
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs)
 {
@@ -779,6 +781,12 @@ void mvk_init_device_queue(vk_render_state *p_vkrs)
   }
 }
 
+void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
+{
+  vkDestroyBuffer(p_vkrs->device, p_vkrs->uniform_data.buf, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->uniform_data.mem, NULL);
+}
+
 void mvk_destroy_command_buffer(vk_render_state *p_vkrs)
 {
   VkCommandBuffer cmd_bufs[1] = {p_vkrs->cmd};
@@ -790,7 +798,7 @@ void mvk_destroy_command_pool(vk_render_state *p_vkrs)
   vkDestroyCommandPool(p_vkrs->device, p_vkrs->cmd_pool, NULL);
 }
 
-void destroy_depth_buffer(vk_render_state *p_vkrs)
+void mvk_destroy_depth_buffer(vk_render_state *p_vkrs)
 {
   vkDestroyImageView(p_vkrs->device, p_vkrs->depth.view, NULL);
   vkDestroyImage(p_vkrs->device, p_vkrs->depth.image, NULL);

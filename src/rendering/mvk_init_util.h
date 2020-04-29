@@ -93,6 +93,12 @@ typedef struct
         VkImageView view;
     } depth;
 
+    struct {
+        VkBuffer buf;
+        VkDeviceMemory mem;
+        VkDescriptorBufferInfo buffer_info;
+    } uniform_data;
+
     glm::mat4 Projection;
     glm::mat4 View;
     glm::mat4 Model;
@@ -120,6 +126,7 @@ VkResult mvk_init_device(vk_render_state *p_vkrs);
 VkResult init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_image_usage_flags);
+VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs);
 VkResult mvk_init_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
@@ -127,6 +134,7 @@ VkResult mvk_execute_end_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
 
+void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_command_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_command_pool(vk_render_state *p_vkrs);
 void mvk_destroy_depth_buffer(vk_render_state *p_vkrs);

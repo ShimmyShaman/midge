@@ -43,6 +43,8 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_execute_begin_command_buffer(&vkrs));
   mvk_init_device_queue(&vkrs);
   MRT_RUN(mvk_init_swapchain(&vkrs, 0));
+  MRT_RUN(mvk_init_depth_buffer(&vkrs));
+  MRT_RUN(mvk_init_uniform_buffer(&vkrs));
 
   // -- Update
   while (!thr->should_exit && !winfo.shouldExit)
@@ -52,6 +54,8 @@ void *midge_render_thread(void *vargp)
   }
 
   // -- Cleanup
+  mvk_destroy_uniform_buffer(&vkrs);
+  mvk_destroy_depth_buffer(&vkrs);  
   mvk_destroy_swap_chain(&vkrs);
   mvk_destroy_command_buffer(&vkrs);
   mvk_destroy_command_pool(&vkrs);
