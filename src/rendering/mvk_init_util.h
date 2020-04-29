@@ -11,6 +11,10 @@
 
 #include "rendering/xcbwindow.h"
 
+/* Number of descriptor sets needs to be the same at alloc,       */
+/* pipeline layout creation, and descriptor set layout creation   */
+#define NUM_DESCRIPTOR_SETS 1
+
 /* Amount of time, in nanoseconds, to wait for a command buffer to complete */
 #define FENCE_TIMEOUT 100000000
 
@@ -93,7 +97,8 @@ typedef struct
         VkImageView view;
     } depth;
 
-    struct {
+    struct
+    {
         VkBuffer buf;
         VkDeviceMemory mem;
         VkDescriptorBufferInfo buffer_info;
@@ -107,8 +112,8 @@ typedef struct
 
     // Buffer for initialization commands
     VkCommandBuffer cmd;
-    // VkPipelineLayout pipeline_layout;
-    // std::vector<VkDescriptorSetLayout> desc_layout;
+    VkPipelineLayout pipeline_layout;
+    std::vector<VkDescriptorSetLayout> desc_layout;
     // VkPipelineCache pipelineCache;
     // VkRenderPass render_pass;
     // VkPipeline pipeline;
@@ -127,6 +132,7 @@ VkResult init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_image_usage_flags);
 VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs);
+VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool use_texture, VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags);
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs);
 VkResult mvk_init_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
@@ -135,6 +141,7 @@ VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
 
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs);
+void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs);
 void mvk_destroy_command_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_command_pool(vk_render_state *p_vkrs);
 void mvk_destroy_depth_buffer(vk_render_state *p_vkrs);

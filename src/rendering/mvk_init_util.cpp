@@ -672,6 +672,54 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   return res;
 }
 
+VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool use_texture,
+                                                  VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags)
+{
+  VkDescriptorSetLayoutBinding layout_bindings[2];
+  layout_bindings[0].binding = 0;
+  layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  layout_bindings[0].descriptorCount = 1;
+  layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  layout_bindings[0].pImmutableSamplers = NULL;
+
+  if (use_texture)
+  {
+    layout_bindings[1].binding = 1;
+    layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    layout_bindings[1].descriptorCount = 1;
+    layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    layout_bindings[1].pImmutableSamplers = NULL;
+  }
+
+  /* Next take layout bindings and use them to create a descriptor set layout
+     */
+  VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
+  descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  descriptor_layout.pNext = NULL;
+  descriptor_layout.flags = descSetLayoutCreateFlags;
+  descriptor_layout.bindingCount = use_texture ? 2 : 1;
+  descriptor_layout.pBindings = layout_bindings;
+
+  VkResult res;
+
+  p_vkrs->desc_layout.resize(NUM_DESCRIPTOR_SETS);
+  res = vkCreateDescriptorSetLayout(p_vkrs->device, &descriptor_layout, NULL, p_vkrs->desc_layout.data());
+  assert(res == VK_SUCCESS);
+
+  /* Now use the descriptor layout to create a pipeline layout */
+  VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
+  pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pPipelineLayoutCreateInfo.pNext = NULL;
+  pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
+  pPipelineLayoutCreateInfo.pPushConstantRanges = NULL;
+  pPipelineLayoutCreateInfo.setLayoutCount = NUM_DESCRIPTOR_SETS;
+  pPipelineLayoutCreateInfo.pSetLayouts = p_vkrs->desc_layout.data();
+
+  res = vkCreatePipelineLayout(p_vkrs->device, &pPipelineLayoutCreateInfo, NULL, &p_vkrs->pipeline_layout);
+  assert(res == VK_SUCCESS);
+  return res;
+}
+
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs)
 {
   /* DEPENDS on init_swapchain_extension() */
@@ -787,6 +835,13 @@ void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
 {
   vkDestroyBuffer(p_vkrs->device, p_vkrs->uniform_data.buf, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->uniform_data.mem, NULL);
+}
+
+void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs)
+{
+  for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
+    vkDestroyDescriptorSetLayout(p_vkrs->device, p_vkrs->desc_layout[i], NULL);
+  vkDestroyPipelineLayout(p_vkrs->device, p_vkrs->pipeline_layout, NULL);
 }
 
 void mvk_destroy_command_buffer(vk_render_state *p_vkrs)
