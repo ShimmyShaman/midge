@@ -24,6 +24,7 @@ void *midge_render_thread(void *vargp)
   vk_render_state vkrs;
   vkrs.window_width = 1024;
   vkrs.window_height = 640;
+  vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
 
   // -- Initialization

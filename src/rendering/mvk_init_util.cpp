@@ -136,10 +136,10 @@ VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_
   inst_info.enabledExtensionCount = p_vkrs->instance_extension_names.size();
   inst_info.ppEnabledExtensionNames = p_vkrs->instance_extension_names.data();
 
-  printf("aboutToVkCreateInstance()\n");
+  printf("create VkInstance...");
   VkResult res = vkCreateInstance(&inst_info, NULL, &p_vkrs->inst);
   assert(res == VK_SUCCESS);
-  printf("vkCreateInstance(SUCCESS)\n");
+  printf("SUCCESS\n");
 
   return res;
 }
@@ -182,6 +182,7 @@ VkResult init_device_extension_properties(vk_render_state *p_vkrs, layer_propert
  */
 VkResult mvk_init_device(vk_render_state *p_vkrs)
 {
+  // printf("mvk_init_device\n");
   VkResult res;
   VkDeviceQueueCreateInfo queue_info = {};
 
@@ -241,6 +242,7 @@ VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, const uint32_t requi
 
 VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
 {
+  // printf("mvk_init_depth_buffer\n");
   VkResult res;
   bool pass;
   VkImageCreateInfo image_info = {};
@@ -263,7 +265,7 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
   else
   {
     /* Try other depth formats? */
-    printf("depth_format:%i is unsupported", depth_format);
+    printf("depth_format:%i is unsupported\n", depth_format);
     return (VkResult)MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT;
   }
 
