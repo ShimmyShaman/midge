@@ -105,7 +105,13 @@ void loadLibrary(const char *name)
   if (result == cling::Interpreter::kSuccess)
     return;
 
-  printf("Failure! %i = loadLibrary(\"%s\")", result, name);
+  std::string lookedUpAddress = clint->lookupFileOrLibrary(name);
+  printf("lookup: %s\n", lookedUpAddress.c_str());
+  result = clint->loadLibrary(lookedUpAddress);
+  if (result == cling::Interpreter::kSuccess)
+    return;
+
+  printf("Failure! %i = loadLibrary(\"%s\")\n", result, name);
 
   exit(-1);
 }
@@ -127,10 +133,12 @@ void run()
     // Include Paths
     // clint->AddIncludePath("/usr/include");
     clint->AddIncludePath("/home/jason/midge/dep/glm");
+    clint->AddIncludePath("/home/jason/midge/dep/glslang");
 
     // Libraries
     loadLibrary("vulkan");
     loadLibrary("xcb");
+    loadLibrary("dep/glslang/bin/glslangValidator");
 
     // Load App source
     printf("<AppSourceLoading>\n");
@@ -146,14 +154,14 @@ void run()
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
     printf("</AppSourceLoading>\n\n");
 
-    clint->declare("void updateUI() { int ms = 0; while(ms < 4000) { ++ms; usleep(1000); } }");
+    clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 4000 && !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
 
     // Run App
     clint->process("mthread_info *rthr;");
     // printf("process(begin)\n");
     clint->process("begin_mthread(midge_render_thread, &rthr);");
     // printf("process(updateUI)\n");
-    clint->process("updateUI();");
+    clint->process("updateUI(rthr);");
     // printf("process(end)\n");
     clint->process("end_mthread(rthr);");
     printf("\n! MIDGE COMPLETE !\n");

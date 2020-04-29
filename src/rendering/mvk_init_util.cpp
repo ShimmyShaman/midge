@@ -721,79 +721,81 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
 }
 
 VkResult mvk_init_renderpass(vk_render_state *p_vkrs, bool include_depth, bool clear, VkImageLayout finalLayout,
-                     VkImageLayout initialLayout) {
-    /* DEPENDS on init_swap_chain() and init_depth_buffer() */
+                             VkImageLayout initialLayout)
+{
+  /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
-    assert(clear || (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED));
+  assert(clear || (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED));
 
-    VkResult res;
-    /* Need attachments for render target and depth buffer */
-    VkAttachmentDescription attachments[2];
-    attachments[0].format = p_vkrs->format;
-    attachments[0].samples = NUM_SAMPLES;
-    attachments[0].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[0].initialLayout = initialLayout;
-    attachments[0].finalLayout = finalLayout;
-    attachments[0].flags = 0;
+  VkResult res;
+  /* Need attachments for render target and depth buffer */
+  VkAttachmentDescription attachments[2];
+  attachments[0].format = p_vkrs->format;
+  attachments[0].samples = NUM_SAMPLES;
+  attachments[0].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+  attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  attachments[0].initialLayout = initialLayout;
+  attachments[0].finalLayout = finalLayout;
+  attachments[0].flags = 0;
 
-    if (include_depth) {
-        attachments[1].format = p_vkrs->depth.format;
-        attachments[1].samples = NUM_SAMPLES;
-        attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachments[1].flags = 0;
-    }
+  if (include_depth)
+  {
+    attachments[1].format = p_vkrs->depth.format;
+    attachments[1].samples = NUM_SAMPLES;
+    attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    attachments[1].flags = 0;
+  }
 
-    VkAttachmentReference color_reference = {};
-    color_reference.attachment = 0;
-    color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  VkAttachmentReference color_reference = {};
+  color_reference.attachment = 0;
+  color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentReference depth_reference = {};
-    depth_reference.attachment = 1;
-    depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  VkAttachmentReference depth_reference = {};
+  depth_reference.attachment = 1;
+  depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.flags = 0;
-    subpass.inputAttachmentCount = 0;
-    subpass.pInputAttachments = NULL;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_reference;
-    subpass.pResolveAttachments = NULL;
-    subpass.pDepthStencilAttachment = include_depth ? &depth_reference : NULL;
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = NULL;
+  VkSubpassDescription subpass = {};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.flags = 0;
+  subpass.inputAttachmentCount = 0;
+  subpass.pInputAttachments = NULL;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_reference;
+  subpass.pResolveAttachments = NULL;
+  subpass.pDepthStencilAttachment = include_depth ? &depth_reference : NULL;
+  subpass.preserveAttachmentCount = 0;
+  subpass.pPreserveAttachments = NULL;
 
-    // Subpass dependency to wait for wsi image acquired semaphore before starting layout transition
-    VkSubpassDependency subpass_dependency = {};
-    subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    subpass_dependency.dstSubpass = 0;
-    subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpass_dependency.srcAccessMask = 0;
-    subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    subpass_dependency.dependencyFlags = 0;
+  // Subpass dependency to wait for wsi image acquired semaphore before starting layout transition
+  VkSubpassDependency subpass_dependency = {};
+  subpass_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  subpass_dependency.dstSubpass = 0;
+  subpass_dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependency.srcAccessMask = 0;
+  subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  subpass_dependency.dependencyFlags = 0;
 
-    VkRenderPassCreateInfo rp_info = {};
-    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rp_info.pNext = NULL;
-    rp_info.attachmentCount = include_depth ? 2 : 1;
-    rp_info.pAttachments = attachments;
-    rp_info.subpassCount = 1;
-    rp_info.pSubpasses = &subpass;
-    rp_info.dependencyCount = 1;
-    rp_info.pDependencies = &subpass_dependency;
+  VkRenderPassCreateInfo rp_info = {};
+  rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  rp_info.pNext = NULL;
+  rp_info.attachmentCount = include_depth ? 2 : 1;
+  rp_info.pAttachments = attachments;
+  rp_info.subpassCount = 1;
+  rp_info.pSubpasses = &subpass;
+  rp_info.dependencyCount = 1;
+  rp_info.pDependencies = &subpass_dependency;
 
-    res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->render_pass);
-    assert(res == VK_SUCCESS);
-    return res;
+  res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->render_pass);
+  assert(res == VK_SUCCESS);
+  return res;
 }
 
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs)
@@ -905,6 +907,85 @@ void mvk_init_device_queue(vk_render_state *p_vkrs)
   {
     vkGetDeviceQueue(p_vkrs->device, p_vkrs->present_queue_family_index, 0, &p_vkrs->present_queue);
   }
+}
+
+void init_glslang() {}
+
+void finalize_glslang() {}
+
+bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv)
+{
+  // MVKGLSLConversionShaderStage shaderStage;
+  // switch (shader_type)
+  // {
+  // case VK_SHADER_STAGE_VERTEX_BIT:
+  //   shaderStage = kMVKGLSLConversionShaderStageVertex;
+  //   break;
+  // case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+  //   shaderStage = kMVKGLSLConversionShaderStageTessControl;
+  //   break;
+  // case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+  //   shaderStage = kMVKGLSLConversionShaderStageTessEval;
+  //   break;
+  // case VK_SHADER_STAGE_GEOMETRY_BIT:
+  //   shaderStage = kMVKGLSLConversionShaderStageGeometry;
+  //   break;
+  // case VK_SHADER_STAGE_FRAGMENT_BIT:
+  //   shaderStage = kMVKGLSLConversionShaderStageFragment;
+  //   break;
+  // case VK_SHADER_STAGE_COMPUTE_BIT:
+  //   shaderStage = kMVKGLSLConversionShaderStageCompute;
+  //   break;
+  // default:
+  //   shaderStage = kMVKGLSLConversionShaderStageAuto;
+  //   break;
+  // }
+
+  // mvk::GLSLToSPIRVConverter glslConverter;
+  // glslConverter.setGLSL(pshader);
+  // bool wasConverted = glslConverter.convert(shaderStage, false, false);
+  // if (wasConverted)
+  // {
+  //   spirv = glslConverter.getSPIRV();
+  // }
+  bool wasConverted = false;
+  return wasConverted;
+}
+
+VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index)
+{
+  init_glslang();
+
+  VkShaderModuleCreateInfo moduleCreateInfo;
+  std::vector<unsigned int> vtx_spv;
+  p_vkrs->shaderStages[stage_index].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  p_vkrs->shaderStages[stage_index].pNext = NULL;
+  p_vkrs->shaderStages[stage_index].pSpecializationInfo = NULL;
+  p_vkrs->shaderStages[stage_index].flags = 0;
+  p_vkrs->shaderStages[stage_index].stage = glsl_shader->stage; // VK_SHADER_STAGE_VERTEX_BIT; VK_SHADER_STAGE_FRAGMENT_BIT
+  p_vkrs->shaderStages[stage_index].pName = "main";
+
+  bool retVal = GLSLtoSPV(glsl_shader->stage, glsl_shader->text, vtx_spv);
+  assert(retVal);
+
+  moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  moduleCreateInfo.pNext = NULL;
+  moduleCreateInfo.flags = 0;
+  moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
+  moduleCreateInfo.pCode = vtx_spv.data();
+
+  VkResult res = vkCreateShaderModule(p_vkrs->device, &moduleCreateInfo, NULL, &p_vkrs->shaderStages[stage_index].module);
+  assert(res == VK_SUCCESS);
+
+  finalize_glslang();
+
+  return res;
+}
+
+void mvk_destroy_shaders(vk_render_state *p_vkrs)
+{
+  vkDestroyShaderModule(p_vkrs->device, p_vkrs->shaderStages[0].module, NULL);
+  vkDestroyShaderModule(p_vkrs->device, p_vkrs->shaderStages[1].module, NULL);
 }
 
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)

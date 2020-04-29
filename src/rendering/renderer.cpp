@@ -2,6 +2,8 @@
 
 #include "rendering/renderer.h"
 
+#include "glslang/glslang_c_interface.h"
+
 #define MRT_RUN(CALL)       \
   result = CALL;            \
   if (result != VK_SUCCESS) \
@@ -10,12 +12,122 @@
     return NULL;            \
   }
 
+static const char *vertShaderText =
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (std140, binding = 0) uniform bufferVals {\n"
+    "    mat4 mvp;\n"
+    "} myBufferVals;\n"
+    "layout (location = 0) in vec4 pos;\n"
+    "layout (location = 1) in vec4 inColor;\n"
+    "layout (location = 0) out vec4 outColor;\n"
+    "void main() {\n"
+    "   outColor = inColor;\n"
+    "   gl_Position = myBufferVals.mvp * pos;\n"
+    "}\n";
+
+static const char *fragShaderText =
+    "#version 400\n"
+    "#extension GL_ARB_separate_shader_objects : enable\n"
+    "#extension GL_ARB_shading_language_420pack : enable\n"
+    "layout (location = 0) in vec4 color;\n"
+    "layout (location = 0) out vec4 outColor;\n"
+    "void main() {\n"
+    "   outColor = color;\n"
+    "}\n";
+
+void glslang()
+{
+  const char *shaderCodeVertex =
+      "#version 400\n"
+      "#extension GL_ARB_separate_shader_objects : enable\n"
+      "#extension GL_ARB_shading_language_420pack : enable\n"
+      "layout (std140, binding = 0) uniform bufferVals {\n"
+      "    mat4 mvp;\n"
+      "} myBufferVals;\n"
+      "layout (location = 0) in vec4 pos;\n"
+      "layout (location = 1) in vec4 inColor;\n"
+      "layout (location = 0) out vec4 outColor;\n"
+      "void main() {\n"
+      "   outColor = inColor;\n"
+      "   gl_Position = myBufferVals.mvp * pos;\n"
+      "}\n";
+
+  const glslang_input_t input =
+  {
+  	.language = GLSLANG_SOURCE_GLSL,
+  	.stage = GLSLANG_STAGE_VERTEX,
+  	.client = GLSLANG_CLIENT_VULKAN,
+  	.client_version = GLSLANG_TARGET_VULKAN_1_1,
+  	.target_language = GLSLANG_TARGET_SPV,
+  	.target_language_version = GLSLANG_TARGET_SPV_1_3,
+  	.code = shaderCodeVertex,
+  	.default_version = 100,
+  	.default_profile = GLSLANG_NO_PROFILE,
+  	.force_default_version_and_profile = false,
+  	.forward_compatible = false,
+  	.messages = GLSLANG_MSG_DEFAULT_BIT,
+  	.resource = NULL,//&glslang::DefaultTBuiltInResource,
+  };
+
+  glslang_initialize_process();
+
+  glslang_shader_t* shader = glslang_shader_create( &input );
+
+  if ( !glslang_shader_preprocess(shader, &input) )
+  {
+  	// use glslang_shader_get_info_log() and glslang_shader_get_info_debug_log()
+  }
+
+  if ( !glslang_shader_parse(shader, &input) )
+  {
+  	// use glslang_shader_get_info_log() and glslang_shader_get_info_debug_log()
+  }
+
+  glslang_program_t* program = glslang_program_create();
+  glslang_program_add_shader( program, shader );
+
+  if (!glslang_program_link(program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT))
+  {
+  	// use glslang_program_get_info_log() and glslang_program_get_info_debug_log();
+  }
+
+  glslang_program_SPIRV_generate( program, input.stage );
+
+  if ( glslang_program_SPIRV_get_messages(program) )
+  {
+  	printf("%s", glslang_program_SPIRV_get_messages(program));
+  }
+
+  glslang_shader_delete( shader );
+
+  const VkShaderModuleCreateInfo ci =
+  {
+  	.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+  	.codeSize = glslang_program_SPIRV_get_size(program) * sizeof(unsigned int),
+  	.pCode    = glslang_program_SPIRV_get_ptr(program)
+  };
+
+  printf("SUCCESS! WOULD CREATE SHADER HERE!\n");
+  // VkResult result = vkCreateShaderModule(device, &ci, nullptr, ...);
+
+  glslang_program_delete( program );
+
+  printf("glslang() end\n");
+}
+
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
 void *midge_render_thread(void *vargp)
 {
   // -- Arguments
   mthread_info *thr = (mthread_info *)vargp;
+
+  // TODO
+  glslang();
+  thr->has_concluded = 1;
+  return NULL;
 
   // -- States
   mxcb_window_info winfo = {
@@ -48,6 +160,7 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_uniform_buffer(&vkrs));
   MRT_RUN(mvk_init_descriptor_and_pipeline_layouts(&vkrs, false, 0));
   MRT_RUN(mvk_init_renderpass(&vkrs, true, true, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED));
+  // MRT_RUN(mvk_init_shader(&vkrs, &vert_info, &frag_info));
 
   // -- Update
   while (!thr->should_exit && !winfo.shouldExit)

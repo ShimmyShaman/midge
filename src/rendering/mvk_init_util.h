@@ -30,6 +30,12 @@ typedef enum MVkResult
     MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT,
 } MVkResult;
 
+struct glsl_shader
+{
+  const char *text;
+  VkShaderStageFlagBits stage;
+};
+
 /*
  * Keep each of our swap chain buffers' image, command buffer and view in one
  * spot
@@ -118,6 +124,8 @@ typedef struct
     VkRenderPass render_pass;
     // VkPipeline pipeline;
 
+    VkPipelineShaderStageCreateInfo shaderStages[2];
+
     uint32_t current_buffer;
     uint32_t queue_family_count;
 } vk_render_state;
@@ -140,7 +148,10 @@ VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_end_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
+VkResult mvk_init_shaders(vk_render_state *p_vkrs, const VkShaderModuleCreateInfo *vertShaderCI, const VkShaderModuleCreateInfo *fragShaderCI);
 
+
+void mvk_destroy_shaders(vk_render_state *p_vkrs);
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs);
 void mvk_destroy_command_buffer(vk_render_state *p_vkrs);

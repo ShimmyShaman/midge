@@ -7,6 +7,7 @@
             "includePath": [
                 "/home/jason/midge/src",
                 "/home/jason/midge/dep/glm",
+                "/home/jason/midge/dep/glslang",
                 "/home/jason/cling/inst/include",
                 "/usr/include"
             ],
