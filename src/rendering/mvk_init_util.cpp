@@ -1141,6 +1141,12 @@ VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData,
   return res;
 }
 
+void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs)
+{
+  vkDestroyBuffer(p_vkrs->device, p_vkrs->vertex_buffer.buf, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->vertex_buffer.mem, NULL);
+}
+
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
 {
   for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++)
