@@ -11,33 +11,33 @@
   }
 
 static glsl_shader vertex_shader = {
-  .text = 
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, binding = 0) uniform bufferVals {\n"
-    "    mat4 mvp;\n"
-    "} myBufferVals;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec4 inColor;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = inColor;\n"
-    "   gl_Position = myBufferVals.mvp * pos;\n"
-    "}\n",
+    .text =
+        "#version 400\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "layout (std140, binding = 0) uniform bufferVals {\n"
+        "    mat4 mvp;\n"
+        "} myBufferVals;\n"
+        "layout (location = 0) in vec4 pos;\n"
+        "layout (location = 1) in vec4 inColor;\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "void main() {\n"
+        "   outColor = inColor;\n"
+        "   gl_Position = myBufferVals.mvp * pos;\n"
+        "}\n",
     .stage = VK_SHADER_STAGE_VERTEX_BIT,
 };
 
 static glsl_shader fragment_shader = {
-  .text = 
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (location = 0) in vec4 color;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = color;\n"
-    "}\n",
+    .text =
+        "#version 400\n"
+        "#extension GL_ARB_separate_shader_objects : enable\n"
+        "#extension GL_ARB_shading_language_420pack : enable\n"
+        "layout (location = 0) in vec4 color;\n"
+        "layout (location = 0) out vec4 outColor;\n"
+        "void main() {\n"
+        "   outColor = color;\n"
+        "}\n",
     .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
@@ -90,6 +90,7 @@ void *midge_render_thread(void *vargp)
   }
 
   // -- Cleanup
+  mvk_destroy_shaders(&vkrs);
   mvk_destroy_renderpass(&vkrs);
   mvk_destroy_descriptor_and_pipeline_layouts(&vkrs);
   mvk_destroy_uniform_buffer(&vkrs);
