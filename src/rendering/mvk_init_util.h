@@ -110,6 +110,15 @@ typedef struct
         VkDescriptorBufferInfo buffer_info;
     } uniform_data;
 
+    struct
+    {
+        VkBuffer buf;
+        VkDeviceMemory mem;
+        VkDescriptorBufferInfo buffer_info;
+    } vertex_buffer;
+    VkVertexInputBindingDescription vi_binding;
+    VkVertexInputAttributeDescription vi_attribs[2];
+
     glm::mat4 Projection;
     glm::mat4 View;
     glm::mat4 Model;
@@ -150,9 +159,9 @@ VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
 VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index);
 VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth);
+VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride, bool use_texture);
 
-
-
+void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs);
 void mvk_destroy_shaders(vk_render_state *p_vkrs);
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs);

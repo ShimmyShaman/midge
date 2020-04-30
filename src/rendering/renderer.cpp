@@ -1,6 +1,7 @@
 /* renderer.cpp */
 
 #include "rendering/renderer.h"
+#include "rendering/cube_data.h"
 
 #define MRT_RUN(CALL)       \
   result = CALL;            \
@@ -82,6 +83,8 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_shader(&vkrs, &vertex_shader, 0));
   MRT_RUN(mvk_init_shader(&vkrs, &fragment_shader, 1));
   MRT_RUN(mvk_init_framebuffers(&vkrs, true));
+  MRT_RUN(mvk_init_vertex_buffer(&vkrs, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
+                                 sizeof(g_vb_solid_face_colors_Data[0]), false));
 
   // -- Update
   while (!thr->should_exit && !winfo.shouldExit)
@@ -91,6 +94,7 @@ void *midge_render_thread(void *vargp)
   }
 
   // -- Cleanup
+  mvk_destroy_vertex_buffer(&vkrs);
   mvk_destroy_framebuffers(&vkrs);
   mvk_destroy_shaders(&vkrs);
   mvk_destroy_renderpass(&vkrs);
