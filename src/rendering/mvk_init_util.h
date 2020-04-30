@@ -148,7 +148,7 @@ VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_end_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
-VkResult mvk_init_shaders(vk_render_state *p_vkrs, const VkShaderModuleCreateInfo *vertShaderCI, const VkShaderModuleCreateInfo *fragShaderCI);
+VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index);
 
 
 void mvk_destroy_shaders(vk_render_state *p_vkrs);

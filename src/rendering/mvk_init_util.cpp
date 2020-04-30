@@ -909,53 +909,69 @@ void mvk_init_device_queue(vk_render_state *p_vkrs)
   }
 }
 
-void init_glslang() {}
-
-void finalize_glslang() {}
-
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv)
+VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader_text, std::vector<unsigned int> &spirv)
 {
-  // MVKGLSLConversionShaderStage shaderStage;
-  // switch (shader_type)
+  // Use glslangValidator from file
+  // Generate the shader file
+  const char *ext = NULL;
+  if((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT)
+  {
+    ext = "vert";
+  }
+  else
+  {
+    printf("GLSLtoSPV: unhandled bit type: %i", shader_type);
+    return VK_ERROR_UNKNOWN;
+  }
+
+  const char const *wd = "/home/jason/midge/dep/glslang/bin/";
+  char shaderFile[1024];
+  strcpy(shaderFile, wd);
+  strcat(shaderFile, "shader.");
+  strcat(shaderFile, ext);
+  
+  FILE *fpw;
+  fpw = fopen(shaderFile, "w");
+  if(!fpw)
+  {
+    printf("GLSLtoSPV: couldn't open file: %s", shaderFile);
+    return VK_ERROR_UNKNOWN;
+  }
+
+  fprintf(fpw, "%s", p_shader_text);
+  fclose(fpw);
+
+  // Execute the SPIRV gen
+  char *argv[3];
+  argv[0] = shaderFile;
+  argv[1] = "-V";
+  argv[2] = "-H";
+  if(execv("/home/jason/midge/dep/glslang/bin/glslangValidator", argv) == -1)
+  {
+    printf("GLSLtoSPV: error occursed during conversion.");
+    return VK_ERROR_UNKNOWN;
+  }
+  printf("SUCCESS ?? ");
+
+  // Load the generated file
+  // strcpy(shaderFile, wd);
+  // strcat(shaderFile, ext);
+  // strcat(shaderFile, ".spv");
+
+  // fpw = fopen(shaderFile, "r");
+  // if(!fpw)
   // {
-  // case VK_SHADER_STAGE_VERTEX_BIT:
-  //   shaderStage = kMVKGLSLConversionShaderStageVertex;
-  //   break;
-  // case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-  //   shaderStage = kMVKGLSLConversionShaderStageTessControl;
-  //   break;
-  // case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-  //   shaderStage = kMVKGLSLConversionShaderStageTessEval;
-  //   break;
-  // case VK_SHADER_STAGE_GEOMETRY_BIT:
-  //   shaderStage = kMVKGLSLConversionShaderStageGeometry;
-  //   break;
-  // case VK_SHADER_STAGE_FRAGMENT_BIT:
-  //   shaderStage = kMVKGLSLConversionShaderStageFragment;
-  //   break;
-  // case VK_SHADER_STAGE_COMPUTE_BIT:
-  //   shaderStage = kMVKGLSLConversionShaderStageCompute;
-  //   break;
-  // default:
-  //   shaderStage = kMVKGLSLConversionShaderStageAuto;
-  //   break;
+  //   printf("GLSLtoSPV: couldn't open file: %s", shaderFile);
+  //   return VK_ERROR_UNKNOWN;
   // }
 
-  // mvk::GLSLToSPIRVConverter glslConverter;
-  // glslConverter.setGLSL(pshader);
-  // bool wasConverted = glslConverter.convert(shaderStage, false, false);
-  // if (wasConverted)
-  // {
-  //   spirv = glslConverter.getSPIRV();
-  // }
-  bool wasConverted = false;
-  return wasConverted;
+  // uint32_t[]
+
+  return VK_SUCCESS;
 }
 
 VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index)
 {
-  init_glslang();
-
   VkShaderModuleCreateInfo moduleCreateInfo;
   std::vector<unsigned int> vtx_spv;
   p_vkrs->shaderStages[stage_index].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -976,8 +992,6 @@ VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shade
 
   VkResult res = vkCreateShaderModule(p_vkrs->device, &moduleCreateInfo, NULL, &p_vkrs->shaderStages[stage_index].module);
   assert(res == VK_SUCCESS);
-
-  finalize_glslang();
 
   return res;
 }

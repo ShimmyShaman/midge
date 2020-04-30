@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <assert.h>
+#include <unistd.h>
 
 #include <xcb/xproto.h>
 #include <vulkan/vulkan.h>

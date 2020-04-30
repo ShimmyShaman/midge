@@ -133,12 +133,12 @@ void run()
     // Include Paths
     // clint->AddIncludePath("/usr/include");
     clint->AddIncludePath("/home/jason/midge/dep/glm");
-    clint->AddIncludePath("/home/jason/midge/dep/glslang");
+    // clint->AddIncludePath("/home/jason/midge/dep/glslang");
 
     // Libraries
     loadLibrary("vulkan");
     loadLibrary("xcb");
-    loadLibrary("dep/glslang/bin/glslangValidator");
+    // loadLibrary("dep/glslang/bin/glslangValidator");
 
     // Load App source
     printf("<AppSourceLoading>\n");
