@@ -56,14 +56,14 @@ typedef struct _swap_chain_buffers
  * A layer can expose extensions, keep track of those
  * extensions here.
  */
-typedef struct
+typedef struct layer_properties
 {
     VkLayerProperties properties;
     std::vector<VkExtensionProperties> instance_extensions;
     std::vector<VkExtensionProperties> device_extensions;
 } layer_properties;
 
-typedef struct
+typedef struct vk_render_state
 {
     VkSurfaceKHR surface;
     // bool prepared;

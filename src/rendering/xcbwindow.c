@@ -49,7 +49,7 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
   {
     xcb_screen_next(&iter);
   }
-  p_wnfo->xcb_screen = iter.data;
+  p_wnfo->screen = iter.data;
 
   // 	uint32_t							_surface_size_x					= 512;
   // 	uint32_t							_surface_size_y					= 512;
@@ -70,13 +70,13 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
   p_wnfo->window = xcb_generate_id(p_wnfo->connection);
 
   value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-  value_list[0] = p_wnfo->xcb_screen->black_pixel;
+  value_list[0] = p_wnfo->screen->black_pixel;
   value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE;
 
   xcb_create_window(p_wnfo->connection, XCB_COPY_FROM_PARENT, p_wnfo->window,
-                    p_wnfo->xcb_screen->root, dimensions.offset.x, dimensions.offset.y,
+                    p_wnfo->screen->root, dimensions.offset.x, dimensions.offset.y,
                     dimensions.extent.width, dimensions.extent.height, 0,
-                    XCB_WINDOW_CLASS_INPUT_OUTPUT, p_wnfo->xcb_screen->root_visual,
+                    XCB_WINDOW_CLASS_INPUT_OUTPUT, p_wnfo->screen->root_visual,
                     value_mask, value_list);
 
   /* Magic code that will send notification when window is destroyed */
@@ -87,12 +87,12 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
 
   xcb_intern_atom_cookie_t cookie2 =
       xcb_intern_atom(p_wnfo->connection, 0, 16, "WM_DELETE_WINDOW");
-  p_wnfo->xcb_atom_window_reply =
+  p_wnfo->atom_window_reply =
       xcb_intern_atom_reply(p_wnfo->connection, cookie2, 0);
 
   xcb_change_property(p_wnfo->connection, XCB_PROP_MODE_REPLACE, p_wnfo->window,
                       (*reply).atom, 4, 32, 1,
-                      &(*p_wnfo->xcb_atom_window_reply).atom);
+                      &(*p_wnfo->atom_window_reply).atom);
   free(reply);
 
   xcb_map_window(p_wnfo->connection, p_wnfo->window);
@@ -142,7 +142,7 @@ int mxcb_update_window(mxcb_window_info *p_wnfo)
   switch (event->response_type & ~0x80)
   {
   case XCB_CLIENT_MESSAGE:
-    if (((xcb_client_message_event_t *)event)->data.data32[0] == p_wnfo->xcb_atom_window_reply->atom)
+    if (((xcb_client_message_event_t *)event)->data.data32[0] == p_wnfo->atom_window_reply->atom)
     {
       p_wnfo->shouldExit = 1;
     }
