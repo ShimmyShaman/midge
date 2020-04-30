@@ -2,8 +2,6 @@
 
 #include "rendering/renderer.h"
 
-#include "glslang/glslang_c_interface.h"
-
 #define MRT_RUN(CALL)       \
   result = CALL;            \
   if (result != VK_SUCCESS) \
@@ -30,22 +28,8 @@ static glsl_shader vertex_shader = {
     .stage = VK_SHADER_STAGE_VERTEX_BIT,
 };
 
-static const char *vertShaderText =
-    "#version 400\n"
-    "#extension GL_ARB_separate_shader_objects : enable\n"
-    "#extension GL_ARB_shading_language_420pack : enable\n"
-    "layout (std140, binding = 0) uniform bufferVals {\n"
-    "    mat4 mvp;\n"
-    "} myBufferVals;\n"
-    "layout (location = 0) in vec4 pos;\n"
-    "layout (location = 1) in vec4 inColor;\n"
-    "layout (location = 0) out vec4 outColor;\n"
-    "void main() {\n"
-    "   outColor = inColor;\n"
-    "   gl_Position = myBufferVals.mvp * pos;\n"
-    "}\n";
-
-static const char *fragShaderText =
+static glsl_shader fragment_shader = {
+  .text = 
     "#version 400\n"
     "#extension GL_ARB_separate_shader_objects : enable\n"
     "#extension GL_ARB_shading_language_420pack : enable\n"
@@ -53,7 +37,9 @@ static const char *fragShaderText =
     "layout (location = 0) out vec4 outColor;\n"
     "void main() {\n"
     "   outColor = color;\n"
-    "}\n";
+    "}\n",
+    .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+};
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
@@ -94,6 +80,7 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_descriptor_and_pipeline_layouts(&vkrs, false, 0));
   MRT_RUN(mvk_init_renderpass(&vkrs, true, true, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED));
   MRT_RUN(mvk_init_shader(&vkrs, &vertex_shader, 0));
+  MRT_RUN(mvk_init_shader(&vkrs, &fragment_shader, 1));
 
   // -- Update
   while (!thr->should_exit && !winfo.shouldExit)

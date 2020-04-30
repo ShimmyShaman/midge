@@ -914,9 +914,12 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   // Use glslangValidator from file
   // Generate the shader file
   const char *ext = NULL;
-  if((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT)
+  if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT)
   {
     ext = "vert";
+  } else if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT)
+  {
+    ext = "frag";
   }
   else
   {
@@ -924,48 +927,93 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
     return VK_ERROR_UNKNOWN;
   }
 
-  const char const *wd = "/home/jason/midge/dep/glslang/bin/";
-  char shaderFile[1024];
-  strcpy(shaderFile, wd);
-  strcat(shaderFile, "shader.");
-  strcat(shaderFile, ext);
-  
-  FILE *fpw;
-  fpw = fopen(shaderFile, "w");
-  if(!fpw)
+  const char *wd = "/home/jason/midge/dep/glslang/bin/";
+  char execOutput[1024];
+  strcpy(execOutput, wd);
+  strcat(execOutput, "shader.");
+  strcat(execOutput, ext);
+
+  FILE *fp;
+  fp = fopen(execOutput, "w");
+  if (!fp)
+  {
+    printf("GLSLtoSPV: couldn't open file: %s", execOutput);
+    return VK_ERROR_UNKNOWN;
+  }
+
+  fprintf(fp, "%s", p_shader_text);
+  fclose(fp);
+  // printf("%s written\n", shaderFile);
+
+  // Execute the SPIRV gen
+  char *exePath = strdup("/home/jason/midge/dep/glslang/bin/glslangValidator");
+  char *arg_V = strdup("-V");
+  char *arg_H = strdup("-H");
+  char *argv[4]{
+      exePath,
+      execOutput,
+      arg_V,
+      // arg_H,
+      NULL};
+  int child_status;
+  pid_t child_pid = fork();
+  if (child_pid == 0)
+  {
+    /* This is done by the child process. */
+    execv(argv[0], argv);
+
+    printf("GLSLtoSPV: error occured during conversion.\n");
+    perror("execv");
+    return VK_ERROR_UNKNOWN;
+  }
+  else
+  {
+    pid_t tpid;
+    do
+    {
+      tpid = wait(&child_status);
+      if (tpid != child_pid)
+        return (VkResult)child_status;
+      //process_terminated(tpid);
+    } while (tpid != child_pid);
+  }
+
+  // Load the generated file
+  char shaderFile[512];
+  strcpy(shaderFile, ext);
+  strcat(shaderFile, ".spv");
+
+  fp = fopen(shaderFile, "r");
+  if (!fp)
   {
     printf("GLSLtoSPV: couldn't open file: %s", shaderFile);
     return VK_ERROR_UNKNOWN;
   }
 
-  fprintf(fpw, "%s", p_shader_text);
-  fclose(fpw);
-
-  // Execute the SPIRV gen
-  char *argv[3];
-  argv[0] = shaderFile;
-  argv[1] = "-V";
-  argv[2] = "-H";
-  if(execv("/home/jason/midge/dep/glslang/bin/glslangValidator", argv) == -1)
+  uint32_t code;
+  while (fread(&code, sizeof code, 1, fp) == 1)
   {
-    printf("GLSLtoSPV: error occursed during conversion.");
-    return VK_ERROR_UNKNOWN;
+    spirv.push_back(code);
   }
-  printf("SUCCESS ?? ");
+  fclose(fp);
+  remove(execOutput);
+  remove(shaderFile);
+  printf("->%s: sizeof=4*%zu\n", shaderFile, spirv.size());
 
-  // Load the generated file
-  // strcpy(shaderFile, wd);
-  // strcat(shaderFile, ext);
-  // strcat(shaderFile, ".spv");
-
-  // fpw = fopen(shaderFile, "r");
-  // if(!fpw)
+  // TEST READ
+  // fp = fopen("/home/jason/midge/test.spv", "w");
+  // if (!fp)
   // {
-  //   printf("GLSLtoSPV: couldn't open file: %s", shaderFile);
+  //   printf("GLSLtoSPV: couldn't open file: %s", "/home/jason/midge/test.spv");
   //   return VK_ERROR_UNKNOWN;
   // }
-
-  // uint32_t[]
+  // // printf("test.spv opened: ");
+  // for (int i = 0; i < spirv.size(); ++i)
+  // {
+  //   // printf("%i", spirv[i]);
+  //   fwrite(&spirv[i], sizeof(uint32_t), 1, fp);
+  // }
+  // fclose(fp);
 
   return VK_SUCCESS;
 }
@@ -981,8 +1029,8 @@ VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shade
   p_vkrs->shaderStages[stage_index].stage = glsl_shader->stage; // VK_SHADER_STAGE_VERTEX_BIT; VK_SHADER_STAGE_FRAGMENT_BIT
   p_vkrs->shaderStages[stage_index].pName = "main";
 
-  bool retVal = GLSLtoSPV(glsl_shader->stage, glsl_shader->text, vtx_spv);
-  assert(retVal);
+  VkResult res = GLSLtoSPV(glsl_shader->stage, glsl_shader->text, vtx_spv);
+  assert(res == VK_SUCCESS);
 
   moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   moduleCreateInfo.pNext = NULL;
@@ -990,7 +1038,7 @@ VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shade
   moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
   moduleCreateInfo.pCode = vtx_spv.data();
 
-  VkResult res = vkCreateShaderModule(p_vkrs->device, &moduleCreateInfo, NULL, &p_vkrs->shaderStages[stage_index].module);
+  res = vkCreateShaderModule(p_vkrs->device, &moduleCreateInfo, NULL, &p_vkrs->shaderStages[stage_index].module);
   assert(res == VK_SUCCESS);
 
   return res;
