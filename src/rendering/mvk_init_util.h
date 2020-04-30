@@ -32,8 +32,8 @@ typedef enum MVkResult
 
 struct glsl_shader
 {
-  const char *text;
-  VkShaderStageFlagBits stage;
+    const char *text;
+    VkShaderStageFlagBits stage;
 };
 
 /*
@@ -82,7 +82,7 @@ typedef struct
     std::vector<VkQueueFamilyProperties> queue_props;
     VkPhysicalDeviceMemoryProperties memory_properties;
 
-    // VkFramebuffer *framebuffers;
+    VkFramebuffer *framebuffers;
     mxcb_window_info *xcb_winfo;
     uint32_t window_width, window_height;
     VkFormat format;
@@ -149,8 +149,11 @@ VkResult mvk_execute_end_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
 VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index);
+VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth);
 
 
+
+void mvk_destroy_framebuffers(vk_render_state *p_vkrs);
 void mvk_destroy_shaders(vk_render_state *p_vkrs);
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs);

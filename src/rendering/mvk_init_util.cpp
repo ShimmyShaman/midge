@@ -917,7 +917,8 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT)
   {
     ext = "vert";
-  } else if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT)
+  }
+  else if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT)
   {
     ext = "frag";
   }
@@ -1042,6 +1043,47 @@ VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shade
   assert(res == VK_SUCCESS);
 
   return res;
+}
+
+VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth)
+{
+  /* DEPENDS on init_depth_buffer(), init_renderpass() and
+     * init_swapchain_extension() */
+
+  VkResult res;
+  VkImageView attachments[2];
+  attachments[1] = p_vkrs->depth.view;
+
+  VkFramebufferCreateInfo fb_info = {};
+  fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  fb_info.pNext = NULL;
+  fb_info.renderPass = p_vkrs->render_pass;
+  fb_info.attachmentCount = include_depth ? 2 : 1;
+  fb_info.pAttachments = attachments;
+  fb_info.width = p_vkrs->window_width;
+  fb_info.height = p_vkrs->window_height;
+  fb_info.layers = 1;
+
+  uint32_t i;
+
+  p_vkrs->framebuffers = (VkFramebuffer *)malloc(p_vkrs->swapchainImageCount * sizeof(VkFramebuffer));
+
+  for (i = 0; i < p_vkrs->swapchainImageCount; i++)
+  {
+    attachments[0] = p_vkrs->buffers[i].view;
+    res = vkCreateFramebuffer(p_vkrs->device, &fb_info, NULL, &p_vkrs->framebuffers[i]);
+    assert(res == VK_SUCCESS);
+  }
+  return res;
+}
+
+void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
+{
+  for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++)
+  {
+    vkDestroyFramebuffer(p_vkrs->device, p_vkrs->framebuffers[i], NULL);
+  }
+  free(p_vkrs->framebuffers);
 }
 
 void mvk_destroy_shaders(vk_render_state *p_vkrs)
