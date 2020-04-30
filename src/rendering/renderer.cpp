@@ -59,6 +59,8 @@ void *midge_render_thread(void *vargp)
   vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
 
+  bool depth_present = true;
+
   // -- Initialization
   VkResult result;
   MRT_RUN(mvk_init_global_layer_properties(&vkrs.instance_layer_properties));
@@ -79,18 +81,19 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_depth_buffer(&vkrs));
   MRT_RUN(mvk_init_uniform_buffer(&vkrs));
   MRT_RUN(mvk_init_descriptor_and_pipeline_layouts(&vkrs, false, 0));
-  MRT_RUN(mvk_init_renderpass(&vkrs, true, true, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED));
+  MRT_RUN(mvk_init_renderpass(&vkrs, depth_present, true, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED));
   MRT_RUN(mvk_init_shader(&vkrs, &vertex_shader, 0));
   MRT_RUN(mvk_init_shader(&vkrs, &fragment_shader, 1));
-  MRT_RUN(mvk_init_framebuffers(&vkrs, true));
+  MRT_RUN(mvk_init_framebuffers(&vkrs, depth_present));
   MRT_RUN(mvk_init_vertex_buffer(&vkrs, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                  sizeof(g_vb_solid_face_colors_Data[0]), false));
   MRT_RUN(mvk_init_descriptor_pool(&vkrs, false));
   MRT_RUN(mvk_init_descriptor_set(&vkrs, false));
-  // MRT_RUN(mvk_init_pipeline_cache(info));
-  // MRT_RUN(mvk_init_pipeline(info, depthPresent));
+  MRT_RUN(mvk_init_pipeline_cache(&vkrs));
+  MRT_RUN(mvk_init_pipeline(&vkrs, depth_present, true)); // Maybe false?
 
   // -- Update
+  printf("InitSuccess!\n");
   while (!thr->should_exit && !winfo.shouldExit)
   {
     usleep(1);
@@ -98,8 +101,8 @@ void *midge_render_thread(void *vargp)
   }
 
   // -- Cleanup
-  // mvk_destroy_pipeline(&vkrs);
-  // mvk_destroy_pipeline_cache(&vkrs);
+  mvk_destroy_pipeline(&vkrs);
+  mvk_destroy_pipeline_cache(&vkrs);
   mvk_destroy_descriptor_pool(&vkrs);
   mvk_destroy_vertex_buffer(&vkrs);
   mvk_destroy_framebuffers(&vkrs);

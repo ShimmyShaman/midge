@@ -15,6 +15,12 @@
 /* pipeline layout creation, and descriptor set layout creation   */
 #define NUM_DESCRIPTOR_SETS 1
 
+/* Number of viewports and number of scissors have to be the same */
+/* at pipeline creation and in any call to set them dynamically   */
+/* They also have to be the same as each other                    */
+#define NUM_VIEWPORTS 1
+#define NUM_SCISSORS NUM_VIEWPORTS
+
 /* Amount of time, in nanoseconds, to wait for a command buffer to complete */
 #define FENCE_TIMEOUT 100000000
 
@@ -134,9 +140,9 @@ typedef struct
     VkCommandBuffer cmd;
     VkPipelineLayout pipeline_layout;
     std::vector<VkDescriptorSetLayout> desc_layout;
-    // VkPipelineCache pipelineCache;
+    VkPipelineCache pipelineCache;
     VkRenderPass render_pass;
-    // VkPipeline pipeline;
+    VkPipeline pipeline;
 
     VkPipelineShaderStageCreateInfo shaderStages[2];
 
@@ -170,7 +176,11 @@ VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth);
 VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride, bool use_texture);
 VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture);
 VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture);
+VkResult mvk_init_pipeline_cache(vk_render_state *p_vkrs);
+VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBool32 include_vi);
 
+void mvk_destroy_pipeline(vk_render_state *p_vkrs);
+void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs);
 void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs);
 void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs);
