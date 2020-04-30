@@ -1365,6 +1365,26 @@ VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBo
   return res;
 }
 
+void mvk_init_viewports(vk_render_state *p_vkrs)
+{
+  p_vkrs->viewport.height = (float)p_vkrs->window_height;
+  p_vkrs->viewport.width = (float)p_vkrs->window_width;
+  p_vkrs->viewport.minDepth = (float)0.0f;
+  p_vkrs->viewport.maxDepth = (float)1.0f;
+  p_vkrs->viewport.x = 0;
+  p_vkrs->viewport.y = 0;
+  vkCmdSetViewport(p_vkrs->cmd, 0, NUM_VIEWPORTS, &p_vkrs->viewport);
+}
+
+void mvk_init_scissors(vk_render_state *p_vkrs)
+{
+  p_vkrs->scissor.extent.width = p_vkrs->window_width;
+  p_vkrs->scissor.extent.height = p_vkrs->window_height;
+  p_vkrs->scissor.offset.x = 0;
+  p_vkrs->scissor.offset.y = 0;
+  vkCmdSetScissor(p_vkrs->cmd, 0, NUM_SCISSORS, &p_vkrs->scissor);
+}
+
 void mvk_destroy_pipeline(vk_render_state *p_vkrs)
 {
   vkDestroyPipeline(p_vkrs->device, p_vkrs->pipeline, NULL);

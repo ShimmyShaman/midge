@@ -42,6 +42,8 @@ static glsl_shader fragment_shader = {
     .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
+VkResult draw_cube(vk_render_state *p_vkrs);
+
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
 void *midge_render_thread(void *vargp)
@@ -92,6 +94,8 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_pipeline_cache(&vkrs));
   MRT_RUN(mvk_init_pipeline(&vkrs, depth_present, true)); // Maybe false?
 
+  MRT_RUN(draw_cube(&vkrs));
+
   // -- Update
   printf("InitSuccess!\n");
   while (!thr->should_exit && !winfo.shouldExit)
@@ -120,17 +124,118 @@ void *midge_render_thread(void *vargp)
   printf("hasConcluded(SUCCESS)\n");
   thr->has_concluded = 1;
   return 0;
+}
 
-  // deInitOSSurface(vkrs.instance, &vkrs.surface);
-  // printf("deInitOSWindow\n");
-  // deInitOSWindow(&wnd);
+VkResult draw_cube(vk_render_state *p_vkrs)
+{
+  VkClearValue clear_values[2];
+  clear_values[0].color.float32[0] = 0.2f;
+  clear_values[0].color.float32[1] = 0.2f;
+  clear_values[0].color.float32[2] = 0.2f;
+  clear_values[0].color.float32[3] = 0.2f;
+  clear_values[1].depthStencil.depth = 1.0f;
+  clear_values[1].depthStencil.stencil = 0;
 
-  // printf("deInitVulkan\n");
-  // deInitVulkan(&vkrs);
+  VkSemaphore imageAcquiredSemaphore;
+  VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+  imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+  imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-  // printf("hasConcluded\n");
-  // thr->has_concluded = 1;
-  // return 0;
+  VkResult res = vkCreateSemaphore(p_vkrs->device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
+  assert(res == VK_SUCCESS);
+
+  // Get the index of the next available swapchain image:
+  res = vkAcquireNextImageKHR(p_vkrs->device, p_vkrs->swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
+                              &p_vkrs->current_buffer);
+  // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
+  // return codes
+  assert(res == VK_SUCCESS);
+
+  VkRenderPassBeginInfo rp_begin;
+  rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  rp_begin.pNext = NULL;
+  rp_begin.renderPass = p_vkrs->render_pass;
+  rp_begin.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
+  rp_begin.renderArea.offset.x = 0;
+  rp_begin.renderArea.offset.y = 0;
+  rp_begin.renderArea.extent.width = p_vkrs->window_width;
+  rp_begin.renderArea.extent.height = p_vkrs->window_height;
+  rp_begin.clearValueCount = 2;
+  rp_begin.pClearValues = clear_values;
+
+  vkCmdBeginRenderPass(p_vkrs->cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+
+  vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
+  vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                          p_vkrs->desc_set.data(), 0, NULL);
+
+  const VkDeviceSize offsets[1] = {0};
+  vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->vertex_buffer.buf, offsets);
+
+  mvk_init_viewports(p_vkrs);
+  mvk_init_scissors(p_vkrs);
+
+  vkCmdDraw(p_vkrs->cmd, 12 * 3, 1, 0, 0);
+  vkCmdEndRenderPass(p_vkrs->cmd);
+  res = vkEndCommandBuffer(p_vkrs->cmd);
+  const VkCommandBuffer cmd_bufs[] = {p_vkrs->cmd};
+  VkFenceCreateInfo fenceInfo;
+  VkFence drawFence;
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.pNext = NULL;
+  fenceInfo.flags = 0;
+  vkCreateFence(p_vkrs->device, &fenceInfo, NULL, &drawFence);
+
+  VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  VkSubmitInfo submit_info[1] = {};
+  submit_info[0].pNext = NULL;
+  submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submit_info[0].waitSemaphoreCount = 1;
+  submit_info[0].pWaitSemaphores = &imageAcquiredSemaphore;
+  submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
+  submit_info[0].commandBufferCount = 1;
+  submit_info[0].pCommandBuffers = cmd_bufs;
+  submit_info[0].signalSemaphoreCount = 0;
+  submit_info[0].pSignalSemaphores = NULL;
+
+  /* Queue the command buffer for execution */
+  res = vkQueueSubmit(p_vkrs->graphics_queue, 1, submit_info, drawFence);
+  assert(res == VK_SUCCESS);
+
+  /* Now present the image in the window */
+
+  VkPresentInfoKHR present;
+  present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  present.pNext = NULL;
+  present.swapchainCount = 1;
+  present.pSwapchains = &p_vkrs->swap_chain;
+  present.pImageIndices = &p_vkrs->current_buffer;
+  present.pWaitSemaphores = NULL;
+  present.waitSemaphoreCount = 0;
+  present.pResults = NULL;
+
+  /* Make sure command buffer is finished before presenting */
+  do
+  {
+    res = vkWaitForFences(p_vkrs->device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+  } while (res == VK_TIMEOUT);
+
+  assert(res == VK_SUCCESS);
+  res = vkQueuePresentKHR(p_vkrs->present_queue, &present);
+  assert(res == VK_SUCCESS);
+
+  const struct timespec ts = {1L, 0L};
+  nanosleep(&ts, NULL);
+
+  /* VULKAN_KEY_END */
+  // if (p_vkrs->save_images)
+  //   write_ppm(p_vkrs, "15-draw_cube");
+
+  vkDestroySemaphore(p_vkrs->device, imageAcquiredSemaphore, NULL);
+  vkDestroyFence(p_vkrs->device, drawFence, NULL);
+
+  return res;
 }
 
 // VkResult vk_init_layers_extensions(std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions)

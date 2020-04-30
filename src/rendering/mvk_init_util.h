@@ -151,6 +151,9 @@ typedef struct
 
     uint32_t current_buffer;
     uint32_t queue_family_count;
+
+    VkViewport viewport;
+    VkRect2D scissor;
 } vk_render_state;
 
 VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_layers);
@@ -178,6 +181,8 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture);
 VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture);
 VkResult mvk_init_pipeline_cache(vk_render_state *p_vkrs);
 VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBool32 include_vi);
+void mvk_init_viewports(vk_render_state *p_vkrs);
+void mvk_init_scissors(vk_render_state *p_vkrs);
 
 void mvk_destroy_pipeline(vk_render_state *p_vkrs);
 void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs);
