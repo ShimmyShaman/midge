@@ -1141,6 +1141,83 @@ VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData,
   return res;
 }
 
+VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture)
+{
+  /* DEPENDS on init_uniform_buffer() and
+     * init_descriptor_and_pipeline_layouts() */
+
+  VkResult res;
+  VkDescriptorPoolSize type_count[2];
+  type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  type_count[0].descriptorCount = 1;
+  if (use_texture)
+  {
+    type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    type_count[1].descriptorCount = 1;
+  }
+
+  VkDescriptorPoolCreateInfo descriptor_pool = {};
+  descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  descriptor_pool.pNext = NULL;
+  descriptor_pool.maxSets = 1;
+  descriptor_pool.poolSizeCount = use_texture ? 2 : 1;
+  descriptor_pool.pPoolSizes = type_count;
+
+  res = vkCreateDescriptorPool(p_vkrs->device, &descriptor_pool, NULL, &p_vkrs->desc_pool);
+  assert(res == VK_SUCCESS);
+  return res;
+}
+
+VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture)
+{
+  /* DEPENDS on init_descriptor_pool() */
+
+  VkResult res;
+
+  VkDescriptorSetAllocateInfo alloc_info[1];
+  alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  alloc_info[0].pNext = NULL;
+  alloc_info[0].descriptorPool = p_vkrs->desc_pool;
+  alloc_info[0].descriptorSetCount = NUM_DESCRIPTOR_SETS;
+  alloc_info[0].pSetLayouts = p_vkrs->desc_layout.data();
+
+  p_vkrs->desc_set.resize(NUM_DESCRIPTOR_SETS);
+  res = vkAllocateDescriptorSets(p_vkrs->device, alloc_info, p_vkrs->desc_set.data());
+  assert(res == VK_SUCCESS);
+
+  VkWriteDescriptorSet writes[2];
+
+  writes[0] = {};
+  writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  writes[0].pNext = NULL;
+  writes[0].dstSet = p_vkrs->desc_set[0];
+  writes[0].descriptorCount = 1;
+  writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  writes[0].pBufferInfo = &p_vkrs->uniform_data.buffer_info;
+  writes[0].dstArrayElement = 0;
+  writes[0].dstBinding = 0;
+
+  if (use_texture)
+  {
+    writes[1] = {};
+    writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[1].dstSet = p_vkrs->desc_set[0];
+    writes[1].dstBinding = 1;
+    writes[1].descriptorCount = 1;
+    writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writes[1].pImageInfo = &p_vkrs->texture_data.image_info;
+    writes[1].dstArrayElement = 0;
+  }
+
+  vkUpdateDescriptorSets(p_vkrs->device, use_texture ? 2 : 1, writes, 0, NULL);
+  return res;
+}
+
+void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs)
+{
+  vkDestroyDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, NULL);
+}
+
 void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs)
 {
   vkDestroyBuffer(p_vkrs->device, p_vkrs->vertex_buffer.buf, NULL);

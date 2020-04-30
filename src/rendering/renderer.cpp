@@ -85,6 +85,10 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_framebuffers(&vkrs, true));
   MRT_RUN(mvk_init_vertex_buffer(&vkrs, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                  sizeof(g_vb_solid_face_colors_Data[0]), false));
+  MRT_RUN(mvk_init_descriptor_pool(&vkrs, false));
+  MRT_RUN(mvk_init_descriptor_set(&vkrs, false));
+  // MRT_RUN(mvk_init_pipeline_cache(info));
+  // MRT_RUN(mvk_init_pipeline(info, depthPresent));
 
   // -- Update
   while (!thr->should_exit && !winfo.shouldExit)
@@ -94,6 +98,9 @@ void *midge_render_thread(void *vargp)
   }
 
   // -- Cleanup
+  // mvk_destroy_pipeline(&vkrs);
+  // mvk_destroy_pipeline_cache(&vkrs);
+  mvk_destroy_descriptor_pool(&vkrs);
   mvk_destroy_vertex_buffer(&vkrs);
   mvk_destroy_framebuffers(&vkrs);
   mvk_destroy_shaders(&vkrs);

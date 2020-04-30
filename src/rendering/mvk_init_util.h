@@ -112,6 +112,11 @@ typedef struct
 
     struct
     {
+        VkDescriptorImageInfo image_info;
+    } texture_data;
+
+    struct
+    {
         VkBuffer buf;
         VkDeviceMemory mem;
         VkDescriptorBufferInfo buffer_info;
@@ -134,6 +139,9 @@ typedef struct
     // VkPipeline pipeline;
 
     VkPipelineShaderStageCreateInfo shaderStages[2];
+
+    VkDescriptorPool desc_pool;
+    std::vector<VkDescriptorSet> desc_set;
 
     uint32_t current_buffer;
     uint32_t queue_family_count;
@@ -160,7 +168,10 @@ void mvk_init_device_queue(vk_render_state *p_vkrs);
 VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index);
 VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth);
 VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride, bool use_texture);
+VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture);
+VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture);
 
+void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs);
 void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs);
 void mvk_destroy_shaders(vk_render_state *p_vkrs);
