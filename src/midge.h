@@ -154,17 +154,54 @@ void run()
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
     printf("</AppSourceLoading>\n\n");
 
-    clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 && !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+    // // Run App
+    // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 && !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
 
-    // Run App
+    // clint->process("mthread_info *rthr;");
+    // // printf("process(begin)\n");
+    // clint->process("begin_mthread(midge_render_thread, &rthr);");
+    // // printf("process(updateUI)\n");
+    // clint->process("updateUI(rthr);");
+    // // printf("process(end)\n");
+    // clint->process("end_mthread(rthr);");
+    // printf("\n! MIDGE COMPLETE !\n");
+
+    /* Goal: is the ability to change a structure (which contains a resource which must be destroyed & initialized) which is used in-a-loop
+     *       in a seperate thread routine > then change the thread routine to make use of that structure change
+     */
+    // -- Redefinition
+    // define structure
+    clint->declare("typedef struct shaver { float battery_life; } shaver;");
+
+    // define method
+    clint->declare("void *shaver_update_routine(void *vargp) {"
+                   " void **vargs = (void **)vargp"
+                   "  mthread_info *thr = (mthread_info *)vargs[0];"
+                   "  shaver *s = (shaver *)vargs[1];"
+                   "  "
+                   "  float last_measure = 120f;"
+                   "  while(!thr->should_exit) {"
+                   "    if(last_measure - s->battery_life > 1f) {"
+                   "      last_measure = s.battery_life;"
+                   "      printf(\"battery-life:%.2f\", s->battery_life);"
+                   "    }"
+                   "    usleep(200);"
+                   "  }"
+                   "  thr->has_concluded = true;"
+                   "}");
+
+    // Begin thread
     clint->process("mthread_info *rthr;");
-    // printf("process(begin)\n");
-    clint->process("begin_mthread(midge_render_thread, &rthr);");
-    // printf("process(updateUI)\n");
-    clint->process("updateUI(rthr);");
-    // printf("process(end)\n");
-    clint->process("end_mthread(rthr);");
-    printf("\n! MIDGE COMPLETE !\n");
+    clint->process("shaver s_data = { .battery_life = 83.4 };");
+    clint->process("void *args[2];");
+    clint->process("args[0] = &rthr;");
+    clint->process("args[1] = &s_data;");
+
+    clint->process("begin_mthread(shaver_update_routine, &rthr);");
+
+    // use structure in another thread in a looping manner
+
+    // redefine structure in main thread
   }
   catch (const std::exception &e)
   {

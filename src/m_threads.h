@@ -15,7 +15,7 @@ typedef struct
     bool should_exit, has_concluded;
 } mthread_info;
 
-int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info)
+int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void **vargs)
 {
     *p_thread_info = (mthread_info *)malloc(sizeof *p_thread_info);
     (*p_thread_info)->start_routine = start_routine;
@@ -23,7 +23,7 @@ int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info)
     printf("beginRenderThread\n");
     (*p_thread_info)->should_exit = 0;
     (*p_thread_info)->has_concluded = 0;
-    if (pthread_create(&(*p_thread_info)->threadId, NULL, (*p_thread_info)->start_routine, (void *)(*p_thread_info)))
+    if (pthread_create(&(*p_thread_info)->threadId, NULL, (*p_thread_info)->start_routine, vargs))
     {
         return 0;
     }
