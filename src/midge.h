@@ -152,6 +152,8 @@ void run()
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
     clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
+
+    clint->loadFile("/home/jason/midge/src/clingexp.c");
     printf("</AppSourceLoading>\n\n");
 
     // // Run App
@@ -169,39 +171,48 @@ void run()
     /* Goal: is the ability to change a structure (which contains a resource which must be destroyed & initialized) which is used in-a-loop
      *       in a seperate thread routine > then change the thread routine to make use of that structure change
      */
+    
     // -- Redefinition
     // define structure
     clint->declare("typedef struct shaver { float battery_life; } shaver;");
 
     // define method
     clint->declare("void *shaver_update_routine(void *vargp) {"
-                   " void **vargs = (void **)vargp"
-                   "  mthread_info *thr = (mthread_info *)vargs[0];"
+                   "  void **vargs = (void **)vargp;"
+                   "  mthread_info *thr = *(mthread_info **)vargs[0];"
                    "  shaver *s = (shaver *)vargs[1];"
                    "  "
-                   "  float last_measure = 120f;"
+                   "  float last_measure = 120.f;"
                    "  while(!thr->should_exit) {"
-                   "    if(last_measure - s->battery_life > 1f) {"
-                   "      last_measure = s.battery_life;"
-                   "      printf(\"battery-life:%.2f\", s->battery_life);"
+                   "    if(last_measure - s->battery_life > 1.f) {"
+                   "      last_measure = s->battery_life;"
+                   "      printf(\"battery-life:%.2f\\n\", s->battery_life);"
                    "    }"
-                   "    usleep(200);"
+                   "    usleep(2000);"
                    "  }"
+                   "  "
                    "  thr->has_concluded = true;"
+                   "  return NULL;"
                    "}");
 
     // Begin thread
     clint->process("mthread_info *rthr;");
-    clint->process("shaver s_data = { .battery_life = 83.4 };");
+    clint->process("shaver s_data = { .battery_life = 83.4f };");
     clint->process("void *args[2];");
     clint->process("args[0] = &rthr;");
     clint->process("args[1] = &s_data;");
 
-    clint->process("begin_mthread(shaver_update_routine, &rthr);");
-
-    // use structure in another thread in a looping manner
+    clint->process("begin_mthread(shaver_update_routine, &rthr, args);");
+    clint->process("int ms = 0; while(ms < 5000) { usleep(500000); ms += 1000; s_data.battery_life = 0.99f * s_data.battery_life - 0.0001f * (5000 - ms); }");
 
     // redefine structure in main thread
+    clint->process("rthr->do_pause = true;");
+    clint->declare("typedef struct shaver { float battery_life; float condition_multiplier; } shaver;");
+
+    // end
+    clint->process("printf(\"ending...\\n\");");
+    clint->process("end_mthread(rthr);");
+    clint->process("printf(\"success!\\n\");");
   }
   catch (const std::exception &e)
   {

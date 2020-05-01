@@ -34,7 +34,7 @@ int end_mthread(mthread_info *p_thread_info)
 {
     p_thread_info->should_exit = 1;
 
-    const int MAX_ITERATIONS = 1000;
+    const int MAX_ITERATIONS = 2000;
     int iterations = 0;
     while (!p_thread_info->has_concluded)
     {
@@ -42,7 +42,7 @@ int end_mthread(mthread_info *p_thread_info)
         ++iterations;
         if (iterations >= MAX_ITERATIONS)
         {
-            printf("TODO -- Thread-Handling for unresponsive thread:: renderer.c\n");
+            printf("TODO -- Thread-Handling for unresponsive thread:: \n");
             return -1;
         }
     }
