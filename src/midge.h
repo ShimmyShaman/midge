@@ -19,9 +19,68 @@
 
 static cling::Interpreter *clint;
 
+void loadSourceFiles(const char *root_dir, int indent)
+{
+  DIR *dir;
+  struct dirent *entry;
+
+  if (!(dir = opendir(root_dir)))
+    return;
+
+  while ((entry = readdir(dir)) != NULL)
+  {
+    if (entry->d_type == DT_DIR)
+    {
+      if (!indent && !strcmp(entry->d_name, "main"))
+      {
+        printf("IgnoreDir: %*s[%s]\n", indent, "", entry->d_name);
+        continue;
+      }
+      char path[1024];
+      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        continue;
+      snprintf(path, sizeof(path), "%s/%s", root_dir, entry->d_name);
+      printf("Directory: %*s[%s]\n", indent, "", entry->d_name);
+      loadSourceFiles(path, indent + 2);
+    }
+    else
+    {
+      if (!strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".h") || !strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".c") || !strcmp(&entry->d_name[strlen(entry->d_name) - 4], ".cpp"))
+      {
+        char path[1024];
+        char *filePath = strcpy(path, root_dir);
+        strcat(filePath, "/");
+        strcat(filePath, entry->d_name);
+        clint->loadFile(path);
+        printf("LoadedSrc: \"%*s- %s\"\n", indent, "", entry->d_name);
+        continue;
+      }
+      printf("IgnoreSrc: %*s- %s\n", indent, "", entry->d_name);
+    }
+  }
+  closedir(dir);
+}
+
+void loadLibrary(const char *name)
+{
+  cling::Interpreter::CompilationResult result = clint->loadLibrary(name);
+  if (result == cling::Interpreter::kSuccess)
+    return;
+
+  std::string lookedUpAddress = clint->lookupFileOrLibrary(name);
+  printf("lookup: %s\n", lookedUpAddress.c_str());
+  result = clint->loadLibrary(lookedUpAddress);
+  if (result == cling::Interpreter::kSuccess)
+    return;
+
+  printf("Failure! %i = loadLibrary(\"%s\")\n", result, name);
+
+  exit(-1);
+}
+
 // std::vector<cling::Transaction *> transactions;
 std::map<std::string, cling::Transaction *> definedTypes;
-void defineType(std::string typeName, std::string definition)
+void defineStructure(std::string typeName, std::string definition)
 {
   std::map<std::string, cling::Transaction *>::iterator it = definedTypes.find(typeName);
   if (it != definedTypes.end())
@@ -57,77 +116,71 @@ void defineType(std::string typeName, std::string definition)
   }
 }
 
-void loadSourceFiles(const char *name, int indent)
+void redef()
 {
-  DIR *dir;
-  struct dirent *entry;
+  // -- Redefinition
+  // define structure
+  defineStructure("shaver", "typedef struct shaver { float battery_life; } shaver;");
 
-  if (!(dir = opendir(name)))
-    return;
+  // define method
+  clint->declare("void *shaver_display_routine(void *vargp) {"
+                 "  void **vargs = (void **)vargp;"
+                 "  mthread_info *thr = *(mthread_info **)vargs[0];"
+                 "  shaver *s = (shaver *)vargs[1];"
+                 "  "
+                 "  float last_measure = 120.f;"
+                 "  while(!thr->should_exit) {"
+                 "    if(last_measure - s->battery_life > 1.f) {"
+                 "      last_measure = s->battery_life;"
+                 "      printf(\"battery-life:%.2f\\n\", s->battery_life);"
+                 "    }"
+                 "    usleep(2000);"
+                 "  }"
+                 "  "
+                 "  thr->has_concluded = true;"
+                 "  return NULL;"
+                 "}");
+  clint->declare("void *shaver_update_routine(void *vargp) {"
+                 "  void **vargs = (void **)vargp;"
+                 "  mthread_info *thr = *(mthread_info **)vargs[0];"
+                 "  shaver *s = (shaver *)vargs[1];"
+                 "  "
+                 "  int ms = 0;"
+                 "  while(!thr->should_exit && ms < 10000) {"
+                 "    usleep(50000);"
+                 "    ms += 50;"
+                 "    s->battery_life = 0.9999f * s->battery_life - 0.00007f * ms;"
+                 "  }"
+                 "  "
+                 "  thr->has_concluded = true;"
+                 "  return NULL;"
+                 "}");
 
-  while ((entry = readdir(dir)) != NULL)
-  {
-    if (entry->d_type == DT_DIR)
-    {
-      if (!indent && !strcmp(entry->d_name, "main"))
-      {
-        printf("IgnoreDir: %*s[%s]\n", indent, "", entry->d_name);
-        continue;
-      }
-      char path[1024];
-      if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-        continue;
-      snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
-      printf("Directory: %*s[%s]\n", indent, "", entry->d_name);
-      loadSourceFiles(path, indent + 2);
-    }
-    else
-    {
-      if (!strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".h") || !strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".c") || !strcmp(&entry->d_name[strlen(entry->d_name) - 4], ".cpp"))
-      {
-        char path[1024];
-        char *filePath = strcpy(path, name);
-        strcat(filePath, "/");
-        strcat(filePath, entry->d_name);
-        clint->loadFile(path);
-        printf("LoadedSrc: \"%*s- %s\"\n", indent, "", entry->d_name);
-        continue;
-      }
-      printf("IgnoreSrc: %*s- %s\n", indent, "", entry->d_name);
-    }
-  }
-  closedir(dir);
-}
+  // Begin thread
+  clint->process("mthread_info *rthr, *uthr;");
+  clint->process("shaver s_data = { .battery_life = 83.4f };");
+  clint->process("void *args[2];");
+  clint->process("args[1] = &s_data;");
 
-void loadLibrary(const char *name)
-{
-  cling::Interpreter::CompilationResult result = clint->loadLibrary(name);
-  if (result == cling::Interpreter::kSuccess)
-    return;
+  clint->process("args[0] = &rthr;");
+  clint->process("begin_mthread(shaver_display_routine, &rthr, args);");
+  clint->process("args[0] = &uthr;");
+  clint->process("begin_mthread(shaver_update_routine, &uthr, args);");
 
-  std::string lookedUpAddress = clint->lookupFileOrLibrary(name);
-  printf("lookup: %s\n", lookedUpAddress.c_str());
-  result = clint->loadLibrary(lookedUpAddress);
-  if (result == cling::Interpreter::kSuccess)
-    return;
+  // redefine structure in main thread
+  // clint->process("rthr->do_pause = true;");
+  // defineStructure("shaver", "typedef struct shaver { float battery_life; float condition_multiplier; } shaver;");
 
-  printf("Failure! %i = loadLibrary(\"%s\")\n", result, name);
-
-  exit(-1);
+  // end
+  clint->process("while(!uthr->has_concluded) usleep(500);");
+  clint->process("printf(\"ending...\\n\");");
+  clint->process("end_mthread(rthr);");
+  clint->process("end_mthread(uthr);");
+  clint->process("printf(\"success!\\n\");");
 }
 
 void run()
 {
-  // Initialize data structures
-  /*defineType("Node", "struct Node {"
-                     "  Node *parent = nullptr;"
-                     "};");
-
-  interp->process("Node global");*/
-
-  //std::cout << "~~midge welcomes you~~" << std::endl;
-  //std::cout << "~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
-
   try
   {
     // Include Paths
@@ -152,8 +205,6 @@ void run()
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
     clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
-
-    clint->loadFile("/home/jason/midge/src/clingexp.c");
     printf("</AppSourceLoading>\n\n");
 
     // // Run App
@@ -171,48 +222,8 @@ void run()
     /* Goal: is the ability to change a structure (which contains a resource which must be destroyed & initialized) which is used in-a-loop
      *       in a seperate thread routine > then change the thread routine to make use of that structure change
      */
-    
-    // -- Redefinition
-    // define structure
-    clint->declare("typedef struct shaver { float battery_life; } shaver;");
 
-    // define method
-    clint->declare("void *shaver_update_routine(void *vargp) {"
-                   "  void **vargs = (void **)vargp;"
-                   "  mthread_info *thr = *(mthread_info **)vargs[0];"
-                   "  shaver *s = (shaver *)vargs[1];"
-                   "  "
-                   "  float last_measure = 120.f;"
-                   "  while(!thr->should_exit) {"
-                   "    if(last_measure - s->battery_life > 1.f) {"
-                   "      last_measure = s->battery_life;"
-                   "      printf(\"battery-life:%.2f\\n\", s->battery_life);"
-                   "    }"
-                   "    usleep(2000);"
-                   "  }"
-                   "  "
-                   "  thr->has_concluded = true;"
-                   "  return NULL;"
-                   "}");
-
-    // Begin thread
-    clint->process("mthread_info *rthr;");
-    clint->process("shaver s_data = { .battery_life = 83.4f };");
-    clint->process("void *args[2];");
-    clint->process("args[0] = &rthr;");
-    clint->process("args[1] = &s_data;");
-
-    clint->process("begin_mthread(shaver_update_routine, &rthr, args);");
-    clint->process("int ms = 0; while(ms < 5000) { usleep(500000); ms += 1000; s_data.battery_life = 0.99f * s_data.battery_life - 0.0001f * (5000 - ms); }");
-
-    // redefine structure in main thread
-    clint->process("rthr->do_pause = true;");
-    clint->declare("typedef struct shaver { float battery_life; float condition_multiplier; } shaver;");
-
-    // end
-    clint->process("printf(\"ending...\\n\");");
-    clint->process("end_mthread(rthr);");
-    clint->process("printf(\"success!\\n\");");
+    redef();
   }
   catch (const std::exception &e)
   {
