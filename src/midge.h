@@ -118,15 +118,21 @@ void define_structure(std::string typeName, std::string definition)
 }
 
 std::map<std::string, int> defined_functions;
-void define_function(const char *returnType, const char *name, const char *params, const char *block)
+void define_function(const char *return_type, const char *name, const char *params, const char *block)
 {
+  if (strcmp(return_type, "void"))
+  {
+    printf("Only allowed void returning functions atm.");
+    return;
+  }
+
   const char *TAB = "  ";
   char decl[16384];
   std::map<std::string, int>::iterator it = defined_functions.find(name);
   if (it == defined_functions.end())
   {
     // Declare Function Pointer
-    strcpy(decl, "static void *(*");
+    strcpy(decl, "static void (*");
     strcat(decl, name);
     strcat(decl, ")(void **);");
     clint->declare(decl);
@@ -142,14 +148,18 @@ void define_function(const char *returnType, const char *name, const char *param
   sprintf(verstr + 2, "%i", version);
 
   // Form the function declaration
-  strcpy(decl, "void *");
+  // -- header
+  strcpy(decl, "void ");
   strcat(decl, name);
   strcat(decl, verstr);
   strcat(decl, "(void **p_vargs) {\n");
+
+  // -- params
   int n = strlen(params);
+  int s = 0, t = 0;
   if (n > 0)
   {
-    int s = 0, t = 0, u = 0, p = 0;
+    int u = 0, p = 0;
     for (int i = 0; i <= n; ++i)
     {
       if (t == s)
@@ -169,6 +179,7 @@ void define_function(const char *returnType, const char *name, const char *param
       {
         if (params[i] == ',' || params[i] == '\0')
         {
+          strcat(decl, TAB);
           strncat(decl, params + s, i - s);
           strcat(decl, " = (");
           strncat(decl, params + s, t - s);
@@ -184,8 +195,39 @@ void define_function(const char *returnType, const char *name, const char *param
     }
     strcat(decl, "\n");
   }
-  strcat(decl, block);
-  strcat(decl, "\n}");
+
+  // -- code-block
+  n = strlen(block);
+  s = 0;
+  t = 0;
+  for (int i = 0; i <= n; ++i)
+  {
+    if (block[i] == ' ' || block[i] == '\n' || block[i] == '\t')
+      continue;
+    if (t == s)
+      t = i;
+    if (block[i] == ';' || block[i] == '\0')
+    {
+      strncat(decl, block + s, i - s + 1);
+      s = t = i + 1;
+    }
+
+    if (block[i] == '(' && i > 0)
+    {
+      char call_name[256];
+      strncpy(call_name, block + t, i - t);
+      call_name[i - t] = '\0';
+      it = defined_functions.find(call_name);
+      if (it == defined_functions.end())
+        continue;
+
+      printf("found-call:(%i:%i):%s\n", t, i - t, call_name);
+      // TODO
+      printf("TODO-TODO-TODO-TODO-TODO-TODO\n")
+    }
+  }
+  // strcat(decl, block);
+  strcat(decl, "}\n");
 
   // Declare function
   printf("decl:%s\n", decl);
@@ -212,17 +254,14 @@ typedef struct structure_definition
 
 } structure_definition;
 
-int multiply_num(int *v) { return *v * 3 - 4; }
-
-void *doib(void *ret) { return 4; }
-
 void redef()
 {
-  int z = (int)doib();
-
   // -- Redefinition
-  // define_function("void", "add_to_num", "int *v", "*v += 4;");
-  // define_function("void", "puffy", "", "int v = 3; add_to_num(&v); printf(\"out:%i\\n\");");
+  define_function("void", "add_to_num", "int *v", "  *v += 4;\n");
+  define_function("void", "puffy", "",
+                  "  int v = 3;\n"
+                  "  add_to_num(&v);\n"
+                  "  printf(\"out:%i\\n\", v);\n");
   // code("int v = 3;");
   // code("add_to_num(&v);");
   // define_method("add_to_num", "void add_to_num(int *v) { *v += 19; }");
