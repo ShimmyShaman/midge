@@ -3,6 +3,7 @@
 #ifndef MIDGE_H
 #define MIDGE_H
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -80,7 +81,7 @@ void loadLibrary(const char *name)
 
 // std::vector<cling::Transaction *> transactions;
 std::map<std::string, cling::Transaction *> definedTypes;
-void defineStructure(std::string typeName, std::string definition)
+void define_structure(std::string typeName, std::string definition)
 {
   std::map<std::string, cling::Transaction *>::iterator it = definedTypes.find(typeName);
   if (it != definedTypes.end())
@@ -116,11 +117,138 @@ void defineStructure(std::string typeName, std::string definition)
   }
 }
 
+std::map<std::string, int> defined_functions;
+void define_function(const char *returnType, const char *name, const char *params, const char *block)
+{
+  const char *TAB = "  ";
+  char decl[16384];
+  std::map<std::string, int>::iterator it = defined_functions.find(name);
+  if (it == defined_functions.end())
+  {
+    // Declare Function Pointer
+    strcpy(decl, "static void *(*");
+    strcat(decl, name);
+    strcat(decl, ")(void **);");
+    clint->declare(decl);
+    printf("%s\n", decl);
+    defined_functions[name] = 0;
+  }
+
+  // Set version and function name postfix
+  int version = defined_functions[name] + 1;
+  defined_functions[name] = version;
+  char verstr[7];
+  strcpy(verstr, "_v");
+  sprintf(verstr + 2, "%i", version);
+
+  // Form the function declaration
+  strcpy(decl, "void *");
+  strcat(decl, name);
+  strcat(decl, verstr);
+  strcat(decl, "(void **p_vargs) {\n");
+  int n = strlen(params);
+  if (n > 0)
+  {
+    int s = 0, t = 0, u = 0, p = 0;
+    for (int i = 0; i <= n; ++i)
+    {
+      if (t == s)
+      {
+        if (params[i] == ' ')
+        {
+          int mod = 0;
+          while (params[i + 1] == '&' || params[i + 1] == '*')
+          {
+            mod = 1;
+            ++i;
+          }
+          t = i + mod;
+        }
+      }
+      else
+      {
+        if (params[i] == ',' || params[i] == '\0')
+        {
+          strncat(decl, params + s, i - s);
+          strcat(decl, " = (");
+          strncat(decl, params + s, t - s);
+          strcat(decl, ")p_vargs[");
+          sprintf(decl + strlen(decl), "%i", p);
+          strcat(decl, "];\n");
+
+          // Reset
+          ++p;
+          s = t = i + 1;
+        }
+      }
+    }
+    strcat(decl, "\n");
+  }
+  strcat(decl, block);
+  strcat(decl, "\n}");
+
+  // Declare function
+  printf("decl:%s\n", decl);
+  clint->declare(decl);
+
+  // Set pointer to function
+  strcpy(decl, name);
+  strcat(decl, " = &");
+  strcpy(decl, name);
+  strcat(decl, verstr);
+  strcat(decl, ";");
+  clint->process(decl);
+}
+
+void code(const char *cstr)
+{
+  clint->process(cstr);
+}
+
+typedef struct structure_definition
+{
+  const char *name;
+  cling::Transaction transaction;
+
+} structure_definition;
+
+int multiply_num(int *v) { return *v * 3 - 4; }
+
+void *doib(void *ret) { return 4; }
+
 void redef()
+{
+  int z = (int)doib();
+
+  // -- Redefinition
+  // define_function("void", "add_to_num", "int *v", "*v += 4;");
+  // define_function("void", "puffy", "", "int v = 3; add_to_num(&v); printf(\"out:%i\\n\");");
+  // code("int v = 3;");
+  // code("add_to_num(&v);");
+  // define_method("add_to_num", "void add_to_num(int *v) { *v += 19; }");
+  // code("add_to_num(&v);");
+
+  // code("printf(\"Initial >v=%i\\n\", v);");
+
+  // define structure
+  // define_structure("shaver", "typedef struct shaver { float battery_life; } shaver;");
+
+  // define_method("do_stuff", "void do_stuff(shaver *s) { s->battery_life -= 7; }");
+
+  // code("shaver s;");
+  // code("s.battery_life = 100;");
+  // code("do_stuff(&s);");
+  // code("printf(\"Before>s.battery_life=%.2f\\n\", s.battery_life);");
+
+  // define_structure("shaver", "typedef struct shaver { float battery_life; float condition_multiplier; } shaver;");
+  // code("printf(\"After >s.battery_life=%i\\n\", s.battery_life);");
+}
+
+void redef2()
 {
   // -- Redefinition
   // define structure
-  defineStructure("shaver", "typedef struct shaver { float battery_life; } shaver;");
+  define_structure("shaver", "typedef struct shaver { float battery_life; } shaver;");
 
   // define method
   clint->declare("void *shaver_display_routine(void *vargp) {"
@@ -130,6 +258,8 @@ void redef()
                  "  "
                  "  float last_measure = 120.f;"
                  "  while(!thr->should_exit) {"
+                 "    if(thr->should_pause && hold_mthread(thr))"
+                 "      break;"
                  "    if(last_measure - s->battery_life > 1.f) {"
                  "      last_measure = s->battery_life;"
                  "      printf(\"battery-life:%.2f\\n\", s->battery_life);"
@@ -147,6 +277,8 @@ void redef()
                  "  "
                  "  int ms = 0;"
                  "  while(!thr->should_exit && ms < 10000) {"
+                 "    if(thr->should_pause && hold_mthread(thr))"
+                 "      break;"
                  "    usleep(50000);"
                  "    ms += 50;"
                  "    s->battery_life = 0.9999f * s->battery_life - 0.00007f * ms;"
@@ -156,7 +288,7 @@ void redef()
                  "  return NULL;"
                  "}");
 
-  // Begin thread
+  // Begin
   clint->process("mthread_info *rthr, *uthr;");
   clint->process("shaver s_data = { .battery_life = 83.4f };");
   clint->process("void *args[2];");
@@ -167,12 +299,29 @@ void redef()
   clint->process("args[0] = &uthr;");
   clint->process("begin_mthread(shaver_update_routine, &uthr, args);");
 
-  // redefine structure in main thread
-  // clint->process("rthr->do_pause = true;");
-  // defineStructure("shaver", "typedef struct shaver { float battery_life; float condition_multiplier; } shaver;");
+  // Pause
+  clint->process("int iterations = 0;");
+  clint->process("while(!uthr->has_concluded && iterations < 1000) { usleep(4000); ++iterations; }");
+  clint->process("printf(\"pausing...\\n\");");
+  clint->process("pause_mthread(rthr, false);");
+  clint->process("pause_mthread(uthr, false);");
+  clint->process("while(!rthr->has_paused || !uthr->has_paused) usleep(1);");
+  clint->process("printf(\"paused for 3 seconds.\\n\");");
 
-  // end
-  clint->process("while(!uthr->has_concluded) usleep(500);");
+  // Redefine
+  // redefine structure in main thread
+  define_structure("shaver", "typedef struct shaver { float battery_life; float condition_multiplier; } shaver;");
+
+  // Resume
+  clint->process("iterations = 0;");
+  clint->process("while(!uthr->has_concluded && iterations < 1000) { usleep(3000); ++iterations; }");
+  clint->process("printf(\"resuming...\");");
+  clint->process("unpause_mthread(rthr, false);");
+  clint->process("unpause_mthread(uthr, false);");
+  clint->process("printf(\"resumed!\\n\");");
+
+  // End
+  clint->process("while(!uthr->has_concluded) usleep(1);");
   clint->process("printf(\"ending...\\n\");");
   clint->process("end_mthread(rthr);");
   clint->process("end_mthread(uthr);");
