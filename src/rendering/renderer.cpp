@@ -11,6 +11,14 @@
     return NULL;            \
   }
 
+#define MRT_RUN2(CALL)      \
+  CALL;                     \
+  if (result != VK_SUCCESS) \
+  {                         \
+    thr->has_concluded = 1; \
+    return NULL;            \
+  }
+
 static glsl_shader vertex_shader = {
     .text =
         "#version 400\n"
@@ -69,7 +77,7 @@ void *midge_render_thread(void *vargp)
   mvk_init_device_extension_names(&vkrs);
 
   // -- Renderer
-  MRT_RUN(mvk_init_instance(&vkrs, "midge"));
+  MRT_RUN2(mvk_init_instance(&result, &vkrs, "midge"));
   MRT_RUN(mvk_init_enumerate_device(&vkrs, 1));
   mxcb_init_window(&winfo, vkrs.window_width, vkrs.window_height);
   MRT_RUN(mvk_init_swapchain_extension(&vkrs));

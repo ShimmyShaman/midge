@@ -158,7 +158,8 @@ typedef struct vk_render_state
 
 VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_layers);
 void mvk_init_device_extension_names(vk_render_state *p_vkrs);
-VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_name);
+// VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_name);
+void mvk_init_instance(VkResult *res, vk_render_state *p_vkrs, char const *const app_short_name);
 VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, uint32_t required_gpu_count);
 VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_device(vk_render_state *p_vkrs);

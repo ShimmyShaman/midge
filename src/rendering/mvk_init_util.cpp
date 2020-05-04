@@ -111,7 +111,10 @@ VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_la
   return res;
 }
 
-VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_name)
+// VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_name)
+#define func void
+
+func mvk_init_instance(VkResult *res, vk_render_state *p_vkrs, char const *const app_short_name)
 {
   VkApplicationInfo app_info = {};
   app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -137,11 +140,9 @@ VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_
   inst_info.ppEnabledExtensionNames = p_vkrs->instance_extension_names.data();
 
   printf("create VkInstance...");
-  VkResult res = vkCreateInstance(&inst_info, NULL, &p_vkrs->inst);
-  assert(res == VK_SUCCESS);
+  *res = vkCreateInstance(&inst_info, NULL, &p_vkrs->inst);
+  assert(*res == VK_SUCCESS);
   printf("SUCCESS\n");
-
-  return res;
 }
 
 void mvk_init_device_extension_names(vk_render_state *p_vkrs)

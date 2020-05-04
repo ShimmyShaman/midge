@@ -60,12 +60,19 @@ void define_structure(std::string typeName, std::string definition)
   }
 }
 
+typedef struct function_parameter
+{
+  char *type;
+  char *name;
+  bool requires_addressing;
+} function_parameter;
+
 typedef struct defined_function
 {
   int version;
   const char *name;
-  char **params_types;
-  char **params_names;
+
+  function_parameter *params;
   int params_count;
   const char *given_code;
 } defined_function;
@@ -94,8 +101,7 @@ void define_function(const char *return_type, const char *name, const char *para
 
     df = (defined_function *)malloc(sizeof df);
     df->version = 0;
-    df->params_names = NULL;
-    df->params_types = NULL;
+    df->params = NULL;
     defined_functions[name] = df;
   }
   else
@@ -106,19 +112,18 @@ void define_function(const char *return_type, const char *name, const char *para
   df->name = name;
   df->given_code = block;
 
-  if (df->params_names)
+  if (df->params)
   {
-    free(df->params_names);
-    free(df->params_types);
     for (int i = 0; i < df->params_count; ++i)
     {
-      free(df->params_names[i]);
-      free(df->params_types[i]);
+      free(df->params[i].type);
+      free(df->params[i].name);
     }
+    free(df->params);
+    df->params = NULL;
   }
   int allocated_params = 20;
-  df->params_names = (char **)malloc(sizeof(char *) * allocated_params);
-  df->params_types = (char **)malloc(sizeof(char *) * allocated_params);
+  df->params = (function_parameter *)malloc(sizeof(function_parameter) * allocated_params);
   df->params_count = 0;
 
   char verstr[7];
@@ -159,19 +164,33 @@ void define_function(const char *return_type, const char *name, const char *para
         if (params[i] == ',' || params[i] == '\0')
         {
           // Set
-          if (df->params_count > allocated_params)
+          if (df->params_count >= allocated_params)
           {
             allocated_params = allocated_params + 4 + allocated_params / 2;
-            df->params_types = (char **)realloc(df->params_types, sizeof(char *) * allocated_params);
-            df->params_names = (char **)realloc(df->params_names, sizeof(char *) * allocated_params);
+            df->params = (function_parameter *)realloc(df->params, sizeof(function_parameter) * allocated_params);
           }
-          df->params_types[df->params_count] = (char *)malloc(sizeof(char) * (t - s));
-          strncpy(df->params_types[df->params_count], params + s, t - s);
-          df->params_types[df->params_count][t - s] = '\0';
-          df->params_names[df->params_count] = (char *)malloc(sizeof(char) * (i - u));
-          strncpy(df->params_names[df->params_count], params + u, i - u);
-          df->params_names[df->params_count][i - u] = '\0';
-          printf("param_type:'%s' param_name:'%s'\n", df->params_types[df->params_count], df->params_names[df->params_count]);
+          df->params[df->params_count].type = (char *)malloc(sizeof(char) * (t - s));
+          strncpy(df->params[df->params_count].type, params + s, t - s);
+          df->params[df->params_count].type[t - s] = '\0';
+          df->params[df->params_count].name = (char *)malloc(sizeof(char) * (i - u));
+          strncpy(df->params[df->params_count].name, params + u, i - u);
+          df->params[df->params_count].name[i - u] = '\0';
+
+          // Check addressing
+          if (df->params[df->params_count].type[t - s - 1] == '*')
+            df->params[df->params_count].requires_addressing = false;
+          else
+          {
+            char *fch = strchr(df->params[df->params_count].type, '&');
+            if (fch != NULL)
+            {
+              printf("ERROR >> Pass By Reference not supported.");
+              return;
+            }
+            df->params[df->params_count].requires_addressing = true;
+          }
+          printf("param_type:'%s' param_name:'%s' requires_addressing:'%s'\n", df->params[df->params_count].type, df->params[df->params_count].name,
+                 df->params[df->params_count].requires_addressing ? "true" : "false");
           ++df->params_count;
 
           // Add to declaration
@@ -185,16 +204,21 @@ void define_function(const char *return_type, const char *name, const char *para
 
           // Reset
           ++p;
+          if (params[i] == ',')
+          {
+            // Remove any further whitespace
+            while (params[i + 1] == '\n' || params[i + 1] == ' ' || params[i + 1] == '\t')
+              ++i;
+          }
           s = t = i + 1;
         }
       }
     }
     strcat(decl, "\n");
   }
-  if (allocated_params != df->params_count)
+  if (allocated_params > df->params_count)
   {
-    df->params_types = (char **)realloc(df->params_types, sizeof(char *) * df->params_count);
-    df->params_names = (char **)realloc(df->params_names, sizeof(char *) * df->params_count);
+    df->params = (function_parameter *)realloc(df->params, sizeof(function_parameter) * df->params_count);
   }
 
   // -- code-block
@@ -274,6 +298,47 @@ void define_function(const char *return_type, const char *name, const char *para
   clint->process(decl);
 }
 
+// struct parsing_state
+// {
+//   const char *text;
+//   int index;
+//   bool end;
+// };
+
+// enum Token
+// {
+//   UNKNOWN,
+//   EOF,
+// };
+
+// void move_past_empty_text()
+
+// void peek_token(Token *token, struct parsing_state *p)
+// {
+//   move_past_empty_text(p);
+// }
+
+// void parse_text(const char *txt)
+// {
+//   struct parsing_state p = {txt, 0, false};
+
+//   while (!p.end)
+//   {
+//     Token token;
+//     peek_token(&token, &p);
+//     switch (token)
+//     {
+//     default:
+//     {
+//       char buf[12];
+//       strncpy(buf, p.text + p.index - 5, 11);
+//       buf[11] = '\0';
+//       printf("unknown token: %s", buf);
+//       break;
+//     }
+//     }
+//   }
+
 void code(const char *cstr)
 {
   clint->process(cstr);
@@ -291,36 +356,91 @@ void load_mc_file(const char *filepath, bool error_on_redefinition)
   FILE *fp = fopen(filepath, "r");
 }
 
+#include <vulkan/vulkan.h>
 void redef()
 {
   // -- Redefinition
   // load_mc_file("/home/jason/midge/src/mc_exp.mc", true);
 
-  const char *mc_add_to_num = "func add_to_num(int *v, int e) { *v += 4 * e; }";
-  clint->declare("void add_to_num (void **vargs) {"
-                 "  int **v = (int **)vargs[0];\n"
-                 "  int *e = (int *)vargs[1];\n"
-                 "  \n"
-                 "  **v += 4 * *e;\n }");
+  /* 
+void mvk_init_instance(VkResult *result, vk_render_state *p_vkrs, char const *const app_short_name)
+{
+  VkApplicationInfo app_info = {};
+  app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+  app_info.pNext = NULL;
+  app_info.pApplicationName = app_short_name;
+  app_info.applicationVersion = 1;
+  app_info.pEngineName = app_short_name;
+  app_info.engineVersion = 1;
+  app_info.apiVersion = VK_API_VERSION_1_0;
 
-  const char *mc_puffy = "func puffy() {"
-                         "  int v = 3;"
-                         "  add_to_num(&v, 2);"
-                         "  printf(\"out:%i\\n\", v);\n"
-                         "}";
-  clint->declare("void puffy() {"
-                 "  int *v = (int *)malloc(sizeof (int));\n"
-                 "  *v = 3;\n"
-                 "\n"
-                 "  void *vargs[2];\n"
-                 "  vargs[0] = (void *)&v;\n"
-                 "  int mcliteral_0 = 2;"
-                 "  vargs[1] = (void *)&mcliteral_0;\n"
-                 "  add_to_num(vargs);"
-                 "\n"
-                 "  printf(\"out:%i\\n\", *v);\n"
-                 "\n"
-                 "  free(v); }");
+  // -- Layers & Extensions --
+  p_vkrs->instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+  p_vkrs->instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+
+  VkInstanceCreateInfo inst_info = {};
+  inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  inst_info.pNext = NULL;
+  inst_info.flags = 0;
+  inst_info.pApplicationInfo = &app_info;
+  inst_info.enabledLayerCount = p_vkrs->instance_layer_names.size();
+  inst_info.ppEnabledLayerNames = p_vkrs->instance_layer_names.size() ? p_vkrs->instance_layer_names.data() : NULL;
+  inst_info.enabledExtensionCount = p_vkrs->instance_extension_names.size();
+  inst_info.ppEnabledExtensionNames = p_vkrs->instance_extension_names.data();
+
+  printf("create VkInstance...");
+  *result = vkCreateInstance(&inst_info, NULL, &p_vkrs->inst);
+  assert(*result == VK_SUCCESS);
+  printf("SUCCESS\n");
+} */
+
+  // const char *mc_add_to_num = "func add_to_num(int *v, int e) { *v += 4 * e; }";
+  define_function("void", "add_to_num", "int *v, int e", "  *v += 4 * e;\n");
+  // clint->declare("void add_to_num (void **vargs) {"
+  //                "  int *v = (int *)vargs[0];\n"
+  //                "  int *e = (int *)vargs[1];\n"
+  //                "  \n"
+  //                "  *v += 4 * *e;\n }");
+
+  // const char *mc_set_num = "func set_num(int **var, int value) { *var = (int *)malloc(sizeof(int)); *var = value; }";
+  // define_function("void", "set_num", "int **var, int value", "  *var = (int *)malloc(sizeof(int));\n  *var = value;\n)");
+  // clint->declare("void set_num (void **vargs) {"
+  //                "  int **var = (int **)vargs[0];\n"
+  //                "  int *value = (int *)vargs[1];\n"
+  //                "  \n"
+  //                "  *var = (int *)malloc(sizeof(int));\n"
+  //                "  **var = *value;\n"
+  //                "}");
+
+  // const char *mc_puffy = "func puffy() {"
+  //                        "  int *v;"
+  //                        "  set_num(&v, 6);"
+  //                        "  add_to_num(&v, 2);"
+  //                        "  printf(\"out:%i\\n\", v);\n"
+  //                        "}";
+  // define("void", "puffy", "",
+  //        "  int *v;"
+  //        "  set_num(&v, 6);"
+  //        "  add_to_num(&v, 2);"
+  //        "  printf(\"out:%i\\n\", v);\n");
+  // clint->declare("void puffy() {"
+  //                "  int *v;\n"
+  //                "\n"
+  //                "  void *vargs_0[2];\n"
+  //                "  vargs_0[0] = (void *)&v;\n"
+  //                "  int mcliteral_0 = 6;"
+  //                "  vargs_0[1] = (void *)&mcliteral_0;\n"
+  //                "  set_num(vargs_0);"
+  //                "\n"
+  //                "  void *vargs_1[2];\n"
+  //                "  vargs_1[0] = (void *)v;\n"
+  //                "  int mcliteral_1 = 2;"
+  //                "  vargs_1[1] = (void *)&mcliteral_1;\n"
+  //                "  add_to_num(vargs_1);"
+  //                "  printf(\"out:%i\\n\", *v);\n"
+  //                "\n"
+  //                "  free(v);"
+  //                "}");
 
   clint->process("puffy()");
   // define_function("void", "add_to_num", "int *v", "  *v += 4;\n");
