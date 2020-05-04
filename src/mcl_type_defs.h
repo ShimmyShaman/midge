@@ -123,7 +123,7 @@ void define_function(const char *return_type, const char *name, const char *para
 
   char verstr[7];
   strcpy(verstr, "_v");
-  sprintf(verstr + 2, "%i", version);]
+  sprintf(verstr + 2, "%i", version);
 
   // Form the function declaration
   // -- header
@@ -214,50 +214,50 @@ void define_function(const char *return_type, const char *name, const char *para
       s = t = i + 1;
     }
 
-    if (block[i] == '(' && i > 0)
+    if (block[i] != '(')
+      continue;
+
+    char call_name[256];
+    strncpy(call_name, block + t, i - t);
+    call_name[i - t] = '\0';
+    it = defined_functions.find(call_name);
+    if (it == defined_functions.end())
+      continue;
+
+    defined_function *sf = it->second;
+    char nstname[10];
+    printf("found-call:(%i:%i):%s\n", t, i - t, call_name);
     {
-      char call_name[256];
-      strncpy(call_name, block + t, i - t);
-      call_name[i - t] = '\0';
-      it = defined_functions.find(call_name);
-      if (it == defined_functions.end())
-        continue;
+      // Declare the array of void pointers
+      char nst[100];
+      char nstnum[7];
+      const char *initial = "void *_mdge_";
+      strcpy(nst, initial);
+      sprintf(nstnum, "%i", varyd);
+      strcat(nst, nstnum);
 
-      defined_function *sf = it->second;
-      char nstname[10];
-      printf("found-call:(%i:%i):%s\n", t, i - t, call_name);
-      {
-        // Declare the array of void pointers
-        char nst[100];
-        char nstnum[7];
-        const char *initial = "void *_mdge_";
-        strcpy(nst, initial);
-        sprintf(nstnum, "%i", varyd);
-        strcat(nst, nstnum);
+      // -- sidebar : set name of array for other pointers to access
+      strcpy(nstname, initial);
+      strcat(nstname, nstnum);
 
-        // -- sidebar : set name of array for other pointers to access
-        strcpy(nstname, initial);
-        strcat(nstname, nstnum);
-
-        strcat(nst, "[");
-        memset(nstnum, '\0', 7);
-        sprintf(nstnum, "%i", sf->params_count);
-        strcat(nst, nstnum);
-        strcat(nst, "];\n");
-        strcat(decl, nst);
-      }
-      for (int j = 0; j < sf->params_count; ++j)
-      {
-        char nst[2048];
-        char nstnum[7];
-        strcpy(nst, nstname);
-        strcat(nst, "[");
-        sprintf(nstnum, "%i", j);
-        strcat(nst, nstnum);
-        strcat(nst, "] = (void *)");
-      }
-      ++varyd;
+      strcat(nst, "[");
+      memset(nstnum, '\0', 7);
+      sprintf(nstnum, "%i", sf->params_count);
+      strcat(nst, nstnum);
+      strcat(nst, "];\n");
+      strcat(decl, nst);
     }
+    for (int j = 0; j < sf->params_count; ++j)
+    {
+      char nst[2048];
+      char nstnum[7];
+      strcpy(nst, nstname);
+      strcat(nst, "[");
+      sprintf(nstnum, "%i", j);
+      strcat(nst, nstnum);
+      strcat(nst, "] = (void *)");
+    }
+    ++varyd;
   }
   strcat(decl, "}\n");
 
@@ -286,14 +286,48 @@ typedef struct structure_definition
 
 } structure_definition;
 
+void load_mc_file(const char *filepath, bool error_on_redefinition)
+{
+  FILE *fp = fopen(filepath, "r");
+}
+
 void redef()
 {
   // -- Redefinition
-  define_function("void", "add_to_num", "int *v", "  *v += 4;\n");
-  define_function("void", "puffy", "",
-                  "  int v = 3;\n"
-                  "  add_to_num(&v);\n"
-                  "  printf(\"out:%i\\n\", v);\n");
+  // load_mc_file("/home/jason/midge/src/mc_exp.mc", true);
+
+  const char *mc_add_to_num = "func add_to_num(int *v, int e) { *v += 4 * e; }";
+  clint->declare("void add_to_num (void **vargs) {"
+                 "  int **v = (int **)vargs[0];\n"
+                 "  int *e = (int *)vargs[1];\n"
+                 "  \n"
+                 "  **v += 4 * *e;\n }");
+
+  const char *mc_puffy = "func puffy() {"
+                         "  int v = 3;"
+                         "  add_to_num(&v, 2);"
+                         "  printf(\"out:%i\\n\", v);\n"
+                         "}";
+  clint->declare("void puffy() {"
+                 "  int *v = (int *)malloc(sizeof (int));\n"
+                 "  *v = 3;\n"
+                 "\n"
+                 "  void *vargs[2];\n"
+                 "  vargs[0] = (void *)&v;\n"
+                 "  int mcliteral_0 = 2;"
+                 "  vargs[1] = (void *)&mcliteral_0;\n"
+                 "  add_to_num(vargs);"
+                 "\n"
+                 "  printf(\"out:%i\\n\", *v);\n"
+                 "\n"
+                 "  free(v); }");
+
+  clint->process("puffy()");
+  // define_function("void", "add_to_num", "int *v", "  *v += 4;\n");
+  // define_function("void", "puffy", "",
+  //                 "  int v = 3;\n"
+  //                 "  add_to_num(&v);\n"
+  //                 "  printf(\"out:%i\\n\", v);\n");
   // code("int v = 3;");
   // code("add_to_num(&v);");
   // define_method("add_to_num", "void add_to_num(int *v) { *v += 19; }");
