@@ -77,114 +77,6 @@ typedef struct defined_function
   const char *given_code;
 } defined_function;
 
-void add_params_definitions(char *decl, defined_function *df, const char *params)
-{
-  // (Re)Allocation
-  if (df->params)
-  {
-    for (int i = 0; i < df->params_count; ++i)
-    {
-      free(df->params[i].type);
-      free(df->params[i].name);
-    }
-    free(df->params);
-    df->params = NULL;
-  }
-  int allocated_params = 20;
-  df->params = (function_parameter *)malloc(sizeof(function_parameter) * allocated_params);
-  df->params_count = 0;
-
-  // Iterate
-  int n = strlen(params);
-  int s = 0, t = 0;
-  if (n > 0)
-  {
-    int u = 0, p = 0;
-    for (int i = 0; i <= n; ++i)
-    {
-      if (t == s)
-      {
-        if (params[i] == ' ' || params[i] == '&' || params[i] == '*')
-        {
-          int mod = 0;
-          while (params[i + 1] == '&' || params[i + 1] == '*')
-          {
-            mod = 1;
-            ++i;
-          }
-          t = i + mod;
-          u = mod ? t : (i + 1);
-        }
-      }
-      else
-      {
-        if (params[i] == ',' || params[i] == '\0')
-        {
-          // Set
-          if (df->params_count >= allocated_params)
-          {
-            allocated_params = allocated_params + 4 + allocated_params / 2;
-            df->params = (function_parameter *)realloc(df->params, sizeof(function_parameter) * allocated_params);
-          }
-          df->params[df->params_count].type = (char *)malloc(sizeof(char) * (t - s));
-          strncpy(df->params[df->params_count].type, params + s, t - s);
-          df->params[df->params_count].type[t - s] = '\0';
-          df->params[df->params_count].name = (char *)malloc(sizeof(char) * (i - u));
-          strncpy(df->params[df->params_count].name, params + u, i - u);
-          df->params[df->params_count].name[i - u] = '\0';
-
-          // Check addressing
-          if (df->params[df->params_count].type[t - s - 1] == '*')
-            df->params[df->params_count].requires_addressing = false;
-          else
-          {
-            char *fch = strchr(df->params[df->params_count].type, '&');
-            if (fch != NULL)
-            {
-              printf("ERROR >> Pass By Reference not supported.");
-              return;
-            }
-            df->params[df->params_count].requires_addressing = true;
-          }
-          printf("param_type:'%s' param_name:'%s' requires_addressing:'%s'\n", df->params[df->params_count].type, df->params[df->params_count].name,
-                 df->params[df->params_count].requires_addressing ? "true" : "false");
-
-          // Add to declaration
-          const char *TAB = "  ";
-          strcat(decl, TAB);
-          strcat(decl, df->params[df->params_count].type);
-          if (df->params[df->params_count].requires_addressing)
-            strcat(decl, " *");
-          strcat(decl, df->params[df->params_count].name);
-          strcat(decl, " = (");
-          strcat(decl, df->params[df->params_count].type);
-          if (df->params[df->params_count].requires_addressing)
-            strcat(decl, " *");
-          strcat(decl, ")p_vargs[");
-          sprintf(decl + strlen(decl), "%i", p);
-          strcat(decl, "];\n");
-
-          // Reset
-          ++df->params_count;
-          ++p;
-          if (params[i] == ',')
-          {
-            // Remove any further whitespace
-            while (params[i + 1] == '\n' || params[i + 1] == ' ' || params[i + 1] == '\t')
-              ++i;
-          }
-          s = t = i + 1;
-        }
-      }
-    }
-    strcat(decl, "\n");
-  }
-  if (allocated_params > df->params_count)
-  {
-    df->params = (function_parameter *)realloc(df->params, sizeof(function_parameter) * df->params_count);
-  }
-}
-
 void append_substring(char *dest, char *src, int n)
 {
   for (int i = 0; i < n; ++i)
@@ -320,6 +212,114 @@ void add_code_block(char *decl, defined_function *df, const char *block)
   }
 }
 
+void add_params_definitions(char *decl, defined_function *df, const char *params)
+{
+  // (Re)Allocation
+  if (df->params)
+  {
+    for (int i = 0; i < df->params_count; ++i)
+    {
+      free(df->params[i].type);
+      free(df->params[i].name);
+    }
+    free(df->params);
+    df->params = NULL;
+  }
+  int allocated_params = 20;
+  df->params = (function_parameter *)malloc(sizeof(function_parameter) * allocated_params);
+  df->params_count = 0;
+
+  // Iterate
+  int n = strlen(params);
+  int s = 0, t = 0;
+  if (n > 0)
+  {
+    int u = 0, p = 0;
+    for (int i = 0; i <= n; ++i)
+    {
+      if (t == s)
+      {
+        if (params[i] == ' ' || params[i] == '&' || params[i] == '*')
+        {
+          int mod = 0;
+          while (params[i + 1] == '&' || params[i + 1] == '*')
+          {
+            mod = 1;
+            ++i;
+          }
+          t = i + mod;
+          u = mod ? t : (i + 1);
+        }
+      }
+      else
+      {
+        if (params[i] == ',' || params[i] == '\0')
+        {
+          // Set
+          if (df->params_count >= allocated_params)
+          {
+            allocated_params = allocated_params + 4 + allocated_params / 2;
+            df->params = (function_parameter *)realloc(df->params, sizeof(function_parameter) * allocated_params);
+          }
+          df->params[df->params_count].type = (char *)malloc(sizeof(char) * (t - s));
+          strncpy(df->params[df->params_count].type, params + s, t - s);
+          df->params[df->params_count].type[t - s] = '\0';
+          df->params[df->params_count].name = (char *)malloc(sizeof(char) * (i - u));
+          strncpy(df->params[df->params_count].name, params + u, i - u);
+          df->params[df->params_count].name[i - u] = '\0';
+
+          // Check addressing
+          if (df->params[df->params_count].type[t - s - 1] == '*')
+            df->params[df->params_count].requires_addressing = false;
+          else
+          {
+            char *fch = strchr(df->params[df->params_count].type, '&');
+            if (fch != NULL)
+            {
+              printf("ERROR >> Pass By Reference not supported.");
+              return;
+            }
+            df->params[df->params_count].requires_addressing = true;
+          }
+          printf("param_type:'%s' param_name:'%s' requires_addressing:'%s'\n", df->params[df->params_count].type, df->params[df->params_count].name,
+                 df->params[df->params_count].requires_addressing ? "true" : "false");
+
+          // Add to declaration
+          const char *TAB = "  ";
+          strcat(decl, TAB);
+          strcat(decl, df->params[df->params_count].type);
+          if (df->params[df->params_count].requires_addressing)
+            strcat(decl, " *");
+          strcat(decl, df->params[df->params_count].name);
+          strcat(decl, " = (");
+          strcat(decl, df->params[df->params_count].type);
+          if (df->params[df->params_count].requires_addressing)
+            strcat(decl, " *");
+          strcat(decl, ")p_vargs[");
+          sprintf(decl + strlen(decl), "%i", p);
+          strcat(decl, "];\n");
+
+          // Reset
+          ++df->params_count;
+          ++p;
+          if (params[i] == ',')
+          {
+            // Remove any further whitespace
+            while (params[i + 1] == '\n' || params[i + 1] == ' ' || params[i + 1] == '\t')
+              ++i;
+          }
+          s = t = i + 1;
+        }
+      }
+    }
+    strcat(decl, "\n");
+  }
+  if (allocated_params > df->params_count)
+  {
+    df->params = (function_parameter *)realloc(df->params, sizeof(function_parameter) * df->params_count);
+  }
+}
+
 void define_function(const char *return_type, const char *name, const char *params, const char *block)
 {
   if (strcmp(return_type, "void"))
@@ -367,7 +367,7 @@ void define_function(const char *return_type, const char *name, const char *para
   strcat(decl, "(void **p_vargs) {\n");
 
   // -- params
-  add_params_definitions(decl, df, params);
+  // add_params_definitions(decl, df, params);
 
   // -- code-block
   add_code_block(decl, df, block);
@@ -384,6 +384,12 @@ void define_function(const char *return_type, const char *name, const char *para
   strcat(decl, ";");
   clint->process(decl);
 }
+
+#define PRCE(CALL)          \
+  if (CALL != 0)            \
+  {                         \
+    printf("error@" #CALL); \
+  }
 
 enum parsing_context
 {
@@ -411,7 +417,7 @@ enum token
   TOKEN_PREPROC_ENDIF,
 };
 
-void parse_past_empty_text(parsing_state *ps)
+int parse_past_empty_text(parsing_state *ps)
 {
   while (true)
   {
@@ -455,6 +461,77 @@ int parse_past(parsing_state *ps, const char *str)
       return i;
 }
 
+int parse_identifier(parsing_state *ps, char **out_seg)
+{
+  int o = ps->index;
+  while (true)
+  {
+    bool doc = true;
+    switch (ps->text[ps->index])
+    {
+    case ' ':
+    case '\n':
+    case '\t':
+      doc = false;
+      break;
+    case '\0':
+      printf("parse_identifier: unexpected eof");
+      return -1;
+    default:
+      if (!isalpha(ps->text[ps->index]) || (ps->index > o && !isalnum(ps->text[ps->index]) && ps->text[ps->index] != '_'))
+        doc = false;
+      break;
+    }
+    if (!doc)
+    {
+      if (o == ps->index)
+        return -1;
+
+      *out_seg = (char *)malloc(sizeof(char) * (ps->index - o + 1));
+      strncpy(*out_seg, ps->text + o, ps->index - o);
+      (*out_seg)[ps->index - o] = '\0';
+      return 0;
+    }
+    ++ps->index;
+  }
+  return -1;
+}
+
+int parse_contiguous_segment(parsing_state *ps, char **out_seg)
+{
+  int o = ps->index;
+  while (true)
+  {
+    bool doc = true;
+    switch (ps->text[ps->index])
+    {
+    case ' ':
+    case '\n':
+    case '\t':
+      doc = false;
+      break;
+    case '\0':
+      ps->end = true;
+      doc = false;
+      break;
+    default:
+      break;
+    }
+    if (!doc)
+    {
+      if (o == ps->index)
+        return -1;
+
+      *out_seg = (char *)malloc(sizeof(char) * (ps->index - o + 1));
+      strncpy(*out_seg, ps->text + o, ps->index - o);
+      (*out_seg)[ps->index - o] = '\0';
+      return 0;
+    }
+    ++ps->index;
+  }
+  return -1;
+}
+
 int peek_token(token *ptk, parsing_state *ps)
 {
   parse_past_empty_text(ps);
@@ -482,10 +559,20 @@ int peek_token(token *ptk, parsing_state *ps)
         *ptk = TOKEN_PREPROC_ENDIF;
         return 0;
       }
-      else
+
+      printf("unknown preproc 2ndchar:%c\n", ps->text[ps->index + 1]);
+      return -1;
+    }
+    case 'i':
+    {
+      if (!strvncmp(ps, "int"))
       {
-        printf("unknown preproc firstchar:%c\n", ps->text[ps->index + 1]);
+        *ptk = TOKEN_INT_KEYWORD;
+        return 0;
       }
+
+      printf("unknown i 2ndchar:%c\n", ps->text[ps->index + 1]);
+      return -1;
     }
     default:
     {
@@ -523,6 +610,8 @@ enum c_node_type
 {
   CNODE_FILE_ROOT = 100,
   CNODE_INCLUDE,
+  CNODE_FUNCTION,
+  CNODE_VARIABLE,
 };
 
 typedef struct c_node
@@ -531,38 +620,6 @@ typedef struct c_node
   void **data;
   int data_count;
 } cnode;
-
-int parse_contiguous_segment(parsing_state *ps, char **out_seg)
-{
-  int o = ps->index;
-  while (true)
-  {
-    bool doc = true;
-    switch (ps->text[ps->index])
-    {
-    case ' ':
-    case '\n':
-    case '\t':
-      doc = false;
-      break;
-    case '\0':
-      ps->end = true;
-      doc = false;
-      break;
-    default:
-      break;
-    }
-    if (!doc)
-    {
-      *out_seg = (char *)malloc(sizeof(char) * (ps->index - o + 1));
-      strncpy(*out_seg, ps->text + o, ps->index - o);
-      (*out_seg)[ps->index - o] = '\0';
-      return 0;
-    }
-    ++ps->index;
-  }
-  return -1;
-}
 
 int add_child_cnode(c_node ***children, int *allocated_children, int *child_count, c_node *child)
 {
@@ -577,6 +634,81 @@ int add_child_cnode(c_node ***children, int *allocated_children, int *child_coun
   int new_allocation = *allocated_children + 4 + *allocated_children / 10;
   *children = (c_node **)realloc(*children, sizeof(cnode **) * new_allocation);
   return 0;
+}
+
+int parse_function(parsing_state *ps, c_node **res, const char *return_type, const char *identifier)
+{
+  PRCE(parse_past(ps, "("));
+
+  int allocated = 4;
+  int param_count = 0;
+  function_parameter *fparams = (function_parameter *)malloc(sizeof(function_parameter *) * allocated);
+
+  // Parse through the parameters
+  while (true)
+  {
+    function_parameter fp = {};
+
+    char *type_identifier, *name_identifier;
+    PRCE(parse_identifier(ps, &fp.type));
+    PRCE(parse_past_empty_text(ps));
+    if (isalpha(ps->text[ps->index]))
+    {
+      fp.requires_addressing = true;
+    }
+    else
+    {
+      switch (ps->text[ps->index])
+      {
+        // case '*':
+      // fp.requires_addressing = false;
+      default:
+        printf("parse_function/unsupported-0 char:%c\n", ps->text[ps->index]);
+      }
+    }
+
+    PRCE(parse_identifier(ps, &fp.name));
+
+    throw 33; // add to fparams
+
+    PRCE(parse_past_empty_text(ps));
+    if (ps->text[ps->index] == ',')
+    {
+      ++ps->index;
+      PRCE(parse_past_empty_text(ps));
+      continue;
+    }
+    else if (ps->text[ps->index] == ')')
+    {
+      ++ps->index;
+      PRCE(parse_past_empty_text(ps));
+      break;
+    }
+    else
+    {
+      printf("parse_function/unsupported-1 char:%c\n", ps->text[ps->index]);
+    }
+  }
+
+  // peek_token(&tok, &ps, 2);
+  // if (ps.text[ps.index] != '<' && ps.text[ps.index] != '"')
+  // {
+  //   // print_error(&ps, "token_include");
+  //   printf("unexpected char 52525:%c\n", ps.text[ps.index]);
+  //   return -1;
+  // }
+
+  // char *statement;
+  // if (parse_contiguous_segment(&ps, &statement))
+  //   return -1;
+
+  // param_count, params, block
+
+  c_node *child = (c_node *)malloc(sizeof(cnode));
+  child->type = CNODE_FUNCTION;
+  // child->data = "" child->data_count = 1;
+
+  // add_child_cnode(&children, &allocated_children, &child_count, child);
 }
 
 int parse_text(c_node *root_node, const char *txt)
@@ -615,6 +747,30 @@ int parse_text(c_node *root_node, const char *txt)
       child->data_count = 1;
 
       add_child_cnode(&children, &allocated_children, &child_count, child);
+    }
+    break;
+    case TOKEN_INT_KEYWORD:
+    {
+      parse_past(&ps, "int");
+      parse_past_empty_text(&ps);
+
+      char *identifier;
+      if (parse_identifier(&ps, &identifier))
+        return -1;
+
+      switch (ps.text[ps.index])
+      {
+      case '(':
+        c_node *child;
+        parse_function(&ps, &child, "int", identifier);
+        break;
+      // case ';':
+      //   parse_variable(&ps, &child, "int", identifier);
+      //   break;
+      default:
+        printf("TOKEN_INT_KEYWORD unexpected char:%c\n", ps.text[ps.index]);
+        break;
+      }
     }
     break;
     default:
