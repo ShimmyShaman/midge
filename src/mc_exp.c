@@ -1,13 +1,13 @@
 
 #include <stdio.h>
 
-void set_num(int **var, int value)
+int set_num(int **var, int value)
 {
     *var = (int *)malloc(sizeof(int));
     **var = value;
 }
 
-void add_to_num(int *v, int e)
+int add_to_num(int *v, int e)
 {
     *v = *v + e;
 }
@@ -18,7 +18,7 @@ struct complex
     int c;
 };
 
-void mcmain()
+int mcmain()
 {
     int *v;
     set_num(&v, 6);

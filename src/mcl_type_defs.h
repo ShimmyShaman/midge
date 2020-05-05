@@ -532,6 +532,53 @@ typedef struct c_node
   int data_count;
 } cnode;
 
+int parse_contiguous_segment(parsing_state *ps, char **out_seg)
+{
+  int o = ps->index;
+  while (true)
+  {
+    bool doc = true;
+    switch (ps->text[ps->index])
+    {
+    case ' ':
+    case '\n':
+    case '\t':
+      doc = false;
+      break;
+    case '\0':
+      ps->end = true;
+      doc = false;
+      break;
+    default:
+      break;
+    }
+    if (!doc)
+    {
+      *out_seg = (char *)malloc(sizeof(char) * (ps->index - o + 1));
+      strncpy(*out_seg, ps->text + o, ps->index - o);
+      (*out_seg)[ps->index - o] = '\0';
+      return 0;
+    }
+    ++ps->index;
+  }
+  return -1;
+}
+
+int add_child_cnode(c_node ***children, int *allocated_children, int *child_count, c_node *child)
+{
+  if (*child_count < *allocated_children)
+  {
+    (*children)[*child_count] = child;
+    ++(*child_count);
+    return 0;
+  }
+
+  // Resize
+  int new_allocation = *allocated_children + 4 + *allocated_children / 10;
+  *children = (c_node **)realloc(*children, sizeof(cnode **) * new_allocation);
+  return 0;
+}
+
 int parse_text(c_node *root_node, const char *txt)
 {
   struct parsing_state ps = {txt, ROOT, 0, false};
@@ -558,13 +605,13 @@ int parse_text(c_node *root_node, const char *txt)
         return -1;
       }
 
-      char *contiguous_string;
-      if (parse_contiguous_string(&ps, &contiguous_string))
+      char *statement;
+      if (parse_contiguous_segment(&ps, &statement))
         return -1;
 
       c_node *child = (c_node *)malloc(sizeof(cnode));
       child->type = CNODE_INCLUDE;
-      child->data = (void **)(&contiguous_string);
+      child->data = (void **)(&statement);
       child->data_count = 1;
 
       add_child_cnode(&children, &allocated_children, &child_count, child);
