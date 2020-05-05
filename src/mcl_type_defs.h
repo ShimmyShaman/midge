@@ -478,7 +478,7 @@ int parse_identifier(parsing_state *ps, char **out_seg)
       printf("parse_identifier: unexpected eof");
       return -1;
     default:
-      if (!isalpha(ps->text[ps->index]) || (ps->index > o && !isalnum(ps->text[ps->index]) && ps->text[ps->index] != '_'))
+      if (!isalpha(ps->text[ps->index]) && (ps->index > o && !isalnum(ps->text[ps->index]) && ps->text[ps->index] != '_'))
         doc = false;
       break;
     }
@@ -487,7 +487,7 @@ int parse_identifier(parsing_state *ps, char **out_seg)
       if (o == ps->index)
         return -1;
 
-      *out_seg = (char *)malloc(sizeof(char) * (ps->index - o + 1));
+      *out_seg = (char *)calloc(sizeof(char), ps->index - o + 1);
       strncpy(*out_seg, ps->text + o, ps->index - o);
       (*out_seg)[ps->index - o] = '\0';
       return 0;
@@ -594,16 +594,23 @@ int peek_token(token *ptk, parsing_state *ps)
   }
 }
 
-char *format_debug_char(parsing_state *ps)
+int print_parse_error(parsing_state *ps, const char *function_name, const char *section_id)
 {
   char *buf = (char *)malloc(sizeof(char) * 16);
+  if (!buf)
+    return -1;
+
   strncpy(buf, ps->text + ps->index - 6, 6);
   strncpy(buf + 6, "|", 1);
   strncpy(buf + 7, ps->text + ps->index, 1);
   strncpy(buf + 8, "|", 1);
   strncpy(buf + 9, ps->text + ps->index + 1, 6);
   buf[15] = '\0';
-  return buf;
+
+  printf("%s>%s#unhandled-char:%s\n", function_name, section_id, buf);
+
+  free(buf);
+  return 0;
 }
 
 enum c_node_type
@@ -619,21 +626,27 @@ typedef struct c_node
 {
   c_node_type type;
   void **data;
-  int data_count;
+  int data_count, data_allocated;
 } cnode;
 
-int add_child_cnode(c_node ***children, int *allocated_children, int *child_count, c_node *child)
+int add_child_data(c_node *parent, void *child)
 {
-  if (*child_count < *allocated_children)
+  if (parent->data_count < parent->data_allocated)
   {
-    (*children)[*child_count] = child;
-    ++(*child_count);
+    parent->data[parent->data_count] = child;
+    ++parent->data_count;
     return 0;
   }
 
   // Resize
-  int new_allocation = *allocated_children + 4 + *allocated_children / 10;
-  *children = (c_node **)realloc(*children, sizeof(cnode **) * new_allocation);
+  parent->data_allocated = parent->data_allocated + 4 + parent->data_allocated / 10;
+  void **new_allocation = (void **)realloc(parent->data, sizeof(void **) * parent->data_allocated);
+  if (!new_allocation)
+  {
+    printf("error allocating new c_node data\n");
+    return -1;
+  }
+  parent->data = new_allocation;
   return 0;
 }
 
@@ -642,12 +655,15 @@ int parse_code_block(parsing_state *ps, c_node *code_block)
   return 1;
 }
 
-int parse_function(parsing_state *ps, c_node **res, const char *return_type, const char *identifier)
+int parse_function(parsing_state *ps, c_node *function)
 {
   PRCE(parse_past(ps, "("));
 
+  int *param_count = (int *)malloc(sizeof(int));
+  *param_count = 0;
+  add_child_data(function, (void *)param_count);
+
   int allocated = 4;
-  int param_count = 0;
   function_parameter **fparams = (function_parameter **)malloc(sizeof(function_parameter *) * allocated);
 
   // Parse through the parameters
@@ -693,13 +709,13 @@ int parse_function(parsing_state *ps, c_node **res, const char *return_type, con
     PRCE(parse_identifier(ps, &fp->name));
 
     // Add to array
-    if (param_count == allocated)
+    if (*param_count == allocated)
     {
       allocated = allocated + 4 + allocated / 10;
       fparams = (function_parameter **)realloc(fparams, sizeof(function_parameter *) * allocated);
     }
-    fparams[param_count] = fp;
-    ++param_count;
+    fparams[*param_count] = fp;
+    ++*param_count;
 
     // Look forward
     PRCE(parse_past_empty_text(ps));
@@ -721,8 +737,9 @@ int parse_function(parsing_state *ps, c_node **res, const char *return_type, con
     }
   }
 
-  if (param_count != allocated)
-    fparams = (function_parameter **)realloc(fparams, sizeof(function_parameter *) * param_count);
+  if (*param_count != allocated)
+    fparams = (function_parameter **)realloc(fparams, sizeof(function_parameter *) * *param_count);
+  add_child_data(function, (void *)fparams);
 
   PRCE(parse_past(ps, "{"));
   PRCE(parse_past_empty_text(ps));
@@ -731,23 +748,9 @@ int parse_function(parsing_state *ps, c_node **res, const char *return_type, con
   PRCE(parse_code_block(ps, code_block));
   PRCE(parse_past(ps, "}"));
   PRCE(parse_past_empty_text(ps));
+  add_child_data(function, (void *)code_block);
 
-  // param_count, params, block
-
-  c_node *child = (c_node *)malloc(sizeof(cnode));
-  child->type = CNODE_FUNCTION;
-  child->data_count = 1 + param_count + 1;
-  child->data = (void **)malloc(sizeof(void *) * child->data_count);
-  int *params_count_ptr = (int *)malloc(sizeof(int));
-  *params_count_ptr = param_count;
-  child->data[0] = (void *)params_count_ptr;
-  for (int i = 0; i < param_count; ++i)
-    child->data[1 + i] = (void *)fparams[i];
-  child->data[1 + param_count] = (void *)code_block;
-
-  free(fparams);
-
-  // add_child_cnode(&children, &allocated_children, &child_count, child);
+  return 0;
 }
 
 int parse_file_text(c_node *root_node, const char *txt)
@@ -780,12 +783,12 @@ int parse_file_text(c_node *root_node, const char *txt)
       if (parse_contiguous_segment(&ps, &statement))
         return -1;
 
-      c_node *child = (c_node *)malloc(sizeof(cnode));
+      c_node *child = (c_node *)calloc(sizeof(cnode), 1);
       child->type = CNODE_INCLUDE;
       child->data = (void **)(&statement);
       child->data_count = 1;
 
-      add_child_cnode(&children, &allocated_children, &child_count, child);
+      add_child_data(root_node, (void *)child);
     }
     break;
     case TOKEN_INT_KEYWORD:
@@ -800,23 +803,32 @@ int parse_file_text(c_node *root_node, const char *txt)
       switch (ps.text[ps.index])
       {
       case '(':
-        c_node *child;
-        parse_function(&ps, &child, "int", identifier);
-        break;
+      {
+        // Function
+        c_node *function = (c_node *)calloc(sizeof(cnode), 1);
+        function->type = CNODE_FUNCTION;
+
+        char *return_type = (char *)calloc(sizeof(char), 4);
+        strcpy(return_type, "int\0");
+        add_child_data(function, (void *)return_type);
+
+        add_child_data(function, (void *)identifier);
+
+        parse_function(&ps, function);
+      }
+      break;
       // case ';':
       //   parse_variable(&ps, &child, "int", identifier);
       //   break;
       default:
-        printf("TOKEN_INT_KEYWORD unexpected char:%c\n", ps.text[ps.index]);
-        break;
+        print_parse_error(&ps, "parse_file_text", "TOKEN_INT");
+        return -1;
       }
     }
     break;
     default:
     {
-      char *deb = format_debug_char(&ps);
-      printf("unknown token for:%s\n", deb);
-      free(deb);
+      print_parse_error(&ps, "parse_file_text", "root_switch");
       return -1;
     }
     }
@@ -834,8 +846,14 @@ typedef struct structure_definition
 
 } structure_definition;
 
-void load_mc_file(const char *filepath, bool error_on_redefinition)
+int load_mc_file(const char *filepath, bool error_on_redefinition)
 {
+  if (sizeof(int *) != sizeof(c_node *) || sizeof(int *) != sizeof(char *) || sizeof(int *) != sizeof(function_parameter *))
+  {
+    printf("violation of program architecture. Specified pointer types must be of the same size!\n");
+    return -1;
+  }
+
   FILE *fp;
   long lSize;
   char *buffer;
@@ -858,11 +876,13 @@ void load_mc_file(const char *filepath, bool error_on_redefinition)
     fclose(fp), free(buffer), fputs("entire read fails", stderr), exit(1);
 
   // Parse
-  c_node root = {.type = CNODE_FILE_ROOT, .data = NULL, .data_count = 0};
+  c_node root = {.type = CNODE_FILE_ROOT, .data = NULL, .data_count = 0, .data_allocated = 0};
   parse_file_text(&root, buffer);
+  // TODO -- free c_nodes
 
   fclose(fp);
   free(buffer);
+  return 0;
 }
 
 void redef()
