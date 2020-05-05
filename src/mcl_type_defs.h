@@ -430,9 +430,9 @@ int parse_past_empty_text(parsing_state *ps)
       continue;
     case '\0':
       ps->end = true;
-      return;
+      return 0;
     default:
-      return;
+      return 0;
     }
   }
 }
@@ -612,6 +612,7 @@ enum c_node_type
   CNODE_INCLUDE,
   CNODE_FUNCTION,
   CNODE_VARIABLE,
+  CNODE_CODE_BLOCK,
 };
 
 typedef struct c_node
@@ -636,41 +637,71 @@ int add_child_cnode(c_node ***children, int *allocated_children, int *child_coun
   return 0;
 }
 
+int parse_code_block(parsing_state *ps, c_node *code_block)
+{
+  return 1;
+}
+
 int parse_function(parsing_state *ps, c_node **res, const char *return_type, const char *identifier)
 {
   PRCE(parse_past(ps, "("));
 
   int allocated = 4;
   int param_count = 0;
-  function_parameter *fparams = (function_parameter *)malloc(sizeof(function_parameter *) * allocated);
+  function_parameter **fparams = (function_parameter **)malloc(sizeof(function_parameter *) * allocated);
 
   // Parse through the parameters
   while (true)
   {
-    function_parameter fp = {};
+    // Parse
+    function_parameter *fp = (function_parameter *)malloc(sizeof(function_parameter));
 
-    char *type_identifier, *name_identifier;
-    PRCE(parse_identifier(ps, &fp.type));
+    PRCE(parse_identifier(ps, &fp->type));
     PRCE(parse_past_empty_text(ps));
     if (isalpha(ps->text[ps->index]))
     {
-      fp.requires_addressing = true;
+      fp->requires_addressing = true;
     }
     else
     {
       switch (ps->text[ps->index])
       {
-        // case '*':
-      // fp.requires_addressing = false;
+      case '*':
+      {
+        fp->requires_addressing = false;
+        int deref_count = 1;
+        while (ps->text[++ps->index] == '*')
+          ++deref_count;
+        int new_type_str_len = strlen(fp->type) + 1 + deref_count;
+        char *new_type_str = (char *)malloc(sizeof(char) * new_type_str_len);
+        strcpy(new_type_str, fp->type);
+        free(fp->type);
+        fp->type = new_type_str;
+        fp->type[new_type_str_len - 2 - deref_count] = ' ';
+        for (int i = 0; i < deref_count; ++i)
+          fp->type[new_type_str_len - 2 - i] = '*';
+        fp->type[new_type_str_len - 1] = '\0';
+
+        PRCE(parse_past_empty_text(ps));
+      }
+      break;
       default:
         printf("parse_function/unsupported-0 char:%c\n", ps->text[ps->index]);
       }
     }
 
-    PRCE(parse_identifier(ps, &fp.name));
+    PRCE(parse_identifier(ps, &fp->name));
 
-    throw 33; // add to fparams
+    // Add to array
+    if (param_count == allocated)
+    {
+      allocated = allocated + 4 + allocated / 10;
+      fparams = (function_parameter **)realloc(fparams, sizeof(function_parameter *) * allocated);
+    }
+    fparams[param_count] = fp;
+    ++param_count;
 
+    // Look forward
     PRCE(parse_past_empty_text(ps));
     if (ps->text[ps->index] == ',')
     {
@@ -690,28 +721,36 @@ int parse_function(parsing_state *ps, c_node **res, const char *return_type, con
     }
   }
 
-  // peek_token(&tok, &ps, 2);
-  // if (ps.text[ps.index] != '<' && ps.text[ps.index] != '"')
-  // {
-  //   // print_error(&ps, "token_include");
-  //   printf("unexpected char 52525:%c\n", ps.text[ps.index]);
-  //   return -1;
-  // }
+  if (param_count != allocated)
+    fparams = (function_parameter **)realloc(fparams, sizeof(function_parameter *) * param_count);
 
-  // char *statement;
-  // if (parse_contiguous_segment(&ps, &statement))
-  //   return -1;
+  PRCE(parse_past(ps, "{"));
+  PRCE(parse_past_empty_text(ps));
+  c_node *code_block = (c_node *)malloc(sizeof(cnode));
+  code_block->type = CNODE_CODE_BLOCK;
+  PRCE(parse_code_block(ps, code_block));
+  PRCE(parse_past(ps, "}"));
+  PRCE(parse_past_empty_text(ps));
 
   // param_count, params, block
 
   c_node *child = (c_node *)malloc(sizeof(cnode));
   child->type = CNODE_FUNCTION;
-  // child->data = "" child->data_count = 1;
+  child->data_count = 1 + param_count + 1;
+  child->data = (void **)malloc(sizeof(void *) * child->data_count);
+  int *params_count_ptr = (int *)malloc(sizeof(int));
+  *params_count_ptr = param_count;
+  child->data[0] = (void *)params_count_ptr;
+  for (int i = 0; i < param_count; ++i)
+    child->data[1 + i] = (void *)fparams[i];
+  child->data[1 + param_count] = (void *)code_block;
+
+  free(fparams);
 
   // add_child_cnode(&children, &allocated_children, &child_count, child);
 }
 
-int parse_text(c_node *root_node, const char *txt)
+int parse_file_text(c_node *root_node, const char *txt)
 {
   struct parsing_state ps = {txt, ROOT, 0, false};
 
@@ -820,7 +859,7 @@ void load_mc_file(const char *filepath, bool error_on_redefinition)
 
   // Parse
   c_node root = {.type = CNODE_FILE_ROOT, .data = NULL, .data_count = 0};
-  parse_text(&root, buffer);
+  parse_file_text(&root, buffer);
 
   fclose(fp);
   free(buffer);
