@@ -77,41 +77,9 @@ typedef struct defined_function
   const char *given_code;
 } defined_function;
 
-std::map<std::string, defined_function *> defined_functions;
-void define_function(const char *return_type, const char *name, const char *params, const char *block)
+void add_params_definitions(char *decl, defined_function *df, const char *params)
 {
-  if (strcmp(return_type, "void"))
-  {
-    printf("Only allowed void returning functions atm.");
-    return;
-  }
-
-  const char *TAB = "  ";
-  char decl[16384];
-  std::map<std::string, defined_function *>::iterator it = defined_functions.find(name);
-  defined_function *df;
-  if (it == defined_functions.end())
-  {
-    // Declare Function Pointer
-    strcpy(decl, "static void (*");
-    strcat(decl, name);
-    strcat(decl, ")(void **);");
-    clint->declare(decl);
-    printf("%s\n", decl);
-
-    df = (defined_function *)malloc(sizeof df);
-    df->version = 0;
-    df->params = NULL;
-    defined_functions[name] = df;
-  }
-  else
-    df = it->second;
-
-  // Set version and function name postfix
-  int version = ++df->version;
-  df->name = name;
-  df->given_code = block;
-
+  // (Re)Allocation
   if (df->params)
   {
     for (int i = 0; i < df->params_count; ++i)
@@ -126,18 +94,7 @@ void define_function(const char *return_type, const char *name, const char *para
   df->params = (function_parameter *)malloc(sizeof(function_parameter) * allocated_params);
   df->params_count = 0;
 
-  char verstr[7];
-  strcpy(verstr, "_v");
-  sprintf(verstr + 2, "%i", version);
-
-  // Form the function declaration
-  // -- header
-  strcpy(decl, "void ");
-  strcat(decl, name);
-  strcat(decl, verstr);
-  strcat(decl, "(void **p_vargs) {\n");
-
-  // -- params
+  // Iterate
   int n = strlen(params);
   int s = 0, t = 0;
   if (n > 0)
@@ -191,18 +148,24 @@ void define_function(const char *return_type, const char *name, const char *para
           }
           printf("param_type:'%s' param_name:'%s' requires_addressing:'%s'\n", df->params[df->params_count].type, df->params[df->params_count].name,
                  df->params[df->params_count].requires_addressing ? "true" : "false");
-          ++df->params_count;
 
           // Add to declaration
+          const char *TAB = "  ";
           strcat(decl, TAB);
-          strncat(decl, params + s, i - s);
+          strcat(decl, df->params[df->params_count].type);
+          if (df->params[df->params_count].requires_addressing)
+            strcat(decl, " *");
+          strcat(decl, df->params[df->params_count].name);
           strcat(decl, " = (");
-          strncat(decl, params + s, t - s);
+          strcat(decl, df->params[df->params_count].type);
+          if (df->params[df->params_count].requires_addressing)
+            strcat(decl, " *");
           strcat(decl, ")p_vargs[");
           sprintf(decl + strlen(decl), "%i", p);
           strcat(decl, "];\n");
 
           // Reset
+          ++df->params_count;
           ++p;
           if (params[i] == ',')
           {
@@ -220,70 +183,194 @@ void define_function(const char *return_type, const char *name, const char *para
   {
     df->params = (function_parameter *)realloc(df->params, sizeof(function_parameter) * df->params_count);
   }
+}
 
-  // -- code-block
-  n = strlen(block);
-  s = 0;
-  t = 0;
-  int varyd = 0;
-  for (int i = 0; i <= n; ++i)
+void append_substring(char *dest, char *src, int n)
+{
+  for (int i = 0; i < n; ++i)
   {
+    dest[i] = src[i];
+  }
+  dest[n] = '\0';
+}
+
+std::map<std::string, defined_function *> defined_functions;
+void add_code_block(char *decl, defined_function *df, const char *block)
+{
+  int dlen = strlen(decl);
+  int blen = strlen(block);
+
+  // Search for identifiers
+  int ids = 0, lwi = 0;
+  bool in_identifier = false;
+  for (int i = 0; i <= blen; ++i)
+  {
+    bool ident_found = false;
     if (block[i] == ' ' || block[i] == '\n' || block[i] == '\t')
-      continue;
-    if (t == s)
-      t = i;
+    {
+      if (!in_identifier)
+        continue;
+
+      // Identifier found
+      ident_found = true;
+    }
     if (block[i] == ';' || block[i] == '\0')
     {
-      strncat(decl, block + s, i - s + 1);
-      s = t = i + 1;
+      if (!in_identifier)
+        continue;
+
+      // Identifier found
+      ident_found = true;
     }
 
-    if (block[i] != '(')
-      continue;
-
-    char call_name[256];
-    strncpy(call_name, block + t, i - t);
-    call_name[i - t] = '\0';
-    it = defined_functions.find(call_name);
-    if (it == defined_functions.end())
-      continue;
-
-    defined_function *sf = it->second;
-    char nstname[10];
-    printf("found-call:(%i:%i):%s\n", t, i - t, call_name);
+    if (in_identifier)
     {
-      // Declare the array of void pointers
-      char nst[100];
-      char nstnum[7];
-      const char *initial = "void *_mdge_";
-      strcpy(nst, initial);
-      sprintf(nstnum, "%i", varyd);
-      strcat(nst, nstnum);
+      if (!ident_found && (isalnum(block[i] || block[i] == '_')))
+        continue;
 
-      // -- sidebar : set name of array for other pointers to access
-      strcpy(nstname, initial);
-      strcat(nstname, nstnum);
-
-      strcat(nst, "[");
-      memset(nstnum, '\0', 7);
-      sprintf(nstnum, "%i", sf->params_count);
-      strcat(nst, nstnum);
-      strcat(nst, "];\n");
-      strcat(decl, nst);
+      // Identifier!
+      ident_found = true;
     }
-    for (int j = 0; j < sf->params_count; ++j)
+    else
     {
-      char nst[2048];
-      char nstnum[7];
-      strcpy(nst, nstname);
-      strcat(nst, "[");
-      sprintf(nstnum, "%i", j);
-      strcat(nst, nstnum);
-      strcat(nst, "] = (void *)");
+      if (isalpha(block[i]))
+      {
+        ids = i;
+        in_identifier = true;
+      }
+      continue;
     }
-    ++varyd;
+
+    if (block[i] == '(')
+    {
+      // Function Call Identifier
+      //   char call_name[256];
+      //   strncpy(call_name, block + t, i - t);
+      //   call_name[i - t] = '\0';
+
+      //   std::map<std::string, defined_function *> it = defined_functions.find(call_name);
+      //   if (it == defined_functions.end())
+      //     continue;
+
+      //   defined_function *sf = it->second;
+      //   char nstname[10];
+      //   printf("found-call:(%i:%i):%s\n", t, i - t, call_name);
+      //   {
+      //     // Declare the array of void pointers
+      //     char nst[100];
+      //     char nstnum[7];
+      //     const char *initial = "void *_mdge_";
+      //     strcpy(nst, initial);
+      //     sprintf(nstnum, "%i", varyd);
+      //     strcat(nst, nstnum);
+
+      //     // -- sidebar : set name of array for other pointers to access
+      //     strcpy(nstname, initial);
+      //     strcat(nstname, nstnum);
+
+      //     strcat(nst, "[");
+      //     memset(nstnum, '\0', 7);
+      //     sprintf(nstnum, "%i", sf->params_count);
+      //     strcat(nst, nstnum);
+      //     strcat(nst, "];\n");
+      //     strcat(decl, nst);
+      //   }
+      //   for (int j = 0; j < sf->params_count; ++j)
+      //   {
+      //     char nst[2048];
+      //     char nstnum[7];
+      //     strcpy(nst, nstname);
+      //     strcat(nst, "[");
+      //     sprintf(nstnum, "%i", j);
+      //     strcat(nst, nstnum);
+      //     strcat(nst, "] = (void *)");
+      //   }
+      //   ++varyd;
+      // }
+      // strcat(decl, "}\n");
+    }
+    else
+    {
+      for (int j = 0; j < df->params_count; ++j)
+      {
+        if (!df->params[j].requires_addressing)
+          continue;
+
+        // Compare
+        bool equals = false;
+        for (int c = 0;; ++c)
+        {
+          if (df->params[j].name[c] == '\0')
+          {
+            equals = true;
+            break;
+          }
+          if (df->params[j].name[c] != decl[ids + c])
+            break;
+        }
+        if (!equals)
+          continue;
+
+        // Insert a dereferencer and copy the rest of the block forwards
+        decl[ids] = '*';
+        decl[ids + 1] = '\0';
+        // strcat(decl, block[ids - dlen])++ i;
+      }
+    }
   }
-  strcat(decl, "}\n");
+}
+
+void define_function(const char *return_type, const char *name, const char *params, const char *block)
+{
+  if (strcmp(return_type, "void"))
+  {
+    printf("Only allowed void returning functions atm.");
+    return;
+  }
+
+  const char *TAB = "  ";
+  char decl[16384];
+  std::map<std::string, defined_function *>::iterator it = defined_functions.find(name);
+  defined_function *df;
+
+  // Declare Function Pointer
+  if (it == defined_functions.end())
+  {
+    strcpy(decl, "static void (*");
+    strcat(decl, name);
+    strcat(decl, ")(void **);");
+    clint->declare(decl);
+    printf("%s\n", decl);
+
+    df = (defined_function *)malloc(sizeof df);
+    df->version = 0;
+    df->params = NULL;
+    defined_functions[name] = df;
+  }
+  else
+    df = it->second;
+
+  // Set version and function name postfix
+  int version = ++df->version;
+  df->name = name;
+  df->given_code = block;
+
+  char verstr[7];
+  strcpy(verstr, "_v");
+  sprintf(verstr + 2, "%i", version);
+
+  // Form the function declaration
+  // -- header
+  strcpy(decl, "void ");
+  strcat(decl, name);
+  strcat(decl, verstr);
+  strcat(decl, "(void **p_vargs) {\n");
+
+  // -- params
+  add_params_definitions(decl, df, params);
+
+  // -- code-block
+  add_code_block(decl, df, block);
 
   // Declare function
   printf("decl:%s\n", decl);
@@ -298,50 +385,204 @@ void define_function(const char *return_type, const char *name, const char *para
   clint->process(decl);
 }
 
-// struct parsing_state
-// {
-//   const char *text;
-//   int index;
-//   bool end;
-// };
-
-// enum Token
-// {
-//   UNKNOWN,
-//   EOF,
-// };
-
-// void move_past_empty_text()
-
-// void peek_token(Token *token, struct parsing_state *p)
-// {
-//   move_past_empty_text(p);
-// }
-
-// void parse_text(const char *txt)
-// {
-//   struct parsing_state p = {txt, 0, false};
-
-//   while (!p.end)
-//   {
-//     Token token;
-//     peek_token(&token, &p);
-//     switch (token)
-//     {
-//     default:
-//     {
-//       char buf[12];
-//       strncpy(buf, p.text + p.index - 5, 11);
-//       buf[11] = '\0';
-//       printf("unknown token: %s", buf);
-//       break;
-//     }
-//     }
-//   }
-
-void code(const char *cstr)
+enum parsing_context
 {
-  clint->process(cstr);
+  ROOT = 1,
+};
+
+typedef struct parsing_state
+{
+  const char *text;
+  parsing_context context;
+  int index;
+  bool end;
+} parsing_state;
+
+enum token
+{
+  TOKEN_UNKNOWN = 0,
+  TOKEN_ENDOFTEXT,
+  TOKEN_INCLUDE,
+  TOKEN_STRUCT_KEYWORD,
+  TOKEN_INT_KEYWORD,
+  TOKEN_PREPROC_DEFINE,
+  TOKEN_PREPROC_IF,
+  TOKEN_PREPROC_IFNDEF,
+  TOKEN_PREPROC_ENDIF,
+};
+
+void parse_past_empty_text(parsing_state *ps)
+{
+  while (true)
+  {
+    switch (ps->text[ps->index])
+    {
+    case ' ':
+    case '\n':
+    case '\t':
+      ++ps->index;
+      continue;
+    case '\0':
+      ps->end = true;
+      return;
+    default:
+      return;
+    }
+  }
+}
+
+int strvncmp(parsing_state *ps, const char *str)
+{
+  for (int i = 0;; ++i)
+    if (str[i] == '\0' || ps->text[ps->index + i] == '\0')
+      return 0;
+    else if (str[i] != ps->text[ps->index + i])
+      return i;
+  return 0;
+}
+
+int parse_past(parsing_state *ps, const char *str)
+{
+  for (int i = 0;; ++i)
+    if (str[i] == '\0')
+    {
+      ps->index += i;
+      return 0;
+    }
+    else if (ps->text[ps->index + i] == '\0')
+      return -1;
+    else if (str[i] != ps->text[ps->index + i])
+      return i;
+}
+
+int peek_token(token *ptk, parsing_state *ps)
+{
+  parse_past_empty_text(ps);
+
+  switch (ps->context)
+  {
+  case ROOT:
+  {
+    switch (ps->text[ps->index])
+    {
+    case '#':
+    {
+      if (!strvncmp(ps, "#include"))
+      {
+        *ptk = TOKEN_INCLUDE;
+        return 0;
+      }
+      else if (!strvncmp(ps, "#ifndef"))
+      {
+        *ptk = TOKEN_PREPROC_IFNDEF;
+        return 0;
+      }
+      else if (!strvncmp(ps, "#endif"))
+      {
+        *ptk = TOKEN_PREPROC_ENDIF;
+        return 0;
+      }
+      else
+      {
+        printf("unknown preproc firstchar:%c\n", ps->text[ps->index + 1]);
+      }
+    }
+    default:
+    {
+      printf("unknown ROOT firstchar:%c\n", ps->text[ps->index]);
+      return -1;
+    }
+    }
+    // if (!isalpha(ps->text[ps->index]))
+    // {
+    //   printf("unexpected char:%c\n", ps->text[ps->index]);
+    // }
+  }
+  break;
+  default:
+  {
+    printf("unknown context: %i", ps->context);
+    return -1;
+  }
+  }
+}
+
+char *format_debug_char(parsing_state *ps)
+{
+  char *buf = (char *)malloc(sizeof(char) * 16);
+  strncpy(buf, ps->text + ps->index - 6, 6);
+  strncpy(buf + 6, "|", 1);
+  strncpy(buf + 7, ps->text + ps->index, 1);
+  strncpy(buf + 8, "|", 1);
+  strncpy(buf + 9, ps->text + ps->index + 1, 6);
+  buf[15] = '\0';
+  return buf;
+}
+
+enum c_node_type
+{
+  CNODE_FILE_ROOT = 100,
+  CNODE_INCLUDE,
+};
+
+typedef struct c_node
+{
+  c_node_type type;
+  void **data;
+  int data_count;
+} cnode;
+
+int parse_text(c_node *root_node, const char *txt)
+{
+  struct parsing_state ps = {txt, ROOT, 0, false};
+
+  int allocated_children = 8, child_count = 0;
+  c_node **children = (c_node **)malloc(sizeof(cnode *));
+
+  while (!ps.end)
+  {
+    token tok;
+    if (peek_token(&tok, &ps))
+      break; // Unhandled Error
+    switch (tok)
+    {
+    case TOKEN_INCLUDE:
+    {
+      parse_past(&ps, "#include");
+      parse_past_empty_text(&ps);
+
+      if (ps.text[ps.index] != '<' && ps.text[ps.index] != '"')
+      {
+        // print_error(&ps, "token_include");
+        printf("unexpected char 52525:%c\n", ps.text[ps.index]);
+        return -1;
+      }
+
+      char *contiguous_string;
+      if (parse_contiguous_string(&ps, &contiguous_string))
+        return -1;
+
+      c_node *child = (c_node *)malloc(sizeof(cnode));
+      child->type = CNODE_INCLUDE;
+      child->data = (void **)(&contiguous_string);
+      child->data_count = 1;
+
+      add_child_cnode(&children, &allocated_children, &child_count, child);
+    }
+    break;
+    default:
+    {
+      char *deb = format_debug_char(&ps);
+      printf("unknown token for:%s\n", deb);
+      free(deb);
+      return -1;
+    }
+    }
+  }
+
+  root_node->data = (void **)children;
+  root_node->data_count = child_count;
+  return 0;
 }
 
 typedef struct structure_definition
@@ -353,14 +594,41 @@ typedef struct structure_definition
 
 void load_mc_file(const char *filepath, bool error_on_redefinition)
 {
-  FILE *fp = fopen(filepath, "r");
+  FILE *fp;
+  long lSize;
+  char *buffer;
+
+  fp = fopen(filepath, "rb");
+  if (!fp)
+    perror(filepath), exit(1);
+
+  fseek(fp, 0L, SEEK_END);
+  lSize = ftell(fp);
+  rewind(fp);
+
+  /* allocate memory for entire content */
+  buffer = (char *)calloc(1, lSize + 1);
+  if (!buffer)
+    fclose(fp), fputs("memory alloc fails", stderr), exit(1);
+
+  /* copy the file into the buffer */
+  if (1 != fread(buffer, lSize, 1, fp))
+    fclose(fp), free(buffer), fputs("entire read fails", stderr), exit(1);
+
+  // Parse
+  c_node root = {.type = CNODE_FILE_ROOT, .data = NULL, .data_count = 0};
+  parse_text(&root, buffer);
+
+  fclose(fp);
+  free(buffer);
 }
 
-#include <vulkan/vulkan.h>
 void redef()
 {
   // -- Redefinition
-  // load_mc_file("/home/jason/midge/src/mc_exp.mc", true);
+  load_mc_file("/home/jason/midge/src/mc_exp.c", true);
+  // clint->process("mcmain();");
+  return;
 
   /* 
 void mvk_init_instance(VkResult *result, vk_render_state *p_vkrs, char const *const app_short_name)
@@ -395,7 +663,7 @@ void mvk_init_instance(VkResult *result, vk_render_state *p_vkrs, char const *co
 } */
 
   // const char *mc_add_to_num = "func add_to_num(int *v, int e) { *v += 4 * e; }";
-  define_function("void", "add_to_num", "int *v, int e", "  *v += 4 * e;\n");
+  // define_function("void", "add_to_num", "int *v, int e", "  *v += 4 * e;\n");
   // clint->declare("void add_to_num (void **vargs) {"
   //                "  int *v = (int *)vargs[0];\n"
   //                "  int *e = (int *)vargs[1];\n"
