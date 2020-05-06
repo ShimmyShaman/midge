@@ -34,6 +34,8 @@ struct node
 
 typedef void **struct_definition;
 typedef void **struct_allocation;
+typedef void **midge_array;
+typedef unsigned int uint;
 
 int allocate_from_int(void **out_field, int value)
 {
@@ -59,11 +61,11 @@ int allocate_from_cstring(void **out_field, const char *cstr)
     return 0;
 }
 
-int allocate_struct_id(void **out_field, const char *struct_name, unsigned int version)
+int allocate_struct_id(void **out_field, const char *struct_name, uint version)
 {
     void **field_data = (void **)malloc(sizeof(void *) * 2);
     allocate_from_cstring(&field_data[0], struct_name);
-    allocate_from_int(&field_data[1], version);
+    allocate_from_uint(&field_data[1], version);
     *out_field = (void *)field_data;
     return 0;
 }
@@ -78,73 +80,49 @@ int allocate_midge_field_info(void **out_field, const char *type, int pointer_co
     return 0;
 }
 
-int define_struct(struct_definition *stdef, char *name, unsigned int version, midge_fields fields, int field_count)
+int define_struct(struct_definition *stdef, const char *name, uint version, midge_array fields, int field_count)
 {
     struct_definition field_data = (struct_definition)malloc(sizeof(void *) * (2 + field_count));
     allocate_struct_id(&field_data[0], name, version);
     allocate_from_uint(&field_data[1], field_count);
-
+    for (int i = 0; i < field_count; ++i)
+        field_data[2 + i] = fields[i];
 
     *stdef = field_data;
     return 0;
 }
 
-#define mto_int(container) *(int *)container
-#define mto_uint(container) *(unsigned int *)container
-
-int allocate_from_definition(struct_allocation *allocation, struct_definition *struct_definition)
+int allocate_from_definition(struct_allocation *allocation, struct_definition struct_definition)
 {
-    struct_allocation alloc = (struct_allocation)malloc(sizeof(void *) * mto_int(struct_definition[1]));
-    allocate_struct_id(&(*alloc)[0], (char *)struct_definition[0], mto_uint(struct_definition[1]));
+    struct_allocation alloc = (struct_allocation)malloc(sizeof(void *) * *(int *)struct_definition[1]);
+    allocate_struct_id(&alloc[0], *(char **)struct_definition[0], **(uint **)struct_definition[0]);
 
     *allocation = alloc;
     return 0;
 }
 
-typedef void **midge_fields;
-
 // int free_void_array(void **)
 
 int mc_main(int argc, const char *const *argv)
 {
-    // int a = 3;
-    // int *b = &a;
-    // void *c = &b;
-    // printf("a:%i b:%p c:%p afc:%i\n", a, b, c, **((int **)c));
-    // return 1;
-    // char *name;
-    // int *child_count;
-    // struct node *parent;
-    // struct node *children;
-
     // Define the node structure
     struct_definition node_v0;
-    midge_fields node_v0_fields = (midge_fields)malloc(sizeof(void *) * (4));
+    midge_array node_v0_fields = (midge_array)malloc(sizeof(void *) * (4));
     allocate_midge_field_info(&node_v0_fields[0], "char", 1, "name");
     allocate_midge_field_info(&node_v0_fields[1], "int", 0, "child_count");
     allocate_midge_field_info(&node_v0_fields[2], "node", 1, "parent");
     allocate_midge_field_info(&node_v0_fields[3], "node", 1, "children");
-    define_struct(&node_v0, "node", 0, &node_v0_fields, 4);
+    define_struct(&node_v0, "node", 0U, node_v0_fields, 4);
     free(node_v0_fields);
-
-    struct_definition node_v1;
-    redefine_struct_append(&node_v0, node_v0_fields, 4);
-    define_append_field(&node_v0, "char", 1, "name");
-    expand_structdefine_struct_remove_field("name");
-
-    void **node_structure = (void **)malloc(sizeof(void *) * (2 + 1 + 4));
-    allocate_from_cstring(&node_structure[0], "node");
-    allocate_from_uint(&node_structure[1], 0);
-    allocate_from_int(&node_structure[2], 4); // field_count
-
-    // define_struct("struct_id")
-    // define_struct("node", 0, 4);
 
     // node global;
     void **global;
-    allocate_from_definition(&global, node_structure);
-
-    void **struct_id = (void **)global[0];
+    allocate_from_definition(&global, node_v0);
+    allocate_from_cstring(&global[1], "global");
+    allocate_from_int(&global[2], 0);
+    global[3] = &global;
+    midge_array children = (midge_array)malloc(sizeof(void *) * (0));
+    global[4] = &children;
 
     return 0;
 }
