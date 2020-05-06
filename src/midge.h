@@ -96,16 +96,16 @@ void run()
     // Load App source
     printf("<AppSourceLoading>\n");
     // loadSourceFiles("/home/jason/midge/src", 0);
-    clint->loadFile("/home/jason/midge/src/rendering/mvk_core.h");
-    clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.h");
-    clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.cpp");
-    clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.c");
-    clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.h");
-    clint->loadFile("/home/jason/midge/src/rendering/renderer.h");
-    clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
-    clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
-    clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
-    clint->loadFile("/home/jason/midge/src/mcl_type_defs.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/mvk_core.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.cpp");
+    // clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.c");
+    // clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/renderer.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
+    // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
+    // clint->loadFile("/home/jason/midge/src/mcl_type_defs.h");
     printf("</AppSourceLoading>\n\n");
 
     // // Run App
@@ -124,8 +124,11 @@ void run()
      *       in a seperate thread routine > then change the thread routine to make use of that structure change
      */
 
-    clint->process("#include \"mcl_type_defs.h\"");
-    clint->process("redef();");
+    clint->loadFile("/home/jason/midge/src/midge_core.c");
+    clint->process("mc_main(0, NULL)");
+
+    // clint->process("#include \"midge.h\"");
+    // clint->process("redef();");
   }
   catch (const std::exception &e)
   {
