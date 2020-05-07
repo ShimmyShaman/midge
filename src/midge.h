@@ -79,6 +79,29 @@ void loadLibrary(const char *name)
   exit(-1);
 }
 
+extern "C"
+{
+  int clint_process(const char *str)
+  {
+    return clint->process(str);
+  }
+
+  int clint_declare(const char *str)
+  {
+    return clint->declare(str);
+  }
+
+  int clint_loadfile(const char *path)
+  {
+    return clint->loadFile(path);
+  }
+
+  int clint_loadheader(const char *path)
+  {
+    return clint->loadHeader(path);
+  }
+}
+
 void run()
 {
   try
