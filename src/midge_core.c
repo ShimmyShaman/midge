@@ -38,12 +38,12 @@ typedef unsigned int uint;
     }                                                                                           \
     strcpy((char *)*field, cstr);
 
-#define MCcall(function)                   \
-    res = function;                        \
-    if (res)                               \
-    {                                      \
-        printf("--" #function ":%i", res); \
-        return res;                        \
+#define MCcall(function)                     \
+    res = function;                          \
+    if (res)                                 \
+    {                                        \
+        printf("--" #function ":%i\n", res); \
+        return res;                          \
     }
 
 int clint_process(const char *str);
@@ -95,8 +95,8 @@ int define_struct_v1(int argc, void **argv)
     struct_definition *stdef = (struct_definition *)argv[0];
     const char *name = (char *)argv[1];
     uint version = *(uint *)argv[2];
-    midgeo fields = (midgeo)argv[3];
-    int field_count = *(int *)argv[4];
+    int field_count = *(int *)argv[3];
+    midgeo fields = (midgeo)argv[4];
 
     int res;
 
@@ -128,7 +128,8 @@ int allocate_from_definition_v1(int argc, void **argv)
 
     int res;
 
-    struct_allocation alloc = (struct_allocation)malloc(sizeof(void *) * *(int *)definition[1]);
+    printf("allocating %i void*\n", *(int *)definition[1]);
+    struct_allocation alloc = (struct_allocation)malloc(sizeof(void *) * (1 + *(int *)definition[1]));
     if (!alloc)
     {
         printf("allocate_from_definition(): failed to allocate memory for alloc.\n");
@@ -155,20 +156,20 @@ int declare_function_pointer_v1(int argc, void **argv)
 
     int res;
 
-    struct_allocation dfpi;
-    void *vargs[4];
-    allocate_from_definition()
-    MCcall(mcqck_temp_allocate_from_definition(&dfpi, function_info_v1));
-    allocate_from_cstringv(&dfpi[1], "declare_function_pointer");
-    dfpi[2] = NULL;
-    dfpi[3] = NULL;
-    allocate_from_intv(&dfpi[4], 4);
-    midgeo fields = (midgeo)malloc(sizeof(void *) * 4);
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[0], "function_info", 1, "function_index"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[1], "char", 1, "name"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[2], "int", 1, "parameter_count"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[3], "parameter_info", 1, "parameters"));
-    dfpi[5] = (void *)fields;
+    // struct_allocation dfpi;
+    // void *vargs[4];
+    // allocate_from_definition()
+    //     MCcall(mcqck_temp_allocate_from_definition(&dfpi, function_info_v1));
+    // allocate_from_cstringv(&dfpi[1], "declare_function_pointer");
+    // dfpi[2] = NULL;
+    // dfpi[3] = NULL;
+    // allocate_from_intv(&dfpi[4], 4);
+    // midgeo fields = (midgeo)malloc(sizeof(void *) * 4);
+    // MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[0], "function_info", 1, "function_index"));
+    // MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[1], "char", 1, "name"));
+    // MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[2], "int", 1, "parameter_count"));
+    // MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[3], "parameter_info", 1, "parameters"));
+    // dfpi[5] = (void *)fields;
 
     // Declare with clint
     char buf[1024];
@@ -176,6 +177,7 @@ int declare_function_pointer_v1(int argc, void **argv)
     strcat(buf, name);
     strcat(buf, ")(int,void**);");
     clint_declare(buf);
+    return 0;
 }
 
 int mcqck_temp_allocate_struct_id(midgeo out_field, const char *struct_name, uint version)
@@ -225,6 +227,11 @@ int mcqck_temp_allocate_from_definition(struct_allocation *allocation, struct_de
     return 0;
 }
 
+typedef struct amber
+{
+    amber *parent;
+} amber;
+
 int mc_main(int argc, const char *const *argv)
 {
     int sizeof_void_ptr = sizeof(void *);
@@ -243,85 +250,97 @@ int mc_main(int argc, const char *const *argv)
     define_struct = &define_struct_v1;
     allocate_from_definition = &allocate_from_definition_v1;
 
-    // Define the function index
-    struct_definition function_info_v1;
-    midgeo function_info_v1_fields = (midgeo)malloc(sizeof(void *) * (5));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[0], "char", 1, "name"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[1], "function_info", 1, "left"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[2], "function_info", 1, "right"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[3], "int", 0, "parameter_count"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[4], "parameter_info", 1, "parameters"));
-    MCcall(mcqck_temp_define_struct(&function_info_v1, "function_info", 1U, 5, function_info_v1_fields));
-    free(function_info_v1_fields);
+    printf("here-0\n");
+    // DEFINE: function_info
+    struct_definition function_definition_v1;
+    midgeo function_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (5));
+    MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[0], "char", 1, "name"));
+    MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[1], "function_info", 1, "left"));
+    MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[2], "function_info", 1, "right"));
+    MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[3], "int", 0, "parameter_count"));
+    MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[4], "parameter_info", 1, "parameters"));
+    MCcall(mcqck_temp_define_struct(&function_definition_v1, "function_info", 1U, 5, function_definition_v1_fields));
+    free(function_definition_v1_fields);
 
+    // DEFINE: node
+    struct_definition node_definition_v1;
+    midgeo node_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (5));
+    MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[0], "char", 1, "name"));
+    MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[1], "node", 1, "parent"));
+    MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[2], "function_info", 1, "function_index"));
+    MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[3], "int", 0, "children_count"));
+    MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[4], "node", 1, "children"));
+    MCcall(mcqck_temp_define_struct(&node_definition_v1, "node", 1U, 5, node_definition_v1_fields));
+    free(node_definition_v1_fields);
+    printf("here-e\n");
+
+    // Instantiate and declare the global::declare_function_pointer method
     struct_allocation dfpi;
-    MCcall(mcqck_temp_allocate_from_definition(&dfpi, function_info_v1));
-    allocate_from_cstringv(&dfpi[1], "declare_function_pointer");
-    dfpi[2] = NULL;
-    dfpi[3] = NULL;
-    allocate_from_intv(&dfpi[4], 4);
-    midgeo fields = (midgeo)malloc(sizeof(void *) * 4);
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[0], "function_info", 1, "function_index"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[1], "char", 1, "name"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[2], "int", 1, "parameter_count"));
-    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[3], "parameter_info", 1, "parameters"));
-    dfpi[5] = (void *)fields;
-    clint_declare("int (*declare_function_pointer)(int argc, void **argv);");
+    MCcall(mcqck_temp_allocate_from_definition(&dfpi, function_definition_v1));
+    printf("sizeof(dfpi):%zu\n", malloc_size sizeof(dfpi));
+    // allocate_from_cstringv(&dfpi[1], "declare_function_pointer");
+    // printf("%p\n", dfpi[2]);
+    // dfpi[2] = NULL;
+    // dfpi[3] = NULL;
+    // allocate_from_intv(&dfpi[4], 5);
+    // midgeo fields = (midgeo)malloc(sizeof(void *) * 5);
+    // MCcall(mcqck_temp_allocate_field(&fields[0], "node", 1, "parent"));
+    // MCcall(mcqck_temp_allocate_field(&fields[1], "function_info", 1, "function_index"));
+    // MCcall(mcqck_temp_allocate_field(&fields[2], "char", 1, "name"));
+    // MCcall(mcqck_temp_allocate_field(&fields[3], "int", 1, "parameter_count"));
+    // MCcall(mcqck_temp_allocate_field(&fields[4], "parameter_info", 1, "parameters"));
+    // dfpi[5] = (void *)fields;
+    // clint_declare("int (*global_declare_function_pointer)(int argc, void **argv);");
 
-    // struct function
+    // Execute commands
+    // midgeo function_index = dfpi;
+    // midgeo process_matrix = NULL;
+    // midgeo history = NULL;
+
+    // const char *commands =
+    //     "create function\n"
+    //     "demobegin\n"
+    //     "funcall declare_function_pointer\n"
+    //     // What is the name of the function?
+    //     "construct_and_attach_child_node\n"
+    //     // Parameter 0 type:
+    //     "char *\n"
+    //     // Parameter 0 identifier:
+    //     "node_name"
+    //     // Parameter 1 type:
+    //     "funcend\n"
+    //     "funcall initialize_function\n"
+    //     // What is the name of the function you wish to initialize?
+    //     "construct_and_attach_child_node\n"
+    //     // construct_and_attach_child_node(char *node_name)
+    //     // write code:
+    //     "TODO\n"
+    //     "funcend\n"
+    //     "demoend\n"
+    //     "create node\n"
+    //     "construct_and_attach_child_node\n";
+
+    // int n = strlen(commands);
+    // int s = 0;
+    // char cstr[2048];
+    // void *vargs[7];
+    // for (int i = 0; i < n; ++i)
     // {
-    //     int (*fptr)(int, void **);
-    //     int param_count;
-    //     function_parameter *params;
-    // };
-    midgeo function_index = dfpi;
-    midgeo process_matrix = NULL;
-    midgeo history = NULL;
+    //     if (commands[i] != '\n')
+    //         continue;
+    //     strncpy(cstr, commands + i, i - s);
+    //     cstr[i - s] = '\0';
 
-    const char *commands =
-        "create function\n"
-        "demobegin\n"
-        "funcall declare_function_pointer\n"
-        // What is the name of the function?
-        "construct_and_attach_child_node\n"
-        // Parameter 0 type:
-        "char *\n"
-        // Parameter 0 identifier:
-        "node_name"
-        // Parameter 1 type:
-        "funcend\n"
-        "funcall initialize_function\n"
-        // What is the name of the function you wish to initialize?
-        "construct_and_attach_child_node\n"
-        // construct_and_attach_child_node(char *node_name)
-        // write code:
-        "TODO\n"
-        "funcend\n"
-        "demoend\n"
-        "create node\n"
-        "construct_and_attach_child_node\n";
-
-    int n = strlen(commands);
-    int s = 0;
-    char cstr[2048];
-    void *vargs[7];
-    for (int i = 0; i < n; ++i)
-    {
-        if (commands[i] != '\n')
-            continue;
-        strncpy(cstr, commands + i, i - s);
-        cstr[i - s] = '\0';
-
-        char *reply;
-        int a = 0;
-        // vargs[a++] = function_index;
-        // vargs[a++] = process_matrix;
-        // vargs[a++] = history;
-        // vargs[a++] = global;
-        // vargs[a++] = (void *)cstr;
-        // vargs[a++] = (void *)&reply;
-        // submit_command(a, vargs);
-    }
+    //     char *reply;
+    //     int a = 0;
+    //     // vargs[a++] = function_index;
+    //     // vargs[a++] = process_matrix;
+    //     // vargs[a++] = history;
+    //     // vargs[a++] = global;
+    //     // vargs[a++] = (void *)cstr;
+    //     // vargs[a++] = (void *)&reply;
+    //     // submit_command(a, vargs);
+    // }
 
     return 0;
 }
