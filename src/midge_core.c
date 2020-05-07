@@ -1,6 +1,7 @@
 /* midge_core.c */
 
 #include <stdlib.h>
+#include <string.h>
 
 typedef void **struct_definition;
 typedef void **struct_allocation;
@@ -50,7 +51,7 @@ int (*allocate_midge_field_info)(int, void **);
 int (*define_struct)(int, void **);
 int (*allocate_from_definition)(int, void **);
 
-int allocate_struct_id_v0(int argc, void **argv)
+int allocate_struct_id_v1(int argc, void **argv)
 {
     midgeo out_field = (midgeo)argv[0];
     const char *struct_name = (char *)argv[1];
@@ -69,7 +70,7 @@ int allocate_struct_id_v0(int argc, void **argv)
     return 0;
 }
 
-int allocate_midge_field_info_v0(int argc, void **argv)
+int allocate_midge_field_info_v1(int argc, void **argv)
 {
     midgeo out_field = (midgeo)argv[0];
     const char *type = (char *)argv[1];
@@ -84,7 +85,7 @@ int allocate_midge_field_info_v0(int argc, void **argv)
     return 0;
 }
 
-int define_struct_v0(int argc, void **argv)
+int define_struct_v1(int argc, void **argv)
 {
     struct_definition *stdef = (struct_definition *)argv[0];
     const char *name = (char *)argv[1];
@@ -115,7 +116,7 @@ int define_struct_v0(int argc, void **argv)
     return 0;
 }
 
-int allocate_from_definition_v0(int argc, void **argv)
+int allocate_from_definition_v1(int argc, void **argv)
 {
     struct_allocation *allocation = (struct_allocation *)argv[0];
     struct_definition definition = (struct_definition)argv[1];
@@ -139,89 +140,221 @@ int allocate_from_definition_v0(int argc, void **argv)
     return 0;
 }
 
-int mc_main(int argc, const char *const *argv)
+int declare_function_pointer_v1(int argc, void **argv)
+{
+    return 0;
+}
+
+// clint_process(const char *command);
+
+int mcqck_temp_allocate_field(void **fields, const char *type, int deref_count, const char *name)
 {
     int res;
+    void *vargs[4];
+    vargs[0] = &fields[0];
+    vargs[1] = (void *)type;
+    vargs[2] = (void *)&deref_count;
+    vargs[3] = (void *)name;
+    MCcall(allocate_midge_field_info(4, vargs));
+    return 0;
+}
 
-    // Define the node structure
-    struct_definition node_v0;
-    midgeo node_v0_fields = (midgeo)malloc(sizeof(void *) * (4));
-
-    allocate_struct_id = &allocate_struct_id_v0;
-    allocate_midge_field_info = &allocate_midge_field_info_v0;
-    define_struct = &define_struct_v0;
-    allocate_from_definition = &allocate_from_definition_v0;
-
+int mcqck_temp_define_struct(struct_definition *definition, const char *name, uint version, int field_count, midgeo fields)
+{
+    int res;
     void *vargs[5];
-    vargs[0] = &node_v0_fields[0];
-    const char *_mtl_0 = "char";
-    vargs[1] = (void *)_mtl_0;
-    int _mtl_1 = 1;
-    vargs[2] = (void *)&_mtl_1;
-    const char *_mtl_2 = "name";
-    vargs[3] = (void *)_mtl_2;
-    MCcall(allocate_midge_field_info(4, vargs));
-
-    vargs[0] = &node_v0_fields[1];
-    const char *_mtl_3 = "int";
-    vargs[1] = (void *)_mtl_3;
-    int _mtl_4 = 0;
-    vargs[2] = (void *)&_mtl_4;
-    const char *_mtl_5 = "child_count";
-    vargs[3] = (void *)_mtl_5;
-    MCcall(allocate_midge_field_info(4, vargs));
-
-    vargs[0] = &node_v0_fields[2];
-    const char *_mtl_6 = "node";
-    vargs[1] = (void *)_mtl_6;
-    int _mtl_7 = 1;
-    vargs[2] = (void *)&_mtl_7;
-    const char *_mtl_8 = "parent";
-    vargs[3] = (void *)_mtl_8;
-    MCcall(allocate_midge_field_info(4, vargs));
-
-    vargs[0] = &node_v0_fields[3];
-    const char *_mtl_9 = "node";
-    vargs[1] = (void *)_mtl_9;
-    int _mtl_10 = 1;
-    vargs[2] = (void *)&_mtl_10;
-    const char *_mtl_11 = "children";
-    vargs[3] = (void *)_mtl_11;
-    MCcall(allocate_midge_field_info(4, vargs));
-
-    vargs[0] = &node_v0;
-    const char *_mtl_12 = "node";
-    vargs[1] = (void *)_mtl_12;
-    uint _mtl_13 = 1U;
-    vargs[2] = (void *)&_mtl_13;
-    vargs[3] = node_v0_fields;
-    int _mtl_14 = 4;
-    vargs[4] = (void *)&_mtl_14;
+    vargs[0] = definition;
+    vargs[1] = (void *)name;
+    vargs[2] = (void *)&version;
+    vargs[3] = (void *)&field_count;
+    vargs[4] = fields;
     MCcall(define_struct(5, vargs));
-    free(node_v0_fields);
+    return 0;
+}
 
-    // printf("type:%s deref:%u ident:%s\n", (char *)((void **)node_v0[2])[0], *(uint *)((void **)node_v0[2])[1], (char *)((void **)node_v0[2])[2]);
-    // printf("type:%s deref:%u ident:%s\n", (char *)((void **)node_v0[3])[0], *(uint *)((void **)node_v0[3])[1], (char *)((void **)node_v0[3])[2]);
-    // printf("type:%s deref:%u ident:%s\n", (char *)((void **)node_v0[4])[0], *(uint *)((void **)node_v0[4])[1], (char *)((void **)node_v0[4])[2]);
-    // printf("type:%s deref:%u ident:%s\n", (char *)((void **)node_v0[5])[0], *(uint *)((void **)node_v0[5])[1], (char *)((void **)node_v0[5])[2]);
+int mcqck_temp_allocate_from_definition(struct_allocation *allocation, struct_definition definition)
+{
+    int res;
+    void *vargs[2];
+    vargs[0] = allocation;
+    vargs[1] = definition;
 
-    // node global
-    midgeo global;
-    vargs[0] = &global;
-    vargs[1] = node_v0;
     MCcall(allocate_from_definition(2, vargs));
-    allocate_from_cstringv(&global[1], "global");
-    allocate_from_intv(&global[2], 0);
-    global[3] = &global;
-    midgeo children = (midgeo)malloc(sizeof(void *) * (0));
-    global[4] = NULL;
+    return 0;
+}
 
-    // printf("global:%p\n", global);
-    // printf("struct_id:%s - %u\n", (char *)((void **)global[0])[0], *(uint *)((void **)global[0])[1]);
-    // printf("global:%s\n", (char *)global[1]);
-    // printf("global:%i\n", *(int *)global[2]);
-    // printf("global:%p\n", global[3]);
-    // printf("global:%p\n", global[4]);
+int mc_main(int argc, const char *const *argv)
+{
+    int sizeof_void_ptr = sizeof(void *);
+    if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) || sizeof_void_ptr != sizeof(uint *) || sizeof_void_ptr != sizeof(const char *) ||
+        sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(allocate_struct_id) || sizeof_void_ptr != sizeof(&allocate_struct_id) || sizeof_void_ptr != sizeof(int *))
+    {
+        printf("pointer sizes aren't equal!!!\n");
+        return -1;
+    }
+
+    int res;
+
+    // Function Pointer Setting
+    allocate_struct_id = &allocate_struct_id_v1;
+    allocate_midge_field_info = &allocate_midge_field_info_v1;
+    define_struct = &define_struct_v1;
+    allocate_from_definition = &allocate_from_definition_v1;
+    // declare_function_pointer =
+
+    // Define the function index
+    struct_definition function_info_v1;
+    midgeo function_info_v1_fields = (midgeo)malloc(sizeof(void *) * (6));
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[0], "void", 1, "fptr"));
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[1], "function_info", 1, "left"));
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[2], "function_info", 1, "right"));
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[3], "char", 1, "name"));
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[4], "int", 0, "parameter_count"));
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[5], "parameter_info", 1, "parameters"));
+    MCcall(mcqck_temp_define_struct(&function_info_v1, "function_info", 1U, 4, function_info_v1_fields));
+    free(function_info_v1_fields);
+
+    struct_allocation declare_function_pointer;
+    MCcall(mcqck_temp_allocate_from_definition(&declare_function_pointer, function_info_v1));
+    declare_function_pointer[0] = &declare_function_pointer_v1;
+    declare_function_pointer[1] = NULL;
+    declare_function_pointer[2] = NULL;
+    allocate_from_cstringv(&declare_function_pointer[3], "declare_function_pointer");
+    allocate_from_intv(&declare_function_pointer[4], 3);
+    midgeo fields = (midgeo)malloc(sizeof(void *) * 3);
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[0], "char", 1, "name"));
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[1], "int", 1, "parameter_count"));
+    MCcall(mcqck_temp_allocate_field(&function_info_v1_fields[2], "parameter_info", 1, "parameters"));
+    declare_function_pointer[5] = (void *)fields;
+
+    // struct function
+    // {
+    //     int (*fptr)(int, void **);
+    //     int param_count;
+    //     function_parameter *params;
+    // };
+    midgeo function_index = declare_function_pointer;
+    midgeo process_matrix = NULL;
+    midgeo history = NULL;
+
+    const char *commands =
+        "create function\n"
+        "demobegin\n"
+        "funcall declare_function_pointer\n"
+        // What is the name of the function?
+        "construct_and_attach_child_node\n"
+        // Parameter 0 type:
+        "char *\n"
+        // Parameter 0 identifier:
+        "node_name"
+        // Parameter 1 type:
+        "funcend\n"
+        "funcall initialize_function\n"
+        // What is the name of the function you wish to initialize?
+        "construct_and_attach_child_node\n"
+        // construct_and_attach_child_node(char *node_name)
+        // write code:
+        "TODO\n"
+        "funcend\n"
+        "demoend\n"
+        "create node\n"
+        "funcall allocate_from_definition";
+
+    int n = strlen(commands);
+    int s = 0;
+    char cstr[2048];
+    void *vargs[7];
+    for (int i = 0; i < n; ++i)
+    {
+        if (commands[i] != '\n')
+            continue;
+        strncpy(cstr, commands + i, i - s);
+        cstr[i - s] = '\0';
+
+        char *reply;
+        int a = 0;
+        // vargs[a++] = function_index;
+        // vargs[a++] = process_matrix;
+        // vargs[a++] = history;
+        // vargs[a++] = global;
+        // vargs[a++] = (void *)cstr;
+        // vargs[a++] = (void *)&reply;
+        // submit_command(a, vargs);
+    }
 
     return 0;
 }
+
+// Define the node structure
+// struct_definition node_v1;
+// midgeo node_v1_fields = (midgeo)malloc(sizeof(void *) * (4));
+
+// vargs[0] = &node_v1_fields[0];
+// const char *_mtl_0 = "char";
+// vargs[1] = (void *)_mtl_0;
+// int _mtl_1 = 1;
+// vargs[2] = (void *)&_mtl_1;
+// const char *_mtl_2 = "name";
+// vargs[3] = (void *)_mtl_2;
+// MCcall(allocate_midge_field_info(4, vargs));
+
+// vargs[0] = &node_v1_fields[1];
+// const char *_mtl_6 = "node";
+// vargs[1] = (void *)_mtl_6;
+// int _mtl_7 = 1;
+// vargs[2] = (void *)&_mtl_7;
+// const char *_mtl_8 = "parent";
+// vargs[3] = (void *)_mtl_8;
+// MCcall(allocate_midge_field_info(4, vargs));
+
+// vargs[0] = &node_v1_fields[2];
+// const char *_mtl_3 = "int";
+// vargs[1] = (void *)_mtl_3;
+// int _mtl_4 = 0;
+// vargs[2] = (void *)&_mtl_4;
+// const char *_mtl_5 = "child_count";
+// vargs[3] = (void *)_mtl_5;
+// MCcall(allocate_midge_field_info(4, vargs));
+
+// vargs[0] = &node_v1_fields[3];
+// const char *_mtl_9 = "node";
+// vargs[1] = (void *)_mtl_9;
+// int _mtl_10 = 1;
+// vargs[2] = (void *)&_mtl_10;
+// const char *_mtl_11 = "children";
+// vargs[3] = (void *)_mtl_11;
+// MCcall(allocate_midge_field_info(4, vargs));
+
+// vargs[0] = &node_v1;
+// const char *_mtl_12 = "node";
+// vargs[1] = (void *)_mtl_12;
+// uint _mtl_13 = 1U;
+// vargs[2] = (void *)&_mtl_13;
+// vargs[3] = node_v1_fields;
+// int _mtl_14 = 4;
+// vargs[4] = (void *)&_mtl_14;
+// MCcall(define_struct(5, vargs));
+// free(node_v1_fields);
+
+// // printf("type:%s deref:%u ident:%s\n", (char *)((void **)node_v1[2])[0], *(uint *)((void **)node_v1[2])[1], (char *)((void **)node_v1[2])[2]);
+// // printf("type:%s deref:%u ident:%s\n", (char *)((void **)node_v1[3])[0], *(uint *)((void **)node_v1[3])[1], (char *)((void **)node_v1[3])[2]);
+// // printf("type:%s deref:%u ident:%s\n", (char *)((void **)node_v1[4])[0], *(uint *)((void **)node_v1[4])[1], (char *)((void **)node_v1[4])[2]);
+// // printf("type:%s deref:%u ident:%s\n", (char *)((void **)node_v1[5])[0], *(uint *)((void **)node_v1[5])[1], (char *)((void **)node_v1[5])[2]);
+
+// // node global
+// midgeo global;
+// vargs[0] = &global;
+// vargs[1] = node_v1;
+// MCcall(allocate_from_definition(2, vargs));
+// allocate_from_cstringv(&global[1], "global");
+// allocate_from_intv(&global[2], 0);
+// global[3] = &global;
+// midgeo children = (midgeo)malloc(sizeof(void *) * (0));
+// global[4] = NULL;
+
+// // printf("global:%p\n", global);
+// // printf("struct_id:%s - %u\n", (char *)((void **)global[0])[0], *(uint *)((void **)global[0])[1]);
+// // printf("global:%s\n", (char *)global[1]);
+// // printf("global:%i\n", *(int *)global[2]);
+// // printf("global:%p\n", global[3]);
+// // printf("global:%p\n", global[4]);
