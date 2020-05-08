@@ -148,14 +148,17 @@ void run()
      */
 
     clint->loadFile("/home/jason/midge/src/midge_core.c");
-    clint->process("mc_main(0, NULL)");
+    for (int i = 0; i < 1; ++i)
+      clint->process("mc_main(0, NULL);");
 
     // clint->process("#include \"midge.h\"");
     // clint->process("redef();");
   }
   catch (const std::exception &e)
   {
+    std::cerr << "midge.h] Caught Error:" << std::endl;
     std::cerr << e.what() << '\n';
   }
+  clint->process("printf(\"</midge>\\n\");");
 }
 #endif // MIDGE_H
