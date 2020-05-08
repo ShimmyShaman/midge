@@ -371,6 +371,68 @@ int mcqck_temp_allocate_from_definition(midgeo *allocation, struct_definition de
     return 0;
 }
 
+#define PROCESS_HANDLE_INTERACTION 1
+#define PROCESS_HANDLE_BRANCH 2
+#define PROCESS_HANDLE_INVOKE 3
+#define PROCESS_BRANCH_THROUGH 4
+#define PROCESS_BRANCH_SAVE_AND_THROUGH 5
+#define INTERACTION_CONTEXT_BLANK 1
+#define INTERACTION_CONTEXT_PROCESS 2
+int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
+{
+    midgeo data_collection = (midgeo)calloc(sizeof(void *), 20);
+    allocate_from_intv(&data_collection[0], 20);
+    allocate_from_intv(&data_collection[1], 0);
+
+    midgeo process_unit_invoke = (midgeo)malloc(sizeof(void *) * 4);
+    midgeo process_unit_type = (midgeo)malloc(sizeof(void *) * 4);
+    midgeo process_unit_name = (midgeo)malloc(sizeof(void *) * 4);
+    midgeo process_unit_function_name = (midgeo)malloc(sizeof(void *) * 4);
+
+    // Function Invoke
+    allocate_from_intv(&process_unit_invoke[0], PROCESS_HANDLE_INVOKE);
+    process_unit_invoke[1] = (void *)&declare_function_pointer_v1;
+    process_unit_invoke[2] = data_collection;
+    process_unit_invoke[3] = NULL;
+
+    // process_unit_name
+    allocate_from_intv(&process_unit_name[0], PROCESS_HANDLE_INTERACTION);
+    allocate_from_cstringv(&process_unit_name[1], "Parameter Name:");
+    process_unit_name[2] = data_collection;
+    process_unit_name[3] = process_unit_type;
+
+    // process_unit_type
+    allocate_from_intv(&process_unit_type[0], PROCESS_HANDLE_BRANCH);
+    allocate_from_cstringv(&process_unit_type[1], "Parameter Type:");
+    process_unit_type[2] = NULL;
+    midgeo array = (midgeo)malloc(sizeof(void *) * 3);
+    process_unit_type[3] = array;
+    allocate_from_intv(&array[0], 2);
+
+    midgeo branch = (midgeo)malloc(sizeof(void *) * 4);
+    allocate_from_cstringv(&branch[0], "end");
+    allocate_from_intv(&branch[1], PROCESS_BRANCH_THROUGH);
+    branch[2] = NULL;
+    branch[3] = process_unit_invoke;
+    array[1] = branch;
+
+    branch = (midgeo)malloc(sizeof(void *) * 4);
+    allocate_from_cstringv(&branch[0], "");
+    allocate_from_intv(&branch[1], PROCESS_BRANCH_SAVE_AND_THROUGH);
+    branch[2] = data_collection;
+    branch[3] = process_unit_name;
+    array[2] = branch;
+
+    // name of the function
+    allocate_from_intv(&process_unit_function_name[0], PROCESS_HANDLE_INTERACTION);
+    allocate_from_cstringv(&process_unit_function_name[1], "Function Name:");
+    process_unit_function_name[2] = data_collection;
+    process_unit_function_name[3] = process_unit_type;
+
+    *process_unit = process_unit_function_name;
+    return 0;
+}
+
 int process_command(int argc, void **argsv);
 int mc_main(int argc, const char *const *argv)
 {
@@ -482,13 +544,18 @@ int mc_main(int argc, const char *const *argv)
 
     // Execute commands
     midgeo function_index = NULL;
-    midgeo process_matrix = NULL;
+    midgeo process_matrix = (midgeo)malloc(sizeof(void *) * 20);
+    allocate_from_intv(&process_matrix[0], 20);
+    allocate_from_intv(&process_matrix[1], 0);
     midgeo interaction_context = (midgeo)malloc(sizeof_void_ptr * 2);
-    allocate_from_intv(&interaction_context[0], 1);
+    allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BLANK);
 
-    // "invoke declare_function_pointer" process
-    midgeo process_invoke_declare_function_pointer = (midgeo)malloc(sizeof_void_ptr * 1);
-    allocate_from_cstringv(&process_invoke_declare_function_pointer[0], "Enter name of the function:");
+    midgeo process_dfp = (midgeo)malloc(sizeof_void_ptr * 3);
+    allocate_from_cstringv(&process_dfp[0], "invoke declare_function_pointer");
+    MCcall(mcqck_temp_create_process_declare_function_pointer((midgeo *)&process_dfp[1]));
+    allocate_from_intv(&process_matrix[1], 1);
+    process_matrix[2] = process_dfp;
+
     // TODO...
 
     const char *commands =
@@ -537,7 +604,7 @@ int mc_main(int argc, const char *const *argv)
         vargs[a++] = (void *)cstr;
         vargs[a++] = (void *)&reply;
 
-        printf(":> %s\n", cstr);
+        printf("%s\n", cstr);
         MCcall(process_command(a, vargs));
 
         if (reply != NULL)
@@ -551,31 +618,34 @@ int mc_main(int argc, const char *const *argv)
 
 int process_command(int argc, void **argsv)
 {
+    midgeo process_matrix = (midgeo)argsv[1];
     midgeo interaction_context = (midgeo)argsv[2];
     // History:
     // [0] -- linked list cstr : most recent set
     char *command = (char *)argsv[4];
     char **reply = (char **)argsv[5];
 
-    if (*(int *)interaction_context[0] == 1)
+    if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BLANK)
     {
         // No real context
         // User Submits Commmands without prompt
 
-        if (!strncmp("invoke ", command, 7))
+        int n = *(int *)process_matrix[1];
+        for (int i = 0; i < n; ++i)
         {
-            if (!strncmp("declare_function_pointer", command + 7, 24))
+            midgeo process = (midgeo)process_matrix[2 + i];
+            if (!strcmp((char *)process[0], command))
             {
-                // 'Search' through process matrix to find a match
-                // TODO -- *just set it
+                int *ic = (int *)interaction_context[0];
+                *ic = INTERACTION_CONTEXT_PROCESS;
+                interaction_context[1] = process;
 
-                // Ask the first question of the user...
-                strcpy(*reply, "TODO\n");
-                return 0;
-            }
-            else
-            {
-                strcpy(*reply, "TODO\n");
+                midgeo process_unit = (midgeo)process[1];
+                if (*(int *)process_unit[0] != PROCESS_HANDLE_INTERACTION)
+                    return -2;
+
+                *reply = (char *)process_unit[1];
+
                 return 0;
             }
         }
@@ -586,13 +656,10 @@ int process_command(int argc, void **argsv)
 
         //     history[0] strcat(*reply, (char *)history) return 0;
         // }
-        else
-        {
-            strcpy(*reply, "TODO\n");
-            return 0;
-        }
+        strcpy(*reply, "TODO\n");
+        return 0;
     }
-    else if (*(int *)interaction_context[0] == 2)
+    else if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_PROCESS)
     {
         // In process...
     }
