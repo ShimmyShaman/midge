@@ -371,11 +371,7 @@ int mcqck_temp_allocate_from_definition(midgeo *allocation, struct_definition de
     return 0;
 }
 
-typedef struct amber
-{
-    amber *parent;
-} amber;
-
+int process_command(int argc, void **argsv);
 int mc_main(int argc, const char *const *argv)
 {
     int sizeof_void_ptr = sizeof(void *);
@@ -455,16 +451,6 @@ int mc_main(int argc, const char *const *argv)
     // global_structure_index[2] = NULL;
     // global_structure_index[3] = NULL;
 
-    // Instantiate: node global;
-    midgeo global;
-    MCcall(mcqck_temp_allocate_from_definition(&global, node_definition_v1));
-    allocate_from_cstringv(&global[1], "global");
-    global[2] = NULL;
-    global[3] = NULL;
-    global[4] = NULL; //global_structure_index;
-    allocate_from_intv(&global[5], 0);
-    global[6] = NULL;
-
     // Instantiate and declare the global::declare_function_pointer method
     // midgeo dfpi;
     // midgeo fields = (midgeo)malloc(sizeof(void *) * 5);
@@ -476,17 +462,37 @@ int mc_main(int argc, const char *const *argv)
     // MCcall(mcqck_temp_declare_function_pointer(&dfpi, global, "declare_function_pointer", 5, fields));
     // clint_declare("int (*global_declare_function_pointer)(int argc, void **argv);");
 
+    // midgeo global_function_index;
+    // MCcall(mcqck_temp_allocate_from_definition(&global_function_index, index_node_definition_v1));
+    // global_structure_index[1] = function_definition_v1;
+    // global_structure_index[2] = NULL;
+    // global_structure_index[3] = NULL;
+
+    // Instantiate: node global;
+    midgeo global;
+    MCcall(mcqck_temp_allocate_from_definition(&global, node_definition_v1));
+    allocate_from_cstringv(&global[1], "global");
+    global[2] = NULL;
+    global[3] = NULL; // global_function_index
+    global[4] = NULL; // global_structure_index;
+    allocate_from_intv(&global[5], 0);
+    global[6] = NULL;
+
     // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
     // Execute commands
-    // midgeo function_index = dfpi;
-    // midgeo process_matrix = NULL;
-    // midgeo history = NULL;
+    midgeo function_index = NULL;
+    midgeo process_matrix = NULL;
+    midgeo interaction_context = (midgeo)malloc(sizeof_void_ptr * 2);
+    allocate_from_intv(&interaction_context[0], 1);
+
+    // "invoke declare_function_pointer" process
+    midgeo process_invoke_declare_function_pointer = (midgeo)malloc(sizeof_void_ptr * 1);
+    allocate_from_cstringv(&process_invoke_declare_function_pointer[0], "Enter name of the function:");
+    // TODO...
 
     const char *commands =
-        "create function\n"
-        "demobegin\n"
-        "funcall declare_function_pointer\n"
+        "invoke declare_function_pointer\n"
         // What is the name of the function?
         "construct_and_attach_child_node\n"
         // Parameter 0 type:
@@ -494,14 +500,18 @@ int mc_main(int argc, const char *const *argv)
         // Parameter 0 identifier:
         "node_name"
         // Parameter 1 type:
-        "funcend\n"
-        "funcall initialize_function\n"
+        "end\n"
+        "invoke initialize_function\n"
         // What is the name of the function you wish to initialize?
         "construct_and_attach_child_node\n"
         // construct_and_attach_child_node(char *node_name)
         // write code:
         "TODO\n"
-        "funcend\n"
+        "end\n"
+
+        "create function\n"
+        // Uncertain response: Type another command or type demobegin to demostrate it
+        "demobegin\n"
         "demoend\n"
         "create node\n"
         "construct_and_attach_child_node\n";
@@ -509,23 +519,82 @@ int mc_main(int argc, const char *const *argv)
     int n = strlen(commands);
     int s = 0;
     char cstr[2048];
-    void *vargs[7];
+    void *vargs[12]; // TODO -- count
     for (int i = 0; i < n; ++i)
     {
         if (commands[i] != '\n')
             continue;
-        strncpy(cstr, commands + i, i - s);
+        strncpy(cstr, commands + s, i - s);
         cstr[i - s] = '\0';
+        s = i + 1;
 
         char *reply;
         int a = 0;
-        // vargs[a++] = function_index;
-        // vargs[a++] = process_matrix;
-        // vargs[a++] = history;
-        // vargs[a++] = global;
-        // vargs[a++] = (void *)cstr;
-        // vargs[a++] = (void *)&reply;
-        // submit_command(a, vargs);
+        vargs[a++] = function_index;
+        vargs[a++] = process_matrix;
+        vargs[a++] = interaction_context;
+        vargs[a++] = global;
+        vargs[a++] = (void *)cstr;
+        vargs[a++] = (void *)&reply;
+
+        printf(":> %s\n", cstr);
+        MCcall(process_command(a, vargs));
+
+        if (reply != NULL)
+        {
+            printf("%s", reply);
+        }
+    }
+
+    return 0;
+}
+
+int process_command(int argc, void **argsv)
+{
+    midgeo interaction_context = (midgeo)argsv[2];
+    // History:
+    // [0] -- linked list cstr : most recent set
+    char *command = (char *)argsv[4];
+    char **reply = (char **)argsv[5];
+
+    if (*(int *)interaction_context[0] == 1)
+    {
+        // No real context
+        // User Submits Commmands without prompt
+
+        if (!strncmp("invoke ", command, 7))
+        {
+            if (!strncmp("declare_function_pointer", command + 7, 24))
+            {
+                // 'Search' through process matrix to find a match
+                // TODO -- *just set it
+
+                // Ask the first question of the user...
+                strcpy(*reply, "TODO\n");
+                return 0;
+            }
+            else
+            {
+                strcpy(*reply, "TODO\n");
+                return 0;
+            }
+        }
+        // else if (!strcmp("demobegin", command))
+        // {
+        //     *reply = "[Demo:\n";
+        //     strcpy(*reply, "[Demo: \"");
+
+        //     history[0] strcat(*reply, (char *)history) return 0;
+        // }
+        else
+        {
+            strcpy(*reply, "TODO\n");
+            return 0;
+        }
+    }
+    else if (*(int *)interaction_context[0] == 2)
+    {
+        // In process...
     }
 
     return 0;
