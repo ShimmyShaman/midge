@@ -5,6 +5,7 @@
 
 typedef void **struct_definition;
 typedef void **midgeo;
+typedef void **midgeary;
 typedef unsigned int uint;
 
 /*
@@ -243,15 +244,17 @@ int obtain_struct_info_from_index_v1(int argc, void **argv)
 
 int declare_function_pointer_v1(int argc, void **argv)
 {
+    printf("declare_function_pointer_v1()\n");
     // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
 
-    midgeo *out_var = (midgeo *)argv[0];
-    midgeo parent = (midgeo)argv[1];
-    char *name = (char *)argv[2];
+    midgeo parent = (midgeo)argv[0];
+    char *name = (char *)argv[1];
+    midgeo return_type = (midgeo)argv[2];
     int parameter_count = *(int *)argv[3];
     midgeo parameters = (midgeo)argv[4];
 
     int res;
+    printf("here-1\n");
 
     // Obtain the global function_info definition
     midgeo global = parent;
@@ -259,6 +262,7 @@ int declare_function_pointer_v1(int argc, void **argv)
         global = (midgeo)parent[2];
     struct_definition function_info_definition;
 
+    printf("here-0\n");
     void *vargs[3];
     vargs[0] = (void *)&function_info_definition;
     vargs[1] = (void *)global;
@@ -266,62 +270,62 @@ int declare_function_pointer_v1(int argc, void **argv)
     vargs[2] = (void *)function_info_name;
     MCcall(obtain_struct_info_from_index_v1(3, vargs));
 
-    vargs[0] = (void *)out_var;
+    midgeo function_info;
+    vargs[0] = (void *)&function_info;
     vargs[1] = (void *)function_info_definition;
     MCcall(allocate_from_definition(2, vargs));
 
     // Set Allocated function_info
-    allocate_from_cstringv(&(*out_var)[1], "declare_function_pointer");
-    (*out_var)[2] = NULL;
-    (*out_var)[3] = NULL;
-    allocate_from_intv(&(*out_var)[4], parameter_count);
-    (*out_var)[5] = *parameters;
+    allocate_from_cstringv(&function_info[1], "declare_function_pointer");
+    allocate_from_intv(&function_info[2], parameter_count);
+    function_info[3] = *parameters;
 
     // Declare with clint
     char buf[1024];
     strcpy(buf, "int (*");
     strcat(buf, name);
     strcat(buf, ")(int,void**);");
+    printf("declaring:%s", buf);
     clint_declare(buf);
     return 0;
 }
 
 int mcqck_temp_declare_function_pointer(midgeo *out_var, midgeo parent, const char *name, int parameter_count, midgeo parameters)
 {
-    // SAME AS declare_function_pointer_v1 without the clint declaration
-    // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
-    int res;
+    // // SAME AS declare_function_pointer_v1 without the clint declaration
+    // // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
+    // int res;
 
-    // Obtain the global function_info definition
-    midgeo global = parent;
-    while (parent[2] != NULL)
-        global = (midgeo)parent[2];
-    struct_definition function_info_definition;
+    // // Obtain the global function_info definition
+    // midgeo global = parent;
+    // while (parent[2] != NULL)
+    //     global = (midgeo)parent[2];
+    // struct_definition function_info_definition;
 
-    void *vargs[3];
-    vargs[0] = (void *)&function_info_definition;
-    vargs[1] = (void *)global;
-    const char *function_info_id = "function_info";
-    vargs[2] = (void *)function_info_id;
-    MCcall(obtain_from_index(3, vargs));
-    if (function_info_definition == NULL)
-    {
-        printf("Could not find 'function_info' definition in provided nodes global root!\n");
-        return -1;
-    }
+    // void *vargs[3];
+    // vargs[0] = (void *)&function_info_definition;
+    // vargs[1] = (void *)global;
+    // const char *function_info_id = "function_info";
+    // vargs[2] = (void *)function_info_id;
+    // MCcall(obtain_from_index(3, vargs));
+    // if (function_info_definition == NULL)
+    // {
+    //     printf("Could not find 'function_info' definition in provided nodes global root!\n");
+    //     return -1;
+    // }
 
-    vargs[0] = (void *)out_var;
-    vargs[1] = (void *)function_info_definition;
-    MCcall(allocate_from_definition(2, vargs));
+    // vargs[0] = (void *)out_var;
+    // vargs[1] = (void *)function_info_definition;
+    // MCcall(allocate_from_definition(2, vargs));
 
-    // Set Allocated function_info
-    allocate_from_cstringv(&(*out_var)[1], "declare_function_pointer");
-    (*out_var)[2] = NULL;
-    (*out_var)[3] = NULL;
-    allocate_from_intv(&(*out_var)[4], parameter_count);
-    (*out_var)[5] = *parameters;
+    // // Set Allocated function_info
+    // allocate_from_cstringv(&(*out_var)[1], "declare_function_pointer");
+    // (*out_var)[2] = NULL;
+    // (*out_var)[3] = NULL;
+    // allocate_from_intv(&(*out_var)[4], parameter_count);
+    // (*out_var)[5] = *parameters;
 
-    return 0;
+    // return 0;
 }
 
 int mcqck_temp_allocate_struct_id(midgeo out_field, const char *struct_name, uint version)
@@ -371,9 +375,29 @@ int mcqck_temp_allocate_from_definition(midgeo *allocation, struct_definition de
     return 0;
 }
 
-#define PROCESS_HANDLE_INTERACTION 1
-#define PROCESS_HANDLE_BRANCH 2
-#define PROCESS_HANDLE_INVOKE 3
+int set_int_value(int argc, void **argv)
+{
+    int *var = (int *)argv[0];
+    int value = *(int *)argv[1];
+
+    *var = value;
+    return 0;
+}
+
+int increment_int_value(int argc, void **argv)
+{
+    int *var = (int *)argv[0];
+
+    ++*var;
+    return 0;
+}
+
+enum process_unit
+{
+    PROCESS_UNIT_INTERACTION = 1,
+    PROCESS_UNIT_BRANCH,
+    PROCESS_UNIT_INVOKE,
+};
 #define PROCESS_BRANCH_THROUGH 4
 #define PROCESS_BRANCH_SAVE_AND_THROUGH 5
 #define INTERACTION_CONTEXT_BLANK 1
@@ -381,29 +405,41 @@ int mcqck_temp_allocate_from_definition(midgeo *allocation, struct_definition de
 #define INTERACTION_CONTEXT_BROKEN 3
 int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
 {
-    midgeo data_collection = (midgeo)calloc(sizeof(void *), 20);
-    allocate_from_intv(&data_collection[0], 20);
-    allocate_from_intv(&data_collection[1], 0);
+    const int dfp_varg_count = 5; // node-parent, name, return-type, params_count, parameters(field_info)
+    midgeary dfp_vargs = (midgeary)malloc(sizeof(void *) * (1 + dfp_varg_count));
+    allocate_from_intv(&dfp_vargs[0], dfp_varg_count);
 
-    midgeo process_unit_invoke = (midgeo)malloc(sizeof(void *) * 4);
+    midgeary function_parameters = (midgeo)calloc(sizeof(void *), 3 * 40);
+    allocate_from_intv(&function_parameters[0], 3 * 40);
+    allocate_from_intv(&dfp_vargs[3], 0);
+    dfp_vargs[4] = function_parameters;
+
+    midgeo process_unit_clear_params = (midgeo)malloc(sizeof(void *) * 4); // TODO -- more than just set param_count to zero : delete the created memory!
+    midgeo process_unit_function_name = (midgeo)malloc(sizeof(void *) * 4);
     midgeo process_unit_type = (midgeo)malloc(sizeof(void *) * 4);
     midgeo process_unit_name = (midgeo)malloc(sizeof(void *) * 4);
-    midgeo process_unit_function_name = (midgeo)malloc(sizeof(void *) * 4);
+    midgeo process_unit_increment_param_count = (midgeo)malloc(sizeof(void *) * 4);
+    midgeo process_unit_invoke = (midgeo)malloc(sizeof(void *) * 4);
 
-    // Function Invoke
-    allocate_from_intv(&process_unit_invoke[0], PROCESS_HANDLE_INVOKE);
-    process_unit_invoke[1] = (void *)&declare_function_pointer_v1;
-    process_unit_invoke[2] = data_collection;
-    process_unit_invoke[3] = NULL;
+    // process_unit : int type; void *data; void *data2; void *next;
 
-    // process_unit_name
-    allocate_from_intv(&process_unit_name[0], PROCESS_HANDLE_INTERACTION);
-    allocate_from_cstringv(&process_unit_name[1], "Parameter Name:");
-    process_unit_name[2] = data_collection;
-    process_unit_name[3] = process_unit_type;
+    // Delete Parameters
+    allocate_from_intv(&process_unit_clear_params[0], PROCESS_UNIT_INVOKE);
+    process_unit_clear_params[1] = (void *)&set_int_value;
+    midgeo vargs = (midgeo)malloc(sizeof(void *) * 2);
+    vargs[0] = &dfp_vargs[3];
+    vargs[1] = 0;
+    process_unit_clear_params[2] = vargs;
+    process_unit_clear_params[3] = process_unit_function_name;
+
+    // name of the function
+    allocate_from_intv(&process_unit_function_name[0], PROCESS_UNIT_INTERACTION);
+    allocate_from_cstringv(&process_unit_function_name[1], "Function Name:");
+    process_unit_function_name[2] = &dfp_vargs[1];
+    process_unit_function_name[3] = process_unit_type;
 
     // process_unit_type
-    allocate_from_intv(&process_unit_type[0], PROCESS_HANDLE_BRANCH);
+    allocate_from_intv(&process_unit_type[0], PROCESS_UNIT_BRANCH);
     allocate_from_cstringv(&process_unit_type[1], "Parameter Type:");
     process_unit_type[2] = NULL;
     midgeo array = (midgeo)malloc(sizeof(void *) * 3);
@@ -424,11 +460,17 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     branch[3] = process_unit_name;
     array[2] = branch;
 
-    // name of the function
-    allocate_from_intv(&process_unit_function_name[0], PROCESS_HANDLE_INTERACTION);
-    allocate_from_cstringv(&process_unit_function_name[1], "Function Name:");
-    process_unit_function_name[2] = data_collection;
-    process_unit_function_name[3] = process_unit_type;
+
+    // process_unit_name
+    allocate_from_intv(&process_unit_name[0], PROCESS_UNIT_INTERACTION);
+    allocate_from_cstringv(&process_unit_name[1], "Parameter Name:");
+    process_unit_name[2] = data_collection;
+    process_unit_name[3] = process_unit_type;
+    // Function Invoke
+    allocate_from_intv(&process_unit_invoke[0], PROCESS_UNIT_INVOKE);
+    process_unit_invoke[1] = (void *)&declare_function_pointer_v1;
+    process_unit_invoke[2] = data_collection;
+    process_unit_invoke[3] = NULL;
 
     *process_unit = process_unit_function_name;
     return 0;
@@ -627,10 +669,13 @@ int process_command(int argc, void **argsv)
 {
     midgeo process_matrix = (midgeo)argsv[1];
     midgeo interaction_context = (midgeo)argsv[2];
+    midgeo nodespace = (midgeo)argsv[3];
     // History:
     // [0] -- linked list cstr : most recent set
     char *command = (char *)argsv[4];
     char **reply = (char **)argsv[5];
+
+    int res = 0;
     *reply = NULL;
 
     if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
@@ -694,6 +739,7 @@ int process_command(int argc, void **argsv)
                 }
                 data_collection[2 + *(int *)data_collection[1]] = (void *)malloc(sizeof(char) * strlen(command) + 1);
                 strcpy((char *)data_collection[2 + *(int *)data_collection[1]], command);
+                *(int *)data_collection[1] += 1;
 
                 interaction_context[2] = process_unit[3];
                 process_unit = (midgeo)process_unit[3];
@@ -728,6 +774,7 @@ int process_command(int argc, void **argsv)
                         }
                         data_collection[2 + *(int *)data_collection[1]] = (void *)malloc(sizeof(char) * strlen(command) + 1);
                         strcpy((char *)data_collection[2 + *(int *)data_collection[1]], command);
+                        *(int *)data_collection[1] += 1;
 
                         interaction_context[2] = branch[3];
                         process_unit = (midgeo)branch[3];
@@ -741,6 +788,27 @@ int process_command(int argc, void **argsv)
                     }
                     break;
                 }
+            }
+            break;
+            case PROCESS_HANDLE_INVOKE:
+            {
+                int (*fptr)(int, void **) = (int (*)(int, void **))process_unit[1];
+
+                midgeo data_collection = (midgeo)process_unit[2];
+
+                if (strcmp((char *)data_collection[2], "construct_and_attach_child_node"))
+                    return -21;
+
+                midgeo function_info;
+                void *vargs[5];
+                vargs[0] = (void *)&function_info;
+                vargs[1] = (void *)nodespace;
+                vargs[2] = (void *)data_collection[2];
+                int n = *(int *)data_collection[1] - 1;
+                vargs[3] = (void *)&n;
+                vargs[4] = (void *)data_collection[3];
+
+                MCcall(fptr(5, vargs));
             }
             break;
 
@@ -777,7 +845,7 @@ int process_command(int argc, void **argsv)
         }
     }
 
-    return 0;
+    return res;
 }
 
 // Define the node structure
