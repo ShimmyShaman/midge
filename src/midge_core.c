@@ -325,7 +325,7 @@ int mcqck_temp_declare_function_pointer(midgeo *out_var, midgeo parent, const ch
     // allocate_from_intv(&(*out_var)[4], parameter_count);
     // (*out_var)[5] = *parameters;
 
-    // return 0;
+    return 0;
 }
 
 int mcqck_temp_allocate_struct_id(midgeo out_field, const char *struct_name, uint version)
@@ -392,88 +392,161 @@ int increment_int_value(int argc, void **argv)
     return 0;
 }
 
-enum process_unit
+int set_pointer_value(int argc, void **argv)
+{
+    void **var = (void **)argv[0];
+    void *value = (void *)argv[1];
+
+    *var = value;
+    return 0;
+}
+
+int increment_pointer(int argc, void **argv)
+{
+    unsigned long **var = (unsigned long **)argv[0];
+
+    ++*var;
+    return 0;
+}
+
+enum process_unit_type
 {
     PROCESS_UNIT_INTERACTION = 1,
     PROCESS_UNIT_BRANCH,
     PROCESS_UNIT_INVOKE,
 };
-#define PROCESS_BRANCH_THROUGH 4
-#define PROCESS_BRANCH_SAVE_AND_THROUGH 5
+enum branch_unit_type
+{
+    PROCESS_BRANCH_THROUGH = 1,
+    PROCESS_BRANCH_SAVE_AND_THROUGH,
+};
 #define INTERACTION_CONTEXT_BLANK 1
 #define INTERACTION_CONTEXT_PROCESS 2
 #define INTERACTION_CONTEXT_BROKEN 3
 int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
 {
     const int dfp_varg_count = 5; // node-parent, name, return-type, params_count, parameters(field_info)
+
     midgeary dfp_vargs = (midgeary)malloc(sizeof(void *) * (1 + dfp_varg_count));
     allocate_from_intv(&dfp_vargs[0], dfp_varg_count);
+    allocate_from_intv(&dfp_vargs[4], 0);
+    void *parameter_data = (void *)malloc(sizeof(void *) * 200);
+    void **ptr_parameter_data = (void **)malloc(sizeof(void **));
+    ptr_parameter_data = &parameter_data;
+    dfp_vargs[5] = parameter_data;
 
-    midgeary function_parameters = (midgeo)calloc(sizeof(void *), 3 * 40);
-    allocate_from_intv(&function_parameters[0], 3 * 40);
-    allocate_from_intv(&dfp_vargs[3], 0);
-    dfp_vargs[4] = function_parameters;
+#define process_unit_v1              \
+    struct                           \
+    {                                \
+        struct                       \
+        {                            \
+            char *name;              \
+            uint version;            \
+        } struct_id;                 \
+        enum process_unit_type type; \
+        void *data;                  \
+        void *data2;                 \
+        void *next;                  \
+    }
+#define sizeof_process_unit_v1 (sizeof(char *) + sizeof(uint) + sizeof(enum process_unit_type) + sizeof(void *) * 3)
 
-    midgeo process_unit_clear_params = (midgeo)malloc(sizeof(void *) * 4); // TODO -- more than just set param_count to zero : delete the created memory!
-    midgeo process_unit_function_name = (midgeo)malloc(sizeof(void *) * 4);
-    midgeo process_unit_type = (midgeo)malloc(sizeof(void *) * 4);
-    midgeo process_unit_name = (midgeo)malloc(sizeof(void *) * 4);
-    midgeo process_unit_increment_param_count = (midgeo)malloc(sizeof(void *) * 4);
-    midgeo process_unit_invoke = (midgeo)malloc(sizeof(void *) * 4);
+#define branch_unit_v1              \
+    struct                          \
+    {                               \
+        struct                      \
+        {                           \
+            char *name;             \
+            uint version;           \
+        } struct_id;                \
+        enum branch_unit_type type; \
+        const char *match;          \
+        void *data;                 \
+        void *next;                 \
+    }
+#define sizeof_branch_unit_v1 (sizeof(char *) + sizeof(uint) + sizeof(enum branch_unit_type) + sizeof(char *) + sizeof(void *) * 2)
+#define allocate_anon_struct(struct, ptr_to_struct, size) \
+    struct *ptr_to_struct;                                \
+    dvp = (void **)&ptr_to_struct;                        \
+    *dvp = malloc(size);
 
-    // process_unit : int type; void *data; void *data2; void *next;
+    void **dvp;
+    allocate_anon_struct(process_unit_v1, process_unit_reset_data_pointer, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_reset_params_count, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_type, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_name, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_increment_param_count, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_invoke, sizeof_process_unit_v1);
 
-    // Delete Parameters
-    allocate_from_intv(&process_unit_clear_params[0], PROCESS_UNIT_INVOKE);
-    process_unit_clear_params[1] = (void *)&set_int_value;
-    midgeo vargs = (midgeo)malloc(sizeof(void *) * 2);
-    vargs[0] = &dfp_vargs[3];
-    vargs[1] = 0;
-    process_unit_clear_params[2] = vargs;
-    process_unit_clear_params[3] = process_unit_function_name;
+    process_unit_reset_data_pointer->type = PROCESS_UNIT_INVOKE;
+    process_unit_reset_data_pointer->data = (void *)&set_pointer_value;
+    midgeary invoke_args = (midgeary)malloc(sizeof(void *) * (1 + 2));
+    allocate_from_intv(&invoke_args[0], 2);
+    invoke_args[1] = (void *)&ptr_parameter_data;
+    invoke_args[2] = (void *)&parameter_data;
+    process_unit_reset_data_pointer->data2 = (void *)invoke_args;
+    process_unit_reset_data_pointer->next = (void *)process_unit_function_name;
 
-    // name of the function
-    allocate_from_intv(&process_unit_function_name[0], PROCESS_UNIT_INTERACTION);
-    allocate_from_cstringv(&process_unit_function_name[1], "Function Name:");
-    process_unit_function_name[2] = &dfp_vargs[1];
-    process_unit_function_name[3] = process_unit_type;
+    process_unit_function_name->type = PROCESS_UNIT_INTERACTION;
+    allocate_from_cstringv(&process_unit_function_name->data, "Function Name:");
+    process_unit_function_name->data2 = (void *)&ptr_parameter_data;
+    process_unit_function_name->next = (void *)process_unit_reset_params_count;
 
-    // process_unit_type
-    allocate_from_intv(&process_unit_type[0], PROCESS_UNIT_BRANCH);
-    allocate_from_cstringv(&process_unit_type[1], "Parameter Type:");
-    process_unit_type[2] = NULL;
-    midgeo array = (midgeo)malloc(sizeof(void *) * 3);
-    process_unit_type[3] = array;
-    allocate_from_intv(&array[0], 2);
+    process_unit_reset_params_count->type = PROCESS_UNIT_INVOKE;
+    process_unit_reset_params_count->data = (void *)&set_int_value;
+    invoke_args = (midgeary)malloc(sizeof(void *) * (1 + 2));
+    allocate_from_intv(&invoke_args[0], 2);
+    invoke_args[1] = (void *)dfp_vargs[4];
+    allocate_from_intv(&invoke_args[0], 0);
+    process_unit_reset_params_count->data2 = (void *)invoke_args;
+    process_unit_reset_params_count->next = (void *)process_unit_type;
 
-    midgeo branch = (midgeo)malloc(sizeof(void *) * 4);
-    allocate_from_cstringv(&branch[0], "end");
-    allocate_from_intv(&branch[1], PROCESS_BRANCH_THROUGH);
-    branch[2] = NULL;
-    branch[3] = process_unit_invoke;
-    array[1] = branch;
+    process_unit_type->type = PROCESS_UNIT_BRANCH;
+    allocate_from_cstringv(&process_unit_type->data, "Parameter Type:");
+    process_unit_type->data2 = NULL;
 
-    branch = (midgeo)malloc(sizeof(void *) * 4);
-    branch[0] = NULL;
-    allocate_from_intv(&branch[1], PROCESS_BRANCH_SAVE_AND_THROUGH);
-    branch[2] = data_collection;
-    branch[3] = process_unit_name;
-    array[2] = branch;
+    midgeary branches = (midgeary)malloc(sizeof(void *) * (1 + 2));
+    allocate_from_intv(&branches[0], 2);
+    process_unit_type->next = (void *)branches;
 
+    allocate_anon_struct(branch_unit_v1, branch_end, sizeof_branch_unit_v1);
+    branch_end->type = PROCESS_BRANCH_THROUGH;
+    branch_end->match = "end";
+    branch_end->next = (void *)process_unit_invoke;
+    branches[1] = (void *)branch_end;
 
-    // process_unit_name
-    allocate_from_intv(&process_unit_name[0], PROCESS_UNIT_INTERACTION);
-    allocate_from_cstringv(&process_unit_name[1], "Parameter Name:");
-    process_unit_name[2] = data_collection;
-    process_unit_name[3] = process_unit_type;
-    // Function Invoke
-    allocate_from_intv(&process_unit_invoke[0], PROCESS_UNIT_INVOKE);
-    process_unit_invoke[1] = (void *)&declare_function_pointer_v1;
-    process_unit_invoke[2] = data_collection;
-    process_unit_invoke[3] = NULL;
+    allocate_anon_struct(branch_unit_v1, branch_default, sizeof_branch_unit_v1);
+    branch_default->type = PROCESS_BRANCH_SAVE_AND_THROUGH;
+    branch_default->match = NULL;
+    branch_default->data = (void *)&ptr_parameter_data;
+    branch_default->next = (void *)process_unit_name;
+    branches[2] = (void *)branch_default;
 
-    *process_unit = process_unit_function_name;
+    process_unit_name->type = PROCESS_UNIT_INTERACTION;
+    allocate_from_cstringv(&process_unit_name->data, "Parameter Name:");
+    process_unit_name->data2 = (void *)&ptr_parameter_data;
+    process_unit_name->next = (void *)process_unit_increment_param_count;
+
+    process_unit_increment_param_count->type = PROCESS_UNIT_INVOKE;
+    process_unit_increment_param_count->data = (void *)&increment_int_value;
+    invoke_args = (midgeary)malloc(sizeof(void *) * (1 + 2));
+    allocate_from_intv(&invoke_args[0], 1);
+    invoke_args[1] = (void *)&dfp_vargs[4];
+    process_unit_increment_param_count->data2 = (void *)invoke_args;
+    process_unit_increment_param_count->next = (void *)process_unit_type;
+
+    process_unit_invoke->type = PROCESS_UNIT_INVOKE;
+    process_unit_invoke->data = (void *)&declare_function_pointer_v1;
+    process_unit_invoke->data2 = (void *)dfp_vargs;
+    process_unit_invoke->next = NULL;
+
+    *process_unit = (void **)process_unit_reset_data_pointer;
+
     return 0;
+#undef process_unit_v1
+#undef allocate_process_unit_v1
+#undef branch_unit_v1
+#undef allocate_branch_unit_v1
 }
 
 int process_command(int argc, void **argsv);
@@ -481,7 +554,7 @@ int mc_main(int argc, const char *const *argv)
 {
     int sizeof_void_ptr = sizeof(void *);
     if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) || sizeof_void_ptr != sizeof(uint *) || sizeof_void_ptr != sizeof(const char *) ||
-        sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(allocate_struct_id) || sizeof_void_ptr != sizeof(&allocate_struct_id) || sizeof_void_ptr != sizeof(int *))
+        sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(allocate_struct_id) || sizeof_void_ptr != sizeof(&allocate_struct_id) || sizeof_void_ptr != sizeof(unsigned long))
     {
         printf("pointer sizes aren't equal!!!\n");
         return -1;
@@ -667,6 +740,41 @@ int mc_main(int argc, const char *const *argv)
 
 int process_command(int argc, void **argsv)
 {
+
+#define process_unit_v1              \
+    struct                           \
+    {                                \
+        struct                       \
+        {                            \
+            char *name;              \
+            uint version;            \
+        } struct_id;                 \
+        enum process_unit_type type; \
+        void *data;                  \
+        void *data2;                 \
+        void *next;                  \
+    }
+
+#define branch_unit_v1              \
+    struct                          \
+    {                               \
+        struct                      \
+        {                           \
+            char *name;             \
+            uint version;           \
+        } struct_id;                \
+        enum branch_unit_type type; \
+        char *match;                \
+        void *data;                 \
+        void *next;                 \
+    }
+#define assign_anon_struct(struct, ptr_to_struct, voidassignee) \
+    struct *ptr_to_struct;                                      \
+    dvp = (void **)&ptr_to_struct;                              \
+    *dvp = (void *)voidassignee;
+
+    void **dvp;
+
     midgeo process_matrix = (midgeo)argsv[1];
     midgeo interaction_context = (midgeo)argsv[2];
     midgeo nodespace = (midgeo)argsv[3];
@@ -698,12 +806,12 @@ int process_command(int argc, void **argsv)
                 *ic = INTERACTION_CONTEXT_PROCESS;
                 interaction_context[1] = process;
 
-                midgeo process_unit = (midgeo)process[1];
+                process_unit_v1 *process_unit = process[1];
                 interaction_context[2] = process_unit;
-                if (*(int *)process_unit[0] != PROCESS_HANDLE_INTERACTION)
+                if (process_unit->type != PROCESS_UNIT_INTERACTION)
                     return -2;
 
-                *reply = (char *)process_unit[1];
+                *reply = process_unit->data;
 
                 return 0;
             }
@@ -722,113 +830,90 @@ int process_command(int argc, void **argsv)
     }
     else if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_PROCESS)
     {
-        midgeo process_unit = (midgeo)interaction_context[2];
+        process_unit_v1 *process_unit = interaction_context[2];
 
         // Handle reaction from previous unit
         while (*reply == NULL)
         {
-            switch (*(int *)process_unit[0])
+            switch (process_unit->type)
             {
-            case PROCESS_HANDLE_INTERACTION:
+            case PROCESS_UNIT_INTERACTION:
             {
-                midgeo data_collection = (midgeo)process_unit[2];
-                if (*(int *)data_collection[0] <= *(int *)data_collection[1])
-                {
-                    // resize the array
-                    return -8;
-                }
-                data_collection[2 + *(int *)data_collection[1]] = (void *)malloc(sizeof(char) * strlen(command) + 1);
-                strcpy((char *)data_collection[2 + *(int *)data_collection[1]], command);
-                *(int *)data_collection[1] += 1;
+                strcpy((char ***)process_unit->data, command);
+                ++*((void ***)process_unit->data);
 
-                interaction_context[2] = process_unit[3];
-                process_unit = (midgeo)process_unit[3];
+                interaction_context[2] = process_unit->next;
+                process_unit = process_unit->next;
             }
             break;
-            case PROCESS_HANDLE_BRANCH:
+            case PROCESS_UNIT_BRANCH:
             {
-                midgeo branch_ary = (midgeo)process_unit[3];
+                midgeo branch_ary = process_unit->next;
                 int branch_ary_size = *(int *)branch_ary[0];
 
                 for (int i = 0; i < branch_ary_size; ++i)
                 {
-                    midgeo branch = (midgeo)branch_ary[1 + i];
-                    if (branch[0] != NULL && strcmp((char *)branch[0], command))
+                    branch_unit_v1 *branch = branch_ary[1 + i];
+                    if (branch->match != NULL && strcmp(branch->match, command))
                         continue;
 
-                    switch (*(int *)branch[1])
+                    switch (branch->type)
                     {
                     case PROCESS_BRANCH_THROUGH:
                     {
-                        interaction_context[2] = branch[3];
-                        process_unit = (midgeo)branch[3];
+                        interaction_context[2] = branch->next;
+                        process_unit = branch->next;
                     }
                     break;
                     case PROCESS_BRANCH_SAVE_AND_THROUGH:
                     {
-                        midgeo data_collection = (midgeo)branch[2];
-                        if (*(int *)data_collection[0] <= *(int *)data_collection[1])
-                        {
-                            // resize the array
-                            return -8;
-                        }
-                        data_collection[2 + *(int *)data_collection[1]] = (void *)malloc(sizeof(char) * strlen(command) + 1);
-                        strcpy((char *)data_collection[2 + *(int *)data_collection[1]], command);
-                        *(int *)data_collection[1] += 1;
+                        strcpy((char ***)branch->data, command);
+                        ++*((void ***)branch->data);
 
-                        interaction_context[2] = branch[3];
-                        process_unit = (midgeo)branch[3];
+                        interaction_context[2] = branch->next;
+                        process_unit = branch->next;
                     }
                     break;
 
                     default:
                         allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
-                        printf("Unhandled process_unit:branch type:%i\n", *(int *)branch[1]);
+                        printf("Unhandled process_unit:branch type:%i\n", branch->type);
                         return -11;
                     }
                     break;
                 }
             }
             break;
-            case PROCESS_HANDLE_INVOKE:
+            case PROCESS_UNIT_INVOKE:
             {
-                int (*fptr)(int, void **) = (int (*)(int, void **))process_unit[1];
+                int (*fptr)(int, void **) = (int (*)(int, void **))process_unit->data;
 
-                midgeo data_collection = (midgeo)process_unit[2];
+                midgeary data = process_unit->data2;
 
-                if (strcmp((char *)data_collection[2], "construct_and_attach_child_node"))
+                if (strcmp((char *)data[1], "construct_and_attach_child_node"))
                     return -21;
 
-                midgeo function_info;
-                void *vargs[5];
-                vargs[0] = (void *)&function_info;
-                vargs[1] = (void *)nodespace;
-                vargs[2] = (void *)data_collection[2];
-                int n = *(int *)data_collection[1] - 1;
-                vargs[3] = (void *)&n;
-                vargs[4] = (void *)data_collection[3];
-
-                MCcall(fptr(5, vargs));
+                MCcall(fptr(*(int *)data[0], (void **)&data[1]));
             }
             break;
 
             default:
                 allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
-                printf("Unhandled process_unit type:%i\n", *(int *)process_unit[0]);
+                printf("Unhandled process_unit type:%i\n", process_unit->type);
                 return -5;
             }
 
             // process next unit
             int break_free = 1;
-            switch (*(int *)process_unit[0])
+            switch (process_unit->type)
             {
-            case PROCESS_HANDLE_INTERACTION:
-                *reply = (char *)process_unit[1];
+            case PROCESS_UNIT_INTERACTION:
+                *reply = (char *)process_unit->data;
                 break;
-            case PROCESS_HANDLE_BRANCH:
-                *reply = (char *)process_unit[1];
+            case PROCESS_UNIT_BRANCH:
+                *reply = (char *)process_unit->data;
                 break;
-            case PROCESS_HANDLE_INVOKE:
+            case PROCESS_UNIT_INVOKE:
             {
                 // No provocation
                 break_free = 0;
@@ -837,7 +922,7 @@ int process_command(int argc, void **argsv)
 
             default:
                 allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
-                printf("Unhandled process_unit type:%i\n", *(int *)process_unit[0]);
+                printf("Unhandled process_unit type:%i\n", process_unit->type);
                 return -7;
             }
             if (break_free)
@@ -846,6 +931,8 @@ int process_command(int argc, void **argsv)
     }
 
     return res;
+#undef process_unit_v1(var)
+#undef branch_unit_v1(var)
 }
 
 // Define the node structure

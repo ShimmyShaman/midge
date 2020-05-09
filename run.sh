@@ -34,6 +34,7 @@ g++ src/main/main.cpp                             \
 -Idep/glm                                         \
 -I/home/jason/cling/inst/include                  \
 /home/jason/cling/obj/lib/libcling.so             \
+-Wbuiltin-macro-redefined                         \
 -o bin/midge
 
 # # export LD_LIBRARY_PATH='/home/daniel/cling/obj/lib;/home/daniel/midge/dep'
@@ -55,6 +56,7 @@ if [ $retval -ne 0 ]; then
 else
     echo Running
     echo "#######################"
+    export EXTRA_CLING_ARGS='-Wmacro-redefined'
     ./bin/midge
     # chmod u=rwx ./bin/vulkanexp
     # ./bin/vulkanexp

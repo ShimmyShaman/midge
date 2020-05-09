@@ -17,6 +17,19 @@ using namespace std;
 
 cling::Interpreter *clint;
 
+// void func_a()
+// {
+// #define BIG "huge"
+//   printf("%s\n", BIG);
+// }
+
+// void func_b()
+// {
+// #undef BIG
+// #define BIG "not so much"
+//   printf("%s\n", BIG);
+// }
+
 int main(int argc, const char *const *argv)
 {
   char buffer[200];
@@ -31,10 +44,6 @@ int main(int argc, const char *const *argv)
   clint->process("clint = (cling::Interpreter *)" + std::to_string((long)clint) + ";");
 
   clint->process("run()");
-
-  // clint->loadLibrary("vulkan");
-  // clint->loadFile("/home/jason/midge/src/vulkanExp.c");
-  // clint->process("createDevice()");
 
   delete (clint);
 }
