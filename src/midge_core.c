@@ -378,6 +378,7 @@ int mcqck_temp_allocate_from_definition(midgeo *allocation, struct_definition de
 #define PROCESS_BRANCH_SAVE_AND_THROUGH 5
 #define INTERACTION_CONTEXT_BLANK 1
 #define INTERACTION_CONTEXT_PROCESS 2
+#define INTERACTION_CONTEXT_BROKEN 3
 int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
 {
     midgeo data_collection = (midgeo)calloc(sizeof(void *), 20);
@@ -417,7 +418,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     array[1] = branch;
 
     branch = (midgeo)malloc(sizeof(void *) * 4);
-    allocate_from_cstringv(&branch[0], "");
+    branch[0] = NULL;
     allocate_from_intv(&branch[1], PROCESS_BRANCH_SAVE_AND_THROUGH);
     branch[2] = data_collection;
     branch[3] = process_unit_name;
@@ -547,8 +548,10 @@ int mc_main(int argc, const char *const *argv)
     midgeo process_matrix = (midgeo)malloc(sizeof(void *) * 20);
     allocate_from_intv(&process_matrix[0], 20);
     allocate_from_intv(&process_matrix[1], 0);
-    midgeo interaction_context = (midgeo)malloc(sizeof_void_ptr * 2);
+    midgeo interaction_context = (midgeo)malloc(sizeof_void_ptr * 3);
     allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BLANK);
+    interaction_context[1] = NULL;
+    interaction_context[2] = NULL;
 
     midgeo process_dfp = (midgeo)malloc(sizeof_void_ptr * 3);
     allocate_from_cstringv(&process_dfp[0], "invoke declare_function_pointer");
@@ -565,7 +568,7 @@ int mc_main(int argc, const char *const *argv)
         // Parameter 0 type:
         "char *\n"
         // Parameter 0 identifier:
-        "node_name"
+        "node_name\n"
         // Parameter 1 type:
         "end\n"
         "invoke initialize_function\n"
@@ -607,6 +610,10 @@ int mc_main(int argc, const char *const *argv)
         printf("%s\n", cstr);
         MCcall(process_command(a, vargs));
 
+        if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+        {
+            printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
+        }
         if (reply != NULL)
         {
             printf("%s", reply);
@@ -624,6 +631,12 @@ int process_command(int argc, void **argsv)
     // [0] -- linked list cstr : most recent set
     char *command = (char *)argsv[4];
     char **reply = (char **)argsv[5];
+    *reply = NULL;
+
+    if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+    {
+        return -1;
+    }
 
     if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BLANK)
     {
@@ -641,6 +654,7 @@ int process_command(int argc, void **argsv)
                 interaction_context[1] = process;
 
                 midgeo process_unit = (midgeo)process[1];
+                interaction_context[2] = process_unit;
                 if (*(int *)process_unit[0] != PROCESS_HANDLE_INTERACTION)
                     return -2;
 
@@ -656,12 +670,111 @@ int process_command(int argc, void **argsv)
 
         //     history[0] strcat(*reply, (char *)history) return 0;
         // }
+
+        allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
         strcpy(*reply, "TODO\n");
         return 0;
     }
     else if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_PROCESS)
     {
-        // In process...
+        midgeo process_unit = (midgeo)interaction_context[2];
+
+        // Handle reaction from previous unit
+        while (*reply == NULL)
+        {
+            switch (*(int *)process_unit[0])
+            {
+            case PROCESS_HANDLE_INTERACTION:
+            {
+                midgeo data_collection = (midgeo)process_unit[2];
+                if (*(int *)data_collection[0] <= *(int *)data_collection[1])
+                {
+                    // resize the array
+                    return -8;
+                }
+                data_collection[2 + *(int *)data_collection[1]] = (void *)malloc(sizeof(char) * strlen(command) + 1);
+                strcpy((char *)data_collection[2 + *(int *)data_collection[1]], command);
+
+                interaction_context[2] = process_unit[3];
+                process_unit = (midgeo)process_unit[3];
+            }
+            break;
+            case PROCESS_HANDLE_BRANCH:
+            {
+                midgeo branch_ary = (midgeo)process_unit[3];
+                int branch_ary_size = *(int *)branch_ary[0];
+
+                for (int i = 0; i < branch_ary_size; ++i)
+                {
+                    midgeo branch = (midgeo)branch_ary[1 + i];
+                    if (branch[0] != NULL && strcmp((char *)branch[0], command))
+                        continue;
+
+                    switch (*(int *)branch[1])
+                    {
+                    case PROCESS_BRANCH_THROUGH:
+                    {
+                        interaction_context[2] = branch[3];
+                        process_unit = (midgeo)branch[3];
+                    }
+                    break;
+                    case PROCESS_BRANCH_SAVE_AND_THROUGH:
+                    {
+                        midgeo data_collection = (midgeo)branch[2];
+                        if (*(int *)data_collection[0] <= *(int *)data_collection[1])
+                        {
+                            // resize the array
+                            return -8;
+                        }
+                        data_collection[2 + *(int *)data_collection[1]] = (void *)malloc(sizeof(char) * strlen(command) + 1);
+                        strcpy((char *)data_collection[2 + *(int *)data_collection[1]], command);
+
+                        interaction_context[2] = branch[3];
+                        process_unit = (midgeo)branch[3];
+                    }
+                    break;
+
+                    default:
+                        allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+                        printf("Unhandled process_unit:branch type:%i\n", *(int *)branch[1]);
+                        return -11;
+                    }
+                    break;
+                }
+            }
+            break;
+
+            default:
+                allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+                printf("Unhandled process_unit type:%i\n", *(int *)process_unit[0]);
+                return -5;
+            }
+
+            // process next unit
+            int break_free = 1;
+            switch (*(int *)process_unit[0])
+            {
+            case PROCESS_HANDLE_INTERACTION:
+                *reply = (char *)process_unit[1];
+                break;
+            case PROCESS_HANDLE_BRANCH:
+                *reply = (char *)process_unit[1];
+                break;
+            case PROCESS_HANDLE_INVOKE:
+            {
+                // No provocation
+                break_free = 0;
+            }
+            break;
+
+            default:
+                allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+                printf("Unhandled process_unit type:%i\n", *(int *)process_unit[0]);
+                return -7;
+            }
+            if (break_free)
+                break;
+        }
     }
 
     return 0;
