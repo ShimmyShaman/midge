@@ -60,7 +60,7 @@ typedef unsigned int uint;
         void *next;                  \
         const char *debug;           \
     }
-#define sizeof_process_unit_v1 (sizeof(char *) + sizeof(uint) + sizeof(enum process_unit_type) + sizeof(void *) * 3 + sizeof(const char *))
+#define sizeof_process_unit_v1 (sizeof(const char *) + sizeof(uint) + sizeof(enum process_unit_type) + sizeof(void *) * 3 + sizeof(const char *))
 
 #define branch_unit_v1              \
     struct                          \
@@ -75,7 +75,23 @@ typedef unsigned int uint;
         void *data;                 \
         void *next;                 \
     }
-#define sizeof_branch_unit_v1 (sizeof(char *) + sizeof(uint) + sizeof(enum branch_unit_type) + sizeof(char *) + sizeof(void *) * 2)
+#define sizeof_branch_unit_v1 (sizeof(const char *) + sizeof(uint) + sizeof(enum branch_unit_type) + sizeof(char *) + sizeof(void *) * 2)
+
+#define node_v1                \
+    struct                     \
+    {                          \
+        struct                 \
+        {                      \
+            const char *name;  \
+            uint version;      \
+        } struct_id;           \
+        const char *name;      \
+        void *parent;          \
+        void *function_index;  \
+        void *structure_index; \
+        void **children;       \
+    }
+#define sizeof_node_v1 (sizeof(const char *) + sizeof(uint) + sizeof(char *) + sizeof(void *) * 3 + sizeof(int) + sizeof(void **))
 
 #define allocate_anon_struct(struct, ptr_to_struct, size) \
     struct *ptr_to_struct;                                \
@@ -290,7 +306,8 @@ int declare_function_pointer_v1(int argc, void **argv)
     printf("declare_function_pointer_v1()\n");
     // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
 
-    midgeo parent = (midgeo)argv[0];
+    void **dvp;
+    declare_and_assign_anon_struct(node_v1, nodespace, argv[0]);
     char *name = (char *)argv[1];
     midgeo return_type = (midgeo)argv[2];
     int parameter_count = *(int *)argv[3];
@@ -300,12 +317,12 @@ int declare_function_pointer_v1(int argc, void **argv)
     printf("dfp-0\n");
 
     // Obtain the global function_info definition
-    midgeo global = parent;
-    while (parent[2] != NULL)
-        global = (midgeo)parent[2];
-    struct_definition function_info_definition;
+    declare_and_assign_anon_struct(node_v1, global, nodespace);
+    while (global->parent != NULL)
+        assign_anon_struct(global, global->parent);
 
     printf("dfp-1\n");
+    struct_definition function_info_definition;
     void *vargs[3];
     vargs[0] = (void *)&function_info_definition;
     vargs[1] = (void *)global;
@@ -421,15 +438,38 @@ int mcqck_temp_allocate_from_definition(midgeo *allocation, struct_definition de
     return 0;
 }
 
+enum process_unit_type
+{
+    PROCESS_UNIT_INTERACTION = 1,
+    PROCESS_UNIT_BRANCH,
+    PROCESS_UNIT_INVOKE,
+};
+enum branch_unit_type
+{
+    PROCESS_BRANCH_THROUGH = 1,
+    PROCESS_BRANCH_SAVE_AND_THROUGH,
+};
+enum interaction_process_state
+{
+    INTERACTION_PROCESS_STATE_INITIAL = 1,
+    INTERACTION_PROCESS_STATE_POSTREPLY,
+};
+
+void *put_data;
+void **process_parameter_data;
+int *p_process_param_count;
+
 int set_int_value(int argc, void **argv)
 {
     printf("set_int_value()\n");
+    void **dvp;
+    declare_and_assign_anon_struct(process_unit_v1, put, put_data);
+    printf("put-1:%i\n", put->type);
     int *var = (int *)argv[0];
-    printf("siv-0\n");
     int value = *(int *)argv[1];
-    printf("siv-1\n");
 
     *var = value;
+    printf("put-2:%i\n", put->type);
     return 0;
 }
 
@@ -461,22 +501,6 @@ int increment_pointer(int argc, void **argv)
     return 0;
 }
 
-enum process_unit_type
-{
-    PROCESS_UNIT_INTERACTION = 1,
-    PROCESS_UNIT_BRANCH,
-    PROCESS_UNIT_INVOKE,
-};
-enum branch_unit_type
-{
-    PROCESS_BRANCH_THROUGH = 1,
-    PROCESS_BRANCH_SAVE_AND_THROUGH,
-};
-enum interaction_process_state
-{
-    INTERACTION_PROCESS_STATE_INITIAL = 1,
-    INTERACTION_PROCESS_STATE_POSTREPLY,
-};
 #define INTERACTION_CONTEXT_BLANK 1
 #define INTERACTION_CONTEXT_PROCESS 2
 #define INTERACTION_CONTEXT_BROKEN 3
@@ -487,10 +511,21 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     midgeary dfp_vargs = (midgeary)malloc(sizeof(void *) * (1 + dfp_varg_count));
     allocate_from_intv(&dfp_vargs[0], dfp_varg_count);
     allocate_from_intv(&dfp_vargs[4], 0);
-    void *parameter_data = (void *)malloc(sizeof(void *) * 200);
+    void **parameter_data = (void **)malloc(sizeof(void *) * 200);
     void **ptr_parameter_data = (void **)malloc(sizeof(void **));
-    ptr_parameter_data = &parameter_data;
+    ptr_parameter_data = &parameter_data[0];
     dfp_vargs[5] = parameter_data;
+
+    process_parameter_data = &parameter_data[0];
+    p_process_param_count = (int *)dfp_vargs[4];
+
+    printf("pr_prm_count:%i\n", *p_process_param_count);
+    char *pparams = (char *)*process_parameter_data;
+    for (int z = 0; z < *p_process_param_count; ++z)
+    {
+        printf("prm[%i]:%s", z, pparams);
+        pparams += sizeof(unsigned long);
+    }
 
     void **dvp;
     allocate_anon_struct(process_unit_v1, process_unit_reset_data_pointer, sizeof_process_unit_v1);
@@ -571,6 +606,10 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
 
     *process_unit = (void **)process_unit_reset_data_pointer;
 
+    put_data = (void *)process_unit_type;
+    declare_and_assign_anon_struct(process_unit_v1, put, put_data);
+    printf("put-0:%i\n", put->type);
+
     printf("end-mcqck_temp_create_process_declare_function_pointer()\n");
     return 0;
 }
@@ -587,6 +626,7 @@ int mc_main(int argc, const char *const *argv)
     }
 
     int res;
+    void **dvp;
 
     // Function Pointer Setting
     allocate_struct_id = &allocate_struct_id_v1;
@@ -637,14 +677,13 @@ int mc_main(int argc, const char *const *argv)
 
     // DEFINE: node
     struct_definition node_definition_v1;
-    midgeo node_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (6));
+    midgeo node_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (5));
     MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[0], "char", 1, "name"));
     MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[1], "node", 1, "parent"));
     MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[2], "function_info", 1, "function_index"));
     MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[3], "structure_info", 1, "structure_index"));
-    MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[4], "int", 0, "children_count"));
-    MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[5], "node", 1, "children"));
-    MCcall(mcqck_temp_define_struct(&node_definition_v1, "node", 1U, 6, node_definition_v1_fields));
+    MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[4], "collection", 0, "children"));
+    MCcall(mcqck_temp_define_struct(&node_definition_v1, "node", 1U, 5, node_definition_v1_fields));
     // MCcall(print_struct_definition(1, node_definition_v1));
     free(node_definition_v1_fields);
 
@@ -673,14 +712,14 @@ int mc_main(int argc, const char *const *argv)
     // global_structure_index[3] = NULL;
 
     // Instantiate: node global;
-    midgeo global;
-    MCcall(mcqck_temp_allocate_from_definition(&global, node_definition_v1));
-    allocate_from_cstringv(&global[1], "global");
-    global[2] = NULL;
-    global[3] = NULL; // global_function_index
-    global[4] = NULL; // global_structure_index;
-    allocate_from_intv(&global[5], 0);
-    global[6] = NULL;
+    allocate_anon_struct(node_v1, global, sizeof_node_v1);
+    global->name = "global";
+    global->parent = NULL;
+    global->function_index = NULL;
+    global->structure_index = NULL;
+    global->children = (void **)calloc(sizeof(void *), 6);
+    allocate_from_intv(&global->children[0], 4);
+    allocate_from_intv(&global->children[1], 0);
 
     // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
@@ -773,10 +812,10 @@ int handle_process(int argc, void **argsv)
     // Arguments
     midgeo process_matrix = (midgeo)argsv[1];
     midgeo interaction_context = (midgeo)argsv[2];
-    midgeo nodespace = (midgeo)argsv[3];
-    // History:
-    // [0] -- linked list cstr : most recent set
-    char *command = (char *)argsv[4];
+    declare_and_assign_anon_struct(node_v1, nodespace, argsv[3])
+        // History:
+        // [0] -- linked list cstr : most recent set
+        char *command = (char *)argsv[4];
     char **reply = (char **)argsv[5];
 
     declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
@@ -786,18 +825,33 @@ int handle_process(int argc, void **argsv)
     while (loop)
     {
         printf("icontext:%i process_unit:%i:%s\n", *(int *)interaction_context[3], process_unit->type, process_unit->debug);
+        declare_and_assign_anon_struct(process_unit_v1, put, put_data);
+        printf("put-i:%i\n", put->type);
         if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_POSTREPLY)
         {
             switch (process_unit->type)
             {
             case PROCESS_UNIT_INTERACTION:
             {
-                strcpy(**(char ***)process_unit->data2, command);
+                printf("put-5:%i\n", put->type);
+
+                strcpy((char *)*((void **)process_unit->data2), command);
+                printf("put-6:%i\n", put->type);
                 ++*((void ***)process_unit->data2);
+                printf("put-7:%i\n", put->type);
+
+                printf("pr_prm_count:%i\n", *p_process_param_count);
+                char *pparams = (char *)*process_parameter_data;
+                for (int z = 0; z < *p_process_param_count; ++z)
+                {
+                    printf("prm[%i]:%s", z, pparams);
+                    pparams += sizeof(unsigned long);
+                }
 
                 interaction_context[2] = process_unit->next;
                 assign_anon_struct(process_unit, process_unit->next);
                 *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+                printf("put-8:%i\n", put->type);
             }
             break;
             case PROCESS_UNIT_BRANCH:
@@ -896,6 +950,8 @@ int handle_process(int argc, void **argsv)
             printf("unhandled interaction_process_state:%i\n", *(int *)interaction_context[3]);
             return -19;
         }
+        // declare_and_assign_anon_struct(process_unit_v1, put, put_data);
+        printf("put-i:%i\n", put->type);
     }
 
     printf("end-handle_process()\n");
