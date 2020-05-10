@@ -377,6 +377,7 @@ int mcqck_temp_allocate_from_definition(midgeo *allocation, struct_definition de
 
 int set_int_value(int argc, void **argv)
 {
+    printf("set_int_value()\n");
     int *var = (int *)argv[0];
     int value = *(int *)argv[1];
 
@@ -386,6 +387,7 @@ int set_int_value(int argc, void **argv)
 
 int increment_int_value(int argc, void **argv)
 {
+    printf("increment_int_value()\n");
     int *var = (int *)argv[0];
 
     ++*var;
@@ -394,6 +396,7 @@ int increment_int_value(int argc, void **argv)
 
 int set_pointer_value(int argc, void **argv)
 {
+    printf("set_pointer_value()\n");
     void **var = (void **)argv[0];
     void *value = (void *)argv[1];
 
@@ -403,6 +406,7 @@ int set_pointer_value(int argc, void **argv)
 
 int increment_pointer(int argc, void **argv)
 {
+    printf("increment_pointer()\n");
     unsigned long **var = (unsigned long **)argv[0];
 
     ++*var;
@@ -768,9 +772,12 @@ int process_command(int argc, void **argsv)
         void *data;                 \
         void *next;                 \
     }
-#define assign_anon_struct(struct, ptr_to_struct, voidassignee) \
-    struct *ptr_to_struct;                                      \
-    dvp = (void **)&ptr_to_struct;                              \
+#define declare_and_assign_anon_struct(struct, ptr_to_struct, voidassignee) \
+    struct *ptr_to_struct;                                                  \
+    dvp = (void **)&ptr_to_struct;                                          \
+    *dvp = (void *)voidassignee;
+#define assign_anon_struct(ptr_to_struct, voidassignee) \
+    dvp = (void **)&ptr_to_struct;                      \
     *dvp = (void *)voidassignee;
 
     void **dvp;
@@ -806,14 +813,15 @@ int process_command(int argc, void **argsv)
                 *ic = INTERACTION_CONTEXT_PROCESS;
                 interaction_context[1] = process;
 
-                process_unit_v1 *process_unit = process[1];
-                interaction_context[2] = process_unit;
-                if (process_unit->type != PROCESS_UNIT_INTERACTION)
-                    return -2;
+                // declare_and_assign_anon_struct(process_unit_v1, process_unit, process[1]);
+                // process_unit_v1 *process_unit = process[1];
+                interaction_context[2] = process[1];
+                // if (process_unit->type != proc)
+                //     return -2;
 
-                *reply = process_unit->data;
+                // *reply = (char *)process_unit->data;
 
-                return 0;
+                return process_command(argc, argsv);
             }
         }
         // else if (!strcmp("demobegin", command))
@@ -830,7 +838,7 @@ int process_command(int argc, void **argsv)
     }
     else if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_PROCESS)
     {
-        process_unit_v1 *process_unit = interaction_context[2];
+        declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
 
         // Handle reaction from previous unit
         while (*reply == NULL)
@@ -839,21 +847,21 @@ int process_command(int argc, void **argsv)
             {
             case PROCESS_UNIT_INTERACTION:
             {
-                strcpy((char ***)process_unit->data, command);
+                strcpy(**(char ***)process_unit->data, command);
                 ++*((void ***)process_unit->data);
 
                 interaction_context[2] = process_unit->next;
-                process_unit = process_unit->next;
+                assign_anon_struct(process_unit, process_unit->next);
             }
             break;
             case PROCESS_UNIT_BRANCH:
             {
-                midgeo branch_ary = process_unit->next;
+                midgeo branch_ary = (midgeo)process_unit->next;
                 int branch_ary_size = *(int *)branch_ary[0];
 
                 for (int i = 0; i < branch_ary_size; ++i)
                 {
-                    branch_unit_v1 *branch = branch_ary[1 + i];
+                    declare_and_assign_anon_struct(branch_unit_v1, branch, branch_ary[1 + i]);
                     if (branch->match != NULL && strcmp(branch->match, command))
                         continue;
 
@@ -862,16 +870,16 @@ int process_command(int argc, void **argsv)
                     case PROCESS_BRANCH_THROUGH:
                     {
                         interaction_context[2] = branch->next;
-                        process_unit = branch->next;
+                        assign_anon_struct(process_unit, branch->next);
                     }
                     break;
                     case PROCESS_BRANCH_SAVE_AND_THROUGH:
                     {
-                        strcpy((char ***)branch->data, command);
+                        strcpy(**(char ***)branch->data, command);
                         ++*((void ***)branch->data);
 
                         interaction_context[2] = branch->next;
-                        process_unit = branch->next;
+                        assign_anon_struct(process_unit, branch->next);
                     }
                     break;
 
@@ -888,12 +896,12 @@ int process_command(int argc, void **argsv)
             {
                 int (*fptr)(int, void **) = (int (*)(int, void **))process_unit->data;
 
-                midgeary data = process_unit->data2;
-
-                if (strcmp((char *)data[1], "construct_and_attach_child_node"))
-                    return -21;
+                midgeary data = (midgeary)process_unit->data2;
 
                 MCcall(fptr(*(int *)data[0], (void **)&data[1]));
+
+                interaction_context[2] = process_unit->next;
+                assign_anon_struct(process_unit, process_unit->next);
             }
             break;
 
@@ -931,8 +939,8 @@ int process_command(int argc, void **argsv)
     }
 
     return res;
-#undef process_unit_v1(var)
-#undef branch_unit_v1(var)
+#undef process_unit_v1
+#undef branch_unit_v1
 }
 
 // Define the node structure
