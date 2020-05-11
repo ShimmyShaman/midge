@@ -454,7 +454,8 @@ enum interaction_process_state
     INTERACTION_PROCESS_STATE_INITIAL = 1,
     INTERACTION_PROCESS_STATE_POSTREPLY,
 };
-void *put_data;
+void **put_data;
+void **int_data;
 void **process_parameter_data;
 int *p_process_param_count;
 
@@ -525,10 +526,26 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     //     printf("prm[%i]:%s", z, pparams);
     //     pparams += sizeof(unsigned long);
     // }
-
     void **dvp;
+
+    int_data = (void **)malloc(sizeof(int));
+    int *pid = (int *)int_data;
+    *pid = 55;
+    printf("int_data:%i | %p\n", *(int *)int_data, int_data);
+
+    int *p_int_data;
+    dvp = (void **)&p_int_data;
+    *dvp = (void *)int_data;
+    printf("p_int_data:%i | %p\n", *p_int_data, p_int_data);
+
     allocate_anon_struct(process_unit_v1, process_unit_reset_data_pointer, sizeof_process_unit_v1);
-    allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
+    // allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
+    process_unit_v1 *process_unit_function_name;
+    put_data = (void **)malloc(sizeof_process_unit_v1);
+    printf("address:%p\n", put_data);
+
+    assign_anon_struct(process_unit_function_name, put_data);
+    printf("pufnAddr:%p\n", process_unit_function_name);
     allocate_anon_struct(process_unit_v1, process_unit_reset_params_count, sizeof_process_unit_v1);
     allocate_anon_struct(process_unit_v1, process_unit_type, sizeof_process_unit_v1);
     allocate_anon_struct(process_unit_v1, process_unit_name, sizeof_process_unit_v1);
@@ -551,11 +568,15 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     process_unit_function_name->next = (void *)process_unit_reset_params_count;
     process_unit_function_name->debug = "process_unit_function_name";
 
-    set_pointer_value(2, &invoke_args[1]);
-    put_data = (void *)process_unit_function_name;
-    declare_and_assign_anon_struct(process_unit_v1, put, put_data);
-    printf("ptr_current_data_points_to:%p\n", **((void ***)put->data2));
-    printf("pufn:%p\n", process_unit_function_name);
+    // set_pointer_value(2, &invoke_args[1]);
+    // // put_data = (void *)process_unit_function_name;
+    // process_unit_v1 *put;
+    // dvp = (void **)&put;
+    // printf("put_data:%p\n", put_data);
+    // *dvp = (void *)(put_data);
+    // printf("put:%p\n", put);
+    // printf("debug:%s\n", put->debug);
+    // printf("ptr_current_data_points_to:%p\n", **((void ***)put->data2));
 
     process_unit_reset_params_count->type = PROCESS_UNIT_INVOKE;
     process_unit_reset_params_count->data = (void *)&set_int_value;
@@ -741,11 +762,18 @@ int mc_main(int argc, const char *const *argv)
     allocate_from_cstringv(&process_dfp[0], "invoke declare_function_pointer");
     MCcall(mcqck_temp_create_process_declare_function_pointer((midgeo *)&process_dfp[1]));
 
-    // process_unit_v1 put;
+    int *p_int_data;
+    dvp = (void **)&p_int_data;
+    *dvp = (void *)int_data;
+    printf("p_int_data:%i | %p\n", *p_int_data, p_int_data);
 
-    declare_and_assign_anon_struct(process_unit_v1, put, put_data);
-    printf("ptr_current_data_points_to0:%p\n", **((void ***)put->data2));
-    printf("pufn:%p\n", put);
+    // process_unit_v1 *process_unit_function_name;
+    // assign_anon_struct(process_unit_function_name, put_data);
+    declare_and_assign_anon_struct(process_unit_v1, pufn, put_data);
+    printf("address:%p\n", put_data);
+    printf("pufnAddr:%p\n", pufn);
+    printf("debug:%s\n", pufn->debug);
+
     allocate_from_intv(&process_matrix[1], 1);
     process_matrix[2] = process_dfp;
 
