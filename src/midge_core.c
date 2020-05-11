@@ -443,6 +443,7 @@ enum process_unit_type
     PROCESS_UNIT_INTERACTION = 1,
     PROCESS_UNIT_BRANCH,
     PROCESS_UNIT_INVOKE,
+    PROCESS_UNIT_SET_CONTEXTUAL_DATA,
 };
 enum branch_unit_type
 {
@@ -453,6 +454,10 @@ enum interaction_process_state
 {
     INTERACTION_PROCESS_STATE_INITIAL = 1,
     INTERACTION_PROCESS_STATE_POSTREPLY,
+};
+enum process_contextual_data
+{
+    PROCESS_CONTEXTUAL_DATA_NODESPACE = 1,
 };
 void **put_data;
 void **process_parameter_data;
@@ -502,15 +507,16 @@ int increment_pointer(int argc, void **argv)
 #define INTERACTION_CONTEXT_BROKEN 3
 int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
 {
-    const int dfp_varg_count = 5; // node-parent, name, return-type, params_count, parameters(field_info)
+    const int dfp_varg_count = 3; // nodespace, params_count, input_data
+                                  // node-parent, name, return-type, params_count, parameters(field_info)
 
     midgeary dfp_vargs = (midgeary)malloc(sizeof(void *) * (1 + dfp_varg_count));
     allocate_from_intv(&dfp_vargs[0], dfp_varg_count);
-    allocate_from_intv(&dfp_vargs[4], 0);
+    allocate_from_intv(&dfp_vargs[2], 0);
     midgeo parameter_data = (midgeo)malloc(sizeof(void *) * 200);
     void **ptr_current_data = (void **)malloc(sizeof(void *) * 1);
     *ptr_current_data = (void *)&parameter_data[0];
-    dfp_vargs[5] = parameter_data;
+    dfp_vargs[3] = parameter_data;
 
     // process_parameter_data = &parameter_data[0];
     // p_process_param_count = (int *)dfp_vargs[4];
@@ -543,6 +549,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     allocate_anon_struct(process_unit_v1, process_unit_name, sizeof_process_unit_v1);
     allocate_anon_struct(process_unit_v1, process_unit_increment_param_count, sizeof_process_unit_v1);
     allocate_anon_struct(process_unit_v1, process_unit_invoke, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_add_context_param, sizeof_process_unit_v1);
 
     process_unit_reset_data_pointer->type = PROCESS_UNIT_INVOKE;
     process_unit_reset_data_pointer->data = (void *)&set_pointer_value;
@@ -593,7 +600,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     process_unit_reset_params_count->data = (void *)&set_int_value;
     invoke_args = (midgeary)malloc(sizeof(void *) * (1 + 2));
     allocate_from_intv(&invoke_args[0], 2);
-    invoke_args[1] = (void *)dfp_vargs[4];
+    invoke_args[1] = (void *)dfp_vargs[2];
     allocate_from_intv(&invoke_args[2], 0);
     process_unit_reset_params_count->data2 = (void *)invoke_args;
     process_unit_reset_params_count->next = (void *)process_unit_type;
@@ -610,7 +617,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     allocate_anon_struct(branch_unit_v1, branch_end, sizeof_branch_unit_v1);
     branch_end->type = PROCESS_BRANCH_THROUGH;
     branch_end->match = "end";
-    branch_end->next = (void *)process_unit_invoke;
+    branch_end->next = (void *)process_unit_add_context_param;
     branches[1] = (void *)branch_end;
 
     allocate_anon_struct(branch_unit_v1, branch_default, sizeof_branch_unit_v1);
@@ -630,10 +637,16 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     process_unit_increment_param_count->data = (void *)&increment_int_value;
     invoke_args = (midgeary)malloc(sizeof(void *) * (1 + 2));
     allocate_from_intv(&invoke_args[0], 1);
-    invoke_args[1] = (void *)dfp_vargs[4];
+    invoke_args[1] = (void *)dfp_vargs[2];
     process_unit_increment_param_count->data2 = (void *)invoke_args;
     process_unit_increment_param_count->next = (void *)process_unit_type;
     process_unit_increment_param_count->debug = "process_unit_increment_param_count";
+
+    process_unit_add_context_param->type = PROCESS_UNIT_SET_CONTEXTUAL_DATA;
+    allocate_from_intv(&process_unit_add_context_param->data, PROCESS_CONTEXTUAL_DATA_NODESPACE);
+    process_unit_add_context_param->data2 = (void *)&dfp_vargs[1];
+    process_unit_add_context_param->next = NULL;
+    process_unit_add_context_param->debug = "process_unit_add_context_param";
 
     process_unit_invoke->type = PROCESS_UNIT_INVOKE;
     process_unit_invoke->data = (void *)&declare_function_pointer_v1;
@@ -872,7 +885,70 @@ int handle_process(int argc, void **argsv)
         printf("icontext:%i process_unit:%i:%s\n", *(int *)interaction_context[3], process_unit->type, process_unit->debug);
         declare_and_assign_anon_struct(process_unit_v1, put, put_data);
         printf("ptr_current_data_points_to0:%p\n", *((void **)put->data2));
-        if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_POSTREPLY)
+
+        if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_INITIAL)
+        {
+            // Perform instigation for next process_unit
+            if (process_unit == NULL)
+            {
+                *(int *)interaction_context[0] = INTERACTION_CONTEXT_BLANK;
+            }
+
+            // process next unit
+            switch (process_unit->type)
+            {
+            case PROCESS_UNIT_INTERACTION:
+                *reply = (char *)process_unit->data;
+                return 0;
+            case PROCESS_UNIT_BRANCH:
+                *reply = (char *)process_unit->data;
+                return 0;
+            case PROCESS_UNIT_INVOKE:
+            {
+                printf("ptr_current_data_points_to10:%p\n", *((void **)put->data2));
+                // No provocation
+                *reply = NULL;
+
+                int (*fptr)(int, void **) = (int (*)(int, void **))process_unit->data;
+                midgeary data = (midgeary)process_unit->data2;
+                MCcall(fptr(*(int *)data[0], (void **)&data[1]));
+
+                interaction_context[2] = process_unit->next;
+                assign_anon_struct(process_unit, process_unit->next);
+                *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+                printf("ptr_current_data_points_to11:%p\n", *((void **)put->data2));
+            }
+            break;
+            case PROCESS_UNIT_SET_CONTEXTUAL_DATA:
+            {
+                // No provocation
+                *reply = NULL;
+                switch (*(int *)process_unit->data)
+                {
+                case PROCESS_CONTEXTUAL_DATA_NODESPACE:
+                {
+                    void **p_data = (void **)process_unit->data2;
+                    *p_data = (void *)nodespace;
+                }
+                break;
+
+                default:
+                    allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+                    printf("Unhandled process_unit type:%i\n", process_unit->type);
+                    return -33;
+                }
+
+                loop = 0;
+            }
+            break;
+
+            default:
+                allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+                printf("Unhandled process_unit type:%i\n", process_unit->type);
+                return -7;
+            }
+        }
+        else if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_POSTREPLY)
         {
             switch (process_unit->type)
             {
@@ -951,46 +1027,6 @@ int handle_process(int argc, void **argsv)
                 allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
                 printf("Unhandled process_unit type:%i\n", process_unit->type);
                 return -5;
-            }
-        }
-        else if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_INITIAL)
-        {
-            // Perform instigation for next process_unit
-            if (process_unit == NULL)
-            {
-                *(int *)interaction_context[0] = INTERACTION_CONTEXT_BLANK;
-            }
-
-            // process next unit
-            switch (process_unit->type)
-            {
-            case PROCESS_UNIT_INTERACTION:
-                *reply = (char *)process_unit->data;
-                return 0;
-            case PROCESS_UNIT_BRANCH:
-                *reply = (char *)process_unit->data;
-                return 0;
-            case PROCESS_UNIT_INVOKE:
-            {
-                printf("ptr_current_data_points_to10:%p\n", *((void **)put->data2));
-                // No provocation
-                *reply = NULL;
-
-                int (*fptr)(int, void **) = (int (*)(int, void **))process_unit->data;
-                midgeary data = (midgeary)process_unit->data2;
-                MCcall(fptr(*(int *)data[0], (void **)&data[1]));
-
-                interaction_context[2] = process_unit->next;
-                assign_anon_struct(process_unit, process_unit->next);
-                *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-                printf("ptr_current_data_points_to11:%p\n", *((void **)put->data2));
-            }
-            break;
-
-            default:
-                allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
-                printf("Unhandled process_unit type:%i\n", process_unit->type);
-                return -7;
             }
         }
         else
