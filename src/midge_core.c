@@ -556,9 +556,28 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
 
     process_unit_function_name->type = PROCESS_UNIT_INTERACTION;
     allocate_from_cstringv(&process_unit_function_name->data, "Function Name:");
-    process_unit_function_name->data2 = (void *)&ptr_current_data;
+    process_unit_function_name->data2 = (void *)ptr_current_data;
     process_unit_function_name->next = (void *)process_unit_reset_params_count;
     process_unit_function_name->debug = "process_unit_function_name";
+
+    declare_and_assign_anon_struct(process_unit_v1, put, put_data);
+    printf("ptr_current_data_points_to7:%p\n", *((void **)put->data2));
+
+    // unsigned long **var = (unsigned long **)ptr_current_data;
+    // ++*var;
+    int res;
+    // // increment_pointer(1, (void **)put->data2);
+    // var = (unsigned long **)*(void **)put->data2;
+    // ++var;
+    MCcall(increment_pointer(1, &put->data2));
+    // *(void **)vbut[0] += sizeof(void *);
+    // unsigned long **var = (unsigned long **)vbut[0];
+    // ++*var;
+
+    printf("ptr_current_data_points_to:%p\n", *ptr_current_data);
+    printf("ptr_current_data_points_to8:%p\n", *((void **)put->data2));
+    set_pointer_value(2, &invoke_args[1]);
+    printf("ptr_current_data_points_to9:%p\n", *((void **)put->data2));
 
     // set_pointer_value(2, &invoke_args[1]);
     // // put_data = (void *)process_unit_function_name;
@@ -597,13 +616,13 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     allocate_anon_struct(branch_unit_v1, branch_default, sizeof_branch_unit_v1);
     branch_default->type = PROCESS_BRANCH_SAVE_AND_THROUGH;
     branch_default->match = NULL;
-    branch_default->data = (void *)&ptr_current_data;
+    branch_default->data = (void *)ptr_current_data;
     branch_default->next = (void *)process_unit_name;
     branches[2] = (void *)branch_default;
 
     process_unit_name->type = PROCESS_UNIT_INTERACTION;
     allocate_from_cstringv(&process_unit_name->data, "Parameter Name:");
-    process_unit_name->data2 = (void *)&ptr_current_data;
+    process_unit_name->data2 = (void *)ptr_current_data;
     process_unit_name->next = (void *)process_unit_increment_param_count;
     process_unit_name->debug = "process_unit_name";
 
@@ -756,10 +775,12 @@ int mc_main(int argc, const char *const *argv)
 
     // process_unit_v1 *process_unit_function_name;
     // assign_anon_struct(process_unit_function_name, put_data);
-    declare_and_assign_anon_struct(process_unit_v1, pufn, put_data);
+    declare_and_assign_anon_struct(process_unit_v1, put, put_data);
+    printf("pufn_data:%s\n", (char *)put->data);
+    printf("ptr_current_data_points_to1:%p\n", *((void **)put->data2));
     printf("address:%p\n", put_data);
-    printf("pufnAddr:%p\n", pufn);
-    printf("debug:%s\n", pufn->debug);
+    // printf("pufnAddr:%p\n", pufn);
+    printf("debug:%s\n", put->debug);
 
     allocate_from_intv(&process_matrix[1], 1);
     process_matrix[2] = process_dfp;
@@ -850,23 +871,22 @@ int handle_process(int argc, void **argsv)
     {
         printf("icontext:%i process_unit:%i:%s\n", *(int *)interaction_context[3], process_unit->type, process_unit->debug);
         declare_and_assign_anon_struct(process_unit_v1, put, put_data);
-        printf("ptr_current_data_points_to0:%p\n", **((void ***)put->data2));
+        printf("ptr_current_data_points_to0:%p\n", *((void **)put->data2));
         if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_POSTREPLY)
         {
             switch (process_unit->type)
             {
             case PROCESS_UNIT_INTERACTION:
             {
-                printf("ptr_current_data_points_to1:%p\n", **((void ***)put->data2));
+                printf("ptr_current_data_points_to2:%p\n", *((void **)put->data2));
                 // printf("pr_prm_pointer:%p\n", (char *)*process_parameter_data);
                 // printf("data2_pointer:%p\n", (char *)**(void ***)process_unit->data2);
                 // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
 
-                strcpy((char *)**((void ***)process_unit->data2), command);
-                MCcall(increment_pointer(1, *(void ***)process_unit->data2));
-                // ++**((void ***)process_unit->data2);
+                strcpy((char *)*((void **)process_unit->data2), command);
+                MCcall(increment_pointer(1, &process_unit->data2));
 
-                printf("ptr_current_data_points_to2:%p\n", **((void ***)put->data2));
+                printf("ptr_current_data_points_to3:%p\n", *((void **)put->data2));
                 // printf("pr_prm_pointer:%p\n", (char *)*process_parameter_data);
                 // printf("data2_pointer:%p\n", (char *)**((void ***)process_unit->data2));
                 // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
@@ -900,8 +920,10 @@ int handle_process(int argc, void **argsv)
                     break;
                     case PROCESS_BRANCH_SAVE_AND_THROUGH:
                     {
+                        printf("ptr_current_data_points_to5:%p\n", *((void **)put->data2));
                         strcpy((char *)*((void **)branch->data), command);
-                        ++*((void ***)branch->data);
+                        MCcall(increment_pointer(1, &branch->data));
+                        printf("ptr_current_data_points_to6:%p\n", *((void **)put->data2));
 
                         interaction_context[2] = branch->next;
                         assign_anon_struct(process_unit, branch->next);
@@ -950,7 +972,7 @@ int handle_process(int argc, void **argsv)
                 return 0;
             case PROCESS_UNIT_INVOKE:
             {
-                printf("ptr_current_data_points_to3:%p\n", **((void ***)put->data2));
+                printf("ptr_current_data_points_to10:%p\n", *((void **)put->data2));
                 // No provocation
                 *reply = NULL;
 
@@ -961,7 +983,7 @@ int handle_process(int argc, void **argsv)
                 interaction_context[2] = process_unit->next;
                 assign_anon_struct(process_unit, process_unit->next);
                 *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-                printf("ptr_current_data_points_to4:%p\n", **((void ***)put->data2));
+                printf("ptr_current_data_points_to11:%p\n", *((void **)put->data2));
             }
             break;
 
