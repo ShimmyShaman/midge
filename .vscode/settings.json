@@ -64,6 +64,7 @@
         "shared_mutex": "c",
         "buggle.h": "c",
         "xcbwindow.h": "c",
-        "mvk_core.h": "c"
+        "mvk_core.h": "c",
+        "*.inc": "c"
     }
 }
