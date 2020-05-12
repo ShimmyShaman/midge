@@ -288,6 +288,42 @@ int obtain_struct_info_from_index_v1(int argc, void **argv)
     return 0;
 }*/
 
+int initialize_function_v1(int argc, void **argv)
+{
+    void **dvp;
+    int res;
+
+    declare_and_assign_anon_struct(node_v1, nodespace, argv[0]);
+    declare_and_assign_anon_struct(function_info_v1, function_info, argv[1]);
+    char *code_block = (char *)argv[2];
+
+    // Declare with clint
+    char buf[1024];
+    strcpy(buf, "int ");
+    strcat(buf, function_info->name);
+    strcat(buf, "(");
+    for (int i = 0; i < function_info->parameter_count; ++i)
+    {
+        declare_and_assign_anon_struct(parameter_info_v1, parameter, function_info->parameters[i]);
+        strcat(buf, parameter->type);
+        strcat(buf, " ");
+        strcat(buf, parameter->name);
+    }
+    strcat(buf, ")\n{\n  ");
+
+    // Translate the code-block into workable midge-cling C
+    {
+        strcat(buf, code_block);
+    }
+
+    strcat(buf, "}");
+
+    printf("dfp>cling_declare:%s\n", buf);
+    clint_declare(buf);
+    printf("dfp-concludes\n");
+    return 0;
+}
+
 int declare_function_pointer_v1(int argc, void **argv)
 {
     printf("declare_function_pointer_v1()\n");
@@ -667,6 +703,154 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     return 0;
 }
 
+int mcqck_temp_create_process_initialize_function(midgeo *process_unit)
+{
+    const int dfp_varg_count = 3; // nodespace, function_info, code_block
+
+    midgeary dfp_vargs = (midgeary)malloc(sizeof(void *) * (1 + dfp_varg_count));
+    allocate_from_intv(&dfp_vargs[0], dfp_varg_count);
+    dfp_vargs[1] = NULL;
+    dfp_vargs[2] = NULL;
+    dfp_vargs[3] = NULL;
+
+    void **dvp;
+
+    allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
+
+    midgeo parameter_data = (midgeo)calloc(sizeof(void *), 200);
+    void **ptr_current_data = (void **)malloc(sizeof(void *) * 1);
+    *ptr_current_data = (void *)&parameter_data[0];
+    char *function_name_storage = (char *)malloc(sizeof(char) * 128);
+    void **ptr_function_name_storage = (void **)malloc(sizeof(void *) * 1);
+    *ptr_function_name_storage = (void *)function_name_storage;
+
+    process_unit_function_name->type = PROCESS_UNIT_INTERACTION;
+    allocate_from_cstringv(&process_unit_function_name->data, "Function Name:");
+    process_unit_function_name->data2 = (void *)function_name_storage;
+    process_unit_function_name->next = (void *)process_unit_return_type;
+    process_unit_function_name->debug = "process_unit_function_name";
+
+    allocate_anon_struct(process_unit_v1, process_unit_return_type, sizeof_process_unit_v1);
+    put_data = (void **)process_unit_function_name;
+    // printf("address:%p\n", put_data);
+    allocate_anon_struct(process_unit_v1, process_unit_reset_params_count, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_type, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_name, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_increment_param_count, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_invoke, sizeof_process_unit_v1);
+    allocate_anon_struct(process_unit_v1, process_unit_add_context_param, sizeof_process_unit_v1);
+
+    process_unit_reset_data_pointer->type = PROCESS_UNIT_INVOKE;
+    process_unit_reset_data_pointer->data = (void *)&set_pointer_value;
+    midgeary invoke_args = (midgeary)malloc(sizeof(void *) * (1 + 2));
+    allocate_from_intv(&invoke_args[0], 2);
+    invoke_args[1] = (void *)ptr_current_data;
+    invoke_args[2] = (void *)&parameter_data[0];
+    process_unit_reset_data_pointer->data2 = (void *)invoke_args;
+    process_unit_reset_data_pointer->next = (void *)process_unit_function_name;
+    process_unit_reset_data_pointer->debug = "process_unit_reset_data_pointer";
+
+    process_unit_return_type->type = PROCESS_UNIT_INTERACTION;
+    allocate_from_cstringv(&process_unit_return_type->data, "Return Type:");
+    process_unit_return_type->data2 = (void *)ptr_current_data;
+    process_unit_return_type->next = (void *)process_unit_reset_params_count;
+    process_unit_return_type->debug = "process_unit_return_type";
+
+    // declare_and_assign_anon_struct(process_unit_v1, put, put_data);
+    // printf("ptr_current_data_points_to7:%p\n", *((void **)put->data2));
+
+    // unsigned long **var = (unsigned long **)ptr_current_data;
+    // ++*var;
+    int res;
+    // // increment_pointer(1, (void **)put->data2);
+    // var = (unsigned long **)*(void **)put->data2;
+    // ++var;
+    // MCcall(increment_pointer(1, &put->data2));
+    // *(void **)vbut[0] += sizeof(void *);
+    // unsigned long **var = (unsigned long **)vbut[0];
+    // ++*var;
+
+    // printf("ptr_current_data_points_to:%p\n", *ptr_current_data);
+    // printf("ptr_current_data_points_to8:%p\n", *((void **)put->data2));
+    // set_pointer_value(2, &invoke_args[1]);
+    // printf("ptr_current_data_points_to9:%p\n", *((void **)put->data2));
+
+    // set_pointer_value(2, &invoke_args[1]);
+    // // put_data = (void *)process_unit_function_name;
+    // process_unit_v1 *put;
+    // dvp = (void **)&put;
+    // printf("put_data:%p\n", put_data);
+    // *dvp = (void *)(put_data);
+    // printf("put:%p\n", put);
+    // printf("debug:%s\n", put->debug);
+    // printf("ptr_current_data_points_to:%p\n", **((void ***)put->data2));
+
+    process_unit_reset_params_count->type = PROCESS_UNIT_INVOKE;
+    process_unit_reset_params_count->data = (void *)&set_int_value;
+    invoke_args = (midgeary)malloc(sizeof(void *) * (1 + 2));
+    allocate_from_intv(&invoke_args[0], 2);
+    invoke_args[1] = (void *)dfp_vargs[2];
+    allocate_from_intv(&invoke_args[2], 0);
+    process_unit_reset_params_count->data2 = (void *)invoke_args;
+    process_unit_reset_params_count->next = (void *)process_unit_type;
+    process_unit_reset_params_count->debug = "process_unit_reset_params_count";
+
+    process_unit_type->type = PROCESS_UNIT_BRANCH;
+    allocate_from_cstringv(&process_unit_type->data, "Parameter Type:");
+    process_unit_type->data2 = NULL;
+    midgeary branches = (midgeary)malloc(sizeof(void *) * (1 + 2));
+    allocate_from_intv(&branches[0], 2);
+    process_unit_type->next = (void *)branches;
+    process_unit_type->debug = "process_unit_type";
+
+    allocate_anon_struct(branch_unit_v1, branch_end, sizeof_branch_unit_v1);
+    branch_end->type = PROCESS_BRANCH_THROUGH;
+    branch_end->match = "end";
+    branch_end->next = (void *)process_unit_add_context_param;
+    branches[1] = (void *)branch_end;
+
+    allocate_anon_struct(branch_unit_v1, branch_default, sizeof_branch_unit_v1);
+    branch_default->type = PROCESS_BRANCH_SAVE_AND_THROUGH;
+    branch_default->match = NULL;
+    branch_default->data = (void *)ptr_current_data;
+    branch_default->next = (void *)process_unit_name;
+    branches[2] = (void *)branch_default;
+
+    process_unit_name->type = PROCESS_UNIT_INTERACTION;
+    allocate_from_cstringv(&process_unit_name->data, "Parameter Name:");
+    process_unit_name->data2 = (void *)ptr_current_data;
+    process_unit_name->next = (void *)process_unit_increment_param_count;
+    process_unit_name->debug = "process_unit_name";
+
+    process_unit_increment_param_count->type = PROCESS_UNIT_INVOKE;
+    process_unit_increment_param_count->data = (void *)&increment_int_value;
+    invoke_args = (midgeary)malloc(sizeof(void *) * (1 + 2));
+    allocate_from_intv(&invoke_args[0], 1);
+    invoke_args[1] = (void *)dfp_vargs[2];
+    process_unit_increment_param_count->data2 = (void *)invoke_args;
+    process_unit_increment_param_count->next = (void *)process_unit_type;
+    process_unit_increment_param_count->debug = "process_unit_increment_param_count";
+
+    process_unit_add_context_param->type = PROCESS_UNIT_SET_CONTEXTUAL_DATA;
+    allocate_from_intv(&process_unit_add_context_param->data, PROCESS_CONTEXTUAL_DATA_NODESPACE);
+    process_unit_add_context_param->data2 = (void *)&dfp_vargs[1];
+    process_unit_add_context_param->next = process_unit_invoke;
+    process_unit_add_context_param->debug = "process_unit_add_context_param";
+
+    process_unit_invoke->type = PROCESS_UNIT_INVOKE;
+    process_unit_invoke->data = (void *)&declare_function_pointer_v1;
+    process_unit_invoke->data2 = (void *)dfp_vargs;
+    process_unit_invoke->next = NULL;
+    process_unit_invoke->debug = "process_unit_invoke";
+
+    *process_unit = (void **)process_unit_reset_data_pointer;
+
+    // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
+
+    printf("end-mcqck_temp_create_process_declare_function_pointer()\n");
+    return 0;
+}
+
 int process_command(int argc, void **argsv);
 int mc_main(int argc, const char *const *argv)
 {
@@ -830,27 +1014,27 @@ int mc_main(int argc, const char *const *argv)
         "node_name|"
         // Parameter 1 type:
         "end|";
-    // // ---- END SEQUENCE ----
-    // "invoke initialize_function|"
-    // // What is the name of the function you wish to initialize?
-    // "construct_and_attach_child_node|"
-    // // int construct_and_attach_child_node(node *parent, char *node_name)
-    // // write code:
-    // "node *child = allocnew;|"
-    // "child->parent = parent;|"
-    // "TODO|"
-    // "return 0;|"
-    // "end|";
+    // ---- END SEQUENCE ----
+    "invoke initialize_function|"
+    // What is the name of the function you wish to initialize?
+    "construct_and_attach_child_node|"
+        // // int construct_and_attach_child_node(node *parent, char *node_name)
+        // // write code:
+        // "node *child = allocnew;|"
+        // "child->parent = parent;|"
+        // "TODO|"
+        // "return 0;|"
+        // "end|";
 
-    // node_v1 *node;
-    // "create function\n"
-    // // Uncertain response: Type another command or type demobegin to demostrate it
-    // "demobegin\n"
-    // "demoend\n"
-    // "create node\n"
-    // "construct_and_attach_child_node\n";
+        // node_v1 *node;
+        // "create function\n"
+        // // Uncertain response: Type another command or type demobegin to demostrate it
+        // "demobegin\n"
+        // "demoend\n"
+        // "create node\n"
+        // "construct_and_attach_child_node\n";
 
-    int n = strlen(commands);
+        int n = strlen(commands);
     int s = 0;
     char cstr[2048];
     void *vargs[12]; // TODO -- count
