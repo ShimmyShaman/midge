@@ -395,7 +395,7 @@ void define_function(const char *return_type, const char *name, const char *para
 
 enum parsing_context
 {
-  ROOT = 1,
+  PARSING_CONTEXT_ROOT = 1,
 };
 
 typedef struct parsing_state
@@ -547,7 +547,7 @@ int peek_token(token *ptk, parsing_state *ps)
 
   switch (ps->context)
   {
-  case ROOT:
+  case PARSING_CONTEXT_ROOT:
   {
     switch (ps->text[ps->index])
     {
@@ -815,7 +815,7 @@ int parse_function(parsing_state *ps, c_node *function)
 int parse_file_text(c_node *root_node, const char *txt)
 {
   int res;
-  struct parsing_state ps = {txt, ROOT, 0, false};
+  struct parsing_state ps = {txt, PARSING_CONTEXT_ROOT, 0, false};
 
   int allocated_children = 8, child_count = 0;
   c_node **children = (c_node **)malloc(sizeof(c_node *));

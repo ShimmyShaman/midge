@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "c_code_lexer.h"
+
 typedef void **midgeo;
 typedef void **midgeary;
 typedef unsigned int uint;
@@ -288,6 +290,20 @@ int obtain_struct_info_from_index_v1(int argc, void **argv)
     return 0;
 }*/
 
+int translate_code_block(void *p_nodespace, c_node *p_code, char **translation)
+{
+    char *out = (char *)malloc(sizeof(char) * 16384);
+    *translation = out;
+
+    strcat(out, "{\n");
+
+    for (int i = 0; p_code->data_count; ++i)
+    {
+    }
+
+    strcat(out, "}\n");
+}
+
 int initialize_function_v1(int argc, void **argv)
 {
     printf("initialize_function_v1()\n");
@@ -303,37 +319,59 @@ int initialize_function_v1(int argc, void **argv)
     printf("code_block:%c%c%c%c%c...", code_block[0], code_block[1], code_block[2], code_block[3], code_block[4]);
 
     // Declare with clint
-    char buf[2048];
+    char buf[16384];
     strcpy(buf, "int ");
     strcat(buf, function_info->name);
-    strcat(buf, "(");
+    strcat(buf, "(int argc, void **argv");
     printf("@ifv-0  (%i)\n", function_info->parameter_count);
+    strcat(buf, ")\n{\n  // Arguments\n");
+
+    const char *TAB = "  ";
+    char buf2[16384];
+    strcpy(buf2, "{");
     for (int i = 0; i < function_info->parameter_count; ++i)
     {
-        printf("@ifv-1   (%s)\n", function_info->name);
+        strcat(buf2, TAB);
+
+        // printf("@ifv-1   (%s)\n", function_info->name);
         declare_and_assign_anon_struct(parameter_info_v1, parameter, function_info->parameters[i]);
-        printf("@ifv-2\n");
-        printf("@ifv:%s\n", parameter->type);
-        strcat(buf, parameter->type);
-        printf("@ifv-3\n");
-        strcat(buf, " ");
-        strcat(buf, parameter->name);
-        printf("@ifv-4\n");
+        // printf("@ifv-2\n");
+        // printf("@ifv:%s\n", parameter->type);
+        strcat(buf2, parameter->type);
+        // printf("@ifv-3\n");
+        strcat(buf2, " ");
+        strcat(buf2, parameter->name);
+        strcat(buf2, " = (");
+        strcat(buf2, parameter->type);
+        strcat(buf2, ")argv[");
+        sprintf(buf2 + strlen(buf2), "%i];\n", i);
+        // printf("@ifv-4\n");
     }
-    strcat(buf, ")\n{\n  ");
+    strcat(buf2, "\n");
 
     printf("@ifv-5\n");
     // Translate the code-block into workable midge-cling C
-    {
-        strcat(buf, code_block);
-    }
+    strcat(buf2, code_block);
+    strcat(buf2, "}");
+    struct parsing_state ps;
+    ps.text = buf2;
+    ps.index = 0;
+    ps.context = PARSING_CONTEXT_ROOT;
+    ps.end = 0;
+    c_node *block_node = (c_node *)calloc(sizeof(c_node), 1);
+    block_node->type = CNODE_CODE_BLOCK;
+    PRCE(parse_code_block(&ps, block_node));
 
-    strcat(buf, "}");
+    char *translated_code;
+    MCcall(translate_code_block(nodespace, block_node, &translated_code));
+
+    // strcat(buf, buf2);
+    strcat(buf, "\n}");
 
     printf("@ifv-4\n");
-    printf("dfp>cling_declare:%s\n", buf);
+    printf("ifv>cling_declare:%s\n", buf);
     clint_declare(buf);
-    printf("dfp-concludes\n");
+    printf("ifv-concludes\n");
     printf("ifv-2\n");
     return 0;
 }
@@ -350,19 +388,19 @@ int declare_function_pointer_v1(int argc, void **argv)
     int parameter_count = *(int *)argv[1];
     midgeo parameters = (midgeo)argv[2];
 
-    printf("::6 Params\n");
-    for (int i = 0; i < 6; ++i)
-    {
-        printf("-%i:%s\n", i, (char *)parameters[i]);
-    }
+    // printf("::6 Params\n");
+    // for (int i = 0; i < 6; ++i)
+    // {
+    //     printf("-%i:%s\n", i, (char *)parameters[i]);
+    // }
 
     char *name = (char *)parameters[0];
     char *return_type = (char *)parameters[1];
 
-    printf("dfp>nodespace:%s\n", nodespace->name);
-    printf("dfp>param_count:%i\n", parameter_count);
-    printf("dfp>name:%s\n", name);
-    printf("dfp>return_type:%s\n", return_type);
+    // printf("dfp>nodespace:%s\n", nodespace->name);
+    // printf("dfp>param_count:%i\n", parameter_count);
+    // printf("dfp>name:%s\n", name);
+    // printf("dfp>return_type:%s\n", return_type);
 
     // TODO -- check
 
@@ -375,11 +413,11 @@ int declare_function_pointer_v1(int argc, void **argv)
     for (int i = 0; i < function_info->parameter_count; ++i)
     {
         allocate_anon_struct(parameter_info_v1, parameter_info, sizeof_parameter_info_v1);
-        printf("dfp>%p=%s\n", i, (void *)parameters[2 + i * 2 + 0], (char *)parameters[2 + i * 2 + 0]);
+        // printf("dfp>%p=%s\n", i, (void *)parameters[2 + i * 2 + 0], (char *)parameters[2 + i * 2 + 0]);
         parameter_info->type = (char *)parameters[2 + i * 2 + 0];
         parameter_info->name = (char *)parameters[2 + i * 2 + 1];
         function_info->parameters[i] = (void *)parameter_info;
-        printf("dfp>set param[%i]=%s %s\n", i, parameter_info->type, parameter_info->name);
+        // printf("dfp>set param[%i]=%s %s\n", i, parameter_info->type, parameter_info->name);
     }
 
     nodespace->function_index[*(int *)nodespace->function_index[1]] = (void *)function_info;
@@ -932,9 +970,9 @@ int mc_main(int argc, const char *const *argv)
         "construct_and_attach_child_node|"
         // int construct_and_attach_child_node(node *parent, char *node_name)
         // write code:
-        "node *child = allocnew;\n"
-        "child->parent = parent;\n"
-        "parent->children[2 + *(int *)parent->children[1]] = (void *)child;\n"
+        // "node *child = (node *)malloc(sizeof(node));\n"
+        // "child->parent = parent;\n"
+        // "parent->children[2 + *(int *)parent->children[1]] = (void *)child;\n"
         "return 0;|";
 
     // node_v1 *node;
@@ -1049,17 +1087,17 @@ int handle_process(int argc, void **argsv)
             break;
             case PROCESS_UNIT_SET_CONTEXTUAL_DATA:
             {
-                printf("gethere-0\n");
+                // printf("gethere-0\n");
                 // No provocation
                 *reply = NULL;
                 switch (*(int *)process_unit->data)
                 {
                 case PROCESS_CONTEXTUAL_DATA_NODESPACE:
                 {
-                    printf("gethere-1\n");
+                    // printf("gethere-1\n");
                     void **p_data = (void **)process_unit->data2;
                     *p_data = (void *)nodespace;
-                    printf("gethere-2\n");
+                    // printf("gethere-2\n");
                 }
                 break;
 
@@ -1072,7 +1110,7 @@ int handle_process(int argc, void **argsv)
                 interaction_context[2] = process_unit->next;
                 assign_anon_struct(process_unit, process_unit->next);
                 *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-                printf("gethere-3\n");
+                // printf("gethere-3\n");
             }
             break;
             case PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO:
@@ -1157,11 +1195,11 @@ int handle_process(int argc, void **argsv)
                     break;
                     case PROCESS_BRANCH_SAVE_AND_THROUGH:
                     {
-                char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
-                strcpy(str_allocation, command);
-                **(void ***)branch->data = str_allocation;
-                // printf("stv:%s set to %p\n", (char *)**(void ***)branch->data, *(void **)branch->data);
-                MCcall(increment_pointer(1, &branch->data));
+                        char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
+                        strcpy(str_allocation, command);
+                        **(void ***)branch->data = str_allocation;
+                        // printf("stv:%s set to %p\n", (char *)**(void ***)branch->data, *(void **)branch->data);
+                        MCcall(increment_pointer(1, &branch->data));
 
                         // printf("ptr_current_data_points_to5:%p\n", *((void **)put->data2));
                         // strcpy((char *)*((void **)branch->data), command);
