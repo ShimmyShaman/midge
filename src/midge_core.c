@@ -350,6 +350,12 @@ int declare_function_pointer_v1(int argc, void **argv)
     int parameter_count = *(int *)argv[1];
     midgeo parameters = (midgeo)argv[2];
 
+    printf("::6 Params\n");
+    for (int i = 0; i < 6; ++i)
+    {
+        printf("-%i:%s\n", i, (char *)parameters[i]);
+    }
+
     char *name = (char *)parameters[0];
     char *return_type = (char *)parameters[1];
 
@@ -1103,7 +1109,7 @@ int handle_process(int argc, void **argsv)
                 char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
                 strcpy(str_allocation, command);
                 **(void ***)process_unit->data2 = str_allocation;
-                // printf("stv:%s set to %p\n", (char *)*(void **)process_unit->data2, *(void **)process_unit->data2);
+                // printf("stv:%s set to %p\n", (char *)**(void ***)process_unit->data2, *(void **)process_unit->data2);
                 MCcall(increment_pointer(1, &process_unit->data2));
 
                 // printf("ptr_current_data_points_to3:%p\n", *((void **)put->data2));
@@ -1151,9 +1157,15 @@ int handle_process(int argc, void **argsv)
                     break;
                     case PROCESS_BRANCH_SAVE_AND_THROUGH:
                     {
+                char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
+                strcpy(str_allocation, command);
+                **(void ***)branch->data = str_allocation;
+                // printf("stv:%s set to %p\n", (char *)**(void ***)branch->data, *(void **)branch->data);
+                MCcall(increment_pointer(1, &branch->data));
+
                         // printf("ptr_current_data_points_to5:%p\n", *((void **)put->data2));
-                        strcpy((char *)*((void **)branch->data), command);
-                        MCcall(increment_pointer(1, &branch->data));
+                        // strcpy((char *)*((void **)branch->data), command);
+                        // MCcall(increment_pointer(1, &branch->data));
                         // printf("ptr_current_data_points_to6:%p\n", *((void **)put->data2));
 
                         interaction_context[2] = branch->next;
