@@ -61,21 +61,21 @@ typedef unsigned int uint;
         void *next;                  \
         const char *debug;           \
     }
-#define sizeof_process_unit_v1 (sizeof(const char *) + sizeof(uint) + sizeof(enum process_unit_type) + sizeof(void *) * 3 + sizeof(const char *))
+#define sizeof_process_unit_v1 (sizeof(void *) * 7)
 #define branch_unit_v1              \
     struct                          \
     {                               \
         struct                      \
         {                           \
             const char *identifier; \
-            uint version;           \
+            unsigned int version;   \
         } struct_id;                \
         enum branch_unit_type type; \
         const char *match;          \
         void *data;                 \
         void *next;                 \
     }
-#define sizeof_branch_unit_v1 (sizeof(const char *) + sizeof(uint) + sizeof(enum branch_unit_type) + sizeof(char *) + sizeof(void *) * 2)
+#define sizeof_branch_unit_v1 (sizeof(void *) * 6)
 #define node_v1                     \
     struct                          \
     {                               \
@@ -90,7 +90,7 @@ typedef unsigned int uint;
         void **structure_index;     \
         void **children;            \
     }
-#define sizeof_node_v1 (sizeof(const char *) * 2 + sizeof(unsigned int) + sizeof(void *) * 1 + sizeof(void **) * 3)
+#define sizeof_node_v1 (sizeof(void *) * 7)
 #define function_info_v1              \
     struct                            \
     {                                 \
@@ -104,7 +104,7 @@ typedef unsigned int uint;
         unsigned int parameter_count; \
         void **parameters;            \
     }
-#define sizeof_function_info_v1 (sizeof(const char *) * 3 + sizeof(unsigned int) * 2 + sizeof(void **))
+#define sizeof_function_info_v1 (sizeof(void *) * 6)
 #define parameter_info_v1           \
     struct                          \
     {                               \
@@ -116,7 +116,7 @@ typedef unsigned int uint;
         const char *type;           \
         const char *name;           \
     }
-#define sizeof_parameter_info_v1 (sizeof(const char *) * 3 + sizeof(unsigned int) * 1)
+#define sizeof_parameter_info_v1 (sizeof(void *) * 4)
 /*#define struct_definition_v1        \
     struct                          \
     {                               \
@@ -302,6 +302,7 @@ int translate_code_block(void *p_nodespace, c_node *p_code, char **translation)
     }
 
     strcat(out, "}\n");
+    return 0;
 }
 
 int initialize_function_v1(int argc, void **argv)
@@ -590,7 +591,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     // process_parameter_data = &parameter_data[0];
     // p_process_param_count = (int *)dfp_vargs[4];
 
-    printf("addr of current_data[0]   :%p\n", &parameter_data[0]);
+    // printf("addr of current_data[0]   :%p\n", &parameter_data[0]);
     // printf("ptr_current_data_points_to:%p\n", *ptr_current_data);
 
     // printf("pr_prm_pointer:%p\n", (char *)*(void **)process_parameter_data);
@@ -691,6 +692,14 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
     process_unit_type->debug = "process_unit_type";
 
     allocate_anon_struct(branch_unit_v1, branch_end, sizeof_branch_unit_v1);
+    // printf("size-of-branch_end:%i\n", sizeof_branch_unit_v1);
+    // printf("address-of-branch_end:%p\n", branch_end);
+    // printf("address-of-branch_end->struct_id.identifier:%p\n", &branch_end->struct_id.identifier);
+    // printf("address-of-branch_end->struct_id.version:%p\n", &branch_end->struct_id.version);
+    // printf("address-of-branch_end->type:%p\n", &branch_end->type);
+    // printf("address-of-branch_end->match:%p\n", &branch_end->match);
+    // printf("address-of-branch_end->data:%p\n", &branch_end->data);
+    // printf("address-of-branch_end->next:%p\n", &branch_end->next);
     branch_end->type = PROCESS_BRANCH_THROUGH;
     branch_end->match = "end";
     branch_end->next = (void *)process_unit_add_context_param;
@@ -734,7 +743,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
 
     // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
 
-    printf("end-mcqck_temp_create_process_declare_function_pointer()\n");
+    // printf("end-mcqck_temp_create_process_declare_function_pointer()\n");
     return 0;
 }
 
@@ -797,7 +806,7 @@ int mcqck_temp_create_process_initialize_function(midgeo *process_unit)
 
     // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
 
-    printf("end-mcqck_temp_create_process_declare_function_pointer()\n");
+    printf("end-mcqck_temp_create_process_initialize_function()\n");
     return 0;
 }
 
@@ -937,17 +946,6 @@ int mc_main(int argc, const char *const *argv)
     process_matrix[2 + *(int *)process_matrix[1]] = process_dfp;
     ++*(int *)process_matrix[1];
 
-    // // process_unit_v1 *process_unit_function_name;
-    // // assign_anon_struct(process_unit_function_name, put_data);
-    // declare_and_assign_anon_struct(process_unit_v1, put, put_data);
-    // printf("pufn_data:%s\n", (char *)put->data);
-    // printf("ptr_current_data_points_to1:%p\n", *((void **)put->data2));
-    // printf("address:%p\n", put_data);
-    // // printf("pufnAddr:%p\n", pufn);
-    // printf("debug:%s\n", put->debug);
-
-    // TODO...
-
     const char *commands =
         "invoke declare_function_pointer|"
         // What is the name of the function?
@@ -973,7 +971,8 @@ int mc_main(int argc, const char *const *argv)
         // "node *child = (node *)malloc(sizeof(node));\n"
         // "child->parent = parent;\n"
         // "parent->children[2 + *(int *)parent->children[1]] = (void *)child;\n"
-        "return 0;|";
+        "return 0;|"
+        "";
 
     // node_v1 *node;
     // "create function\n"

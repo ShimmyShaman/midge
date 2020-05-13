@@ -149,8 +149,7 @@ void run()
 
     clint->loadFile("/home/jason/midge/src/c_code_lexer.h");
     clint->loadFile("/home/jason/midge/src/midge_core.c");
-    for (int i = 0; i < 1; ++i)
-      clint->process("mc_main(0, NULL);");
+    clint->process("mc_main(0, NULL);");
 
     // clint->process("#include \"midge.h\"");
     // clint->process("redef();");
