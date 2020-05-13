@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "c_code_lexer.h"
+// #include "c_code_lexer.h"
 
 typedef void **midgeo;
 typedef void **midgeary;
@@ -290,16 +290,12 @@ int obtain_struct_info_from_index_v1(int argc, void **argv)
     return 0;
 }*/
 
-int translate_code_block(void *p_nodespace, c_node *p_code, char **translation)
+int translate_code_block(void *p_nodespace, char *input, char **translation)
 {
     char *out = (char *)malloc(sizeof(char) * 16384);
     *translation = out;
 
     strcat(out, "{\n");
-
-    for (int i = 0; p_code->data_count; ++i)
-    {
-    }
 
     strcat(out, "}\n");
     return 0;
@@ -328,50 +324,47 @@ int initialize_function_v1(int argc, void **argv)
     strcat(buf, ")\n{\n  // Arguments\n");
 
     const char *TAB = "  ";
-    char buf2[16384];
-    strcpy(buf2, "{");
     for (int i = 0; i < function_info->parameter_count; ++i)
     {
-        strcat(buf2, TAB);
+        strcat(buf, TAB);
 
         // printf("@ifv-1   (%s)\n", function_info->name);
         declare_and_assign_anon_struct(parameter_info_v1, parameter, function_info->parameters[i]);
         // printf("@ifv-2\n");
         // printf("@ifv:%s\n", parameter->type);
-        strcat(buf2, parameter->type);
+        strcat(buf, parameter->type);
         // printf("@ifv-3\n");
-        strcat(buf2, " ");
-        strcat(buf2, parameter->name);
-        strcat(buf2, " = (");
-        strcat(buf2, parameter->type);
-        strcat(buf2, ")argv[");
-        sprintf(buf2 + strlen(buf2), "%i];\n", i);
+        strcat(buf, " ");
+        strcat(buf, parameter->name);
+        strcat(buf, " = (");
+        strcat(buf, parameter->type);
+        strcat(buf, ")argv[");
+        sprintf(buf + strlen(buf), "%i];\n", i);
         // printf("@ifv-4\n");
     }
-    strcat(buf2, "\n");
+    strcat(buf, "\n");
 
     printf("@ifv-5\n");
     // Translate the code-block into workable midge-cling C
-    strcat(buf2, code_block);
-    strcat(buf2, "}");
-    struct parsing_state ps;
-    ps.text = buf2;
-    ps.index = 0;
-    ps.context = PARSING_CONTEXT_ROOT;
-    ps.end = 0;
-    c_node *block_node = (c_node *)calloc(sizeof(c_node), 1);
-    block_node->type = CNODE_CODE_BLOCK;
-    PRCE(parse_code_block(&ps, block_node));
+    strcat(buf, code_block);
+    strcat(buf, "}");
+    // struct parsing_state ps;
+    // ps.text = buf2;
+    // ps.index = 0;
+    // ps.context = PARSING_CONTEXT_ROOT;
+    // ps.end = 0;
+    // c_node *block_node = (c_node *)calloc(sizeof(c_node), 1);
+    // block_node->type = CNODE_CODE_BLOCK;
+    // PRCE(parse_code_block(&ps, block_node));
 
-    char *translated_code;
-    MCcall(translate_code_block(nodespace, block_node, &translated_code));
+    // char *translated_code;
+    // MCcall(translate_code_block(nodespace, buf2, &translated_code));
 
     // strcat(buf, buf2);
-    strcat(buf, "\n}");
 
     printf("@ifv-4\n");
-    printf("ifv>cling_declare:%s\n", buf);
-    clint_declare(buf);
+    printf("ifv>cling_declare:\n%s\n", buf);
+    // clint_declare(buf);
     printf("ifv-concludes\n");
     printf("ifv-2\n");
     return 0;
@@ -953,11 +946,11 @@ int mc_main(int argc, const char *const *argv)
         // Return Type:
         "int|"
         // Parameter type:
-        "node *|"
+        "node|"
         // Parameter name:
         "parent|"
         // Parameter type:
-        "char *|"
+        "cstr|"
         // Parameter name:
         "node_name|"
         // Parameter 1 type:
@@ -966,12 +959,15 @@ int mc_main(int argc, const char *const *argv)
         "invoke initialize_function|"
         // What is the name of the function you wish to initialize?
         "construct_and_attach_child_node|"
-        // int construct_and_attach_child_node(node *parent, char *node_name)
+        // int construct_and_attach_child_node(node parent, cstr node_name)
         // write code:
-        // "node *child = (node *)malloc(sizeof(node));\n"
-        // "child->parent = parent;\n"
-        // "parent->children[2 + *(int *)parent->children[1]] = (void *)child;\n"
-        "return 0;|"
+        "dec node child\n"
+        "ass child.name node_name\n"
+        "ass child.parent parent\n"
+        "set parent.children_alloc 1\n"
+        "set parent.children_count 1\n"
+        "ass parent.children[0] child\n"
+        "ret 0\n|"
         "";
 
     // node_v1 *node;

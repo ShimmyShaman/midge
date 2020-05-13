@@ -147,7 +147,7 @@ void run()
      *       in a seperate thread routine > then change the thread routine to make use of that structure change
      */
 
-    clint->loadFile("/home/jason/midge/src/c_code_lexer.h");
+    // clint->loadFile("/home/jason/midge/src/c_code_lexer.h");
     clint->loadFile("/home/jason/midge/src/midge_core.c");
     clint->process("mc_main(0, NULL);");
 
