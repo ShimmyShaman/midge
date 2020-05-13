@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 // #include "c_code_lexer.h"
 
@@ -75,8 +76,29 @@ typedef unsigned int uint;
         void *data;                 \
         void *next;                 \
     }
-#define sizeof_branch_unit_v1 (sizeof(void *) * 6)
-#define node_v1                     \
+#define sizeof_branch_unit_v1 (sizeof(void *) * 13)
+#define node_v1                       \
+    struct                            \
+    {                                 \
+        struct                        \
+        {                             \
+            const char *identifier;   \
+            unsigned int version;     \
+        } struct_id;                  \
+        const char *name;             \
+        void *parent;                 \
+        unsigned int functions_alloc; \
+        unsigned int function_count;  \
+        void **functions;             \
+        unsigned int structs_alloc;   \
+        unsigned int struct_count;    \
+        void **structs;               \
+        unsigned int children_alloc;  \
+        unsigned int child_count;     \
+        void **children;              \
+    }
+#define sizeof_node_v1 (sizeof(void *) * 7)
+#define struct_info_v1              \
     struct                          \
     {                               \
         struct                      \
@@ -85,12 +107,11 @@ typedef unsigned int uint;
             unsigned int version;   \
         } struct_id;                \
         const char *name;           \
-        void *parent;               \
-        void **function_index;      \
-        void **structure_index;     \
-        void **children;            \
+        unsigned int version;       \
+        unsigned int field_count;   \
+        void **fields;              \
     }
-#define sizeof_node_v1 (sizeof(void *) * 7)
+#define sizeof_struct_info_v1 (sizeof(void *) * 6)
 #define function_info_v1              \
     struct                            \
     {                                 \
@@ -113,24 +134,14 @@ typedef unsigned int uint;
             const char *identifier; \
             unsigned int version;   \
         } struct_id;                \
-        const char *type;           \
-        const char *name;           \
-    }
-#define sizeof_parameter_info_v1 (sizeof(void *) * 4)
-/*#define struct_definition_v1        \
-    struct                          \
-    {                               \
         struct                      \
         {                           \
             const char *identifier; \
-            uint version;           \
-        } struct_id;                \
-        const char *identifier;     \
-        uint version;               \
-        uint field_count;           \
-        void **fields;              \
+            unsigned int version;   \
+        } type;                     \
+        const char *name;           \
     }
-#define sizeof_struct_definition_v1 (sizeof(const char *) * 2 + sizeof(uint) * 3 + sizeof(void **))*/
+#define sizeof_parameter_info_v1 (sizeof(void *) * 5)
 
 #define allocate_anon_struct(struct, ptr_to_struct, size) \
     struct *ptr_to_struct;                                \
@@ -290,14 +301,141 @@ int obtain_struct_info_from_index_v1(int argc, void **argv)
     return 0;
 }*/
 
-int translate_code_block(void *p_nodespace, char *input, char **translation)
+int parse_past(const char *text, int *index, const char *sequence)
 {
-    char *out = (char *)malloc(sizeof(char) * 16384);
-    *translation = out;
+    for (int i = 0;; ++i)
+    {
+        if (sequence[i] == '\0')
+        {
+            *index += i;
+            return 0;
+        }
+        else if (text[*index + i] == '\0')
+        {
+            return -1;
+        }
+        else if (sequence[i] != text[*index + i])
+        {
+            printf("!parse_past() expected:'%c' was:'%c'\n", sequence[i], text[*index + i]);
+            return 1 + i;
+        }
+    }
+}
 
-    strcat(out, "{\n");
+int parse_past_identifier(const char *text, int *index, char **identifier)
+{
+    int o = *index;
+    while (1)
+    {
+        int doc = 1;
+        switch (text[*index])
+        {
+        case ' ':
+        case '\n':
+        case '\t':
+            doc = 0;
+            break;
+        case '\0':
+            printf("!parse_identifier: unexpected eof");
+            return -1;
+        default:
+            if (!isalpha(text[*index]) && (*index > o && !isalnum(text[*index]) && text[*index] != '_'))
+                doc = 0;
+            break;
+        }
+        if (!doc)
+        {
+            if (o == *index)
+                return -1;
 
-    strcat(out, "}\n");
+            *identifier = (char *)calloc(sizeof(char), *index - o + 1);
+            strncpy(*identifier, text + o, *index - o);
+            (*identifier)[*index - o] = '\0';
+            return 0;
+        }
+        ++*index;
+    }
+    return -1;
+}
+
+int set_int_value(int argc, void **argv)
+{
+    printf("set_int_value()\n");
+    int *var = (int *)argv[0];
+    int value = *(int *)argv[1];
+
+    *var = value;
+    return 0;
+}
+
+int increment_int_value(int argc, void **argv)
+{
+    printf("increment_int_value()\n");
+    int *var = (int *)argv[0];
+
+    ++*var;
+    return 0;
+}
+
+int set_pointer_value(int argc, void **argv)
+{
+    printf("set_pointer_value()\n");
+    void **var = (void **)argv[0];
+    void *value = (void *)argv[1];
+    printf("was:%p  now:%p\n", *var, value);
+
+    *var = value;
+    return 0;
+}
+
+int increment_pointer(int argc, void **argv)
+{
+    printf("increment_pointer()\n");
+    unsigned long **var = (unsigned long **)argv[0];
+
+    ++*var;
+    return 0;
+}
+
+int find_function_info(void *vp_nodespace, char *function_name, void **function_info)
+{
+    void **dvp;
+    int res;
+    declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
+
+    for (int i = 0; i < node->function_count; ++i)
+    {
+        declare_and_assign_anon_struct(function_info_v1, finfo, node->functions[i]);
+        if (strcmp(finfo->name, function_name))
+            continue;
+
+        // Matches
+        *function_info = (void *)finfo;
+        printf("find_function_info:set with '%s'\n", finfo->name);
+        return 0;
+    }
+    printf("find_function_info: '%s' could not be found!\n", function_name);
+    return 0;
+}
+
+int find_struct_info(void *vp_nodespace, char *struct_name, void **struct_info)
+{
+    void **dvp;
+    int res;
+    declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
+
+    for (int i = 0; i < node->struct_count; ++i)
+    {
+        declare_and_assign_anon_struct(struct_info_v1, finfo, node->structs[i]);
+        if (strcmp(finfo->name, struct_name))
+            continue;
+
+        // Matches
+        *struct_info = (void *)finfo;
+        printf("find_struct_info:set with '%s'\n", finfo->name);
+        return 0;
+    }
+    printf("find_struct_info: '%s' could not be found!\n", struct_name);
     return 0;
 }
 
@@ -309,11 +447,11 @@ int initialize_function_v1(int argc, void **argv)
 
     declare_and_assign_anon_struct(node_v1, nodespace, argv[0]);
     declare_and_assign_anon_struct(function_info_v1, function_info, argv[1]);
-    char *code_block = (char *)argv[2];
+    char *code = (char *)argv[2];
 
     printf("nodespace->name:%s\n", nodespace->name);
     printf("function_info->name:%s\n", function_info->name);
-    printf("code_block:%c%c%c%c%c...", code_block[0], code_block[1], code_block[2], code_block[3], code_block[4]);
+    // printf("code_block:%c%c%c%c%c...", code_block[0], code_block[1], code_block[2], code_block[3], code_block[4]);
 
     // Declare with clint
     char buf[16384];
@@ -330,23 +468,85 @@ int initialize_function_v1(int argc, void **argv)
 
         // printf("@ifv-1   (%s)\n", function_info->name);
         declare_and_assign_anon_struct(parameter_info_v1, parameter, function_info->parameters[i]);
-        // printf("@ifv-2\n");
-        // printf("@ifv:%s\n", parameter->type);
-        strcat(buf, parameter->type);
-        // printf("@ifv-3\n");
-        strcat(buf, " ");
+
+        strcat(buf, "declare_and_assign_anon_struct(");
+        strcat(buf, parameter->type.identifier);
+        strcat(buf, "_v");
+        sprintf(buf + strlen(buf), "%i, ", parameter->type.version);
         strcat(buf, parameter->name);
-        strcat(buf, " = (");
-        strcat(buf, parameter->type);
-        strcat(buf, ")argv[");
-        sprintf(buf + strlen(buf), "%i];\n", i);
-        // printf("@ifv-4\n");
+        strcat(buf, ", ");
+        strcat(buf, "argv[");
+        sprintf(buf + strlen(buf), "%i]);\n", i);
     }
     strcat(buf, "\n");
+    strcat(buf, TAB);
 
     printf("@ifv-5\n");
     // Translate the code-block into workable midge-cling C
-    strcat(buf, code_block);
+    int n = strlen(code);
+    for (int i = 0; i < n; ++i)
+    {
+        //strcat(buf, code_block);
+        switch (code[i])
+        {
+        case ' ':
+        case '\t':
+            continue;
+        default:
+        {
+            if (!isalpha(code[i]))
+                return -42;
+
+            switch (code[i])
+            {
+            case 'd':
+            {
+                // dec
+                MCcall(parse_past(code, &i, "dec "));
+
+                // Identifier
+                char *identifier;
+                MCcall(parse_past_identifier(code, &i, &identifier));
+                strcat(buf, identifier);
+
+                // -- Determine if the structure is midge-specified
+                void *p_struct_info = NULL;
+                MCcall(find_struct_info((void *)nodespace, identifier, &p_struct_info));
+                if (p_struct_info)
+                {
+                    declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
+
+                    strcat(buf, "allocate_anon_struct(");
+                    strcat(buf, struct_info->name);
+                    sprintf(buf + strlen(buf), "_v%u, ", struct_info->field_count);
+
+                    char *var_name;
+                    MCcall(parse_past_identifier(code, &i, &var_name));
+                    strcat(buf, var_name);
+                    free(var_name);
+
+                    sprintf(buf + strlen(buf), ", (sizeof(void *) * %u));", struct_info->field_count);
+                }
+                else
+                {
+                    strcat(buf, identifier);
+
+                    char *var_name;
+                    MCcall(parse_past_identifier(code, &i, &var_name));
+                    strcat(buf, var_name);
+                    strcat(buf, ";");
+                }
+                free(identifier);
+            }
+            break;
+
+            default:
+                printf("Unhandledstatement:'%c'\n", code[i]);
+            }
+        }
+        break;
+        }
+    }
     strcat(buf, "}");
     // struct parsing_state ps;
     // ps.text = buf2;
@@ -408,14 +608,17 @@ int declare_function_pointer_v1(int argc, void **argv)
     {
         allocate_anon_struct(parameter_info_v1, parameter_info, sizeof_parameter_info_v1);
         // printf("dfp>%p=%s\n", i, (void *)parameters[2 + i * 2 + 0], (char *)parameters[2 + i * 2 + 0]);
-        parameter_info->type = (char *)parameters[2 + i * 2 + 0];
+        parameter_info->type.identifier = (char *)parameters[2 + i * 2 + 0];
+
+        printf("TODO -- set the latest version of this struct here -- then set it to the function usage details");
+        parameter_info->type.version = 1;
         parameter_info->name = (char *)parameters[2 + i * 2 + 1];
         function_info->parameters[i] = (void *)parameter_info;
         // printf("dfp>set param[%i]=%s %s\n", i, parameter_info->type, parameter_info->name);
     }
 
-    nodespace->function_index[*(int *)nodespace->function_index[1]] = (void *)function_info;
-    ++*(int *)nodespace->function_index[1];
+    nodespace->functions[*(int *)nodespace->functions[1]] = (void *)function_info;
+    ++*(int *)nodespace->functions[1];
 
     // Cleanup Parameters
     // TODO
@@ -504,66 +707,6 @@ enum process_contextual_data
 void **put_data;
 void **process_parameter_data;
 int *p_process_param_count;
-
-int set_int_value(int argc, void **argv)
-{
-    printf("set_int_value()\n");
-    int *var = (int *)argv[0];
-    int value = *(int *)argv[1];
-
-    *var = value;
-    return 0;
-}
-
-int increment_int_value(int argc, void **argv)
-{
-    printf("increment_int_value()\n");
-    int *var = (int *)argv[0];
-
-    ++*var;
-    return 0;
-}
-
-int set_pointer_value(int argc, void **argv)
-{
-    printf("set_pointer_value()\n");
-    void **var = (void **)argv[0];
-    void *value = (void *)argv[1];
-    printf("was:%p  now:%p\n", *var, value);
-
-    *var = value;
-    return 0;
-}
-
-int increment_pointer(int argc, void **argv)
-{
-    printf("increment_pointer()\n");
-    unsigned long **var = (unsigned long **)argv[0];
-
-    ++*var;
-    return 0;
-}
-
-int find_function_info(void *vp_nodespace, char *function_name, void **function_info)
-{
-    void **dvp;
-    int res;
-    declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
-
-    for (int i = 0; i < *(int *)node->function_index[1]; ++i)
-    {
-        declare_and_assign_anon_struct(function_info_v1, finfo, node->function_index[i]);
-        if (strcmp(finfo->name, function_name))
-            continue;
-
-        // Matches
-        *function_info = (void *)finfo;
-        printf("find_function_info:set with %s\n", finfo->name);
-        return 0;
-    }
-    printf("find_function_info: %s could not be found!\n", function_name);
-    return 0;
-}
 
 #define INTERACTION_CONTEXT_BLANK 1
 #define INTERACTION_CONTEXT_PROCESS 2
@@ -900,19 +1043,83 @@ int mc_main(int argc, const char *const *argv)
     // global_structure_index[2] = NULL;
     // global_structure_index[3] = NULL;
 
+    allocate_anon_struct(struct_info_v1, node_definition_v1, sizeof_struct_info_v1);
+    node_definition_v1->struct_id.identifier = "struct_info";
+    node_definition_v1->struct_id.version = 1U;
+    node_definition_v1->name = "node";
+    node_definition_v1->version = 1U;
+    node_definition_v1->field_count = 11;
+    node_definition_v1->fields = (void **)calloc(sizeof(void *), 7);
+
+    allocate_anon_struct(parameter_info_v1, field0, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field0;
+    field0->type.identifier = "const char *";
+    field0->type.version = 0U;
+    field0->name = "name";
+    allocate_anon_struct(parameter_info_v1, field1, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field1;
+    field1->type.identifier = "node";
+    field1->type.version = 1U;
+    field1->name = "parent";
+    allocate_anon_struct(parameter_info_v1, field2, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field2;
+    field2->type.identifier = "unsigned int";
+    field2->type.version = 0U;
+    field2->name = "functions_alloc";
+    allocate_anon_struct(parameter_info_v1, field3, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field3;
+    field3->type.identifier = "unsigned int";
+    field3->type.version = 0U;
+    field3->name = "function_count";
+    allocate_anon_struct(parameter_info_v1, field4, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field4;
+    field4->type.identifier = "void **";
+    field4->type.version = 0U;
+    field4->name = "functions";
+    allocate_anon_struct(parameter_info_v1, field5, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field5;
+    field5->type.identifier = "unsigned int";
+    field5->type.version = 0U;
+    field5->name = "structs_alloc";
+    allocate_anon_struct(parameter_info_v1, field6, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field6;
+    field6->type.identifier = "unsigned int";
+    field6->type.version = 0U;
+    field6->name = "struct_count";
+    allocate_anon_struct(parameter_info_v1, field7, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field7;
+    field7->type.identifier = "void **";
+    field7->type.version = 0U;
+    field7->name = "structs";
+    allocate_anon_struct(parameter_info_v1, field8, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field8;
+    field8->type.identifier = "unsigned int";
+    field8->type.version = 0U;
+    field8->name = "child_count";
+    allocate_anon_struct(parameter_info_v1, field9, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field9;
+    field9->type.identifier = "unsigned int";
+    field9->type.version = 0U;
+    field9->name = "children_alloc";
+    allocate_anon_struct(parameter_info_v1, field10, sizeof_parameter_info_v1);
+    node_definition_v1->fields[0] = field10;
+    field10->type.identifier = "void **";
+    field10->type.version = 0U;
+    field10->name = "children";
+
     // Instantiate: node global;
     allocate_anon_struct(node_v1, global, sizeof_node_v1);
     global->name = "global";
     global->parent = NULL;
-    global->function_index = (void **)calloc(sizeof(void *), 40);
-    allocate_from_intv(&global->function_index[0], 40);
-    allocate_from_intv(&global->function_index[1], 0);
-    global->structure_index = (void **)calloc(sizeof(void *), 40);
-    allocate_from_intv(&global->structure_index[0], 40);
-    allocate_from_intv(&global->structure_index[1], 0);
-    global->children = (void **)calloc(sizeof(void *), 40);
-    allocate_from_intv(&global->children[0], 40);
-    allocate_from_intv(&global->children[1], 0);
+    global->functions_alloc = 40;
+    global->functions = (void **)calloc(sizeof(void *), global->functions_alloc);
+    global->function_count = 0;
+    global->structs_alloc = 40;
+    global->structs = (void **)calloc(sizeof(void *), global->structs_alloc);
+    global->struct_count = 0;
+    global->children_alloc = 40;
+    global->children = (void **)calloc(sizeof(void *), global->children_alloc);
+    global->child_count = 0;
 
     // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
