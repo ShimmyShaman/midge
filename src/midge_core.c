@@ -97,7 +97,7 @@ typedef unsigned int uint;
     unsigned int child_count;     \
     void **children;              \
   }
-#define sizeof_node_v1 (sizeof(void *) * 7)
+#define sizeof_node_v1 (sizeof(void *) * 13)
 #define struct_info_v1        \
   struct                      \
   {                           \
@@ -303,6 +303,38 @@ int obtain_struct_info_from_index_v1(int argc, void **argv)
     return 0;
 }*/
 
+int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
+{
+  char buf[30];
+  int off = 6 - index;
+  for (int i = 0; i < 13; ++i)
+  {
+    if (index - 13 + i < 0)
+      buf[i] = ' ';
+    else
+      buf[i] = text[index - 13 + i];
+  }
+  buf[13] = '|';
+  buf[14] = text[index];
+  buf[15] = '|';
+  char eof = text[index] == '\0';
+  for (int i = 0; i < 13; ++i)
+  {
+    if (eof)
+      buf[16 + i] = ' ';
+    else
+    {
+      eof = text[index + 1 + i] == '\0';
+      buf[16 + i] = text[index + 1 + i];
+    }
+  }
+  buf[29] = '\0';
+
+  printf("%s>%s#unhandled-char:'%s'\n", function_name, section_id, buf);
+
+  return 0;
+}
+
 int parse_past(const char *text, int *index, const char *sequence)
 {
   for (int i = 0;; ++i)
@@ -339,7 +371,7 @@ int parse_past_identifier(const char *text, int *index, char **identifier)
       break;
     case '\0':
       printf("!parse_identifier: unexpected eof");
-      return -1;
+      return -147;
     default:
       if (!isalpha(text[*index]) && (*index > o && !isalnum(text[*index]) && text[*index] != '_'))
         doc = 0;
@@ -348,7 +380,11 @@ int parse_past_identifier(const char *text, int *index, char **identifier)
     if (!doc)
     {
       if (o == *index)
-        return -1;
+      {
+        int res;
+        MCcall(print_parse_error(text, *index, "parse_past_identifier", "identifier_end"));
+        return -148;
+      }
 
       *identifier = (char *)calloc(sizeof(char), *index - o + 1);
       strncpy(*identifier, text + o, *index - o);
@@ -357,7 +393,7 @@ int parse_past_identifier(const char *text, int *index, char **identifier)
     }
     ++*index;
   }
-  return -1;
+  return -149;
 }
 
 int set_int_value(int argc, void **argv)
@@ -518,18 +554,23 @@ int initialize_function_v1(int argc, void **argv)
     default:
     {
       if (!isalpha(code[i]))
+      {
+        MCcall(print_parse_error(code, i, "initialize_function_v1", "default:!isalpha"));
         return -42;
+      }
 
       switch (code[i])
       {
       case 'd':
       {
         // dec
-        MCcall(parse_past(code, &i, "dec "));
+        MCcall(parse_past(code, &i, "dec"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
         // Identifier
         char *identifier;
         MCcall(parse_past_identifier(code, &i, &identifier));
+        MCcall(parse_past(code, &i, " "));
         strcat(buf, identifier);
 
         // -- Determine if the structure is midge-specified
@@ -564,7 +605,8 @@ int initialize_function_v1(int argc, void **argv)
       break;
 
       default:
-        printf("Unhandledstatement:'%c'\n", code[i]);
+        MCcall(print_parse_error(code, i, "initialize_function_v1", "Unhandledstatement"));
+        return -757;
       }
     }
     break;
@@ -631,7 +673,6 @@ int declare_function_pointer_v1(int argc, void **argv)
   function_info->struct_usage = (void **)malloc(sizeof(void *) * struct_usage_alloc);
   function_info->struct_usage_count = 0;
 
-  printf("here-0\n");
   for (int i = 0; i < function_info->parameter_count; ++i)
   {
     allocate_anon_struct(parameter_info_v1, parameter_info, sizeof_parameter_info_v1);
@@ -668,9 +709,7 @@ int declare_function_pointer_v1(int argc, void **argv)
     function_info->parameters[i] = (void *)parameter_info;
     // printf("dfp>set param[%i]=%s %s\n", i, parameter_info->type, parameter_info->name);
   }
-  printf("here-2\n");
   MCcall(append_to_collection(&nodespace->functions, &nodespace->functions_alloc, &nodespace->function_count, function_info));
-  printf("here-3\n");
 
   // Cleanup Parameters
   if (function_info->struct_usage_count != struct_usage_alloc)
@@ -703,53 +742,29 @@ int declare_function_pointer_v1(int argc, void **argv)
   return 0;
 }
 
-int mcqck_temp_allocate_struct_id(midgeo out_field, const char *struct_name, uint version)
-{
-  int res;
-  void *vargs[3];
-  vargs[0] = (void *)out_field;
-  vargs[1] = (void *)struct_name;
-  vargs[2] = (void *)&version;
-  MCcall(allocate_struct_id(3, vargs));
-  return 0;
-}
-
-int mcqck_temp_allocate_field(void **fields, const char *type, int deref_count, const char *name)
-{
-  int res;
-  void *vargs[4];
-  vargs[0] = (void *)&fields[0];
-  vargs[1] = (void *)type;
-  vargs[2] = (void *)&deref_count;
-  vargs[3] = (void *)name;
-  MCcall(allocate_midge_field_info(4, vargs));
-  return 0;
-}
-
-// int mcqck_temp_define_struct(struct_definition *definition, const char *name, uint version, int field_count, midgeo fields)
+// int mcqck_temp_allocate_struct_id(midgeo out_field, const char *struct_name, uint version)
 // {
-//     int res;
-//     void *vargs[5];
-//     vargs[0] = (void *)definition;
-//     vargs[1] = (void *)name;
-//     vargs[2] = (void *)&version;
-//     vargs[3] = (void *)&field_count;
-//     vargs[4] = (void *)fields;
-//     MCcall(define_struct(5, vargs));
-//     return 0;
+//   int res;
+//   void *vargs[3];
+//   vargs[0] = (void *)out_field;
+//   vargs[1] = (void *)struct_name;
+//   vargs[2] = (void *)&version;
+//   MCcall(allocate_struct_id(3, vargs));
+//   return 0;
 // }
-/*
-int mcqck_temp_allocate_from_definition(midgeo *allocation, struct_definition definition)
-{
-    int res;
-    void *vargs[2];
-    vargs[0] = (void *)allocation;
-    vargs[1] = (void *)definition;
 
-    MCcall(allocate_from_definition(2, vargs));
-    return 0;
-}
-*/
+// int mcqck_temp_allocate_field(void **fields, const char *type, int deref_count, const char *name)
+// {
+//   int res;
+//   void *vargs[4];
+//   vargs[0] = (void *)&fields[0];
+//   vargs[1] = (void *)type;
+//   vargs[2] = (void *)&deref_count;
+//   vargs[3] = (void *)name;
+//   MCcall(allocate_midge_field_info(4, vargs));
+//   return 0;
+// }
+
 enum process_unit_type
 {
   PROCESS_UNIT_INTERACTION_INCR_DPTR = 1,
@@ -1189,6 +1204,8 @@ int mc_main(int argc, const char *const *argv)
   global->children_alloc = 40;
   global->children = (void **)calloc(sizeof(void *), global->children_alloc);
   global->child_count = 0;
+
+  MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)node_definition_v1));
 
   // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
