@@ -806,7 +806,8 @@ int initialize_function_v1(int argc, void **argv)
   clint_declare(buf);
 
   // Set the method to the function pointer
-  sprintf(buf, "%s = &%s_v%u;", function_info->name, function_info->latest_iteration);
+  sprintf(buf, "%s = &%s_v%u;", function_info->name, function_info->name, function_info->latest_iteration);
+  printf("ifv>clint_process:\n%s\n", buf);
   clint_process(buf);
 
   printf("ifv-concludes\n");
