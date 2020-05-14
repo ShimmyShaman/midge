@@ -63,18 +63,18 @@ typedef unsigned int uint;
     const char *debug;           \
   }
 #define sizeof_process_unit_v1 (sizeof(void *) * 7)
-#define branch_unit_v1          \
-  struct                        \
-  {                             \
-    struct                      \
-    {                           \
-      const char *identifier;   \
-      unsigned int version;     \
-    } struct_id;                \
-    enum branch_unit_type type; \
-    const char *match;          \
-    void *data;                 \
-    void *next;                 \
+#define branch_unit_v1                    \
+  struct                                  \
+  {                                       \
+    struct                                \
+    {                                     \
+      const char *identifier;             \
+      unsigned int version;               \
+    } struct_id;                          \
+    enum branching_interaction_type type; \
+    const char *match;                    \
+    void *data;                           \
+    void *next;                           \
   }
 #define sizeof_branch_unit_v1 (sizeof(void *) * 13)
 #define node_v1                   \
@@ -112,23 +112,24 @@ typedef unsigned int uint;
     void **fields;            \
   }
 #define sizeof_struct_info_v1 (sizeof(void *) * 6)
-#define function_info_v1             \
-  struct                             \
-  {                                  \
-    struct                           \
-    {                                \
-      const char *identifier;        \
-      unsigned int version;          \
-    } struct_id;                     \
-    const char *name;                \
-    unsigned int latest_iteration;   \
-    const char *return_type;         \
-    unsigned int parameter_count;    \
-    void **parameters;               \
-    unsigned int struct_usage_count; \
-    void **struct_usage;             \
+#define function_info_v1                         \
+  struct                                         \
+  {                                              \
+    struct                                       \
+    {                                            \
+      const char *identifier;                    \
+      unsigned int version;                      \
+    } struct_id;                                 \
+    const char *name;                            \
+    unsigned int latest_iteration;               \
+    const char *return_type;                     \
+    unsigned int parameter_count;                \
+    void **parameters;                           \
+    unsigned int variable_parameter_begin_index; \
+    unsigned int struct_usage_count;             \
+    void **struct_usage;                         \
   }
-#define sizeof_function_info_v1 (sizeof(void *) * 9)
+#define sizeof_function_info_v1 (sizeof(void *) * 10)
 #define parameter_info_v1     \
   struct                      \
   {                           \
@@ -849,6 +850,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   function_info->return_type = return_type;
   function_info->parameter_count = parameter_count;
   function_info->parameters = (void **)malloc(sizeof(void *) * parameter_count);
+  function_info->variable_parameter_begin_index = 0U;
   unsigned int struct_usage_alloc = 2;
   function_info->struct_usage = (void **)malloc(sizeof(void *) * struct_usage_alloc);
   function_info->struct_usage_count = 0;
@@ -949,15 +951,16 @@ enum process_unit_type
 {
   PROCESS_UNIT_INTERACTION_INCR_DPTR = 1,
   PROCESS_UNIT_INTERACTION,
-  PROCESS_UNIT_BRANCH,
+  PROCESS_UNIT_BRANCHING_INTERACTION,
   PROCESS_UNIT_INVOKE,
   PROCESS_UNIT_SET_CONTEXTUAL_DATA,
   PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO,
 };
-enum branch_unit_type
+enum branching_interaction_type
 {
-  PROCESS_BRANCH_THROUGH = 1,
-  PROCESS_BRANCH_SAVE_AND_THROUGH,
+  BRANCHING_INTERACTION_IGNORE_DATA = 1,
+  BRANCHING_INTERACTION_INCR_DPTR,
+  BRANCHING_INTERACTION,
 };
 enum interaction_process_state
 {
@@ -1083,11 +1086,12 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
   process_unit_reset_params_count->next = (void *)process_unit_type;
   process_unit_reset_params_count->debug = "process_unit_reset_params_count";
 
-  process_unit_type->type = PROCESS_UNIT_BRANCH;
+  process_unit_type->type = PROCESS_UNIT_BRANCHING_INTERACTION;
   allocate_from_cstringv(&process_unit_type->data, "Parameter Type:");
-  process_unit_type->data2 = NULL;
-  midgeary branches = (midgeary)malloc(sizeof(void *) * (1 + 2));
-  allocate_from_intv(&branches[0], 2);
+  const int PARAMETER_TYPE_BRANCH_COUNT = 2;
+  allocate_from_intv(&process_unit_type->data2, PARAMETER_TYPE_BRANCH_COUNT);
+  midgeary branches = (midgeary)malloc(sizeof(void *) * PARAMETER_TYPE_BRANCH_COUNT);
+  allocate_from_intv(&branches[0], PARAMETER_TYPE_BRANCH_COUNT);
   process_unit_type->next = (void *)branches;
   process_unit_type->debug = "process_unit_type";
 
@@ -1100,13 +1104,13 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
   // printf("address-of-branch_end->match:%p\n", &branch_end->match);
   // printf("address-of-branch_end->data:%p\n", &branch_end->data);
   // printf("address-of-branch_end->next:%p\n", &branch_end->next);
-  branch_end->type = PROCESS_BRANCH_THROUGH;
+  branch_end->type = BRANCHING_INTERACTION_IGNORE_DATA;
   branch_end->match = "end";
   branch_end->next = (void *)process_unit_add_context_param;
   branches[1] = (void *)branch_end;
 
   allocate_anon_struct(branch_unit_v1, branch_default, sizeof_branch_unit_v1);
-  branch_default->type = PROCESS_BRANCH_SAVE_AND_THROUGH;
+  branch_default->type = BRANCHING_INTERACTION_INCR_DPTR;
   branch_default->match = NULL;
   branch_default->data = (void *)ptr_current_data;
   branch_default->next = (void *)process_unit_name;
@@ -1412,7 +1416,11 @@ int mc_main(int argc, const char *const *argv)
   process_matrix[2 + *(int *)process_matrix[1]] = process_dfp;
   ++*(int *)process_matrix[1];
 
+  function_info_v1 *finfo;
+
   const char *commands =
+      // ---- BEGIN SEQUENCE ----
+      // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
       "invoke declare_function_pointer|"
       // What is the name of the function?
       "construct_and_attach_child_node|"
@@ -1428,7 +1436,7 @@ int mc_main(int argc, const char *const *argv)
       "node_name|"
       // Parameter 1 type:
       "end|"
-      // ---- END SEQUENCE ----
+      // ---- SEQUENCE TRANSITION ----
       "invoke initialize_function|"
       // What is the name of the function you wish to initialize?
       "construct_and_attach_child_node|"
@@ -1438,6 +1446,8 @@ int mc_main(int argc, const char *const *argv)
       "cpy 'const char *' child->name node_name\n"
       "ass child->parent parent\n"
       "inv append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n|"
+      // ---- SEQUENCE TRANSITION ----
+      "invoke construct_and_attach_child_node|"
       "";
 
   // node_v1 *node;
@@ -1528,7 +1538,7 @@ int handle_process(int argc, void **argsv)
         loop = 0;
       }
       break;
-      case PROCESS_UNIT_BRANCH:
+      case PROCESS_UNIT_BRANCHING_INTERACTION:
       {
         *reply = (char *)process_unit->data;
         loop = 0;
@@ -1636,29 +1646,29 @@ int handle_process(int argc, void **argsv)
         *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
       }
       break;
-      case PROCESS_UNIT_BRANCH:
+      case PROCESS_UNIT_BRANCHING_INTERACTION:
       {
         // printf("pub-0\n");
         midgeo branch_ary = (midgeo)process_unit->next;
-        int branch_ary_size = *(int *)branch_ary[0];
+        int branch_ary_size = *(int *)process_unit->data2;
 
         for (int i = 0; i < branch_ary_size; ++i)
         {
           // printf("pub-1:%i\n", i);
-          declare_and_assign_anon_struct(branch_unit_v1, branch, branch_ary[1 + i]);
+          declare_and_assign_anon_struct(branch_unit_v1, branch, branch_ary[i]);
           if (branch->match != NULL && strcmp(branch->match, command))
             continue;
 
           switch (branch->type)
           {
-          case PROCESS_BRANCH_THROUGH:
+          case BRANCHING_INTERACTION_IGNORE_DATA:
           {
             interaction_context[2] = branch->next;
             assign_anon_struct(process_unit, branch->next);
             *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
           }
           break;
-          case PROCESS_BRANCH_SAVE_AND_THROUGH:
+          case BRANCHING_INTERACTION_INCR_DPTR:
           {
             char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
             strcpy(str_allocation, command);
