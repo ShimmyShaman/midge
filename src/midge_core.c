@@ -356,9 +356,10 @@ int parse_past(const char *text, int *index, const char *sequence)
   }
 }
 
-int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access)
+int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing)
 {
   int o = *index;
+  bool hit_alpha = false;
   while (1)
   {
     int doc = 1;
@@ -370,12 +371,15 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
       doc = 0;
       break;
     case '\0':
-      printf("!parse_identifier: unexpected eof");
+      printf("!parse_past_identifier: unexpected eof");
       return -147;
     default:
     {
       if (isalpha(text[*index]))
+      {
+        hit_alpha = true;
         break;
+      }
       if (*index > o && isalnum(text[*index]))
         break;
       if (text[*index] == '_')
@@ -388,6 +392,13 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
           break;
         }
         if (text[*index] == '.')
+          break;
+      }
+      if (include_referencing && !hit_alpha)
+      {
+        if (text[*index] == '&')
+          break;
+        if (text[*index] == '*')
           break;
       }
 
@@ -481,6 +492,7 @@ int find_function_info(void *vp_nodespace, char *function_name, void **function_
   int res;
   declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
 
+  *function_info = NULL;
   for (int i = 0; i < node->function_count; ++i)
   {
     declare_and_assign_anon_struct(function_info_v1, finfo, node->functions[i]);
@@ -502,6 +514,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
   int res;
   declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
 
+  *struct_info = NULL;
   for (int i = 0; i < node->struct_count; ++i)
   {
     declare_and_assign_anon_struct(struct_info_v1, finfo, node->structs[i]);
@@ -536,15 +549,19 @@ int initialize_function_v1(int argc, void **argv)
   strcpy(buf, "int ");
   strcat(buf, function_info->name);
   strcat(buf, "(int argc, void **argv");
-  printf("@ifv-0  (%i)\n", function_info->parameter_count);
-  strcat(buf, ")\n{\n"); //  // Arguments\n");
+  // printf("@ifv-0  (%i)\n", function_info->parameter_count);
+  strcat(buf, ")\n{\n");
+  if (function_info->parameter_count > 0)
+  {
+    strcat(buf, TAB);
+    strcat(buf, "// Arguments\n");
+  }
 
   const char *TAB = "  ";
   for (int i = 0; i < function_info->parameter_count; ++i)
   {
     strcat(buf, TAB);
 
-    // printf("@ifv-1   (%s)\n", function_info->name);
     declare_and_assign_anon_struct(parameter_info_v1, parameter, function_info->parameters[i]);
 
     strcat(buf, "declare_and_assign_anon_struct(");
@@ -556,8 +573,8 @@ int initialize_function_v1(int argc, void **argv)
     strcat(buf, "argv[");
     sprintf(buf + strlen(buf), "%i]);\n", i);
   }
-  strcat(buf, "\n");
-  // strcat(buf, TAB);
+  if (function_info->parameter_count > 0)
+    strcat(buf, "\n");
 
   // const char *identity; const char *type; struct_info *struct_info;
   struct
@@ -590,6 +607,66 @@ int initialize_function_v1(int argc, void **argv)
 
       switch (code[i])
       {
+      case 'a':
+      {
+        // ass
+        MCcall(parse_past(code, &i, "ass"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // // type
+        // char *type_identity;
+        // MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
+        // MCcall(parse_past(code, &i, " "));
+
+        // Identifier
+        char *set_identity;
+        MCcall(parse_past_identifier(code, &i, &set_identity, true, true));
+        MCcall(parse_past(code, &i, " "));
+
+        // Value-identifier
+        char *value_identity;
+        MCcall(parse_past_identifier(code, &i, &value_identity, true, true));
+        MCcall(parse_past(code, &i, "\n"));
+
+        strcat(buf, TAB);
+        sprintf(buf + strlen(buf), "%s = %s;\n", set_identity, value_identity);
+      }
+      break;
+      case 'c':
+      {
+        // cpy
+        MCcall(parse_past(code, &i, "cpy"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // type
+        char *type_identity;
+        MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
+        MCcall(parse_past(code, &i, " "));
+
+        // Identifier
+        char *set_identity;
+        MCcall(parse_past_identifier(code, &i, &set_identity, true, false));
+        MCcall(parse_past(code, &i, " "));
+
+        // Value-identifier
+        char *value_identity;
+        MCcall(parse_past_identifier(code, &i, &value_identity, true, false));
+        MCcall(parse_past(code, &i, "\n"));
+
+        if (!strcmp(type_identity, "cstr"))
+        {
+          strcat(buf, TAB);
+          sprintf(buf + strlen(buf), "%s = (char *)malloc(sizeof(char) * (strlen(%s) + 1));\n", set_identity, value_identity);
+          strcat(buf, TAB);
+          sprintf(buf + strlen(buf), "strcpy((char *)%s, %s);\n", set_identity, value_identity);
+        }
+        else
+        {
+          printf("initialize_function_V1:>[ass]>unhandled type identity:%s\n", type_identity);
+          return 727;
+        }
+      }
+      break;
       case 'd':
       {
         // dec
@@ -598,12 +675,12 @@ int initialize_function_v1(int argc, void **argv)
 
         // Identifier
         char *type_identifier;
-        MCcall(parse_past_identifier(code, &i, &type_identifier, false));
+        MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
         MCcall(parse_past(code, &i, " "));
 
         // Variable Name
         char *var_name;
-        MCcall(parse_past_identifier(code, &i, &var_name, false));
+        MCcall(parse_past_identifier(code, &i, &var_name, false, false));
         MCcall(parse_past(code, &i, "\n"));
 
         declared_types[declared_type_count].type = type_identifier;
@@ -635,44 +712,56 @@ int initialize_function_v1(int argc, void **argv)
         free(type_identifier);
       }
       break;
-      case 'c':
+      case 'i':
       {
-        // cpy
-        MCcall(parse_past(code, &i, "cpy"));
+        // invoke
+        MCcall(parse_past(code, &i, "inv"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
         // type
-        char *type_identity;
-        MCcall(parse_past_identifier(code, &i, &type_identity, false));
-        MCcall(parse_past(code, &i, " "));
+        char *function_identity;
+        MCcall(parse_past_identifier(code, &i, &function_identity, true, false));
 
-        // Identifier
-        char *set_identity;
-        MCcall(parse_past_identifier(code, &i, &set_identity, true));
-        MCcall(parse_past(code, &i, " "));
-
-        // Value-identifier
-        char *value_identity;
-        MCcall(parse_past_identifier(code, &i, &value_identity, true));
-        MCcall(parse_past(code, &i, "\n"));
-
-        if (!strcmp(type_identity, "cstr"))
+        // Is mc function?
+        void *p_function_info;
+        MCcall(find_function_info((void *)nodespace, function_identity, &p_function_info));
+        if (p_function_info)
         {
-          strcat(buf, TAB);
-          sprintf(buf + strlen(buf), "%s = (char *)malloc(sizeof(char) * (strlen(%s) + 1));\n", set_identity, value_identity);
-          strcat(buf, TAB);
-          sprintf(buf + strlen(buf), "strcpy((char *)%s, %s);\n", set_identity, value_identity);
+          return -583;
         }
         else
         {
-          printf("initialize_function_V1:>[ass]>unhandled type identity:%s\n", type_identity);
-          return 727;
+          strcat(buf, TAB);
+          strcat(buf, function_identity);
+          strcat(buf, "(");
+
+          int arg_count = 0;
+          while (code[i] == ' ')
+          {
+            ++i;
+            char *arg_identity;
+            MCcall(parse_past_identifier(code, &i, &arg_identity, true, true));
+            if (arg_count > 0)
+              strcat(buf, ", ");
+            strcat(buf, arg_identity);
+
+            ++arg_count;
+          }
         }
-        printf("ifv>cling_declare:\n%s\n", buf);
+
+        strcat(buf, ");\n");
+        MCcall(parse_past(code, &i, "\n"));
+      }
+      break;
+      case 'r':
+      {
+        printf("TODO\n");
+        return -52828;
       }
       break;
 
       default:
+        printf("ifv>cling_declare:\n%s\n", buf);
         MCcall(print_parse_error(code, i, "initialize_function_v1", "UnhandledStatement"));
         return -757;
       }
@@ -681,25 +770,10 @@ int initialize_function_v1(int argc, void **argv)
     }
   }
   strcat(buf, "}");
-  // struct parsing_state ps;
-  // ps.text = buf2;
-  // ps.index = 0;
-  // ps.context = PARSING_CONTEXT_ROOT;
-  // ps.end = 0;
-  // c_node *block_node = (c_node *)calloc(sizeof(c_node), 1);
-  // block_node->type = CNODE_CODE_BLOCK;
-  // PRCE(parse_code_block(&ps, block_node));
 
-  // char *translated_code;
-  // MCcall(translate_code_block(nodespace, buf2, &translated_code));
-
-  // strcat(buf, buf2);
-
-  printf("@ifv-4\n");
   printf("ifv>cling_declare:\n%s\n", buf);
   // clint_declare(buf);
   printf("ifv-concludes\n");
-  printf("ifv-2\n");
   return 0;
 }
 
@@ -1305,7 +1379,7 @@ int mc_main(int argc, const char *const *argv)
       // What is the name of the function?
       "construct_and_attach_child_node|"
       // Return Type:
-      "int|"
+      "void|"
       // Parameter type:
       "node|"
       // Parameter name:
@@ -1320,15 +1394,12 @@ int mc_main(int argc, const char *const *argv)
       "invoke initialize_function|"
       // What is the name of the function you wish to initialize?
       "construct_and_attach_child_node|"
-      // int construct_and_attach_child_node(node parent, cstr node_name)
+      // int construct_and_attach_child_node(node parent, cstr node_name )
       // write code:
       "dec node child\n"
       "cpy cstr child->name node_name\n"
-      "ass node child->parent parent\n"
-      "set int parent.children_alloc 1\n"
-      "set int parent.children_count 1\n"
-      "ass node parent.children[0] child\n"
-      "ret 0\n|"
+      "ass child->parent parent\n"
+      "inv append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n|"
       "";
 
   // node_v1 *node;
