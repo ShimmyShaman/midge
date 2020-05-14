@@ -121,13 +121,14 @@ typedef unsigned int uint;
       unsigned int version;          \
     } struct_id;                     \
     const char *name;                \
+    unsigned int latest_iteration;   \
     const char *return_type;         \
     unsigned int parameter_count;    \
     void **parameters;               \
     unsigned int struct_usage_count; \
     void **struct_usage;             \
   }
-#define sizeof_function_info_v1 (sizeof(void *) * 8)
+#define sizeof_function_info_v1 (sizeof(void *) * 9)
 #define parameter_info_v1     \
   struct                      \
   {                           \
@@ -147,15 +148,15 @@ typedef unsigned int uint;
 
 #define allocate_anon_struct(struct, ptr_to_struct, size) \
   struct *ptr_to_struct;                                  \
-  dvp = (void **)&ptr_to_struct;                          \
-  *dvp = malloc(size);
+  mc_dvp = (void **)&ptr_to_struct;                       \
+  *mc_dvp = malloc(size);
 #define declare_and_assign_anon_struct(struct, ptr_to_struct, voidassignee) \
   struct *ptr_to_struct;                                                    \
-  dvp = (void **)&ptr_to_struct;                                            \
-  *dvp = (void *)voidassignee;
+  mc_dvp = (void **)&ptr_to_struct;                                         \
+  *mc_dvp = (void *)voidassignee;
 #define assign_anon_struct(ptr_to_struct, voidassignee) \
-  dvp = (void **)&ptr_to_struct;                        \
-  *dvp = (void *)voidassignee;
+  mc_dvp = (void **)&ptr_to_struct;                     \
+  *mc_dvp = (void *)voidassignee;
 
 int clint_process(const char *str);
 int clint_declare(const char *str);
@@ -488,7 +489,7 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
 
 int find_function_info(void *vp_nodespace, char *function_name, void **function_info)
 {
-  void **dvp;
+  void **mc_dvp;
   int res;
   declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
 
@@ -510,7 +511,7 @@ int find_function_info(void *vp_nodespace, char *function_name, void **function_
 
 int find_struct_info(void *vp_nodespace, const char *const struct_name, void **struct_info)
 {
-  void **dvp;
+  void **mc_dvp;
   int res;
   declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
 
@@ -533,7 +534,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
 int initialize_function_v1(int argc, void **argv)
 {
   printf("initialize_function_v1()\n");
-  void **dvp;
+  void **mc_dvp;
   int res;
 
   declare_and_assign_anon_struct(node_v1, nodespace, argv[0]);
@@ -542,36 +543,48 @@ int initialize_function_v1(int argc, void **argv)
 
   printf("nodespace->name:%s\n", nodespace->name);
   printf("function_info->name:%s\n", function_info->name);
+  printf("function_info->latest_iteration:%u\n", function_info->latest_iteration);
   // printf("code_block:%c%c%c%c%c...", code_block[0], code_block[1], code_block[2], code_block[3], code_block[4]);
+
+  // Increment function iteration
+  ++function_info->latest_iteration;
 
   // Declare with clint
   char buf[16384];
-  strcpy(buf, "int ");
-  strcat(buf, function_info->name);
-  strcat(buf, "(int argc, void **argv");
-  // printf("@ifv-0  (%i)\n", function_info->parameter_count);
-  strcat(buf, ")\n{\n");
-  if (function_info->parameter_count > 0)
-  {
-    strcat(buf, TAB);
-    strcat(buf, "// Arguments\n");
-  }
-
   const char *TAB = "  ";
+
+  sprintf(buf, "int %s_v%u(int mc_argc, void **mc_argv)\n{\n", function_info->name, function_info->latest_iteration);
+  // TODO -- mc_argc count check?
+  strcat(buf, TAB);
+  strcat(buf, "// Arguments\n");
+  strcat(buf, TAB);
+  strcat(buf, "int res;\n");
+  strcat(buf, TAB);
+  strcat(buf, "void **mc_dvp;\n");
+
   for (int i = 0; i < function_info->parameter_count; ++i)
   {
     strcat(buf, TAB);
 
     declare_and_assign_anon_struct(parameter_info_v1, parameter, function_info->parameters[i]);
 
-    strcat(buf, "declare_and_assign_anon_struct(");
-    strcat(buf, parameter->type.identifier);
-    strcat(buf, "_v");
-    sprintf(buf + strlen(buf), "%i, ", parameter->type.version);
-    strcat(buf, parameter->name);
-    strcat(buf, ", ");
-    strcat(buf, "argv[");
-    sprintf(buf + strlen(buf), "%i]);\n", i);
+    void *p_struct_info;
+    MCcall(find_struct_info(nodespace, parameter->type.identifier, &p_struct_info));
+    if (p_struct_info)
+    {
+      strcat(buf, "declare_and_assign_anon_struct(");
+      strcat(buf, parameter->type.identifier);
+      strcat(buf, "_v");
+      sprintf(buf + strlen(buf), "%i, ", parameter->type.version);
+      strcat(buf, parameter->name);
+      strcat(buf, ", ");
+      strcat(buf, "mc_argv[");
+      sprintf(buf + strlen(buf), "%i]);\n", i);
+    }
+    else
+    {
+      sprintf(buf + strlen(buf), "%s %s = (%s)mc_argv[%i];\n", parameter->type.identifier, parameter->name, parameter->type.identifier, i);
+    }
   }
   if (function_info->parameter_count > 0)
     strcat(buf, "\n");
@@ -605,6 +618,7 @@ int initialize_function_v1(int argc, void **argv)
         return -42;
       }
 
+      // TODO -- free all created char * strings
       switch (code[i])
       {
       case 'a':
@@ -640,7 +654,19 @@ int initialize_function_v1(int argc, void **argv)
 
         // type
         char *type_identity;
-        MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
+        if (code[i] == '\'')
+        {
+          int o = ++i;
+          while (code[i] != '\'')
+            ++i;
+          type_identity = (char *)malloc(sizeof(char) * (i - o + 1));
+          strncpy(type_identity, code + o, i - o);
+          type_identity[i - o] = '\0';
+          printf("type_identity:%s\n", type_identity);
+          ++i;
+        }
+        else
+          MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
         MCcall(parse_past(code, &i, " "));
 
         // Identifier
@@ -653,7 +679,7 @@ int initialize_function_v1(int argc, void **argv)
         MCcall(parse_past_identifier(code, &i, &value_identity, true, false));
         MCcall(parse_past(code, &i, "\n"));
 
-        if (!strcmp(type_identity, "cstr"))
+        if (!strcmp(type_identity, "const char *"))
         {
           strcat(buf, TAB);
           sprintf(buf + strlen(buf), "%s = (char *)malloc(sizeof(char) * (strlen(%s) + 1));\n", set_identity, value_identity);
@@ -662,8 +688,8 @@ int initialize_function_v1(int argc, void **argv)
         }
         else
         {
-          printf("initialize_function_V1:>[ass]>unhandled type identity:%s\n", type_identity);
-          return 727;
+          printf("initialize_function_V1:>[cpy]>unhandled type identity:%s\n", type_identity);
+          return -727;
         }
       }
       break;
@@ -769,10 +795,20 @@ int initialize_function_v1(int argc, void **argv)
     break;
     }
   }
+
+  strcat(buf, "\n");
+  strcat(buf, TAB);
+  strcat(buf, "return res;\n");
   strcat(buf, "}");
 
   printf("ifv>cling_declare:\n%s\n", buf);
-  // clint_declare(buf);
+  // Declare the method
+  clint_declare(buf);
+
+  // Set the method to the function pointer
+  sprintf(buf, "%s = &%s_v%u;", function_info->name, function_info->latest_iteration);
+  clint_process(buf);
+
   printf("ifv-concludes\n");
   return 0;
 }
@@ -782,7 +818,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   printf("declare_function_pointer_v1()\n");
   // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
 
-  void **dvp;
+  void **mc_dvp;
   int res;
 
   declare_and_assign_anon_struct(node_v1, nodespace, argv[0]);
@@ -808,6 +844,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   // Fill in the function_info and attach to the nodespace
   allocate_anon_struct(function_info_v1, function_info, sizeof_function_info_v1);
   function_info->name = name;
+  function_info->latest_iteration = 0U;
   function_info->return_type = return_type;
   function_info->parameter_count = parameter_count;
   function_info->parameters = (void **)malloc(sizeof(void *) * parameter_count);
@@ -963,7 +1000,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
   //     printf("prm[%i]:%s", z, pparams);
   //     pparams += sizeof(unsigned long);
   // }
-  void **dvp;
+  void **mc_dvp;
 
   allocate_anon_struct(process_unit_v1, process_unit_reset_data_pointer, sizeof_process_unit_v1);
   // allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
@@ -1028,9 +1065,9 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
   // set_pointer_value(2, &invoke_args[1]);
   // // put_data = (void *)process_unit_function_name;
   // process_unit_v1 *put;
-  // dvp = (void **)&put;
+  // mc_dvp = (void **)&put;
   // printf("put_data:%p\n", put_data);
-  // *dvp = (void *)(put_data);
+  // *mc_dvp = (void *)(put_data);
   // printf("put:%p\n", put);
   // printf("debug:%s\n", put->debug);
   // printf("ptr_current_data_points_to:%p\n", **((void ***)put->data2));
@@ -1119,7 +1156,7 @@ int mcqck_temp_create_process_initialize_function(midgeo *process_unit)
   dfp_vargs[2] = NULL;
   dfp_vargs[3] = NULL;
 
-  void **dvp;
+  void **mc_dvp;
 
   allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
   allocate_anon_struct(process_unit_v1, process_unit_add_context_param, sizeof_process_unit_v1);
@@ -1184,7 +1221,7 @@ int mc_main(int argc, const char *const *argv)
   }
 
   int res;
-  void **dvp;
+  void **mc_dvp;
 
   // Function Pointer Setting
   allocate_struct_id = &allocate_struct_id_v1;
@@ -1385,7 +1422,7 @@ int mc_main(int argc, const char *const *argv)
       // Parameter name:
       "parent|"
       // Parameter type:
-      "cstr|"
+      "const char *|"
       // Parameter name:
       "node_name|"
       // Parameter 1 type:
@@ -1397,7 +1434,7 @@ int mc_main(int argc, const char *const *argv)
       // int construct_and_attach_child_node(node parent, cstr node_name )
       // write code:
       "dec node child\n"
-      "cpy cstr child->name node_name\n"
+      "cpy 'const char *' child->name node_name\n"
       "ass child->parent parent\n"
       "inv append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n|"
       "";
@@ -1449,7 +1486,7 @@ int mc_main(int argc, const char *const *argv)
 
 int handle_process(int argc, void **argsv)
 {
-  void **dvp;
+  void **mc_dvp;
   int res;
 
   // Arguments
@@ -1682,7 +1719,7 @@ int handle_process(int argc, void **argsv)
 
 int process_command(int argc, void **argsv)
 {
-  void **dvp;
+  void **mc_dvp;
 
   midgeo process_matrix = (midgeo)argsv[1];
   midgeo interaction_context = (midgeo)argsv[2];
