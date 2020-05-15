@@ -1,168 +1,6 @@
 /* midge_core.c */
 
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-
-// #include "c_code_lexer.h"
-
-typedef void **midgeo;
-typedef void **midgeary;
-typedef unsigned int uint;
-
-/*
- * @field a (void **) variable to store the created value in.
- */
-#define allocate_from_intv(field, val)                                                      \
-  *field = (void *)malloc(sizeof(int) * 1);                                                 \
-  if (!*field)                                                                              \
-  {                                                                                         \
-    printf("allocate_from_intv(): failed to allocate memory for " #field " field_data.\n"); \
-    return -1;                                                                              \
-  }                                                                                         \
-  **(int **)field = val;
-
-#define allocate_from_uintv(field, val)                                                     \
-  *field = (void *)malloc(sizeof(uint) * 1);                                                \
-  if (!*field)                                                                              \
-  {                                                                                         \
-    printf("allocate_from_intv(): failed to allocate memory for " #field " field_data.\n"); \
-    return -1;                                                                              \
-  }                                                                                         \
-  **(uint **)field = val;
-
-#define allocate_from_cstringv(field, cstr)                                                 \
-  *field = (void *)malloc(sizeof(char) * (strlen(cstr) + 1));                               \
-  if (!*field)                                                                              \
-  {                                                                                         \
-    printf("allocate_from_intv(): failed to allocate memory for " #field " field_data.\n"); \
-    return -1;                                                                              \
-  }                                                                                         \
-  strcpy((char *)(*field), cstr);
-
-#define MCcall(function)                 \
-  res = function;                        \
-  if (res)                               \
-  {                                      \
-    printf("--" #function ":%i\n", res); \
-    return res;                          \
-  }
-
-#define process_unit_v1          \
-  struct                         \
-  {                              \
-    struct                       \
-    {                            \
-      const char *identifier;    \
-      uint version;              \
-    } struct_id;                 \
-    enum process_unit_type type; \
-    void *data;                  \
-    void *data2;                 \
-    void *next;                  \
-    const char *debug;           \
-  }
-#define sizeof_process_unit_v1 (sizeof(void *) * 7)
-#define branch_unit_v1                    \
-  struct                                  \
-  {                                       \
-    struct                                \
-    {                                     \
-      const char *identifier;             \
-      unsigned int version;               \
-    } struct_id;                          \
-    enum branching_interaction_type type; \
-    const char *match;                    \
-    void *data;                           \
-    void *next;                           \
-  }
-#define sizeof_branch_unit_v1 (sizeof(void *) * 13)
-#define node_v1                   \
-  struct                          \
-  {                               \
-    struct                        \
-    {                             \
-      const char *identifier;     \
-      unsigned int version;       \
-    } struct_id;                  \
-    const char *name;             \
-    void *parent;                 \
-    unsigned int functions_alloc; \
-    unsigned int function_count;  \
-    void **functions;             \
-    unsigned int structs_alloc;   \
-    unsigned int struct_count;    \
-    void **structs;               \
-    unsigned int children_alloc;  \
-    unsigned int child_count;     \
-    void **children;              \
-  }
-#define sizeof_node_v1 (sizeof(void *) * 13)
-#define struct_info_v1        \
-  struct                      \
-  {                           \
-    struct                    \
-    {                         \
-      const char *identifier; \
-      unsigned int version;   \
-    } struct_id;              \
-    const char *name;         \
-    unsigned int version;     \
-    unsigned int field_count; \
-    void **fields;            \
-  }
-#define sizeof_struct_info_v1 (sizeof(void *) * 6)
-#define function_info_v1                         \
-  struct                                         \
-  {                                              \
-    struct                                       \
-    {                                            \
-      const char *identifier;                    \
-      unsigned int version;                      \
-    } struct_id;                                 \
-    const char *name;                            \
-    unsigned int latest_iteration;               \
-    const char *return_type;                     \
-    unsigned int parameter_count;                \
-    void **parameters;                           \
-    unsigned int variable_parameter_begin_index; \
-    unsigned int struct_usage_count;             \
-    void **struct_usage;                         \
-  }
-#define sizeof_function_info_v1 (sizeof(void *) * 10)
-#define parameter_info_v1     \
-  struct                      \
-  {                           \
-    struct                    \
-    {                         \
-      const char *identifier; \
-      unsigned int version;   \
-    } struct_id;              \
-    struct                    \
-    {                         \
-      const char *identifier; \
-      unsigned int version;   \
-    } type;                   \
-    const char *name;         \
-  }
-#define sizeof_parameter_info_v1 (sizeof(void *) * 5)
-
-#define allocate_anon_struct(struct, ptr_to_struct, size) \
-  struct *ptr_to_struct;                                  \
-  mc_dvp = (void **)&ptr_to_struct;                       \
-  *mc_dvp = malloc(size);
-#define declare_and_assign_anon_struct(struct, ptr_to_struct, voidassignee) \
-  struct *ptr_to_struct;                                                    \
-  mc_dvp = (void **)&ptr_to_struct;                                         \
-  *mc_dvp = (void *)voidassignee;
-#define assign_anon_struct(ptr_to_struct, voidassignee) \
-  mc_dvp = (void **)&ptr_to_struct;                     \
-  *mc_dvp = (void *)voidassignee;
-
-int clint_process(const char *str);
-int clint_declare(const char *str);
-int clint_loadfile(const char *path);
-int clint_loadheader(const char *path);
+#include "midge_core.h"
 
 int (*allocate_struct_id)(int, void **);
 int (*allocate_midge_field_info)(int, void **);
@@ -1197,7 +1035,7 @@ int mcqck_temp_create_process_initialize_function(midgeo *process_unit)
   return 0;
 }
 
-int process_command(int argc, void **argsv);
+int submit_user_command(int argc, void **argsv);
 int mc_main(int argc, const char *const *argv)
 {
   int sizeof_void_ptr = sizeof(void *);
@@ -1218,81 +1056,6 @@ int mc_main(int argc, const char *const *argv)
   // allocate_from_definition = &allocate_from_definition_v1;
   declare_function_pointer = &declare_function_pointer_v1;
   // obtain_from_index = &obtain_from_index_v1;
-
-  // // DEFINE: field_definition
-  // struct_definition field_definition_v1;
-  // midgeo field_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (3));
-  // MCcall(mcqck_temp_allocate_field(&field_definition_v1_fields[0], "char", 1, "type"));
-  // MCcall(mcqck_temp_allocate_field(&field_definition_v1_fields[1], "int", 0, "deref_count"));
-  // MCcall(mcqck_temp_allocate_field(&field_definition_v1_fields[2], "char", 1, "identifier"));
-  // MCcall(mcqck_temp_define_struct(&field_definition_v1, "field_info", 1U, 3, field_definition_v1_fields));
-
-  // // DEFINE: struct_definition
-  // struct_definition struct_definition_v1;
-  // midgeo struct_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (3));
-  // MCcall(mcqck_temp_allocate_field(&struct_definition_v1_fields[0], "struct_id", 1, "id"));
-  // MCcall(mcqck_temp_allocate_field(&struct_definition_v1_fields[1], "int", 0, "field_count"));
-  // MCcall(mcqck_temp_allocate_field(&struct_definition_v1_fields[2], "field_info", 1, "fields"));
-  // MCcall(mcqck_temp_define_struct(&struct_definition_v1, "struct_info", 1U, 3, struct_definition_v1_fields));
-
-  // // DEFINE: index_node_definition
-  // struct_definition index_node_definition_v1;
-  // midgeo index_node_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (4));
-  // MCcall(mcqck_temp_allocate_field(&index_node_definition_v1_fields[0], "char", 1, "name"));
-  // MCcall(mcqck_temp_allocate_field(&index_node_definition_v1_fields[1], "void", 1, "item"));
-  // MCcall(mcqck_temp_allocate_field(&index_node_definition_v1_fields[2], "void", 1, "left"));
-  // MCcall(mcqck_temp_allocate_field(&index_node_definition_v1_fields[3], "void", 1, "right"));
-  // MCcall(mcqck_temp_define_struct(&index_node_definition_v1, "field_info", 1U, 4, index_node_definition_v1_fields));
-
-  // // DEFINE: function_info
-  // struct_definition function_definition_v1;
-  // midgeo function_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (4));
-  // MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[0], "char", 1, "name"));
-  // MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[1], "char", 1, "return_type"));
-  // MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[2], "int", 0, "parameter_count"));
-  // MCcall(mcqck_temp_allocate_field(&function_definition_v1_fields[3], "parameter_info", 1, "parameters"));
-  // MCcall(mcqck_temp_define_struct(&function_definition_v1, "function_info", 1U, 4, function_definition_v1_fields));
-  // // MCcall(print_struct_definition(1, function_definition_v1));
-  // // printf("--%s (%i*)%s;\n", (char *)((void **)function_definition_v1[3])[0], *(int *)((void **)function_definition_v1[3])[1],
-  // //        (char *)((void **)function_definition_v1[3])[2]);
-  // free(function_definition_v1_fields);
-  // // MCcall(print_struct_definition(1, function_definition_v1));
-
-  // // DEFINE: node
-  // struct_definition node_definition_v1;
-  // midgeo node_definition_v1_fields = (midgeo)malloc(sizeof(void *) * (5));
-  // MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[0], "char", 1, "name"));
-  // MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[1], "node", 1, "parent"));
-  // MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[2], "function_info", 1, "function_index"));
-  // MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[3], "structure_info", 1, "structure_index"));
-  // MCcall(mcqck_temp_allocate_field(&node_definition_v1_fields[4], "collection", 0, "children"));
-  // MCcall(mcqck_temp_define_struct(&node_definition_v1, "node", 1U, 5, node_definition_v1_fields));
-  // // MCcall(print_struct_definition(1, node_definition_v1));
-  // free(node_definition_v1_fields);
-
-  // TODO -- add 2 previous defined structures to global structure index
-  // midgeo global_structure_index;
-  // MCcall(mcqck_temp_allocate_from_definition(&global_structure_index, index_node_definition_v1));
-  // global_structure_index[1] = function_definition_v1;
-  // global_structure_index[2] = NULL;
-  // global_structure_index[3] = NULL;
-
-  // Instantiate and declare the global::declare_function_pointer method
-  // midgeo dfpi;
-  // midgeo fields = (midgeo)malloc(sizeof(void *) * 5);
-  // MCcall(mcqck_temp_allocate_field(&fields[0], "function_info", 2, "out_var"));
-  // MCcall(mcqck_temp_allocate_field(&fields[1], "node", 1, "parent"));
-  // MCcall(mcqck_temp_allocate_field(&fields[2], "char", 1, "name"));
-  // MCcall(mcqck_temp_allocate_field(&fields[3], "int", 0, "parameter_count"));
-  // MCcall(mcqck_temp_allocate_field(&fields[4], "parameter_info", 1, "parameters"));
-  // MCcall(mcqck_temp_declare_function_pointer(&dfpi, global, "declare_function_pointer", 5, fields));
-  // clint_declare("int (*global_declare_function_pointer)(int argc, void **argv);");
-
-  // midgeo global_function_index;
-  // MCcall(mcqck_temp_allocate_from_definition(&global_function_index, index_node_definition_v1));
-  // global_structure_index[1] = function_definition_v1;
-  // global_structure_index[2] = NULL;
-  // global_structure_index[3] = NULL;
 
   allocate_anon_struct(struct_info_v1, node_definition_v1, sizeof_struct_info_v1);
   node_definition_v1->struct_id.identifier = "struct_info";
@@ -1377,29 +1140,43 @@ int mc_main(int argc, const char *const *argv)
   // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
   // Execute commands
+  allocate_anon_struct(command_hub_v1, command_hub, sizeof_command_hub_v1);
+  command_hub->global = global;
+
   midgeo interaction_context = (midgeo)malloc(sizeof_void_ptr * 4);
   allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BLANK);
   interaction_context[1] = NULL;
   interaction_context[2] = NULL;
   allocate_from_intv(&interaction_context[3], 0);
+  command_hub->interaction_context = interaction_context;
 
-  midgeary process_matrix = (midgeo)malloc(sizeof(void *) * 20);
-  allocate_from_intv(&process_matrix[0], 20);
-  allocate_from_intv(&process_matrix[1], 0);
+  command_hub->process_matrix = (midgeo)malloc(sizeof_void_ptr * (2 + 4000));
 
-  midgeary process_dfp = (midgeo)malloc(sizeof_void_ptr * 2);
-  allocate_from_cstringv(&process_dfp[0], "invoke declare_function_pointer");
-  MCcall(mcqck_temp_create_process_declare_function_pointer((midgeo *)&process_dfp[1]));
-  process_matrix[2 + *(int *)process_matrix[1]] = process_dfp;
-  ++*(int *)process_matrix[1];
+  midgeary template_collection = (midgeo)malloc(sizeof(void *) * 20);
+  allocate_from_intv(&template_collection[0], 20);
+  allocate_from_intv(&template_collection[1], 0);
+  command_hub->template_collection = template_collection;
 
-  process_dfp = (midgeo)malloc(sizeof_void_ptr * 2);
-  allocate_from_cstringv(&process_dfp[0], "invoke initialize_function");
-  MCcall(mcqck_temp_create_process_initialize_function((midgeo *)&process_dfp[1]));
-  process_matrix[2 + *(int *)process_matrix[1]] = process_dfp;
-  ++*(int *)process_matrix[1];
+  midgeary template_process = (midgeo)malloc(sizeof_void_ptr * 2);
+  allocate_from_cstringv(&template_process[0], "invoke declare_function_pointer");
+  MCcall(mcqck_temp_create_process_declare_function_pointer((midgeo *)&template_process[1]));
+  template_collection[2 + *(int *)template_collection[1]] = template_process;
+  ++*(int *)template_collection[1];
 
-  allocate_anon_struct(function_info_v1, declare_function_pointer_function_info, sizeof_function_info_v1);
+  template_process = (midgeo)malloc(sizeof_void_ptr * 2);
+  allocate_from_cstringv(&template_process[0], "invoke initialize_function");
+  MCcall(mcqck_temp_create_process_initialize_function((midgeo *)&template_process[1]));
+  template_collection[2 + *(int *)template_collection[1]] = template_process;
+  ++*(int *)template_collection[1];
+
+  // allocate_anon_struct(function_info_v1, function_info_decfp, sizeof_function_info_v1);
+  // function_info_decfp->struct_id.identifier = "struct_info";
+  // function_info_decfp->struct_id.version = 1U;
+  // function_info_decfp->name = "declare_function_pointer";
+  // function_info_decfp->latest_iteration = 1U;
+  // function_info_decfp->return_type = "void";
+  // function_info_decfp->parameter_count = 4;
+  // function_info_decfp->parameters
 
   const char *commands =
       // ---- BEGIN SEQUENCE ----
@@ -1441,6 +1218,7 @@ int mc_main(int argc, const char *const *argv)
   // "create node\n"
   // "construct_and_attach_child_node\n";
 
+  printf("\n>: ");
   int n = strlen(commands);
   int s = 0;
   char cstr[2048];
@@ -1453,43 +1231,166 @@ int mc_main(int argc, const char *const *argv)
     cstr[i - s] = '\0';
     s = i + 1;
 
-    char *reply;
-    vargs[1] = process_matrix;
-    vargs[2] = interaction_context;
-    vargs[3] = global;
+    vargs[0] = (void *)command_hub;
     vargs[4] = (void *)cstr;
-    vargs[5] = (void *)&reply;
 
-    printf("%s\n", cstr);
-    MCcall(process_command(12, vargs));
+    // printf("%s\n", cstr);
+    MCcall(submit_user_command(12, vargs));
 
-    if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
-    {
-      printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
-      break;
-    }
-    if (reply != NULL)
-    {
-      printf("%s", reply);
-    }
+    // if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+    // {
+    //   printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
+    //   break;
+    // }
+    // if (reply != NULL)
+    // {
+    //   printf("%s", reply);
+    // }
   }
 
   printf("</midge_core>\n");
   return 0;
 }
 
+int handle_process(int argc, void **argsv);
+
+int submit_user_command(int argc, void **argsv)
+{
+  void **mc_dvp;
+
+  declare_and_assign_anon_struct(command_hub_v1, command_hub, argsv[0]);
+  char *command = (char *)argsv[4];
+
+  // Format the User Response as an action
+  allocate_anon_struct(process_action_v1, process_action, sizeof_process_action_v1);
+  if (command_hub->focused_issue == NULL)
+  {
+    process_action->sequence_uid = command_hub->uid_counter;
+    ++command_hub->uid_counter;
+
+    process_action->type = PROCESS_ACTION_USER_BASE_COMMAND;
+    process_action->dialogue = command;
+  }
+  else
+  {
+    return -58918948;
+  }
+
+  while (1)
+  {
+    // Affect the command hub
+    process_matrix_register_action(command_hub, process_action);
+    command_hub_submit_process_action(command_hub, process_action);
+
+    // Process the action
+    command_hub_process_outstanding_actions(command_hub);
+
+    // Formulate system responses
+    void *p_response_action;
+    systems_process_command_hub_issues(command_hub, &p_response_action);
+    if (!p_response_action)
+      break;
+    assign_anon_struct(process_action, p_response_action);
+  }
+
+  // Send control back to the user
+  return 0;
+
+  declare_and_assign_anon_struct(process_action_v1, response_action, p_response_action);
+
+  register_process_action(command_hub, process_action);
+
+  apply_action_to_command_hub(command_hub, process_action);
+
+  if (command_hub->issues_count == 0)
+  {
+    printf("\n>: ");
+    return 0;
+  }
+  else if (command_hub->issues_count == 1)
+  {
+    declare_and_assign_anon_struct(process_action_v1, issue, command_hub->issues[0]);
+    switch (issue->type)
+    {
+    default:
+      printf("Unhandled process issue type:%i\n", issue->type);
+      return -82825;
+    }
+  }
+  else
+  {
+    printf("more than 1 issues!\n");
+    return -882;
+  }
+}
+
+return 0;
+
+int res = 0;
+*reply = NULL;
+
+if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+{
+  return -1;
+}
+
+if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BLANK)
+{
+  // No real context
+  // User Submits Commmand without prompt
+  int n = *(int *)template_collection[1];
+  for (int i = 0; i < n; ++i)
+  {
+    midgeo process = (midgeo)template_collection[2 + i];
+    if (!strcmp((char *)process[0], command))
+    {
+      *(int *)interaction_context[0] = INTERACTION_CONTEXT_PROCESS;
+      *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+      interaction_context[1] = process;
+      interaction_context[2] = process[1];
+
+      printf("##########################################\n");
+      printf("Begin Process:%s\n", process[0]);
+      MCcall(handle_process(argc, argsv));
+      return 0;
+    }
+  }
+  // else if (!strcmp("demobegin", command))
+  // {
+  //     *reply = "[Demo:\n";
+  //     strcpy(*reply, "[Demo: \"");
+
+  //     history[0] strcat(*reply, (char *)history) return 0;
+  // }
+
+  *(int *)interaction_context[0] = INTERACTION_CONTEXT_BROKEN;
+  return 0;
+}
+else if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_PROCESS)
+{
+  declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
+  *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_POSTREPLY;
+  // printf("process_unit:%u\n", process_unit->type);
+
+  // Handle reaction from previous unit
+  MCcall(handle_process(argc, argsv));
+}
+
+return res;
+}
 int handle_process(int argc, void **argsv)
 {
   void **mc_dvp;
   int res;
 
   // Arguments
-  midgeo process_matrix = (midgeo)argsv[1];
+  midgeo process_matrix = (midgeo)argsv[0];
+  midgeo template_collection = (midgeo)argsv[1];
   midgeo interaction_context = (midgeo)argsv[2];
-  declare_and_assign_anon_struct(node_v1, nodespace, argsv[3])
-      // History:
-      // [0] -- linked list cstr : most recent set
-      char *command = (char *)argsv[4];
+  declare_and_assign_anon_struct(node_v1, nodespace, argsv[3]);
+  // History:
+  // [0] -- linked list cstr : most recent set
+  char *command = (char *)argsv[4];
   char **reply = (char **)argsv[5];
 
   declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
@@ -1720,69 +1621,4 @@ int handle_process(int argc, void **argsv)
 
   printf("end-handle_process()\n");
   return 0;
-}
-
-int process_command(int argc, void **argsv)
-{
-  void **mc_dvp;
-
-  midgeo process_matrix = (midgeo)argsv[1];
-  midgeo interaction_context = (midgeo)argsv[2];
-  midgeo nodespace = (midgeo)argsv[3];
-  // History:
-  // [0] -- linked list cstr : most recent set
-  char *command = (char *)argsv[4];
-  char **reply = (char **)argsv[5];
-
-  int res = 0;
-  *reply = NULL;
-
-  if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
-  {
-    return -1;
-  }
-
-  if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BLANK)
-  {
-    // No real context
-    // User Submits Commmands without prompt
-    int n = *(int *)process_matrix[1];
-    for (int i = 0; i < n; ++i)
-    {
-      midgeo process = (midgeo)process_matrix[2 + i];
-      if (!strcmp((char *)process[0], command))
-      {
-        *(int *)interaction_context[0] = INTERACTION_CONTEXT_PROCESS;
-        *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-        interaction_context[1] = process;
-        interaction_context[2] = process[1];
-
-        printf("##########################################\n");
-        printf("Begin Process:%s\n", process[0]);
-        MCcall(handle_process(argc, argsv));
-        return 0;
-      }
-    }
-    // else if (!strcmp("demobegin", command))
-    // {
-    //     *reply = "[Demo:\n";
-    //     strcpy(*reply, "[Demo: \"");
-
-    //     history[0] strcat(*reply, (char *)history) return 0;
-    // }
-
-    *(int *)interaction_context[0] = INTERACTION_CONTEXT_BROKEN;
-    return 0;
-  }
-  else if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_PROCESS)
-  {
-    declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
-    *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_POSTREPLY;
-    // printf("process_unit:%u\n", process_unit->type);
-
-    // Handle reaction from previous unit
-    MCcall(handle_process(argc, argsv));
-  }
-
-  return res;
 }
