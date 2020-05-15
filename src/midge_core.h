@@ -10,6 +10,40 @@ typedef void **midgeo;
 typedef void **midgeary;
 typedef unsigned int uint;
 
+enum process_unit_type
+{
+    PROCESS_UNIT_INTERACTION_INCR_DPTR = 1,
+    PROCESS_UNIT_INTERACTION,
+    PROCESS_UNIT_BRANCHING_INTERACTION,
+    PROCESS_UNIT_INVOKE,
+    PROCESS_UNIT_SET_CONTEXTUAL_DATA,
+    PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO,
+};
+
+enum branching_interaction_type
+{
+    BRANCHING_INTERACTION_IGNORE_DATA = 1,
+    BRANCHING_INTERACTION_INCR_DPTR,
+    BRANCHING_INTERACTION,
+    BRANCHING_INTERACTION_INVOKE,
+};
+
+enum interaction_process_state
+{
+    INTERACTION_PROCESS_STATE_INITIAL = 1,
+    INTERACTION_PROCESS_STATE_POSTREPLY,
+};
+
+enum process_contextual_data
+{
+    PROCESS_CONTEXTUAL_DATA_NODESPACE = 1,
+};
+
+enum process_action_type
+{
+    PROCESS_ACTION_UNPROVOKED_USER_COMMAND = 1,
+};
+
 /*
  * @field a (void **) variable to store the created value in.
  */
@@ -39,6 +73,11 @@ typedef unsigned int uint;
         return -1;                                                                              \
     }                                                                                           \
     strcpy((char *)(*field), cstr);
+
+#define allocate_and_copy_cstr(var, value)                    \
+    var = (char *)malloc(sizeof(char) * (strlen(value) + 1)); \
+    strcpy(var, value);                                       \
+    var[strlen(value)] = '\0';
 
 #define MCcall(function)                     \
     res = function;                          \
@@ -147,14 +186,61 @@ typedef unsigned int uint;
     }
 #define sizeof_parameter_info_v1 (sizeof(void *) * 5)
 
+#define process_action_v1              \
+    struct                             \
+    {                                  \
+        struct                         \
+        {                              \
+            const char *identifier;    \
+            unsigned int version;      \
+        } struct_id;                   \
+        unsigned int sequence_uid;     \
+        enum process_action_type type; \
+        char *dialogue;                \
+    }
+#define sizeof_process_action_v1 (sizeof(void *) * 5)
+
+#define template_collection_v1        \
+    struct                            \
+    {                                 \
+        struct                        \
+        {                             \
+            const char *identifier;   \
+            uint version;             \
+        } struct_id;                  \
+        unsigned int templates_alloc; \
+        unsigned int template_count;  \
+        void **templates;             \
+    }
+#define sizeof_template_collection_v1 (sizeof(void *) * 5)
+
+#define command_hub_v1                \
+    struct                            \
+    {                                 \
+        struct                        \
+        {                             \
+            const char *identifier;   \
+            uint version;             \
+        } struct_id;                  \
+        void *global_node;            \
+        void *template_collection;    \
+        void *process_matrix;         \
+        void *focused_issue;          \
+        bool focused_issue_activated; \
+        unsigned int uid_counter;     \
+    }
+#define sizeof_command_hub_v1 (sizeof(void *) * 7)
+
 #define allocate_anon_struct(struct, ptr_to_struct, size) \
     struct *ptr_to_struct;                                \
     mc_dvp = (void **)&ptr_to_struct;                     \
     *mc_dvp = malloc(size);
+
 #define declare_and_assign_anon_struct(struct, ptr_to_struct, voidassignee) \
     struct *ptr_to_struct;                                                  \
     mc_dvp = (void **)&ptr_to_struct;                                       \
     *mc_dvp = (void *)voidassignee;
+
 #define assign_anon_struct(ptr_to_struct, voidassignee) \
     mc_dvp = (void **)&ptr_to_struct;                   \
     *mc_dvp = (void *)voidassignee;
@@ -164,19 +250,4 @@ int clint_declare(const char *str);
 int clint_loadfile(const char *path);
 int clint_loadheader(const char *path);
 
-#define command_hub_v1               \
-    struct                           \
-    {                                \
-        struct                       \
-        {                            \
-            const char *identifier;  \
-            uint version;            \
-        } struct_id;                 \
-        void **;                  \
-        void *data2;                 \
-        void *next;                  \
-        const char *debug;           \
-    }
-#define sizeof_command_hub_v1 (sizeof(void *) * 7)
-
-#endif MIDGE_CORE_H
+#endif // MIDGE_CORE_H

@@ -763,38 +763,6 @@ int declare_function_pointer_v1(int argc, void **argv)
   return 0;
 }
 
-enum process_unit_type
-{
-  PROCESS_UNIT_INTERACTION_INCR_DPTR = 1,
-  PROCESS_UNIT_INTERACTION,
-  PROCESS_UNIT_BRANCHING_INTERACTION,
-  PROCESS_UNIT_INVOKE,
-  PROCESS_UNIT_SET_CONTEXTUAL_DATA,
-  PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO,
-};
-enum branching_interaction_type
-{
-  BRANCHING_INTERACTION_IGNORE_DATA = 1,
-  BRANCHING_INTERACTION_INCR_DPTR,
-  BRANCHING_INTERACTION,
-  BRANCHING_INTERACTION_INVOKE,
-};
-enum interaction_process_state
-{
-  INTERACTION_PROCESS_STATE_INITIAL = 1,
-  INTERACTION_PROCESS_STATE_POSTREPLY,
-};
-enum process_contextual_data
-{
-  PROCESS_CONTEXTUAL_DATA_NODESPACE = 1,
-};
-void **put_data;
-void **process_parameter_data;
-int *p_process_param_count;
-
-#define INTERACTION_CONTEXT_BLANK 1
-#define INTERACTION_CONTEXT_PROCESS 2
-#define INTERACTION_CONTEXT_BROKEN 3
 int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
 {
   const int dfp_varg_count = 4; // nodespace, params_count, input_data
@@ -834,7 +802,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
   // printf("pufnAddr:%p\n", process_unit_function_name);
   allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
   allocate_anon_struct(process_unit_v1, process_unit_return_type, sizeof_process_unit_v1);
-  put_data = (void **)process_unit_function_name;
+  // put_data = (void **)process_unit_function_name;
   // printf("address:%p\n", put_data);
   allocate_anon_struct(process_unit_v1, process_unit_reset_params_count, sizeof_process_unit_v1);
   allocate_anon_struct(process_unit_v1, process_unit_type, sizeof_process_unit_v1);
@@ -1031,7 +999,7 @@ int mcqck_temp_create_process_initialize_function(midgeo *process_unit)
 
   // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
 
-  printf("end-mcqck_temp_create_process_initialize_function()\n");
+  // printf("end-mcqck_temp_create_process_initialize_function()\n");
   return 0;
 }
 
@@ -1141,33 +1109,27 @@ int mc_main(int argc, const char *const *argv)
 
   // Execute commands
   allocate_anon_struct(command_hub_v1, command_hub, sizeof_command_hub_v1);
-  command_hub->global = global;
-
-  midgeo interaction_context = (midgeo)malloc(sizeof_void_ptr * 4);
-  allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BLANK);
-  interaction_context[1] = NULL;
-  interaction_context[2] = NULL;
-  allocate_from_intv(&interaction_context[3], 0);
-  command_hub->interaction_context = interaction_context;
-
+  command_hub->global_node = global;
   command_hub->process_matrix = (midgeo)malloc(sizeof_void_ptr * (2 + 4000));
+  command_hub->focused_issue = NULL;
+  command_hub->focused_issue_activated = false;
+  command_hub->uid_counter = 2000;
 
-  midgeary template_collection = (midgeo)malloc(sizeof(void *) * 20);
-  allocate_from_intv(&template_collection[0], 20);
-  allocate_from_intv(&template_collection[1], 0);
-  command_hub->template_collection = template_collection;
+  allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
+  template_collection->templates_alloc = 400;
+  template_collection->template_count = 0;
+  template_collection->templates = (void **)malloc(sizeof(void *) * template_collection->templates_alloc);
+  command_hub->template_collection = (void *)template_collection;
 
-  midgeary template_process = (midgeo)malloc(sizeof_void_ptr * 2);
+  midgeo template_process = (midgeo)malloc(sizeof_void_ptr * 2);
   allocate_from_cstringv(&template_process[0], "invoke declare_function_pointer");
   MCcall(mcqck_temp_create_process_declare_function_pointer((midgeo *)&template_process[1]));
-  template_collection[2 + *(int *)template_collection[1]] = template_process;
-  ++*(int *)template_collection[1];
+  MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc, &template_collection->template_count, (void *)template_process));
 
   template_process = (midgeo)malloc(sizeof_void_ptr * 2);
   allocate_from_cstringv(&template_process[0], "invoke initialize_function");
   MCcall(mcqck_temp_create_process_initialize_function((midgeo *)&template_process[1]));
-  template_collection[2 + *(int *)template_collection[1]] = template_process;
-  ++*(int *)template_collection[1];
+  MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc, &template_collection->template_count, (void *)template_process));
 
   // allocate_anon_struct(function_info_v1, function_info_decfp, sizeof_function_info_v1);
   // function_info_decfp->struct_id.identifier = "struct_info";
@@ -1252,7 +1214,10 @@ int mc_main(int argc, const char *const *argv)
   return 0;
 }
 
-int handle_process(int argc, void **argsv);
+int process_matrix_register_action(void *p_command_hub, void *p_process_action);
+int command_hub_submit_process_action(void *p_command_hub, void *p_process_action);
+int command_hub_process_outstanding_actions(void *p_command_hub);
+int systems_process_command_hub_issues(void *p_command_hub, void **p_response_action);
 
 int submit_user_command(int argc, void **argsv)
 {
@@ -1268,11 +1233,13 @@ int submit_user_command(int argc, void **argsv)
     process_action->sequence_uid = command_hub->uid_counter;
     ++command_hub->uid_counter;
 
-    process_action->type = PROCESS_ACTION_USER_BASE_COMMAND;
-    process_action->dialogue = command;
+    process_action->type = PROCESS_ACTION_UNPROVOKED_USER_COMMAND;
+    allocate_and_copy_cstr(process_action->dialogue, command);
   }
   else
   {
+    declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue);
+
     return -58918948;
   }
 
@@ -1295,330 +1262,399 @@ int submit_user_command(int argc, void **argsv)
 
   // Send control back to the user
   return 0;
-
-  declare_and_assign_anon_struct(process_action_v1, response_action, p_response_action);
-
-  register_process_action(command_hub, process_action);
-
-  apply_action_to_command_hub(command_hub, process_action);
-
-  if (command_hub->issues_count == 0)
-  {
-    printf("\n>: ");
-    return 0;
-  }
-  else if (command_hub->issues_count == 1)
-  {
-    declare_and_assign_anon_struct(process_action_v1, issue, command_hub->issues[0]);
-    switch (issue->type)
-    {
-    default:
-      printf("Unhandled process issue type:%i\n", issue->type);
-      return -82825;
-    }
-  }
-  else
-  {
-    printf("more than 1 issues!\n");
-    return -882;
-  }
 }
 
-return 0;
-
-int res = 0;
-*reply = NULL;
-
-if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+int process_matrix_register_action(void *p_command_hub, void *p_process_action)
 {
-  return -1;
-}
-
-if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BLANK)
-{
-  // No real context
-  // User Submits Commmand without prompt
-  int n = *(int *)template_collection[1];
-  for (int i = 0; i < n; ++i)
-  {
-    midgeo process = (midgeo)template_collection[2 + i];
-    if (!strcmp((char *)process[0], command))
-    {
-      *(int *)interaction_context[0] = INTERACTION_CONTEXT_PROCESS;
-      *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-      interaction_context[1] = process;
-      interaction_context[2] = process[1];
-
-      printf("##########################################\n");
-      printf("Begin Process:%s\n", process[0]);
-      MCcall(handle_process(argc, argsv));
-      return 0;
-    }
-  }
-  // else if (!strcmp("demobegin", command))
-  // {
-  //     *reply = "[Demo:\n";
-  //     strcpy(*reply, "[Demo: \"");
-
-  //     history[0] strcat(*reply, (char *)history) return 0;
-  // }
-
-  *(int *)interaction_context[0] = INTERACTION_CONTEXT_BROKEN;
   return 0;
 }
-else if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_PROCESS)
-{
-  declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
-  *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_POSTREPLY;
-  // printf("process_unit:%u\n", process_unit->type);
 
-  // Handle reaction from previous unit
-  MCcall(handle_process(argc, argsv));
-}
-
-return res;
-}
-int handle_process(int argc, void **argsv)
+int command_hub_submit_process_action(void *p_command_hub, void *p_process_action)
 {
   void **mc_dvp;
-  int res;
+  declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
+  declare_and_assign_anon_struct(process_action_v1, process_action, p_process_action);
 
-  // Arguments
-  midgeo process_matrix = (midgeo)argsv[0];
-  midgeo template_collection = (midgeo)argsv[1];
-  midgeo interaction_context = (midgeo)argsv[2];
-  declare_and_assign_anon_struct(node_v1, nodespace, argsv[3]);
-  // History:
-  // [0] -- linked list cstr : most recent set
-  char *command = (char *)argsv[4];
-  char **reply = (char **)argsv[5];
+  command_hub->focused_issue = process_action;
+  command_hub->focused_issue_activated = false;
 
-  declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
-  printf("handle_process()\n");
-
-  int loop = 1;
-  while (loop)
-  {
-    printf("icontext:%i process_unit:%i:%s\n", *(int *)interaction_context[3], process_unit->type, process_unit->debug);
-    // declare_and_assign_anon_struct(process_unit_v1, put, put_data);
-    // printf("ptr_current_data_points_to0:%p\n", *((void **)put->data2));
-
-    if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_INITIAL)
-    {
-      // Perform instigation for next process_unit
-      if (process_unit == NULL)
-      {
-        *(int *)interaction_context[0] = INTERACTION_CONTEXT_BLANK;
-      }
-
-      // process next unit
-      switch (process_unit->type)
-      {
-      case PROCESS_UNIT_INTERACTION_INCR_DPTR:
-      case PROCESS_UNIT_INTERACTION:
-      {
-        *reply = (char *)process_unit->data;
-
-        loop = 0;
-      }
-      break;
-      case PROCESS_UNIT_BRANCHING_INTERACTION:
-      {
-        *reply = (char *)process_unit->data;
-        loop = 0;
-      }
-      break;
-      case PROCESS_UNIT_INVOKE:
-      {
-        // printf("ptr_current_data_points_to10:%p\n", *((void **)put->data2));
-        // No provocation
-        *reply = NULL;
-
-        int (*fptr)(int, void **) = (int (*)(int, void **))process_unit->data;
-        midgeary data = (midgeary)process_unit->data2;
-        MCcall(fptr(*(int *)data[0], &data[1]));
-
-        interaction_context[2] = process_unit->next;
-        assign_anon_struct(process_unit, process_unit->next);
-        *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-        // printf("ptr_current_data_points_to11:%p\n", *((void **)put->data2));
-      }
-      break;
-      case PROCESS_UNIT_SET_CONTEXTUAL_DATA:
-      {
-        // printf("gethere-0\n");
-        // No provocation
-        *reply = NULL;
-        switch (*(int *)process_unit->data)
-        {
-        case PROCESS_CONTEXTUAL_DATA_NODESPACE:
-        {
-          // printf("gethere-1\n");
-          void **p_data = (void **)process_unit->data2;
-          *p_data = (void *)nodespace;
-          // printf("gethere-2\n");
-        }
-        break;
-
-        default:
-          allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
-          printf("Unhandled process_unit type:%i\n", process_unit->type);
-          return -33;
-        }
-
-        interaction_context[2] = process_unit->next;
-        assign_anon_struct(process_unit, process_unit->next);
-        *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-        // printf("gethere-3\n");
-      }
-      break;
-      case PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO:
-      {
-        // Find the function_info in the current nodespace
-        MCcall(find_function_info(nodespace, *(char **)process_unit->data, (void **)process_unit->data2));
-
-        // No provocation
-        *reply = NULL;
-
-        interaction_context[2] = process_unit->next;
-        assign_anon_struct(process_unit, process_unit->next);
-        *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-      }
-      break;
-
-      default:
-        allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
-        printf("Unhandled process_unit type:%i\n", process_unit->type);
-        return -7;
-      }
-    }
-    else if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_POSTREPLY)
-    {
-      switch (process_unit->type)
-      {
-      case PROCESS_UNIT_INTERACTION_INCR_DPTR:
-      {
-        // printf("ptr_current_data_points_to2:%p\n", *((void **)put->data2));
-        // printf("pr_prm_pointer:%p\n", (char *)*process_parameter_data);
-        // printf("data2_pointer:%p\n", (char *)**(void ***)process_unit->data2);
-        // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
-
-        char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
-        strcpy(str_allocation, command);
-        **(void ***)process_unit->data2 = str_allocation;
-        // printf("stv:%s set to %p\n", (char *)**(void ***)process_unit->data2, *(void **)process_unit->data2);
-        MCcall(increment_pointer(1, &process_unit->data2));
-
-        // printf("ptr_current_data_points_to3:%p\n", *((void **)put->data2));
-        // printf("pr_prm_pointer:%p\n", (char *)*process_parameter_data);
-        // printf("data2_pointer:%p\n", (char *)**((void ***)process_unit->data2));
-        // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
-
-        interaction_context[2] = process_unit->next;
-        assign_anon_struct(process_unit, process_unit->next);
-        *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-      }
-      break;
-      case PROCESS_UNIT_INTERACTION:
-      {
-        *(char **)process_unit->data2 = (char *)malloc(sizeof(char) * (strlen(command) + 1));
-        strcpy(*(char **)process_unit->data2, command);
-        // printf("PROCCESSUINT copied:%s\n", *(char **)process_unit->data2);
-
-        interaction_context[2] = process_unit->next;
-        assign_anon_struct(process_unit, process_unit->next);
-        *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-      }
-      break;
-      case PROCESS_UNIT_BRANCHING_INTERACTION:
-      {
-        // printf("pub-0\n");
-        midgeo branch_ary = (midgeo)process_unit->next;
-        int branch_ary_size = *(int *)process_unit->data2;
-
-        for (int i = 0; i < branch_ary_size; ++i)
-        {
-          // printf("pub-1:%i\n", i);
-          declare_and_assign_anon_struct(branch_unit_v1, branch, branch_ary[i]);
-          if (branch->match != NULL && strcmp(branch->match, command))
-            continue;
-
-          switch (branch->type)
-          {
-          case BRANCHING_INTERACTION_IGNORE_DATA:
-          {
-            interaction_context[2] = branch->next;
-            assign_anon_struct(process_unit, branch->next);
-            *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-          }
-          break;
-          case BRANCHING_INTERACTION_INCR_DPTR:
-          {
-            char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
-            strcpy(str_allocation, command);
-            **(void ***)branch->data = str_allocation;
-            // printf("stv:%s set to %p\n", (char *)**(void ***)branch->data, *(void **)branch->data);
-            MCcall(increment_pointer(1, &branch->data));
-
-            // printf("ptr_current_data_points_to5:%p\n", *((void **)put->data2));
-            // strcpy((char *)*((void **)branch->data), command);
-            // MCcall(increment_pointer(1, &branch->data));
-            // printf("ptr_current_data_points_to6:%p\n", *((void **)put->data2));
-
-            interaction_context[2] = branch->next;
-            assign_anon_struct(process_unit, branch->next);
-            *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-          }
-          break;
-          case BRANCHING_INTERACTION_INVOKE:
-          {
-            int (*fptr)(int, void **) = (int (*)(int, void **))process_unit->data;
-            midgeary data = (midgeary)branch->data;
-            MCcall(fptr(*(int *)data[0], &data[1]));
-
-            interaction_context[2] = branch->next;
-            assign_anon_struct(process_unit, branch->next);
-            *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-          }
-          break;
-
-          default:
-            allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
-            printf("Unhandled process_unit:branch type:%i\n", branch->type);
-            return -11;
-          }
-          break;
-        }
-      }
-      break;
-      case PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO:
-      case PROCESS_UNIT_SET_CONTEXTUAL_DATA:
-      case PROCESS_UNIT_INVOKE:
-      {
-        printf("shouldn't get here: handle_process():PROCESS_UNIT_INVOKE\n");
-        return -24;
-      }
-      break;
-
-      default:
-        allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
-        printf("Unhandled process_unit type:%i\n", process_unit->type);
-        return -5;
-      }
-    }
-    else
-    {
-      printf("unhandled interaction_process_state:%i\n", *(int *)interaction_context[3]);
-      return -19;
-    }
-
-    if (process_unit == NULL)
-    {
-      *(int *)interaction_context[0] = INTERACTION_CONTEXT_BLANK;
-      break;
-    }
-  }
-
-  printf("end-handle_process()\n");
   return 0;
 }
+
+int command_hub_process_outstanding_actions(void *p_command_hub)
+{
+  void **mc_dvp;
+  declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
+  if (command_hub->focused_issue_activated || command_hub->focused_issue == NULL)
+    return 0;
+
+  declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue);
+
+  switch (focused_issue->type)
+  {
+  case PROCESS_ACTION_UNPROVOKED_USER_COMMAND:
+  {
+    // Print to terminal
+    printf("%s\n", focused_issue->dialogue);
+    command_hub->focused_issue_activated = true;
+  }
+  break;
+  default:
+    printf("\nUnhandledType:%i\n", focused_issue->type);
+    return -1;
+  }
+
+  return 0;
+}
+
+int systems_process_command_hub_issues(void *p_command_hub, void **p_response_action)
+{
+  *p_response_action = NULL;
+
+  void **mc_dvp;
+  declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
+  if (command_hub->focused_issue == NULL)
+    return 0;
+
+  declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue);
+  declare_and_assign_anon_struct(template_collection_v1, template_collection, command_hub->template_collection);
+
+  // Templates first
+  switch (focused_issue->type)
+  {
+  case PROCESS_ACTION_UNPROVOKED_USER_COMMAND:
+  {
+    // Attempt to find the action the user is commanding
+    // -- Look in templates
+    return -582;
+
+    // TODO -- look in process matrix first or templates?
+    // how to handle process after ie interaction
+
+    for (int i = 0; i < template_collection->template_count; ++i)
+    {
+      midgeo process = (midgeo)template_collection->templates[i];
+      if (!strcmp((char *)process[0], command))
+      {
+        *(int *)interaction_context[0] = INTERACTION_CONTEXT_PROCESS;
+        *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+        interaction_context[1] = process;
+        interaction_context[2] = process[1];
+
+        printf("##########################################\n");
+        printf("Begin Process:%s\n", process[0]);
+        MCcall(handle_process(argc, argsv));
+        return 0;
+      }
+    }
+
+    // -- Find a suggestion from the process matrix
+  }
+  break;
+  default:
+    printf("\nUnhandledType:%i\n", focused_issue->type);
+    return -1;
+  }
+
+  return 0;
+}
+
+// return 0;
+
+// int res = 0;
+// *reply = NULL;
+
+// if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+// {
+//   return -1;
+// }
+
+// if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BLANK)
+// {
+//   // No real context
+//   // User Submits Commmand without prompt
+//   int n = *(int *)template_collection[1];
+//   for (int i = 0; i < n; ++i)
+//   {
+//     midgeo process = (midgeo)template_collection[2 + i];
+//     if (!strcmp((char *)process[0], command))
+//     {
+//       *(int *)interaction_context[0] = INTERACTION_CONTEXT_PROCESS;
+//       *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//       interaction_context[1] = process;
+//       interaction_context[2] = process[1];
+
+//       printf("##########################################\n");
+//       printf("Begin Process:%s\n", process[0]);
+//       MCcall(handle_process(argc, argsv));
+//       return 0;
+//     }
+//   }
+//   // else if (!strcmp("demobegin", command))
+//   // {
+//   //     *reply = "[Demo:\n";
+//   //     strcpy(*reply, "[Demo: \"");
+
+//   //     history[0] strcat(*reply, (char *)history) return 0;
+//   // }
+
+//   *(int *)interaction_context[0] = INTERACTION_CONTEXT_BROKEN;
+//   return 0;
+// }
+// else if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_PROCESS)
+// {
+//   declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
+//   *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_POSTREPLY;
+//   // printf("process_unit:%u\n", process_unit->type);
+
+//   // Handle reaction from previous unit
+//   MCcall(handle_process(argc, argsv));
+// }
+
+// return res;
+// }
+
+// int handle_process(int argc, void **argsv)
+// {
+//   void **mc_dvp;
+//   int res;
+
+//   // Arguments
+//   midgeo process_matrix = (midgeo)argsv[0];
+//   midgeo template_collection = (midgeo)argsv[1];
+//   midgeo interaction_context = (midgeo)argsv[2];
+//   declare_and_assign_anon_struct(node_v1, nodespace, argsv[3]);
+//   // History:
+//   // [0] -- linked list cstr : most recent set
+//   char *command = (char *)argsv[4];
+//   char **reply = (char **)argsv[5];
+
+//   declare_and_assign_anon_struct(process_unit_v1, process_unit, interaction_context[2]);
+//   printf("handle_process()\n");
+
+//   int loop = 1;
+//   while (loop)
+//   {
+//     printf("icontext:%i process_unit:%i:%s\n", *(int *)interaction_context[3], process_unit->type, process_unit->debug);
+//     // declare_and_assign_anon_struct(process_unit_v1, put, put_data);
+//     // printf("ptr_current_data_points_to0:%p\n", *((void **)put->data2));
+
+//     if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_INITIAL)
+//     {
+//       // Perform instigation for next process_unit
+//       if (process_unit == NULL)
+//       {
+//         *(int *)interaction_context[0] = INTERACTION_CONTEXT_BLANK;
+//       }
+
+//       // process next unit
+//       switch (process_unit->type)
+//       {
+//       case PROCESS_UNIT_INTERACTION_INCR_DPTR:
+//       case PROCESS_UNIT_INTERACTION:
+//       {
+//         *reply = (char *)process_unit->data;
+
+//         loop = 0;
+//       }
+//       break;
+//       case PROCESS_UNIT_BRANCHING_INTERACTION:
+//       {
+//         *reply = (char *)process_unit->data;
+//         loop = 0;
+//       }
+//       break;
+//       case PROCESS_UNIT_INVOKE:
+//       {
+//         // printf("ptr_current_data_points_to10:%p\n", *((void **)put->data2));
+//         // No provocation
+//         *reply = NULL;
+
+//         int (*fptr)(int, void **) = (int (*)(int, void **))process_unit->data;
+//         midgeary data = (midgeary)process_unit->data2;
+//         MCcall(fptr(*(int *)data[0], &data[1]));
+
+//         interaction_context[2] = process_unit->next;
+//         assign_anon_struct(process_unit, process_unit->next);
+//         *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//         // printf("ptr_current_data_points_to11:%p\n", *((void **)put->data2));
+//       }
+//       break;
+//       case PROCESS_UNIT_SET_CONTEXTUAL_DATA:
+//       {
+//         // printf("gethere-0\n");
+//         // No provocation
+//         *reply = NULL;
+//         switch (*(int *)process_unit->data)
+//         {
+//         case PROCESS_CONTEXTUAL_DATA_NODESPACE:
+//         {
+//           // printf("gethere-1\n");
+//           void **p_data = (void **)process_unit->data2;
+//           *p_data = (void *)nodespace;
+//           // printf("gethere-2\n");
+//         }
+//         break;
+
+//         default:
+//           allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+//           printf("Unhandled process_unit type:%i\n", process_unit->type);
+//           return -33;
+//         }
+
+//         interaction_context[2] = process_unit->next;
+//         assign_anon_struct(process_unit, process_unit->next);
+//         *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//         // printf("gethere-3\n");
+//       }
+//       break;
+//       case PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO:
+//       {
+//         // Find the function_info in the current nodespace
+//         MCcall(find_function_info(nodespace, *(char **)process_unit->data, (void **)process_unit->data2));
+
+//         // No provocation
+//         *reply = NULL;
+
+//         interaction_context[2] = process_unit->next;
+//         assign_anon_struct(process_unit, process_unit->next);
+//         *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//       }
+//       break;
+
+//       default:
+//         allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+//         printf("Unhandled process_unit type:%i\n", process_unit->type);
+//         return -7;
+//       }
+//     }
+//     else if (*(int *)interaction_context[3] == INTERACTION_PROCESS_STATE_POSTREPLY)
+//     {
+//       switch (process_unit->type)
+//       {
+//       case PROCESS_UNIT_INTERACTION_INCR_DPTR:
+//       {
+//         // printf("ptr_current_data_points_to2:%p\n", *((void **)put->data2));
+//         // printf("pr_prm_pointer:%p\n", (char *)*process_parameter_data);
+//         // printf("data2_pointer:%p\n", (char *)**(void ***)process_unit->data2);
+//         // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
+
+//         char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
+//         strcpy(str_allocation, command);
+//         **(void ***)process_unit->data2 = str_allocation;
+//         // printf("stv:%s set to %p\n", (char *)**(void ***)process_unit->data2, *(void **)process_unit->data2);
+//         MCcall(increment_pointer(1, &process_unit->data2));
+
+//         // printf("ptr_current_data_points_to3:%p\n", *((void **)put->data2));
+//         // printf("pr_prm_pointer:%p\n", (char *)*process_parameter_data);
+//         // printf("data2_pointer:%p\n", (char *)**((void ***)process_unit->data2));
+//         // printf("put_data_ptr-2:%p\n", (char *)**(void ***)((void **)put->data2)[1]);
+
+//         interaction_context[2] = process_unit->next;
+//         assign_anon_struct(process_unit, process_unit->next);
+//         *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//       }
+//       break;
+//       case PROCESS_UNIT_INTERACTION:
+//       {
+//         *(char **)process_unit->data2 = (char *)malloc(sizeof(char) * (strlen(command) + 1));
+//         strcpy(*(char **)process_unit->data2, command);
+//         // printf("PROCCESSUINT copied:%s\n", *(char **)process_unit->data2);
+
+//         interaction_context[2] = process_unit->next;
+//         assign_anon_struct(process_unit, process_unit->next);
+//         *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//       }
+//       break;
+//       case PROCESS_UNIT_BRANCHING_INTERACTION:
+//       {
+//         // printf("pub-0\n");
+//         midgeo branch_ary = (midgeo)process_unit->next;
+//         int branch_ary_size = *(int *)process_unit->data2;
+
+//         for (int i = 0; i < branch_ary_size; ++i)
+//         {
+//           // printf("pub-1:%i\n", i);
+//           declare_and_assign_anon_struct(branch_unit_v1, branch, branch_ary[i]);
+//           if (branch->match != NULL && strcmp(branch->match, command))
+//             continue;
+
+//           switch (branch->type)
+//           {
+//           case BRANCHING_INTERACTION_IGNORE_DATA:
+//           {
+//             interaction_context[2] = branch->next;
+//             assign_anon_struct(process_unit, branch->next);
+//             *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//           }
+//           break;
+//           case BRANCHING_INTERACTION_INCR_DPTR:
+//           {
+//             char *str_allocation = (char *)malloc(sizeof(char) * (strlen(command) + 1));
+//             strcpy(str_allocation, command);
+//             **(void ***)branch->data = str_allocation;
+//             // printf("stv:%s set to %p\n", (char *)**(void ***)branch->data, *(void **)branch->data);
+//             MCcall(increment_pointer(1, &branch->data));
+
+//             // printf("ptr_current_data_points_to5:%p\n", *((void **)put->data2));
+//             // strcpy((char *)*((void **)branch->data), command);
+//             // MCcall(increment_pointer(1, &branch->data));
+//             // printf("ptr_current_data_points_to6:%p\n", *((void **)put->data2));
+
+//             interaction_context[2] = branch->next;
+//             assign_anon_struct(process_unit, branch->next);
+//             *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//           }
+//           break;
+//           case BRANCHING_INTERACTION_INVOKE:
+//           {
+//             int (*fptr)(int, void **) = (int (*)(int, void **))process_unit->data;
+//             midgeary data = (midgeary)branch->data;
+//             MCcall(fptr(*(int *)data[0], &data[1]));
+
+//             interaction_context[2] = branch->next;
+//             assign_anon_struct(process_unit, branch->next);
+//             *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
+//           }
+//           break;
+
+//           default:
+//             allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+//             printf("Unhandled process_unit:branch type:%i\n", branch->type);
+//             return -11;
+//           }
+//           break;
+//         }
+//       }
+//       break;
+//       case PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO:
+//       case PROCESS_UNIT_SET_CONTEXTUAL_DATA:
+//       case PROCESS_UNIT_INVOKE:
+//       {
+//         printf("shouldn't get here: handle_process():PROCESS_UNIT_INVOKE\n");
+//         return -24;
+//       }
+//       break;
+
+//       default:
+//         allocate_from_intv(&interaction_context[0], INTERACTION_CONTEXT_BROKEN);
+//         printf("Unhandled process_unit type:%i\n", process_unit->type);
+//         return -5;
+//       }
+//     }
+//     else
+//     {
+//       printf("unhandled interaction_process_state:%i\n", *(int *)interaction_context[3]);
+//       return -19;
+//     }
+
+//     if (process_unit == NULL)
+//     {
+//       *(int *)interaction_context[0] = INTERACTION_CONTEXT_BLANK;
+//       break;
+//     }
+//   }
+
+//   printf("end-handle_process()\n");
+//   return 0;
+// }
