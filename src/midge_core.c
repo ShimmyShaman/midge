@@ -559,7 +559,7 @@ int initialize_function_v1(int argc, void **argv)
           declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
 
           strcat(buf, TAB);
-          sprintf(buf + strlen(buf), "allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
+          sprintf(buf + strlen(buf), "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
                   struct_info->version, var_name, struct_info->field_count);
 
           declared_types[declared_type_count].struct_info = (void *)struct_info;
@@ -683,7 +683,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   // TODO -- check
 
   // Fill in the function_info and attach to the nodespace
-  allocate_anon_struct(function_info_v1, function_info, sizeof_function_info_v1);
+  declare_and_allocate_anon_struct(function_info_v1, function_info, sizeof_function_info_v1);
   function_info->name = name;
   function_info->latest_iteration = 0U;
   function_info->return_type = return_type;
@@ -696,7 +696,7 @@ int declare_function_pointer_v1(int argc, void **argv)
 
   for (int i = 0; i < function_info->parameter_count; ++i)
   {
-    allocate_anon_struct(parameter_info_v1, parameter_info, sizeof_parameter_info_v1);
+    declare_and_allocate_anon_struct(parameter_info_v1, parameter_info, sizeof_parameter_info_v1);
     // printf("dfp>%p=%s\n", i, (void *)parameters[2 + i * 2 + 0], (char *)parameters[2 + i * 2 + 0]);
     parameter_info->type.identifier = (char *)parameters[2 + i * 2 + 0];
 
@@ -792,24 +792,24 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
   // }
   void **mc_dvp;
 
-  allocate_anon_struct(process_unit_v1, process_unit_reset_data_pointer, sizeof_process_unit_v1);
-  // allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_reset_data_pointer, sizeof_process_unit_v1);
+  // declare_and_allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
   // process_unit_v1 *process_unit_function_name;
   // put_data = (void **)malloc(sizeof_process_unit_v1);
   // printf("address:%p\n", put_data);
 
   // assign_anon_struct(process_unit_function_name, put_data);
   // printf("pufnAddr:%p\n", process_unit_function_name);
-  allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_return_type, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_return_type, sizeof_process_unit_v1);
   // put_data = (void **)process_unit_function_name;
   // printf("address:%p\n", put_data);
-  allocate_anon_struct(process_unit_v1, process_unit_reset_params_count, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_type, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_name, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_increment_param_count, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_invoke, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_add_context_param, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_reset_params_count, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_type, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_name, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_increment_param_count, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_invoke, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_add_context_param, sizeof_process_unit_v1);
 
   process_unit_reset_data_pointer->type = PROCESS_UNIT_INVOKE;
   process_unit_reset_data_pointer->data = (void *)&set_pointer_value;
@@ -881,13 +881,13 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
   process_unit_type->next = (void *)branches;
   process_unit_type->debug = "process_unit_type";
 
-  allocate_anon_struct(branch_unit_v1, branch_end, sizeof_branch_unit_v1);
+  declare_and_allocate_anon_struct(branch_unit_v1, branch_end, sizeof_branch_unit_v1);
   branch_end->type = BRANCHING_INTERACTION_IGNORE_DATA;
   branch_end->match = "end";
   branch_end->next = (void *)process_unit_add_context_param;
   branches[0] = (void *)branch_end;
 
-  allocate_anon_struct(branch_unit_v1, branch_indicate_params, sizeof_branch_unit_v1);
+  declare_and_allocate_anon_struct(branch_unit_v1, branch_indicate_params, sizeof_branch_unit_v1);
   branch_indicate_params->type = BRANCHING_INTERACTION_INVOKE;
   branch_indicate_params->match = "params";
   process_unit_reset_params_count->data = (void *)&set_int_value;
@@ -898,7 +898,7 @@ int mcqck_temp_create_process_declare_function_pointer(midgeo *process_unit)
   branch_indicate_params->next = (void *)process_unit_type;
   branches[1] = (void *)branch_indicate_params;
 
-  allocate_anon_struct(branch_unit_v1, branch_default, sizeof_branch_unit_v1);
+  declare_and_allocate_anon_struct(branch_unit_v1, branch_default, sizeof_branch_unit_v1);
   branch_default->type = BRANCHING_INTERACTION_INCR_DPTR;
   branch_default->match = NULL;
   branch_default->data = (void *)ptr_current_data;
@@ -952,11 +952,11 @@ int mcqck_temp_create_process_initialize_function(midgeo *process_unit)
 
   void **mc_dvp;
 
-  allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_add_context_param, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_get_func_info_set, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_code_block, sizeof_process_unit_v1);
-  allocate_anon_struct(process_unit_v1, process_unit_invoke, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_function_name, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_add_context_param, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_get_func_info_set, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_code_block, sizeof_process_unit_v1);
+  declare_and_allocate_anon_struct(process_unit_v1, process_unit_invoke, sizeof_process_unit_v1);
 
   midgeo parameter_data = (midgeo)calloc(sizeof(void *), 200);
   void **ptr_current_data = (void **)malloc(sizeof(void *) * 1);
@@ -1025,7 +1025,7 @@ int mc_main(int argc, const char *const *argv)
   declare_function_pointer = &declare_function_pointer_v1;
   // obtain_from_index = &obtain_from_index_v1;
 
-  allocate_anon_struct(struct_info_v1, node_definition_v1, sizeof_struct_info_v1);
+  declare_and_allocate_anon_struct(struct_info_v1, node_definition_v1, sizeof_struct_info_v1);
   node_definition_v1->struct_id.identifier = "struct_info";
   node_definition_v1->struct_id.version = 1U;
   node_definition_v1->name = "node";
@@ -1033,64 +1033,64 @@ int mc_main(int argc, const char *const *argv)
   node_definition_v1->field_count = 11;
   node_definition_v1->fields = (void **)calloc(sizeof(void *), 7);
 
-  allocate_anon_struct(parameter_info_v1, field0, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field0, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field0;
   field0->type.identifier = "const char *";
   field0->type.version = 0U;
   field0->name = "name";
-  allocate_anon_struct(parameter_info_v1, field1, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field1, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field1;
   field1->type.identifier = "node";
   field1->type.version = 1U;
   field1->name = "parent";
-  allocate_anon_struct(parameter_info_v1, field2, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field2, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field2;
   field2->type.identifier = "unsigned int";
   field2->type.version = 0U;
   field2->name = "functions_alloc";
-  allocate_anon_struct(parameter_info_v1, field3, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field3, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field3;
   field3->type.identifier = "unsigned int";
   field3->type.version = 0U;
   field3->name = "function_count";
-  allocate_anon_struct(parameter_info_v1, field4, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field4, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field4;
   field4->type.identifier = "void **";
   field4->type.version = 0U;
   field4->name = "functions";
-  allocate_anon_struct(parameter_info_v1, field5, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field5, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field5;
   field5->type.identifier = "unsigned int";
   field5->type.version = 0U;
   field5->name = "structs_alloc";
-  allocate_anon_struct(parameter_info_v1, field6, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field6, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field6;
   field6->type.identifier = "unsigned int";
   field6->type.version = 0U;
   field6->name = "struct_count";
-  allocate_anon_struct(parameter_info_v1, field7, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field7, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field7;
   field7->type.identifier = "void **";
   field7->type.version = 0U;
   field7->name = "structs";
-  allocate_anon_struct(parameter_info_v1, field8, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field8, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field8;
   field8->type.identifier = "unsigned int";
   field8->type.version = 0U;
   field8->name = "child_count";
-  allocate_anon_struct(parameter_info_v1, field9, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field9, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field9;
   field9->type.identifier = "unsigned int";
   field9->type.version = 0U;
   field9->name = "children_alloc";
-  allocate_anon_struct(parameter_info_v1, field10, sizeof_parameter_info_v1);
+  declare_and_allocate_anon_struct(parameter_info_v1, field10, sizeof_parameter_info_v1);
   node_definition_v1->fields[0] = field10;
   field10->type.identifier = "void **";
   field10->type.version = 0U;
   field10->name = "children";
 
   // Instantiate: node global;
-  allocate_anon_struct(node_v1, global, sizeof_node_v1);
+  declare_and_allocate_anon_struct(node_v1, global, sizeof_node_v1);
   global->name = "global";
   global->parent = NULL;
   global->functions_alloc = 40;
@@ -1108,14 +1108,14 @@ int mc_main(int argc, const char *const *argv)
   // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
   // Execute commands
-  allocate_anon_struct(command_hub_v1, command_hub, sizeof_command_hub_v1);
+  declare_and_allocate_anon_struct(command_hub_v1, command_hub, sizeof_command_hub_v1);
   command_hub->global_node = global;
   command_hub->process_matrix = (midgeo)malloc(sizeof_void_ptr * (2 + 4000));
   command_hub->focused_issue = NULL;
   command_hub->focused_issue_activated = false;
   command_hub->uid_counter = 2000;
 
-  allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
+  declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
   template_collection->templates_alloc = 400;
   template_collection->template_count = 0;
   template_collection->templates = (void **)malloc(sizeof(void *) * template_collection->templates_alloc);
@@ -1131,7 +1131,7 @@ int mc_main(int argc, const char *const *argv)
   MCcall(mcqck_temp_create_process_initialize_function((midgeo *)&template_process[1]));
   MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc, &template_collection->template_count, (void *)template_process));
 
-  // allocate_anon_struct(function_info_v1, function_info_decfp, sizeof_function_info_v1);
+  // declare_and_allocate_anon_struct(function_info_v1, function_info_decfp, sizeof_function_info_v1);
   // function_info_decfp->struct_id.identifier = "struct_info";
   // function_info_decfp->struct_id.version = 1U;
   // function_info_decfp->name = "declare_function_pointer";
@@ -1222,39 +1222,40 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
 int submit_user_command(int argc, void **argsv)
 {
   void **mc_dvp;
+  int res;
 
   declare_and_assign_anon_struct(command_hub_v1, command_hub, argsv[0]);
   char *command = (char *)argsv[4];
 
   // Format the User Response as an action
-  allocate_anon_struct(process_action_v1, process_action, sizeof_process_action_v1);
+  process_action_v1 *process_action;
   if (command_hub->focused_issue == NULL)
   {
+    allocate_anon_struct(process_action, sizeof_process_action_v1);
     process_action->sequence_uid = command_hub->uid_counter;
     ++command_hub->uid_counter;
 
-    process_action->type = PROCESS_ACTION_UNPROVOKED_USER_COMMAND;
+    process_action->type = PROCESS_ACTION_USER_UNPROVOKED_COMMAND;
     allocate_and_copy_cstr(process_action->dialogue, command);
   }
   else
-  {
-    declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue);
-
-    return -58918948;
+  {PROCESS_ACTION_USER_QUERIED_RESPONSE
+    // declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue);
   }
 
+  // Process command and any/all system responses
   while (1)
   {
     // Affect the command hub
-    process_matrix_register_action(command_hub, process_action);
-    command_hub_submit_process_action(command_hub, process_action);
+    MCcall(process_matrix_register_action(command_hub, process_action));
+    MCcall(command_hub_submit_process_action(command_hub, process_action));
 
     // Process the action
-    command_hub_process_outstanding_actions(command_hub);
+    MCcall(command_hub_process_outstanding_actions(command_hub));
 
     // Formulate system responses
     void *p_response_action;
-    systems_process_command_hub_issues(command_hub, &p_response_action);
+    MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
     if (!p_response_action)
       break;
     assign_anon_struct(process_action, p_response_action);
@@ -1292,16 +1293,23 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
 
   switch (focused_issue->type)
   {
-  case PROCESS_ACTION_UNPROVOKED_USER_COMMAND:
+  case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
   {
     // Print to terminal
     printf("%s\n", focused_issue->dialogue);
     command_hub->focused_issue_activated = true;
   }
   break;
+  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+  {
+    // Print to terminal
+    printf("%s", focused_issue->dialogue);
+    command_hub->focused_issue_activated = true;
+  }
+  break;
   default:
-    printf("\nUnhandledType:%i\n", focused_issue->type);
-    return -1;
+    printf("\n\nUnhandledType:%i\n", focused_issue->type);
+    return -151;
   }
 
   return 0;
@@ -1322,41 +1330,39 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
   // Templates first
   switch (focused_issue->type)
   {
-  case PROCESS_ACTION_UNPROVOKED_USER_COMMAND:
+  case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
   {
     // Attempt to find the action the user is commanding
-    // -- Look in templates
-    return -582;
-
-    // TODO -- look in process matrix first or templates?
-    // how to handle process after ie interaction
-
-    for (int i = 0; i < template_collection->template_count; ++i)
-    {
-      midgeo process = (midgeo)template_collection->templates[i];
-      if (!strcmp((char *)process[0], command))
-      {
-        *(int *)interaction_context[0] = INTERACTION_CONTEXT_PROCESS;
-        *(int *)interaction_context[3] = INTERACTION_PROCESS_STATE_INITIAL;
-        interaction_context[1] = process;
-        interaction_context[2] = process[1];
-
-        printf("##########################################\n");
-        printf("Begin Process:%s\n", process[0]);
-        MCcall(handle_process(argc, argsv));
-        return 0;
-      }
-    }
 
     // -- Find a suggestion from the process matrix
+    // printf("##########################################\n");
+    // printf("Begin Template Process:%s\n", process[0]);
+    // MCcall(handle_process(argc, argsv));
+
+    // -- Couldn't find one
+    // -- Request direction
+    declare_and_allocate_anon_struct(process_action_v1, request_guidance_issue, sizeof_process_action_v1);
+    allocate_and_copy_cstr(request_guidance_issue->dialogue, "Unresolved Command: Please specify direction.\n?: ");
+    request_guidance_issue->sequence_uid = focused_issue->sequence_uid;
+    request_guidance_issue->type = PROCESS_ACTION_PM_UNRESOLVED_COMMAND;
+    request_guidance_issue->history = (void *)focused_issue;
+
+    *p_response_action = (void *)request_guidance_issue;
+
+    return 0;
   }
-  break;
+  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+  {
+    // Do not process these commands
+    // Send back to user
+    return 0;
+  }
   default:
     printf("\nUnhandledType:%i\n", focused_issue->type);
-    return -1;
+    return -241;
   }
 
-  return 0;
+  return -242;
 }
 
 // return 0;

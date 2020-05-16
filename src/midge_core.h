@@ -6,6 +6,12 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifndef __cplusplus
+typedef unsigned char bool;
+static const bool false = 0;
+static const bool true = 1;
+#endif
+
 typedef void **midgeo;
 typedef void **midgeary;
 typedef unsigned int uint;
@@ -41,7 +47,8 @@ enum process_contextual_data
 
 enum process_action_type
 {
-    PROCESS_ACTION_UNPROVOKED_USER_COMMAND = 1,
+    PROCESS_ACTION_USER_UNPROVOKED_COMMAND = 1,
+    PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
 };
 
 /*
@@ -197,8 +204,9 @@ enum process_action_type
         unsigned int sequence_uid;     \
         enum process_action_type type; \
         char *dialogue;                \
+        void *history;                 \
     }
-#define sizeof_process_action_v1 (sizeof(void *) * 5)
+#define sizeof_process_action_v1 (sizeof(void *) * 6)
 
 #define template_collection_v1        \
     struct                            \
@@ -231,9 +239,13 @@ enum process_action_type
     }
 #define sizeof_command_hub_v1 (sizeof(void *) * 7)
 
-#define allocate_anon_struct(struct, ptr_to_struct, size) \
-    struct *ptr_to_struct;                                \
-    mc_dvp = (void **)&ptr_to_struct;                     \
+#define allocate_anon_struct(ptr_to_struct, size) \
+    mc_dvp = (void **)&ptr_to_struct;             \
+    *mc_dvp = malloc(size);
+
+#define declare_and_allocate_anon_struct(struct, ptr_to_struct, size) \
+    struct *ptr_to_struct;                                            \
+    mc_dvp = (void **)&ptr_to_struct;                                 \
     *mc_dvp = malloc(size);
 
 #define declare_and_assign_anon_struct(struct, ptr_to_struct, voidassignee) \
