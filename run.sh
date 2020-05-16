@@ -58,6 +58,7 @@ else
     echo "#######################"
     export EXTRA_CLING_ARGS='-Wmacro-redefined'
     ./bin/midge
+    # -x c
     # chmod u=rwx ./bin/vulkanexp
     # ./bin/vulkanexp
     retval=$?

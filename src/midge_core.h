@@ -48,7 +48,10 @@ enum process_contextual_data
 enum process_action_type
 {
     PROCESS_ACTION_USER_UNPROVOKED_COMMAND = 1,
+    PROCESS_ACTION_USER_UNRESOLVED_RESPONSE,
+
     PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
+    PROCESS_ACTION_PM_DEMO_INITIATION,
 };
 
 /*
@@ -93,6 +96,10 @@ enum process_action_type
         printf("--" #function ":%i\n", res); \
         return res;                          \
     }
+
+#define MCerror(error_code, error_message, ...)                            \
+    printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
+    return error_code;
 
 #define process_unit_v1              \
     struct                           \
@@ -222,22 +229,38 @@ enum process_action_type
     }
 #define sizeof_template_collection_v1 (sizeof(void *) * 5)
 
-#define command_hub_v1                \
-    struct                            \
-    {                                 \
-        struct                        \
-        {                             \
-            const char *identifier;   \
-            uint version;             \
-        } struct_id;                  \
-        void *global_node;            \
-        void *template_collection;    \
-        void *process_matrix;         \
-        void *focused_issue;          \
-        bool focused_issue_activated; \
-        unsigned int uid_counter;     \
+#define command_hub_v1                          \
+    struct                                      \
+    {                                           \
+        struct                                  \
+        {                                       \
+            const char *identifier;             \
+            uint version;                       \
+        } struct_id;                            \
+        void *global_node;                      \
+        void *template_collection;              \
+        void *process_matrix;                   \
+        unsigned int focused_issue_stack_alloc; \
+        unsigned int focused_issue_stack_count; \
+        void **focused_issue_stack;             \
+        bool focused_issue_activated;           \
+        unsigned int uid_counter;               \
     }
 #define sizeof_command_hub_v1 (sizeof(void *) * 7)
+
+#define void_collection_v1          \
+    struct                          \
+    {                               \
+        struct                      \
+        {                           \
+            const char *identifier; \
+            uint version;           \
+        } struct_id;                \
+        unsigned int allocated;     \
+        unsigned int count;         \
+        void *items;                \
+    }
+#define sizeof_void_collection_v1 (sizeof(void *) * 5)
 
 #define allocate_anon_struct(ptr_to_struct, size) \
     mc_dvp = (void **)&ptr_to_struct;             \

@@ -1111,7 +1111,9 @@ int mc_main(int argc, const char *const *argv)
   declare_and_allocate_anon_struct(command_hub_v1, command_hub, sizeof_command_hub_v1);
   command_hub->global_node = global;
   command_hub->process_matrix = (midgeo)malloc(sizeof_void_ptr * (2 + 4000));
-  command_hub->focused_issue = NULL;
+  command_hub->focused_issue_stack_alloc = 16;
+  command_hub->focused_issue_stack = (void **)malloc(sizeof(void *) * command_hub->focused_issue_stack_alloc);
+  command_hub->focused_issue_stack_count = 0;
   command_hub->focused_issue_activated = false;
   command_hub->uid_counter = 2000;
 
@@ -1141,9 +1143,13 @@ int mc_main(int argc, const char *const *argv)
   // function_info_decfp->parameters
 
   const char *commands =
+      "construct_and_attach_child_node|"
+      "demo|"
       // ---- BEGIN SEQUENCE ----
-      // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
       "invoke declare_function_pointer|"
+      "demo|"
+
+      // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
       // What is the name of the function?
       "construct_and_attach_child_node|"
       // Return Type:
@@ -1228,19 +1234,46 @@ int submit_user_command(int argc, void **argsv)
   char *command = (char *)argsv[4];
 
   // Format the User Response as an action
-  process_action_v1 *process_action;
-  if (command_hub->focused_issue == NULL)
+  declare_and_allocate_anon_struct(process_action_v1, process_action, sizeof_process_action_v1);
+  if (command_hub->focused_issue_stack_count == 0)
   {
-    allocate_anon_struct(process_action, sizeof_process_action_v1);
     process_action->sequence_uid = command_hub->uid_counter;
     ++command_hub->uid_counter;
 
     process_action->type = PROCESS_ACTION_USER_UNPROVOKED_COMMAND;
     allocate_and_copy_cstr(process_action->dialogue, command);
+    process_action->history = NULL;
   }
   else
-  {PROCESS_ACTION_USER_QUERIED_RESPONSE
-    // declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue);
+  {
+    // Pop the focused issue from the stack
+    declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1]);
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
+    switch (focused_issue->type)
+    {
+    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+    {
+      process_action->sequence_uid = focused_issue->sequence_uid;
+      process_action->type = PROCESS_ACTION_USER_UNRESOLVED_RESPONSE;
+
+      allocate_and_copy_cstr(process_action->dialogue, command);
+      process_action->history = focused_issue;
+    }
+    break;
+    case PROCESS_ACTION_PM_DEMO_INITIATION:
+    {
+      process_action->sequence_uid = focused_issue->sequence_uid;
+      process_action->type = PROCESS_ACTION_USER_UNPROVOKED_COMMAND;
+
+      allocate_and_copy_cstr(process_action->dialogue, command);
+      process_action->history = focused_issue;
+    }
+    break;
+    default:
+      MCerror(-828, "Unhandled PM-query-type:%i", focused_issue->type);
+    }
   }
 
   // Process command and any/all system responses
@@ -1276,7 +1309,8 @@ int command_hub_submit_process_action(void *p_command_hub, void *p_process_actio
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
   declare_and_assign_anon_struct(process_action_v1, process_action, p_process_action);
 
-  command_hub->focused_issue = process_action;
+  append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count,
+                       process_action);
   command_hub->focused_issue_activated = false;
 
   return 0;
@@ -1286,14 +1320,16 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
 {
   void **mc_dvp;
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
-  if (command_hub->focused_issue_activated || command_hub->focused_issue == NULL)
+  if (command_hub->focused_issue_activated || command_hub->focused_issue_stack_count == 0)
     return 0;
 
-  declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue);
+  // Process the foremost focused issue
+  declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1]);
 
   switch (focused_issue->type)
   {
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+  case PROCESS_ACTION_USER_UNRESOLVED_RESPONSE:
   {
     // Print to terminal
     printf("%s\n", focused_issue->dialogue);
@@ -1301,6 +1337,7 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
   }
   break;
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+  case PROCESS_ACTION_PM_DEMO_INITIATION:
   {
     // Print to terminal
     printf("%s", focused_issue->dialogue);
@@ -1308,8 +1345,7 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
   }
   break;
   default:
-    printf("\n\nUnhandledType:%i\n", focused_issue->type);
-    return -151;
+    MCerror(-151, "UnhandledType:%i", focused_issue->type)
   }
 
   return 0;
@@ -1321,17 +1357,28 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
 
   void **mc_dvp;
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
-  if (command_hub->focused_issue == NULL)
+  if (command_hub->focused_issue_stack_count == 0)
     return 0;
 
-  declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue);
+  declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1]);
   declare_and_assign_anon_struct(template_collection_v1, template_collection, command_hub->template_collection);
 
   // Templates first
   switch (focused_issue->type)
   {
+  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+  case PROCESS_ACTION_PM_DEMO_INITIATION:
+  {
+    // Do not process these commands
+    // Send back to user
+    return 0;
+  }
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
   {
+    // Pop the focused issue from the stack
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
     // Attempt to find the action the user is commanding
 
     // -- Find a suggestion from the process matrix
@@ -1342,24 +1389,39 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     // -- Couldn't find one
     // -- Request direction
     declare_and_allocate_anon_struct(process_action_v1, request_guidance_issue, sizeof_process_action_v1);
-    allocate_and_copy_cstr(request_guidance_issue->dialogue, "Unresolved Command: Please specify direction.\n?: ");
-    request_guidance_issue->sequence_uid = focused_issue->sequence_uid;
     request_guidance_issue->type = PROCESS_ACTION_PM_UNRESOLVED_COMMAND;
+    request_guidance_issue->sequence_uid = focused_issue->sequence_uid;
     request_guidance_issue->history = (void *)focused_issue;
+    allocate_and_copy_cstr(request_guidance_issue->dialogue, "Unresolved Command: type 'demo' to demonstrate.\n>: ");
 
     *p_response_action = (void *)request_guidance_issue;
 
     return 0;
   }
-  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+  case PROCESS_ACTION_USER_UNRESOLVED_RESPONSE:
   {
-    // Do not process these commands
-    // Send back to user
+    // Pop the focused issue from the stack
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
+    if (!strcmp(focused_issue->dialogue, "demo"))
+    {
+      // Begin demonstration
+      declare_and_allocate_anon_struct(process_action_v1, demo_issue, sizeof_process_action_v1);
+      demo_issue->type = PROCESS_ACTION_PM_DEMO_INITIATION;
+      demo_issue->history = (void *)focused_issue;
+      allocate_and_copy_cstr(demo_issue->dialogue, "Demonstrating (type 'end' to end).\n>: ");
+
+      *p_response_action = (void *)demo_issue;
+    }
+    else
+    {
+      MCerror(-842, "TODO");
+    }
     return 0;
   }
   default:
-    printf("\nUnhandledType:%i\n", focused_issue->type);
-    return -241;
+    MCerror(-241, "UnhandledType:%i", focused_issue->type)
   }
 
   return -242;

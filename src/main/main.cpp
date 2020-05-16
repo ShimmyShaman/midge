@@ -32,8 +32,8 @@ cling::Interpreter *clint;
 
 int main(int argc, const char *const *argv)
 {
-  char buffer[200];
-  getcwd(buffer, 200);
+  // char buffer[200];
+  // getcwd(buffer, 200);
   const char *LLVMDIR = "/home/jason/cling/inst";
   clint = new cling::Interpreter(argc, argv, LLVMDIR);
 
