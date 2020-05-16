@@ -1148,35 +1148,36 @@ int mc_main(int argc, const char *const *argv)
       // ---- BEGIN SEQUENCE ----
       "invoke declare_function_pointer|"
       "demo|"
-
-      // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
-      // What is the name of the function?
-      "construct_and_attach_child_node|"
-      // Return Type:
-      "void|"
-      // Parameter type:
-      "node|"
-      // Parameter name:
-      "parent|"
-      // Parameter type:
-      "const char *|"
-      // Parameter name:
-      "node_name|"
-      // Parameter 1 type:
-      "end|"
-      // ---- SEQUENCE TRANSITION ----
-      "invoke initialize_function|"
-      // What is the name of the function you wish to initialize?
-      "construct_and_attach_child_node|"
-      // int construct_and_attach_child_node(node parent, cstr node_name )
-      // write code:
-      "dec node child\n"
-      "cpy 'const char *' child->name node_name\n"
-      "ass child->parent parent\n"
-      "inv append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n|"
-      // ---- SEQUENCE TRANSITION ----
-      "invoke construct_and_attach_child_node|"
+      // ---- BEGIN SEQUENCE ----
       "";
+  // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
+  // What is the name of the function?
+  "construct_and_attach_child_node|"
+  // Return Type:
+  "void|"
+  // Parameter type:
+  "node|"
+  // Parameter name:
+  "parent|"
+  // Parameter type:
+  "const char *|"
+  // Parameter name:
+  "node_name|"
+  // Parameter 1 type:
+  "end|"
+  // ---- SEQUENCE TRANSITION ----
+  "invoke initialize_function|"
+  // What is the name of the function you wish to initialize?
+  "construct_and_attach_child_node|"
+  // int construct_and_attach_child_node(node parent, cstr node_name )
+  // write code:
+  "dec node child\n"
+  "cpy 'const char *' child->name node_name\n"
+  "ass child->parent parent\n"
+  "inv append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n|"
+  // ---- SEQUENCE TRANSITION ----
+  "invoke construct_and_attach_child_node|"
+  "";
 
   // node_v1 *node;
   // "create function\n"
@@ -1216,7 +1217,7 @@ int mc_main(int argc, const char *const *argv)
     // }
   }
 
-  printf("</midge_core>\n");
+  printf("\n\n</midge_core>\n");
   return 0;
 }
 
