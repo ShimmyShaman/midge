@@ -329,8 +329,8 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
 int find_function_info_v1(int argc, void **argv)
 {
   void **function_info = (void **)argv[0];
-  void *vp_nodespace = (void **)argv[1];
-  void *function_name = (void **)argv[2];
+  void *vp_nodespace = (void *)argv[1];
+  char *function_name = (char *)argv[2];
 
   void **mc_dvp;
   int res;
@@ -1176,7 +1176,7 @@ int mc_main(int argc, const char *const *argv)
       "invoke declare_function_pointer|"
       "demo|"
       // ---- BEGIN SEQUENCE ----
-      "create_script|"
+      "create_script |"
       "dcl int space_index\n"
       "nvi int command_length strlen $command\n"
       "for i 0 command_length\n"
@@ -1193,12 +1193,12 @@ int mc_main(int argc, const char *const *argv)
       ""
       "dcs int rind 0\n"
       "dca 'char *' responses 32\n"
-      "$ASI responses[rind] \"Function Name: \"\n"
-      "ass rind + rind 1\n"
-      "$ASI responses[rind] \"Return Type: \"\n"
-      "ass rind + rind 1\n"
       ""
-      "for i 0 finfo->variable_parameter_begin_index\n"
+      "dcs int linit finfo->parameter_count\n"
+      "if_ finfo->variable_parameter_begin_index >= 0\n"
+      "ass linit finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "for i 0 linit\n"
       "dca char provocation 512"
       "nvk strcpy provocation finfo->parameters[i]->name\n"
       "nvk strcat provocation \": \"\n"
@@ -1221,7 +1221,7 @@ int mc_main(int argc, const char *const *argv)
       "end\n"
       "end\n"
       ""
-      "nvk TODO"
+      "nvk $SVL function_name $SYA rind &responses\n"
       "|"
       "midgequit|";
   // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
