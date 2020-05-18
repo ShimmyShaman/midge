@@ -1176,7 +1176,7 @@ int mc_main(int argc, const char *const *argv)
       "invoke declare_function_pointer|"
       "demo|"
       // ---- BEGIN SEQUENCE ----
-      "create_script |"
+      ".script\n"
       "dcl int space_index\n"
       "nvi int command_length strlen $command\n"
       "for i 0 command_length\n"
@@ -1411,6 +1411,7 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
   {
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
   case PROCESS_ACTION_USER_UNRESOLVED_RESPONSE:
+  case PROCESS_ACTION_USER_SCRIPT_ENTRY:
   {
     // Print to terminal
     printf("%s\n", focused_issue->dialogue);
@@ -1463,6 +1464,70 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
     --command_hub->focused_issue_stack_count;
 
+    // Script Execution Request
+    if (!strncmp(focused_issue->dialogue, ".script ", 8))
+    {
+      // Create the script
+      declare_and_allocate_anon_struct(script_v1, script, sizeof_script_v1);
+      script->execution_state = SCRIPT_EXECUTION_STATE_INITIAL;
+      script->next_statement_index = -1;
+      script->statement_count = 0;
+      script->statements_alloc = 4;
+      script->statements = (void **)malloc(sizeof(void *) * script->statements_alloc);
+      script->argument_count = 0;
+      script->arguments_alloc = 4;
+      script->arguments = (void **)malloc(sizeof(void *) * script->arguments_alloc);
+      script->local_variable_count = 0;
+      script->local_variables_alloc = 4;
+      script->local_variables = (void **)malloc(sizeof(void *) * script->local_variables_alloc);
+
+      // -- Submit contextual arguments
+      declare_and_assign_anon_struct(process_action_v1, previous_issue, focused_issue->history);
+      // -- -- Previous User Command
+      // -- -- Nodespace
+
+      // -- Parse statements
+      {
+        int s = 8;
+        int i = 8;
+        int ps = 0;
+        bool loop = true;
+        while (loop)
+        {
+          switch (focused_issue->dialogue[i])
+          {
+          case ' ':
+          case '\t':
+          {
+            if (ps == 0)
+              continue;
+          }
+
+          default:
+            break;
+          }
+        }
+      }
+
+      // -- Preprocess
+
+      allocate_and_copy_cstr(script->text, focused_issue->dialogue);
+
+      //
+      declare_and_allocate_anon_struct(process_action_v1, script_issue, sizeof_process_action_v1);
+      script_issue->sequence_uid = focused_issue->sequence_uid;
+      script_issue->type = PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS;
+      script_issue->history = (void *)focused_issue;
+      allocate_and_copy_cstr(script_issue->dialogue, "Executing Script...");
+
+      // Submit the script
+      append_to_collection(&command_hub->script_processes, &command_hub->script_processes_alloc, &command_hub->script_process_count, script);
+
+      // Add a demonstration process on top of the focused issue stack
+      *p_response_action = (void *)script_issue;
+      return 0;
+    }
+
     // Attempt to find the action the user is commanding
 
     // -- Find a suggestion from the process matrix
@@ -1490,11 +1555,32 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
 
     if (!strcmp(focused_issue->dialogue, "demo"))
     {
+      ++command_hub->uid_counter;
+      focused_issue->sequence_uid = command_hub->uid_counter;
+
       // Begin demonstration
       declare_and_allocate_anon_struct(process_action_v1, demo_issue, sizeof_process_action_v1);
+      demo_issue->sequence_uid = focused_issue->sequence_uid;
       demo_issue->type = PROCESS_ACTION_PM_DEMO_INITIATION;
       demo_issue->history = (void *)focused_issue;
-      allocate_and_copy_cstr(demo_issue->dialogue, "Demonstrating (type 'end' to end).");
+
+      // Obtain the command being demonstrated
+      {
+        if (focused_issue->history == NULL)
+        {
+          MCerror(-852, "demo historical issue shouldn't be NULL");
+        }
+        declare_and_assign_anon_struct(process_action_v1, historical_issue, focused_issue->history);
+        if (historical_issue->history == NULL)
+        {
+          MCerror(-853, "demo historical issue 2 shouldn't be NULL");
+        }
+        assign_anon_struct(historical_issue, historical_issue->history);
+
+        allocate_and_copy_cstr(demo_issue->data.demonstrated_command, historical_issue->dialogue);
+      }
+      demo_issue->dialogue = (char *)malloc(sizeof(char) * ())
+          allocate_and_copy_cstr(demo_issue->dialogue, "Demonstrating (type 'end' to end).");
 
       // Return the original command to the stack
       if (focused_issue->history == NULL)
@@ -1514,6 +1600,7 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     }
     else
     {
+      // Look at resubmitting this as an unprovoked command
       MCerror(-842, "TODO");
     }
     return 0;

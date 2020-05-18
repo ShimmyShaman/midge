@@ -49,9 +49,11 @@ enum process_action_type
 {
     PROCESS_ACTION_USER_UNPROVOKED_COMMAND = 1,
     PROCESS_ACTION_USER_UNRESOLVED_RESPONSE,
+    PROCESS_ACTION_USER_SCRIPT_ENTRY,
 
     PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
     PROCESS_ACTION_PM_DEMO_INITIATION,
+    PROCESS_ACTION_PM_SCRIPT_REQUEST,
 };
 
 /*
@@ -84,10 +86,10 @@ enum process_action_type
     }                                                                                           \
     strcpy((char *)(*field), cstr);
 
-#define allocate_and_copy_cstr(var, value)                    \
-    var = (char *)malloc(sizeof(char) * (strlen(value) + 1)); \
-    strcpy(var, value);                                       \
-    var[strlen(value)] = '\0';
+#define allocate_and_copy_cstr(dest, src)                    \
+    dest = (char *)malloc(sizeof(char) * (strlen(src) + 1)); \
+    strcpy(dest, src);                                       \
+    dest[strlen(src)] = '\0';
 
 #define MCcall(function)                     \
     res = function;                          \
@@ -200,20 +202,23 @@ enum process_action_type
     }
 #define sizeof_parameter_info_v1 (sizeof(void *) * 5)
 
-#define process_action_v1              \
-    struct                             \
-    {                                  \
-        struct                         \
-        {                              \
-            const char *identifier;    \
-            unsigned int version;      \
-        } struct_id;                   \
-        unsigned int sequence_uid;     \
-        enum process_action_type type; \
-        char *dialogue;                \
-        void *history;                 \
+#define process_action_v1               \
+    struct                              \
+    {                                   \
+        struct                          \
+        {                               \
+            const char *identifier;     \
+            unsigned int version;       \
+        } struct_id;                    \
+        unsigned int sequence_uid;      \
+        enum process_action_type type;  \
+        char *dialogue;                 \
+        void *history;                  \
+        union {                         \
+            char *demonstrated_command; \
+        } data;                         \
     }
-#define sizeof_process_action_v1 (sizeof(void *) * 6)
+#define sizeof_process_action_v1 (sizeof(void *) * 7)
 
 #define template_collection_v1        \
     struct                            \
