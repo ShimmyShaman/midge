@@ -246,7 +246,7 @@ enum process_action_type
         bool focused_issue_activated;           \
         unsigned int uid_counter;               \
     }
-#define sizeof_command_hub_v1 (sizeof(void *) * 7)
+#define sizeof_command_hub_v1 (sizeof(void *) * 10)
 
 #define void_collection_v1          \
     struct                          \

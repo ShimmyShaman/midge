@@ -326,8 +326,12 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
   return 0;
 }
 
-int find_function_info(void *vp_nodespace, char *function_name, void **function_info)
+int find_function_info_v1(int argc, void **argv)
 {
+  void **function_info = (void **)argv[0];
+  void *vp_nodespace = (void **)argv[1];
+  void *function_name = (void **)argv[2];
+
   void **mc_dvp;
   int res;
   declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
@@ -345,6 +349,28 @@ int find_function_info(void *vp_nodespace, char *function_name, void **function_
     return 0;
   }
   printf("find_function_info: '%s' could not be found!\n", function_name);
+  return 0;
+}
+
+int mcqck_find_function_info(void *vp_nodespace, char *function_name, void **function_info)
+{
+  void **mc_dvp;
+  int res;
+  declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
+
+  *function_info = NULL;
+  for (int i = 0; i < node->function_count; ++i)
+  {
+    declare_and_assign_anon_struct(function_info_v1, finfo, node->functions[i]);
+    if (strcmp(finfo->name, function_name))
+      continue;
+
+    // Matches
+    *function_info = (void *)finfo;
+    printf("mcqck_find_function_info:set with '%s'\n", finfo->name);
+    return 0;
+  }
+  printf("mcqck_find_function_info: '%s' could not be found!\n", function_name);
   return 0;
 }
 
@@ -589,7 +615,7 @@ int initialize_function_v1(int argc, void **argv)
 
         // Is mc function?
         void *p_function_info;
-        MCcall(find_function_info((void *)nodespace, function_identity, &p_function_info));
+        MCcall(mcqck_find_function_info((void *)nodespace, function_identity, &p_function_info));
         if (p_function_info)
         {
           return -583;
@@ -1140,6 +1166,7 @@ int mc_main(int argc, const char *const *argv)
   // function_info_decfp->latest_iteration = 1U;
   // function_info_decfp->return_type = "void";
   // function_info_decfp->parameter_count = 4;
+  // function_info_decfp->variable_parameter_begin_index = 4; // Otherwise -1
   // function_info_decfp->parameters
 
   const char *commands =
@@ -1149,7 +1176,54 @@ int mc_main(int argc, const char *const *argv)
       "invoke declare_function_pointer|"
       "demo|"
       // ---- BEGIN SEQUENCE ----
-      "";
+      "create_script|"
+      "dcl int space_index\n"
+      "nvi int command_length strlen $command\n"
+      "for i 0 command_length\n"
+      "if_ $command[i] == ' '\n"
+      "cpy int space_index i\n"
+      "brk\n"
+      "end\n"
+      "end\n"
+      "nvi int command_remaining_length - command_length space_index - 1\n"
+      "mal 'char *' function_name + command_remaining_length 1\n"
+      "cpy 'char *' function_name $command\n"
+      "ass function_name[command_remaining_length] '\\0'\n"
+      "nvi function_info finfo find_function_info $nodespace function_name\n"
+      ""
+      "dcs int rind 0\n"
+      "dca 'char *' responses 32\n"
+      "$ASI responses[rind] \"Function Name: \"\n"
+      "ass rind + rind 1\n"
+      "$ASI responses[rind] \"Return Type: \"\n"
+      "ass rind + rind 1\n"
+      ""
+      "for i 0 finfo->variable_parameter_begin_index\n"
+      "dca char provocation 512"
+      "nvk strcpy provocation finfo->parameters[i]->name\n"
+      "nvk strcat provocation \": \"\n"
+      "$ASI responses[rind] provocation\n"
+      "ass rind + rind 1\n"
+      "end\n"
+      "if_ finfo->variable_parameter_begin_index >= 0\n"
+      "dcs int pind finfo->variable_parameter_begin_index\n"
+      "whl 1\n"
+      "dca char provocation 512"
+      "nvk strcpy provocation finfo->parameters[pind]->name\n"
+      "nvk strcat provocation \": \"\n"
+      "$ASI responses[rind] provocation\n"
+      "ass rind + rind 1\n"
+      "ass pind + pind 1\n"
+      "ass pind % pind finfo->parameter_count\n"
+      "if_ pind < finfo->variable_parameter_begin_index\n"
+      "ass pind finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "end\n"
+      "end\n"
+      ""
+      "nvk TODO"
+      "|"
+      "midgequit|";
   // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
   // What is the name of the function?
   "construct_and_attach_child_node|"
@@ -1172,9 +1246,9 @@ int mc_main(int argc, const char *const *argv)
   // int construct_and_attach_child_node(node parent, cstr node_name )
   // write code:
   "dec node child\n"
-  "cpy 'const char *' child->name node_name\n"
+  "cpy 'char *' child->name node_name\n"
   "ass child->parent parent\n"
-  "inv append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n|"
+  "inv void append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n|"
   // ---- SEQUENCE TRANSITION ----
   "invoke construct_and_attach_child_node|"
   "";
@@ -1187,7 +1261,7 @@ int mc_main(int argc, const char *const *argv)
   // "create node\n"
   // "construct_and_attach_child_node\n";
 
-  printf("\n>: ");
+  printf("\n:> ");
   int n = strlen(commands);
   int s = 0;
   char cstr[2048];
@@ -1202,6 +1276,12 @@ int mc_main(int argc, const char *const *argv)
 
     vargs[0] = (void *)command_hub;
     vargs[4] = (void *)cstr;
+
+    if (!strcmp(cstr, "midgequit"))
+    {
+      printf("midgequit\n");
+      break;
+    }
 
     // printf("%s\n", cstr);
     MCcall(submit_user_command(12, vargs));
@@ -1341,8 +1421,11 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
   case PROCESS_ACTION_PM_DEMO_INITIATION:
   {
     // Print to terminal
-    printf("%s", focused_issue->dialogue);
+    printf("%s\n", focused_issue->dialogue);
     command_hub->focused_issue_activated = true;
+
+    // Indicate user response
+    printf(":> ");
   }
   break;
   default:
@@ -1393,7 +1476,7 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     request_guidance_issue->type = PROCESS_ACTION_PM_UNRESOLVED_COMMAND;
     request_guidance_issue->sequence_uid = focused_issue->sequence_uid;
     request_guidance_issue->history = (void *)focused_issue;
-    allocate_and_copy_cstr(request_guidance_issue->dialogue, "Unresolved Command: type 'demo' to demonstrate.\n>: ");
+    allocate_and_copy_cstr(request_guidance_issue->dialogue, "Unresolved Command: type 'demo' to demonstrate.");
 
     *p_response_action = (void *)request_guidance_issue;
 
@@ -1411,8 +1494,22 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       declare_and_allocate_anon_struct(process_action_v1, demo_issue, sizeof_process_action_v1);
       demo_issue->type = PROCESS_ACTION_PM_DEMO_INITIATION;
       demo_issue->history = (void *)focused_issue;
-      allocate_and_copy_cstr(demo_issue->dialogue, "Demonstrating (type 'end' to end).\n>: ");
+      allocate_and_copy_cstr(demo_issue->dialogue, "Demonstrating (type 'end' to end).");
 
+      // Return the original command to the stack
+      if (focused_issue->history == NULL)
+      {
+        MCerror(-882, "demo -1 should not be missing");
+      }
+      declare_and_assign_anon_struct(process_action_v1, unresolved_command, focused_issue->history);
+      if (unresolved_command->history == NULL)
+      {
+        MCerror(-883, "demo -2 should not be missing");
+      }
+      append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count,
+                           unresolved_command->history);
+
+      // Add a demonstration process on top of the focused issue stack
       *p_response_action = (void *)demo_issue;
     }
     else
