@@ -54,6 +54,8 @@ enum process_action_type
     PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
     PROCESS_ACTION_PM_DEMO_INITIATION,
     PROCESS_ACTION_PM_SCRIPT_REQUEST,
+
+    PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
 };
 
 /*
@@ -234,6 +236,24 @@ enum process_action_type
     }
 #define sizeof_template_collection_v1 (sizeof(void *) * 5)
 
+#define script_v1                      \
+    struct                             \
+    {                                  \
+        struct                         \
+        {                              \
+            const char *identifier;    \
+            uint version;              \
+        } struct_id;                   \
+        unsigned int sequence_uid;     \
+        unsigned int variables_alloc;  \
+        unsigned int variable_count;   \
+        void **variables;              \
+        unsigned int statements_alloc; \
+        unsigned int statement_count;  \
+        void **statements;             \
+    }
+#define sizeof_script_v1 (sizeof(void *) * 9)
+
 #define command_hub_v1                          \
     struct                                      \
     {                                           \
@@ -243,15 +263,19 @@ enum process_action_type
             uint version;                       \
         } struct_id;                            \
         void *global_node;                      \
+        void *nodespace;                        \
         void *template_collection;              \
         void *process_matrix;                   \
         unsigned int focused_issue_stack_alloc; \
         unsigned int focused_issue_stack_count; \
         void **focused_issue_stack;             \
+        unsigned int active_scripts_alloc;      \
+        unsigned int active_script_count;       \
+        void **active_scripts;                  \
         bool focused_issue_activated;           \
         unsigned int uid_counter;               \
     }
-#define sizeof_command_hub_v1 (sizeof(void *) * 10)
+#define sizeof_command_hub_v1 (sizeof(void *) * 14)
 
 #define void_collection_v1          \
     struct                          \

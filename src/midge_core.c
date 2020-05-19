@@ -1136,6 +1136,7 @@ int mc_main(int argc, const char *const *argv)
   // Execute commands
   declare_and_allocate_anon_struct(command_hub_v1, command_hub, sizeof_command_hub_v1);
   command_hub->global_node = global;
+  command_hub->nodespace = global;
   command_hub->process_matrix = (midgeo)malloc(sizeof_void_ptr * (2 + 4000));
   command_hub->focused_issue_stack_alloc = 16;
   command_hub->focused_issue_stack = (void **)malloc(sizeof(void *) * command_hub->focused_issue_stack_alloc);
@@ -1305,6 +1306,7 @@ int process_matrix_register_action(void *p_command_hub, void *p_process_action);
 int command_hub_submit_process_action(void *p_command_hub, void *p_process_action);
 int command_hub_process_outstanding_actions(void *p_command_hub);
 int systems_process_command_hub_issues(void *p_command_hub, void **p_response_action);
+int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_action);
 
 int submit_user_command(int argc, void **argsv)
 {
@@ -1369,7 +1371,11 @@ int submit_user_command(int argc, void **argsv)
 
     // Formulate system responses
     void *p_response_action;
-    MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
+    MCcall(systems_process_command_hub_scripts(command_hub, &p_response_action));
+    if (!p_response_action)
+    {
+      MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
+    }
     if (!p_response_action)
       break;
     assign_anon_struct(process_action, p_response_action);
@@ -1436,15 +1442,37 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
   return 0;
 }
 
+int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_action)
+{
+  *p_response_action = NULL;
+  void **mc_dvp;
+  declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
+
+  if (command_hub->active_script_count == 0)
+    return 0;
+
+  // for (int i = 0; i < command_hub->active_script_count; ++i)
+  // {
+  //   declare_and_assign_anon_struct(script_v1, script, command_hub->active_scripts[i]);
+
+  //   printf("statement_index=%u\n", script->sequence_uid);
+  //   printf("statement_count=%u\n", script->statement_count);
+  //   printf("first_statement=%s\n", (char *)script->statements[0]);
+  // }
+
+  MCerror(-424, "TODO");
+}
+
 int systems_process_command_hub_issues(void *p_command_hub, void **p_response_action)
 {
   *p_response_action = NULL;
-
   void **mc_dvp;
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
+
   if (command_hub->focused_issue_stack_count == 0)
     return 0;
 
+  // Process the Focused Issue
   declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1]);
   declare_and_assign_anon_struct(template_collection_v1, template_collection, command_hub->template_collection);
 
@@ -1465,30 +1493,60 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     --command_hub->focused_issue_stack_count;
 
     // Script Execution Request
-    if (!strncmp(focused_issue->dialogue, ".script ", 8))
+    if (!strncmp(focused_issue->dialogue, ".script", 7))
     {
       // Create the script
       declare_and_allocate_anon_struct(script_v1, script, sizeof_script_v1);
-      script->execution_state = SCRIPT_EXECUTION_STATE_INITIAL;
-      script->next_statement_index = -1;
+      // script->execution_state = SCRIPT_EXECUTION_STATE_INITIAL;
+      // script->next_statement_index = -1;
+      script->sequence_uid = focused_issue->sequence_uid;
+      script->variable_count = 0;
+      script->variables_alloc = 4;
+      script->variables = (void **)malloc(sizeof(void *) * script->variables_alloc);
       script->statement_count = 0;
       script->statements_alloc = 4;
       script->statements = (void **)malloc(sizeof(void *) * script->statements_alloc);
-      script->argument_count = 0;
-      script->arguments_alloc = 4;
-      script->arguments = (void **)malloc(sizeof(void *) * script->arguments_alloc);
-      script->local_variable_count = 0;
-      script->local_variables_alloc = 4;
-      script->local_variables = (void **)malloc(sizeof(void *) * script->local_variables_alloc);
 
       // -- Submit contextual arguments
-      declare_and_assign_anon_struct(process_action_v1, previous_issue, focused_issue->history);
+      struct
+      {
+        char *name;
+        void *value;
+      } * variable;
+
       // -- -- Previous User Command
+      declare_and_assign_anon_struct(process_action_v1, previous_issue, focused_issue->history);
+      switch (previous_issue->type)
+      {
+      case PROCESS_ACTION_PM_DEMO_INITIATION:
+      {
+        assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+        allocate_and_copy_cstr(variable->name, "command");
+        allocate_from_cstringv(&variable->value, previous_issue->data.demonstrated_command);
+
+        append_to_collection(&script->variables, &script->variables_alloc, &script->variable_count, variable);
+      }
+      break;
+      default:
+      {
+        MCerror(-825, "unhandled type:%i", previous_issue->type);
+      }
+      }
       // -- -- Nodespace
+      assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+      allocate_and_copy_cstr(variable->name, "nodespace");
+      variable->value = command_hub->nodespace;
+      append_to_collection(&script->variables, &script->variables_alloc, &script->variable_count, variable);
+
+      // -- -- Global
+      assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+      allocate_and_copy_cstr(variable->name, "global_node");
+      variable->value = command_hub->global_node;
+      append_to_collection(&script->variables, &script->variables_alloc, &script->variable_count, variable);
 
       // -- Parse statements
       {
-        int s = 8;
+        int s = -1;
         int i = 8;
         int ps = 0;
         bool loop = true;
@@ -1498,22 +1556,36 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
           {
           case ' ':
           case '\t':
-          {
-            if (ps == 0)
-              continue;
-          }
-
-          default:
             break;
+          case '\n':
+          case '\0':
+          {
+            if (ps > 0 && s >= 0)
+            {
+              char *statement = (char *)malloc(sizeof(char) * (i - s + 1));
+              strncpy(statement, focused_issue->dialogue + s, (i - s));
+              statement[i - s] = '\0';
+
+              append_to_collection(&script->statements, &script->statements_alloc, &script->statement_count, statement);
+            }
+            if (focused_issue->dialogue[i] == '\0')
+            {
+              loop = false;
+            }
+            s = -1;
+            break;
+          }
+          default:
+          {
+            if (s < 0)
+              s = i;
+          }
+          break;
           }
         }
       }
 
-      // -- Preprocess
-
-      allocate_and_copy_cstr(script->text, focused_issue->dialogue);
-
-      //
+      // Set corresponding issue
       declare_and_allocate_anon_struct(process_action_v1, script_issue, sizeof_process_action_v1);
       script_issue->sequence_uid = focused_issue->sequence_uid;
       script_issue->type = PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS;
@@ -1521,9 +1593,9 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       allocate_and_copy_cstr(script_issue->dialogue, "Executing Script...");
 
       // Submit the script
-      append_to_collection(&command_hub->script_processes, &command_hub->script_processes_alloc, &command_hub->script_process_count, script);
+      append_to_collection(&command_hub->active_scripts, &command_hub->active_scripts_alloc, &command_hub->active_script_count, script);
 
-      // Add a demonstration process on top of the focused issue stack
+      // Set as response action
       *p_response_action = (void *)script_issue;
       return 0;
     }
@@ -1579,8 +1651,12 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
 
         allocate_and_copy_cstr(demo_issue->data.demonstrated_command, historical_issue->dialogue);
       }
-      demo_issue->dialogue = (char *)malloc(sizeof(char) * ())
-          allocate_and_copy_cstr(demo_issue->dialogue, "Demonstrating (type 'end' to end).");
+      const char *DIALOGUE_PREFIX = "Demonstrating '";
+      const char *DIALOGUE_POSTFIX = "' (type 'end' to end).";
+      demo_issue->dialogue = (char *)malloc(sizeof(char) * (strlen(demo_issue->data.demonstrated_command) + strlen(DIALOGUE_PREFIX) + strlen(DIALOGUE_POSTFIX) + 1));
+      strcpy(demo_issue->dialogue, DIALOGUE_PREFIX);
+      strcat(demo_issue->dialogue, demo_issue->data.demonstrated_command);
+      strcat(demo_issue->dialogue, DIALOGUE_POSTFIX);
 
       // Return the original command to the stack
       if (focused_issue->history == NULL)
