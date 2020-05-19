@@ -237,24 +237,22 @@ enum process_action_type
     }
 #define sizeof_template_collection_v1 (sizeof(void *) * 5)
 
-#define script_v1                      \
-    struct                             \
-    {                                  \
-        struct                         \
-        {                              \
-            const char *identifier;    \
-            uint version;              \
-        } struct_id;                   \
-        unsigned int sequence_uid;     \
-        unsigned int arguments_alloc;  \
-        unsigned int argument_count;   \
-        void **arguments;              \
-        unsigned int statements_alloc; \
-        unsigned int statement_count;  \
-        void **statements;             \
-        void *process_info;            \
+#define script_v1                     \
+    struct                            \
+    {                                 \
+        struct                        \
+        {                             \
+            const char *identifier;   \
+            uint version;             \
+        } struct_id;                  \
+        unsigned int sequence_uid;    \
+        unsigned int arguments_alloc; \
+        unsigned int argument_count;  \
+        void **arguments;             \
+        char *code;                   \
+        void *process_info;           \
     }
-#define sizeof_script_v1 (sizeof(void *) * 10)
+#define sizeof_script_v1 (sizeof(void *) * 8)
 
 #define command_hub_v1                          \
     struct                                      \

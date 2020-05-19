@@ -170,7 +170,7 @@ int print_parse_error(const char *const text, int index, const char *const funct
   }
   buf[29] = '\0';
 
-  printf("%s>%s#unhandled-char:'%s'\n", function_name, section_id, buf);
+  printf("\n%s>%s#unhandled-char:'%s'\n", function_name, section_id, buf);
 
   return 0;
 }
@@ -198,6 +198,7 @@ int parse_past(const char *text, int *index, const char *sequence)
 
 int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing)
 {
+  int res;
   int o = *index;
   bool hit_alpha = false;
   while (1)
@@ -208,11 +209,9 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
     case ' ':
     case '\n':
     case '\t':
+    case '\0':
       doc = 0;
       break;
-    case '\0':
-      printf("!parse_past_identifier: unexpected eof");
-      return -147;
     default:
     {
       if (isalpha(text[*index]))
@@ -251,7 +250,6 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
     {
       if (o == *index)
       {
-        int res;
         MCcall(print_parse_error(text, *index, "parse_past_identifier", "identifier_end"));
         return -148;
       }
@@ -261,6 +259,8 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
       (*identifier)[*index - o] = '\0';
       return 0;
     }
+    if (text[*index] == '\0')
+      return 0;
     ++*index;
   }
   return -149;
@@ -400,6 +400,260 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
   return 0;
 }
 
+int mcqck_translate_script_statement(void *nodespace, char *script_statement, char **translated_statement)
+{
+  int res;
+  void **mc_dvp;
+  char buf[16384];
+  int i = 0;
+
+  // TODO -- free all created char * strings
+  switch (script_statement[i])
+  {
+  // case 'a':
+  // {
+  //   // ass
+  //   MCcall(parse_past(code, &i, "ass"));
+  //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+  //   // // type
+  //   // char *type_identity;
+  //   // MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
+  //   // MCcall(parse_past(code, &i, " "));
+
+  //   // Identifier
+  //   char *set_identity;
+  //   MCcall(parse_past_identifier(code, &i, &set_identity, true, true));
+  //   MCcall(parse_past(code, &i, " "));
+
+  //   // Value-identifier
+  //   char *value_identity;
+  //   MCcall(parse_past_identifier(code, &i, &value_identity, true, true));
+  //   MCcall(parse_past(code, &i, "\n"));
+
+  //   strcat(buf, TAB);
+  //   sprintf(buf + strlen(buf), "%s = %s;\n", set_identity, value_identity);
+  // }
+  // break;
+  // case 'c':
+  // {
+  //   // cpy
+  //   MCcall(parse_past(code, &i, "cpy"));
+  //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+  //   // type
+  //   char *type_identity;
+  //   if (code[i] == '\'')
+  //   {
+  //     int o = ++i;
+  //     while (code[i] != '\'')
+  //       ++i;
+  //     type_identity = (char *)malloc(sizeof(char) * (i - o + 1));
+  //     strncpy(type_identity, code + o, i - o);
+  //     type_identity[i - o] = '\0';
+  //     printf("type_identity:%s\n", type_identity);
+  //     ++i;
+  //   }
+  //   else
+  //     MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
+  //   MCcall(parse_past(code, &i, " "));
+
+  //   // Identifier
+  //   char *set_identity;
+  //   MCcall(parse_past_identifier(code, &i, &set_identity, true, false));
+  //   MCcall(parse_past(code, &i, " "));
+
+  //   // Value-identifier
+  //   char *value_identity;
+  //   MCcall(parse_past_identifier(code, &i, &value_identity, true, false));
+  //   MCcall(parse_past(code, &i, "\n"));
+
+  //   if (!strcmp(type_identity, "const char *"))
+  //   {
+  //     strcat(buf, TAB);
+  //     sprintf(buf + strlen(buf), "%s = (char *)malloc(sizeof(char) * (strlen(%s) + 1));\n", set_identity, value_identity);
+  //     strcat(buf, TAB);
+  //     sprintf(buf + strlen(buf), "strcpy((char *)%s, %s);\n", set_identity, value_identity);
+  //   }
+  //   else
+  //   {
+  //     printf("initialize_function_V1:>[cpy]>unhandled type identity:%s\n", type_identity);
+  //     return -727;
+  //   }
+  // }
+  // break;
+  case 'd':
+  {
+    // dec
+    MCcall(parse_past(script_statement, &i, "dcl"));
+    MCcall(parse_past(script_statement, &i, " ")); // TODO -- allow tabs too
+
+    // Identifier
+    char *type_identifier;
+    MCcall(parse_past_identifier(script_statement, &i, &type_identifier, false, false));
+    MCcall(parse_past(script_statement, &i, " "));
+
+    // Variable Name
+    char *var_name;
+    MCcall(parse_past_identifier(script_statement, &i, &var_name, false, false));
+    if (script_statement[i] != '\n' && script_statement[i] != '\0')
+    {
+      MCerror(-4829, "expected statement end");
+    }
+
+    // declared_types[declared_type_count].type = type_identifier;
+    // declared_types[declared_type_count].var_name = var_name;
+
+    // -- Determine if the structure is midge-specified
+    void *p_struct_info = NULL;
+    MCcall(find_struct_info((void *)nodespace, type_identifier, &p_struct_info));
+    if (p_struct_info)
+    {
+      declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
+
+      sprintf(buf + strlen(buf), "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
+              struct_info->version, var_name, struct_info->field_count);
+
+      // declared_types[declared_type_count].struct_info = (void *)struct_info;
+    }
+    else
+    {
+      sprintf(buf + strlen(buf), "%s %s;\n", type_identifier, var_name);
+
+      // declared_types[declared_type_count].struct_info = NULL;
+    }
+
+    // ++declared_type_count;
+    free(var_name);
+    free(type_identifier);
+  }
+    return 0;
+    // case 'i':
+    // {
+    //   // invoke
+    //   MCcall(parse_past(code, &i, "inv"));
+    //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+    //   // type
+    //   char *function_identity;
+    //   MCcall(parse_past_identifier(code, &i, &function_identity, true, false));
+
+    //   // Is mc function?
+    //   void *p_function_info;
+    //   MCcall(mcqck_find_function_info((void *)nodespace, function_identity, &p_function_info));
+    //   if (p_function_info)
+    //   {
+    //     return -583;
+    //   }
+    //   else
+    //   {
+    //     strcat(buf, TAB);
+    //     strcat(buf, function_identity);
+    //     strcat(buf, "(");
+
+    //     int arg_count = 0;
+    //     while (code[i] == ' ')
+    //     {
+    //       ++i;
+    //       char *arg_identity;
+    //       MCcall(parse_past_identifier(code, &i, &arg_identity, true, true));
+    //       if (arg_count > 0)
+    //         strcat(buf, ", ");
+    //       strcat(buf, arg_identity);
+
+    //       ++arg_count;
+    //     }
+    //   }
+
+    //   strcat(buf, ");\n");
+    //   MCcall(parse_past(code, &i, "\n"));
+    // }
+    // break;
+    // case 'r':
+    // {
+    //   printf("TODO\n");
+    //   return -52828;
+    // }
+    // break;
+
+  default:
+    MCcall(print_parse_error(script_statement, 0, "mcqck_translate_script_statement", "UnhandledStatement"));
+    return -757;
+  }
+}
+
+int mcqck_translate_process_script(void *nodespace, char *script, char **translation)
+{
+  unsigned int statements_alloc = (int)strlen(script) / 15;
+  unsigned int statement_count = 0;
+  void **statements = (void **)malloc(sizeof(void *) * statements_alloc);
+
+  // -- Parse statements
+  int s = -1;
+  int i = 8;
+  bool loop = true;
+  bool statement_has_process_notation = false; // $
+  while (loop)
+  {
+    switch (script[i])
+    {
+    case ' ':
+    case '\t':
+      break;
+    case '$':
+      statement_has_process_notation = true;
+      break;
+    case '\n':
+    case '\0':
+    {
+      if (s >= 0 && i - s > 0)
+      {
+        char *script_statement = (char *)malloc(sizeof(char) * (i - s + 1));
+        strncpy(script_statement, script + s, (i - s));
+        script_statement[i - s] = '\0';
+
+        char *statement;
+        if (statement_has_process_notation)
+        {
+          if (script_statement[0] == '$')
+          {
+            printf("%s\n", script_statement);
+            return -57272;
+          }
+          else
+          {
+            // Replace
+            return -58287;
+          }
+        }
+        else
+          mcqck_translate_script_statement(nodespace, script_statement, &statement);
+
+        append_to_collection(&statements, &statements_alloc, &statement_count, (void *)statement);
+        free(script_statement);
+      }
+      if (script[i] == '\0')
+      {
+        loop = false;
+      }
+      s = -1;
+      statement_has_process_notation = false;
+      break;
+    }
+    default:
+    {
+      if (s < 0)
+        s = i;
+    }
+    break;
+    }
+
+    ++i;
+  }
+
+  return 0;
+}
+
 int initialize_function_v1(int argc, void **argv)
 {
   printf("initialize_function_v1()\n");
@@ -468,7 +722,10 @@ int initialize_function_v1(int argc, void **argv)
   int declared_type_count = 0;
 
   printf("@ifv-5\n");
-  // Translate the code-block into workable midge-cling C
+  // Translate the code-block from script into workable midge-cling C
+
+  return -5224;
+
   int n = strlen(code);
   for (int i = 0; i < n;)
   {
@@ -486,182 +743,10 @@ int initialize_function_v1(int argc, void **argv)
         MCcall(print_parse_error(code, i, "initialize_function_v1", "default:!isalpha"));
         return -42;
       }
-
-      // TODO -- free all created char * strings
-      switch (code[i])
-      {
-      case 'a':
-      {
-        // ass
-        MCcall(parse_past(code, &i, "ass"));
-        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-        // // type
-        // char *type_identity;
-        // MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
-        // MCcall(parse_past(code, &i, " "));
-
-        // Identifier
-        char *set_identity;
-        MCcall(parse_past_identifier(code, &i, &set_identity, true, true));
-        MCcall(parse_past(code, &i, " "));
-
-        // Value-identifier
-        char *value_identity;
-        MCcall(parse_past_identifier(code, &i, &value_identity, true, true));
-        MCcall(parse_past(code, &i, "\n"));
-
-        strcat(buf, TAB);
-        sprintf(buf + strlen(buf), "%s = %s;\n", set_identity, value_identity);
-      }
+      return -58822;
+      mcqck_translate_script_statement(nodespace, NULL, NULL);
       break;
-      case 'c':
-      {
-        // cpy
-        MCcall(parse_past(code, &i, "cpy"));
-        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-        // type
-        char *type_identity;
-        if (code[i] == '\'')
-        {
-          int o = ++i;
-          while (code[i] != '\'')
-            ++i;
-          type_identity = (char *)malloc(sizeof(char) * (i - o + 1));
-          strncpy(type_identity, code + o, i - o);
-          type_identity[i - o] = '\0';
-          printf("type_identity:%s\n", type_identity);
-          ++i;
-        }
-        else
-          MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
-        MCcall(parse_past(code, &i, " "));
-
-        // Identifier
-        char *set_identity;
-        MCcall(parse_past_identifier(code, &i, &set_identity, true, false));
-        MCcall(parse_past(code, &i, " "));
-
-        // Value-identifier
-        char *value_identity;
-        MCcall(parse_past_identifier(code, &i, &value_identity, true, false));
-        MCcall(parse_past(code, &i, "\n"));
-
-        if (!strcmp(type_identity, "const char *"))
-        {
-          strcat(buf, TAB);
-          sprintf(buf + strlen(buf), "%s = (char *)malloc(sizeof(char) * (strlen(%s) + 1));\n", set_identity, value_identity);
-          strcat(buf, TAB);
-          sprintf(buf + strlen(buf), "strcpy((char *)%s, %s);\n", set_identity, value_identity);
-        }
-        else
-        {
-          printf("initialize_function_V1:>[cpy]>unhandled type identity:%s\n", type_identity);
-          return -727;
-        }
-      }
-      break;
-      case 'd':
-      {
-        // dec
-        MCcall(parse_past(code, &i, "dec"));
-        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-        // Identifier
-        char *type_identifier;
-        MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
-        MCcall(parse_past(code, &i, " "));
-
-        // Variable Name
-        char *var_name;
-        MCcall(parse_past_identifier(code, &i, &var_name, false, false));
-        MCcall(parse_past(code, &i, "\n"));
-
-        declared_types[declared_type_count].type = type_identifier;
-        declared_types[declared_type_count].var_name = var_name;
-
-        // -- Determine if the structure is midge-specified
-        void *p_struct_info = NULL;
-        MCcall(find_struct_info((void *)nodespace, type_identifier, &p_struct_info));
-        if (p_struct_info)
-        {
-          declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
-
-          strcat(buf, TAB);
-          sprintf(buf + strlen(buf), "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
-                  struct_info->version, var_name, struct_info->field_count);
-
-          declared_types[declared_type_count].struct_info = (void *)struct_info;
-        }
-        else
-        {
-          strcat(buf, TAB);
-          sprintf(buf + strlen(buf), "%s %s;\n", type_identifier, var_name);
-
-          declared_types[declared_type_count].struct_info = NULL;
-        }
-
-        ++declared_type_count;
-        free(var_name);
-        free(type_identifier);
-      }
-      break;
-      case 'i':
-      {
-        // invoke
-        MCcall(parse_past(code, &i, "inv"));
-        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-        // type
-        char *function_identity;
-        MCcall(parse_past_identifier(code, &i, &function_identity, true, false));
-
-        // Is mc function?
-        void *p_function_info;
-        MCcall(mcqck_find_function_info((void *)nodespace, function_identity, &p_function_info));
-        if (p_function_info)
-        {
-          return -583;
-        }
-        else
-        {
-          strcat(buf, TAB);
-          strcat(buf, function_identity);
-          strcat(buf, "(");
-
-          int arg_count = 0;
-          while (code[i] == ' ')
-          {
-            ++i;
-            char *arg_identity;
-            MCcall(parse_past_identifier(code, &i, &arg_identity, true, true));
-            if (arg_count > 0)
-              strcat(buf, ", ");
-            strcat(buf, arg_identity);
-
-            ++arg_count;
-          }
-        }
-
-        strcat(buf, ");\n");
-        MCcall(parse_past(code, &i, "\n"));
-      }
-      break;
-      case 'r':
-      {
-        printf("TODO\n");
-        return -52828;
-      }
-      break;
-
-      default:
-        printf("ifv>cling_declare:\n%s\n", buf);
-        MCcall(print_parse_error(code, i, "initialize_function_v1", "UnhandledStatement"));
-        return -757;
-      }
     }
-    break;
     }
   }
 
@@ -1459,6 +1544,7 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
 {
   *p_response_action = NULL;
   void **mc_dvp;
+  int res;
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
 
   if (command_hub->active_script_count == 0)
@@ -1469,7 +1555,6 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
     declare_and_assign_anon_struct(script_v1, script, command_hub->active_scripts[i]);
 
     printf("script->sequence_uid=%u\n", script->sequence_uid);
-    printf("statement_count=%u\n", script->statement_count);
 
     if (!script->process_info)
     {
@@ -1478,18 +1563,33 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
       {
         pthread_t threadId;
         void *(*start_routine)(void *);
-        bool should_exit, has_concluded;
-        bool should_pause, has_paused;
+        bool should_exit;
+        bool has_concluded;
+        bool should_pause;
+        bool has_paused;
         char *interactive_response;
       } * process_info;
-      allocate_anon_struct(process_info, sizeof(void *) * 1);
+      allocate_anon_struct(process_info, sizeof(void *) * 7);
 
       // -- Construct the function
+      char *c_code;
+      MCcall(mcqck_translate_process_script(command_hub->nodespace, script->code, &c_code));
+
+      // -- Function Arguments
+      // void **args = (void **)malloc(sizeof(void *) * (1 + script->argument_count));
+      // args[0] =
 
       // -- Begin the thread
-    }
+      // process_info->start_routine = start_routine;
 
-    printf("first_statement=%s\n", (char *)script->statements[0]);
+      // process_info->should_exit = 0;
+      // process_info->has_concluded = 0;
+      // process_info->should_pause = 0;
+      // process_info->has_paused = 0;
+      // if (pthread_create(&(*p_thread_info)->threadId, NULL, (*p_thread_info)->start_routine, vargs))
+      // {
+      // }
+    }
   }
 
   MCerror(-445, "TODO Finish Script Processing");
@@ -1531,13 +1631,11 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       declare_and_allocate_anon_struct(script_v1, script, sizeof_script_v1);
       // script->execution_state = SCRIPT_EXECUTION_STATE_INITIAL;
       // script->next_statement_index = -1;
+      script->process_info = NULL;
       script->sequence_uid = focused_issue->sequence_uid;
-      script->variable_count = 0;
-      script->variables_alloc = 4;
-      script->variables = (void **)malloc(sizeof(void *) * script->variables_alloc);
-      script->statement_count = 0;
-      script->statements_alloc = 4;
-      script->statements = (void **)malloc(sizeof(void *) * script->statements_alloc);
+      script->argument_count = 0;
+      script->arguments_alloc = 4;
+      script->arguments = (void **)malloc(sizeof(void *) * script->arguments_alloc);
 
       // -- Submit contextual arguments
       struct
@@ -1556,7 +1654,7 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
         allocate_and_copy_cstr(variable->name, "command");
         allocate_from_cstringv(&variable->value, previous_issue->data.demonstrated_command);
 
-        append_to_collection(&script->variables, &script->variables_alloc, &script->variable_count, variable);
+        append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
       }
       break;
       default:
@@ -1568,54 +1666,17 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       assign_anon_struct(variable, malloc(sizeof(void *) * 2));
       allocate_and_copy_cstr(variable->name, "nodespace");
       variable->value = command_hub->nodespace;
-      append_to_collection(&script->variables, &script->variables_alloc, &script->variable_count, variable);
+      append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
 
       // -- -- Global
       assign_anon_struct(variable, malloc(sizeof(void *) * 2));
       allocate_and_copy_cstr(variable->name, "global_node");
       variable->value = command_hub->global_node;
-      append_to_collection(&script->variables, &script->variables_alloc, &script->variable_count, variable);
+      append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
 
       // -- Parse statements
-      {
-        int s = -1;
-        int i = 8;
-        bool loop = true;
-        while (loop)
-        {
-          switch (focused_issue->dialogue[i])
-          {
-          case ' ':
-          case '\t':
-            break;
-          case '\n':
-          case '\0':
-          {
-            if (s >= 0 && i - s > 0)
-            {
-              char *statement = (char *)malloc(sizeof(char) * (i - s + 1));
-              strncpy(statement, focused_issue->dialogue + s, (i - s));
-              statement[i - s] = '\0';
-              append_to_collection(&script->statements, &script->statements_alloc, &script->statement_count, statement);
-            }
-            if (focused_issue->dialogue[i] == '\0')
-            {
-              loop = false;
-            }
-            s = -1;
-            break;
-          }
-          default:
-          {
-            if (s < 0)
-              s = i;
-          }
-          break;
-          }
-
-          ++i;
-        }
-      }
+      script->code = (char *)malloc(sizeof(char) * (strlen(focused_issue->dialogue) + 1));
+      strcpy(script->code, focused_issue->dialogue);
 
       // Set corresponding issue
       declare_and_allocate_anon_struct(process_action_v1, script_issue, sizeof_process_action_v1);
