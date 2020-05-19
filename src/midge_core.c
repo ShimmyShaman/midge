@@ -309,15 +309,19 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
 {
   if (*collection_count + 1 > *collection_alloc)
   {
-    unsigned int realloc_amount = *collection_alloc + 4 + *collection_alloc / 4;
-    void **new_struct_usage = (void **)realloc(*collection, realloc_amount);
-    if (new_struct_usage == NULL)
+    unsigned int realloc_amount = *collection_alloc + 8 + *collection_alloc / 3;
+    printf("reallocate collection size %i->%i\n", *collection_alloc, realloc_amount);
+    void **new_collection = (void **)malloc(sizeof(void *) * realloc_amount);
+    if (new_collection == NULL)
     {
-      printf("realloc error\n");
+      printf("append_to_collection malloc error\n");
       return -424;
     }
 
-    *collection = new_struct_usage;
+    memcpy(new_collection, *collection, *collection_count * sizeof(void *));
+    free(*collection);
+
+    *collection = new_collection;
     *collection_alloc = realloc_amount;
   }
 
@@ -1039,7 +1043,6 @@ int mc_main(int argc, const char *const *argv)
     printf("pointer sizes aren't equal!!!\n");
     return -1;
   }
-
   int res;
   void **mc_dvp;
 
@@ -1143,6 +1146,9 @@ int mc_main(int argc, const char *const *argv)
   command_hub->focused_issue_stack_count = 0;
   command_hub->focused_issue_activated = false;
   command_hub->uid_counter = 2000;
+  command_hub->active_scripts_alloc = 16;
+  command_hub->active_scripts = (void **)malloc(sizeof(void *) * command_hub->active_scripts_alloc);
+  command_hub->active_script_count = 0;
 
   declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
   template_collection->templates_alloc = 400;
@@ -1200,7 +1206,7 @@ int mc_main(int argc, const char *const *argv)
       "ass linit finfo->variable_parameter_begin_index\n"
       "end\n"
       "for i 0 linit\n"
-      "dca char provocation 512"
+      "dca char provocation 512\n"
       "nvk strcpy provocation finfo->parameters[i]->name\n"
       "nvk strcat provocation \": \"\n"
       "$ASI responses[rind] provocation\n"
@@ -1424,6 +1430,13 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
     command_hub->focused_issue_activated = true;
   }
   break;
+  case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+  {
+    // Print to terminal
+    printf("%s\n", focused_issue->dialogue);
+    command_hub->focused_issue_activated = true;
+  }
+  break;
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_PM_DEMO_INITIATION:
   {
@@ -1451,16 +1464,35 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
   if (command_hub->active_script_count == 0)
     return 0;
 
-  // for (int i = 0; i < command_hub->active_script_count; ++i)
-  // {
-  //   declare_and_assign_anon_struct(script_v1, script, command_hub->active_scripts[i]);
+  for (int i = 0; i < command_hub->active_script_count; ++i)
+  {
+    declare_and_assign_anon_struct(script_v1, script, command_hub->active_scripts[i]);
 
-  //   printf("statement_index=%u\n", script->sequence_uid);
-  //   printf("statement_count=%u\n", script->statement_count);
-  //   printf("first_statement=%s\n", (char *)script->statements[0]);
-  // }
+    printf("script->sequence_uid=%u\n", script->sequence_uid);
+    printf("statement_count=%u\n", script->statement_count);
 
-  MCerror(-424, "TODO");
+    if (!script->process_info)
+    {
+      // Construct the process info
+      struct
+      {
+        pthread_t threadId;
+        void *(*start_routine)(void *);
+        bool should_exit, has_concluded;
+        bool should_pause, has_paused;
+        char *interactive_response;
+      } * process_info;
+      allocate_anon_struct(process_info, sizeof(void *) * 1);
+
+      // -- Construct the function
+
+      // -- Begin the thread
+    }
+
+    printf("first_statement=%s\n", (char *)script->statements[0]);
+  }
+
+  MCerror(-445, "TODO Finish Script Processing");
 }
 
 int systems_process_command_hub_issues(void *p_command_hub, void **p_response_action)
@@ -1548,7 +1580,6 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       {
         int s = -1;
         int i = 8;
-        int ps = 0;
         bool loop = true;
         while (loop)
         {
@@ -1560,12 +1591,11 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
           case '\n':
           case '\0':
           {
-            if (ps > 0 && s >= 0)
+            if (s >= 0 && i - s > 0)
             {
               char *statement = (char *)malloc(sizeof(char) * (i - s + 1));
               strncpy(statement, focused_issue->dialogue + s, (i - s));
               statement[i - s] = '\0';
-
               append_to_collection(&script->statements, &script->statements_alloc, &script->statement_count, statement);
             }
             if (focused_issue->dialogue[i] == '\0')
@@ -1582,6 +1612,8 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
           }
           break;
           }
+
+          ++i;
         }
       }
 
@@ -1590,7 +1622,7 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       script_issue->sequence_uid = focused_issue->sequence_uid;
       script_issue->type = PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS;
       script_issue->history = (void *)focused_issue;
-      allocate_and_copy_cstr(script_issue->dialogue, "Executing Script...");
+      allocate_and_copy_cstr(script_issue->dialogue, "Initiating Script...");
 
       // Submit the script
       append_to_collection(&command_hub->active_scripts, &command_hub->active_scripts_alloc, &command_hub->active_script_count, script);

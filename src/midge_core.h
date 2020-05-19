@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <pthread.h>
 
 #ifndef __cplusplus
 typedef unsigned char bool;
@@ -133,7 +134,7 @@ enum process_action_type
         void *data;                           \
         void *next;                           \
     }
-#define sizeof_branch_unit_v1 (sizeof(void *) * 13)
+#define sizeof_branch_unit_v1 (sizeof(void *) * 6)
 #define node_v1                       \
     struct                            \
     {                                 \
@@ -245,14 +246,15 @@ enum process_action_type
             uint version;              \
         } struct_id;                   \
         unsigned int sequence_uid;     \
-        unsigned int variables_alloc;  \
-        unsigned int variable_count;   \
-        void **variables;              \
+        unsigned int arguments_alloc;  \
+        unsigned int argument_count;   \
+        void **arguments;              \
         unsigned int statements_alloc; \
         unsigned int statement_count;  \
         void **statements;             \
+        void *process_info;            \
     }
-#define sizeof_script_v1 (sizeof(void *) * 9)
+#define sizeof_script_v1 (sizeof(void *) * 10)
 
 #define command_hub_v1                          \
     struct                                      \
