@@ -91,6 +91,11 @@ extern "C"
     return clint->declare(str);
   }
 
+  void *clint_compile_function(const char *name, const char *str)
+  {
+    return clint->compileFunction(name, str);
+  }
+
   int clint_loadfile(const char *path)
   {
     return clint->loadFile(path);

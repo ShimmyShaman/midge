@@ -51,13 +51,24 @@ enum process_action_type
     PROCESS_ACTION_USER_UNPROVOKED_COMMAND = 1,
     PROCESS_ACTION_USER_UNRESOLVED_RESPONSE,
     PROCESS_ACTION_USER_SCRIPT_ENTRY,
+    PROCESS_ACTION_USER_SCRIPT_RESPONSE,
 
     PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
     PROCESS_ACTION_PM_DEMO_INITIATION,
     PROCESS_ACTION_PM_SCRIPT_REQUEST,
 
     PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
+    PROCESS_ACTION_SCRIPT_QUERY,
 };
+
+enum script_process_state
+{
+    SCRIPT_PROCESS_NOT_STARTED = 1,
+    SCRIPT_PROCESS_EXECUTION,
+    SCRIPT_PROCESS_QUERY_USER,
+};
+
+#define SCRIPT_NAME_PREFIX "mc_script_"
 
 /*
  * @field a (void **) variable to store the created value in.
@@ -237,22 +248,26 @@ enum process_action_type
     }
 #define sizeof_template_collection_v1 (sizeof(void *) * 5)
 
-#define script_v1                     \
-    struct                            \
-    {                                 \
-        struct                        \
-        {                             \
-            const char *identifier;   \
-            uint version;             \
-        } struct_id;                  \
-        unsigned int sequence_uid;    \
-        unsigned int arguments_alloc; \
-        unsigned int argument_count;  \
-        void **arguments;             \
-        char *code;                   \
-        void *process_info;           \
+#define script_v1                       \
+    struct                              \
+    {                                   \
+        struct                          \
+        {                               \
+            const char *identifier;     \
+            uint version;               \
+        } struct_id;                    \
+        unsigned int sequence_uid;      \
+        unsigned int script_uid;        \
+        unsigned int arguments_alloc;   \
+        unsigned int argument_count;    \
+        void **arguments;               \
+        unsigned int local_count;       \
+        void **locals;                  \
+        char *response;                 \
+        unsigned int segment_count;     \
+        unsigned int segments_complete; \
     }
-#define sizeof_script_v1 (sizeof(void *) * 8)
+#define sizeof_script_v1 (sizeof(void *) * 11)
 
 #define command_hub_v1                          \
     struct                                      \

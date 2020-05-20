@@ -400,292 +400,311 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
   return 0;
 }
 
-int mcqck_translate_script_statement(void *nodespace, char *script_statement, char **translated_statement)
+// int mcqck_translate_script_statement(void *nodespace, char *script_statement, char **translated_statement)
+// {
+//   int res;
+//   void **mc_dvp;
+//   char buf[16384];
+//   int i = 0;
+
+//   // TODO -- free all created char * strings
+//   switch (script_statement[i])
+//   {
+//   // case 'a':
+//   // {
+//   //   // ass
+//   //   MCcall(parse_past(code, &i, "ass"));
+//   //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+//   //   // // type
+//   //   // char *type_identity;
+//   //   // MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
+//   //   // MCcall(parse_past(code, &i, " "));
+
+//   //   // Identifier
+//   //   char *set_identity;
+//   //   MCcall(parse_past_identifier(code, &i, &set_identity, true, true));
+//   //   MCcall(parse_past(code, &i, " "));
+
+//   //   // Value-identifier
+//   //   char *value_identity;
+//   //   MCcall(parse_past_identifier(code, &i, &value_identity, true, true));
+//   //   MCcall(parse_past(code, &i, "\n"));
+
+//   //   strcat(buf, TAB);
+//   //   sprintf(buf + strlen(buf), "%s = %s;\n", set_identity, value_identity);
+//   // }
+//   // break;
+//   // case 'c':
+//   // {
+//   //   // cpy
+//   //   MCcall(parse_past(code, &i, "cpy"));
+//   //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+//   //   // type
+//   //   char *type_identity;
+//   //   if (code[i] == '\'')
+//   //   {
+//   //     int o = ++i;
+//   //     while (code[i] != '\'')
+//   //       ++i;
+//   //     type_identity = (char *)malloc(sizeof(char) * (i - o + 1));
+//   //     strncpy(type_identity, code + o, i - o);
+//   //     type_identity[i - o] = '\0';
+//   //     printf("type_identity:%s\n", type_identity);
+//   //     ++i;
+//   //   }
+//   //   else
+//   //     MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
+//   //   MCcall(parse_past(code, &i, " "));
+
+//   //   // Identifier
+//   //   char *set_identity;
+//   //   MCcall(parse_past_identifier(code, &i, &set_identity, true, false));
+//   //   MCcall(parse_past(code, &i, " "));
+
+//   //   // Value-identifier
+//   //   char *value_identity;
+//   //   MCcall(parse_past_identifier(code, &i, &value_identity, true, false));
+//   //   MCcall(parse_past(code, &i, "\n"));
+
+//   //   if (!strcmp(type_identity, "const char *"))
+//   //   {
+//   //     strcat(buf, TAB);
+//   //     sprintf(buf + strlen(buf), "%s = (char *)malloc(sizeof(char) * (strlen(%s) + 1));\n", set_identity, value_identity);
+//   //     strcat(buf, TAB);
+//   //     sprintf(buf + strlen(buf), "strcpy((char *)%s, %s);\n", set_identity, value_identity);
+//   //   }
+//   //   else
+//   //   {
+//   //     printf("initialize_function_V1:>[cpy]>unhandled type identity:%s\n", type_identity);
+//   //     return -727;
+//   //   }
+//   // }
+//   // break;
+//   case 'd':
+//   {
+//     // dec
+//     MCcall(parse_past(script_statement, &i, "dcl"));
+//     MCcall(parse_past(script_statement, &i, " ")); // TODO -- allow tabs too
+
+//     // Identifier
+//     char *type_identifier;
+//     MCcall(parse_past_identifier(script_statement, &i, &type_identifier, false, false));
+//     MCcall(parse_past(script_statement, &i, " "));
+
+//     // Variable Name
+//     char *var_name;
+//     MCcall(parse_past_identifier(script_statement, &i, &var_name, false, false));
+//     if (script_statement[i] != '\n' && script_statement[i] != '\0')
+//     {
+//       MCerror(-4829, "expected statement end");
+//     }
+
+//     // declared_types[declared_type_count].type = type_identifier;
+//     // declared_types[declared_type_count].var_name = var_name;
+
+//     // -- Determine if the structure is midge-specified
+//     void *p_struct_info = NULL;
+//     MCcall(find_struct_info((void *)nodespace, type_identifier, &p_struct_info));
+//     if (p_struct_info)
+//     {
+//       declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
+
+//       sprintf(buf + strlen(buf), "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
+//               struct_info->version, var_name, struct_info->field_count);
+
+//       // declared_types[declared_type_count].struct_info = (void *)struct_info;
+//     }
+//     else
+//     {
+//       sprintf(buf + strlen(buf), "%s %s;\n", type_identifier, var_name);
+
+//       // declared_types[declared_type_count].struct_info = NULL;
+//     }
+
+//     // ++declared_type_count;
+//     free(var_name);
+//     free(type_identifier);
+//   }
+//     return 0;
+//   case 'n':
+//   {
+//     // invoke
+//     bool isi = script_statement[i + 2] == 'i';
+//     if (isi)
+//     {
+//       MCcall(parse_past(script_statement, &i, "nvi"));
+//     }
+//     else
+//     {
+//       MCcall(parse_past(script_statement, &i, "nvk"));
+//     }
+
+//     MCcall(parse_past(script_statement, &i, " ")); // TODO -- allow tabs too
+
+//     // type
+//     char *function_identity;
+//     MCcall(parse_past_identifier(script_statement, &i, &function_identity, true, false));
+
+//     // Is mc function?
+//     void *p_function_info;
+//     MCcall(mcqck_find_function_info((void *)nodespace, function_identity, &p_function_info));
+//     if (p_function_info)
+//     {
+//       return -583;
+//     }
+//     else
+//     {
+//       strcat(buf, function_identity);
+//       strcat(buf, "(");
+
+//       int arg_count = 0;
+//       while (script_statement[i] == ' ')
+//       {
+//         ++i;
+//         char *arg_identity;
+//         MCcall(parse_past_identifier(script_statement, &i, &arg_identity, true, true));
+//         if (arg_count > 0)
+//           strcat(buf, ", ");
+//         strcat(buf, arg_identity);
+
+//         ++arg_count;
+//       }
+//     }
+
+//     strcat(buf, ");\n");
+//     MCcall(parse_past(script_statement, &i, "\n"));
+//   }
+//     return 0;
+//     // case 'r':
+//     // {
+//     //   printf("TODO\n");
+//     //   return -52828;
+//     // }
+//     // break;
+
+//   default:
+//     MCcall(print_parse_error(script_statement, 0, "mcqck_translate_script_statement", "UnhandledStatement"));
+//     return -757;
+//   }
+// }
+
+int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
+{
+  int n = strlen(extra);
+  if (strlen(*cstr) + n + 1 >= *allocated_size)
+  {
+    unsigned int new_allocated_size = *allocated_size + 100 + *allocated_size / 100;
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    memcpy(newptr, *cstr, sizeof(char) * *allocated_size);
+    free(*cstr);
+    *cstr = newptr;
+    *allocated_size = new_allocated_size;
+  }
+
+  strcat(*cstr, extra);
+
+  return 0;
+}
+
+int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 {
   int res;
   void **mc_dvp;
-  char buf[16384];
-  int i = 0;
+  declare_and_assign_anon_struct(script_v1, script, p_script);
 
-  // TODO -- free all created char * strings
-  switch (script_statement[i])
-  {
-  // case 'a':
-  // {
-  //   // ass
-  //   MCcall(parse_past(code, &i, "ass"));
-  //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+  unsigned int translation_alloc = 512 + strlen(code) * 13 / 10;
+  char *translation = (char *)malloc(sizeof(char) * translation_alloc);
+  translation[0] = '\0';
+  unsigned int t = 0;
 
-  //   // // type
-  //   // char *type_identity;
-  //   // MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
-  //   // MCcall(parse_past(code, &i, " "));
+  script->local_count = 0;
+  script->segment_count = 0;
 
-  //   // Identifier
-  //   char *set_identity;
-  //   MCcall(parse_past_identifier(code, &i, &set_identity, true, true));
-  //   MCcall(parse_past(code, &i, " "));
-
-  //   // Value-identifier
-  //   char *value_identity;
-  //   MCcall(parse_past_identifier(code, &i, &value_identity, true, true));
-  //   MCcall(parse_past(code, &i, "\n"));
-
-  //   strcat(buf, TAB);
-  //   sprintf(buf + strlen(buf), "%s = %s;\n", set_identity, value_identity);
-  // }
-  // break;
-  // case 'c':
-  // {
-  //   // cpy
-  //   MCcall(parse_past(code, &i, "cpy"));
-  //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-  //   // type
-  //   char *type_identity;
-  //   if (code[i] == '\'')
-  //   {
-  //     int o = ++i;
-  //     while (code[i] != '\'')
-  //       ++i;
-  //     type_identity = (char *)malloc(sizeof(char) * (i - o + 1));
-  //     strncpy(type_identity, code + o, i - o);
-  //     type_identity[i - o] = '\0';
-  //     printf("type_identity:%s\n", type_identity);
-  //     ++i;
-  //   }
-  //   else
-  //     MCcall(parse_past_identifier(code, &i, &type_identity, false, false));
-  //   MCcall(parse_past(code, &i, " "));
-
-  //   // Identifier
-  //   char *set_identity;
-  //   MCcall(parse_past_identifier(code, &i, &set_identity, true, false));
-  //   MCcall(parse_past(code, &i, " "));
-
-  //   // Value-identifier
-  //   char *value_identity;
-  //   MCcall(parse_past_identifier(code, &i, &value_identity, true, false));
-  //   MCcall(parse_past(code, &i, "\n"));
-
-  //   if (!strcmp(type_identity, "const char *"))
-  //   {
-  //     strcat(buf, TAB);
-  //     sprintf(buf + strlen(buf), "%s = (char *)malloc(sizeof(char) * (strlen(%s) + 1));\n", set_identity, value_identity);
-  //     strcat(buf, TAB);
-  //     sprintf(buf + strlen(buf), "strcpy((char *)%s, %s);\n", set_identity, value_identity);
-  //   }
-  //   else
-  //   {
-  //     printf("initialize_function_V1:>[cpy]>unhandled type identity:%s\n", type_identity);
-  //     return -727;
-  //   }
-  // }
-  // break;
-  case 'd':
-  {
-    // dec
-    MCcall(parse_past(script_statement, &i, "dcl"));
-    MCcall(parse_past(script_statement, &i, " ")); // TODO -- allow tabs too
-
-    // Identifier
-    char *type_identifier;
-    MCcall(parse_past_identifier(script_statement, &i, &type_identifier, false, false));
-    MCcall(parse_past(script_statement, &i, " "));
-
-    // Variable Name
-    char *var_name;
-    MCcall(parse_past_identifier(script_statement, &i, &var_name, false, false));
-    if (script_statement[i] != '\n' && script_statement[i] != '\0')
-    {
-      MCerror(-4829, "expected statement end");
-    }
-
-    // declared_types[declared_type_count].type = type_identifier;
-    // declared_types[declared_type_count].var_name = var_name;
-
-    // -- Determine if the structure is midge-specified
-    void *p_struct_info = NULL;
-    MCcall(find_struct_info((void *)nodespace, type_identifier, &p_struct_info));
-    if (p_struct_info)
-    {
-      declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
-
-      sprintf(buf + strlen(buf), "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
-              struct_info->version, var_name, struct_info->field_count);
-
-      // declared_types[declared_type_count].struct_info = (void *)struct_info;
-    }
-    else
-    {
-      sprintf(buf + strlen(buf), "%s %s;\n", type_identifier, var_name);
-
-      // declared_types[declared_type_count].struct_info = NULL;
-    }
-
-    // ++declared_type_count;
-    free(var_name);
-    free(type_identifier);
-  }
-    return 0;
-  case 'n':
-  {
-    // invoke
-    bool isi = script_statement[i + 2] == 'i';
-    if (isi)
-    {
-      MCcall(parse_past(script_statement, &i, "nvi"));
-    }
-    else
-    {
-      MCcall(parse_past(script_statement, &i, "nvk"));
-    }
-
-    MCcall(parse_past(script_statement, &i, " ")); // TODO -- allow tabs too
-
-    // type
-    char *function_identity;
-    MCcall(parse_past_identifier(script_statement, &i, &function_identity, true, false));
-
-    // Is mc function?
-    void *p_function_info;
-    MCcall(mcqck_find_function_info((void *)nodespace, function_identity, &p_function_info));
-    if (p_function_info)
-    {
-      return -583;
-    }
-    else
-    {
-      strcat(buf, function_identity);
-      strcat(buf, "(");
-
-      int arg_count = 0;
-      while (script_statement[i] == ' ')
-      {
-        ++i;
-        char *arg_identity;
-        MCcall(parse_past_identifier(script_statement, &i, &arg_identity, true, true));
-        if (arg_count > 0)
-          strcat(buf, ", ");
-        strcat(buf, arg_identity);
-
-        ++arg_count;
-      }
-    }
-
-    strcat(buf, ");\n");
-    MCcall(parse_past(script_statement, &i, "\n"));
-  }
-    return 0;
-    // case 'r':
-    // {
-    //   printf("TODO\n");
-    //   return -52828;
-    // }
-    // break;
-
-  default:
-    MCcall(print_parse_error(script_statement, 0, "mcqck_translate_script_statement", "UnhandledStatement"));
-    return -757;
-  }
-}
-
-int mcqck_translate_process_script(void *nodespace, char *script, char **translation)
-{
-  int res;
-  unsigned int statements_alloc = (int)strlen(script) / 15;
-  unsigned int statement_count = 0;
-  void **statements = (void **)malloc(sizeof(void *) * statements_alloc);
-
+  char buf[1024];
   // -- Parse statements
   int s = -1;
   int i = 8;
   bool loop = true;
-  bool statement_has_process_notation = false; // $
   while (loop)
   {
-    switch (script[i])
+    switch (code[i])
     {
     case ' ':
     case '\t':
+    case '\n':
       break;
     case '$':
-      statement_has_process_notation = true;
-      break;
-    case '\n':
-    case '\0':
     {
-      if (s >= 0 && i - s > 0)
+      // $
+      MCcall(parse_past(code, &i, "$asi"));
+      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+      // Identifier
+      char *response_identifier;
+      MCcall(parse_past_identifier(code, &i, &response_identifier, false, false));
+      MCcall(parse_past(code, &i, " "));
+
+      // Variable Name
+      char *literal_cstr;
+      if (code[i] == '"')
       {
-        char *script_statement = (char *)malloc(sizeof(char) * (i - s + 1));
-        strncpy(script_statement, script + s, (i - s));
-        script_statement[i - s] = '\0';
-
-        char *statement;
-        if (statement_has_process_notation)
+        int j;
+        int x = -1;
+        bool prev_escape = false;
+        for (j = i + 1;; ++j)
         {
-          if (script_statement[0] == '$')
+          if (code[j] == '"' && !prev_escape)
           {
-            printf("%s\n", script_statement);
-            return -57272;
+            x = j + 1;
+            break;
           }
-          else
-          {
-            // Replace
-            allocate_from_cstringv((void **)&statement, "{\n"
-                                                        "  if(process_info->interactive_response)\n"
-                                                        "    free(process_info->interactive_response);\n"
-                                                        "  const char *query = \"say the word:\\n"
-                                                        "  process_info->interactive_response = (char *)malloc(sizeof(char) * (strlen(query) + 1))\n"
-                                                        ""
-                                                        "  process_info->has_paused = 1;\n"
-                                                        "  while (process_info->should_pause)\n"
-                                                        "  {\n"
-                                                        "    usleep(1);\n"
-                                                        "    if (process_info->should_exit)\n"
-                                                        "    {\n"
-                                                        "      process_info->has_concluded = true;\n"
-                                                        "      return 0;\n"
-                                                        "    }\n"
-                                                        "  }\n"
-                                                        "  process_info->has_paused = 0;\n"
-                                                        "  char *response = process_info->interactive_response;\n"
-                                                        "  printf(\"You wrote %s!\n\");\n"
-                                                        "}\n")
-
-            // struct
-            // {
-            //   pthread_t threadId;
-            //   void *(*start_routine)(void *);
-            //   bool should_exit;
-            //   bool has_concluded;
-            //   bool should_pause;
-            //   bool has_paused;
-            //   char *interactive_response;
-            // } * process_info;
-            // Hold the thread
-          }
-        }
-        else
-        {
-          MCcall(mcqck_translate_script_statement(nodespace, script_statement, &statement));
+          prev_escape = !prev_escape && (code[j] == '\\');
         }
 
-        append_to_collection(&statements, &statements_alloc, &statement_count, (void *)statement);
-        free(script_statement);
+        if (x < 0)
+        {
+          MCerror(4877, "literal not ended");
+        }
+        literal_cstr = (char *)malloc(sizeof(char) * (x - i + 1));
+        strncpy(literal_cstr, code + i, x - i);
+        literal_cstr[x - i] = '\0';
+
+        i += x - i + 1;
       }
-      if (script[i] == '\0')
+      else
       {
-        loop = false;
+        MCerror(4875, "only literal supported");
       }
-      s = -1;
-      statement_has_process_notation = false;
-      break;
+
+      if (code[i] != '\n' && code[i] != '\0')
+      {
+        MCerror(-4864, "expected statement end:'%c'", code[i]);
+      }
+
+      ++script->segment_count;
+      sprintf(buf, "  strcpy(script->response, %s);\n"
+                   "  script->segments_complete = %u;"
+                   "  return 0;\n"
+                   "segment_%u: char *%s = (char *)script->locals[%u];\n",
+              literal_cstr, script->segment_count, script->segment_count, response_identifier, script->local_count);
+      ++script->local_count;
+
+      append_to_cstr(&translation_alloc, &translation, buf);
+
+      free(literal_cstr);
+      //     // declared_types[declared_type_count].type = type_identifier;
+      //     // declared_types[declared_type_count].var_name = var_name;
     }
+    break;
+    case '\0':
+      loop = false;
+      break;
     default:
     {
-      if (s < 0)
-        s = i;
+      MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "UnhandledStatement"));
+      return -4857;
     }
     break;
     }
@@ -693,8 +712,41 @@ int mcqck_translate_process_script(void *nodespace, char *script, char **transla
     ++i;
   }
 
-  // Write the function
-  
+  unsigned int declaration_alloc = 1024 + translation_alloc;
+  char *declaration = (char *)malloc(sizeof(char) * declaration_alloc);
+  sprintf(declaration, "int %s%u(void *p_script) {\n"
+                       "  int res;\n"
+                       "  void **mc_dvp;\n"
+                       "  declare_and_assign_anon_struct(script_v1, script, p_script);\n"
+                       "  declare_and_assign_anon_struct(node_v1, global, script->arguments[0]);\n"
+                       "  declare_and_assign_anon_struct(node_v1, nodespace, script->arguments[1]);\n"
+                       "  const char *command = (const char *)script->arguments[2];\n\n"
+                       "  switch(script->segments_complete)\n"
+                       "  {\n"
+                       "  case 0:\n"
+                       "    break;\n",
+          SCRIPT_NAME_PREFIX, script->script_uid);
+  for (int i = 1; i <= script->segment_count; ++i)
+  {
+    sprintf(buf, "  case %i: goto segment_%i;\n", i, i);
+    append_to_cstr(&declaration_alloc, &declaration, buf);
+  }
+  append_to_cstr(&declaration_alloc, &declaration,
+                 "  default:\n"
+                 "    return 0;\n"
+                 "  }\n\n");
+  ++script->segment_count;
+  append_to_cstr(&declaration_alloc, &declaration, translation);
+  append_to_cstr(&declaration_alloc, &declaration, "\n  script->segments_complete = script->segment_count;\n  return 0;\n}");
+
+  script->locals = (void **)calloc(sizeof(void *), script->local_count);
+
+  // printf("declaration:%s\n\n", declaration);
+
+  clint_declare(declaration);
+
+  free(translation);
+  free(declaration);
 
   return 0;
 }
@@ -789,7 +841,7 @@ int initialize_function_v1(int argc, void **argv)
         return -42;
       }
       return -58822;
-      mcqck_translate_script_statement(nodespace, NULL, NULL);
+      // mcqck_translate_script_statement(nodespace, NULL, NULL);
       break;
     }
     }
@@ -1308,7 +1360,7 @@ int mc_main(int argc, const char *const *argv)
 
   const char *commands =
       ".script\n"
-      "$ASI response \"enter a word:\"|"
+      "$asi response \"enter a word:\"|"
       "midgequit|";
   "construct_and_attach_child_node|"
   "demo|"
@@ -1534,6 +1586,7 @@ int command_hub_submit_process_action(void *p_command_hub, void *p_process_actio
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
   declare_and_assign_anon_struct(process_action_v1, process_action, p_process_action);
 
+  printf("submitting:%i\n", process_action->type);
   append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count,
                        process_action);
   command_hub->focused_issue_activated = false;
@@ -1602,49 +1655,66 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
     declare_and_assign_anon_struct(script_v1, script, command_hub->active_scripts[i]);
 
     printf("script->sequence_uid=%u\n", script->sequence_uid);
-
-    if (!script->process_info)
+    if (script->segments_complete >= script->segment_count)
     {
-      // Construct the process info
-      struct
-      {
-        pthread_t threadId;
-        void *(*start_routine)(void *);
-        bool should_exit;
-        bool has_concluded;
-        bool should_pause;
-        bool has_paused;
-        char *interactive_response;
-      } * process_info;
-      allocate_anon_struct(process_info, sizeof(void *) * 7);
-
-      // -- Construct the function
-      char *c_code;
-      MCcall(mcqck_translate_process_script(command_hub->nodespace, script->code, &c_code));
-
-      // -- Function Arguments
-      // void **args = (void **)malloc(sizeof(void *) * (1 + script->argument_count));
-      // args[0] =
-
-      // -- Begin the thread
-      // process_info->start_routine = start_routine;
-
-      // process_info->should_exit = 0;
-      // process_info->has_concluded = 0;
-      // process_info->should_pause = 0;
-      // process_info->has_paused = 0;
-      // if (pthread_create(&(*p_thread_info)->threadId, NULL, (*p_thread_info)->start_routine, vargs))
-      // {
-      // }
+      // Cleanup
+      MCerror(5482, "TODO");
     }
-  }
+    // Execute the script
+    char buf[1024];
+    strcpy(buf, SCRIPT_NAME_PREFIX);
 
-  MCerror(-445, "TODO Finish Script Processing");
+    char **output = NULL;
+    printf("here-8\n");
+    sprintf(buf, "{\n"
+                 "void *p_script = (void *)%p;\n"
+                 "%s%u(p_script);\n"
+                 "}",
+            script, SCRIPT_NAME_PREFIX, script->script_uid);
+    clint_process(buf);
+    printf("script exited\n");
+
+    if (script->segments_complete > script->segment_count)
+    {
+      // Cleanup & continue
+      printf("TODO cleanup finished scripts\n");
+
+      continue;
+    }
+
+    if (!script->response)
+    {
+      MCerror(542852, "TODO");
+    }
+
+    // Process the Focused Issue
+    declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1]);
+
+    if (focused_issue->type != PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS)
+    {
+      MCerror(42425, "TODO");
+    }
+
+    // Pop the focused issue from the stack
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
+    // Begin Query
+    declare_and_allocate_anon_struct(process_action_v1, script_query, sizeof_process_action_v1);
+    script_query->sequence_uid = focused_issue->sequence_uid;
+    script_query->type = PROCESS_ACTION_SCRIPT_QUERY;
+    allocate_and_copy_cstr(script_query->dialogue, script->response);
+    script_query->history = (void *)focused_issue;
+
+    *p_response_action = script_query;
+  }
+  return 0;
 }
 
 int systems_process_command_hub_issues(void *p_command_hub, void **p_response_action)
 {
   *p_response_action = NULL;
+  int res;
   void **mc_dvp;
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
 
@@ -1658,6 +1728,13 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
   // Templates first
   switch (focused_issue->type)
   {
+  // case PROCESS_ACTION_SCRIPT_QUERY:
+  // case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+  // {
+  //   // Do not process these commands
+  //   // Send to other systems
+  //   return 0;
+  // }
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_PM_DEMO_INITIATION:
   {
@@ -1678,18 +1755,27 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       declare_and_allocate_anon_struct(script_v1, script, sizeof_script_v1);
       // script->execution_state = SCRIPT_EXECUTION_STATE_INITIAL;
       // script->next_statement_index = -1;
-      script->process_info = NULL;
       script->sequence_uid = focused_issue->sequence_uid;
-      script->argument_count = 0;
-      script->arguments_alloc = 4;
-      script->arguments = (void **)malloc(sizeof(void *) * script->arguments_alloc);
+      ++command_hub->uid_counter;
+      script->script_uid = command_hub->uid_counter;
+      script->segments_complete = 0;
+      script->arguments = (void **)malloc(sizeof(void *) * 3);
 
       // -- Submit contextual arguments
-      struct
-      {
-        char *name;
-        void *value;
-      } * variable;
+
+      // -- -- Global
+      script->arguments[0] = command_hub->global_node;
+      // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+      // allocate_and_copy_cstr(variable->name, "global_node");
+      // variable->value = command_hub->global_node;
+      // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
+
+      // -- -- Nodespace
+      script->arguments[1] = command_hub->nodespace;
+      // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+      // allocate_and_copy_cstr(variable->name, "nodespace");
+      // variable->value = command_hub->nodespace;
+      // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
 
       // -- -- Previous User Command
       if (focused_issue->history)
@@ -1699,11 +1785,12 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
         {
         case PROCESS_ACTION_PM_DEMO_INITIATION:
         {
-          assign_anon_struct(variable, malloc(sizeof(void *) * 2));
-          allocate_and_copy_cstr(variable->name, "command");
-          allocate_from_cstringv(&variable->value, previous_issue->data.demonstrated_command);
+          script->arguments[2] = previous_issue->data.demonstrated_command;
+          // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+          // allocate_and_copy_cstr(variable->name, "command");
+          // allocate_from_cstringv(&variable->value, previous_issue->data.demonstrated_command);
 
-          append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
+          // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
         }
         break;
         default:
@@ -1714,28 +1801,16 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       }
       else
       {
-        assign_anon_struct(variable, malloc(sizeof(void *) * 2));
-        allocate_and_copy_cstr(variable->name, "command");
-        allocate_from_cstringv(&variable->value, "null");
+        script->arguments[2] = NULL;
+        // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+        // allocate_and_copy_cstr(variable->name, "command");
+        // allocate_from_cstringv(&variable->value, "null");
 
-        append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
+        // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
       }
 
-      // -- -- Nodespace
-      assign_anon_struct(variable, malloc(sizeof(void *) * 2));
-      allocate_and_copy_cstr(variable->name, "nodespace");
-      variable->value = command_hub->nodespace;
-      append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
-
-      // -- -- Global
-      assign_anon_struct(variable, malloc(sizeof(void *) * 2));
-      allocate_and_copy_cstr(variable->name, "global_node");
-      variable->value = command_hub->global_node;
-      append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
-
       // -- Parse statements
-      script->code = (char *)malloc(sizeof(char) * (strlen(focused_issue->dialogue) + 1));
-      strcpy(script->code, focused_issue->dialogue);
+      MCcall(mcqck_translate_script_code(command_hub->nodespace, (void *)script, focused_issue->dialogue));
 
       // Set corresponding issue
       declare_and_allocate_anon_struct(process_action_v1, script_issue, sizeof_process_action_v1);

@@ -41,7 +41,10 @@ int main(int argc, const char *const *argv)
   clint->AddIncludePath("/home/jason/cling/inst/include");
 
   clint->loadFile("/home/jason/midge/src/midge.h");
-  clint->process("clint = (cling::Interpreter *)" + std::to_string((long)clint) + ";");
+  char buf[512];
+  sprintf(buf, "clint = (cling::Interpreter *)%p;", (void *)clint);
+  // clint->process("clint = (cling::Interpreter *)" + std::to_string((long)clint) + ";");
+  clint->process(buf);
 
   clint->process("run()");
 
