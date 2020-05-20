@@ -528,47 +528,55 @@ int mcqck_translate_script_statement(void *nodespace, char *script_statement, ch
     free(type_identifier);
   }
     return 0;
-    // case 'i':
-    // {
-    //   // invoke
-    //   MCcall(parse_past(code, &i, "inv"));
-    //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+  case 'n':
+  {
+    // invoke
+    bool isi = script_statement[i + 2] == 'i';
+    if (isi)
+    {
+      MCcall(parse_past(script_statement, &i, "nvi"));
+    }
+    else
+    {
+      MCcall(parse_past(script_statement, &i, "nvk"));
+    }
 
-    //   // type
-    //   char *function_identity;
-    //   MCcall(parse_past_identifier(code, &i, &function_identity, true, false));
+    MCcall(parse_past(script_statement, &i, " ")); // TODO -- allow tabs too
 
-    //   // Is mc function?
-    //   void *p_function_info;
-    //   MCcall(mcqck_find_function_info((void *)nodespace, function_identity, &p_function_info));
-    //   if (p_function_info)
-    //   {
-    //     return -583;
-    //   }
-    //   else
-    //   {
-    //     strcat(buf, TAB);
-    //     strcat(buf, function_identity);
-    //     strcat(buf, "(");
+    // type
+    char *function_identity;
+    MCcall(parse_past_identifier(script_statement, &i, &function_identity, true, false));
 
-    //     int arg_count = 0;
-    //     while (code[i] == ' ')
-    //     {
-    //       ++i;
-    //       char *arg_identity;
-    //       MCcall(parse_past_identifier(code, &i, &arg_identity, true, true));
-    //       if (arg_count > 0)
-    //         strcat(buf, ", ");
-    //       strcat(buf, arg_identity);
+    // Is mc function?
+    void *p_function_info;
+    MCcall(mcqck_find_function_info((void *)nodespace, function_identity, &p_function_info));
+    if (p_function_info)
+    {
+      return -583;
+    }
+    else
+    {
+      strcat(buf, function_identity);
+      strcat(buf, "(");
 
-    //       ++arg_count;
-    //     }
-    //   }
+      int arg_count = 0;
+      while (script_statement[i] == ' ')
+      {
+        ++i;
+        char *arg_identity;
+        MCcall(parse_past_identifier(script_statement, &i, &arg_identity, true, true));
+        if (arg_count > 0)
+          strcat(buf, ", ");
+        strcat(buf, arg_identity);
 
-    //   strcat(buf, ");\n");
-    //   MCcall(parse_past(code, &i, "\n"));
-    // }
-    // break;
+        ++arg_count;
+      }
+    }
+
+    strcat(buf, ");\n");
+    MCcall(parse_past(script_statement, &i, "\n"));
+  }
+    return 0;
     // case 'r':
     // {
     //   printf("TODO\n");
@@ -584,6 +592,7 @@ int mcqck_translate_script_statement(void *nodespace, char *script_statement, ch
 
 int mcqck_translate_process_script(void *nodespace, char *script, char **translation)
 {
+  int res;
   unsigned int statements_alloc = (int)strlen(script) / 15;
   unsigned int statement_count = 0;
   void **statements = (void **)malloc(sizeof(void *) * statements_alloc);
@@ -623,11 +632,44 @@ int mcqck_translate_process_script(void *nodespace, char *script, char **transla
           else
           {
             // Replace
-            return -58287;
+            allocate_from_cstringv((void **)&statement, "{\n"
+                                                        "  if(process_info->interactive_response)\n"
+                                                        "    free(process_info->interactive_response);\n"
+                                                        "  const char *query = \"say the word:\\n"
+                                                        "  process_info->interactive_response = (char *)malloc(sizeof(char) * (strlen(query) + 1))\n"
+                                                        ""
+                                                        "  process_info->has_paused = 1;\n"
+                                                        "  while (process_info->should_pause)\n"
+                                                        "  {\n"
+                                                        "    usleep(1);\n"
+                                                        "    if (process_info->should_exit)\n"
+                                                        "    {\n"
+                                                        "      process_info->has_concluded = true;\n"
+                                                        "      return 0;\n"
+                                                        "    }\n"
+                                                        "  }\n"
+                                                        "  process_info->has_paused = 0;\n"
+                                                        "  char *response = process_info->interactive_response;\n"
+                                                        "  printf(\"You wrote %s!\n\");\n"
+                                                        "}\n")
+
+            // struct
+            // {
+            //   pthread_t threadId;
+            //   void *(*start_routine)(void *);
+            //   bool should_exit;
+            //   bool has_concluded;
+            //   bool should_pause;
+            //   bool has_paused;
+            //   char *interactive_response;
+            // } * process_info;
+            // Hold the thread
           }
         }
         else
-          mcqck_translate_script_statement(nodespace, script_statement, &statement);
+        {
+          MCcall(mcqck_translate_script_statement(nodespace, script_statement, &statement));
+        }
 
         append_to_collection(&statements, &statements_alloc, &statement_count, (void *)statement);
         free(script_statement);
@@ -650,6 +692,9 @@ int mcqck_translate_process_script(void *nodespace, char *script, char **transla
 
     ++i;
   }
+
+  // Write the function
+  
 
   return 0;
 }
@@ -1262,60 +1307,63 @@ int mc_main(int argc, const char *const *argv)
   // function_info_decfp->parameters
 
   const char *commands =
-      "construct_and_attach_child_node|"
-      "demo|"
-      // ---- BEGIN SEQUENCE ----
-      "invoke declare_function_pointer|"
-      "demo|"
-      // ---- BEGIN SEQUENCE ----
       ".script\n"
-      "dcl int space_index\n"
-      "nvi int command_length strlen $command\n"
-      "for i 0 command_length\n"
-      "if_ $command[i] == ' '\n"
-      "cpy int space_index i\n"
-      "brk\n"
-      "end\n"
-      "end\n"
-      "nvi int command_remaining_length - command_length space_index - 1\n"
-      "mal 'char *' function_name + command_remaining_length 1\n"
-      "cpy 'char *' function_name $command\n"
-      "ass function_name[command_remaining_length] '\\0'\n"
-      "nvi function_info finfo find_function_info $nodespace function_name\n"
-      ""
-      "dcs int rind 0\n"
-      "dca 'char *' responses 32\n"
-      ""
-      "dcs int linit finfo->parameter_count\n"
-      "if_ finfo->variable_parameter_begin_index >= 0\n"
-      "ass linit finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "for i 0 linit\n"
-      "dca char provocation 512\n"
-      "nvk strcpy provocation finfo->parameters[i]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$ASI responses[rind] provocation\n"
-      "ass rind + rind 1\n"
-      "end\n"
-      "if_ finfo->variable_parameter_begin_index >= 0\n"
-      "dcs int pind finfo->variable_parameter_begin_index\n"
-      "whl 1\n"
-      "dca char provocation 512"
-      "nvk strcpy provocation finfo->parameters[pind]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$ASI responses[rind] provocation\n"
-      "ass rind + rind 1\n"
-      "ass pind + pind 1\n"
-      "ass pind % pind finfo->parameter_count\n"
-      "if_ pind < finfo->variable_parameter_begin_index\n"
-      "ass pind finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "end\n"
-      "end\n"
-      ""
-      "nvk $SVL function_name $SYA rind &responses\n"
-      "|"
+      "$ASI response \"enter a word:\"|"
       "midgequit|";
+  "construct_and_attach_child_node|"
+  "demo|"
+  // ---- BEGIN SEQUENCE ----
+  "invoke declare_function_pointer|"
+  "demo|"
+  // ---- BEGIN SEQUENCE ----
+  ".script\n"
+  "dcl int space_index\n"
+  "nvi int command_length strlen command\n"
+  "for i 0 command_length\n"
+  "if_ $command[i] == ' '\n"
+  "cpy int space_index i\n"
+  "brk\n"
+  "end\n"
+  "end\n"
+  "nvi int command_remaining_length - command_length space_index - 1\n"
+  "mal 'char *' function_name + command_remaining_length 1\n"
+  "cpy 'char *' function_name command\n"
+  "ass function_name[command_remaining_length] '\\0'\n"
+  "nvi function_info finfo find_function_info nodespace function_name\n"
+  ""
+  "dcs int rind 0\n"
+  "dca 'char *' responses 32\n"
+  ""
+  "dcs int linit finfo->parameter_count\n"
+  "if_ finfo->variable_parameter_begin_index >= 0\n"
+  "ass linit finfo->variable_parameter_begin_index\n"
+  "end\n"
+  "for i 0 linit\n"
+  "dca char provocation 512\n"
+  "nvk strcpy provocation finfo->parameters[i]->name\n"
+  "nvk strcat provocation \": \"\n"
+  "$ASI responses[rind] provocation\n"
+  "ass rind + rind 1\n"
+  "end\n"
+  "if_ finfo->variable_parameter_begin_index >= 0\n"
+  "dcs int pind finfo->variable_parameter_begin_index\n"
+  "whl 1\n"
+  "dca char provocation 512"
+  "nvk strcpy provocation finfo->parameters[pind]->name\n"
+  "nvk strcat provocation \": \"\n"
+  "$ASI responses[rind] provocation\n"
+  "ass rind + rind 1\n"
+  "ass pind + pind 1\n"
+  "ass pind % pind finfo->parameter_count\n"
+  "if_ pind < finfo->variable_parameter_begin_index\n"
+  "ass pind finfo->variable_parameter_begin_index\n"
+  "end\n"
+  "end\n"
+  "end\n"
+  ""
+  "nvk $SVL function_name $SYA rind &responses\n"
+  "|"
+  "midgequit|";
   // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
   // What is the name of the function?
   "construct_and_attach_child_node|"
@@ -1352,7 +1400,6 @@ int mc_main(int argc, const char *const *argv)
   // "demoend\n"
   // "create node\n"
   // "construct_and_attach_child_node\n";
-
   printf("\n:> ");
   int n = strlen(commands);
   int s = 0;
@@ -1645,23 +1692,35 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       } * variable;
 
       // -- -- Previous User Command
-      declare_and_assign_anon_struct(process_action_v1, previous_issue, focused_issue->history);
-      switch (previous_issue->type)
+      if (focused_issue->history)
       {
-      case PROCESS_ACTION_PM_DEMO_INITIATION:
+        declare_and_assign_anon_struct(process_action_v1, previous_issue, focused_issue->history);
+        switch (previous_issue->type)
+        {
+        case PROCESS_ACTION_PM_DEMO_INITIATION:
+        {
+          assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+          allocate_and_copy_cstr(variable->name, "command");
+          allocate_from_cstringv(&variable->value, previous_issue->data.demonstrated_command);
+
+          append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
+        }
+        break;
+        default:
+        {
+          MCerror(-825, "unhandled type:%i", previous_issue->type);
+        }
+        }
+      }
+      else
       {
         assign_anon_struct(variable, malloc(sizeof(void *) * 2));
         allocate_and_copy_cstr(variable->name, "command");
-        allocate_from_cstringv(&variable->value, previous_issue->data.demonstrated_command);
+        allocate_from_cstringv(&variable->value, "null");
 
         append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
       }
-      break;
-      default:
-      {
-        MCerror(-825, "unhandled type:%i", previous_issue->type);
-      }
-      }
+
       // -- -- Nodespace
       assign_anon_struct(variable, malloc(sizeof(void *) * 2));
       allocate_and_copy_cstr(variable->name, "nodespace");
