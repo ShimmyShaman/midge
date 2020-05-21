@@ -216,11 +216,36 @@ int parse_past_number(const char *text, int *index, char **output)
   return 0;
 }
 
+int parse_past_character(const char *text, int *index, char **output)
+{
+  if (text[*index] != '\'')
+    return -2482;
+
+  bool prev_escape = false;
+  for (int i = *index + 1;; ++i)
+  {
+    if (!prev_escape && text[i] == '\'')
+    {
+      ++i;
+      *output = (char *)malloc(sizeof(char) * (i - *index + 1));
+      strncpy(*output, text + *index, i - *index);
+      (*output)[i - *index] = '\0';
+      *index = i;
+      return 0;
+    }
+
+    prev_escape = (text[i] == '\\');
+  }
+
+  return 0;
+}
+
 int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing)
 {
   int res;
   int o = *index;
   bool hit_alpha = false;
+  int after_square_depth = 0;
   while (1)
   {
     int doc = 1;
@@ -234,6 +259,19 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
       break;
     default:
     {
+      if (include_referencing && after_square_depth > 0)
+      {
+        if (text[*index] == ']')
+        {
+          --after_square_depth;
+          if (after_square_depth < 1)
+          {
+            doc = 0;
+            ++*index;
+            break;
+          }
+        }
+      }
       if (isalpha(text[*index]))
       {
         hit_alpha = true;
@@ -253,12 +291,20 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
         if (text[*index] == '.')
           break;
       }
-      if (include_referencing && !hit_alpha)
+      if (include_referencing)
       {
-        if (text[*index] == '&')
+        if (!hit_alpha)
+        {
+          if (text[*index] == '&')
+            break;
+          if (text[*index] == '*')
+            break;
+        }
+        else if (text[*index] == '[')
+        {
+          after_square_depth++;
           break;
-        if (text[*index] == '*')
-          break;
+        }
       }
 
       // Identifier end found
@@ -827,6 +873,106 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       MCcall(append_to_cstr(&translation_alloc, &translation, buf));
     }
     break;
+    case 'i':
+    {
+      // for i 0 command_length
+      // for
+      MCcall(parse_past(code, &i, "ifs"));
+      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+      // left
+      char *left, *left_final;
+      if (isalpha(code[i]))
+      {
+        MCcall(parse_past_identifier(code, &i, &left, true, true));
+
+        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, left, &left_final));
+        if (!left_final)
+          left_final = left;
+      }
+      else if (code[i] == '"')
+      {
+        MCerror(7834534, "TODO quotes");
+      }
+      else if (code[i] == '\'')
+      {
+        MCerror(68685, "TODO quote");
+      }
+      else if (isdigit(code[i]))
+      {
+        parse_past_number(code, &i, &left);
+        left_final = left;
+      }
+      else
+      {
+        MCerror(738778, "TODO what");
+      }
+      MCcall(parse_past(code, &i, " "));
+
+      // comparison operator
+      char *comparator;
+      switch (code[i])
+      {
+      case '=':
+      {
+        if (code[i + 1] != '=')
+        {
+          MCerror(585282, "can't have just one =");
+        }
+        i += 2;
+        comparator = (char *)malloc(sizeof(char) * 3);
+        strcpy(comparator, "==");
+      }
+      break;
+      default:
+        MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "if>comparator-switch"));
+        return 858528;
+      }
+      MCcall(parse_past(code, &i, " "));
+
+      // right
+      char *right, *right_final;
+      if (isalpha(code[i]))
+      {
+        MCcall(parse_past_identifier(code, &i, &right, true, true));
+
+        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, right, &right_final));
+        if (!right_final)
+          right_final = right;
+      }
+      else if (code[i] == '"')
+      {
+        MCerror(76432, "TODO quotes");
+      }
+      else if (code[i] == '\'')
+      {
+        parse_past_character(code, &i, &right);
+        right_final = right;
+      }
+      else if (isdigit(code[i]))
+      {
+        parse_past_number(code, &i, &right);
+        right_final = right;
+      }
+      else
+      {
+        MCerror(767868, "TODO what:'%c'", code[i]);
+      }
+      if (code[i] != '\n' && code[i] != '\0')
+      {
+        MCerror(-4864, "expected statement end:'%c'", code[i]);
+      }
+
+      buf[0] = '\0';
+      sprintf(buf, "if(%s %s %s) {\n", left_final, comparator, right_final);
+      printf("%s", buf);
+      MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+      free(left);
+      free(comparator);
+      free(right);
+    }
+    break;
     case 'f':
     {
       // for i 0 command_length
@@ -877,7 +1023,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       }
       else if (code[i] == '"')
       {
-        MCerror(118492, "TODO quotes");
+        MCerror(78678, "TODO quotes");
       }
       else if (isdigit(code[i]))
       {
@@ -885,7 +1031,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       }
       else
       {
-        MCerror(118492, "TODO what");
+        MCerror(373785, "TODO what");
       }
       if (code[i] != '\n' && code[i] != '\0')
       {
@@ -894,20 +1040,20 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
       append_to_cstr(&translation_alloc, &translation, "{\n");
       buf[0] = '\0';
+      char *int_cstr;
+      allocate_and_copy_cstr(int_cstr, "int");
       MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                         "int", iterator));
+                                         int_cstr, iterator));
       append_to_cstr(&translation_alloc, &translation, buf);
       char *iterator_replace;
       MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, iterator, &iterator_replace));
 
-      printf("here-5\n");
       buf[0] = '\0';
       sprintf(buf, "for(%s = %s; %s < %s; ++%s) {\n", iterator_replace, initiate_final, iterator_replace, maximum_final, iterator_replace);
       append_to_cstr(&translation_alloc, &translation, buf);
 
       free(initiate);
       free(maximum);
-      printf("here-6\n");
     }
     break;
     case 'n':
@@ -1634,11 +1780,11 @@ int mc_main(int argc, const char *const *argv)
       "dcl int space_index\n"
       "nvi int command_length strlen command\n"
       "for i 0 command_length\n"
-      "if_ $command[i] == ' '\n"
+      "ifs command[i] == ' '\n"
       "cpy int space_index i\n"
       "brk\n"
-      "end\n"
-      "end\n"
+      "end if\n"
+      "end for\n"
       "nvi int command_remaining_length - command_length space_index - 1\n"
       "mal 'char *' function_name + command_remaining_length 1\n"
       "cpy 'char *' function_name command\n"
@@ -1649,17 +1795,17 @@ int mc_main(int argc, const char *const *argv)
       "dca 'char *' responses 32\n"
       ""
       "dcs int linit finfo->parameter_count\n"
-      "if_ finfo->variable_parameter_begin_index >= 0\n"
+      "ifs finfo->variable_parameter_begin_index >= 0\n"
       "ass linit finfo->variable_parameter_begin_index\n"
-      "end\n"
+      "end if\n"
       "for i 0 linit\n"
       "dca char provocation 512\n"
       "nvk strcpy provocation finfo->parameters[i]->name\n"
       "nvk strcat provocation \": \"\n"
       "$ASI responses[rind] provocation\n"
       "ass rind + rind 1\n"
-      "end\n"
-      "if_ finfo->variable_parameter_begin_index >= 0\n"
+      "end for\n"
+      "ifs finfo->variable_parameter_begin_index >= 0\n"
       "dcs int pind finfo->variable_parameter_begin_index\n"
       "whl 1\n"
       "dca char provocation 512"
@@ -1669,11 +1815,11 @@ int mc_main(int argc, const char *const *argv)
       "ass rind + rind 1\n"
       "ass pind + pind 1\n"
       "ass pind % pind finfo->parameter_count\n"
-      "if_ pind < finfo->variable_parameter_begin_index\n"
+      "ifs pind < finfo->variable_parameter_begin_index\n"
       "ass pind finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "end\n"
-      "end\n"
+      "end if\n"
+      "end while\n"
+      "end if\n"
       ""
       "nvk $SVL function_name $SYA rind &responses\n"
       "|"
