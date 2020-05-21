@@ -330,6 +330,19 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
   return 0;
 }
 
+int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, int index)
+{
+  *collection[index] = NULL;
+  for (int i = index + 1; i < *collection_count; ++i)
+    *collection[i - 1] = *collection[i];
+
+  --*collection_count;
+  if (index > 0)
+    *collection[*collection_count] = NULL;
+
+  return 0;
+}
+
 int find_function_info_v1(int argc, void **argv)
 {
   void **function_info = (void **)argv[0];
@@ -608,6 +621,46 @@ int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
   return 0;
 }
 
+int mcqck_generate_script_local(void ***local_index, unsigned int *local_indexes_alloc, unsigned int *local_indexes_count, script_v1 *script, char *buf,
+                                char *type_identifier, char *var_name)
+{
+  local_kvp_v1 *kvp;
+  allocate_anon_struct(kvp, sizeof_local_kvp_v1);
+  kvp->type = type_identifier;
+  kvp->identifier = var_name;
+  kvp->locals_index = script->local_count;
+  kvp->replacement_code = malloc(sizeof(char), 64 + strlen(kvp->type)));
+  sprintf(kvp->replacement_code, "(*(%s *)script->locals[%i])", kvp->type, kvp->locals_index);
+  append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
+  script->locals[script->local_count] = (void *)calloc(sizeof(type_identifier));
+  ++script->local_count;
+
+  // declared_types[declared_type_count].type = type_identifier;
+  // declared_types[declared_type_count].var_name = var_name;
+
+  // -- Determine if the structure is midge-specified
+  void *p_struct_info = NULL;
+  MCcall(find_struct_info((void *)nodespace, type_identifier, &p_struct_info));
+  if (p_struct_info)
+  {
+    MCerror(4722, "TODO");
+    declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
+
+    sprintf(buf + strlen(buf), "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
+            struct_info->version, var_name, struct_info->field_count);
+
+    // declared_types[declared_type_count].struct_info = (void *)struct_info;
+  }
+  else
+  {
+    sprintf(buf + strlen(buf), "script->locals[%u] = (void *)malloc(sizeof(%s));\n", kvp->locals_index, kvp->type);
+
+    // declared_types[declared_type_count].struct_info = NULL;
+  }
+
+  return 0;
+}
+
 int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 {
   int res;
@@ -618,6 +671,10 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   char *translation = (char *)malloc(sizeof(char) * translation_alloc);
   translation[0] = '\0';
   unsigned int t = 0;
+
+  unsigned int local_indexes_alloc = 20;
+  unsigned int local_indexes_count = 0;
+  void **local_index = (void **)malloc(sizeof(void *) * local_indexes_alloc);
 
   script->local_count = 0;
   script->segment_count = 0;
@@ -684,10 +741,12 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       }
 
       ++script->segment_count;
-      sprintf(buf, "  strcpy(script->response, %s);\n"
+      sprintf(buf, "  printf(\"here-4\\n\");allocate_and_copy_cstr(script->response, %s);\n"
+                   "printf(\"seqid:%%u \\n\", script->sequence_uid);\n"
                    "  script->segments_complete = %u;"
-                   "  return 0;\n"
-                   "segment_%u: char *%s = (char *)script->locals[%u];\n",
+                   "  script->awaiting_data_set_index = script->local_count;"
+                   "  printf(\"here-6a\\n\");return 0;\n"
+                   "segment_%u: printf(\"here-6b\\n\");char *%s = (char *)script->locals[%u];\n",
               literal_cstr, script->segment_count, script->segment_count, response_identifier, script->local_count);
       ++script->local_count;
 
@@ -696,6 +755,70 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       free(literal_cstr);
       //     // declared_types[declared_type_count].type = type_identifier;
       //     // declared_types[declared_type_count].var_name = var_name;
+    }
+    break;
+    case 'd':
+    {
+      // dcl
+      MCcall(parse_past(code, &i, "dcl"));
+      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+      // Identifier
+      char *type_identifier;
+      MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
+      MCcall(parse_past(code, &i, " "));
+
+      // Variable Name
+      char *var_name;
+      MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+      if (code[i] != '\n' && code[i] != '\0')
+      {
+        MCerror(-4829, "expected statement end");
+      }
+
+      generate_script_local(&local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                            type_identifier, var_name);
+
+      append_to_cstr(&translation_alloc, &translation, buf);
+    }
+    break;
+    case 'n':
+    {
+      // nvi
+      MCcall(parse_past(code, &i, "nvi"));
+      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+      // Identifier
+      char *type_identifier;
+      MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
+      MCcall(parse_past(code, &i, " "));
+
+      // Variable Name
+      char *var_name;
+      MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+
+      generate_script_local(&local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                            type_identifier, var_name);
+
+      append_to_cstr(&translation_alloc, &translation, buf);
+
+      // Invoke
+
+      // Function Name
+      char *function_name;
+      MCcall(parse_past_identifier(code, &i, &function_name, true, false));
+
+      sprintf(buf, "%s = %s(", get_script_local_replace(var_name), function_name);
+      append_to_cstr(&translation_alloc, &translation, buf);
+
+      MCerror(52552, "TODO");
+      bool first_arg = true;
+      while (code[i] != '\n' && code[i] != '\0')
+      {
+        sprintf(buf, "%s%s", first_arg ? ", " : "", get_script_local_replace(var_name), function_name);
+        append_to_cstr
+            first_arg = false;
+      }
     }
     break;
     case '\0':
@@ -734,10 +857,10 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   append_to_cstr(&declaration_alloc, &declaration,
                  "  default:\n"
                  "    return 0;\n"
-                 "  }\n\n");
+                 "  }\n\nprintf(\"here-3\\n\");");
   ++script->segment_count;
   append_to_cstr(&declaration_alloc, &declaration, translation);
-  append_to_cstr(&declaration_alloc, &declaration, "\n  script->segments_complete = script->segment_count;\n  return 0;\n}");
+  append_to_cstr(&declaration_alloc, &declaration, "\n  script->segments_complete = script->segment_count;\n return 0;\n}");
 
   script->locals = (void **)calloc(sizeof(void *), script->local_count);
 
@@ -747,7 +870,6 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
   free(translation);
   free(declaration);
-
   return 0;
 }
 
@@ -1359,63 +1481,60 @@ int mc_main(int argc, const char *const *argv)
   // function_info_decfp->parameters
 
   const char *commands =
+      "construct_and_attach_child_node|"
+      "demo|"
+      // ---- BEGIN SEQUENCE ----
+      "invoke declare_function_pointer|"
+      "demo|"
+      // ---- BEGIN SEQUENCE ----
       ".script\n"
-      "$asi response \"enter a word:\"|"
+      "dcl int space_index\n"
+      "nvi int command_length strlen command\n"
+      "for i 0 command_length\n"
+      "if_ $command[i] == ' '\n"
+      "cpy int space_index i\n"
+      "brk\n"
+      "end\n"
+      "end\n"
+      "nvi int command_remaining_length - command_length space_index - 1\n"
+      "mal 'char *' function_name + command_remaining_length 1\n"
+      "cpy 'char *' function_name command\n"
+      "ass function_name[command_remaining_length] '\\0'\n"
+      "nvi function_info finfo find_function_info nodespace function_name\n"
+      ""
+      "dcs int rind 0\n"
+      "dca 'char *' responses 32\n"
+      ""
+      "dcs int linit finfo->parameter_count\n"
+      "if_ finfo->variable_parameter_begin_index >= 0\n"
+      "ass linit finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "for i 0 linit\n"
+      "dca char provocation 512\n"
+      "nvk strcpy provocation finfo->parameters[i]->name\n"
+      "nvk strcat provocation \": \"\n"
+      "$ASI responses[rind] provocation\n"
+      "ass rind + rind 1\n"
+      "end\n"
+      "if_ finfo->variable_parameter_begin_index >= 0\n"
+      "dcs int pind finfo->variable_parameter_begin_index\n"
+      "whl 1\n"
+      "dca char provocation 512"
+      "nvk strcpy provocation finfo->parameters[pind]->name\n"
+      "nvk strcat provocation \": \"\n"
+      "$ASI responses[rind] provocation\n"
+      "ass rind + rind 1\n"
+      "ass pind + pind 1\n"
+      "ass pind % pind finfo->parameter_count\n"
+      "if_ pind < finfo->variable_parameter_begin_index\n"
+      "ass pind finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "end\n"
+      "end\n"
+      ""
+      "nvk $SVL function_name $SYA rind &responses\n"
+      "|"
       "midgequit|";
-  "construct_and_attach_child_node|"
-  "demo|"
-  // ---- BEGIN SEQUENCE ----
-  "invoke declare_function_pointer|"
-  "demo|"
-  // ---- BEGIN SEQUENCE ----
-  ".script\n"
-  "dcl int space_index\n"
-  "nvi int command_length strlen command\n"
-  "for i 0 command_length\n"
-  "if_ $command[i] == ' '\n"
-  "cpy int space_index i\n"
-  "brk\n"
-  "end\n"
-  "end\n"
-  "nvi int command_remaining_length - command_length space_index - 1\n"
-  "mal 'char *' function_name + command_remaining_length 1\n"
-  "cpy 'char *' function_name command\n"
-  "ass function_name[command_remaining_length] '\\0'\n"
-  "nvi function_info finfo find_function_info nodespace function_name\n"
-  ""
-  "dcs int rind 0\n"
-  "dca 'char *' responses 32\n"
-  ""
-  "dcs int linit finfo->parameter_count\n"
-  "if_ finfo->variable_parameter_begin_index >= 0\n"
-  "ass linit finfo->variable_parameter_begin_index\n"
-  "end\n"
-  "for i 0 linit\n"
-  "dca char provocation 512\n"
-  "nvk strcpy provocation finfo->parameters[i]->name\n"
-  "nvk strcat provocation \": \"\n"
-  "$ASI responses[rind] provocation\n"
-  "ass rind + rind 1\n"
-  "end\n"
-  "if_ finfo->variable_parameter_begin_index >= 0\n"
-  "dcs int pind finfo->variable_parameter_begin_index\n"
-  "whl 1\n"
-  "dca char provocation 512"
-  "nvk strcpy provocation finfo->parameters[pind]->name\n"
-  "nvk strcat provocation \": \"\n"
-  "$ASI responses[rind] provocation\n"
-  "ass rind + rind 1\n"
-  "ass pind + pind 1\n"
-  "ass pind % pind finfo->parameter_count\n"
-  "if_ pind < finfo->variable_parameter_begin_index\n"
-  "ass pind finfo->variable_parameter_begin_index\n"
-  "end\n"
-  "end\n"
-  "end\n"
-  ""
-  "nvk $SVL function_name $SYA rind &responses\n"
-  "|"
-  "midgequit|";
   // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
   // What is the name of the function?
   "construct_and_attach_child_node|"
@@ -1544,6 +1663,15 @@ int submit_user_command(int argc, void **argsv)
       process_action->history = focused_issue;
     }
     break;
+    case PROCESS_ACTION_SCRIPT_QUERY:
+    {
+      process_action->sequence_uid = focused_issue->sequence_uid;
+      process_action->type = PROCESS_ACTION_USER_SCRIPT_RESPONSE;
+
+      allocate_and_copy_cstr(process_action->dialogue, command);
+      process_action->history = focused_issue;
+    }
+    break;
     default:
       MCerror(-828, "Unhandled PM-query-type:%i", focused_issue->type);
     }
@@ -1615,7 +1743,24 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
     command_hub->focused_issue_activated = true;
   }
   break;
+  case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
+  {
+    // Print to terminal
+    printf("%s\n", focused_issue->dialogue);
+    command_hub->focused_issue_activated = true;
+  }
+  break;
   case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+  {
+    if (focused_issue->dialogue != NULL)
+    {
+      // Print to terminal
+      printf("%s\n", focused_issue->dialogue);
+      command_hub->focused_issue_activated = true;
+    }
+  }
+  break;
+  case PROCESS_ACTION_SCRIPT_QUERY:
   {
     // Print to terminal
     printf("%s\n", focused_issue->dialogue);
@@ -1654,8 +1799,11 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
   {
     declare_and_assign_anon_struct(script_v1, script, command_hub->active_scripts[i]);
 
+    if (script->awaiting_data_set_index >= 0)
+      continue;
+
     printf("script->sequence_uid=%u\n", script->sequence_uid);
-    if (script->segments_complete >= script->segment_count)
+    if (script->segments_complete > script->segment_count)
     {
       // Cleanup
       MCerror(5482, "TODO");
@@ -1665,7 +1813,7 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
     strcpy(buf, SCRIPT_NAME_PREFIX);
 
     char **output = NULL;
-    printf("here-8\n");
+    printf("script entered: %i / %i\n", script->segments_complete, script->segment_count);
     sprintf(buf, "{\n"
                  "void *p_script = (void *)%p;\n"
                  "%s%u(p_script);\n"
@@ -1677,7 +1825,19 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
     if (script->segments_complete > script->segment_count)
     {
       // Cleanup & continue
-      printf("TODO cleanup finished scripts\n");
+
+      if (script->arguments[2])
+        free(script->arguments[2]);
+      free(script->arguments);
+
+      // Locals should be freed at end of script
+      for (int j = 0; j < script->local_count; ++j)
+        if (script->locals[j])
+          free(script->locals[j]);
+      free(script->locals);
+
+      if (script->response)
+        free(script->response);
 
       continue;
     }
@@ -1692,7 +1852,10 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
 
     if (focused_issue->type != PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS)
     {
-      MCerror(42425, "TODO");
+      // MCerror(42425, "TODO"); // Cleanup
+      remove_from_collection(&command_hub->active_scripts, &command_hub->active_scripts_alloc, &command_hub->active_script_count, i);
+      --i;
+      continue;
     }
 
     // Pop the focused issue from the stack
@@ -1728,13 +1891,48 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
   // Templates first
   switch (focused_issue->type)
   {
-  // case PROCESS_ACTION_SCRIPT_QUERY:
-  // case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
-  // {
-  //   // Do not process these commands
-  //   // Send to other systems
-  //   return 0;
-  // }
+  case PROCESS_ACTION_SCRIPT_QUERY:
+    // case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+    {
+      //   // Do not process these commands
+      //   // Send to other systems
+      return 0;
+    }
+  case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
+  {
+    // Pop the focused issue from the stack
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
+    // Obtain the script that queried the response
+    script_v1 *script = NULL;
+    for (int i = 0; i < command_hub->active_script_count; ++i)
+    {
+      assign_anon_struct(script, command_hub->active_scripts[i]);
+      if (focused_issue->sequence_uid == script->sequence_uid)
+        break;
+      script = NULL;
+    }
+    if (script == NULL)
+    {
+      MCerror(8284, "");
+    }
+
+    // Set the requested data on the script
+    allocate_from_cstringv(&script->locals[script->awaiting_data_set_index], focused_issue->dialogue);
+    script->awaiting_data_set_index = -1;
+
+    // Set corresponding issue
+    declare_and_allocate_anon_struct(process_action_v1, script_issue, sizeof_process_action_v1);
+    script_issue->sequence_uid = focused_issue->sequence_uid;
+    script_issue->type = PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS;
+    script_issue->history = (void *)focused_issue;
+    script_issue->dialogue = NULL;
+
+    *p_response_action = script_issue;
+
+    return 0;
+  }
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_PM_DEMO_INITIATION:
   {
@@ -1759,7 +1957,9 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       ++command_hub->uid_counter;
       script->script_uid = command_hub->uid_counter;
       script->segments_complete = 0;
+      script->awaiting_data_set_index = -1;
       script->arguments = (void **)malloc(sizeof(void *) * 3);
+      script->response = NULL;
 
       // -- Submit contextual arguments
 

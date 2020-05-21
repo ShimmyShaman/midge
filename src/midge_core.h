@@ -117,6 +117,16 @@ enum script_process_state
     printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
     return error_code;
 
+#define local_kvp_v1               \
+    struct                         \
+    {                              \
+        char *type;                \
+        char *identifier;          \
+        unsigned int locals_index; \
+        char *replacement_code;    \
+    }
+#define sizeof_local_kvp_v1 (sizeof(void *) * 4)
+
 #define process_unit_v1              \
     struct                           \
     {                                \
@@ -266,8 +276,9 @@ enum script_process_state
         char *response;                 \
         unsigned int segment_count;     \
         unsigned int segments_complete; \
+        int awaiting_data_set_index;    \
     }
-#define sizeof_script_v1 (sizeof(void *) * 11)
+#define sizeof_script_v1 (sizeof(void *) * 13)
 
 #define command_hub_v1                          \
     struct                                      \
