@@ -196,6 +196,26 @@ int parse_past(const char *text, int *index, const char *sequence)
   }
 }
 
+int parse_past_number(const char *text, int *index, char **output)
+{
+  for (int i = *index;; ++i)
+  {
+    if (isdigit(text[i]))
+      continue;
+
+    if (i - *index <= 0)
+      return -5252;
+
+    *output = (char *)malloc(sizeof(char) * (i - *index + 1));
+    strncpy(*output, text + *index, i - *index);
+    (*output)[i - *index] = '\0';
+    *index = i;
+    return 0;
+  }
+
+  return 0;
+}
+
 int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing)
 {
   int res;
@@ -409,7 +429,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
     printf("find_struct_info:set with '%s'\n", finfo->name);
     return 0;
   }
-  printf("find_struct_info: '%s' could not be found!\n", struct_name);
+  // printf("find_struct_info: '%s' could not be found!\n", struct_name);
   return 0;
 }
 
@@ -621,18 +641,23 @@ int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
   return 0;
 }
 
-int mcqck_generate_script_local(void ***local_index, unsigned int *local_indexes_alloc, unsigned int *local_indexes_count, script_v1 *script, char *buf,
+int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned int *local_indexes_alloc, unsigned int *local_indexes_count, void *p_script, char *buf,
                                 char *type_identifier, char *var_name)
 {
+  int res;
+  void **mc_dvp;
+
+  declare_and_assign_anon_struct(script_v1, script, p_script);
+
   local_kvp_v1 *kvp;
   allocate_anon_struct(kvp, sizeof_local_kvp_v1);
   kvp->type = type_identifier;
   kvp->identifier = var_name;
   kvp->locals_index = script->local_count;
-  kvp->replacement_code = malloc(sizeof(char), 64 + strlen(kvp->type)));
-  sprintf(kvp->replacement_code, "(*(%s *)script->locals[%i])", kvp->type, kvp->locals_index);
+  kvp->replacement_code = (char *)malloc(sizeof(char) * (64 + strlen(kvp->type)));
+  sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", kvp->type, kvp->locals_index);
   append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
-  script->locals[script->local_count] = (void *)calloc(sizeof(type_identifier));
+  kvp->pointer = (void *)calloc(sizeof(type_identifier), 1);
   ++script->local_count;
 
   // declared_types[declared_type_count].type = type_identifier;
@@ -640,7 +665,7 @@ int mcqck_generate_script_local(void ***local_index, unsigned int *local_indexes
 
   // -- Determine if the structure is midge-specified
   void *p_struct_info = NULL;
-  MCcall(find_struct_info((void *)nodespace, type_identifier, &p_struct_info));
+  MCcall(find_struct_info(nodespace, type_identifier, &p_struct_info));
   if (p_struct_info)
   {
     MCerror(4722, "TODO");
@@ -658,6 +683,25 @@ int mcqck_generate_script_local(void ***local_index, unsigned int *local_indexes
     // declared_types[declared_type_count].struct_info = NULL;
   }
 
+  return 0;
+}
+
+int mcqck_get_script_local_replace(void **local_index, int local_indexes_count, const char *key, char **output)
+{
+  void **mc_dvp;
+  *output = NULL;
+
+  local_kvp_v1 *kvp;
+  for (int i = 0; i < local_indexes_count; ++i)
+  {
+    assign_anon_struct(kvp, local_index[i]);
+
+    if (!strcmp(key, kvp->identifier))
+    {
+      *output = kvp->replacement_code;
+      return 0;
+    }
+  }
   return 0;
 }
 
@@ -741,6 +785,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       }
 
       ++script->segment_count;
+      buf[0] = '\0';
       sprintf(buf, "  printf(\"here-4\\n\");allocate_and_copy_cstr(script->response, %s);\n"
                    "printf(\"seqid:%%u \\n\", script->sequence_uid);\n"
                    "  script->segments_complete = %u;"
@@ -776,10 +821,93 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCerror(-4829, "expected statement end");
       }
 
-      generate_script_local(&local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                            type_identifier, var_name);
+      buf[0] = '\0';
+      MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                         type_identifier, var_name));
+      MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+    }
+    break;
+    case 'f':
+    {
+      // for i 0 command_length
+      // for
+      MCcall(parse_past(code, &i, "for"));
+      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
+      // iterator
+      char *iterator;
+      MCcall(parse_past_identifier(code, &i, &iterator, false, false));
+      MCcall(parse_past(code, &i, " "));
+
+      // initiate
+      char *initiate, *initiate_final;
+      if (isalpha(code[i]))
+      {
+        MCcall(parse_past_identifier(code, &i, &initiate, false, false));
+
+        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, initiate, &initiate_final));
+        if (!initiate_final)
+          initiate_final = initiate;
+      }
+      else if (code[i] == '"')
+      {
+        MCerror(118492, "TODO quotes");
+      }
+      else if (isdigit(code[i]))
+      {
+        parse_past_number(code, &i, &initiate);
+        initiate_final = initiate;
+      }
+      else
+      {
+        MCerror(118492, "TODO what");
+      }
+
+      MCcall(parse_past(code, &i, " "));
+
+      // maximum
+      char *maximum, *maximum_final;
+      if (isalpha(code[i]))
+      {
+        MCcall(parse_past_identifier(code, &i, &maximum, false, false));
+
+        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, maximum, &maximum_final));
+        if (!maximum_final)
+          maximum_final = maximum;
+      }
+      else if (code[i] == '"')
+      {
+        MCerror(118492, "TODO quotes");
+      }
+      else if (isdigit(code[i]))
+      {
+        parse_past_number(code, &i, &initiate);
+      }
+      else
+      {
+        MCerror(118492, "TODO what");
+      }
+      if (code[i] != '\n' && code[i] != '\0')
+      {
+        MCerror(-4864, "expected statement end:'%c'", code[i]);
+      }
+
+      append_to_cstr(&translation_alloc, &translation, "{\n");
+      buf[0] = '\0';
+      MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                         "int", iterator));
       append_to_cstr(&translation_alloc, &translation, buf);
+      char *iterator_replace;
+      MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, iterator, &iterator_replace));
+
+      printf("here-5\n");
+      buf[0] = '\0';
+      sprintf(buf, "for(%s = %s; %s < %s; ++%s) {\n", iterator_replace, initiate_final, iterator_replace, maximum_final, iterator_replace);
+      append_to_cstr(&translation_alloc, &translation, buf);
+
+      free(initiate);
+      free(maximum);
+      printf("here-6\n");
     }
     break;
     case 'n':
@@ -796,29 +924,43 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       // Variable Name
       char *var_name;
       MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+      MCcall(parse_past(code, &i, " "));
 
-      generate_script_local(&local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                            type_identifier, var_name);
-
+      buf[0] = '\0';
+      MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                         type_identifier, var_name));
       append_to_cstr(&translation_alloc, &translation, buf);
 
       // Invoke
-
       // Function Name
       char *function_name;
       MCcall(parse_past_identifier(code, &i, &function_name, true, false));
+      MCcall(parse_past(code, &i, " "));
 
-      sprintf(buf, "%s = %s(", get_script_local_replace(var_name), function_name);
-      append_to_cstr(&translation_alloc, &translation, buf);
+      char *replace_name;
+      MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_name));
+      buf[0] = '\0';
+      sprintf(buf, "%s = %s(", replace_name, function_name);
+      MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
-      MCerror(52552, "TODO");
       bool first_arg = true;
       while (code[i] != '\n' && code[i] != '\0')
       {
-        sprintf(buf, "%s%s", first_arg ? ", " : "", get_script_local_replace(var_name), function_name);
-        append_to_cstr
-            first_arg = false;
+        char *arg_name;
+        MCcall(parse_past_identifier(code, &i, &arg_name, true, true));
+        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, arg_name, &replace_name));
+        char *arg_entry = arg_name;
+        if (replace_name)
+          arg_entry = replace_name;
+        buf[0] = '\0';
+        sprintf(buf, "%s%s", first_arg ? "" : ", ", arg_entry);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        first_arg = false;
+        free(arg_name);
       }
+      MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+
+      free(function_name);
     }
     break;
     case '\0':
@@ -826,6 +968,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       break;
     default:
     {
+      printf("\ntranslation:\n%s\n\n", translation);
       MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "UnhandledStatement"));
       return -4857;
     }
@@ -1714,7 +1857,7 @@ int command_hub_submit_process_action(void *p_command_hub, void *p_process_actio
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
   declare_and_assign_anon_struct(process_action_v1, process_action, p_process_action);
 
-  printf("submitting:%i\n", process_action->type);
+  // printf("submitting:%i\n", process_action->type);
   append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count,
                        process_action);
   command_hub->focused_issue_activated = false;
