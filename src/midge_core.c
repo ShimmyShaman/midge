@@ -313,6 +313,35 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
   return -149;
 }
 
+int parse_past_type_identifier(const char *text, int *index, char **identifier)
+{
+  int res;
+  if (text[*index] == '\'')
+  {
+    // Obtain the type in the literal string
+    for (int i = *index + 1;; ++i)
+    {
+      if (text[i] == '\'')
+      {
+        *identifier = (char *)malloc(sizeof(char) * (i - *index));
+        strncpy(*identifier, text + *index + 1, i - *index - 1);
+        (*identifier)[i - *index - 1] = '\0';
+        *index = i + 1;
+        return 0;
+      }
+      if (text[i] == '\0')
+      {
+        MCerror(-25258, "SHOULDN'T");
+      }
+    }
+  }
+  else
+  {
+    MCcall(parse_past_identifier(text, index, identifier, false, false));
+    return 0;
+  }
+}
+
 int set_int_value(int argc, void **argv)
 {
   printf("set_int_value()\n");
@@ -909,6 +938,97 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       //     // declared_types[declared_type_count].var_name = var_name;
     }
     break;
+    case 'a':
+    {
+      // ass / asi
+      MCcall(parse_past(code, &i, "as"));
+      if (code[i] == 'i')
+      {
+        MCcall(parse_past(code, &i, "i"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // Identifier
+        char *type_identifier;
+        MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
+        MCcall(parse_past(code, &i, " "));
+
+        // Variable Name
+        char *var_name;
+        MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        MCcall(parse_past(code, &i, " "));
+
+        // Any arithmetic operator
+        char *comparator;
+        switch (code[i])
+        {
+        case '-':
+        {
+          allocate_and_copy_cstr(comparator, "-");
+          ++i;
+        }
+        break;
+        default:
+          MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "if>operator-switch"));
+          return 34242;
+        }
+        MCcall(parse_past(code, &i, " "));
+
+        if (comparator)
+        {
+          // left
+          char *left;
+          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+          MCcall(parse_past(code, &i, " "));
+
+          // right
+          char *right;
+          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+
+          buf[0] = '\0';
+          MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                             type_identifier, var_name));
+          append_to_cstr(&translation_alloc, &translation, buf);
+
+          buf[0] = '\0';
+          char *replace_name;
+          MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_name));
+          sprintf(buf, "%s = %s %s %s", replace_name, left, comparator, right);
+
+          while (code[i] != '\n' && code[i] != '\0')
+          {
+            MCcall(parse_past(code, &i, " "));
+
+            // Any arithmetic operator
+            switch (code[i])
+            {
+            case '-':
+            {
+              allocate_and_copy_cstr(comparator, "-");
+              ++i;
+            }
+            break;
+            default:
+              MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "if>operator-switch"));
+              return 34242;
+            }
+            MCcall(parse_past(code, &i, " "));
+            MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+            sprintf(buf + strlen(buf), " %s %s", comparator, right);
+          }
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          MCcall(append_to_cstr(&translation_alloc, &translation, ";\n"));
+        }
+        else
+        {
+          MCerror(-4864, "TODO");
+        }
+      }
+      else
+      {
+        MCerror(-4866, "TODO");
+      }
+    }
+    break;
     case 'b':
     {
       // brk
@@ -928,7 +1048,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
       // Identifier
       char *type_identifier;
-      MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
+      MCcall(parse_past_type_identifier(code, &i, &type_identifier));
       MCcall(parse_past(code, &i, " "));
 
       // Variable Name
@@ -1098,6 +1218,112 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       free(maximum);
     }
     break;
+    case 'm':
+    {
+      // msi
+      MCcall(parse_past(code, &i, "ms"));
+      if (code[i] == 'i')
+      {
+        MCcall(parse_past(code, &i, "i"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        printf("here-3\n");
+        // Identifier
+        char *type_identifier;
+        MCcall(parse_past_type_identifier(code, &i, &type_identifier));
+        MCcall(parse_past(code, &i, " "));
+
+        // Variable Name
+        char *var_name;
+        MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        MCcall(parse_past(code, &i, " "));
+
+        printf("here-2\n");
+        // Any arithmetic operator
+        char *comparator;
+        switch (code[i])
+        {
+        case '-':
+        case '+':
+        case '*':
+        case '/':
+        {
+          comparator = (char *)malloc(sizeof(char) * 2);
+          comparator[0] = code[i];
+          comparator[1] = '\0';
+          ++i;
+        }
+        break;
+        default:
+          MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "if>operator-switch"));
+          return 34242;
+        }
+        MCcall(parse_past(code, &i, " "));
+
+        if (comparator)
+        {
+          // left
+          char *left;
+          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+          MCcall(parse_past(code, &i, " "));
+
+          // right
+          char *right;
+          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+
+          buf[0] = '\0';
+          MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                             type_identifier, var_name));
+          append_to_cstr(&translation_alloc, &translation, buf);
+
+          buf[0] = '\0';
+          char *replace_name;
+          MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_name));
+          char *trimmed_type_identifier = (char *)malloc(sizeof(char) * (strlen(type_identifier)));
+          strncpy(trimmed_type_identifier, type_identifier, strlen(type_identifier) - 1);
+          trimmed_type_identifier[strlen(type_identifier) - 1] = '\0';
+          sprintf(buf, "%s = malloc(sizeof(%s) * (%s %s %s", replace_name, trimmed_type_identifier, left, comparator, right);
+
+          while (code[i] != '\n' && code[i] != '\0')
+          {
+            MCcall(parse_past(code, &i, " "));
+
+            // Any arithmetic operator
+            switch (code[i])
+            {
+            case '-':
+            case '+':
+            case '*':
+            case '/':
+            {
+              comparator = (char *)malloc(sizeof(char) * 2);
+              comparator[0] = code[i];
+              comparator[1] = '\0';
+              ++i;
+            }
+            break;
+            default:
+              MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "msi>operator-switch"));
+              return 34242;
+            }
+            MCcall(parse_past(code, &i, " "));
+            MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+            sprintf(buf + strlen(buf), " %s %s", comparator, right);
+          }
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          MCcall(append_to_cstr(&translation_alloc, &translation, "));\n"));
+        }
+        else
+        {
+          MCerror(-4864, "TODO");
+        }
+      }
+      else
+      {
+        MCerror(-4866, "TODO");
+      }
+    }
+    break;
     case 'n':
     {
       // nvi
@@ -1159,7 +1385,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
       // Identifier
       char *type_identifier;
-      MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
+      MCcall(parse_past_type_identifier(code, &i, &type_identifier));
       MCcall(parse_past(code, &i, " "));
 
       // Variable Name
@@ -1863,9 +2089,9 @@ int mc_main(int argc, const char *const *argv)
       "brk\n"
       "end\n"
       "end for\n"
-      "nvi int command_remaining_length - command_length space_index - 1\n"
-      "mal 'char *' function_name + command_remaining_length 1\n"
-      "set 'char *' function_name command\n"
+      "asi int command_remaining_length - command_length space_index - 1\n"
+      "msi 'char *' function_name + command_remaining_length 1\n"
+      "nvk strcpy function_name (+ command space_index + 1)\n"
       "ass function_name[command_remaining_length] '\\0'\n"
       "nvi function_info finfo find_function_info nodespace function_name\n"
       ""
