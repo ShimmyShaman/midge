@@ -124,7 +124,6 @@ enum script_process_state
         char *identifier;          \
         unsigned int locals_index; \
         char *replacement_code;    \
-        void *pointer;             \
     }
 #define sizeof_local_kvp_v1 (sizeof(void *) * 4)
 
