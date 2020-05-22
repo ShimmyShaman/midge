@@ -713,7 +713,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   kvp->replacement_code = (char *)malloc(sizeof(char) * (64 + strlen(kvp->type)));
   sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", kvp->type, kvp->locals_index);
 
-  printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
+  // printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
   append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
   ++script->local_count;
 
@@ -728,14 +728,14 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
     MCerror(4722, "TODO");
     declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
 
-    sprintf(buf + strlen(buf), "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
+    sprintf(buf, "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
             struct_info->version, var_name, struct_info->field_count);
 
     // declared_types[declared_type_count].struct_info = (void *)struct_info;
   }
   else
   {
-    sprintf(buf + strlen(buf), "script->locals[%u] = (void *)malloc(sizeof(%s));\n", kvp->locals_index, kvp->type);
+    sprintf(buf, "script->locals[%u] = (void *)malloc(sizeof(%s));\n", kvp->locals_index, kvp->type);
 
     // declared_types[declared_type_count].struct_info = NULL;
   }
@@ -755,7 +755,7 @@ int mcqck_get_script_local_replace(void **local_index, unsigned int local_indexe
 
     if (!strcmp(key, kvp->identifier))
     {
-      printf("match!: %s=%s\n", key, kvp->replacement_code);
+      // printf("match!: %s=%s\n", key, kvp->replacement_code);
       *output = kvp->replacement_code;
       return 0;
     }
@@ -817,28 +817,89 @@ int parse_past_singular_expression(void **local_index, unsigned int local_indexe
         primary[k + b] = '\0';
 
         *output = primary;
-        return 0;
       }
     }
-  }
-  else if (code[*i] == '"')
-  {
-    MCerror(7834534, "TODO quotes");
-  }
-  else if (code[*i] == '\'')
-  {
-    parse_past_character_literal(code, i, output);
-  }
-  else if (isdigit(code[*i]))
-  {
-    parse_past_number(code, i, output);
+
+    
+    return 0;
   }
   else
-  {
-    MCerror(738778, "TODO what");
-  }
+    switch (code[*i])
+    {
+    case '"':
+      MCerror(7834534, "TODO quotes");
+      return 0;
+    case '\'':
+    {
+      MCcall(parse_past_character_literal(code, i, output));
+    }
+      return 0;
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+    {
+      MCcall(parse_past_number(code, i, output));
+    }
+      return 0;
+    case '(':
+    {
+      ++*i;
+      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, i, &temp));
 
-  return 0;
+      MCcall(parse_past(code, i, ")"));
+
+      *output = (char *)malloc(sizeof(char) * (2 + strlen(temp) + 1));
+      sprintf(*output, "(%s)", temp);
+    }
+      return 0;
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+    case '%':
+    {
+      char *oper = (char *)malloc(sizeof(char) * 2);
+      oper[0] = code[*i];
+      oper[1] = '\0';
+      ++*i;
+      if (code[*i] != ' ')
+      {
+        MCerror(9877, "BackTODO");
+      }
+      MCcall(parse_past(code, i, " "));
+
+      // left
+      char *left;
+      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, i, &left));
+      MCcall(parse_past(code, i, " "));
+
+      // right
+      char *right;
+      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, i, &right));
+
+      *output = (char *)malloc(sizeof(char) * (strlen(oper) + 1 + strlen(left) + 1 + strlen(right) + 1));
+      sprintf(*output, "%s %s %s", left, oper, right);
+
+      free(left);
+      free(oper);
+      free(right);
+    }
+      return 0;
+    default:
+    {
+      MCcall(print_parse_error(code, *i, "parse_past_expression", "first_char"));
+      return -7777;
+    }
+    }
+
+  return 4240;
 }
 
 int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
@@ -1023,6 +1084,29 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           MCerror(-4864, "TODO");
         }
       }
+      else if (code[i] == 's')
+      {
+        MCcall(parse_past(code, &i, "s"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        char *var_identifier;
+        MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &var_identifier));
+        MCcall(parse_past(code, &i, " "));
+
+        char *left;
+        MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+        if (code[i] != '\n' && code[i] != '\0')
+        {
+          MCerror(-4829, "expected statement end");
+        }
+
+        // buf[0] = '\0';
+        sprintf(buf, "%s = %s;\n", var_identifier, left);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        // free(var_identifier);
+        // free(left);
+      }
       else
       {
         MCerror(-4866, "TODO");
@@ -1043,26 +1127,107 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
     case 'd':
     {
       // dcl
-      MCcall(parse_past(code, &i, "dcl"));
-      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-      // Identifier
-      char *type_identifier;
-      MCcall(parse_past_type_identifier(code, &i, &type_identifier));
-      MCcall(parse_past(code, &i, " "));
-
-      // Variable Name
-      char *var_name;
-      MCcall(parse_past_identifier(code, &i, &var_name, false, false));
-      if (code[i] != '\n' && code[i] != '\0')
+      MCcall(parse_past(code, &i, "dc"));
+      if (code[i] == 'l')
       {
-        MCerror(-4829, "expected statement end");
-      }
+        MCcall(parse_past(code, &i, "l"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
-      buf[0] = '\0';
-      MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                         type_identifier, var_name));
-      MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        // Identifier
+        char *type_identifier;
+        MCcall(parse_past_type_identifier(code, &i, &type_identifier));
+        MCcall(parse_past(code, &i, " "));
+
+        // Variable Name
+        char *var_name;
+        MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        if (code[i] != '\n' && code[i] != '\0')
+        {
+          // Array decl
+          MCcall(parse_past(code, &i, "["));
+
+          char *left;
+          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+          MCcall(parse_past(code, &i, "]"));
+          if (code[i] != '\n' && code[i] != '\0')
+          {
+            MCerror(-4829, "expected statement end");
+          }
+
+          // Add deref to type
+          char *new_type_identifier = (char *)malloc(sizeof(char) * (strlen(type_identifier) + 2));
+          strcpy(new_type_identifier, type_identifier);
+          strcat(new_type_identifier, "*");
+
+          // Normal Declaration
+          MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                             new_type_identifier, var_name));
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+          // Allocate the array
+          char *replace_var_name;
+          MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_var_name));
+
+          sprintf(buf, "%s = malloc(sizeof(%s) * (%s));\n", replace_var_name, type_identifier, left);
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+          free(left);
+          free(new_type_identifier);
+          printf("Translation:\n%s\n", translation);
+        }
+        else
+        {
+          // Normal Declaration
+          MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                             type_identifier, var_name));
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        }
+        free(var_name);
+        free(type_identifier);
+      }
+      else if (code[i] == 's')
+      {
+        MCcall(parse_past(code, &i, "s"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // Identifier
+        char *type_identifier;
+        MCcall(parse_past_type_identifier(code, &i, &type_identifier));
+        MCcall(parse_past(code, &i, " "));
+
+        // Variable Name
+        char *var_name;
+        MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        MCcall(parse_past(code, &i, " "));
+
+        // Set Value
+        char *left;
+        MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+        if (code[i] != '\n' && code[i] != '\0')
+        {
+          MCerror(-4829, "expected statement end");
+        }
+
+        // Generate Local
+        MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                           type_identifier, var_name));
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        // Assign
+        char *replace_var_name;
+        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_var_name));
+
+        sprintf(buf, "%s = %s;\n", replace_var_name, left);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        free(type_identifier);
+        free(var_name);
+        free(left);
+      }
+      else
+      {
+        MCerror(86583, "TODO");
+      }
     }
     break;
     case 'e':
@@ -1109,6 +1274,20 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         i += 2;
         comparator = (char *)malloc(sizeof(char) * 3);
         strcpy(comparator, "==");
+      }
+      break;
+      case '<':
+      case '>':
+      {
+        int len = 1;
+        if (code[i + 1] == '=')
+          len = 2;
+        comparator = (char *)malloc(sizeof(char) * (len + 1));
+        comparator[0] = code[i];
+        if (len > 1)
+          comparator[1] = code[i + 1];
+        comparator[len] = '\0';
+        i += len;
       }
       break;
       default:
@@ -1227,7 +1406,6 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(parse_past(code, &i, "i"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
-        printf("here-3\n");
         // Identifier
         char *type_identifier;
         MCcall(parse_past_type_identifier(code, &i, &type_identifier));
@@ -1238,7 +1416,6 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(parse_past_identifier(code, &i, &var_name, false, false));
         MCcall(parse_past(code, &i, " "));
 
-        printf("here-2\n");
         // Any arithmetic operator
         char *comparator;
         switch (code[i])
@@ -1327,54 +1504,91 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
     case 'n':
     {
       // nvi
-      MCcall(parse_past(code, &i, "nvi"));
-      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-      // Identifier
-      char *type_identifier;
-      MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
-      MCcall(parse_past(code, &i, " "));
-
-      // Variable Name
-      char *var_name;
-      MCcall(parse_past_identifier(code, &i, &var_name, false, false));
-      MCcall(parse_past(code, &i, " "));
-
-      buf[0] = '\0';
-      MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                         type_identifier, var_name));
-      append_to_cstr(&translation_alloc, &translation, buf);
-
-      // Invoke
-      // Function Name
-      char *function_name;
-      MCcall(parse_past_identifier(code, &i, &function_name, true, false));
-      MCcall(parse_past(code, &i, " "));
-
-      char *replace_name;
-      MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_name));
-      buf[0] = '\0';
-      sprintf(buf, "%s = %s(", replace_name, function_name);
-      MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-
-      bool first_arg = true;
-      while (code[i] != '\n' && code[i] != '\0')
+      MCcall(parse_past(code, &i, "nv"));
+      if (code[i] == 'i')
       {
-        char *arg_name;
-        MCcall(parse_past_identifier(code, &i, &arg_name, true, true));
-        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, arg_name, &replace_name));
-        char *arg_entry = arg_name;
-        if (replace_name)
-          arg_entry = replace_name;
-        buf[0] = '\0';
-        sprintf(buf, "%s%s", first_arg ? "" : ", ", arg_entry);
-        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-        first_arg = false;
-        free(arg_name);
-      }
-      MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+        MCcall(parse_past(code, &i, "i"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
-      free(function_name);
+        // Identifier
+        char *type_identifier;
+        MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
+        MCcall(parse_past(code, &i, " "));
+
+        // Variable Name
+        char *var_name;
+        MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        MCcall(parse_past(code, &i, " "));
+
+        buf[0] = '\0';
+        MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
+                                           type_identifier, var_name));
+        append_to_cstr(&translation_alloc, &translation, buf);
+
+        // Invoke
+        // Function Name
+        char *function_name;
+        MCcall(parse_past_identifier(code, &i, &function_name, true, false));
+
+        char *replace_name;
+        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_name));
+        buf[0] = '\0';
+        sprintf(buf, "%s = %s(", replace_name, function_name);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        bool first_arg = true;
+        while (code[i] != '\n' && code[i] != '\0')
+        {
+          MCcall(parse_past(code, &i, " "));
+
+          char *arg_name;
+          MCcall(parse_past_identifier(code, &i, &arg_name, true, true));
+          MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, arg_name, &replace_name));
+          char *arg_entry = arg_name;
+          if (replace_name)
+            arg_entry = replace_name;
+          buf[0] = '\0';
+          sprintf(buf, "%s%s", first_arg ? "" : ", ", arg_entry);
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          first_arg = false;
+          free(arg_name);
+        }
+        MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+
+        free(function_name);
+      }
+      else if (code[i] == 'k')
+      {
+        MCcall(parse_past(code, &i, "k"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // Invoke
+        // Function Name
+        char *function_name;
+        MCcall(parse_past_identifier(code, &i, &function_name, true, false));
+        MCcall(append_to_cstr(&translation_alloc, &translation, function_name));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "("));
+
+        bool first_arg = true;
+        while (code[i] != '\n' && code[i] != '\0')
+        {
+          MCcall(parse_past(code, &i, " "));
+
+          char *argument;
+          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &argument));
+
+          buf[0] = '\0';
+          sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          first_arg = false;
+          free(argument);
+        }
+        MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+      }
+      else
+      {
+        MCerror(-4248, "TODO");
+      }
     }
     break;
     case 's':
@@ -2091,19 +2305,19 @@ int mc_main(int argc, const char *const *argv)
       "end for\n"
       "asi int command_remaining_length - command_length space_index - 1\n"
       "msi 'char *' function_name + command_remaining_length 1\n"
-      "nvk strcpy function_name (+ command space_index + 1)\n"
+      "nvk strcpy function_name (+ command + space_index 1)\n"
       "ass function_name[command_remaining_length] '\\0'\n"
       "nvi function_info finfo find_function_info nodespace function_name\n"
       ""
       "dcs int rind 0\n"
-      "dca 'char *' responses 32\n"
+      "dcl 'char *' responses[32]\n"
       ""
       "dcs int linit finfo->parameter_count\n"
       "ifs finfo->variable_parameter_begin_index >= 0\n"
       "ass linit finfo->variable_parameter_begin_index\n"
       "end\n"
       "for i 0 linit\n"
-      "dca char provocation 512\n"
+      "dcl char provocation[512]\n"
       "nvk strcpy provocation finfo->parameters[i]->name\n"
       "nvk strcat provocation \": \"\n"
       "$ASI responses[rind] provocation\n"
@@ -2112,7 +2326,7 @@ int mc_main(int argc, const char *const *argv)
       "ifs finfo->variable_parameter_begin_index >= 0\n"
       "dcs int pind finfo->variable_parameter_begin_index\n"
       "whl 1\n"
-      "dca char provocation 512"
+      "dcl char provocation[512]\n"
       "nvk strcpy provocation finfo->parameters[pind]->name\n"
       "nvk strcat provocation \": \"\n"
       "$ASI responses[rind] provocation\n"
