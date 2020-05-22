@@ -909,6 +909,17 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       //     // declared_types[declared_type_count].var_name = var_name;
     }
     break;
+    case 'b':
+    {
+      // brk
+      MCcall(parse_past(code, &i, "brk"));
+      if (code[i] != '\n' && code[i] != '\0')
+      {
+        MCerror(-4829, "expected statement end");
+      }
+      MCcall(append_to_cstr(&translation_alloc, &translation, "break;\n"));
+    }
+    break;
     case 'd':
     {
       // dcl
@@ -932,6 +943,25 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
                                          type_identifier, var_name));
       MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+    }
+    break;
+    case 'e':
+    {
+      // end
+      MCcall(parse_past(code, &i, "end"));
+      MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
+
+      if (code[i] != '\n' && code[i] != '\0')
+      {
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+        MCcall(parse_past(code, &i, "for"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
+
+        if (code[i] != '\n' && code[i] != '\0')
+        {
+          MCerror(-4831, "expected statement end");
+        }
+      }
     }
     break;
     case 'i':
@@ -1831,7 +1861,7 @@ int mc_main(int argc, const char *const *argv)
       "ifs command[i] == ' '\n"
       "set int space_index i\n"
       "brk\n"
-      "end if\n"
+      "end\n"
       "end for\n"
       "nvi int command_remaining_length - command_length space_index - 1\n"
       "mal 'char *' function_name + command_remaining_length 1\n"
@@ -1845,7 +1875,7 @@ int mc_main(int argc, const char *const *argv)
       "dcs int linit finfo->parameter_count\n"
       "ifs finfo->variable_parameter_begin_index >= 0\n"
       "ass linit finfo->variable_parameter_begin_index\n"
-      "end if\n"
+      "end\n"
       "for i 0 linit\n"
       "dca char provocation 512\n"
       "nvk strcpy provocation finfo->parameters[i]->name\n"
@@ -1865,9 +1895,9 @@ int mc_main(int argc, const char *const *argv)
       "ass pind % pind finfo->parameter_count\n"
       "ifs pind < finfo->variable_parameter_begin_index\n"
       "ass pind finfo->variable_parameter_begin_index\n"
-      "end if\n"
-      "end while\n"
-      "end if\n"
+      "end\n"
+      "end\n"
+      "end\n"
       ""
       "nvk $SVL function_name $SYA rind &responses\n"
       "|"
