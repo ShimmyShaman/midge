@@ -1237,24 +1237,36 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           }
 
           // Add deref to type
-          char *new_type_identifier = (char *)malloc(sizeof(char) * (strlen(type_identifier) + 2));
-          strcpy(new_type_identifier, type_identifier);
-          strcat(new_type_identifier, "*");
+          char *derefenced_type_identifier;
+          for (int j = strlen(type_identifier) - 1;; --j)
+          {
+            if (type_identifier[j] == '*')
+            {
+              derefenced_type_identifier = (char *)malloc(sizeof(char) * (j + 1));
+              strcpy(derefenced_type_identifier, type_identifier);
+              derefenced_type_identifier[j] = '\0';
+              break;
+            }
+            if (isalpha(type_identifier[j]))
+            {
+              MCerror(4242, "no pointer for array?");
+            }
+          }
 
           // Normal Declaration
           MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                             new_type_identifier, var_name));
+                                             type_identifier, var_name));
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
           // Allocate the array
           char *replace_var_name;
           MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_var_name));
 
-          sprintf(buf, "%s = malloc(sizeof(%s) * (%s));\n", replace_var_name, type_identifier, left);
+          sprintf(buf, "%s = (%s)malloc(sizeof(%s) * (%s));\n", replace_var_name, type_identifier, derefenced_type_identifier, left);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
           free(left);
-          free(new_type_identifier);
+          free(derefenced_type_identifier);
           printf("Translation:\n%s\n", translation);
         }
         else
@@ -1804,7 +1816,11 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
                  "  }\n\n");
   ++script->segment_count;
   append_to_cstr(&declaration_alloc, &declaration, translation);
-  append_to_cstr(&declaration_alloc, &declaration, "\n  script->segments_complete = script->segment_count;\n printf(\"script-concluding\\n\"); return 0;\n}");
+  append_to_cstr(&declaration_alloc, &declaration, "\n"
+                                                   "// Script Execution Finished\n"
+                                                   "script->segments_complete = script->segment_count;\n"
+                                                   "printf(\"script-concluding\\n\");\n"
+                                                   "return 0;\n}");
 
   script->locals = (void **)calloc(sizeof(void *), script->local_count);
 
@@ -2697,11 +2713,11 @@ int mc_main(int argc, const char *const *argv)
       "nvk strcpy function_name (+ command + space_index 1)\n"
       "ass function_name[command_remaining_length] '\\0'\n"
       "nvi 'function_info *' finfo find_function_info nodespace function_name\n"
+      ""
+      "dcs int rind 0\n"
+      "dcl 'char *' responses[32]\n"
       "|"
       "midgequit|";
-  ""
-  "dcs int rind 0\n"
-  "dcl 'char *' responses[32]\n"
   ""
   "dcs int linit finfo->parameter_count\n"
   "ifs finfo->variable_parameter_begin_index >= 0\n"
