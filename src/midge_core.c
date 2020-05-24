@@ -2,13 +2,6 @@
 
 #include "midge_core.h"
 
-int (*allocate_struct_id)(int, void **);
-int (*allocate_midge_field_info)(int, void **);
-int (*define_struct)(int, void **);
-int (*allocate_from_definition)(int, void **);
-int (*declare_function_pointer)(int, void **);
-int (*obtain_from_index)(int, void **);
-
 int print_struct_id(int argc, void **argv)
 {
   midgeo struct_id = (midgeo)argv;
@@ -1940,7 +1933,7 @@ int initialize_function_v1(int argc, void **argv)
 
 int declare_function_pointer_v1(int argc, void **argv)
 {
-  printf("declare_function_pointer_v1()\n");
+  // printf("declare_function_pointer_v1()\n");
   // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
 
   void **mc_dvp;
@@ -2289,25 +2282,18 @@ int mcqck_temp_create_process_initialize_function(midgeo *process_unit)
 }
 
 int submit_user_command(int argc, void **argsv);
+int (*mc_dummy_function_pointer)(int, void **);
 int mc_main(int argc, const char *const *argv)
 {
   int sizeof_void_ptr = sizeof(void *);
   if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) || sizeof_void_ptr != sizeof(uint *) || sizeof_void_ptr != sizeof(const char *) ||
-      sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(allocate_struct_id) || sizeof_void_ptr != sizeof(&allocate_struct_id) || sizeof_void_ptr != sizeof(unsigned long))
+      sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(mc_dummy_function_pointer) || sizeof_void_ptr != sizeof(&find_function_info_v1) || sizeof_void_ptr != sizeof(unsigned long))
   {
     printf("pointer sizes aren't equal!!!\n");
     return -1;
   }
   int res;
   void **mc_dvp;
-
-  // Function Pointer Setting
-  allocate_struct_id = &allocate_struct_id_v1;
-  // allocate_midge_field_info = &allocate_midge_field_info_v1;
-  // define_struct = &define_struct_v1;
-  // allocate_from_definition = &allocate_from_definition_v1;
-  // declare_function_pointer = &declare_function_pointer_v1;
-  // obtain_from_index = &obtain_from_index_v1;
 
   declare_and_allocate_anon_struct(struct_info_v1, parameter_info_definition_v1, sizeof_struct_info_v1);
   { // TYPE:DEFINITION parameter_info
@@ -2514,17 +2500,56 @@ int mc_main(int argc, const char *const *argv)
 
     parameter_info_v1 *field;
     allocate_anon_struct(field, sizeof_parameter_info_v1);
-    function_info_definition_v1->fields[0] = field;
+    find_function_info_definition_v1->parameters[0] = field;
     field->type_name = "node";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "nodespace";
     allocate_anon_struct(field, sizeof_parameter_info_v1);
-    function_info_definition_v1->fields[1] = field;
+    find_function_info_definition_v1->parameters[1] = field;
     field->type_name = "char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "function_name";
+  }
+
+  declare_and_allocate_anon_struct(function_info_v1, declare_function_pointer_definition_v1, sizeof_function_info_v1);
+  {
+    declare_function_pointer_definition_v1->struct_id = NULL;
+    declare_function_pointer_definition_v1->name = "declare_function_pointer";
+    declare_function_pointer_definition_v1->latest_iteration = 1U;
+    declare_function_pointer_definition_v1->return_type = "void";
+    declare_function_pointer_definition_v1->parameter_count = 2;
+    declare_function_pointer_definition_v1->parameters = (void **)malloc(sizeof(void *) * declare_function_pointer_definition_v1->parameter_count);
+    declare_function_pointer_definition_v1->variable_parameter_begin_index = -1;
+    declare_function_pointer_definition_v1->struct_usage_count = 0;
+    declare_function_pointer_definition_v1->struct_usage = NULL;
+
+    parameter_info_v1 *field;
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    declare_function_pointer_definition_v1->parameters[0] = field;
+    field->type_name = "node";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "nodespace";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    declare_function_pointer_definition_v1->parameters[1] = field;
+    field->type_name = "int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "parameter_count";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    declare_function_pointer_definition_v1->parameters[2] = field;
+    field->type_name = "parameter_info";
+    field->type_version = 1U;
+    field->type_deref_count = 2;
+    field->name = "parameters";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    declare_function_pointer_definition_v1->parameters[3] = field;
+    field->type_name = "int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "variable_parameter_begin_index";
   }
 
   // NODE STRUCT INFO
@@ -2615,6 +2640,9 @@ int mc_main(int argc, const char *const *argv)
   MCcall(append_to_collection(&global->functions, &global->functions_alloc, &global->function_count, (void *)find_function_info_definition_v1));
   clint_process("int (*find_function_info)(int, void **);");
   clint_process("find_function_info = &find_function_info_v1;");
+  MCcall(append_to_collection(&global->functions, &global->functions_alloc, &global->function_count, (void *)declare_function_pointer_definition_v1));
+  clint_process("int (*declare_function_pointer)(int, void **);");
+  clint_process("declare_function_pointer = &declare_function_pointer_v1;");
 
   // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
