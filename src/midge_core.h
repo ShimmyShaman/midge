@@ -117,15 +117,16 @@ enum script_process_state
     printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
     return error_code;
 
-#define local_kvp_v1               \
+#define script_local_v1            \
     struct                         \
     {                              \
         char *type;                \
         char *identifier;          \
         unsigned int locals_index; \
         char *replacement_code;    \
+        void *struct_info;         \
     }
-#define sizeof_local_kvp_v1 (sizeof(void *) * 4)
+#define sizeof_script_local_v1 (sizeof(void *) * 5)
 
 #define process_unit_v1              \
     struct                           \
@@ -177,18 +178,22 @@ enum script_process_state
         void **children;              \
     }
 #define sizeof_node_v1 (sizeof(void *) * 13)
-#define struct_info_v1              \
-    struct                          \
-    {                               \
-        struct                      \
-        {                           \
-            const char *identifier; \
-            unsigned int version;   \
-        } struct_id;                \
-        const char *name;           \
-        unsigned int version;       \
-        unsigned int field_count;   \
-        void **fields;              \
+#define struct_id_v1            \
+    struct                      \
+    {                           \
+        const char *identifier; \
+        unsigned int version;   \
+    }
+#define sizeof_struct_id_v1 (sizeof(void *) * 2)
+#define struct_info_v1            \
+    struct                        \
+    {                             \
+        void *struct_id;          \
+        const char *name;         \
+        unsigned int version;     \
+        unsigned int field_count; \
+        void **fields;            \
+        const char *sizeof_cstr;  \
     }
 #define sizeof_struct_info_v1 (sizeof(void *) * 6)
 #define function_info_v1                             \
@@ -209,22 +214,16 @@ enum script_process_state
         void **struct_usage;                         \
     }
 #define sizeof_function_info_v1 (sizeof(void *) * 10)
-#define parameter_info_v1           \
-    struct                          \
-    {                               \
-        struct                      \
-        {                           \
-            const char *identifier; \
-            unsigned int version;   \
-        } struct_id;                \
-        struct                      \
-        {                           \
-            const char *identifier; \
-            unsigned int version;   \
-        } type;                     \
-        const char *name;           \
+#define parameter_info_v1          \
+    struct                         \
+    {                              \
+        void *struct_id;           \
+        const char *type_name;     \
+        unsigned int type_version; \
+        unsigned int type_deref_count; \
+        const char *name;          \
     }
-#define sizeof_parameter_info_v1 (sizeof(void *) * 5)
+#define sizeof_parameter_info_v1 (sizeof(void *) * 4)
 
 #define process_action_v1               \
     struct                              \

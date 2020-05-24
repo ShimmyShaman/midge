@@ -485,7 +485,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
     printf("find_struct_info:set with '%s'\n", finfo->name);
     return 0;
   }
-  // printf("find_struct_info: '%s' could not be found!\n", struct_name);
+  printf("find_struct_info: '%s' could not be found!\n", struct_name);
   return 0;
 }
 
@@ -705,65 +705,143 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
 
   declare_and_assign_anon_struct(script_v1, script, p_script);
 
-  local_kvp_v1 *kvp;
-  allocate_anon_struct(kvp, sizeof_local_kvp_v1);
+  script_local_v1 *kvp;
+  allocate_anon_struct(kvp, sizeof_script_local_v1);
   kvp->type = type_identifier;
   kvp->identifier = var_name;
   kvp->locals_index = script->local_count;
   kvp->replacement_code = (char *)malloc(sizeof(char) * (64 + strlen(kvp->type)));
-  sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", kvp->type, kvp->locals_index);
-
-  // printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
-  append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
-  ++script->local_count;
-
-  // declared_types[declared_type_count].type = type_identifier;
-  // declared_types[declared_type_count].var_name = var_name;
 
   // -- Determine if the structure is midge-specified
-  void *p_struct_info = NULL;
-  MCcall(find_struct_info(nodespace, type_identifier, &p_struct_info));
-  if (p_struct_info)
+  MCcall(find_struct_info(nodespace, type_identifier, &kvp->struct_info));
+  char *size_of_var;
+  if (kvp->struct_info)
   {
-    MCerror(4722, "TODO");
-    declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
+    declare_and_assign_anon_struct(struct_info_v1, sinfo, kvp->struct_info);
+    sprintf(kvp->replacement_code, "(*(%s_v%u **)script->locals[%u])", kvp->type, sinfo->version, kvp->locals_index);
+    printf("\nkrpstcde:%s\n", kvp->replacement_code);
 
-    sprintf(buf, "declare_and_allocate_anon_struct(%s_v%u, %s, (sizeof(void *) * %u));\n", struct_info->name,
-            struct_info->version, var_name, struct_info->field_count);
-
-    // declared_types[declared_type_count].struct_info = (void *)struct_info;
+    allocate_and_copy_cstr(size_of_var, sinfo->sizeof_cstr);
   }
   else
   {
-    sprintf(buf, "script->locals[%u] = (void *)malloc(sizeof(%s));\n", kvp->locals_index, kvp->type);
+    sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", kvp->type, kvp->locals_index);
+    printf("\nkrpnncde:%s,%s\n", type_identifier, kvp->replacement_code);
 
-    // declared_types[declared_type_count].struct_info = NULL;
+    size_of_var = (char *)malloc(sizeof(char) * (8 + 1 + strlen(kvp->type)));
+    sprintf(size_of_var, "sizeof(%s)", kvp->type);
   }
+
+  ++script->local_count;
+  printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
+
+  for (int i = 0; i < *local_indexes_count; ++i)
+  {
+    declare_and_assign_anon_struct(script_local_v1, cvp, local_index[i]);
+    printf("cvpCOL[%i] type:%s identifier:%s lind:%u repcode:%s\n", i, cvp->type, cvp->identifier, cvp->locals_index, cvp->replacement_code);
+  }
+  append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
+  for (int i = 0; i < *local_indexes_count; ++i)
+  {
+    declare_and_assign_anon_struct(script_local_v1, cvp, local_index[i]);
+    printf("cvpCOL[%i] type:%s identifier:%s lind:%u repcode:%s\n", i, cvp->type, cvp->identifier, cvp->locals_index, cvp->replacement_code);
+  }
+
+  sprintf(buf, "script->locals[%u] = (void *)malloc(%s);\n", kvp->locals_index, size_of_var);
+
+  free(size_of_var);
 
   return 0;
 }
 
-int mcqck_get_script_local_replace(void **local_index, unsigned int local_indexes_count, const char *key, char **output)
+int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned int local_indexes_count, const char *key, char **output)
 {
   void **mc_dvp;
   *output = NULL;
 
-  local_kvp_v1 *kvp;
+  char *primary = NULL;
+  int m = -1;
+  for (int i = 0;; ++i)
+  {
+    if (key[i] == '-')
+    {
+      primary = (char *)malloc(sizeof(char) * (i + 1));
+      strncpy(primary, key, i);
+      primary[i] = '\0';
+      m = i;
+    }
+    else if (key[i] == '\0')
+      break;
+  }
+  if (primary == NULL)
+  {
+    allocate_and_copy_cstr(primary, key);
+  }
+  script_local_v1 *kvp;
   for (int i = 0; i < local_indexes_count; ++i)
   {
     assign_anon_struct(kvp, local_index[i]);
 
-    if (!strcmp(key, kvp->identifier))
+    if (!strcmp(primary, kvp->identifier))
     {
-      // printf("match!: %s=%s\n", key, kvp->replacement_code);
-      *output = kvp->replacement_code;
-      return 0;
+      printf("match!: %s=%s:%s\n", primary, kvp->identifier, kvp->replacement_code);
+      break;
     }
+    else
+    {
+      printf("NOmatch!: %s=%s:%s\n", primary, kvp->identifier, kvp->replacement_code);
+    }
+
+    kvp = NULL;
   }
-  return 0;
+  free(primary);
+  if (!kvp)
+    return 0;
+
+  if (m < 0)
+  {
+    *output = kvp->replacement_code;
+    return 0;
+  }
+
+  if (!kvp->struct_info)
+  {
+    *output = (char *)malloc(sizeof(char) * (strlen(kvp->replacement_code) + strlen(key) - m + 1));
+    sprintf(*output, "%s%s", kvp->replacement_code, key + m);
+    printf("*output='%s'\n", *output);
+    return 0;
+  }
+  MCerror(24524, "TODO");
+
+  parse_past(key, &m, "->");
+  *output = (char *)malloc(sizeof(char) * (2 + strlen(kvp->replacement_code) + 1));
+  sprintf(*output, "%s->", kvp->replacement_code);
+
+  // Determine the child field type
+  struct_info_v1 *parent_struct_info;
+  assign_anon_struct(parent_struct_info, kvp->struct_info);
+  char *member_type = NULL;
+  int n = -1;
+  for (int i = m;; ++i)
+  {
+    if (key[i] == '-')
+    {
+      primary = (char *)malloc(sizeof(char) * (i - m + 1));
+      n = i;
+    }
+    else if (key[i] == '\0')
+      break;
+  }
+  if (n < 0)
+  {
+    // This is the last member access
+    primary = (char *)malloc(sizeof(char) * (strlen(key) - m + 1));
+    strcpy(primary, key + m);
+    primary[strlen(key) - m] = '\0';
+  }
 }
 
-int parse_past_singular_expression(void **local_index, unsigned int local_indexes_count, char *code, int *i, char **output)
+int parse_past_singular_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i, char **output)
 {
   int res;
   char *primary, *temp;
@@ -771,7 +849,9 @@ int parse_past_singular_expression(void **local_index, unsigned int local_indexe
   if (isalpha(code[*i]))
   {
     MCcall(parse_past_identifier(code, i, &primary, true, true));
-    MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, primary, &temp));
+
+    MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, primary, &temp));
+
     if (temp)
     {
       free(primary);
@@ -791,7 +871,7 @@ int parse_past_singular_expression(void **local_index, unsigned int local_indexe
 
       char *secondary;
       MCcall(parse_past_identifier(code, i, &secondary, true, true));
-      MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, secondary, &temp));
+      MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, secondary, &temp));
       if (temp)
       {
         free(secondary);
@@ -817,10 +897,10 @@ int parse_past_singular_expression(void **local_index, unsigned int local_indexe
         primary[k + b] = '\0';
 
         *output = primary;
+        break;
       }
     }
 
-    
     return 0;
   }
   else
@@ -851,7 +931,7 @@ int parse_past_singular_expression(void **local_index, unsigned int local_indexe
     case '(':
     {
       ++*i;
-      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, i, &temp));
+      MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, i, &temp));
 
       MCcall(parse_past(code, i, ")"));
 
@@ -877,12 +957,12 @@ int parse_past_singular_expression(void **local_index, unsigned int local_indexe
 
       // left
       char *left;
-      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, i, &left));
+      MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, i, &left));
       MCcall(parse_past(code, i, " "));
 
       // right
       char *right;
-      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, i, &right));
+      MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, i, &right));
 
       *output = (char *)malloc(sizeof(char) * (strlen(oper) + 1 + strlen(left) + 1 + strlen(right) + 1));
       sprintf(*output, "%s %s %s", left, oper, right);
@@ -1038,12 +1118,12 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         {
           // left
           char *left;
-          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+          MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
           MCcall(parse_past(code, &i, " "));
 
           // right
           char *right;
-          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+          MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
 
           buf[0] = '\0';
           MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
@@ -1052,7 +1132,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
           buf[0] = '\0';
           char *replace_name;
-          MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_name));
+          MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
           sprintf(buf, "%s = %s %s %s", replace_name, left, comparator, right);
 
           while (code[i] != '\n' && code[i] != '\0')
@@ -1073,7 +1153,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
               return 34242;
             }
             MCcall(parse_past(code, &i, " "));
-            MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+            MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
             sprintf(buf + strlen(buf), " %s %s", comparator, right);
           }
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1090,11 +1170,11 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
         char *var_identifier;
-        MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &var_identifier));
+        MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &var_identifier));
         MCcall(parse_past(code, &i, " "));
 
         char *left;
-        MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+        MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
         if (code[i] != '\n' && code[i] != '\0')
         {
           MCerror(-4829, "expected statement end");
@@ -1147,7 +1227,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           MCcall(parse_past(code, &i, "["));
 
           char *left;
-          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+          MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
           MCcall(parse_past(code, &i, "]"));
           if (code[i] != '\n' && code[i] != '\0')
           {
@@ -1166,7 +1246,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
           // Allocate the array
           char *replace_var_name;
-          MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_var_name));
+          MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_var_name));
 
           sprintf(buf, "%s = malloc(sizeof(%s) * (%s));\n", replace_var_name, type_identifier, left);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1202,7 +1282,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
         // Set Value
         char *left;
-        MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
         if (code[i] != '\n' && code[i] != '\0')
         {
           MCerror(-4829, "expected statement end");
@@ -1215,7 +1295,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
         // Assign
         char *replace_var_name;
-        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_var_name));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_var_name));
 
         sprintf(buf, "%s = %s;\n", replace_var_name, left);
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1251,14 +1331,16 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
     break;
     case 'i':
     {
-      // for i 0 command_length
+      // ifs
       // for
       MCcall(parse_past(code, &i, "ifs"));
       MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
       // left
       char *left;
-      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+      printf("here-0\n");
+      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
+      printf("left:%s\n", left);
       MCcall(parse_past(code, &i, " "));
 
       // comparison operator
@@ -1298,7 +1380,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
       // right
       char *right;
-      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
       if (code[i] != '\n' && code[i] != '\0')
       {
         MCerror(-4864, "expected statement end:'%c'", code[i]);
@@ -1332,7 +1414,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       {
         MCcall(parse_past_identifier(code, &i, &initiate, false, false));
 
-        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, initiate, &initiate_final));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, initiate, &initiate_final));
         if (!initiate_final)
           initiate_final = initiate;
       }
@@ -1358,7 +1440,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       {
         MCcall(parse_past_identifier(code, &i, &maximum, false, false));
 
-        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, maximum, &maximum_final));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, maximum, &maximum_final));
         if (!maximum_final)
           maximum_final = maximum;
       }
@@ -1387,7 +1469,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
                                          int_cstr, iterator));
       append_to_cstr(&translation_alloc, &translation, buf);
       char *iterator_replace;
-      MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, iterator, &iterator_replace));
+      MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, iterator, &iterator_replace));
 
       buf[0] = '\0';
       sprintf(buf, "for(%s = %s; %s < %s; ++%s) {\n", iterator_replace, initiate_final, iterator_replace, maximum_final, iterator_replace);
@@ -1441,12 +1523,12 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         {
           // left
           char *left;
-          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &left));
+          MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
           MCcall(parse_past(code, &i, " "));
 
           // right
           char *right;
-          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+          MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
 
           buf[0] = '\0';
           MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
@@ -1455,7 +1537,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
           buf[0] = '\0';
           char *replace_name;
-          MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_name));
+          MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
           char *trimmed_type_identifier = (char *)malloc(sizeof(char) * (strlen(type_identifier)));
           strncpy(trimmed_type_identifier, type_identifier, strlen(type_identifier) - 1);
           trimmed_type_identifier[strlen(type_identifier) - 1] = '\0';
@@ -1484,7 +1566,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
               return 34242;
             }
             MCcall(parse_past(code, &i, " "));
-            MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &right));
+            MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
             sprintf(buf + strlen(buf), " %s %s", comparator, right);
           }
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1512,7 +1594,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
         // Identifier
         char *type_identifier;
-        MCcall(parse_past_identifier(code, &i, &type_identifier, false, false));
+        MCcall(parse_past_type_identifier(code, &i, &type_identifier));
         MCcall(parse_past(code, &i, " "));
 
         // Variable Name
@@ -1531,7 +1613,8 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(parse_past_identifier(code, &i, &function_name, true, false));
 
         char *replace_name;
-        MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, var_name, &replace_name));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
+        printf("nvi gen replace_name:%s=%s\n", var_name, replace_name);
         buf[0] = '\0';
         sprintf(buf, "%s = %s(", replace_name, function_name);
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1543,7 +1626,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
           char *arg_name;
           MCcall(parse_past_identifier(code, &i, &arg_name, true, true));
-          MCcall(mcqck_get_script_local_replace(local_index, local_indexes_count, arg_name, &replace_name));
+          MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, arg_name, &replace_name));
           char *arg_entry = arg_name;
           if (replace_name)
             arg_entry = replace_name;
@@ -1575,7 +1658,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           MCcall(parse_past(code, &i, " "));
 
           char *argument;
-          MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &argument));
+          MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
 
           buf[0] = '\0';
           sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
@@ -1604,12 +1687,12 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
       // Variable Name
       char *var_name;
-      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &var_name));
+      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &var_name));
       MCcall(parse_past(code, &i, " "));
 
       // Value Name
       char *value_expr;
-      MCcall(parse_past_singular_expression(local_index, local_indexes_count, code, &i, &value_expr));
+      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &value_expr));
       if (code[i] != '\n' && code[i] != '\0')
       {
         MCerror(-4829, "expected statement end");
@@ -1664,14 +1747,14 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   append_to_cstr(&declaration_alloc, &declaration,
                  "  default:\n"
                  "    return 0;\n"
-                 "  }\n\nprintf(\"here-3\\n\");");
+                 "  }\n\n");
   ++script->segment_count;
   append_to_cstr(&declaration_alloc, &declaration, translation);
-  append_to_cstr(&declaration_alloc, &declaration, "\n  script->segments_complete = script->segment_count;\n return 0;\n}");
+  append_to_cstr(&declaration_alloc, &declaration, "\n  script->segments_complete = script->segment_count;\n printf(\"script-concluding\\n\"); return 0;\n}");
 
   script->locals = (void **)calloc(sizeof(void *), script->local_count);
 
-  // printf("declaration:%s\n\n", declaration);
+  printf("script_declaration:\n%s\n\n", declaration);
 
   clint_declare(declaration);
 
@@ -1718,13 +1801,13 @@ int initialize_function_v1(int argc, void **argv)
     declare_and_assign_anon_struct(parameter_info_v1, parameter, function_info->parameters[i]);
 
     void *p_struct_info;
-    MCcall(find_struct_info(nodespace, parameter->type.identifier, &p_struct_info));
+    MCcall(find_struct_info(nodespace, parameter->type_name, &p_struct_info));
     if (p_struct_info)
     {
       strcat(buf, "declare_and_assign_anon_struct(");
-      strcat(buf, parameter->type.identifier);
+      strcat(buf, parameter->type_name);
       strcat(buf, "_v");
-      sprintf(buf + strlen(buf), "%i, ", parameter->type.version);
+      sprintf(buf + strlen(buf), "%i, ", parameter->type_version);
       strcat(buf, parameter->name);
       strcat(buf, ", ");
       strcat(buf, "mc_argv[");
@@ -1732,7 +1815,7 @@ int initialize_function_v1(int argc, void **argv)
     }
     else
     {
-      sprintf(buf + strlen(buf), "%s %s = (%s)mc_argv[%i];\n", parameter->type.identifier, parameter->name, parameter->type.identifier, i);
+      sprintf(buf + strlen(buf), "%s %s = (%s)mc_argv[%i];\n", parameter->type_name, parameter->name, parameter->type_name, i);
     }
   }
   if (function_info->parameter_count > 0)
@@ -1839,21 +1922,21 @@ int declare_function_pointer_v1(int argc, void **argv)
   {
     declare_and_allocate_anon_struct(parameter_info_v1, parameter_info, sizeof_parameter_info_v1);
     // printf("dfp>%p=%s\n", i, (void *)parameters[2 + i * 2 + 0], (char *)parameters[2 + i * 2 + 0]);
-    parameter_info->type.identifier = (char *)parameters[2 + i * 2 + 0];
+    parameter_info->type_name = (char *)parameters[2 + i * 2 + 0];
 
     void *p_struct_info = NULL;
-    MCcall(find_struct_info((void *)nodespace, parameter_info->type.identifier, &p_struct_info));
+    MCcall(find_struct_info((void *)nodespace, parameter_info->type_name, &p_struct_info));
     declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
     if (struct_info)
     {
-      parameter_info->type.version = struct_info->version;
+      parameter_info->type_version = struct_info->version;
 
       int already_added = 0;
       for (int j = 0; j < function_info->struct_usage_count; ++j)
       {
         declare_and_assign_anon_struct(struct_info_v1, existing, function_info->struct_usage[j]);
 
-        if (!strcmp(parameter_info->type.identifier, existing->name))
+        if (!strcmp(parameter_info->type_name, existing->name))
         {
           already_added = 1;
           break;
@@ -1865,7 +1948,7 @@ int declare_function_pointer_v1(int argc, void **argv)
       }
     }
     else
-      parameter_info->type.version = 0;
+      parameter_info->type_version = 0;
 
     parameter_info->name = (char *)parameters[2 + i * 2 + 1];
     function_info->parameters[i] = (void *)parameter_info;
@@ -2165,69 +2248,172 @@ int mc_main(int argc, const char *const *argv)
   declare_function_pointer = &declare_function_pointer_v1;
   // obtain_from_index = &obtain_from_index_v1;
 
-  declare_and_allocate_anon_struct(struct_info_v1, node_definition_v1, sizeof_struct_info_v1);
-  node_definition_v1->struct_id.identifier = "struct_info";
-  node_definition_v1->struct_id.version = 1U;
-  node_definition_v1->name = "node";
-  node_definition_v1->version = 1U;
-  node_definition_v1->field_count = 11;
-  node_definition_v1->fields = (void **)calloc(sizeof(void *), 7);
+  declare_and_allocate_anon_struct(struct_info_v1, parameter_info_definition_v1, sizeof_struct_info_v1);
+  { // TYPE:DEFINITION parameter_info
+    parameter_info_definition_v1->struct_id = NULL;
+    parameter_info_definition_v1->name = "parameter_info";
+    parameter_info_definition_v1->version = 1U;
+    parameter_info_definition_v1->field_count = 5;
+    parameter_info_definition_v1->fields = (void **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
+    parameter_info_definition_v1->sizeof_cstr = "sizeof_parameter_info_v1";
 
-  declare_and_allocate_anon_struct(parameter_info_v1, field0, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field0;
-  field0->type.identifier = "const char *";
-  field0->type.version = 0U;
-  field0->name = "name";
-  declare_and_allocate_anon_struct(parameter_info_v1, field1, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field1;
-  field1->type.identifier = "node";
-  field1->type.version = 1U;
-  field1->name = "parent";
-  declare_and_allocate_anon_struct(parameter_info_v1, field2, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field2;
-  field2->type.identifier = "unsigned int";
-  field2->type.version = 0U;
-  field2->name = "functions_alloc";
-  declare_and_allocate_anon_struct(parameter_info_v1, field3, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field3;
-  field3->type.identifier = "unsigned int";
-  field3->type.version = 0U;
-  field3->name = "function_count";
-  declare_and_allocate_anon_struct(parameter_info_v1, field4, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field4;
-  field4->type.identifier = "void **";
-  field4->type.version = 0U;
-  field4->name = "functions";
-  declare_and_allocate_anon_struct(parameter_info_v1, field5, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field5;
-  field5->type.identifier = "unsigned int";
-  field5->type.version = 0U;
-  field5->name = "structs_alloc";
-  declare_and_allocate_anon_struct(parameter_info_v1, field6, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field6;
-  field6->type.identifier = "unsigned int";
-  field6->type.version = 0U;
-  field6->name = "struct_count";
-  declare_and_allocate_anon_struct(parameter_info_v1, field7, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field7;
-  field7->type.identifier = "void **";
-  field7->type.version = 0U;
-  field7->name = "structs";
-  declare_and_allocate_anon_struct(parameter_info_v1, field8, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field8;
-  field8->type.identifier = "unsigned int";
-  field8->type.version = 0U;
-  field8->name = "child_count";
-  declare_and_allocate_anon_struct(parameter_info_v1, field9, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field9;
-  field9->type.identifier = "unsigned int";
-  field9->type.version = 0U;
-  field9->name = "children_alloc";
-  declare_and_allocate_anon_struct(parameter_info_v1, field10, sizeof_parameter_info_v1);
-  node_definition_v1->fields[0] = field10;
-  field10->type.identifier = "void **";
-  field10->type.version = 0U;
-  field10->name = "children";
+    parameter_info_v1 *field;
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    parameter_info_definition_v1->fields[0] = field;
+    field->type_name = "struct_info";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "struct_id";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    parameter_info_definition_v1->fields[1] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "type_name";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    parameter_info_definition_v1->fields[2] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "type_version";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    parameter_info_definition_v1->fields[3] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "type_deref_count";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    parameter_info_definition_v1->fields[4] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "name";
+  }
+
+  declare_and_allocate_anon_struct(struct_info_v1, struct_info_definition_v1, sizeof_struct_info_v1);
+  { // TYPE:DEFINITION struct_info
+    struct_info_definition_v1->struct_id = NULL;
+    struct_info_definition_v1->name = "struct_info";
+    struct_info_definition_v1->version = 1U;
+    struct_info_definition_v1->field_count = 6;
+    struct_info_definition_v1->fields = (void **)calloc(sizeof(void *), struct_info_definition_v1->field_count);
+    struct_info_definition_v1->sizeof_cstr = "sizeof_struct_info_v1";
+
+    // FUNCTION_INFO STRUCT INFO
+    // #define struct_info_v1              \
+//     struct                          \
+//     {                               \
+//         struct_info *struct_id;                \
+//         const char *name;           \
+//         unsigned int version;       \
+//         unsigned int field_count;   \
+//         void **fields;              \
+//         const char *sizeof_cstr;    \
+//     }
+    parameter_info_v1 *field;
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    struct_info_definition_v1->fields[0] = field;
+    field->type_name = "struct_info";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "struct_id";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    struct_info_definition_v1->fields[1] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "type_name";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    struct_info_definition_v1->fields[2] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "version";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    struct_info_definition_v1->fields[3] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "field_count";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    struct_info_definition_v1->fields[4] = field;
+    field->type_name = "parameter_info";
+    field->type_version = 0U;
+    field->type_deref_count = 2;
+    field->name = "fields";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    struct_info_definition_v1->fields[5] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "sizeof_cstr";
+  }
+
+  // NODE STRUCT INFO
+  // declare_and_allocate_anon_struct(struct_info_v1, node_definition_v1, sizeof_struct_info_v1);
+  // node_definition_v1->struct_id.identifier = "struct_info";
+  // node_definition_v1->struct_id.version = 1U;
+  // node_definition_v1->name = "node";
+  // node_definition_v1->version = 1U;
+  // node_definition_v1->field_count = 11;
+  // node_definition_v1->fields = (void **)calloc(sizeof(void *), 7);
+  // node_definition_v1->sizeof_cstr = "sizeof_node_v1";
+
+  // declare_and_allocate_anon_struct(parameter_info_v1, field0, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field0;
+  // field0->type.identifier = "const char *";
+  // field0->type.version = 0U;
+  // field0->name = "name";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field1, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field1;
+  // field1->type.identifier = "node";
+  // field1->type.version = 1U;
+  // field1->name = "parent";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field2, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field2;
+  // field2->type.identifier = "unsigned int";
+  // field2->type.version = 0U;
+  // field2->name = "functions_alloc";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field3, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field3;
+  // field3->type.identifier = "unsigned int";
+  // field3->type.version = 0U;
+  // field3->name = "function_count";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field4, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field4;
+  // field4->type.identifier = "void **";
+  // field4->type.version = 0U;
+  // field4->name = "functions";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field5, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field5;
+  // field5->type.identifier = "unsigned int";
+  // field5->type.version = 0U;
+  // field5->name = "structs_alloc";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field6, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field6;
+  // field6->type.identifier = "unsigned int";
+  // field6->type.version = 0U;
+  // field6->name = "struct_count";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field7, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field7;
+  // field7->type.identifier = "void **";
+  // field7->type.version = 0U;
+  // field7->name = "structs";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field8, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field8;
+  // field8->type.identifier = "unsigned int";
+  // field8->type.version = 0U;
+  // field8->name = "child_count";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field9, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field9;
+  // field9->type.identifier = "unsigned int";
+  // field9->type.version = 0U;
+  // field9->name = "children_alloc";
+  // declare_and_allocate_anon_struct(parameter_info_v1, field10, sizeof_parameter_info_v1);
+  // node_definition_v1->fields[0] = field10;
+  // field10->type.identifier = "void **";
+  // field10->type.version = 0U;
+  // field10->name = "children";
 
   // Instantiate: node global;
   declare_and_allocate_anon_struct(node_v1, global, sizeof_node_v1);
@@ -2243,7 +2429,9 @@ int mc_main(int argc, const char *const *argv)
   global->children = (void **)calloc(sizeof(void *), global->children_alloc);
   global->child_count = 0;
 
-  MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)node_definition_v1));
+  MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)parameter_info_definition_v1));
+  MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)struct_info_definition_v1));
+  // MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)node_definition_v1));
 
   // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
@@ -2297,51 +2485,53 @@ int mc_main(int argc, const char *const *argv)
       ".script\n"
       "dcl int space_index\n"
       "nvi int command_length strlen command\n"
-      "for i 0 command_length\n"
-      "ifs command[i] == ' '\n"
-      "set int space_index i\n"
-      "brk\n"
-      "end\n"
-      "end for\n"
-      "asi int command_remaining_length - command_length space_index - 1\n"
-      "msi 'char *' function_name + command_remaining_length 1\n"
-      "nvk strcpy function_name (+ command + space_index 1)\n"
-      "ass function_name[command_remaining_length] '\\0'\n"
-      "nvi function_info finfo find_function_info nodespace function_name\n"
-      ""
-      "dcs int rind 0\n"
-      "dcl 'char *' responses[32]\n"
-      ""
-      "dcs int linit finfo->parameter_count\n"
-      "ifs finfo->variable_parameter_begin_index >= 0\n"
-      "ass linit finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "for i 0 linit\n"
-      "dcl char provocation[512]\n"
-      "nvk strcpy provocation finfo->parameters[i]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$ASI responses[rind] provocation\n"
-      "ass rind + rind 1\n"
-      "end for\n"
-      "ifs finfo->variable_parameter_begin_index >= 0\n"
-      "dcs int pind finfo->variable_parameter_begin_index\n"
-      "whl 1\n"
-      "dcl char provocation[512]\n"
-      "nvk strcpy provocation finfo->parameters[pind]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$ASI responses[rind] provocation\n"
-      "ass rind + rind 1\n"
-      "ass pind + pind 1\n"
-      "ass pind % pind finfo->parameter_count\n"
-      "ifs pind < finfo->variable_parameter_begin_index\n"
-      "ass pind finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "end\n"
-      "end\n"
-      ""
-      "nvk $SVL function_name $SYA rind &responses\n"
       "|"
       "midgequit|";
+  "for i 0 command_length\n"
+  "ifs command[i] == ' '\n"
+  "set int space_index i\n"
+  "brk\n"
+  "end\n"
+  "end for\n"
+  "asi int command_remaining_length - command_length space_index - 1\n"
+  "msi 'char *' function_name + command_remaining_length 1\n"
+  "nvk strcpy function_name (+ command + space_index 1)\n"
+  "ass function_name[command_remaining_length] '\\0'\n"
+  "nvi 'function_info *' finfo find_function_info nodespace function_name\n"
+  ""
+  "dcs int rind 0\n"
+  "dcl 'char *' responses[32]\n"
+  ""
+  "dcs int linit finfo->parameter_count\n"
+  "ifs finfo->variable_parameter_begin_index >= 0\n"
+  "ass linit finfo->variable_parameter_begin_index\n"
+  "end\n"
+  "for i 0 linit\n"
+  "dcl char provocation[512]\n"
+  "nvk strcpy provocation finfo->parameters[i]->name\n"
+  "nvk strcat provocation \": \"\n"
+  "$ASI responses[rind] provocation\n"
+  "ass rind + rind 1\n"
+  "end for\n"
+  "ifs finfo->variable_parameter_begin_index >= 0\n"
+  "dcs int pind finfo->variable_parameter_begin_index\n"
+  "whl 1\n"
+  "dcl char provocation[512]\n"
+  "nvk strcpy provocation finfo->parameters[pind]->name\n"
+  "nvk strcat provocation \": \"\n"
+  "$ASI responses[rind] provocation\n"
+  "ass rind + rind 1\n"
+  "ass pind + pind 1\n"
+  "ass pind % pind finfo->parameter_count\n"
+  "ifs pind < finfo->variable_parameter_begin_index\n"
+  "ass pind finfo->variable_parameter_begin_index\n"
+  "end\n"
+  "end\n"
+  "end\n"
+  ""
+  "nvk $SVL function_name $SYA rind &responses\n"
+  "|"
+  "midgequit|";
   // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
   // What is the name of the function?
   "construct_and_attach_child_node|"
@@ -2609,7 +2799,7 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
     if (script->awaiting_data_set_index >= 0)
       continue;
 
-    printf("script->sequence_uid=%u\n", script->sequence_uid);
+    // printf("script->sequence_uid=%u\n", script->sequence_uid);
     if (script->segments_complete > script->segment_count)
     {
       // Cleanup
@@ -2620,16 +2810,16 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
     strcpy(buf, SCRIPT_NAME_PREFIX);
 
     char **output = NULL;
-    printf("script entered: %i / %i\n", script->segments_complete, script->segment_count);
+    printf("script entered: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
     sprintf(buf, "{\n"
                  "void *p_script = (void *)%p;\n"
                  "%s%u(p_script);\n"
                  "}",
             script, SCRIPT_NAME_PREFIX, script->script_uid);
     clint_process(buf);
-    printf("script exited\n");
+    printf("script exited: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
 
-    if (script->segments_complete > script->segment_count)
+    if (script->segments_complete >= script->segment_count)
     {
       // Cleanup & continue
 
@@ -2651,7 +2841,7 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
 
     if (!script->response)
     {
-      MCerror(542852, "TODO");
+      MCerror(542852, "TODO: response=%s", script->response);
     }
 
     // Process the Focused Issue
@@ -2916,6 +3106,10 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     return 0;
   }
   default:
+    if (focused_issue->type == 8)
+    {
+      MCerror(-241, "Temp got to end of script:%i", focused_issue->type)
+    }
     MCerror(-241, "UnhandledType:%i", focused_issue->type)
   }
 
