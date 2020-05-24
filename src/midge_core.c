@@ -707,8 +707,8 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
 
   script_local_v1 *kvp;
   allocate_anon_struct(kvp, sizeof_script_local_v1);
-  kvp->type = type_identifier;
-  kvp->identifier = var_name;
+  allocate_and_copy_cstr(kvp->type, type_identifier);
+  allocate_and_copy_cstr(kvp->identifier, var_name);
   kvp->locals_index = script->local_count;
   kvp->replacement_code = (char *)malloc(sizeof(char) * (64 + strlen(kvp->type)));
 
@@ -719,33 +719,23 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   {
     declare_and_assign_anon_struct(struct_info_v1, sinfo, kvp->struct_info);
     sprintf(kvp->replacement_code, "(*(%s_v%u **)script->locals[%u])", kvp->type, sinfo->version, kvp->locals_index);
-    printf("\nkrpstcde:%s\n", kvp->replacement_code);
+    // printf("\nkrpstcde:%s\n", kvp->replacement_code);
 
     allocate_and_copy_cstr(size_of_var, sinfo->sizeof_cstr);
   }
   else
   {
     sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", kvp->type, kvp->locals_index);
-    printf("\nkrpnncde:%s,%s\n", type_identifier, kvp->replacement_code);
+    // printf("\nkrpnncde:%s,%s\n", type_identifier, kvp->replacement_code);
 
     size_of_var = (char *)malloc(sizeof(char) * (8 + 1 + strlen(kvp->type)));
     sprintf(size_of_var, "sizeof(%s)", kvp->type);
   }
 
   ++script->local_count;
-  printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
+  // printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
 
-  for (int i = 0; i < *local_indexes_count; ++i)
-  {
-    declare_and_assign_anon_struct(script_local_v1, cvp, local_index[i]);
-    printf("cvpCOL[%i] type:%s identifier:%s lind:%u repcode:%s\n", i, cvp->type, cvp->identifier, cvp->locals_index, cvp->replacement_code);
-  }
   append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
-  for (int i = 0; i < *local_indexes_count; ++i)
-  {
-    declare_and_assign_anon_struct(script_local_v1, cvp, local_index[i]);
-    printf("cvpCOL[%i] type:%s identifier:%s lind:%u repcode:%s\n", i, cvp->type, cvp->identifier, cvp->locals_index, cvp->replacement_code);
-  }
 
   sprintf(buf, "script->locals[%u] = (void *)malloc(%s);\n", kvp->locals_index, size_of_var);
 
@@ -784,12 +774,12 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
 
     if (!strcmp(primary, kvp->identifier))
     {
-      printf("match!: %s=%s:%s\n", primary, kvp->identifier, kvp->replacement_code);
+      // printf("match!: %s=%s:%s\n", primary, kvp->identifier, kvp->replacement_code);
       break;
     }
     else
     {
-      printf("NOmatch!: %s=%s:%s\n", primary, kvp->identifier, kvp->replacement_code);
+      // printf("NOmatch!: %s=%s:%s\n", primary, kvp->identifier, kvp->replacement_code);
     }
 
     kvp = NULL;
@@ -808,7 +798,7 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
   {
     *output = (char *)malloc(sizeof(char) * (strlen(kvp->replacement_code) + strlen(key) - m + 1));
     sprintf(*output, "%s%s", kvp->replacement_code, key + m);
-    printf("*output='%s'\n", *output);
+    // printf("*output='%s'\n", *output);
     return 0;
   }
   MCerror(24524, "TODO");
@@ -1614,7 +1604,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
         char *replace_name;
         MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
-        printf("nvi gen replace_name:%s=%s\n", var_name, replace_name);
+        // printf("nvi gen replace_name:%s=%s\n", var_name, replace_name);
         buf[0] = '\0';
         sprintf(buf, "%s = %s(", replace_name, function_name);
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1715,7 +1705,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       break;
     default:
     {
-      printf("\ntranslation:\n%s\n\n", translation);
+      // printf("\ntranslation:\n%s\n\n", translation);
       MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "UnhandledStatement"));
       return -4857;
     }
