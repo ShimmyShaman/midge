@@ -730,12 +730,15 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
     strcpy(substituted_type, sinfo->declared_mc_name);
     strcat(substituted_type, kvp->type + strlen(raw_type_id));
     substituted_type[strlen(kvp->type) - strlen(raw_type_id) + strlen(sinfo->declared_mc_name)] = '\0';
+    printf("kt:%s rt:%s dmc:%s st:%s\n", kvp->type, raw_type_id, sinfo->declared_mc_name, substituted_type);
 
     sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", substituted_type, kvp->locals_index);
     // printf("\nkrpstcde:'%s'\n", kvp->replacement_code);
 
+    size_of_var = (char *)malloc(sizeof(char) * (8 + 1 + strlen(substituted_type)));
+    sprintf(size_of_var, "sizeof(%s)", substituted_type);
+
     free(substituted_type);
-    allocate_and_copy_cstr(size_of_var, sinfo->sizeof_cstr);
   }
   else
   {
@@ -1633,7 +1636,6 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(parse_past_identifier(code, &i, &var_name, false, false));
         MCcall(parse_past(code, &i, " "));
 
-        buf[0] = '\0';
         MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
                                            type_identifier, var_name));
         append_to_cstr(&translation_alloc, &translation, buf);
@@ -1641,9 +1643,6 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         char *replace_name;
         MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
         // printf("nvi gen replace_name:%s=%s\n", var_name, replace_name);
-        buf[0] = '\0';
-        sprintf(buf, "%s = ", replace_name);
-        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // Invoke
         // Function Name
@@ -1651,11 +1650,23 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(parse_past_identifier(code, &i, &function_name, true, false));
 
         function_info_v1 *function_info;
-        mcqck_find_function_info((void *)nodespace, function_name, (void *)&function_info);
+        mcqck_find_function_info((void *)nodespace, function_name, (void **)&function_info);
         if (!function_info)
         {
-          sprintf(buf, "%s(", function_name);
+          sprintf(buf, "%s = %s(", replace_name, function_name);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        }
+        else
+        {
+          if (!strcmp(function_info->return_type, "void"))
+          {
+            MCerror(-1002, "compile error: cannot assign from a void function!");
+          }
+          else
+          {
+            sprintf(buf, "mc_vargs[0] = (void *)&%s;\n", replace_name);
+            MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          }
         }
 
         int arg_index = 0;
@@ -1670,7 +1681,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           if (replace_name)
             arg_entry = replace_name;
           if (function_info)
-            sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index, arg_entry);
+            sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, arg_entry);
           else
             sprintf(buf, "%s%s", arg_index ? ", " : "", arg_entry);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1678,9 +1689,9 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           free(arg_name);
         }
 
-        if (!function_info)
+        if (function_info)
         {
-          sprintf(buf, "%s(%i, mc_vargs", function_name, arg_index);
+          sprintf(buf, "%s(%i, mc_vargs", function_name, arg_index + 1);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         }
 
@@ -2295,7 +2306,7 @@ int mc_main(int argc, const char *const *argv)
   // allocate_midge_field_info = &allocate_midge_field_info_v1;
   // define_struct = &define_struct_v1;
   // allocate_from_definition = &allocate_from_definition_v1;
-  declare_function_pointer = &declare_function_pointer_v1;
+  // declare_function_pointer = &declare_function_pointer_v1;
   // obtain_from_index = &obtain_from_index_v1;
 
   declare_and_allocate_anon_struct(struct_info_v1, parameter_info_definition_v1, sizeof_struct_info_v1);
@@ -2419,17 +2430,18 @@ int mc_main(int argc, const char *const *argv)
     function_info_definition_v1->sizeof_cstr = "sizeof_function_info_v1";
 
     // FUNCTION_INFO STRUCT INFO
-    //     struct                          \
-//     {                               \
-        void *struct_id;                             \
-        const char *name;                            \
-        unsigned int latest_iteration;               \
-        const char *return_type;                     \
-        unsigned int parameter_count;                \
-        void **parameters;                           \
-        unsigned int variable_parameter_begin_index; \
-        unsigned int struct_usage_count;             \
-        void **struct_usage;                         \
+    // #define function_info_v1                             \
+//     struct                                           \
+//     {                                                \
+//         void *struct_id;                             \
+//         const char *name;                            \
+//         unsigned int latest_iteration;               \
+//         const char *return_type;                     \
+//         unsigned int parameter_count;                \
+//         void **parameters;                           \
+//         unsigned int variable_parameter_begin_index; \
+//         unsigned int struct_usage_count;             \
+//         void **struct_usage;                         \
 //     }
     parameter_info_v1 *field;
     allocate_anon_struct(field, sizeof_parameter_info_v1);
@@ -2486,6 +2498,33 @@ int mc_main(int argc, const char *const *argv)
     field->type_version = 0U;
     field->type_deref_count = 2;
     field->name = "struct_usage";
+  }
+
+  declare_and_allocate_anon_struct(function_info_v1, find_function_info_definition_v1, sizeof_function_info_v1);
+  {
+    find_function_info_definition_v1->struct_id = NULL;
+    find_function_info_definition_v1->name = "find_function_info";
+    find_function_info_definition_v1->latest_iteration = 1U;
+    find_function_info_definition_v1->return_type = "function_info *";
+    find_function_info_definition_v1->parameter_count = 2;
+    find_function_info_definition_v1->parameters = (void **)malloc(sizeof(void *) * find_function_info_definition_v1->parameter_count);
+    find_function_info_definition_v1->variable_parameter_begin_index = -1;
+    find_function_info_definition_v1->struct_usage_count = 0;
+    find_function_info_definition_v1->struct_usage = NULL;
+
+    parameter_info_v1 *field;
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    function_info_definition_v1->fields[0] = field;
+    field->type_name = "node";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "nodespace";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    function_info_definition_v1->fields[1] = field;
+    field->type_name = "char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "function_name";
   }
 
   // NODE STRUCT INFO
@@ -2572,6 +2611,10 @@ int mc_main(int argc, const char *const *argv)
   MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)struct_info_definition_v1));
   MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)function_info_definition_v1));
   // MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)node_definition_v1));
+
+  MCcall(append_to_collection(&global->functions, &global->functions_alloc, &global->function_count, (void *)find_function_info_definition_v1));
+  clint_process("int (*find_function_info)(int, void **);");
+  clint_process("find_function_info = &find_function_info_v1;");
 
   // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
