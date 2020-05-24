@@ -185,25 +185,22 @@ enum script_process_state
         unsigned int version;   \
     }
 #define sizeof_struct_id_v1 (sizeof(void *) * 2)
-#define struct_info_v1            \
-    struct                        \
-    {                             \
-        void *struct_id;          \
-        const char *name;         \
-        unsigned int version;     \
-        unsigned int field_count; \
-        void **fields;            \
-        const char *sizeof_cstr;  \
+#define struct_info_v1                \
+    struct                            \
+    {                                 \
+        void *struct_id;              \
+        const char *name;             \
+        unsigned int version;         \
+        const char *declared_mc_name; \
+        unsigned int field_count;     \
+        void **fields;                \
+        const char *sizeof_cstr;      \
     }
-#define sizeof_struct_info_v1 (sizeof(void *) * 6)
+#define sizeof_struct_info_v1 (sizeof(void *) * 7)
 #define function_info_v1                             \
     struct                                           \
     {                                                \
-        struct                                       \
-        {                                            \
-            const char *identifier;                  \
-            unsigned int version;                    \
-        } struct_id;                                 \
+        void *struct_id;                             \
         const char *name;                            \
         unsigned int latest_iteration;               \
         const char *return_type;                     \
@@ -213,15 +210,15 @@ enum script_process_state
         unsigned int struct_usage_count;             \
         void **struct_usage;                         \
     }
-#define sizeof_function_info_v1 (sizeof(void *) * 10)
-#define parameter_info_v1          \
-    struct                         \
-    {                              \
-        void *struct_id;           \
-        const char *type_name;     \
-        unsigned int type_version; \
+#define sizeof_function_info_v1 (sizeof(void *) * 9)
+#define parameter_info_v1              \
+    struct                             \
+    {                                  \
+        void *struct_id;               \
+        const char *type_name;         \
+        unsigned int type_version;     \
         unsigned int type_deref_count; \
-        const char *name;          \
+        const char *name;              \
     }
 #define sizeof_parameter_info_v1 (sizeof(void *) * 4)
 
@@ -315,6 +312,10 @@ enum script_process_state
         void *items;                \
     }
 #define sizeof_void_collection_v1 (sizeof(void *) * 5)
+
+typedef struct_info_v1 mc_struct_info_v1;
+typedef parameter_info_v1 mc_parameter_info_v1;
+typedef function_info_v1 mc_function_info_v1;
 
 #define allocate_anon_struct(ptr_to_struct, size) \
     mc_dvp = (void **)&ptr_to_struct;             \
