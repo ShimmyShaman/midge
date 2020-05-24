@@ -762,17 +762,18 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
 
   char *primary = NULL;
   int m = -1;
+  char breaker = 'n';
   for (int i = 0;; ++i)
   {
-    if (key[i] == '-')
+    if (!isalnum(key[i]) && key[i] != '_')
     {
       primary = (char *)malloc(sizeof(char) * (i + 1));
       strncpy(primary, key, i);
       primary[i] = '\0';
       m = i;
-    }
-    else if (key[i] == '\0')
+      breaker = key[i];
       break;
+    }
   }
   if (primary == NULL)
   {
@@ -799,46 +800,87 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
   if (!kvp)
     return 0;
 
-  if (m < 0)
+  switch (breaker)
   {
+  case '\0':
+  {
+    // Simple replacement
     *output = kvp->replacement_code;
     return 0;
   }
-
-  if (!kvp->struct_info)
+  case '-':
   {
-    *output = (char *)malloc(sizeof(char) * (strlen(kvp->replacement_code) + strlen(key) - m + 1));
-    sprintf(*output, "%s%s", kvp->replacement_code, key + m);
-    // printf("*output='%s'\n", *output);
-    return 0;
-  }
-  MCerror(24524, "TODO");
-
-  parse_past(key, &m, "->");
-  *output = (char *)malloc(sizeof(char) * (2 + strlen(kvp->replacement_code) + 1));
-  sprintf(*output, "%s->", kvp->replacement_code);
-
-  // Determine the child field type
-  struct_info_v1 *parent_struct_info;
-  assign_anon_struct(parent_struct_info, kvp->struct_info);
-  char *member_type = NULL;
-  int n = -1;
-  for (int i = m;; ++i)
-  {
-    if (key[i] == '-')
+    // -> Pointer to member
+    if (!kvp->struct_info)
     {
-      primary = (char *)malloc(sizeof(char) * (i - m + 1));
-      n = i;
+      *output = (char *)malloc(sizeof(char) * (strlen(kvp->replacement_code) + strlen(key) - m + 1));
+      sprintf(*output, "%s%s", kvp->replacement_code, key + m);
+      // printf("*output='%s'\n", *output);
+      return 0;
     }
-    else if (key[i] == '\0')
-      break;
+
+    parse_past(key, &m, "->");
+    primary = (char *)malloc(sizeof(char) * (2 + strlen(kvp->replacement_code) + 1));
+    sprintf(primary, "%s->", kvp->replacement_code);
+
+    // Determine the child field type
+    struct_info_v1 *parent_struct_info;
+    assign_anon_struct(parent_struct_info, kvp->struct_info);
+    char *secondary = NULL;
+    // Get the member name
+    breaker = 'n';
+    for (int i = m;; ++i)
+    {
+      if (!isalnum(key[i]) && key[i] != '_')
+      {
+        secondary = (char *)malloc(sizeof(char) * (i - m + 1));
+        strncpy(secondary, key + m, i - m);
+        secondary[i - m] = '\0';
+        m = i;
+        breaker = key[i];
+        break;
+      }
+    }
+    switch (breaker)
+    {
+    case '\0':
+    {
+      printf("primary:'%s'\n", primary);
+      printf("secondary:'%s'\n", secondary);
+
+      *output = (char *)malloc(sizeof(char) * (strlen(primary) + strlen(secondary) + 1));
+      strcpy(*output, primary);
+      strcat(*output, secondary);
+      (*output)[strlen(primary) + strlen(secondary)] = '\0';
+
+      free(primary);
+      free(secondary);
+      return 0;
+    }
+    // case '-':
+    // {
+    // }
+    // break;
+    default:
+    {
+      MCerror(24530, "Not handled:'%c'  key=%s", breaker, key);
+    }
+    }
+
+    // if (n < 0)
+    // {
+    // }
+    // else
+    // {
+    //   MCerror(24526, "TODO");
+    // }
+
+    MCerror(24524, "TODO");
   }
-  if (n < 0)
+  default:
   {
-    // This is the last member access
-    primary = (char *)malloc(sizeof(char) * (strlen(key) - m + 1));
-    strcpy(primary, key + m);
-    primary[strlen(key) - m] = '\0';
+    MCerror(24528, "Not handled:'%c'  key=%s", breaker, key);
+  }
   }
 }
 
@@ -1208,10 +1250,10 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
     break;
     case 'd':
     {
-      // dcl
       MCcall(parse_past(code, &i, "dc"));
       if (code[i] == 'l')
       {
+        // dcl
         MCcall(parse_past(code, &i, "l"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
@@ -1281,6 +1323,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       }
       else if (code[i] == 's')
       {
+        // dcs
         MCcall(parse_past(code, &i, "s"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
@@ -2716,10 +2759,10 @@ int mc_main(int argc, const char *const *argv)
       ""
       "dcs int rind 0\n"
       "dcl 'char *' responses[32]\n"
+      ""
+      "dcs int linit finfo->parameter_count\n"
       "|"
       "midgequit|";
-  ""
-  "dcs int linit finfo->parameter_count\n"
   "ifs finfo->variable_parameter_begin_index >= 0\n"
   "ass linit finfo->variable_parameter_begin_index\n"
   "end\n"
