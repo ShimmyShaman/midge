@@ -1519,7 +1519,18 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       }
 
       append_to_cstr(&translation_alloc, &translation, "{\n");
-      buf[0] = '\0';
+
+      for (int j = 0; j < local_indexes_count; ++j)
+      {
+        declare_and_assign_anon_struct(script_local_v1, local, local_index[j]);
+        if (local->in_scope && !strcmp(iterator, local->identifier))
+        {
+          // Variable Identity Conflict
+          MCerror(241414, "Variable with same identity already declared in this scope");
+        }
+      }
+MCerror(572, "TODO");
+
       char *int_cstr;
       allocate_and_copy_cstr(int_cstr, "int");
       MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
@@ -2761,12 +2772,12 @@ int mc_main(int argc, const char *const *argv)
       "dcl 'char *' responses[32]\n"
       ""
       "dcs int linit finfo->parameter_count\n"
+      "ifs finfo->variable_parameter_begin_index >= 0\n"
+      "ass linit finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "for i 0 linit\n"
       "|"
       "midgequit|";
-  "ifs finfo->variable_parameter_begin_index >= 0\n"
-  "ass linit finfo->variable_parameter_begin_index\n"
-  "end\n"
-  "for i 0 linit\n"
   "dcl char provocation[512]\n"
   "nvk strcpy provocation finfo->parameters[i]->name\n"
   "nvk strcat provocation \": \"\n"

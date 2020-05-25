@@ -125,8 +125,9 @@ enum script_process_state
         unsigned int locals_index; \
         char *replacement_code;    \
         void *struct_info;         \
+        bool in_scope;             \
     }
-#define sizeof_script_local_v1 (sizeof(void *) * 5)
+#define sizeof_script_local_v1 (sizeof(void *) * 6)
 
 #define process_unit_v1              \
     struct                           \
@@ -197,18 +198,18 @@ enum script_process_state
         const char *sizeof_cstr;      \
     }
 #define sizeof_struct_info_v1 (sizeof(void *) * 7)
-#define function_info_v1                             \
-    struct                                           \
-    {                                                \
-        void *struct_id;                             \
-        const char *name;                            \
-        unsigned int latest_iteration;               \
-        const char *return_type;                     \
-        unsigned int parameter_count;                \
-        void **parameters;                           \
-        unsigned int variable_parameter_begin_index; \
-        unsigned int struct_usage_count;             \
-        void **struct_usage;                         \
+#define function_info_v1                    \
+    struct                                  \
+    {                                       \
+        void *struct_id;                    \
+        const char *name;                   \
+        unsigned int latest_iteration;      \
+        const char *return_type;            \
+        unsigned int parameter_count;       \
+        void **parameters;                  \
+        int variable_parameter_begin_index; \
+        unsigned int struct_usage_count;    \
+        void **struct_usage;                \
     }
 #define sizeof_function_info_v1 (sizeof(void *) * 9)
 #define parameter_info_v1              \
