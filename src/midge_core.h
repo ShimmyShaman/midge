@@ -125,7 +125,7 @@ enum script_process_state
         unsigned int locals_index; \
         char *replacement_code;    \
         void *struct_info;         \
-        bool in_scope;             \
+        int scope_depth;  \
     }
 #define sizeof_script_local_v1 (sizeof(void *) * 6)
 

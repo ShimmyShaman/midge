@@ -671,26 +671,65 @@ int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
   int n = strlen(extra);
   if (strlen(*cstr) + n + 1 >= *allocated_size)
   {
-    unsigned int new_allocated_size = *allocated_size + 100 + *allocated_size / 100;
+    unsigned int new_allocated_size = n + *allocated_size + 100 + (n + *allocated_size) / 10;
+    printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);
     char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    printf("atc-4\n");
     memcpy(newptr, *cstr, sizeof(char) * *allocated_size);
+    printf("atc-5\n");
     free(*cstr);
+    printf("atc-6\n");
     *cstr = newptr;
+    printf("atc-7\n");
     *allocated_size = new_allocated_size;
+    printf("atc-8\n");
   }
 
+  printf("atc-9\n");
   strcat(*cstr, extra);
+  printf("atc-10\n");
 
   return 0;
 }
 
 int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned int *local_indexes_alloc, unsigned int *local_indexes_count, void *p_script, char *buf,
-                                char *type_identifier, char *var_name)
+                                int scope_depth, char *type_identifier, char *var_name)
 {
   int res;
   void **mc_dvp;
 
   declare_and_assign_anon_struct(script_v1, script, p_script);
+
+  // Reuse out-of-scope declarations, and check for in-scope conflicts
+  for (int j = 0; j < *local_indexes_count; ++j)
+  {
+    declare_and_assign_anon_struct(script_local_v1, local, (*local_index)[j]);
+    // printf("type:%s identifier:%s lind:%u repcode:%s\n", local->type, local->identifier, local->locals_index, local->replacement_code);
+    //   printf("var_name:%s\n", var_name);
+    // printf("here-2\n");
+    if (!strcmp(var_name, local->identifier))
+    {
+      // printf("here-6\n");
+      if (local->scope_depth >= 0)
+      {
+        // Variable Identity Conflict with active local
+        MCerror(241414, "Variable with same identity already declared in this scope");
+      }
+      else if (!strcmp(type_identifier, local->type))
+      {
+        // Reset it
+        local->scope_depth = scope_depth;
+        buf[0] = '\0';
+        return 0;
+      }
+      else
+      {
+        MCerror(8582, "Reusing out of scope function local again. TODO in future allowing this");
+      }
+    }
+    // printf("here-4\n");
+  }
+  // printf("here-3\n");
 
   // Strip type of all deref operators
   char *raw_type_id = NULL;
@@ -699,7 +738,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
     if (type_identifier[i] == ' ' || type_identifier[i] == '*' || type_identifier[i] == '\0')
     {
       raw_type_id = (char *)malloc(sizeof(char) * (i + 1));
-      strcpy(raw_type_id, type_identifier);
+      strncpy(raw_type_id, type_identifier, i);
       raw_type_id[i] = '\0';
       break;
     }
@@ -710,6 +749,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   allocate_and_copy_cstr(kvp->type, type_identifier);
   allocate_and_copy_cstr(kvp->identifier, var_name);
   kvp->locals_index = script->local_count;
+  kvp->scope_depth = scope_depth;
   kvp->replacement_code = (char *)malloc(sizeof(char) * (64 + strlen(kvp->type)));
 
   // -- Determine if the structure is midge-specified
@@ -743,7 +783,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   }
 
   ++script->local_count;
-  // printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
+  printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
 
   append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
 
@@ -1039,6 +1079,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   unsigned int local_indexes_alloc = 20;
   unsigned int local_indexes_count = 0;
   void **local_index = (void **)malloc(sizeof(void *) * local_indexes_alloc);
+  int local_scope_depth = 0;
 
   script->local_count = 0;
   script->segment_count = 0;
@@ -1050,6 +1091,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   bool loop = true;
   while (loop)
   {
+    printf("i:%i  '%c'\n", i, code[i]);
     switch (code[i])
     {
     case ' ':
@@ -1279,43 +1321,40 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           }
 
           // Add deref to type
-          char *derefenced_type_identifier;
-          for (int j = strlen(type_identifier) - 1;; --j)
-          {
-            if (type_identifier[j] == '*')
-            {
-              derefenced_type_identifier = (char *)malloc(sizeof(char) * (j + 1));
-              strcpy(derefenced_type_identifier, type_identifier);
-              derefenced_type_identifier[j] = '\0';
-              break;
-            }
-            if (isalpha(type_identifier[j]))
-            {
-              MCerror(4242, "no pointer for array?");
-            }
-          }
+          char *new_type_identifier = (char *)malloc(sizeof(char) * (strlen(type_identifier) + 2));
+          strcpy(new_type_identifier, type_identifier);
+          strcat(new_type_identifier, "*");
+          new_type_identifier[strlen(type_identifier) + 1] = '\0';
 
           // Normal Declaration
           MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                             type_identifier, var_name));
+                                             local_scope_depth, new_type_identifier, var_name));
+          printf("dcl-here-0\n");
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          printf("dcl-here-1\n");
 
           // Allocate the array
           char *replace_var_name;
           MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_var_name));
+          printf("dcl-here-2\n");
 
-          sprintf(buf, "%s = (%s)malloc(sizeof(%s) * (%s));\n", replace_var_name, type_identifier, derefenced_type_identifier, left);
+          sprintf(buf, "%s = (%s)malloc(sizeof(%s) * (%s));\n", replace_var_name, new_type_identifier, type_identifier, left);
+          printf("dcl-here-3\n");
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          printf("dcl-here-4\n");
 
           free(left);
-          free(derefenced_type_identifier);
+          printf("dcl-here-5\n");
+          free(new_type_identifier);
+          printf("dcl-here-6\n");
           printf("Translation:\n%s\n", translation);
+          printf("dcl-here-7\n");
         }
         else
         {
           // Normal Declaration
           MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                             type_identifier, var_name));
+                                             local_scope_depth, type_identifier, var_name));
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         }
         free(var_name);
@@ -1347,7 +1386,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
         // Generate Local
         MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                           type_identifier, var_name));
+                                           local_scope_depth, type_identifier, var_name));
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // Assign
@@ -1373,15 +1412,30 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       MCcall(parse_past(code, &i, "end"));
       MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
 
+      --local_scope_depth;
+
       if (code[i] != '\n' && code[i] != '\0')
       {
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
         MCcall(parse_past(code, &i, "for"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
 
+        --local_scope_depth;
+
         if (code[i] != '\n' && code[i] != '\0')
         {
           MCerror(-4831, "expected statement end");
+        }
+      }
+
+      // Manage variable scope
+      for (int j = 0; j < local_indexes_count; ++j)
+      {
+        declare_and_assign_anon_struct(script_local_v1, local, local_index[j]);
+        if (local->scope_depth > local_scope_depth)
+        {
+          // Disable the local variable
+          local->scope_depth = -1;
         }
       }
     }
@@ -1443,10 +1497,10 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCerror(-4864, "expected statement end:'%c'", code[i]);
       }
 
-      buf[0] = '\0';
       sprintf(buf, "if(%s %s %s) {\n", left, comparator, right);
-      printf("ifs:%s", buf);
       MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+      ++local_scope_depth;
 
       free(left);
       free(comparator);
@@ -1519,29 +1573,19 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       }
 
       append_to_cstr(&translation_alloc, &translation, "{\n");
-
-      for (int j = 0; j < local_indexes_count; ++j)
-      {
-        declare_and_assign_anon_struct(script_local_v1, local, local_index[j]);
-        if (local->in_scope && !strcmp(iterator, local->identifier))
-        {
-          // Variable Identity Conflict
-          MCerror(241414, "Variable with same identity already declared in this scope");
-        }
-      }
-MCerror(572, "TODO");
+      ++local_scope_depth;
 
       char *int_cstr;
       allocate_and_copy_cstr(int_cstr, "int");
       MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                         int_cstr, iterator));
+                                         local_scope_depth, int_cstr, iterator));
       append_to_cstr(&translation_alloc, &translation, buf);
       char *iterator_replace;
       MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, iterator, &iterator_replace));
 
-      buf[0] = '\0';
       sprintf(buf, "for(%s = %s; %s < %s; ++%s) {\n", iterator_replace, initiate_final, iterator_replace, maximum_final, iterator_replace);
       append_to_cstr(&translation_alloc, &translation, buf);
+      ++local_scope_depth;
 
       free(initiate);
       free(maximum);
@@ -1576,7 +1620,7 @@ MCerror(572, "TODO");
 
         // Script Local
         MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                           type_identifier, var_name));
+                                           local_scope_depth, type_identifier, var_name));
         append_to_cstr(&translation_alloc, &translation, buf);
 
         char *replace_name;
@@ -1696,7 +1740,7 @@ MCerror(572, "TODO");
         MCcall(parse_past(code, &i, " "));
 
         MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                           type_identifier, var_name));
+                                           local_scope_depth, type_identifier, var_name));
         append_to_cstr(&translation_alloc, &translation, buf);
 
         char *replace_name;
@@ -2589,7 +2633,7 @@ int mc_main(int argc, const char *const *argv)
     declare_function_pointer_definition_v1->name = "declare_function_pointer";
     declare_function_pointer_definition_v1->latest_iteration = 1U;
     declare_function_pointer_definition_v1->return_type = "void";
-    declare_function_pointer_definition_v1->parameter_count = 2;
+    declare_function_pointer_definition_v1->parameter_count = 4;
     declare_function_pointer_definition_v1->parameters = (void **)malloc(sizeof(void *) * declare_function_pointer_definition_v1->parameter_count);
     declare_function_pointer_definition_v1->variable_parameter_begin_index = -1;
     declare_function_pointer_definition_v1->struct_usage_count = 0;
@@ -2776,9 +2820,9 @@ int mc_main(int argc, const char *const *argv)
       "ass linit finfo->variable_parameter_begin_index\n"
       "end\n"
       "for i 0 linit\n"
+      "dcl char provocation[512]\n"
       "|"
       "midgequit|";
-  "dcl char provocation[512]\n"
   "nvk strcpy provocation finfo->parameters[i]->name\n"
   "nvk strcat provocation \": \"\n"
   "$ASI responses[rind] provocation\n"
