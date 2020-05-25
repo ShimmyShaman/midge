@@ -125,7 +125,7 @@ enum script_process_state
         unsigned int locals_index; \
         char *replacement_code;    \
         void *struct_info;         \
-        int scope_depth;  \
+        int scope_depth;           \
     }
 #define sizeof_script_local_v1 (sizeof(void *) * 6)
 
@@ -206,7 +206,7 @@ enum script_process_state
         unsigned int latest_iteration;      \
         const char *return_type;            \
         unsigned int parameter_count;       \
-        void **parameters;                  \
+        mc_parameter_info_v1 **parameters;  \
         int variable_parameter_begin_index; \
         unsigned int struct_usage_count;    \
         void **struct_usage;                \

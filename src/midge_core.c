@@ -419,7 +419,7 @@ int find_function_info_v1(int argc, void **argv)
     MCerror(-848, "Incorrect argument count");
   }
 
-  void **function_info = *(void ***)argv[0];
+  void **function_info = (void **)argv[0];
   void *vp_nodespace = *(void **)argv[1];
   char *function_name = *(char **)argv[2];
 
@@ -446,7 +446,7 @@ int find_function_info_v1(int argc, void **argv)
 int mcqck_find_function_info(void *vp_nodespace, char *function_name, void **function_info)
 {
   void *vargs[3];
-  vargs[0] = &function_info;
+  vargs[0] = function_info;
   vargs[1] = &vp_nodespace;
   vargs[2] = &function_name;
   int res;
@@ -2099,7 +2099,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   function_info->latest_iteration = 0U;
   function_info->return_type = return_type;
   function_info->parameter_count = parameter_count;
-  function_info->parameters = (void **)malloc(sizeof(void *) * parameter_count);
+  function_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * parameter_count);
   function_info->variable_parameter_begin_index = variable_parameter_begin_index;
   unsigned int struct_usage_alloc = 2;
   function_info->struct_usage = (void **)malloc(sizeof(void *) * struct_usage_alloc);
@@ -2138,7 +2138,7 @@ int declare_function_pointer_v1(int argc, void **argv)
       parameter_info->type_version = 0;
 
     parameter_info->name = (char *)parameters[2 + i * 2 + 1];
-    function_info->parameters[i] = (void *)parameter_info;
+    function_info->parameters[i] = (mc_parameter_info_v1 *)parameter_info;
     // printf("dfp>set param[%i]=%s %s\n", i, parameter_info->type, parameter_info->name);
   }
   MCcall(append_to_collection(&nodespace->functions, &nodespace->functions_alloc, &nodespace->function_count, function_info));
@@ -2626,12 +2626,12 @@ int mc_main(int argc, const char *const *argv)
     find_function_info_definition_v1->latest_iteration = 1U;
     find_function_info_definition_v1->return_type = "function_info *";
     find_function_info_definition_v1->parameter_count = 2;
-    find_function_info_definition_v1->parameters = (void **)malloc(sizeof(void *) * find_function_info_definition_v1->parameter_count);
+    find_function_info_definition_v1->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * find_function_info_definition_v1->parameter_count);
     find_function_info_definition_v1->variable_parameter_begin_index = -1;
     find_function_info_definition_v1->struct_usage_count = 0;
     find_function_info_definition_v1->struct_usage = NULL;
 
-    parameter_info_v1 *field;
+    mc_parameter_info_v1 *field;
     allocate_anon_struct(field, sizeof_parameter_info_v1);
     find_function_info_definition_v1->parameters[0] = field;
     field->type_name = "node";
@@ -2653,12 +2653,12 @@ int mc_main(int argc, const char *const *argv)
     declare_function_pointer_definition_v1->latest_iteration = 1U;
     declare_function_pointer_definition_v1->return_type = "void";
     declare_function_pointer_definition_v1->parameter_count = 4;
-    declare_function_pointer_definition_v1->parameters = (void **)malloc(sizeof(void *) * declare_function_pointer_definition_v1->parameter_count);
+    declare_function_pointer_definition_v1->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * declare_function_pointer_definition_v1->parameter_count);
     declare_function_pointer_definition_v1->variable_parameter_begin_index = -1;
     declare_function_pointer_definition_v1->struct_usage_count = 0;
     declare_function_pointer_definition_v1->struct_usage = NULL;
 
-    parameter_info_v1 *field;
+    mc_parameter_info_v1 *field;
     allocate_anon_struct(field, sizeof_parameter_info_v1);
     declare_function_pointer_definition_v1->parameters[0] = field;
     field->type_name = "node";
@@ -2751,6 +2751,9 @@ int mc_main(int argc, const char *const *argv)
   // field10->type.version = 0U;
   // field10->name = "children";
 
+  // void *function = NULL;
+  // find_function_info_v1()
+
   // Instantiate: node global;
   declare_and_allocate_anon_struct(node_v1, global, sizeof_node_v1);
   global->name = "global";
@@ -2830,21 +2833,22 @@ int mc_main(int argc, const char *const *argv)
       "nvk strcpy function_name (+ command + space_index 1)\n"
       "ass function_name[command_remaining_length] '\\0'\n"
       "nvi 'function_info *' finfo find_function_info nodespace function_name\n"
-      ""
-      "dcs int rind 0\n"
-      "dcl 'char *' responses[32]\n"
-      ""
-      "dcs int linit finfo->parameter_count\n"
-      "ifs finfo->variable_parameter_begin_index >= 0\n"
-      "ass linit finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "for i 0 linit\n"
-      "dcl char provocation[512]\n"
-      "nvk strcpy provocation finfo->parameters[i]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$pi responses[rind] provocation\n"
-      "ass rind + rind 1\n"
-      "end for\n"
+  ""
+  "dcs int rind 0\n"
+  "dcl 'char *' responses[32]\n"
+  ""
+  "dcs int linit finfo->parameter_count\n"
+  "ifs finfo->variable_parameter_begin_index >= 0\n"
+  "ass linit finfo->variable_parameter_begin_index\n"
+  "end\n"
+  "for i 0 linit\n"
+  "dcl char provocation[512]\n"
+  "nvk strcpy provocation finfo->parameters[i]->name\n"
+  "nvk strcat provocation \": \"\n"
+  "$pi responses[rind] provocation\n"
+  "ass rind + rind 1\n"
+  "end for\n"
+      "nvk printf \"func_name:%s\\n\" finfo->name\n"
       "|"
       "midgequit|";
   "ifs finfo->variable_parameter_begin_index >= 0\n"
