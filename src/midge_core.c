@@ -439,7 +439,7 @@ int find_function_info_v1(int argc, void **argv)
     printf("find_function_info:set with '%s'\n", finfo->name);
     return 0;
   }
-  printf("find_function_info: '%s' could not be found!\n", function_name);
+  // printf("find_function_info: '%s' could not be found!\n", function_name);
   return 0;
 }
 
@@ -472,7 +472,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
     printf("find_struct_info:set with '%s'\n", finfo->name);
     return 0;
   }
-  printf("find_struct_info: '%s' could not be found!\n", struct_name);
+  // printf("find_struct_info: '%s' could not be found!\n", struct_name);
   return 0;
 }
 
@@ -1034,12 +1034,26 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
 
       return 0;
     }
-      return 0;
     case '\'':
     {
       MCcall(parse_past_character_literal(code, i, output));
-    }
+
       return 0;
+    }
+    case '!':
+    {
+      ++*i;
+      parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, i, &primary);
+      temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2));
+      strcpy(temp, "!");
+      strcat(temp, primary);
+      temp[strlen(primary) + 1] = '\0';
+
+      free(primary);
+      *output = temp;
+
+      return 0;
+    }
     case '0':
     case '1':
     case '2':
@@ -1134,7 +1148,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   bool loop = true;
   while (loop)
   {
-    // printf("i:%i  '%c'\n", i, code[i]);
+    printf("i:%i  '%c'\n", i, code[i]);
     switch (code[i])
     {
     case ' ':
@@ -1365,7 +1379,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           // printf("dcl-here-5\n");
           free(new_type_identifier);
           // printf("dcl-here-6\n");
-          printf("Translation:\n%s\n", translation);
+          // printf("Translation:\n%s\n", translation);
           // printf("dcl-here-7\n");
         }
         else
@@ -1461,68 +1475,82 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
     case 'i':
     {
       // ifs
-      // for
       MCcall(parse_past(code, &i, "ifs"));
       MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
       // left
       char *left;
-      printf("here-0\n");
+      // printf("here-0\n");
       MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
-      printf("left:%s\n", left);
-      MCcall(parse_past(code, &i, " "));
-
-      // comparison operator
-      char *comparator;
-      switch (code[i])
+      // printf("left:%s\n", left);
+      if (code[i] != ' ')
       {
-      case '=':
-      {
-        if (code[i + 1] != '=')
+        if (code[i] != '\n' && code[i] != '\0')
         {
-          MCerror(585282, "can't have just one =");
+          MCerror(-4887, "expected statement end");
         }
-        i += 2;
-        comparator = (char *)malloc(sizeof(char) * 3);
-        strcpy(comparator, "==");
+
+        sprintf(buf, "if(%s) {\n", left);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
       }
-      break;
-      case '<':
-      case '>':
+      else
       {
-        int len = 1;
-        if (code[i + 1] == '=')
-          len = 2;
-        comparator = (char *)malloc(sizeof(char) * (len + 1));
-        comparator[0] = code[i];
-        if (len > 1)
-          comparator[1] = code[i + 1];
-        comparator[len] = '\0';
-        i += len;
-      }
-      break;
-      default:
-        MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "if>comparator-switch"));
-        return 858528;
-      }
-      MCcall(parse_past(code, &i, " "));
+        MCcall(parse_past(code, &i, " "));
 
-      // right
-      char *right;
-      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
-      if (code[i] != '\n' && code[i] != '\0')
-      {
-        MCerror(-4864, "expected statement end:'%c'", code[i]);
+        // comparison operator
+        char *comparator;
+        switch (code[i])
+        {
+        case '=':
+        {
+          if (code[i + 1] != '=')
+          {
+            MCerror(585282, "can't have just one =");
+          }
+          i += 2;
+          comparator = (char *)malloc(sizeof(char) * 3);
+          strcpy(comparator, "==");
+        }
+        break;
+        case '<':
+        case '>':
+        {
+          int len = 1;
+          if (code[i + 1] == '=')
+            len = 2;
+          comparator = (char *)malloc(sizeof(char) * (len + 1));
+          comparator[0] = code[i];
+          if (len > 1)
+            comparator[1] = code[i + 1];
+          comparator[len] = '\0';
+          i += len;
+        }
+        break;
+        default:
+          MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "if>comparator-switch"));
+          return 858528;
+        }
+        MCcall(parse_past(code, &i, " "));
+
+        // right
+        char *right;
+        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
+        if (code[i] != '\n' && code[i] != '\0')
+        {
+          MCerror(-4864, "expected statement end:'%c'", code[i]);
+        }
+
+        sprintf(buf, "if(%s %s %s) {\n", left, comparator, right);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        free(comparator);
+        free(right);
       }
 
-      sprintf(buf, "if(%s %s %s) {\n", left, comparator, right);
-      MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-
+      // Increment Scope Depth
       ++local_scope_depth;
 
       free(left);
-      free(comparator);
-      free(right);
     }
     break;
     case 'f':
@@ -1747,7 +1775,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(parse_past(code, &i, "i"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
-        // Identifier
+        // Type Identifier
         char *type_identifier;
         MCcall(parse_past_type_identifier(code, &i, &type_identifier));
         MCcall(parse_past(code, &i, " "));
@@ -1795,19 +1823,20 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         {
           MCcall(parse_past(code, &i, " "));
 
-          char *arg_name;
-          MCcall(parse_past_identifier(code, &i, &arg_name, true, true));
-          MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, arg_name, &replace_name));
-          char *arg_entry = arg_name;
-          if (replace_name)
-            arg_entry = replace_name;
+          char *argument;
+          MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+          // MCcall(parse_past_identifier(code, &i, &argument, true, true));
+          // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument, &replace_name));
+          // char *arg_entry = argument;
+          // if (replace_name)
+          //   arg_entry = replace_name;
           if (function_info)
-            sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, arg_entry);
+            sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
           else
-            sprintf(buf, "%s%s", arg_index ? ", " : "", arg_entry);
+            sprintf(buf, "%s%s", arg_index ? ", " : "", argument);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
           ++arg_index;
-          free(arg_name);
+          free(argument);
         }
 
         if (function_info)
@@ -1889,6 +1918,26 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       {
         MCerror(52885, "NotYetSupported:%s", type_identifier);
       }
+    }
+    break;
+    case 'w':
+    {
+      // set
+      MCcall(parse_past(code, &i, "whl"));
+      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+      // Variable Name
+      char *conditional;
+      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &conditional));
+      if (code[i] != '\n' && code[i] != '\0')
+      {
+        MCerror(-4829, "expected statement end");
+      }
+
+      sprintf(buf, "while(%s) {\n", conditional);
+      MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+      free(conditional);
     }
     break;
     case '\0':
@@ -2654,35 +2703,35 @@ int mc_main(int argc, const char *const *argv)
     declare_function_pointer_definition_v1->return_type = "void";
     declare_function_pointer_definition_v1->parameter_count = 4;
     declare_function_pointer_definition_v1->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * declare_function_pointer_definition_v1->parameter_count);
-    declare_function_pointer_definition_v1->variable_parameter_begin_index = -1;
+    declare_function_pointer_definition_v1->variable_parameter_begin_index = 2;
     declare_function_pointer_definition_v1->struct_usage_count = 0;
     declare_function_pointer_definition_v1->struct_usage = NULL;
 
     mc_parameter_info_v1 *field;
     allocate_anon_struct(field, sizeof_parameter_info_v1);
     declare_function_pointer_definition_v1->parameters[0] = field;
-    field->type_name = "node";
+    field->type_name = "char";
     field->type_version = 1U;
     field->type_deref_count = 1;
-    field->name = "nodespace";
+    field->name = "function_name";
     allocate_anon_struct(field, sizeof_parameter_info_v1);
     declare_function_pointer_definition_v1->parameters[1] = field;
-    field->type_name = "int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "parameter_count";
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "return_type";
     allocate_anon_struct(field, sizeof_parameter_info_v1);
     declare_function_pointer_definition_v1->parameters[2] = field;
-    field->type_name = "parameter_info";
+    field->type_name = "char";
     field->type_version = 1U;
-    field->type_deref_count = 2;
-    field->name = "parameters";
+    field->type_deref_count = 1;
+    field->name = "parameter_type";
     allocate_anon_struct(field, sizeof_parameter_info_v1);
     declare_function_pointer_definition_v1->parameters[3] = field;
-    field->type_name = "int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "variable_parameter_begin_index";
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "parameter_name";
   }
 
   // NODE STRUCT INFO
@@ -2833,58 +2882,61 @@ int mc_main(int argc, const char *const *argv)
       "nvk strcpy function_name (+ command + space_index 1)\n"
       "ass function_name[command_remaining_length] '\\0'\n"
       "nvi 'function_info *' finfo find_function_info nodespace function_name\n"
-  ""
-  "dcs int rind 0\n"
-  "dcl 'char *' responses[32]\n"
-  ""
-  "dcs int linit finfo->parameter_count\n"
-  "ifs finfo->variable_parameter_begin_index >= 0\n"
-  "ass linit finfo->variable_parameter_begin_index\n"
-  "end\n"
-  "for i 0 linit\n"
-  "dcl char provocation[512]\n"
-  "nvk strcpy provocation finfo->parameters[i]->name\n"
-  "nvk strcat provocation \": \"\n"
-  "$pi responses[rind] provocation\n"
-  "ass rind + rind 1\n"
-  "end for\n"
-      "nvk printf \"func_name:%s\\n\" finfo->name\n"
+      ""
+      "dcs int rind 0\n"
+      "dcl 'char *' responses[32]\n"
+      ""
+      "dcs int linit finfo->parameter_count\n"
+      "ifs finfo->variable_parameter_begin_index >= 0\n"
+      "ass linit finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "for i 0 linit\n"
+      "dcl char provocation[512]\n"
+      "nvk strcpy provocation finfo->parameters[i]->name\n"
+      "nvk strcat provocation \": \"\n"
+      "$pi responses[rind] provocation\n"
+      "ass rind + rind 1\n"
+      "end for\n"
+      // "nvk printf \"func_name:%s\\n\" finfo->name\n"
+      "ifs finfo->variable_parameter_begin_index >= 0\n"
+      "dcs int pind finfo->variable_parameter_begin_index\n"
+      "whl 1\n"
+      "dcl char provocation[512]\n"
+      "nvk strcpy provocation finfo->parameters[pind]->name\n"
+      "nvk strcat provocation \": \"\n"
+      "$pi responses[rind] provocation\n"
+      "nvi bool end_it strcmp responses[rind] \"end\"\n"
+      "ifs !end_it\n"
+      "brk\n"
+      "end\n"
+      // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
+      "ass rind + rind 1\n"
+      "ass pind + pind 1\n"
+      "ass pind % pind finfo->parameter_count\n"
+      "ifs pind < finfo->variable_parameter_begin_index\n"
+      "ass pind finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "end\n"
+      "end\n"
       "|"
+      ""
+      // "nvk $SVL function_name $SYA rind &responses\n"
+      // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
+      // What is the name of the function?
+      "construct_and_attach_child_node|"
+      // Return Type:
+      "void|"
+      // Parameter type:
+      "node|"
+      // Parameter name:
+      "parent|"
+      // Parameter type:
+      "const char *|"
+      // Parameter name:
+      "node_name|"
+      // Parameter 1 type:
+      "end|"
       "midgequit|";
-  "ifs finfo->variable_parameter_begin_index >= 0\n"
-  "dcs int pind finfo->variable_parameter_begin_index\n"
-  "whl 1\n"
-  "dcl char provocation[512]\n"
-  "nvk strcpy provocation finfo->parameters[pind]->name\n"
-  "nvk strcat provocation \": \"\n"
-  "$ASI responses[rind] provocation\n"
-  "ass rind + rind 1\n"
-  "ass pind + pind 1\n"
-  "ass pind % pind finfo->parameter_count\n"
-  "ifs pind < finfo->variable_parameter_begin_index\n"
-  "ass pind finfo->variable_parameter_begin_index\n"
-  "end\n"
-  "end\n"
-  "end\n"
-  ""
-  "nvk $SVL function_name $SYA rind &responses\n"
-  "|"
-  "midgequit|";
-  // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
-  // What is the name of the function?
-  "construct_and_attach_child_node|"
-  // Return Type:
-  "void|"
-  // Parameter type:
-  "node|"
-  // Parameter name:
-  "parent|"
-  // Parameter type:
-  "const char *|"
-  // Parameter name:
-  "node_name|"
-  // Parameter 1 type:
-  "end|"
   // ---- SEQUENCE TRANSITION ----
   "invoke initialize_function|"
   // What is the name of the function you wish to initialize?
