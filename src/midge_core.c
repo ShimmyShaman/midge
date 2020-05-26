@@ -1286,7 +1286,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         // sprintf(buf, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n");
         // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-        // MCcall(append_to_cstr(&translation_alloc, &translation, "  clint_process(mcsfnv_buf);\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  clint_process(mcsfnv_buf);\n"));
 
         MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
 
