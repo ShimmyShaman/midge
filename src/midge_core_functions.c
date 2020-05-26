@@ -2,11 +2,11 @@
 
 int declare_function_pointer_v1(int argc, void **argv)
 {
-  /* REPLACED IN MIDGE PARSING */
   void **mc_dvp;
   int res;
+  /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
-  /* END_REPLACE */
+  /*mcfuncreplace*/
 
   // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
   printf("declare_function_pointer_v1()\n");
@@ -16,6 +16,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   // TODO -- check
 
   // Fill in the function_info and attach to the nodespace
+  // function_info *func_info = (function_info *)malloc(sizeof(function_info));
   declare_and_allocate_anon_struct(function_info_v1, function_info, sizeof_function_info_v1);
   function_info->name = name;
   function_info->latest_iteration = 1U;
@@ -95,3 +96,4 @@ int declare_function_pointer_v1(int argc, void **argv)
   printf("dfp-concludes\n");
   return 0;
 }
+/*mcfuncend*/

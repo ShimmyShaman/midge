@@ -1284,7 +1284,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
         sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"%%s(%%i, mcsfnv_vargs);\", %s, mcsfnv_arg_count);\n", function_name_identifier);
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-        MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"\\n%%s\\n\", mcsfnv_buf);\n"));
         // MCcall(append_to_cstr(&translation_alloc, &translation, "  clint_process(mcsfnv_buf);\n"));
 
         MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
@@ -2459,6 +2459,7 @@ int mcqck_temp_create_process_initialize_function(midgeo *process_unit)
   return 0;
 }
 
+int init_core_functions(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
 int (*mc_dummy_function_pointer)(int, void **);
 int mc_main(int argc, const char *const *argv)
@@ -2472,8 +2473,6 @@ int mc_main(int argc, const char *const *argv)
   }
   int res;
   void **mc_dvp;
-
-  // TODO parse and clint_declare functions in midge_core_functions.c
 
   declare_and_allocate_anon_struct(struct_info_v1, parameter_info_definition_v1, sizeof_struct_info_v1);
   { // TYPE:DEFINITION parameter_info
@@ -2666,72 +2665,6 @@ int mc_main(int argc, const char *const *argv)
     field->name = "struct_usage";
   }
 
-  declare_and_allocate_anon_struct(function_info_v1, find_function_info_definition_v1, sizeof_function_info_v1);
-  {
-    find_function_info_definition_v1->struct_id = NULL;
-    find_function_info_definition_v1->name = "find_function_info";
-    find_function_info_definition_v1->latest_iteration = 1U;
-    find_function_info_definition_v1->return_type = "function_info *";
-    find_function_info_definition_v1->parameter_count = 2;
-    find_function_info_definition_v1->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * find_function_info_definition_v1->parameter_count);
-    find_function_info_definition_v1->variable_parameter_begin_index = -1;
-    find_function_info_definition_v1->struct_usage_count = 0;
-    find_function_info_definition_v1->struct_usage = NULL;
-
-    mc_parameter_info_v1 *field;
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
-    find_function_info_definition_v1->parameters[0] = field;
-    field->type_name = "node";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "nodespace";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
-    find_function_info_definition_v1->parameters[1] = field;
-    field->type_name = "char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "function_name";
-  }
-
-  declare_and_allocate_anon_struct(function_info_v1, declare_function_pointer_definition_v1, sizeof_function_info_v1);
-  {
-    declare_function_pointer_definition_v1->struct_id = NULL;
-    declare_function_pointer_definition_v1->name = "declare_function_pointer";
-    declare_function_pointer_definition_v1->latest_iteration = 1U;
-    declare_function_pointer_definition_v1->return_type = "void";
-    declare_function_pointer_definition_v1->parameter_count = 4;
-    declare_function_pointer_definition_v1->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * declare_function_pointer_definition_v1->parameter_count);
-    declare_function_pointer_definition_v1->variable_parameter_begin_index = 2;
-    declare_function_pointer_definition_v1->struct_usage_count = 0;
-    declare_function_pointer_definition_v1->struct_usage = NULL;
-
-    mc_parameter_info_v1 *field;
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
-    declare_function_pointer_definition_v1->parameters[0] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "function_name";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
-    declare_function_pointer_definition_v1->parameters[1] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "return_type";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
-    declare_function_pointer_definition_v1->parameters[2] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "parameter_type";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
-    declare_function_pointer_definition_v1->parameters[3] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "parameter_name";
-  }
-
   // NODE STRUCT INFO
   // declare_and_allocate_anon_struct(struct_info_v1, node_definition_v1, sizeof_struct_info_v1);
   // node_definition_v1->struct_id.identifier = "struct_info";
@@ -2802,7 +2735,7 @@ int mc_main(int argc, const char *const *argv)
   // find_function_info_v1()
 
   // Instantiate: node global;
-  declare_and_allocate_anon_struct(node_v1, global, sizeof_node_v1);
+  mc_node_v1 *global = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
   global->name = "global";
   global->parent = NULL;
   global->functions_alloc = 40;
@@ -2820,17 +2753,10 @@ int mc_main(int argc, const char *const *argv)
   MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)function_info_definition_v1));
   // MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)node_definition_v1));
 
-  MCcall(append_to_collection(&global->functions, &global->functions_alloc, &global->function_count, (void *)find_function_info_definition_v1));
-  clint_process("int (*find_function_info)(int, void **);");
-  clint_process("find_function_info = &find_function_info_v1;");
-  MCcall(append_to_collection(&global->functions, &global->functions_alloc, &global->function_count, (void *)declare_function_pointer_definition_v1));
-  clint_process("int (*declare_function_pointer)(int, void **);");
-  clint_process("declare_function_pointer = &declare_function_pointer_v1;");
-
   // TODO -- Instantiate version 2 of declare_function_pointer (with struct usage)
 
   // Execute commands
-  declare_and_allocate_anon_struct(command_hub_v1, command_hub, sizeof_command_hub_v1);
+  mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)malloc(sizeof(mc_command_hub_v1));
   command_hub->global_node = global;
   command_hub->nodespace = global;
   command_hub->process_matrix = (midgeo)malloc(sizeof_void_ptr * (2 + 4000));
@@ -2849,15 +2775,18 @@ int mc_main(int argc, const char *const *argv)
   template_collection->templates = (void **)malloc(sizeof(void *) * template_collection->templates_alloc);
   command_hub->template_collection = (void *)template_collection;
 
-  midgeo template_process = (midgeo)malloc(sizeof_void_ptr * 2);
-  allocate_from_cstringv(&template_process[0], "invoke declare_function_pointer");
-  MCcall(mcqck_temp_create_process_declare_function_pointer((midgeo *)&template_process[1]));
-  MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc, &template_collection->template_count, (void *)template_process));
+  // midgeo template_process = (midgeo)malloc(sizeof_void_ptr * 2);
+  // allocate_from_cstringv(&template_process[0], "invoke declare_function_pointer");
+  // MCcall(mcqck_temp_create_process_declare_function_pointer((midgeo *)&template_process[1]));
+  // MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc, &template_collection->template_count, (void *)template_process));
 
-  template_process = (midgeo)malloc(sizeof_void_ptr * 2);
-  allocate_from_cstringv(&template_process[0], "invoke initialize_function");
-  MCcall(mcqck_temp_create_process_initialize_function((midgeo *)&template_process[1]));
-  MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc, &template_collection->template_count, (void *)template_process));
+  // template_process = (midgeo)malloc(sizeof_void_ptr * 2);
+  // allocate_from_cstringv(&template_process[0], "invoke initialize_function");
+  // MCcall(mcqck_temp_create_process_initialize_function((midgeo *)&template_process[1]));
+  // MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc, &template_collection->template_count, (void *)template_process));
+
+  // Parse & Declare/add Core functions in midge_core_functions.c
+  MCcall(init_core_functions(command_hub));
 
   const char *commands =
       "construct_and_attach_child_node|"
@@ -3803,3 +3732,161 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
 //   printf("end-handle_process()\n");
 //   return 0;
 // }
+
+char *get_mc_function_insert(mc_command_hub_v1 *command_hub)
+{
+  char *insert = (char *)malloc(sizeof(char) * 72);
+  sprintf(insert, "mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)%p;\n\n", command_hub);
+  return insert;
+}
+
+int init_core_functions(mc_command_hub_v1 *command_hub)
+{
+  // Parse
+  FILE *f = fopen("/home/jason/midge/src/midge_core_functions.c", "rb");
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+  char *input = (char *)malloc(fsize + 1);
+  fread(input, sizeof(char), fsize, f);
+  fclose(f);
+
+  char *insert = get_mc_function_insert(command_hub);
+
+  char *output = (char *)malloc(sizeof(char) * ((fsize * 12) / 10));
+  int n = 0;
+
+  int s = 0;
+  const char *func_marker = "/*mcfuncreplace*/\n";
+  for (int i = 0; i < fsize; ++i)
+  {
+    if (input[i] != '/')
+      continue;
+
+    bool marker = true;
+    for (int j = 0; j < strlen(func_marker); ++j)
+    {
+      if (input[i + j] != func_marker[j])
+      {
+        marker = false;
+        break;
+      }
+    }
+    if (!marker)
+      continue;
+
+    strncpy(output + n, input + s, i - s);
+    n += i - s;
+    s = i + strlen(func_marker);
+
+    strcpy(output + n, insert);
+    n += strlen(insert);
+
+    for (; i < fsize; ++i)
+    {
+      if (input[i] != '/')
+        continue;
+
+      bool marker = true;
+      for (int j = 0; j < strlen(func_marker); ++j)
+      {
+        if (input[i + j] != func_marker[j])
+        {
+          marker = false;
+          break;
+        }
+      }
+      if (marker)
+        break;
+    }
+  }
+
+  clint_process(output);
+
+  free(input);
+  free(output);
+
+  int res;
+  void **mc_dvp;
+
+  // Declare
+  declare_and_allocate_anon_struct(function_info_v1, find_function_info_definition_v1, sizeof_function_info_v1);
+  {
+    find_function_info_definition_v1->struct_id = NULL;
+    find_function_info_definition_v1->name = "find_function_info";
+    find_function_info_definition_v1->latest_iteration = 1U;
+    find_function_info_definition_v1->return_type = "function_info *";
+    find_function_info_definition_v1->parameter_count = 2;
+    find_function_info_definition_v1->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * find_function_info_definition_v1->parameter_count);
+    find_function_info_definition_v1->variable_parameter_begin_index = -1;
+    find_function_info_definition_v1->struct_usage_count = 0;
+    find_function_info_definition_v1->struct_usage = NULL;
+
+    mc_parameter_info_v1 *field;
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    find_function_info_definition_v1->parameters[0] = field;
+    field->type_name = "node";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "nodespace";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    find_function_info_definition_v1->parameters[1] = field;
+    field->type_name = "char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "function_name";
+  }
+
+  declare_and_allocate_anon_struct(function_info_v1, declare_function_pointer_definition_v1, sizeof_function_info_v1);
+  {
+    declare_function_pointer_definition_v1->struct_id = NULL;
+    declare_function_pointer_definition_v1->name = "declare_function_pointer";
+    declare_function_pointer_definition_v1->latest_iteration = 1U;
+    declare_function_pointer_definition_v1->return_type = "void";
+    declare_function_pointer_definition_v1->parameter_count = 4;
+    declare_function_pointer_definition_v1->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * declare_function_pointer_definition_v1->parameter_count);
+    declare_function_pointer_definition_v1->variable_parameter_begin_index = 2;
+    declare_function_pointer_definition_v1->struct_usage_count = 0;
+    declare_function_pointer_definition_v1->struct_usage = NULL;
+
+    mc_parameter_info_v1 *field;
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    declare_function_pointer_definition_v1->parameters[0] = field;
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "function_name";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    declare_function_pointer_definition_v1->parameters[1] = field;
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "return_type";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    declare_function_pointer_definition_v1->parameters[2] = field;
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "parameter_type";
+    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    declare_function_pointer_definition_v1->parameters[3] = field;
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "parameter_name";
+  }
+
+  // Declare with cling interpreter
+  clint_process("int (*find_function_info)(int, void **);");
+  clint_process("find_function_info = &find_function_info_v1;");
+  MCcall(append_to_collection(&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)find_function_info_definition_v1));
+
+  clint_process("int (*declare_function_pointer)(int, void **);");
+  clint_process("declare_function_pointer = &declare_function_pointer_v1;");
+  MCcall(append_to_collection(&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
+
+  return 0;
+}

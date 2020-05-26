@@ -2,6 +2,7 @@
 #ifndef MIDGE_CORE_H
 #define MIDGE_CORE_H
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -285,7 +286,7 @@ enum script_process_state
             const char *identifier;             \
             uint version;                       \
         } struct_id;                            \
-        void *global_node;                      \
+        mc_node_v1 *global_node;                \
         mc_node_v1 *nodespace;                  \
         void *template_collection;              \
         void *process_matrix;                   \
@@ -317,8 +318,8 @@ enum script_process_state
 typedef struct_info_v1 mc_struct_info_v1;
 typedef parameter_info_v1 mc_parameter_info_v1;
 typedef function_info_v1 mc_function_info_v1;
-typedef command_hub_v1 mc_command_hub_v1;
 typedef node_v1 mc_node_v1;
+typedef command_hub_v1 mc_command_hub_v1;
 
 #define allocate_anon_struct(ptr_to_struct, size) \
     mc_dvp = (void **)&ptr_to_struct;             \
