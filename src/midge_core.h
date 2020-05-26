@@ -286,7 +286,7 @@ enum script_process_state
             uint version;                       \
         } struct_id;                            \
         void *global_node;                      \
-        void *nodespace;                        \
+        mc_node_v1 *nodespace;                  \
         void *template_collection;              \
         void *process_matrix;                   \
         unsigned int focused_issue_stack_alloc; \
@@ -317,6 +317,8 @@ enum script_process_state
 typedef struct_info_v1 mc_struct_info_v1;
 typedef parameter_info_v1 mc_parameter_info_v1;
 typedef function_info_v1 mc_function_info_v1;
+typedef command_hub_v1 mc_command_hub_v1;
+typedef node_v1 mc_node_v1;
 
 #define allocate_anon_struct(ptr_to_struct, size) \
     mc_dvp = (void **)&ptr_to_struct;             \
