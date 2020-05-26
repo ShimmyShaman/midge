@@ -436,7 +436,7 @@ int find_function_info_v1(int argc, void **argv)
 
     // Matches
     *function_info = (void *)finfo;
-    printf("find_function_info:set with '%s'\n", finfo->name);
+    // printf("find_function_info:set with '%s'\n", finfo->name);
     return 0;
   }
   // printf("find_function_info: '%s' could not be found!\n", function_name);
@@ -469,7 +469,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
 
     // Matches
     *struct_info = (void *)finfo;
-    printf("find_struct_info:set with '%s'\n", finfo->name);
+    // printf("find_struct_info:set with '%s'\n", finfo->name);
     return 0;
   }
   // printf("find_struct_info: '%s' could not be found!\n", struct_name);
@@ -763,7 +763,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
     strcpy(substituted_type, sinfo->declared_mc_name);
     strcat(substituted_type, kvp->type + strlen(raw_type_id));
     substituted_type[strlen(kvp->type) - strlen(raw_type_id) + strlen(sinfo->declared_mc_name)] = '\0';
-    printf("kt:%s rt:%s dmc:%s st:%s\n", kvp->type, raw_type_id, sinfo->declared_mc_name, substituted_type);
+    // printf("kt:%s rt:%s dmc:%s st:%s\n", kvp->type, raw_type_id, sinfo->declared_mc_name, substituted_type);
 
     sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", substituted_type, kvp->locals_index);
     // printf("\nkrpstcde:'%s'\n", kvp->replacement_code);
@@ -783,7 +783,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   }
 
   ++script->local_count;
-  printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
+  // printf("type:%s identifier:%s lind:%u repcode:%s\n", kvp->type, kvp->identifier, kvp->locals_index, kvp->replacement_code);
 
   append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
 
@@ -1150,7 +1150,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   bool loop = true;
   while (loop)
   {
-    printf("i:%i  '%c'\n", i, code[i]);
+    // printf("i:%i  '%c'\n", i, code[i]);
     switch (code[i])
     {
     case ' ':
@@ -1222,9 +1222,9 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         sprintf(buf, "  function_info_v1 *mcsfnv_function_info;\n"
                      "  mcqck_find_function_info((void *)nodespace, %s, (void **)&mcsfnv_function_info);\n"
                      "  if (mcsfnv_function_info) {\n"
-                     "    // Invoking a midge function, pass command_hub as first argument\n"
-                     "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[0] = (void *)%%p;\\n\", command_hub);\n"
-                     "    ++mcsfnv_arg_count;\n"
+                     //  "    // Invoking a midge function, pass command_hub as first argument\n"
+                     //  "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[0] = (void *)%%p;\\n\", command_hub);\n"
+                     //  "    ++mcsfnv_arg_count;\n"
                      "  }\n"
                      "  else\n"
                      "    throw -233;\n\n",
@@ -1284,7 +1284,8 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
         sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"%%s(%%i, mcsfnv_vargs);\", %s, mcsfnv_arg_count);\n", function_name_identifier);
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-        MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"\\n%%s\\n\", mcsfnv_buf);\n"));
+        // sprintf(buf, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n");
+        // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         // MCcall(append_to_cstr(&translation_alloc, &translation, "  clint_process(mcsfnv_buf);\n"));
 
         MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
@@ -2787,6 +2788,7 @@ int mc_main(int argc, const char *const *argv)
 
   // Parse & Declare/add Core functions in midge_core_functions.c
   MCcall(init_core_functions(command_hub));
+  // return 0;
 
   const char *commands =
       "construct_and_attach_child_node|"
@@ -2845,7 +2847,7 @@ int mc_main(int argc, const char *const *argv)
       "end\n"
       "end\n"
       "end\n"
-      // "$nv function_name $ya rind responses\n"
+      "$nv function_name $ya rind responses\n"
       "|"
       ""
       // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
@@ -3778,7 +3780,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
     strncpy(output + n, input + s, i - s);
     n += i - s;
-    s = i + strlen(func_marker);
+    i += strlen(func_marker);
 
     strcpy(output + n, insert);
     n += strlen(insert);
@@ -3788,7 +3790,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
       if (input[i] != '/')
         continue;
 
-      bool marker = true;
+      marker = true;
       for (int j = 0; j < strlen(func_marker); ++j)
       {
         if (input[i + j] != func_marker[j])
@@ -3798,11 +3800,23 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
         }
       }
       if (marker)
+      {
         break;
+      }
     }
+    if (!marker)
+    {
+      MCerror(-9928, "second marker wasn't found");
+    }
+    i += strlen(func_marker);
+    s = i;
   }
+  strncpy(output + n, input + s, fsize - s);
+  output[n + fsize - s] = '\0';
 
-  clint_process(output);
+  // clint_process(output);
+  // printf("output:\n%s\n", output);
+  clint_declare(output);
 
   free(input);
   free(output);

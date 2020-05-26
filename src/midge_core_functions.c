@@ -96,4 +96,3 @@ int declare_function_pointer_v1(int argc, void **argv)
   printf("dfp-concludes\n");
   return 0;
 }
-/*mcfuncend*/
