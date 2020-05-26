@@ -955,13 +955,7 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
       ++*i;
 
       char *secondary;
-      MCcall(parse_past_identifier(code, i, &secondary, true, true));
-      MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, secondary, &temp));
-      if (temp)
-      {
-        free(secondary);
-        allocate_and_copy_cstr(secondary, temp);
-      }
+      parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, i, &secondary);
 
       temp = (char *)malloc(sizeof(char) * (strlen(primary) + 1 + strlen(secondary) + b + 1));
       strcpy(temp, primary);
@@ -985,6 +979,7 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
         {
         case ' ':
         case '\0':
+        case '\n':
           *output = primary;
           return 0;
           break;
@@ -1006,7 +1001,7 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
           MCerror(42452, "TODO ");
         }
         default:
-          MCerror(3252353, "TODO ");
+          MCerror(3252353, "TODO '%c'", code[*i]);
         }
       }
     }
@@ -1157,43 +1152,180 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
       break;
     case '$':
     {
-      // $pi - provocation interaction
-      MCcall(parse_past(code, &i, "$pi"));
-      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-      // Identifier
-      char *response_location;
-      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
-      MCcall(parse_past(code, &i, " "));
-
-      // Variable Name
-      char *provocation;
-      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
-      if (code[i] != '\n' && code[i] != '\0')
+      MCcall(parse_past(code, &i, "$"));
+      switch (code[i])
       {
-        MCerror(-4864, "expected statement end:'%c'", code[i]);
+      case 'p':
+      {
+        // $pi - provocation interaction
+        MCcall(parse_past(code, &i, "pi"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // Identifier
+        char *response_location;
+        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
+        MCcall(parse_past(code, &i, " "));
+
+        // Variable Name
+        char *provocation;
+        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
+        if (code[i] != '\n' && code[i] != '\0')
+        {
+          MCerror(-4864, "expected statement end:'%c'", code[i]);
+        }
+
+        ++script->segment_count;
+        buf[0] = '\0';
+        sprintf(buf,
+                "  \n// Script Provocation-Response Break\n"
+                // "  printf(\"here-4\\n\");\n"
+                "  allocate_and_copy_cstr(script->response, %s);\n"
+                "printf(\"seqid:%%u \\n\", script->sequence_uid);\n"
+                "  script->segments_complete = %u;\n"
+                "  script->awaiting_data_set_index = %u;\n"
+                // "  printf(\"here-6a\\n\");\n"
+                "  return 0;\n"
+                "segment_%u:\n"
+                // "printf(\"here-6b\\n\");\n"
+                "  %s = (char *)script->locals[%u];\n",
+                provocation, script->segment_count, script->local_count, script->segment_count, response_location, script->local_count);
+        ++script->local_count;
+
+        append_to_cstr(&translation_alloc, &translation, buf);
+
+        free(response_location);
+        free(provocation);
       }
+      break;
+      case 'n':
+      {
+        // $nv - invocation of function with variable name
+        MCcall(parse_past(code, &i, "nv"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
-      ++script->segment_count;
-      buf[0] = '\0';
-      sprintf(buf,
-              "  \n// Script Provocation-Response Break\n"
-              // "  printf(\"here-4\\n\");\n"
-              "  allocate_and_copy_cstr(script->response, %s);\n"
-              "printf(\"seqid:%%u \\n\", script->sequence_uid);\n"
-              "  script->segments_complete = %u;\n"
-              "  script->awaiting_data_set_index = %u;\n"
-              "  printf(\"here-6a\\n\");\n"
-              "  return 0;\n"
-              "segment_%u: printf(\"here-6b\\n\");\n"
-              "  %s = (char *)script->locals[%u];\n",
-              provocation, script->segment_count, script->local_count, script->segment_count, response_location, script->local_count);
-      ++script->local_count;
+        MCcall(append_to_cstr(&translation_alloc, &translation, "{\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  char mcsfnv_buf[2048];\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf, \"void *mcsfnv_vargs[128]\n\");\n\n"));
 
-      append_to_cstr(&translation_alloc, &translation, buf);
+        // Function Name
+        char *function_name;
+        MCcall(parse_past_identifier(code, &i, &function_name, true, false));
 
-      free(response_location);
-      free(provocation);
+        function_info_v1 *function_info;
+        mcqck_find_function_info((void *)nodespace, function_name, (void **)&function_info);
+        int argument_count = 0;
+        if (function_info)
+        {
+          // Invoke a midge function
+          MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf, \"mcsfnv_vargs[0] = (void *)command_hub;\n\");\n"));
+          ++argument_count;
+        }
+        else
+        {
+          MCerror(-1032, "TODO this case");
+        }
+
+        // Form the arguments
+        while (code[i] != '\n' && code[i] != '\0')
+        {
+          MCcall(parse_past(code, &i, " "));
+
+          if (code[i] == '$')
+          {
+            MCcall(parse_past(code, &i, "ya"));
+
+            char array_count_identifier;
+            MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_count_identifier));
+            sprintf(buf, "  for (int mc_ii = 0; mc_ii < %s; ++mc_ii) {", array_count_identifier);
+            MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+            char *array_identifier;
+            MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_identifier));
+            sprintf(buf, "    sprintf(mcsfnv_buf, \"mc_vargs[%%i] = (void *)%p;\n\", mc_ii, %s,)
+                MCcall(append_to_cstr(&translation_alloc, &translation, ""));
+
+            MCcall(append_to_cstr(&translation_alloc, &translation, "  }\n"));
+          }
+          else
+          {
+            MCerror(-1037, "TODO this case");
+            char *argument;
+            MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+            // MCcall(parse_past_identifier(code, &i, &argument, true, true));
+            // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument, &replace_name));
+            // char *arg_entry = argument;
+            // if (replace_name)
+            //   arg_entry = replace_name;
+            if (function_info)
+              sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", argument_count + 1, argument);
+            else
+              sprintf(buf, "%s%s", argument_count ? ", " : "", argument);
+            MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+            ++argument_count;
+            free(argument);
+          }
+        }
+
+        MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
+
+        free(function_name);
+
+        const char *func_name = "call_it";
+
+        char buf[2522];
+        int v = 3;
+        int o = 0;
+        sprintf(buf,
+                "void *in = (void *)%p;\n"
+                "void *out = (void *)%p;\n"
+                "%s(in, out);\n",
+                &v, &o, func_name);
+        clint_process(buf);
+
+        // Invoke
+        // Function Name
+        char *function_name;
+        MCcall(parse_past_identifier(code, &i, &function_name, true, false));
+
+        function_info_v1 *function_info;
+        mcqck_find_function_info((void *)nodespace, function_name, (void **)&function_info);
+        if (!function_info)
+        {
+          sprintf(buf, "%s = %s(", replace_name, function_name);
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        }
+        else
+        {
+          if (!strcmp(function_info->return_type, "void"))
+          {
+            MCerror(-1002, "compile error: cannot assign from a void function!");
+          }
+          else
+          {
+            sprintf(buf, "mc_vargs[0] = (void *)&%s;\n", replace_name);
+            MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          }
+        }
+
+        if (function_info)
+        {
+          sprintf(buf, "%s(%i, mc_vargs", function_name, arg_index + 1);
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        }
+
+        MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+
+        free(function_name);
+      }
+      break;
+      default:
+      {
+        // printf("\ntranslation:\n%s\n\n", translation);
+        MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "$ unhandled"));
+        return -4857;
+      }
+      break;
+      }
     }
     break;
     case 'a':
@@ -1960,10 +2092,10 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   sprintf(declaration, "int %s%u(void *p_script) {\n"
                        "  int res;\n"
                        "  void **mc_dvp;\n"
-                       "  void *mc_vargs[64];\n"
+                       "  void *mc_vargs[128];\n"
                        "\n"
                        "  declare_and_assign_anon_struct(script_v1, script, p_script);\n"
-                       "  declare_and_assign_anon_struct(node_v1, global, script->arguments[0]);\n"
+                       "  declare_and_assign_anon_struct(command_hub_v1, command_hub, script->arguments[0]);\n"
                        "  declare_and_assign_anon_struct(node_v1, nodespace, script->arguments[1]);\n"
                        "  const char *command = (const char *)script->arguments[2];\n\n"
                        "  switch(script->segments_complete)\n"
@@ -2909,7 +3041,7 @@ int mc_main(int argc, const char *const *argv)
       "ifs !end_it\n"
       "brk\n"
       "end\n"
-      // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
+      "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
       "ass rind + rind 1\n"
       "ass pind + pind 1\n"
       "ass pind % pind finfo->parameter_count\n"
@@ -2918,9 +3050,9 @@ int mc_main(int argc, const char *const *argv)
       "end\n"
       "end\n"
       "end\n"
+      "$nv function_name $ya rind responses\n"
       "|"
       ""
-      // "nvk $SVL function_name $SYA rind &responses\n"
       // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
       // What is the name of the function?
       "construct_and_attach_child_node|"
@@ -3150,7 +3282,7 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
   case PROCESS_ACTION_SCRIPT_QUERY:
   {
     // Print to terminal
-    printf("%s\n", focused_issue->dialogue);
+    printf("%s", focused_issue->dialogue);
     command_hub->focused_issue_activated = true;
   }
   break;
@@ -3351,7 +3483,7 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       // -- Submit contextual arguments
 
       // -- -- Global
-      script->arguments[0] = command_hub->global_node;
+      script->arguments[0] = command_hub;
       // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
       // allocate_and_copy_cstr(variable->name, "global_node");
       // variable->value = command_hub->global_node;
