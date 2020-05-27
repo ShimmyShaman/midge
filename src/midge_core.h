@@ -210,7 +210,7 @@ enum script_process_state
         mc_parameter_info_v1 **parameters;  \
         int variable_parameter_begin_index; \
         unsigned int struct_usage_count;    \
-        void **struct_usage;                \
+        mc_struct_info_v1 **struct_usage;                \
     }
 #define sizeof_function_info_v1 (sizeof(void *) * 9)
 #define parameter_info_v1              \

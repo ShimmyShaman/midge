@@ -440,15 +440,15 @@ int find_function_info_v1(int argc, void **argv)
     return 0;
   }
 
-  if (node->parent)
-  {
-    // Search in the parent nodespace
-    void *mc_vargs[3];
-    mc_vargs[0] = argv[0];
-    mc_vargs[1] = (void *)node->parent;
-    mc_vargs[2] = argv[2];
-    MCcall(find_function_info_v1(3, mc_vargs));
-  }
+  // if (node->parent)
+  // {
+  //   // Search in the parent nodespace
+  //   void *mc_vargs[3];
+  //   mc_vargs[0] = argv[0];
+  //   mc_vargs[1] = (void *)node->parent;
+  //   mc_vargs[2] = argv[2];
+  //   MCcall(find_function_info_v1(3, mc_vargs));
+  // }
   // printf("find_function_info: '%s' could not be found!\n", function_name);
   return 0;
 }
@@ -483,11 +483,11 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
     return 0;
   }
 
-  if (node->parent)
-  {
-    // Search in the parent nodespace
-    MCcall(find_struct_info(node->parent, struct_name, struct_info));
-  }
+  // if (node->parent)
+  // {
+  //   // Search in the parent nodespace
+  //   MCcall(find_struct_info(node->parent, struct_name, struct_info));
+  // }
 
   // printf("find_struct_info: '%s' could not be found!\n", struct_name);
   return 0;
@@ -3761,88 +3761,15 @@ char *get_mc_function_insert(mc_command_hub_v1 *command_hub)
 
 int init_core_functions(mc_command_hub_v1 *command_hub)
 {
-  // Parse
-  FILE *f = fopen("/home/jason/midge/src/midge_core_functions.c", "rb");
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
-
-  char *input = (char *)malloc(fsize + 1);
-  fread(input, sizeof(char), fsize, f);
-  fclose(f);
-
-  char *insert = get_mc_function_insert(command_hub);
-
-  char *output = (char *)malloc(sizeof(char) * ((fsize * 12) / 10));
-  int n = 0;
-
-  int s = 0;
-  const char *func_marker = "/*mcfuncreplace*/\n";
-  for (int i = 0; i < fsize; ++i)
-  {
-    if (input[i] != '/')
-      continue;
-
-    bool marker = true;
-    for (int j = 0; j < strlen(func_marker); ++j)
-    {
-      if (input[i + j] != func_marker[j])
-      {
-        marker = false;
-        break;
-      }
-    }
-    if (!marker)
-      continue;
-
-    strncpy(output + n, input + s, i - s);
-    n += i - s;
-    i += strlen(func_marker);
-
-    strcpy(output + n, insert);
-    n += strlen(insert);
-
-    for (; i < fsize; ++i)
-    {
-      if (input[i] != '/')
-        continue;
-
-      marker = true;
-      for (int j = 0; j < strlen(func_marker); ++j)
-      {
-        if (input[i + j] != func_marker[j])
-        {
-          marker = false;
-          break;
-        }
-      }
-      if (marker)
-      {
-        break;
-      }
-    }
-    if (!marker)
-    {
-      MCerror(-9928, "second marker wasn't found");
-    }
-    i += strlen(func_marker);
-    s = i;
-  }
-  strncpy(output + n, input + s, fsize - s);
-  output[n + fsize - s] = '\0';
-
-  // clint_process(output);
-  // printf("output:\n%s\n", output);
-  clint_declare(output);
-
-  free(input);
-  free(output);
-
   int res;
   void **mc_dvp;
 
   // Declare
-  declare_and_allocate_anon_struct(function_info_v1, find_function_info_definition_v1, sizeof_function_info_v1);
+  mc_function_info_v1 **all_function_definitions = (mc_function_info_v1 **)malloc(sizeof(mc_function_info_v1) * 20);
+  int all_function_definition_count = 0;
+
+  mc_function_info_v1 *find_function_info_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  all_function_definitions[all_function_definition_count++] = find_function_info_definition_v1;
   {
     find_function_info_definition_v1->struct_id = NULL;
     find_function_info_definition_v1->name = "find_function_info";
@@ -3869,7 +3796,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->name = "function_name";
   }
 
-  declare_and_allocate_anon_struct(function_info_v1, declare_function_pointer_definition_v1, sizeof_function_info_v1);
+  mc_function_info_v1 *declare_function_pointer_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  all_function_definitions[all_function_definition_count++] = declare_function_pointer_definition_v1;
   {
     declare_function_pointer_definition_v1->struct_id = NULL;
     declare_function_pointer_definition_v1->name = "declare_function_pointer";
@@ -3907,6 +3835,104 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->type_deref_count = 1;
     field->name = "parameter_name";
   }
+
+  // Parse
+  FILE *f = fopen("/home/jason/midge/src/midge_core_functions.c", "rb");
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+  char *input = (char *)malloc(fsize + 1);
+  fread(input, sizeof(char), fsize, f);
+  fclose(f);
+
+  char *insert = get_mc_function_insert(command_hub);
+
+  char *output = (char *)malloc(sizeof(char) * ((fsize * 12) / 10));
+  int n = 0;
+
+  int s = 0;
+  const char *func_marker = "/*mcfuncreplace*/\n";
+  for (int i = 0; i < fsize; ++i)
+  {
+    if (input[i] == '/')
+    {
+      bool marker = true;
+      for (int j = 0; j < strlen(func_marker); ++j)
+      {
+        if (input[i + j] != func_marker[j])
+        {
+          marker = false;
+          break;
+        }
+      }
+      if (!marker)
+        continue;
+
+      // Output up to now
+      strncpy(output + n, input + s, i - s);
+      n += i - s;
+      i += strlen(func_marker);
+
+      strcpy(output + n, insert);
+      n += strlen(insert);
+
+      for (; i < fsize; ++i)
+      {
+        if (input[i] != '/')
+          continue;
+
+        marker = true;
+        for (int j = 0; j < strlen(func_marker); ++j)
+        {
+          if (input[i + j] != func_marker[j])
+          {
+            marker = false;
+            break;
+          }
+        }
+        if (marker)
+        {
+          break;
+        }
+      }
+      if (!marker)
+      {
+        MCerror(-9928, "second marker wasn't found");
+      }
+      i += strlen(func_marker);
+      s = i;
+    }
+
+    // Temp
+    // -- compare code against all
+    // if (input[i] == ' ')
+    // {
+    //   for (int f = 0; f < all_function_definition_count; ++f)
+    //   {
+    //     for (int s = 0; s < all_function_definitions[f]->struct_usage_count; ++s)
+    //     {
+    //       if (strncmp(input + (i + 1), all_function_definitions[f]->struct_usage[s]->name, strlen(all_function_definitions[f]->struct_usage[s]->name)))
+    //         continue;
+    //       // Output up to now
+    //       strncpy(output + n, input + s, i - s);
+    //       n += i - s;
+    //       i += strlen(func_marker);
+    //       // Replace it
+    //       sprintf(output + n, "mc_%s_v%u")
+    //     }
+    //   }
+    // }
+  }
+  strncpy(output + n, input + s, fsize - s);
+  output[n + fsize - s] = '\0';
+
+  // clint_process(output);
+  printf("output:\n%s\n", output);
+  clint_declare(output);
+
+  free(input);
+  free(output);
 
   // Declare with cling interpreter
   clint_process("int (*find_function_info)(int, void **);");
