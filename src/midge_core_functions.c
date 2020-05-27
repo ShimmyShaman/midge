@@ -8,7 +8,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   void **mc_dvp;
   int res;
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
 
   // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
@@ -81,7 +81,8 @@ int declare_function_pointer_v1(int argc, void **argv)
     // printf("dfp>set param[%i]=%s %s\n", i, parameter_info->type, parameter_info->name);
   }
   // printf("dfp-7\n");
-  MCcall(append_to_collection(&command_hub->nodespace->functions, &command_hub->nodespace->functions_alloc, &command_hub->nodespace->function_count, func_info));
+  MCcall(append_to_collection((void ***)&command_hub->nodespace->functions, &command_hub->nodespace->functions_alloc, &command_hub->nodespace->function_count,
+                              (void *)func_info));
 
   // Cleanup Parameters
   if (func_info->struct_usage_count != struct_usage_alloc)
