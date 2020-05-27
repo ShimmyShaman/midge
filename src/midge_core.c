@@ -2383,16 +2383,16 @@ int mc_main(int argc, const char *const *argv)
   global->functions = (mc_function_info_v1 **)calloc(sizeof(mc_function_info_v1 *), global->functions_alloc);
   global->function_count = 0;
   global->structs_alloc = 40;
-  global->structs = (void **)calloc(sizeof(void *), global->structs_alloc);
+  global->structs = (mc_struct_info_v1 **)calloc(sizeof(mc_struct_info_v1 *), global->structs_alloc);
   global->struct_count = 0;
   global->children_alloc = 40;
-  global->children = (void **)calloc(sizeof(void *), global->children_alloc);
+  global->children = (void **)calloc(sizeof(mc_node_v1 *), global->children_alloc);
   global->child_count = 0;
 
-  MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)parameter_info_definition_v1));
-  MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)struct_info_definition_v1));
-  MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)function_info_definition_v1));
-  MCcall(append_to_collection(&global->structs, &global->structs_alloc, &global->struct_count, (void *)node_definition_v1));
+  MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count, (void *)parameter_info_definition_v1));
+  MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count, (void *)struct_info_definition_v1));
+  MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count, (void *)function_info_definition_v1));
+  MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count, (void *)node_definition_v1));
 
   // Execute commands
   mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)calloc(sizeof(mc_command_hub_v1), 1);

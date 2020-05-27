@@ -164,7 +164,7 @@ enum script_process_state
     {                                    \
         mc_struct_id_v1 *struct_id;      \
         const char *name;                \
-        mc_node_v1 *parent;              \
+        void *parent;                    \
         unsigned int functions_alloc;    \
         unsigned int function_count;     \
         mc_function_info_v1 **functions; \
@@ -173,7 +173,7 @@ enum script_process_state
         mc_struct_info_v1 **structs;     \
         unsigned int children_alloc;     \
         unsigned int child_count;        \
-        mc_node_v1 **children;           \
+        void **children;                 \
     }
 #define sizeof_node_v1 (sizeof(void *) * 12)
 #define struct_id_v1            \
@@ -311,6 +311,7 @@ enum script_process_state
     }
 #define sizeof_void_collection_v1 (sizeof(void *) * 5)
 
+typedef struct_id_v1 mc_struct_id_v1;
 typedef struct_info_v1 mc_struct_info_v1;
 typedef parameter_info_v1 mc_parameter_info_v1;
 typedef function_info_v1 mc_function_info_v1;
