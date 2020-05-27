@@ -159,25 +159,25 @@ enum script_process_state
         void *next;                           \
     }
 #define sizeof_branch_unit_v1 (sizeof(void *) * 6)
-#define node_v1                       \
-    struct                            \
-    {                                 \
-        struct                        \
-        {                             \
-            const char *identifier;   \
-            unsigned int version;     \
-        } struct_id;                  \
-        const char *name;             \
-        void *parent;                 \
-        unsigned int functions_alloc; \
-        unsigned int function_count;  \
-        mc_function_info_v1 **functions;             \
-        unsigned int structs_alloc;   \
-        unsigned int struct_count;    \
-        void **structs;               \
-        unsigned int children_alloc;  \
-        unsigned int child_count;     \
-        void **children;              \
+#define node_v1                          \
+    struct                               \
+    {                                    \
+        struct                           \
+        {                                \
+            const char *identifier;      \
+            unsigned int version;        \
+        } struct_id;                     \
+        const char *name;                \
+        void *parent;                    \
+        unsigned int functions_alloc;    \
+        unsigned int function_count;     \
+        mc_function_info_v1 **functions; \
+        unsigned int structs_alloc;      \
+        unsigned int struct_count;       \
+        void **structs;                  \
+        unsigned int children_alloc;     \
+        unsigned int child_count;        \
+        void **children;                 \
     }
 #define sizeof_node_v1 (sizeof(void *) * 13)
 #define struct_id_v1            \
@@ -322,6 +322,8 @@ typedef node_v1 mc_node_v1;
 typedef script_local_v1 mc_script_local_v1;
 typedef script_v1 mc_script_v1;
 typedef command_hub_v1 mc_command_hub_v1;
+
+int (*find_function_info)(int, void **);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
     mc_dvp = (void **)&ptr_to_struct;             \

@@ -2,8 +2,6 @@
 
 #include "midge_core.h"
 
-int (*find_function_info)(int, void **);
-
 int print_struct_id(int argc, void **argv)
 {
   midgeo struct_id = (midgeo)argv;

@@ -38,16 +38,16 @@ int find_function_info_v1(int argc, void **argv)
   }
   // printf("dopu\n");
 
-  // if (node->parent)
-  // {
-  //   // Search in the parent nodespace
-  //   void *mc_vargs[3];
-  //   mc_vargs[0] = argv[0];
-  //   mc_vargs[1] = (void *)node->parent;
-  //   mc_vargs[2] = argv[2];
-  //   MCcall(find_function_info_v1(3, mc_vargs));
-  // }
-  // printf("find_function_info: '%s' could not be found!\n", function_name);
+  if (nodespace->parent)
+  {
+    // Search in the parent nodespace
+    void *mc_vargs[3];
+    mc_vargs[0] = argv[0];
+    mc_vargs[1] = (void *)&nodespace->parent;
+    mc_vargs[2] = argv[2];
+    MCcall(find_function_info(3, mc_vargs));
+  }
+  printf("find_function_info: '%s' could not be found!\n", function_name);
   return 0;
 }
 
