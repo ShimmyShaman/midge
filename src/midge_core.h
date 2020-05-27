@@ -162,24 +162,20 @@ enum script_process_state
 #define node_v1                          \
     struct                               \
     {                                    \
-        struct                           \
-        {                                \
-            const char *identifier;      \
-            unsigned int version;        \
-        } struct_id;                     \
+        mc_struct_id_v1 *struct_id;      \
         const char *name;                \
-        void *parent;                    \
+        mc_node_v1 *parent;              \
         unsigned int functions_alloc;    \
         unsigned int function_count;     \
         mc_function_info_v1 **functions; \
         unsigned int structs_alloc;      \
         unsigned int struct_count;       \
-        void **structs;                  \
+        mc_struct_info_v1 **structs;     \
         unsigned int children_alloc;     \
         unsigned int child_count;        \
-        void **children;                 \
+        mc_node_v1 **children;           \
     }
-#define sizeof_node_v1 (sizeof(void *) * 13)
+#define sizeof_node_v1 (sizeof(void *) * 12)
 #define struct_id_v1            \
     struct                      \
     {                           \
