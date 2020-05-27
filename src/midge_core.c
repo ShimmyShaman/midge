@@ -412,47 +412,6 @@ int remove_from_collection(void ***collection, unsigned int *collection_alloc, u
   return 0;
 }
 
-int find_function_info_v1(int argc, void **argv)
-{
-  if (argc != 3)
-  {
-    MCerror(-848, "Incorrect argument count");
-  }
-
-  void **function_info = (void **)argv[0];
-  void *vp_nodespace = *(void **)argv[1];
-  char *function_name = *(char **)argv[2];
-
-  void **mc_dvp;
-  int res;
-  declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
-
-  *function_info = NULL;
-  for (int i = 0; i < node->function_count; ++i)
-  {
-    declare_and_assign_anon_struct(function_info_v1, finfo, node->functions[i]);
-    if (strcmp(finfo->name, function_name))
-      continue;
-
-    // Matches
-    *function_info = (void *)finfo;
-    // printf("find_function_info:set with '%s'\n", finfo->name);
-    return 0;
-  }
-
-  // if (node->parent)
-  // {
-  //   // Search in the parent nodespace
-  //   void *mc_vargs[3];
-  //   mc_vargs[0] = argv[0];
-  //   mc_vargs[1] = (void *)node->parent;
-  //   mc_vargs[2] = argv[2];
-  //   MCcall(find_function_info_v1(3, mc_vargs));
-  // }
-  // printf("find_function_info: '%s' could not be found!\n", function_name);
-  return 0;
-}
-
 int mcqck_find_function_info(void *vp_nodespace, char *function_name, void **function_info)
 {
   void *vargs[3];
@@ -460,7 +419,7 @@ int mcqck_find_function_info(void *vp_nodespace, char *function_name, void **fun
   vargs[1] = &vp_nodespace;
   vargs[2] = &function_name;
   int res;
-  MCcall(find_function_info_v1(3, vargs));
+  MCcall(find_function_info(3, vargs));
   return 0;
 }
 
@@ -3970,6 +3929,32 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
       // Replace it
       strcpy(output + n, "(mc_struct_info_v1");
       n += strlen("(mc_struct_info_v1");
+    }
+
+    // node >> mc_node_v1
+    if (!strncmp(input + i, " node", strlen(" node")))
+    {
+      // Output up to now
+      strncpy(output + n, input + s, i - s);
+      n += i - s;
+      i += strlen(" node");
+      s = i;
+
+      // Replace it
+      strcpy(output + n, " mc_node_v1");
+      n += strlen(" mc_node_v1");
+    }
+    if (!strncmp(input + i, "(node", strlen("(node")))
+    {
+      // Output up to now
+      strncpy(output + n, input + s, i - s);
+      n += i - s;
+      i += strlen("(node");
+      s = i;
+
+      // Replace it
+      strcpy(output + n, "(mc_node_v1");
+      n += strlen("(mc_node_v1");
     }
   }
   strncpy(output + n, input + s, fsize - s);

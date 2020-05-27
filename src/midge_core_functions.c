@@ -3,9 +3,49 @@
 /*mcfuncreplace*/
 #define function_info mc_function_info_v1
 #define struct_info mc_struct_info_v1
+#define node mc_node_v1
 /*mcfuncreplace*/
 
-/*mcfuncdefinition:declare_function_pointer*/
+int find_function_info_v1(int argc, void **argv)
+{
+  if (argc != 3)
+  {
+    MCerror(-848, "Incorrect argument count");
+  }
+
+  function_info **func_info = (function_info **)argv[0];
+  node *nodespace = *(node **)argv[1];
+  char *function_name = *(char **)argv[2];
+
+  void **mc_dvp;
+  int res;
+
+  *func_info = NULL;
+  for (int i = 0; i < nodespace->function_count; ++i)
+  {
+    function_info *finfo = nodespace->functions[i];
+    if (strcmp(finfo->name, function_name))
+      continue;
+
+    // Matches
+    *func_info = finfo;
+    // printf("find_function_info:set with '%s'\n", finfo->name);
+    return 0;
+  }
+
+  // if (node->parent)
+  // {
+  //   // Search in the parent nodespace
+  //   void *mc_vargs[3];
+  //   mc_vargs[0] = argv[0];
+  //   mc_vargs[1] = (void *)node->parent;
+  //   mc_vargs[2] = argv[2];
+  //   MCcall(find_function_info_v1(3, mc_vargs));
+  // }
+  // printf("find_function_info: '%s' could not be found!\n", function_name);
+  return 0;
+}
+
 int declare_function_pointer_v1(int argc, void **argv)
 {
   void **mc_dvp;
@@ -116,5 +156,3 @@ int declare_function_pointer_v1(int argc, void **argv)
   // printf("dfp-concludes\n");
   return 0;
 }
-
-#undef function_info
