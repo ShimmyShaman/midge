@@ -171,7 +171,7 @@ enum script_process_state
         void *parent;                 \
         unsigned int functions_alloc; \
         unsigned int function_count;  \
-        void **functions;             \
+        mc_function_info_v1 **functions;             \
         unsigned int structs_alloc;   \
         unsigned int struct_count;    \
         void **structs;               \
@@ -210,7 +210,7 @@ enum script_process_state
         mc_parameter_info_v1 **parameters;  \
         int variable_parameter_begin_index; \
         unsigned int struct_usage_count;    \
-        mc_struct_info_v1 **struct_usage;                \
+        mc_struct_info_v1 **struct_usage;   \
     }
 #define sizeof_function_info_v1 (sizeof(void *) * 9)
 #define parameter_info_v1              \
@@ -319,6 +319,8 @@ typedef struct_info_v1 mc_struct_info_v1;
 typedef parameter_info_v1 mc_parameter_info_v1;
 typedef function_info_v1 mc_function_info_v1;
 typedef node_v1 mc_node_v1;
+typedef script_local_v1 mc_script_local_v1;
+typedef script_v1 mc_script_v1;
 typedef command_hub_v1 mc_command_hub_v1;
 
 #define allocate_anon_struct(ptr_to_struct, size) \

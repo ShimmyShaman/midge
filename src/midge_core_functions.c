@@ -23,15 +23,20 @@ int find_function_info_v1(int argc, void **argv)
   *func_info = NULL;
   for (int i = 0; i < nodespace->function_count; ++i)
   {
+    // printf("dope\n");
     function_info *finfo = nodespace->functions[i];
+    // printf("dodpe:%s\n", nodespace->name);
+    // printf("dodpj:%s\n", function_name);
     if (strcmp(finfo->name, function_name))
       continue;
+    // printf("dwde\n");
 
     // Matches
     *func_info = finfo;
     // printf("find_function_info:set with '%s'\n", finfo->name);
     return 0;
   }
+  // printf("dopu\n");
 
   // if (node->parent)
   // {

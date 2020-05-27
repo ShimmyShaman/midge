@@ -2,6 +2,8 @@
 
 #include "midge_core.h"
 
+int (*find_function_info)(int, void **);
+
 int print_struct_id(int argc, void **argv)
 {
   midgeo struct_id = (midgeo)argv;
@@ -409,17 +411,6 @@ int remove_from_collection(void ***collection, unsigned int *collection_alloc, u
   if (index > 0)
     *collection[*collection_count] = NULL;
 
-  return 0;
-}
-
-int mcqck_find_function_info(void *vp_nodespace, char *function_name, void **function_info)
-{
-  void *vargs[3];
-  vargs[0] = function_info;
-  vargs[1] = &vp_nodespace;
-  vargs[2] = &function_name;
-  int res;
-  MCcall(find_function_info(3, vargs));
   return 0;
 }
 
@@ -1196,7 +1187,13 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &function_name_identifier));
 
         sprintf(buf, "  function_info_v1 *mcsfnv_function_info;\n"
-                     "  mcqck_find_function_info((void *)nodespace, %s, (void **)&mcsfnv_function_info);\n"
+                     "  {\n"
+                     "    void *mc_vargs[3];\n"
+                     "    mc_vargs[0] = (void *)&mcsfnv_function_info;\n"
+                     "    mc_vargs[1] = (void *)&nodespace;\n"
+                     "    mc_vargs[2] = (void *)&%s;\n"
+                     "    find_function_info(3, mc_vargs);\n"
+                     "  }\n"
                      "  if (mcsfnv_function_info) {\n"
                      //  "    // Invoking a midge function, pass command_hub as first argument\n"
                      //  "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[0] = (void *)%%p;\\n\", command_hub);\n"
@@ -1881,16 +1878,24 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         char *function_name;
         MCcall(parse_past_identifier(code, &i, &function_name, true, false));
 
-        function_info_v1 *function_info;
-        mcqck_find_function_info((void *)nodespace, function_name, (void **)&function_info);
-        if (!function_info)
+        // printf("dopeh\n");
+        function_info_v1 *func_info;
+        {
+          void *mc_vargs[3];
+          mc_vargs[0] = (void *)&func_info;
+          mc_vargs[1] = (void *)&nodespace;
+          mc_vargs[2] = (void *)&function_name;
+          find_function_info(3, mc_vargs);
+        }
+        // printf("dopey\n");
+        if (!func_info)
         {
           sprintf(buf, "%s = %s(", replace_name, function_name);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         }
         else
         {
-          if (!strcmp(function_info->return_type, "void"))
+          if (!strcmp(func_info->return_type, "void"))
           {
             MCerror(-1002, "compile error: cannot assign from a void function!");
           }
@@ -1913,7 +1918,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           // char *arg_entry = argument;
           // if (replace_name)
           //   arg_entry = replace_name;
-          if (function_info)
+          if (func_info)
             sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
           else
             sprintf(buf, "%s%s", arg_index ? ", " : "", argument);
@@ -1922,7 +1927,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
           free(argument);
         }
 
-        if (function_info)
+        if (func_info)
         {
           sprintf(buf, "%s(%i, mc_vargs", function_name, arg_index + 1);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -2443,7 +2448,7 @@ int mc_main(int argc, const char *const *argv)
 {
   int sizeof_void_ptr = sizeof(void *);
   if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) || sizeof_void_ptr != sizeof(uint *) || sizeof_void_ptr != sizeof(const char *) ||
-      sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(mc_dummy_function_pointer) || sizeof_void_ptr != sizeof(&find_function_info_v1) || sizeof_void_ptr != sizeof(unsigned long))
+      sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(mc_dummy_function_pointer) || sizeof_void_ptr != sizeof(&mc_main) || sizeof_void_ptr != sizeof(unsigned long))
   {
     printf("pointer sizes aren't equal!!!\n");
     return -1;
@@ -2716,7 +2721,7 @@ int mc_main(int argc, const char *const *argv)
   global->name = "global";
   global->parent = NULL;
   global->functions_alloc = 40;
-  global->functions = (void **)calloc(sizeof(void *), global->functions_alloc);
+  global->functions = (mc_function_info_v1 **)calloc(sizeof(mc_function_info_v1 *), global->functions_alloc);
   global->function_count = 0;
   global->structs_alloc = 40;
   global->structs = (void **)calloc(sizeof(void *), global->structs_alloc);
@@ -3932,29 +3937,29 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     }
 
     // node >> mc_node_v1
-    if (!strncmp(input + i, " node", strlen(" node")))
+    if (!strncmp(input + i, " node ", strlen(" node ")))
     {
       // Output up to now
       strncpy(output + n, input + s, i - s);
       n += i - s;
-      i += strlen(" node");
+      i += strlen(" node ");
       s = i;
 
       // Replace it
-      strcpy(output + n, " mc_node_v1");
-      n += strlen(" mc_node_v1");
+      strcpy(output + n, " mc_node_v1 ");
+      n += strlen(" mc_node_v1 ");
     }
-    if (!strncmp(input + i, "(node", strlen("(node")))
+    if (!strncmp(input + i, "(node ", strlen("(node ")))
     {
       // Output up to now
       strncpy(output + n, input + s, i - s);
       n += i - s;
-      i += strlen("(node");
+      i += strlen("(node ");
       s = i;
 
       // Replace it
-      strcpy(output + n, "(mc_node_v1");
-      n += strlen("(mc_node_v1");
+      strcpy(output + n, "(mc_node_v1 ");
+      n += strlen("(mc_node_v1 ");
     }
   }
   strncpy(output + n, input + s, fsize - s);
@@ -3968,15 +3973,66 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(output);
 
   // Declare with cling interpreter
-  clint_process("int (*find_function_info)(int, void **);");
   clint_process("find_function_info = &find_function_info_v1;");
-  MCcall(append_to_collection(&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)find_function_info_definition_v1));
 
   clint_process("int (*declare_function_pointer)(int, void **);");
   clint_process("declare_function_pointer = &declare_function_pointer_v1;");
-  MCcall(append_to_collection(&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
+
+  printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
 
   return 0;
 }
+
+// int kvr_count = 3;
+// const char **kvr_collection = (char **)malloc(sizeof(char *) * kvr_count * 2);
+// kvr_collection[0] = "function_info";
+// kvr_collection[1] = "mc_function_info_v1";
+// kvr_collection[2] = "struct_info";
+// kvr_collection[3] = "mc_struct_info_v1";
+// kvr_collection[4] = "node";
+// kvr_collection[5] = "mc_node_v1";
+
+// switch (input[i])
+// {
+// case ' ':
+// case '(':
+// case '\n':
+// case '\t':
+// case ';':
+//   break;
+// default:
+//   continue;
+// }
+// if (!isalpha(input[i]))
+//   continue;
+
+// for (int k = 0; k < kvr_count; ++k)
+// {
+//   int klen = strlen(kvr_collection[k * 2]);
+//   switch (input[i + 1 + klen])
+//   {
+//   case '*':
+//   case ' ':
+//   case ')':
+//     break;
+//   default:
+//     continue;
+//   }
+//   if (!strncmp(input + i + 1, kvr_collection[k * 2], klen))
+//   {
+//     sprintf("replaced\n");
+//     // Output up to now
+//     strncpy(output + n, input + s, i - s);
+//     n += i - s;
+//     i += klen;
+//     s = i;
+
+//     // Replace it
+//     strcpy(output + n, kvr_collection[k * 2 + 1]);
+//     n += strlen(kvr_collection[k * 2 + 1]);
+//   }
+// }
