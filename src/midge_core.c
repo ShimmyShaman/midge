@@ -3846,7 +3846,10 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   fread(input, sizeof(char), fsize, f);
   fclose(f);
 
-  char *insert = get_mc_function_insert(command_hub);
+  // char *insert = get_mc_function_insert(command_hub);
+  char *command_hub_replace = (char *)malloc(sizeof(char) * (26 - 2 + 14 + 1));
+  sprintf(command_hub_replace, "((mc_command_hub_v1 *)%p)", command_hub);
+  command_hub_replace[38] = '\0';
 
   char *output = (char *)malloc(sizeof(char) * ((fsize * 12) / 10));
   int n = 0;
@@ -3874,8 +3877,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
       n += i - s;
       i += strlen(func_marker);
 
-      strcpy(output + n, insert);
-      n += strlen(insert);
+      // strcpy(output + n, insert);
+      // n += strlen(insert);
 
       for (; i < fsize; ++i)
       {
@@ -3904,31 +3907,76 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
       s = i;
     }
 
-    // Temp
-    // -- compare code against all
-    // if (input[i] == ' ')
-    // {
-    //   for (int f = 0; f < all_function_definition_count; ++f)
-    //   {
-    //     for (int s = 0; s < all_function_definitions[f]->struct_usage_count; ++s)
-    //     {
-    //       if (strncmp(input + (i + 1), all_function_definitions[f]->struct_usage[s]->name, strlen(all_function_definitions[f]->struct_usage[s]->name)))
-    //         continue;
-    //       // Output up to now
-    //       strncpy(output + n, input + s, i - s);
-    //       n += i - s;
-    //       i += strlen(func_marker);
-    //       // Replace it
-    //       sprintf(output + n, "mc_%s_v%u")
-    //     }
-    //   }
-    // }
+    if (!strncmp(input + i, "command_hub", strlen("command_hub")))
+    {
+      // Output up to now
+      strncpy(output + n, input + s, i - s);
+      n += i - s;
+      i += strlen("command_hub");
+      s = i;
+
+      // Replace it
+      strcpy(output + n, command_hub_replace);
+      n += strlen(command_hub_replace);
+    }
+
+    // function_info >> mc_function_info_v1
+    if (!strncmp(input + i, " function_info", strlen(" function_info")))
+    {
+      // Output up to now
+      strncpy(output + n, input + s, i - s);
+      n += i - s;
+      i += strlen(" function_info");
+      s = i;
+
+      // Replace it
+      strcpy(output + n, " mc_function_info_v1");
+      n += strlen(" mc_function_info_v1");
+    }
+    if (!strncmp(input + i, "(function_info", strlen("(function_info")))
+    {
+      // Output up to now
+      strncpy(output + n, input + s, i - s);
+      n += i - s;
+      i += strlen("(function_info");
+      s = i;
+
+      // Replace it
+      strcpy(output + n, "(mc_function_info_v1");
+      n += strlen("(mc_function_info_v1");
+    }
+
+    // struct_info >> mc_struct_info_v1
+    if (!strncmp(input + i, " struct_info", strlen(" struct_info")))
+    {
+      // Output up to now
+      strncpy(output + n, input + s, i - s);
+      n += i - s;
+      i += strlen(" struct_info");
+      s = i;
+
+      // Replace it
+      strcpy(output + n, " mc_struct_info_v1");
+      n += strlen(" mc_struct_info_v1");
+    }
+    if (!strncmp(input + i, "(struct_info", strlen("(struct_info")))
+    {
+      // Output up to now
+      strncpy(output + n, input + s, i - s);
+      n += i - s;
+      i += strlen("(struct_info");
+      s = i;
+
+      // Replace it
+      strcpy(output + n, "(mc_struct_info_v1");
+      n += strlen("(mc_struct_info_v1");
+    }
   }
   strncpy(output + n, input + s, fsize - s);
   output[n + fsize - s] = '\0';
 
   // clint_process(output);
-  printf("output:\n%s\n", output);
+  printf("processed_core_function:\n%s\n", output);
   clint_declare(output);
 
   free(input);

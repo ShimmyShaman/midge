@@ -1,6 +1,9 @@
 #include "midge_core.h"
 
+/*mcfuncreplace*/
 #define function_info mc_function_info_v1
+#define struct_info mc_struct_info_v1
+/*mcfuncreplace*/
 
 /*mcfuncdefinition:declare_function_pointer*/
 int declare_function_pointer_v1(int argc, void **argv)
@@ -49,17 +52,15 @@ int declare_function_pointer_v1(int argc, void **argv)
     // printf("dfp-4b\n");
     void *p_struct_info = NULL;
     MCcall(find_struct_info((void *)command_hub->nodespace, parameter_info->type_name, &p_struct_info));
-    // printf("dfp-5\n");
-    declare_and_assign_anon_struct(struct_info_v1, struct_info, p_struct_info);
-    // printf("dfp-3\n");
-    if (struct_info)
+    if (p_struct_info)
     {
-      parameter_info->type_version = struct_info->version;
+      struct_info *sinfo = (struct_info *)p_struct_info;
+      parameter_info->type_version = sinfo->version;
 
       int already_added = 0;
       for (int j = 0; j < func_info->struct_usage_count; ++j)
       {
-        declare_and_assign_anon_struct(struct_info_v1, existing, func_info->struct_usage[j]);
+        struct_info *existing = (struct_info *)func_info->struct_usage[j];
 
         if (!strcmp(parameter_info->type_name, existing->name))
         {
@@ -69,7 +70,7 @@ int declare_function_pointer_v1(int argc, void **argv)
       }
       if (!already_added)
       {
-        MCcall(append_to_collection((void ***)&func_info->struct_usage, &struct_usage_alloc, &func_info->struct_usage_count, (void *)struct_info));
+        MCcall(append_to_collection((void ***)&func_info->struct_usage, &struct_usage_alloc, &func_info->struct_usage_count, (void *)sinfo));
       }
       // printf("dfp-6\n");
     }
@@ -89,7 +90,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   {
     if (func_info->struct_usage_count > 0)
     {
-      mc_struct_info_v1 **new_struct_usage = (mc_struct_info_v1 **)realloc(func_info->struct_usage, func_info->struct_usage_count);
+      struct_info **new_struct_usage = (struct_info **)realloc(func_info->struct_usage, func_info->struct_usage_count);
       if (new_struct_usage == NULL)
       {
         printf("realloc error\n");
