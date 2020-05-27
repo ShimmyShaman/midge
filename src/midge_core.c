@@ -439,6 +439,16 @@ int find_function_info_v1(int argc, void **argv)
     // printf("find_function_info:set with '%s'\n", finfo->name);
     return 0;
   }
+
+  if (node->parent)
+  {
+    // Search in the parent nodespace
+    void *mc_vargs[3];
+    mc_vargs[0] = argv[0];
+    mc_vargs[1] = (void *)node->parent;
+    mc_vargs[2] = argv[2];
+    MCcall(find_function_info_v1(3, mc_vargs));
+  }
   // printf("find_function_info: '%s' could not be found!\n", function_name);
   return 0;
 }
@@ -472,6 +482,13 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
     // printf("find_struct_info:set with '%s'\n", finfo->name);
     return 0;
   }
+
+  if (node->parent)
+  {
+    // Search in the parent nodespace
+    MCcall(find_struct_info(node->parent, struct_name, struct_info));
+  }
+
   // printf("find_struct_info: '%s' could not be found!\n", struct_name);
   return 0;
 }
