@@ -47,22 +47,26 @@ enum process_contextual_data
     PROCESS_CONTEXTUAL_DATA_NODESPACE = 1,
 };
 
-enum process_action_type
+typedef enum
 {
+// User Initiated
     PROCESS_ACTION_USER_UNPROVOKED_COMMAND = 1,
     PROCESS_ACTION_USER_UNRESOLVED_RESPONSE,
     PROCESS_ACTION_USER_SCRIPT_ENTRY,
     PROCESS_ACTION_USER_SCRIPT_RESPONSE,
     PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
 
+// Process Manager Initiated
+PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
     PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
     PROCESS_ACTION_PM_DEMO_INITIATION,
     PROCESS_ACTION_PM_SCRIPT_REQUEST,
+    PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
 
-    PROCESS_ACTION_SCRIPT_QUERY_CREATED_NAME,
+// Script
     PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
     PROCESS_ACTION_SCRIPT_QUERY,
-};
+} process_action_type;
 
 enum script_process_state
 {
@@ -222,20 +226,20 @@ enum script_process_state
     }
 #define sizeof_parameter_info_v1 (sizeof(void *) * 4)
 
-#define process_action_v1               \
-    struct                              \
-    {                                   \
-        mc_struct_id_v1 *struct_id;     \
-        unsigned int sequence_uid;      \
-        enum process_action_type type;  \
-        char *dialogue;                 \
-        void *history;                  \
-        union {                         \
-            char *demonstrated_command; \
-            void *ptr;                  \
-        } data;                         \
+// #define process_action_data_v1
+
+#define process_action_v1              \
+    struct                             \
+    {                                  \
+        mc_struct_id_v1 *struct_id;    \
+        unsigned int sequence_uid;     \
+        enum process_action_type type; \
+        char *dialogue;                \
+        void *contextual_issue;        \
+        void *previous_issue;          \
+        void *consequential_issue;     \
+        void *data;                    \
     }
-#define sizeof_process_action_v1 (sizeof(void *) * 7)
 
 #define template_collection_v1        \
     struct                            \
