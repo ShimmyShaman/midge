@@ -225,11 +225,7 @@ enum script_process_state
 #define process_action_v1               \
     struct                              \
     {                                   \
-        struct                          \
-        {                               \
-            const char *identifier;     \
-            unsigned int version;       \
-        } struct_id;                    \
+        mc_struct_id_v1 *struct_id;     \
         unsigned int sequence_uid;      \
         enum process_action_type type;  \
         char *dialogue;                 \
@@ -255,15 +251,15 @@ enum script_process_state
     }
 #define sizeof_template_collection_v1 (sizeof(void *) * 5)
 
-#define script_v1                          \
-    struct                                 \
-    {                                      \
-        mc_struct_info_v1 *struct_id;      \
-        char *name;                  \
-        unsigned int script_uid;           \
-        unsigned int local_count;          \
-        unsigned int segment_count;        \
-        char *created_function_name; \
+#define script_v1                     \
+    struct                            \
+    {                                 \
+        mc_struct_info_v1 *struct_id; \
+        char *name;                   \
+        unsigned int script_uid;      \
+        unsigned int local_count;     \
+        unsigned int segment_count;   \
+        char *created_function_name;  \
     }
 
 #define script_instance_v1              \
@@ -274,7 +270,7 @@ enum script_process_state
         unsigned int sequence_uid;      \
         mc_command_hub_v1 *command_hub; \
         mc_node_v1 *nodespace;          \
-        char *previous_command;   \
+        char *previous_command;         \
         void **locals;                  \
         char *response;                 \
         unsigned int segments_complete; \

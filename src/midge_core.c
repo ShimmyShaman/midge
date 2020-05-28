@@ -2924,7 +2924,7 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     mc_script_v1 *script = (mc_script_v1 *)((mc_process_action_v1 *)focused_issue->history)->data.ptr;
     if (!script)
     {
-      MCerror(958, "aint supposed to be the case");
+      MCerror(9427, "aint supposed to be the case");
     }
 
     script->name = focused_issue->dialogue;
@@ -2942,11 +2942,20 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     focused_issue = historical;
     historical = (mc_process_action_v1 *)focused_issue->history;
     // TODO delete/free process action focused_issue
-
     if (!historical)
       break;
 
-    printf("historical readded:%s\n", historical->type);
+    if (historical->type != PROCESS_ACTION_USER_UNPROVOKED_COMMAND)
+    {
+      MCerror(9429, "unexpected");
+    }
+    focused_issue = historical;
+    historical = (mc_process_action_v1 *)focused_issue->history;
+    // TODO delete/free process action focused_issue
+    if (!historical)
+      break;
+
+    // printf("historical readded:%i  '%s'\n", historical->type, historical->dialogue);
 
     // Return to the stack
     append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count, historical);
@@ -3108,10 +3117,12 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       focused_issue->sequence_uid = command_hub->uid_counter;
 
       // Begin demonstration
-      declare_and_allocate_anon_struct(process_action_v1, demo_issue, sizeof_process_action_v1);
+      mc_process_action_v1 *demo_issue = (mc_process_action_v1 *)malloc(sizeof(mc_process_action_v1));
+      demo_issue->struct_id = NULL;
       demo_issue->sequence_uid = focused_issue->sequence_uid;
       demo_issue->type = PROCESS_ACTION_PM_DEMO_INITIATION;
       demo_issue->history = (void *)focused_issue;
+      demo_issue->data.ptr = NULL;
 
       // Obtain the command being demonstrated
       {
