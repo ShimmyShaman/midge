@@ -1942,8 +1942,6 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
                                                    "printf(\"script-concluding\\n\");\n"
                                                    "return 0;\n}");
 
-  script->locals = (void **)calloc(sizeof(void *), script->local_count);
-
   printf("script_declaration:\n%s\n\n", declaration);
 
   clint_declare(declaration);
@@ -2404,9 +2402,12 @@ int mc_main(int argc, const char *const *argv)
   command_hub->focused_issue_stack_count = 0;
   command_hub->focused_issue_activated = false;
   command_hub->uid_counter = 2000;
-  command_hub->active_scripts_alloc = 16;
-  command_hub->active_scripts = (void **)malloc(sizeof(void *) * command_hub->active_scripts_alloc);
-  command_hub->active_script_count = 0;
+  command_hub->scripts_alloc = 32;
+  command_hub->scripts = (void **)malloc(sizeof(void *) * command_hub->scripts_alloc);
+  command_hub->scripts_count = 0;
+  command_hub->script_instances_alloc = 16;
+  command_hub->script_instances = (void **)malloc(sizeof(void *) * command_hub->script_instances_alloc);
+  command_hub->script_instances_count = 0;
 
   declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
   template_collection->templates_alloc = 400;
@@ -2435,7 +2436,7 @@ int mc_main(int argc, const char *const *argv)
       "invoke declare_function_pointer|"
       "demo|"
       // ---- BEGIN SEQUENCE ----
-      ".script\n"
+      ".createScript\n"
       "dcl int space_index\n"
       "nvi int command_length strlen command\n"
       "for i 0 command_length\n"
@@ -2487,23 +2488,25 @@ int mc_main(int argc, const char *const *argv)
       "end\n"
       "$nv function_name $ya rind responses\n"
       "|"
-      ""
-      // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
-      // What is the name of the function?
-      "construct_and_attach_child_node|"
-      // Return Type:
-      "void|"
-      // Parameter type:
-      "node|"
-      // Parameter name:
-      "parent|"
-      // Parameter type:
-      "const char *|"
-      // Parameter name:
-      "node_name|"
-      // Parameter 1 type:
+      "invoke_function_with_args|"
       "end|"
       "midgequit|";
+  // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
+  // What is the name of the function?
+  "construct_and_attach_child_node|"
+  // Return Type:
+  "void|"
+  // Parameter type:
+  "node|"
+  // Parameter name:
+  "parent|"
+  // Parameter type:
+  "const char *|"
+  // Parameter name:
+  "node_name|"
+  // Parameter 1 type:
+  "end|"
+  "midgequit|";
   // ---- SEQUENCE TRANSITION ----
   "invoke initialize_function|"
   // What is the name of the function you wish to initialize?
@@ -2746,52 +2749,55 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
   int res;
   declare_and_assign_anon_struct(command_hub_v1, command_hub, p_command_hub);
 
-  if (command_hub->active_script_count == 0)
+  if (command_hub->script_instances_count == 0)
     return 0;
 
-  for (int i = 0; i < command_hub->active_script_count; ++i)
+  for (int i = 0; i < command_hub->script_instances_count; ++i)
   {
-    declare_and_assign_anon_struct(script_v1, script, command_hub->active_scripts[i]);
+    script_instance_v1 *script_instance = (script_instance_v1 *)command_hub->script_instances[i];
 
-    if (script->awaiting_data_set_index >= 0)
+    if (script_instance->awaiting_data_set_index >= 0)
       continue;
 
     // printf("script->sequence_uid=%u\n", script->sequence_uid);
-    if (script->segments_complete > script->segment_count)
+    if (script_instance->segments_complete > script_instance->script->segment_count)
     {
       // Cleanup
       MCerror(5482, "TODO");
     }
     // Execute the script
     char buf[1024];
-    strcpy(buf, SCRIPT_NAME_PREFIX);
+    // strcpy(buf, SCRIPT_NAME_PREFIX);
 
     char **output = NULL;
-    printf("script entered: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
+    // printf("script entered: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
     sprintf(buf, "{\n"
                  "void *p_script = (void *)%p;\n"
-                 "%s%u(p_script);\n"
+                 "%s(p_script);\n"
                  "}",
-            script, SCRIPT_NAME_PREFIX, script->script_uid);
+            script_instance, script_instance->script->created_function_name);
     clint_process(buf);
-    printf("script exited: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
+    // printf("script exited: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
 
-    if (script->segments_complete >= script->segment_count)
+    if (script_instance->segments_complete >= script_instance->script->segment_count)
     {
+      // Free script data
       // Cleanup & continue
-
-      if (script->arguments[2])
-        free(script->arguments[2]);
-      free(script->arguments);
+      if (script_instance->previous_command)
+        free(script_instance->previous_command);
 
       // Locals should be freed at end of script
-      for (int j = 0; j < script->local_count; ++j)
-        if (script->locals[j])
-          free(script->locals[j]);
-      free(script->locals);
+      for (int j = 0; j < script_instance->script->local_count; ++j)
+        if (script_instance->locals[j])
+          free(script_instance->locals[j]);
+      free(script_instance->locals);
 
-      if (script->response)
-        free(script->response);
+      if (script_instance->response)
+        free(script_instance->response);
+
+      // Remove script
+      remove_from_collection(&command_hub->script_instances, &command_hub->script_instances_alloc, &command_hub->script_instances_count, i);
+      --i;
 
       continue;
     }
@@ -2806,7 +2812,7 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
 
     if (focused_issue->type != PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS)
     {
-      // MCerror(42425, "TODO"); // Cleanup
+      MCerror(42425, "TODO"); // Cleanup
       remove_from_collection(&command_hub->active_scripts, &command_hub->active_scripts_alloc, &command_hub->active_script_count, i);
       --i;
       continue;
@@ -2901,84 +2907,111 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     --command_hub->focused_issue_stack_count;
 
     // Script Execution Request
-    if (!strncmp(focused_issue->dialogue, ".script", 7))
+    if (!strncmp(focused_issue->dialogue, ".script", 7) || !strncmp(focused_issue->dialogue, ".createScript", 12))
     {
       // Create the script
-      declare_and_allocate_anon_struct(script_v1, script, sizeof_script_v1);
-      // script->execution_state = SCRIPT_EXECUTION_STATE_INITIAL;
-      // script->next_statement_index = -1;
-      script->sequence_uid = focused_issue->sequence_uid;
+      script_v1 *script = (script_v1 *)malloc(sizeof(script_v1));
+      script->struct_id = NULL;
       ++command_hub->uid_counter;
       script->script_uid = command_hub->uid_counter;
-      script->segments_complete = 0;
-      script->awaiting_data_set_index = -1;
-      script->arguments = (void **)malloc(sizeof(void *) * 3);
-      script->response = NULL;
-
-      // -- Submit contextual arguments
-
-      // -- -- Global
-      script->arguments[0] = command_hub;
-      // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
-      // allocate_and_copy_cstr(variable->name, "global_node");
-      // variable->value = command_hub->global_node;
-      // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
-
-      // -- -- Nodespace
-      script->arguments[1] = command_hub->nodespace;
-      // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
-      // allocate_and_copy_cstr(variable->name, "nodespace");
-      // variable->value = command_hub->nodespace;
-      // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
-
-      // -- -- Previous User Command
-      if (focused_issue->history)
-      {
-        declare_and_assign_anon_struct(process_action_v1, previous_issue, focused_issue->history);
-        switch (previous_issue->type)
-        {
-        case PROCESS_ACTION_PM_DEMO_INITIATION:
-        {
-          script->arguments[2] = previous_issue->data.demonstrated_command;
-          // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
-          // allocate_and_copy_cstr(variable->name, "command");
-          // allocate_from_cstringv(&variable->value, previous_issue->data.demonstrated_command);
-
-          // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
-        }
-        break;
-        default:
-        {
-          MCerror(-825, "unhandled type:%i", previous_issue->type);
-        }
-        }
-      }
-      else
-      {
-        script->arguments[2] = NULL;
-        // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
-        // allocate_and_copy_cstr(variable->name, "command");
-        // allocate_from_cstringv(&variable->value, "null");
-
-        // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
-      }
+      script->name = NULL;
 
       // -- Parse statements
       MCcall(mcqck_translate_script_code(command_hub->nodespace, (void *)script, focused_issue->dialogue));
 
-      // Set corresponding issue
-      declare_and_allocate_anon_struct(process_action_v1, script_issue, sizeof_process_action_v1);
-      script_issue->sequence_uid = focused_issue->sequence_uid;
-      script_issue->type = PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS;
-      script_issue->history = (void *)focused_issue;
-      allocate_and_copy_cstr(script_issue->dialogue, "Initiating Script...");
-
       // Submit the script
       append_to_collection(&command_hub->active_scripts, &command_hub->active_scripts_alloc, &command_hub->active_script_count, script);
 
-      // Set as response action
-      *p_response_action = (void *)script_issue;
-      return 0;
+      if (!strncmp(focused_issue->dialogue, ".createScript", 12))
+      {
+        // Save the script and do not invoke
+        // Requires name
+        // Set corresponding issue
+        process_action_v1 *script_issue = (process_action_v1 *)malloc(sizeof(process_action_v1));
+        script_issue->sequence_uid = focused_issue->sequence_uid;
+        script_issue->type = PROCESS_ACTION_SCRIPT_QUERY_CREATED_NAME;
+        script_issue->history = (void *)focused_issue;
+        script_issue->data.ptr = script;
+        allocate_and_copy_cstr(script_issue->dialogue, "Enter Script Name:");
+
+        // Set as response action
+        *p_response_action = (void *)script_issue;
+        return 0;
+      }
+
+      MCerror(4928, "TODO -- quick invoke temp script");
+      // script->locals = (void **)calloc(sizeof(void *), script->local_count);
+
+      // // Invoke the script straightaway as a quick temporary execution
+      // declare_and_allocate_anon_struct(script_v1, script, sizeof_script_v1);
+      // // script->execution_state = SCRIPT_EXECUTION_STATE_INITIAL;
+      // // script->next_statement_index = -1;
+      // script_instance_v1 *script_instance;
+
+      // script->sequence_uid = focused_issue->sequence_uid;
+      // script->segments_complete = 0;
+      // script->awaiting_data_set_index = -1;
+      // script->arguments = (void **)malloc(sizeof(void *) * 3);
+      // script->response = NULL;
+
+      // // -- Submit contextual arguments
+
+      // // -- -- Global
+      // script->arguments[0] = command_hub;
+      // // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+      // // allocate_and_copy_cstr(variable->name, "global_node");
+      // // variable->value = command_hub->global_node;
+      // // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
+
+      // // -- -- Nodespace
+      // script->arguments[1] = command_hub->nodespace;
+      // // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+      // // allocate_and_copy_cstr(variable->name, "nodespace");
+      // // variable->value = command_hub->nodespace;
+      // // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
+
+      // // -- -- Previous User Command
+      // if (focused_issue->history)
+      // {
+      //   declare_and_assign_anon_struct(process_action_v1, previous_issue, focused_issue->history);
+      //   switch (previous_issue->type)
+      //   {
+      //   case PROCESS_ACTION_PM_DEMO_INITIATION:
+      //   {
+      //     script->arguments[2] = previous_issue->data.demonstrated_command;
+      //     // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+      //     // allocate_and_copy_cstr(variable->name, "command");
+      //     // allocate_from_cstringv(&variable->value, previous_issue->data.demonstrated_command);
+
+      //     // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
+      //   }
+      //   break;
+      //   default:
+      //   {
+      //     MCerror(-825, "unhandled type:%i", previous_issue->type);
+      //   }
+      //   }
+      // }
+      // else
+      // {
+      //   script->arguments[2] = NULL;
+      //   // assign_anon_struct(variable, malloc(sizeof(void *) * 2));
+      //   // allocate_and_copy_cstr(variable->name, "command");
+      //   // allocate_from_cstringv(&variable->value, "null");
+
+      //   // append_to_collection(&script->arguments, &script->arguments_alloc, &script->argument_count, variable);
+      // }
+
+      // // Set corresponding issue
+      // declare_and_allocate_anon_struct(process_action_v1, script_issue, sizeof_process_action_v1);
+      // script_issue->sequence_uid = focused_issue->sequence_uid;
+      // script_issue->type = PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS;
+      // script_issue->history = (void *)focused_issue;
+      // allocate_and_copy_cstr(script_issue->dialogue, "Initiating Script...");
+
+      // // Set as response action
+      // *p_response_action = (void *)script_issue;
+      // return 0;
     }
 
     // Attempt to find the action the user is commanding
@@ -3063,10 +3096,6 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     return 0;
   }
   default:
-    if (focused_issue->type == 8)
-    {
-      MCerror(-241, "Temp got to end of script:%i", focused_issue->type)
-    }
     MCerror(-241, "UnhandledType:%i", focused_issue->type)
   }
 

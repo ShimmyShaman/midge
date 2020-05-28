@@ -58,6 +58,7 @@ enum process_action_type
     PROCESS_ACTION_PM_DEMO_INITIATION,
     PROCESS_ACTION_PM_SCRIPT_REQUEST,
 
+    PROCESS_ACTION_SCRIPT_QUERY_CREATED_NAME,
     PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
     PROCESS_ACTION_SCRIPT_QUERY,
 };
@@ -234,6 +235,7 @@ enum script_process_state
         void *history;                  \
         union {                         \
             char *demonstrated_command; \
+            void *ptr;                  \
         } data;                         \
     }
 #define sizeof_process_action_v1 (sizeof(void *) * 7)
@@ -252,27 +254,31 @@ enum script_process_state
     }
 #define sizeof_template_collection_v1 (sizeof(void *) * 5)
 
-#define script_v1                       \
+#define script_v1                          \
+    struct                                 \
+    {                                      \
+        mc_struct_info_v1 *struct_id;      \
+        const char *name;                  \
+        unsigned int script_uid;           \
+        unsigned int local_count;          \
+        unsigned int segment_count;        \
+        const char *created_function_name; \
+    }
+
+#define script_instance_v1              \
     struct                              \
     {                                   \
-        struct                          \
-        {                               \
-            const char *identifier;     \
-            uint version;               \
-        } struct_id;                    \
+        mc_struct_info_v1 *struct_id;   \
+        mc_script_v1 *script;           \
         unsigned int sequence_uid;      \
-        unsigned int script_uid;        \
-        unsigned int arguments_alloc;   \
-        unsigned int argument_count;    \
-        void **arguments;               \
-        unsigned int local_count;       \
+        mc_command_hub_v1 *command_hub; \
+        mc_node_v1 *nodespace;          \
+        const char *previous_command;   \
         void **locals;                  \
         char *response;                 \
-        unsigned int segment_count;     \
         unsigned int segments_complete; \
         int awaiting_data_set_index;    \
     }
-#define sizeof_script_v1 (sizeof(void *) * 13)
 
 #define command_hub_v1                          \
     struct                                      \
@@ -289,29 +295,29 @@ enum script_process_state
         unsigned int focused_issue_stack_alloc; \
         unsigned int focused_issue_stack_count; \
         void **focused_issue_stack;             \
-        unsigned int active_scripts_alloc;      \
-        unsigned int active_script_count;       \
-        void **active_scripts;                  \
+        unsigned int scripts_alloc;             \
+        unsigned int scripts_count;             \
+        void **scripts;                         \
+        unsigned int script_instances_alloc;    \
+        unsigned int script_instances_count;    \
+        void **script_instances;                \
         bool focused_issue_activated;           \
         unsigned int uid_counter;               \
     }
 #define sizeof_command_hub_v1 (sizeof(void *) * 14)
 
-#define void_collection_v1          \
-    struct                          \
-    {                               \
-        struct                      \
-        {                           \
-            const char *identifier; \
-            uint version;           \
-        } struct_id;                \
-        unsigned int allocated;     \
-        unsigned int count;         \
-        void *items;                \
+#define void_collection_v1         \
+    struct                         \
+    {                              \
+        mc_struct_id_v1 struct_id; \
+        unsigned int allocated;    \
+        unsigned int count;        \
+        void *items;               \
     }
 #define sizeof_void_collection_v1 (sizeof(void *) * 5)
 
 typedef struct_id_v1 mc_struct_id_v1;
+typedef void_collection_v1 mc_void_collection_v1;
 typedef struct_info_v1 mc_struct_info_v1;
 typedef parameter_info_v1 mc_parameter_info_v1;
 typedef function_info_v1 mc_function_info_v1;
@@ -319,6 +325,7 @@ typedef node_v1 mc_node_v1;
 typedef script_local_v1 mc_script_local_v1;
 typedef script_v1 mc_script_v1;
 typedef command_hub_v1 mc_command_hub_v1;
+typedef script_instance_v1 mc_script_instance_v1;
 
 int (*find_function_info)(int, void **);
 
