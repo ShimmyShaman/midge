@@ -53,6 +53,7 @@ enum process_action_type
     PROCESS_ACTION_USER_UNRESOLVED_RESPONSE,
     PROCESS_ACTION_USER_SCRIPT_ENTRY,
     PROCESS_ACTION_USER_SCRIPT_RESPONSE,
+    PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
 
     PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
     PROCESS_ACTION_PM_DEMO_INITIATION,
@@ -258,11 +259,11 @@ enum script_process_state
     struct                                 \
     {                                      \
         mc_struct_info_v1 *struct_id;      \
-        const char *name;                  \
+        char *name;                  \
         unsigned int script_uid;           \
         unsigned int local_count;          \
         unsigned int segment_count;        \
-        const char *created_function_name; \
+        char *created_function_name; \
     }
 
 #define script_instance_v1              \
@@ -273,7 +274,7 @@ enum script_process_state
         unsigned int sequence_uid;      \
         mc_command_hub_v1 *command_hub; \
         mc_node_v1 *nodespace;          \
-        const char *previous_command;   \
+        char *previous_command;   \
         void **locals;                  \
         char *response;                 \
         unsigned int segments_complete; \
@@ -324,6 +325,7 @@ typedef function_info_v1 mc_function_info_v1;
 typedef node_v1 mc_node_v1;
 typedef script_local_v1 mc_script_local_v1;
 typedef script_v1 mc_script_v1;
+typedef process_action_v1 mc_process_action_v1;
 typedef command_hub_v1 mc_command_hub_v1;
 typedef script_instance_v1 mc_script_instance_v1;
 

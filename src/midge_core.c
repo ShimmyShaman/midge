@@ -605,7 +605,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
     substituted_type[strlen(kvp->type) - strlen(raw_type_id) + strlen(sinfo->declared_mc_name)] = '\0';
     // printf("kt:%s rt:%s dmc:%s st:%s\n", kvp->type, raw_type_id, sinfo->declared_mc_name, substituted_type);
 
-    sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", substituted_type, kvp->locals_index);
+    sprintf(kvp->replacement_code, "(*(%s *)script_instance->locals[%u])", substituted_type, kvp->locals_index);
     // printf("\nkrpstcde:'%s'\n", kvp->replacement_code);
 
     size_of_var = (char *)malloc(sizeof(char) * (8 + 1 + strlen(substituted_type)));
@@ -615,7 +615,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   }
   else
   {
-    sprintf(kvp->replacement_code, "(*(%s *)script->locals[%u])", kvp->type, kvp->locals_index);
+    sprintf(kvp->replacement_code, "(*(%s *)script_instance->locals[%u])", kvp->type, kvp->locals_index);
     // printf("\nkrpnncde:'%s','%s'\n", type_identifier, kvp->replacement_code);
 
     size_of_var = (char *)malloc(sizeof(char) * (8 + 1 + strlen(kvp->type)));
@@ -627,7 +627,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
 
   append_to_collection(local_index, local_indexes_alloc, local_indexes_count, kvp);
 
-  sprintf(buf, "script->locals[%u] = (void *)malloc(%s);\n", kvp->locals_index, size_of_var);
+  sprintf(buf, "script_instance->locals[%u] = (void *)malloc(%s);\n", kvp->locals_index, size_of_var);
 
   free(raw_type_id);
   free(size_of_var);
@@ -957,11 +957,10 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
   return 4240;
 }
 
-int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
+int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *code)
 {
   int res;
   void **mc_dvp;
-  declare_and_assign_anon_struct(script_v1, script, p_script);
 
   unsigned int translation_alloc = 512 + strlen(code) * 13 / 10;
   char *translation = (char *)malloc(sizeof(char) * translation_alloc);
@@ -979,7 +978,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   char buf[2048];
   // -- Parse statements
   int s = -1;
-  int i = 8;
+  int i = 0;
   bool loop = true;
   while (loop)
   {
@@ -1019,15 +1018,15 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
         sprintf(buf,
                 "  \n// Script Provocation-Response Break\n"
                 // "  printf(\"here-4\\n\");\n"
-                "  allocate_and_copy_cstr(script->response, %s);\n"
-                "printf(\"seqid:%%u \\n\", script->sequence_uid);\n"
-                "  script->segments_complete = %u;\n"
-                "  script->awaiting_data_set_index = %u;\n"
+                "  allocate_and_copy_cstr(script_instance->response, %s);\n"
+                "printf(\"seqid:%%u \\n\", script_instance->sequence_uid);\n"
+                "  script_instance->segments_complete = %u;\n"
+                "  script_instance->awaiting_data_set_index = %u;\n"
                 // "  printf(\"here-6a\\n\");\n"
                 "  return 0;\n"
                 "segment_%u:\n"
                 // "printf(\"here-6b\\n\");\n"
-                "  %s = (char *)script->locals[%u];\n",
+                "  %s = (char *)script_instance->locals[%u];\n",
                 provocation, script->segment_count, script->local_count, script->segment_count, response_location, script->local_count);
         ++script->local_count;
 
@@ -1911,20 +1910,18 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
 
   unsigned int declaration_alloc = 1024 + translation_alloc;
   char *declaration = (char *)malloc(sizeof(char) * declaration_alloc);
-  sprintf(declaration, "int %s%u(void *p_script) {\n"
+  sprintf(declaration, "int %s(mc_script_instance_v1 *script_instance) {\n"
                        "  int res;\n"
                        "  void **mc_dvp;\n"
                        "  void *mc_vargs[128];\n"
-                       "\n"
-                       "  declare_and_assign_anon_struct(script_v1, script, p_script);\n"
-                       "  declare_and_assign_anon_struct(command_hub_v1, command_hub, script->arguments[0]);\n"
-                       "  declare_and_assign_anon_struct(node_v1, nodespace, script->arguments[1]);\n"
-                       "  const char *command = (const char *)script->arguments[2];\n\n"
-                       "  switch(script->segments_complete)\n"
+                       "\n\n"
+                       "  mc_node_v1 *nodespace = (mc_node_v1 *)script_instance->command_hub->nodespace;"
+                       "  const char *command = script_instance->previous_command;\n\n"
+                       "  switch(script_instance->segments_complete)\n"
                        "  {\n"
                        "  case 0:\n"
                        "    break;\n",
-          SCRIPT_NAME_PREFIX, script->script_uid);
+          script->created_function_name);
   for (int i = 1; i <= script->segment_count; ++i)
   {
     sprintf(buf, "  case %i: goto segment_%i;\n", i, i);
@@ -1938,7 +1935,7 @@ int mcqck_translate_script_code(void *nodespace, void *p_script, char *code)
   append_to_cstr(&declaration_alloc, &declaration, translation);
   append_to_cstr(&declaration_alloc, &declaration, "\n"
                                                    "// Script Execution Finished\n"
-                                                   "script->segments_complete = script->segment_count;\n"
+                                                   "script_instance->segments_complete = script_instance->script->segment_count;\n"
                                                    "printf(\"script-concluding\\n\");\n"
                                                    "return 0;\n}");
 
@@ -2489,6 +2486,7 @@ int mc_main(int argc, const char *const *argv)
       "$nv function_name $ya rind responses\n"
       "|"
       "invoke_function_with_args|"
+      ".runScript invoke_function_with_args|"
       "end|"
       "midgequit|";
   // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
@@ -2568,6 +2566,7 @@ int mc_main(int argc, const char *const *argv)
   return 0;
 }
 
+int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_process_action_v1 **command_action);
 int process_matrix_register_action(void *p_command_hub, void *p_process_action);
 int command_hub_submit_process_action(void *p_command_hub, void *p_process_action);
 int command_hub_process_outstanding_actions(void *p_command_hub);
@@ -2579,11 +2578,42 @@ int submit_user_command(int argc, void **argsv)
   void **mc_dvp;
   int res;
 
-  declare_and_assign_anon_struct(command_hub_v1, command_hub, argsv[0]);
+  mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)argsv[0];
   char *command = (char *)argsv[4];
 
   // Format the User Response as an action
-  declare_and_allocate_anon_struct(process_action_v1, process_action, sizeof_process_action_v1);
+  mc_process_action_v1 *process_action;
+  MCcall(format_user_response(command_hub, command, &process_action));
+
+  // Process command and any/all system responses
+  while (1)
+  {
+    // Affect the command hub
+    MCcall(process_matrix_register_action(command_hub, process_action));
+    MCcall(command_hub_submit_process_action(command_hub, process_action));
+
+    // Process the action
+    MCcall(command_hub_process_outstanding_actions(command_hub));
+
+    // Formulate system responses
+    void *p_response_action;
+    MCcall(systems_process_command_hub_scripts(command_hub, &p_response_action));
+    if (!p_response_action)
+    {
+      MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
+    }
+    if (!p_response_action)
+      break;
+    assign_anon_struct(process_action, p_response_action);
+  }
+
+  // Send control back to the user
+  return 0;
+}
+
+int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_process_action_v1 **command_action)
+{
+  mc_process_action_v1 *process_action = (mc_process_action_v1 *)calloc(sizeof(mc_process_action_v1), 1);
   if (command_hub->focused_issue_stack_count == 0)
   {
     process_action->sequence_uid = command_hub->uid_counter;
@@ -2596,7 +2626,7 @@ int submit_user_command(int argc, void **argsv)
   else
   {
     // Pop the focused issue from the stack
-    declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1]);
+    mc_process_action_v1 *focused_issue = (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
     command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
     --command_hub->focused_issue_stack_count;
 
@@ -2629,34 +2659,20 @@ int submit_user_command(int argc, void **argsv)
       process_action->history = focused_issue;
     }
     break;
-    default:
-      MCerror(-828, "Unhandled PM-query-type:%i", focused_issue->type);
-    }
-  }
-
-  // Process command and any/all system responses
-  while (1)
-  {
-    // Affect the command hub
-    MCcall(process_matrix_register_action(command_hub, process_action));
-    MCcall(command_hub_submit_process_action(command_hub, process_action));
-
-    // Process the action
-    MCcall(command_hub_process_outstanding_actions(command_hub));
-
-    // Formulate system responses
-    void *p_response_action;
-    MCcall(systems_process_command_hub_scripts(command_hub, &p_response_action));
-    if (!p_response_action)
+    case PROCESS_ACTION_SCRIPT_QUERY_CREATED_NAME:
     {
-      MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
-    }
-    if (!p_response_action)
-      break;
-    assign_anon_struct(process_action, p_response_action);
-  }
+      process_action->sequence_uid = focused_issue->sequence_uid;
+      process_action->type = PROCESS_ACTION_USER_CREATED_SCRIPT_NAME;
 
-  // Send control back to the user
+      allocate_and_copy_cstr(process_action->dialogue, command);
+      process_action->history = focused_issue;
+    }
+    break;
+    default:
+      MCerror(-828, "Unhandled PM-query-type:%i  '%s'", focused_issue->type, focused_issue->dialogue);
+    }
+  }
+  *command_action = process_action;
   return 0;
 }
 
@@ -2701,6 +2717,7 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
   }
   break;
   case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
+  case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
   {
     // Print to terminal
     printf("%s\n", focused_issue->dialogue);
@@ -2718,6 +2735,7 @@ int command_hub_process_outstanding_actions(void *p_command_hub)
   }
   break;
   case PROCESS_ACTION_SCRIPT_QUERY:
+  case PROCESS_ACTION_SCRIPT_QUERY_CREATED_NAME:
   {
     // Print to terminal
     printf("%s", focused_issue->dialogue);
@@ -2754,7 +2772,7 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
 
   for (int i = 0; i < command_hub->script_instances_count; ++i)
   {
-    script_instance_v1 *script_instance = (script_instance_v1 *)command_hub->script_instances[i];
+    mc_script_instance_v1 *script_instance = (mc_script_instance_v1 *)command_hub->script_instances[i];
 
     if (script_instance->awaiting_data_set_index >= 0)
       continue;
@@ -2802,9 +2820,9 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
       continue;
     }
 
-    if (!script->response)
+    if (!script_instance->response)
     {
-      MCerror(542852, "TODO: response=%s", script->response);
+      MCerror(542852, "TODO: response=%s", script_instance->response);
     }
 
     // Process the Focused Issue
@@ -2813,7 +2831,7 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
     if (focused_issue->type != PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS)
     {
       MCerror(42425, "TODO"); // Cleanup
-      remove_from_collection(&command_hub->active_scripts, &command_hub->active_scripts_alloc, &command_hub->active_script_count, i);
+      remove_from_collection(&command_hub->script_instances, &command_hub->script_instances_alloc, &command_hub->script_instances_count, i);
       --i;
       continue;
     }
@@ -2826,7 +2844,7 @@ int systems_process_command_hub_scripts(void *p_command_hub, void **p_response_a
     declare_and_allocate_anon_struct(process_action_v1, script_query, sizeof_process_action_v1);
     script_query->sequence_uid = focused_issue->sequence_uid;
     script_query->type = PROCESS_ACTION_SCRIPT_QUERY;
-    allocate_and_copy_cstr(script_query->dialogue, script->response);
+    allocate_and_copy_cstr(script_query->dialogue, script_instance->response);
     script_query->history = (void *)focused_issue;
 
     *p_response_action = script_query;
@@ -2845,13 +2863,14 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     return 0;
 
   // Process the Focused Issue
-  declare_and_assign_anon_struct(process_action_v1, focused_issue, command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1]);
+  mc_process_action_v1 *focused_issue = (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
   declare_and_assign_anon_struct(template_collection_v1, template_collection, command_hub->template_collection);
 
   // Templates first
   switch (focused_issue->type)
   {
   case PROCESS_ACTION_SCRIPT_QUERY:
+  case PROCESS_ACTION_SCRIPT_QUERY_CREATED_NAME:
     // case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
     {
       //   // Do not process these commands
@@ -2860,15 +2879,16 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     }
   case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
   {
+    // User response to script provoked query
     // Pop the focused issue from the stack
     command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
     --command_hub->focused_issue_stack_count;
 
     // Obtain the script that queried the response
-    script_v1 *script = NULL;
-    for (int i = 0; i < command_hub->active_script_count; ++i)
+    mc_script_instance_v1 *script = NULL;
+    for (int i = 0; i < command_hub->script_instances_count; ++i)
     {
-      assign_anon_struct(script, command_hub->active_scripts[i]);
+      script = (mc_script_instance_v1 *)command_hub->script_instances[i];
       if (focused_issue->sequence_uid == script->sequence_uid)
         break;
       script = NULL;
@@ -2893,6 +2913,44 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
 
     return 0;
   }
+  case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
+  {
+    // User response to provocation to name created script
+    // Pop the focused issue from the stack
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
+    // Get the script from the query issue
+    mc_script_v1 *script = (mc_script_v1 *)((mc_process_action_v1 *)focused_issue->history)->data.ptr;
+    if (!script)
+    {
+      MCerror(958, "aint supposed to be the case");
+    }
+
+    script->name = focused_issue->dialogue;
+    printf("<> script '%s' created!\n", script->name);
+
+    // Do not keep .createScript process actions
+    // Return the original historical action (if one exists) to the issue stack where it came from
+    mc_process_action_v1 *historical = (mc_process_action_v1 *)focused_issue->history;
+    // TODO delete/free process action focused_issue
+
+    if (historical->type != PROCESS_ACTION_SCRIPT_QUERY_CREATED_NAME)
+    {
+      MCerror(9428, "unexpected");
+    }
+    focused_issue = historical;
+    historical = (mc_process_action_v1 *)focused_issue->history;
+    // TODO delete/free process action focused_issue
+
+    if (!historical)
+      break;
+
+    printf("historical readded:%s\n", historical->type);
+
+    // Return to the stack
+    append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count, historical);
+  }
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_PM_DEMO_INITIATION:
   {
@@ -2909,25 +2967,29 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
     // Script Execution Request
     if (!strncmp(focused_issue->dialogue, ".script", 7) || !strncmp(focused_issue->dialogue, ".createScript", 12))
     {
+      bool temp = strncmp(focused_issue->dialogue, ".createScript", 12);
       // Create the script
-      script_v1 *script = (script_v1 *)malloc(sizeof(script_v1));
+      mc_script_v1 *script = (mc_script_v1 *)malloc(sizeof(mc_script_v1));
+      script->created_function_name = NULL;
       script->struct_id = NULL;
       ++command_hub->uid_counter;
       script->script_uid = command_hub->uid_counter;
       script->name = NULL;
+      script->created_function_name = (char *)malloc(sizeof(char) * (strlen(SCRIPT_NAME_PREFIX) + 5 + 1));
+      sprintf(script->created_function_name, "%s%u", SCRIPT_NAME_PREFIX, script->script_uid);
 
       // -- Parse statements
-      MCcall(mcqck_translate_script_code(command_hub->nodespace, (void *)script, focused_issue->dialogue));
+      MCcall(mcqck_translate_script_code(command_hub->nodespace, script, focused_issue->dialogue + (temp ? 8 : 13)));
 
-      // Submit the script
-      append_to_collection(&command_hub->active_scripts, &command_hub->active_scripts_alloc, &command_hub->active_script_count, script);
-
-      if (!strncmp(focused_issue->dialogue, ".createScript", 12))
+      if (!temp)
       {
+        // Add the script to loaded scripts
+        append_to_collection(&command_hub->scripts, &command_hub->scripts_alloc, &command_hub->scripts_count, script);
+
         // Save the script and do not invoke
         // Requires name
         // Set corresponding issue
-        process_action_v1 *script_issue = (process_action_v1 *)malloc(sizeof(process_action_v1));
+        mc_process_action_v1 *script_issue = (mc_process_action_v1 *)malloc(sizeof(mc_process_action_v1));
         script_issue->sequence_uid = focused_issue->sequence_uid;
         script_issue->type = PROCESS_ACTION_SCRIPT_QUERY_CREATED_NAME;
         script_issue->history = (void *)focused_issue;
@@ -2940,6 +3002,7 @@ int systems_process_command_hub_issues(void *p_command_hub, void **p_response_ac
       }
 
       MCerror(4928, "TODO -- quick invoke temp script");
+      // script->created_function_name = NULL;
       // script->locals = (void **)calloc(sizeof(void *), script->local_count);
 
       // // Invoke the script straightaway as a quick temporary execution
