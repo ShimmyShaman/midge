@@ -49,21 +49,21 @@ enum process_contextual_data
 
 typedef enum
 {
-// User Initiated
+    // User Initiated
     PROCESS_ACTION_USER_UNPROVOKED_COMMAND = 1,
     PROCESS_ACTION_USER_UNRESOLVED_RESPONSE,
     PROCESS_ACTION_USER_SCRIPT_ENTRY,
     PROCESS_ACTION_USER_SCRIPT_RESPONSE,
     PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
 
-// Process Manager Initiated
-PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
+    // Process Manager Initiated
+    PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
     PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
     PROCESS_ACTION_PM_DEMO_INITIATION,
     PROCESS_ACTION_PM_SCRIPT_REQUEST,
     PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
 
-// Script
+    // Script
     PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
     PROCESS_ACTION_SCRIPT_QUERY,
 } process_action_type;
@@ -123,6 +123,13 @@ enum script_process_state
 #define MCerror(error_code, error_message, ...)                            \
     printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
     return error_code;
+
+#define cprintf(dest, format, ...)                                \
+    {                                                             \
+        int cprintf_n = snprintf(NULL, 0, format, ##__VA_ARGS__); \
+        dest = (char *)malloc(sizeof(char) * (cprintf_n + 1));    \
+        sprintf(dest, format, ##__VA_ARGS__);                     \
+    }
 
 #define script_local_v1            \
     struct                         \
@@ -228,17 +235,19 @@ enum script_process_state
 
 // #define process_action_data_v1
 
-#define process_action_v1              \
-    struct                             \
-    {                                  \
-        mc_struct_id_v1 *struct_id;    \
-        unsigned int sequence_uid;     \
-        enum process_action_type type; \
-        char *dialogue;                \
-        void *contextual_issue;        \
-        void *previous_issue;          \
-        void *consequential_issue;     \
-        void *data;                    \
+#define process_action_v1                                  \
+    struct                                                 \
+    {                                                      \
+        mc_struct_id_v1 *struct_id;                        \
+        unsigned int sequence_uid;                         \
+        process_action_type type;                          \
+        char *dialogue;                                    \
+        /* The root issue this exists under. eg. */        \
+        /* the demo issue that this action is a part of.*/ \
+        void *contextual_issue;                            \
+        void *previous_issue;                              \
+        void *consequential_issue;                         \
+        void *data;                                        \
     }
 
 #define template_collection_v1        \
@@ -255,26 +264,26 @@ enum script_process_state
     }
 #define sizeof_template_collection_v1 (sizeof(void *) * 5)
 
-#define script_v1                     \
-    struct                            \
-    {                                 \
-        mc_struct_info_v1 *struct_id; \
-        char *name;                   \
-        unsigned int script_uid;      \
-        unsigned int local_count;     \
-        unsigned int segment_count;   \
-        char *created_function_name;  \
+#define script_v1                    \
+    struct                           \
+    {                                \
+        mc_struct_id_v1 *struct_id;  \
+        char *name;                  \
+        unsigned int script_uid;     \
+        unsigned int local_count;    \
+        unsigned int segment_count;  \
+        char *created_function_name; \
     }
 
 #define script_instance_v1              \
     struct                              \
     {                                   \
-        mc_struct_info_v1 *struct_id;   \
+        mc_struct_id_v1 *struct_id;     \
         mc_script_v1 *script;           \
         unsigned int sequence_uid;      \
         mc_command_hub_v1 *command_hub; \
         mc_node_v1 *nodespace;          \
-        char *previous_command;         \
+        char *contextual_command;         \
         void **locals;                  \
         char *response;                 \
         unsigned int segments_complete; \
