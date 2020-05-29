@@ -2804,8 +2804,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     {
       // Free script data
       // Cleanup & continue
-      if (script_instance->previous_command)
-        free(script_instance->previous_command);
+      if (script_instance->contextual_command)
+        free(script_instance->contextual_command);
 
       // Locals should be freed at end of script
       for (int j = 0; j < script_instance->script->local_count; ++j)
@@ -2848,6 +2848,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_SCRIPT_QUERY, focused_issue->contextual_issue,
                              focused_issue, NULL, script_instance->response, NULL, &script_query);
     focused_issue->consequential_issue = script_query;
+    free(script_instance->response);
+    script_instance->response = NULL;
 
     *p_response_action = script_query;
   }
@@ -3111,8 +3113,26 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
           MCerror(7584, "UNHANDLED type:%i", contextual_issue->type);
         }
       }
-      script_instance->contextual_command = ((mc_process_action_v1 *)focused_issue->contextual_issue)->data;
-      MCerror(7585, "TODO -- continue filling script instance out and set it to be run");
+      script_instance->contextual_command = (char *)((mc_process_action_v1 *)focused_issue->contextual_issue)->data;
+      script_instance->locals = (void **)malloc(sizeof(void *) * script->local_count);
+      script_instance->response = NULL;
+      script_instance->segments_complete = 0;
+      script_instance->awaiting_data_set_index = -1;
+
+      // Add to active scripts
+      append_to_collection(&command_hub->script_instances, &command_hub->script_instances_alloc, &command_hub->script_instances_count, script_instance);
+
+      // Set corresponding issue
+      char *initiation_msg;
+      cprintf(initiation_msg, " -- initiating script '%s'...", script->name);
+      mc_process_action_v1 *script_initiation;
+      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS, focused_issue->contextual_issue,
+                               focused_issue, NULL, initiation_msg, script_instance, &script_initiation);
+      free(initiation_msg);
+
+      // Set as response action
+      *p_response_action = (void *)script_initiation;
+      return 0;
     }
     // Attempt to find the action the user is commanding
 
