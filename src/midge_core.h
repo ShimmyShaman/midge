@@ -194,7 +194,12 @@ enum script_process_state
         const char *identifier; \
         unsigned int version;   \
     }
-#define sizeof_struct_id_v1 (sizeof(void *) * 2)
+#define key_value_pair_v1 \
+    struct                \
+    {                     \
+        const char *key;  \
+        void *value;      \
+    }
 #define struct_info_v1                \
     struct                            \
     {                                 \
@@ -247,6 +252,9 @@ enum script_process_state
         void *previous_issue;                              \
         void *consequential_issue;                         \
         void *data;                                        \
+        unsigned int contextual_data_alloc;                \
+        unsigned int contextual_data_count;                \
+        void **contextual_data;                            \
     }
 
 #define template_collection_v1        \
@@ -274,19 +282,20 @@ enum script_process_state
         char *created_function_name; \
     }
 
-#define script_instance_v1              \
-    struct                              \
-    {                                   \
-        mc_struct_id_v1 *struct_id;     \
-        mc_script_v1 *script;           \
-        unsigned int sequence_uid;      \
-        mc_command_hub_v1 *command_hub; \
-        mc_node_v1 *nodespace;          \
-        char *contextual_command;         \
-        void **locals;                  \
-        char *response;                 \
-        unsigned int segments_complete; \
-        int awaiting_data_set_index;    \
+#define script_instance_v1                       \
+    struct                                       \
+    {                                            \
+        mc_struct_id_v1 *struct_id;              \
+        mc_script_v1 *script;                    \
+        unsigned int sequence_uid;               \
+        mc_command_hub_v1 *command_hub;          \
+        mc_node_v1 *nodespace;                   \
+        mc_process_action_v1 *contextual_action; \
+        char *contextual_command;                \
+        void **locals;                           \
+        char *response;                          \
+        unsigned int segments_complete;          \
+        int awaiting_data_set_index;             \
     }
 
 #define command_hub_v1                          \
@@ -326,6 +335,7 @@ enum script_process_state
 #define sizeof_void_collection_v1 (sizeof(void *) * 5)
 
 typedef struct_id_v1 mc_struct_id_v1;
+typedef key_value_pair_v1 mc_key_value_pair_v1;
 typedef void_collection_v1 mc_void_collection_v1;
 typedef struct_info_v1 mc_struct_info_v1;
 typedef parameter_info_v1 mc_parameter_info_v1;

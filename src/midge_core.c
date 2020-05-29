@@ -249,6 +249,25 @@ int increment_pointer(int argc, void **argv)
   return 0;
 }
 
+int get_process_contextual_data(mc_process_action_v1 *contextual_action, const char *const key, void **value)
+{
+  *value = NULL;
+  while (contextual_action)
+  {
+    for (int mc_ii = 0; mc_ii < contextual_action->contextual_data_count; ++mc_ii)
+    {
+      if (!strcmp(key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[mc_ii])->key))
+      {
+        *value = ((mc_key_value_pair_v1 *)contextual_action->contextual_data[mc_ii])->value;
+        return 0;
+      }
+    }
+
+    contextual_action = (mc_process_action_v1 *)contextual_action->contextual_issue;
+  }
+  return 0;
+}
+
 int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, void *item)
 {
   if (*collection_count + 1 > *collection_alloc)
@@ -765,7 +784,7 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
   }
 }
 
-int parse_past_singular_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i, char **output)
+int parse_past_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i, char **output)
 {
   int res;
   char *primary, *temp;
@@ -795,7 +814,7 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
       ++*i;
 
       char *secondary;
-      parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, i, &secondary);
+      parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, i, &secondary);
 
       temp = (char *)malloc(sizeof(char) * (strlen(primary) + 1 + strlen(secondary) + b + 1));
       strcpy(temp, primary);
@@ -878,7 +897,7 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
     case '!':
     {
       ++*i;
-      parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, i, &primary);
+      parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, i, &primary);
       temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2));
       strcpy(temp, "!");
       strcat(temp, primary);
@@ -906,7 +925,7 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
     case '(':
     {
       ++*i;
-      MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, i, &temp));
+      MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, &temp));
 
       MCcall(parse_past(code, i, ")"));
 
@@ -932,12 +951,12 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
 
       // left
       char *left;
-      MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, i, &left));
+      MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, &left));
       MCcall(parse_past(code, i, " "));
 
       // right
       char *right;
-      MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, i, &right));
+      MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, &right));
 
       *output = (char *)malloc(sizeof(char) * (strlen(oper) + 1 + strlen(left) + 1 + strlen(right) + 1));
       sprintf(*output, "%s %s %s", left, oper, right);
@@ -955,6 +974,29 @@ int parse_past_singular_expression(void *nodespace, void **local_index, unsigned
     }
 
   return 4240;
+}
+
+int parse_past_script_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i, char **output)
+{
+  bool script_variable_prefix = false;
+  if (code[*i] == '$')
+  {
+    script_variable_prefix = true;
+    ++*i;
+  }
+
+  int res;
+  MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, output));
+
+  if (!script_variable_prefix)
+    return 0;
+
+  char *temp = (char *)malloc(sizeof(char) * (strlen(*output) + 2));
+  sprintf(temp, "$%s", *output);
+  free(*output);
+  *output = temp;
+
+  return 0;
 }
 
 int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *code)
@@ -1002,12 +1044,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Identifier
         char *response_location;
-        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
+        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
         MCcall(parse_past(code, &i, " "));
 
         // Variable Name
         char *provocation;
-        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
+        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
         if (code[i] != '\n' && code[i] != '\0')
         {
           MCerror(-4864, "expected statement end:'%c'", code[i]);
@@ -1049,15 +1091,24 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Function Name
         char *function_name_identifier;
-        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &function_name_identifier));
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &function_name_identifier));
 
-        sprintf(buf, "  function_info_v1 *mcsfnv_function_info;\n"
-                     "  {\n"
-                     "    void *mc_vargs[3];\n"
-                     "    mc_vargs[0] = (void *)&mcsfnv_function_info;\n"
-                     "    mc_vargs[1] = (void *)&nodespace;\n"
-                     "    mc_vargs[2] = (void *)&%s;\n"
-                     "    find_function_info(3, mc_vargs);\n"
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  function_info_v1 *mcsfnv_function_info;\n"
+                                                                "  {\n"
+                                                                "    void *mc_vargs[3];\n"
+                                                                "    mc_vargs[0] = (void *)&mcsfnv_function_info;\n"
+                                                                "    mc_vargs[1] = (void *)&nodespace;\n"));
+        if (function_name_identifier[0] == '$')
+        {
+          sprintf(buf, "MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", &mc_vargs[2]));\n", function_name_identifier + 1);
+          // TODO deal with maybe duplicated / free strings?
+        }
+        else
+        {
+          sprintf(buf, "    mc_vargs[2] = (void *)&%s;\n", function_name_identifier);
+        }
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        sprintf(buf, "    find_function_info(3, mc_vargs);\n"
                      "  }\n"
                      "  if (mcsfnv_function_info) {\n"
                      //  "    // Invoking a midge function, pass command_hub as first argument\n"
@@ -1065,8 +1116,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                      //  "    ++mcsfnv_arg_count;\n"
                      "  }\n"
                      "  else\n"
-                     "    throw -233;\n\n",
-                function_name_identifier);
+                     "    throw -233;\n\n");
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // Form the arguments
@@ -1080,13 +1130,13 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             MCcall(parse_past(code, &i, " "));
 
             char *array_count_identifier;
-            MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_count_identifier));
+            MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_count_identifier));
             MCcall(parse_past(code, &i, " "));
             sprintf(buf, "  for (int mc_ii = 0; mc_ii < %s; ++mc_ii) {\n", array_count_identifier);
             MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
             char *array_identifier;
-            MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_identifier));
+            MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_identifier));
             sprintf(buf, "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[%%i] = (void *)%%p;\\n\",\n"
                          "            mcsfnv_arg_count, %s[mc_ii]);\n",
                     array_identifier);
@@ -1102,7 +1152,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           {
             MCerror(-1037, "TODO this case");
             // char *argument;
-            // MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+            // MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
             // // MCcall(parse_past_identifier(code, &i, &argument, true, true));
             // // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument, &replace_name));
             // // char *arg_entry = argument;
@@ -1118,9 +1168,15 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           }
         }
 
-        // TODO haven't implemented return
+        sprintf(buf, "  char *mcsfnv_function_name;"
+                     "  MCcall(get_process_contextual_data(script_instance->contextual_action, %s + 1, &(void *)mcsfnv_function_name));\n"
+                     "  if(!mcsfnv_function_name) {\n"
+                     "    MCerror(42424, \"InScriptGen: Couldn't find '%%s' in process action contextual data\", %s);\n"
+                     "  }\n",
+                function_name_identifier, function_name_identifier);
 
-        sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"%%s(%%i, mcsfnv_vargs);\", %s, mcsfnv_arg_count);\n", function_name_identifier);
+        // TODO haven't implemented return
+        sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"%%s(%%i, mcsfnv_vargs);\", mcsfnv_function_name, mcsfnv_arg_count);\n");
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         // sprintf(buf, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n");
         // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1180,12 +1236,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       //   {
       //     // left
       //     char *left;
-      //     MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
+      //     MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
       //     MCcall(parse_past(code, &i, " "));
 
       //     // right
       //     char *right;
-      //     MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
+      //     MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
 
       //     buf[0] = '\0';
       //     MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
@@ -1215,7 +1271,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       //         return 34242;
       //       }
       //       MCcall(parse_past(code, &i, " "));
-      //       MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
+      //       MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
       //       sprintf(buf + strlen(buf), " %s %s", comparator, right);
       //     }
       //     MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1233,11 +1289,11 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
         char *var_identifier;
-        MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &var_identifier));
+        MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &var_identifier));
         MCcall(parse_past(code, &i, " "));
 
         char *left;
-        MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
+        MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
         if (code[i] != '\n' && code[i] != '\0')
         {
           MCerror(-4829, "expected statement end");
@@ -1290,7 +1346,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           MCcall(parse_past(code, &i, "["));
 
           char *left;
-          MCcall(parse_past_singular_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
+          MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
           MCcall(parse_past(code, &i, "]"));
           if (code[i] != '\n' && code[i] != '\0')
           {
@@ -1355,7 +1411,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Set Value
         char *left;
-        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
+        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
         if (code[i] != '\n' && code[i] != '\0')
         {
           MCerror(-4829, "expected statement end");
@@ -1426,7 +1482,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       // left
       char *left;
       // printf("here-0\n");
-      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
+      MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
       // printf("left:%s\n", left);
       if (code[i] != ' ')
       {
@@ -1479,7 +1535,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // right
         char *right;
-        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
+        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
         if (code[i] != '\n' && code[i] != '\0')
         {
           MCerror(-4864, "expected statement end:'%c'", code[i]);
@@ -1603,7 +1659,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Set Value
         char *sizeof_expr;
-        MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &sizeof_expr));
+        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &sizeof_expr));
         if (code[i] != '\n' && code[i] != '\0')
         {
           MCerror(-4829, "expected statement end");
@@ -1651,12 +1707,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         // {
         //   // left
         //   char *left;
-        //   MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
+        //   MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
         //   MCcall(parse_past(code, &i, " "));
 
         //   // right
         //   char *right;
-        //   MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
+        //   MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
 
         //   buf[0] = '\0';
         //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
@@ -1694,7 +1750,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         //       return 34242;
         //     }
         //     MCcall(parse_past(code, &i, " "));
-        //     MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
+        //     MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
         //     sprintf(buf + strlen(buf), " %s %s", comparator, right);
         //   }
         //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1777,16 +1833,31 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           MCcall(parse_past(code, &i, " "));
 
           char *argument;
-          MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+          MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
           // MCcall(parse_past_identifier(code, &i, &argument, true, true));
           // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument, &replace_name));
           // char *arg_entry = argument;
           // if (replace_name)
           //   arg_entry = replace_name;
           if (func_info)
-            sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
+          {
+            if (argument[0] == '$')
+            {
+              sprintf(buf, "MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", &mc_vargs[%i]));\n", argument + 1, arg_index + 1);
+            }
+            else
+            {
+              sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
+            }
+          }
           else
+          {
+            if (argument[0] == '$')
+            {
+              MCerror(4829, "NOT YET IMPLEMENTED");
+            }
             sprintf(buf, "%s%s", arg_index ? ", " : "", argument);
+          }
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
           ++arg_index;
           free(argument);
@@ -1821,7 +1892,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           MCcall(parse_past(code, &i, " "));
 
           char *argument;
-          MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+          MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
 
           buf[0] = '\0';
           sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
@@ -1850,12 +1921,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
       // Variable Name
       char *var_name;
-      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &var_name));
+      MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &var_name));
       MCcall(parse_past(code, &i, " "));
 
       // Value Name
       char *value_expr;
-      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &value_expr));
+      MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &value_expr));
       if (code[i] != '\n' && code[i] != '\0')
       {
         MCerror(-4829, "expected statement end");
@@ -1881,7 +1952,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
       // Variable Name
       char *conditional;
-      MCcall(parse_past_singular_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &conditional));
+      MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &conditional));
       if (code[i] != '\n' && code[i] != '\0')
       {
         MCerror(-4829, "expected statement end");
@@ -2747,6 +2818,7 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
     command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
     --command_hub->focused_issue_stack_count;
   }
+  break;
   default:
     MCerror(1511, "UnhandledType:%i", focused_issue->type)
   }
@@ -3036,6 +3108,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       // -- Instance
       mc_script_instance_v1 *script_instance = (mc_script_instance_v1 *)malloc(sizeof(mc_script_instance_v1));
       script_instance->script = script;
+      script_instance->contextual_action = (mc_process_action_v1 *)focused_issue->contextual_issue;
       script_instance->struct_id = NULL;
       script_instance->sequence_uid = focused_issue->sequence_uid;
 
@@ -3117,7 +3190,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
           var_value[i - s] = '\0';
           break;
         }
-        parse_past(focused_issue->dialogue, &i, "{");
+        parse_past(focused_issue->dialogue, &i, "}");
         if (i != strlen(focused_issue->dialogue))
         {
           MCerror(5829, "TODO");
@@ -3147,7 +3220,10 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       free(demo_issue_dialogue);
 
       // TODO -- add var_name & var_value to issue contextual data
-      MCerror(9252, "TODO");
+      mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
+      kvp->key = var_name;
+      kvp->value = (void *)var_value;
+      append_to_collection(&demo_issue->contextual_data, &demo_issue->contextual_data_alloc, &demo_issue->contextual_data_count, (void *)kvp);
 
       // // Return the original command to the stack
       // append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count,
@@ -3890,6 +3966,10 @@ int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequen
   (*output)->contextual_issue = contextual_issue;
   (*output)->previous_issue = previous_issue;
   (*output)->consequential_issue = consequential_issue;
+
+  (*output)->contextual_data_alloc = 2;
+  (*output)->contextual_data_count = 0;
+  (*output)->contextual_data = (void **)malloc(sizeof(void *) * (*output)->contextual_data_alloc);
 
   if (dialogue)
   {
