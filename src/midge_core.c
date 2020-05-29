@@ -1019,7 +1019,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                 "  \n// Script Provocation-Response Break\n"
                 // "  printf(\"here-4\\n\");\n"
                 "  allocate_and_copy_cstr(script_instance->response, %s);\n"
-                "printf(\"seqid:%%u \\n\", script_instance->sequence_uid);\n"
+                // "printf(\"seqid:%%u \\n\", script_instance->sequence_uid);\n"
                 "  script_instance->segments_complete = %u;\n"
                 "  script_instance->awaiting_data_set_index = %u;\n"
                 // "  printf(\"here-6a\\n\");\n"
@@ -1916,7 +1916,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                        "  void *mc_vargs[128];\n"
                        "\n\n"
                        "  mc_node_v1 *nodespace = (mc_node_v1 *)script_instance->command_hub->nodespace;"
-                       "  const char *command = script_instance->previous_command;\n\n"
+                       "  const char *command = script_instance->contextual_command;\n\n"
                        "  switch(script_instance->segments_complete)\n"
                        "  {\n"
                        "  case 0:\n"
@@ -2428,25 +2428,13 @@ int mc_main(int argc, const char *const *argv)
 
   const char *commands =
       "construct_and_attach_child_node|"
-      "demo|"
+      "demo 'construct_and_attach_child_node'|"
       // ---- BEGIN SEQUENCE ----
       "invoke declare_function_pointer|"
-      "demo|"
+      "demo 'invoke ${function_to_invoke=declare_function_pointer}|"
       // ---- BEGIN SEQUENCE ----
       ".createScript\n"
-      "dcl int space_index\n"
-      "nvi int command_length strlen command\n"
-      "for i 0 command_length\n"
-      "ifs command[i] == ' '\n"
-      "set int space_index i\n"
-      "brk\n"
-      "end\n"
-      "end for\n"
-      "dcs int command_remaining_length - command_length - space_index 1\n"
-      "msi 'char *' function_name + command_remaining_length 1\n"
-      "nvk strcpy function_name (+ command + space_index 1)\n"
-      "ass function_name[command_remaining_length] '\\0'\n"
-      "nvi 'function_info *' finfo find_function_info nodespace function_name\n"
+      "nvi 'function_info *' finfo find_function_info nodespace $function_to_invoke\n"
       ""
       "dcs int rind 0\n"
       "dcl 'char *' responses[32]\n"
@@ -2483,28 +2471,26 @@ int mc_main(int argc, const char *const *argv)
       "end\n"
       "end\n"
       "end\n"
-      "$nv function_name $ya rind responses\n"
+      "$nv $function_to_invoke $ya rind responses\n"
       "|"
       "invoke_function_with_args|"
       ".runScript invoke_function_with_args|"
+      // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
+      // What is the name of the function?
+      "construct_and_attach_child_node|"
+      // Return Type:
+      "void|"
+      // Parameter type:
+      "node|"
+      // Parameter name:
+      "parent|"
+      // Parameter type:
+      "const char *|"
+      // Parameter name:
+      "node_name|"
+      // Parameter 1 type:
       "end|"
       "midgequit|";
-  // void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type, char *parameter_name]...);
-  // What is the name of the function?
-  "construct_and_attach_child_node|"
-  // Return Type:
-  "void|"
-  // Parameter type:
-  "node|"
-  // Parameter name:
-  "parent|"
-  // Parameter type:
-  "const char *|"
-  // Parameter name:
-  "node_name|"
-  // Parameter 1 type:
-  "end|"
-  "midgequit|";
   // ---- SEQUENCE TRANSITION ----
   "invoke initialize_function|"
   // What is the name of the function you wish to initialize?
@@ -2631,13 +2617,6 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
 
     switch (focused_issue->type)
     {
-    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-    {
-      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_UNRESOLVED_RESPONSE, focused_issue->contextual_issue,
-                               focused_issue, NULL, command, NULL, &process_action);
-      focused_issue->consequential_issue = process_action;
-    }
-    break;
     case PROCESS_ACTION_PM_DEMO_INITIATION:
     {
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_UNPROVOKED_COMMAND,
@@ -2667,7 +2646,7 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
       {
         consequential_root = (mc_process_action_v1 *)consequential_root->previous_issue;
       }
-      printf("consequential_root:%i  '%s'\n", consequential_root->type, consequential_root->dialogue);
+      // printf("consequential_root:%i  '%s'\n", consequential_root->type, consequential_root->dialogue);
 
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_UNPROVOKED_COMMAND,
                                focused_issue->contextual_issue, consequential_root, NULL, command, NULL, &process_action);
@@ -2711,7 +2690,6 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
   switch (focused_issue->type)
   {
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
-  case PROCESS_ACTION_USER_UNRESOLVED_RESPONSE:
   case PROCESS_ACTION_USER_SCRIPT_ENTRY:
   {
     // Print to terminal
@@ -2745,7 +2723,6 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
     command_hub->focused_issue_activated = true;
   }
   break;
-  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_PM_DEMO_INITIATION:
   case PROCESS_ACTION_PM_IDLE_WITH_CONTEXT:
   {
@@ -2757,6 +2734,19 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
     printf(":> ");
   }
   break;
+  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+  {
+    // Print to terminal
+    printf("%s\n", focused_issue->dialogue);
+    command_hub->focused_issue_activated = true;
+
+    // Indicate user response
+    printf(":> ");
+
+    // Remove as an issue
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+  }
   default:
     MCerror(1511, "UnhandledType:%i", focused_issue->type)
   }
@@ -2793,21 +2783,31 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     char **output = NULL;
     // printf("script entered: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
     sprintf(buf, "{\n"
-                 "void *p_script = (void *)%p;\n"
+                 "mc_script_instance_v1 *p_script = (mc_script_instance_v1 *)%p;\n"
                  "%s(p_script);\n"
                  "}",
             script_instance, script_instance->script->created_function_name);
     clint_process(buf);
     // printf("script exited: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
 
+    // Pop the focused issue from the stack
+    mc_process_action_v1 *focused_issue = (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
+    if (focused_issue->sequence_uid != script_instance->sequence_uid)
+    {
+      MCerror(5221, "incorrect script / process_action association");
+    }
+
     if (script_instance->segments_complete >= script_instance->script->segment_count)
     {
+      // -- Script Complete!
       // Free script data
-      // Cleanup & continue
       if (script_instance->contextual_command)
         free(script_instance->contextual_command);
 
-      // Locals should be freed at end of script
+      // Locals should be freed at the end of script
       for (int j = 0; j < script_instance->script->local_count; ++j)
         if (script_instance->locals[j])
           free(script_instance->locals[j]);
@@ -2820,20 +2820,25 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       remove_from_collection(&command_hub->script_instances, &command_hub->script_instances_alloc, &command_hub->script_instances_count, i);
       --i;
 
+      mc_process_action_v1 *script_completion;
+      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_IDLE_WITH_CONTEXT, focused_issue->contextual_issue,
+                               focused_issue, NULL, " -- script completed", NULL, &script_completion);
+      focused_issue->consequential_issue = script_completion;
+
+      // TODO -- setting response action while also iterating through all scripts isn't right. Fix it up. Find a better way
+      *p_response_action = script_completion;
       continue;
     }
 
+    // -- The script has exited with a query
     if (!script_instance->response)
     {
-      MCerror(542852, "TODO: response=%s", script_instance->response);
+      MCerror(5222, "TODO: response=%s", script_instance->response);
     }
-
-    // Process the Focused Issue
-    mc_process_action_v1 *focused_issue = (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
 
     if (focused_issue->type != PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS)
     {
-      MCerror(42425, "TODO"); // Cleanup
+      MCerror(4245, "TODO"); // Cleanup
       remove_from_collection(&command_hub->script_instances, &command_hub->script_instances_alloc, &command_hub->script_instances_count, i);
       --i;
       continue;
@@ -2851,6 +2856,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     free(script_instance->response);
     script_instance->response = NULL;
 
+    // TODO -- setting response action while also iterating through all scripts isn't right. Fix it up. Find a better way
     *p_response_action = script_query;
   }
   return 0;
@@ -2880,73 +2886,6 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       //   // Send to other systems
       return 0;
     }
-  case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
-  {
-    // User response to script provoked query
-    // Pop the focused issue from the stack
-    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
-    --command_hub->focused_issue_stack_count;
-
-    // Obtain the script that queried the response
-    mc_script_instance_v1 *script = NULL;
-    for (int i = 0; i < command_hub->script_instances_count; ++i)
-    {
-      script = (mc_script_instance_v1 *)command_hub->script_instances[i];
-      if (focused_issue->sequence_uid == script->sequence_uid)
-        break;
-      script = NULL;
-    }
-    if (script == NULL)
-    {
-      MCerror(8284, "");
-    }
-
-    // Set the requested data on the script
-    allocate_from_cstringv(&script->locals[script->awaiting_data_set_index], focused_issue->dialogue);
-    script->awaiting_data_set_index = -1;
-
-    // Set corresponding issue
-    mc_process_action_v1 *script_issue;
-    construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS, focused_issue->contextual_issue,
-                             focused_issue, NULL, NULL, NULL, &script_issue);
-    focused_issue->consequential_issue = script_issue;
-
-    *p_response_action = script_issue;
-
-    return 0;
-  }
-  case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-  {
-    // User response to provocation to name created script
-    // Pop the focused issue from the stack
-    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
-    --command_hub->focused_issue_stack_count;
-
-    // Get the script from the query issue
-    mc_script_v1 *script = (mc_script_v1 *)((mc_process_action_v1 *)focused_issue->previous_issue)->data;
-    if (!script)
-    {
-      MCerror(9427, "aint supposed to be the case");
-    }
-
-    script->name = focused_issue->dialogue;
-
-    if (!focused_issue->contextual_issue)
-    {
-      MCerror(7248, "TODO -- handle the case where the stack would return to empty. How is this chain of actions stored?");
-    }
-
-    // Layer a Idle process action on and return to the loop/user
-    mc_process_action_v1 *idle_action;
-    char *resolution_message;
-    cprintf(resolution_message, "<> script '%s' created!\n", script->name);
-    construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_IDLE_WITH_CONTEXT, focused_issue->contextual_issue,
-                             focused_issue, NULL, resolution_message, NULL, &idle_action);
-    idle_action->consequential_issue = idle_action;
-    free(resolution_message);
-
-    *p_response_action = idle_action;
-  }
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_PM_DEMO_INITIATION:
   case PROCESS_ACTION_PM_IDLE_WITH_CONTEXT:
@@ -3109,6 +3048,9 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         mc_process_action_v1 *contextual_issue = (mc_process_action_v1 *)focused_issue->contextual_issue;
         switch (contextual_issue->type)
         {
+        case PROCESS_ACTION_PM_DEMO_INITIATION:
+          script_instance->contextual_command = (char *)contextual_issue->data;
+          break;
         default:
           MCerror(7584, "UNHANDLED type:%i", contextual_issue->type);
         }
@@ -3136,72 +3078,167 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     }
     // Attempt to find the action the user is commanding
 
+    if (!strncmp(focused_issue->dialogue, "demo ", 5))
+    {
+      ++command_hub->uid_counter;
+      focused_issue->sequence_uid = command_hub->uid_counter;
+
+      // Process the command
+      char patbuf[256];
+      char *pattern;
+      char *var_name, *var_value;
+      int bi = 0;
+      for (int i = 5; i < strlen(focused_issue->dialogue); ++i)
+      {
+        if (focused_issue->dialogue[i] != '$')
+        {
+          patbuf[bi++] = focused_issue->dialogue[i];
+          continue;
+        }
+
+        // Pattern
+        patbuf[bi++] = focused_issue->dialogue[i];
+        ++i;
+        parse_past(focused_issue->dialogue, &i, "{");
+
+        // Parse past variable name
+        parse_past_identifier(focused_issue->dialogue, &i, &var_name, false, false);
+        strcat(patbuf, var_name);
+
+        parse_past(focused_issue->dialogue, &i, "=");
+        int s = i;
+        for (; i < strlen(focused_issue->dialogue); ++i)
+        {
+          if (focused_issue->dialogue[i] != '}')
+            continue;
+
+          var_value = (char *)malloc(sizeof(char) * (i - s + 1));
+          strncpy(var_value, focused_issue->dialogue, i - s);
+          var_value[i - s] = '\0';
+          break;
+        }
+        parse_past(focused_issue->dialogue, &i, "{");
+        if (i != strlen(focused_issue->dialogue))
+        {
+          MCerror(5829, "TODO");
+        }
+        pattern = (char *)malloc(sizeof(char) * (bi + 1));
+        strncpy(pattern, patbuf, bi);
+        pattern[bi] = '\0';
+
+        break;
+      }
+
+      // Begin demonstration
+      const char *DIALOGUE_PREFIX = "Demonstrating '";
+      const char *DIALOGUE_POSTFIX = "' (type 'end' to end).";
+      char *demo_issue_dialogue = (char *)malloc(sizeof(char) * (strlen(DIALOGUE_PREFIX) + strlen(pattern) + strlen(DIALOGUE_POSTFIX) + 1));
+      strcpy(demo_issue_dialogue, DIALOGUE_PREFIX);
+      strcat(demo_issue_dialogue, pattern);
+      strcat(demo_issue_dialogue, DIALOGUE_POSTFIX);
+
+      mc_process_action_v1 *demo_issue;
+      mc_process_action_v1 *contextual_issue = NULL;
+      if (focused_issue)
+        contextual_issue = (mc_process_action_v1 *)focused_issue->contextual_issue;
+      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_DEMO_INITIATION, contextual_issue,
+                               focused_issue, NULL, demo_issue_dialogue, NULL, &demo_issue);
+      focused_issue->consequential_issue = demo_issue;
+      free(demo_issue_dialogue);
+
+      // TODO -- add var_name & var_value to issue contextual data
+      MCerror(9252, "TODO");
+
+      // // Return the original command to the stack
+      // append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count,
+      //                      historical_issue);
+
+      // Add a demonstration process on top of the focused issue stack
+      *p_response_action = (void *)demo_issue;
+    }
+
     // -- Find a suggestion from the process matrix
     // printf("##########################################\n");
     // printf("Begin Template Process:%s\n", process[0]);
     // MCcall(handle_process(argc, argsv));
 
     // -- Couldn't find one
-    // -- Request direction
+    // -- Send Unresolved command message
     mc_process_action_v1 *request_guidance_issue;
     construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_UNRESOLVED_COMMAND, focused_issue->contextual_issue,
-                             focused_issue, NULL, "Unresolved Command: type 'demo' to demonstrate.", NULL, &request_guidance_issue);
+                             focused_issue, NULL, "Unresolved Command.", NULL, &request_guidance_issue);
     focused_issue->consequential_issue = request_guidance_issue;
 
     *p_response_action = (void *)request_guidance_issue;
 
     return 0;
   }
-  case PROCESS_ACTION_USER_UNRESOLVED_RESPONSE:
+  case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
   {
+    // User response to script provoked query
     // Pop the focused issue from the stack
     command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
     --command_hub->focused_issue_stack_count;
 
-    if (!strcmp(focused_issue->dialogue, "demo"))
+    // Obtain the script that queried the response
+    mc_script_instance_v1 *script = NULL;
+    for (int i = 0; i < command_hub->script_instances_count; ++i)
     {
-      ++command_hub->uid_counter;
-      focused_issue->sequence_uid = command_hub->uid_counter;
-
-      // Obtain the command being demonstrated
-      mc_process_action_v1 *historical_issue = (mc_process_action_v1 *)focused_issue->previous_issue;
-      if (historical_issue == NULL || historical_issue->type != PROCESS_ACTION_PM_UNRESOLVED_COMMAND)
-      {
-        MCerror(-852, "demo historical issue 1 should be non-null and an PM_UNRESOLVED_COMMAND");
-      }
-      historical_issue = (mc_process_action_v1 *)historical_issue->previous_issue;
-      if (historical_issue == NULL || historical_issue->type != PROCESS_ACTION_USER_UNPROVOKED_COMMAND)
-      {
-        MCerror(-853, "demo historical issue 2 should be non-null and an USER_UNPROVOKED_COMMAND");
-      }
-
-      // Begin demonstration
-      const char *DIALOGUE_PREFIX = "Demonstrating '";
-      const char *DIALOGUE_POSTFIX = "' (type 'end' to end).";
-      char *demo_issue_dialogue = (char *)malloc(sizeof(char) * (strlen(DIALOGUE_PREFIX) + strlen(historical_issue->dialogue) + strlen(DIALOGUE_POSTFIX) + 1));
-      strcpy(demo_issue_dialogue, DIALOGUE_PREFIX);
-      strcat(demo_issue_dialogue, historical_issue->dialogue);
-      strcat(demo_issue_dialogue, DIALOGUE_POSTFIX);
-
-      mc_process_action_v1 *demo_issue;
-      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_DEMO_INITIATION, historical_issue,
-                               focused_issue, NULL, demo_issue_dialogue, historical_issue->dialogue, &demo_issue);
-      focused_issue->consequential_issue = demo_issue;
-      free(demo_issue_dialogue);
-
-      // Return the original command to the stack
-      append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count,
-                           historical_issue);
-
-      // Add a demonstration process on top of the focused issue stack
-      *p_response_action = (void *)demo_issue;
+      script = (mc_script_instance_v1 *)command_hub->script_instances[i];
+      if (focused_issue->sequence_uid == script->sequence_uid)
+        break;
+      script = NULL;
     }
-    else
+    if (script == NULL)
     {
-      // Look at resubmitting this as an unprovoked command
-      MCerror(-842, "TODO");
+      MCerror(8284, "");
     }
+
+    // Set the requested data on the script
+    allocate_from_cstringv(&script->locals[script->awaiting_data_set_index], focused_issue->dialogue);
+    script->awaiting_data_set_index = -1;
+
+    // Set corresponding issue
+    mc_process_action_v1 *script_issue;
+    construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS, focused_issue->contextual_issue,
+                             focused_issue, NULL, NULL, NULL, &script_issue);
+    focused_issue->consequential_issue = script_issue;
+
+    *p_response_action = script_issue;
+
     return 0;
+  }
+  case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
+  {
+    // User response to provocation to name created script
+    // Pop the focused issue from the stack
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
+    // Get the script from the query issue
+    mc_script_v1 *script = (mc_script_v1 *)((mc_process_action_v1 *)focused_issue->previous_issue)->data;
+    if (!script)
+    {
+      MCerror(9427, "aint supposed to be the case");
+    }
+
+    script->name = focused_issue->dialogue;
+
+    if (!focused_issue->contextual_issue)
+    {
+      MCerror(7248, "TODO -- handle the case where the stack would return to empty. How is this chain of actions stored?");
+    }
+
+    // Layer a Idle process action on and return to the loop/user
+    mc_process_action_v1 *idle_action;
+    char *resolution_message;
+    cprintf(resolution_message, "<> script '%s' created!\n", script->name);
+    construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_IDLE_WITH_CONTEXT, focused_issue->contextual_issue,
+                             focused_issue, NULL, resolution_message, NULL, &idle_action);
+    idle_action->consequential_issue = idle_action;
+    free(resolution_message);
+
+    *p_response_action = idle_action;
   }
   default:
     MCerror(2411, "UnhandledType:%i", focused_issue->type)
@@ -3760,7 +3797,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   output[n + fsize - s] = '\0';
 
   // clint_process(output);
-  printf("processed_core_function:\n%s\n", output);
+  // printf("processed_core_function:\n%s\n", output);
   clint_declare(output);
 
   free(input);
@@ -3776,7 +3813,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
 
-  printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
+  // printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
 
   return 0;
 }
