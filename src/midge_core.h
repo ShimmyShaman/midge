@@ -18,14 +18,36 @@ typedef void **midgeo;
 typedef void **midgeary;
 typedef unsigned int uint;
 
-enum process_unit_type {
-  PROCESS_UNIT_INTERACTION_INCR_DPTR = 1,
-  PROCESS_UNIT_INTERACTION,
-  PROCESS_UNIT_BRANCHING_INTERACTION,
-  PROCESS_UNIT_INVOKE,
-  PROCESS_UNIT_SET_CONTEXTUAL_DATA,
-  PROCESS_UNIT_SET_NODESPACE_FUNCTION_INFO,
-};
+typedef enum {
+  // User Initiated
+  PROCESS_ACTION_USER_UNPROVOKED_COMMAND = 1,
+  PROCESS_ACTION_USER_SCRIPT_ENTRY,
+  PROCESS_ACTION_USER_SCRIPT_RESPONSE,
+  PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
+
+  // Process Manager Initiated
+  PROCESS_ACTION_PM_IDLE,
+  PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
+  PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
+  PROCESS_ACTION_PM_DEMO_INITIATION,
+  PROCESS_ACTION_PM_SCRIPT_REQUEST,
+  PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
+
+  // Script
+  PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
+  PROCESS_ACTION_SCRIPT_QUERY,
+} process_action_type;
+
+typedef enum {
+  PROCESS_TYPE_DEMONSTRATED = 1,
+  PROCESS_TYPE_EXHIBITED,
+} process_unit_type;
+
+typedef enum {
+  PROCESS_ORIGINATOR_USER = 1,
+  PROCESS_ORIGINATOR_PM,
+  PROCESS_ORIGINATOR_SCRIPT,
+} process_originator;
 
 enum branching_interaction_type {
   BRANCHING_INTERACTION_IGNORE_DATA = 1,
@@ -42,25 +64,6 @@ enum interaction_process_state {
 enum process_contextual_data {
   PROCESS_CONTEXTUAL_DATA_NODESPACE = 1,
 };
-
-typedef enum {
-  // User Initiated
-  PROCESS_ACTION_USER_UNPROVOKED_COMMAND = 1,
-  PROCESS_ACTION_USER_SCRIPT_ENTRY,
-  PROCESS_ACTION_USER_SCRIPT_RESPONSE,
-  PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
-
-  // Process Manager Initiated
-  PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
-  PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
-  PROCESS_ACTION_PM_DEMO_INITIATION,
-  PROCESS_ACTION_PM_SCRIPT_REQUEST,
-  PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
-
-  // Script
-  PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
-  PROCESS_ACTION_SCRIPT_QUERY,
-} process_action_type;
 
 enum script_process_state {
   SCRIPT_PROCESS_NOT_STARTED = 1,
@@ -131,19 +134,18 @@ enum script_process_state {
   }
 #define sizeof_script_local_v1 (sizeof(void *) * 6)
 
-#define process_unit_v1          \
-  struct {                       \
-    struct {                     \
-      const char *identifier;    \
-      uint version;              \
-    } struct_id;                 \
-    enum process_unit_type type; \
-    void *data;                  \
-    void *data2;                 \
-    void *next;                  \
-    const char *debug;           \
+#define process_unit_v1              \
+  struct {                           \
+    mc_struct_id_v1 *struct_id;      \
+    process_unit_type type;          \
+    char *dialogue;                  \
+    process_originator origin;       \
+    mc_process_action_v1 *action;    \
+    unsigned int continuances_alloc; \
+    unsigned int continuances_count; \
+    void **continuances;             \
   }
-#define sizeof_process_unit_v1 (sizeof(void *) * 7)
+
 #define branch_unit_v1                    \
   struct {                                \
     struct {                              \
@@ -274,14 +276,11 @@ enum script_process_state {
 
 #define command_hub_v1                      \
   struct {                                  \
-    struct {                                \
-      const char *identifier;               \
-      uint version;                         \
-    } struct_id;                            \
+    mc_struct_id_v1 *struct_id;             \
     mc_node_v1 *global_node;                \
     mc_node_v1 *nodespace;                  \
     void *template_collection;              \
-    void *process_matrix;                   \
+    mc_void_collection_v1 *process_matrix;  \
     unsigned int focused_issue_stack_alloc; \
     unsigned int focused_issue_stack_count; \
     void **focused_issue_stack;             \
@@ -301,7 +300,7 @@ enum script_process_state {
     mc_struct_id_v1 struct_id; \
     unsigned int allocated;    \
     unsigned int count;        \
-    void *items;               \
+    void **items;              \
   }
 #define sizeof_void_collection_v1 (sizeof(void *) * 5)
 
@@ -317,6 +316,7 @@ typedef script_v1 mc_script_v1;
 typedef process_action_v1 mc_process_action_v1;
 typedef command_hub_v1 mc_command_hub_v1;
 typedef script_instance_v1 mc_script_instance_v1;
+typedef process_unit_v1 mc_process_unit_v1;
 
 int (*find_function_info)(int, void **);
 

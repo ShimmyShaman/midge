@@ -9,7 +9,7 @@ Language: Cpp
 AlignEscapedNewlines: Left
 DerivePointerAlignment: false
 PointerAlignment: Right
-ColumnLimit: 120
+ColumnLimit: 130
 BreakStringLiterals: true
 ---
 Language: CSharp
