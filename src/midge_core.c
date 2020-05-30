@@ -256,11 +256,15 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
   {
     for (int mc_ii = 0; mc_ii < contextual_action->contextual_data_count; ++mc_ii)
     {
+      printf("here34\n");
+      printf("comparing %s<>%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[mc_ii])->key);
       if (!strcmp(key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[mc_ii])->key))
       {
         *value = ((mc_key_value_pair_v1 *)contextual_action->contextual_data[mc_ii])->value;
+        printf("here35\n");
         return 0;
       }
+      printf("here36\n");
     }
 
     contextual_action = (mc_process_action_v1 *)contextual_action->contextual_issue;
@@ -1086,6 +1090,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         MCcall(append_to_cstr(&translation_alloc, &translation, "{\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  char mcsfnv_buf[2048];\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-1\\n\");\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  int mcsfnv_arg_count = 0;\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf, \"void *mcsfnv_vargs[128];\\n\");\n\n"));
 
@@ -1100,7 +1105,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                                                                 "    mc_vargs[1] = (void *)&nodespace;\n"));
         if (function_name_identifier[0] == '$')
         {
-          sprintf(buf, "MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", &mc_vargs[2]));\n", function_name_identifier + 1);
+          sprintf(buf, "    MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", &mc_vargs[2]));\n", function_name_identifier + 1);
           // TODO deal with maybe duplicated / free strings?
         }
         else
@@ -1168,12 +1173,20 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           }
         }
 
-        sprintf(buf, "  char *mcsfnv_function_name;"
-                     "  MCcall(get_process_contextual_data(script_instance->contextual_action, %s + 1, &(void *)mcsfnv_function_name));\n"
-                     "  if(!mcsfnv_function_name) {\n"
-                     "    MCerror(42424, \"InScriptGen: Couldn't find '%%s' in process action contextual data\", %s);\n"
-                     "  }\n",
-                function_name_identifier, function_name_identifier);
+        if (function_name_identifier[0] == '$')
+        {
+          sprintf(buf, "  char *mcsfnv_function_name;\n"
+                       "  MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", (void **)&mcsfnv_function_name));\n"
+                       "  if(!mcsfnv_function_name) {\n"
+                       "    MCerror(42424, \"InScriptGen: Couldn't find '%%s' in process action contextual data\", mcsfnv_function_name);\n"
+                       "  }\n",
+                  function_name_identifier + 1);
+        }
+        else
+        {
+          sprintf(buf, "  char *mcsfnv_function_name = %s;\n", function_name_identifier);
+        }
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // TODO haven't implemented return
         sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"%%s(%%i, mcsfnv_vargs);\", mcsfnv_function_name, mcsfnv_arg_count);\n");
@@ -1809,12 +1822,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           find_function_info(3, mc_vargs);
         }
         // printf("dopey\n");
-        if (!func_info)
-        {
-          sprintf(buf, "%s = %s(", replace_name, function_name);
-          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-        }
-        else
+        if (func_info)
         {
           if (!strcmp(func_info->return_type, "void"))
           {
@@ -1822,9 +1830,16 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           }
           else
           {
-            sprintf(buf, "mc_vargs[0] = (void *)&%s;\n", replace_name);
+            sprintf(buf, "{\n"
+                         "  mc_vargs[0] = (void *)&%s;\n",
+                    replace_name);
             MCcall(append_to_cstr(&translation_alloc, &translation, buf));
           }
+        }
+        else
+        {
+          sprintf(buf, "%s = %s(", replace_name, function_name);
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         }
 
         int arg_index = 0;
@@ -1843,12 +1858,17 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           {
             if (argument[0] == '$')
             {
-              sprintf(buf, "MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", &mc_vargs[%i]));\n", argument + 1, arg_index + 1);
+              sprintf(buf, "  char *mc_context_data_%i;\n"
+                           "  MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", (void **)&mc_context_data_%i));\n"
+                           "  mc_vargs[%i] = (void *)&mc_context_data_%i;\n",
+                      arg_index + 1, argument + 1, arg_index + 1, arg_index + 1, arg_index + 1);
             }
             else
             {
               sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
             }
+
+            append_to_cstr(&translation_alloc, &translation, "  printf(\"here-21 sica=%p\\n\", script_instance->contextual_action);\n");
           }
           else
           {
@@ -1865,11 +1885,16 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         if (func_info)
         {
-          sprintf(buf, "%s(%i, mc_vargs", function_name, arg_index + 1);
+
+          append_to_cstr(&translation_alloc, &translation, "  printf(\"here-22  =%s\\n\", (char *)mc_vargs[2]);\n");
+          sprintf(buf, "  %s(%i, mc_vargs", function_name, arg_index + 1);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         }
 
         MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+        if (func_info)
+          MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-31\\n\");\n"));
 
         free(function_name);
       }
@@ -2499,10 +2524,10 @@ int mc_main(int argc, const char *const *argv)
 
   const char *commands =
       "construct_and_attach_child_node|"
-      "demo 'construct_and_attach_child_node'|"
+      "demo construct_and_attach_child_node|"
       // ---- BEGIN SEQUENCE ----
       "invoke declare_function_pointer|"
-      "demo 'invoke ${function_to_invoke=declare_function_pointer}|"
+      "demo invoke ${function_to_invoke=declare_function_pointer}|"
       // ---- BEGIN SEQUENCE ----
       ".createScript\n"
       "nvi 'function_info *' finfo find_function_info nodespace $function_to_invoke\n"
@@ -3098,7 +3123,6 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
           break;
         }
       }
-
       if (!script)
       {
         MCerror(7583, "TODO case where no script was found with that name");
@@ -3109,6 +3133,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       mc_script_instance_v1 *script_instance = (mc_script_instance_v1 *)malloc(sizeof(mc_script_instance_v1));
       script_instance->script = script;
       script_instance->contextual_action = (mc_process_action_v1 *)focused_issue->contextual_issue;
+      printf("beforesica:%p\n", script_instance->contextual_action);
       script_instance->struct_id = NULL;
       script_instance->sequence_uid = focused_issue->sequence_uid;
 
@@ -3128,7 +3153,6 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
           MCerror(7584, "UNHANDLED type:%i", contextual_issue->type);
         }
       }
-      script_instance->contextual_command = (char *)((mc_process_action_v1 *)focused_issue->contextual_issue)->data;
       script_instance->locals = (void **)malloc(sizeof(void *) * script->local_count);
       script_instance->response = NULL;
       script_instance->segments_complete = 0;
@@ -3159,8 +3183,9 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       // Process the command
       char patbuf[256];
       char *pattern;
-      char *var_name, *var_value;
       int bi = 0;
+      void *kvps[16];
+      int kvps_index = 0;
       for (int i = 5; i < strlen(focused_issue->dialogue); ++i)
       {
         if (focused_issue->dialogue[i] != '$')
@@ -3170,13 +3195,15 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         }
 
         // Pattern
-        patbuf[bi++] = focused_issue->dialogue[i];
+        patbuf[bi++] = '$';
         ++i;
         parse_past(focused_issue->dialogue, &i, "{");
 
         // Parse past variable name
+        char *var_name, *var_value;
         parse_past_identifier(focused_issue->dialogue, &i, &var_name, false, false);
-        strcat(patbuf, var_name);
+        strcpy(patbuf + bi, var_name);
+        bi += strlen(var_name);
 
         parse_past(focused_issue->dialogue, &i, "=");
         int s = i;
@@ -3186,7 +3213,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
             continue;
 
           var_value = (char *)malloc(sizeof(char) * (i - s + 1));
-          strncpy(var_value, focused_issue->dialogue, i - s);
+          strncpy(var_value, focused_issue->dialogue + s, i - s);
           var_value[i - s] = '\0';
           break;
         }
@@ -3195,20 +3222,33 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         {
           MCerror(5829, "TODO");
         }
-        pattern = (char *)malloc(sizeof(char) * (bi + 1));
-        strncpy(pattern, patbuf, bi);
-        pattern[bi] = '\0';
 
+        // Add var_name & var_value to issue contextual data
+        mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
+        kvp->key = var_name;
+        kvp->value = (void *)var_value;
+        kvps[kvps_index++] = (void *)kvp;
         break;
       }
 
+      // Set pattern
+      pattern = (char *)malloc(sizeof(char) * (bi + 1));
+      strncpy(pattern, patbuf, bi);
+      pattern[bi] = '\0';
+
       // Begin demonstration
-      const char *DIALOGUE_PREFIX = "Demonstrating '";
-      const char *DIALOGUE_POSTFIX = "' (type 'end' to end).";
-      char *demo_issue_dialogue = (char *)malloc(sizeof(char) * (strlen(DIALOGUE_PREFIX) + strlen(pattern) + strlen(DIALOGUE_POSTFIX) + 1));
-      strcpy(demo_issue_dialogue, DIALOGUE_PREFIX);
-      strcat(demo_issue_dialogue, pattern);
-      strcat(demo_issue_dialogue, DIALOGUE_POSTFIX);
+      char *demo_issue_dialogue;
+      cprintf(demo_issue_dialogue, "Demonstrating '%s' (type 'end' to end).", pattern);
+      unsigned int demo_issue_dialogue_alloc = strlen(demo_issue_dialogue) + 1;
+      if (kvps_index > 0)
+      {
+        char buf[256];
+        for (int k = 0; k < kvps_index; ++k)
+        {
+          sprintf(buf, "\n - using '$%s'='%s'", ((mc_key_value_pair_v1 *)kvps[k])->key, ((mc_key_value_pair_v1 *)kvps[k])->value);
+          MCcall(append_to_cstr(&demo_issue_dialogue_alloc, &demo_issue_dialogue, buf));
+        }
+      }
 
       mc_process_action_v1 *demo_issue;
       mc_process_action_v1 *contextual_issue = NULL;
@@ -3217,13 +3257,10 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_DEMO_INITIATION, contextual_issue,
                                focused_issue, NULL, demo_issue_dialogue, NULL, &demo_issue);
       focused_issue->consequential_issue = demo_issue;
-      free(demo_issue_dialogue);
 
-      // TODO -- add var_name & var_value to issue contextual data
-      mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
-      kvp->key = var_name;
-      kvp->value = (void *)var_value;
-      append_to_collection(&demo_issue->contextual_data, &demo_issue->contextual_data_alloc, &demo_issue->contextual_data_count, (void *)kvp);
+      for (int i = 0; i < kvps_index; ++i)
+        append_to_collection(&demo_issue->contextual_data, &demo_issue->contextual_data_alloc, &demo_issue->contextual_data_count, kvps[i]);
+      free(demo_issue_dialogue);
 
       // // Return the original command to the stack
       // append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc, &command_hub->focused_issue_stack_count,
@@ -3231,6 +3268,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 
       // Add a demonstration process on top of the focused issue stack
       *p_response_action = (void *)demo_issue;
+      return 0;
     }
 
     // -- Find a suggestion from the process matrix
@@ -3302,7 +3340,9 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 
     if (!focused_issue->contextual_issue)
     {
-      MCerror(7248, "TODO -- handle the case where the stack would return to empty. How is this chain of actions stored?");
+      // MCerror(7248, "TODO -- handle the case where the stack would return to empty. How is this chain of actions stored?");
+      // No Storage of discarded actions yet
+      return 0;
     }
 
     // Layer a Idle process action on and return to the loop/user
@@ -3315,6 +3355,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     free(resolution_message);
 
     *p_response_action = idle_action;
+    return 0;
   }
   default:
     MCerror(2411, "UnhandledType:%i", focused_issue->type)

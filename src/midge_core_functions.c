@@ -12,24 +12,31 @@ int find_function_info_v1(int argc, void **argv)
   {
     MCerror(-848, "Incorrect argument count");
   }
-
+  
   function_info **func_info = (function_info **)argv[0];
   node *nodespace = *(node **)argv[1];
   char *function_name = *(char **)argv[2];
-
+  
   void **mc_dvp;
   int res;
 
   *func_info = NULL;
   for (int i = 0; i < nodespace->function_count; ++i)
   {
+
+printf("ffi-3\n");
     // printf("dope\n");
     function_info *finfo = nodespace->functions[i];
-    // printf("dodpe:%s\n", nodespace->name);
-    // printf("dodpj:%s\n", function_name);
+
+printf("ffi-4a\n");
+    printf("dodpe:%s\n", nodespace->name);
+    printf("dodpj:%s\n", function_name);
+printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
     // printf("dwde\n");
+
+printf("ffi-5\n");
 
     // Matches
     *func_info = finfo;
@@ -37,6 +44,8 @@ int find_function_info_v1(int argc, void **argv)
     return 0;
   }
   // printf("dopu\n");
+
+printf("ffi-2\n");
 
   if (nodespace->parent)
   {
