@@ -1005,10 +1005,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                               "    mc_vargs[0] = (void *)&mcsfnv_function_info;\n"
                               "    mc_vargs[1] = (void *)&nodespace;\n"));
         if (function_name_identifier[0] == '$') {
-          sprintf(
-              buf,
-              "    MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", &mc_vargs[2]));\n",
-              function_name_identifier + 1);
+          sprintf(buf,
+                  "    char *mc_context_data_2;\n"
+                  "    MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\",\n"
+                  "           (void **)&mc_context_data_2));\n"
+                  "    mc_vargs[2] = (void *)&mc_context_data_2;\n",
+                  function_name_identifier + 1);
           // TODO deal with maybe duplicated / free strings?
         } else {
           sprintf(buf, "    mc_vargs[2] = (void *)&%s;\n", function_name_identifier);
@@ -1707,9 +1709,6 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             } else {
               sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
             }
-
-            append_to_cstr(&translation_alloc, &translation,
-                           "  printf(\"here-21 sica=%p\\n\", script_instance->contextual_action);\n");
           } else {
             if (argument[0] == '$') {
               MCerror(4829, "NOT YET IMPLEMENTED");
@@ -1723,7 +1722,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         if (func_info) {
 
-          append_to_cstr(&translation_alloc, &translation, "  printf(\"here-22  =%s\\n\", (char *)mc_vargs[2]);\n");
+          // append_to_cstr(&translation_alloc, &translation, "  printf(\"here-22  =%s\\n\", (char *)mc_vargs[2]);\n");
           sprintf(buf, "  %s(%i, mc_vargs", function_name, arg_index + 1);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         }
@@ -1731,7 +1730,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
         if (func_info)
           MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
-        MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-31\\n\");\n"));
+        // MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-31\\n\");\n"));
 
         free(function_name);
       } else if (code[i] == 'k') {
@@ -2666,7 +2665,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
             "}",
             script_instance, script_instance->script->created_function_name);
     clint_process(buf);
-    // printf("script exited: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
+    printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+           script_instance->script->segment_count);
 
     // Pop the focused issue from the stack
     mc_process_action_v1 *focused_issue =
@@ -2674,11 +2674,16 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
     --command_hub->focused_issue_stack_count;
 
+    printf("spchs-1\n");
     if (focused_issue->sequence_uid != script_instance->sequence_uid) {
       MCerror(5221, "incorrect script / process_action association");
     }
 
+    printf("spchs-2\n");
+
     if (script_instance->segments_complete >= script_instance->script->segment_count) {
+
+      printf("spchs-4\n");
       // -- Script Complete!
       // Free script data
       if (script_instance->contextual_command)
@@ -2689,6 +2694,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
         if (script_instance->locals[j])
           free(script_instance->locals[j]);
       free(script_instance->locals);
+
+      printf("spchs-5\n");
 
       if (script_instance->response)
         free(script_instance->response);
@@ -2704,16 +2711,22 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
                                &script_completion);
       focused_issue->consequential_issue = script_completion;
 
+      printf("spchs-6\n");
+
       // TODO -- setting response action while also iterating through all scripts isn't right. Fix it up. Find a better
       // way
       *p_response_action = script_completion;
       continue;
     }
 
+    printf("spchs-7\n");
+
     // -- The script has exited with a query
     if (!script_instance->response) {
       MCerror(5222, "TODO: response=%s", script_instance->response);
     }
+
+    printf("spchs-8\n");
 
     if (focused_issue->type != PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS) {
       MCerror(4245, "TODO"); // Cleanup
@@ -2723,9 +2736,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       continue;
     }
 
-    // Pop the focused issue from the stack
-    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
-    --command_hub->focused_issue_stack_count;
+    printf("spchs-9\n");
 
     // Begin Query
     mc_process_action_v1 *script_query;
@@ -2735,6 +2746,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     focused_issue->consequential_issue = script_query;
     free(script_instance->response);
     script_instance->response = NULL;
+
+    printf("spchs-10\n");
 
     // TODO -- setting response action while also iterating through all scripts isn't right. Fix it up. Find a better
     // way
