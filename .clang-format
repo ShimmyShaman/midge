@@ -1,5 +1,6 @@
 ---
 # We'll use defaults from the LLVM style, but with 2 columns indentation.
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
 BasedOnStyle: LLVM
 IndentWidth: 2
 ---
