@@ -948,8 +948,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
   bool loop = true;
   while (loop) {
     // printf("i:%i  '%c'\n", i, code[i]);
-    sprintf(buf, "printf(\"statement %i:\\n\");\n", debug_statement_index++);
-    MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+    // sprintf(buf, "printf(\"statement %i:\\n\");\n", debug_statement_index++);
+    // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
     switch (code[i]) {
     case ' ':
     case '\t':
@@ -1007,7 +1007,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(append_to_cstr(&translation_alloc, &translation, "  char mcsfnv_buf[2048];\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-1\\n\");\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  int mcsfnv_arg_count = 0;\n"));
-        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf, \"void *mcsfnv_vargs[128];\\n\");\n\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf, \"{\\n\");\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"void *mcsfnv_vargs[128];\\n\");\n\n"));
 
         // Function Name
         char *function_name_identifier;
@@ -1112,6 +1113,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"%%s(%%i, mcsfnv_vargs);\", mcsfnv_function_name, "
                      "mcsfnv_arg_count);\n");
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"}\\n\");\n"));
         // sprintf(buf, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n");
         // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  clint_process(mcsfnv_buf);\n"));
@@ -1896,110 +1898,6 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
   return 0;
 }
 
-int initialize_function_v1(int argc, void **argv) {
-  printf("initialize_function_v1()\n");
-  void **mc_dvp;
-  int res;
-
-  declare_and_assign_anon_struct(node_v1, nodespace, argv[0]);
-  declare_and_assign_anon_struct(function_info_v1, function_info, argv[1]);
-  char *code = (char *)argv[2];
-
-  printf("nodespace->name:%s\n", nodespace->name);
-  printf("function_info->name:%s\n", function_info->name);
-  printf("function_info->latest_iteration:%u\n", function_info->latest_iteration);
-  // printf("code_block:%c%c%c%c%c...", code_block[0], code_block[1], code_block[2], code_block[3], code_block[4]);
-
-  // Increment function iteration
-  ++function_info->latest_iteration;
-
-  // Declare with clint
-  char buf[16384];
-  const char *TAB = "  ";
-
-  sprintf(buf, "int %s_v%u(int mc_argc, void **mc_argv)\n{\n", function_info->name, function_info->latest_iteration);
-  // TODO -- mc_argc count check?
-  strcat(buf, TAB);
-  strcat(buf, "// Arguments\n");
-  strcat(buf, TAB);
-  strcat(buf, "int res;\n");
-  strcat(buf, TAB);
-  strcat(buf, "void **mc_dvp;\n");
-
-  for (int i = 0; i < function_info->parameter_count; ++i) {
-    strcat(buf, TAB);
-
-    declare_and_assign_anon_struct(parameter_info_v1, parameter, function_info->parameters[i]);
-
-    void *p_struct_info;
-    MCcall(find_struct_info(nodespace, parameter->type_name, &p_struct_info));
-    if (p_struct_info) {
-      strcat(buf, "declare_and_assign_anon_struct(");
-      strcat(buf, parameter->type_name);
-      strcat(buf, "_v");
-      sprintf(buf + strlen(buf), "%i, ", parameter->type_version);
-      strcat(buf, parameter->name);
-      strcat(buf, ", ");
-      strcat(buf, "mc_argv[");
-      sprintf(buf + strlen(buf), "%i]);\n", i);
-    } else {
-      sprintf(buf + strlen(buf), "%s %s = (%s)mc_argv[%i];\n", parameter->type_name, parameter->name, parameter->type_name, i);
-    }
-  }
-  if (function_info->parameter_count > 0)
-    strcat(buf, "\n");
-
-  // const char *identity; const char *type; struct_info *struct_info;
-  struct {
-    const char *var_name;
-    const char *type;
-    void *struct_info;
-  } declared_types[200];
-  int declared_type_count = 0;
-
-  printf("@ifv-5\n");
-  // Translate the code-block from script into workable midge-cling C
-
-  return -5224;
-
-  int n = strlen(code);
-  for (int i = 0; i < n;) {
-    // strcat(buf, code_block);
-    switch (code[i]) {
-    case ' ':
-    case '\t':
-      ++i;
-      continue;
-    default: {
-      if (!isalpha(code[i])) {
-        MCcall(print_parse_error(code, i, "initialize_function_v1", "default:!isalpha"));
-        return -42;
-      }
-      return -58822;
-      // mcqck_translate_script_statement(nodespace, NULL, NULL);
-      break;
-    }
-    }
-  }
-
-  strcat(buf, "\n");
-  strcat(buf, TAB);
-  strcat(buf, "return res;\n");
-  strcat(buf, "}");
-
-  printf("ifv>cling_declare:\n%s\n", buf);
-  // Declare the method
-  clint_declare(buf);
-
-  // Set the method to the function pointer
-  sprintf(buf, "%s = &%s_v%u;", function_info->name, function_info->name, function_info->latest_iteration);
-  printf("ifv>clint_process:\n%s\n", buf);
-  clint_process(buf);
-
-  printf("ifv-concludes\n");
-  return 0;
-}
-
 int init_core_functions(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
 int (*mc_dummy_function_pointer)(int, void **);
@@ -2448,6 +2346,9 @@ int mc_main(int argc, const char *const *argv) {
       // -- END DEMO
       // -- DEMO initialize function
       "invoke initialize_function|"
+      "construct_and_attach_child_node|"
+      "nvk printf \"got here\\n\"\n"
+      "|"
       "midgequit|";
   // What is the name of the function you wish to initialize?
   "construct_and_attach_child_node|"
@@ -3463,9 +3364,11 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
 
           allocate_and_copy_cstrn(kvp->key, (process_unit->dialogue + c + 1), ci - c - 1);
           kvp->value = malloc(sizeof(char) * (di - d + 1));
-          strncpy((char *)kvp->value, intercepted_action->dialogue, di - d);
+          strncpy((char *)kvp->value, intercepted_action->dialogue + d, di - d);
           ((char *)kvp->value)[di - d] = '\0';
           kvps[kvps_index++] = kvp;
+
+          // printf("setkvp: %s+%s\n", kvp->key, (char *)kvp->value);
         } else {
           if (strncmp(process_unit->dialogue + c, intercepted_action->dialogue + d, di - d))
             continue;
@@ -3523,6 +3426,45 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   return 0;
 }
 
+int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequence_uid, process_action_type type,
+                             void *contextual_issue, void *previous_issue, mc_process_action_v1 *causation_issue,
+                             const char *const dialogue, void *data, mc_process_action_v1 **output) {
+  *output = (mc_process_action_v1 *)malloc(sizeof(mc_process_action_v1));
+  (*output)->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+  (*output)->struct_id->identifier = "process_action";
+  (*output)->struct_id->version = 1U;
+
+  if (sequence_uid)
+    (*output)->sequence_uid = command_hub->uid_counter;
+  else {
+    // Generate anew
+    ++command_hub->uid_counter;
+    (*output)->sequence_uid = command_hub->uid_counter;
+  }
+
+  (*output)->type = type;
+  (*output)->contextual_issue = contextual_issue;
+  (*output)->previous_issue = previous_issue;
+
+  (*output)->contextual_data_alloc = 2;
+  (*output)->contextual_data_count = 0;
+  (*output)->contextual_data = (void **)malloc(sizeof(void *) * (*output)->contextual_data_alloc);
+
+  if (dialogue) {
+    allocate_and_copy_cstr((*output)->dialogue, dialogue);
+  } else {
+    (*output)->dialogue = NULL;
+  }
+
+  (*output)->data = data;
+
+  (*output)->causation_issue = causation_issue;
+  if (causation_issue)
+    causation_issue->consequential_issue = (*output);
+  (*output)->consequential_issue = NULL;
+
+  return 0;
+}
 // return 0;
 
 // int res = 0;
@@ -3908,6 +3850,35 @@ int init_core_functions(mc_command_hub_v1 *command_hub) {
     field->name = "parameter_name";
   }
 
+  mc_function_info_v1 *initialize_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  all_function_definitions[all_function_definition_count++] = initialize_function_definition_v1;
+  {
+    initialize_function_definition_v1->struct_id = NULL;
+    initialize_function_definition_v1->name = "initialize_function";
+    initialize_function_definition_v1->latest_iteration = 1U;
+    initialize_function_definition_v1->return_type = "void";
+    initialize_function_definition_v1->parameter_count = 2;
+    initialize_function_definition_v1->parameters =
+        (mc_parameter_info_v1 **)malloc(sizeof(void *) * initialize_function_definition_v1->parameter_count);
+    initialize_function_definition_v1->variable_parameter_begin_index = -1;
+    initialize_function_definition_v1->struct_usage_count = 0;
+    initialize_function_definition_v1->struct_usage = NULL;
+
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    initialize_function_definition_v1->parameters[0] = field;
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "function_name";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    initialize_function_definition_v1->parameters[1] = field;
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "code";
+  }
+
   // Parse
   FILE *f = fopen("/home/jason/midge/src/midge_core_functions.c", "rb");
   fseek(f, 0, SEEK_END);
@@ -4074,6 +4045,11 @@ int init_core_functions(mc_command_hub_v1 *command_hub) {
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
 
+  clint_process("int (*initialize_function)(int, void **);");
+  clint_process("initialize_function = &initialize_function_v1;");
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)initialize_function_definition_v1));
+
   // printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
 
   return 0;
@@ -4128,43 +4104,3 @@ int init_core_functions(mc_command_hub_v1 *command_hub) {
 //     n += strlen(kvr_collection[k * 2 + 1]);
 //   }
 // }
-
-int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequence_uid, process_action_type type,
-                             void *contextual_issue, void *previous_issue, mc_process_action_v1 *causation_issue,
-                             const char *const dialogue, void *data, mc_process_action_v1 **output) {
-  *output = (mc_process_action_v1 *)malloc(sizeof(mc_process_action_v1));
-  (*output)->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
-  (*output)->struct_id->identifier = "process_action";
-  (*output)->struct_id->version = 1U;
-
-  if (sequence_uid)
-    (*output)->sequence_uid = command_hub->uid_counter;
-  else {
-    // Generate anew
-    ++command_hub->uid_counter;
-    (*output)->sequence_uid = command_hub->uid_counter;
-  }
-
-  (*output)->type = type;
-  (*output)->contextual_issue = contextual_issue;
-  (*output)->previous_issue = previous_issue;
-
-  (*output)->contextual_data_alloc = 2;
-  (*output)->contextual_data_count = 0;
-  (*output)->contextual_data = (void **)malloc(sizeof(void *) * (*output)->contextual_data_alloc);
-
-  if (dialogue) {
-    allocate_and_copy_cstr((*output)->dialogue, dialogue);
-  } else {
-    (*output)->dialogue = NULL;
-  }
-
-  (*output)->data = data;
-
-  (*output)->causation_issue = causation_issue;
-  if (causation_issue)
-    causation_issue->consequential_issue = (*output);
-  (*output)->consequential_issue = NULL;
-
-  return 0;
-}

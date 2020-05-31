@@ -19,6 +19,7 @@ int find_function_info_v1(int argc, void **argv) {
   int res;
 
   *func_info = NULL;
+  // printf("ffi-nodespace.name:%s\n", nodespace->name);
   for (int i = 0; i < nodespace->function_count; ++i) {
 
     // printf("ffi-3\n");
@@ -26,8 +27,8 @@ int find_function_info_v1(int argc, void **argv) {
     function_info *finfo = nodespace->functions[i];
 
     // printf("ffi-4a\n");
-    // printf("dodpe:%s\n", nodespace->name);
-    // printf("dodpj:%s\n", function_name);
+    // printf("ffi-cmp0:%s\n", finfo->name);
+    // printf("ffi-cmp1:%s\n", function_name);
     // printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
@@ -115,8 +116,8 @@ int declare_function_pointer_v1(int argc, void **argv) {
         }
       }
       if (!already_added) {
-        MCcall(append_to_collection((void ***)&func_info->struct_usage, &struct_usage_alloc,
-                                    &func_info->struct_usage_count, (void *)sinfo));
+        MCcall(append_to_collection((void ***)&func_info->struct_usage, &struct_usage_alloc, &func_info->struct_usage_count,
+                                    (void *)sinfo));
       }
       // printf("dfp-6\n");
     } else
@@ -151,9 +152,132 @@ int declare_function_pointer_v1(int argc, void **argv) {
   strcpy(buf, "int (*");
   strcat(buf, name);
   strcat(buf, ")(int,void**);");
-  printf("dfp>cling_declare:%s\n -- with %i parameters returning %s\n", buf, func_info->parameter_count,
-         func_info->return_type);
+  printf("dfp>cling_declare:%s\n -- with %i parameters returning %s\n", buf, func_info->parameter_count, func_info->return_type);
   clint_declare(buf);
   // printf("dfp-concludes\n");
+  return 0;
+}
+
+int initialize_function_v1(int argc, void **argv) {
+  void **mc_dvp;
+  int res;
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+  printf("initialize_function_v1()\n");
+
+  char *function_name = (char *)argv[0];
+  char *code = (char *)argv[1];
+
+  MCerror(999, "Expected");
+  // Find the function info
+  mc_function_info_v1 *func_info = NULL;
+  {
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&func_info;
+    mc_vargs[1] = (void *)&command_hub->nodespace;
+    mc_vargs[2] = (void *)&function_name;
+    MCcall(find_function_info(3, mc_vargs));
+    if (!func_info) {
+      MCerror(184, "cannot find function info for function_name=%s", function_name);
+    }
+  }
+  // {
+  //   find_function_info()
+  // }
+
+  // printf("nodespace->name:%s\n", command_hub->nodespace->name);
+  // printf("function_info->name:%s\n", func_info->name);
+  // printf("function_info->latest_iteration:%u\n", func_info->latest_iteration);
+  // printf("code_block:%c%c%c%c%c...", code_block[0], code_block[1], code_block[2], code_block[3], code_block[4]);
+
+  // Increment function iteration
+  ++func_info->latest_iteration;
+
+  // Declare with clint
+  char buf[16384];
+  const char *TAB = "  ";
+
+  sprintf(buf, "int %s_v%u(int mc_argc, void **mc_argv)\n{\n", func_info->name, func_info->latest_iteration);
+  // TODO -- mc_argc count check?
+  strcat(buf, TAB);
+  strcat(buf, "// Arguments\n");
+  strcat(buf, TAB);
+  strcat(buf, "int res;\n");
+  strcat(buf, TAB);
+  strcat(buf, "void **mc_dvp;\n");
+
+  for (int i = 0; i < func_info->parameter_count; ++i) {
+    strcat(buf, TAB);
+
+    mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)func_info->parameters[i];
+
+    void *p_struct_info;
+    MCcall(find_struct_info(command_hub->nodespace, parameter->type_name, &p_struct_info));
+    if (p_struct_info) {
+      strcat(buf, "declare_and_assign_anon_struct(");
+      strcat(buf, parameter->type_name);
+      strcat(buf, "_v");
+      sprintf(buf + strlen(buf), "%i, ", parameter->type_version);
+      strcat(buf, parameter->name);
+      strcat(buf, ", ");
+      strcat(buf, "mc_argv[");
+      sprintf(buf + strlen(buf), "%i]);\n", i);
+    } else {
+      sprintf(buf + strlen(buf), "%s %s = (%s)mc_argv[%i];\n", parameter->type_name, parameter->name, parameter->type_name, i);
+    }
+  }
+  if (func_info->parameter_count > 0)
+    strcat(buf, "\n");
+
+  // const char *identity; const char *type; struct_info *struct_info;
+  struct {
+    const char *var_name;
+    const char *type;
+    void *struct_info;
+  } declared_types[200];
+  int declared_type_count = 0;
+
+  printf("@ifv-5\n");
+  // Translate the code-block from script into workable midge-cling C
+
+  return -5224;
+
+  int n = strlen(code);
+  for (int i = 0; i < n;) {
+    // strcat(buf, code_block);
+    switch (code[i]) {
+    case ' ':
+    case '\t':
+      ++i;
+      continue;
+    default: {
+      if (!isalpha(code[i])) {
+        MCcall(print_parse_error(code, i, "initialize_function_v1", "default:!isalpha"));
+        return -42;
+      }
+      return -58822;
+      // mcqck_translate_script_statement(nodespace, NULL, NULL);
+      break;
+    }
+    }
+  }
+
+  strcat(buf, "\n");
+  strcat(buf, TAB);
+  strcat(buf, "return res;\n");
+  strcat(buf, "}");
+
+  printf("ifv>cling_declare:\n%s\n", buf);
+  // Declare the method
+  clint_declare(buf);
+
+  // Set the method to the function pointer
+  sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
+  printf("ifv>clint_process:\n%s\n", buf);
+  clint_process(buf);
+
+  printf("ifv-concludes\n");
   return 0;
 }
