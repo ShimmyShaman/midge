@@ -105,6 +105,11 @@ enum script_process_state {
   strcpy(dest, src);                                       \
   dest[strlen(src)] = '\0';
 
+#define allocate_and_copy_cstrn(dest, src, n)    \
+  dest = (char *)malloc(sizeof(char) * (n + 1)); \
+  strncpy(dest, src, n);                         \
+  dest[n] = '\0';
+
 #define MCcall(function)                 \
   res = function;                        \
   if (res) {                             \
@@ -182,7 +187,7 @@ enum script_process_state {
   }
 #define key_value_pair_v1 \
   struct {                \
-    const char *key;      \
+    char *key;            \
     void *value;          \
   }
 #define struct_info_v1            \
@@ -231,6 +236,7 @@ enum script_process_state {
     /* the demo issue that this action is a part of.*/ \
     void *contextual_issue;                            \
     void *previous_issue;                              \
+    void *causation_issue;                             \
     void *consequential_issue;                         \
     void *data;                                        \
     unsigned int contextual_data_alloc;                \
