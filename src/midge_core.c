@@ -549,8 +549,7 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
     }
   }
 
-  script_local_v1 *kvp;
-  allocate_anon_struct(kvp, sizeof_script_local_v1);
+  mc_script_local_v1 *kvp = (mc_script_local_v1 *)malloc(sizeof(mc_script_local_v1));
   allocate_and_copy_cstr(kvp->type, type_identifier);
   allocate_and_copy_cstr(kvp->identifier, var_name);
   kvp->locals_index = script->local_count;
@@ -1966,7 +1965,7 @@ int mc_main(int argc, const char *const *argv) {
   int res;
   void **mc_dvp;
 
-  declare_and_allocate_anon_struct(struct_info_v1, parameter_info_definition_v1, sizeof_struct_info_v1);
+  mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
   { // TYPE:DEFINITION parameter_info
     parameter_info_definition_v1->struct_id = NULL;
     parameter_info_definition_v1->name = "parameter_info";
@@ -1976,32 +1975,32 @@ int mc_main(int argc, const char *const *argv) {
     parameter_info_definition_v1->fields = (void **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
     parameter_info_definition_v1->sizeof_cstr = "sizeof_parameter_info_v1";
 
-    parameter_info_v1 *field;
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     parameter_info_definition_v1->fields[0] = field;
     field->type_name = "struct_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "struct_id";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     parameter_info_definition_v1->fields[1] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "type_name";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     parameter_info_definition_v1->fields[2] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "type_version";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     parameter_info_definition_v1->fields[3] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "type_deref_count";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     parameter_info_definition_v1->fields[4] = field;
     field->type_name = "const char";
     field->type_version = 0U;
@@ -2009,7 +2008,7 @@ int mc_main(int argc, const char *const *argv) {
     field->name = "name";
   }
 
-  declare_and_allocate_anon_struct(struct_info_v1, struct_info_definition_v1, sizeof_struct_info_v1);
+  mc_struct_info_v1 *struct_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
   { // TYPE:DEFINITION struct_info
     struct_info_definition_v1->struct_id = NULL;
     struct_info_definition_v1->name = "struct_info";
@@ -2031,44 +2030,44 @@ int mc_main(int argc, const char *const *argv) {
 //         void **fields;              \
 //         const char *sizeof_cstr;    \
 //     }
-    parameter_info_v1 *field;
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     struct_info_definition_v1->fields[0] = field;
     field->type_name = "struct_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "struct_id";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     struct_info_definition_v1->fields[1] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "type_name";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     struct_info_definition_v1->fields[2] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "version";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     struct_info_definition_v1->fields[3] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "declared_mc_name";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     struct_info_definition_v1->fields[4] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "field_count";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     struct_info_definition_v1->fields[5] = field;
     field->type_name = "parameter_info";
     field->type_version = 0U;
     field->type_deref_count = 2;
     field->name = "fields";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     struct_info_definition_v1->fields[6] = field;
     field->type_name = "const char";
     field->type_version = 0U;
@@ -2076,7 +2075,7 @@ int mc_main(int argc, const char *const *argv) {
     field->name = "sizeof_cstr";
   }
 
-  declare_and_allocate_anon_struct(struct_info_v1, function_info_definition_v1, sizeof_struct_info_v1);
+  mc_struct_info_v1 *function_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
   { // TYPE:DEFINITION function_info
     function_info_definition_v1->struct_id = NULL;
     function_info_definition_v1->name = "function_info";
@@ -2100,56 +2099,56 @@ int mc_main(int argc, const char *const *argv) {
 //         unsigned int struct_usage_count;             \
 //         void **struct_usage;                         \
 //     }
-    parameter_info_v1 *field;
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[0] = field;
     field->type_name = "struct_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "struct_id";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[1] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "name";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[2] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "latest_iteration";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[3] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "return_type";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[4] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "parameter_count";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[5] = field;
     field->type_name = "parameter_info";
     field->type_version = 0U;
     field->type_deref_count = 2;
     field->name = "parameters";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[6] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "variable_parameter_begin_index";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[7] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "struct_usage_count";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[8] = field;
     field->type_name = "struct_id";
     field->type_version = 0U;
@@ -2157,7 +2156,7 @@ int mc_main(int argc, const char *const *argv) {
     field->name = "struct_usage";
   }
 
-  declare_and_allocate_anon_struct(struct_info_v1, node_definition_v1, sizeof_struct_info_v1);
+  mc_struct_info_v1 *node_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
   { // TYPE:DEFINITION function_info
     node_definition_v1->struct_id = NULL;
     node_definition_v1->name = "node";
@@ -2184,74 +2183,74 @@ int mc_main(int argc, const char *const *argv) {
         // mc_node_v1 **children;           \
 //     }
 
-    parameter_info_v1 *field;
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[0] = field;
     field->type_name = "struct_id";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "struct_id";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[1] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "name";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[2] = field;
     field->type_name = "node";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "parent";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[3] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "functions_alloc";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[4] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "function_count";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[5] = field;
     field->type_name = "function_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "functions";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[6] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "structs_alloc";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[7] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "struct_count";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[8] = field;
     field->type_name = "struct_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "structs";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[9] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "children_alloc";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[10] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "child_count";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     node_definition_v1->fields[11] = field;
     field->type_name = "node";
     field->type_version = 1U;
@@ -2302,11 +2301,11 @@ int mc_main(int argc, const char *const *argv) {
   command_hub->script_instances = (void **)malloc(sizeof(void *) * command_hub->script_instances_alloc);
   command_hub->script_instances_count = 0;
 
-  declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
-  template_collection->templates_alloc = 400;
-  template_collection->template_count = 0;
-  template_collection->templates = (void **)malloc(sizeof(void *) * template_collection->templates_alloc);
-  command_hub->template_collection = (void *)template_collection;
+  // declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
+  // template_collection->templates_alloc = 400;
+  // template_collection->template_count = 0;
+  // template_collection->templates = (void **)malloc(sizeof(void *) * template_collection->templates_alloc);
+  // command_hub->template_collection = (void *)template_collection;
 
   // midgeo template_process = (midgeo)malloc(sizeof_void_ptr * 2);
   // allocate_from_cstringv(&template_process[0], "invoke declare_function_pointer");
@@ -2682,6 +2681,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
 
     if (script_instance->segments_complete >= script_instance->script->segment_count) {
 
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
       // printf("spchs-4\n");
       // -- Script Complete!
       // Free script data
@@ -2694,6 +2694,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
           free(script_instance->locals[j]);
       free(script_instance->locals);
 
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
       // printf("spchs-5\n");
 
       if (script_instance->response)
@@ -2704,6 +2705,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
                              &command_hub->script_instances_count, i);
       --i;
 
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
       mc_process_action_v1 *script_completion;
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
                                focused_issue->contextual_issue, focused_issue, NULL, " -- script completed", NULL,
@@ -2715,6 +2717,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       // TODO -- setting response action while also iterating through all scripts isn't right. Fix it up. Find a better
       // way
       *p_response_action = script_completion;
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
       continue;
     }
 
@@ -2932,7 +2935,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         mc_process_action_v1 *contextual_issue = (mc_process_action_v1 *)focused_issue->contextual_issue;
         switch (contextual_issue->type) {
         case PROCESS_ACTION_PM_DEMO_INITIATION:
-          script_instance->contextual_command = (char *)contextual_issue->data;
+          allocate_and_copy_cstr(script_instance->contextual_command, (char *)contextual_issue->data);
           break;
         default:
           MCerror(7584, "UNHANDLED type:%i", contextual_issue->type);
@@ -2969,7 +2972,6 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 
       // Process the command
       char patbuf[256];
-      char *pattern;
       int bi = 0;
       void *kvps[16];
       int kvps_index = 0;
@@ -3015,7 +3017,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       }
 
       // Set pattern
-      pattern = (char *)malloc(sizeof(char) * (bi + 1));
+      char *pattern = (char *)malloc(sizeof(char) * (bi + 1));
       strncpy(pattern, patbuf, bi);
       pattern[bi] = '\0';
 
@@ -3043,7 +3045,6 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         append_to_collection(&demo_issue->contextual_data, &demo_issue->contextual_data_alloc, &demo_issue->contextual_data_count,
                              kvps[i]);
       free(demo_issue_dialogue);
-
       // // Return the original command to the stack
       // append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc,
       // &command_hub->focused_issue_stack_count,
@@ -3051,6 +3052,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 
       // Add a demonstration process on top of the focused issue stack
       *p_response_action = (void *)demo_issue;
+      command_hub->demo_issue = demo_issue;
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
       return 0;
     }
 
@@ -3065,6 +3068,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       if (demo_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION) {
         MCerror(9483, "TODO");
       }
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
+      // printf("@@@ demo_issue()->data='%u'\n", ((mc_process_action_v1 *)*(void **)demo_issue->data)->sequence_uid);
 
       // Add the process to the process matrix
       // -- Search for similiar existing
@@ -3072,7 +3077,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       // -- Construct the process from the demo
       mc_process_unit_v1 *const demod_process = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
       demod_process->type = PROCESS_TYPE_DEMONSTRATED;
-      demod_process->dialogue = (char *)demo_issue->data;
+      allocate_and_copy_cstr(demod_process->dialogue, (char *)demo_issue->data);
       demod_process->dialogue_has_pattern = false;
       for (int i = 0; i < strlen(demod_process->dialogue); ++i)
         if (demod_process->dialogue[i] == '$') {
@@ -3089,7 +3094,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       while (action) {
         mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
         process_unit->type = PROCESS_TYPE_EXHIBITED;
-        process_unit->dialogue = action->dialogue;
+        allocate_and_copy_cstr(process_unit->dialogue, action->dialogue);
         for (int i = 0; i < strlen(process_unit->dialogue); ++i)
           if (process_unit->dialogue[i] == '$') {
             process_unit->dialogue_has_pattern = true;
@@ -3137,8 +3142,11 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       }
 
       // Add to the process matrix
+      printf("procm-demodprocess:%i '%s'\n", demod_process->type, demod_process->dialogue);
       MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
                                   &command_hub->process_matrix->count, demod_process));
+
+      // printf("pmitem %i %s\n", demod_process->action->type, ((mc_process_unit_v1 *)demod_process)->dialogue);
 
       // Conclude the demo
       process_action_type completion_issue_type;
@@ -3246,12 +3254,14 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
   return 3246;
 }
 
-int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, void **p_response_action);
+int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
+                               void **p_response_action);
+
 int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action) {
   int res;
   void **mc_dvp;
 
-  printf("aupi-0\n");
+  // printf("aupi-0\n");
   if (*p_response_action) {
     // Intercept any responses
     mc_process_action_v1 *response_action = (mc_process_action_v1 *)*p_response_action;
@@ -3271,9 +3281,15 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     case PROCESS_ACTION_PM_SCRIPT_REQUEST:
     case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
       break;
-    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-      MCcall(attempt_to_resolve_command(command_hub, p_response_action));
-      break;
+    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
+      void *resolution_action;
+      MCcall(
+          attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->previous_issue, &resolution_action));
+      if (resolution_action) {
+        // Replace the response with the resolution
+        MCerror(3282, "todo");
+      }
+    } break;
       // Script
     case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
     case PROCESS_ACTION_SCRIPT_QUERY:
@@ -3323,43 +3339,55 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
   return 0;
 }
 
-int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, void **p_response_action) {
+int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
+                               void **p_response_action) {
   int res;
   void **mc_dvp;
   // printf("aurc-0\n");
+  *p_response_action = NULL;
 
   // Intercept any responses
-  mc_process_action_v1 *response_action = (mc_process_action_v1 *)*p_response_action;
 
   // Search through the process matrix to find matches
   for (int i = 0; i < command_hub->process_matrix->count; ++i) {
     mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)command_hub->process_matrix->items[i];
 
-    if (!strcmp(process_unit->dialogue, response_action->dialogue)) {
-      MCerror(3292, "TODO %s==%s", process_unit->dialogue, response_action->dialogue);
+    printf("atrc-0 : %i '%s'<>'%s'\n", command_hub->process_matrix->count, process_unit->dialogue, intercepted_action->dialogue);
+    if (!strcmp(process_unit->dialogue, intercepted_action->dialogue)) {
+      // Full match
+      // Activate this process
+      MCerror(3292, "TODO %s==%s", process_unit->dialogue, intercepted_action->dialogue);
     }
 
-    MCerror(3341, "TODO ");
     if (process_unit->dialogue_has_pattern) {
       // Determine how well the pattern matches
       char *pattern_args[256];
       char buf[256];
 
-      bool match = true, in_param = false;
-      for (int c = 0; c < strlen(process_unit->dialogue); ++c) {
-        if (in_param) {
-          MCerror(3302, "TODO");
-        } else {
-          if (process_unit->dialogue[c] == '$') {
-            in_param = true;
-          } else {
-            if (process_unit->dialogue[c] != response_action->dialogue[c]) {
-              match = false;
-              break;
-            }
+      int c = 0, cn = strlen(process_unit->dialogue);
+      int d = 0, dn = strlen(intercepted_action->dialogue);
+      while (1) {
+        // Find the first word c
+        int ci;
+        for (ci = c; c <= cn; ++c) {
+          if (process_unit->dialogue[ci] == ' ') {
+            break;
+          }
+          if (process_unit->dialogue[ci] == '\0') {
+            ci = -1;
+            break;
           }
         }
+        if (ci < 0) {
+          MCerror(3387, "TODO");
+        }
+
+        // Find the next word
+        MCerror(3391, "TODO");
       }
+
+      mc_key_value_pair_v1 *kvps[256];
+      int kvps_index = 0;
     }
   }
 
@@ -3696,13 +3724,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub) {
     find_function_info_definition_v1->struct_usage = NULL;
 
     mc_parameter_info_v1 *field;
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     find_function_info_definition_v1->parameters[0] = field;
     field->type_name = "node";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "nodespace";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     find_function_info_definition_v1->parameters[1] = field;
     field->type_name = "char";
     field->type_version = 0U;
@@ -3725,25 +3753,25 @@ int init_core_functions(mc_command_hub_v1 *command_hub) {
     declare_function_pointer_definition_v1->struct_usage = NULL;
 
     mc_parameter_info_v1 *field;
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     declare_function_pointer_definition_v1->parameters[0] = field;
     field->type_name = "char";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "function_name";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     declare_function_pointer_definition_v1->parameters[1] = field;
     field->type_name = "char";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "return_type";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     declare_function_pointer_definition_v1->parameters[2] = field;
     field->type_name = "char";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "parameter_type";
-    allocate_anon_struct(field, sizeof_parameter_info_v1);
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     declare_function_pointer_definition_v1->parameters[3] = field;
     field->type_name = "char";
     field->type_version = 1U;

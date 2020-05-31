@@ -132,7 +132,7 @@ enum script_process_state {
     void *struct_info;         \
     int scope_depth;           \
   }
-#define sizeof_script_local_v1 (sizeof(void *) * 6)
+// #define sizeof_script_local_v1 (sizeof(void *) * 6)
 
 #define process_unit_v1              \
   struct {                           \
@@ -158,7 +158,7 @@ enum script_process_state {
     void *data;                           \
     void *next;                           \
   }
-#define sizeof_branch_unit_v1 (sizeof(void *) * 6)
+// #define sizeof_branch_unit_v1 (sizeof(void *) * 6)
 #define node_v1                      \
   struct {                           \
     mc_struct_id_v1 *struct_id;      \
@@ -174,7 +174,7 @@ enum script_process_state {
     unsigned int child_count;        \
     void **children;                 \
   }
-#define sizeof_node_v1 (sizeof(void *) * 12)
+// #define sizeof_node_v1 (sizeof(void *) * 12)
 #define struct_id_v1        \
   struct {                  \
     const char *identifier; \
@@ -195,7 +195,7 @@ enum script_process_state {
     void **fields;                \
     const char *sizeof_cstr;      \
   }
-#define sizeof_struct_info_v1 (sizeof(void *) * 7)
+// #define sizeof_struct_info_v1 (sizeof(void *) * 7)
 #define function_info_v1                \
   struct {                              \
     void *struct_id;                    \
@@ -208,7 +208,7 @@ enum script_process_state {
     unsigned int struct_usage_count;    \
     mc_struct_info_v1 **struct_usage;   \
   }
-#define sizeof_function_info_v1 (sizeof(void *) * 9)
+// #define sizeof_function_info_v1 (sizeof(void *) * 9)
 #define parameter_info_v1          \
   struct {                         \
     void *struct_id;               \
@@ -217,7 +217,7 @@ enum script_process_state {
     unsigned int type_deref_count; \
     const char *name;              \
   }
-#define sizeof_parameter_info_v1 (sizeof(void *) * 4)
+// #define sizeof_parameter_info_v1 (sizeof(void *) * 4)
 
 // #define process_action_data_v1
 
@@ -248,7 +248,7 @@ enum script_process_state {
     unsigned int template_count;  \
     void **templates;             \
   }
-#define sizeof_template_collection_v1 (sizeof(void *) * 5)
+// #define sizeof_template_collection_v1 (sizeof(void *) * 5)
 
 #define script_v1                \
   struct {                       \
@@ -293,8 +293,9 @@ enum script_process_state {
     void **script_instances;                \
     bool focused_issue_activated;           \
     unsigned int uid_counter;               \
+    mc_process_action_v1 *demo_issue;       \
   }
-#define sizeof_command_hub_v1 (sizeof(void *) * 14)
+// #define sizeof_command_hub_v1 (sizeof(void *) * 14)
 
 #define void_collection_v1     \
   struct {                     \
@@ -303,7 +304,7 @@ enum script_process_state {
     unsigned int count;        \
     void **items;              \
   }
-#define sizeof_void_collection_v1 (sizeof(void *) * 5)
+// #define sizeof_void_collection_v1 (sizeof(void *) * 5)
 
 typedef struct_id_v1 mc_struct_id_v1;
 typedef key_value_pair_v1 mc_key_value_pair_v1;

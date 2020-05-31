@@ -91,7 +91,7 @@ int declare_function_pointer_v1(int argc, void **argv) {
 
   for (int i = 0; i < func_info->parameter_count; ++i) {
     // printf("dfp-2\n");
-    declare_and_allocate_anon_struct(parameter_info_v1, parameter_info, sizeof_parameter_info_v1);
+    mc_parameter_info_v1 *parameter_info = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     // printf("dfp>%p=%s\n", i, (void *)parameters[2 + i * 2 + 0], (char *)parameters[2 + i * 2 + 0]);
     parameter_info->type_name = (char *)argv[2 + i * 2 + 0];
 
