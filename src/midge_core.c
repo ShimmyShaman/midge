@@ -91,6 +91,27 @@ int parse_past_character_literal(const char *text, int *index, char **output) {
   return 0;
 }
 
+int mc_parse_past_literal_string(const char *text, int *index, char **output) {
+  if (text[*index] != '"')
+    return -2482;
+
+  bool prev_escape = false;
+  for (int j = *index + 1;; ++j) {
+    if (!prev_escape && text[j] == '"') {
+      ++j;
+      *output = (char *)malloc(sizeof(char) * (j - *index + 1));
+      strncpy(*output, text + *index, j - *index);
+      (*output)[j - *index] = '\0';
+      *index = j;
+      return 0;
+    }
+
+    prev_escape = (text[j] == '\\');
+  }
+
+  return 0;
+}
+
 int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing) {
   int res;
   int o = *index;
@@ -219,9 +240,10 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
       // printf("here34\n");
       // printf("key:%s\n", key);
       // printf("contextual_action:%p\n", contextual_action);
-      // printf("contextual_action->contextual_data[%i]:%p\n", i, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i]));
-      // printf("key:%s\n", ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key);
-      // printf("comparing %s<>%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key);
+      // printf("contextual_action->contextual_data[%i]:%p\n", i, ((mc_key_value_pair_v1
+      // *)contextual_action->contextual_data[i])); printf("key:%s\n", ((mc_key_value_pair_v1
+      // *)contextual_action->contextual_data[i])->key);
+      printf("comparing %s<>%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key);
       if (!strcmp(key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key)) {
         *value = ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->value;
         // printf("here35\n");
@@ -793,19 +815,7 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
   } else
     switch (code[*i]) {
     case '"': {
-      bool prev_escape = false;
-      for (int j = *i + 1;; ++j) {
-        if (!prev_escape && code[j] == '"') {
-          ++j;
-          *output = (char *)malloc(sizeof(char) * (j - *i + 1));
-          strncpy(*output, code + *i, j - *i);
-          (*output)[j - *i] = '\0';
-          *i = j;
-          return 0;
-        }
-
-        prev_escape = (code[j] == '\\');
-      }
+      MCcall(mc_parse_past_literal_string(code, i, output));
 
       return 0;
     }
@@ -938,8 +948,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
   bool loop = true;
   while (loop) {
     // printf("i:%i  '%c'\n", i, code[i]);
-    sprintf(buf, "printf(\"statement %i: %%i\\n\", script_instance->contextual_action->contextual_data_count);\n",
-            debug_statement_index++);
+    sprintf(buf, "printf(\"statement %i:\\n\");\n", debug_statement_index++);
     MCcall(append_to_cstr(&translation_alloc, &translation, buf));
     switch (code[i]) {
     case ' ':
@@ -1342,32 +1351,57 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       }
     } break;
     case 'e': {
-      // end
-      MCcall(parse_past(code, &i, "end"));
-      MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
-
-      --local_scope_depth;
-
-      if (code[i] != '\n' && code[i] != '\0') {
-        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-        MCcall(parse_past(code, &i, "for"));
+      if (code[i + 1] == 'n') {
+        // end
+        MCcall(parse_past(code, &i, "end"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
 
         --local_scope_depth;
 
         if (code[i] != '\n' && code[i] != '\0') {
+          MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+          MCcall(parse_past(code, &i, "for"));
+          MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
+
+          --local_scope_depth;
+
+          if (code[i] != '\n' && code[i] != '\0') {
+            MCerror(-4831, "expected statement end");
+          }
+        }
+
+        // Manage variable scope
+        for (int j = 0; j < local_indexes_count; ++j) {
+          declare_and_assign_anon_struct(script_local_v1, local, local_index[j]);
+          if (local->scope_depth > local_scope_depth) {
+            // Disable the local variable
+            local->scope_depth = -1;
+          }
+        }
+      } else if (code[i + 1] == 'r') {
+        // end
+        MCcall(parse_past(code, &i, "err"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        char *error_code;
+        MCcall(parse_past_number(code, &i, &error_code));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        char *error_message;
+        MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &error_message));
+        if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4831, "expected statement end");
         }
+
+        sprintf(buf, "{\n  MCerror(%s, %s);\n}\n", error_code, error_message);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        free(error_code);
+        free(error_message);
+      } else {
+        MCerror(1380, "Unhandled statement:'%c'", code[i]);
       }
 
-      // Manage variable scope
-      for (int j = 0; j < local_indexes_count; ++j) {
-        declare_and_assign_anon_struct(script_local_v1, local, local_index[j]);
-        if (local->scope_depth > local_scope_depth) {
-          // Disable the local variable
-          local->scope_depth = -1;
-        }
-      }
     } break;
     case 'i': {
       // ifs
@@ -2343,6 +2377,9 @@ int mc_main(int argc, const char *const *argv) {
       // Create invoke function script
       ".createScript\n"
       "nvi 'function_info *' finfo find_function_info nodespace $function_to_invoke\n"
+      "ifs !finfo\n"
+      "err 10 \"Could not find function_info for specified function\"\n"
+      "end\n"
       ""
       "dcs int rind 0\n"
       "dcl 'char *' responses[32]\n"
@@ -3302,16 +3339,15 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
       break;
     case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
-      // void *resolution_action;
-      // MCcall(
-      //     attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->previous_issue,
-      //     &resolution_action));
-      // if (resolution_action) {
-      //   // TODO -- delete the current response and its fields
+      void *resolution_action;
+      MCcall(
+          attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->previous_issue, &resolution_action));
+      if (resolution_action) {
+        // TODO -- delete the current response and its fields
 
-      //   // Replace the response with the resolution
-      //   *p_response_action = resolution_action;
-      // }
+        // Replace the response with the resolution
+        *p_response_action = resolution_action;
+      }
     } break;
       // Script
     case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
