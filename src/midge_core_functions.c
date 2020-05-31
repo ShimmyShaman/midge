@@ -16,7 +16,7 @@ int find_function_info_v1(int argc, void **argv) {
   char *function_name = *(char **)argv[2];
 
   void **mc_dvp;
-  int res;
+  int mc_res;
 
   *func_info = NULL;
   // printf("ffi-nodespace.name:%s\n", nodespace->name);
@@ -59,7 +59,7 @@ int find_function_info_v1(int argc, void **argv) {
 
 int declare_function_pointer_v1(int argc, void **argv) {
   void **mc_dvp;
-  int res;
+  int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
@@ -160,7 +160,7 @@ int declare_function_pointer_v1(int argc, void **argv) {
 
 int initialize_function_v1(int argc, void **argv) {
   void **mc_dvp;
-  int res;
+  int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
@@ -170,7 +170,6 @@ int initialize_function_v1(int argc, void **argv) {
   char *function_name = (char *)argv[0];
   char *code = (char *)argv[1];
 
-  MCerror(999, "Expected");
   // Find the function info
   mc_function_info_v1 *func_info = NULL;
   {
@@ -204,7 +203,7 @@ int initialize_function_v1(int argc, void **argv) {
   strcat(buf, TAB);
   strcat(buf, "// Arguments\n");
   strcat(buf, TAB);
-  strcat(buf, "int res;\n");
+  strcat(buf, "int mc_res;\n");
   strcat(buf, TAB);
   strcat(buf, "void **mc_dvp;\n");
 

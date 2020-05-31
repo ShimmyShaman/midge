@@ -113,7 +113,7 @@ int mc_parse_past_literal_string(const char *text, int *index, char **output) {
 }
 
 int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing) {
-  int res;
+  int mc_res;
   int o = *index;
   bool hit_alpha = false;
   while (1) {
@@ -174,7 +174,7 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
 }
 
 int parse_past_type_identifier(const char *text, int *index, char **identifier) {
-  int res;
+  int mc_res;
   if (text[*index] == '\'') {
     // Obtain the type in the literal string
     for (int i = *index + 1;; ++i) {
@@ -294,7 +294,7 @@ int remove_from_collection(void ***collection, unsigned int *collection_alloc, u
 
 int find_struct_info(void *vp_nodespace, const char *const struct_name, void **struct_info) {
   void **mc_dvp;
-  int res;
+  int mc_res;
   declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
 
   *struct_info = NULL;
@@ -321,7 +321,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
 
 // int mcqck_translate_script_statement(void *nodespace, char *script_statement, char **translated_statement)
 // {
-//   int res;
+//   int mc_res;
 //   void **mc_dvp;
 //   char buf[16384];
 //   int i = 0;
@@ -538,7 +538,7 @@ int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
 int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned int *local_indexes_alloc,
                                 unsigned int *local_indexes_count, void *p_script, char *buf, int scope_depth,
                                 char *type_identifier, char *var_name) {
-  int res;
+  int mc_res;
   void **mc_dvp;
 
   declare_and_assign_anon_struct(script_v1, script, p_script);
@@ -743,7 +743,7 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
 
 int parse_past_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i,
                           char **output) {
-  int res;
+  int mc_res;
   char *primary, *temp;
 
   if (isalpha(code[*i])) {
@@ -908,7 +908,7 @@ int parse_past_script_expression(void *nodespace, void **local_index, unsigned i
     ++*i;
   }
 
-  int res;
+  int mc_res;
   MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, output));
 
   if (!script_variable_prefix)
@@ -923,7 +923,7 @@ int parse_past_script_expression(void *nodespace, void **local_index, unsigned i
 }
 
 int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *code) {
-  int res;
+  int mc_res;
   void **mc_dvp;
 
   unsigned int translation_alloc = 512 + strlen(code) * 13 / 10;
@@ -1008,7 +1008,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-1\\n\");\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  int mcsfnv_arg_count = 0;\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf, \"{\\n\");\n"));
-        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"void *mcsfnv_vargs[128];\\n\");\n\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation,
+                              "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"void *mcsfnv_vargs[128];\\n\");\n\n"));
 
         // Function Name
         char *function_name_identifier;
@@ -1110,8 +1111,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // TODO haven't implemented return
-        sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"%%s(%%i, mcsfnv_vargs);\", mcsfnv_function_name, "
-                     "mcsfnv_arg_count);\n");
+        sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"int mc_res;\\nMCcall(%%s(%%i, mcsfnv_vargs));\","
+                     " mcsfnv_function_name, mcsfnv_arg_count);\n");
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"}\\n\");\n"));
         // sprintf(buf, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n");
@@ -1861,7 +1862,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
   char *declaration = (char *)malloc(sizeof(char) * declaration_alloc);
   sprintf(declaration,
           "int %s(mc_script_instance_v1 *script_instance) {\n"
-          "  int res;\n"
+          "  int mc_res;\n"
           "  void **mc_dvp;\n"
           "  void *mc_vargs[128];\n"
           "\n\n"
@@ -1910,7 +1911,7 @@ int mc_main(int argc, const char *const *argv) {
     printf("pointer sizes aren't equal!!!\n");
     return -1;
   }
-  int res;
+  int mc_res;
   void **mc_dvp;
 
   mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
@@ -2420,7 +2421,7 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
 
 int submit_user_command(int argc, void **argsv) {
   void **mc_dvp;
-  int res;
+  int mc_res;
 
   mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)argsv[0];
   char *command = (char *)argsv[4];
@@ -2586,7 +2587,7 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub) {
 int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p_response_action) {
   *p_response_action = NULL;
   void **mc_dvp;
-  int res;
+  int mc_res;
 
   if (command_hub->script_instances_count == 0)
     return 0;
@@ -2712,7 +2713,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
 
 int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_response_action) {
   *p_response_action = NULL;
-  int res;
+  int mc_res;
   void **mc_dvp;
 
   if (command_hub->focused_issue_stack_count == 0)
@@ -3216,7 +3217,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
                                void **p_response_action);
 
 int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action) {
-  int res;
+  int mc_res;
   void **mc_dvp;
 
   // printf("aupi-0\n");
@@ -3301,7 +3302,7 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
 
 int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
                                void **p_response_action) {
-  int res;
+  int mc_res;
   void **mc_dvp;
   // printf("aurc-0\n");
   *p_response_action = NULL;
@@ -3523,7 +3524,7 @@ int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequen
 // int handle_process(int argc, void **argsv)
 // {
 //   void **mc_dvp;
-//   int res;
+//   int mc_res;
 
 //   // Arguments
 //   midgeo process_matrix = (midgeo)argsv[0];
@@ -3773,7 +3774,7 @@ char *get_mc_function_insert(mc_command_hub_v1 *command_hub) {
 }
 
 int init_core_functions(mc_command_hub_v1 *command_hub) {
-  int res;
+  int mc_res;
   void **mc_dvp;
 
   // Declare

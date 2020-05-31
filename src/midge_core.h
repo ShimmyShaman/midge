@@ -110,11 +110,11 @@ enum script_process_state {
   strncpy(dest, src, n);                         \
   dest[n] = '\0';
 
-#define MCcall(function)                 \
-  res = function;                        \
-  if (res) {                             \
-    printf("--" #function ":%i\n", res); \
-    return res;                          \
+#define MCcall(function)                    \
+  mc_res = function;                        \
+  if (mc_res) {                             \
+    printf("--" #function ":%i\n", mc_res); \
+    return mc_res;                          \
   }
 
 #define MCerror(error_code, error_message, ...)                          \
