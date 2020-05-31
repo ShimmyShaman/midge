@@ -26,7 +26,3 @@ best.
 - [cling c++ interpreter](https://root.cern.ch/cling)
 - [cglm](https://github.com/recp/cglm)
 - vulkan sdk
-
-## Community and contributing
-
-No Guidelines yet. TODO
