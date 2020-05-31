@@ -139,6 +139,7 @@ enum script_process_state {
     mc_struct_id_v1 *struct_id;      \
     process_unit_type type;          \
     char *dialogue;                  \
+    bool dialogue_has_pattern;       \
     process_originator origin;       \
     mc_process_action_v1 *action;    \
     unsigned int continuances_alloc; \

@@ -21,19 +21,19 @@ int find_function_info_v1(int argc, void **argv) {
   *func_info = NULL;
   for (int i = 0; i < nodespace->function_count; ++i) {
 
-    printf("ffi-3\n");
+    // printf("ffi-3\n");
     // printf("dope\n");
     function_info *finfo = nodespace->functions[i];
 
-    printf("ffi-4a\n");
-    printf("dodpe:%s\n", nodespace->name);
-    printf("dodpj:%s\n", function_name);
-    printf("ffi-4b\n");
+    // printf("ffi-4a\n");
+    // printf("dodpe:%s\n", nodespace->name);
+    // printf("dodpj:%s\n", function_name);
+    // printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
     // printf("dwde\n");
 
-    printf("ffi-5\n");
+    // printf("ffi-5\n");
 
     // Matches
     *func_info = finfo;
@@ -42,7 +42,7 @@ int find_function_info_v1(int argc, void **argv) {
   }
   // printf("dopu\n");
 
-  printf("ffi-2\n");
+  // printf("ffi-2\n");
 
   if (nodespace->parent) {
     // Search in the parent nodespace
@@ -52,7 +52,7 @@ int find_function_info_v1(int argc, void **argv) {
     mc_vargs[2] = argv[2];
     MCcall(find_function_info(3, mc_vargs));
   }
-  printf("find_function_info: '%s' could not be found!\n", function_name);
+  // printf("find_function_info: '%s' could not be found!\n", function_name);
   return 0;
 }
 
