@@ -3877,7 +3877,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub) {
     field->type_name = "char";
     field->type_version = 1U;
     field->type_deref_count = 1;
-    field->name = "code";
+    field->name = "script";
   }
 
   // Parse

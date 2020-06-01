@@ -168,7 +168,7 @@ int initialize_function_v1(int argc, void **argv) {
   printf("initialize_function_v1()\n");
 
   char *function_name = (char *)argv[0];
-  char *code = (char *)argv[1];
+  char *script = (char *)argv[1];
 
   // Find the function info
   mc_function_info_v1 *func_info = NULL;
@@ -182,87 +182,63 @@ int initialize_function_v1(int argc, void **argv) {
       MCerror(184, "cannot find function info for function_name=%s", function_name);
     }
   }
-  // {
-  //   find_function_info()
-  // }
 
-  // printf("nodespace->name:%s\n", command_hub->nodespace->name);
-  // printf("function_info->name:%s\n", func_info->name);
-  // printf("function_info->latest_iteration:%u\n", func_info->latest_iteration);
-  // printf("code_block:%c%c%c%c%c...", code_block[0], code_block[1], code_block[2], code_block[3], code_block[4]);
+  // Translate the code-block from script into workable midge-cling C
+  char *midge_c;
+  {
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&midge_c;
+    mc_vargs[1] = (void *)&script;
+    MCcall(parse_script_to_mc(2, mc_vargs));
+  }
+
+  printf("@ifv-1\n");
+
+  // // const char *identity; const char *type; struct_info *struct_info;
+  // struct {
+  //   const char *var_name;
+  //   const char *type;
+  //   void *struct_info;
+  // } declared_types[200];
+  // int declared_type_count = 0;
 
   // Increment function iteration
   ++func_info->latest_iteration;
 
-  // Declare with clint
-  char buf[16384];
-  const char *TAB = "  ";
+  // Construct the function identifier
+  const char *function_identifier_format = "%s_v%u";
+  char func_identity_buf[256];
+  func_identity_buf[0] = '\0';
+  sprintf(func_identity_buf, function_identifier_format, func_info->name, func_info->latest_iteration);
 
-  sprintf(buf, "int %s_v%u(int mc_argc, void **mc_argv)\n{\n", func_info->name, func_info->latest_iteration);
-  // TODO -- mc_argc count check?
-  strcat(buf, TAB);
-  strcat(buf, "// Arguments\n");
-  strcat(buf, TAB);
-  strcat(buf, "int mc_res;\n");
-  strcat(buf, TAB);
-  strcat(buf, "void **mc_dvp;\n");
-
+  // Construct the function parameters
+  char param_buf[4096];
+  param_buf[0] = '\0';
   for (int i = 0; i < func_info->parameter_count; ++i) {
-    strcat(buf, TAB);
-
-    mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)func_info->parameters[i];
-
-    void *p_struct_info;
-    MCcall(find_struct_info(command_hub->nodespace, parameter->type_name, &p_struct_info));
-    if (p_struct_info) {
-      strcat(buf, "declare_and_assign_anon_struct(");
-      strcat(buf, parameter->type_name);
-      strcat(buf, "_v");
-      sprintf(buf + strlen(buf), "%i, ", parameter->type_version);
-      strcat(buf, parameter->name);
-      strcat(buf, ", ");
-      strcat(buf, "mc_argv[");
-      sprintf(buf + strlen(buf), "%i]);\n", i);
-    } else {
-      sprintf(buf + strlen(buf), "%s %s = (%s)mc_argv[%i];\n", parameter->type_name, parameter->name, parameter->type_name, i);
-    }
+    char derefbuf[24];
+    for (int j = 0; j < func_info->parameters[i]->type_deref_count; ++j)
+      derefbuf[j] = '*';
+    derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
+    sprintf(param_buf + strlen(param_buf), "  %s %s%s;\n", func_info->parameters[i]->type_name, derefbuf,
+            func_info->parameters[i]->type_name);
   }
-  if (func_info->parameter_count > 0)
-    strcat(buf, "\n");
+  sprintf(param_buf + strlen(param_buf), "\n");
 
-  // const char *identity; const char *type; struct_info *struct_info;
-  struct {
-    const char *var_name;
-    const char *type;
-    void *struct_info;
-  } declared_types[200];
-  int declared_type_count = 0;
-
-  printf("@ifv-5\n");
-  // Translate the code-block from script into workable midge-cling C
-
-  return -5224;
-
-  int n = strlen(code);
-  for (int i = 0; i < n;) {
-    // strcat(buf, code_block);
-    switch (code[i]) {
-    case ' ':
-    case '\t':
-      ++i;
-      continue;
-    default: {
-      if (!isalpha(code[i])) {
-        MCcall(print_parse_error(code, i, "initialize_function_v1", "default:!isalpha"));
-        return -42;
-      }
-      return -58822;
-      // mcqck_translate_script_statement(nodespace, NULL, NULL);
-      break;
-    }
-    }
-  }
-
+  // Declare the function
+  const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
+                                            "  // MidgeC Method Locals"
+                                            "  mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)%p;\n"
+                                            "  int mc_res;\n"
+                                            "  void *mc_vargs[128];\n"
+                                            "\n"
+                                            "  // Function Parameters\n"
+                                            "%s"
+                                            "\n"
+                                            "  // Function Code\n"
+                                            "%s"
+                                            "}";
+  int method_declaration_length =
+      snprintf(NULL, 0, function_declaration_format, func_identity_buf, command_hub, param_buf, midge_c);
   strcat(buf, "\n");
   strcat(buf, TAB);
   strcat(buf, "return res;\n");
@@ -279,4 +255,17 @@ int initialize_function_v1(int argc, void **argv) {
 
   printf("ifv-concludes\n");
   return 0;
+}
+
+int parse_script_to_mc(int argc, void **argv) {
+  void **mc_dvp;
+  int mc_res;
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+  printf("initialize_function_v1()\n");
+
+  char **output = (char **)argv[0];
+  char *code = *(char **)argv[1];
 }
