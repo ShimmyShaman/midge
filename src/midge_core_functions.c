@@ -82,7 +82,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   // function_info *func_info = (function_info *)malloc(sizeof(function_info));
   function_info *func_info = (function_info *)malloc(sizeof(function_info));
   func_info->name = name;
-  func_info->latest_iteration = 1U;
+  func_info->latest_iteration = 0U;
   func_info->return_type = return_type;
   func_info->parameter_count = (argc - 2) / 2;
   func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * func_info->parameter_count);
@@ -96,14 +96,43 @@ int declare_function_pointer_v1(int argc, void **argv)
     // printf("dfp-2\n");
     mc_parameter_info_v1 *parameter_info = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     // printf("dfp>%p=%s\n", i, (void *)parameters[2 + i * 2 + 0], (char *)parameters[2 + i * 2 + 0]);
-    parameter_info->type_name = (char *)argv[2 + i * 2 + 0];
+    char *type_name;
+    allocate_and_copy_cstr(type_name, (char *)argv[2 + i * 2 + 0]);
+
+    // Strip the type name of dereference operators
+    parameter_info->type_deref_count = 0;
+    while (true) {
+      int k = strlen(type_name) - 1;
+      if (k < 0) {
+        MCerror(108, "arg error");
+      }
+
+      if (type_name[k] == ' ') {
+        // Do nothing
+      }
+      else if (type_name[k] == '*') {
+        ++parameter_info->type_deref_count;
+      }
+      else
+        break;
+
+      // Strip of last character
+      char *temp;
+      allocate_and_copy_cstrn(temp, type_name, k);
+      free(type_name);
+      type_name = temp;
+    }
+    parameter_info->type_name = type_name;
 
     // printf("dfp-4a\n");
     // printf("chn:%p\n", command_hub->nodespace);
     // printf("ptn:%s\n", parameter_info->type_name);
-    // printf("dfp-4b\n");
+    //  printf("dfp-4b\n");
     void *p_struct_info = NULL;
     MCcall(find_struct_info((void *)command_hub->nodespace, parameter_info->type_name, &p_struct_info));
+    if (!strcmp(parameter_info->type_name, "node") && !p_struct_info) {
+      MCerror(109, "Its not finding node in find_struct_info");
+    }
     if (p_struct_info) {
       struct_info *sinfo = (struct_info *)p_struct_info;
       parameter_info->type_version = sinfo->version;
@@ -162,15 +191,67 @@ int declare_function_pointer_v1(int argc, void **argv)
   return 0;
 }
 
-int initialize_function_v1(int argc, void **argv)
+int conform_type_name_v1(int argc, void **argv)
 {
-  void **mc_dvp;
   int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
-  printf("initialize_function_v1()\n");
+
+  // Parameters
+  char **conformed_type_name = (char **)argv[0];
+  function_info *func_info = *(function_info **)argv[1];
+  char *type_name = *(char **)argv[2];
+
+  printf("ctn-0\n");
+  // Check for utilized version in function info
+  for (int i = 0; i < func_info->struct_usage_count; ++i) {
+    if (!strcmp(type_name, func_info->struct_usage[i]->name)) {
+      // Match!
+      allocate_and_copy_cstr((*conformed_type_name), func_info->struct_usage[i]->declared_mc_name);
+      return 0;
+    }
+  }
+
+  // printf("ctn-2\n");
+  // Look for type in nodespace
+  void *p_struct_info;
+  MCcall(find_struct_info((void *)command_hub->nodespace, type_name, &p_struct_info));
+  if (p_struct_info) {
+    struct_info *str_info = (struct_info *)p_struct_info;
+
+    // printf("ctn-3\n");
+    // Change Name
+    allocate_and_copy_cstr((*conformed_type_name), str_info->declared_mc_name);
+
+    // Add reference to function infos struct usages
+    struct_info **new_collection = (struct_info **)malloc(sizeof(struct_info *) * (func_info->struct_usage_count + 1));
+    memcpy((void *)new_collection, func_info->struct_usage, sizeof(struct_info *) * func_info->struct_usage_count);
+    new_collection[func_info->struct_usage_count] = str_info;
+    free(func_info->struct_usage);
+
+    // printf("ctn-4\n");
+    func_info->struct_usage_count = func_info->struct_usage_count + 1;
+    func_info->struct_usage = new_collection;
+
+    return 0;
+  }
+
+  // printf("ctn-5\n");
+  // No modification, used the passed type_name
+  allocate_and_copy_cstr((*conformed_type_name), type_name);
+  return 0;
+}
+
+int initialize_function_v1(int argc, void **argv)
+{
+  int mc_res;
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+  printf("~initialize_function_v1()\n");
 
   char *function_name = (char *)argv[0];
   char *script = (char *)argv[1];
@@ -193,12 +274,12 @@ int initialize_function_v1(int argc, void **argv)
   {
     void *mc_vargs[3];
     mc_vargs[0] = (void *)&midge_c;
-    mc_vargs[1] = (void *)&script;
-    MCcall(parse_script_to_mc(2, mc_vargs));
+    mc_vargs[1] = (void *)&func_info;
+    mc_vargs[2] = (void *)&script;
+    MCcall(parse_script_to_mc(3, mc_vargs));
   }
 
   printf("@ifv-1\n");
-  MCerror(196, "TODO");
 
   // // const char *identity; const char *type; struct_info *struct_info;
   // struct {
@@ -217,23 +298,34 @@ int initialize_function_v1(int argc, void **argv)
   func_identity_buf[0] = '\0';
   sprintf(func_identity_buf, function_identifier_format, func_info->name, func_info->latest_iteration);
 
+  printf("@ifv-2\n");
   // Construct the function parameters
   char param_buf[4096];
   param_buf[0] = '\0';
   for (int i = 0; i < func_info->parameter_count; ++i) {
-    char derefbuf[24];
-    for (int j = 0; j < func_info->parameters[i]->type_deref_count; ++j)
-      derefbuf[j] = '*';
-    derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
-    sprintf(param_buf + strlen(param_buf), "  %s %s%s;\n", func_info->parameters[i]->type_name, derefbuf,
-            func_info->parameters[i]->type_name);
+    // char derefbuf[24];
+    // for (int j = 0; j < func_info->parameters[i]->type_deref_count; ++j)
+    // derefbuf[j] = '*';
+    // derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
+    char *conformed_type_name;
+    {
+      void *mc_vargs[3];
+      mc_vargs[0] = (void *)&conformed_type_name;
+      mc_vargs[1] = (void *)&func_info;
+      mc_vargs[2] = (void *)&func_info->parameters[i]->type_name;
+      printf("@ifv-4\n");
+      MCcall(conform_type_name(3, mc_vargs));
+      printf("@ifv-5\n");
+    }
+
+    sprintf(param_buf + strlen(param_buf), "  %s %s;\n", conformed_type_name, func_info->parameters[i]->name);
   }
   sprintf(param_buf + strlen(param_buf), "\n");
 
+  printf("@ifv-3\n");
   // Declare the function
   const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
-                                            "  // MidgeC Method Locals"
-                                            "  mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)%p;\n"
+                                            "  // MidgeC Function Locals\n"
                                             "  int mc_res;\n"
                                             "  void *mc_vargs[128];\n"
                                             "\n"
@@ -242,6 +334,7 @@ int initialize_function_v1(int argc, void **argv)
                                             "\n"
                                             "  // Function Code\n"
                                             "%s"
+                                            "\n"
                                             "}";
   int function_declaration_length =
       snprintf(NULL, 0, function_declaration_format, func_identity_buf, command_hub, param_buf, midge_c);
@@ -253,12 +346,184 @@ int initialize_function_v1(int argc, void **argv)
   clint_declare(function_declaration);
 
   // Set the method to the function pointer
-  // sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
-  // printf("ifv>clint_process:\n%s\n", buf);
-  // clint_process(buf);
+  char decl_buf[1024];
+  sprintf(decl_buf, "%s = &%s;", func_info->name, func_identity_buf);
+  printf("ifv>clint_declare:\n%s\n", decl_buf);
+  clint_declare(decl_buf);
 
-  // printf("ifv-concludes\n");
+  printf("ifv-concludes\n");
   return 0;
+}
+
+int parse_past_expression(void *nodespace, char *code, int *i, char **output)
+{
+  int mc_res;
+  char *primary, *temp;
+
+  if (isalpha(code[*i])) {
+
+    MCcall(parse_past_identifier(code, i, &primary, true, true));
+    // printf("primary:%s code[*i]:'%c'\n", primary, code[*i]);
+
+    if (temp) {
+      free(primary);
+      allocate_and_copy_cstr(primary, temp);
+    }
+    if (code[*i] != '[') {
+      *output = primary;
+      return 0;
+    }
+
+    for (int b = 1;; ++b) {
+      // Parse past the '['
+      ++*i;
+
+      char *secondary;
+      parse_past_expression((void *)nodespace, code, i, &secondary);
+
+      temp = (char *)malloc(sizeof(char) * (strlen(primary) + 1 + strlen(secondary) + b + 1));
+      strcpy(temp, primary);
+      strcat(temp, "[");
+      strcat(temp, secondary);
+      free(primary);
+      free(secondary);
+      primary = temp;
+
+      if (code[*i] != '[') {
+        int k = strlen(primary);
+        for (int c = 0; c < b; ++c) {
+          primary[k + c] = ']';
+          ++*i;
+        }
+        primary[k + b] = '\0';
+
+        switch (code[*i]) {
+        case ' ':
+        case '\0':
+        case '\n':
+          *output = primary;
+          return 0;
+          break;
+        case '-': {
+          MCcall(parse_past(code, i, "->"));
+          MCcall(parse_past_identifier(code, i, &secondary, true, true));
+          if (code[*i] != '[') {
+            temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2 + strlen(secondary) + 1));
+            strcpy(temp, primary);
+            strcat(temp, "->");
+            strcat(temp, secondary);
+            free(primary);
+            free(secondary);
+            *output = temp;
+            return 0;
+          }
+          MCerror(326, "TODO ");
+        }
+        default:
+          MCerror(329, "TODO '%c'", code[*i]);
+        }
+      }
+    }
+  }
+  else
+    switch (code[*i]) {
+    case '"': {
+      MCcall(mc_parse_past_literal_string(code, i, output));
+
+      return 0;
+    }
+    case '\'': {
+      MCcall(parse_past_character_literal(code, i, output));
+
+      return 0;
+    }
+    case '!': {
+      ++*i;
+      MCcall(parse_past_expression((void *)nodespace, code, i, &primary));
+      temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2));
+      strcpy(temp, "!");
+      strcat(temp, primary);
+      temp[strlen(primary) + 1] = '\0';
+
+      free(primary);
+      *output = temp;
+
+      return 0;
+    }
+    case '$': {
+      ++*i;
+
+      MCcall(parse_past_expression(nodespace, code, i, output));
+
+      char *temp = (char *)malloc(sizeof(char) * (strlen(*output) + 2));
+      sprintf(temp, "$%s", *output);
+      free(*output);
+      *output = temp;
+
+      return 0;
+    }
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9': {
+      MCcall(parse_past_number(code, i, output));
+
+      return 0;
+    }
+    case '(': {
+      ++*i;
+      MCcall(parse_past_expression(nodespace, code, i, &temp));
+
+      MCcall(parse_past(code, i, ")"));
+
+      *output = (char *)malloc(sizeof(char) * (2 + strlen(temp) + 1));
+      sprintf(*output, "(%s)", temp);
+    }
+      return 0;
+    case '+':
+    case '-':
+    case '*':
+    case '/':
+    case '%': {
+      char *oper = (char *)malloc(sizeof(char) * 2);
+      oper[0] = code[*i];
+      oper[1] = '\0';
+      ++*i;
+      if (code[*i] != ' ') {
+        MCerror(404, "BackTODO");
+      }
+      MCcall(parse_past(code, i, " "));
+
+      // left
+      char *left;
+      MCcall(parse_past_expression(nodespace, code, i, &left));
+      MCcall(parse_past(code, i, " "));
+
+      // right
+      char *right;
+      MCcall(parse_past_expression(nodespace, code, i, &right));
+
+      *output = (char *)malloc(sizeof(char) * (strlen(oper) + 1 + strlen(left) + 1 + strlen(right) + 1));
+      sprintf(*output, "%s %s %s", left, oper, right);
+
+      free(left);
+      free(oper);
+      free(right);
+    }
+      return 0;
+    default: {
+      MCcall(print_parse_error(code, *i, "parse_past_expression", "first_char"));
+      return -427;
+    }
+    }
+
+  MCerror(432, "Incorrectly Handled");
 }
 
 int parse_script_to_mc_v1(int argc, void **argv)
@@ -271,11 +536,13 @@ int parse_script_to_mc_v1(int argc, void **argv)
   printf("initialize_function_v1()\n");
 
   char **output = (char **)argv[0];
-  char *code = *(char **)argv[1];
+  function_info *func_info = *(function_info **)argv[1];
+  char *code = *(char **)argv[2];
 
   // Parse the script one statement at a time
-  int translation_alloc = 80;
+  unsigned int translation_alloc = 80;
   char *translation = (char *)malloc(sizeof(char) * translation_alloc);
+  translation[0] = '\0';
   char buf[2048];
   int i = 0;
   int code_len = strlen(code);
@@ -387,35 +654,44 @@ int parse_script_to_mc_v1(int argc, void **argv)
 
         // free(function_name);
       }
-      // else if (code[i] == 'k') {
-      //   // nvk
-      //   MCcall(parse_past(code, &i, "k"));
-      //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+      else if (code[i] == 'k') {
+        // nvk
+        MCcall(parse_past(code, &i, "k"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
-      //   // Invoke
-      //   // Function Name
-      //   char *function_name;
-      //   MCcall(parse_past_identifier(code, &i, &function_name, true, false));
-      //   MCcall(append_to_cstr(&translation_alloc, &translation, function_name));
-      //   MCcall(append_to_cstr(&translation_alloc, &translation, "("));
+        // Invoke
+        // Function Name
+        char *function_name;
+        MCcall(parse_past_identifier(code, &i, &function_name, true, false));
+        MCcall(append_to_cstr(&translation_alloc, &translation, function_name));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "("));
 
-      //   bool first_arg = true;
-      //   while (code[i] != '\n' && code[i] != '\0') {
-      //     MCcall(parse_past(code, &i, " "));
+        bool first_arg = true;
+        while (code[i] != '\n' && code[i] != '\0') {
+          MCcall(parse_past(code, &i, " "));
 
-      //     char *argument;
-      //     MCcall(parse_past_expression((void *)command_hub->nodespace, local_index, local_indexes_count, code, &i, &argument));
+          char *argument;
+          MCcall(parse_past_expression((void *)command_hub->nodespace, code, &i, &argument));
 
-      //     sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
-      //     MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-      //     first_arg = false;
-      //     free(argument);
-      //   }
-      //   MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
-      // }
+          sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
+          MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+          first_arg = false;
+          free(argument);
+        }
+        MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+      }
       else {
         MCerror(417, "TODO");
       }
+    } break;
+    case '\n': {
+      MCcall(parse_past(code, &i, "\n"));
+    } break;
+    case ' ': {
+      MCcall(parse_past(code, &i, " "));
+    } break;
+    case '\t': {
+      MCcall(parse_past(code, &i, "\t"));
     } break;
     case '\0': {
       // Trim translation

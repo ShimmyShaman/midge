@@ -2378,7 +2378,7 @@ int mc_main(int argc, const char *const *argv)
       // > return_type:
       "void|"
       // > parameter_type:
-      "node|"
+      "node *|"
       // > parameter_name:
       "parent|"
       // > parameter_type:
@@ -4093,6 +4093,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("int (*declare_function_pointer)(int, void **);");
   clint_process("int (*initialize_function)(int, void **);");
   clint_process("int (*parse_script_to_mc)(int, void **);");
+  clint_process("int (*conform_type_name)(int, void **);");
 
   // printf("processed_core_function:\n%s\n", output);
   clint_declare(output);
@@ -4113,6 +4114,10 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("parse_script_to_mc = &parse_script_to_mc_v1;");
   // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
   //             TODO                &command_hub->global_node->function_count, (void *)parse_script_to_mc_definition_v1));
+
+  clint_process("conform_type_name = &conform_type_name_v1;");
+  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+  //             TODO                &command_hub->global_node->function_count, (void *)conform_type_name_definition_v1));
 
   // printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
 
