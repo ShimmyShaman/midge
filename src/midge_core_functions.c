@@ -303,10 +303,7 @@ int initialize_function_v1(int argc, void **argv)
   char param_buf[4096];
   param_buf[0] = '\0';
   for (int i = 0; i < func_info->parameter_count; ++i) {
-    // char derefbuf[24];
-    // for (int j = 0; j < func_info->parameters[i]->type_deref_count; ++j)
-    // derefbuf[j] = '*';
-    // derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
+    // MC conformed type name
     char *conformed_type_name;
     {
       void *mc_vargs[3];
@@ -318,9 +315,32 @@ int initialize_function_v1(int argc, void **argv)
       printf("@ifv-5\n");
     }
 
-    sprintf(param_buf + strlen(param_buf), "  %s %s;\n", conformed_type_name, func_info->parameters[i]->name);
+    // Deref
+    char derefbuf[24];
+    if (func_info->parameters[i]->type_deref_count) {
+      derefbuf[0] = ' ';
+      for (int j = 0; j < func_info->parameters[i]->type_deref_count; ++j)
+        derefbuf[1 + j] = '*';
+      derefbuf[1 + func_info->parameters[i]->type_deref_count] = '\0';
+    }
+    else
+      derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
+
+    // Decl
+    sprintf(param_buf + strlen(param_buf), "  %s%s%s = ", conformed_type_name, derefbuf, func_info->parameters[i]->name);
+
+    // Deref + 1 (unless its the return value)
+    derefbuf[0] = ' ';
+    for (int j = 0; j < func_info->parameters[i]->type_deref_count; ++j)
+      derefbuf[1 + j] = '*';
+    derefbuf[1 + func_info->parameters[i]->type_deref_count] = '*';
+    derefbuf[1 + func_info->parameters[i]->type_deref_count + 1] = '\0';
+
+    // Assignment
+    sprintf(param_buf + strlen(param_buf), "*(%s%s)argv[%i];\n", conformed_type_name, derefbuf, i);
+
+    free(conformed_type_name);
   }
-  sprintf(param_buf + strlen(param_buf), "\n");
 
   printf("@ifv-3\n");
   // Declare the function
@@ -335,11 +355,12 @@ int initialize_function_v1(int argc, void **argv)
                                             "  // Function Code\n"
                                             "%s"
                                             "\n"
+                                            "  return 0;\n"
                                             "}";
   int function_declaration_length =
-      snprintf(NULL, 0, function_declaration_format, func_identity_buf, command_hub, param_buf, midge_c);
+      snprintf(NULL, 0, function_declaration_format, func_identity_buf, param_buf, midge_c);
   char *function_declaration = (char *)malloc(sizeof(char) * (function_declaration_length + 1));
-  sprintf(function_declaration, function_declaration_format, func_identity_buf, command_hub, param_buf, midge_c);
+  sprintf(function_declaration, function_declaration_format, func_identity_buf, param_buf, midge_c);
 
   // Declare the function
   printf("ifv>cling_declare:\n%s\n", function_declaration);
@@ -348,10 +369,12 @@ int initialize_function_v1(int argc, void **argv)
   // Set the method to the function pointer
   char decl_buf[1024];
   sprintf(decl_buf, "%s = &%s;", func_info->name, func_identity_buf);
-  printf("ifv>clint_declare:\n%s\n", decl_buf);
-  clint_declare(decl_buf);
+  printf("ifv>clint_process:\n%s\n", decl_buf);
+  clint_process(decl_buf);
 
-  printf("ifv-concludes\n");
+  free(function_declaration);
+  free(midge_c);
+  // printf("ifv-concludes\n");
   return 0;
 }
 

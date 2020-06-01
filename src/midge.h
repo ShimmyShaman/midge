@@ -3,12 +3,12 @@
 #ifndef MIDGE_H
 #define MIDGE_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <iostream>
 #include <map>
@@ -28,12 +28,9 @@ void loadSourceFiles(const char *root_dir, int indent)
   if (!(dir = opendir(root_dir)))
     return;
 
-  while ((entry = readdir(dir)) != NULL)
-  {
-    if (entry->d_type == DT_DIR)
-    {
-      if (!indent && !strcmp(entry->d_name, "main"))
-      {
+  while ((entry = readdir(dir)) != NULL) {
+    if (entry->d_type == DT_DIR) {
+      if (!indent && !strcmp(entry->d_name, "main")) {
         printf("IgnoreDir: %*s[%s]\n", indent, "", entry->d_name);
         continue;
       }
@@ -44,10 +41,9 @@ void loadSourceFiles(const char *root_dir, int indent)
       printf("Directory: %*s[%s]\n", indent, "", entry->d_name);
       loadSourceFiles(path, indent + 2);
     }
-    else
-    {
-      if (!strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".h") || !strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".c") || !strcmp(&entry->d_name[strlen(entry->d_name) - 4], ".cpp"))
-      {
+    else {
+      if (!strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".h") || !strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".c") ||
+          !strcmp(&entry->d_name[strlen(entry->d_name) - 4], ".cpp")) {
         char path[1024];
         char *filePath = strcpy(path, root_dir);
         strcat(filePath, "/");
@@ -79,38 +75,21 @@ void loadLibrary(const char *name)
   exit(-1);
 }
 
-extern "C"
-{
-  int clint_process(const char *str)
-  {
-    return clint->process(str);
-  }
+extern "C" {
+int clint_process(const char *str) { return clint->process(str); }
 
-  int clint_declare(const char *str)
-  {
-    return clint->declare(str);
-  }
+int clint_declare(const char *str) { return clint->declare(str); }
 
-  void *clint_compile_function(const char *name, const char *str)
-  {
-    return clint->compileFunction(name, str);
-  }
+void *clint_compile_function(const char *name, const char *str) { return clint->compileFunction(name, str); }
 
-  int clint_loadfile(const char *path)
-  {
-    return clint->loadFile(path);
-  }
+int clint_loadfile(const char *path) { return clint->loadFile(path); }
 
-  int clint_loadheader(const char *path)
-  {
-    return clint->loadHeader(path);
-  }
+int clint_loadheader(const char *path) { return clint->loadHeader(path); }
 }
 
 void run()
 {
-  try
-  {
+  try {
     // Include Paths
     // clint->AddIncludePath("/usr/include");
     clint->AddIncludePath("/home/jason/midge/dep/glm");
@@ -137,7 +116,8 @@ void run()
     printf("</AppSourceLoading>\n\n");
 
     // // Run App
-    // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 && !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+    // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&
+    // !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
 
     // clint->process("mthread_info *rthr;");
     // // printf("process(begin)\n");
@@ -148,8 +128,8 @@ void run()
     // clint->process("end_mthread(rthr);");
     // printf("\n! MIDGE COMPLETE !\n");
 
-    /* Goal: is the ability to change a structure (which contains a resource which must be destroyed & initialized) which is used in-a-loop
-     *       in a seperate thread routine > then change the thread routine to make use of that structure change
+    /* Goal: is the ability to change a structure (which contains a resource which must be destroyed & initialized) which is used
+     * in-a-loop in a seperate thread routine > then change the thread routine to make use of that structure change
      */
 
     // clint->loadFile("/home/jason/midge/src/c_code_lexer.h");
@@ -159,8 +139,7 @@ void run()
     // clint->process("#include \"midge.h\"");
     // clint->process("redef();");
   }
-  catch (const std::exception &e)
-  {
+  catch (const std::exception &e) {
     std::cerr << "midge.h] Caught Error:" << std::endl;
     std::cerr << e.what() << '\n';
   }
