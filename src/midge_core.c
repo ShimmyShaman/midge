@@ -2691,11 +2691,13 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       // Free script data
       if (script_instance->contextual_command)
         free(script_instance->contextual_command);
+      // printf("spchs-4b\n");
 
-      // Locals should be freed at the end of script
-      for (int j = 0; j < script_instance->script->local_count; ++j)
-        if (script_instance->locals[j])
-          free(script_instance->locals[j]);
+      // Locals should be freed at the end of script TODO
+      // for (int j = 0; j < script_instance->script->local_count; ++j)
+      //   if (script_instance->locals[j])
+      //     free(script_instance->locals[j]);
+      // printf("spchs-4c\n");
       free(script_instance->locals);
 
       // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);

@@ -155,7 +155,10 @@ int declare_function_pointer_v1(int argc, void **argv)
     else
       parameter_info->type_version = 0;
 
-    parameter_info->name = *(char **)argv[2 + i * 2 + 1];
+    char *param_name;
+    allocate_and_copy_cstr(param_name, *(char **)argv[2 + i * 2 + 1]);
+    parameter_info->name = param_name;
+
     func_info->parameters[i] = (mc_parameter_info_v1 *)parameter_info;
     // printf("dfp>set param[%i]=%s %s\n", i, parameter_info->type, parameter_info->name);
   }
