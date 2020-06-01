@@ -259,7 +259,7 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
       // printf("contextual_action->contextual_data[%i]:%p\n", i, ((mc_key_value_pair_v1
       // *)contextual_action->contextual_data[i])); printf("key:%s\n", ((mc_key_value_pair_v1
       // *)contextual_action->contextual_data[i])->key);
-      printf("comparing %s<>%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key);
+      // printf("comparing %s<>%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key);
       if (!strcmp(key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key)) {
         *value = ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->value;
         // printf("here35\n");
@@ -1088,7 +1088,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                 parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_identifier));
             sprintf(buf,
                     "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[%%i] = (void *)%%p;\\n\",\n"
-                    "            mcsfnv_arg_count, %s[mc_ii]);\n",
+                    "            mcsfnv_arg_count, &%s[mc_ii]);\n",
                     array_identifier);
             MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
@@ -2378,10 +2378,6 @@ int mc_main(int argc, const char *const *argv)
       // > return_type:
       "void|"
       // > parameter_type:
-      "node *|"
-      // > parameter_name:
-      "parent|"
-      // > parameter_type:
       "const char *|"
       // > parameter_name:
       "node_name|"
@@ -2393,8 +2389,10 @@ int mc_main(int argc, const char *const *argv)
       // -- DEMO initialize function
       "invoke initialize_function|"
       "construct_and_attach_child_node|"
-      "nvk printf \"got here\\n\"\n"
+      "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "|"
+      "invoke construct_and_attach_child_node|"
+      "command_interface_node|"
       "midgequit|";
   // What is the name of the function you wish to initialize?
   "construct_and_attach_child_node|"
@@ -2927,7 +2925,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       mc_script_instance_v1 *script_instance = (mc_script_instance_v1 *)malloc(sizeof(mc_script_instance_v1));
       script_instance->script = script;
       script_instance->contextual_action = (mc_process_action_v1 *)focused_issue;
-      printf("beforesica:%p\n", script_instance->contextual_action);
+      // printf("beforesica:%p\n", script_instance->contextual_action);
       script_instance->struct_id = NULL;
       script_instance->sequence_uid = focused_issue->sequence_uid;
 
