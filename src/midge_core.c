@@ -2,7 +2,8 @@
 
 #include "midge_core.h"
 
-int print_struct_id(int argc, void **argv) {
+int print_struct_id(int argc, void **argv)
+{
   midgeo struct_id = (midgeo)argv;
 
   printf("[%s (version:%i)]\n", (char *)struct_id[0], *(uint *)struct_id[1]);
@@ -10,7 +11,8 @@ int print_struct_id(int argc, void **argv) {
   return 0;
 }
 
-int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id) {
+int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
+{
   char buf[30];
   int off = 6 - index;
   for (int i = 0; i < 13; ++i) {
@@ -38,21 +40,25 @@ int print_parse_error(const char *const text, int index, const char *const funct
   return 0;
 }
 
-int parse_past(const char *text, int *index, const char *sequence) {
+int parse_past(const char *text, int *index, const char *sequence)
+{
   for (int i = 0;; ++i) {
     if (sequence[i] == '\0') {
       *index += i;
       return 0;
-    } else if (text[*index + i] == '\0') {
+    }
+    else if (text[*index + i] == '\0') {
       return -1;
-    } else if (sequence[i] != text[*index + i]) {
+    }
+    else if (sequence[i] != text[*index + i]) {
       printf("!parse_past() expected:'%c' was:'%c'\n", sequence[i], text[*index + i]);
       return 1 + i;
     }
   }
 }
 
-int parse_past_number(const char *text, int *index, char **output) {
+int parse_past_number(const char *text, int *index, char **output)
+{
   for (int i = *index;; ++i) {
     if (isdigit(text[i]))
       continue;
@@ -70,7 +76,8 @@ int parse_past_number(const char *text, int *index, char **output) {
   return 0;
 }
 
-int parse_past_character_literal(const char *text, int *index, char **output) {
+int parse_past_character_literal(const char *text, int *index, char **output)
+{
   if (text[*index] != '\'')
     return -2482;
 
@@ -91,7 +98,8 @@ int parse_past_character_literal(const char *text, int *index, char **output) {
   return 0;
 }
 
-int mc_parse_past_literal_string(const char *text, int *index, char **output) {
+int mc_parse_past_literal_string(const char *text, int *index, char **output)
+{
   if (text[*index] != '"')
     return -2482;
 
@@ -112,7 +120,8 @@ int mc_parse_past_literal_string(const char *text, int *index, char **output) {
   return 0;
 }
 
-int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing) {
+int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing)
+{
   int mc_res;
   int o = *index;
   bool hit_alpha = false;
@@ -173,7 +182,8 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
   return -149;
 }
 
-int parse_past_type_identifier(const char *text, int *index, char **identifier) {
+int parse_past_type_identifier(const char *text, int *index, char **identifier)
+{
   int mc_res;
   if (text[*index] == '\'') {
     // Obtain the type in the literal string
@@ -189,13 +199,15 @@ int parse_past_type_identifier(const char *text, int *index, char **identifier) 
         MCerror(-25258, "SHOULDN'T");
       }
     }
-  } else {
+  }
+  else {
     MCcall(parse_past_identifier(text, index, identifier, false, false));
     return 0;
   }
 }
 
-int set_int_value(int argc, void **argv) {
+int set_int_value(int argc, void **argv)
+{
   printf("set_int_value()\n");
   int *var = (int *)argv[0];
   int value = *(int *)argv[1];
@@ -204,7 +216,8 @@ int set_int_value(int argc, void **argv) {
   return 0;
 }
 
-int increment_int_value(int argc, void **argv) {
+int increment_int_value(int argc, void **argv)
+{
   printf("increment_int_value()\n");
   int *var = (int *)argv[0];
 
@@ -212,7 +225,8 @@ int increment_int_value(int argc, void **argv) {
   return 0;
 }
 
-int set_pointer_value(int argc, void **argv) {
+int set_pointer_value(int argc, void **argv)
+{
   printf("set_pointer_value()\n");
   void **var = (void **)argv[0];
   void *value = (void *)argv[1];
@@ -222,7 +236,8 @@ int set_pointer_value(int argc, void **argv) {
   return 0;
 }
 
-int increment_pointer(int argc, void **argv) {
+int increment_pointer(int argc, void **argv)
+{
   printf("increment_pointer()\n");
   unsigned long **var = (unsigned long **)argv[0];
 
@@ -230,7 +245,8 @@ int increment_pointer(int argc, void **argv) {
   return 0;
 }
 
-int get_process_contextual_data(mc_process_action_v1 *contextual_action, const char *const key, void **value) {
+int get_process_contextual_data(mc_process_action_v1 *contextual_action, const char *const key, void **value)
+{
   *value = NULL;
   // printf("entered gpcd()\n");
   // printf("contextual_action->contextual_data_count:%i\n", contextual_action->contextual_data_count);
@@ -258,7 +274,8 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
   return 0;
 }
 
-int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, void *item) {
+int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, void *item)
+{
   if (*collection_count + 1 > *collection_alloc) {
     unsigned int realloc_amount = *collection_alloc + 8 + *collection_alloc / 3;
     printf("reallocate collection size %i->%i\n", *collection_alloc, realloc_amount);
@@ -280,7 +297,8 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
   return 0;
 }
 
-int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, int index) {
+int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, int index)
+{
   *collection[index] = NULL;
   for (int i = index + 1; i < *collection_count; ++i)
     *collection[i - 1] = *collection[i];
@@ -292,7 +310,8 @@ int remove_from_collection(void ***collection, unsigned int *collection_alloc, u
   return 0;
 }
 
-int find_struct_info(void *vp_nodespace, const char *const struct_name, void **struct_info) {
+int find_struct_info(void *vp_nodespace, const char *const struct_name, void **struct_info)
+{
   void **mc_dvp;
   int mc_res;
   declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
@@ -511,7 +530,8 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
 //   }
 // }
 
-int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra) {
+int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
+{
   int n = strlen(extra);
   if (strlen(*cstr) + n + 1 >= *allocated_size) {
     unsigned int new_allocated_size = n + *allocated_size + 100 + (n + *allocated_size) / 10;
@@ -537,7 +557,8 @@ int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
 
 int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned int *local_indexes_alloc,
                                 unsigned int *local_indexes_count, void *p_script, char *buf, int scope_depth,
-                                char *type_identifier, char *var_name) {
+                                char *type_identifier, char *var_name)
+{
   int mc_res;
   void **mc_dvp;
 
@@ -555,12 +576,14 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
       if (local->scope_depth >= 0) {
         // Variable Identity Conflict with active local
         MCerror(241414, "Variable with same identity already declared in this scope");
-      } else if (!strcmp(type_identifier, local->type)) {
+      }
+      else if (!strcmp(type_identifier, local->type)) {
         // Reset it
         local->scope_depth = scope_depth;
         buf[0] = '\0';
         return 0;
-      } else {
+      }
+      else {
         MCerror(8582, "Reusing out of scope function local again. TODO in future allowing this");
       }
     }
@@ -606,7 +629,8 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
     sprintf(size_of_var, "sizeof(%s)", substituted_type);
 
     free(substituted_type);
-  } else {
+  }
+  else {
     sprintf(kvp->replacement_code, "(*(%s *)script_instance->locals[%u])", kvp->type, kvp->locals_index);
     // printf("\nkrpnncde:'%s','%s'\n", type_identifier, kvp->replacement_code);
 
@@ -629,7 +653,8 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
 }
 
 int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned int local_indexes_count, const char *key,
-                                   char **output) {
+                                   char **output)
+{
   void **mc_dvp;
   *output = NULL;
   // "nvk strcpy provocation finfo->parameters[pind]->name\n"
@@ -657,7 +682,8 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
     if (!strcmp(primary, kvp->identifier)) {
       // printf("match!: %s=%s:%s\n", primary, kvp->identifier, kvp->replacement_code);
       break;
-    } else {
+    }
+    else {
       // printf("NOmatch!: %s=%s:%s\n", primary, kvp->identifier, kvp->replacement_code);
     }
 
@@ -742,7 +768,8 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
 }
 
 int parse_past_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i,
-                          char **output) {
+                          char **output)
+{
   int mc_res;
   char *primary, *temp;
 
@@ -812,7 +839,8 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
         }
       }
     }
-  } else
+  }
+  else
     switch (code[*i]) {
     case '"': {
       MCcall(mc_parse_past_literal_string(code, i, output));
@@ -901,7 +929,8 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
 }
 
 int parse_past_script_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i,
-                                 char **output) {
+                                 char **output)
+{
   bool script_variable_prefix = false;
   if (code[*i] == '$') {
     script_variable_prefix = true;
@@ -922,7 +951,8 @@ int parse_past_script_expression(void *nodespace, void **local_index, unsigned i
   return 0;
 }
 
-int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *code) {
+int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *code)
+{
   int mc_res;
   void **mc_dvp;
 
@@ -1033,7 +1063,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                   "    mc_vargs[2] = (void *)&mc_context_data_2;\n",
                   function_name_identifier + 1);
           // TODO deal with maybe duplicated / free strings?
-        } else {
+        }
+        else {
           sprintf(buf, "    mc_vargs[2] = (void *)&%s;\n", function_name_identifier);
         }
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1075,7 +1106,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
             free(array_count_identifier);
             free(array_identifier);
-          } else {
+          }
+          else {
             MCerror(-1037, "TODO this case");
             // char *argument;
             // MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
@@ -1105,7 +1137,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                   "mcsfnv_function_name);\n"
                   "  }\n",
                   function_name_identifier + 1);
-        } else {
+        }
+        else {
           sprintf(buf, "  char *mcsfnv_function_name = %s;\n", function_name_identifier);
         }
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1236,7 +1269,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // free(var_identifier);
         // free(left);
-      } else {
+      }
+      else {
         MCerror(-4866, "TODO");
       }
     } break;
@@ -1304,7 +1338,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           // printf("dcl-here-6\n");
           // printf("Translation:\n%s\n", translation);
           // printf("dcl-here-7\n");
-        } else {
+        }
+        else {
           // Normal Declaration
           MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script,
                                              buf, local_scope_depth, type_identifier, var_name));
@@ -1312,7 +1347,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         }
         free(var_name);
         free(type_identifier);
-      } else if (code[i] == 's') {
+      }
+      else if (code[i] == 's') {
         // dcs
         MCcall(parse_past(code, &i, "s"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
@@ -1349,7 +1385,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         free(type_identifier);
         free(var_name);
         free(left);
-      } else {
+      }
+      else {
         MCerror(86583, "TODO");
       }
     } break;
@@ -1381,7 +1418,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             local->scope_depth = -1;
           }
         }
-      } else if (code[i + 1] == 'r') {
+      }
+      else if (code[i + 1] == 'r') {
         // end
         MCcall(parse_past(code, &i, "err"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
@@ -1401,7 +1439,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         free(error_code);
         free(error_message);
-      } else {
+      }
+      else {
         MCerror(1380, "Unhandled statement:'%c'", code[i]);
       }
 
@@ -1423,7 +1462,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         sprintf(buf, "if(%s) {\n", left);
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-      } else {
+      }
+      else {
         MCcall(parse_past(code, &i, " "));
 
         // comparison operator
@@ -1493,12 +1533,15 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, initiate, &initiate_final));
         if (!initiate_final)
           initiate_final = initiate;
-      } else if (code[i] == '"') {
+      }
+      else if (code[i] == '"') {
         MCerror(118492, "TODO quotes");
-      } else if (isdigit(code[i])) {
+      }
+      else if (isdigit(code[i])) {
         parse_past_number(code, &i, &initiate);
         initiate_final = initiate;
-      } else {
+      }
+      else {
         MCerror(118492, "TODO what");
       }
 
@@ -1512,11 +1555,14 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, maximum, &maximum_final));
         if (!maximum_final)
           maximum_final = maximum;
-      } else if (code[i] == '"') {
+      }
+      else if (code[i] == '"') {
         MCerror(78678, "TODO quotes");
-      } else if (isdigit(code[i])) {
+      }
+      else if (isdigit(code[i])) {
         parse_past_number(code, &i, &initiate);
-      } else {
+      }
+      else {
         MCerror(373785, "TODO what");
       }
       if (code[i] != '\n' && code[i] != '\0') {
@@ -1664,7 +1710,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         // {
         //   MCerror(-4864, "TODO");
         // }
-      } else {
+      }
+      else {
         MCerror(-4866, "TODO");
       }
     } break;
@@ -1711,14 +1758,16 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         if (func_info) {
           if (!strcmp(func_info->return_type, "void")) {
             MCerror(-1002, "compile error: cannot assign from a void function!");
-          } else {
+          }
+          else {
             sprintf(buf,
                     "{\n"
                     "  mc_vargs[0] = (void *)&%s;\n",
                     replace_name);
             MCcall(append_to_cstr(&translation_alloc, &translation, buf));
           }
-        } else {
+        }
+        else {
           sprintf(buf, "%s = %s(", replace_name, function_name);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         }
@@ -1741,10 +1790,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                       "**)&mc_context_data_%i));\n"
                       "  mc_vargs[%i] = (void *)&mc_context_data_%i;\n",
                       arg_index + 1, argument + 1, arg_index + 1, arg_index + 1, arg_index + 1);
-            } else {
+            }
+            else {
               sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
             }
-          } else {
+          }
+          else {
             if (argument[0] == '$') {
               MCerror(4829, "NOT YET IMPLEMENTED");
             }
@@ -1768,7 +1819,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         // MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-31\\n\");\n"));
 
         free(function_name);
-      } else if (code[i] == 'k') {
+      }
+      else if (code[i] == 'k') {
         // nvk
         MCcall(parse_past(code, &i, "k"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
@@ -1787,14 +1839,14 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           char *argument;
           MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
 
-          buf[0] = '\0';
           sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
           first_arg = false;
           free(argument);
         }
         MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
-      } else {
+      }
+      else {
         MCerror(-4248, "TODO");
       }
     } break;
@@ -1824,7 +1876,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         buf[0] = '\0';
         sprintf(buf, "%s = %s;\n", var_name, value_expr);
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-      } else {
+      }
+      else {
         MCerror(52885, "NotYetSupported:%s", type_identifier);
       }
     } break;
@@ -1902,7 +1955,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 int init_core_functions(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
 int (*mc_dummy_function_pointer)(int, void **);
-int mc_main(int argc, const char *const *argv) {
+int mc_main(int argc, const char *const *argv)
+{
   int sizeof_void_ptr = sizeof(void *);
   if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) || sizeof_void_ptr != sizeof(uint *) ||
       sizeof_void_ptr != sizeof(const char *) || sizeof_void_ptr != sizeof(void **) ||
@@ -2419,7 +2473,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p_response_action);
 int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action);
 
-int submit_user_command(int argc, void **argsv) {
+int submit_user_command(int argc, void **argsv)
+{
   void **mc_dvp;
   int mc_res;
 
@@ -2459,13 +2514,15 @@ int submit_user_command(int argc, void **argsv) {
   return 0;
 }
 
-int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_process_action_v1 **command_action) {
+int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_process_action_v1 **command_action)
+{
   mc_process_action_v1 *process_action;
 
   if (command_hub->focused_issue_stack_count == 0) {
     construct_process_action(command_hub, 0, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, NULL, NULL, NULL, command, NULL,
                              &process_action);
-  } else {
+  }
+  else {
     // Pop the focused issue from the stack
     mc_process_action_v1 *focused_issue =
         (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
@@ -2511,7 +2568,8 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
 
 int process_matrix_register_action(mc_command_hub_v1 *command_hub, void *p_process_action) { return 0; }
 
-int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *process_action) {
+int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *process_action)
+{
   void **mc_dvp;
 
   // printf("submitting:%i\n", process_action->type);
@@ -2522,7 +2580,8 @@ int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process
   return 0;
 }
 
-int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub) {
+int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
+{
   void **mc_dvp;
   if (command_hub->focused_issue_activated || command_hub->focused_issue_stack_count == 0)
     return 0;
@@ -2584,7 +2643,8 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub) {
   return 0;
 }
 
-int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p_response_action) {
+int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p_response_action)
+{
   *p_response_action = NULL;
   void **mc_dvp;
   int mc_res;
@@ -2711,7 +2771,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
   return 0;
 }
 
-int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_response_action) {
+int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_response_action)
+{
   *p_response_action = NULL;
   int mc_res;
   void **mc_dvp;
@@ -3053,7 +3114,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
               process_unit->dialogue_has_pattern = true;
               break;
             }
-        } else {
+        }
+        else {
           process_unit->dialogue = NULL;
           process_unit->dialogue_has_pattern = false;
         }
@@ -3111,7 +3173,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       if (demo_issue->contextual_issue) {
         completion_issue_type = PROCESS_ACTION_PM_IDLE_WITH_CONTEXT;
         previous_contextual_issue = demo_issue->contextual_issue;
-      } else {
+      }
+      else {
         completion_issue_type = PROCESS_ACTION_PM_IDLE;
         previous_contextual_issue = NULL;
       }
@@ -3159,7 +3222,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     // Set the requested data on the script
     if (focused_issue->dialogue != NULL) {
       allocate_from_cstringv(&script->locals[script->awaiting_data_set_index], focused_issue->dialogue);
-    } else {
+    }
+    else {
       *((char **)script->locals[script->awaiting_data_set_index]) = NULL;
     }
 
@@ -3216,7 +3280,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
                                void **p_response_action);
 
-int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action) {
+int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action)
+{
   int mc_res;
   void **mc_dvp;
 
@@ -3300,8 +3365,8 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
   return 0;
 }
 
-int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
-                               void **p_response_action) {
+int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action, void **p_response_action)
+{
   int mc_res;
   void **mc_dvp;
   // printf("aurc-0\n");
@@ -3370,7 +3435,8 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
           kvps[kvps_index++] = kvp;
 
           // printf("setkvp: %s+%s\n", kvp->key, (char *)kvp->value);
-        } else {
+        }
+        else {
           if (strncmp(process_unit->dialogue + c, intercepted_action->dialogue + d, di - d))
             continue;
         }
@@ -3429,7 +3495,8 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
 
 int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequence_uid, process_action_type type,
                              void *contextual_issue, void *previous_issue, mc_process_action_v1 *causation_issue,
-                             const char *const dialogue, void *data, mc_process_action_v1 **output) {
+                             const char *const dialogue, void *data, mc_process_action_v1 **output)
+{
   *output = (mc_process_action_v1 *)malloc(sizeof(mc_process_action_v1));
   (*output)->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
   (*output)->struct_id->identifier = "process_action";
@@ -3453,7 +3520,8 @@ int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequen
 
   if (dialogue) {
     allocate_and_copy_cstr((*output)->dialogue, dialogue);
-  } else {
+  }
+  else {
     (*output)->dialogue = NULL;
   }
 
@@ -3767,13 +3835,15 @@ int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequen
 //   return 0;
 // }
 
-char *get_mc_function_insert(mc_command_hub_v1 *command_hub) {
+char *get_mc_function_insert(mc_command_hub_v1 *command_hub)
+{
   char *insert = (char *)malloc(sizeof(char) * 72);
   sprintf(insert, "mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)%p;\n\n", command_hub);
   return insert;
 }
 
-int init_core_functions(mc_command_hub_v1 *command_hub) {
+int init_core_functions(mc_command_hub_v1 *command_hub)
+{
   int mc_res;
   void **mc_dvp;
 
@@ -4029,29 +4099,34 @@ int init_core_functions(mc_command_hub_v1 *command_hub) {
   strncpy(output + n, input + s, fsize - s);
   output[n + fsize - s] = '\0';
 
-  // clint_process(output);
+  clint_process("int (*declare_function_pointer)(int, void **);");
+  clint_process("int (*initialize_function)(int, void **);");
+  clint_process("int (*parse_script_to_mc)(int, void **);");
+
   // printf("processed_core_function:\n%s\n", output);
   clint_declare(output);
-
-  free(input);
-  free(output);
 
   // Declare with cling interpreter
   clint_process("find_function_info = &find_function_info_v1;");
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)find_function_info_definition_v1));
 
-  clint_process("int (*declare_function_pointer)(int, void **);");
   clint_process("declare_function_pointer = &declare_function_pointer_v1;");
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
 
-  clint_process("int (*initialize_function)(int, void **);");
   clint_process("initialize_function = &initialize_function_v1;");
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)initialize_function_definition_v1));
 
+  clint_process("parse_script_to_mc = &parse_script_to_mc_v1;");
+  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+  //             TODO                &command_hub->global_node->function_count, (void *)parse_script_to_mc_definition_v1));
+
   // printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
+
+  free(input);
+  free(output);
 
   return 0;
 }

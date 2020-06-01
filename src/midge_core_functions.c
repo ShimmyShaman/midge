@@ -6,7 +6,8 @@
 #define node mc_node_v1
 /*mcfuncreplace*/
 
-int find_function_info_v1(int argc, void **argv) {
+int find_function_info_v1(int argc, void **argv)
+{
   if (argc != 3) {
     MCerror(-848, "Incorrect argument count");
   }
@@ -57,7 +58,8 @@ int find_function_info_v1(int argc, void **argv) {
   return 0;
 }
 
-int declare_function_pointer_v1(int argc, void **argv) {
+int declare_function_pointer_v1(int argc, void **argv)
+{
   void **mc_dvp;
   int mc_res;
   /*mcfuncreplace*/
@@ -120,7 +122,8 @@ int declare_function_pointer_v1(int argc, void **argv) {
                                     (void *)sinfo));
       }
       // printf("dfp-6\n");
-    } else
+    }
+    else
       parameter_info->type_version = 0;
 
     parameter_info->name = (char *)argv[2 + i * 2 + 1];
@@ -140,7 +143,8 @@ int declare_function_pointer_v1(int argc, void **argv) {
         return -426;
       }
       func_info->struct_usage = new_struct_usage;
-    } else {
+    }
+    else {
       struct_usage_alloc = 0;
       free(func_info->struct_usage);
     }
@@ -158,7 +162,8 @@ int declare_function_pointer_v1(int argc, void **argv) {
   return 0;
 }
 
-int initialize_function_v1(int argc, void **argv) {
+int initialize_function_v1(int argc, void **argv)
+{
   void **mc_dvp;
   int mc_res;
   /*mcfuncreplace*/
@@ -193,6 +198,7 @@ int initialize_function_v1(int argc, void **argv) {
   }
 
   printf("@ifv-1\n");
+  MCerror(196, "TODO");
 
   // // const char *identity; const char *type; struct_info *struct_info;
   // struct {
@@ -237,28 +243,26 @@ int initialize_function_v1(int argc, void **argv) {
                                             "  // Function Code\n"
                                             "%s"
                                             "}";
-  int method_declaration_length =
+  int function_declaration_length =
       snprintf(NULL, 0, function_declaration_format, func_identity_buf, command_hub, param_buf, midge_c);
-  strcat(buf, "\n");
-  strcat(buf, TAB);
-  strcat(buf, "return res;\n");
-  strcat(buf, "}");
+  char *function_declaration = (char *)malloc(sizeof(char) * (function_declaration_length + 1));
+  sprintf(function_declaration, function_declaration_format, func_identity_buf, command_hub, param_buf, midge_c);
 
-  printf("ifv>cling_declare:\n%s\n", buf);
-  // Declare the method
-  clint_declare(buf);
+  // Declare the function
+  printf("ifv>cling_declare:\n%s\n", function_declaration);
+  clint_declare(function_declaration);
 
   // Set the method to the function pointer
-  sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
-  printf("ifv>clint_process:\n%s\n", buf);
-  clint_process(buf);
+  // sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
+  // printf("ifv>clint_process:\n%s\n", buf);
+  // clint_process(buf);
 
-  printf("ifv-concludes\n");
+  // printf("ifv-concludes\n");
   return 0;
 }
 
-int parse_script_to_mc(int argc, void **argv) {
-  void **mc_dvp;
+int parse_script_to_mc_v1(int argc, void **argv)
+{
   int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
@@ -268,4 +272,163 @@ int parse_script_to_mc(int argc, void **argv) {
 
   char **output = (char **)argv[0];
   char *code = *(char **)argv[1];
+
+  // Parse the script one statement at a time
+  int translation_alloc = 36;
+  char *translation = (char *)malloc(sizeof(char) * translation_alloc);
+  char buf[2048];
+  int i = 0;
+  int code_len = strlen(code);
+  while (i <= code_len) {
+    switch (code[i]) {
+    case 'n': {
+      MCcall(parse_past(code, &i, "nv"));
+      if (code[i] == 'i') {
+        MCerror(286, "TODO");
+        // // nvi
+        // MCcall(parse_past(code, &i, "i"));
+        // MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // // Type Identifier
+        // char *type_identifier;
+        // MCcall(parse_past_type_identifier(code, &i, &type_identifier));
+        // MCcall(parse_past(code, &i, " "));
+
+        // // Variable Name
+        // char *var_name;
+        // MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        // MCcall(parse_past(code, &i, " "));
+
+        // MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script,
+        //                                    buf, local_scope_depth, type_identifier, var_name));
+        // append_to_cstr(&translation_alloc, &translation, buf);
+
+        // char *replace_name;
+        // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
+        // // printf("nvi gen replace_name:%s=%s\n", var_name, replace_name);
+
+        // // Invoke
+        // // Function Name
+        // char *function_name;
+        // MCcall(parse_past_identifier(code, &i, &function_name, true, false));
+
+        // // printf("dopeh\n");
+        // function_info_v1 *func_info;
+        // {
+        //   void *mc_vargs[3];
+        //   mc_vargs[0] = (void *)&func_info;
+        //   mc_vargs[1] = (void *)&nodespace;
+        //   mc_vargs[2] = (void *)&function_name;
+        //   find_function_info(3, mc_vargs);
+        // }
+        // // printf("dopey\n");
+        // if (func_info) {
+        //   if (!strcmp(func_info->return_type, "void")) {
+        //     MCerror(-1002, "compile error: cannot assign from a void function!");
+        //   }
+        //   else {
+        //     sprintf(buf,
+        //             "{\n"
+        //             "  mc_vargs[0] = (void *)&%s;\n",
+        //             replace_name);
+        //     MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        //   }
+        // }
+        // else {
+        //   sprintf(buf, "%s = %s(", replace_name, function_name);
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        // }
+
+        // int arg_index = 0;
+        // while (code[i] != '\n' && code[i] != '\0') {
+        //   MCcall(parse_past(code, &i, " "));
+
+        //   char *argument;
+        //   MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+        //   // MCcall(parse_past_identifier(code, &i, &argument, true, true));
+        //   // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument,
+        //   // &replace_name)); char *arg_entry = argument; if (replace_name)
+        //   //   arg_entry = replace_name;
+        //   if (func_info) {
+        //     if (argument[0] == '$') {
+        //       sprintf(buf,
+        //               "  char *mc_context_data_%i;\n"
+        //               "  MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", (void "
+        //               "**)&mc_context_data_%i));\n"
+        //               "  mc_vargs[%i] = (void *)&mc_context_data_%i;\n",
+        //               arg_index + 1, argument + 1, arg_index + 1, arg_index + 1, arg_index + 1);
+        //     }
+        //     else {
+        //       sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
+        //     }
+        //   }
+        //   else {
+        //     if (argument[0] == '$') {
+        //       MCerror(4829, "NOT YET IMPLEMENTED");
+        //     }
+        //     sprintf(buf, "%s%s", arg_index ? ", " : "", argument);
+        //   }
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        //   ++arg_index;
+        //   free(argument);
+        // }
+
+        // if (func_info) {
+
+        //   // append_to_cstr(&translation_alloc, &translation, "  printf(\"here-22  =%s\\n\", (char *)mc_vargs[2]);\n");
+        //   sprintf(buf, "  %s(%i, mc_vargs", function_name, arg_index + 1);
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        // }
+
+        // MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+        // if (func_info)
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
+        // // MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-31\\n\");\n"));
+
+        // free(function_name);
+      }
+      // else if (code[i] == 'k') {
+      //   // nvk
+      //   MCcall(parse_past(code, &i, "k"));
+      //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+      //   // Invoke
+      //   // Function Name
+      //   char *function_name;
+      //   MCcall(parse_past_identifier(code, &i, &function_name, true, false));
+      //   MCcall(append_to_cstr(&translation_alloc, &translation, function_name));
+      //   MCcall(append_to_cstr(&translation_alloc, &translation, "("));
+
+      //   bool first_arg = true;
+      //   while (code[i] != '\n' && code[i] != '\0') {
+      //     MCcall(parse_past(code, &i, " "));
+
+      //     char *argument;
+      //     MCcall(parse_past_expression((void *)command_hub->nodespace, local_index, local_indexes_count, code, &i, &argument));
+
+      //     sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
+      //     MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+      //     first_arg = false;
+      //     free(argument);
+      //   }
+      //   MCcall(append_to_cstr(&translation_alloc, &translation, ");\n"));
+      // }
+      else {
+        MCerror(417, "TODO");
+      }
+    } break;
+    case '\0': {
+      // Trim translation
+      *output = translation;
+      return 0;
+    }
+    default: {
+      // printf("\ntranslation:\n%s\n\n", translation);
+      MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "UnhandledStatement"));
+      return 285;
+    }
+    }
+  }
+
+  MCerror(279, "Improperly terminated script argument");
 }

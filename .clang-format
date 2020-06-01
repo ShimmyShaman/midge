@@ -11,6 +11,7 @@ DerivePointerAlignment: false
 PointerAlignment: Right
 ColumnLimit: 130
 BreakStringLiterals: true
+BreakBeforeBraces: Stroustrup
 ---
 Language: CSharp
 # Use 100 columns for C#.
