@@ -274,7 +274,7 @@ int parse_script_to_mc_v1(int argc, void **argv)
   char *code = *(char **)argv[1];
 
   // Parse the script one statement at a time
-  int translation_alloc = 36;
+  int translation_alloc = 80;
   char *translation = (char *)malloc(sizeof(char) * translation_alloc);
   char buf[2048];
   int i = 0;

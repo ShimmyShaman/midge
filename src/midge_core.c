@@ -534,8 +534,8 @@ int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
 {
   int n = strlen(extra);
   if (strlen(*cstr) + n + 1 >= *allocated_size) {
-    unsigned int new_allocated_size = n + *allocated_size + 100 + (n + *allocated_size) / 10;
-    // printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);
+    unsigned int new_allocated_size = n + *allocated_size + 16 + (n + *allocated_size) / 10;
+    printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);
     char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
     // printf("atc-4\n");
     memcpy(newptr, *cstr, sizeof(char) * *allocated_size);
@@ -767,8 +767,8 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
   }
 }
 
-int parse_past_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i,
-                          char **output)
+int parse_past_script_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i,
+                                 char **output)
 {
   int mc_res;
   char *primary, *temp;
@@ -794,7 +794,7 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
       ++*i;
 
       char *secondary;
-      parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, i, &secondary);
+      parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, i, &secondary);
 
       temp = (char *)malloc(sizeof(char) * (strlen(primary) + 1 + strlen(secondary) + b + 1));
       strcpy(temp, primary);
@@ -854,13 +854,25 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
     }
     case '!': {
       ++*i;
-      parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, i, &primary);
+      MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, i, &primary));
       temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2));
       strcpy(temp, "!");
       strcat(temp, primary);
       temp[strlen(primary) + 1] = '\0';
 
       free(primary);
+      *output = temp;
+
+      return 0;
+    }
+    case '$': {
+      ++*i;
+
+      MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, i, output));
+
+      char *temp = (char *)malloc(sizeof(char) * (strlen(*output) + 2));
+      sprintf(temp, "$%s", *output);
+      free(*output);
       *output = temp;
 
       return 0;
@@ -880,7 +892,7 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
       return 0;
     case '(': {
       ++*i;
-      MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, &temp));
+      MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, i, &temp));
 
       MCcall(parse_past(code, i, ")"));
 
@@ -904,12 +916,12 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
 
       // left
       char *left;
-      MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, &left));
+      MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, i, &left));
       MCcall(parse_past(code, i, " "));
 
       // right
       char *right;
-      MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, &right));
+      MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, i, &right));
 
       *output = (char *)malloc(sizeof(char) * (strlen(oper) + 1 + strlen(left) + 1 + strlen(right) + 1));
       sprintf(*output, "%s %s %s", left, oper, right);
@@ -920,7 +932,7 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
     }
       return 0;
     default: {
-      MCcall(print_parse_error(code, *i, "parse_past_expression", "first_char"));
+      MCcall(print_parse_error(code, *i, "parse_past_script_expression", "first_char"));
       return -7777;
     }
     }
@@ -928,35 +940,12 @@ int parse_past_expression(void *nodespace, void **local_index, unsigned int loca
   return 4240;
 }
 
-int parse_past_script_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i,
-                                 char **output)
-{
-  bool script_variable_prefix = false;
-  if (code[*i] == '$') {
-    script_variable_prefix = true;
-    ++*i;
-  }
-
-  int mc_res;
-  MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, i, output));
-
-  if (!script_variable_prefix)
-    return 0;
-
-  char *temp = (char *)malloc(sizeof(char) * (strlen(*output) + 2));
-  sprintf(temp, "$%s", *output);
-  free(*output);
-  *output = temp;
-
-  return 0;
-}
-
 int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *code)
 {
   int mc_res;
   void **mc_dvp;
 
-  unsigned int translation_alloc = 512 + strlen(code) * 13 / 10;
+  unsigned int translation_alloc = strlen(code);
   char *translation = (char *)malloc(sizeof(char) * translation_alloc);
   translation[0] = '\0';
   unsigned int t = 0;
@@ -995,12 +984,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Identifier
         char *response_location;
-        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
         MCcall(parse_past(code, &i, " "));
 
         // Variable Name
         char *provocation;
-        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
         if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4864, "expected statement end:'%c'", code[i]);
         }
@@ -1088,13 +1077,15 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             MCcall(parse_past(code, &i, " "));
 
             char *array_count_identifier;
-            MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_count_identifier));
+            MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
+                                                &array_count_identifier));
             MCcall(parse_past(code, &i, " "));
             sprintf(buf, "  for (int mc_ii = 0; mc_ii < %s; ++mc_ii) {\n", array_count_identifier);
             MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
             char *array_identifier;
-            MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_identifier));
+            MCcall(
+                parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_identifier));
             sprintf(buf,
                     "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[%%i] = (void *)%%p;\\n\",\n"
                     "            mcsfnv_arg_count, %s[mc_ii]);\n",
@@ -1110,7 +1101,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           else {
             MCerror(-1037, "TODO this case");
             // char *argument;
-            // MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+            // MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
             // // MCcall(parse_past_identifier(code, &i, &argument, true, true));
             // // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument,
             // &replace_name));
@@ -1201,12 +1192,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       //   {
       //     // left
       //     char *left;
-      //     MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
+      //     MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
       //     MCcall(parse_past(code, &i, " "));
 
       //     // right
       //     char *right;
-      //     MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
+      //     MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
 
       //     buf[0] = '\0';
       //     MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
@@ -1237,7 +1228,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       //         return 34242;
       //       }
       //       MCcall(parse_past(code, &i, " "));
-      //       MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
+      //       MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, &i, &right));
       //       sprintf(buf + strlen(buf), " %s %s", comparator, right);
       //     }
       //     MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1254,11 +1245,11 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
         char *var_identifier;
-        MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &var_identifier));
+        MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, &i, &var_identifier));
         MCcall(parse_past(code, &i, " "));
 
         char *left;
-        MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
+        MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
         if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4829, "expected statement end");
         }
@@ -1302,7 +1293,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           MCcall(parse_past(code, &i, "["));
 
           char *left;
-          MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
+          MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
           MCcall(parse_past(code, &i, "]"));
           if (code[i] != '\n' && code[i] != '\0') {
             MCerror(-4829, "expected statement end");
@@ -1365,7 +1356,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Set Value
         char *left;
-        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
         if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4829, "expected statement end");
         }
@@ -1429,7 +1420,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
         char *error_message;
-        MCcall(parse_past_expression(nodespace, local_index, local_indexes_count, code, &i, &error_message));
+        MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, &i, &error_message));
         if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4831, "expected statement end");
         }
@@ -1453,7 +1444,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       // left
       char *left;
       // printf("here-0\n");
-      MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
+      MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
       // printf("left:%s\n", left);
       if (code[i] != ' ') {
         if (code[i] != '\n' && code[i] != '\0') {
@@ -1497,7 +1488,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // right
         char *right;
-        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
         if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4864, "expected statement end:'%c'", code[i]);
         }
@@ -1607,7 +1598,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Set Value
         char *sizeof_expr;
-        MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &sizeof_expr));
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &sizeof_expr));
         if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4829, "expected statement end");
         }
@@ -1655,12 +1646,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         // {
         //   // left
         //   char *left;
-        //   MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
+        //   MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
         //   MCcall(parse_past(code, &i, " "));
 
         //   // right
         //   char *right;
-        //   MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
+        //   MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
 
         //   buf[0] = '\0';
         //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
@@ -1700,7 +1691,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         //       return 34242;
         //     }
         //     MCcall(parse_past(code, &i, " "));
-        //     MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
+        //     MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
         //     sprintf(buf + strlen(buf), " %s %s", comparator, right);
         //   }
         //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1837,7 +1828,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           MCcall(parse_past(code, &i, " "));
 
           char *argument;
-          MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+          MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
 
           sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1862,12 +1853,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
       // Variable Name
       char *var_name;
-      MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &var_name));
+      MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &var_name));
       MCcall(parse_past(code, &i, " "));
 
       // Value Name
       char *value_expr;
-      MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &value_expr));
+      MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &value_expr));
       if (code[i] != '\n' && code[i] != '\0') {
         MCerror(-4829, "expected statement end");
       }
@@ -1888,7 +1879,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
       // Variable Name
       char *conditional;
-      MCcall(parse_past_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &conditional));
+      MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &conditional));
       if (code[i] != '\n' && code[i] != '\0') {
         MCerror(-4829, "expected statement end");
       }
