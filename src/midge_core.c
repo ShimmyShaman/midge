@@ -2390,21 +2390,14 @@ int mc_main(int argc, const char *const *argv)
       "invoke initialize_function|"
       "construct_and_attach_child_node|"
       "nvk printf \"got here, node_name=%s\\n\" node_name\n"
+      "dcd 'node *' child\n"
+      "cpy 'char *' child->name node_name\n"
+      "ass child->parent parent\n"
+      "nvk append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n"
       "|"
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"
       "midgequit|";
-  // What is the name of the function you wish to initialize?
-  "construct_and_attach_child_node|"
-  // int construct_and_attach_child_node(node parent, cstr node_name )
-  // write code:
-  "dec node child\n"
-  "cpy 'char *' child->name node_name\n"
-  "ass child->parent parent\n"
-  "inv void append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n|"
-  // ---- SEQUENCE TRANSITION ----
-  "invoke construct_and_attach_child_node|"
-  "";
 
   // node_v1 *node;
   // "create function\n"
