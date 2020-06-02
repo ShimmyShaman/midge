@@ -2401,7 +2401,7 @@ int mc_main(int argc, const char *const *argv)
       "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "dcd 'node *' child\n"
       "cpy 'char *' child->name node_name\n"
-      // "ass child->parent parent\n"
+      "ass child->parent command_hub->nodespace\n"
       // "nvk append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n"
       "|"
       "invoke construct_and_attach_child_node|"
@@ -4036,7 +4036,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
       s = i;
     }
 
-    if (!strncmp(input + i, "command_hub", strlen("command_hub"))) {
+    if (!strncmp(input + i, "command_hub", strlen("command_hub")) && strncmp(input + i - 3, "mc_", 3) &&
+        strncmp(input + i - 1, "\"", 1)) {
       // Output up to now
       strncpy(output + n, input + s, i - s);
       n += i - s;

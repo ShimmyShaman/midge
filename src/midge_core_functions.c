@@ -447,67 +447,92 @@ int initialize_function_v1(int argc, void **argv)
 int parse_past_expression(void *nodespace, char *code, int *i, char **output)
 {
   int mc_res;
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
   char *primary, *temp;
 
   if (isalpha(code[*i])) {
 
-    MCcall(parse_past_identifier(code, i, &primary, true, true));
-    // printf("primary:%s code[*i]:'%c'\n", primary, code[*i]);
+    MCcall(parse_past_identifier(code, i, &primary, false, true));
 
-    if (code[*i] != '[') {
+    if (!strcmp(primary, "command_hub")) {
+      int len = snprintf(NULL, 0, "((mc_command_hub_v1 *)%p)", command_hub);
+      free(primary);
+      primary = (char *)malloc(sizeof(char) * (len + 1));
+      sprintf(primary, "((mc_command_hub_v1 *)%p)", command_hub);
+    }
+
+    switch (code[*i]) {
+    case '[': {
+      for (int b = 1;; ++b) {
+        // Parse past the '['
+        ++*i;
+
+        char *secondary;
+        parse_past_expression((void *)nodespace, code, i, &secondary);
+
+        temp = (char *)malloc(sizeof(char) * (strlen(primary) + 1 + strlen(secondary) + b + 1));
+        strcpy(temp, primary);
+        strcat(temp, "[");
+        strcat(temp, secondary);
+        free(primary);
+        free(secondary);
+        primary = temp;
+
+        if (code[*i] != '[') {
+          int k = strlen(primary);
+          for (int c = 0; c < b; ++c) {
+            primary[k + c] = ']';
+            ++*i;
+          }
+          primary[k + b] = '\0';
+
+          switch (code[*i]) {
+          case ' ':
+          case '\0':
+          case '\n':
+            *output = primary;
+            return 0;
+            break;
+          case '-': {
+            MCcall(parse_past(code, i, "->"));
+            MCcall(parse_past_identifier(code, i, &secondary, true, true));
+            if (code[*i] != '[') {
+              temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2 + strlen(secondary) + 1));
+              strcpy(temp, primary);
+              strcat(temp, "->");
+              strcat(temp, secondary);
+              free(primary);
+              free(secondary);
+              *output = temp;
+              return 0;
+            }
+            MCerror(326, "TODO ");
+          }
+          default:
+            MCerror(329, "TODO '%c'", code[*i]);
+          }
+        }
+      }
+    } break;
+    case '-': {
+      parse_past(code, i, "->");
+      parse_past_expression(nodespace, code, i, &temp);
+      int len = snprintf(NULL, 0, "%s->%s", primary, temp);
+      *output = (char *)malloc(sizeof(char) * (len + 1));
+      sprintf(*output, "%s->%s", primary, temp);
+      printf("primary:'%s'\n", primary);
+      printf("temp:'%s'\n", temp);
+      free(primary);
+      free(temp);
+      return 0;
+    }
+    default: {
       *output = primary;
       return 0;
     }
-
-    for (int b = 1;; ++b) {
-      // Parse past the '['
-      ++*i;
-
-      char *secondary;
-      parse_past_expression((void *)nodespace, code, i, &secondary);
-
-      temp = (char *)malloc(sizeof(char) * (strlen(primary) + 1 + strlen(secondary) + b + 1));
-      strcpy(temp, primary);
-      strcat(temp, "[");
-      strcat(temp, secondary);
-      free(primary);
-      free(secondary);
-      primary = temp;
-
-      if (code[*i] != '[') {
-        int k = strlen(primary);
-        for (int c = 0; c < b; ++c) {
-          primary[k + c] = ']';
-          ++*i;
-        }
-        primary[k + b] = '\0';
-
-        switch (code[*i]) {
-        case ' ':
-        case '\0':
-        case '\n':
-          *output = primary;
-          return 0;
-          break;
-        case '-': {
-          MCcall(parse_past(code, i, "->"));
-          MCcall(parse_past_identifier(code, i, &secondary, true, true));
-          if (code[*i] != '[') {
-            temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2 + strlen(secondary) + 1));
-            strcpy(temp, primary);
-            strcat(temp, "->");
-            strcat(temp, secondary);
-            free(primary);
-            free(secondary);
-            *output = temp;
-            return 0;
-          }
-          MCerror(326, "TODO ");
-        }
-        default:
-          MCerror(329, "TODO '%c'", code[*i]);
-        }
-      }
     }
   }
   else
@@ -697,6 +722,27 @@ int parse_script_to_mc_v1(int argc, void **argv)
   int code_len = strlen(code);
   while (i <= code_len) {
     switch (code[i]) {
+    case 'a': {
+      // ass / asi
+      MCcall(parse_past(code, &i, "ass"));
+      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+      char *dest_expr;
+      MCcall(parse_past_expression(command_hub->nodespace, code, &i, &dest_expr));
+      MCcall(parse_past(code, &i, " "));
+
+      char *src_expr;
+      MCcall(parse_past_expression(command_hub->nodespace, code, &i, &src_expr));
+      if (code[i] != '\n' && code[i] != '\0') {
+        MCerror(-4829, "expected statement end");
+      }
+
+      sprintf(buf, "%s = %s;\n", dest_expr, src_expr);
+      MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+      // free(var_identifier);
+      // free(left);
+    } break;
     case 'c': {
       // cpy - deep copy of known types
       MCcall(parse_past(code, &i, "cpy"));
