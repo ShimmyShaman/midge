@@ -314,7 +314,8 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
 {
   void **mc_dvp;
   int mc_res;
-  declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
+  mc_node_v1 *node = (mc_node_v1 *)vp_nodespace;
+  // declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
 
   *struct_info = NULL;
   for (int i = 0; i < node->struct_count; ++i) {
@@ -888,18 +889,19 @@ int parse_past_script_expression(void *nodespace, void **local_index, unsigned i
     case '8':
     case '9': {
       MCcall(parse_past_number(code, i, output));
-    }
       return 0;
-    case '(': {
-      ++*i;
-      MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, i, &temp));
-
-      MCcall(parse_past(code, i, ")"));
-
-      *output = (char *)malloc(sizeof(char) * (2 + strlen(temp) + 1));
-      sprintf(*output, "(%s)", temp);
     }
-      return 0;
+    // case '(': {
+    //   ++*i;
+    //   MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, i, &temp));
+
+    //   MCcall(parse_past(code, i, ")"));
+
+    //   *output = (char *)malloc(sizeof(char) * (2 + strlen(temp) + 1));
+    //   sprintf(*output, "(%s)", temp);
+
+    //   return 0;
+    // }
     case '+':
     case '-':
     case '*':
@@ -2272,7 +2274,7 @@ int mc_main(int argc, const char *const *argv)
   global->structs = (mc_struct_info_v1 **)calloc(sizeof(mc_struct_info_v1 *), global->structs_alloc);
   global->struct_count = 0;
   global->children_alloc = 40;
-  global->children = (void **)calloc(sizeof(mc_node_v1 *), global->children_alloc);
+  global->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), global->children_alloc);
   global->child_count = 0;
 
   MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count,
@@ -2399,10 +2401,11 @@ int mc_main(int argc, const char *const *argv)
       "invoke initialize_function|"
       "construct_and_attach_child_node|"
       "nvk printf \"got here, node_name=%s\\n\" node_name\n"
-      "dcd 'node *' child\n"
-      "cpy 'char *' child->name node_name\n"
+      "dcd node * child\n"
+      "cpy char * child->name node_name\n"
       "ass child->parent command_hub->nodespace\n"
-      "nvk append_to_collection &child->parent->children &child->parent->children_alloc &child->parent->child_count child\n"
+      "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
+      "(void *)child\n"
       "|"
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"

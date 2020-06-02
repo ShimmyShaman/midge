@@ -444,7 +444,57 @@ int initialize_function_v1(int argc, void **argv)
   return 0;
 }
 
-int parse_past_expression(void *nodespace, char *code, int *i, char **output)
+int parse_past_conformed_type_identifier(function_info *func_info, char *code, int *i, char **conformed_type_identity)
+{
+  int mc_res;
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+
+  *conformed_type_identity = NULL;
+
+  if (!isalpha(code[*i])) {
+    MCerror(459, "Type must begin with alpha character was:'%c'", code[*i]);
+  }
+
+  char *type_identity;
+  int type_end_index;
+  for (type_end_index = *i;; ++type_end_index) {
+    if (code[type_end_index] == ' ' || code[type_end_index] == '\0') {
+      if (code[type_end_index] == ' ' && code[type_end_index + 1] == '*') {
+        do {
+          ++type_end_index;
+        } while (code[type_end_index] == '*');
+      }
+
+      type_identity = (char *)malloc(sizeof(char) * (type_end_index - *i + 1));
+      strncpy(type_identity, code + *i, type_end_index - *i);
+      type_identity[type_end_index - *i] = '\0';
+      *i = type_end_index;
+      break;
+    }
+  }
+
+  char *conformed_result;
+  {
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&conformed_result;
+    mc_vargs[1] = (void *)&func_info;
+    mc_vargs[2] = (void *)&type_identity;
+    // printf("@ppcti-2\n");
+    MCcall(conform_type_identity(3, mc_vargs));
+    // printf("@ppcti-3\n");
+    printf("ppcti:paramName:'%s' conformed_type_name:'%s'\n", type_identity, conformed_result);
+  }
+  printf("@ppcti-4\n");
+  free(type_identity);
+
+  *conformed_type_identity = conformed_result;
+  return 0;
+}
+
+int parse_past_expression(function_info *func_info, void *nodespace, char *code, int *i, char **output)
 {
   int mc_res;
   /*mcfuncreplace*/
@@ -471,7 +521,7 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
         ++*i;
 
         char *secondary;
-        parse_past_expression((void *)nodespace, code, i, &secondary);
+        parse_past_expression(func_info, (void *)nodespace, code, i, &secondary);
 
         temp = (char *)malloc(sizeof(char) * (strlen(primary) + 1 + strlen(secondary) + b + 1));
         strcpy(temp, primary);
@@ -519,12 +569,12 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
     } break;
     case '-': {
       parse_past(code, i, "->");
-      parse_past_expression(nodespace, code, i, &temp);
+      parse_past_expression(func_info, nodespace, code, i, &temp);
       int len = snprintf(NULL, 0, "%s->%s", primary, temp);
       *output = (char *)malloc(sizeof(char) * (len + 1));
       sprintf(*output, "%s->%s", primary, temp);
-      printf("primary:'%s'\n", primary);
-      printf("temp:'%s'\n", temp);
+      // printf("primary:'%s'\n", primary);
+      // printf("temp:'%s'\n", temp);
       free(primary);
       free(temp);
       return 0;
@@ -549,7 +599,7 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
     }
     case '&': {
       ++*i;
-      MCcall(parse_past_expression((void *)nodespace, code, i, &primary));
+      MCcall(parse_past_expression(func_info, (void *)nodespace, code, i, &primary));
       temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2));
       strcpy(temp, "&");
       strcat(temp, primary);
@@ -560,9 +610,24 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
 
       return 0;
     }
+    case '(': {
+      // Assume to be a casting - do containment other ways
+      parse_past(code, i, "(");
+      MCcall(parse_past_conformed_type_identifier(func_info, code, i, &primary));
+      parse_past(code, i, ")");
+
+      MCcall(parse_past_expression(func_info, (void *)nodespace, code, i, &temp));
+
+      *output = (char *)malloc(sizeof(char) * (2 + strlen(primary) + strlen(temp) + 1));
+      sprintf(*output, "(%s)%s", primary, temp);
+      free(primary);
+      free(temp);
+
+      return 0;
+    }
     case '!': {
       ++*i;
-      MCcall(parse_past_expression((void *)nodespace, code, i, &primary));
+      MCcall(parse_past_expression(func_info, (void *)nodespace, code, i, &primary));
       temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2));
       strcpy(temp, "!");
       strcat(temp, primary);
@@ -576,7 +641,7 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
     case '$': {
       ++*i;
 
-      MCcall(parse_past_expression(nodespace, code, i, output));
+      MCcall(parse_past_expression(func_info, nodespace, code, i, output));
 
       char *temp = (char *)malloc(sizeof(char) * (strlen(*output) + 2));
       sprintf(temp, "$%s", *output);
@@ -599,16 +664,6 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
 
       return 0;
     }
-    case '(': {
-      ++*i;
-      MCcall(parse_past_expression(nodespace, code, i, &temp));
-
-      MCcall(parse_past(code, i, ")"));
-
-      *output = (char *)malloc(sizeof(char) * (2 + strlen(temp) + 1));
-      sprintf(*output, "(%s)", temp);
-    }
-      return 0;
     case '+':
     case '-':
     case '*':
@@ -625,12 +680,12 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
 
       // left
       char *left;
-      MCcall(parse_past_expression(nodespace, code, i, &left));
+      MCcall(parse_past_expression(func_info, nodespace, code, i, &left));
       MCcall(parse_past(code, i, " "));
 
       // right
       char *right;
-      MCcall(parse_past_expression(nodespace, code, i, &right));
+      MCcall(parse_past_expression(func_info, nodespace, code, i, &right));
 
       *output = (char *)malloc(sizeof(char) * (strlen(oper) + 1 + strlen(left) + 1 + strlen(right) + 1));
       sprintf(*output, "%s %s %s", left, oper, right);
@@ -647,38 +702,6 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
     }
 
   MCerror(432, "Incorrectly Handled");
-}
-
-int parse_past_conformed_type_identifier(function_info *func_info, char *code, int *i, char **conformed_type_identity)
-{
-  int mc_res;
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-  /*mcfuncreplace*/
-
-  *conformed_type_identity = NULL;
-
-  char *type_identity;
-  MCcall(parse_past_type_identifier(code, i, &type_identity));
-
-  // printf("@ppcti-1\n");
-  char *conformed_result;
-  {
-    void *mc_vargs[3];
-    mc_vargs[0] = (void *)&conformed_result;
-    mc_vargs[1] = (void *)&func_info;
-    mc_vargs[2] = (void *)&type_identity;
-    // printf("@ppcti-2\n");
-    MCcall(conform_type_identity(3, mc_vargs));
-    // printf("@ppcti-3\n");
-    printf("ppcti:paramName:'%s' conformed_type_name:'%s'\n", type_identity, conformed_result);
-  }
-  printf("@ppcti-4\n");
-  free(type_identity);
-
-  *conformed_type_identity = conformed_result;
-  return 0;
 }
 
 int create_default_mc_struct_v1(int argc, void **argv)
@@ -704,7 +727,7 @@ int create_default_mc_struct_v1(int argc, void **argv)
     data->structs = (mc_struct_info_v1 **)malloc(sizeof(mc_struct_info_v1 *) * data->structs_alloc);
     data->children_alloc = 1;
     data->child_count = 0;
-    data->children = (void **)malloc(sizeof(void *) * data->children_alloc);
+    data->children = (mc_node_v1 **)malloc(sizeof(mc_node_v1 *) * data->children_alloc);
 
     *ptr_output = (void *)data;
     // printf("@cdms-3\n");
@@ -741,11 +764,11 @@ int parse_script_to_mc_v1(int argc, void **argv)
       MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
       char *dest_expr;
-      MCcall(parse_past_expression(command_hub->nodespace, code, &i, &dest_expr));
+      MCcall(parse_past_expression(func_info, command_hub->nodespace, code, &i, &dest_expr));
       MCcall(parse_past(code, &i, " "));
 
       char *src_expr;
-      MCcall(parse_past_expression(command_hub->nodespace, code, &i, &src_expr));
+      MCcall(parse_past_expression(func_info, command_hub->nodespace, code, &i, &src_expr));
       if (code[i] != '\n' && code[i] != '\0') {
         MCerror(-4829, "expected statement end");
       }
@@ -768,12 +791,12 @@ int parse_script_to_mc_v1(int argc, void **argv)
 
       // Destination Name
       char *dest_expr;
-      MCcall(parse_past_expression(command_hub->nodespace, code, &i, &dest_expr));
+      MCcall(parse_past_expression(func_info, command_hub->nodespace, code, &i, &dest_expr));
       MCcall(parse_past(code, &i, " "));
 
       // Source Name
       char *src_expr;
-      MCcall(parse_past_expression(command_hub->nodespace, code, &i, &src_expr));
+      MCcall(parse_past_expression(func_info, command_hub->nodespace, code, &i, &src_expr));
       if (code[i] != '\n' && code[i] != '\0') {
         MCerror(589, "expected end of statement");
       }
@@ -1095,7 +1118,7 @@ int parse_script_to_mc_v1(int argc, void **argv)
           MCcall(parse_past(code, &i, " "));
 
           char *argument;
-          MCcall(parse_past_expression((void *)command_hub->nodespace, code, &i, &argument));
+          MCcall(parse_past_expression(func_info, (void *)command_hub->nodespace, code, &i, &argument));
 
           // printf("argument='%s'\n", argument);
 
