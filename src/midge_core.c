@@ -2402,7 +2402,7 @@ int mc_main(int argc, const char *const *argv)
       "dcd 'node *' child\n"
       "cpy 'char *' child->name node_name\n"
       "ass child->parent command_hub->nodespace\n"
-      // "nvk append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n"
+      "nvk append_to_collection &child->parent->children &child->parent->children_alloc &child->parent->child_count child\n"
       "|"
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"

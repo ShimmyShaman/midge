@@ -547,6 +547,19 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
 
       return 0;
     }
+    case '&': {
+      ++*i;
+      MCcall(parse_past_expression((void *)nodespace, code, i, &primary));
+      temp = (char *)malloc(sizeof(char) * (strlen(primary) + 2));
+      strcpy(temp, "&");
+      strcat(temp, primary);
+      temp[strlen(primary) + 1] = '\0';
+
+      free(primary);
+      *output = temp;
+
+      return 0;
+    }
     case '!': {
       ++*i;
       MCcall(parse_past_expression((void *)nodespace, code, i, &primary));
