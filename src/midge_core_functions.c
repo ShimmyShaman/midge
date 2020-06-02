@@ -697,6 +697,46 @@ int parse_script_to_mc_v1(int argc, void **argv)
   int code_len = strlen(code);
   while (i <= code_len) {
     switch (code[i]) {
+    case 'c': {
+      // cpy - deep copy of known types
+      MCcall(parse_past(code, &i, "cpy"));
+      MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+      // Type Identifier
+      char *type_identifier;
+      MCcall(parse_past_conformed_type_identifier(func_info, code, &i, &type_identifier));
+      MCcall(parse_past(code, &i, " "));
+
+      // Destination Name
+      char *dest_expr;
+      MCcall(parse_past_expression(command_hub->nodespace, code, &i, &dest_expr));
+      MCcall(parse_past(code, &i, " "));
+
+      // Source Name
+      char *src_expr;
+      MCcall(parse_past_expression(command_hub->nodespace, code, &i, &src_expr));
+      if (code[i] != '\n' && code[i] != '\0') {
+        MCerror(589, "expected end of statement");
+      }
+
+      if (!strcmp(type_identifier, "char *")) {
+        sprintf(buf,
+                "{\n"
+                "  char *mc_tmp_constchar = (char *)malloc(sizeof(char) * (strlen(%s) + 1));\n"
+                "  strcpy(mc_tmp_constchar, %s);\n"
+                "  %s = mc_tmp_constchar;\n"
+                "}\n",
+                src_expr, src_expr, dest_expr);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+      }
+      else {
+        MCerror(727, "Unsupported deep copy type");
+      }
+
+      free(type_identifier);
+      free(dest_expr);
+      free(src_expr);
+    } break;
     case 'd': {
       MCcall(parse_past(code, &i, "dc"));
       if (code[i] == 'd') {

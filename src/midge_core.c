@@ -2400,7 +2400,7 @@ int mc_main(int argc, const char *const *argv)
       "construct_and_attach_child_node|"
       "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "dcd 'node *' child\n"
-      // "cpy 'char *' child->name node_name\n"
+      "cpy 'char *' child->name node_name\n"
       // "ass child->parent parent\n"
       // "nvk append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n"
       "|"
