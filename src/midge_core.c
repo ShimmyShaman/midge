@@ -324,7 +324,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
 
     // Matches
     *struct_info = (void *)finfo;
-    printf("find_struct_info:set with '%s'\n", finfo->name);
+    // printf("find_struct_info:set with '%s'\n", finfo->name);
     return 0;
   }
 
@@ -334,7 +334,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
   //   MCcall(find_struct_info(node->parent, struct_name, struct_info));
   // }
 
-  printf("find_struct_info: '%s' could not be found in nodespace=%s!\n", struct_name, node->name);
+  // printf("find_struct_info: '%s' could not be found in nodespace=%s!\n", struct_name, node->name);
   return 0;
 }
 
@@ -535,7 +535,7 @@ int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
   int n = strlen(extra);
   if (strlen(*cstr) + n + 1 >= *allocated_size) {
     unsigned int new_allocated_size = n + *allocated_size + 16 + (n + *allocated_size) / 10;
-    printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);
+    // printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);
     char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
     // printf("atc-4\n");
     memcpy(newptr, *cstr, sizeof(char) * *allocated_size);
@@ -1024,7 +1024,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         MCcall(append_to_cstr(&translation_alloc, &translation, "{\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  char mcsfnv_buf[2048];\n"));
-        MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-1\\n\");\n"));
+        // MCcall(append_to_cstr(&translation_alloc, &translation, "  printf(\"here-1\\n\");\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  int mcsfnv_arg_count = 0;\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf, \"{\\n\");\n"));
         MCcall(append_to_cstr(&translation_alloc, &translation,
@@ -1145,6 +1145,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         // sprintf(buf, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n");
         // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  clint_process(mcsfnv_buf);\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"}\\n\");\n"));
         sprintf(buf, "  if (mc_script_func_res) {\n"
                      "    printf(\"--function '%%s' error:%%i\\n\", mcsfnv_function_name, mc_script_func_res);\n"
                      "    return mc_script_func_res;\n"
@@ -1939,10 +1940,10 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                  "\n"
                  "// Script Execution Finished\n"
                  "script_instance->segments_complete = script_instance->script->segment_count;\n"
-                 "printf(\"script-concluding\\n\");\n"
+                 //  "printf(\"script-concluding\\n\");\n"
                  "return 0;\n}");
 
-  printf("script_declaration:\n%s\n\n", declaration);
+  // printf("script_declaration:\n%s\n\n", declaration);
 
   clint_declare(declaration);
 
@@ -2359,7 +2360,7 @@ int mc_main(int argc, const char *const *argv)
       "ifs !end_it\n"
       "brk\n"
       "end\n"
-      "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
+      // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
       "ass rind + rind 1\n"
       "ass pind + pind 1\n"
       "ass pind % pind finfo->parameter_count\n"
@@ -2491,8 +2492,11 @@ int submit_user_command(int argc, void **argsv)
       MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
     }
 
+    // printf("suc-1\n");
+
     MCcall(assist_user_process_issues(command_hub, &p_response_action));
 
+    // printf("suc-2\n");
     if (!p_response_action) {
       // Send control back to the user
       break;
@@ -2660,7 +2664,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     // printf("scriptcont:%i\n", script_instance->contextual_action->contextual_data_count);
 
     char **output = NULL;
-    // printf("script entered: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
+    // printf("script entered: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+    // script_instance->script->segment_count);
     int mc_script_res;
     sprintf(buf,
             "{\n"
@@ -2674,8 +2679,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       printf("--script '%s' error:%i\n", script_instance->script->name, mc_script_res);
       return mc_script_res;
     }
-    printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
-           script_instance->script->segment_count);
+    // printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+    //  script_instance->script->segment_count);
 
     // Pop the focused issue from the stack
     mc_process_action_v1 *focused_issue =
@@ -2971,7 +2976,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
                                focused_issue->contextual_issue, focused_issue, focused_issue, initiation_msg, script_instance,
                                &script_initiation);
       free(initiation_msg);
-      printf("spchi-14\n");
+      // printf("spchi-14\n");
 
       // Set as response action
       *p_response_action = (void *)script_initiation;
@@ -3163,7 +3168,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       }
 
       // Add to the process matrix
-      printf("procm-demodprocess:%i '%s'\n", demod_process->type, demod_process->dialogue);
+      // printf("procm-demodprocess:%i '%s'\n", demod_process->type, demod_process->dialogue);
       MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
                                   &command_hub->process_matrix->count, demod_process));
 
@@ -3309,13 +3314,16 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
       break;
     case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
       void *resolution_action;
+      // printf("aupi-1\n");
       MCcall(
           attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->previous_issue, &resolution_action));
+      // printf("aupi-2\n");
       if (resolution_action) {
         // TODO -- delete the current response and its fields
 
         // Replace the response with the resolution
         *p_response_action = resolution_action;
+        // printf("aupi-3\n");
       }
     } break;
       // Script
@@ -3383,12 +3391,15 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
     if (process_unit->dialogue == NULL)
       continue;
 
-    printf("atrc-0 : %i '%s'<>'%s'\n", command_hub->process_matrix->count, process_unit->dialogue, intercepted_action->dialogue);
+    // printf("atrc-0 : %i '%s'<>'%s'\n", command_hub->process_matrix->count, process_unit->dialogue,
+    // intercepted_action->dialogue);
     if (!strcmp(process_unit->dialogue, intercepted_action->dialogue)) {
       // Full match
       // Activate this process
       MCerror(3292, "TODO %s==%s", process_unit->dialogue, intercepted_action->dialogue);
     }
+
+    // printf("atrc-1\n");
 
     mc_key_value_pair_v1 *kvps[256];
     int kvps_index = 0;
@@ -3397,6 +3408,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
       char *pattern_args[256];
       char buf[256];
 
+      // printf("atrc-2\n");
       int c = 0, cn = strlen(process_unit->dialogue);
       int d = 0, dn = strlen(intercepted_action->dialogue);
       bool statement_match = false;
@@ -3413,6 +3425,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
             break;
           }
         }
+        // printf("atrc-3\n");
 
         // Find the next word
         int di;
@@ -3426,6 +3439,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
           // No match?
           break;
         }
+        // printf("atrc-4\n");
 
         if (is_variable) {
           mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
@@ -3442,6 +3456,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
           if (strncmp(process_unit->dialogue + c, intercepted_action->dialogue + d, di - d))
             continue;
         }
+        // printf("atrc-5\n");
 
         // Fitting word
         if (string_end) {
@@ -3454,8 +3469,10 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
         c = ci + 1;
         d = di + 1;
       }
+      // printf("atrc-6\n");
 
       if (statement_match) {
+        // printf("atrc-6a\n");
         // Replace the current unresolved action with the process action
         if (process_unit->continuances_count == 0)
           continue;
@@ -3464,24 +3481,29 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
         // TODO -- what if theres more?
         mc_process_unit_v1 *diversion = (mc_process_unit_v1 *)process_unit->continuances[0];
 
+        // printf("atrc-6e\n");
         // Replicate the action
-        printf("divact = %i '%s'\n", diversion->action->type, diversion->action->dialogue);
+        // printf("divact=%i\n", process_unit->continuances_count);
+        // printf("divact = %i '%s'\n", diversion->action->type, diversion->action->dialogue);
         mc_process_action_v1 *replacement;
         construct_process_action(command_hub, intercepted_action->sequence_uid, diversion->action->type,
                                  intercepted_action->contextual_issue, intercepted_action->previous_issue,
                                  (mc_process_action_v1 *)intercepted_action->causation_issue, diversion->action->dialogue, NULL,
                                  &replacement);
 
+        // printf("atrc-6f\n");
         // Set contextual data
         for (int i = 0; i < kvps_index; ++i)
           append_to_collection(&replacement->contextual_data, &replacement->contextual_data_alloc,
                                &replacement->contextual_data_count, kvps[i]);
 
+        // printf("atrc-7\n");
         *p_response_action = replacement;
         return 0;
       }
+      // printf("atrc-7a\n");
     }
-    printf("atrc-1\n");
+    // printf("atrc-8\n");
 
     for (int i = 0; i < kvps_index; ++i) {
       if (kvps[i]) {
@@ -4104,10 +4126,10 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("int (*declare_function_pointer)(int, void **);");
   clint_process("int (*initialize_function)(int, void **);");
   clint_process("int (*parse_script_to_mc)(int, void **);");
-  clint_process("int (*conform_type_name)(int, void **);");
+  clint_process("int (*conform_type_identity)(int, void **);");
   clint_process("int (*create_default_mc_struct)(int, void **);");
 
-   printf("processed_core_function:\n%s\n", output);
+  //  printf("processed_core_function:\n%s\n", output);
   clint_declare(output);
 
   // Declare with cling interpreter
@@ -4127,9 +4149,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
   //             TODO                &command_hub->global_node->function_count, (void *)parse_script_to_mc_definition_v1));
 
-  clint_process("conform_type_name = &conform_type_name_v1;");
+  clint_process("conform_type_identity = &conform_type_identity_v1;");
   // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-  //             TODO                &command_hub->global_node->function_count, (void *)conform_type_name_definition_v1));
+  //             TODO                &command_hub->global_node->function_count, (void *)conform_type_identity_definition_v1));
 
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
   // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,

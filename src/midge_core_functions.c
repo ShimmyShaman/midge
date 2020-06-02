@@ -169,16 +169,16 @@ int declare_function_pointer_v1(int argc, void **argv)
   // Cleanup Parameters
   if (func_info->struct_usage_count != struct_usage_alloc) {
     if (func_info->struct_usage_count > 0) {
-      struct_info **new_struct_usage = (struct_info **)realloc(func_info->struct_usage, func_info->struct_usage_count);
-      if (new_struct_usage == NULL) {
-        printf("realloc error\n");
-        return -426;
-      }
+      struct_info **new_struct_usage = (struct_info **)malloc(sizeof(struct_info *) * func_info->struct_usage_count);
+      memcpy((void *)new_struct_usage, func_info->struct_usage, sizeof(struct_info *) * func_info->struct_usage_count);
+
+      free(func_info->struct_usage);
       func_info->struct_usage = new_struct_usage;
     }
     else {
       struct_usage_alloc = 0;
       free(func_info->struct_usage);
+      func_info->struct_usage = NULL;
     }
   }
   // printf("dfp-8\n");
@@ -194,7 +194,13 @@ int declare_function_pointer_v1(int argc, void **argv)
   return 0;
 }
 
-int conform_type_name_v1(int argc, void **argv)
+/* Conforms the given type_identity to a mc_type_identity if it is available. Searches first the given func_info, failing that
+ * then searches the current nodespace.
+ * @conformed_type_identity : (char **) Return Value.
+ * @func_info : *(function_info **) The function info, may be NULL.
+ * @type_identity : *(const char * const *) The type name to check for
+ */
+int conform_type_identity_v1(int argc, void **argv)
 {
   int mc_res;
   /*mcfuncreplace*/
@@ -203,47 +209,103 @@ int conform_type_name_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   // Parameters
-  char **conformed_type_name = (char **)argv[0];
+  char **conformed_type_identity = (char **)argv[0];
   function_info *func_info = *(function_info **)argv[1];
-  char *type_name = *(char **)argv[2];
+  const char *const type_identity = *(const char *const *)argv[2];
 
-  printf("ctn-0\n");
-  // Check for utilized version in function info
-  for (int i = 0; i < func_info->struct_usage_count; ++i) {
-    if (!strcmp(type_name, func_info->struct_usage[i]->name)) {
-      // Match!
-      allocate_and_copy_cstr((*conformed_type_name), func_info->struct_usage[i]->declared_mc_name);
-      return 0;
+  // if (!strcmp(type_identity, "node")) {
+  //   allocate_and_copy_cstr((*conformed_type_identity), "mc_node_v1 *");
+  //   return 0;
+  // }
+
+  char *finalized_identity;
+  allocate_and_copy_cstr(finalized_identity, type_identity);
+
+  // Strip the type identity of all deref operators
+  int type_deref_count = 0;
+  while (true) {
+    int k = strlen(finalized_identity) - 1;
+    if (k < 0) {
+      MCerror(108, "arg error");
+    }
+
+    if (finalized_identity[k] == ' ') {
+      // Do nothing
+    }
+    else if (finalized_identity[k] == '*') {
+      ++type_deref_count;
+    }
+    else
+      break;
+
+    // Strip of last character
+    char *temp;
+    allocate_and_copy_cstrn(temp, finalized_identity, k);
+    free(finalized_identity);
+    finalized_identity = temp;
+  }
+
+  bool matched = false;
+  if (func_info) {
+    printf("ctn-0  %s\n", func_info->name);
+    // Check for utilized version in function info
+    for (int i = 0; i < func_info->struct_usage_count; ++i) {
+      if (!strcmp(finalized_identity, func_info->struct_usage[i]->name)) {
+        printf("ctn-1\n");
+        // Match!
+        matched = true;
+        free(finalized_identity);
+        allocate_and_copy_cstr(finalized_identity, func_info->struct_usage[i]->declared_mc_name);
+        break;
+      }
     }
   }
 
-  // printf("ctn-2\n");
-  // Look for type in nodespace
-  void *p_struct_info;
-  MCcall(find_struct_info((void *)command_hub->nodespace, type_name, &p_struct_info));
-  if (p_struct_info) {
-    struct_info *str_info = (struct_info *)p_struct_info;
+  if (!matched) {
+    // Look for type in nodespace
+    void *p_struct_info;
+    MCcall(find_struct_info((void *)command_hub->nodespace, finalized_identity, &p_struct_info));
+    if (p_struct_info) {
+      struct_info *str_info = (struct_info *)p_struct_info;
+      matched = true;
 
-    // printf("ctn-3\n");
-    // Change Name
-    allocate_and_copy_cstr((*conformed_type_name), str_info->declared_mc_name);
+      printf("ctn-3\n");
+      // Change Name
+      free(finalized_identity);
+      allocate_and_copy_cstr(finalized_identity, str_info->declared_mc_name);
 
-    // Add reference to function infos struct usages
-    struct_info **new_collection = (struct_info **)malloc(sizeof(struct_info *) * (func_info->struct_usage_count + 1));
-    memcpy((void *)new_collection, func_info->struct_usage, sizeof(struct_info *) * func_info->struct_usage_count);
-    new_collection[func_info->struct_usage_count] = str_info;
-    free(func_info->struct_usage);
+      // Add reference to function infos struct usages
+      if (func_info) {
+        struct_info **new_collection = (struct_info **)malloc(sizeof(struct_info *) * (func_info->struct_usage_count + 1));
+        if (func_info->struct_usage_count)
+          memcpy((void *)new_collection, func_info->struct_usage, sizeof(struct_info *) * func_info->struct_usage_count);
+        new_collection[func_info->struct_usage_count] = str_info;
+        if (func_info->struct_usage)
+          free(func_info->struct_usage);
 
-    // printf("ctn-4\n");
-    func_info->struct_usage_count = func_info->struct_usage_count + 1;
-    func_info->struct_usage = new_collection;
-
-    return 0;
+        // // printf("ctn-4\n");
+        func_info->struct_usage_count = func_info->struct_usage_count + 1;
+        func_info->struct_usage = new_collection;
+      }
+    }
   }
 
-  // printf("ctn-5\n");
-  // No modification, used the passed type_name
-  allocate_and_copy_cstr((*conformed_type_name), type_name);
+  // Re-add any deref operators
+  if (type_deref_count) {
+    char *temp = (char *)malloc(sizeof(char) * (strlen(finalized_identity) + 1 + type_deref_count + 1));
+    strcpy(temp, finalized_identity);
+    strcat(temp, " ");
+    for (int i = 0; i < type_deref_count; ++i)
+      strcat(temp, "*");
+
+    free(finalized_identity);
+    finalized_identity = temp;
+  }
+
+  // No modification, use the original value
+  allocate_and_copy_cstr((*conformed_type_identity), finalized_identity);
+  free(finalized_identity);
+
   return 0;
 }
 
@@ -271,6 +333,7 @@ int initialize_function_v1(int argc, void **argv)
       MCerror(184, "cannot find function info for function_name=%s", function_name);
     }
   }
+  // printf("@ifv-0\n");
 
   // Translate the code-block from script into workable midge-cling C
   char *midge_c;
@@ -314,7 +377,7 @@ int initialize_function_v1(int argc, void **argv)
       mc_vargs[1] = (void *)&func_info;
       mc_vargs[2] = (void *)&func_info->parameters[i]->type_name;
       // printf("@ifv-4\n");
-      MCcall(conform_type_name(3, mc_vargs));
+      MCcall(conform_type_identity(3, mc_vargs));
       // printf("@ifv-5\n");
       //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name, conformed_type_name);
     }
@@ -366,7 +429,7 @@ int initialize_function_v1(int argc, void **argv)
   sprintf(function_declaration, function_declaration_format, func_identity_buf, param_buf, midge_c);
 
   // Declare the function
-  // printf("ifv>cling_declare:\n%s\n", function_declaration);
+  printf("ifv>cling_declare:\n%s\n", function_declaration);
   clint_declare(function_declaration);
 
   // Set the method to the function pointer
@@ -548,7 +611,7 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
   MCerror(432, "Incorrectly Handled");
 }
 
-int parse_past_conformed_type_identifier(char *code, int *i, char **conformed_type)
+int parse_past_conformed_type_identifier(function_info *func_info, char *code, int *i, char **conformed_type_identity)
 {
   int mc_res;
   /*mcfuncreplace*/
@@ -556,64 +619,39 @@ int parse_past_conformed_type_identifier(char *code, int *i, char **conformed_ty
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
 
-  *conformed_type = NULL;
+  *conformed_type_identity = NULL;
 
   char *type_identity;
   MCcall(parse_past_type_identifier(code, i, &type_identity));
 
-  // Strip the type identity of all deref operators
-  int type_deref_count = 0;
-  while (true) {
-    int k = strlen(type_identity) - 1;
-    if (k < 0) {
-      MCerror(108, "arg error");
-    }
-
-    if (type_identity[k] == ' ') {
-      // Do nothing
-    }
-    else if (type_identity[k] == '*') {
-      ++type_deref_count;
-    }
-    else
-      break;
-
-    // Strip of last character
-    char *temp;
-    allocate_and_copy_cstrn(temp, type_identity, k);
-    free(type_identity);
-    type_identity = temp;
+  // printf("@ppcti-1\n");
+  char *conformed_result;
+  {
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&conformed_result;
+    mc_vargs[1] = (void *)&func_info;
+    mc_vargs[2] = (void *)&type_identity;
+    // printf("@ppcti-2\n");
+    MCcall(conform_type_identity(3, mc_vargs));
+    // printf("@ppcti-3\n");
+    printf("ppcti:paramName:'%s' conformed_type_name:'%s'\n", type_identity, conformed_result);
   }
+  printf("@ppcti-4\n");
+  free(type_identity);
 
-  struct_info *ptr_str_info;
-  MCcall(find_struct_info(command_hub->nodespace, type_identity, (void **)&ptr_str_info));
-  if (ptr_str_info) {
-    free(type_identity);
-    allocate_and_copy_cstr(type_identity, ptr_str_info->declared_mc_name);
-  }
-
-  // Re-add any deref operators
-  if (type_deref_count) {
-    char *temp = (char *)malloc(sizeof(char) * (strlen(type_identity) + 1 + type_deref_count + 1));
-    strcpy(temp, type_identity);
-    strcat(temp, " ");
-    for (int i = 0; i < type_deref_count; ++i)
-      strcat(temp, "*");
-    free(type_identity);
-    type_identity = temp;
-  }
-
-  *conformed_type = type_identity;
+  *conformed_type_identity = conformed_result;
   return 0;
 }
 
 int create_default_mc_struct_v1(int argc, void **argv)
 {
+  // printf("@cdms-1\n");
   // Arguments
   void **ptr_output = (void **)argv[0];
   char *type_name = *(char **)argv[1];
 
   if (!strcmp(type_name, "mc_node_v1 *")) {
+    // printf("@cdms-2\n");
     mc_node_v1 *data = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
     data->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
     data->struct_id->identifier = "mc_node_v1";
@@ -631,6 +669,7 @@ int create_default_mc_struct_v1(int argc, void **argv)
     data->children = (void **)malloc(sizeof(void *) * data->children_alloc);
 
     *ptr_output = (void *)data;
+    // printf("@cdms-3\n");
     return 0;
   }
   MCerror(616, "Unrecognized type:%s", type_name);
@@ -643,7 +682,7 @@ int parse_script_to_mc_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
-  printf("initialize_function_v1()\n");
+  // printf("initialize_function_v1()\n");
 
   char **output = (char **)argv[0];
   function_info *func_info = *(function_info **)argv[1];
@@ -665,10 +704,14 @@ int parse_script_to_mc_v1(int argc, void **argv)
         MCcall(parse_past(code, &i, "d"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
+        // parse_past(code, &i, "'node *' child");
+        // break;
         // Identifier
         char *type_identifier;
-        MCcall(parse_past_conformed_type_identifier(code, &i, &type_identifier));
+        MCcall(parse_past_conformed_type_identifier(func_info, code, &i, &type_identifier));
         MCcall(parse_past(code, &i, " "));
+        // parse_past(code, &i, "child");
+        // break;
 
         // Variable Name
         char *var_name;
@@ -684,6 +727,7 @@ int parse_script_to_mc_v1(int argc, void **argv)
         // Call for default allocation
         sprintf(buf,
                 "{\n"
+                // "printf(\"@innercdmscall-1\\n\");"
                 "  void *mc_vargs[2];\n"
                 "  mc_vargs[0] = (void *)&%s;\n"
                 "  const char *mc_type_name = \"%s\";\n"
@@ -954,7 +998,7 @@ int parse_script_to_mc_v1(int argc, void **argv)
           char *argument;
           MCcall(parse_past_expression((void *)command_hub->nodespace, code, &i, &argument));
 
-          printf("argument='%s'\n", argument);
+          // printf("argument='%s'\n", argument);
 
           if (func_info) {
             sprintf(buf, "  mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
