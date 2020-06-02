@@ -282,7 +282,7 @@ int initialize_function_v1(int argc, void **argv)
     MCcall(parse_script_to_mc(3, mc_vargs));
   }
 
-  printf("@ifv-1\n");
+  // printf("@ifv-1\n");
 
   // // const char *identity; const char *type; struct_info *struct_info;
   // struct {
@@ -301,7 +301,7 @@ int initialize_function_v1(int argc, void **argv)
   func_identity_buf[0] = '\0';
   sprintf(func_identity_buf, function_identifier_format, func_info->name, func_info->latest_iteration);
 
-  printf("@ifv-2\n");
+  // printf("@ifv-2\n");
   // Construct the function parameters
   char param_buf[4096];
   param_buf[0] = '\0';
@@ -313,9 +313,9 @@ int initialize_function_v1(int argc, void **argv)
       mc_vargs[0] = (void *)&conformed_type_name;
       mc_vargs[1] = (void *)&func_info;
       mc_vargs[2] = (void *)&func_info->parameters[i]->type_name;
-      printf("@ifv-4\n");
+      // printf("@ifv-4\n");
       MCcall(conform_type_name(3, mc_vargs));
-      printf("@ifv-5\n");
+      // printf("@ifv-5\n");
       //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name, conformed_type_name);
     }
 
@@ -346,7 +346,7 @@ int initialize_function_v1(int argc, void **argv)
     free(conformed_type_name);
   }
 
-  printf("@ifv-3\n");
+  // printf("@ifv-3\n");
   // Declare the function
   const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
                                             "  // MidgeC Function Locals\n"
@@ -366,13 +366,13 @@ int initialize_function_v1(int argc, void **argv)
   sprintf(function_declaration, function_declaration_format, func_identity_buf, param_buf, midge_c);
 
   // Declare the function
-  printf("ifv>cling_declare:\n%s\n", function_declaration);
+  // printf("ifv>cling_declare:\n%s\n", function_declaration);
   clint_declare(function_declaration);
 
   // Set the method to the function pointer
   char decl_buf[1024];
   sprintf(decl_buf, "%s = &%s;", func_info->name, func_identity_buf);
-  printf("ifv>clint_process:\n%s\n", decl_buf);
+  // printf("ifv>clint_process:\n%s\n", decl_buf);
   clint_process(decl_buf);
 
   free(function_declaration);
@@ -548,6 +548,94 @@ int parse_past_expression(void *nodespace, char *code, int *i, char **output)
   MCerror(432, "Incorrectly Handled");
 }
 
+int parse_past_conformed_type_identifier(char *code, int *i, char **conformed_type)
+{
+  int mc_res;
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+
+  *conformed_type = NULL;
+
+  char *type_identity;
+  MCcall(parse_past_type_identifier(code, i, &type_identity));
+
+  // Strip the type identity of all deref operators
+  int type_deref_count = 0;
+  while (true) {
+    int k = strlen(type_identity) - 1;
+    if (k < 0) {
+      MCerror(108, "arg error");
+    }
+
+    if (type_identity[k] == ' ') {
+      // Do nothing
+    }
+    else if (type_identity[k] == '*') {
+      ++type_deref_count;
+    }
+    else
+      break;
+
+    // Strip of last character
+    char *temp;
+    allocate_and_copy_cstrn(temp, type_identity, k);
+    free(type_identity);
+    type_identity = temp;
+  }
+
+  struct_info *ptr_str_info;
+  MCcall(find_struct_info(command_hub->nodespace, type_identity, (void **)&ptr_str_info));
+  if (ptr_str_info) {
+    free(type_identity);
+    allocate_and_copy_cstr(type_identity, ptr_str_info->declared_mc_name);
+  }
+
+  // Re-add any deref operators
+  if (type_deref_count) {
+    char *temp = (char *)malloc(sizeof(char) * (strlen(type_identity) + 1 + type_deref_count + 1));
+    strcpy(temp, type_identity);
+    strcat(temp, " ");
+    for (int i = 0; i < type_deref_count; ++i)
+      strcat(temp, "*");
+    free(type_identity);
+    type_identity = temp;
+  }
+
+  *conformed_type = type_identity;
+  return 0;
+}
+
+int create_default_mc_struct_v1(int argc, void **argv)
+{
+  // Arguments
+  void **ptr_output = (void **)argv[0];
+  char *type_name = *(char **)argv[1];
+
+  if (!strcmp(type_name, "mc_node_v1 *")) {
+    mc_node_v1 *data = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
+    data->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+    data->struct_id->identifier = "mc_node_v1";
+    data->struct_id->version = 1U;
+    data->name = NULL;
+    data->parent = NULL;
+    data->functions_alloc = 1;
+    data->function_count = 0;
+    data->functions = (mc_function_info_v1 **)malloc(sizeof(mc_function_info_v1 *) * data->functions_alloc);
+    data->structs_alloc = 1;
+    data->struct_count = 0;
+    data->structs = (mc_struct_info_v1 **)malloc(sizeof(mc_struct_info_v1 *) * data->structs_alloc);
+    data->children_alloc = 1;
+    data->child_count = 0;
+    data->children = (void **)malloc(sizeof(void *) * data->children_alloc);
+
+    *ptr_output = (void *)data;
+    return 0;
+  }
+  MCerror(616, "Unrecognized type:%s", type_name);
+}
+
 int parse_script_to_mc_v1(int argc, void **argv)
 {
   int mc_res;
@@ -570,6 +658,158 @@ int parse_script_to_mc_v1(int argc, void **argv)
   int code_len = strlen(code);
   while (i <= code_len) {
     switch (code[i]) {
+    case 'd': {
+      MCcall(parse_past(code, &i, "dc"));
+      if (code[i] == 'd') {
+        // dcd - initialization of configured mc_structures to default values
+        MCcall(parse_past(code, &i, "d"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // Identifier
+        char *type_identifier;
+        MCcall(parse_past_conformed_type_identifier(code, &i, &type_identifier));
+        MCcall(parse_past(code, &i, " "));
+
+        // Variable Name
+        char *var_name;
+        MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        if (code[i] != '\n' && code[i] != '\0') {
+          MCerror(589, "expected end of statement");
+        }
+
+        // Normal Declaration
+        sprintf(buf, "%s %s;\n", type_identifier, var_name);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        // Call for default allocation
+        sprintf(buf,
+                "{\n"
+                "  void *mc_vargs[2];\n"
+                "  mc_vargs[0] = (void *)&%s;\n"
+                "  const char *mc_type_name = \"%s\";\n"
+                "  mc_vargs[1] = (void *)&mc_type_name;\n"
+                "  MCcall(create_default_mc_struct(2, mc_vargs));\n"
+                "}\n",
+                var_name, type_identifier);
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        free(var_name);
+        free(type_identifier);
+      }
+      else if (code[i] == 'l') {
+        MCerror(576, "TODO");
+        // // dcl
+        // MCcall(parse_past(code, &i, "l"));
+        // MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // // Identifier
+        // char *type_identifier;
+        // MCcall(parse_past_type_identifier(code, &i, &type_identifier));
+        // MCcall(parse_past(code, &i, " "));
+
+        // // Variable Name
+        // char *var_name;
+        // MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        // if (code[i] != '\n' && code[i] != '\0') {
+        //   // Array decl
+        //   MCcall(parse_past(code, &i, "["));
+
+        //   char *left;
+        //   MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, &i, &left));
+        //   MCcall(parse_past(code, &i, "]"));
+        //   if (code[i] != '\n' && code[i] != '\0') {
+        //     MCerror(-4829, "expected statement end");
+        //   }
+
+        //   // Add deref to type
+        //   char *new_type_identifier = (char *)malloc(sizeof(char) * (strlen(type_identifier) + 2));
+        //   strcpy(new_type_identifier, type_identifier);
+        //   strcat(new_type_identifier, "*");
+        //   new_type_identifier[strlen(type_identifier) + 1] = '\0';
+
+        //   // Normal Declaration
+        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
+        //   script,
+        //                                      buf, local_scope_depth, new_type_identifier, var_name));
+        //   // printf("dcl-here-0\n");
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        //   // printf("dcl-here-1\n");
+
+        //   // Allocate the array
+        //   char *replace_var_name;
+        //   MCcall(
+        //       mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name,
+        //       &replace_var_name));
+        //   // printf("dcl-here-2\n");
+
+        //   sprintf(buf, "%s = (%s)malloc(sizeof(%s) * (%s));\n", replace_var_name, new_type_identifier, type_identifier, left);
+        //   // printf("dcl-here-3\n");
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        //   // printf("dcl-here-4\n");
+
+        //   free(left);
+        //   // printf("dcl-here-5\n");
+        //   free(new_type_identifier);
+        //   // printf("dcl-here-6\n");
+        //   // printf("Translation:\n%s\n", translation);
+        //   // printf("dcl-here-7\n");
+        // }
+        // else {
+        //   // Normal Declaration
+        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
+        //   script,
+        //                                      buf, local_scope_depth, type_identifier, var_name));
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        // }
+        // free(var_name);
+        // free(type_identifier);
+      }
+      else if (code[i] == 's') {
+        MCerror(641, "TODO");
+        //   // dcs
+        //   MCcall(parse_past(code, &i, "s"));
+        //   MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        //   // Identifier
+        //   char *type_identifier;
+        //   MCcall(parse_past_type_identifier(code, &i, &type_identifier));
+        //   MCcall(parse_past(code, &i, " "));
+
+        //   // Variable Name
+        //   char *var_name;
+        //   MCcall(parse_past_identifier(code, &i, &var_name, false, false));
+        //   MCcall(parse_past(code, &i, " "));
+
+        //   // Set Value
+        //   char *left;
+        //   MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &left));
+        //   if (code[i] != '\n' && code[i] != '\0') {
+        //     MCerror(-4829, "expected statement end");
+        //   }
+
+        //   // Generate Local
+        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
+        //   script,
+        //                                      buf, local_scope_depth, type_identifier, var_name));
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        //   // Assign
+        //   char *replace_var_name;
+        //   MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name,
+        //   &replace_var_name));
+
+        //   sprintf(buf, "%s = %s;\n", replace_var_name, left);
+        //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
+        //   free(type_identifier);
+        //   free(var_name);
+        //   free(left);
+        // }
+        // else {
+        //   MCerror(678, "TODO");
+        // }
+      }
+    } break;
     case 'n': {
       MCcall(parse_past(code, &i, "nv"));
       if (code[i] == 'i') {

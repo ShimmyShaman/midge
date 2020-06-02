@@ -324,7 +324,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
 
     // Matches
     *struct_info = (void *)finfo;
-    // printf("find_struct_info:set with '%s'\n", finfo->name);
+    printf("find_struct_info:set with '%s'\n", finfo->name);
     return 0;
   }
 
@@ -334,7 +334,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
   //   MCcall(find_struct_info(node->parent, struct_name, struct_info));
   // }
 
-  // printf("find_struct_info: '%s' could not be found!\n", struct_name);
+  printf("find_struct_info: '%s' could not be found in nodespace=%s!\n", struct_name, node->name);
   return 0;
 }
 
@@ -2399,9 +2399,9 @@ int mc_main(int argc, const char *const *argv)
       "construct_and_attach_child_node|"
       "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "dcd 'node *' child\n"
-      "cpy 'char *' child->name node_name\n"
-      "ass child->parent parent\n"
-      "nvk append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n"
+      // "cpy 'char *' child->name node_name\n"
+      // "ass child->parent parent\n"
+      // "nvk append_to_collection &parent->children &parent->children_alloc &parent->child_count child\n"
       "|"
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"
@@ -4105,8 +4105,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("int (*initialize_function)(int, void **);");
   clint_process("int (*parse_script_to_mc)(int, void **);");
   clint_process("int (*conform_type_name)(int, void **);");
+  clint_process("int (*create_default_mc_struct)(int, void **);");
 
-  // printf("processed_core_function:\n%s\n", output);
+   printf("processed_core_function:\n%s\n", output);
   clint_declare(output);
 
   // Declare with cling interpreter
@@ -4129,6 +4130,10 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("conform_type_name = &conform_type_name_v1;");
   // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
   //             TODO                &command_hub->global_node->function_count, (void *)conform_type_name_definition_v1));
+
+  clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
+  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+  //             TODO                &command_hub->global_node->function_count, (void *)create_default_mc_struct_definition_v1));
 
   // printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
 
