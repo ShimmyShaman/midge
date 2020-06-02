@@ -2396,11 +2396,11 @@ int mc_main(int argc, const char *const *argv)
       "end|"
       // ---- END SCRIPT SEQUENCE ----
       "end|"
-      // -- END DEMO
-      // -- DEMO initialize function
+      // -- END DEMO invoke $function_to_invoke
+      // -- invoke initialize function
       "invoke initialize_function|"
       "construct_and_attach_child_node|"
-      "nvk printf \"got here, node_name=%s\\n\" node_name\n"
+      // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "dcd node * child\n"
       "cpy char * child->name node_name\n"
       "ass child->parent command_hub->nodespace\n"
@@ -2409,6 +2409,9 @@ int mc_main(int argc, const char *const *argv)
       "|"
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"
+      "end|"
+      // -- END DEMO create function $function_name
+      "create function print_word|"
       "midgequit|";
 
   // node_v1 *node;
@@ -2527,6 +2530,16 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
     --command_hub->focused_issue_stack_count;
 
     switch (focused_issue->type) {
+    case PROCESS_ACTION_PM_IDLE: {
+      // Find the consequential root of the previous action chain
+      mc_process_action_v1 *consequential_root = focused_issue;
+      while (consequential_root->previous_issue) {
+        consequential_root = (mc_process_action_v1 *)consequential_root->previous_issue;
+      }
+
+      construct_process_action(command_hub, 0, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, NULL, consequential_root, focused_issue,
+                               command, NULL, &process_action);
+    } break;
     case PROCESS_ACTION_PM_DEMO_INITIATION: {
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, focused_issue,
                                NULL, focused_issue, command, NULL, &process_action);
@@ -2556,7 +2569,7 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
                                &process_action);
     } break;
     default:
-      MCerror(8286, "Unhandled PM-query-type:%i  '%s'", focused_issue->type, focused_issue->dialogue);
+      MCerror(2562, "Unhandled PM-query-type:%i  '%s'", focused_issue->type, focused_issue->dialogue);
     }
   }
   *command_action = process_action;
@@ -2804,6 +2817,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     }
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_PM_DEMO_INITIATION:
+  case PROCESS_ACTION_PM_IDLE:
   case PROCESS_ACTION_PM_IDLE_WITH_CONTEXT: {
     // Do not process these commands
     // Send back to user
@@ -3171,7 +3185,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       }
 
       // Add to the process matrix
-      // printf("procm-demodprocess:%i '%s'\n", demod_process->type, demod_process->dialogue);
+      // printf("procm>demo process added: type:%i dialogue:'%s'\n", demod_process->type, demod_process->dialogue);
       MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
                                   &command_hub->process_matrix->count, demod_process));
 
@@ -3281,10 +3295,10 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     return 0;
   }
   default:
-    MCerror(3243, "UnhandledType:%i", focused_issue->type)
+    MCerror(3286, "UnhandledType:%i", focused_issue->type)
   }
 
-  return 3246;
+  MCerror(3289, "Unintended flow");
 }
 
 int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
