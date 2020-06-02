@@ -866,14 +866,16 @@ int parse_past_script_expression(void *nodespace, void **local_index, unsigned i
 
       return 0;
     }
-    case '$': {
+    case '@': {
+      // Script context variable
       ++*i;
 
       MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, i, output));
 
       char *temp = (char *)malloc(sizeof(char) * (strlen(*output) + 2));
-      sprintf(temp, "$%s", *output);
+      sprintf(temp, "@%s", *output);
       free(*output);
+      // printf("@@@@ ='%s'\n", temp);
       *output = temp;
 
       return 0;
@@ -1009,9 +1011,19 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                 "  return 0;\n"
                 "segment_%u:\n"
                 // "printf(\"here-6b\\n\");\n"
-                "  %s = (char *)script_instance->locals[%u];\n",
+                "  %s = (char *)script_instance->locals[%u];\n"
+                "  if(%s[0] == '@') {\n"
+                "    char *mc_context_data;"
+                "    MCcall(get_process_contextual_data(script_instance->contextual_action, %s + 1,\n"
+                "           (void **)&mc_context_data));\n"
+                "    if(!mc_context_data) {\n"
+                "      return 1020;"
+                "    }\n"
+                "    free(%s);\n"
+                "    %s = mc_context_data;\n"
+                "  }\n",
                 provocation, script->segment_count, script->local_count, script->segment_count, response_location,
-                script->local_count);
+                script->local_count, response_location, response_location, response_location, response_location);
         ++script->local_count;
 
         append_to_cstr(&translation_alloc, &translation, buf);
@@ -1043,7 +1055,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                               "    void *mc_vargs[3];\n"
                               "    mc_vargs[0] = (void *)&mcsfnv_function_info;\n"
                               "    mc_vargs[1] = (void *)&nodespace;\n"));
-        if (function_name_identifier[0] == '$') {
+        if (function_name_identifier[0] == '@') {
           sprintf(buf,
                   "    char *mc_context_data_2;\n"
                   "    MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\",\n"
@@ -1120,7 +1132,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           }
         }
 
-        if (function_name_identifier[0] == '$') {
+        if (function_name_identifier[0] == '@') {
           sprintf(buf,
                   "  char *mcsfnv_function_name;\n"
                   "  MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", (void "
@@ -1785,7 +1797,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           // &replace_name)); char *arg_entry = argument; if (replace_name)
           //   arg_entry = replace_name;
           if (func_info) {
-            if (argument[0] == '$') {
+            if (argument[0] == '@') {
               sprintf(buf,
                       "  char *mc_context_data_%i;\n"
                       "  MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", (void "
@@ -1798,7 +1810,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             }
           }
           else {
-            if (argument[0] == '$') {
+            if (argument[0] == '@') {
               MCerror(4829, "NOT YET IMPLEMENTED");
             }
             sprintf(buf, "%s%s", arg_index ? ", " : "", argument);
@@ -2331,7 +2343,7 @@ int mc_main(int argc, const char *const *argv)
   const char *commands =
       // Create invoke function script
       ".createScript\n"
-      "nvi 'function_info *' finfo find_function_info nodespace $function_to_invoke\n"
+      "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
       "ifs !finfo\n"
       "err 10 \"Could not find function_info for specified function\"\n"
       "end\n"
@@ -2371,21 +2383,21 @@ int mc_main(int argc, const char *const *argv)
       "end\n"
       "end\n"
       "end\n"
-      "$nv $function_to_invoke $ya rind responses\n"
+      "$nv @function_to_invoke $ya rind responses\n"
       "|"
       "invoke_function_with_args|"
       // Create Function Sequence
       "create function construct_and_attach_child_node|"
-      "demo create function ${function_name=construct_and_attach_child_node}|"
+      "demo create function @{function_name=construct_and_attach_child_node}|"
       // -- DEMO declare function
       "invoke declare_function_pointer|"
-      "demo invoke ${function_to_invoke=declare_function_pointer}|"
+      "demo invoke @{function_to_invoke=declare_function_pointer}|"
       ".runScript invoke_function_with_args|"
       // ---- SCRIPT SEQUENCE ----
       // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
       // ---- char *parameter_name]...);
       // > function_name:
-      "construct_and_attach_child_node|"
+      "@function_name|"
       // > return_type:
       "void|"
       // > parameter_type:
@@ -2399,7 +2411,7 @@ int mc_main(int argc, const char *const *argv)
       // -- END DEMO invoke $function_to_invoke
       // -- invoke initialize function
       "invoke initialize_function|"
-      "construct_and_attach_child_node|"
+      "@function_name|"
       // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "dcd node * child\n"
       "cpy char * child->name node_name\n"
@@ -2407,11 +2419,11 @@ int mc_main(int argc, const char *const *argv)
       "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
       "(void *)child\n"
       "|"
-      "invoke construct_and_attach_child_node|"
-      "command_interface_node|"
       "end|"
       // -- END DEMO create function $function_name
-      "create function print_word|"
+      "invoke construct_and_attach_child_node|"
+      "command_interface_node|"
+      // "create function print_word|"
       "midgequit|";
 
   // node_v1 *node;
@@ -3012,13 +3024,13 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       void *kvps[16];
       int kvps_index = 0;
       for (int i = 5; i < strlen(focused_issue->dialogue); ++i) {
-        if (focused_issue->dialogue[i] != '$') {
+        if (focused_issue->dialogue[i] != '@') {
           patbuf[bi++] = focused_issue->dialogue[i];
           continue;
         }
 
         // Pattern
-        patbuf[bi++] = '$';
+        patbuf[bi++] = '@';
         ++i;
         parse_past(focused_issue->dialogue, &i, "{");
 
@@ -3117,7 +3129,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       allocate_and_copy_cstr(demod_process->dialogue, (char *)demo_issue->data);
       demod_process->dialogue_has_pattern = false;
       for (int i = 0; i < strlen(demod_process->dialogue); ++i)
-        if (demod_process->dialogue[i] == '$') {
+        if (demod_process->dialogue[i] == '@') {
           demod_process->dialogue_has_pattern = true;
           break;
         }
@@ -3134,7 +3146,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         if (action->dialogue) {
           allocate_and_copy_cstr(process_unit->dialogue, action->dialogue);
           for (int i = 0; i < strlen(process_unit->dialogue); ++i)
-            if (process_unit->dialogue[i] == '$') {
+            if (process_unit->dialogue[i] == '@') {
               process_unit->dialogue_has_pattern = true;
               break;
             }
@@ -3429,10 +3441,11 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
       int c = 0, cn = strlen(process_unit->dialogue);
       int d = 0, dn = strlen(intercepted_action->dialogue);
       bool statement_match = false;
+      // bool loop = true;
       while (1) {
-        // Find the first word c
+        // Find the first word in the process unit
         int ci;
-        bool is_variable = process_unit->dialogue[c] == '$';
+        bool is_variable = process_unit->dialogue[c] == '@';
         bool string_end = false;
         for (ci = c; ci <= cn; ++ci) {
           if (process_unit->dialogue[ci] == ' ')
@@ -3449,8 +3462,9 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
         for (di = d; di <= dn; ++di) {
           if (intercepted_action->dialogue[di] == ' ')
             break;
-          if (intercepted_action->dialogue[di] == '\0')
+          if (intercepted_action->dialogue[di] == '\0') {
             break;
+          }
         }
         if (string_end && di != dn) {
           // No match?
@@ -3470,8 +3484,9 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
           // printf("setkvp: %s+%s\n", kvp->key, (char *)kvp->value);
         }
         else {
-          if (strncmp(process_unit->dialogue + c, intercepted_action->dialogue + d, di - d))
-            continue;
+          if (strncmp(process_unit->dialogue + c, intercepted_action->dialogue + d, di - d)) {
+            break;
+          }
         }
         // printf("atrc-5\n");
 
@@ -3494,6 +3509,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
         if (process_unit->continuances_count == 0)
           continue;
 
+        printf("-- Beginning Process:'%s'\n", process_unit->dialogue);
         // Just take the first one
         // TODO -- what if theres more?
         mc_process_unit_v1 *diversion = (mc_process_unit_v1 *)process_unit->continuances[0];
