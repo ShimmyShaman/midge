@@ -2423,7 +2423,13 @@ int mc_main(int argc, const char *const *argv)
       // -- END DEMO create function $function_name
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"
-      // "create function print_word|"
+      "create function print_word|"
+      "@function_name|"
+      "void|"
+      "char *|"
+      "word|"
+      "end|"
+      ""
       "midgequit|";
 
   // node_v1 *node;
@@ -3524,13 +3530,16 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
                                  (mc_process_action_v1 *)intercepted_action->causation_issue, diversion->action->dialogue, NULL,
                                  &replacement);
 
-        // printf("atrc-6f\n");
+        printf("atrc-6f\n");
+        // printf("replacement was:%u\n", replacement->sequence_uid);
         // Set contextual data
-        for (int i = 0; i < kvps_index; ++i)
+        for (int i = 0; i < kvps_index; ++i) {
           append_to_collection(&replacement->contextual_data, &replacement->contextual_data_alloc,
                                &replacement->contextual_data_count, kvps[i]);
+          printf("[kvp]added:%s=%s\n", kvps[i]->key, kvps[i]->value);
+        }
 
-        // printf("atrc-7\n");
+        printf("atrc-7\n");
         *p_response_action = replacement;
         return 0;
       }
