@@ -1135,13 +1135,21 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // TODO haven't implemented return
-        sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"int mc_res;\\nMCcall(%%s(%%i, mcsfnv_vargs));\","
-                     " mcsfnv_function_name, mcsfnv_arg_count);\n");
+        MCcall(append_to_cstr(&translation_alloc, &translation, "  int mc_script_func_res;\n"));
+        sprintf(buf, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"int *mc_script_func_res = (int *)%%p;\\n"
+                     "  *mc_script_func_res = %%s(%%i, mcsfnv_vargs);\","
+                     " &mc_script_func_res, mcsfnv_function_name, mcsfnv_arg_count);\n");
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+
         MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"}\\n\");\n"));
         // sprintf(buf, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n");
         // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  clint_process(mcsfnv_buf);\n"));
+        sprintf(buf, "  if (mc_script_func_res) {\n"
+                     "    printf(\"--function '%%s' error:%%i\\n\", mcsfnv_function_name, mc_script_func_res);\n"
+                     "    return mc_script_func_res;\n"
+                     "}\n\n");
+        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
 
@@ -2649,17 +2657,23 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     char buf[1024];
     // strcpy(buf, SCRIPT_NAME_PREFIX);
 
-    printf("scriptcont:%i\n", script_instance->contextual_action->contextual_data_count);
+    // printf("scriptcont:%i\n", script_instance->contextual_action->contextual_data_count);
 
     char **output = NULL;
     // printf("script entered: %u: %i / %i\n", script->sequence_uid, script->segments_complete, script->segment_count);
+    int mc_script_res;
     sprintf(buf,
             "{\n"
-            "mc_script_instance_v1 *p_script = (mc_script_instance_v1 *)%p;\n"
-            "%s(p_script);\n"
+            "  mc_script_instance_v1 *p_script = (mc_script_instance_v1 *)%p;\n"
+            "  int *mc_script_res = (int *)%p;\n"
+            "  *mc_script_res = %s(p_script);\n"
             "}",
-            script_instance, script_instance->script->created_function_name);
+            script_instance, &mc_script_res, script_instance->script->created_function_name);
     clint_process(buf);
+    if (mc_script_res) {
+      printf("--script '%s' error:%i\n", script_instance->script->name, mc_script_res);
+      return mc_script_res;
+    }
     printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
            script_instance->script->segment_count);
 
@@ -2678,8 +2692,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
 
     if (script_instance->segments_complete >= script_instance->script->segment_count) {
 
-      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
-      // printf("spchs-4\n");
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
+      // *)command_hub->demo_issue->data); printf("spchs-4\n");
       // -- Script Complete!
       // Free script data
       if (script_instance->contextual_command)
@@ -2693,8 +2707,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       // printf("spchs-4c\n");
       free(script_instance->locals);
 
-      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
-      // printf("spchs-5\n");
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
+      // *)command_hub->demo_issue->data); printf("spchs-5\n");
 
       if (script_instance->response)
         free(script_instance->response);
@@ -2704,7 +2718,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
                              &command_hub->script_instances_count, i);
       --i;
 
-      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
+      // *)command_hub->demo_issue->data);
       mc_process_action_v1 *script_completion;
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
                                focused_issue->contextual_issue, focused_issue, focused_issue, " -- script completed", NULL,
@@ -2715,7 +2730,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       // TODO -- setting response action while also iterating through all scripts isn't right. Fix it up. Find a better
       // way
       *p_response_action = script_completion;
-      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
+      // *)command_hub->demo_issue->data);
       continue;
     }
 
@@ -3050,7 +3066,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       // Add a demonstration process on top of the focused issue stack
       *p_response_action = (void *)demo_issue;
       command_hub->demo_issue = demo_issue;
-      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
+      // *)command_hub->demo_issue->data);
       return 0;
     }
 
@@ -3065,8 +3082,9 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       if (demo_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION) {
         MCerror(9483, "TODO");
       }
-      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char *)command_hub->demo_issue->data);
-      // printf("@@@ demo_issue()->data='%u'\n", ((mc_process_action_v1 *)*(void **)demo_issue->data)->sequence_uid);
+      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
+      // *)command_hub->demo_issue->data); printf("@@@ demo_issue()->data='%u'\n", ((mc_process_action_v1 *)*(void
+      // **)demo_issue->data)->sequence_uid);
 
       // Add the process to the process matrix
       // -- Search for similiar existing
