@@ -1,3 +1,4 @@
 bin/**
 !dep/glm
 dep/**
+daily_clarity.md
