@@ -6,7 +6,7 @@ int print_struct_id(int argc, void **argv)
 {
   midgeo struct_id = (midgeo)argv;
 
-  printf("[%s (version:%i)]\n", (char *)struct_id[0], *(uint *)struct_id[1]);
+  printf("[struct:%s (version:%i)]\n", (char *)struct_id[0], *(uint *)struct_id[1]);
 
   return 0;
 }
