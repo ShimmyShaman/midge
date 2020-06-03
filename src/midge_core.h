@@ -226,24 +226,6 @@ enum script_process_state {
 
 // #define process_action_data_v1
 
-#define process_action_v1                              \
-  struct {                                             \
-    mc_struct_id_v1 *struct_id;                        \
-    unsigned int sequence_uid;                         \
-    process_action_type type;                          \
-    char *dialogue;                                    \
-    /* The root issue this exists under. eg. */        \
-    /* the demo issue that this action is a part of.*/ \
-    void *contextual_issue;                            \
-    void *previous_issue;                              \
-    void *causation_issue;                             \
-    void *consequential_issue;                         \
-    void *data;                                        \
-    unsigned int contextual_data_alloc;                \
-    unsigned int contextual_data_count;                \
-    void **contextual_data;                            \
-  }
-
 #define template_collection_v1    \
   struct {                        \
     struct {                      \
@@ -321,7 +303,7 @@ typedef function_info_v1 mc_function_info_v1;
 struct mc_node_v1;
 typedef script_local_v1 mc_script_local_v1;
 typedef script_v1 mc_script_v1;
-typedef process_action_v1 mc_process_action_v1;
+struct mc_process_action_v1;
 typedef command_hub_v1 mc_command_hub_v1;
 typedef script_instance_v1 mc_script_instance_v1;
 typedef process_unit_v1 mc_process_unit_v1;
@@ -340,6 +322,25 @@ typedef struct mc_node_v1 {
   unsigned int child_count;
   mc_node_v1 **children;
 } mc_node_v1;
+
+typedef struct mc_process_action_v1 {
+  mc_struct_id_v1 *struct_id;
+  unsigned int object_uid;
+  unsigned int sequence_uid;
+  process_action_type type;
+  char *dialogue;
+  /* The root issue this exists under. eg. */
+  /* Demo/root-unprovoked-command*/
+  mc_process_action_v1 *contextual_issue;
+  /* The action previous in the chain */
+  mc_process_action_v1 *previous_issue;
+  /* The action next in the chain */
+  mc_process_action_v1 *next_issue;
+  void *data;
+  unsigned int contextual_data_alloc;
+  unsigned int contextual_data_count;
+  void **contextual_data;
+} mc_process_action_v1;
 
 int (*find_function_info)(int, void **);
 

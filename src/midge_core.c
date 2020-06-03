@@ -248,10 +248,10 @@ int increment_pointer(int argc, void **argv)
 int get_process_contextual_data(mc_process_action_v1 *contextual_action, const char *const key, void **value)
 {
   *value = NULL;
-  // printf("entered gpcd()\n");
+  printf("entered gpcd()\n");
   // printf("contextual_action->contextual_data_count:%i\n", contextual_action->contextual_data_count);
   while (contextual_action) {
-    // printf("here31\n");
+    printf("here31\n");
     for (int i = 0; i < contextual_action->contextual_data_count; ++i) {
       // printf("here34\n");
       // printf("key:%s\n", key);
@@ -259,18 +259,25 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
       // printf("contextual_action->contextual_data[%i]:%p\n", i, ((mc_key_value_pair_v1
       // *)contextual_action->contextual_data[i])); printf("key:%s\n", ((mc_key_value_pair_v1
       // *)contextual_action->contextual_data[i])->key);
-      // printf("comparing %s<>%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key);
+      printf("comparing %s<>%s:%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key,
+             (char *)((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->value);
       if (!strcmp(key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key)) {
         *value = ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->value;
-        // printf("here35\n");
+        printf("here35\n");
         return 0;
       }
       // printf("here36\n");
     }
 
-    contextual_action = (mc_process_action_v1 *)contextual_action->causation_issue;
+    if (contextual_action->contextual_issue == NULL)
+      break;
+
+    if (contextual_action->previous_issue != NULL)
+      contextual_action = contextual_action->previous_issue;
+    else
+      contextual_action = contextual_action->contextual_issue;
   }
-  // printf("left gpcd()\n");
+  printf("left gpcd()\n");
   return 0;
 }
 
@@ -971,8 +978,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
   bool loop = true;
   while (loop) {
     // printf("i:%i  '%c'\n", i, code[i]);
-    // sprintf(buf, "printf(\"statement %i:\\n\");\n", debug_statement_index++);
-    // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+    sprintf(buf, "printf(\"statement %i:\\n\");\n", debug_statement_index++);
+    MCcall(append_to_cstr(&translation_alloc, &translation, buf));
     switch (code[i]) {
     case ' ':
     case '\t':
@@ -1802,8 +1809,11 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                       "  char *mc_context_data_%i;\n"
                       "  MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", (void "
                       "**)&mc_context_data_%i));\n"
+                      "  if(!mc_context_data_%i) {\n"
+                      "    return 1813;"
+                      "  }\n"
                       "  mc_vargs[%i] = (void *)&mc_context_data_%i;\n",
-                      arg_index + 1, argument + 1, arg_index + 1, arg_index + 1, arg_index + 1);
+                      arg_index + 1, argument + 1, arg_index + 1, arg_index + 1, arg_index + 1, arg_index + 1);
             }
             else {
               sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
@@ -1957,7 +1967,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                  //  "printf(\"script-concluding\\n\");\n"
                  "return 0;\n}");
 
-  // printf("script_declaration:\n%s\n\n", declaration);
+  printf("script_declaration:\n%s\n\n", declaration);
 
   clint_declare(declaration);
 
@@ -1971,6 +1981,7 @@ int submit_user_command(int argc, void **argsv);
 int (*mc_dummy_function_pointer)(int, void **);
 int mc_main(int argc, const char *const *argv)
 {
+  printf("mm-0\n");
   int sizeof_void_ptr = sizeof(void *);
   if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) || sizeof_void_ptr != sizeof(uint *) ||
       sizeof_void_ptr != sizeof(const char *) || sizeof_void_ptr != sizeof(void **) ||
@@ -2173,6 +2184,7 @@ int mc_main(int argc, const char *const *argv)
     field->name = "struct_usage";
   }
 
+  printf("mm-1\n");
   mc_struct_info_v1 *node_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
   { // TYPE:DEFINITION function_info
     node_definition_v1->struct_id = NULL;
@@ -2336,10 +2348,12 @@ int mc_main(int argc, const char *const *argv)
   // MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc,
   // &template_collection->template_count, (void *)template_process));
 
+  printf("mm-2\n");
   // Parse & Declare/add Core functions in midge_core_functions.c
   MCcall(init_core_functions(command_hub));
   // return 0;
 
+  printf("mm-3\n");
   const char *commands =
       // Create invoke function script
       ".createScript\n"
@@ -2478,7 +2492,7 @@ int mc_main(int argc, const char *const *argv)
 }
 
 int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequence_uid, process_action_type type,
-                             void *contextual_issue, void *previous_issue, mc_process_action_v1 *causation_issue,
+                             mc_process_action_v1 *contextual_issue, mc_process_action_v1 *previous_issue,
                              const char *const dialogue, void *data, mc_process_action_v1 **output);
 int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_process_action_v1 **command_action);
 int process_matrix_register_action(mc_command_hub_v1 *command_hub, void *p_process_action);
@@ -2493,6 +2507,7 @@ int submit_user_command(int argc, void **argsv)
   void **mc_dvp;
   int mc_res;
 
+  // printf("suc-0\n");
   mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)argsv[0];
   char *command = (char *)argsv[4];
 
@@ -2500,23 +2515,27 @@ int submit_user_command(int argc, void **argsv)
   mc_process_action_v1 *process_action;
   MCcall(format_user_response(command_hub, command, &process_action));
 
+  printf("suc-1\n");
   // Process command and any/all system responses
   while (1) {
     // Affect the command hub
     MCcall(process_matrix_register_action(command_hub, process_action));
     MCcall(command_hub_submit_process_action(command_hub, process_action));
 
+    printf("suc-2\n");
     // Process the action
     MCcall(command_hub_process_outstanding_actions(command_hub));
 
+    printf("suc-3\n");
     // Formulate system responses
     void *p_response_action = NULL;
     MCcall(systems_process_command_hub_scripts(command_hub, &p_response_action));
+    printf("suc-4\n");
     if (!p_response_action) {
       MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
     }
 
-    // printf("suc-1\n");
+    printf("suc-5\n");
 
     MCcall(assist_user_process_issues(command_hub, &p_response_action));
 
@@ -2537,8 +2556,7 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
   mc_process_action_v1 *process_action;
 
   if (command_hub->focused_issue_stack_count == 0) {
-    construct_process_action(command_hub, 0, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, NULL, NULL, NULL, command, NULL,
-                             &process_action);
+    construct_process_action(command_hub, 0, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, NULL, NULL, command, NULL, &process_action);
   }
   else {
     // Pop the focused issue from the stack
@@ -2549,42 +2567,28 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
 
     switch (focused_issue->type) {
     case PROCESS_ACTION_PM_IDLE: {
-      // Find the consequential root of the previous action chain
-      mc_process_action_v1 *consequential_root = focused_issue;
-      while (consequential_root->previous_issue) {
-        consequential_root = (mc_process_action_v1 *)consequential_root->previous_issue;
-      }
-
-      construct_process_action(command_hub, 0, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, NULL, consequential_root, focused_issue,
-                               command, NULL, &process_action);
+      construct_process_action(command_hub, 0, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, focused_issue->contextual_issue,
+                               focused_issue, command, NULL, &process_action);
     } break;
     case PROCESS_ACTION_PM_DEMO_INITIATION: {
-      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, focused_issue,
-                               NULL, focused_issue, command, NULL, &process_action);
+      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_UNPROVOKED_COMMAND,
+                               focused_issue->contextual_issue, focused_issue, command, NULL, &process_action);
     } break;
     case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
       construct_process_action(command_hub, 0, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, focused_issue->contextual_issue,
-                               focused_issue, focused_issue, command, NULL, &process_action);
+                               focused_issue, command, NULL, &process_action);
     } break;
     case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME: {
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
-                               focused_issue->contextual_issue, focused_issue, focused_issue, command, NULL, &process_action);
+                               focused_issue->contextual_issue, focused_issue, command, NULL, &process_action);
     } break;
     case PROCESS_ACTION_SCRIPT_QUERY: {
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_SCRIPT_RESPONSE,
-                               focused_issue->contextual_issue, focused_issue, focused_issue, command, NULL, &process_action);
+                               focused_issue->contextual_issue, focused_issue, command, NULL, &process_action);
     } break;
     case PROCESS_ACTION_PM_IDLE_WITH_CONTEXT: {
-      // Find the consequential root of the previous action
-      mc_process_action_v1 *consequential_root = focused_issue;
-      while (consequential_root->previous_issue) {
-        consequential_root = (mc_process_action_v1 *)consequential_root->previous_issue;
-      }
-      // printf("consequential_root:%i  '%s'\n", consequential_root->type, consequential_root->dialogue);
-
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_USER_UNPROVOKED_COMMAND,
-                               focused_issue->contextual_issue, consequential_root, focused_issue, command, NULL,
-                               &process_action);
+                               focused_issue->contextual_issue, focused_issue, command, NULL, &process_action);
     } break;
     default:
       MCerror(2562, "Unhandled PM-query-type:%i  '%s'", focused_issue->type, focused_issue->dialogue);
@@ -2698,8 +2702,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     // printf("scriptcont:%i\n", script_instance->contextual_action->contextual_data_count);
 
     char **output = NULL;
-    // printf("script entered: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
-    // script_instance->script->segment_count);
+    printf("script entered: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+           script_instance->script->segment_count);
     int mc_script_res;
     sprintf(buf,
             "{\n"
@@ -2713,8 +2717,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       printf("--script '%s' error:%i\n", script_instance->script->name, mc_script_res);
       return mc_script_res;
     }
-    // printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
-    //  script_instance->script->segment_count);
+    printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+           script_instance->script->segment_count);
 
     // Pop the focused issue from the stack
     mc_process_action_v1 *focused_issue =
@@ -2761,8 +2765,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       // *)command_hub->demo_issue->data);
       mc_process_action_v1 *script_completion;
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
-                               focused_issue->contextual_issue, focused_issue, focused_issue, " -- script completed", NULL,
-                               &script_completion);
+                               focused_issue->contextual_issue, focused_issue, " -- script completed", NULL, &script_completion);
 
       // printf("spchs-6\n");
 
@@ -2796,8 +2799,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     // Begin Query
     mc_process_action_v1 *script_query;
     construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_SCRIPT_QUERY,
-                             focused_issue->contextual_issue, focused_issue, focused_issue, script_instance->response, NULL,
-                             &script_query);
+                             focused_issue->contextual_issue, focused_issue, script_instance->response, NULL, &script_query);
     free(script_instance->response);
     script_instance->response = NULL;
 
@@ -2871,8 +2873,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         // Set corresponding issue
         mc_process_action_v1 *script_issue;
         construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
-                                 focused_issue->contextual_issue, focused_issue, focused_issue,
-                                 "Enter Script Name:", (void *)script, &script_issue);
+                                 focused_issue->contextual_issue, focused_issue, "Enter Script Name:", (void *)script,
+                                 &script_issue);
 
         // Set as response action
         *p_response_action = (void *)script_issue;
@@ -2976,6 +2978,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       mc_script_instance_v1 *script_instance = (mc_script_instance_v1 *)malloc(sizeof(mc_script_instance_v1));
       script_instance->script = script;
       script_instance->contextual_action = (mc_process_action_v1 *)focused_issue;
+      // if(script_instance->contextual_action->contextual_data_count)
+      // for(int m = 0; m < )
       // printf("beforesica:%p\n", script_instance->contextual_action);
       script_instance->struct_id = NULL;
       script_instance->sequence_uid = focused_issue->sequence_uid;
@@ -3008,7 +3012,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       cprintf(initiation_msg, " -- initiating script '%s'...", script->name);
       mc_process_action_v1 *script_initiation;
       construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
-                               focused_issue->contextual_issue, focused_issue, focused_issue, initiation_msg, script_instance,
+                               focused_issue->contextual_issue, focused_issue, initiation_msg, script_instance,
                                &script_initiation);
       free(initiation_msg);
       // printf("spchi-14\n");
@@ -3091,8 +3095,9 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       mc_process_action_v1 *contextual_issue = NULL;
       if (focused_issue)
         contextual_issue = (mc_process_action_v1 *)focused_issue->contextual_issue;
-      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_DEMO_INITIATION, contextual_issue,
-                               focused_issue, focused_issue, demo_issue_dialogue, (void *)pattern, &demo_issue);
+      construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_DEMO_INITIATION,
+                               focused_issue->contextual_issue, NULL, demo_issue_dialogue, (void *)pattern, &demo_issue);
+      focused_issue->next_issue = demo_issue;
 
       for (int i = 0; i < kvps_index; ++i)
         append_to_collection(&demo_issue->contextual_data, &demo_issue->contextual_data_alloc, &demo_issue->contextual_data_count,
@@ -3118,10 +3123,10 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         MCerror(9482, "TODO");
       }
 
-      mc_process_action_v1 *demo_issue = (mc_process_action_v1 *)focused_issue->contextual_issue;
-      if (demo_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION) {
-        MCerror(9483, "TODO");
-      }
+      // mc_process_action_v1 *demo_issue = (mc_process_action_v1 *)focused_issue->contextual_issue;
+      // if (demo_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION) {
+      //   MCerror(9483, "TODO");
+      // }
       // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
       // *)command_hub->demo_issue->data); printf("@@@ demo_issue()->data='%u'\n", ((mc_process_action_v1 *)*(void
       // **)demo_issue->data)->sequence_uid);
@@ -3129,10 +3134,19 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       // Add the process to the process matrix
       // -- Search for similiar existing
 
+      // Obtain the demo begin action
+      mc_process_action_v1 *root_demo_issue = focused_issue;
+      while (root_demo_issue->previous_issue) {
+        root_demo_issue = root_demo_issue->previous_issue;
+      }
+      if (root_demo_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION) {
+        MCerror(3149, "unexpected");
+      }
+
       // -- Construct the process from the demo
       mc_process_unit_v1 *const demod_process = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
       demod_process->type = PROCESS_TYPE_DEMONSTRATED;
-      allocate_and_copy_cstr(demod_process->dialogue, (char *)demo_issue->data);
+      allocate_and_copy_cstr(demod_process->dialogue, (char *)root_demo_issue->data);
       demod_process->dialogue_has_pattern = false;
       for (int i = 0; i < strlen(demod_process->dialogue); ++i)
         if (demod_process->dialogue[i] == '@') {
@@ -3144,7 +3158,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       demod_process->continuances_alloc = 2;
       demod_process->continuances = (void **)malloc(sizeof(void *) * demod_process->continuances_alloc);
 
-      mc_process_action_v1 *action = (mc_process_action_v1 *)demo_issue->consequential_issue;
+      mc_process_action_v1 *action = (mc_process_action_v1 *)root_demo_issue->next_issue;
       mc_process_unit_v1 *previous_unit = demod_process;
       while (action) {
         mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
@@ -3198,7 +3212,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
                                     &previous_unit->continuances_count, (void *)process_unit));
 
         // Continue
-        action = (mc_process_action_v1 *)action->consequential_issue;
+        action = (mc_process_action_v1 *)action->next_issue;
         previous_unit = process_unit;
       }
 
@@ -3211,18 +3225,24 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 
       // Conclude the demo
       process_action_type completion_issue_type;
-      void *previous_contextual_issue;
-      if (demo_issue->contextual_issue) {
+      mc_process_action_v1 *previous_contextual_issue, *issue_before_demo_issue;
+      if (root_demo_issue->contextual_issue) {
         completion_issue_type = PROCESS_ACTION_PM_IDLE_WITH_CONTEXT;
-        previous_contextual_issue = demo_issue->contextual_issue;
+        previous_contextual_issue = root_demo_issue->contextual_issue;
+
+        issue_before_demo_issue = previous_contextual_issue;
+        while (((mc_process_action_v1 *)issue_before_demo_issue->next_issue)->object_uid != root_demo_issue->object_uid) {
+          issue_before_demo_issue = (mc_process_action_v1 *)issue_before_demo_issue->next_issue;
+        }
       }
       else {
         completion_issue_type = PROCESS_ACTION_PM_IDLE;
         previous_contextual_issue = NULL;
+        issue_before_demo_issue = NULL;
       }
       mc_process_action_v1 *demo_completed_issue;
       construct_process_action(command_hub, focused_issue->sequence_uid, completion_issue_type, previous_contextual_issue,
-                               focused_issue, focused_issue, " -- demo completed", NULL, &demo_completed_issue);
+                               issue_before_demo_issue, " -- demo completed", NULL, &demo_completed_issue);
 
       *p_response_action = (void *)demo_completed_issue;
       return 0;
@@ -3236,8 +3256,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     // -- Send Unresolved command message
     mc_process_action_v1 *unresolved_issue;
     construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
-                             focused_issue->contextual_issue, focused_issue, focused_issue, "Unresolved Command.", NULL,
-                             &unresolved_issue);
+                             focused_issue->contextual_issue, focused_issue, "Unresolved Command.", NULL, &unresolved_issue);
 
     *p_response_action = (void *)unresolved_issue;
 
@@ -3274,7 +3293,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     // Set corresponding issue
     mc_process_action_v1 *script_issue;
     construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
-                             focused_issue->contextual_issue, focused_issue, focused_issue, NULL, NULL, &script_issue);
+                             focused_issue->contextual_issue, focused_issue, NULL, NULL, &script_issue);
 
     *p_response_action = script_issue;
 
@@ -3305,8 +3324,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     char *resolution_message;
     cprintf(resolution_message, "<> script '%s' created!\n", script->name);
     construct_process_action(command_hub, focused_issue->sequence_uid, PROCESS_ACTION_PM_IDLE_WITH_CONTEXT,
-                             focused_issue->contextual_issue, focused_issue, focused_issue, resolution_message, NULL,
-                             &idle_action);
+                             focused_issue->contextual_issue, focused_issue, resolution_message, NULL, &idle_action);
     free(resolution_message);
 
     *p_response_action = idle_action;
@@ -3527,8 +3545,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
         mc_process_action_v1 *replacement;
         construct_process_action(command_hub, intercepted_action->sequence_uid, diversion->action->type,
                                  intercepted_action->contextual_issue, intercepted_action->previous_issue,
-                                 (mc_process_action_v1 *)intercepted_action->causation_issue, diversion->action->dialogue, NULL,
-                                 &replacement);
+                                 diversion->action->dialogue, NULL, &replacement);
 
         printf("atrc-6f\n");
         // printf("replacement was:%u\n", replacement->sequence_uid);
@@ -3560,7 +3577,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
 }
 
 int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequence_uid, process_action_type type,
-                             void *contextual_issue, void *previous_issue, mc_process_action_v1 *causation_issue,
+                             mc_process_action_v1 *contextual_issue, mc_process_action_v1 *previous_issue,
                              const char *const dialogue, void *data, mc_process_action_v1 **output)
 {
   *output = (mc_process_action_v1 *)malloc(sizeof(mc_process_action_v1));
@@ -3568,6 +3585,8 @@ int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequen
   (*output)->struct_id->identifier = "process_action";
   (*output)->struct_id->version = 1U;
 
+  ++command_hub->uid_counter;
+  (*output)->object_uid = command_hub->uid_counter;
   if (sequence_uid)
     (*output)->sequence_uid = command_hub->uid_counter;
   else {
@@ -3579,6 +3598,8 @@ int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequen
   (*output)->type = type;
   (*output)->contextual_issue = contextual_issue;
   (*output)->previous_issue = previous_issue;
+  if (previous_issue)
+    previous_issue->next_issue = (*output);
 
   (*output)->contextual_data_alloc = 2;
   (*output)->contextual_data_count = 0;
@@ -3592,11 +3613,6 @@ int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequen
   }
 
   (*output)->data = data;
-
-  (*output)->causation_issue = causation_issue;
-  if (causation_issue)
-    causation_issue->consequential_issue = (*output);
-  (*output)->consequential_issue = NULL;
 
   return 0;
 }
