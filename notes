@@ -1,0 +1,35 @@
+.createscript finishThreshold = 1		 script = 1, demo = 2
+	script_name:
+	...
+	resolved
+
+create function construct_and_attach_child
+unresolved_command
+
+demo create function @{}
+	demo_initiation
+	demo invoke @{}
+		demo_initiation
+		.runscript
+		function_name:
+		@function_name
+		...
+		finish
+		IDLE
+		enddemo
+		RESOLVED
+	invoke initialize_function
+		.runscript
+		function_name:
+		...
+		RESOLVED
+	...
+	enddemo
+	RESOLVED
+invoke construct_and_attach_child
+	.runscript
+	...
+	RESOLVED
+
+	
+	

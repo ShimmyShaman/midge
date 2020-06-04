@@ -139,17 +139,19 @@ enum script_process_state {
   }
 // #define sizeof_script_local_v1 (sizeof(void *) * 6)
 
-#define process_unit_v1              \
-  struct {                           \
-    mc_struct_id_v1 *struct_id;      \
-    process_unit_type type;          \
-    char *dialogue;                  \
-    bool dialogue_has_pattern;       \
-    process_originator origin;       \
-    mc_process_action_v1 *action;    \
-    unsigned int continuances_alloc; \
-    unsigned int continuances_count; \
-    void **continuances;             \
+#define process_unit_v1                      \
+  struct {                                   \
+    mc_struct_id_v1 *struct_id;              \
+    process_unit_type type;                  \
+    char *dialogue;                          \
+    bool dialogue_has_pattern;               \
+    process_originator origin;               \
+    mc_process_action_v1 *action;            \
+    mc_process_action_v1 *contextual_action; \
+    mc_process_action_v1 *previous_action;   \
+    unsigned int continuances_alloc;         \
+    unsigned int continuances_count;         \
+    void **continuances;                     \
   }
 
 #define branch_unit_v1                    \
@@ -328,7 +330,7 @@ typedef struct mc_process_action_v1 {
   unsigned int sequence_uid;
   process_action_type type;
   char *dialogue;
-  
+
   /* The root issue this exists under. eg. */
   /* Demo/root-unprovoked-command*/
   mc_process_action_v1 *contextual_issue;
@@ -366,5 +368,37 @@ int clint_process(const char *str);
 int clint_declare(const char *str);
 int clint_loadfile(const char *path);
 int clint_loadheader(const char *path);
+
+const char *get_action_type_string(mc_process_action_v1 *action)
+{
+  switch (action->type) {
+  case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+    return "PROCESS_ACTION_USER_UNPROVOKED_COMMAND";
+  case PROCESS_ACTION_USER_SCRIPT_ENTRY:
+    return "PROCESS_ACTION_USER_SCRIPT_ENTRY";
+  case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
+    return "PROCESS_ACTION_USER_SCRIPT_RESPONSE";
+  case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
+    return "PROCESS_ACTION_USER_CREATED_SCRIPT_NAME";
+  case PROCESS_ACTION_PM_IDLE:
+    return "PROCESS_ACTION_PM_IDLE";
+  case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
+    return "PROCESS_ACTION_PM_SEQUENCE_RESOLVED";
+  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+    return "PROCESS_ACTION_PM_UNRESOLVED_COMMAND";
+  case PROCESS_ACTION_PM_DEMO_INITIATION:
+    return "PROCESS_ACTION_PM_DEMO_INITIATION";
+  case PROCESS_ACTION_PM_SCRIPT_REQUEST:
+    return "PROCESS_ACTION_PM_SCRIPT_REQUEST";
+  case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
+    return "PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME";
+  case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+    return "PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS";
+  case PROCESS_ACTION_SCRIPT_QUERY:
+    return "PROCESS_ACTION_SCRIPT_QUERY";
+  default:
+    return "UNWRITTEN_PROCESS_ACTION_TYPE";
+  }
+}
 
 #endif // MIDGE_CORE_H
