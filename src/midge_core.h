@@ -26,7 +26,8 @@ typedef enum {
   PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
 
   // Process Manager Initiated
-  PROCESS_ACTION_PM_RESOLVED,
+  PROCESS_ACTION_PM_IDLE,
+  PROCESS_ACTION_PM_SEQUENCE_RESOLVED,
   PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
   PROCESS_ACTION_PM_DEMO_INITIATION,
   PROCESS_ACTION_PM_SCRIPT_REQUEST,
@@ -255,7 +256,6 @@ enum script_process_state {
     mc_command_hub_v1 *command_hub;          \
     mc_node_v1 *nodespace;                   \
     mc_process_action_v1 *contextual_action; \
-    char *contextual_command;                \
     void **locals;                           \
     char *response;                          \
     unsigned int segments_complete;          \
@@ -328,6 +328,7 @@ typedef struct mc_process_action_v1 {
   unsigned int sequence_uid;
   process_action_type type;
   char *dialogue;
+  
   /* The root issue this exists under. eg. */
   /* Demo/root-unprovoked-command*/
   mc_process_action_v1 *contextual_issue;
