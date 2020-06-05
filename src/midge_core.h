@@ -18,57 +18,6 @@ typedef void **midgeo;
 typedef void **midgeary;
 typedef unsigned int uint;
 
-typedef enum {
-  // User Initiated
-  PROCESS_ACTION_NONE = 1,
-  PROCESS_ACTION_USER_UNPROVOKED_COMMAND,
-  PROCESS_ACTION_USER_SCRIPT_ENTRY,
-  PROCESS_ACTION_USER_SCRIPT_RESPONSE,
-  PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
-
-  // Process Manager Initiated
-  PROCESS_ACTION_PM_IDLE,
-  PROCESS_ACTION_PM_SEQUENCE_RESOLVED,
-  PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
-  PROCESS_ACTION_PM_DEMO_INITIATION,
-  PROCESS_ACTION_PM_SCRIPT_REQUEST,
-  PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
-
-  // Script
-  PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
-  PROCESS_ACTION_SCRIPT_QUERY,
-
-  PROCESS_ACTION_MAX_VALUE = 999,
-} process_action_type;
-
-typedef enum {
-  PROCESS_ORIGINATOR_USER = 1,
-  PROCESS_ORIGINATOR_PM,
-  PROCESS_ORIGINATOR_SCRIPT,
-} process_originator;
-
-enum branching_interaction_type {
-  BRANCHING_INTERACTION_IGNORE_DATA = 1,
-  BRANCHING_INTERACTION_INCR_DPTR,
-  BRANCHING_INTERACTION,
-  BRANCHING_INTERACTION_INVOKE,
-};
-
-enum interaction_process_state {
-  INTERACTION_PROCESS_STATE_INITIAL = 1,
-  INTERACTION_PROCESS_STATE_POSTREPLY,
-};
-
-enum process_contextual_data {
-  PROCESS_CONTEXTUAL_DATA_NODESPACE = 1,
-};
-
-enum script_process_state {
-  SCRIPT_PROCESS_NOT_STARTED = 1,
-  SCRIPT_PROCESS_EXECUTION,
-  SCRIPT_PROCESS_QUERY_USER,
-};
-
 #define SCRIPT_NAME_PREFIX "mc_script_"
 
 /*
@@ -132,189 +81,182 @@ enum script_process_state {
     sprintf(dest, format, ##__VA_ARGS__);                     \
   }
 
-#define script_local_v1        \
-  struct {                     \
-    char *type;                \
-    char *identifier;          \
-    unsigned int locals_index; \
-    char *replacement_code;    \
-    void *struct_info;         \
-    int scope_depth;           \
-  }
-// #define sizeof_script_local_v1 (sizeof(void *) * 6)
+typedef enum {
+  // User Initiated
+  PROCESS_ACTION_NONE = 1,
+  PROCESS_ACTION_USER_UNPROVOKED_COMMAND,
+  PROCESS_ACTION_USER_SCRIPT_ENTRY,
+  PROCESS_ACTION_USER_SCRIPT_RESPONSE,
+  PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
 
-// #define process_unit_v1                      \
-//   struct {                                   \
-//     mc_struct_id_v1 *struct_id;              \
-//     process_unit_type type;                  \
-//     char *dialogue;                          \
-//     bool dialogue_has_pattern;               \
-//     process_originator origin;               \
-//     mc_process_action_v1 *action;            \
-//     mc_process_action_v1 *contextual_action; \
-//     mc_process_action_v1 *previous_action;   \
-//     unsigned int continuances_alloc;         \
-//     unsigned int continuances_count;         \
-//     void **continuances;                     \
-//   }
+  // Process Manager Initiated
+  PROCESS_ACTION_PM_IDLE,
+  PROCESS_ACTION_PM_SEQUENCE_RESOLVED,
+  PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
+  PROCESS_ACTION_PM_DEMO_INITIATION,
+  PROCESS_ACTION_PM_SCRIPT_REQUEST,
+  PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
+
+  // Script
+  PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
+  PROCESS_ACTION_SCRIPT_QUERY,
+
+  PROCESS_ACTION_MAX_VALUE = 999,
+} process_action_type;
+
+typedef enum {
+  PROCESS_ORIGINATOR_USER = 1,
+  PROCESS_ORIGINATOR_PM,
+  PROCESS_ORIGINATOR_SCRIPT,
+} process_originator_type;
+
+typedef enum {
+  BRANCHING_INTERACTION_IGNORE_DATA = 1,
+  BRANCHING_INTERACTION_INCR_DPTR,
+  BRANCHING_INTERACTION,
+  BRANCHING_INTERACTION_INVOKE,
+} branching_interaction_type;
+
+typedef enum {
+  INTERACTION_PROCESS_STATE_INITIAL = 1,
+  INTERACTION_PROCESS_STATE_POSTREPLY,
+} interaction_process_state;
+
+typedef enum {
+  PROCESS_CONTEXTUAL_DATA_NODESPACE = 1,
+} process_contextual_data;
+
+typedef enum {
+  SCRIPT_PROCESS_NOT_STARTED = 1,
+  SCRIPT_PROCESS_EXECUTION,
+  SCRIPT_PROCESS_QUERY_USER,
+} script_process_state;
 
 typedef enum {
   PROCESS_VIEW_DEMONSTRATED = 1,
   PROCESS_VIEW_EXHIBITED,
 } process_unit_view_type;
 
-#define branch_unit_v1                    \
-  struct {                                \
-    struct {                              \
-      const char *identifier;             \
-      unsigned int version;               \
-    } struct_id;                          \
-    enum branching_interaction_type type; \
-    const char *match;                    \
-    void *data;                           \
-    void *next;                           \
-  }
-// #define sizeof_branch_unit_v1 (sizeof(void *) * 6)
-// #define node_v1                      \
-//   struct {                           \
-//     mc_struct_id_v1 *struct_id;      \
-//     const char *name;                \
-//     void *parent;                    \
-//     unsigned int functions_alloc;    \
-//     unsigned int function_count;     \
-//     mc_function_info_v1 **functions; \
-//     unsigned int structs_alloc;      \
-//     unsigned int struct_count;       \
-//     mc_struct_info_v1 **structs;     \
-//     unsigned int children_alloc;     \
-//     unsigned int child_count;        \
-//     void **children;                 \
-//   }
-// #define sizeof_node_v1 (sizeof(void *) * 12)
-#define struct_id_v1        \
-  struct {                  \
-    const char *identifier; \
-    unsigned int version;   \
-  }
-#define key_value_pair_v1 \
-  struct {                \
-    char *key;            \
-    void *value;          \
-  }
-#define struct_info_v1            \
-  struct {                        \
-    void *struct_id;              \
-    const char *name;             \
-    unsigned int version;         \
-    const char *declared_mc_name; \
-    unsigned int field_count;     \
-    void **fields;                \
-    const char *sizeof_cstr;      \
-  }
-// #define sizeof_struct_info_v1 (sizeof(void *) * 7)
-#define function_info_v1                \
-  struct {                              \
-    void *struct_id;                    \
-    const char *name;                   \
-    unsigned int latest_iteration;      \
-    const char *return_type;            \
-    unsigned int parameter_count;       \
-    mc_parameter_info_v1 **parameters;  \
-    int variable_parameter_begin_index; \
-    unsigned int struct_usage_count;    \
-    mc_struct_info_v1 **struct_usage;   \
-  }
-// #define sizeof_function_info_v1 (sizeof(void *) * 9)
-#define parameter_info_v1          \
-  struct {                         \
-    void *struct_id;               \
-    const char *type_name;         \
-    unsigned int type_version;     \
-    unsigned int type_deref_count; \
-    const char *name;              \
-  }
-// #define sizeof_parameter_info_v1 (sizeof(void *) * 4)
+typedef enum {
+  PROCESS_UNIT_SAMPLE = 1,
+  PROCESS_UNIT_CONSENSUS_DETAIL,
+  PROCESS_UNIT_BRANCH,
+} process_unit_type;
 
-// #define process_action_data_v1
+struct mc_struct_id_v1;
+struct mc_void_collection_v1;
+struct mc_key_value_pair_v1;
+struct mc_script_local_v1;
+struct mc_struct_info_v1;
+struct mc_parameter_info_v1;
+struct mc_function_info_v1;
+struct mc_script_v1;
+struct mc_script_instance_v1;
+struct mc_command_hub_v1;
+struct mc_node_v1;
+struct mc_process_action_v1;
+struct mc_process_action_detail_v1;
+struct mc_process_unit_v1;
 
-#define template_collection_v1    \
-  struct {                        \
-    struct {                      \
-      const char *identifier;     \
-      uint version;               \
-    } struct_id;                  \
-    unsigned int templates_alloc; \
-    unsigned int template_count;  \
-    void **templates;             \
-  }
-// #define sizeof_template_collection_v1 (sizeof(void *) * 5)
-
-#define script_v1                \
-  struct {                       \
-    mc_struct_id_v1 *struct_id;  \
-    char *name;                  \
-    unsigned int script_uid;     \
-    unsigned int local_count;    \
-    unsigned int segment_count;  \
-    char *created_function_name; \
-  }
-
-#define script_instance_v1                   \
-  struct {                                   \
-    mc_struct_id_v1 *struct_id;              \
-    mc_script_v1 *script;                    \
-    unsigned int sequence_uid;               \
-    mc_command_hub_v1 *command_hub;          \
-    mc_node_v1 *nodespace;                   \
-    mc_process_action_v1 *contextual_action; \
-    void **locals;                           \
-    char *response;                          \
-    unsigned int segments_complete;          \
-    int awaiting_data_set_index;             \
-  }
-
-#define command_hub_v1                      \
-  struct {                                  \
-    mc_struct_id_v1 *struct_id;             \
-    mc_node_v1 *global_node;                \
-    mc_node_v1 *nodespace;                  \
-    void *template_collection;              \
-    mc_void_collection_v1 *process_matrix;  \
-    unsigned int focused_issue_stack_alloc; \
-    unsigned int focused_issue_stack_count; \
-    void **focused_issue_stack;             \
-    unsigned int scripts_alloc;             \
-    unsigned int scripts_count;             \
-    void **scripts;                         \
-    unsigned int script_instances_alloc;    \
-    unsigned int script_instances_count;    \
-    void **script_instances;                \
-    bool focused_issue_activated;           \
-    unsigned int uid_counter;               \
-    mc_process_action_v1 *demo_issue;       \
-  }
-// #define sizeof_command_hub_v1 (sizeof(void *) * 14)
+typedef struct mc_struct_id_v1 {
+  const char *identifier;
+  unsigned int version;
+} mc_struct_id_v1;
 
 typedef struct mc_void_collection_v1 {
-  mc_struct_id_v1 struct_id;
+  mc_struct_id_v1 *struct_id;
   unsigned int allocated;
   unsigned int count;
   void **items;
 } mc_void_collection_v1;
 
-typedef struct_id_v1 mc_struct_id_v1;
-typedef key_value_pair_v1 mc_key_value_pair_v1;
-struct mc_void_collection_v1;
-typedef struct_info_v1 mc_struct_info_v1;
-typedef parameter_info_v1 mc_parameter_info_v1;
-typedef function_info_v1 mc_function_info_v1;
-struct mc_node_v1;
-typedef script_local_v1 mc_script_local_v1;
-typedef script_v1 mc_script_v1;
-struct mc_process_action_v1;
-typedef command_hub_v1 mc_command_hub_v1;
-typedef script_instance_v1 mc_script_instance_v1;
-struct mc_process_unit_v1;
+typedef struct mc_key_value_pair_v1 {
+  mc_struct_id_v1 *struct_id;
+  char *key;
+  void *value;
+} mc_key_value_pair_v1;
+
+typedef struct mc_script_local_v1 {
+  mc_struct_id_v1 *struct_id;
+  char *type;
+  char *identifier;
+  unsigned int locals_index;
+  char *replacement_code;
+  void *struct_info;
+  int scope_depth;
+} mc_script_local_v1;
+
+typedef struct mc_struct_info_v1 {
+  mc_struct_id_v1 *struct_id;
+  const char *name;
+  unsigned int version;
+  const char *declared_mc_name;
+  unsigned int field_count;
+  void **fields;
+  const char *sizeof_cstr;
+} mc_struct_info_v1;
+
+typedef struct mc_parameter_info_v1 {
+  mc_struct_id_v1 *struct_id;
+  const char *type_name;
+  unsigned int type_version;
+  unsigned int type_deref_count;
+  const char *name;
+} mc_parameter_info_v1;
+
+typedef struct mc_function_info_v1 {
+  mc_struct_id_v1 *struct_id;
+  const char *name;
+  unsigned int latest_iteration;
+  const char *return_type;
+  unsigned int parameter_count;
+  mc_parameter_info_v1 **parameters;
+  int variable_parameter_begin_index;
+  unsigned int struct_usage_count;
+  mc_struct_info_v1 **struct_usage;
+} mc_function_info_v1;
+
+typedef struct mc_script_v1 {
+  mc_struct_id_v1 *struct_id;
+  char *name;
+  unsigned int script_uid;
+  unsigned int local_count;
+  unsigned int segment_count;
+  char *created_function_name;
+} mc_script_v1;
+
+typedef struct mc_script_instance_v1 {
+  mc_struct_id_v1 *struct_id;
+  mc_script_v1 *script;
+  unsigned int sequence_uid;
+  mc_command_hub_v1 *command_hub;
+  mc_node_v1 *nodespace;
+  mc_process_action_v1 *contextual_action;
+  void **locals;
+  char *response;
+  unsigned int segments_complete;
+  int awaiting_data_set_index;
+} mc_script_instance_v1;
+
+typedef struct mc_command_hub_v1 {
+  mc_struct_id_v1 *struct_id;
+  mc_node_v1 *global_node;
+  mc_node_v1 *nodespace;
+  void *template_collection;
+  mc_process_unit_v1 *process_matrix;
+  unsigned int focused_issue_stack_alloc;
+  unsigned int focused_issue_stack_count;
+  void **focused_issue_stack;
+  unsigned int scripts_alloc;
+  unsigned int scripts_count;
+  void **scripts;
+  unsigned int script_instances_alloc;
+  unsigned int script_instances_count;
+  void **script_instances;
+  bool focused_issue_activated;
+  unsigned int uid_counter;
+  mc_process_action_v1 *demo_issue;
+} mc_command_hub_v1;
 
 typedef struct mc_node_v1 {
   mc_struct_id_v1 *struct_id;
@@ -355,14 +297,8 @@ typedef struct mc_process_action_detail_v1 {
   process_action_type type;
   const char *dialogue;
   bool dialogue_has_pattern;
-  process_originator origin;
+  process_originator_type origin;
 } mc_process_action_detail_v1;
-
-typedef enum {
-  PROCESS_UNIT_ACTION_DETAIL = 1,
-  PROCESS_UNIT_CONSENSUS_DETAIL,
-  PROCESS_UNIT_BRANCH,
-} process_unit_type;
 
 typedef struct mc_process_unit_v1 {
   mc_struct_id_v1 *struct_id;
@@ -383,7 +319,7 @@ typedef struct mc_process_unit_v1 {
 
   process_action_type continuance_action_type;
   const char *continuance_dialogue;
-  const char *continuance_dialogue_has_pattern;
+  bool continuance_dialogue_has_pattern;
 } mc_process_unit_v1;
 
 int (*find_function_info)(int, void **);
@@ -443,7 +379,7 @@ const char *get_action_type_string(mc_process_action_v1 *action)
   }
 }
 
-process_originator get_process_originator(process_action_type action_type)
+int get_process_originator_type(process_action_type action_type, process_originator_type *result)
 {
   switch (action_type) {
     // User Initiated
@@ -451,8 +387,8 @@ process_originator get_process_originator(process_action_type action_type)
   case PROCESS_ACTION_USER_SCRIPT_ENTRY:
   case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
   case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-    origin = PROCESS_ORIGINATOR_USER;
-    break;
+    *result = PROCESS_ORIGINATOR_USER;
+    return 0;
     // Process Manager Initiated
   case PROCESS_ACTION_PM_IDLE:
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
@@ -460,15 +396,15 @@ process_originator get_process_originator(process_action_type action_type)
   case PROCESS_ACTION_PM_SCRIPT_REQUEST:
   case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
   case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
-    origin = PROCESS_ORIGINATOR_PM;
-    break;
+    *result = PROCESS_ORIGINATOR_PM;
+    return 0;
     // Script
   case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
   case PROCESS_ACTION_SCRIPT_QUERY:
-    origin = PROCESS_ORIGINATOR_SCRIPT;
-    break;
+    *result = PROCESS_ORIGINATOR_SCRIPT;
+    return 0;
   default:
-    MCerror(3152, "TODO for type:%i", action->type);
+    MCerror(3152, "get_process_originator:TODO for type:%i", (int)action_type);
     break;
   }
 }
