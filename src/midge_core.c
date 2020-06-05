@@ -11,6 +11,23 @@ int print_struct_id(int argc, void **argv)
   return 0;
 }
 
+int does_dialogue_have_pattern(const char *const text, bool *output)
+{
+  if (text == NULL) {
+    *output = false;
+    return 0;
+  }
+
+  for (int i = 0; i < strlen(text); ++i)
+    if (text[i] == '@') {
+      *output = true;
+      return 0;
+    }
+
+  *output = false;
+  return 0;
+}
+
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
 {
   char buf[30];
@@ -2497,14 +2514,13 @@ int mc_main(int argc, const char *const *argv)
 int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequence_uid, process_action_type type,
                              mc_process_action_v1 *contextual_issue, mc_process_action_v1 *previous_issue,
                              const char *const dialogue, void *data, mc_process_action_v1 **output);
-int construct_process_unit(mc_command_hub_v1 *command_hub, process_unit_type process_type, char const *const dialogue,
-                           process_originator origin, mc_process_action_v1 *associated_action, mc_process_unit_v1 **output);
+int construct_process_action_unit(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action, mc_process_unit_v1 **output);
 int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_focused_issue,
                                 char const *const dialogue, bool force_resolution, mc_process_action_v1 **output);
 
 int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_process_action_v1 **command_action);
-int process_matrix_register_action(mc_command_hub_v1 *command_hub, void *p_process_action);
-int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *process_action);
+int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *process_action);
+int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action);
 int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub);
 int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_response_action);
 int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p_response_action);
@@ -2611,7 +2627,194 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
   return 0;
 }
 
-int process_matrix_register_action(mc_command_hub_v1 *command_hub, void *p_process_action) { return 0; }
+int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action)
+{
+  int mc_res;
+
+  // Apply this action as a continuance of the previous action (focused_issue)
+  if (command_hub->focused_issue_stack_count == 0)
+    return 0;
+
+  mc_process_action_v1 *focused_issue =
+      (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
+
+  // Construct and register the focused action inside the process matrix
+  mc_process_unit_v1 *focused_process_unit;
+  construct_process_unit(command_hub, focused_issue, &focused_process_unit);
+
+  // Find the appropriate branch to place it, creating a new one if need be
+  // Search first amongst action types
+  mc_process_unit_v1 *root_matrix_unit = NULL;
+  for (int i = 0; i < command_hub->process_matrix->count; ++i) {
+    mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)command_hub->process_matrix->items[i];
+
+    if (process_unit->type == focused_process_unit->unit_detail.action->type) {
+      root_matrix_unit = process_unit;
+      break;
+    }
+  }
+  if (!root_matrix_unit) {
+    // Make one and add it to the process matrix
+    root_matrix_unit = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
+    root_matrix_unit->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+    root_matrix_unit->struct_id->identifier = "process_unit";
+    root_matrix_unit->struct_id->version = 1U;
+    root_matrix_unit->type = focused_process_unit->unit_detail.action->type;
+    root_matrix_unit->utilization_count = 1U;
+    root_matrix_unit->unit_detail = focused_process_unit->unit_detail;
+
+    root_matrix_unit->further_branches = NULL;
+    root_matrix_unit->process_action_units = (mc_void_collection_v1 *)malloc(sizeof(mc_void_collection_v1));
+    MCcall(append_to_collection((void ***)&root_matrix_unit->process_action_units->items,
+                                &root_matrix_unit->process_action_units->allocated,
+                                &root_matrix_unit->process_action_units->count, focused_process_unit));
+
+    root_matrix_unit->continuance_action_type = action->type;
+    allocate_and_copy_cstr(root_matrix_unit->continuance_dialogue, action->dialogue);
+    MCcall(
+        does_dialogue_have_pattern(root_matrix_unit->continuance_dialogue, root_matrix_unit->continuance_dialogue_has_pattern));
+
+    // Add to the process matrix
+    MCcall(append_to_collection((void ***)&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
+                                &command_hub->process_matrix->count, root_matrix_unit));
+    return 0;
+  }
+
+  // Add it to a branch of the current matrix
+  while (root_matrix_unit) {
+    if (root_matrix_unit->further_branches) {
+      // Determine which branch to follow
+      mc_process_unit_v1 *branch_unit = NULL;
+      for (int i = 0; i < root_matrix_unit->further_branches->count; ++i) {
+        mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)root_matrix_unit->further_branches->items[i];
+
+        if (process_unit->continuance_action_type == focused_process_unit->continuance_action_type &&
+            !strcmp(process_unit->continuance_dialogue, focused_process_unit->continuance_dialogue) &&
+            process_unit->continuance_dialogue_has_pattern == focused_process_unit->continuance_dialogue_has_pattern) {
+          // Continuance match
+          branch_unit = process_unit;
+          break;
+        }
+      }
+
+      if (!branch_unit) {
+        // Create another branch
+        MCcall(append_to_collection((void ***)&root_matrix_unit->further_branches->items,
+                                    &root_matrix_unit->further_branches->allocated, &root_matrix_unit->further_branches->count,
+                                    focused_process_unit));
+        return 0;
+      }
+
+      // Set as new root and continue searching
+      root_matrix_unit = branch_unit;
+    }
+    else {
+      // Determine whether to merge or split this branch ending
+      // if split(construct the branch and add the focused_unit and original unit as branches to that??)
+      MCerror(2706, "TODO");
+    }
+  }
+
+  // // Obtain the demo begin action
+  // mc_process_action_v1 *root_demo_issue = action;
+  // while (root_demo_issue->previous_issue) {
+  //   root_demo_issue = root_demo_issue->previous_issue;
+  // }
+  // process_unit_type action_process_unit_type =
+  //     root_demo_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ? PROCESS_TYPE_DEMONSTRATED : PROCESS_TYPE_EXHIBITED;
+
+  // mc_process_unit_v1 *action_process_unit;
+  // MCcall(construct_process_unit(command_hub, action_process_unit_type, action->dialogue,
+  // get_process_originator(action->type),
+  //                               action, &action_process_unit));
+
+  // // Apply this action as a continuance of the previous action (focused_issue)
+  // mc_process_action_v1 *focused_issue = NULL;
+  // if (command_hub->focused_issue_stack_count == 0) {
+  //   mc_process_action_v1 *focused_issue =
+  //       (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
+  // }
+  // if (focused_issue) {
+  //   // Find the process unit for the focused issue
+  //   for(int i = command_hub->process_matrix->count - 1; i >= 0; --i){
+  //     mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *) command_hub->process_matrix->items[i];
+
+  //     if(process_unit->action->)
+  //   }
+  // }
+
+  // // Insert this action into the process matrix too (with 0 continuances)
+
+  // // -- Construct the process from the demo action sequence
+  // mc_process_unit_v1 *demod_process;
+  // MCcall(construct_process_unit(command_hub, PROCESS_TYPE_DEMONSTRATED, (char *)root_demo_issue->data,
+  // PROCESS_ORIGINATOR_USER,
+  //                               root_demo_issue, &demod_process));
+
+  // printf("root_demo_issue>next:%p  type:%i\n", root_demo_issue->next_issue, root_demo_issue->next_issue->type);
+
+  // // Add root to the process matrix
+  // printf("procm>demo process added: type:%i dialogue:'%s'\n", demod_process->type, demod_process->dialogue);
+  // MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
+  //                             &command_hub->process_matrix->count, demod_process));
+
+  // // Go through each action within the sequence
+  // mc_process_action_v1 *action = (mc_process_action_v1 *)root_demo_issue->next_issue;
+  // mc_process_unit_v1 *previous_unit = demod_process;
+  // while (action) {
+  //   if (action->object_uid == focused_issue->object_uid) {
+  //     // Don't include demo end action
+  //     break;
+  //   }
+
+  //   process_originator origin;
+  //   printf("processLoopActionType:%i\n", action->type);
+  //   switch (action->type) {
+  //     // User Initiated
+  //   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+  //   case PROCESS_ACTION_USER_SCRIPT_ENTRY:
+  //   case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
+  //   case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
+  //     origin = PROCESS_ORIGINATOR_USER;
+  //     break;
+  //     // Process Manager Initiated
+  //   case PROCESS_ACTION_PM_IDLE:
+  //   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+  //   case PROCESS_ACTION_PM_DEMO_INITIATION:
+  //   case PROCESS_ACTION_PM_SCRIPT_REQUEST:
+  //   case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
+  //   case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
+  //     origin = PROCESS_ORIGINATOR_PM;
+  //     break;
+  //     // Script
+  //   case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+  //   case PROCESS_ACTION_SCRIPT_QUERY:
+  //     origin = PROCESS_ORIGINATOR_SCRIPT;
+  //     break;
+  //   default:
+  //     MCerror(3152, "TODO for type:%i", action->type);
+  //     break;
+  //   }
+  //   mc_process_unit_v1 *process_unit;
+  //   MCcall(construct_process_unit(command_hub, PROCESS_TYPE_EXHIBITED, action->dialogue, origin, action, &process_unit));
+
+  //   // Add it as a continuance of the previous process unit
+  //   MCcall(append_to_collection((void ***)&previous_unit->continuances, &previous_unit->continuances_alloc,
+  //                               &previous_unit->continuances_count, (void *)process_unit));
+
+  //   // Add root to the process matrix
+  //   printf("procm>demo process added: type:%i dialogue:'%s'\n", process_unit->type,
+  //          process_unit->dialogue == NULL ? "(null)" : process_unit->dialogue);
+  //   MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
+  //                               &command_hub->process_matrix->count, (void *)process_unit));
+
+  //   // Continue
+  //   action = (mc_process_action_v1 *)action->next_issue;
+  //   previous_unit = process_unit;
+  // }
+
+  return 0;
+}
 
 int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *process_action)
 {
@@ -3133,81 +3336,6 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       // Add the process to the process matrix
       // -- Search for similiar existing
 
-      // Obtain the demo begin action
-      mc_process_action_v1 *root_demo_issue = focused_issue;
-      while (root_demo_issue->previous_issue) {
-        root_demo_issue = root_demo_issue->previous_issue;
-      }
-      if (root_demo_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION) {
-        MCerror(3149, "unexpected! was:%i %s", root_demo_issue->type, root_demo_issue->dialogue);
-      }
-      printf("root_demo_issue>next:%p  type:%i\n", root_demo_issue->next_issue, root_demo_issue->next_issue->type);
-
-      // -- Construct the process from the demo action sequence
-      mc_process_unit_v1 *demod_process;
-      MCcall(construct_process_unit(command_hub, PROCESS_TYPE_DEMONSTRATED, (char *)root_demo_issue->data,
-                                    PROCESS_ORIGINATOR_USER, root_demo_issue, &demod_process));
-
-      // Add root to the process matrix
-      printf("procm>demo process added: type:%i dialogue:'%s'\n", demod_process->type, demod_process->dialogue);
-      MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
-                                  &command_hub->process_matrix->count, demod_process));
-
-      // Go through each action within the sequence
-      mc_process_action_v1 *action = (mc_process_action_v1 *)root_demo_issue->next_issue;
-      mc_process_unit_v1 *previous_unit = demod_process;
-      while (action) {
-        if (action->object_uid == focused_issue->object_uid) {
-          // Don't include demo end action
-          break;
-        }
-
-        process_originator origin;
-        printf("processLoopActionType:%i\n", action->type);
-        switch (action->type) {
-          // User Initiated
-        case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
-        case PROCESS_ACTION_USER_SCRIPT_ENTRY:
-        case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
-        case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-          origin = PROCESS_ORIGINATOR_USER;
-          break;
-          // Process Manager Initiated
-        case PROCESS_ACTION_PM_IDLE:
-        case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-        case PROCESS_ACTION_PM_DEMO_INITIATION:
-        case PROCESS_ACTION_PM_SCRIPT_REQUEST:
-        case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
-        case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
-          origin = PROCESS_ORIGINATOR_PM;
-          break;
-          // Script
-        case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
-        case PROCESS_ACTION_SCRIPT_QUERY:
-          origin = PROCESS_ORIGINATOR_SCRIPT;
-          break;
-        default:
-          MCerror(3152, "TODO for type:%i", action->type);
-          break;
-        }
-        mc_process_unit_v1 *process_unit;
-        MCcall(construct_process_unit(command_hub, PROCESS_TYPE_EXHIBITED, action->dialogue, origin, action, &process_unit));
-
-        // Add it as a continuance of the previous process unit
-        MCcall(append_to_collection((void ***)&previous_unit->continuances, &previous_unit->continuances_alloc,
-                                    &previous_unit->continuances_count, (void *)process_unit));
-
-        // Add root to the process matrix
-        printf("procm>demo process added: type:%i dialogue:'%s'\n", process_unit->type,
-               process_unit->dialogue == NULL ? "(null)" : process_unit->dialogue);
-        MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
-                                    &command_hub->process_matrix->count, (void *)process_unit));
-
-        // Continue
-        action = (mc_process_action_v1 *)action->next_issue;
-        previous_unit = process_unit;
-      }
-
       // printf("pmitem %i %s\n", demod_process->action->type, ((mc_process_unit_v1 *)demod_process)->dialogue);
 
       // Conclude the demo
@@ -3387,14 +3515,31 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     if (!focused_issue->contextual_issue)
       break;
 
-    printf("aupi-2: sequence contextual:%s\n", get_action_type_string(focused_issue->contextual_issue));
+    printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue),
+           focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
+    printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue),
+           focused_issue->contextual_issue->dialogue == NULL ? "(null)" : focused_issue->contextual_issue->dialogue);
 
-    MCerror(3392,
-            "TODO -- go through the process matrix and determine if contextual and previous actions match with patterns etc");
-    // for (int i = 0; i < command_hub->process_matrix->count; ++i) {
-    //   mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)command_hub->process_matrix->items[i];
+    for (int i = 0; i < command_hub->process_matrix->count; ++i) {
+      mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)command_hub->process_matrix->items[i];
 
-    //   if(process_unit->action-> == )
+      if (process_unit->action->type != focused_issue->type)
+        continue;
+      printf("aupi-2a process_unit:%s:%s\n", get_action_type_string(process_unit->action->previous_issue),
+             process_unit->action->previous_issue->dialogue == NULL ? "(null)" : process_unit->action->previous_issue->dialogue);
+      if (process_unit->previous_action != focused_issue->previous_issue)
+        continue;
+      printf("aupi-2b\n");
+      if (process_unit->previous_action->type != focused_issue->previous_issue->type)
+        continue;
+      if (process_unit->contextual_action != focused_issue->contextual_issue)
+        continue;
+      if (process_unit->contextual_action->type != focused_issue->contextual_issue->type)
+        continue;
+    }
+
+    // MCerror(3392,
+    //         "TODO -- go through the process matrix and determine if contextual and previous actions match with patterns etc");
   } break;
     // Script
   case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
@@ -3609,35 +3754,68 @@ int construct_process_action(mc_command_hub_v1 *command_hub, unsigned int sequen
   return 0;
 }
 
-int construct_process_unit(mc_command_hub_v1 *command_hub, process_unit_type process_type, char const *const dialogue,
-                           process_originator origin, mc_process_action_v1 *associated_action, mc_process_unit_v1 **output)
+int construct_process_action_detail(mc_process_action_v1 *action, mc_process_action_detail_v1 **output)
 {
+  (*output) = (mc_process_action_detail_v1 *)malloc(sizeof(mc_process_action_detail_v1));
+  if (action) {
+    (*output)->type = action->type;
+    (*output)->dialogue_has_pattern = false;
+    if (action->dialogue) {
+      allocate_and_copy_cstr((*output)->dialogue, action->dialogue);
+      for (int i = 0; i < strlen((*output)->dialogue); ++i)
+        if ((*output)->dialogue[i] == '@') {
+          (*output)->dialogue_has_pattern = true;
+          break;
+        }
+    }
+    else {
+      (*output)->dialogue = NULL;
+    }
+    (*output)->origin = get_process_originator(action->type);
+  }
+  else {
+    (*output)->type = PROCESS_ACTION_NONE;
+    (*output)->dialogue = NULL;
+    (*output)->dialogue_has_pattern = false;
+    (*output)->origin = 0;
+  }
+
+  return 0;
+}
+
+int construct_process_action_unit(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action, mc_process_unit_v1 **output)
+{
+  int mc_res;
   *output = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
   (*output)->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
   (*output)->struct_id->identifier = "process_unit";
   (*output)->struct_id->version = 1U;
 
-  (*output)->type = process_type;
-  if (dialogue) {
-    allocate_and_copy_cstr((*output)->dialogue, dialogue);
-    for (int i = 0; i < strlen((*output)->dialogue); ++i)
-      if ((*output)->dialogue[i] == '@') {
-        (*output)->dialogue_has_pattern = true;
-        break;
-      }
-  }
-  else {
-    (*output)->dialogue = NULL;
-  }
+  (*output)->type = PROCESS_UNIT_ACTION_UNIT;
+  (*output)->utilization_count = 1U;
 
-  (*output)->origin = origin;
-  (*output)->action = associated_action;
-  (*output)->contextual_action = associated_action->contextual_issue;
-  (*output)->previous_action = associated_action->previous_issue;
+  // Set Unit Data : Action
+  MCcall(construct_process_action_detail(action, &(*output)->unit_detail.action));
+  MCcall(construct_process_action_detail(action->previous_issue, &(*output)->unit_detail.previous_issue));
+  MCcall(construct_process_action_detail(action->contextual_issue, &(*output)->unit_detail.contextual_issue));
 
-  (*output)->continuances_count = 0;
-  (*output)->continuances_alloc = 2;
-  (*output)->continuances = (void **)malloc(sizeof(void *) * (*output)->continuances_alloc);
+  mc_process_action_v1 *sequence_root = action;
+  while (sequence_root->previous_issue) {
+    if (sequence_root->previous_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ||
+        sequence_root->previous_issue->type == PROCESS_ACTION_PM_IDLE ||
+        sequence_root->previous_issue->type == PROCESS_ACTION_PM_SEQUENCE_RESOLVED)
+      sequence_root = sequence_root->previous_issue;
+  }
+  if (sequence_root->object_uid == action->object_uid) {
+    sequence_root = NULL;
+  }
+  MCcall(construct_process_action_detail(sequence_root, &(*output)->unit_detail.sequence_root));
+
+  (*output)->continuance_action_type = 0;
+  (*output)->continuance_dialogue = NULL;
+
+  (*output)->further_branches = NULL;
+  (*output)->process_action_units = NULL;
 
   return 0;
 }
