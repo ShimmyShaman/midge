@@ -162,10 +162,6 @@ typedef enum {
   PROCESS_VIEW_DEMONSTRATED = 1,
   PROCESS_VIEW_EXHIBITED,
 } process_unit_view_type;
-typedef enum {
-  PROCESS_UNIT_ACTION_UNIT = PROCESS_ACTION_MAX_NOT_SET + 1,
-  PROCESS_UNIT_BRANCH,
-} process_unit_type;
 
 #define branch_unit_v1                    \
   struct {                                \
@@ -364,24 +360,15 @@ typedef struct mc_process_action_detail_v1 {
 
 typedef struct mc_process_unit_v1 {
   mc_struct_id_v1 *struct_id;
-  process_unit_type type;
   unsigned int utilization_count;
-  union {
-    struct {
-      mc_process_action_detail_v1 *action;
-      // The action previous in the current sequence back to after a demo_initiation or idle/resolution action
-      mc_process_action_detail_v1 *sequence_root;
-      mc_process_action_detail_v1 *previous_issue;
-      mc_process_action_detail_v1 *contextual_issue;
-    } unit_detail;
-
-    struct {
-
-    } branch;
-  };
-  mc_void_collection_v1 *process_action_units;
+  mc_process_action_detail_v1 *action;
+  // The action previous in the current sequence back to after a demo_initiation or idle/resolution action
+  mc_process_action_detail_v1 *sequence_root_issue;
+  mc_process_action_detail_v1 *previous_issue;
+  mc_process_action_detail_v1 *contextual_issue;
+  mc_void_collection_v1 *consensus_process_units;
   mc_void_collection_v1 *further_branches;
-  
+
   process_action_type continuance_action_type;
   const char *continuance_dialogue;
   const char *continuance_dialogue_has_pattern;
