@@ -358,16 +358,28 @@ typedef struct mc_process_action_detail_v1 {
   process_originator origin;
 } mc_process_action_detail_v1;
 
+typedef enum {
+  PROCESS_UNIT_ACTION_DETAIL = 1,
+  PROCESS_UNIT_CONSENSUS_DETAIL,
+  PROCESS_UNIT_BRANCH,
+} process_unit_type;
+
 typedef struct mc_process_unit_v1 {
   mc_struct_id_v1 *struct_id;
+  process_unit_type type;
   unsigned int utilization_count;
   mc_process_action_detail_v1 *action;
   // The action previous in the current sequence back to after a demo_initiation or idle/resolution action
   mc_process_action_detail_v1 *sequence_root_issue;
   mc_process_action_detail_v1 *previous_issue;
   mc_process_action_detail_v1 *contextual_issue;
-  mc_void_collection_v1 *consensus_process_units;
-  mc_void_collection_v1 *further_branches;
+  union {
+    mc_void_collection_v1 *consensus_process_units;
+    struct {
+      mc_process_unit_v1 *first;
+      mc_process_unit_v1 *second;
+    } branch;
+  };
 
   process_action_type continuance_action_type;
   const char *continuance_dialogue;
