@@ -309,14 +309,14 @@ int conform_type_identity_v1(int argc, void **argv)
   return 0;
 }
 
-int initialize_function_v1(int argc, void **argv)
+int instantiate_function_v1(int argc, void **argv)
 {
   int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
-  printf("~initialize_function_v1()\n");
+  printf("~instantiate()\n");
 
   char *function_name = *(char **)argv[0];
   char *script = *(char **)argv[1];
@@ -743,7 +743,6 @@ int parse_script_to_mc_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
-  // printf("initialize_function_v1()\n");
 
   char **output = (char **)argv[0];
   function_info *func_info = *(function_info **)argv[1];

@@ -82,8 +82,11 @@ typedef unsigned int uint;
   }
 
 typedef enum {
+
+  PROCESS_ACTION_NULL = 1,
+  PROCESS_ACTION_NONE,
+
   // User Initiated
-  PROCESS_ACTION_NONE = 1,
   PROCESS_ACTION_USER_UNPROVOKED_COMMAND,
   PROCESS_ACTION_USER_SCRIPT_ENTRY,
   PROCESS_ACTION_USER_SCRIPT_RESPONSE,
@@ -105,7 +108,8 @@ typedef enum {
 } process_action_type;
 
 typedef enum {
-  PROCESS_ORIGINATOR_USER = 1,
+  PROCESS_ORIGINATOR_NULL = 1,
+  PROCESS_ORIGINATOR_USER,
   PROCESS_ORIGINATOR_PM,
   PROCESS_ORIGINATOR_SCRIPT,
 } process_originator_type;
@@ -295,7 +299,7 @@ typedef struct mc_process_action_v1 {
 
 typedef struct mc_process_action_detail_v1 {
   process_action_type type;
-  const char *dialogue;
+  char *dialogue;
   bool dialogue_has_pattern;
   process_originator_type origin;
 } mc_process_action_detail_v1;
@@ -304,21 +308,20 @@ typedef struct mc_process_unit_v1 {
   mc_struct_id_v1 *struct_id;
   process_unit_type type;
   unsigned int utilization_count;
+
   mc_process_action_detail_v1 *action;
   // The action previous in the current sequence back to after a demo_initiation or idle/resolution action
   mc_process_action_detail_v1 *sequence_root_issue;
   mc_process_action_detail_v1 *previous_issue;
   mc_process_action_detail_v1 *contextual_issue;
+
   union {
     mc_void_collection_v1 *consensus_process_units;
-    struct {
-      mc_process_unit_v1 *first;
-      mc_process_unit_v1 *second;
-    } branch;
+    mc_void_collection_v1 *branches;
   };
 
   process_action_type continuance_action_type;
-  const char *continuance_dialogue;
+  char *continuance_dialogue;
   bool continuance_dialogue_has_pattern;
 } mc_process_unit_v1;
 

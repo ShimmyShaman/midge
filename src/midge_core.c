@@ -442,7 +442,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
 //   //   }
 //   //   else
 //   //   {
-//   //     printf("init_function_V1:>[cpy]>unhandled type identity:%s\n", type_identity);
+//   //     printf("instantiate_function_V1:>[cpy]>unhandled type identity:%s\n", type_identity);
 //   //     return -727;
 //   //   }
 //   // }
@@ -2360,8 +2360,8 @@ int mc_main(int argc, const char *const *argv)
   // &template_collection->template_count, (void *)template_process));
 
   // template_process = (midgeo)malloc(sizeof_void_ptr * 2);
-  // allocate_from_cstringv(&template_process[0], "invoke init_function");
-  // MCcall(mcqck_temp_create_process_init_function((midgeo *)&template_process[1]));
+  // allocate_from_cstringv(&template_process[0], "invoke instantiate_function");
+  // MCcall(mcqck_temp_create_process_instantiate_function((midgeo *)&template_process[1]));
   // MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc,
   // &template_collection->template_count, (void *)template_process));
 
@@ -2441,7 +2441,7 @@ int mc_main(int argc, const char *const *argv)
       "enddemo|"
       // -- END DEMO invoke $function_to_invoke
       // -- invoke initialize function
-      "invoke init_function|"
+      "invoke instantiate_function|"
       "@function_name|"
       // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "dcd node * child\n"
@@ -3734,7 +3734,7 @@ int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub)
 
   init_unit->action = (mc_process_action_detail_v1 *)malloc(sizeof(mc_process_action_detail_v1));
   init_unit->action->type = PROCESS_ACTION_USER_UNPROVOKED_COMMAND;
-  init_unit->action->dialogue = "hello midge";
+  allocate_and_copy_cstr(init_unit->action->dialogue, "hello midge");
   init_unit->action->dialogue_has_pattern = false;
   init_unit->action->origin = PROCESS_ORIGINATOR_USER;
 
@@ -3743,11 +3743,10 @@ int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub)
   construct_process_action_detail(NULL, &init_unit->sequence_root_issue);
 
   init_unit->consensus_process_units = NULL;
-  init_unit->branch.first = NULL;
-  init_unit->branch.second = NULL;
+  init_unit->branches = NULL;
 
   init_unit->continuance_action_type = PROCESS_ACTION_PM_IDLE;
-  init_unit->continuance_dialogue = "hello user!";
+  allocate_and_copy_cstr(init_unit->continuance_dialogue, "hello user!");
   init_unit->continuance_dialogue_has_pattern = false;
 
   // Set
@@ -3793,8 +3792,7 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
   MCcall(does_dialogue_have_pattern((*output)->continuance_dialogue, &(*output)->continuance_dialogue_has_pattern));
 
   (*output)->consensus_process_units = NULL;
-  (*output)->branch.first = NULL;
-  (*output)->branch.second = NULL;
+  (*output)->branches = NULL;
 
   return 0;
 }
@@ -3957,12 +3955,13 @@ int clone_process_action_detail(mc_process_action_detail_v1 *process_detail, mc_
 
   return 0;
 }
+
 int clone_process_unit(mc_process_unit_v1 *process_unit, mc_process_unit_v1 **cloned_unit)
 {
   int mc_res;
 
   // Check
-  if (process_unit->branch.first || process_unit->branch.second || process_unit->consensus_process_units) {
+  if (process_unit->type != PROCESS_UNIT_SAMPLE || process_unit->branches || process_unit->consensus_process_units) {
     MCerror(2727, "Incorrect argument state");
   }
 
@@ -3971,12 +3970,16 @@ int clone_process_unit(mc_process_unit_v1 *process_unit, mc_process_unit_v1 **cl
   cloned->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
   cloned->struct_id->identifier = "process_unit";
   cloned->struct_id->version = 1U;
+  cloned->type = PROCESS_UNIT_SAMPLE;
   cloned->utilization_count = 1U;
 
   MCcall(clone_process_action_detail(process_unit->action, &cloned->action));
   MCcall(clone_process_action_detail(process_unit->previous_issue, &cloned->previous_issue));
   MCcall(clone_process_action_detail(process_unit->contextual_issue, &cloned->contextual_issue));
   MCcall(clone_process_action_detail(process_unit->sequence_root_issue, &cloned->sequence_root_issue));
+
+  cloned->branches = NULL;
+  cloned->consensus_process_units = NULL;
 
   cloned->continuance_action_type = process_unit->continuance_action_type;
   cloned->continuance_dialogue = process_unit->continuance_dialogue;
@@ -4100,6 +4103,77 @@ int calculate_process_unit_match_score(mc_process_unit_v1 *matrix_unit, bool inc
   return 0;
 }
 
+int release_process_action_detail(mc_process_action_detail_v1 **action_detail)
+{
+  if (!(*action_detail))
+    return 0;
+
+  if ((*action_detail)->dialogue)
+    free((*action_detail)->dialogue);
+
+  free(*action_detail);
+  *action_detail = NULL;
+
+  return 0;
+}
+
+int form_consensus_from_process_unit_detail(mc_process_action_detail_v1 *consensus_detail,
+                                            mc_process_action_detail_v1 *unit_detail)
+{
+  if (consensus_detail->type != unit_detail->type)
+    consensus_detail->type = PROCESS_ACTION_NULL;
+
+  if (consensus_detail->dialogue != NULL &&
+      (unit_detail->dialogue == NULL || strcmp(consensus_detail->dialogue, unit_detail->dialogue))) {
+    free(consensus_detail->dialogue);
+    consensus_detail->dialogue = NULL;
+    consensus_detail->dialogue_has_pattern = false;
+  }
+  else if (consensus_detail->dialogue_has_pattern && !unit_detail->dialogue_has_pattern) {
+    consensus_detail->dialogue_has_pattern = false;
+  }
+
+  if (consensus_detail->origin != unit_detail->origin)
+    consensus_detail->origin = PROCESS_ORIGINATOR_NULL;
+
+  return 0;
+}
+
+int form_consensus_from_process_unit_collection(mc_process_unit_v1 *consensus_unit, mc_void_collection_v1 *unit_collection)
+{
+  int mc_res;
+
+  // Specify detail fields where they can be specified
+  MCcall(release_process_action_detail(&consensus_unit->action));
+  MCcall(release_process_action_detail(&consensus_unit->previous_issue));
+  MCcall(release_process_action_detail(&consensus_unit->contextual_issue));
+  MCcall(release_process_action_detail(&consensus_unit->sequence_root_issue));
+
+  if (unit_collection->count < 1) {
+    MCerror(4129, "TODO");
+  }
+
+  MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->action, &consensus_unit->action));
+  MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->previous_issue,
+                                     &consensus_unit->previous_issue));
+  MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->contextual_issue,
+                                     &consensus_unit->contextual_issue));
+  MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->sequence_root_issue,
+                                     &consensus_unit->sequence_root_issue));
+
+  for (int i = 1; i < unit_collection->count; ++i) {
+    mc_process_unit_v1 *collection_unit = (mc_process_unit_v1 *)unit_collection->items[i];
+
+    // consensus
+    MCcall(form_consensus_from_process_unit_detail(consensus_unit->action, collection_unit->action));
+    MCcall(form_consensus_from_process_unit_detail(consensus_unit->previous_issue, collection_unit->previous_issue));
+    MCcall(form_consensus_from_process_unit_detail(consensus_unit->contextual_issue, collection_unit->contextual_issue));
+    MCcall(form_consensus_from_process_unit_detail(consensus_unit->sequence_root_issue, collection_unit->sequence_root_issue));
+  }
+
+  return 0;
+}
+
 int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_process_unit_v1 *focused_process_unit)
 {
   int mc_res;
@@ -4108,15 +4182,51 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
   switch (branch_unit->type) {
   case PROCESS_UNIT_SAMPLE: {
     bool match;
-    MCcall(does_process_unit_match_action_and_continuance(focused_process_unit, branch_unit, &match));
+    MCcall(does_process_unit_match_consensus(focused_process_unit, branch_unit, &match));
     if (match) {
       // Build a consensus unit
-      MCerror(2902, "TODO:%i", branch_unit->type);
+      mc_process_unit_v1 *cloned_unit;
+      MCcall(clone_process_unit(branch_unit, &cloned_unit));
+
+      branch_unit->type = PROCESS_UNIT_CONSENSUS_DETAIL;
+
+      // Set as child consensus units
+      MCcall(init_void_collection_v1(&branch_unit->consensus_process_units));
+      MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
+                                  &branch_unit->consensus_process_units->allocated, &branch_unit->consensus_process_units->count,
+                                  cloned_unit));
+      MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
+                                  &branch_unit->consensus_process_units->allocated, &branch_unit->consensus_process_units->count,
+                                  focused_process_unit));
+
+      branch_unit->utilization_count = branch_unit->consensus_process_units->count;
+      MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->consensus_process_units));
+
+      return 0;
     }
 
-    // Build a splitting branch
-    MCerror(2905, "TODO:%i", branch_unit->type);
-    // No Match
+    // Split into a multi branched unit
+    mc_process_unit_v1 *cloned_unit;
+    MCcall(clone_process_unit(branch_unit, &cloned_unit));
+
+    branch_unit->type = PROCESS_UNIT_BRANCH;
+
+    branch_unit->continuance_action_type = PROCESS_ACTION_NULL;
+    if (branch_unit->continuance_dialogue)
+      free(branch_unit->continuance_dialogue);
+    branch_unit->continuance_dialogue = NULL;
+    branch_unit->continuance_dialogue_has_pattern = false;
+
+    // Set as child branches
+    MCcall(init_void_collection_v1(&branch_unit->branches));
+    MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
+                                &branch_unit->branches->count, cloned_unit));
+    MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
+                                &branch_unit->branches->count, focused_process_unit));
+
+    branch_unit->utilization_count = branch_unit->branches->count;
+    MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->branches));
+
     return 0;
   } break;
   case PROCESS_UNIT_CONSENSUS_DETAIL: {
@@ -4135,40 +4245,41 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
       }
 
       // Force split of consensus unit into branches
-      MCerror(2927, "TODO:%i", branch_unit->type);
+      MCerror(4248, "TODO:%i", branch_unit->type);
 
       return 0;
     }
 
     // Force split into branches
-    MCerror(2916, "TODO:%i", branch_unit->type);
+    MCerror(4254, "TODO:%i", branch_unit->type);
 
     return 0;
   } break;
   case PROCESS_UNIT_BRANCH: {
     // Find the branch the action would traverse down
     // Find the branch that matches action details with the highest score
-    unsigned int first_branch_match_score, second_branch_match_score;
-    MCcall(calculate_process_unit_match_score(
-        branch_unit->branch.first, false, focused_process_unit->action->type, focused_process_unit->action->dialogue,
-        focused_process_unit->previous_issue->type, focused_process_unit->previous_issue->dialogue,
-        focused_process_unit->contextual_issue->type, focused_process_unit->contextual_issue->dialogue,
-        focused_process_unit->sequence_root_issue->type, focused_process_unit->sequence_root_issue->dialogue,
-        &first_branch_match_score));
-    MCcall(calculate_process_unit_match_score(
-        branch_unit->branch.first, false, focused_process_unit->action->type, focused_process_unit->action->dialogue,
-        focused_process_unit->previous_issue->type, focused_process_unit->previous_issue->dialogue,
-        focused_process_unit->contextual_issue->type, focused_process_unit->contextual_issue->dialogue,
-        focused_process_unit->sequence_root_issue->type, focused_process_unit->sequence_root_issue->dialogue,
-        &second_branch_match_score));
+    // unsigned int first_branch_match_score, second_branch_match_score;
+    // MCcall(calculate_process_unit_match_score(
+    //     branch_unit->branch.first, false, focused_process_unit->action->type, focused_process_unit->action->dialogue,
+    //     focused_process_unit->previous_issue->type, focused_process_unit->previous_issue->dialogue,
+    //     focused_process_unit->contextual_issue->type, focused_process_unit->contextual_issue->dialogue,
+    //     focused_process_unit->sequence_root_issue->type, focused_process_unit->sequence_root_issue->dialogue,
+    //     &first_branch_match_score));
+    // MCcall(calculate_process_unit_match_score(
+    //     branch_unit->branch.first, false, focused_process_unit->action->type, focused_process_unit->action->dialogue,
+    //     focused_process_unit->previous_issue->type, focused_process_unit->previous_issue->dialogue,
+    //     focused_process_unit->contextual_issue->type, focused_process_unit->contextual_issue->dialogue,
+    //     focused_process_unit->sequence_root_issue->type, focused_process_unit->sequence_root_issue->dialogue,
+    //     &second_branch_match_score));
 
-    if (first_branch_match_score > second_branch_match_score) {
-      MCcall(attach_process_unit_to_matrix_branch(focused_process_unit, branch_unit->branch.first));
-    }
-    else {
-      MCcall(attach_process_unit_to_matrix_branch(focused_process_unit, branch_unit->branch.second));
-    }
+    // if (first_branch_match_score > second_branch_match_score) {
+    //   MCcall(attach_process_unit_to_matrix_branch(focused_process_unit, branch_unit->branch.first));
+    // }
+    // else {
+    //   MCcall(attach_process_unit_to_matrix_branch(focused_process_unit, branch_unit->branch.second));
+    // }
 
+    MCerror(4282, "TODO:%i", branch_unit->type);
     return 0;
   } break;
 
@@ -4614,29 +4725,29 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->name = "parameter_name";
   }
 
-  mc_function_info_v1 *init_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  all_function_definitions[all_function_definition_count++] = init_function_definition_v1;
+  mc_function_info_v1 *instantiate_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  all_function_definitions[all_function_definition_count++] = instantiate_function_definition_v1;
   {
-    init_function_definition_v1->struct_id = NULL;
-    init_function_definition_v1->name = "init_function";
-    init_function_definition_v1->latest_iteration = 1U;
-    init_function_definition_v1->return_type = "void";
-    init_function_definition_v1->parameter_count = 2;
-    init_function_definition_v1->parameters =
-        (mc_parameter_info_v1 **)malloc(sizeof(void *) * init_function_definition_v1->parameter_count);
-    init_function_definition_v1->variable_parameter_begin_index = -1;
-    init_function_definition_v1->struct_usage_count = 0;
-    init_function_definition_v1->struct_usage = NULL;
+    instantiate_function_definition_v1->struct_id = NULL;
+    instantiate_function_definition_v1->name = "instantiate_function";
+    instantiate_function_definition_v1->latest_iteration = 1U;
+    instantiate_function_definition_v1->return_type = "void";
+    instantiate_function_definition_v1->parameter_count = 2;
+    instantiate_function_definition_v1->parameters =
+        (mc_parameter_info_v1 **)malloc(sizeof(void *) * instantiate_function_definition_v1->parameter_count);
+    instantiate_function_definition_v1->variable_parameter_begin_index = -1;
+    instantiate_function_definition_v1->struct_usage_count = 0;
+    instantiate_function_definition_v1->struct_usage = NULL;
 
     mc_parameter_info_v1 *field;
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    init_function_definition_v1->parameters[0] = field;
+    instantiate_function_definition_v1->parameters[0] = field;
     field->type_name = "char";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "function_name";
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    init_function_definition_v1->parameters[1] = field;
+    instantiate_function_definition_v1->parameters[1] = field;
     field->type_name = "char";
     field->type_version = 1U;
     field->type_deref_count = 1;
@@ -4794,7 +4905,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   output[n + fsize - s] = '\0';
 
   clint_process("int (*declare_function_pointer)(int, void **);");
-  clint_process("int (*init_function)(int, void **);");
+  clint_process("int (*instantiate_function)(int, void **);");
   clint_process("int (*parse_script_to_mc)(int, void **);");
   clint_process("int (*conform_type_identity)(int, void **);");
   clint_process("int (*create_default_mc_struct)(int, void **);");
@@ -4811,9 +4922,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
 
-  clint_process("init_function = &init_function_v1;");
+  clint_process("instantiate_function = &instantiate_function_v1;");
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)init_function_definition_v1));
+                              &command_hub->global_node->function_count, (void *)instantiate_function_definition_v1));
 
   clint_process("parse_script_to_mc = &parse_script_to_mc_v1;");
   // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
