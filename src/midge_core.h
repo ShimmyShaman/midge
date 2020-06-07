@@ -69,11 +69,13 @@ typedef unsigned int uint;
     dest = mc_tmp_cstr;                                         \
   }
 
-#define MCcall(function)                    \
-  mc_res = function;                        \
-  if (mc_res) {                             \
-    printf("--" #function ":%i\n", mc_res); \
-    return mc_res;                          \
+#define MCcall(function)                      \
+  {                                           \
+    int mc_res = function;                    \
+    if (mc_res) {                             \
+      printf("--" #function ":%i\n", mc_res); \
+      return mc_res;                          \
+    }                                         \
   }
 
 #define MCerror(error_code, error_message, ...)                          \
@@ -359,6 +361,8 @@ int clint_loadheader(const char *path);
 const char *get_action_type_string(process_action_type action_type)
 {
   switch (action_type) {
+  case PROCESS_ACTION_NONE:
+    return "PROCESS_ACTION_NONE";
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
     return "PROCESS_ACTION_USER_UNPROVOKED_COMMAND";
   case PROCESS_ACTION_USER_SCRIPT_ENTRY:
@@ -384,7 +388,7 @@ const char *get_action_type_string(process_action_type action_type)
   case PROCESS_ACTION_SCRIPT_QUERY:
     return "PROCESS_ACTION_SCRIPT_QUERY";
   default:
-    return "UNWRITTEN_PROCESS_ACTION_TYPE";
+    return "UNSPECIFIED_PROCESS_ACTION_TYPE";
   }
 }
 

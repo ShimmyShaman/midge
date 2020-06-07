@@ -16,9 +16,6 @@ int find_function_info_v1(int argc, void **argv)
   node *nodespace = *(node **)argv[1];
   char *function_name = *(char **)argv[2];
 
-  void **mc_dvp;
-  int mc_res;
-
   *func_info = NULL;
   // printf("ffi-nodespace.name:%s\n", nodespace->name);
   for (int i = 0; i < nodespace->function_count; ++i) {
@@ -60,8 +57,6 @@ int find_function_info_v1(int argc, void **argv)
 
 int declare_function_pointer_v1(int argc, void **argv)
 {
-  void **mc_dvp;
-  int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
@@ -202,7 +197,6 @@ int declare_function_pointer_v1(int argc, void **argv)
  */
 int conform_type_identity_v1(int argc, void **argv)
 {
-  int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
@@ -311,7 +305,6 @@ int conform_type_identity_v1(int argc, void **argv)
 
 int instantiate_function_v1(int argc, void **argv)
 {
-  int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
@@ -413,7 +406,6 @@ int instantiate_function_v1(int argc, void **argv)
   // Declare the function
   const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
                                             "  // MidgeC Function Locals\n"
-                                            "  int mc_res;\n"
                                             "  void *mc_vargs[128];\n"
                                             "\n"
                                             "  // Function Parameters\n"
@@ -446,7 +438,6 @@ int instantiate_function_v1(int argc, void **argv)
 
 int parse_past_conformed_type_identifier(function_info *func_info, char *code, int *i, char **conformed_type_identity)
 {
-  int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
@@ -496,7 +487,6 @@ int parse_past_conformed_type_identifier(function_info *func_info, char *code, i
 
 int parse_past_expression(function_info *func_info, void *nodespace, char *code, int *i, char **output)
 {
-  int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
@@ -738,7 +728,6 @@ int create_default_mc_struct_v1(int argc, void **argv)
 
 int parse_script_to_mc_v1(int argc, void **argv)
 {
-  int mc_res;
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.

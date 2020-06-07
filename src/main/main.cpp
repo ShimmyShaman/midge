@@ -49,4 +49,6 @@ int main(int argc, const char *const *argv)
   clint->process("run()");
 
   delete (clint);
+
+  usleep(100000);
 }
