@@ -1995,6 +1995,66 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
   return 0;
 }
 
+int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int indent)
+{
+  if (indent > 0)
+    printf("-%i--", indent);
+  for (int i = 1; i < indent; ++i)
+    printf("----");
+  printf(":");
+  switch (process_unit->type) {
+  case PROCESS_UNIT_SAMPLE:
+    printf("SAMPLE\n");
+    break;
+  case PROCESS_UNIT_CONSENSUS_DETAIL:
+    printf("CONSENSUS\n");
+    break;
+  case PROCESS_UNIT_BRANCH:
+    printf("BRANCH\n");
+    break;
+  default:
+    MCerror(2009, "forget");
+  }
+
+  if (detail_level > 0) {
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf("actType:%s\n", get_action_type_string(process_unit->action->type));
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf(">actDiag:'%s'\n", process_unit->action->dialogue == NULL ? "(null)" : process_unit->action->dialogue);
+  }
+
+  if (detail_level > 1) {
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf("contType:%s\n", get_action_type_string(process_unit->continuance_action_type));
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf(">contDiag:'%s'\n", process_unit->continuance_dialogue == NULL ? "(null)" : process_unit->continuance_dialogue);
+  }
+
+  // Children
+  switch (process_unit->type) {
+  case PROCESS_UNIT_SAMPLE:
+    return 0;
+  case PROCESS_UNIT_CONSENSUS_DETAIL:
+    for (int i = 0; i < process_unit->consensus_process_units->count; ++i)
+      print_process_unit((mc_process_unit_v1 *)process_unit->consensus_process_units->items[i], detail_level, indent + 1);
+    return 0;
+  case PROCESS_UNIT_BRANCH:
+    for (int i = 0; i < process_unit->branches->count; ++i)
+      print_process_unit((mc_process_unit_v1 *)process_unit->branches->items[i], detail_level, indent + 1);
+    return 0;
+  default:
+    MCerror(2009, "forget");
+  }
+}
+
 int init_core_functions(mc_command_hub_v1 *command_hub);
 int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
@@ -2504,6 +2564,9 @@ int mc_main(int argc, const char *const *argv)
     // }
   }
 
+  printf("\n\nProcess Matrix:\n");
+  print_process_unit(command_hub->process_matrix, 5, 1);
+
   printf("\n\n</midge_core>\n");
   return 0;
 }
@@ -2576,6 +2639,7 @@ int submit_user_command(int argc, void **argsv)
     }
     process_action = (mc_process_action_v1 *)p_response_action;
   }
+  // printf("suc-7\n");
 
   // Send control back to the user
   return 0;
@@ -2636,13 +2700,14 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
 int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_process_unit_v1 *process_unit);
 int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action)
 {
-  // printf("pmra-0\n");
+  printf("pmra-0\n");
   int mc_res;
 
   // Construct and register the focused action inside the process matrix
   mc_process_unit_v1 *action_process_unit;
   MCcall(construct_process_unit_from_action(command_hub, action, &action_process_unit));
 
+  printf("pmra-1\n");
   // Find the appropriate branch to place it, creating a new one if need be
   // Search first amongst action types
   MCcall(attach_process_unit_to_matrix_branch(command_hub->process_matrix, action_process_unit));
@@ -2767,7 +2832,7 @@ int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process
     action = action->contextual_issue;
   }
   printf("chspa>(%u) Depth:%i", process_action->object_uid, depth);
-  printf(" Submitted:%s", get_action_type_string(process_action));
+  printf(" Submitted:%s", get_action_type_string(process_action->type));
   printf("\n");
 
   return 0;
@@ -3429,7 +3494,7 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
   mc_process_action_v1 *focused_issue =
       (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
 
-  printf("aupi-1: focused_issue=%s\n", get_action_type_string(focused_issue));
+  printf("aupi-1: focused_issue=%s\n", get_action_type_string(focused_issue->type));
 
   // Filter the types of actions that can be assisted with
   switch (focused_issue->type) {
@@ -3450,9 +3515,9 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     if (!focused_issue->contextual_issue)
       break;
 
-    printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue),
+    printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue->type),
            focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
-    printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue),
+    printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue->type),
            focused_issue->contextual_issue->dialogue == NULL ? "(null)" : focused_issue->contextual_issue->dialogue);
 
     // for (int i = 0; i < command_hub->process_matrix->count; ++i) {
@@ -3475,7 +3540,8 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     // }
 
     // MCerror(3392,
-    //         "TODO -- go through the process matrix and determine if contextual and previous actions match with patterns etc");
+    //         "TODO -- go through the process matrix and determine if contextual and previous actions match with patterns
+    //         etc");
   } break;
     // Script
   case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
@@ -3776,7 +3842,9 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
     if (sequence_root->previous_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ||
         sequence_root->previous_issue->type == PROCESS_ACTION_PM_IDLE ||
         sequence_root->previous_issue->type == PROCESS_ACTION_PM_SEQUENCE_RESOLVED)
-      sequence_root = sequence_root->previous_issue;
+      break;
+
+    sequence_root = sequence_root->previous_issue;
   }
   if (sequence_root->object_uid == action->object_uid) {
     sequence_root = NULL;
@@ -3800,7 +3868,7 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
 int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_focused_issue,
                                 char const *const dialogue, bool force_resolution, mc_process_action_v1 **output)
 {
-  printf("cca-0\n");
+  // printf("cca-0\n");
   if (current_focused_issue->contextual_issue == NULL || current_focused_issue->contextual_issue->next_issue == NULL) {
     MCerror(3615, "shouldn't be");
   }
@@ -3819,9 +3887,94 @@ int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_actio
                            current_focused_issue->contextual_issue, current_focused_issue, dialogue, NULL, output);
   return 0;
 }
-int does_dialogue_match_pattern(char const *const dialogue, char const *const pattern, bool *result)
+int does_dialogue_match_pattern(char const *const dialogue, char const *const pattern, bool *match)
 {
-  MCerror(2632, "NotYetImplemented");
+  if (dialogue == NULL || pattern == NULL) {
+    MCerror(3826, "TODO");
+  }
+
+  // TODO
+  void *variables = NULL;
+
+  // Pattern Match
+  mc_key_value_pair_v1 *kvps[256];
+  int kvps_index = 0;
+
+  // Determine how well the pattern matches
+  char *pattern_args[256];
+  char buf[256];
+
+  // printf("atrc-2\n");
+  int d = 0, dn = strlen(dialogue);
+  int p = 0, pn = strlen(pattern);
+  while (1) {
+    // Find the next word in the pattern
+    int pi;
+    bool is_variable = pattern[p] == '@';
+    bool string_end = false;
+    for (pi = p; pi <= pn; ++pi) {
+      if (pattern[pi] == ' ')
+        break;
+      if (pattern[pi] == '\0') {
+        string_end = true;
+        break;
+      }
+      // printf("atrc-3\n");
+    }
+
+    // Find the next word in the dialogue
+    int di;
+    for (di = d; di <= dn; ++di) {
+      if (dialogue[di] == ' ')
+        break;
+      if (dialogue[di] == '\0') {
+        break;
+      }
+      // printf("atrc-4\n");
+    }
+    if (string_end && di != dn) {
+      if (variables) {
+        MCerror(3863, "TODO release");
+      }
+      *match = false;
+      return 0;
+    }
+
+    if (is_variable) {
+      if (variables) {
+        mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
+
+        allocate_and_copy_cstrn(kvp->key, (pattern + p + 1), pi - p - 1);
+        allocate_and_copy_cstrn(kvp->value, (dialogue + d), di - d);
+        kvps[kvps_index++] = kvp;
+      }
+
+      // printf("setkvp: %s+%s\n", kvp->key, (char *)kvp->value);
+    }
+    else {
+      if (strncmp(dialogue + d, pattern + p, di - d)) {
+        if (variables) {
+          MCerror(3863, "TODO release");
+        }
+        *match = false;
+        return 0;
+      }
+    }
+    // printf("atrc-5\n");
+
+    // Fitting word
+    if (string_end) {
+      // Statement match by pattern
+      *match = true;
+      return 0;
+    }
+
+    // Continue
+    d = di + 1;
+    p = pi + 1;
+  }
+
+  MCerror(3903, "Incorrect flow");
 }
 
 int does_process_unit_detail_match(mc_process_action_detail_v1 *process_unit_detail,
@@ -3990,16 +4143,67 @@ int clone_process_unit(mc_process_unit_v1 *process_unit, mc_process_unit_v1 **cl
   return 0;
 }
 
-int does_process_unit_match_consensus(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *branch_unit, bool *match_result)
+int does_process_unit_match_detail_consensus(mc_process_action_detail_v1 *process_unit,
+                                             mc_process_action_detail_v1 *consensus_unit, bool *match_result)
 {
-  MCerror(2795, "NYI");
+  int mc_res;
+
+  if (consensus_unit->type != PROCESS_ACTION_NULL && consensus_unit->type != process_unit->type) {
+    *match_result = false;
+    return 0;
+  }
+
+  if (consensus_unit->dialogue != NULL) {
+    if (process_unit->dialogue == NULL) {
+      *match_result = false;
+      return 0;
+    }
+
+    MCcall(does_dialogue_match_pattern(process_unit->dialogue, consensus_unit->dialogue, match_result));
+    if (!*match_result) {
+      return 0;
+    }
+  }
+
+  return 0;
+}
+
+int does_process_unit_match_consensus(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *consensus_unit, bool *match_result)
+{
+  int mc_res;
+
+  MCcall(does_process_unit_match_detail_consensus(process_unit->action, consensus_unit->action, match_result));
+  if (!*match_result) {
+    return 0;
+  }
+
+  MCcall(does_process_unit_match_detail_consensus(process_unit->previous_issue, consensus_unit->previous_issue, match_result));
+  if (!*match_result) {
+    return 0;
+  }
+
+  MCcall(
+      does_process_unit_match_detail_consensus(process_unit->contextual_issue, consensus_unit->contextual_issue, match_result));
+  if (!*match_result) {
+    return 0;
+  }
+
+  MCcall(does_process_unit_match_detail_consensus(process_unit->sequence_root_issue, consensus_unit->sequence_root_issue,
+                                                  match_result));
 
   return 0;
 }
 
 int does_process_unit_match_continuance(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *branch_unit, bool *match_result)
 {
-  MCerror(2802, "NYI");
+  int mc_res;
+
+  if (process_unit->continuance_action_type != branch_unit->continuance_action_type) {
+    *match_result = false;
+    return 0;
+  }
+
+  MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, branch_unit->continuance_dialogue, match_result));
 
   return 0;
 }
@@ -4120,19 +4324,51 @@ int release_process_action_detail(mc_process_action_detail_v1 **action_detail)
 int form_consensus_from_process_unit_detail(mc_process_action_detail_v1 *consensus_detail,
                                             mc_process_action_detail_v1 *unit_detail)
 {
+  int mc_res;
+
+  // Type
   if (consensus_detail->type != unit_detail->type)
     consensus_detail->type = PROCESS_ACTION_NULL;
 
-  if (consensus_detail->dialogue != NULL &&
-      (unit_detail->dialogue == NULL || strcmp(consensus_detail->dialogue, unit_detail->dialogue))) {
-    free(consensus_detail->dialogue);
-    consensus_detail->dialogue = NULL;
-    consensus_detail->dialogue_has_pattern = false;
-  }
-  else if (consensus_detail->dialogue_has_pattern && !unit_detail->dialogue_has_pattern) {
-    consensus_detail->dialogue_has_pattern = false;
+  // Dialogue & pattern
+  if (consensus_detail->dialogue != NULL) {
+    if (unit_detail->dialogue == NULL) {
+      free(consensus_detail->dialogue);
+      consensus_detail->dialogue = NULL;
+      consensus_detail->dialogue_has_pattern = false;
+    }
+    else if (consensus_detail->dialogue_has_pattern) {
+      bool pattern_match;
+      MCcall(does_dialogue_match_pattern(unit_detail->dialogue, consensus_detail->dialogue, &pattern_match));
+      if (!pattern_match) {
+        free(consensus_detail->dialogue);
+        consensus_detail->dialogue = NULL;
+        consensus_detail->dialogue_has_pattern = false;
+      }
+    }
+    else if (!consensus_detail->dialogue_has_pattern) {
+      if (unit_detail->dialogue_has_pattern) {
+        // Ensure match
+        bool pattern_match;
+        MCcall(does_dialogue_match_pattern(consensus_detail->dialogue, unit_detail->dialogue, &pattern_match));
+
+        // Replace
+        free(consensus_detail->dialogue);
+        consensus_detail->dialogue_has_pattern = true;
+        allocate_and_copy_cstr(consensus_detail->dialogue, unit_detail->dialogue);
+      }
+      else {
+        // consensus_detail exists without pattern, as does unit dialogue
+        if (strcmp(consensus_detail->dialogue, unit_detail->dialogue)) {
+          free(consensus_detail->dialogue);
+          consensus_detail->dialogue = NULL;
+          consensus_detail->dialogue_has_pattern = false;
+        }
+      }
+    }
   }
 
+  // Origin
   if (consensus_detail->origin != unit_detail->origin)
     consensus_detail->origin = PROCESS_ORIGINATOR_NULL;
 
@@ -4182,7 +4418,7 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
   switch (branch_unit->type) {
   case PROCESS_UNIT_SAMPLE: {
     bool match;
-    MCcall(does_process_unit_match_consensus(focused_process_unit, branch_unit, &match));
+    MCcall(does_process_unit_match_continuance(focused_process_unit, branch_unit, &match));
     if (match) {
       // Build a consensus unit
       mc_process_unit_v1 *cloned_unit;
@@ -4228,58 +4464,60 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
     MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->branches));
 
     return 0;
-  } break;
+  }
   case PROCESS_UNIT_CONSENSUS_DETAIL: {
     bool match;
     MCcall(does_process_unit_match_consensus(focused_process_unit, branch_unit, &match));
     if (match) {
       MCcall(does_process_unit_match_continuance(focused_process_unit, branch_unit, &match));
-      if (match) {
-        // Append given unit as a consensus process action
-        MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
-                                    &branch_unit->consensus_process_units->allocated,
-                                    &branch_unit->consensus_process_units->count, focused_process_unit));
-        ++branch_unit->utilization_count;
-
-        return 0;
-      }
-
-      // Force split of consensus unit into branches
-      MCerror(4248, "TODO:%i", branch_unit->type);
+    }
+    if (match) {
+      // Append given unit as a consensus process action
+      MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
+                                  &branch_unit->consensus_process_units->allocated, &branch_unit->consensus_process_units->count,
+                                  focused_process_unit));
+      ++branch_unit->utilization_count;
 
       return 0;
     }
 
-    // Force split into branches
-    MCerror(4254, "TODO:%i", branch_unit->type);
+    // Force split of consensus unit into branches
+    MCerror(4407, "TODO:%i", branch_unit->type);
 
     return 0;
-  } break;
+  }
   case PROCESS_UNIT_BRANCH: {
-    // Find the branch the action would traverse down
-    // Find the branch that matches action details with the highest score
-    // unsigned int first_branch_match_score, second_branch_match_score;
-    // MCcall(calculate_process_unit_match_score(
-    //     branch_unit->branch.first, false, focused_process_unit->action->type, focused_process_unit->action->dialogue,
-    //     focused_process_unit->previous_issue->type, focused_process_unit->previous_issue->dialogue,
-    //     focused_process_unit->contextual_issue->type, focused_process_unit->contextual_issue->dialogue,
-    //     focused_process_unit->sequence_root_issue->type, focused_process_unit->sequence_root_issue->dialogue,
-    //     &first_branch_match_score));
-    // MCcall(calculate_process_unit_match_score(
-    //     branch_unit->branch.first, false, focused_process_unit->action->type, focused_process_unit->action->dialogue,
-    //     focused_process_unit->previous_issue->type, focused_process_unit->previous_issue->dialogue,
-    //     focused_process_unit->contextual_issue->type, focused_process_unit->contextual_issue->dialogue,
-    //     focused_process_unit->sequence_root_issue->type, focused_process_unit->sequence_root_issue->dialogue,
-    //     &second_branch_match_score));
+    // Determine if the unit matches the consensus of any current branch
+    mc_process_unit_v1 *best_match = NULL;
+    unsigned int best_match_score;
+    for (int i = 0; i < branch_unit->branches->count; ++i) {
+      bool match;
+      mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+      MCcall(does_process_unit_match_consensus(focused_process_unit, branch_child, &match));
+      if (match) {
+        unsigned int match_score;
+        MCcall(calculate_process_unit_match_score(
+            branch_child, false, focused_process_unit->action->type, focused_process_unit->action->dialogue,
+            focused_process_unit->previous_issue->type, focused_process_unit->previous_issue->dialogue,
+            focused_process_unit->contextual_issue->type, focused_process_unit->contextual_issue->dialogue,
+            focused_process_unit->sequence_root_issue->type, focused_process_unit->sequence_root_issue->dialogue, &match_score));
+        if (!best_match || match_score > best_match_score) {
+          best_match = branch_child;
+          best_match_score = match_score;
+        }
+      }
+    }
 
-    // if (first_branch_match_score > second_branch_match_score) {
-    //   MCcall(attach_process_unit_to_matrix_branch(focused_process_unit, branch_unit->branch.first));
-    // }
-    // else {
-    //   MCcall(attach_process_unit_to_matrix_branch(focused_process_unit, branch_unit->branch.second));
-    // }
+    if (best_match) {
+      MCcall(attach_process_unit_to_matrix_branch(best_match, focused_process_unit));
 
-    MCerror(4282, "TODO:%i", branch_unit->type);
+      return 0;
+    }
+
+    // Append as another branch child
+    MCcall(append_to_collection(&branch_unit->branches->items, &branch_unit->branches->allocated, &branch_unit->branches->count,
+                                focused_process_unit));
+
     return 0;
   } break;
 
@@ -4308,8 +4546,8 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
 
   //   // Add given unit as a consensus process action
   //   MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
-  //                               &branch_unit->consensus_process_units->allocated, &branch_unit->consensus_process_units->count,
-  //                               focused_process_unit));
+  //                               &branch_unit->consensus_process_units->allocated,
+  //                               &branch_unit->consensus_process_units->count, focused_process_unit));
   //   branch_unit->utilization_count = branch_unit->consensus_process_units->count;
 
   //   // Modify the branch to specify its fields on all of its consensus process action matches
@@ -4936,7 +5174,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
   // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-  //             TODO                &command_hub->global_node->function_count, (void *)create_default_mc_struct_definition_v1));
+  //             TODO                &command_hub->global_node->function_count, (void
+  //             *)create_default_mc_struct_definition_v1));
 
   // printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
 

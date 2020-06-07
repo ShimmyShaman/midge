@@ -58,10 +58,16 @@ typedef unsigned int uint;
     dest = mc_tmp_cstr;                                                   \
   }
 
-#define allocate_and_copy_cstrn(dest, src, n)    \
-  dest = (char *)malloc(sizeof(char) * (n + 1)); \
-  strncpy(dest, src, n);                         \
-  dest[n] = '\0';
+#define allocate_and_copy_cstrn(dest, src, n)                   \
+  if (src == NULL) {                                            \
+    dest = NULL;                                                \
+  }                                                             \
+  else {                                                        \
+    char *mc_tmp_cstr = (char *)malloc(sizeof(char) * (n + 1)); \
+    strncpy(mc_tmp_cstr, src, n);                               \
+    mc_tmp_cstr[n] = '\0';                                      \
+    dest = mc_tmp_cstr;                                         \
+  }
 
 #define MCcall(function)                    \
   mc_res = function;                        \
@@ -350,9 +356,9 @@ int clint_declare(const char *str);
 int clint_loadfile(const char *path);
 int clint_loadheader(const char *path);
 
-const char *get_action_type_string(mc_process_action_v1 *action)
+const char *get_action_type_string(process_action_type action_type)
 {
-  switch (action->type) {
+  switch (action_type) {
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
     return "PROCESS_ACTION_USER_UNPROVOKED_COMMAND";
   case PROCESS_ACTION_USER_SCRIPT_ENTRY:
