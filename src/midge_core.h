@@ -363,6 +363,8 @@ const char *get_action_type_string(process_action_type action_type)
   switch (action_type) {
   case PROCESS_ACTION_NONE:
     return "PROCESS_ACTION_NONE";
+  case PROCESS_ACTION_NULL:
+    return "PROCESS_ACTION_NULL";
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
     return "PROCESS_ACTION_USER_UNPROVOKED_COMMAND";
   case PROCESS_ACTION_USER_SCRIPT_ENTRY:
@@ -387,8 +389,11 @@ const char *get_action_type_string(process_action_type action_type)
     return "PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS";
   case PROCESS_ACTION_SCRIPT_QUERY:
     return "PROCESS_ACTION_SCRIPT_QUERY";
-  default:
-    return "UNSPECIFIED_PROCESS_ACTION_TYPE";
+  default: {
+    char *type;
+    cprintf(type, "UNSPECIFIED_PROCESS_ACTION_TYPE:%i", (int)action_type);
+    return type;
+  }
   }
 }
 
