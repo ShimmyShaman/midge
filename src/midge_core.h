@@ -150,10 +150,10 @@ typedef enum {
 } process_unit_view_type;
 
 typedef enum {
-  PROCESS_UNIT_SAMPLE = 1,
-  PROCESS_UNIT_CONSENSUS_DETAIL,
-  PROCESS_UNIT_BRANCH,
-} process_unit_type;
+  PROCESS_MATRIX_SAMPLE = 1,
+  PROCESS_MATRIX_NODE,
+  // PROCESS_MATRIX_CONSENSUS_CONTAINER,
+} process_matrix_unit_type;
 
 struct mc_struct_id_v1;
 struct mc_void_collection_v1;
@@ -312,10 +312,12 @@ typedef struct mc_process_action_detail_v1 {
   process_originator_type origin;
 } mc_process_action_detail_v1;
 
+#define PROCESS_UNIT_FIELD_COUNT 8
 typedef struct mc_process_unit_v1 {
   mc_struct_id_v1 *struct_id;
-  process_unit_type type;
-  unsigned int utilization_count;
+
+  process_matrix_unit_type type;
+  unsigned int process_unit_field_differentiation_index;
 
   mc_process_action_detail_v1 *action;
   // The action previous in the current sequence back to after a demo_initiation or idle/resolution action
@@ -323,15 +325,29 @@ typedef struct mc_process_unit_v1 {
   mc_process_action_detail_v1 *previous_issue;
   mc_process_action_detail_v1 *contextual_issue;
 
-  union {
-    mc_void_collection_v1 *consensus_process_units;
-    mc_void_collection_v1 *branches;
-  };
+  mc_process_action_detail_v1 *continuance;
 
-  process_action_type continuance_action_type;
-  char *continuance_dialogue;
-  bool continuance_dialogue_has_pattern;
+  union {
+    mc_void_collection_v1 *children;
+  };
 } mc_process_unit_v1;
+
+// typedef struct mc_process_matrix_node_v1 {
+//   mc_struct_id_v1 *struct_id;
+
+//   mc_process_action_detail_v1 *action;
+//   // The action previous in the current sequence back to after a demo_initiation or idle/resolution action
+//   mc_process_action_detail_v1 *sequence_root_issue;
+//   mc_process_action_detail_v1 *previous_issue;
+//   mc_process_action_detail_v1 *contextual_issue;
+
+//   mc_process_action_detail_v1 *continuance;
+
+//   union {
+//     mc_void_collection_v1 *consensus_process_units;
+//     mc_void_collection_v1 *branches;
+//   };
+// } mc_process_matrix_node_v1;
 
 int (*find_function_info)(int, void **);
 

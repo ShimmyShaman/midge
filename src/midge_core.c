@@ -1988,14 +1988,11 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
     printf("----");
   printf(":");
   switch (process_unit->type) {
-  case PROCESS_UNIT_SAMPLE:
+  case PROCESS_MATRIX_SAMPLE:
     printf("SAMPLE\n");
     break;
-  case PROCESS_UNIT_CONSENSUS_DETAIL:
-    printf("CONSENSUS\n");
-    break;
-  case PROCESS_UNIT_BRANCH:
-    printf("BRANCH\n");
+  case PROCESS_MATRIX_NODE:
+    printf("NODE(%i)\n", process_unit->process_unit_field_differentiation_index);
     break;
   default:
     MCerror(2009, "forget");
@@ -2016,42 +2013,29 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf("contType:%s\n", get_action_type_string(process_unit->continuance_action_type));
+    printf("contType:%s\n", get_action_type_string(process_unit->continuance->type));
   }
 
   if (detail_level > 3) {
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf(">contDiag:'%s'\n", process_unit->continuance_dialogue == NULL ? "(null)" : process_unit->continuance_dialogue);
+    printf(">contDiag:'%s'\n", process_unit->continuance->dialogue == NULL ? "(null)" : process_unit->continuance->dialogue);
   }
 
   // Children
   switch (process_unit->type) {
-  case PROCESS_UNIT_SAMPLE:
+  case PROCESS_MATRIX_SAMPLE:
     return 0;
-  case PROCESS_UNIT_CONSENSUS_DETAIL:
+  case PROCESS_MATRIX_NODE:
     if (print_children) {
-      for (int i = 0; i < process_unit->consensus_process_units->count; ++i)
-        print_process_unit((mc_process_unit_v1 *)process_unit->consensus_process_units->items[i], print_children, print_children,
-                           indent + 1);
+      for (int i = 0; i < process_unit->children->count; ++i)
+        print_process_unit((mc_process_unit_v1 *)process_unit->children->items[i], print_children, print_children, indent + 1);
     }
     else {
       for (int i = 0; i < indent; ++i)
         printf("    ");
-      printf("consensus_units:%i\n", process_unit->consensus_process_units->count);
-    }
-
-    return 0;
-  case PROCESS_UNIT_BRANCH:
-    if (print_children) {
-      for (int i = 0; i < process_unit->branches->count; ++i)
-        print_process_unit((mc_process_unit_v1 *)process_unit->branches->items[i], print_children, print_children, indent + 1);
-    }
-    else {
-      for (int i = 0; i < indent; ++i)
-        printf("    ");
-      printf("child_branches:%i\n", process_unit->branches->count);
+      printf("child_branches:%i\n", process_unit->children->count);
     }
     return 0;
   default:
@@ -2617,8 +2601,13 @@ int submit_user_command(int argc, void **argsv)
       if (action == NULL) {
         action = process_action->contextual_issue;
       }
-      if (action != NULL)
+      if (action != NULL) {
+        while (action->next_issue->object_uid != process_action->object_uid) {
+          action = action->next_issue;
+        }
+
         MCcall(process_matrix_register_action(command_hub, action));
+      }
     }
 
     // Affect the command hub
@@ -3847,12 +3836,14 @@ int construct_process_action_detail(mc_process_action_v1 *action, mc_process_act
 
 int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub)
 {
+  // Process Matrix Node
   mc_process_unit_v1 *init_unit = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
   init_unit->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
   init_unit->struct_id->identifier = "process_unit";
   init_unit->struct_id->version = 1U;
-  init_unit->type = PROCESS_UNIT_SAMPLE;
-  init_unit->utilization_count = 1U;
+
+  init_unit->type = PROCESS_MATRIX_SAMPLE;
+  init_unit->process_unit_field_differentiation_index = 0U;
 
   init_unit->action = (mc_process_action_detail_v1 *)malloc(sizeof(mc_process_action_detail_v1));
   init_unit->action->type = PROCESS_ACTION_USER_UNPROVOKED_COMMAND;
@@ -3864,12 +3855,17 @@ int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub)
   construct_process_action_detail(NULL, &init_unit->contextual_issue);
   construct_process_action_detail(NULL, &init_unit->sequence_root_issue);
 
-  init_unit->consensus_process_units = NULL;
-  init_unit->branches = NULL;
+  init_unit->continuance = (mc_process_action_detail_v1 *)malloc(sizeof(mc_process_action_detail_v1));
+  init_unit->continuance->type = PROCESS_ACTION_PM_IDLE;
+  allocate_and_copy_cstr(init_unit->continuance->dialogue, "hello user!");
+  init_unit->continuance->dialogue_has_pattern = false;
+  init_unit->continuance->origin = PROCESS_ORIGINATOR_PM;
 
-  init_unit->continuance_action_type = PROCESS_ACTION_PM_IDLE;
-  allocate_and_copy_cstr(init_unit->continuance_dialogue, "hello user!");
-  init_unit->continuance_dialogue_has_pattern = false;
+  init_unit->children = NULL;
+
+  // init_unit->continuance_action_type = PROCESS_ACTION_PM_IDLE;
+  // allocate_and_copy_cstr(init_unit->continuance_dialogue, "hello user!");
+  // init_unit->continuance_dialogue_has_pattern = false;
 
   // Set
   command_hub->process_matrix = init_unit;
@@ -3884,8 +3880,8 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
   (*output)->struct_id->identifier = "process_unit";
   (*output)->struct_id->version = 1U;
 
-  (*output)->type = PROCESS_UNIT_SAMPLE;
-  (*output)->utilization_count = 1U;
+  (*output)->type = PROCESS_MATRIX_SAMPLE;
+  (*output)->process_unit_field_differentiation_index = 0U;
 
   // Set Unit Data : Action
   MCcall(construct_process_action_detail(action, &(*output)->action));
@@ -3913,12 +3909,12 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
     MCerror(3876, "Should never enter process unit without a continuance result");
   }
 
-  (*output)->continuance_action_type = action->next_issue->type;
-  (*output)->continuance_dialogue = action->next_issue->dialogue;
-  MCcall(does_dialogue_have_pattern((*output)->continuance_dialogue, &(*output)->continuance_dialogue_has_pattern));
+  MCcall(construct_process_action_detail(action->next_issue, &(*output)->continuance));
+  // (*output)->continuance_action_type = action->next_issue->type;
+  // (*output)->continuance_dialogue = action->next_issue->dialogue;
+  // MCcall(does_dialogue_have_pattern((*output)->continuance_dialogue, &(*output)->continuance_dialogue_has_pattern));
 
-  (*output)->consensus_process_units = NULL;
-  (*output)->branches = NULL;
+  (*output)->children = NULL;
 
   return 0;
 }
@@ -4071,44 +4067,45 @@ int does_process_unit_detail_match(mc_process_action_detail_v1 *process_unit_det
 
 int does_process_unit_match_action_and_continuance(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *comparable, bool *result)
 {
-  // For a process unit to match:
-  // The action types must equal
-  if (process_unit->action->type != comparable->action->type) {
-    *result = false;
-    return 0;
-  }
+  MCerror(4071, "TODO");
+  //   // For a process unit to match:
+  //   // The action types must equal
+  //   if (process_unit->action->type != comparable->action->type) {
+  //     *result = false;
+  //     return 0;
+  //   }
 
-  // The continuance results must be equal
-  if (comparable->continuance_action_type != process_unit->continuance_action_type) {
-    *result = false;
-    return 0;
-  }
-  if (!comparable->continuance_dialogue && process_unit->continuance_dialogue) {
-    *result = false;
-    return 0;
-  }
-  if (comparable->continuance_dialogue_has_pattern) {
-    bool match;
-    MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, comparable->continuance_dialogue, &match));
-    if (!match) {
-      *result = false;
-      return 0;
-    }
-  }
-  else if (strcmp(process_unit->continuance_dialogue, comparable->continuance_dialogue)) {
-    *result = false;
-    return 0;
-  }
+  //   // The continuance results must be equal
+  //   if (comparable->continuance_action_type != process_unit->continuance_action_type) {
+  //     *result = false;
+  //     return 0;
+  //   }
+  //   if (!comparable->continuance_dialogue && process_unit->continuance_dialogue) {
+  //     *result = false;
+  //     return 0;
+  //   }
+  //   if (comparable->continuance_dialogue_has_pattern) {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, comparable->continuance_dialogue, &match));
+  //     if (!match) {
+  //       *result = false;
+  //       return 0;
+  //     }
+  //   }
+  //   else if (strcmp(process_unit->continuance_dialogue, comparable->continuance_dialogue)) {
+  //     *result = false;
+  //     return 0;
+  //   }
 
-  // If the comparison has dialogue - then it must fit the pattern (if one exists, or equal if one does not).
-  if (comparable->action->dialogue) {
-    bool match;
-    MCcall(does_dialogue_match_pattern(process_unit->action->dialogue, comparable->action->dialogue, &match));
-    if (!match) {
-      *result = false;
-      return 0;
-    }
-  }
+  //   // If the comparison has dialogue - then it must fit the pattern (if one exists, or equal if one does not).
+  //   if (comparable->action->dialogue) {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(process_unit->action->dialogue, comparable->action->dialogue, &match));
+  //     if (!match) {
+  //       *result = false;
+  //       return 0;
+  //     }
+  //   }
 
   *result = true;
   return 0;
@@ -4167,32 +4164,33 @@ int clone_process_action_detail(mc_process_action_detail_v1 *process_detail, mc_
 
 int clone_process_unit(mc_process_unit_v1 *process_unit, mc_process_unit_v1 **cloned_unit)
 {
-  // Check
-  if (process_unit->branches || process_unit->consensus_process_units) {
-    MCerror(2727, "Incorrect argument state");
-  }
+  MCerror(4183, "TODO");
+  // // Check
+  // if (process_unit->branches || process_unit->consensus_process_units) {
+  //   MCerror(2727, "Incorrect argument state");
+  // }
 
-  // Clone the unit
-  mc_process_unit_v1 *cloned = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
-  cloned->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
-  cloned->struct_id->identifier = "process_unit";
-  cloned->struct_id->version = 1U;
-  cloned->type = process_unit->type;
-  cloned->utilization_count = process_unit->utilization_count;
+  // // Clone the unit
+  // mc_process_unit_v1 *cloned = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
+  // cloned->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+  // cloned->struct_id->identifier = "process_unit";
+  // cloned->struct_id->version = 1U;
+  // cloned->type = process_unit->type;
+  // cloned->utilization_count = process_unit->utilization_count;
 
-  MCcall(clone_process_action_detail(process_unit->action, &cloned->action));
-  MCcall(clone_process_action_detail(process_unit->previous_issue, &cloned->previous_issue));
-  MCcall(clone_process_action_detail(process_unit->contextual_issue, &cloned->contextual_issue));
-  MCcall(clone_process_action_detail(process_unit->sequence_root_issue, &cloned->sequence_root_issue));
+  // MCcall(clone_process_action_detail(process_unit->action, &cloned->action));
+  // MCcall(clone_process_action_detail(process_unit->previous_issue, &cloned->previous_issue));
+  // MCcall(clone_process_action_detail(process_unit->contextual_issue, &cloned->contextual_issue));
+  // MCcall(clone_process_action_detail(process_unit->sequence_root_issue, &cloned->sequence_root_issue));
 
-  cloned->branches = NULL;
-  cloned->consensus_process_units = NULL;
+  // cloned->branches = NULL;
+  // cloned->consensus_process_units = NULL;
 
-  cloned->continuance_action_type = process_unit->continuance_action_type;
-  cloned->continuance_dialogue = process_unit->continuance_dialogue;
-  cloned->continuance_dialogue_has_pattern = process_unit->continuance_dialogue_has_pattern;
+  // cloned->continuance_action_type = process_unit->continuance_action_type;
+  // cloned->continuance_dialogue = process_unit->continuance_dialogue;
+  // cloned->continuance_dialogue_has_pattern = process_unit->continuance_dialogue_has_pattern;
 
-  *cloned_unit = cloned;
+  // *cloned_unit = cloned;
 
   return 0;
 }
@@ -4248,109 +4246,110 @@ int does_process_unit_match_consensus(mc_process_unit_v1 *process_unit, mc_proce
 
 int does_process_unit_match_continuance(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *branch_unit, bool *match_result)
 {
-  if (process_unit->continuance_action_type != branch_unit->continuance_action_type) {
-    *match_result = false;
-    return 0;
-  }
+  MCerror(4266, "TODO");
+  //   if (process_unit->continuance_action_type != branch_unit->continuance_action_type) {
+  //     *match_result = false;
+  //     return 0;
+  //   }
 
-  MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, branch_unit->continuance_dialogue, match_result));
+  //   MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, branch_unit->continuance_dialogue, match_result));
 
-  return 0;
-}
+  //   return 0;
+  // }
 
-int calculate_process_unit_match_score(mc_process_unit_v1 *matrix_unit, bool include_utilization_strength,
-                                       process_action_type action_type, char const *const action_dialogue,
-                                       process_action_type previous_issue_type, char const *const previous_issue_dialogue,
-                                       process_action_type contextual_issue_type, char const *const contextual_issue_dialogue,
-                                       process_action_type sequence_root_issue_type,
-                                       char const *const sequence_root_issue_dialogue, unsigned int *score)
-{
-  if (include_utilization_strength) {
-    MCerror(2808, "TODO");
-  }
+  // int calculate_process_unit_match_score(mc_process_unit_v1 *matrix_unit, bool include_utilization_strength,
+  //                                        process_action_type action_type, char const *const action_dialogue,
+  //                                        process_action_type previous_issue_type, char const *const previous_issue_dialogue,
+  //                                        process_action_type contextual_issue_type, char const *const
+  //                                        contextual_issue_dialogue, process_action_type sequence_root_issue_type, char const
+  //                                        *const sequence_root_issue_dialogue, unsigned int *score)
+  // {
+  //   if (include_utilization_strength) {
+  //     MCerror(2808, "TODO");
+  //   }
 
-  // Initialize
-  *score = 0;
+  //   // Initialize
+  //   *score = 0;
 
-  // action
-  if (matrix_unit->action->type == action_type)
-    *score += 100;
-  else if (matrix_unit->action->type == PROCESS_ACTION_NONE)
-    *score += 20;
-  if (matrix_unit->action->dialogue == NULL) {
-    if (action_dialogue == NULL)
-      *score += 200;
-    else {
-      *score += 20;
-    }
-  }
-  else {
-    bool match;
-    MCcall(does_dialogue_match_pattern(matrix_unit->action->dialogue, action_dialogue, &match));
-    if (match) {
-      *score += 200;
-    }
-  }
+  //   // action
+  //   if (matrix_unit->action->type == action_type)
+  //     *score += 100;
+  //   else if (matrix_unit->action->type == PROCESS_ACTION_NONE)
+  //     *score += 20;
+  //   if (matrix_unit->action->dialogue == NULL) {
+  //     if (action_dialogue == NULL)
+  //       *score += 200;
+  //     else {
+  //       *score += 20;
+  //     }
+  //   }
+  //   else {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(matrix_unit->action->dialogue, action_dialogue, &match));
+  //     if (match) {
+  //       *score += 200;
+  //     }
+  //   }
 
-  // previous_issue
-  if (matrix_unit->previous_issue->type == previous_issue_type)
-    *score += 100;
-  else if (matrix_unit->previous_issue->type == PROCESS_ACTION_NONE)
-    *score += 20;
-  if (matrix_unit->previous_issue->dialogue == NULL) {
-    if (previous_issue_dialogue == NULL)
-      *score += 200;
-    else {
-      *score += 20;
-    }
-  }
-  else {
-    bool match;
-    MCcall(does_dialogue_match_pattern(matrix_unit->previous_issue->dialogue, previous_issue_dialogue, &match));
-    if (match) {
-      *score += 200;
-    }
-  }
+  //   // previous_issue
+  //   if (matrix_unit->previous_issue->type == previous_issue_type)
+  //     *score += 100;
+  //   else if (matrix_unit->previous_issue->type == PROCESS_ACTION_NONE)
+  //     *score += 20;
+  //   if (matrix_unit->previous_issue->dialogue == NULL) {
+  //     if (previous_issue_dialogue == NULL)
+  //       *score += 200;
+  //     else {
+  //       *score += 20;
+  //     }
+  //   }
+  //   else {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(matrix_unit->previous_issue->dialogue, previous_issue_dialogue, &match));
+  //     if (match) {
+  //       *score += 200;
+  //     }
+  //   }
 
-  // contextual_issue
-  if (matrix_unit->contextual_issue->type == contextual_issue_type)
-    *score += 100;
-  else if (matrix_unit->contextual_issue->type == PROCESS_ACTION_NONE)
-    *score += 20;
-  if (matrix_unit->contextual_issue->dialogue == NULL) {
-    if (contextual_issue_dialogue == NULL)
-      *score += 200;
-    else {
-      *score += 20;
-    }
-  }
-  else {
-    bool match;
-    MCcall(does_dialogue_match_pattern(matrix_unit->contextual_issue->dialogue, contextual_issue_dialogue, &match));
-    if (match) {
-      *score += 200;
-    }
-  }
+  //   // contextual_issue
+  //   if (matrix_unit->contextual_issue->type == contextual_issue_type)
+  //     *score += 100;
+  //   else if (matrix_unit->contextual_issue->type == PROCESS_ACTION_NONE)
+  //     *score += 20;
+  //   if (matrix_unit->contextual_issue->dialogue == NULL) {
+  //     if (contextual_issue_dialogue == NULL)
+  //       *score += 200;
+  //     else {
+  //       *score += 20;
+  //     }
+  //   }
+  //   else {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(matrix_unit->contextual_issue->dialogue, contextual_issue_dialogue, &match));
+  //     if (match) {
+  //       *score += 200;
+  //     }
+  //   }
 
-  // sequence_root_issue
-  if (matrix_unit->sequence_root_issue->type == sequence_root_issue_type)
-    *score += 100;
-  else if (matrix_unit->sequence_root_issue->type == PROCESS_ACTION_NONE)
-    *score += 20;
-  if (matrix_unit->sequence_root_issue->dialogue == NULL) {
-    if (sequence_root_issue_dialogue == NULL)
-      *score += 200;
-    else {
-      *score += 20;
-    }
-  }
-  else {
-    bool match;
-    MCcall(does_dialogue_match_pattern(matrix_unit->sequence_root_issue->dialogue, sequence_root_issue_dialogue, &match));
-    if (match) {
-      *score += 200;
-    }
-  }
+  //   // sequence_root_issue
+  //   if (matrix_unit->sequence_root_issue->type == sequence_root_issue_type)
+  //     *score += 100;
+  //   else if (matrix_unit->sequence_root_issue->type == PROCESS_ACTION_NONE)
+  //     *score += 20;
+  //   if (matrix_unit->sequence_root_issue->dialogue == NULL) {
+  //     if (sequence_root_issue_dialogue == NULL)
+  //       *score += 200;
+  //     else {
+  //       *score += 20;
+  //     }
+  //   }
+  //   else {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(matrix_unit->sequence_root_issue->dialogue, sequence_root_issue_dialogue, &match));
+  //     if (match) {
+  //       *score += 200;
+  //     }
+  //   }
 
   return 0;
 }
@@ -4463,150 +4462,152 @@ int form_consensus_from_process_unit_collection(mc_process_unit_v1 *consensus_un
 int find_most_specific_branch_to_form_with(mc_process_unit_v1 *branch_unit, mc_process_unit_v1 *focused_process_unit,
                                            mc_process_unit_v1 **unit_to_form_with)
 {
-  // action
-  if (focused_process_unit->action->type == branch_unit->action->type) {
-    *unit_to_form_with = branch_unit;
-    return 0;
-  }
-  for (int i = 0; i < branch_unit->branches->count; ++i) {
-    mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-    if (focused_process_unit->action->type == branch_child->action->type) {
-      *unit_to_form_with = branch_child;
-      return 0;
-    }
-  }
-  if (focused_process_unit->action->dialogue) {
-    if (branch_unit->action->dialogue) {
-      bool match;
-      MCcall(does_dialogue_match_pattern(focused_process_unit->action->dialogue, branch_unit->action->dialogue, &match));
-      if (match) {
-        *unit_to_form_with = branch_unit;
-        return 0;
-      }
-    }
-    for (int i = 0; i < branch_unit->branches->count; ++i) {
-      mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-      if (branch_child->action->dialogue) {
-        bool match;
-        MCcall(does_dialogue_match_pattern(focused_process_unit->action->dialogue, branch_child->action->dialogue, &match));
-        if (match) {
-          *unit_to_form_with = branch_child;
-          return 0;
-        }
-      }
-    }
-  }
+  MCerror(4465, "TODO");
+  // // action
+  // if (focused_process_unit->action->type == branch_unit->action->type) {
+  //   *unit_to_form_with = branch_unit;
+  //   return 0;
+  // }
+  // for (int i = 0; i < branch_unit->branches->count; ++i) {
+  //   mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+  //   if (focused_process_unit->action->type == branch_child->action->type) {
+  //     *unit_to_form_with = branch_child;
+  //     return 0;
+  //   }
+  // }
+  // if (focused_process_unit->action->dialogue) {
+  //   if (branch_unit->action->dialogue) {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(focused_process_unit->action->dialogue, branch_unit->action->dialogue, &match));
+  //     if (match) {
+  //       *unit_to_form_with = branch_unit;
+  //       return 0;
+  //     }
+  //   }
+  //   for (int i = 0; i < branch_unit->branches->count; ++i) {
+  //     mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+  //     if (branch_child->action->dialogue) {
+  //       bool match;
+  //       MCcall(does_dialogue_match_pattern(focused_process_unit->action->dialogue, branch_child->action->dialogue, &match));
+  //       if (match) {
+  //         *unit_to_form_with = branch_child;
+  //         return 0;
+  //       }
+  //     }
+  //   }
+  // }
 
-  // previous_issue
-  if (focused_process_unit->previous_issue->type == branch_unit->previous_issue->type) {
-    *unit_to_form_with = branch_unit;
-    return 0;
-  }
-  for (int i = 0; i < branch_unit->branches->count; ++i) {
-    mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-    if (focused_process_unit->previous_issue->type == branch_child->previous_issue->type) {
-      *unit_to_form_with = branch_child;
-      return 0;
-    }
-  }
-  if (focused_process_unit->previous_issue->dialogue) {
-    if (branch_unit->previous_issue->dialogue) {
-      bool match;
-      MCcall(does_dialogue_match_pattern(focused_process_unit->previous_issue->dialogue, branch_unit->previous_issue->dialogue,
-                                         &match));
-      if (match) {
-        *unit_to_form_with = branch_unit;
-        return 0;
-      }
-    }
-    for (int i = 0; i < branch_unit->branches->count; ++i) {
-      mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-      if (branch_child->previous_issue->dialogue) {
-        bool match;
-        MCcall(does_dialogue_match_pattern(focused_process_unit->previous_issue->dialogue, branch_child->previous_issue->dialogue,
-                                           &match));
-        if (match) {
-          *unit_to_form_with = branch_child;
-          return 0;
-        }
-      }
-    }
-  }
+  // // previous_issue
+  // if (focused_process_unit->previous_issue->type == branch_unit->previous_issue->type) {
+  //   *unit_to_form_with = branch_unit;
+  //   return 0;
+  // }
+  // for (int i = 0; i < branch_unit->branches->count; ++i) {
+  //   mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+  //   if (focused_process_unit->previous_issue->type == branch_child->previous_issue->type) {
+  //     *unit_to_form_with = branch_child;
+  //     return 0;
+  //   }
+  // }
+  // if (focused_process_unit->previous_issue->dialogue) {
+  //   if (branch_unit->previous_issue->dialogue) {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(focused_process_unit->previous_issue->dialogue, branch_unit->previous_issue->dialogue,
+  //                                        &match));
+  //     if (match) {
+  //       *unit_to_form_with = branch_unit;
+  //       return 0;
+  //     }
+  //   }
+  //   for (int i = 0; i < branch_unit->branches->count; ++i) {
+  //     mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+  //     if (branch_child->previous_issue->dialogue) {
+  //       bool match;
+  //       MCcall(does_dialogue_match_pattern(focused_process_unit->previous_issue->dialogue,
+  //       branch_child->previous_issue->dialogue,
+  //                                          &match));
+  //       if (match) {
+  //         *unit_to_form_with = branch_child;
+  //         return 0;
+  //       }
+  //     }
+  //   }
+  // }
 
-  // sequence_root_issue
-  if (focused_process_unit->sequence_root_issue->type == branch_unit->sequence_root_issue->type) {
-    *unit_to_form_with = branch_unit;
-    return 0;
-  }
-  for (int i = 0; i < branch_unit->branches->count; ++i) {
-    mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-    if (focused_process_unit->sequence_root_issue->type == branch_child->sequence_root_issue->type) {
-      *unit_to_form_with = branch_child;
-      return 0;
-    }
-  }
-  if (focused_process_unit->sequence_root_issue->dialogue) {
-    if (branch_unit->sequence_root_issue->dialogue) {
-      bool match;
-      MCcall(does_dialogue_match_pattern(focused_process_unit->sequence_root_issue->dialogue,
-                                         branch_unit->sequence_root_issue->dialogue, &match));
-      if (match) {
-        *unit_to_form_with = branch_unit;
-        return 0;
-      }
-    }
-    for (int i = 0; i < branch_unit->branches->count; ++i) {
-      mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-      if (branch_child->sequence_root_issue->dialogue) {
-        bool match;
-        MCcall(does_dialogue_match_pattern(focused_process_unit->sequence_root_issue->dialogue,
-                                           branch_child->sequence_root_issue->dialogue, &match));
-        if (match) {
-          *unit_to_form_with = branch_child;
-          return 0;
-        }
-      }
-    }
-  }
+  // // sequence_root_issue
+  // if (focused_process_unit->sequence_root_issue->type == branch_unit->sequence_root_issue->type) {
+  //   *unit_to_form_with = branch_unit;
+  //   return 0;
+  // }
+  // for (int i = 0; i < branch_unit->branches->count; ++i) {
+  //   mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+  //   if (focused_process_unit->sequence_root_issue->type == branch_child->sequence_root_issue->type) {
+  //     *unit_to_form_with = branch_child;
+  //     return 0;
+  //   }
+  // }
+  // if (focused_process_unit->sequence_root_issue->dialogue) {
+  //   if (branch_unit->sequence_root_issue->dialogue) {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(focused_process_unit->sequence_root_issue->dialogue,
+  //                                        branch_unit->sequence_root_issue->dialogue, &match));
+  //     if (match) {
+  //       *unit_to_form_with = branch_unit;
+  //       return 0;
+  //     }
+  //   }
+  //   for (int i = 0; i < branch_unit->branches->count; ++i) {
+  //     mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+  //     if (branch_child->sequence_root_issue->dialogue) {
+  //       bool match;
+  //       MCcall(does_dialogue_match_pattern(focused_process_unit->sequence_root_issue->dialogue,
+  //                                          branch_child->sequence_root_issue->dialogue, &match));
+  //       if (match) {
+  //         *unit_to_form_with = branch_child;
+  //         return 0;
+  //       }
+  //     }
+  //   }
+  // }
 
-  // sequence_root_issue
-  if (focused_process_unit->contextual_issue->type == branch_unit->contextual_issue->type) {
-    *unit_to_form_with = branch_unit;
-    return 0;
-  }
-  for (int i = 0; i < branch_unit->branches->count; ++i) {
-    mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-    if (focused_process_unit->contextual_issue->type == branch_child->contextual_issue->type) {
-      *unit_to_form_with = branch_child;
-      return 0;
-    }
-  }
-  if (focused_process_unit->contextual_issue->dialogue) {
-    if (branch_unit->contextual_issue->dialogue) {
-      bool match;
-      MCcall(does_dialogue_match_pattern(focused_process_unit->contextual_issue->dialogue,
-                                         branch_unit->contextual_issue->dialogue, &match));
-      if (match) {
-        *unit_to_form_with = branch_unit;
-        return 0;
-      }
-    }
-    for (int i = 0; i < branch_unit->branches->count; ++i) {
-      mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-      if (branch_child->contextual_issue->dialogue) {
-        bool match;
-        MCcall(does_dialogue_match_pattern(focused_process_unit->contextual_issue->dialogue,
-                                           branch_child->contextual_issue->dialogue, &match));
-        if (match) {
-          *unit_to_form_with = branch_child;
-          return 0;
-        }
-      }
-    }
-  }
+  // // sequence_root_issue
+  // if (focused_process_unit->contextual_issue->type == branch_unit->contextual_issue->type) {
+  //   *unit_to_form_with = branch_unit;
+  //   return 0;
+  // }
+  // for (int i = 0; i < branch_unit->branches->count; ++i) {
+  //   mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+  //   if (focused_process_unit->contextual_issue->type == branch_child->contextual_issue->type) {
+  //     *unit_to_form_with = branch_child;
+  //     return 0;
+  //   }
+  // }
+  // if (focused_process_unit->contextual_issue->dialogue) {
+  //   if (branch_unit->contextual_issue->dialogue) {
+  //     bool match;
+  //     MCcall(does_dialogue_match_pattern(focused_process_unit->contextual_issue->dialogue,
+  //                                        branch_unit->contextual_issue->dialogue, &match));
+  //     if (match) {
+  //       *unit_to_form_with = branch_unit;
+  //       return 0;
+  //     }
+  //   }
+  //   for (int i = 0; i < branch_unit->branches->count; ++i) {
+  //     mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+  //     if (branch_child->contextual_issue->dialogue) {
+  //       bool match;
+  //       MCcall(does_dialogue_match_pattern(focused_process_unit->contextual_issue->dialogue,
+  //                                          branch_child->contextual_issue->dialogue, &match));
+  //       if (match) {
+  //         *unit_to_form_with = branch_child;
+  //         return 0;
+  //       }
+  //     }
+  //   }
+  // }
 
-  // No specific match
-  *unit_to_form_with = NULL;
+  // // No specific match
+  // *unit_to_form_with = NULL;
   return 0;
 }
 
@@ -4620,150 +4621,165 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
   print_process_unit(branch_unit, 5, 0, 1);
 
   switch (branch_unit->type) {
-  case PROCESS_UNIT_SAMPLE: {
-    bool match;
-    MCcall(does_process_unit_match_continuance(focused_process_unit, branch_unit, &match));
-    if (match) {
-      // Build a consensus unit
-      mc_process_unit_v1 *cloned_unit;
-      MCcall(clone_process_unit(branch_unit, &cloned_unit));
+  case PROCESS_MATRIX_SAMPLE: {
 
-      branch_unit->type = PROCESS_UNIT_CONSENSUS_DETAIL;
-
-      // Set as child consensus units
-      MCcall(init_void_collection_v1(&branch_unit->consensus_process_units));
-      MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
-                                  &branch_unit->consensus_process_units->allocated, &branch_unit->consensus_process_units->count,
-                                  cloned_unit));
-      MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
-                                  &branch_unit->consensus_process_units->allocated, &branch_unit->consensus_process_units->count,
-                                  focused_process_unit));
-
-      branch_unit->utilization_count = branch_unit->consensus_process_units->count;
-      MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->consensus_process_units));
-
-      printf("== 2 Samples combined into consensus unit:\n");
-      print_process_unit(branch_unit, 5, 1, 1);
-      return 0;
-    }
-
-    // Split into a multi branched unit
+    // Form a branch containing both units
     mc_process_unit_v1 *cloned_unit;
     MCcall(clone_process_unit(branch_unit, &cloned_unit));
 
-    branch_unit->type = PROCESS_UNIT_BRANCH;
+    branch_unit->type = PROCESS_MATRIX_NODE;
+    branch_unit->process_unit_field_differentiation_index = 1;
+    for (; branch_unit->process_unit_field_differentiation_index < PROCESS_UNIT_FIELD_COUNT;
+         ++branch_unit->process_unit_field_differentiation_index) {
+           if(process_unit_field_compare(focused_process_unit, branch_unit, branch_unit->process_unit_field_differentiation_index)){
+             // Fields at this index don't match
+             break;
+           }
+    }
+    //   bool match;
+    //   MCcall(does_process_unit_match_continuance(focused_process_unit, branch_unit, &match));
+    //   if (match) {
+    //     // Build a consensus unit
+    //     mc_process_unit_v1 *cloned_unit;
+    //     MCcall(clone_process_unit(branch_unit, &cloned_unit));
 
-    branch_unit->continuance_action_type = PROCESS_ACTION_NULL;
-    if (branch_unit->continuance_dialogue)
-      free(branch_unit->continuance_dialogue);
-    branch_unit->continuance_dialogue = NULL;
-    branch_unit->continuance_dialogue_has_pattern = false;
+    //     branch_unit->type = PROCESS_UNIT_CONSENSUS_DETAIL;
 
-    // Set as child branches
-    MCcall(init_void_collection_v1(&branch_unit->branches));
-    MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
-                                &branch_unit->branches->count, cloned_unit));
-    MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
-                                &branch_unit->branches->count, focused_process_unit));
+    //     // Set as child consensus units
+    //     MCcall(init_void_collection_v1(&branch_unit->consensus_process_units));
+    //     MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
+    //                                 &branch_unit->consensus_process_units->allocated,
+    //                                 &branch_unit->consensus_process_units->count, cloned_unit));
+    //     MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
+    //                                 &branch_unit->consensus_process_units->allocated,
+    //                                 &branch_unit->consensus_process_units->count, focused_process_unit));
 
-    branch_unit->utilization_count = branch_unit->branches->count;
-    MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->branches));
+    //     branch_unit->utilization_count = branch_unit->consensus_process_units->count;
+    //     MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->consensus_process_units));
 
-    printf("== 2 Samples split by a branch:\n");
-    print_process_unit(branch_unit, 5, 1, 1);
+    //     printf("== 2 Samples combined into consensus unit:\n");
+    //     print_process_unit(branch_unit, 5, 1, 1);
+    //     return 0;
+    //   }
+
+    //   // Split into a multi branched unit
+    //   mc_process_unit_v1 *cloned_unit;
+    //   MCcall(clone_process_unit(branch_unit, &cloned_unit));
+
+    //   branch_unit->type = PROCESS_UNIT_BRANCH;
+
+    //   branch_unit->continuance_action_type = PROCESS_ACTION_NULL;
+    //   if (branch_unit->continuance_dialogue)
+    //     free(branch_unit->continuance_dialogue);
+    //   branch_unit->continuance_dialogue = NULL;
+    //   branch_unit->continuance_dialogue_has_pattern = false;
+
+    //   // Set as child branches
+    //   MCcall(init_void_collection_v1(&branch_unit->branches));
+    //   MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
+    //                               &branch_unit->branches->count, cloned_unit));
+    //   MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
+    //                               &branch_unit->branches->count, focused_process_unit));
+
+    //   branch_unit->utilization_count = branch_unit->branches->count;
+    //   MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->branches));
+
+    //   printf("== 2 Samples split by a branch:\n");
+    //   print_process_unit(branch_unit, 5, 1, 1);
     return 0;
   }
-  case PROCESS_UNIT_CONSENSUS_DETAIL: {
-    bool match;
-    MCcall(does_process_unit_match_consensus(focused_process_unit, branch_unit, &match));
-    if (match) {
-      MCcall(does_process_unit_match_continuance(focused_process_unit, branch_unit, &match));
-    }
-    if (match) {
-      // Append given unit as a consensus process action
-      MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
-                                  &branch_unit->consensus_process_units->allocated, &branch_unit->consensus_process_units->count,
-                                  focused_process_unit));
-      ++branch_unit->utilization_count;
+    // case PROCESS_UNIT_CONSENSUS_DETAIL: {
+    //   bool match;
+    //   MCcall(does_process_unit_match_consensus(focused_process_unit, branch_unit, &match));
+    //   if (match) {
+    //     MCcall(does_process_unit_match_continuance(focused_process_unit, branch_unit, &match));
+    //   }
+    //   if (match) {
+    //     // Append given unit as a consensus process action
+    //     MCcall(append_to_collection((void ***)&branch_unit->consensus_process_units->items,
+    //                                 &branch_unit->consensus_process_units->allocated,
+    //                                 &branch_unit->consensus_process_units->count, focused_process_unit));
+    //     ++branch_unit->utilization_count;
 
-      printf("== Sample added into consensus unit:\n");
-      print_process_unit(branch_unit, 5, 1, 1);
-      return 0;
-    }
+    //     printf("== Sample added into consensus unit:\n");
+    //     print_process_unit(branch_unit, 5, 1, 1);
+    //     return 0;
+    //   }
 
-    // Force split of consensus unit into branches
-    MCerror(4407, "TODO:%i", branch_unit->type);
+    //   // Force split of consensus unit into branches
+    //   MCerror(4407, "TODO:%i", branch_unit->type);
 
-    return 0;
-  }
-  case PROCESS_UNIT_BRANCH: {
-    // Determine if the unit matches the consensus of any current branch
-    for (int i = 0; i < branch_unit->branches->count; ++i) {
-      bool match;
-      mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
-      MCcall(does_process_unit_match_consensus(focused_process_unit, branch_child, &match));
-      if (match) {
-        printf("== Sample to be attached to child branch unit:\n");
-        MCcall(attach_process_unit_to_matrix_branch(branch_child, focused_process_unit));
+    //   return 0;
+    // }
+    // case PROCESS_UNIT_BRANCH: {
+    //   // Determine if the unit matches the consensus of any current branch
+    //   for (int i = 0; i < branch_unit->branches->count; ++i) {
+    //     bool match;
+    //     mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
+    //     MCcall(does_process_unit_match_consensus(focused_process_unit, branch_child, &match));
+    //     if (match) {
+    //       printf("== Sample to be attached to child branch unit:\n");
+    //       MCcall(attach_process_unit_to_matrix_branch(branch_child, focused_process_unit));
 
-        return 0;
-      }
-    }
+    //       return 0;
+    //     }
+    //   }
 
-    // Unit doesn't fit any consensus of child branches
-    // Determine the unit that has the highest priority specific match
-    mc_process_unit_v1 *unit_to_form_with = NULL;
-    MCcall(find_most_specific_branch_to_form_with(branch_unit, focused_process_unit, &unit_to_form_with));
+    //   // Unit doesn't fit any consensus of child branches
+    //   // Determine the unit that has the highest priority specific match
+    //   mc_process_unit_v1 *unit_to_form_with = NULL;
+    //   MCcall(find_most_specific_branch_to_form_with(branch_unit, focused_process_unit, &unit_to_form_with));
 
-    if (unit_to_form_with) {
-      if (unit_to_form_with != branch_unit) {
-        printf("== Sample to be attached to child branch unit:\n");
-        MCcall(attach_process_unit_to_matrix_branch(unit_to_form_with, focused_process_unit));
+    //   if (unit_to_form_with) {
+    //     if (unit_to_form_with != branch_unit) {
+    //       printf("== Sample to be attached to child branch unit:\n");
+    //       MCcall(attach_process_unit_to_matrix_branch(unit_to_form_with, focused_process_unit));
 
-        return 0;
-      }
+    //       return 0;
+    //     }
 
-      // Form another branch, and attach current branch and new unit as children
+    //     // Form another branch, and attach current branch and new unit as children
 
-      // Construct a new branch unit to represent the current unit and add it as a child
-      mc_void_collection_v1 *former_children = branch_unit->branches;
-      branch_unit->branches = NULL;
-      mc_process_unit_v1 *former_branch;
-      MCcall(clone_process_unit(branch_unit, &former_branch));
-      former_branch->branches = former_children;
+    //     // Construct a new branch unit to represent the current unit and add it as a child
+    //     mc_void_collection_v1 *former_children = branch_unit->branches;
+    //     branch_unit->branches = NULL;
+    //     mc_process_unit_v1 *former_branch;
+    //     MCcall(clone_process_unit(branch_unit, &former_branch));
+    //     former_branch->branches = former_children;
 
-      // Add new unit
-      MCcall(init_void_collection_v1(&branch_unit->branches));
-      MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
-                                  &branch_unit->branches->count, former_branch));
-      MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
-                                  &branch_unit->branches->count, focused_process_unit));
+    //     // Add new unit
+    //     MCcall(init_void_collection_v1(&branch_unit->branches));
+    //     MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
+    //                                 &branch_unit->branches->count, former_branch));
+    //     MCcall(append_to_collection((void ***)&branch_unit->branches->items, &branch_unit->branches->allocated,
+    //                                 &branch_unit->branches->count, focused_process_unit));
 
-      branch_unit->utilization_count = branch_unit->branches->count;
-      MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->branches));
+    //     branch_unit->utilization_count = branch_unit->branches->count;
+    //     MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->branches));
 
-      printf("== Sample & Branch split by new branch:\n");
-      print_process_unit(branch_unit, 5, 1, 1);
+    //     printf("== Sample & Branch split by new branch:\n");
+    //     print_process_unit(branch_unit, 5, 1, 1);
 
-      return 0;
-    }
+    //     return 0;
+    //   }
 
-    // No matches specific enough
-    // Append as another branch child
-    MCcall(append_to_collection(&branch_unit->branches->items, &branch_unit->branches->allocated, &branch_unit->branches->count,
-                                focused_process_unit));
+    //   // No matches specific enough
+    //   // Append as another branch child
+    //   MCcall(append_to_collection(&branch_unit->branches->items, &branch_unit->branches->allocated,
+    //   &branch_unit->branches->count,
+    //                               focused_process_unit));
 
-    printf("== Sample added into branching split:\n");
-    print_process_unit(branch_unit, 5, 1, 1);
+    //   printf("== Sample added into branching split:\n");
+    //   print_process_unit(branch_unit, 5, 1, 1);
 
-    return 0;
-  } break;
+    //   return 0;
+    // } break;
 
   default:
-    MCerror(2904, "unsupported for process_unit_type:%i", branch_unit->type);
+    MCerror(4765, "unsupported for process_unit_type:%i", branch_unit->type);
   }
 
-  MCerror(2968, "Invalid Path");
+  MCerror(4768, "Invalid Path");
   // bool match;
   // MCcall(does_process_unit_match_action_and_continuance(focused_process_unit, branch_unit, &match));
   // if (match) {
