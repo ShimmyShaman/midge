@@ -263,38 +263,38 @@ int increment_pointer(int argc, void **argv)
 int get_process_contextual_data(mc_process_action_v1 *contextual_action, const char *const key, void **value)
 {
   *value = NULL;
-  printf("entered gpcd()\n");
+  // printf("entered gpcd()\n");
   while (contextual_action) {
-    printf("contextual_action(%u)->contextual_data_count:%i\n", contextual_action->object_uid,
-           contextual_action->contextual_data_count);
+    // printf("contextual_action(%u)->contextual_data_count:%i\n", contextual_action->object_uid,
+    //        contextual_action->contextual_data_count);
     // printf("here31\n");
     for (int i = 0; i < contextual_action->contextual_data_count; ++i) {
       // printf("here34\n");
-      printf("comparing %s<>%s:%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key,
-             (char *)((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->value);
+      // printf("comparing %s<>%s:%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key,
+      //        (char *)((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->value);
       if (!strcmp(key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->key)) {
         *value = ((mc_key_value_pair_v1 *)contextual_action->contextual_data[i])->value;
-        printf("here35\n");
+        // printf("here35\n");
         return 0;
       }
       // printf("here36\n");
     }
 
     if (contextual_action->contextual_issue == NULL) {
-      printf("gpcd-contextual_issue=NULL; break\n");
+      // printf("gpcd-contextual_issue=NULL; break\n");
       break;
     }
 
     if (contextual_action->previous_issue != NULL) {
-      printf("gpcd-contextual_action = contextual_action->previous_issue;\n");
+      // printf("gpcd-contextual_action = contextual_action->previous_issue;\n");
       contextual_action = contextual_action->previous_issue;
     }
     else {
-      printf("gpcd-contextual_action = contextual_action->contextual_issue;\n");
+      // printf("gpcd-contextual_action = contextual_action->contextual_issue;\n");
       contextual_action = contextual_action->contextual_issue;
     }
   }
-  printf("left gpcd()\n");
+  // printf("left gpcd()\n");
   return 0;
 }
 
@@ -1982,6 +1982,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
 int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int print_children, int indent)
 {
+  return 0;
   if (indent > 0)
     printf("-%i--", indent);
   for (int i = 1; i < indent; ++i)
@@ -2017,6 +2018,24 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
   }
 
   if (detail_level > 3) {
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf(">seqRootType:'%s'\n", get_action_type_string(process_unit->sequence_root_issue->type));
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf(">seqRootDlg:'%s'\n",
+           process_unit->sequence_root_issue->dialogue == NULL ? "(null)" : process_unit->sequence_root_issue->dialogue);
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf(">contextType:'%s'\n", get_action_type_string(process_unit->contextual_issue->type));
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf(">contextDlg:'%s'\n",
+           process_unit->contextual_issue->dialogue == NULL ? "(null)" : process_unit->contextual_issue->dialogue);
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
@@ -2593,8 +2612,8 @@ int submit_user_command(int argc, void **argsv)
   // printf("suc-1\n");
   // Process command and any/all system responses
   while (1) {
-    printf("suc:loop_begin:process_action=%s\n", get_action_type_string(process_action->type));
-    printf("suc:loop_begin:focused_issue_stack_count=%u\n", command_hub->focused_issue_stack_count);
+    // printf("suc:loop_begin:process_action=%s\n", get_action_type_string(process_action->type));
+    // printf("suc:loop_begin:focused_issue_stack_count=%u\n", command_hub->focused_issue_stack_count);
     {
       // Register the previous action with the process matrix
       mc_process_action_v1 *action = process_action->previous_issue;
@@ -2617,27 +2636,27 @@ int submit_user_command(int argc, void **argsv)
     // Process the action
     MCcall(command_hub_process_outstanding_actions(command_hub));
 
-    printf("suc-3\n");
+    // printf("suc-3\n");
     // Formulate system responses
     void *p_response_action = NULL;
     MCcall(systems_process_command_hub_scripts(command_hub, &p_response_action));
-    printf("suc-4\n");
+    // printf("suc-4\n");
     if (!p_response_action) {
       MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
     }
 
-    printf("suc-5\n");
+    // printf("suc-5\n");
 
     MCcall(assist_user_process_issues(command_hub, &p_response_action));
 
-    printf("suc-6\n");
+    // printf("suc-6\n");
     if (!p_response_action) {
       // Send control back to the user
       break;
     }
     process_action = (mc_process_action_v1 *)p_response_action;
   }
-  printf("suc-7\n");
+  // printf("suc-7\n");
 
   // Send control back to the user
   return 0;
@@ -2701,15 +2720,84 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
 }
 
 int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_process_unit_v1 *process_unit);
+int construct_process_action_detail(mc_process_action_v1 *process_action, mc_process_action_detail_v1 **action_detail);
+int release_process_action_detail(mc_process_action_detail_v1 **action_detail);
+int convert_from_demo_dialogue(char **dialogue);
 int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action)
 {
-  printf("pmra-0\n");
+  // printf("pmra-0\n");
 
-  // Construct and register the focused action inside the process matrix
+  // Remove demonstrations from data
   mc_process_unit_v1 *action_process_unit;
-  MCcall(construct_process_unit_from_action(command_hub, action, &action_process_unit));
+  if (action->next_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+    // printf("### demo invocation registration to process matrix delayed!\n");
+    return 0;
+  }
+  else if (action->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+    // printf("pmra-1\n");
+    // Add the trimmed demo invocation action, that was ignored above, instead
+    if (action->contextual_issue->type != PROCESS_ACTION_USER_UNPROVOKED_COMMAND || !action->contextual_issue->dialogue ||
+        strncmp(action->contextual_issue->dialogue, "demo ", 5)) {
+      MCerror(2734, "Unexpected");
+    }
 
-  printf("pmra-1\n");
+    MCcall(construct_process_unit_from_action(command_hub, action->contextual_issue, &action_process_unit));
+
+    construct_process_action_detail(action->next_issue, &action_process_unit->continuance);
+
+    // if (!action_process_unit->action->dialogue || strncmp(action_process_unit->action->dialogue, "demo ", 5)) {
+    //   MCerror(2743, "TODO");
+    // }
+    // char *str = (char *)action_process_unit->action->dialogue;
+    // allocate_and_copy_cstr(action_process_unit->action->dialogue, action_process_unit->action->dialogue + 5);
+    // free(str);
+
+    // printf("### demo command registered to process matrix!\n");
+  }
+  else if (action->previous_issue && action->previous_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+    // printf("pmra-2\n");
+    if (action->previous_issue->previous_issue) {
+      MCerror(2745, "Unexpected");
+    }
+
+    MCcall(construct_process_unit_from_action(command_hub, action, &action_process_unit));
+    MCcall(release_process_action_detail(&action_process_unit->previous_issue));
+    MCcall(construct_process_action_detail(NULL, &action_process_unit->previous_issue));
+  }
+  else {
+    // printf("pmra-3\n");
+    // Construct and register the focused action inside the process matrix
+    MCcall(construct_process_unit_from_action(command_hub, action, &action_process_unit));
+  }
+
+  // printf("pmra-4\n");
+  // Trim all "demo ..." dialogues
+  if (action_process_unit->previous_issue->dialogue && !strncmp(action_process_unit->previous_issue->dialogue, "demo ", 5)) {
+    MCcall(convert_from_demo_dialogue(&action_process_unit->previous_issue->dialogue));
+  }
+  if (action_process_unit->action->dialogue && !strncmp(action_process_unit->action->dialogue, "demo ", 5)) {
+    MCcall(convert_from_demo_dialogue(&action_process_unit->action->dialogue));
+  }
+  // printf("pmra-4a\n");
+  if (action_process_unit->contextual_issue->dialogue && !strncmp(action_process_unit->contextual_issue->dialogue, "demo ", 5)) {
+    MCcall(convert_from_demo_dialogue(&action_process_unit->contextual_issue->dialogue));
+  }
+  if (action_process_unit->sequence_root_issue->dialogue &&
+      !strncmp(action_process_unit->sequence_root_issue->dialogue, "demo ", 5)) {
+    MCcall(convert_from_demo_dialogue(&action_process_unit->sequence_root_issue->dialogue));
+  }
+  // printf("pmra-5:%p\n", action_process_unit->continuance);
+  if (action_process_unit->continuance->dialogue && !strncmp(action_process_unit->continuance->dialogue, "demo ", 5)) {
+    // printf("pmra-5a:%s\n", action_process_unit->continuance->dialogue);
+    MCcall(convert_from_demo_dialogue(&action_process_unit->continuance->dialogue));
+    // MCerror(2779, "TODO:%s", action_process_unit->continuance->dialogue);
+  }
+
+  if (action_process_unit->continuance && action_process_unit->continuance->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+    MCerror(2020, "hopper");
+  }
+
+  // printf("pmra-6\n");
   // Find the appropriate branch to place it, creating a new one if need be
   // Search first amongst action types
   MCcall(attach_process_unit_to_matrix_branch(command_hub->process_matrix, action_process_unit));
@@ -2928,8 +3016,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     // printf("scriptcont:%i\n", script_instance->contextual_action->contextual_data_count);
 
     char **output = NULL;
-    printf("script entered: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
-           script_instance->script->segment_count);
+    // printf("script entered: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+    //  script_instance->script->segment_count);
     int mc_script_res;
     sprintf(buf,
             "{\n"
@@ -2943,8 +3031,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       printf("--script '%s' error:%i\n", script_instance->script->name, mc_script_res);
       return mc_script_res;
     }
-    printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
-           script_instance->script->segment_count);
+    // printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+    //  script_instance->script->segment_count);
 
     // Pop the focused issue from the stack
     mc_process_action_v1 *focused_issue =
@@ -2952,13 +3040,13 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
     command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
     --command_hub->focused_issue_stack_count;
 
-    printf("spchs-1\n");
+    // printf("spchs-1\n");
     // printf("focused_issue->seq:%u script_instance->seq:%u\n", focused_issue->sequence_uid, script_instance->sequence_uid);
     if (focused_issue->sequence_uid != script_instance->sequence_uid) {
       MCerror(2734, "incorrect script / process_action association");
     }
 
-    printf("spchs-2\n");
+    // printf("spchs-2\n");
 
     if (script_instance->segments_complete >= script_instance->script->segment_count) {
 
@@ -2974,23 +3062,23 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       // for (int j = 0; j < script_instance->script->local_count; ++j)
       //   if (script_instance->locals[j])
       //     free(script_instance->locals[j]);
-      printf("spchs-4c\n");
+      // printf("spchs-4c\n");
       free(script_instance->locals);
 
       // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
       // *)command_hub->demo_issue->data); printf("spchs-5\n");
 
-      printf("spchs-4d\n");
+      // printf("spchs-4d\n");
       if (script_instance->response)
         free(script_instance->response);
 
-      printf("spchs-4e\n");
+      // printf("spchs-4e\n");
       // Remove script
       remove_from_collection(&command_hub->script_instances, &command_hub->script_instances_alloc,
                              &command_hub->script_instances_count, i);
       --i;
 
-      printf("spchs-5\n");
+      // printf("spchs-5\n");
       // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
       // *)command_hub->demo_issue->data);
       mc_process_action_v1 *script_completion;
@@ -2998,7 +3086,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       construct_completion_action(command_hub, focused_issue, " - script completed", resolve_indented_workflow,
                                   &script_completion);
 
-      printf("spchs-6\n");
+      // printf("spchs-6\n");
 
       // TODO -- setting response action while also iterating through all scripts isn't right. Fix it up. Find a better
       // way
@@ -3891,17 +3979,23 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
   MCcall(construct_process_action_detail(action->previous_issue, &(*output)->previous_issue));
   MCcall(construct_process_action_detail(action->contextual_issue, &(*output)->contextual_issue));
 
-  mc_process_action_v1 *sequence_root = action;
-  while (sequence_root->previous_issue) {
-    if (sequence_root->previous_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ||
-        sequence_root->previous_issue->type == PROCESS_ACTION_PM_IDLE ||
-        sequence_root->previous_issue->type == PROCESS_ACTION_PM_SEQUENCE_RESOLVED)
-      break;
-
-    sequence_root = sequence_root->previous_issue;
-  }
-  if (sequence_root->object_uid == action->object_uid) {
+  mc_process_action_v1 *sequence_root;
+  if (action->contextual_issue == NULL) {
     sequence_root = NULL;
+  }
+  else {
+    sequence_root = action;
+    while (sequence_root->previous_issue) {
+      if (sequence_root->previous_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ||
+          sequence_root->previous_issue->type == PROCESS_ACTION_PM_IDLE ||
+          sequence_root->previous_issue->type == PROCESS_ACTION_PM_SEQUENCE_RESOLVED)
+        break;
+
+      sequence_root = sequence_root->previous_issue;
+    }
+    if (sequence_root->object_uid == action->object_uid) {
+      sequence_root = NULL;
+    }
   }
   MCcall(construct_process_action_detail(sequence_root, &(*output)->sequence_root_issue));
 
@@ -3929,7 +4023,7 @@ int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_actio
 
   if (force_resolution) {
     // Resolve
-    printf("cca-RESOLUTION\n");
+    // printf("cca-RESOLUTION\n");
     MCcall(construct_process_action_in_sequence(command_hub, current_focused_issue->sequence_uid,
                                                 PROCESS_ACTION_PM_SEQUENCE_RESOLVED, current_focused_issue->contextual_issue,
                                                 current_focused_issue, dialogue, NULL, output));
@@ -3937,7 +4031,7 @@ int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_actio
   }
 
   // Idle
-  printf("cca-IDLE\n");
+  // printf("cca-IDLE\n");
   MCcall(construct_process_action_in_sequence(command_hub, current_focused_issue->sequence_uid, PROCESS_ACTION_PM_IDLE,
                                               current_focused_issue->contextual_issue, current_focused_issue, dialogue, NULL,
                                               output));
@@ -4363,6 +4457,49 @@ int release_process_action_detail(mc_process_action_detail_v1 **action_detail)
   return 0;
 }
 
+int convert_from_demo_dialogue(char **dialogue)
+{
+  char buf[1024];
+  int b = 0;
+  // printf("'%s'\n", *dialogue);
+
+  for (int i = 5;; ++i) {
+    if ((*dialogue)[i] == '\0') {
+      buf[b++] = '\0';
+      break;
+    }
+    else if ((*dialogue)[i] == '@') {
+      buf[b++] = '@';
+      MCcall(parse_past(*dialogue, &i, "@{"));
+
+      for (;; ++i) {
+        if ((*dialogue)[i] == '=') {
+          for (; (*dialogue)[i] != '}'; ++i)
+            ;
+          if ((*dialogue)[i] != '}') {
+            MCerror(4473, "incorrect format");
+          }
+          break;
+        }
+        else {
+          buf[b++] = (*dialogue)[i];
+        }
+      }
+    }
+    else {
+      buf[b++] = (*dialogue)[i];
+    }
+  }
+
+  free((void *)(*dialogue));
+
+  char *cstr = (char *)malloc(sizeof(char) * (strlen(buf) + 1));
+  strcpy(cstr, buf);
+  *dialogue = cstr;
+
+  return 0;
+}
+
 int form_consensus_from_process_unit_detail(mc_process_action_detail_v1 *consensus_detail,
                                             mc_process_action_detail_v1 *unit_detail)
 {
@@ -4664,11 +4801,11 @@ int process_unit_field_compare(mc_process_unit_v1 *process_unit_a, mc_process_un
 int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_process_unit_v1 *focused_process_unit)
 {
   // printf("aputmb-0  %p %p\n", branch_unit, focused_process_unit);
-  printf("\n##attach_process_unit_to_matrix_branch##\n");
-  printf("focused_process_unit:\n");
-  MCcall(print_process_unit(focused_process_unit, 5, 0, 1));
-  printf("branch_unit:\n");
-  MCcall(print_process_unit(branch_unit, 5, 0, 1));
+  // printf("\n##attach_process_unit_to_matrix_branch##\n");
+  // printf("focused_process_unit:\n");
+  // MCcall(print_process_unit(focused_process_unit, 5, 0, 1));
+  // printf("branch_unit:\n");
+  // MCcall(print_process_unit(branch_unit, 5, 0, 1));
 
   switch (branch_unit->type) {
   case PROCESS_MATRIX_SAMPLE: {
@@ -4701,8 +4838,8 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
                                 &branch_unit->children->count, focused_process_unit));
     MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->children));
 
-    printf("== 2 Samples combined to form a node:\n");
-    MCcall(print_process_unit(branch_unit, 5, 2, 1));
+    // printf("== 2 Samples combined to form a node:\n");
+    // MCcall(print_process_unit(branch_unit, 5, 2, 1));
     return 0;
 
     //     mc_void_collection_v1 *former_children = branch_unit->branches;
@@ -4831,13 +4968,13 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
                                   &branch_unit->children->count, focused_process_unit));
       MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->children));
 
-      printf("== The Sample attached with the node to a new node:\n");
-      MCcall(print_process_unit(branch_unit, 5, 2, 1));
+      // printf("== The Sample attached with the node to a new node:\n");
+      // MCcall(print_process_unit(branch_unit, 5, 2, 1));
       return 0;
     }
-    else if (field_difference_index == branch_unit->process_unit_field_differentiation_index) {
+    else if (field_difference_index >= branch_unit->process_unit_field_differentiation_index) {
 
-      printf("field_difference_index=%i\n", field_difference_index);
+      // printf("field_difference_index=%i\n", field_difference_index);
       // Determine if any existing children match the unit at the difference index
       for (int i = 0; i < branch_unit->children->count; ++i) {
         mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->children->items[i];
@@ -4846,8 +4983,8 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
         MCcall(process_unit_field_compare(focused_process_unit, branch_child, field_difference_index, &equivalent));
         if (equivalent) {
           // A match -- combine it with this node/sample
-          printf("== Sample to be attached to child branch unit:\n");
-          MCcall(attach_process_unit_to_matrix_branch(branch_child, focused_process_unit));
+          // printf("== Sample to be attached to child branch unit:\n");
+          // MCcall(attach_process_unit_to_matrix_branch(branch_child, focused_process_unit));
 
           return 0;
         }
@@ -4858,12 +4995,13 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
                                   &branch_unit->children->count, focused_process_unit));
       MCcall(form_consensus_from_process_unit_collection(branch_unit, branch_unit->children));
 
-      printf("== The Sample was added as the nodes child:\n");
-      MCcall(print_process_unit(branch_unit, 5, 2, 1));
+      // printf("== The Sample was added as the nodes child:\n");
+      // MCcall(print_process_unit(branch_unit, 5, 2, 1));
 
       return 0;
     }
     else {
+
       MCerror(4818, "TODO%i", field_difference_index);
     }
 
