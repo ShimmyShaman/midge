@@ -113,6 +113,8 @@ void run()
     // clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
     // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
     // clint->loadFile("/home/jason/midge/src/mcl_type_defs.h");
+    clint->loadFile("/home/jason/midge/src/midge_core.c");
+
     printf("</AppSourceLoading>\n\n");
 
     // // Run App
@@ -133,7 +135,6 @@ void run()
      */
 
     // clint->loadFile("/home/jason/midge/src/c_code_lexer.h");
-    clint->loadFile("/home/jason/midge/src/midge_core.c");
     clint->process("mc_main(0, NULL);");
 
     // clint->process("#include \"midge.h\"");

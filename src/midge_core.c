@@ -2063,6 +2063,7 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
 }
 
 int init_core_functions(mc_command_hub_v1 *command_hub);
+int init_process_matrix(mc_command_hub_v1 *command_hub);
 int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
 int (*mc_dummy_function_pointer)(int, void **);
@@ -2433,6 +2434,7 @@ int mc_main(int argc, const char *const *argv)
   printf("mm-2\n");
   // Parse & Declare/add Core functions in midge_core_functions.c
   MCcall(init_core_functions(command_hub));
+  MCcall(init_process_matrix(command_hub));
   // return 0;
 
   printf("mm-3\n");
@@ -2507,8 +2509,8 @@ int mc_main(int argc, const char *const *argv)
       // -- END DEMO invoke $function_to_invoke
       // -- invoke initialize function
       "invoke instantiate_function|"
-      "midgequit|"
       "@function_name|"
+      "midgequit|"
       // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "dcd node * child\n"
       "cpy char * child->name node_name\n"
@@ -3548,19 +3550,18 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
       break;
     case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
-      // void *resolution_action;
-      // // printf("aupi-1\n");
-      // MCcall(
-      //     attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->previous_issue,
-      //     &resolution_action));
-      // // printf("aupi-2\n");
-      // if (resolution_action) {
-      //   // TODO -- delete the current response and its fields
+      void *resolution_action;
+      // printf("aupi-1\n");
+      MCcall(
+          attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->previous_issue, &resolution_action));
+      // printf("aupi-2\n");
+      if (resolution_action) {
+        // TODO -- delete the current response and its fields
 
-      //   // Replace the response with the resolution
-      //   *p_response_action = resolution_action;
-      //   // printf("aupi-3\n");
-      // }
+        // Replace the response with the resolution
+        *p_response_action = resolution_action;
+        // printf("aupi-3\n");
+      }
     } break;
       // Script
     case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
@@ -3601,10 +3602,10 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     if (!focused_issue->contextual_issue)
       break;
 
-    printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue->type),
-           focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
-    printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue->type),
-           focused_issue->contextual_issue->dialogue == NULL ? "(null)" : focused_issue->contextual_issue->dialogue);
+    // printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue->type),
+    //        focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
+    // printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue->type),
+    //        focused_issue->contextual_issue->dialogue == NULL ? "(null)" : focused_issue->contextual_issue->dialogue);
 
     // for (int i = 0; i < command_hub->process_matrix->count; ++i) {
     //   mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)command_hub->process_matrix->items[i];
@@ -3642,13 +3643,78 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
   return 0;
 }
 
-int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action, void **p_response_action)
+int search_process_matrix_for_best_match(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *matrix_branch,
+                                         mc_process_unit_v1 **best_match)
+{
+  *best_match = NULL;
+
+  if (matrix_branch->continuance->type != PROCESS_ACTION_NULL) {
+    // Analyze this branch
+    }
+
+  if (matrix_branch->type == PROCESS_MATRIX_NODE) {
+  }
+
+  return 0;
+}
+
+int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action, void **p_response_action)
 {
   // printf("aurc-0\n");
   *p_response_action = NULL;
+  if (!action->dialogue || strncmp(action->dialogue, "invoke instantiate_", 19)) {
+    return 0;
+  }
+
+  printf("atrc:action:%s\n", get_action_type_string(action->type));
+
+  mc_process_unit_v1 *process_unit;
+  MCcall(construct_process_unit_from_action(command_hub, action, &process_unit));
+
+  // Search the process matrix for a similar situation
+  mc_process_unit_v1 *matrix = command_hub->process_matrix;
+
+  // Find the best match via the field indices
+  mc_process_unit_v1 *best_match;
+  MCcall(search_process_matrix_for_best_match(process_unit, matrix, &best_match));
+
+  // int field_index = 0;
+  // while (1) {
+  //   if (matrix->type != PROCESS_MATRIX_NODE) {
+  //     break;
+  //   }
+
+  //   mc_process_unit_v1 *match_for_field = NULL;
+  //   for (int i = 0; i < matrix->children->count; ++i) {
+
+  //     bool compares;
+  //     MCcall(
+  //         process_unit_field_compare(process_unit, (mc_process_unit_v1 *)matrix->children->items[i], field_index + 1,
+  //         &compares));
+  //     if (compares) {
+  //       match_for_field = (mc_process_unit_v1 *)matrix->children->items[i];
+  //       ++field_index;
+  //     }
+  //   }
+
+  //   if (!match_for_field) {
+  //     break;
+  //   }
+
+  //   best_match = match_for_field;
+
+  //   if (field_index)
+
+  //     bool match_result;
+  //   MCcall(does_process_unit_match_consensus(process_unit, matrix, &match_result));
+  //   if (match_result) {
+  //   }
+
+  //   MCcall(does_process_unit_match_detail_consensus)
+  // }
 
   // Intercept any responses
-  MCerror(3889, "TODO");
+  MCerror(3652, "TODO");
 
   // // Search through the process matrix to find matches
   // for (int i = 0; i < command_hub->process_matrix->count; ++i) {
@@ -5423,11 +5489,176 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
 //   return 0;
 // }
 
-char *get_mc_function_insert(mc_command_hub_v1 *command_hub)
+int replace_init_file_with_v1_labels(mc_command_hub_v1 *command_hub, char *input, int input_len, char **output)
 {
-  char *insert = (char *)malloc(sizeof(char) * 72);
-  sprintf(insert, "mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)%p;\n\n", command_hub);
-  return insert;
+  int fsize = input_len;
+  char *out = (char *)malloc(sizeof(char) * ((fsize * 12) / 10));
+
+  char *command_hub_replace = (char *)malloc(sizeof(char) * (26 - 2 + 14 + 1));
+  sprintf(command_hub_replace, "((mc_command_hub_v1 *)%p)", command_hub);
+  command_hub_replace[38] = '\0';
+
+  int n = 0;
+  int s = 0;
+  const char *func_marker = "/*mcfuncreplace*/\n";
+  for (int i = 0; i < fsize; ++i) {
+    if (input[i] == '/') {
+      bool marker = true;
+      for (int j = 0; j < strlen(func_marker); ++j) {
+        if (input[i + j] != func_marker[j]) {
+          marker = false;
+          break;
+        }
+      }
+      if (!marker)
+        continue;
+
+      // Output up to now
+      strncpy(out + n, input + s, i - s);
+      n += i - s;
+      i += strlen(func_marker);
+
+      // strcpy(out + n, insert);
+      // n += strlen(insert);
+
+      for (; i < fsize; ++i) {
+        if (input[i] != '/')
+          continue;
+
+        marker = true;
+        for (int j = 0; j < strlen(func_marker); ++j) {
+          if (input[i + j] != func_marker[j]) {
+            marker = false;
+            break;
+          }
+        }
+        if (marker) {
+          break;
+        }
+      }
+      if (!marker) {
+        MCerror(-9928, "second marker wasn't found");
+      }
+      i += strlen(func_marker);
+      s = i;
+    }
+
+    if (!strncmp(input + i, "command_hub", strlen("command_hub")) && strncmp(input + i - 3, "mc_", 3) &&
+        strncmp(input + i - 1, "\"", 1)) {
+      // Output up to now
+      strncpy(out + n, input + s, i - s);
+      n += i - s;
+      i += strlen("command_hub");
+      s = i;
+
+      // Replace it
+      strcpy(out + n, command_hub_replace);
+      n += strlen(command_hub_replace);
+    }
+
+    // function_info >> mc_function_info_v1
+    if (!strncmp(input + i, " function_info", strlen(" function_info"))) {
+      // Output up to now
+      strncpy(out + n, input + s, i - s);
+      n += i - s;
+      i += strlen(" function_info");
+      s = i;
+
+      // Replace it
+      strcpy(out + n, " mc_function_info_v1");
+      n += strlen(" mc_function_info_v1");
+    }
+    if (!strncmp(input + i, "(function_info", strlen("(function_info"))) {
+      // Output up to now
+      strncpy(out + n, input + s, i - s);
+      n += i - s;
+      i += strlen("(function_info");
+      s = i;
+
+      // Replace it
+      strcpy(out + n, "(mc_function_info_v1");
+      n += strlen("(mc_function_info_v1");
+    }
+
+    // struct_info >> mc_struct_info_v1
+    if (!strncmp(input + i, " struct_info", strlen(" struct_info"))) {
+      // Output up to now
+      strncpy(out + n, input + s, i - s);
+      n += i - s;
+      i += strlen(" struct_info");
+      s = i;
+
+      // Replace it
+      strcpy(out + n, " mc_struct_info_v1");
+      n += strlen(" mc_struct_info_v1");
+    }
+    if (!strncmp(input + i, "(struct_info", strlen("(struct_info"))) {
+      // Output up to now
+      strncpy(out + n, input + s, i - s);
+      n += i - s;
+      i += strlen("(struct_info");
+      s = i;
+
+      // Replace it
+      strcpy(out + n, "(mc_struct_info_v1");
+      n += strlen("(mc_struct_info_v1");
+    }
+
+    // node >> mc_node_v1
+    if (!strncmp(input + i, " node ", strlen(" node "))) {
+      // Output up to now
+      strncpy(out + n, input + s, i - s);
+      n += i - s;
+      i += strlen(" node ");
+      s = i;
+
+      // Replace it
+      strcpy(out + n, " mc_node_v1 ");
+      n += strlen(" mc_node_v1 ");
+    }
+    if (!strncmp(input + i, "(node ", strlen("(node "))) {
+      // Output up to now
+      strncpy(out + n, input + s, i - s);
+      n += i - s;
+      i += strlen("(node ");
+      s = i;
+
+      // Replace it
+      strcpy(out + n, "(mc_node_v1 ");
+      n += strlen("(mc_node_v1 ");
+    }
+  }
+  strncpy(out + n, input + s, fsize - s);
+  out[n + fsize - s] = '\0';
+
+  *output = out;
+
+  return 0;
+}
+
+int init_process_matrix(mc_command_hub_v1 *command_hub)
+{
+  // Parse
+  FILE *f = fopen("/home/jason/midge/src/process_matrix.c", "rb");
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+  char *input = (char *)malloc(fsize + 1);
+  fread(input, sizeof(char), fsize, f);
+  fclose(f);
+
+  char *output;
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
+
+  // clint_process("int (*create_default_mc_struct)(int, void **);");
+
+  clint_declare(output);
+
+  free(input);
+  free(output);
+
+  return 0;
 }
 
 int init_core_functions(mc_command_hub_v1 *command_hub)
@@ -5545,145 +5776,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   fread(input, sizeof(char), fsize, f);
   fclose(f);
 
-  // char *insert = get_mc_function_insert(command_hub);
-  char *command_hub_replace = (char *)malloc(sizeof(char) * (26 - 2 + 14 + 1));
-  sprintf(command_hub_replace, "((mc_command_hub_v1 *)%p)", command_hub);
-  command_hub_replace[38] = '\0';
-
-  char *output = (char *)malloc(sizeof(char) * ((fsize * 12) / 10));
-  int n = 0;
-
-  int s = 0;
-  const char *func_marker = "/*mcfuncreplace*/\n";
-  for (int i = 0; i < fsize; ++i) {
-    if (input[i] == '/') {
-      bool marker = true;
-      for (int j = 0; j < strlen(func_marker); ++j) {
-        if (input[i + j] != func_marker[j]) {
-          marker = false;
-          break;
-        }
-      }
-      if (!marker)
-        continue;
-
-      // Output up to now
-      strncpy(output + n, input + s, i - s);
-      n += i - s;
-      i += strlen(func_marker);
-
-      // strcpy(output + n, insert);
-      // n += strlen(insert);
-
-      for (; i < fsize; ++i) {
-        if (input[i] != '/')
-          continue;
-
-        marker = true;
-        for (int j = 0; j < strlen(func_marker); ++j) {
-          if (input[i + j] != func_marker[j]) {
-            marker = false;
-            break;
-          }
-        }
-        if (marker) {
-          break;
-        }
-      }
-      if (!marker) {
-        MCerror(-9928, "second marker wasn't found");
-      }
-      i += strlen(func_marker);
-      s = i;
-    }
-
-    if (!strncmp(input + i, "command_hub", strlen("command_hub")) && strncmp(input + i - 3, "mc_", 3) &&
-        strncmp(input + i - 1, "\"", 1)) {
-      // Output up to now
-      strncpy(output + n, input + s, i - s);
-      n += i - s;
-      i += strlen("command_hub");
-      s = i;
-
-      // Replace it
-      strcpy(output + n, command_hub_replace);
-      n += strlen(command_hub_replace);
-    }
-
-    // function_info >> mc_function_info_v1
-    if (!strncmp(input + i, " function_info", strlen(" function_info"))) {
-      // Output up to now
-      strncpy(output + n, input + s, i - s);
-      n += i - s;
-      i += strlen(" function_info");
-      s = i;
-
-      // Replace it
-      strcpy(output + n, " mc_function_info_v1");
-      n += strlen(" mc_function_info_v1");
-    }
-    if (!strncmp(input + i, "(function_info", strlen("(function_info"))) {
-      // Output up to now
-      strncpy(output + n, input + s, i - s);
-      n += i - s;
-      i += strlen("(function_info");
-      s = i;
-
-      // Replace it
-      strcpy(output + n, "(mc_function_info_v1");
-      n += strlen("(mc_function_info_v1");
-    }
-
-    // struct_info >> mc_struct_info_v1
-    if (!strncmp(input + i, " struct_info", strlen(" struct_info"))) {
-      // Output up to now
-      strncpy(output + n, input + s, i - s);
-      n += i - s;
-      i += strlen(" struct_info");
-      s = i;
-
-      // Replace it
-      strcpy(output + n, " mc_struct_info_v1");
-      n += strlen(" mc_struct_info_v1");
-    }
-    if (!strncmp(input + i, "(struct_info", strlen("(struct_info"))) {
-      // Output up to now
-      strncpy(output + n, input + s, i - s);
-      n += i - s;
-      i += strlen("(struct_info");
-      s = i;
-
-      // Replace it
-      strcpy(output + n, "(mc_struct_info_v1");
-      n += strlen("(mc_struct_info_v1");
-    }
-
-    // node >> mc_node_v1
-    if (!strncmp(input + i, " node ", strlen(" node "))) {
-      // Output up to now
-      strncpy(output + n, input + s, i - s);
-      n += i - s;
-      i += strlen(" node ");
-      s = i;
-
-      // Replace it
-      strcpy(output + n, " mc_node_v1 ");
-      n += strlen(" mc_node_v1 ");
-    }
-    if (!strncmp(input + i, "(node ", strlen("(node "))) {
-      // Output up to now
-      strncpy(output + n, input + s, i - s);
-      n += i - s;
-      i += strlen("(node ");
-      s = i;
-
-      // Replace it
-      strcpy(output + n, "(mc_node_v1 ");
-      n += strlen("(mc_node_v1 ");
-    }
-  }
-  strncpy(output + n, input + s, fsize - s);
-  output[n + fsize - s] = '\0';
+  char *output;
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
 
   clint_process("int (*declare_function_pointer)(int, void **);");
   clint_process("int (*instantiate_function)(int, void **);");
