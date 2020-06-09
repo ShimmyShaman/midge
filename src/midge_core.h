@@ -116,6 +116,12 @@ typedef enum {
 } process_action_type;
 
 typedef enum {
+  PROCESS_MOVEMENT_CONTINUE = 1,
+  PROCESS_MOVEMENT_INDENTED,
+  PROCESS_MOVEMENT_RESOLVED,
+} process_action_indent_movement;
+
+typedef enum {
   PROCESS_ORIGINATOR_NULL = 1,
   PROCESS_ORIGINATOR_USER,
   PROCESS_ORIGINATOR_PM,
@@ -289,8 +295,8 @@ typedef struct mc_process_action_v1 {
   mc_struct_id_v1 *struct_id;
   unsigned int object_uid;
   unsigned int sequence_uid;
-  process_action_type type;
-  char *dialogue;
+
+  process_action_indent_movement process_movement;
 
   /* The root issue this exists under. eg. */
   /* Demo/root-unprovoked-command*/
@@ -299,7 +305,11 @@ typedef struct mc_process_action_v1 {
   mc_process_action_v1 *previous_issue;
   /* The action next in the chain */
   mc_process_action_v1 *next_issue;
+
+  process_action_type type;
+  char *dialogue;
   void *data;
+
   unsigned int contextual_data_alloc;
   unsigned int contextual_data_count;
   void **contextual_data;
