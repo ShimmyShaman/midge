@@ -116,7 +116,8 @@ typedef enum {
 } process_action_type;
 
 typedef enum {
-  PROCESS_MOVEMENT_CONTINUE = 1,
+  PROCESS_MOVEMENT_NONE = 1,
+  PROCESS_MOVEMENT_CONTINUE,
   PROCESS_MOVEMENT_INDENTED,
   PROCESS_MOVEMENT_RESOLVED,
 } process_action_indent_movement;
@@ -310,12 +311,11 @@ typedef struct mc_process_action_v1 {
   char *dialogue;
   void *data;
 
-  unsigned int contextual_data_alloc;
-  unsigned int contextual_data_count;
-  void **contextual_data;
+  mc_void_collection_v1 *contextual_data;
 } mc_process_action_v1;
 
 typedef struct mc_process_action_detail_v1 {
+  process_action_indent_movement process_movement;
   process_action_type type;
   char *dialogue;
   bool dialogue_has_pattern;
