@@ -2515,7 +2515,6 @@ int mc_main(int argc, const char *const *argv)
       // -- END DEMO create function $function_name
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"
-      "midgequit|"
       "create function print_word|"
       "@function_name|"
       "void|"
@@ -2710,7 +2709,8 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
 
   // Remove demonstrations from data
   mc_process_unit_v1 *action_process_unit;
-  if (action->next_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+  if (action->next_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ||
+      action->next_issue->type == PROCESS_ACTION_PM_UNRESOLVED_COMMAND || action->type == PROCESS_ACTION_PM_UNRESOLVED_COMMAND) {
     // printf("### demo invocation registration to process matrix delayed!\n");
     return 0;
   }
@@ -3519,181 +3519,61 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
   MCerror(3289, "Unintended flow");
 }
 
-int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
-                               void **p_response_action);
-
-int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action)
-{
-  // printf("aupi-0\n");
-  if (*p_response_action) {
-    // Intercept any responses
-    mc_process_action_v1 *response_action = (mc_process_action_v1 *)*p_response_action;
-
-    // Filter the types of actions that can be assisted with
-    switch (response_action->type) {
-      // User Initiated
-    case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
-    case PROCESS_ACTION_USER_SCRIPT_ENTRY:
-    case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
-    case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-      break;
-      // Process Manager Initiated
-    case PROCESS_ACTION_PM_IDLE:
-    case PROCESS_ACTION_PM_DEMO_INITIATION:
-    case PROCESS_ACTION_PM_SCRIPT_REQUEST:
-    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
-    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
-      break;
-    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
-      void *resolution_action;
-      // printf("aupi-1\n");
-      MCcall(
-          attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->contextual_issue, &resolution_action));
-      // printf("aupi-2\n");
-      if (resolution_action) {
-        // TODO -- delete the current response and its fields
-
-        // Replace the response with the resolution
-        *p_response_action = resolution_action;
-        // printf("aupi-3\n");
-      }
-    } break;
-      // Script
-    case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
-    case PROCESS_ACTION_SCRIPT_QUERY:
-      break;
-    default:
-      MCerror(3280, "UnhandledType:%i '%s'", response_action->type, response_action->dialogue);
-    }
-
-    return 0;
-  }
-
-  if (command_hub->focused_issue_stack_count == 0)
-    return 0;
-
-  // Process the Focused Issue
-  mc_process_action_v1 *focused_issue =
-      (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
-
-  // printf("aupi-1: focused_issue=%s\n", get_action_type_string(focused_issue->type));
-
-  // Filter the types of actions that can be assisted with
-  switch (focused_issue->type) {
-    // User Initiated
-  case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
-  case PROCESS_ACTION_USER_SCRIPT_ENTRY:
-  case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
-  case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-    break;
-    // Process Manager Initiated
-  case PROCESS_ACTION_PM_IDLE:
-  case PROCESS_ACTION_PM_DEMO_INITIATION:
-  case PROCESS_ACTION_PM_SCRIPT_REQUEST:
-  case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
-  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-    break;
-  case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
-    if (!focused_issue->contextual_issue)
-      break;
-
-    // printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue->type),
-    //        focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
-    // printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue->type),
-    //        focused_issue->contextual_issue->dialogue == NULL ? "(null)" : focused_issue->contextual_issue->dialogue);
-
-    // for (int i = 0; i < command_hub->process_matrix->count; ++i) {
-    //   mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *)command_hub->process_matrix->items[i];
-
-    //   if (process_unit->action->type != focused_issue->type)
-    //     continue;
-    //   printf("aupi-2a process_unit:%s:%s\n", get_action_type_string(process_unit->action->previous_issue),
-    //          process_unit->action->previous_issue->dialogue == NULL ? "(null)" :
-    //          process_unit->action->previous_issue->dialogue);
-    //   if (process_unit->previous_action != focused_issue->previous_issue)
-    //     continue;
-    //   printf("aupi-2b\n");
-    //   if (process_unit->previous_action->type != focused_issue->previous_issue->type)
-    //     continue;
-    //   if (process_unit->contextual_action != focused_issue->contextual_issue)
-    //     continue;
-    //   if (process_unit->contextual_action->type != focused_issue->contextual_issue->type)
-    //     continue;
-    // }
-
-    // MCerror(3392,
-    //         "TODO -- go through the process matrix and determine if contextual and previous actions match with patterns
-    //         etc");
-  } break;
-    // Script
-  case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
-  case PROCESS_ACTION_SCRIPT_QUERY:
-    break;
-  default:
-    MCerror(3308, "UnhandledType:%i '%s'", focused_issue->type, focused_issue->dialogue);
-  }
-
-  // printf("aupi-2\n");
-
-  return 0;
-}
-
 int does_process_unit_match_detail_consensus(mc_process_action_detail_v1 *process_unit,
                                              mc_process_action_detail_v1 *consensus_unit, bool *match_result);
 int process_unit_field_compare(mc_process_unit_v1 *process_unit_a, mc_process_unit_v1 *process_unit_b, int field_index,
                                bool *result);
 int search_process_matrix_for_best_match(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *matrix_branch,
-                                         mc_process_unit_v1 **best_match, float *best_score)
+                                         unsigned int const *const field_search_priority, mc_process_unit_v1 **best_match,
+                                         int *best_matched_prioritized_field_count)
 {
-  // Match with this node
-  if (matrix_branch->continuance->type != PROCESS_ACTION_NULL) {
-    // Score
-    float score = 0;
+  // Search for a specific match within the children
+  if (matrix_branch->type == PROCESS_MATRIX_NODE) {
 
-    bool consensus_fit;
-    MCcall(does_process_unit_match_detail_consensus(process_unit->action, matrix_branch->action, &consensus_fit));
-    if (consensus_fit) {
-      score += 1.f;
+    if (matrix_branch->process_unit_field_differentiation_index < 1 ||
+        matrix_branch->process_unit_field_differentiation_index > PROCESS_UNIT_FIELD_COUNT) {
+      MCerror(3676, "TODO");
     }
 
-    if (score > *best_score) {
+    for (int i = 0; i < matrix_branch->children->count; ++i) {
+
+      mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)matrix_branch->children->items[i];
+      bool search_further_with_child = true;
+      for (int f = 0; f < *best_matched_prioritized_field_count; ++f) {
+
+        bool matches_field_of_differentation;
+        MCcall(process_unit_field_compare(process_unit, branch_child, field_search_priority[1 + f],
+                                          &matches_field_of_differentation));
+        if (!matches_field_of_differentation) {
+          search_further_with_child = false;
+          break;
+        }
+      }
+
+      if (!search_further_with_child) {
+        continue;
+      }
+
+      MCcall(search_process_matrix_for_best_match(process_unit, branch_child, field_search_priority, best_match,
+                                                  best_matched_prioritized_field_count));
+    }
+  }
+  else {
+    int match_count = *best_matched_prioritized_field_count;
+    for (; match_count < field_search_priority[0]; ++match_count) {
+
+      bool matches_field_of_differentation;
+      MCcall(process_unit_field_compare(process_unit, matrix_branch, field_search_priority[1 + match_count],
+                                        &matches_field_of_differentation));
+      if (!matches_field_of_differentation) {
+        break;
+      }
+    }
+
+    if (best_match == NULL || match_count > *best_matched_prioritized_field_count) {
       *best_match = matrix_branch;
-      *best_score = score;
+      *best_matched_prioritized_field_count = match_count;
     }
-  }
-
-  if (matrix_branch->type != PROCESS_MATRIX_NODE) {
-    return 0;
-  }
-
-  if (matrix_branch->process_unit_field_differentiation_index < 1 ||
-      matrix_branch->process_unit_field_differentiation_index > PROCESS_UNIT_FIELD_COUNT) {
-    MCerror(3676, "TODO");
-  }
-
-  // Two phases
-  // Find the best match for the field differentation index
-  int field_match_index = -1;
-  for (int i = 0; i < matrix_branch->children->count; ++i) {
-
-    bool matches_field_of_differentation;
-    MCcall(process_unit_field_compare(process_unit, (mc_process_unit_v1 *)matrix_branch->children->items[i],
-                                      matrix_branch->process_unit_field_differentiation_index, &matches_field_of_differentation));
-    if (matches_field_of_differentation) {
-      MCcall(search_process_matrix_for_best_match(process_unit, (mc_process_unit_v1 *)matrix_branch->children->items[i],
-                                                  best_match, best_score));
-      // break; ??
-    }
-  }
-
-  // Compare to the rest
-  for (int i = 0; i < matrix_branch->children->count; ++i) {
-    if (i == field_match_index) {
-      continue;
-    }
-
-    MCcall(search_process_matrix_for_best_match(process_unit, (mc_process_unit_v1 *)matrix_branch->children->items[i], best_match,
-                                                best_score));
   }
 
   return 0;
@@ -3817,6 +3697,145 @@ int does_dialogue_match_pattern(char const *const dialogue, char const *const pa
   MCerror(3903, "Incorrect flow");
 }
 
+int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
+                               void **p_response_action);
+
+int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action)
+{
+  // printf("aupi-0\n");
+  if (*p_response_action) {
+    // Intercept any responses
+    mc_process_action_v1 *response_action = (mc_process_action_v1 *)*p_response_action;
+
+    // Filter the types of actions that can be assisted with
+    switch (response_action->type) {
+      // User Initiated
+    case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+    case PROCESS_ACTION_USER_SCRIPT_ENTRY:
+    case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
+    case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
+      break;
+      // Process Manager Initiated
+    case PROCESS_ACTION_PM_IDLE:
+    case PROCESS_ACTION_PM_DEMO_INITIATION:
+    case PROCESS_ACTION_PM_SCRIPT_REQUEST:
+    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
+    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
+      break;
+    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
+      void *resolution_action;
+      // printf("aupi-1\n");
+      MCcall(
+          attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->contextual_issue, &resolution_action));
+      // printf("aupi-2\n");
+      if (resolution_action) {
+        // TODO -- delete the current response and its fields
+
+        // Replace the response with the resolution
+        *p_response_action = resolution_action;
+        // printf("aupi-3\n");
+      }
+    } break;
+      // Script
+    case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+    case PROCESS_ACTION_SCRIPT_QUERY:
+      break;
+    default:
+      MCerror(3280, "UnhandledType:%i '%s'", response_action->type, response_action->dialogue);
+    }
+
+    return 0;
+  }
+
+  if (command_hub->focused_issue_stack_count == 0)
+    return 0;
+
+  // Process the Focused Issue
+  mc_process_action_v1 *focused_issue =
+      (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
+
+  // printf("aupi-1: focused_issue=%s\n", get_action_type_string(focused_issue->type));
+
+  // Filter the types of actions that can be assisted with
+  switch (focused_issue->type) {
+    // User Initiated
+  case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+  case PROCESS_ACTION_USER_SCRIPT_ENTRY:
+  case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
+  case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
+    break;
+    // Process Manager Initiated
+  case PROCESS_ACTION_PM_IDLE:
+  case PROCESS_ACTION_PM_DEMO_INITIATION:
+  case PROCESS_ACTION_PM_SCRIPT_REQUEST:
+  case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
+  case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+    break;
+  case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
+    if (!focused_issue->contextual_issue)
+      break;
+
+    printf("#### AUPI RESOLVED SEQUENCE ####\n");
+    // printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue->type),
+    //        focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
+    // printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue->type),
+    //        focused_issue->contextual_issue->dialogue == NULL ? "(null)" : focused_issue->contextual_issue->dialogue);
+
+    mc_process_unit_v1 *process_unit;
+    MCcall(construct_process_unit_from_action(command_hub, focused_issue, &process_unit));
+    printf("process_unit:\n");
+    print_process_unit(process_unit, 6, 1, 0);
+
+    // printf("aupi-2: sequence contextual:%s : %s\n", get_action_type_string(process_unit->contextual_issue->type),
+    //        process_unit->contextual_issue->dialogue);
+    // printf("aupi-2: sequence root:%s : %s\n", get_action_type_string(process_unit->sequence_root_issue->type),
+    //        process_unit->sequence_root_issue->dialogue);
+
+    // printf("\nprocess_matrix:\n");
+    // MCcall(print_process_unit(command_hub->process_matrix, 3, 3, 0));
+
+    // Search the process matrix for a similar situation
+    mc_process_unit_v1 *matrix = command_hub->process_matrix;
+
+    // Find the best match via the field indices
+    unsigned int sequence_resolved_field_priority[5] = {
+        4,
+        PROCESS_UNIT_FIELD_ACTION_TYPE,
+        PROCESS_UNIT_FIELD_CONTEXTUAL_TYPE,
+        PROCESS_UNIT_FIELD_CONTEXTUAL_DIALOGUE,
+        PROCESS_UNIT_FIELD_PREVIOUS_TYPE,
+    };
+    mc_process_unit_v1 *best_match = NULL;
+    int best_field_match_count = 0;
+    MCcall(search_process_matrix_for_best_match(process_unit, matrix, sequence_resolved_field_priority, &best_match,
+                                                &best_field_match_count));
+
+    if (best_match == NULL)
+      return 0;
+
+    printf("best_match:\n");
+    print_process_unit(best_match, 6, 1, 0);
+    // printf("aupi-3: best_match continuance:%s : %s\n", get_action_type_string(best_match->continuance->type),
+    //        best_match->continuance->dialogue == NULL ? "(null)" : best_match->continuance->dialogue);
+    // printf("aupi-3: best_match previous:%s : %s\n", get_action_type_string(best_match->previous_issue->type),
+    //        best_match->previous_issue->dialogue == NULL ? "(null)" : best_match->previous_issue->dialogue);
+
+    MCerror(3805, "Unhandled");
+
+  } break;
+    // Script
+  case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+  case PROCESS_ACTION_SCRIPT_QUERY:
+    break;
+  default:
+    MCerror(3813, "UnhandledType:%i '%s'", focused_issue->type, focused_issue->dialogue);
+  }
+
+  // printf("aupi-2\n");
+
+  return 0;
+}
+
 int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *command_action, void **p_response_action)
 {
   printf("atrc-0\n");
@@ -3837,9 +3856,16 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   mc_process_unit_v1 *matrix = command_hub->process_matrix;
 
   // Find the best match via the field indices
+  unsigned int sequence_resolved_field_priority[5] = {
+      3,
+      PROCESS_UNIT_FIELD_ACTION_TYPE,
+      PROCESS_UNIT_FIELD_PREVIOUS_TYPE,
+      PROCESS_UNIT_FIELD_PREVIOUS_DIALOGUE,
+  };
   mc_process_unit_v1 *best_match = NULL;
-  float best_match_score = 0.8f;
-  MCcall(search_process_matrix_for_best_match(process_unit, matrix, &best_match, &best_match_score));
+  int best_field_match_count = 0;
+  MCcall(search_process_matrix_for_best_match(process_unit, matrix, sequence_resolved_field_priority, &best_match,
+                                              &best_field_match_count));
 
   if (best_match == NULL)
     return 0;
@@ -3974,6 +4000,10 @@ int construct_process_action_detail(mc_process_action_v1 *action, mc_process_act
           (*output)->dialogue_has_pattern = true;
           break;
         }
+
+      if (!strncmp((*output)->dialogue, "demo ", 5)) {
+        MCcall(convert_from_demo_dialogue(&(*output)->dialogue));
+      }
     }
     else {
       (*output)->dialogue = NULL;
@@ -4076,9 +4106,9 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
   MCcall(construct_process_action_detail(sequence_root, &(*output)->sequence_root_issue));
 
   // printf("cpufa-3\n");
-  if (!action->next_issue) {
-    MCerror(3876, "Should never enter process unit without a continuance result");
-  }
+  // if (!action->next_issue) {
+  //   MCerror(3876, "Should never enter process unit without a continuance result");
+  // }
 
   MCcall(construct_process_action_detail(action->next_issue, &(*output)->continuance));
   // (*output)->continuance_action_type = action->next_issue->type;
@@ -4728,7 +4758,7 @@ int find_most_specific_branch_to_form_with(mc_process_unit_v1 *branch_unit, mc_p
 int process_unit_field_compare(mc_process_unit_v1 *process_unit_a, mc_process_unit_v1 *process_unit_b, int field_index,
                                bool *result)
 {
-
+MCerror(4761, "Do with the enums");
   mc_process_action_detail_v1 *action_detail_a = NULL, *action_detail_b = NULL;
   if (field_index < 3) {
     action_detail_a = process_unit_a->action;
