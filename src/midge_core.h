@@ -116,10 +116,10 @@ typedef enum {
 } process_action_type;
 
 typedef enum {
-  PROCESS_MOVEMENT_NONE = 1,
+  PROCESS_MOVEMENT_NULL = 1,
   PROCESS_MOVEMENT_CONTINUE,
-  PROCESS_MOVEMENT_INDENTED,
-  PROCESS_MOVEMENT_RESOLVED,
+  PROCESS_MOVEMENT_INDENT,
+  PROCESS_MOVEMENT_RESOLVE,
 } process_action_indent_movement;
 
 typedef enum {
