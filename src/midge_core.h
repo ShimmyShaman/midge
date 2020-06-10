@@ -162,6 +162,7 @@ typedef enum {
   // PROCESS_MATRIX_CONSENSUS_CONTAINER,
 } process_matrix_unit_type;
 
+#define PROCESS_UNIT_FIELD_COUNT 8
 typedef enum {
   PROCESS_UNIT_FIELD_ACTION_TYPE = 1,
   PROCESS_UNIT_FIELD_ACTION_DIALOGUE,
@@ -333,7 +334,6 @@ typedef struct mc_process_action_detail_v1 {
   process_originator_type origin;
 } mc_process_action_detail_v1;
 
-#define PROCESS_UNIT_FIELD_COUNT 8
 typedef struct mc_process_unit_v1 {
   mc_struct_id_v1 *struct_id;
 

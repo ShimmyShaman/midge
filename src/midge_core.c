@@ -2004,36 +2004,44 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf(">actDiag:'%s'\n", process_unit->action->dialogue == NULL ? "(null)" : process_unit->action->dialogue);
+    printf("actDiag:'%s'\n", process_unit->action->dialogue == NULL ? "(null)" : process_unit->action->dialogue);
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
     printf("contType:%s\n", get_action_type_string(process_unit->continuance->type));
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf("contDiag:'%s'\n", process_unit->continuance->dialogue == NULL ? "(null)" : process_unit->continuance->dialogue);
   }
 
   if (detail_level > 3) {
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf(">seqRootType:'%s'\n", get_action_type_string(process_unit->sequence_root_issue->type));
+    printf("prevType:'%s'\n", get_action_type_string(process_unit->previous_issue->type));
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf(">seqRootDlg:'%s'\n",
+    printf("prevDlg:'%s'\n", process_unit->previous_issue->dialogue == NULL ? "(null)" : process_unit->previous_issue->dialogue);
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf("seqRootType:'%s'\n", get_action_type_string(process_unit->sequence_root_issue->type));
+
+    for (int i = 0; i < indent; ++i)
+      printf("    ");
+    printf("seqRootDlg:'%s'\n",
            process_unit->sequence_root_issue->dialogue == NULL ? "(null)" : process_unit->sequence_root_issue->dialogue);
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf(">contextType:'%s'\n", get_action_type_string(process_unit->contextual_issue->type));
+    printf("contextType:'%s'\n", get_action_type_string(process_unit->contextual_issue->type));
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf(">contextDlg:'%s'\n",
+    printf("contextDlg:'%s'\n",
            process_unit->contextual_issue->dialogue == NULL ? "(null)" : process_unit->contextual_issue->dialogue);
-
-    for (int i = 0; i < indent; ++i)
-      printf("    ");
-    printf(">contDiag:'%s'\n", process_unit->continuance->dialogue == NULL ? "(null)" : process_unit->continuance->dialogue);
   }
 
   // Children
@@ -3521,7 +3529,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 
 int does_process_unit_match_detail_consensus(mc_process_action_detail_v1 *process_unit,
                                              mc_process_action_detail_v1 *consensus_unit, bool *match_result);
-int process_unit_field_compare(mc_process_unit_v1 *process_unit_a, mc_process_unit_v1 *process_unit_b, int field_index,
+int compare_process_unit_field(mc_process_unit_v1 *process_unit_a, mc_process_unit_v1 *process_unit_b, int field_index,
                                bool *result);
 int search_process_matrix_for_best_match(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *matrix_branch,
                                          unsigned int const *const field_search_priority, mc_process_unit_v1 **best_match,
@@ -3530,9 +3538,12 @@ int search_process_matrix_for_best_match(mc_process_unit_v1 *process_unit, mc_pr
   // Search for a specific match within the children
   if (matrix_branch->type == PROCESS_MATRIX_NODE) {
 
-    if (matrix_branch->process_unit_field_differentiation_index < 1 ||
-        matrix_branch->process_unit_field_differentiation_index > PROCESS_UNIT_FIELD_COUNT) {
-      MCerror(3676, "TODO");
+    if (matrix_branch->process_unit_field_differentiation_index < 1) {
+      printf("process_unit:\n");
+      MCcall(print_process_unit(process_unit, 5, 0, 1));
+      printf("matrix_branch:\n");
+      MCcall(print_process_unit(matrix_branch, 5, 1, 1));
+      MCerror(3676, "TODO:%i", matrix_branch->process_unit_field_differentiation_index);
     }
 
     for (int i = 0; i < matrix_branch->children->count; ++i) {
@@ -3542,8 +3553,12 @@ int search_process_matrix_for_best_match(mc_process_unit_v1 *process_unit, mc_pr
       for (int f = 0; f < *best_matched_prioritized_field_count; ++f) {
 
         bool matches_field_of_differentation;
-        MCcall(process_unit_field_compare(process_unit, branch_child, field_search_priority[1 + f],
-                                          &matches_field_of_differentation));
+        if (matrix_branch->process_unit_field_differentiation_index > PROCESS_UNIT_FIELD_COUNT)
+          matches_field_of_differentation = true;
+        else {
+          MCcall(compare_process_unit_field(process_unit, branch_child, field_search_priority[1 + f],
+                                            &matches_field_of_differentation));
+        }
         if (!matches_field_of_differentation) {
           search_further_with_child = false;
           break;
@@ -3563,7 +3578,7 @@ int search_process_matrix_for_best_match(mc_process_unit_v1 *process_unit, mc_pr
     for (; match_count < field_search_priority[0]; ++match_count) {
 
       bool matches_field_of_differentation;
-      MCcall(process_unit_field_compare(process_unit, matrix_branch, field_search_priority[1 + match_count],
+      MCcall(compare_process_unit_field(process_unit, matrix_branch, field_search_priority[1 + match_count],
                                         &matches_field_of_differentation));
       if (!matches_field_of_differentation) {
         break;
@@ -3702,6 +3717,7 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
 
 int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action)
 {
+  return 0;
   // printf("aupi-0\n");
   if (*p_response_action) {
     // Intercept any responses
@@ -3775,7 +3791,6 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     if (!focused_issue->contextual_issue)
       break;
 
-    printf("#### AUPI RESOLVED SEQUENCE ####\n");
     // printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue->type),
     //        focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
     // printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue->type),
@@ -3783,8 +3798,6 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
 
     mc_process_unit_v1 *process_unit;
     MCcall(construct_process_unit_from_action(command_hub, focused_issue, &process_unit));
-    printf("process_unit:\n");
-    print_process_unit(process_unit, 6, 1, 0);
 
     // printf("aupi-2: sequence contextual:%s : %s\n", get_action_type_string(process_unit->contextual_issue->type),
     //        process_unit->contextual_issue->dialogue);
@@ -3810,17 +3823,49 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     MCcall(search_process_matrix_for_best_match(process_unit, matrix, sequence_resolved_field_priority, &best_match,
                                                 &best_field_match_count));
 
-    if (best_match == NULL)
+    if (best_field_match_count < 3)
       return 0;
 
-    printf("best_match:\n");
-    print_process_unit(best_match, 6, 1, 0);
-    // printf("aupi-3: best_match continuance:%s : %s\n", get_action_type_string(best_match->continuance->type),
-    //        best_match->continuance->dialogue == NULL ? "(null)" : best_match->continuance->dialogue);
-    // printf("aupi-3: best_match previous:%s : %s\n", get_action_type_string(best_match->previous_issue->type),
-    //        best_match->previous_issue->dialogue == NULL ? "(null)" : best_match->previous_issue->dialogue);
+    printf("#### AUPI RESOLVED SEQUENCE ####\n");
+    // printf("atrc-6a\n");
+    // Replace the current unresolved action with the process action
+    printf("-#AUPI# Beginning Process:%s-'%s'\n", get_action_type_string(best_match->continuance->type),
+           best_match->continuance->dialogue);
+    // printf("process_unit:\n");
+    // print_process_unit(process_unit, 6, 1, 0);
+    // printf("best_match:\n");
+    // print_process_unit(best_match, 6, 1, 0);
 
-    MCerror(3805, "Unhandled");
+    printf("continuance: %s : %s : %i\n", get_action_type_string(best_match->continuance->type),
+           best_match->continuance->dialogue, best_match->continuance->process_movement);
+    // ERROR
+    // ERROR
+    // ERROR
+    // ERROR
+    // ERROR
+    mc_process_action_v1 *replacement;
+    // command_action->next_issue = NULL;
+    MCcall(construct_process_action(command_hub, best_match->continuance->process_movement, focused_issue,
+                                    best_match->continuance->type, best_match->continuance->dialogue, NULL, &replacement));
+
+    // if (best_match->action->dialogue_has_pattern) {
+    //   bool match;
+    //   MCcall(does_dialogue_match_pattern(process_unit->action->dialogue, best_match->action->dialogue,
+    //                                      replacement->contextual_data, &match));
+    //   if (!match) {
+    //     MCerror(3738, "TODO");
+    //   }
+    // }
+
+    //         // TODO - should dispose of intercepted action...
+
+    // printf("atrc-7\n");
+    // TODO -- delete the current response and its fields
+
+    // Replace the response with the resolution
+    *p_response_action = replacement;
+
+    // MCerror(3805, "Unhandled");
 
   } break;
     // Script
@@ -3838,7 +3883,7 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
 
 int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *command_action, void **p_response_action)
 {
-  printf("atrc-0\n");
+  // printf("atrc-0\n");
   *p_response_action = NULL;
   // if (!command_action->dialogue || strncmp(command_action->dialogue, "invoke instantiate_", 19)) {
   //   return 0;
@@ -3847,7 +3892,6 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   mc_process_unit_v1 *process_unit;
   MCcall(construct_process_unit_from_action(command_hub, command_action, &process_unit));
 
-  printf("#### ATRC ####\n");
   // MCcall(print_process_unit(process_unit, 3, 0, 0));
   // printf("\nprocess_matrix:\n");
   // MCcall(print_process_unit(command_hub->process_matrix, 3, 3, 0));
@@ -3856,21 +3900,23 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   mc_process_unit_v1 *matrix = command_hub->process_matrix;
 
   // Find the best match via the field indices
-  unsigned int sequence_resolved_field_priority[5] = {
+  unsigned int unresolved_command_field_priority[5] = {
       3,
       PROCESS_UNIT_FIELD_ACTION_TYPE,
+      PROCESS_UNIT_FIELD_ACTION_DIALOGUE,
       PROCESS_UNIT_FIELD_PREVIOUS_TYPE,
       PROCESS_UNIT_FIELD_PREVIOUS_DIALOGUE,
   };
   mc_process_unit_v1 *best_match = NULL;
   int best_field_match_count = 0;
-  MCcall(search_process_matrix_for_best_match(process_unit, matrix, sequence_resolved_field_priority, &best_match,
+  MCcall(search_process_matrix_for_best_match(process_unit, matrix, unresolved_command_field_priority, &best_match,
                                               &best_field_match_count));
 
-  if (best_match == NULL)
+  if (best_field_match_count < 2)
     return 0;
 
-  printf("atrc-6a\n");
+  printf("#### ATRC ####\n");
+  // printf("atrc-6a\n");
   // Replace the current unresolved action with the process action
   printf("-#ATRC# Beginning Process:%s-'%s'\n", get_action_type_string(best_match->action->type), best_match->action->dialogue);
 
@@ -4755,52 +4801,70 @@ int find_most_specific_branch_to_form_with(mc_process_unit_v1 *branch_unit, mc_p
   return 0;
 }
 
-int process_unit_field_compare(mc_process_unit_v1 *process_unit_a, mc_process_unit_v1 *process_unit_b, int field_index,
-                               bool *result)
+int compare_dialogue(mc_process_action_detail_v1 *action_detail_a, mc_process_action_detail_v1 *action_detail_b, bool *result)
 {
-MCerror(4761, "Do with the enums");
-  mc_process_action_detail_v1 *action_detail_a = NULL, *action_detail_b = NULL;
-  if (field_index < 3) {
-    action_detail_a = process_unit_a->action;
-    action_detail_b = process_unit_b->action;
+  if (!action_detail_a->dialogue) {
+    *result = !(action_detail_b->dialogue);
   }
-  else if (field_index < 5) {
-    action_detail_a = process_unit_a->previous_issue;
-    action_detail_b = process_unit_b->previous_issue;
-  }
-  else if (field_index < 7) {
-    action_detail_a = process_unit_a->sequence_root_issue;
-    action_detail_b = process_unit_b->sequence_root_issue;
-  }
-  else if (field_index < 9) {
-    action_detail_a = process_unit_a->contextual_issue;
-    action_detail_b = process_unit_b->contextual_issue;
-  }
-
-  if (!action_detail_a || field_index < 1) {
-    MCerror(4638, "invalid field index:%i", field_index)
-  }
-
-  if (field_index % 2 == 1) {
-    // Compare the type
-    *result = action_detail_a->type == action_detail_b->type;
+  else if (!action_detail_b->dialogue) {
+    *result = false;
   }
   else {
-    if (action_detail_a->dialogue != action_detail_b->dialogue) {
-      *result = false;
-    }
-    else if (!action_detail_a->dialogue) {
-      *result = true;
+    // Compare the dialogue
+    if (action_detail_b->dialogue_has_pattern) {
+      MCcall(does_dialogue_match_pattern(action_detail_a->dialogue, action_detail_b->dialogue, NULL, result));
     }
     else {
-      // Compare the dialogue
-      if (action_detail_b->dialogue_has_pattern) {
-        MCcall(does_dialogue_match_pattern(action_detail_a->dialogue, action_detail_b->dialogue, NULL, result));
-      }
-      else {
-        MCcall(does_dialogue_match_pattern(action_detail_b->dialogue, action_detail_a->dialogue, NULL, result));
-      }
+      MCcall(does_dialogue_match_pattern(action_detail_b->dialogue, action_detail_a->dialogue, NULL, result));
     }
+  }
+
+  return 0;
+}
+
+int compare_process_unit_field(mc_process_unit_v1 *process_unit_a, mc_process_unit_v1 *process_unit_b, int field_index,
+                               bool *result)
+{
+  switch (field_index) {
+  case PROCESS_UNIT_FIELD_ACTION_TYPE: {
+    *result = process_unit_a->action->type == process_unit_b->action->type;
+    return 0;
+  }
+  case PROCESS_UNIT_FIELD_ACTION_DIALOGUE: {
+    MCcall(compare_dialogue(process_unit_a->action, process_unit_b->action, result));
+    return 0;
+  }
+  case PROCESS_UNIT_FIELD_PREVIOUS_TYPE: {
+    *result = process_unit_a->previous_issue->type == process_unit_b->previous_issue->type;
+    return 0;
+  }
+  case PROCESS_UNIT_FIELD_PREVIOUS_DIALOGUE: {
+    printf("PROCESS_UNIT_FIELD_PREVIOUS_DIALOGUE\n");
+    printf("process_unit_a->previous_issue='%s'\n", process_unit_a->previous_issue->dialogue);
+    printf("process_unit_b->previous_issue='%s'\n", process_unit_b->previous_issue->dialogue);
+    MCcall(compare_dialogue(process_unit_a->previous_issue, process_unit_b->previous_issue, result));
+    printf("compare_dialogue='%s'\n", result ? "true" : "false");
+    return 0;
+  }
+  case PROCESS_UNIT_FIELD_CONTEXTUAL_TYPE: {
+    *result = process_unit_a->contextual_issue->type == process_unit_b->contextual_issue->type;
+    return 0;
+  }
+  case PROCESS_UNIT_FIELD_CONTEXTUAL_DIALOGUE: {
+    MCcall(compare_dialogue(process_unit_a->contextual_issue, process_unit_b->contextual_issue, result));
+    return 0;
+  }
+  case PROCESS_UNIT_FIELD_SEQUENCE_ROOT_TYPE: {
+    *result = process_unit_a->sequence_root_issue->type == process_unit_b->sequence_root_issue->type;
+    return 0;
+  }
+  case PROCESS_UNIT_FIELD_SEQUENCE_ROOT_DIALOGUE: {
+    MCcall(compare_dialogue(process_unit_a->sequence_root_issue, process_unit_b->sequence_root_issue, result));
+    return 0;
+  }
+
+  default:
+    MCerror(4795, "Unsupported:%i", field_index);
   }
 
   return 0;
@@ -4817,26 +4881,35 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
 
   switch (branch_unit->type) {
   case PROCESS_MATRIX_SAMPLE: {
+    int field_difference_index = 1;
+    for (; field_difference_index <= PROCESS_UNIT_FIELD_COUNT; ++field_difference_index) {
+
+      bool equivalent;
+      MCcall(compare_process_unit_field(focused_process_unit, branch_unit, field_difference_index, &equivalent));
+      if (!equivalent) {
+        // Fields at this index don't match
+        break;
+      }
+    }
+    if (field_difference_index > PROCESS_UNIT_FIELD_COUNT) {
+      // There is no difference...
+      // printf("focused_process_unit:\n");
+      // MCcall(print_process_unit(focused_process_unit, 5, 0, 1));
+      // printf("branch_sample:\n");
+      // MCcall(print_process_unit(branch_unit, 5, 0, 1));
+      // MCerror(4856, "TODO:%i", field_difference_index);
+    }
 
     // Form a branch from the current attached sample unit
     mc_process_unit_v1 *former_unit;
     MCcall(clone_process_unit(branch_unit, &former_unit));
 
     branch_unit->type = PROCESS_MATRIX_NODE;
-    int field_difference_index = 1;
-    for (; field_difference_index <= PROCESS_UNIT_FIELD_COUNT; ++field_difference_index) {
-
-      bool equivalent;
-      MCcall(process_unit_field_compare(focused_process_unit, branch_unit, field_difference_index, &equivalent));
-      if (!equivalent) {
-        // Fields at this index don't match
-        break;
-      }
-    }
 
     // if (field_difference_index > PROCESS_UNIT_FIELD_COUNT)
     //   field_difference_index = 0;
     branch_unit->process_unit_field_differentiation_index = field_difference_index;
+    // printf("aputmb-2: field_difference_index:%i\n", field_difference_index);
 
     // Add new units
     MCcall(init_void_collection_v1(&branch_unit->children));
@@ -4856,15 +4929,20 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
     for (; field_difference_index <= PROCESS_UNIT_FIELD_COUNT; ++field_difference_index) {
 
       bool equivalent;
-      MCcall(process_unit_field_compare(focused_process_unit, branch_unit, field_difference_index, &equivalent));
+      MCcall(compare_process_unit_field(focused_process_unit, branch_unit, field_difference_index, &equivalent));
       if (!equivalent) {
         // Fields at this index don't match
+        // printf("broke at %i\n", field_difference_index);
         break;
       }
     }
 
     if (field_difference_index > PROCESS_UNIT_FIELD_COUNT) {
       // There is no difference...
+      // printf("focused_process_unit:\n");
+      // MCcall(print_process_unit(focused_process_unit, 5, 0, 1));
+      // printf("branch_unit:\n");
+      // MCcall(print_process_unit(branch_unit, 5, 0, 1));
       // MCerror(4806, "TODO");
     }
 
@@ -4896,18 +4974,20 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
 
       // printf("field_difference_index=%i\n", field_difference_index);
       // Determine if any existing children match the unit at the difference index
-      for (int i = 0; i < branch_unit->children->count; ++i) {
-        mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->children->items[i];
+      if (field_difference_index <= PROCESS_UNIT_FIELD_COUNT) {
+        for (int i = 0; i < branch_unit->children->count; ++i) {
+          mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->children->items[i];
 
-        bool equivalent;
-        MCcall(process_unit_field_compare(focused_process_unit, branch_child, field_difference_index, &equivalent));
-        if (equivalent) {
-          // A match -- combine it with this node/sample
-          // printf("== Sample to be attached to child branch unit:\n");
+          bool equivalent;
+          MCcall(compare_process_unit_field(focused_process_unit, branch_child, field_difference_index, &equivalent));
+          if (equivalent) {
+            // A match -- combine it with this node/sample
+            // printf("== Sample to be attached to child branch unit:\n");
 
-          MCcall(attach_process_unit_to_matrix_branch(branch_child, focused_process_unit));
+            MCcall(attach_process_unit_to_matrix_branch(branch_child, focused_process_unit));
 
-          return 0;
+            return 0;
+          }
         }
       }
 
