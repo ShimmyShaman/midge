@@ -2525,13 +2525,7 @@ int mc_main(int argc, const char *const *argv)
       ""
       "midgequit|";
 
-  // node_v1 *node;
-  // "create function\n"
-  // // Uncertain response: Type another command or type demobegin to demostrate it
-  // "demobegin\n"
-  // "demoend\n"
-  // "create node\n"
-  // "construct_and_attach_child_node\n";
+  // Command Loop
   printf("\n:> ");
   int n = strlen(commands);
   int s = 0;
@@ -2566,6 +2560,10 @@ int mc_main(int argc, const char *const *argv)
     // }
   }
 
+  if (global->child_count > 0) {
+    mc_node_v1 *child = (mc_node_v1 *)global->children[0];
+    printf("\n>> global has a child named %s!\n", child->name);
+  }
   // printf("\n\nProcess Matrix:\n");
   // print_process_unit(command_hub->process_matrix, 5, 5, 1);
 
@@ -2590,7 +2588,7 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
 
 int submit_user_command(int argc, void **argsv)
 {
-  printf("suc-0\n");
+  // printf("suc-0\n");
   mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)argsv[0];
   char *command = (char *)argsv[4];
 
@@ -2598,7 +2596,7 @@ int submit_user_command(int argc, void **argsv)
   mc_process_action_v1 *process_action;
   MCcall(format_user_response(command_hub, command, &process_action));
 
-  printf("suc-1\n");
+  // printf("suc-1\n");
   // Process command and any/all system responses
   while (1) {
     // printf("suc:loop_begin:process_action=%s\n", get_action_type_string(process_action->type));
@@ -2621,31 +2619,31 @@ int submit_user_command(int argc, void **argsv)
     // Affect the command hub
     MCcall(command_hub_submit_process_action(command_hub, process_action));
 
-    printf("suc-2\n");
+    // printf("suc-2\n");
     // Process the action
     MCcall(command_hub_process_outstanding_actions(command_hub));
 
-    printf("suc-3\n");
+    // printf("suc-3\n");
     // Formulate system responses
     void *p_response_action = NULL;
     MCcall(systems_process_command_hub_scripts(command_hub, &p_response_action));
-    printf("suc-4\n");
+    // printf("suc-4\n");
     if (!p_response_action) {
       MCcall(systems_process_command_hub_issues(command_hub, &p_response_action));
     }
 
-    printf("suc-5\n");
+    // printf("suc-5\n");
 
     MCcall(assist_user_process_issues(command_hub, &p_response_action));
 
-    printf("suc-6\n");
+    // printf("suc-6\n");
     if (!p_response_action) {
       // Send control back to the user
       break;
     }
     process_action = (mc_process_action_v1 *)p_response_action;
   }
-  printf("suc-7\n");
+  // printf("suc-7\n");
 
   // Send control back to the user
   return 0;
@@ -2728,6 +2726,9 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
 
     construct_process_action_detail(action->next_issue, &action_process_unit->continuance);
 
+    // Transfer the DEMO-INITIATION indentation
+    action_process_unit->continuance->process_movement = PROCESS_MOVEMENT_INDENT;
+
     // if (!action_process_unit->action->dialogue || strncmp(action_process_unit->action->dialogue, "demo ", 5)) {
     //   MCerror(2743, "TODO");
     // }
@@ -2751,7 +2752,7 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
     MCcall(construct_process_action_detail(NULL, &action_process_unit->previous_issue));
 
     // Transfer the DEMO-INITIATION indentation
-    action_process_unit->action->process_movement = PROCESS_MOVEMENT_INDENT;
+    // action_process_unit->action->process_movement = PROCESS_MOVEMENT_INDENT;
   }
   else {
     // printf("pmra-3\n");
@@ -3849,11 +3850,11 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
 
   printf("continuance: %s : %s : %i\n", get_action_type_string(best_match->continuance->type), best_match->continuance->dialogue,
          best_match->continuance->process_movement);
-// ERROR
-// ERROR
-// ERROR
-// ERROR
-// ERROR
+  // ERROR
+  // ERROR
+  // ERROR
+  // ERROR
+  // ERROR
   mc_process_action_v1 *replacement;
   command_action->next_issue = NULL;
   MCcall(construct_process_action(command_hub, best_match->continuance->process_movement, command_action,
@@ -4042,18 +4043,18 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
 
   // printf("cpufa-1\n");
   // Set Unit Data : Action
-  printf("cpufa-act:%p\n", action);
+  // printf("cpufa-act:%p\n", action);
   MCcall(construct_process_action_detail(action, &(*output)->action));
-  printf("cpufa-1a\n");
+  // printf("cpufa-1a\n");
   // if (action->previous_issue && action->previous_issue->next_issue->object_uid != action->object_uid) {
   //   MCerror(3860, "EXPECTED");
   // }
-  printf("cpufa-act:%p\n", action);
+  // printf("cpufa-act:%p\n", action);
   MCcall(construct_process_action_detail(action->previous_issue, &(*output)->previous_issue));
-  printf("cpufa-1b\n");
+  // printf("cpufa-1b\n");
   MCcall(construct_process_action_detail(action->contextual_issue, &(*output)->contextual_issue));
 
-  printf("cpufa-2\n");
+  // printf("cpufa-2\n");
   mc_process_action_v1 *sequence_root;
   if (action->contextual_issue == NULL) {
     sequence_root = NULL;
@@ -4074,7 +4075,7 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
   }
   MCcall(construct_process_action_detail(sequence_root, &(*output)->sequence_root_issue));
 
-  printf("cpufa-3\n");
+  // printf("cpufa-3\n");
   if (!action->next_issue) {
     MCerror(3876, "Should never enter process unit without a continuance result");
   }
@@ -4086,7 +4087,7 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
 
   (*output)->children = NULL;
 
-  printf("cpufa-9\n");
+  // printf("cpufa-9\n");
   return 0;
 }
 
