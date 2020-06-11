@@ -355,6 +355,7 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
   return 0;
 }
 
+int release_process_action(mc_process_action_v1 *process_action) { free(process_action); return 0; }
 // int mcqck_translate_script_statement(void *nodespace, char *script_statement, char **translated_statement)
 // {
 //   char buf[16384];
@@ -2538,6 +2539,7 @@ int mc_main(int argc, const char *const *argv)
   int n = strlen(commands);
   int s = 0;
   char cstr[2048];
+  mc_process_action_v1 *suggestion = NULL;
   void *vargs[12]; // TODO -- count
   for (int i = 0; i < n; ++i) {
     if (commands[i] != '|')
@@ -2548,6 +2550,7 @@ int mc_main(int argc, const char *const *argv)
 
     vargs[0] = (void *)command_hub;
     vargs[4] = (void *)cstr;
+    vargs[6] = (void *)&suggestion;
 
     if (!strcmp(cstr, "midgequit")) {
       printf("midgequit\n");
@@ -2555,6 +2558,11 @@ int mc_main(int argc, const char *const *argv)
     }
 
     printf("========================================\n");
+    if (suggestion) {
+      printf("%s]%s\n>: ", get_action_type_string(suggestion->type), suggestion->dialogue);
+      release_process_action(suggestion);
+      suggestion = NULL;
+    }
     MCcall(submit_user_command(12, vargs));
 
     // if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
@@ -2592,13 +2600,14 @@ int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process
 int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub);
 int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_response_action);
 int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p_response_action);
-int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action);
+int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 **out_suggestion);
 
 int submit_user_command(int argc, void **argsv)
 {
   // printf("suc-0\n");
   mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)argsv[0];
   char *command = (char *)argsv[4];
+  mc_process_action_v1 **suggestion = (mc_process_action_v1 **)argsv[6];
 
   // Format the User Response as an action
   mc_process_action_v1 *process_action;
@@ -2642,11 +2651,10 @@ int submit_user_command(int argc, void **argsv)
 
     // printf("suc-5\n");
 
-    MCcall(assist_user_process_issues(command_hub, &p_response_action));
-
     // printf("suc-6\n");
     if (!p_response_action) {
       // Send control back to the user
+      // MCcall(suggest_user_process_action(command_hub, suggestion));
       break;
     }
     process_action = (mc_process_action_v1 *)p_response_action;
@@ -2720,7 +2728,8 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
   mc_process_unit_v1 *action_process_unit;
   if (action->next_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ||
       action->next_issue->type == PROCESS_ACTION_PM_UNRESOLVED_COMMAND || action->type == PROCESS_ACTION_PM_UNRESOLVED_COMMAND ||
-      action->next_issue->type == PROCESS_ACTION_PM_DEMO_CONCLUSION) {
+      (action->next_issue->type == PROCESS_ACTION_USER_UNPROVOKED_COMMAND &&
+       !strncmp(action->next_issue->dialogue, "enddemo", 7))) {
     // printf("### demo invocation registration to process matrix delayed!\n");
     return 0;
   }
@@ -2741,9 +2750,28 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
 
     // printf("### demo command registered to process matrix!\n");
   }
-  else if (action->type == PROCESS_ACTION_PM_DEMO_CONCLUSION) {
+  else if (action->type == PROCESS_ACTION_USER_UNPROVOKED_COMMAND && action->dialogue &&
+           !strncmp(action->next_issue->dialogue, "enddemo", 7)) {
 
-    MCerror(2746, "what the fuck do i know");
+    // Add the previously delayed action
+    // printf("pmra-1\n");
+    // Add the trimmed demo invocation action, that was ignored above, instead
+    if (action->contextual_issue->type != PROCESS_ACTION_USER_UNPROVOKED_COMMAND || !action->contextual_issue->dialogue ||
+        strncmp(action->contextual_issue->dialogue, "demo ", 5)) {
+      MCerror(2734, "Unexpected");
+    }
+    if (!action->previous_issue) {
+      MCerror(2754, "Unexpected");
+    }
+
+    MCcall(construct_process_unit_from_action(command_hub, action->previous_issue, &action_process_unit));
+
+    construct_process_action_detail(action->next_issue, &action_process_unit->continuance);
+
+    // Transfer the DEMO-INITIATION indentation
+    // action_process_unit->continuance->process_movement = PROCESS_MOVEMENT_INDENT;
+
+    // printf("### demo command registered to process matrix!\n");
   }
   else if (action->previous_issue && action->previous_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
     // printf("pmra-2\n");
@@ -3419,8 +3447,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 
       // Conclude the demo
       mc_process_action_v1 *demo_completed_issue;
-      construct_process_action(command_hub, PROCESS_MOVEMENT_RESOLVE, focused_issue, PROCESS_ACTION_PM_DEMO_CONCLUSION,
-                               " -- demo completed", NULL, &demo_completed_issue);
+      construct_completion_action(command_hub, focused_issue, " -- demo completed", true, &demo_completed_issue);
 
       *p_response_action = (void *)demo_completed_issue;
       return 0;
@@ -3702,53 +3729,8 @@ int does_dialogue_match_pattern(char const *const dialogue, char const *const pa
 int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
                                void **p_response_action);
 
-int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response_action)
+int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 **out_suggestion)
 {
-  // printf("aupi-0\n");
-  if (*p_response_action) {
-    // Intercept any responses
-    mc_process_action_v1 *response_action = (mc_process_action_v1 *)*p_response_action;
-
-    // Filter the types of actions that can be assisted with
-    switch (response_action->type) {
-      // User Initiated
-    case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
-    case PROCESS_ACTION_USER_SCRIPT_ENTRY:
-    case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
-    case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-      break;
-      // Process Manager Initiated
-    case PROCESS_ACTION_PM_IDLE:
-    case PROCESS_ACTION_PM_DEMO_INITIATION:
-    case PROCESS_ACTION_PM_SCRIPT_REQUEST:
-    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
-    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
-      break;
-    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
-      void *resolution_action;
-      // printf("aupi-1\n");
-      MCcall(
-          attempt_to_resolve_command(command_hub, (mc_process_action_v1 *)response_action->contextual_issue, &resolution_action));
-      // printf("aupi-2\n");
-      if (resolution_action) {
-        // TODO -- delete the current response and its fields
-
-        // Replace the response with the resolution
-        *p_response_action = resolution_action;
-        // printf("aupi-3\n");
-      }
-    } break;
-      // Script
-    case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
-    case PROCESS_ACTION_SCRIPT_QUERY:
-      break;
-    default:
-      MCerror(3280, "UnhandledType:%i '%s'", response_action->type, response_action->dialogue);
-    }
-
-    return 0;
-  }
-
   if (command_hub->focused_issue_stack_count == 0)
     return 0;
 
@@ -3817,15 +3799,14 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     // Replace the current unresolved action with the process action
     printf("-#AUPI# Beginning Process:%s-'%s': %i\n", get_action_type_string(best_match->continuance->type),
            best_match->continuance->dialogue, best_match->continuance->process_movement);
-    // printf("process_unit:\n");
-    // print_process_unit(process_unit, 6, 1, 0);
-    // printf("best_match:\n");
-    // print_process_unit(best_match, 6, 1, 0);
+    printf("process_unit:\n");
+    print_process_unit(process_unit, 6, 1, 0);
+    printf("best_match:\n");
+    print_process_unit(best_match, 6, 1, 0);
 
-    mc_process_action_v1 *replacement;
     // command_action->next_issue = NULL;
     MCcall(construct_process_action(command_hub, best_match->continuance->process_movement, focused_issue,
-                                    best_match->continuance->type, best_match->continuance->dialogue, NULL, &replacement));
+                                    best_match->continuance->type, best_match->continuance->dialogue, NULL, out_suggestion));
 
     // if (best_match->action->dialogue_has_pattern) {
     //   bool match;
@@ -3836,13 +3817,13 @@ int assist_user_process_issues(mc_command_hub_v1 *command_hub, void **p_response
     //   }
     // }
 
-    //         // TODO - should dispose of intercepted action...
+    // //         // TODO - should dispose of intercepted action...
 
-    // printf("atrc-7\n");
-    // TODO -- delete the current response and its fields
+    // // printf("atrc-7\n");
+    // // TODO -- delete the current response and its fields
 
-    // Replace the response with the resolution
-    *p_response_action = replacement;
+    // // Replace the response with the resolution
+    // *p_response_action = replacement;
 
     // MCerror(3805, "Unhandled");
 

@@ -32,4 +32,21 @@ invoke construct_and_attach_child
 	RESOLVED
 
 	
+
+
+Templates - confirmed processes
+ - create function @{name_of_function_to_create}
+    - declare function
+    - define function
+ - declare function
+    - invoke declare_function
+ - define function
+    - invoke define_function
+ - invoke @{name_of_function_to_invoke}
+    ? sets contextual variable name_of_function_to_invoke
+    - .runScript invoke_function_with_args
+
+
+
+Process Matrix - previous history of actions for suggestions
 	
