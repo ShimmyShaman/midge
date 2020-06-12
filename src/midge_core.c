@@ -355,7 +355,11 @@ int find_struct_info(void *vp_nodespace, const char *const struct_name, void **s
   return 0;
 }
 
-int release_process_action(mc_process_action_v1 *process_action) { free(process_action); return 0; }
+int release_process_action(mc_process_action_v1 *process_action)
+{
+  free(process_action);
+  return 0;
+}
 // int mcqck_translate_script_statement(void *nodespace, char *script_statement, char **translated_statement)
 // {
 //   char buf[16384];
@@ -2069,14 +2073,16 @@ int init_core_functions(mc_command_hub_v1 *command_hub);
 int init_process_matrix(mc_command_hub_v1 *command_hub);
 int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
-int (*mc_dummy_function_pointer)(int, void **);
+int (*mc_dummy_function)(int, void **);
+int mc_dummy_function_v1(int argc, void **argv) { return 0; }
 int mc_main(int argc, const char *const *argv)
 {
+  mc_dummy_function = &mc_dummy_function_v1;
   printf("mm-0\n");
   int sizeof_void_ptr = sizeof(void *);
   if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) || sizeof_void_ptr != sizeof(uint *) ||
       sizeof_void_ptr != sizeof(const char *) || sizeof_void_ptr != sizeof(void **) ||
-      sizeof_void_ptr != sizeof(mc_dummy_function_pointer) || sizeof_void_ptr != sizeof(&mc_main) ||
+      sizeof_void_ptr != sizeof(mc_dummy_function) || sizeof_void_ptr != sizeof(&mc_dummy_function_v1) ||
       sizeof_void_ptr != sizeof(unsigned long)) {
     printf("pointer sizes aren't equal!!!\n");
     return -1;
@@ -2487,12 +2493,20 @@ int mc_main(int argc, const char *const *argv)
       "$nv @function_to_invoke $ya rind responses\n"
       "|"
       "invoke_function_with_args|"
+      "midgequit|"
+      "demo|"
+      "invoke @name_of_function_to_invoke|"
+      "mc_dummy_function|"
+      "enddemo|"
+      "midgequit|"
+
       // Create Function Sequence
-      "create function construct_and_attach_child_node|"
-      "demo create function @{function_name=construct_and_attach_child_node}|"
+      "demo|"
+      "create function @function_name_to_create|"
+      "construct_and_attach_child|"
       // -- DEMO declare function
-      "invoke declare_function_pointer|"
-      "demo invoke @{function_to_invoke=declare_function_pointer}|"
+      "demo|"
+      "invoke @{function_to_invoke=declare_function_pointer}|"
       ".runScript invoke_function_with_args|"
       // ---- SCRIPT SEQUENCE ----
       // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
@@ -2587,9 +2601,8 @@ int mc_main(int argc, const char *const *argv)
   return 0;
 }
 
-int construct_process_action(mc_command_hub_v1 *command_hub, process_action_indent_movement process_movement,
-                             mc_process_action_v1 *current_issue, process_action_type type, const char *const dialogue,
-                             void *data, mc_process_action_v1 **output);
+int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue, process_action_type type,
+                             const char *const dialogue, void *data, mc_process_action_v1 **output);
 int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action, mc_process_unit_v1 **output);
 int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_focused_issue,
                                 char const *const dialogue, bool force_resolution, mc_process_action_v1 **output);
@@ -2613,10 +2626,10 @@ int submit_user_command(int argc, void **argsv)
   mc_process_action_v1 *process_action;
   MCcall(format_user_response(command_hub, command, &process_action));
 
-  // printf("suc-1\n");
+  printf("suc-1\n");
   // Process command and any/all system responses
   while (1) {
-    // printf("suc:loop_begin:process_action=%s\n", get_action_type_string(process_action->type));
+    printf("suc:loop_begin:process_action=%s\n", get_action_type_string(process_action->type));
     // printf("suc:loop_begin:focused_issue_stack_count=%u\n", command_hub->focused_issue_stack_count);
     {
       // Register the previous action with the process matrix
@@ -2632,11 +2645,12 @@ int submit_user_command(int argc, void **argsv)
         MCcall(process_matrix_register_action(command_hub, action));
       }
     }
+    printf("suc-2\n");
 
     // Affect the command hub
     MCcall(command_hub_submit_process_action(command_hub, process_action));
 
-    // printf("suc-2\n");
+    // printf("suc-2A\n");
     // Process the action
     MCcall(command_hub_process_outstanding_actions(command_hub));
 
@@ -2670,8 +2684,7 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
   mc_process_action_v1 *process_action;
 
   if (command_hub->focused_issue_stack_count == 0) {
-    MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, NULL, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command,
-                                    NULL, &process_action));
+    MCcall(construct_process_action(command_hub, NULL, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL, &process_action));
   }
   else {
     // Pop the focused issue from the stack
@@ -2680,36 +2693,46 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_proce
     command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
     --command_hub->focused_issue_stack_count;
 
-    switch (focused_issue->type) {
-    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
-      // Previous sequence concluded: Move back up a tier
-      MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_RESOLVE, focused_issue,
-                                      PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL, &process_action));
-    } break;
-    case PROCESS_ACTION_PM_IDLE: {
-      MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, focused_issue,
-                                      PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL, &process_action));
-    } break;
-    case PROCESS_ACTION_PM_DEMO_INITIATION: {
-      MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, focused_issue,
-                                      PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL, &process_action));
-      // printf("demo_focused_issue>next:%p\n", focused_issue->next_issue);
-    } break;
-    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
+    if (command && !strcmp(command, "demo")) {
+      MCcall(
+          construct_process_action(command_hub, focused_issue, PROCESS_ACTION_DEMO_INITIATION, command, NULL, &process_action));
+    }
+    else if (command && !strcmp(command, "enddemo")) {
+      MCcall(
+          construct_process_action(command_hub, focused_issue, PROCESS_ACTION_DEMO_CONCLUSION, command, NULL, &process_action));
+    }
+    else {
+      switch (focused_issue->type) {
+      case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
+        // Previous sequence concluded: Move back up a tier
+        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL,
+                                        &process_action));
+      } break;
+      case PROCESS_ACTION_PM_IDLE: {
+        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL,
+                                        &process_action));
+      } break;
+      case PROCESS_ACTION_DEMO_INITIATION: {
+        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL,
+                                        &process_action));
+        // printf("demo_focused_issue>next:%p\n", focused_issue->next_issue);
+      } break;
+      case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
 
-      MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_RESOLVE, focused_issue,
-                                      PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL, &process_action));
-    } break;
-    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME: {
-      MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, focused_issue,
-                                      PROCESS_ACTION_USER_CREATED_SCRIPT_NAME, command, NULL, &process_action));
-    } break;
-    case PROCESS_ACTION_SCRIPT_QUERY: {
-      MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, focused_issue, PROCESS_ACTION_USER_SCRIPT_RESPONSE,
-                                      command, NULL, &process_action));
-    } break;
-    default:
-      MCerror(2562, "Unhandled PM-query-type:%i  '%s'", focused_issue->type, focused_issue->dialogue);
+        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL,
+                                        &process_action));
+      } break;
+      case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME: {
+        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_CREATED_SCRIPT_NAME, command, NULL,
+                                        &process_action));
+      } break;
+      case PROCESS_ACTION_SCRIPT_QUERY: {
+        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_SCRIPT_RESPONSE, command, NULL,
+                                        &process_action));
+      } break;
+      default:
+        MCerror(2562, "Unhandled PM-query-type:%i  '%s'", focused_issue->type, focused_issue->dialogue);
+      }
     }
   }
   *command_action = process_action;
@@ -2726,14 +2749,14 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
 
   // Remove demonstrations from data
   mc_process_unit_v1 *action_process_unit;
-  if (action->next_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ||
+  if (action->next_issue->type == PROCESS_ACTION_DEMO_INITIATION ||
       action->next_issue->type == PROCESS_ACTION_PM_UNRESOLVED_COMMAND || action->type == PROCESS_ACTION_PM_UNRESOLVED_COMMAND ||
       (action->next_issue->type == PROCESS_ACTION_USER_UNPROVOKED_COMMAND &&
        !strncmp(action->next_issue->dialogue, "enddemo", 7))) {
     // printf("### demo invocation registration to process matrix delayed!\n");
     return 0;
   }
-  else if (action->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+  else if (action->type == PROCESS_ACTION_DEMO_INITIATION) {
     // printf("pmra-1\n");
     // Add the trimmed demo invocation action, that was ignored above, instead
     if (action->contextual_issue->type != PROCESS_ACTION_USER_UNPROVOKED_COMMAND || !action->contextual_issue->dialogue ||
@@ -2773,7 +2796,7 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
 
     // printf("### demo command registered to process matrix!\n");
   }
-  else if (action->previous_issue && action->previous_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+  else if (action->previous_issue && action->previous_issue->type == PROCESS_ACTION_DEMO_INITIATION) {
     // printf("pmra-2\n");
     if (action->previous_issue->previous_issue) {
       MCerror(2745, "Unexpected");
@@ -2818,11 +2841,11 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
     // MCerror(2779, "TODO:%s", action_process_unit->continuance->dialogue);
   }
 
-  if (action_process_unit->continuance && action_process_unit->continuance->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+  if (action_process_unit->continuance && action_process_unit->continuance->type == PROCESS_ACTION_DEMO_INITIATION) {
     MCerror(2020, "hopper");
   }
 
-  if (action->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+  if (action->type == PROCESS_ACTION_DEMO_INITIATION) {
     // printf("\ndemo_process_unit:\n");
     // print_process_unit(action_process_unit, 4, 3, 0);
   }
@@ -2831,7 +2854,7 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
   // Search first amongst action types
   MCcall(attach_process_unit_to_matrix_branch(command_hub->process_matrix, action_process_unit));
 
-  if (action->type == PROCESS_ACTION_PM_DEMO_INITIATION) {
+  if (action->type == PROCESS_ACTION_DEMO_INITIATION) {
     // printf("\nprocess_matrix:\n");
     // print_process_unit(command_hub->process_matrix, 3, 3, 0);
   }
@@ -2844,7 +2867,7 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
   //   root_demo_issue = root_demo_issue->previous_issue;
   // }
   // process_unit_type action_process_unit_type =
-  //     root_demo_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ? PROCESS_TYPE_DEMONSTRATED : PROCESS_TYPE_EXHIBITED;
+  //     root_demo_issue->type == PROCESS_ACTION_DEMO_INITIATION ? PROCESS_TYPE_DEMONSTRATED : PROCESS_TYPE_EXHIBITED;
 
   // mc_process_unit_v1 *action_process_unit;
   // MCcall(construct_process_unit(command_hub, action_process_unit_type, action->dialogue,
@@ -2903,7 +2926,7 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
   //     // Process Manager Initiated
   //   case PROCESS_ACTION_PM_IDLE:
   //   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-  //   case PROCESS_ACTION_PM_DEMO_INITIATION:
+  //   case PROCESS_ACTION_DEMO_INITIATION:
   //   case PROCESS_ACTION_PM_SCRIPT_REQUEST:
   //   case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
   //   case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
@@ -2998,7 +3021,7 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
     printf("%s", focused_issue->dialogue);
     command_hub->focused_issue_activated = true;
   } break;
-  case PROCESS_ACTION_PM_DEMO_INITIATION: {
+  case PROCESS_ACTION_DEMO_INITIATION: {
     // Print to terminal
     if (focused_issue->dialogue != NULL)
       printf("%s\n", focused_issue->dialogue);
@@ -3117,7 +3140,7 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
       // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
       // *)command_hub->demo_issue->data);
       mc_process_action_v1 *script_completion;
-      bool resolve_indented_workflow = (focused_issue->contextual_issue->next_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION);
+      bool resolve_indented_workflow = (focused_issue->contextual_issue->next_issue->type != PROCESS_ACTION_DEMO_INITIATION);
       construct_completion_action(command_hub, focused_issue, " - script completed", resolve_indented_workflow,
                                   &script_completion);
 
@@ -3152,8 +3175,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, void **p
 
     // Begin Query
     mc_process_action_v1 *script_query;
-    MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, focused_issue, PROCESS_ACTION_SCRIPT_QUERY,
-                                    script_instance->response, NULL, &script_query));
+    MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_SCRIPT_QUERY, script_instance->response, NULL,
+                                    &script_query));
     free(script_instance->response);
     script_instance->response = NULL;
 
@@ -3188,7 +3211,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       return 0;
     }
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-  case PROCESS_ACTION_PM_DEMO_INITIATION:
+  case PROCESS_ACTION_DEMO_INITIATION:
   case PROCESS_ACTION_PM_IDLE:
   case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
     // Do not process these commands
@@ -3224,9 +3247,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
         // Requires name
         // Set corresponding issue
         mc_process_action_v1 *script_issue;
-        MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_INDENT, focused_issue,
-                                        PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME, "Enter Script Name:", (void *)script,
-                                        &script_issue));
+        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
+                                        "Enter Script Name:", (void *)script, &script_issue));
 
         // Set as response action
         *p_response_action = (void *)script_issue;
@@ -3292,7 +3314,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       //     if (!strncmp(contextual_issue->dialogue, "demo ", 5)) {
       //       // Obtain pattern from demo initiation child
       //       mc_process_action_v1 *demo_issue = contextual_issue->next_issue;
-      //       if (demo_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION) {
+      //       if (demo_issue->type != PROCESS_ACTION_DEMO_INITIATION) {
       //         MCerror(3006, "TODO :%i", demo_issue->type);
       //       }
       //       allocate_and_copy_cstr(script_instance->contextual_command, (char *)demo_issue->data);
@@ -3301,7 +3323,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       //       MCerror(3012, "TODO");
       //     }
       //   } break;
-      //   case PROCESS_ACTION_PM_DEMO_INITIATION:
+      //   case PROCESS_ACTION_DEMO_INITIATION:
       //     allocate_and_copy_cstr(script_instance->contextual_command, (char *)contextual_issue->data);
       //     break;
       //   default:
@@ -3321,9 +3343,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       char *initiation_msg;
       cprintf(initiation_msg, " -- initiating script '%s'...", script->name);
       mc_process_action_v1 *script_initiation;
-      MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_INDENT, focused_issue,
-                                      PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS, initiation_msg, script_instance,
-                                      &script_initiation));
+      MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS, initiation_msg,
+                                      script_instance, &script_initiation));
       free(initiation_msg);
       // printf("spchi-14\n");
 
@@ -3331,7 +3352,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       // while (root_demo_issue->previous_issue) {
       //   root_demo_issue = root_demo_issue->previous_issue;
       // }
-      // if (root_demo_issue->type != PROCESS_ACTION_PM_DEMO_INITIATION) {
+      // if (root_demo_issue->type != PROCESS_ACTION_DEMO_INITIATION) {
       //   MCerror(2998, "unexpected:%i", root_demo_issue->type);
       // }
       // printf("root_demo_issue>next:%p  type:%i\n", root_demo_issue->next_issue, root_demo_issue->next_issue->type);
@@ -3413,8 +3434,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
       mc_process_action_v1 *contextual_issue = NULL;
       if (focused_issue)
         contextual_issue = (mc_process_action_v1 *)focused_issue->contextual_issue;
-      MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_INDENT, focused_issue, PROCESS_ACTION_PM_DEMO_INITIATION,
-                                      demo_issue_dialogue, (void *)pattern, &demo_issue));
+      MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_DEMO_INITIATION, demo_issue_dialogue,
+                                      (void *)pattern, &demo_issue));
       focused_issue->next_issue = demo_issue;
       // printf("demo_issue sequid:%u\n", demo_issue->sequence_uid);
 
@@ -3460,8 +3481,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
     // -- Couldn't find one
     // -- Send Unresolved command message
     mc_process_action_v1 *unresolved_issue;
-    MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_INDENT, focused_issue, PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
-                                    "Unresolved Command.", NULL, &unresolved_issue));
+    MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_PM_UNRESOLVED_COMMAND, "Unresolved Command.", NULL,
+                                    &unresolved_issue));
 
     *p_response_action = (void *)unresolved_issue;
 
@@ -3497,8 +3518,8 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, void **p_
 
     // Set corresponding issue
     mc_process_action_v1 *script_issue;
-    MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, focused_issue,
-                                    PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS, NULL, NULL, &script_issue));
+    MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS, NULL, NULL,
+                                    &script_issue));
 
     *p_response_action = script_issue;
 
@@ -3750,7 +3771,7 @@ int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_actio
     break;
     // Process Manager Initiated
   case PROCESS_ACTION_PM_IDLE:
-  case PROCESS_ACTION_PM_DEMO_INITIATION:
+  case PROCESS_ACTION_DEMO_INITIATION:
   case PROCESS_ACTION_PM_SCRIPT_REQUEST:
   case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
@@ -3805,8 +3826,8 @@ int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_actio
     print_process_unit(best_match, 6, 1, 0);
 
     // command_action->next_issue = NULL;
-    MCcall(construct_process_action(command_hub, best_match->continuance->process_movement, focused_issue,
-                                    best_match->continuance->type, best_match->continuance->dialogue, NULL, out_suggestion));
+    MCcall(construct_process_action(command_hub, focused_issue, best_match->continuance->type, best_match->continuance->dialogue,
+                                    NULL, out_suggestion));
 
     // if (best_match->action->dialogue_has_pattern) {
     //   bool match;
@@ -3889,8 +3910,8 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   // ERROR
   mc_process_action_v1 *replacement;
   command_action->next_issue = NULL;
-  MCcall(construct_process_action(command_hub, best_match->continuance->process_movement, command_action,
-                                  best_match->continuance->type, best_match->continuance->dialogue, NULL, &replacement));
+  MCcall(construct_process_action(command_hub, command_action, best_match->continuance->type, best_match->continuance->dialogue,
+                                  NULL, &replacement));
 
   if (best_match->action->dialogue_has_pattern) {
     bool match;
@@ -3908,9 +3929,8 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   return 0;
 }
 
-int construct_process_action(mc_command_hub_v1 *command_hub, process_action_indent_movement process_movement,
-                             mc_process_action_v1 *current_issue, process_action_type type, const char *const dialogue,
-                             void *data, mc_process_action_v1 **output)
+int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue, process_action_type type,
+                             const char *const dialogue, void *data, mc_process_action_v1 **output)
 {
   // printf("cpa-0\n");
   *output = (mc_process_action_v1 *)malloc(sizeof(mc_process_action_v1));
@@ -3921,17 +3941,41 @@ int construct_process_action(mc_command_hub_v1 *command_hub, process_action_inde
   ++command_hub->uid_counter;
   (*output)->object_uid = command_hub->uid_counter;
 
+  // Process Positioning
+  process_action_indent_movement process_movement;
+  if (current_issue) {
+    switch (current_issue->type) {
+    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
+    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+      process_movement = PROCESS_MOVEMENT_RESOLVE;
+      break;
+    case PROCESS_ACTION_PM_IDLE:
+    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
+    case PROCESS_ACTION_SCRIPT_QUERY:
+      process_movement = PROCESS_MOVEMENT_CONTINUE;
+      break;
+    case PROCESS_ACTION_DEMO_INITIATION:
+      process_movement = PROCESS_MOVEMENT_INDENT;
+      break;
+    default: {
+      MCerror(3957, "Unsupported action type:'%s'", get_action_type_string(current_issue->type));
+    }
+    }
+  }
+  else {
+    process_movement = PROCESS_MOVEMENT_CONTINUE;
+  }
+
   if (current_issue && current_issue->type == PROCESS_ACTION_USER_UNPROVOKED_COMMAND &&
       type != PROCESS_ACTION_PM_SEQUENCE_RESOLVED && process_movement != PROCESS_MOVEMENT_INDENT &&
       (!dialogue || strncmp(dialogue, ".runScript ", 11))) {
     MCerror(3885, "Should you have indented this?");
   }
-
-  // Process Positioning
   if (process_movement > 4 || process_movement < 1) {
     MCerror(3967, "processMOVEMENT:%i", process_movement);
   }
   (*output)->process_movement = process_movement;
+
   switch ((*output)->process_movement) {
   case PROCESS_MOVEMENT_CONTINUE: {
     // printf("CONTINUE: context %p<>%p\n", current_issue, (current_issue == NULL ? NULL : current_issue->contextual_issue));
@@ -4103,7 +4147,7 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
   else {
     sequence_root = action;
     while (sequence_root->previous_issue) {
-      if (sequence_root->previous_issue->type == PROCESS_ACTION_PM_DEMO_INITIATION ||
+      if (sequence_root->previous_issue->type == PROCESS_ACTION_DEMO_INITIATION ||
           sequence_root->previous_issue->type == PROCESS_ACTION_PM_IDLE ||
           sequence_root->previous_issue->type == PROCESS_ACTION_PM_SEQUENCE_RESOLVED)
         break;
@@ -4143,15 +4187,14 @@ int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_actio
   if (force_resolution) {
     // Resolve
     // printf("cca-RESOLUTION\n");
-    MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, current_focused_issue,
-                                    PROCESS_ACTION_PM_SEQUENCE_RESOLVED, dialogue, NULL, output));
+    MCcall(construct_process_action(command_hub, current_focused_issue, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, dialogue, NULL,
+                                    output));
     return 0;
   }
 
   // Idle
   // printf("cca-IDLE\n");
-  MCcall(construct_process_action(command_hub, PROCESS_MOVEMENT_CONTINUE, current_focused_issue, PROCESS_ACTION_PM_IDLE, dialogue,
-                                  NULL, output));
+  MCcall(construct_process_action(command_hub, current_focused_issue, PROCESS_ACTION_PM_IDLE, dialogue, NULL, output));
   return 0;
 }
 
