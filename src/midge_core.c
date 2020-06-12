@@ -2493,7 +2493,6 @@ int mc_main(int argc, const char *const *argv)
       "$nv @function_to_invoke $ya rind responses\n"
       "|"
       "invoke_function_with_args|"
-      "midgequit|"
       "demo|"
       "invoke @name_of_function_to_invoke|"
       "mc_dummy_function|"
@@ -2626,10 +2625,10 @@ int submit_user_command(int argc, void **argsv)
   mc_process_action_v1 *process_action;
   MCcall(format_user_response(command_hub, command, &process_action));
 
-  printf("suc-1\n");
+  // printf("suc-1\n");
   // Process command and any/all system responses
   while (1) {
-    printf("suc:loop_begin:process_action=%s\n", get_action_type_string(process_action->type));
+    // printf("suc:loop_begin:process_action=%s\n", get_action_type_string(process_action->type));
     // printf("suc:loop_begin:focused_issue_stack_count=%u\n", command_hub->focused_issue_stack_count);
     {
       // Register the previous action with the process matrix
@@ -2645,12 +2644,12 @@ int submit_user_command(int argc, void **argsv)
         MCcall(process_matrix_register_action(command_hub, action));
       }
     }
-    printf("suc-2\n");
+    // printf("suc-2a\n");
 
     // Affect the command hub
     MCcall(command_hub_submit_process_action(command_hub, process_action));
 
-    // printf("suc-2A\n");
+    // printf("suc-2b\n");
     // Process the action
     MCcall(command_hub_process_outstanding_actions(command_hub));
 
@@ -2747,217 +2746,27 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
 {
   // printf("pmra-0\n");
 
-  // Remove demonstrations from data
-  mc_process_unit_v1 *action_process_unit;
-  if (action->next_issue->type == PROCESS_ACTION_DEMO_INITIATION ||
-      action->next_issue->type == PROCESS_ACTION_PM_UNRESOLVED_COMMAND || action->type == PROCESS_ACTION_PM_UNRESOLVED_COMMAND ||
-      (action->next_issue->type == PROCESS_ACTION_USER_UNPROVOKED_COMMAND &&
-       !strncmp(action->next_issue->dialogue, "enddemo", 7))) {
-    // printf("### demo invocation registration to process matrix delayed!\n");
+  // Remove demonstrations from added data
+  if (action->type == PROCESS_ACTION_DEMO_INITIATION || action->type == PROCESS_ACTION_DEMO_CONCLUSION ||
+      (action->contextual_issue && action->contextual_issue->type == PROCESS_ACTION_DEMO_INITIATION)) {
     return 0;
   }
-  else if (action->type == PROCESS_ACTION_DEMO_INITIATION) {
-    // printf("pmra-1\n");
-    // Add the trimmed demo invocation action, that was ignored above, instead
-    if (action->contextual_issue->type != PROCESS_ACTION_USER_UNPROVOKED_COMMAND || !action->contextual_issue->dialogue ||
-        strncmp(action->contextual_issue->dialogue, "demo ", 5)) {
-      MCerror(2734, "Unexpected");
-    }
 
-    MCcall(construct_process_unit_from_action(command_hub, action->contextual_issue, &action_process_unit));
-
-    construct_process_action_detail(action->next_issue, &action_process_unit->continuance);
-
-    // Transfer the DEMO-INITIATION indentation
-    action_process_unit->continuance->process_movement = PROCESS_MOVEMENT_INDENT;
-
-    // printf("### demo command registered to process matrix!\n");
-  }
-  else if (action->type == PROCESS_ACTION_USER_UNPROVOKED_COMMAND && action->dialogue &&
-           !strncmp(action->next_issue->dialogue, "enddemo", 7)) {
-
-    // Add the previously delayed action
-    // printf("pmra-1\n");
-    // Add the trimmed demo invocation action, that was ignored above, instead
-    if (action->contextual_issue->type != PROCESS_ACTION_USER_UNPROVOKED_COMMAND || !action->contextual_issue->dialogue ||
-        strncmp(action->contextual_issue->dialogue, "demo ", 5)) {
-      MCerror(2734, "Unexpected");
-    }
-    if (!action->previous_issue) {
-      MCerror(2754, "Unexpected");
-    }
-
-    MCcall(construct_process_unit_from_action(command_hub, action->previous_issue, &action_process_unit));
-
-    construct_process_action_detail(action->next_issue, &action_process_unit->continuance);
-
-    // Transfer the DEMO-INITIATION indentation
-    // action_process_unit->continuance->process_movement = PROCESS_MOVEMENT_INDENT;
-
-    // printf("### demo command registered to process matrix!\n");
-  }
-  else if (action->previous_issue && action->previous_issue->type == PROCESS_ACTION_DEMO_INITIATION) {
-    // printf("pmra-2\n");
-    if (action->previous_issue->previous_issue) {
-      MCerror(2745, "Unexpected");
-    }
-
-    // Construct the process Unit
-    MCcall(construct_process_unit_from_action(command_hub, action, &action_process_unit));
-
-    // Skip the DEMO_INITIATION as the previous issue
-    MCcall(release_process_action_detail(&action_process_unit->previous_issue));
-    MCcall(construct_process_action_detail(NULL, &action_process_unit->previous_issue));
-
-    // Transfer the DEMO-INITIATION indentation
-    // action_process_unit->action->process_movement = PROCESS_MOVEMENT_INDENT;
-  }
-  else {
-    // printf("pmra-3\n");
-    // Construct and register the focused action inside the process matrix
-    MCcall(construct_process_unit_from_action(command_hub, action, &action_process_unit));
-  }
+  mc_process_unit_v1 *action_process_unit;
 
   // printf("pmra-4\n");
-  // Trim all "demo ..." dialogues
-  if (action_process_unit->previous_issue->dialogue && !strncmp(action_process_unit->previous_issue->dialogue, "demo ", 5)) {
-    MCcall(convert_from_demo_dialogue(&action_process_unit->previous_issue->dialogue));
-  }
-  if (action_process_unit->action->dialogue && !strncmp(action_process_unit->action->dialogue, "demo ", 5)) {
-    MCcall(convert_from_demo_dialogue(&action_process_unit->action->dialogue));
-  }
-  // printf("pmra-4a\n");
-  if (action_process_unit->contextual_issue->dialogue && !strncmp(action_process_unit->contextual_issue->dialogue, "demo ", 5)) {
-    MCcall(convert_from_demo_dialogue(&action_process_unit->contextual_issue->dialogue));
-  }
-  if (action_process_unit->sequence_root_issue->dialogue &&
-      !strncmp(action_process_unit->sequence_root_issue->dialogue, "demo ", 5)) {
-    MCcall(convert_from_demo_dialogue(&action_process_unit->sequence_root_issue->dialogue));
-  }
-  // printf("pmra-5:%p\n", action_process_unit->continuance);
-  if (action_process_unit->continuance->dialogue && !strncmp(action_process_unit->continuance->dialogue, "demo ", 5)) {
-    // printf("pmra-5a:%s\n", action_process_unit->continuance->dialogue);
-    MCcall(convert_from_demo_dialogue(&action_process_unit->continuance->dialogue));
-    // MCerror(2779, "TODO:%s", action_process_unit->continuance->dialogue);
-  }
+  // Construct and register the focused action inside the process matrix
+  MCcall(construct_process_unit_from_action(command_hub, action, &action_process_unit));
+
+  // printf("pmra-5\n");
 
   if (action_process_unit->continuance && action_process_unit->continuance->type == PROCESS_ACTION_DEMO_INITIATION) {
-    MCerror(2020, "hopper");
+    release_process_action_detail(&action_process_unit->continuance);
+    construct_process_action_detail(NULL, &action_process_unit->continuance);
   }
 
-  if (action->type == PROCESS_ACTION_DEMO_INITIATION) {
-    // printf("\ndemo_process_unit:\n");
-    // print_process_unit(action_process_unit, 4, 3, 0);
-  }
-  // printf("pmra-6\n");
-  // Find the appropriate branch to place it, creating a new one if need be
   // Search first amongst action types
   MCcall(attach_process_unit_to_matrix_branch(command_hub->process_matrix, action_process_unit));
-
-  if (action->type == PROCESS_ACTION_DEMO_INITIATION) {
-    // printf("\nprocess_matrix:\n");
-    // print_process_unit(command_hub->process_matrix, 3, 3, 0);
-  }
-
-  return 0;
-
-  // // Obtain the demo begin action
-  // mc_process_action_v1 *root_demo_issue = action;
-  // while (root_demo_issue->previous_issue) {
-  //   root_demo_issue = root_demo_issue->previous_issue;
-  // }
-  // process_unit_type action_process_unit_type =
-  //     root_demo_issue->type == PROCESS_ACTION_DEMO_INITIATION ? PROCESS_TYPE_DEMONSTRATED : PROCESS_TYPE_EXHIBITED;
-
-  // mc_process_unit_v1 *action_process_unit;
-  // MCcall(construct_process_unit(command_hub, action_process_unit_type, action->dialogue,
-  // get_process_originator(action->type),
-  //                               action, &action_process_unit));
-
-  // // Apply this action as a continuance of the previous action (focused_issue)
-  // mc_process_action_v1 *focused_issue = NULL;
-  // if (command_hub->focused_issue_stack_count == 0) {
-  //   mc_process_action_v1 *focused_issue =
-  //       (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
-  // }
-  // if (focused_issue) {
-  //   // Find the process unit for the focused issue
-  //   for(int i = command_hub->process_matrix->count - 1; i >= 0; --i){
-  //     mc_process_unit_v1 *process_unit = (mc_process_unit_v1 *) command_hub->process_matrix->items[i];
-
-  //     if(process_unit->action->)
-  //   }
-  // }
-
-  // // Insert this action into the process matrix too (with 0 continuances)
-
-  // // -- Construct the process from the demo action sequence
-  // mc_process_unit_v1 *demod_process;
-  // MCcall(construct_process_unit(command_hub, PROCESS_TYPE_DEMONSTRATED, (char *)root_demo_issue->data,
-  // PROCESS_ORIGINATOR_USER,
-  //                               root_demo_issue, &demod_process));
-
-  // printf("root_demo_issue>next:%p  type:%i\n", root_demo_issue->next_issue, root_demo_issue->next_issue->type);
-
-  // // Add root to the process matrix
-  // printf("procm>demo process added: type:%i dialogue:'%s'\n", demod_process->type, demod_process->dialogue);
-  // MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
-  //                             &command_hub->process_matrix->count, demod_process));
-
-  // // Go through each action within the sequence
-  // mc_process_action_v1 *action = (mc_process_action_v1 *)root_demo_issue->next_issue;
-  // mc_process_unit_v1 *previous_unit = demod_process;
-  // while (action) {
-  //   if (action->object_uid == focused_issue->object_uid) {
-  //     // Don't include demo end action
-  //     break;
-  //   }
-
-  //   process_originator origin;
-  //   printf("processLoopActionType:%i\n", action->type);
-  //   switch (action->type) {
-  //     // User Initiated
-  //   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
-  //   case PROCESS_ACTION_USER_SCRIPT_ENTRY:
-  //   case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
-  //   case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-  //     origin = PROCESS_ORIGINATOR_USER;
-  //     break;
-  //     // Process Manager Initiated
-  //   case PROCESS_ACTION_PM_IDLE:
-  //   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-  //   case PROCESS_ACTION_DEMO_INITIATION:
-  //   case PROCESS_ACTION_PM_SCRIPT_REQUEST:
-  //   case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
-  //   case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
-  //     origin = PROCESS_ORIGINATOR_PM;
-  //     break;
-  //     // Script
-  //   case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
-  //   case PROCESS_ACTION_SCRIPT_QUERY:
-  //     origin = PROCESS_ORIGINATOR_SCRIPT;
-  //     break;
-  //   default:
-  //     MCerror(3152, "TODO for type:%i", action->type);
-  //     break;
-  //   }
-  //   mc_process_unit_v1 *process_unit;
-  //   MCcall(construct_process_unit(command_hub, PROCESS_TYPE_EXHIBITED, action->dialogue, origin, action, &process_unit));
-
-  //   // Add it as a continuance of the previous process unit
-  //   MCcall(append_to_collection((void ***)&previous_unit->continuances, &previous_unit->continuances_alloc,
-  //                               &previous_unit->continuances_count, (void *)process_unit));
-
-  //   // Add root to the process matrix
-  //   printf("procm>demo process added: type:%i dialogue:'%s'\n", process_unit->type,
-  //          process_unit->dialogue == NULL ? "(null)" : process_unit->dialogue);
-  //   MCcall(append_to_collection(&command_hub->process_matrix->items, &command_hub->process_matrix->allocated,
-  //                               &command_hub->process_matrix->count, (void *)process_unit));
-
-  //   // Continue
-  //   action = (mc_process_action_v1 *)action->next_issue;
-  //   previous_unit = process_unit;
-  // }
 
   return 0;
 }
@@ -3021,15 +2830,6 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
     printf("%s", focused_issue->dialogue);
     command_hub->focused_issue_activated = true;
   } break;
-  case PROCESS_ACTION_DEMO_INITIATION: {
-    // Print to terminal
-    if (focused_issue->dialogue != NULL)
-      printf("%s\n", focused_issue->dialogue);
-    command_hub->focused_issue_activated = true;
-
-    // Indicate user response
-    printf(":> ");
-  } break;
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_PM_IDLE:
   case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
@@ -3040,6 +2840,16 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
 
     // Indicate user response
     printf(":> ");
+  } break;
+  case PROCESS_ACTION_DEMO_INITIATION: {
+    // Print to terminal
+    printf("Beginning Demonstration...\n");
+    command_hub->focused_issue_activated = true;
+  } break;
+  case PROCESS_ACTION_DEMO_CONCLUSION: {
+    // Print to terminal
+    printf("Concluded Demonstration\n");
+    command_hub->focused_issue_activated = true;
   } break;
   default:
     MCerror(1511, "UnhandledType:%i", focused_issue->type)
@@ -3952,9 +3762,11 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
     case PROCESS_ACTION_PM_IDLE:
     case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
     case PROCESS_ACTION_SCRIPT_QUERY:
+    case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
       process_movement = PROCESS_MOVEMENT_CONTINUE;
       break;
     case PROCESS_ACTION_DEMO_INITIATION:
+    case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
       process_movement = PROCESS_MOVEMENT_INDENT;
       break;
     default: {
@@ -3966,11 +3778,6 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
     process_movement = PROCESS_MOVEMENT_CONTINUE;
   }
 
-  if (current_issue && current_issue->type == PROCESS_ACTION_USER_UNPROVOKED_COMMAND &&
-      type != PROCESS_ACTION_PM_SEQUENCE_RESOLVED && process_movement != PROCESS_MOVEMENT_INDENT &&
-      (!dialogue || strncmp(dialogue, ".runScript ", 11))) {
-    MCerror(3885, "Should you have indented this?");
-  }
   if (process_movement > 4 || process_movement < 1) {
     MCerror(3967, "processMOVEMENT:%i", process_movement);
   }
