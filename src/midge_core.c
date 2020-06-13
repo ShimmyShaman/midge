@@ -2797,9 +2797,9 @@ int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process
     ++depth;
     action = action->contextual_issue;
   }
-  // printf("chspa>(%u:seq=%u) Depth:%i", process_action->object_uid, process_action->sequence_uid, depth);
-  // printf(" Submitted:%s", get_action_type_string(process_action->type));
-  // printf("\n");
+  printf("chspa>(%u:seq=%u) Depth:%i", process_action->object_uid, process_action->sequence_uid, depth);
+  printf(" Submitted:%s", get_action_type_string(process_action->type));
+  printf("\n");
 
   return 0;
 }
@@ -2852,7 +2852,7 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
     command_hub->focused_issue_activated = true;
 
     // Indicate user response
-    printf(":> ");
+    printf("\n:> ");
   } break;
   case PROCESS_ACTION_DEMO_INITIATION: {
     // Print to terminal
@@ -2860,13 +2860,15 @@ int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
     command_hub->focused_issue_activated = true;
 
     // Indicate user response
-    printf(":> ");
+    printf("\n:> ");
   } break;
   case PROCESS_ACTION_DEMO_CONCLUSION: {
     // Print to terminal
-    printf("%s", focused_issue->dialogue);
-    printf("Concluded Demonstration\n");
+    printf("%s\nConcluded Demonstration.", focused_issue->dialogue);
     command_hub->focused_issue_activated = true;
+
+    // Indicate user response
+    printf("\n:> ");
   } break;
   default:
     MCerror(1511, "UnhandledType:%s", get_action_type_string(focused_issue->type))
@@ -2903,8 +2905,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, mc_proce
     // printf("scriptcont:%i\n", script_instance->contextual_action->contextual_data_count);
 
     char **output = NULL;
-    printf("script entered: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
-           script_instance->script->segment_count);
+    // printf("script entered: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+    //        script_instance->script->segment_count);
     int mc_script_res;
     sprintf(buf,
             "{\n"
@@ -2918,8 +2920,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, mc_proce
       printf("--script '%s' error:%i\n", script_instance->script->name, mc_script_res);
       return mc_script_res;
     }
-    printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
-           script_instance->script->segment_count);
+    // printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
+    //        script_instance->script->segment_count);
 
     // Pop the focused issue from the stack
     mc_process_action_v1 *focused_issue =
@@ -3361,31 +3363,32 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
   case PROCESS_ACTION_USER_VARIABLE_RESPONSE: {
 
     // Set the contextual variable to the contextual issue
-    if (!focused_issue->contextual_issue) {
-      MCerror(3350, "NOPE");
+    mc_process_action_v1 *request_action = focused_issue->contextual_issue;
+    if (!request_action || request_action->type != PROCESS_ACTION_PM_VARIABLE_REQUEST) {
+      MCerror(3367, "NOPE");
     }
-    if (!focused_issue->previous_issue || focused_issue->previous_issue->type != PROCESS_ACTION_PM_VARIABLE_REQUEST) {
-      MCerror(3354, "NOPE");
+    if (!request_action->contextual_issue || focused_issue->previous_issue) {
+      MCerror(3370, "NOPE");
     }
 
     mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
     kvp->struct_id = NULL; // TODO
-    allocate_and_copy_cstr(kvp->key, (char *)focused_issue->previous_issue->data);
+    allocate_and_copy_cstr(kvp->key, (char *)request_action->data);
     allocate_and_copy_cstr(kvp->value, focused_issue->dialogue);
 
-    MCcall(append_to_collection(&focused_issue->contextual_issue->contextual_data->items,
-                                &focused_issue->contextual_issue->contextual_data->allocated,
-                                &focused_issue->contextual_issue->contextual_data->count, kvp));
+    MCcall(append_to_collection(&request_action->contextual_issue->contextual_data->items,
+                                &request_action->contextual_issue->contextual_data->allocated,
+                                &request_action->contextual_issue->contextual_data->count, kvp));
 
     mc_process_action_v1 *further_variable_request;
-    MCcall(
-        generate_variable_request_action(command_hub, focused_issue->contextual_issue, focused_issue, &further_variable_request));
+    MCcall(generate_variable_request_action(command_hub, request_action->contextual_issue, focused_issue,
+                                            &further_variable_request));
     if (further_variable_request) {
       *p_response_action = further_variable_request;
       return 0;
     }
 
-    if (focused_issue->contextual_issue->type == PROCESS_ACTION_USER_DEMO_COMMAND) {
+    if (request_action->contextual_issue->type == PROCESS_ACTION_USER_DEMO_COMMAND) {
 
       MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_PM_IDLE, "...continue demo...", NULL,
                                       p_response_action));
@@ -3413,7 +3416,50 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
       return 0;
     }
 
-    MCerror(3384, "TODO");
+    MCerror(3418, "TODO");
+
+    return 0;
+  }
+  case PROCESS_ACTION_DEMO_CONCLUSION: {
+    // User response after demo initiation
+    // Pop the focused issue from the stack
+    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
+    --command_hub->focused_issue_stack_count;
+
+    if (!focused_issue->contextual_issue || focused_issue->contextual_issue->type != PROCESS_ACTION_USER_DEMO_COMMAND) {
+      MCerror(3429, "TODO");
+    }
+
+    // Write the template demonstrated
+    mc_template_v1 *procedure_template = (mc_template_v1 *)malloc(sizeof(mc_template_v1));
+    procedure_template->struct_id = NULL; // TODO
+    allocate_and_copy_cstr(procedure_template->dialogue, focused_issue->contextual_issue->dialogue);
+    procedure_template->dialogue_has_pattern = true;
+    procedure_template->initial_procedure = NULL;
+
+    mc_process_action_v1 *action = focused_issue;
+    while (action->previous_issue) {
+      action = action->previous_issue;
+      switch (action->type) {
+      case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+        break;
+      case PROCESS_ACTION_PM_VARIABLE_REQUEST:
+        continue;
+      default: {
+        MCerror(3449, "Unsupported:%s", get_action_type_string(action->type));
+      }
+      }
+
+      // Specify for command
+      mc_template_procedure_v1 *procedure = (mc_template_procedure_v1 *)malloc(sizeof(mc_template_procedure_v1));
+      allocate_and_copy_cstr(procedure->command, action->dialogue);
+
+      // Prepend & continue...
+      procedure->next = procedure_template->initial_procedure;
+      procedure_template->initial_procedure = procedure->next;
+    }
+
+    MCcall(construct_completion_action(command_hub, focused_issue, NULL, true, p_response_action));
 
     return 0;
   }
@@ -3448,10 +3494,10 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
     return 0;
   }
   default:
-    MCerror(3286, "UnhandledType:%s", get_action_type_string(focused_issue->type))
+    MCerror(3471, "UnhandledType:%s", get_action_type_string(focused_issue->type))
   }
 
-  MCerror(3289, "Unintended flow");
+  MCerror(3474, "Unintended flow");
 }
 
 int generate_variable_request_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *command_issue,
@@ -3885,19 +3931,23 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
   process_action_indent_movement process_movement;
   if (current_issue) {
     switch (current_issue->type) {
+    // case PROCESS_ACTION_DEMO_CONCLUSION:
+    //   process_movement = PROCESS_MOVEMENT_DOUBLE_RESOLVE;
+    //   break;
     case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
+    case PROCESS_ACTION_PM_IDLE:
     case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+    case PROCESS_ACTION_USER_VARIABLE_RESPONSE:
       process_movement = PROCESS_MOVEMENT_RESOLVE;
       break;
-    case PROCESS_ACTION_PM_IDLE:
-    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
-    case PROCESS_ACTION_SCRIPT_QUERY:
     case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-    case PROCESS_ACTION_PM_VARIABLE_REQUEST:
-    case PROCESS_ACTION_USER_VARIABLE_RESPONSE:
+    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
+    case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+    case PROCESS_ACTION_SCRIPT_QUERY:
       process_movement = PROCESS_MOVEMENT_CONTINUE;
       break;
     case PROCESS_ACTION_DEMO_INITIATION:
+    case PROCESS_ACTION_PM_VARIABLE_REQUEST:
     case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
     case PROCESS_ACTION_USER_DEMO_COMMAND:
       process_movement = PROCESS_MOVEMENT_INDENT;
@@ -3909,6 +3959,10 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
   }
   else {
     process_movement = PROCESS_MOVEMENT_CONTINUE;
+  }
+  if (process_movement == PROCESS_MOVEMENT_RESOLVE && type == PROCESS_ACTION_PM_IDLE) {
+    process_movement = PROCESS_MOVEMENT_CONTINUE;
+    type = PROCESS_ACTION_PM_SEQUENCE_RESOLVED;
   }
 
   if (process_movement > 4 || process_movement < 1) {
@@ -5501,6 +5555,20 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   mc_function_info_v1 **all_function_definitions = (mc_function_info_v1 **)malloc(sizeof(mc_function_info_v1) * 20);
   int all_function_definition_count = 0;
 
+  mc_function_info_v1 *mc_dummy_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  all_function_definitions[all_function_definition_count++] = mc_dummy_function_definition_v1;
+  {
+    mc_dummy_function_definition_v1->struct_id = NULL;
+    mc_dummy_function_definition_v1->name = "mc_dummy_function";
+    mc_dummy_function_definition_v1->latest_iteration = 1U;
+    mc_dummy_function_definition_v1->return_type = "void";
+    mc_dummy_function_definition_v1->parameter_count = 0;
+    mc_dummy_function_definition_v1->parameters = NULL;
+    mc_dummy_function_definition_v1->variable_parameter_begin_index = -1;
+    mc_dummy_function_definition_v1->struct_usage_count = 0;
+    mc_dummy_function_definition_v1->struct_usage = NULL;
+  }
+
   mc_function_info_v1 *find_function_info_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
   all_function_definitions[all_function_definition_count++] = find_function_info_definition_v1;
   {
@@ -5623,6 +5691,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_declare(output);
 
   // Declare with cling interpreter
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)mc_dummy_function_definition_v1));
+
   clint_process("find_function_info = &find_function_info_v1;");
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)find_function_info_definition_v1));
@@ -5655,53 +5726,3 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   return 0;
 }
-
-// int kvr_count = 3;
-// const char **kvr_collection = (char **)malloc(sizeof(char *) * kvr_count * 2);
-// kvr_collection[0] = "function_info";
-// kvr_collection[1] = "mc_function_info_v1";
-// kvr_collection[2] = "struct_info";
-// kvr_collection[3] = "mc_struct_info_v1";
-// kvr_collection[4] = "node";
-// kvr_collection[5] = "mc_node_v1";
-
-// switch (input[i])
-// {
-// case ' ':
-// case '(':
-// case '\n':
-// case '\t':
-// case ';':
-//   break;
-// default:
-//   continue;
-// }
-// if (!isalpha(input[i]))
-//   continue;
-
-// for (int k = 0; k < kvr_count; ++k)
-// {
-//   int klen = strlen(kvr_collection[k * 2]);
-//   switch (input[i + 1 + klen])
-//   {
-//   case '*':
-//   case ' ':
-//   case ')':
-//     break;
-//   default:
-//     continue;
-//   }
-//   if (!strncmp(input + i + 1, kvr_collection[k * 2], klen))
-//   {
-//     sprintf("replaced\n");
-//     // Output up to now
-//     strncpy(output + n, input + s, i - s);
-//     n += i - s;
-//     i += klen;
-//     s = i;
-
-//     // Replace it
-//     strcpy(output + n, kvr_collection[k * 2 + 1]);
-//     n += strlen(kvr_collection[k * 2 + 1]);
-//   }
-// }

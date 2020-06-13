@@ -194,6 +194,8 @@ struct mc_node_v1;
 struct mc_process_action_v1;
 struct mc_process_action_detail_v1;
 struct mc_process_unit_v1;
+struct mc_template_v1;
+struct mc_template_procedure_v1;
 
 typedef struct mc_struct_id_v1 {
   const char *identifier;
@@ -358,6 +360,27 @@ typedef struct mc_process_unit_v1 {
     mc_void_collection_v1 *children;
   };
 } mc_process_unit_v1;
+struct mc_template_v1;
+struct mc_template_procedure_v1;
+
+typedef struct mc_template_v1 {
+  mc_struct_id_v1 *struct_id;
+
+  char *dialogue;
+  bool dialogue_has_pattern;
+
+  mc_template_procedure_v1 *initial_procedure;
+
+} mc_template_v1;
+
+typedef struct mc_template_procedure_v1 {
+  mc_struct_id_v1 *struct_id;
+
+  mc_template_procedure_v1 *next;
+
+  char const *command;
+
+} mc_template_procedure_v1;
 
 // typedef struct mc_process_matrix_node_v1 {
 //   mc_struct_id_v1 *struct_id;
