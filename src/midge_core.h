@@ -126,6 +126,7 @@ typedef enum {
   PROCESS_MOVEMENT_CONTINUE,
   PROCESS_MOVEMENT_INDENT,
   PROCESS_MOVEMENT_RESOLVE,
+  PROCESS_MOVEMENT_DOUBLE_RESOLVE,
 } process_action_indent_movement;
 
 typedef enum {
@@ -281,7 +282,7 @@ typedef struct mc_command_hub_v1 {
   mc_struct_id_v1 *struct_id;
   mc_node_v1 *global_node;
   mc_node_v1 *nodespace;
-  void *template_collection;
+  mc_void_collection_v1 *template_collection;
   mc_process_unit_v1 *process_matrix;
   unsigned int focused_issue_stack_alloc;
   unsigned int focused_issue_stack_count;

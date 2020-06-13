@@ -2415,6 +2415,7 @@ int mc_main(int argc, const char *const *argv)
   command_hub->global_node = global;
   command_hub->nodespace = global;
   MCcall(init_command_hub_process_matrix(command_hub));
+  MCcall(init_void_collection_v1(&command_hub->template_collection));
   command_hub->focused_issue_stack_alloc = 16;
   command_hub->focused_issue_stack = (void **)malloc(sizeof(void *) * command_hub->focused_issue_stack_alloc);
   command_hub->focused_issue_stack_count = 0;
@@ -2503,6 +2504,7 @@ int mc_main(int argc, const char *const *argv)
       "mc_dummy_function|"
       ".runScript invoke_function_with_args|"
       "enddemo|"
+      "invoke declare_function_pointer|"
       "midgequit|"
 
       // Create Function Sequence
@@ -3196,118 +3198,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
       return 0;
     }
     // Attempt to find the action the user is commanding
-
-    // Demo Initiation
-    if (!strncmp(focused_issue->dialogue, "demo ", 5)) {
-      // ++command_hub->uid_counter;
-      // focused_issue->sequence_uid = command_hub->uid_counter;
-
-      // Process the command
-      char patbuf[256];
-      int bi = 0;
-      void *kvps[16];
-      int kvps_index = 0;
-      for (int i = 5; i < strlen(focused_issue->dialogue); ++i) {
-        if (focused_issue->dialogue[i] != '@') {
-          patbuf[bi++] = focused_issue->dialogue[i];
-          continue;
-        }
-
-        // Pattern
-        patbuf[bi++] = '@';
-        ++i;
-        parse_past(focused_issue->dialogue, &i, "{");
-
-        // Parse past variable name
-        char *var_name, *var_value;
-        parse_past_identifier(focused_issue->dialogue, &i, &var_name, false, false);
-        strcpy(patbuf + bi, var_name);
-        bi += strlen(var_name);
-
-        parse_past(focused_issue->dialogue, &i, "=");
-        int s = i;
-        for (; i < strlen(focused_issue->dialogue); ++i) {
-          if (focused_issue->dialogue[i] != '}')
-            continue;
-
-          var_value = (char *)malloc(sizeof(char) * (i - s + 1));
-          strncpy(var_value, focused_issue->dialogue + s, i - s);
-          var_value[i - s] = '\0';
-          break;
-        }
-        parse_past(focused_issue->dialogue, &i, "}");
-        if (i != strlen(focused_issue->dialogue)) {
-          MCerror(3029, "TODO");
-        }
-
-        // Add var_name & var_value to issue contextual data
-        mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
-        kvp->key = var_name;
-        kvp->value = (void *)var_value;
-        kvps[kvps_index++] = (void *)kvp;
-        break;
-      }
-
-      // Set pattern
-      char *pattern = (char *)malloc(sizeof(char) * (bi + 1));
-      strncpy(pattern, patbuf, bi);
-      pattern[bi] = '\0';
-
-      // Begin demonstration
-      char *demo_issue_dialogue;
-      cprintf(demo_issue_dialogue, "Demonstrating '%s' (type 'end' to end).", pattern);
-      unsigned int demo_issue_dialogue_alloc = strlen(demo_issue_dialogue) + 1;
-      if (kvps_index > 0) {
-        char buf[256];
-        for (int k = 0; k < kvps_index; ++k) {
-          sprintf(buf, "\n - using '$%s'='%s'", ((mc_key_value_pair_v1 *)kvps[k])->key, ((mc_key_value_pair_v1 *)kvps[k])->value);
-          MCcall(append_to_cstr(&demo_issue_dialogue_alloc, &demo_issue_dialogue, buf));
-        }
-      }
-
-      mc_process_action_v1 *demo_issue;
-      mc_process_action_v1 *contextual_issue = NULL;
-      if (focused_issue)
-        contextual_issue = (mc_process_action_v1 *)focused_issue->contextual_issue;
-      MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_DEMO_INITIATION, demo_issue_dialogue,
-                                      (void *)pattern, &demo_issue));
-      focused_issue->next_issue = demo_issue;
-      // printf("demo_issue sequid:%u\n", demo_issue->sequence_uid);
-
-      for (int i = 0; i < kvps_index; ++i) {
-        printf("setting contextual data to %u; key:%s value:%s\n", demo_issue->object_uid, ((mc_key_value_pair_v1 *)kvps[i])->key,
-               ((mc_key_value_pair_v1 *)kvps[i])->value);
-        append_to_collection(&demo_issue->contextual_data->items, &demo_issue->contextual_data->allocated,
-                             &demo_issue->contextual_data->count, kvps[i]);
-      }
-      free(demo_issue_dialogue);
-      // // Return the original command to the stack
-      // append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc,
-      // &command_hub->focused_issue_stack_count,
-      //                      historical_issue);
-
-      // Add a demonstration process on top of the focused issue stack
-      *p_response_action = demo_issue;
-      command_hub->demo_issue = demo_issue;
-      // printf("@@@ demo_issue(%u)->data='%s'\n", command_hub->demo_issue->sequence_uid, (char
-      // *)command_hub->demo_issue->data);
-      return 0;
-    }
-
-    // Demo End
-    if (!strncmp(focused_issue->dialogue, "enddemo", 7)) {
-
-      if (focused_issue == NULL || focused_issue->contextual_issue == NULL) {
-        MCerror(9482, "TODO");
-      }
-
-      // Conclude the demo
-      mc_process_action_v1 *demo_completed_issue;
-      construct_completion_action(command_hub, focused_issue, " -- demo completed", true, &demo_completed_issue);
-
-      *p_response_action = demo_completed_issue;
-      return 0;
-    }
+    
     // -- Find a suggestion from the process matrix
     // printf("##########################################\n");
     // printf("Begin Template Process:%s\n", process[0]);
@@ -3459,7 +3350,10 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
       procedure_template->initial_procedure = procedure->next;
     }
 
-    MCcall(construct_completion_action(command_hub, focused_issue, NULL, true, p_response_action));
+    MCcall(append_to_collection(&command_hub->template_collection->items, &command_hub->template_collection->allocated,
+                                &command_hub->template_collection->count, procedure_template));
+
+    *p_response_action = NULL;
 
     return 0;
   }
@@ -3931,9 +3825,9 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
   process_action_indent_movement process_movement;
   if (current_issue) {
     switch (current_issue->type) {
-    // case PROCESS_ACTION_DEMO_CONCLUSION:
-    //   process_movement = PROCESS_MOVEMENT_DOUBLE_RESOLVE;
-    //   break;
+    case PROCESS_ACTION_DEMO_CONCLUSION:
+      process_movement = PROCESS_MOVEMENT_DOUBLE_RESOLVE;
+      break;
     case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
     case PROCESS_ACTION_PM_IDLE:
     case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
@@ -3965,7 +3859,7 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
     type = PROCESS_ACTION_PM_SEQUENCE_RESOLVED;
   }
 
-  if (process_movement > 4 || process_movement < 1) {
+  if (process_movement > PROCESS_MOVEMENT_DOUBLE_RESOLVE || process_movement < PROCESS_MOVEMENT_CONTINUE) {
     MCerror(3967, "processMOVEMENT:%i", process_movement);
   }
   (*output)->process_movement = process_movement;
@@ -3975,30 +3869,42 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
     // printf("CONTINUE: context %p<>%p\n", current_issue, (current_issue == NULL ? NULL : current_issue->contextual_issue));
     (*output)->contextual_issue = (current_issue == NULL ? NULL : current_issue->contextual_issue);
     (*output)->previous_issue = current_issue;
+
     if (current_issue) {
       if (current_issue->next_issue) {
         MCerror(3814, "NOT EXPECTED");
       }
-
       current_issue->next_issue = *output;
     }
   } break;
   case PROCESS_MOVEMENT_INDENT: {
     (*output)->contextual_issue = current_issue;
     (*output)->previous_issue = NULL;
+
     if (!current_issue || current_issue->next_issue) {
       MCerror(3835, "NOT EXPECTED");
     }
-
     current_issue->next_issue = *output;
   } break;
   case PROCESS_MOVEMENT_RESOLVE: {
     (*output)->contextual_issue = current_issue->contextual_issue->contextual_issue;
     (*output)->previous_issue = current_issue->contextual_issue;
+
     if (!current_issue || current_issue->next_issue) {
       MCerror(3913, "NOT EXPECTED");
     }
+    current_issue->next_issue = *output;
+  } break;
+  case PROCESS_MOVEMENT_DOUBLE_RESOLVE: {
+    if (!current_issue->contextual_issue || !current_issue->contextual_issue->contextual_issue) {
+      MCerror(4006, "Bad state");
+    }
+    (*output)->contextual_issue = current_issue->contextual_issue->contextual_issue->contextual_issue;
+    (*output)->previous_issue = current_issue->contextual_issue->contextual_issue;
 
+    if (!current_issue || current_issue->next_issue) {
+      MCerror(3913, "NOT EXPECTED");
+    }
     current_issue->next_issue = *output;
   } break;
   default:
