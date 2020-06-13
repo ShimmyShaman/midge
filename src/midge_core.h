@@ -99,14 +99,18 @@ typedef enum {
   PROCESS_ACTION_USER_SCRIPT_ENTRY,
   PROCESS_ACTION_USER_SCRIPT_RESPONSE,
   PROCESS_ACTION_USER_CREATED_SCRIPT_NAME,
+  PROCESS_ACTION_USER_VARIABLE_RESPONSE,
 
+  // Demo
   PROCESS_ACTION_DEMO_INITIATION,
+  PROCESS_ACTION_USER_DEMO_COMMAND,
   PROCESS_ACTION_DEMO_CONCLUSION,
 
   // Process Manager Initiated
   PROCESS_ACTION_PM_IDLE,
   PROCESS_ACTION_PM_SEQUENCE_RESOLVED,
   PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
+  PROCESS_ACTION_PM_VARIABLE_REQUEST,
   PROCESS_ACTION_PM_SCRIPT_REQUEST,
   PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
 
@@ -430,6 +434,12 @@ const char *get_action_type_string(process_action_type action_type)
     return "PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS";
   case PROCESS_ACTION_SCRIPT_QUERY:
     return "PROCESS_ACTION_SCRIPT_QUERY";
+  case PROCESS_ACTION_USER_DEMO_COMMAND:
+    return "PROCESS_ACTION_USER_DEMO_COMMAND";
+  case PROCESS_ACTION_PM_VARIABLE_REQUEST:
+    return "PROCESS_ACTION_PM_VARIABLE_REQUEST";
+  case PROCESS_ACTION_USER_VARIABLE_RESPONSE:
+    return "PROCESS_ACTION_USER_VARIABLE_RESPONSE";
   default: {
     char *type;
     cprintf(type, "UNSPECIFIED_PROCESS_ACTION_TYPE:%i", (int)action_type);
@@ -447,7 +457,9 @@ int get_process_originator_type(process_action_type action_type, process_origina
   case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
   case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
   case PROCESS_ACTION_DEMO_INITIATION:
+  case PROCESS_ACTION_USER_DEMO_COMMAND:
   case PROCESS_ACTION_DEMO_CONCLUSION:
+  case PROCESS_ACTION_USER_VARIABLE_RESPONSE:
     *result = PROCESS_ORIGINATOR_USER;
     return 0;
     // Process Manager Initiated
@@ -456,6 +468,7 @@ int get_process_originator_type(process_action_type action_type, process_origina
   case PROCESS_ACTION_PM_SCRIPT_REQUEST:
   case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
   case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
+  case PROCESS_ACTION_PM_VARIABLE_REQUEST:
     *result = PROCESS_ORIGINATOR_PM;
     return 0;
     // Script
@@ -464,7 +477,7 @@ int get_process_originator_type(process_action_type action_type, process_origina
     *result = PROCESS_ORIGINATOR_SCRIPT;
     return 0;
   default:
-    MCerror(3152, "get_process_originator:TODO for type:%i", (int)action_type);
+    MCerror(477, "get_process_originator:TODO for type:%s", get_action_type_string(action_type));
     break;
   }
 }
