@@ -196,7 +196,7 @@ struct mc_process_action_v1;
 struct mc_process_action_detail_v1;
 struct mc_process_unit_v1;
 struct mc_template_v1;
-struct mc_template_procedure_v1;
+struct mc_procedure_template_v1;
 
 typedef struct mc_struct_id_v1 {
   const char *identifier;
@@ -278,22 +278,26 @@ typedef struct mc_script_instance_v1 {
   int awaiting_data_set_index;
 } mc_script_instance_v1;
 
+typedef struct mc_workflow_process_v1 {
+
+  mc_process_action_v1 *initial_issue;
+  mc_process_action_v1 *current_issue;
+  bool requires_activation;
+} mc_workflow_process_v1;
+
 typedef struct mc_command_hub_v1 {
   mc_struct_id_v1 *struct_id;
   mc_node_v1 *global_node;
   mc_node_v1 *nodespace;
   mc_void_collection_v1 *template_collection;
   mc_process_unit_v1 *process_matrix;
-  unsigned int focused_issue_stack_alloc;
-  unsigned int focused_issue_stack_count;
-  void **focused_issue_stack;
+  mc_workflow_process_v1 *focused_workflow;
   unsigned int scripts_alloc;
   unsigned int scripts_count;
   void **scripts;
   unsigned int script_instances_alloc;
   unsigned int script_instances_count;
   void **script_instances;
-  bool focused_issue_activated;
   unsigned int uid_counter;
   mc_process_action_v1 *demo_issue;
 } mc_command_hub_v1;
@@ -332,6 +336,7 @@ typedef struct mc_process_action_v1 {
   char *dialogue;
   void *data;
 
+  mc_procedure_template_v1 *queued_procedures;
   mc_void_collection_v1 *contextual_data;
 } mc_process_action_v1;
 
@@ -362,26 +367,28 @@ typedef struct mc_process_unit_v1 {
   };
 } mc_process_unit_v1;
 struct mc_template_v1;
-struct mc_template_procedure_v1;
+struct mc_procedure_template_v1;
 
-typedef struct mc_template_v1 {
+typedef struct mc_process_template_v1 {
   mc_struct_id_v1 *struct_id;
 
   char *dialogue;
   bool dialogue_has_pattern;
 
-  mc_template_procedure_v1 *initial_procedure;
+  mc_procedure_template_v1 *initial_procedure;
 
-} mc_template_v1;
+} mc_process_template_v1;
 
-typedef struct mc_template_procedure_v1 {
+typedef struct mc_procedure_template_v1 {
   mc_struct_id_v1 *struct_id;
 
-  mc_template_procedure_v1 *next;
+  mc_procedure_template_v1 *next;
 
+  process_action_type type;
   char const *command;
+  void *data;
 
-} mc_template_procedure_v1;
+} mc_procedure_template_v1;
 
 // typedef struct mc_process_matrix_node_v1 {
 //   mc_struct_id_v1 *struct_id;

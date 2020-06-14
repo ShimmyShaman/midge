@@ -2415,11 +2415,8 @@ int mc_main(int argc, const char *const *argv)
   command_hub->global_node = global;
   command_hub->nodespace = global;
   MCcall(init_command_hub_process_matrix(command_hub));
+  command_hub->focused_workflow = NULL;
   MCcall(init_void_collection_v1(&command_hub->template_collection));
-  command_hub->focused_issue_stack_alloc = 16;
-  command_hub->focused_issue_stack = (void **)malloc(sizeof(void *) * command_hub->focused_issue_stack_alloc);
-  command_hub->focused_issue_stack_count = 0;
-  command_hub->focused_issue_activated = false;
   command_hub->uid_counter = 2000;
   command_hub->scripts_alloc = 32;
   command_hub->scripts = (void **)malloc(sizeof(void *) * command_hub->scripts_alloc);
@@ -2608,16 +2605,17 @@ int mc_main(int argc, const char *const *argv)
   return 0;
 }
 
+int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context, process_action_type type,
+                           const char *const dialogue, void *data);
 int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue, process_action_type type,
                              const char *const dialogue, void *data, mc_process_action_v1 **output);
 int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action, mc_process_unit_v1 **output);
 int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_focused_issue,
                                 char const *const dialogue, bool force_resolution, mc_process_action_v1 **output);
 
-int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_process_action_v1 **command_action);
+int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_workflow_process_v1 *workflow_context);
 int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *process_action);
-int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action);
-int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub);
+int activate_outstanding_command_hub_actions(mc_command_hub_v1 *command_hub);
 int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_process_action_v1 **p_response_action);
 int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, mc_process_action_v1 **p_response_action);
 int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 **out_suggestion);
@@ -2629,37 +2627,31 @@ int submit_user_command(int argc, void **argsv)
   char *command = (char *)argsv[4];
   mc_process_action_v1 **suggestion = (mc_process_action_v1 **)argsv[6];
 
+  // Open the workflow process context the user is operating inside
+  mc_workflow_process_v1 *workflow_context = command_hub->focused_workflow;
+  command_hub->focused_workflow = NULL;
+  if (!workflow_context) {
+    // Create a new one
+    workflow_context = (mc_workflow_process_v1 *)malloc(sizeof(mc_workflow_process_v1));
+    workflow_context->initial_issue = NULL;
+    workflow_context->current_issue = NULL;
+    workflow_context->requires_activation = false;
+  }
+
   // Format the User Response as an action
   mc_process_action_v1 *process_action;
-  MCcall(format_user_response(command_hub, command, &process_action));
+  MCcall(format_user_response(command_hub, command, workflow_context));
 
   // printf("suc-1\n");
   // Process command and any/all system responses
   while (1) {
     // printf("suc:loop_begin:process_action=%s\n", get_action_type_string(process_action->type));
     // printf("suc:loop_begin:focused_issue_stack_count=%u\n", command_hub->focused_issue_stack_count);
-    {
-      // Register the previous action with the process matrix
-      mc_process_action_v1 *action = process_action->previous_issue;
-      if (action == NULL) {
-        action = process_action->contextual_issue;
-      }
-      if (action != NULL) {
-        while (action->next_issue->object_uid != process_action->object_uid) {
-          action = action->next_issue;
-        }
-
-        MCcall(process_matrix_register_action(command_hub, action));
-      }
-    }
     // printf("suc-2a\n");
-
-    // Affect the command hub
-    MCcall(command_hub_submit_process_action(command_hub, process_action));
 
     // printf("suc-2b\n");
     // Process the action
-    MCcall(command_hub_process_outstanding_actions(command_hub));
+    MCcall(activate_outstanding_command_hub_actions(command_hub));
 
     // printf("suc-3\n");
     // Formulate system responses
@@ -2686,67 +2678,47 @@ int submit_user_command(int argc, void **argsv)
   return 0;
 }
 
-int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_process_action_v1 **command_action)
+int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_workflow_process_v1 *workflow_context)
 {
-  mc_process_action_v1 *process_action;
-
-  if (command_hub->focused_issue_stack_count == 0) {
-    MCcall(construct_process_action(command_hub, NULL, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL, &process_action));
+  if (workflow_context->current_issue == NULL) {
+    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
   }
   else {
-    // Pop the focused issue from the stack
-    mc_process_action_v1 *focused_issue =
-        (mc_process_action_v1 *)command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1];
-    command_hub->focused_issue_stack[command_hub->focused_issue_stack_count - 1] = NULL;
-    --command_hub->focused_issue_stack_count;
-
     if (command && !strcmp(command, "demo")) {
-      MCcall(
-          construct_process_action(command_hub, focused_issue, PROCESS_ACTION_DEMO_INITIATION, command, NULL, &process_action));
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_DEMO_INITIATION, command, NULL));
     }
     else if (command && !strcmp(command, "enddemo")) {
-      MCcall(
-          construct_process_action(command_hub, focused_issue, PROCESS_ACTION_DEMO_CONCLUSION, command, NULL, &process_action));
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_DEMO_CONCLUSION, command, NULL));
     }
     else {
-      switch (focused_issue->type) {
+      switch (workflow_context->current_issue->type) {
       case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
-        // Previous sequence concluded: Move back up a tier
-        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL,
-                                        &process_action));
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
       } break;
       case PROCESS_ACTION_PM_IDLE: {
-        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL,
-                                        &process_action));
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
       } break;
       case PROCESS_ACTION_DEMO_INITIATION: {
-        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_DEMO_COMMAND, command, NULL,
-                                        &process_action));
-        // printf("demo_focused_issue>next:%p\n", focused_issue->next_issue);
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_DEMO_COMMAND, command, NULL));
       } break;
       case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
-
-        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL,
-                                        &process_action));
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
       } break;
       case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME: {
-        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_CREATED_SCRIPT_NAME, command, NULL,
-                                        &process_action));
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_CREATED_SCRIPT_NAME, command, NULL));
       } break;
       case PROCESS_ACTION_PM_VARIABLE_REQUEST: {
-        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_VARIABLE_RESPONSE, command, NULL,
-                                        &process_action));
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_VARIABLE_RESPONSE, command, NULL));
       } break;
       case PROCESS_ACTION_SCRIPT_QUERY: {
-        MCcall(construct_process_action(command_hub, focused_issue, PROCESS_ACTION_USER_SCRIPT_RESPONSE, command, NULL,
-                                        &process_action));
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_SCRIPT_RESPONSE, command, NULL));
       } break;
       default:
-        MCerror(2739, "Unhandled PM-query-type:%s  '%s'", get_action_type_string(focused_issue->type), focused_issue->dialogue);
+        MCerror(2739, "Unhandled PM-query-type:%s  '%s'", get_action_type_string(workflow_context->current_issue->type),
+                workflow_context->current_issue->dialogue);
       }
     }
   }
-  *command_action = process_action;
   return 0;
 }
 
@@ -2783,30 +2755,7 @@ int process_matrix_register_action(mc_command_hub_v1 *command_hub, mc_process_ac
   return 0;
 }
 
-int command_hub_submit_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *process_action)
-{
-  void **mc_dvp;
-
-  // printf("submitting:%i\n", process_action->type);
-  append_to_collection(&command_hub->focused_issue_stack, &command_hub->focused_issue_stack_alloc,
-                       &command_hub->focused_issue_stack_count, process_action);
-  command_hub->focused_issue_activated = false;
-
-  // DEBUG
-  int depth = 0;
-  mc_process_action_v1 *action = process_action;
-  while (action->contextual_issue) {
-    ++depth;
-    action = action->contextual_issue;
-  }
-  printf("chspa>(%u:seq=%u) Depth:%i", process_action->object_uid, process_action->sequence_uid, depth);
-  printf(" Submitted:%s", get_action_type_string(process_action->type));
-  printf("\n");
-
-  return 0;
-}
-
-int command_hub_process_outstanding_actions(mc_command_hub_v1 *command_hub)
+int activate_outstanding_command_hub_actions(mc_command_hub_v1 *command_hub)
 {
   void **mc_dvp;
   if (command_hub->focused_issue_activated || command_hub->focused_issue_stack_count == 0)
@@ -3025,6 +2974,8 @@ int systems_process_command_hub_scripts(mc_command_hub_v1 *command_hub, mc_proce
 
 int generate_variable_request_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *command_issue,
                                      mc_process_action_v1 *current_issue, mc_process_action_v1 **output_action);
+int search_for_template_match(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue,
+                              mc_process_action_v1 **output_action);
 int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_process_action_v1 **p_response_action)
 {
   *p_response_action = NULL;
@@ -3040,13 +2991,11 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
   switch (focused_issue->type) {
   case PROCESS_ACTION_SCRIPT_QUERY:
   case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
-  case PROCESS_ACTION_PM_VARIABLE_REQUEST:
-    // case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
-    {
-      //   // Do not process these commands
-      //   // Send to other systems
-      return 0;
-    }
+  case PROCESS_ACTION_PM_VARIABLE_REQUEST: {
+    //   // Do not process these commands
+    //   // Send to other systems
+    return 0;
+  }
   case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
   case PROCESS_ACTION_DEMO_INITIATION:
   case PROCESS_ACTION_PM_IDLE:
@@ -3198,11 +3147,15 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
       return 0;
     }
     // Attempt to find the action the user is commanding
-    
+
     // -- Find a suggestion from the process matrix
     // printf("##########################################\n");
     // printf("Begin Template Process:%s\n", process[0]);
     // MCcall(handle_process(argc, argsv));
+    MCcall(search_for_template_match(command_hub, focused_issue, p_response_action));
+    if (*p_response_action) {
+      return 0;
+    }
 
     // -- Couldn't find one
     // -- Send Unresolved command message
@@ -3322,7 +3275,7 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
     }
 
     // Write the template demonstrated
-    mc_template_v1 *procedure_template = (mc_template_v1 *)malloc(sizeof(mc_template_v1));
+    mc_process_template_v1 *procedure_template = (mc_process_template_v1 *)malloc(sizeof(mc_process_template_v1));
     procedure_template->struct_id = NULL; // TODO
     allocate_and_copy_cstr(procedure_template->dialogue, focused_issue->contextual_issue->dialogue);
     procedure_template->dialogue_has_pattern = true;
@@ -3342,8 +3295,10 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
       }
 
       // Specify for command
-      mc_template_procedure_v1 *procedure = (mc_template_procedure_v1 *)malloc(sizeof(mc_template_procedure_v1));
+      mc_procedure_template_v1 *procedure = (mc_procedure_template_v1 *)malloc(sizeof(mc_procedure_template_v1));
+      procedure->type = action->type;
       allocate_and_copy_cstr(procedure->command, action->dialogue);
+      procedure->data = NULL;
 
       // Prepend & continue...
       procedure->next = procedure_template->initial_procedure;
@@ -3392,6 +3347,33 @@ int systems_process_command_hub_issues(mc_command_hub_v1 *command_hub, mc_proces
   }
 
   MCerror(3474, "Unintended flow");
+}
+
+int does_dialogue_match_pattern(char const *const dialogue, char const *const pattern, mc_void_collection_v1 *variables,
+                                bool *match);
+int does_dialogue_have_pattern(const char *const text, bool *output);
+int search_for_template_match(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue,
+                              mc_process_action_v1 **output_action)
+{
+  for (int i = 0; i < command_hub->template_collection->count; ++i) {
+    mc_process_template_v1 *process_template = (mc_process_template_v1 *)command_hub->template_collection->items[i];
+
+    bool pattern_match;
+    MCcall(does_dialogue_match_pattern(current_issue->dialogue, process_template->dialogue, current_issue->contextual_data,
+                                       &pattern_match));
+    if (!pattern_match)
+      continue;
+
+    printf("using template procedure %s:%s\n", get_action_type_string(process_template->initial_procedure->type),
+           process_template->initial_procedure->command);
+    MCcall(construct_process_action(command_hub, current_issue, process_template->initial_procedure->type,
+                                    process_template->initial_procedure->command, process_template->initial_procedure->data,
+                                    output_action));
+    (*output_action)->queued_procedures = process_template->initial_procedure->next;
+    return 0;
+  }
+
+  return 0;
 }
 
 int generate_variable_request_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *command_issue,
@@ -3507,124 +3489,6 @@ int search_process_matrix_for_best_match(mc_process_unit_v1 *process_unit, mc_pr
   }
 
   return 0;
-}
-
-int does_dialogue_have_pattern(const char *const text, bool *output)
-{
-  if (text == NULL) {
-    *output = false;
-    return 0;
-  }
-
-  for (int i = 0; i < strlen(text); ++i)
-    if (text[i] == '@') {
-      *output = true;
-      return 0;
-    }
-
-  *output = false;
-  return 0;
-}
-
-int does_dialogue_match_pattern(char const *const dialogue, char const *const pattern, mc_void_collection_v1 *variables,
-                                bool *match)
-{
-  if (dialogue == NULL || pattern == NULL) {
-    MCerror(3826, "TODO dialogue=%p pattern=%p", dialogue, pattern);
-  }
-
-  // Pattern Match
-  mc_key_value_pair_v1 *kvps[256];
-  int kvps_index = 0;
-
-  // Determine how well the pattern matches
-  char *pattern_args[256];
-  char buf[256];
-
-  int d = 0, dn = strlen(dialogue);
-  int p = 0, pn = strlen(pattern);
-  while (1) {
-    // Find the next word in the pattern
-    int pi;
-    bool is_variable = pattern[p] == '@';
-    bool string_end = false;
-    for (pi = p; pi <= pn; ++pi) {
-      if (pattern[pi] == ' ')
-        break;
-      if (pattern[pi] == '\0') {
-        string_end = true;
-        break;
-      }
-    }
-
-    // Find the next word in the dialogue
-    int di;
-    for (di = d; di <= dn; ++di) {
-      if (dialogue[di] == ' ')
-        break;
-      if (dialogue[di] == '\0') {
-        break;
-      }
-    }
-    if (string_end && di != dn) {
-      if (variables) {
-        for (int k = 0; k < kvps_index; ++k) {
-          free(kvps[k]->key);
-          free(kvps[k]->value);
-          free(kvps[k]);
-          kvps[k] = NULL;
-        }
-      }
-      *match = false;
-      return 0;
-    }
-
-    if (is_variable) {
-      if (variables) {
-        mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
-
-        allocate_and_copy_cstrn(kvp->key, (pattern + p + 1), pi - p - 1);
-        allocate_and_copy_cstrn(kvp->value, (dialogue + d), di - d);
-        kvps[kvps_index++] = kvp;
-      }
-    }
-    else {
-      if (strncmp(dialogue + d, pattern + p, di - d)) {
-        if (variables) {
-          for (int k = 0; k < kvps_index; ++k) {
-            free(kvps[k]->key);
-            free(kvps[k]->value);
-            free(kvps[k]);
-            kvps[k] = NULL;
-          }
-        }
-        *match = false;
-        return 0;
-      }
-    }
-
-    // Fitting word
-    if (string_end) {
-      // Statement match by pattern
-      if (variables) {
-        // -- Copy all variables to the given collection
-        for (int k = 0; k < kvps_index; ++k) {
-          MCcall(append_to_collection(&variables->items, &variables->allocated, &variables->count, kvps[k]));
-          printf("--dialogue_var_added():%s=%s\n", kvps[k]->key, kvps[k]->value);
-          kvps[k] = NULL;
-        }
-      }
-
-      *match = true;
-      return 0;
-    }
-
-    // Continue
-    d = di + 1;
-    p = pi + 1;
-  }
-
-  MCerror(3903, "Incorrect flow");
 }
 
 int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *intercepted_action,
@@ -3806,6 +3670,49 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
 
   printf("atrc-7\n");
   *p_response_action = replacement;
+  return 0;
+}
+
+int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context, process_action_type type,
+                           const char *const dialogue, void *data)
+{
+  if (workflow_context->requires_activation) {
+    MCerror(3731, "TODO");
+  }
+
+  MCcall(construct_process_action(command_hub, workflow_context->current_issue, type, dialogue, data,
+                                  &workflow_context->current_issue));
+  if (workflow_context->initial_issue == NULL) {
+    workflow_context->initial_issue = workflow_context->current_issue;
+  }
+
+  workflow_context->requires_activation = true;
+
+  // Register the previous action and its continuance with the process matrix
+  mc_process_action_v1 *action = workflow_context->current_issue->previous_issue;
+  if (action == NULL) {
+    action = workflow_context->current_issue->contextual_issue;
+  }
+  if (action != NULL) {
+    while (action->next_issue->object_uid != workflow_context->current_issue->object_uid) {
+      action = action->next_issue;
+    }
+
+    MCcall(process_matrix_register_action(command_hub, action));
+  }
+
+  // DEBUG
+  int depth = 0;
+  mc_process_action_v1 *action = workflow_context->current_issue;
+  while (action->contextual_issue) {
+    ++depth;
+    action = action->contextual_issue;
+  }
+  printf("chspa>(%u:seq=%u) Depth:%i", workflow_context->current_issue->object_uid, workflow_context->current_issue->sequence_uid,
+         depth);
+  printf(" Submitted:%s", get_action_type_string(workflow_context->current_issue->type));
+  printf("\n");
+
   return 0;
 }
 
@@ -4096,6 +4003,124 @@ int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_actio
   // printf("cca-IDLE\n");
   MCcall(construct_process_action(command_hub, current_focused_issue, PROCESS_ACTION_PM_IDLE, dialogue, NULL, output));
   return 0;
+}
+
+int does_dialogue_have_pattern(const char *const text, bool *output)
+{
+  if (text == NULL) {
+    *output = false;
+    return 0;
+  }
+
+  for (int i = 0; i < strlen(text); ++i)
+    if (text[i] == '@') {
+      *output = true;
+      return 0;
+    }
+
+  *output = false;
+  return 0;
+}
+
+int does_dialogue_match_pattern(char const *const dialogue, char const *const pattern, mc_void_collection_v1 *variables,
+                                bool *match)
+{
+  if (dialogue == NULL || pattern == NULL) {
+    MCerror(3826, "TODO dialogue=%p pattern=%p", dialogue, pattern);
+  }
+
+  // Pattern Match
+  mc_key_value_pair_v1 *kvps[256];
+  int kvps_index = 0;
+
+  // Determine how well the pattern matches
+  char *pattern_args[256];
+  char buf[256];
+
+  int d = 0, dn = strlen(dialogue);
+  int p = 0, pn = strlen(pattern);
+  while (1) {
+    // Find the next word in the pattern
+    int pi;
+    bool is_variable = pattern[p] == '@';
+    bool string_end = false;
+    for (pi = p; pi <= pn; ++pi) {
+      if (pattern[pi] == ' ')
+        break;
+      if (pattern[pi] == '\0') {
+        string_end = true;
+        break;
+      }
+    }
+
+    // Find the next word in the dialogue
+    int di;
+    for (di = d; di <= dn; ++di) {
+      if (dialogue[di] == ' ')
+        break;
+      if (dialogue[di] == '\0') {
+        break;
+      }
+    }
+    if (string_end && di != dn) {
+      if (variables) {
+        for (int k = 0; k < kvps_index; ++k) {
+          free(kvps[k]->key);
+          free(kvps[k]->value);
+          free(kvps[k]);
+          kvps[k] = NULL;
+        }
+      }
+      *match = false;
+      return 0;
+    }
+
+    if (is_variable) {
+      if (variables) {
+        mc_key_value_pair_v1 *kvp = (mc_key_value_pair_v1 *)malloc(sizeof(mc_key_value_pair_v1));
+
+        allocate_and_copy_cstrn(kvp->key, (pattern + p + 1), pi - p - 1);
+        allocate_and_copy_cstrn(kvp->value, (dialogue + d), di - d);
+        kvps[kvps_index++] = kvp;
+      }
+    }
+    else {
+      if (strncmp(dialogue + d, pattern + p, di - d)) {
+        if (variables) {
+          for (int k = 0; k < kvps_index; ++k) {
+            free(kvps[k]->key);
+            free(kvps[k]->value);
+            free(kvps[k]);
+            kvps[k] = NULL;
+          }
+        }
+        *match = false;
+        return 0;
+      }
+    }
+
+    // Fitting word
+    if (string_end) {
+      // Statement match by pattern
+      if (variables) {
+        // -- Copy all variables to the given collection
+        for (int k = 0; k < kvps_index; ++k) {
+          MCcall(append_to_collection(&variables->items, &variables->allocated, &variables->count, kvps[k]));
+          printf("--dialogue_var_added():%s=%s\n", kvps[k]->key, kvps[k]->value);
+          kvps[k] = NULL;
+        }
+      }
+
+      *match = true;
+      return 0;
+    }
+
+    // Continue
+    d = di + 1;
+    p = pi + 1;
+  }
+
+  MCerror(3903, "Incorrect flow");
 }
 
 int does_process_unit_detail_match(mc_process_action_detail_v1 *process_unit_detail,
