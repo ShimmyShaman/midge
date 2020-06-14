@@ -115,7 +115,7 @@ typedef enum {
   PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME,
 
   // Script
-  PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS,
+  PROCESS_ACTION_SCRIPT_EXECUTION,
   PROCESS_ACTION_SCRIPT_QUERY,
 
   PROCESS_ACTION_MAX_VALUE = 999,
@@ -295,9 +295,6 @@ typedef struct mc_command_hub_v1 {
   unsigned int scripts_alloc;
   unsigned int scripts_count;
   void **scripts;
-  unsigned int script_instances_alloc;
-  unsigned int script_instances_count;
-  void **script_instances;
   unsigned int uid_counter;
   mc_process_action_v1 *demo_issue;
 } mc_command_hub_v1;
@@ -461,8 +458,8 @@ const char *get_action_type_string(process_action_type action_type)
     return "PROCESS_ACTION_PM_SCRIPT_REQUEST";
   case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
     return "PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME";
-  case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
-    return "PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS";
+  case PROCESS_ACTION_SCRIPT_EXECUTION:
+    return "PROCESS_ACTION_SCRIPT_EXECUTION";
   case PROCESS_ACTION_SCRIPT_QUERY:
     return "PROCESS_ACTION_SCRIPT_QUERY";
   case PROCESS_ACTION_USER_DEMO_COMMAND:
@@ -503,7 +500,7 @@ int get_process_originator_type(process_action_type action_type, process_origina
     *result = PROCESS_ORIGINATOR_PM;
     return 0;
     // Script
-  case PROCESS_ACTION_SCRIPT_EXECUTION_IN_PROGRESS:
+  case PROCESS_ACTION_SCRIPT_EXECUTION:
   case PROCESS_ACTION_SCRIPT_QUERY:
     *result = PROCESS_ORIGINATOR_SCRIPT;
     return 0;
