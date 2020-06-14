@@ -2646,77 +2646,90 @@ int submit_user_command(int argc, void **argsv)
   return 0;
 }
 
+int determine_and_handle_workflow_conclusion(mc_workflow_process_v1 *workflow_context, bool *workflow_archived);
 int process_workflow_with_systems(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context)
 {
-  printf("pwws-0\n");
+  printf("pwwSys-0\n");
   // Process workflow issues through the systems until it is resolved or requires user response
   unsigned int former_issue_uid = 0;
   do {
-    printf("pwws-1\n");
+    printf("pwwSys-1\n");
     // Activate any unactivated actions
     if (workflow_context->requires_activation) {
       MCcall(activate_workflow_actions(command_hub, workflow_context));
-
-      continue;
     }
 
-    printf("pwws-2\n");
+    printf("pwwSys-2\n");
     // Scripts
     if (workflow_context->current_issue->type == PROCESS_ACTION_SCRIPT_EXECUTION) {
       MCcall(process_workflow_script(command_hub, workflow_context));
 
+      printf("pwwSys-continue\n");
       continue;
     }
 
-    printf("pwws-3\n");
+    printf("pwwSys-3\n");
     // Process Director
     former_issue_uid = workflow_context->current_issue->object_uid;
     MCcall(process_workflow_system_issues(command_hub, workflow_context));
   } while (workflow_context->current_issue->object_uid != former_issue_uid);
 
-  printf("pwws-4\n");
+  bool workflow_archived;
+  MCcall(determine_and_handle_workflow_conclusion(workflow_context, &workflow_archived));
+  if (!workflow_archived) {
+    // Return it to users focus
+    command_hub->focused_workflow = workflow_context;
+  }
+
+  printf("pwwSys-break\n");
   return 0;
 }
 
+int get_process_movement_from_action(mc_process_action_v1 const *const current_issue,
+                                     process_action_indent_movement *process_movement);
+int calculate_workflow_depth(mc_workflow_process_v1 *workflow_context, int *depth);
+int determine_and_handle_workflow_conclusion(mc_workflow_process_v1 *workflow_context, bool *workflow_archived);
+
 int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_workflow_process_v1 *workflow_context)
 {
-  if (workflow_context->current_issue == NULL) {
+  // Format according to command
+  if (command && !strcmp(command, "demo")) {
+    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_DEMO_INITIATION, command, NULL));
+  }
+  else if (command && !strcmp(command, "enddemo")) {
+    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_DEMO_CONCLUSION, command, NULL));
+  }
+
+  // Format according to previous type
+  else if (workflow_context->current_issue == NULL) {
     MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
   }
   else {
-    if (command && !strcmp(command, "demo")) {
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_DEMO_INITIATION, command, NULL));
-    }
-    else if (command && !strcmp(command, "enddemo")) {
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_DEMO_CONCLUSION, command, NULL));
-    }
-    else {
-      switch (workflow_context->current_issue->type) {
-      case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
-        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
-      } break;
-      case PROCESS_ACTION_PM_IDLE: {
-        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
-      } break;
-      case PROCESS_ACTION_DEMO_INITIATION: {
-        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_DEMO_COMMAND, command, NULL));
-      } break;
-      case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
-        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
-      } break;
-      case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME: {
-        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_CREATED_SCRIPT_NAME, command, NULL));
-      } break;
-      case PROCESS_ACTION_PM_VARIABLE_REQUEST: {
-        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_VARIABLE_RESPONSE, command, NULL));
-      } break;
-      case PROCESS_ACTION_SCRIPT_QUERY: {
-        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_SCRIPT_RESPONSE, command, NULL));
-      } break;
-      default:
-        MCerror(2739, "Unhandled PM-query-type:%s  '%s'", get_action_type_string(workflow_context->current_issue->type),
-                workflow_context->current_issue->dialogue);
-      }
+    switch (workflow_context->current_issue->type) {
+    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
+    } break;
+    case PROCESS_ACTION_PM_IDLE: {
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
+    } break;
+    case PROCESS_ACTION_DEMO_INITIATION: {
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_DEMO_COMMAND, command, NULL));
+    } break;
+    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
+    } break;
+    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME: {
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_CREATED_SCRIPT_NAME, command, NULL));
+    } break;
+    case PROCESS_ACTION_PM_VARIABLE_REQUEST: {
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_VARIABLE_RESPONSE, command, NULL));
+    } break;
+    case PROCESS_ACTION_SCRIPT_QUERY: {
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_SCRIPT_RESPONSE, command, NULL));
+    } break;
+    default:
+      MCerror(2739, "Unhandled PM-query-type:%s  '%s'", get_action_type_string(workflow_context->current_issue->type),
+              workflow_context->current_issue->dialogue);
     }
   }
   return 0;
@@ -3274,6 +3287,50 @@ int process_variable_response(mc_command_hub_v1 *command_hub, mc_process_action_
   return 0;
 }
 
+int determine_and_handle_workflow_conclusion(mc_workflow_process_v1 *workflow_context, bool *workflow_archived)
+{
+  int depth;
+  MCcall(calculate_workflow_depth(workflow_context, &depth));
+
+  if (depth < 0) {
+    *workflow_archived = true;
+    return 0;
+  }
+
+  process_action_indent_movement process_movement;
+  MCcall(get_process_movement_from_action(workflow_context->current_issue, &process_movement));
+
+  switch (process_movement) {
+  case PROCESS_MOVEMENT_DOUBLE_RESOLVE:
+    if (depth <= 2) {
+      *workflow_archived = true;
+      return 0;
+    }
+    break;
+  case PROCESS_MOVEMENT_RESOLVE:
+    if (depth <= 1) {
+      *workflow_archived = true;
+      return 0;
+    }
+    break;
+  case PROCESS_MOVEMENT_CONTINUE:
+    if (depth <= 0) {
+      *workflow_archived = true;
+      return 0;
+    }
+    break;
+  case PROCESS_MOVEMENT_INDENT:
+    break;
+
+  default: {
+    MCerror(2701, "Unsupported");
+  }
+  }
+
+  *workflow_archived = false;
+  return 0;
+}
+
 int does_process_unit_match_detail_consensus(mc_process_action_detail_v1 *process_unit,
                                              mc_process_action_detail_v1 *consensus_unit, bool *match_result);
 int compare_process_unit_field(mc_process_unit_v1 *process_unit_a, mc_process_unit_v1 *process_unit_b, int field_index,
@@ -3554,13 +3611,9 @@ int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v
   }
 
   // DEBUG
-  int depth = 0;
-  mc_process_action_v1 *contextual_root = workflow_context->current_issue;
-  while (contextual_root->contextual_issue) {
-    ++depth;
-    contextual_root = contextual_root->contextual_issue;
-  }
-  printf("chspa>(%u:seq=%u) Depth:%i", workflow_context->current_issue->object_uid, workflow_context->current_issue->sequence_uid,
+  int depth;
+  MCcall(calculate_workflow_depth(workflow_context, &depth));
+  printf("aatw>(%u:seq=%u) Depth:%i", workflow_context->current_issue->object_uid, workflow_context->current_issue->sequence_uid,
          depth);
   printf(" Submitted:%s", get_action_type_string(workflow_context->current_issue->type));
   printf("\n");
@@ -3581,47 +3634,13 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
   (*output)->object_uid = command_hub->uid_counter;
 
   // Process Positioning
-  process_action_indent_movement process_movement;
-  if (current_issue) {
-    switch (current_issue->type) {
-    case PROCESS_ACTION_DEMO_CONCLUSION:
-      process_movement = PROCESS_MOVEMENT_DOUBLE_RESOLVE;
-      break;
-    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
-    case PROCESS_ACTION_PM_IDLE:
-    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-    case PROCESS_ACTION_USER_VARIABLE_RESPONSE:
-      process_movement = PROCESS_MOVEMENT_RESOLVE;
-      break;
-    case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
-    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
-    case PROCESS_ACTION_SCRIPT_EXECUTION:
-    case PROCESS_ACTION_SCRIPT_QUERY:
-      process_movement = PROCESS_MOVEMENT_CONTINUE;
-      break;
-    case PROCESS_ACTION_DEMO_INITIATION:
-    case PROCESS_ACTION_PM_VARIABLE_REQUEST:
-    case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
-    case PROCESS_ACTION_USER_DEMO_COMMAND:
-      process_movement = PROCESS_MOVEMENT_INDENT;
-      break;
-    default: {
-      MCerror(3957, "Unsupported action type:'%s'", get_action_type_string(current_issue->type));
-    }
-    }
-  }
-  else {
-    process_movement = PROCESS_MOVEMENT_CONTINUE;
-  }
-  if (process_movement == PROCESS_MOVEMENT_RESOLVE && type == PROCESS_ACTION_PM_IDLE) {
-    process_movement = PROCESS_MOVEMENT_CONTINUE;
+  MCcall(get_process_movement_from_action(current_issue, &(*output)->process_movement));
+
+  // printf("process_movement:%i  type:%s\n", (*output)->process_movement, get_action_type_string(type));
+  if ((*output)->process_movement == PROCESS_MOVEMENT_RESOLVE && type == PROCESS_ACTION_PM_IDLE) {
+    (*output)->process_movement = PROCESS_MOVEMENT_CONTINUE;
     type = PROCESS_ACTION_PM_SEQUENCE_RESOLVED;
   }
-
-  if (process_movement > PROCESS_MOVEMENT_DOUBLE_RESOLVE || process_movement < PROCESS_MOVEMENT_CONTINUE) {
-    MCerror(3967, "processMOVEMENT:%i", process_movement);
-  }
-  (*output)->process_movement = process_movement;
 
   switch ((*output)->process_movement) {
   case PROCESS_MOVEMENT_CONTINUE: {
@@ -3730,6 +3749,61 @@ int construct_process_action_detail(mc_process_action_v1 *action, mc_process_act
     (*output)->dialogue = NULL;
     (*output)->dialogue_has_pattern = false;
     (*output)->origin = (process_originator_type)0;
+  }
+
+  return 0;
+}
+
+int get_process_movement_from_action(mc_process_action_v1 const *const current_issue,
+                                     process_action_indent_movement *process_movement)
+{
+  if (current_issue) {
+    switch (current_issue->type) {
+    case PROCESS_ACTION_DEMO_CONCLUSION:
+      *process_movement = PROCESS_MOVEMENT_DOUBLE_RESOLVE;
+      break;
+    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
+    case PROCESS_ACTION_PM_IDLE:
+    case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
+    case PROCESS_ACTION_USER_VARIABLE_RESPONSE:
+      *process_movement = PROCESS_MOVEMENT_RESOLVE;
+      break;
+    case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
+    case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
+    case PROCESS_ACTION_SCRIPT_EXECUTION:
+    case PROCESS_ACTION_SCRIPT_QUERY:
+      *process_movement = PROCESS_MOVEMENT_CONTINUE;
+      break;
+    case PROCESS_ACTION_DEMO_INITIATION:
+    case PROCESS_ACTION_PM_VARIABLE_REQUEST:
+    case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+    case PROCESS_ACTION_USER_DEMO_COMMAND:
+      *process_movement = PROCESS_MOVEMENT_INDENT;
+      break;
+    default: {
+      MCerror(3957, "Unsupported action type:'%s'", get_action_type_string(current_issue->type));
+    }
+    }
+  }
+  else {
+    *process_movement = PROCESS_MOVEMENT_CONTINUE;
+  }
+
+  return 0;
+}
+
+int calculate_workflow_depth(mc_workflow_process_v1 *workflow_context, int *depth)
+{
+  if (!workflow_context->current_issue) {
+    *depth = -1;
+    return 0;
+  }
+
+  *depth = 0;
+  mc_process_action_v1 *contextual_root = workflow_context->current_issue;
+  while (contextual_root->contextual_issue) {
+    ++*depth;
+    contextual_root = contextual_root->contextual_issue;
   }
 
   return 0;
