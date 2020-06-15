@@ -692,7 +692,9 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
   if (primary == NULL) {
     allocate_and_copy_cstr(primary, key);
   }
-  mc_script_local_v1 *kvp;
+
+  // Search for keys
+  mc_script_local_v1 *kvp = NULL;
   for (int i = 0; i < local_indexes_count; ++i) {
     assign_anon_struct(kvp, local_index[i]);
 
@@ -714,6 +716,7 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
   case '\0': {
     // Simple replacement
     *output = kvp->replacement_code;
+    // printf("doop\n");
     return 0;
   }
   case '-': {
@@ -791,12 +794,14 @@ int parse_past_script_expression(void *nodespace, void **local_index, unsigned i
 
   if (isalpha(code[*i])) {
 
+    // printf("code[*i]:'%c'\n", code[*i]);
     MCcall(parse_past_identifier(code, i, &primary, true, true));
     // printf("primary:%s code[*i]:'%c'\n", primary, code[*i]);
 
     MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, primary, &temp));
-
+    // printf("after %s\n", temp);
     if (temp) {
+      // printf("aftertheafter\n");
       free(primary);
       allocate_and_copy_cstr(primary, temp);
     }
@@ -886,6 +891,7 @@ int parse_past_script_expression(void *nodespace, void **local_index, unsigned i
       ++*i;
 
       MCcall(parse_past_script_expression(nodespace, local_index, local_indexes_count, code, i, output));
+      // printf("@@@@ ='%s'\n", *output);
 
       char *temp = (char *)malloc(sizeof(char) * (strlen(*output) + 2));
       sprintf(temp, "@%s", *output);
@@ -1010,6 +1016,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         char *function_name_identifier;
         MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
                                             &function_name_identifier));
+        // printf("$nv-0 %p %s\n", nodespace, function_name_identifier);
 
         MCcall(append_to_cstr(&translation_alloc, &translation,
                               "  mc_function_info_v1 *mcsfnv_function_info;\n"
@@ -1024,7 +1031,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                   "    MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\",\n"
                   "           (void **)&mc_context_data_2));\n"
                   "    if(!mc_context_data_2) {\n"
-                  "      MCError(1027, \"Couldn't find context data\");"
+                  "      MCerror(1027, \"Couldn't find context data\");\n"
                   "    }\n"
                   "    mc_vargs[2] = (void *)&mc_context_data_2;\n"
                   "    function_name_id = mc_context_data_2;\n",
@@ -1059,6 +1066,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // Form the arguments
+        int argument_index = 0;
         while (code[i] != '\n' && code[i] != '\0') {
           MCcall(parse_past(code, &i, " "));
 
@@ -1089,7 +1097,13 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             free(array_identifier);
           }
           else {
-            MCerror(-1037, "TODO this case");
+            char *argument_expression;
+            MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
+                                                &argument_expression));
+            printf("argument_expression:%s\n", argument_expression);
+
+            printf("translation:%s\n", translation);
+            MCerror(1037, "TODO this case");
             // char *argument;
             // MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
             // // MCcall(parse_past_identifier(code, &i, &argument, true, true));
@@ -1106,6 +1120,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             // ++argument_count;
             // free(argument);
           }
+
+          ++argument_index;
         }
 
         if (function_name_identifier[0] == '@') {
@@ -1182,7 +1198,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                 "    MCcall(get_process_contextual_data(script_instance->contextual_action, %s + 1,\n"
                 "           (void **)&mc_context_data));\n"
                 "    if(!mc_context_data) {\n"
-                "      MCerror(1027, \"Missing process context data for '%%s'\", %s);"
+                "      MCerror(1187, \"Missing process context data for '%%s'\", %s);\n"
                 "    }\n"
                 "    free(%s);\n"
                 "    %s = mc_context_data;\n"
@@ -2462,92 +2478,92 @@ int mc_main(int argc, const char *const *argv)
 
   printf("mm-3\n");
   const char *commands =
-      // // Create invoke function script
-      // ".createScript\n"
-      // "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
-      // "ifs !finfo\n"
-      // "err 2455 \"Could not find function_info for specified function\"\n"
-      // "end\n"
-      // ""
-      // "dcs int rind 0\n"
-      // "dcl 'char *' responses[32]\n"
-      // ""
-      // "dcs int linit finfo->parameter_count\n"
-      // "ifs finfo->variable_parameter_begin_index >= 0\n"
-      // "ass linit finfo->variable_parameter_begin_index\n"
-      // "end\n"
-      // "for i 0 linit\n"
-      // "dcl char provocation[512]\n"
-      // "nvk strcpy provocation finfo->parameters[i]->name\n"
-      // "nvk strcat provocation \": \"\n"
-      // "$pi responses[rind] provocation\n"
-      // "ass rind + rind 1\n"
-      // "end for\n"
-      // // "nvk printf \"func_name:%s\\n\" finfo->name\n"
-      // "ifs finfo->variable_parameter_begin_index >= 0\n"
-      // "dcs int pind finfo->variable_parameter_begin_index\n"
-      // "whl 1\n"
-      // "dcl char provocation[512]\n"
-      // "nvk strcpy provocation finfo->parameters[pind]->name\n"
-      // "nvk strcat provocation \": \"\n"
-      // "$pi responses[rind] provocation\n"
-      // "nvi bool end_it strcmp responses[rind] \"finish\"\n"
-      // "ifs !end_it\n"
-      // "brk\n"
-      // "end\n"
-      // // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
-      // "ass rind + rind 1\n"
-      // "ass pind + pind 1\n"
-      // "ass pind % pind finfo->parameter_count\n"
-      // "ifs pind < finfo->variable_parameter_begin_index\n"
-      // "ass pind finfo->variable_parameter_begin_index\n"
-      // "end\n"
-      // "end\n"
-      // "end\n"
-      // "$nv @function_to_invoke $ya rind responses\n"
-      // "|"
-      // "invoke_function_with_args_script|"
-      // "demo|"
-      // "invoke @function_to_invoke|"
-      // "mc_dummy_function|"
-      // ".runScript invoke_function_with_args_script|"
-      // "enddemo|"
+      // Create invoke function script
+      ".createScript\n"
+      "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
+      "ifs !finfo\n"
+      "err 2455 \"Could not find function_info for specified function\"\n"
+      "end\n"
+      ""
+      "dcs int rind 0\n"
+      "dcl 'char *' responses[32]\n"
+      ""
+      "dcs int linit finfo->parameter_count\n"
+      "ifs finfo->variable_parameter_begin_index >= 0\n"
+      "ass linit finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "for i 0 linit\n"
+      "dcl char provocation[512]\n"
+      "nvk strcpy provocation finfo->parameters[i]->name\n"
+      "nvk strcat provocation \": \"\n"
+      "$pi responses[rind] provocation\n"
+      "ass rind + rind 1\n"
+      "end for\n"
+      // "nvk printf \"func_name:%s\\n\" finfo->name\n"
+      "ifs finfo->variable_parameter_begin_index >= 0\n"
+      "dcs int pind finfo->variable_parameter_begin_index\n"
+      "whl 1\n"
+      "dcl char provocation[512]\n"
+      "nvk strcpy provocation finfo->parameters[pind]->name\n"
+      "nvk strcat provocation \": \"\n"
+      "$pi responses[rind] provocation\n"
+      "nvi bool end_it strcmp responses[rind] \"finish\"\n"
+      "ifs !end_it\n"
+      "brk\n"
+      "end\n"
+      // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
+      "ass rind + rind 1\n"
+      "ass pind + pind 1\n"
+      "ass pind % pind finfo->parameter_count\n"
+      "ifs pind < finfo->variable_parameter_begin_index\n"
+      "ass pind finfo->variable_parameter_begin_index\n"
+      "end\n"
+      "end\n"
+      "end\n"
+      "$nv @function_to_invoke $ya rind responses\n"
+      "|"
+      "invoke_function_with_args_script|"
+      "demo|"
+      "invoke @function_to_invoke|"
+      "mc_dummy_function|"
+      ".runScript invoke_function_with_args_script|"
+      "enddemo|"
       // // "demo|"
       // // "call dummy thrice|"
       // // "invoke mc_dummy_function|"
       // // "invoke mc_dummy_function|"
       // // "invoke mc_dummy_function|"
       // // "enddemo|"
-      // "demo|"
-      // "create function @create_function_name|"
-      // "construct_and_attach_child_node|"
-      // "invoke declare_function_pointer|"
-      // // ---- SCRIPT SEQUENCE ----
-      // // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
-      // // ---- char *parameter_name]...);
-      // // > function_name:
-      // "@create_function_name|"
-      // // > return_type:
-      // "void|"
-      // // > parameter_type:
-      // "const char *|"
-      // // > parameter_name:
-      // "node_name|"
-      // // > Parameter 1 type:
-      // "finish|"
-      // // ---- END SCRIPT SEQUENCE ----
-      // // ---- SCRIPT SEQUENCE ----
-      // // ---- void instantiate_function(char *function_name, char *mc_script);
-      // "invoke instantiate_function|"
-      // "@create_function_name|"
-      // // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
-      // "dcd node * child\n"
-      // "cpy char * child->name node_name\n"
-      // "ass child->parent command_hub->nodespace\n"
-      // "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
-      // "(void *)child\n"
-      // "|"
-      // "enddemo|"
+      "demo|"
+      "create function @create_function_name|"
+      "construct_and_attach_child_node|"
+      "invoke declare_function_pointer|"
+      // ---- SCRIPT SEQUENCE ----
+      // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
+      // ---- char *parameter_name]...);
+      // > function_name:
+      "@create_function_name|"
+      // > return_type:
+      "void|"
+      // > parameter_type:
+      "const char *|"
+      // > parameter_name:
+      "node_name|"
+      // > Parameter 1 type:
+      "finish|"
+      // ---- END SCRIPT SEQUENCE ----
+      // ---- SCRIPT SEQUENCE ----
+      // ---- void instantiate_function(char *function_name, char *mc_script);
+      "invoke instantiate_function|"
+      "@create_function_name|"
+      // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
+      "dcd node * child\n"
+      "cpy char * child->name node_name\n"
+      "ass child->parent command_hub->nodespace\n"
+      "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
+      "(void *)child\n"
+      "|"
+      "enddemo|"
       // // -- END DEMO create function $create_function_name
       // "invoke construct_and_attach_child_node|"
       // "command_interface_node|"
@@ -2574,16 +2590,8 @@ int mc_main(int argc, const char *const *argv)
       // clint->process("end_mthread(rthr);");
       // printf("\n! MIDGE COMPLETE !\n");
       // "invoke clint_process \"printf(\"clint_processed!\\n\");|"
-      ".createScript\n"
-      "$ev @external_function_id @function_parameter\n"
-      "|"
-      "call_external_function_script|"
-      "demo|"
-      "call @external_function_id @function_parameter|"
-      "clint_process|"
-      "\"Hello World!\""
-      ".runScript call_external_function_script"
-      "enddemo|"
+      "invoke cling_process|"
+      "\"Hello World!\"|"
       "midgequit|";
 
   // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
@@ -5529,12 +5537,10 @@ int init_process_matrix(mc_command_hub_v1 *command_hub)
 
 int init_core_functions(mc_command_hub_v1 *command_hub)
 {
-  // Declare
-  mc_function_info_v1 **all_function_definitions = (mc_function_info_v1 **)malloc(sizeof(mc_function_info_v1) * 20);
-  int all_function_definition_count = 0;
-
+  // Function Definitions
   mc_function_info_v1 *mc_dummy_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  all_function_definitions[all_function_definition_count++] = mc_dummy_function_definition_v1;
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)mc_dummy_function_definition_v1));
   {
     mc_dummy_function_definition_v1->struct_id = NULL;
     mc_dummy_function_definition_v1->name = "mc_dummy_function";
@@ -5547,8 +5553,33 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_dummy_function_definition_v1->struct_usage = NULL;
   }
 
+  mc_function_info_v1 *cling_process_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)cling_process_definition_v1));
+  {
+    cling_process_definition_v1->struct_id = NULL;
+    cling_process_definition_v1->name = "cling_process";
+    cling_process_definition_v1->latest_iteration = 1U;
+    cling_process_definition_v1->return_type = "void";
+    cling_process_definition_v1->parameter_count = 1;
+    cling_process_definition_v1->parameters =
+        (mc_parameter_info_v1 **)malloc(sizeof(void *) * cling_process_definition_v1->parameter_count);
+    cling_process_definition_v1->variable_parameter_begin_index = -1;
+    cling_process_definition_v1->struct_usage_count = 0;
+    cling_process_definition_v1->struct_usage = NULL;
+
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    cling_process_definition_v1->parameters[0] = field;
+    field->type_name = "char";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "str";
+  }
+
   mc_function_info_v1 *find_function_info_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  all_function_definitions[all_function_definition_count++] = find_function_info_definition_v1;
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)find_function_info_definition_v1));
   {
     find_function_info_definition_v1->struct_id = NULL;
     find_function_info_definition_v1->name = "find_function_info";
@@ -5577,7 +5608,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   }
 
   mc_function_info_v1 *declare_function_pointer_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  all_function_definitions[all_function_definition_count++] = declare_function_pointer_definition_v1;
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
   {
     declare_function_pointer_definition_v1->struct_id = NULL;
     declare_function_pointer_definition_v1->name = "declare_function_pointer";
@@ -5618,7 +5650,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   }
 
   mc_function_info_v1 *instantiate_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  all_function_definitions[all_function_definition_count++] = instantiate_function_definition_v1;
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)instantiate_function_definition_v1));
   {
     instantiate_function_definition_v1->struct_id = NULL;
     instantiate_function_definition_v1->name = "instantiate_function";
@@ -5668,36 +5701,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   //  printf("processed_core_function:\n%s\n", output);
   clint_declare(output);
 
-  // Declare with cling interpreter
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)mc_dummy_function_definition_v1));
-
+  // Attach declared function pointers with declared functions
   clint_process("find_function_info = &find_function_info_v1;");
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)find_function_info_definition_v1));
-
   clint_process("declare_function_pointer = &declare_function_pointer_v1;");
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
-
   clint_process("instantiate_function = &instantiate_function_v1;");
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)instantiate_function_definition_v1));
-
   clint_process("parse_script_to_mc = &parse_script_to_mc_v1;");
-  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-  //             TODO                &command_hub->global_node->function_count, (void *)parse_script_to_mc_definition_v1));
-
   clint_process("conform_type_identity = &conform_type_identity_v1;");
-  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-  //             TODO                &command_hub->global_node->function_count, (void *)conform_type_identity_definition_v1));
-
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
-  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-  //             TODO                &command_hub->global_node->function_count, (void
-  //             *)create_default_mc_struct_definition_v1));
-
-  // printf("first:%s\n", ((mc_function_info_v1 *)command_hub->global_node->functions[0])->name);
 
   free(input);
   free(output);

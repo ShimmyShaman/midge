@@ -188,6 +188,14 @@ int declare_function_pointer_v1(int argc, void **argv)
   return 0;
 }
 
+int cling_process(int argc, void **argv)
+{
+  // Parameters
+  char *str = *(char **)argv[0];
+
+  return clint_process(str);
+}
+
 /* Conforms the given type_identity to a mc_type_identity if it is available. Searches first the given func_info, failing that
  * then searches the current nodespace.
  * @conformed_type_identity : (char **) Return Value.
