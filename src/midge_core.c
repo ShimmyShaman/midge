@@ -2498,17 +2498,18 @@ int mc_main(int argc, const char *const *argv)
       "mc_dummy_function|"
       ".runScript invoke_function_with_args|"
       "enddemo|"
-      "invoke declare_function_pointer|"
+      "demo|"
+      "call dummy thrice|"
+      "invoke mc_dummy_function|"
+      "invoke mc_dummy_function|"
+      "invoke mc_dummy_function|"
+      "enddemo|"
+      "call dummy thrice|"
       "midgequit|"
-
-      // Create Function Sequence
       "demo|"
       "create function @create_function_name|"
       "construct_and_attach_child|"
-      // -- DEMO declare function
-      "demo|"
-      "invoke @{function_to_invoke=declare_function_pointer}|"
-      ".runScript invoke_function_with_args|"
+      "invoke declare_function_pointer|"
       // ---- SCRIPT SEQUENCE ----
       // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
       // ---- char *parameter_name]...);
@@ -2523,7 +2524,12 @@ int mc_main(int argc, const char *const *argv)
       // > Parameter 1 type:
       "finish|"
       // ---- END SCRIPT SEQUENCE ----
+      // ---- SCRIPT SEQUENCE ----
+      // ---- void instantiate_function(char *function_name, char *mc_script);
+      "invoke instantiate_function|"
+      "@create_function_name|"
       "enddemo|"
+      "midgequit|"
       // -- END DEMO invoke $function_to_invoke
       // -- invoke initialize function
       "invoke instantiate_function|"
@@ -2649,29 +2655,58 @@ int submit_user_command(int argc, void **argsv)
 int determine_and_handle_workflow_conclusion(mc_workflow_process_v1 *workflow_context, bool *workflow_archived);
 int process_workflow_with_systems(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context)
 {
-  // printf("pwwSys-0\n");
+  printf("pwwSys-0\n");
   // Process workflow issues through the systems until it is resolved or requires user response
   unsigned int former_issue_uid = 0;
   do {
-    // printf("pwwSys-1\n");
+    printf("pwwSys-1\n");
     // Activate any unactivated actions
     if (workflow_context->requires_activation) {
       MCcall(activate_workflow_actions(command_hub, workflow_context));
     }
 
-    // printf("pwwSys-2\n");
+    printf("pwwSys-2\n");
     // Scripts
     if (workflow_context->current_issue->type == PROCESS_ACTION_SCRIPT_EXECUTION) {
       MCcall(process_workflow_script(command_hub, workflow_context));
 
-      // printf("pwwSys-continue\n");
+      printf("pwwSys-continue\n");
       continue;
     }
 
-    // printf("pwwSys-3\n");
+    printf("pwwSys-3\n");
     // Process Director
     former_issue_uid = workflow_context->current_issue->object_uid;
     MCcall(process_workflow_system_issues(command_hub, workflow_context));
+    if (former_issue_uid != workflow_context->current_issue->object_uid) {
+
+      printf("pwwSys-continue\n");
+      continue;
+    }
+
+    // Template issues
+    printf("pwwSys-4\n");
+    switch (workflow_context->current_issue->type) {
+    case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
+      if (workflow_context->current_issue->contextual_issue &&
+          workflow_context->current_issue->contextual_issue->contextual_issue &&
+          workflow_context->current_issue->contextual_issue->contextual_issue->type == PROCESS_ACTION_USER_TEMPLATE_COMMAND) {
+
+        if (workflow_context->current_issue->contextual_issue->queued_procedures) {
+          MCerror(2694, "TODO");
+          continue;
+        }
+
+        add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, "--template concludes", NULL);
+
+        printf("pwwSys-continue\n");
+        continue;
+      }
+    default:
+      break;
+    }
+
+    printf("pwwSys-5\n");
   } while (workflow_context->current_issue->object_uid != former_issue_uid);
 
   bool workflow_archived;
@@ -2689,16 +2724,25 @@ int get_process_movement_from_action(mc_process_action_v1 const *const current_i
                                      process_action_indent_movement *process_movement);
 int calculate_workflow_depth(mc_workflow_process_v1 *workflow_context, int *depth);
 int determine_and_handle_workflow_conclusion(mc_workflow_process_v1 *workflow_context, bool *workflow_archived);
+int process_command_with_templates(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context,
+                                   char const *const command, bool *command_handled);
 
 int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_workflow_process_v1 *workflow_context)
 {
   // Format according to command
   if (command && !strcmp(command, "demo")) {
     MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_DEMO_INITIATION, command, NULL));
+    return 0;
   }
   else if (command && !strcmp(command, "enddemo")) {
     MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_DEMO_CONCLUSION, command, NULL));
+    return 0;
   }
+
+  bool command_handled;
+  MCcall(process_command_with_templates(command_hub, workflow_context, command, &command_handled));
+  if (command_handled)
+    return 0;
 
   // Format according to previous type
   else if (workflow_context->current_issue == NULL) {
@@ -2772,6 +2816,7 @@ int activate_workflow_actions(mc_command_hub_v1 *command_hub, mc_workflow_proces
 {
   switch (workflow_context->current_issue->type) {
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+  case PROCESS_ACTION_USER_TEMPLATE_COMMAND:
   case PROCESS_ACTION_USER_DEMO_COMMAND:
   case PROCESS_ACTION_USER_SCRIPT_ENTRY: {
     // Print to terminal
@@ -2911,8 +2956,9 @@ int process_workflow_script(mc_command_hub_v1 *command_hub, mc_workflow_process_
 
 int process_variable_response(mc_command_hub_v1 *command_hub, mc_process_action_v1 *command_issue,
                               mc_workflow_process_v1 *workflow_context, bool *issue_handled);
-int process_unprovoked_command_with_templates(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context);
 int process_unprovoked_command_with_system(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context);
+int does_dialogue_match_pattern(char const *const dialogue, char const *const pattern, mc_void_collection_v1 *variables,
+                                bool *match);
 int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context)
 {
   // printf("pwsi-0\n");
@@ -2935,6 +2981,30 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
   }
   case PROCESS_ACTION_USER_UNPROVOKED_COMMAND: {
     MCcall(process_unprovoked_command_with_system(command_hub, workflow_context));
+
+    return 0;
+  }
+  case PROCESS_ACTION_USER_TEMPLATE_COMMAND: {
+
+    mc_process_template_v1 *process_template = (mc_process_template_v1 *)workflow_context->current_issue->data;
+    if (!process_template) {
+      MCerror(2991, "Incorrect setting of command data");
+    }
+
+    // Collect the contextual data
+    bool pattern_match;
+    MCcall(does_dialogue_match_pattern(workflow_context->current_issue->dialogue, process_template->dialogue,
+                                       workflow_context->current_issue->contextual_data, &pattern_match));
+    if (!pattern_match) {
+      MCerror(2956, "Shouldn't happen, just matched");
+    }
+
+    // Add the template invocation
+    MCcall(add_action_to_workflow(command_hub, workflow_context, process_template->initial_procedure->type,
+                                  process_template->initial_procedure->command, process_template->initial_procedure->data));
+
+    // Set the remainder template procedure process with the new issue
+    workflow_context->current_issue->queued_procedures = process_template->initial_procedure->next;
 
     return 0;
   }
@@ -3013,7 +3083,7 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
       return 0;
     }
 
-    MCerror(3418, "TODO");
+    // MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_IDLE, "...continue demo...", NULL));
 
     return 0;
   }
@@ -3037,11 +3107,12 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
       action = action->previous_issue;
       switch (action->type) {
       case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
+      case PROCESS_ACTION_USER_TEMPLATE_COMMAND:
         break;
       case PROCESS_ACTION_PM_VARIABLE_REQUEST:
         continue;
       default: {
-        MCerror(3449, "Unsupported:%s", get_action_type_string(action->type));
+        MCerror(3108, "Unsupported:%s", get_action_type_string(action->type));
       }
       }
 
@@ -3195,11 +3266,6 @@ int process_unprovoked_command_with_system(mc_command_hub_v1 *command_hub, mc_wo
   // printf("##########################################\n");
   // printf("Begin Template Process:%s\n", process[0]);
   // MCcall(handle_process(argc, argsv));
-  unsigned int current_issue_uid = workflow_context->current_issue->object_uid;
-  MCcall(process_unprovoked_command_with_templates(command_hub, workflow_context));
-  if (workflow_context->current_issue->object_uid != current_issue_uid) {
-    return 0;
-  }
 
   // TODO -- suggest with process matrix...
 
@@ -3211,33 +3277,37 @@ int process_unprovoked_command_with_system(mc_command_hub_v1 *command_hub, mc_wo
   return 0;
 }
 
-int does_dialogue_match_pattern(char const *const dialogue, char const *const pattern, mc_void_collection_v1 *variables,
-                                bool *match);
 int does_dialogue_have_pattern(const char *const text, bool *output);
-int process_unprovoked_command_with_templates(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context)
+int process_command_with_templates(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context,
+                                   char const *const command, bool *command_handled)
 {
-  printf("pucwt-0\n");
+  // printf("pucwt-0\n");
   for (int i = 0; i < command_hub->template_collection->count; ++i) {
     mc_process_template_v1 *process_template = (mc_process_template_v1 *)command_hub->template_collection->items[i];
-    printf("pucwt-1\n");
+    // printf("pucwt-1\n");
 
     bool pattern_match;
-    MCcall(does_dialogue_match_pattern(workflow_context->current_issue->dialogue, process_template->dialogue,
-                                       workflow_context->current_issue->contextual_data, &pattern_match));
+    MCcall(does_dialogue_match_pattern(command, process_template->dialogue, NULL, &pattern_match));
     if (!pattern_match)
       continue;
 
-    printf("pucwt-2 %p\n", process_template->initial_procedure);
-    printf("using template procedure %s:%s\n", get_action_type_string(process_template->initial_procedure->type),
-           process_template->initial_procedure->command);
-    MCcall(add_action_to_workflow(command_hub, workflow_context, process_template->initial_procedure->type,
-                                  process_template->initial_procedure->command, process_template->initial_procedure->data));
+    // printf("pucwt-2 %p\n", process_template->initial_procedure);
+    // printf("using template procedure %s:%s\n", get_action_type_string(process_template->initial_procedure->type),
+    //  process_template->initial_procedure->command);
+    // Replace the command with the template procedure
+    // {
+    // mc_process_action_v1 *unprovoked_command = workflow_context->current_issue;
+    // workflow_context->current_issue =
+    // }
+    // Add the template command
+    MCcall(
+        add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_TEMPLATE_COMMAND, command, process_template));
+    *command_handled = true;
 
-    // Set the remainder template procedure process with the new issue
-    workflow_context->current_issue->queued_procedures = process_template->initial_procedure->next;
     return 0;
   }
 
+  *command_handled = false;
   return 0;
 }
 
@@ -3768,19 +3838,21 @@ int get_process_movement_from_action(mc_process_action_v1 const *const current_i
     case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
     case PROCESS_ACTION_PM_IDLE:
     case PROCESS_ACTION_PM_UNRESOLVED_COMMAND:
-    case PROCESS_ACTION_USER_VARIABLE_RESPONSE:
+    case PROCESS_ACTION_USER_VARIABLE_RESPONSE: {
       *process_movement = PROCESS_MOVEMENT_RESOLVE;
-      break;
+    } break;
     case PROCESS_ACTION_USER_CREATED_SCRIPT_NAME:
     case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME:
     case PROCESS_ACTION_SCRIPT_EXECUTION:
     case PROCESS_ACTION_SCRIPT_QUERY:
+    case PROCESS_ACTION_USER_SCRIPT_RESPONSE:
       *process_movement = PROCESS_MOVEMENT_CONTINUE;
       break;
     case PROCESS_ACTION_DEMO_INITIATION:
     case PROCESS_ACTION_PM_VARIABLE_REQUEST:
     case PROCESS_ACTION_USER_UNPROVOKED_COMMAND:
     case PROCESS_ACTION_USER_DEMO_COMMAND:
+    case PROCESS_ACTION_USER_TEMPLATE_COMMAND:
       *process_movement = PROCESS_MOVEMENT_INDENT;
       break;
     default: {
