@@ -25,8 +25,7 @@ int find_function_info_v1(int argc, void **argv)
     function_info *finfo = nodespace->functions[i];
 
     // printf("ffi-4a\n");
-    // printf("ffi-cmp0:%s\n", finfo->name);
-    // printf("ffi-cmp1:%s\n", function_name);
+    // printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
     // printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
@@ -157,7 +156,8 @@ int declare_function_pointer_v1(int argc, void **argv)
     func_info->parameters[i] = (mc_parameter_info_v1 *)parameter_info;
     // printf("dfp>set param[%i]=%s %s\n", i, parameter_info->type, parameter_info->name);
   }
-  // printf("dfp-7\n");
+
+  // Add the function info to the nodespace
   MCcall(append_to_collection((void ***)&command_hub->nodespace->functions, &command_hub->nodespace->functions_alloc,
                               &command_hub->nodespace->function_count, (void *)func_info));
 
@@ -176,7 +176,6 @@ int declare_function_pointer_v1(int argc, void **argv)
       func_info->struct_usage = NULL;
     }
   }
-  // printf("dfp-8\n");
 
   // Declare with clint
   char buf[1024];
@@ -241,11 +240,11 @@ int conform_type_identity_v1(int argc, void **argv)
 
   bool matched = false;
   if (func_info) {
-    printf("ctn-0  %s\n", func_info->name);
+    // printf("ctn-0  %s\n", func_info->name);
     // Check for utilized version in function info
     for (int i = 0; i < func_info->struct_usage_count; ++i) {
       if (!strcmp(finalized_identity, func_info->struct_usage[i]->name)) {
-        printf("ctn-1\n");
+        // printf("ctn-1\n");
         // Match!
         matched = true;
         free(finalized_identity);
@@ -263,7 +262,7 @@ int conform_type_identity_v1(int argc, void **argv)
       struct_info *str_info = (struct_info *)p_struct_info;
       matched = true;
 
-      printf("ctn-3\n");
+      // printf("ctn-3\n");
       // Change Name
       free(finalized_identity);
       allocate_and_copy_cstr(finalized_identity, str_info->declared_mc_name);
@@ -476,9 +475,9 @@ int parse_past_conformed_type_identifier(function_info *func_info, char *code, i
     // printf("@ppcti-2\n");
     MCcall(conform_type_identity(3, mc_vargs));
     // printf("@ppcti-3\n");
-    printf("ppcti:paramName:'%s' conformed_type_name:'%s'\n", type_identity, conformed_result);
+    // printf("ppcti:paramName:'%s' conformed_type_name:'%s'\n", type_identity, conformed_result);
   }
-  printf("@ppcti-4\n");
+  // printf("@ppcti-4\n");
   free(type_identity);
 
   *conformed_type_identity = conformed_result;

@@ -2452,7 +2452,7 @@ int mc_main(int argc, const char *const *argv)
       ".createScript\n"
       "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
       "ifs !finfo\n"
-      "err 10 \"Could not find function_info for specified function\"\n"
+      "err 2455 \"Could not find function_info for specified function\"\n"
       "end\n"
       ""
       "dcs int rind 0\n"
@@ -2498,17 +2498,15 @@ int mc_main(int argc, const char *const *argv)
       "mc_dummy_function|"
       ".runScript invoke_function_with_args|"
       "enddemo|"
-      "demo|"
-      "call dummy thrice|"
-      "invoke mc_dummy_function|"
-      "invoke mc_dummy_function|"
-      "invoke mc_dummy_function|"
-      "enddemo|"
-      "call dummy thrice|"
-      "midgequit|"
+      // "demo|"
+      // "call dummy thrice|"
+      // "invoke mc_dummy_function|"
+      // "invoke mc_dummy_function|"
+      // "invoke mc_dummy_function|"
+      // "enddemo|"
       "demo|"
       "create function @create_function_name|"
-      "construct_and_attach_child|"
+      "construct_and_attach_child_node|"
       "invoke declare_function_pointer|"
       // ---- SCRIPT SEQUENCE ----
       // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
@@ -2528,12 +2526,6 @@ int mc_main(int argc, const char *const *argv)
       // ---- void instantiate_function(char *function_name, char *mc_script);
       "invoke instantiate_function|"
       "@create_function_name|"
-      "enddemo|"
-      "midgequit|"
-      // -- END DEMO invoke $function_to_invoke
-      // -- invoke initialize function
-      "invoke instantiate_function|"
-      "@create_function_name|"
       // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
       "dcd node * child\n"
       "cpy char * child->name node_name\n"
@@ -2542,7 +2534,6 @@ int mc_main(int argc, const char *const *argv)
       "(void *)child\n"
       "|"
       "enddemo|"
-      "midgequit|"
       // -- END DEMO create function $create_function_name
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"
@@ -2552,7 +2543,11 @@ int mc_main(int argc, const char *const *argv)
       "char *|"
       "word|"
       "finish|"
-      ""
+      "@create_function_name|"
+      "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
+      "|"
+      "invoke print_word|"
+      "BIRD|"
       "midgequit|";
 
   // Command Loop
@@ -2601,6 +2596,10 @@ int mc_main(int argc, const char *const *argv)
     mc_node_v1 *child = (mc_node_v1 *)global->children[0];
     printf("\n>> global has a child named %s!\n", child->name);
   }
+  else {
+    printf("\n>> global has no children\n");
+  }
+
   // printf("\n\nProcess Matrix:\n");
   // print_process_unit(command_hub->process_matrix, 5, 5, 1);
 
@@ -2655,37 +2654,37 @@ int submit_user_command(int argc, void **argsv)
 int determine_and_handle_workflow_conclusion(mc_workflow_process_v1 *workflow_context, bool *workflow_archived);
 int process_workflow_with_systems(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context)
 {
-  printf("pwwSys-0\n");
+  // printf("pwwSys-0\n");
   // Process workflow issues through the systems until it is resolved or requires user response
   unsigned int former_issue_uid = 0;
   do {
-    printf("pwwSys-1\n");
+    // printf("pwwSys-1\n");
     // Activate any unactivated actions
     if (workflow_context->requires_activation) {
       MCcall(activate_workflow_actions(command_hub, workflow_context));
     }
 
-    printf("pwwSys-2\n");
+    // printf("pwwSys-2\n");
     // Scripts
     if (workflow_context->current_issue->type == PROCESS_ACTION_SCRIPT_EXECUTION) {
       MCcall(process_workflow_script(command_hub, workflow_context));
 
-      printf("pwwSys-continue\n");
+      // printf("pwwSys-continue\n");
       continue;
     }
 
-    printf("pwwSys-3\n");
+    // printf("pwwSys-3\n");
     // Process Director
     former_issue_uid = workflow_context->current_issue->object_uid;
     MCcall(process_workflow_system_issues(command_hub, workflow_context));
     if (former_issue_uid != workflow_context->current_issue->object_uid) {
 
-      printf("pwwSys-continue\n");
+      // printf("pwwSys-continue\n");
       continue;
     }
 
     // Template issues
-    printf("pwwSys-4\n");
+    // printf("pwwSys-4\n");
     switch (workflow_context->current_issue->type) {
     case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
       if (workflow_context->current_issue->contextual_issue &&
@@ -2704,14 +2703,14 @@ int process_workflow_with_systems(mc_command_hub_v1 *command_hub, mc_workflow_pr
         MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, "--template concludes",
                                       NULL));
 
-        printf("pwwSys-continue\n");
+        // printf("pwwSys-continue\n");
         continue;
       }
     default:
       break;
     }
 
-    printf("pwwSys-5\n");
+    // printf("pwwSys-5\n");
   } while (workflow_context->current_issue->object_uid != former_issue_uid);
 
   bool workflow_archived;
@@ -3305,7 +3304,7 @@ int process_command_with_templates(mc_command_hub_v1 *command_hub, mc_workflow_p
     // workflow_context->current_issue =
     // }
 
-    printf("process_template:%p %s\n", process_template, process_template->dialogue);
+    // printf("process_template:%p %s\n", process_template, process_template->dialogue);
     // Add the template command
     MCcall(
         add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_TEMPLATE_COMMAND, command, process_template));
@@ -3693,10 +3692,11 @@ int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v
   // DEBUG
   int depth;
   MCcall(calculate_workflow_depth(workflow_context, &depth));
-  printf("aatw>(%u:seq=%u) Depth:%i", workflow_context->current_issue->object_uid, workflow_context->current_issue->sequence_uid,
-         depth);
-  printf(" Submitted:%s", get_action_type_string(workflow_context->current_issue->type));
-  printf("\n");
+  // printf("aatw>(%u:seq=%u) Depth:%i", workflow_context->current_issue->object_uid,
+  // workflow_context->current_issue->sequence_uid,
+  //        depth);
+  // printf(" Submitted:%s", get_action_type_string(workflow_context->current_issue->type));
+  // printf("\n");
 
   return 0;
 }
