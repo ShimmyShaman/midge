@@ -193,6 +193,8 @@ int cling_process(int argc, void **argv)
   // Parameters
   char *str = *(char **)argv[0];
 
+  // printf("arg is:'%s'\n", str);
+
   return clint_process(str);
 }
 

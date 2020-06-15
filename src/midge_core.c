@@ -2476,6 +2476,9 @@ int mc_main(int argc, const char *const *argv)
   MCcall(init_process_matrix(command_hub));
   // return 0;
 
+  clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
+                 " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+
   printf("mm-3\n");
   const char *commands =
       // Create invoke function script
@@ -2528,6 +2531,10 @@ int mc_main(int argc, const char *const *argv)
       "mc_dummy_function|"
       ".runScript invoke_function_with_args_script|"
       "enddemo|"
+      "invoke cling_process|"
+      "mthread_info *rthr;|"
+      "invoke cling_process|"
+      "begin_mthread(midge_render_thread, &rthr, (void *)&rthr);|"
       // // "demo|"
       // // "call dummy thrice|"
       // // "invoke mc_dummy_function|"
@@ -2591,7 +2598,15 @@ int mc_main(int argc, const char *const *argv)
       // printf("\n! MIDGE COMPLETE !\n");
       // "invoke clint_process \"printf(\"clint_processed!\\n\");|"
       "invoke cling_process|"
-      "\"Hello World!\"|"
+      "updateUI(rthr);|"
+      "invoke cling_process|"
+      "end_mthread(rthr);|"
+      // "invoke cling_process|"
+      // "writing|"
+      // "invoke cling_process|"
+      // "writing|"
+      // "invoke cling_process|"
+      // "writing|"
       "midgequit|";
 
   // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
