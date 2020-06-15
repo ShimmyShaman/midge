@@ -102,31 +102,32 @@ void run()
 
     // Load App source
     printf("<AppSourceLoading>\n");
-    // loadSourceFiles("/home/jason/midge/src", 0);
-    // clint->loadFile("/home/jason/midge/src/rendering/mvk_core.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.cpp");
-    // clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.c");
-    // clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/renderer.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
-    // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
+    // loadSourceFiles("/home/jason/midge/src/", 0);
+    clint->loadFile("/home/jason/midge/src/m_threads.h");
+    clint->loadFile("/home/jason/midge/src/rendering/mvk_core.h");
+    clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.h");
+    clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.cpp");
+    clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.c");
+    clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.h");
+    clint->loadFile("/home/jason/midge/src/rendering/renderer.h");
+    clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
+    clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
+    clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
     // clint->loadFile("/home/jason/midge/src/mcl_type_defs.h");
     clint->loadFile("/home/jason/midge/src/midge_core.c");
 
     printf("</AppSourceLoading>\n\n");
 
     // // Run App
-    // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&
-    // !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+    // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
+    //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
 
     // clint->process("mthread_info *rthr;");
     // // printf("process(begin)\n");
-    // clint->process("begin_mthread(midge_render_thread, &rthr);");
-    // // printf("process(updateUI)\n");
+    // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
+    // printf("process(updateUI)\n");
     // clint->process("updateUI(rthr);");
-    // // printf("process(end)\n");
+    // printf("process(end)\n");
     // clint->process("end_mthread(rthr);");
     // printf("\n! MIDGE COMPLETE !\n");
 

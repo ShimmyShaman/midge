@@ -8,13 +8,10 @@
 bool memory_type_from_properties(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
 {
   // Search memtypes to find first index with those properties
-  for (uint32_t i = 0; i < p_vkrs->memory_properties.memoryTypeCount; i++)
-  {
-    if ((typeBits & 1) == 1)
-    {
+  for (uint32_t i = 0; i < p_vkrs->memory_properties.memoryTypeCount; i++) {
+    if ((typeBits & 1) == 1) {
       // Type is available, does it match user properties?
-      if ((p_vkrs->memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask)
-      {
+      if ((p_vkrs->memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
         *typeIndex = i;
         return true;
       }
@@ -37,14 +34,12 @@ VkResult mvk_init_global_extension_properties(layer_properties &layer_props)
 
   layer_name = layer_props.properties.layerName;
 
-  do
-  {
+  do {
     res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, NULL);
     if (res)
       return res;
 
-    if (instance_extension_count == 0)
-    {
+    if (instance_extension_count == 0) {
       return VK_SUCCESS;
     }
 
@@ -59,6 +54,38 @@ VkResult mvk_init_global_extension_properties(layer_properties &layer_props)
 /*
  * Enumerates through all globally accessible instance layers and fills a vector with their retrieved
  * properties.
+ *
+      "create function mvk_init_global_layer_properties|"
+      "@create_function_name|"
+      "VkResult|"
+      "void_collection *|"
+      "vk_layers|"
+      "finish|"
+      "@create_function_name|"
+      "dcl uint32_t instance_layer_count\n"
+      "dcs VkLayerProperties * vk_props NULL\n"
+      "dcl VkResult res\n"
+      "whl 1\n"
+      "nva res vkEnumerateInstanceLayerProperties &instance_layer_count NULL\n"
+      "ifs res\n"
+      "ret res\n"
+      "end\n"
+      "ifs instance_layer_count == 0\n"
+      "ret VK_SUCCESS\n"
+      "end\n"
+      "nva vk_props (VkLayerProperties *) realloc vk_props 'instance_layer_count * sizeof(VkLayerProperties)'\n"
+      "nva res vkEnumerateInstanceLayerProperties &instance_layer_count vk_props\n"
+      "ifs res != VK_INCOMPLETE\n"
+      "brk\n"
+      "end\n"
+      "end\n"
+      "for i 0 instance_layer_count\n"
+      "dcl layer_properties layer_props\n"
+      "ass layer_props.properties vk_props[i]\n"
+      "nva res mvk_init_global_extensions_properties\n"
+      "TODO"
+      "end for\n"
+      "|"
  */
 VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_layers)
 {
@@ -67,25 +94,23 @@ VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_la
   VkResult res;
 
   /*
-     * It's possible, though very rare, that the number of
-     * instance layers could change. For example, installing something
-     * could include new layers that the loader would pick up
-     * between the initial query for the count and the
-     * request for VkLayerProperties. The loader indicates that
-     * by returning a VK_INCOMPLETE status and will update the
-     * the count parameter.
-     * The count parameter will be updated with the number of
-     * entries loaded into the data pointer - in case the number
-     * of layers went down or is smaller than the size given.
-     */
-  do
-  {
+   * It's possible, though very rare, that the number of
+   * instance layers could change. For example, installing something
+   * could include new layers that the loader would pick up
+   * between the initial query for the count and the
+   * request for VkLayerProperties. The loader indicates that
+   * by returning a VK_INCOMPLETE status and will update the
+   * the count parameter.
+   * The count parameter will be updated with the number of
+   * entries loaded into the data pointer - in case the number
+   * of layers went down or is smaller than the size given.
+   */
+  do {
     res = vkEnumerateInstanceLayerProperties(&instance_layer_count, NULL);
     if (res)
       return res;
 
-    if (instance_layer_count == 0)
-    {
+    if (instance_layer_count == 0) {
       return VK_SUCCESS;
     }
 
@@ -95,10 +120,9 @@ VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_la
   } while (res == VK_INCOMPLETE);
 
   /*
-     * Now gather the extension list for each instance layer.
-     */
-  for (uint32_t i = 0; i < instance_layer_count; i++)
-  {
+   * Now gather the extension list for each instance layer.
+   */
+  for (uint32_t i = 0; i < instance_layer_count; i++) {
     layer_properties layer_props;
     layer_props.properties = vk_props[i];
     res = mvk_init_global_extension_properties(layer_props);
@@ -159,14 +183,12 @@ VkResult init_device_extension_properties(vk_render_state *p_vkrs, layer_propert
 
   layer_name = layer_props.properties.layerName;
 
-  do
-  {
+  do {
     res = vkEnumerateDeviceExtensionProperties(p_vkrs->gpus[0], layer_name, &device_extension_count, NULL);
     if (res)
       return res;
 
-    if (device_extension_count == 0)
-    {
+    if (device_extension_count == 0) {
       return VK_SUCCESS;
     }
 
@@ -233,8 +255,7 @@ VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, const uint32_t requi
   vkGetPhysicalDeviceMemoryProperties(p_vkrs->gpus[0], &p_vkrs->memory_properties);
   vkGetPhysicalDeviceProperties(p_vkrs->gpus[0], &p_vkrs->gpu_props);
   /* query device extensions for enabled layers */
-  for (auto &layer_props : p_vkrs->instance_layer_properties)
-  {
+  for (auto &layer_props : p_vkrs->instance_layer_properties) {
     init_device_extension_properties(p_vkrs, layer_props);
   }
 
@@ -255,16 +276,13 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
 
   const VkFormat depth_format = p_vkrs->depth.format;
   vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], depth_format, &props);
-  if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
-  {
+  if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
     image_info.tiling = VK_IMAGE_TILING_LINEAR;
   }
-  else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
-  {
+  else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
   }
-  else
-  {
+  else {
     /* Try other depth formats? */
     printf("depth_format:%i is unsupported\n", depth_format);
     return (VkResult)MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT;
@@ -311,8 +329,7 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
   view_info.flags = 0;
 
   if (depth_format == VK_FORMAT_D16_UNORM_S8_UINT || depth_format == VK_FORMAT_D24_UNORM_S8_UINT ||
-      depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT)
-  {
+      depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
     view_info.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
   }
 
@@ -326,7 +343,8 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
 
   mem_alloc.allocationSize = mem_reqs.size;
   /* Use the memory properties to determine the type of memory required */
-  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &mem_alloc.memoryTypeIndex);
+  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                     &mem_alloc.memoryTypeIndex);
   assert(pass);
 
   /* Allocate memory */
@@ -347,7 +365,7 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
 
 /*
  * Constructs the surface, finds a graphics and present queue for it as well as a supported format.
-*/
+ */
 VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
 {
   VkResult res;
@@ -363,8 +381,7 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
 
   // Iterate over each queue to learn whether it supports presenting:
   VkBool32 *pSupportsPresent = (VkBool32 *)malloc(p_vkrs->queue_family_count * sizeof(VkBool32));
-  for (uint32_t i = 0; i < p_vkrs->queue_family_count; i++)
-  {
+  for (uint32_t i = 0; i < p_vkrs->queue_family_count; i++) {
     vkGetPhysicalDeviceSurfaceSupportKHR(p_vkrs->gpus[0], i, p_vkrs->surface, &pSupportsPresent[i]);
   }
 
@@ -372,15 +389,12 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
   // families, try to find one that supports both
   p_vkrs->graphics_queue_family_index = UINT32_MAX;
   p_vkrs->present_queue_family_index = UINT32_MAX;
-  for (uint32_t i = 0; i < p_vkrs->queue_family_count; ++i)
-  {
-    if ((p_vkrs->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
-    {
+  for (uint32_t i = 0; i < p_vkrs->queue_family_count; ++i) {
+    if ((p_vkrs->queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0) {
       if (p_vkrs->graphics_queue_family_index == UINT32_MAX)
         p_vkrs->graphics_queue_family_index = i;
 
-      if (pSupportsPresent[i] == VK_TRUE)
-      {
+      if (pSupportsPresent[i] == VK_TRUE) {
         p_vkrs->graphics_queue_family_index = i;
         p_vkrs->present_queue_family_index = i;
         break;
@@ -388,13 +402,11 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
     }
   }
 
-  if (p_vkrs->present_queue_family_index == UINT32_MAX)
-  {
+  if (p_vkrs->present_queue_family_index == UINT32_MAX) {
     // If didn't find a queue that supports both graphics and present, then
     // find a separate present queue.
     for (size_t i = 0; i < p_vkrs->queue_family_count; ++i)
-      if (pSupportsPresent[i] == VK_TRUE)
-      {
+      if (pSupportsPresent[i] == VK_TRUE) {
         p_vkrs->present_queue_family_index = i;
         break;
       }
@@ -419,12 +431,10 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
   // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
   // the surface has no preferred format.  Otherwise, at least one
   // supported format will be returned.
-  if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED)
-  {
+  if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
     p_vkrs->format = VK_FORMAT_B8G8R8A8_UNORM;
   }
-  else
-  {
+  else {
     assert(formatCount >= 1);
     p_vkrs->format = surfFormats[0].format;
   }
@@ -456,32 +466,26 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_i
 
   VkExtent2D swapchainExtent;
   // width and height are either both 0xFFFFFFFF, or both not 0xFFFFFFFF.
-  if (surfCapabilities.currentExtent.width == 0xFFFFFFFF)
-  {
+  if (surfCapabilities.currentExtent.width == 0xFFFFFFFF) {
     // If the surface size is undefined, the size is set to
     // the size of the images requested.
     swapchainExtent.width = p_vkrs->window_width;
     swapchainExtent.height = p_vkrs->window_height;
-    if (swapchainExtent.width < surfCapabilities.minImageExtent.width)
-    {
+    if (swapchainExtent.width < surfCapabilities.minImageExtent.width) {
       swapchainExtent.width = surfCapabilities.minImageExtent.width;
     }
-    else if (swapchainExtent.width > surfCapabilities.maxImageExtent.width)
-    {
+    else if (swapchainExtent.width > surfCapabilities.maxImageExtent.width) {
       swapchainExtent.width = surfCapabilities.maxImageExtent.width;
     }
 
-    if (swapchainExtent.height < surfCapabilities.minImageExtent.height)
-    {
+    if (swapchainExtent.height < surfCapabilities.minImageExtent.height) {
       swapchainExtent.height = surfCapabilities.minImageExtent.height;
     }
-    else if (swapchainExtent.height > surfCapabilities.maxImageExtent.height)
-    {
+    else if (swapchainExtent.height > surfCapabilities.maxImageExtent.height) {
       swapchainExtent.height = surfCapabilities.maxImageExtent.height;
     }
   }
-  else
-  {
+  else {
     // If the surface size is defined, the swap chain size must match
     swapchainExtent = surfCapabilities.currentExtent;
   }
@@ -498,12 +502,10 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_i
   uint32_t desiredNumberOfSwapChainImages = surfCapabilities.minImageCount;
 
   VkSurfaceTransformFlagBitsKHR preTransform;
-  if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
-  {
+  if (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
     preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
   }
-  else
-  {
+  else {
     preTransform = surfCapabilities.currentTransform;
   }
 
@@ -515,10 +517,8 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_i
       VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
       VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
   };
-  for (uint32_t i = 0; i < sizeof(compositeAlphaFlags) / sizeof(compositeAlphaFlags[0]); i++)
-  {
-    if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i])
-    {
+  for (uint32_t i = 0; i < sizeof(compositeAlphaFlags) / sizeof(compositeAlphaFlags[0]); i++) {
+    if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
       compositeAlpha = compositeAlphaFlags[i];
       break;
     }
@@ -544,8 +544,7 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_i
   swapchain_ci.queueFamilyIndexCount = 0;
   swapchain_ci.pQueueFamilyIndices = NULL;
   uint32_t queueFamilyIndices[2] = {(uint32_t)p_vkrs->graphics_queue_family_index, (uint32_t)p_vkrs->present_queue_family_index};
-  if (p_vkrs->graphics_queue_family_index != p_vkrs->present_queue_family_index)
-  {
+  if (p_vkrs->graphics_queue_family_index != p_vkrs->present_queue_family_index) {
     // If the graphics and present queues are from different queue families,
     // we either have to explicitly transfer ownership of images between the
     // queues, or we have to create the swapchain with imageSharingMode
@@ -566,8 +565,7 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_i
   res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain, &p_vkrs->swapchainImageCount, swapchainImages);
   assert(res == VK_SUCCESS);
 
-  for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++)
-  {
+  for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++) {
     swap_chain_buffer sc_buffer;
 
     VkImageViewCreateInfo color_image_view = {};
@@ -597,8 +595,7 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_i
   free(swapchainImages);
   p_vkrs->current_buffer = 0;
 
-  if (NULL != presentModes)
-  {
+  if (NULL != presentModes) {
     free(presentModes);
   }
 
@@ -610,11 +607,11 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   VkResult res;
   bool pass;
   float fov = glm::radians(45.0f);
-  if (p_vkrs->window_width > p_vkrs->window_height)
-  {
+  if (p_vkrs->window_width > p_vkrs->window_height) {
     fov *= static_cast<float>(p_vkrs->window_height) / static_cast<float>(p_vkrs->window_width);
   }
-  p_vkrs->Projection = glm::perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f);
+  p_vkrs->Projection =
+      glm::perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f);
   p_vkrs->View = glm::lookAt(glm::vec3(-5, 3, -10), // Camera is at (-5,3,-10), in World Space
                              glm::vec3(0, 0, 0),    // and looks at the origin
                              glm::vec3(0, -1, 0)    // Head is up (set to 0,-1,0 to look upside-down)
@@ -683,8 +680,7 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
   layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
   layout_bindings[0].pImmutableSamplers = NULL;
 
-  if (use_texture)
-  {
+  if (use_texture) {
     layout_bindings[1].binding = 1;
     layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     layout_bindings[1].descriptorCount = 1;
@@ -693,7 +689,7 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
   }
 
   /* Next take layout bindings and use them to create a descriptor set layout
-     */
+   */
   VkDescriptorSetLayoutCreateInfo descriptor_layout = {};
   descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   descriptor_layout.pNext = NULL;
@@ -741,8 +737,7 @@ VkResult mvk_init_renderpass(vk_render_state *p_vkrs, bool include_depth, bool c
   attachments[0].finalLayout = finalLayout;
   attachments[0].flags = 0;
 
-  if (include_depth)
-  {
+  if (include_depth) {
     attachments[1].format = p_vkrs->depth.format;
     attachments[1].samples = NUM_SAMPLES;
     attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -885,8 +880,7 @@ VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs)
   res = vkQueueSubmit(p_vkrs->graphics_queue, 1, submit_info, drawFence);
   assert(res == VK_SUCCESS);
 
-  do
-  {
+  do {
     res = vkWaitForFences(p_vkrs->device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
   } while (res == VK_TIMEOUT);
   assert(res == VK_SUCCESS);
@@ -900,12 +894,10 @@ void mvk_init_device_queue(vk_render_state *p_vkrs)
   /* DEPENDS on init_swapchain_extension() */
 
   vkGetDeviceQueue(p_vkrs->device, p_vkrs->graphics_queue_family_index, 0, &p_vkrs->graphics_queue);
-  if (p_vkrs->graphics_queue_family_index == p_vkrs->present_queue_family_index)
-  {
+  if (p_vkrs->graphics_queue_family_index == p_vkrs->present_queue_family_index) {
     p_vkrs->present_queue = p_vkrs->graphics_queue;
   }
-  else
-  {
+  else {
     vkGetDeviceQueue(p_vkrs->device, p_vkrs->present_queue_family_index, 0, &p_vkrs->present_queue);
   }
 }
@@ -915,16 +907,14 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   // Use glslangValidator from file
   // Generate the shader file
   const char *ext = NULL;
-  if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT)
-  {
+  if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) {
     ext = "vert";
   }
-  else if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT)
-  {
+  else if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT) ==
+           VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT) {
     ext = "frag";
   }
-  else
-  {
+  else {
     printf("GLSLtoSPV: unhandled bit type: %i", shader_type);
     return VK_ERROR_UNKNOWN;
   }
@@ -937,8 +927,7 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
 
   FILE *fp;
   fp = fopen(execOutput, "w");
-  if (!fp)
-  {
+  if (!fp) {
     printf("GLSLtoSPV: couldn't open file: %s", execOutput);
     return VK_ERROR_UNKNOWN;
   }
@@ -951,16 +940,12 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   char *exePath = strdup("/home/jason/midge/dep/glslang/bin/glslangValidator");
   char *arg_V = strdup("-V");
   char *arg_H = strdup("-H");
-  char *argv[4]{
-      exePath,
-      execOutput,
-      arg_V,
-      // arg_H,
-      NULL};
+  char *argv[4]{exePath, execOutput, arg_V,
+                // arg_H,
+                NULL};
   int child_status;
   pid_t child_pid = fork();
-  if (child_pid == 0)
-  {
+  if (child_pid == 0) {
     /* This is done by the child process. */
     execv(argv[0], argv);
 
@@ -968,15 +953,13 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
     perror("execv");
     return VK_ERROR_UNKNOWN;
   }
-  else
-  {
+  else {
     pid_t tpid;
-    do
-    {
+    do {
       tpid = wait(&child_status);
       if (tpid != child_pid)
         return (VkResult)child_status;
-      //process_terminated(tpid);
+      // process_terminated(tpid);
     } while (tpid != child_pid);
   }
 
@@ -986,15 +969,13 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   strcat(shaderFile, ".spv");
 
   fp = fopen(shaderFile, "r");
-  if (!fp)
-  {
+  if (!fp) {
     printf("GLSLtoSPV: couldn't open file: %s", shaderFile);
     return VK_ERROR_UNKNOWN;
   }
 
   uint32_t code;
-  while (fread(&code, sizeof code, 1, fp) == 1)
-  {
+  while (fread(&code, sizeof code, 1, fp) == 1) {
     spirv.push_back(code);
   }
   fclose(fp);
@@ -1049,7 +1030,7 @@ VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shade
 VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth)
 {
   /* DEPENDS on init_depth_buffer(), init_renderpass() and
-     * init_swapchain_extension() */
+   * init_swapchain_extension() */
 
   VkResult res;
   VkImageView attachments[2];
@@ -1069,8 +1050,7 @@ VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth)
 
   p_vkrs->framebuffers = (VkFramebuffer *)malloc(p_vkrs->swapchainImageCount * sizeof(VkFramebuffer));
 
-  for (i = 0; i < p_vkrs->swapchainImageCount; i++)
-  {
+  for (i = 0; i < p_vkrs->swapchainImageCount; i++) {
     attachments[0] = p_vkrs->buffers[i].view;
     res = vkCreateFramebuffer(p_vkrs->device, &fb_info, NULL, &p_vkrs->framebuffers[i]);
     assert(res == VK_SUCCESS);
@@ -1145,14 +1125,13 @@ VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData,
 VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture)
 {
   /* DEPENDS on init_uniform_buffer() and
-     * init_descriptor_and_pipeline_layouts() */
+   * init_descriptor_and_pipeline_layouts() */
 
   VkResult res;
   VkDescriptorPoolSize type_count[2];
   type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   type_count[0].descriptorCount = 1;
-  if (use_texture)
-  {
+  if (use_texture) {
     type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     type_count[1].descriptorCount = 1;
   }
@@ -1198,8 +1177,7 @@ VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture)
   writes[0].dstArrayElement = 0;
   writes[0].dstBinding = 0;
 
-  if (use_texture)
-  {
+  if (use_texture) {
     writes[1] = {};
     writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[1].dstSet = p_vkrs->desc_set[0];
@@ -1244,8 +1222,7 @@ VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBo
   VkPipelineVertexInputStateCreateInfo vi;
   memset(&vi, 0, sizeof(vi));
   vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  if (include_vi)
-  {
+  if (include_vi) {
     vi.pNext = NULL;
     vi.flags = 0;
     vi.vertexBindingDescriptionCount = 1;
@@ -1386,20 +1363,11 @@ void mvk_init_scissors(vk_render_state *p_vkrs)
   vkCmdSetScissor(p_vkrs->cmd, 0, NUM_SCISSORS, &p_vkrs->scissor);
 }
 
-void mvk_destroy_pipeline(vk_render_state *p_vkrs)
-{
-  vkDestroyPipeline(p_vkrs->device, p_vkrs->pipeline, NULL);
-}
+void mvk_destroy_pipeline(vk_render_state *p_vkrs) { vkDestroyPipeline(p_vkrs->device, p_vkrs->pipeline, NULL); }
 
-void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs)
-{
-  vkDestroyPipelineCache(p_vkrs->device, p_vkrs->pipelineCache, NULL);
-}
+void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs) { vkDestroyPipelineCache(p_vkrs->device, p_vkrs->pipelineCache, NULL); }
 
-void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs)
-{
-  vkDestroyDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, NULL);
-}
+void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs) { vkDestroyDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, NULL); }
 
 void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs)
 {
@@ -1409,8 +1377,7 @@ void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs)
 
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
 {
-  for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++)
-  {
+  for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++) {
     vkDestroyFramebuffer(p_vkrs->device, p_vkrs->framebuffers[i], NULL);
   }
   free(p_vkrs->framebuffers);
@@ -1441,10 +1408,7 @@ void mvk_destroy_command_buffer(vk_render_state *p_vkrs)
   vkFreeCommandBuffers(p_vkrs->device, p_vkrs->cmd_pool, 1, cmd_bufs);
 }
 
-void mvk_destroy_command_pool(vk_render_state *p_vkrs)
-{
-  vkDestroyCommandPool(p_vkrs->device, p_vkrs->cmd_pool, NULL);
-}
+void mvk_destroy_command_pool(vk_render_state *p_vkrs) { vkDestroyCommandPool(p_vkrs->device, p_vkrs->cmd_pool, NULL); }
 
 void mvk_destroy_depth_buffer(vk_render_state *p_vkrs)
 {
@@ -1455,8 +1419,7 @@ void mvk_destroy_depth_buffer(vk_render_state *p_vkrs)
 
 void mvk_destroy_swap_chain(vk_render_state *p_vkrs)
 {
-  for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++)
-  {
+  for (uint32_t i = 0; i < p_vkrs->swapchainImageCount; i++) {
     vkDestroyImageView(p_vkrs->device, p_vkrs->buffers[i].view, NULL);
   }
   vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain, NULL);
@@ -1470,7 +1433,4 @@ void mvk_destroy_device(vk_render_state *p_vkrs)
   vkDestroyDevice(p_vkrs->device, NULL);
 }
 
-void mvk_destroy_instance(vk_render_state *p_vkrs)
-{
-  vkDestroyInstance(p_vkrs->inst, NULL);
-}
+void mvk_destroy_instance(vk_render_state *p_vkrs) { vkDestroyInstance(p_vkrs->inst, NULL); }

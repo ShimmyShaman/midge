@@ -993,59 +993,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
     case '$': {
       MCcall(parse_past(code, &i, "$"));
       switch (code[i]) {
-      case 'p': {
-        // $pi - provocation interaction
-        MCcall(parse_past(code, &i, "pi"));
-        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
-
-        // Identifier
-        char *response_location;
-        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
-        MCcall(parse_past(code, &i, " "));
-
-        // Variable Name
-        char *provocation;
-        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
-        if (code[i] != '\n' && code[i] != '\0') {
-          MCerror(-4864, "expected statement end:'%c'", code[i]);
-        }
-
-        ++script->segment_count;
-        buf[0] = '\0';
-        sprintf(buf,
-                "  \n// Script Provocation-Response Break\n"
-                // "  printf(\"here-4\\n\");\n"
-                "  allocate_and_copy_cstr(script_instance->response, %s);\n"
-                // "printf(\"seqid:%%u \\n\", script_instance->sequence_uid);\n"
-                "  script_instance->segments_complete = %u;\n"
-                "  script_instance->awaiting_data_set_index = %u;\n"
-                // "  printf(\"here-6a\\n\");\n"
-                "  return 0;\n"
-                "segment_%u:\n"
-                // "printf(\"here-6b\\n\");\n"
-                "  %s = (char *)script_instance->locals[%u];\n"
-                "  if(%s[0] == '@') {\n"
-                "    char *mc_context_data;"
-                "    MCcall(get_process_contextual_data(script_instance->contextual_action, %s + 1,\n"
-                "           (void **)&mc_context_data));\n"
-                "    if(!mc_context_data) {\n"
-                "      MCerror(1027, \"Missing process context data for '%%s'\", %s);"
-                "    }\n"
-                "    free(%s);\n"
-                "    %s = mc_context_data;\n"
-                "  }\n",
-                provocation, script->segment_count, script->local_count, script->segment_count, response_location,
-                script->local_count, response_location, response_location, response_location, response_location,
-                response_location);
-        ++script->local_count;
-
-        append_to_cstr(&translation_alloc, &translation, buf);
-
-        free(response_location);
-        free(provocation);
-      } break;
       case 'n': {
-        // $nv - invocation of function with variable name
+        // $nv - invocation of function (with function info) with variable name
         MCcall(parse_past(code, &i, "nv"));
         MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
 
@@ -1064,6 +1013,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         MCcall(append_to_cstr(&translation_alloc, &translation,
                               "  mc_function_info_v1 *mcsfnv_function_info;\n"
+                              "  char *function_name_id;\n"
                               "  {\n"
                               "    void *mc_vargs[3];\n"
                               "    mc_vargs[0] = (void *)&mcsfnv_function_info;\n"
@@ -1074,26 +1024,39 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                   "    MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\",\n"
                   "           (void **)&mc_context_data_2));\n"
                   "    if(!mc_context_data_2) {\n"
-                  "      return -5;"
+                  "      MCError(1027, \"Couldn't find context data\");"
                   "    }\n"
-                  "    mc_vargs[2] = (void *)&mc_context_data_2;\n",
+                  "    mc_vargs[2] = (void *)&mc_context_data_2;\n"
+                  "    function_name_id = mc_context_data_2;\n",
                   function_name_identifier + 1);
           // TODO deal with maybe duplicated / free strings?
         }
         else {
-          sprintf(buf, "    mc_vargs[2] = (void *)&%s;\n", function_name_identifier);
+          sprintf(buf,
+                  "    mc_vargs[2] = (void *)&%s;\n"
+                  "allocate_and_copy_cstr(function_name_id, \"%s\");\n",
+                  function_name_identifier, function_name_identifier);
         }
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
-        sprintf(buf, "    find_function_info(3, mc_vargs);\n"
-                     "  }\n"
-                     "  if (mcsfnv_function_info) {\n"
-                     //  "    // Invoking a midge function, pass command_hub as first argument\n"
-                     //  "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[0] = (void *)%%p;\\n\",
-                     //  command_hub);\n" "    ++mcsfnv_arg_count;\n"
-                     "  }\n"
-                     "  else\n"
-                     "    throw -233;\n\n");
-        MCcall(append_to_cstr(&translation_alloc, &translation, buf));
+        MCcall(append_to_cstr(&translation_alloc, &translation,
+                              "    find_function_info(3, mc_vargs);\n"
+                              "  }\n"));
+
+        // // Begin MIDGE-ONLY function invocation
+        // sprintf(buf, "  if (mcsfnv_function_info) {\n"
+        //              //  "    // Invoking a midge function, pass command_hub as first argument\n"
+        //              //  "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[0] = (void *)%%p;\\n\",
+        //              //  command_hub);\n" "    ++mcsfnv_arg_count;\n"
+        //              "}\n");
+        // // END MIDGE-ONLY function invocation
+        // // ELSE external function call
+        // {
+        //   MCcall(append_to_cstr(&translation_alloc, &translation,
+        //                         "  }\n"
+        //                         "  else {\n"));
+        //   sprintf(buf, "    sprintf(mcsfnv_buf + strlen(mcsfnv_bf")
+        // }
+        // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // Form the arguments
         while (code[i] != '\n' && code[i] != '\0') {
@@ -1182,6 +1145,57 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(append_to_cstr(&translation_alloc, &translation, "}\n"));
 
         free(function_name_identifier);
+      } break;
+      case 'p': {
+        // $pi - provocation interaction
+        MCcall(parse_past(code, &i, "pi"));
+        MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too
+
+        // Identifier
+        char *response_location;
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
+        MCcall(parse_past(code, &i, " "));
+
+        // Variable Name
+        char *provocation;
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
+        if (code[i] != '\n' && code[i] != '\0') {
+          MCerror(-4864, "expected statement end:'%c'", code[i]);
+        }
+
+        ++script->segment_count;
+        buf[0] = '\0';
+        sprintf(buf,
+                "  \n// Script Provocation-Response Break\n"
+                // "  printf(\"here-4\\n\");\n"
+                "  allocate_and_copy_cstr(script_instance->response, %s);\n"
+                // "printf(\"seqid:%%u \\n\", script_instance->sequence_uid);\n"
+                "  script_instance->segments_complete = %u;\n"
+                "  script_instance->awaiting_data_set_index = %u;\n"
+                // "  printf(\"here-6a\\n\");\n"
+                "  return 0;\n"
+                "segment_%u:\n"
+                // "printf(\"here-6b\\n\");\n"
+                "  %s = (char *)script_instance->locals[%u];\n"
+                "  if(%s[0] == '@') {\n"
+                "    char *mc_context_data;"
+                "    MCcall(get_process_contextual_data(script_instance->contextual_action, %s + 1,\n"
+                "           (void **)&mc_context_data));\n"
+                "    if(!mc_context_data) {\n"
+                "      MCerror(1027, \"Missing process context data for '%%s'\", %s);"
+                "    }\n"
+                "    free(%s);\n"
+                "    %s = mc_context_data;\n"
+                "  }\n",
+                provocation, script->segment_count, script->local_count, script->segment_count, response_location,
+                script->local_count, response_location, response_location, response_location, response_location,
+                response_location);
+        ++script->local_count;
+
+        append_to_cstr(&translation_alloc, &translation, buf);
+
+        free(response_location);
+        free(provocation);
       } break;
       default: {
         // printf("\ntranslation:\n%s\n\n", translation);
@@ -2448,107 +2462,131 @@ int mc_main(int argc, const char *const *argv)
 
   printf("mm-3\n");
   const char *commands =
-      // Create invoke function script
-      ".createScript\n"
-      "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
-      "ifs !finfo\n"
-      "err 2455 \"Could not find function_info for specified function\"\n"
-      "end\n"
-      ""
-      "dcs int rind 0\n"
-      "dcl 'char *' responses[32]\n"
-      ""
-      "dcs int linit finfo->parameter_count\n"
-      "ifs finfo->variable_parameter_begin_index >= 0\n"
-      "ass linit finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "for i 0 linit\n"
-      "dcl char provocation[512]\n"
-      "nvk strcpy provocation finfo->parameters[i]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$pi responses[rind] provocation\n"
-      "ass rind + rind 1\n"
-      "end for\n"
-      // "nvk printf \"func_name:%s\\n\" finfo->name\n"
-      "ifs finfo->variable_parameter_begin_index >= 0\n"
-      "dcs int pind finfo->variable_parameter_begin_index\n"
-      "whl 1\n"
-      "dcl char provocation[512]\n"
-      "nvk strcpy provocation finfo->parameters[pind]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$pi responses[rind] provocation\n"
-      "nvi bool end_it strcmp responses[rind] \"finish\"\n"
-      "ifs !end_it\n"
-      "brk\n"
-      "end\n"
-      // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
-      "ass rind + rind 1\n"
-      "ass pind + pind 1\n"
-      "ass pind % pind finfo->parameter_count\n"
-      "ifs pind < finfo->variable_parameter_begin_index\n"
-      "ass pind finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "end\n"
-      "end\n"
-      "$nv @function_to_invoke $ya rind responses\n"
-      "|"
-      "invoke_function_with_args|"
-      "demo|"
-      "invoke @function_to_invoke|"
-      "mc_dummy_function|"
-      ".runScript invoke_function_with_args|"
-      "enddemo|"
+      // // Create invoke function script
+      // ".createScript\n"
+      // "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
+      // "ifs !finfo\n"
+      // "err 2455 \"Could not find function_info for specified function\"\n"
+      // "end\n"
+      // ""
+      // "dcs int rind 0\n"
+      // "dcl 'char *' responses[32]\n"
+      // ""
+      // "dcs int linit finfo->parameter_count\n"
+      // "ifs finfo->variable_parameter_begin_index >= 0\n"
+      // "ass linit finfo->variable_parameter_begin_index\n"
+      // "end\n"
+      // "for i 0 linit\n"
+      // "dcl char provocation[512]\n"
+      // "nvk strcpy provocation finfo->parameters[i]->name\n"
+      // "nvk strcat provocation \": \"\n"
+      // "$pi responses[rind] provocation\n"
+      // "ass rind + rind 1\n"
+      // "end for\n"
+      // // "nvk printf \"func_name:%s\\n\" finfo->name\n"
+      // "ifs finfo->variable_parameter_begin_index >= 0\n"
+      // "dcs int pind finfo->variable_parameter_begin_index\n"
+      // "whl 1\n"
+      // "dcl char provocation[512]\n"
+      // "nvk strcpy provocation finfo->parameters[pind]->name\n"
+      // "nvk strcat provocation \": \"\n"
+      // "$pi responses[rind] provocation\n"
+      // "nvi bool end_it strcmp responses[rind] \"finish\"\n"
+      // "ifs !end_it\n"
+      // "brk\n"
+      // "end\n"
+      // // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
+      // "ass rind + rind 1\n"
+      // "ass pind + pind 1\n"
+      // "ass pind % pind finfo->parameter_count\n"
+      // "ifs pind < finfo->variable_parameter_begin_index\n"
+      // "ass pind finfo->variable_parameter_begin_index\n"
+      // "end\n"
+      // "end\n"
+      // "end\n"
+      // "$nv @function_to_invoke $ya rind responses\n"
+      // "|"
+      // "invoke_function_with_args_script|"
       // "demo|"
-      // "call dummy thrice|"
-      // "invoke mc_dummy_function|"
-      // "invoke mc_dummy_function|"
-      // "invoke mc_dummy_function|"
+      // "invoke @function_to_invoke|"
+      // "mc_dummy_function|"
+      // ".runScript invoke_function_with_args_script|"
       // "enddemo|"
+      // // "demo|"
+      // // "call dummy thrice|"
+      // // "invoke mc_dummy_function|"
+      // // "invoke mc_dummy_function|"
+      // // "invoke mc_dummy_function|"
+      // // "enddemo|"
+      // "demo|"
+      // "create function @create_function_name|"
+      // "construct_and_attach_child_node|"
+      // "invoke declare_function_pointer|"
+      // // ---- SCRIPT SEQUENCE ----
+      // // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
+      // // ---- char *parameter_name]...);
+      // // > function_name:
+      // "@create_function_name|"
+      // // > return_type:
+      // "void|"
+      // // > parameter_type:
+      // "const char *|"
+      // // > parameter_name:
+      // "node_name|"
+      // // > Parameter 1 type:
+      // "finish|"
+      // // ---- END SCRIPT SEQUENCE ----
+      // // ---- SCRIPT SEQUENCE ----
+      // // ---- void instantiate_function(char *function_name, char *mc_script);
+      // "invoke instantiate_function|"
+      // "@create_function_name|"
+      // // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
+      // "dcd node * child\n"
+      // "cpy char * child->name node_name\n"
+      // "ass child->parent command_hub->nodespace\n"
+      // "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
+      // "(void *)child\n"
+      // "|"
+      // "enddemo|"
+      // // -- END DEMO create function $create_function_name
+      // "invoke construct_and_attach_child_node|"
+      // "command_interface_node|"
+      // "create function print_word|"
+      // "@create_function_name|"
+      // "void|"
+      // "char *|"
+      // "word|"
+      // "finish|"
+      // "@create_function_name|"
+      // "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
+      // "|"
+      // "invoke print_word|"
+      // "===========$================$===============$============$============|"
+      // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
+      //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+
+      // clint->process("mthread_info *rthr;");
+      // // printf("process(begin)\n");
+      // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
+      // printf("process(updateUI)\n");
+      // clint->process("updateUI(rthr);");
+      // printf("process(end)\n");
+      // clint->process("end_mthread(rthr);");
+      // printf("\n! MIDGE COMPLETE !\n");
+      // "invoke clint_process \"printf(\"clint_processed!\\n\");|"
+      ".createScript\n"
+      "$ev @external_function_id @function_parameter\n"
+      "|"
+      "call_external_function_script|"
       "demo|"
-      "create function @create_function_name|"
-      "construct_and_attach_child_node|"
-      "invoke declare_function_pointer|"
-      // ---- SCRIPT SEQUENCE ----
-      // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
-      // ---- char *parameter_name]...);
-      // > function_name:
-      "@create_function_name|"
-      // > return_type:
-      "void|"
-      // > parameter_type:
-      "const char *|"
-      // > parameter_name:
-      "node_name|"
-      // > Parameter 1 type:
-      "finish|"
-      // ---- END SCRIPT SEQUENCE ----
-      // ---- SCRIPT SEQUENCE ----
-      // ---- void instantiate_function(char *function_name, char *mc_script);
-      "invoke instantiate_function|"
-      "@create_function_name|"
-      // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
-      "dcd node * child\n"
-      "cpy char * child->name node_name\n"
-      "ass child->parent command_hub->nodespace\n"
-      "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
-      "(void *)child\n"
-      "|"
+      "call @external_function_id @function_parameter|"
+      "clint_process|"
+      "\"Hello World!\""
+      ".runScript call_external_function_script"
       "enddemo|"
-      // -- END DEMO create function $create_function_name
-      "invoke construct_and_attach_child_node|"
-      "command_interface_node|"
-      "create function print_word|"
-      "@create_function_name|"
-      "void|"
-      "char *|"
-      "word|"
-      "finish|"
-      "@create_function_name|"
-      "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
-      "|"
-      "invoke print_word|"
-      "BIRD|"
       "midgequit|";
+
+  // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
 
   // Command Loop
   printf("\n:> ");

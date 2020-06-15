@@ -3,50 +3,46 @@
 #include "rendering/renderer.h"
 #include "rendering/cube_data.h"
 
-#define MRT_RUN(CALL)       \
-  result = CALL;            \
-  if (result != VK_SUCCESS) \
-  {                         \
-    thr->has_concluded = 1; \
-    return NULL;            \
+#define MRT_RUN(CALL)         \
+  result = CALL;              \
+  if (result != VK_SUCCESS) { \
+    thr->has_concluded = 1;   \
+    return NULL;              \
   }
 
-#define MRT_RUN2(CALL)      \
-  CALL;                     \
-  if (result != VK_SUCCESS) \
-  {                         \
-    thr->has_concluded = 1; \
-    return NULL;            \
+#define MRT_RUN2(CALL)        \
+  CALL;                       \
+  if (result != VK_SUCCESS) { \
+    thr->has_concluded = 1;   \
+    return NULL;              \
   }
 
 static glsl_shader vertex_shader = {
-    .text =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (std140, binding = 0) uniform bufferVals {\n"
-        "    mat4 mvp;\n"
-        "} myBufferVals;\n"
-        "layout (location = 0) in vec4 pos;\n"
-        "layout (location = 1) in vec4 inColor;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "void main() {\n"
-        "   outColor = inColor;\n"
-        "   gl_Position = myBufferVals.mvp * pos;\n"
-        "}\n",
+    .text = "#version 400\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (std140, binding = 0) uniform bufferVals {\n"
+            "    mat4 mvp;\n"
+            "} myBufferVals;\n"
+            "layout (location = 0) in vec4 pos;\n"
+            "layout (location = 1) in vec4 inColor;\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = inColor;\n"
+            "   gl_Position = myBufferVals.mvp * pos;\n"
+            "}\n",
     .stage = VK_SHADER_STAGE_VERTEX_BIT,
 };
 
 static glsl_shader fragment_shader = {
-    .text =
-        "#version 400\n"
-        "#extension GL_ARB_separate_shader_objects : enable\n"
-        "#extension GL_ARB_shading_language_420pack : enable\n"
-        "layout (location = 0) in vec4 color;\n"
-        "layout (location = 0) out vec4 outColor;\n"
-        "void main() {\n"
-        "   outColor = color;\n"
-        "}\n",
+    .text = "#version 400\n"
+            "#extension GL_ARB_separate_shader_objects : enable\n"
+            "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (location = 0) in vec4 color;\n"
+            "layout (location = 0) out vec4 outColor;\n"
+            "void main() {\n"
+            "   outColor = color;\n"
+            "}\n",
     .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
@@ -57,7 +53,8 @@ VkResult draw_cube(vk_render_state *p_vkrs);
 void *midge_render_thread(void *vargp)
 {
   // -- Arguments
-  mthread_info *thr = (mthread_info *)vargp;
+  mthread_info *thr = *(mthread_info **)vargp;
+  // printf("mrt-2: %p\n", thr);
 
   // -- States
   mxcb_window_info winfo = {
@@ -91,7 +88,8 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_depth_buffer(&vkrs));
   MRT_RUN(mvk_init_uniform_buffer(&vkrs));
   MRT_RUN(mvk_init_descriptor_and_pipeline_layouts(&vkrs, false, 0));
-  MRT_RUN(mvk_init_renderpass(&vkrs, depth_present, true, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED));
+  MRT_RUN(mvk_init_renderpass(&vkrs, depth_present, true, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                              VK_IMAGE_LAYOUT_UNDEFINED));
   MRT_RUN(mvk_init_shader(&vkrs, &vertex_shader, 0));
   MRT_RUN(mvk_init_shader(&vkrs, &fragment_shader, 1));
   MRT_RUN(mvk_init_framebuffers(&vkrs, depth_present));
@@ -105,31 +103,37 @@ void *midge_render_thread(void *vargp)
   MRT_RUN(draw_cube(&vkrs));
 
   // -- Update
-  printf("InitSuccess!\n");
-  while (!thr->should_exit && !winfo.shouldExit)
-  {
+  printf("mvkInitSuccess!\n");
+  // printf("mrt-2: %p\n", thr);
+  // printf("mrt-2: %p\n", &winfo);
+  while (!thr->should_exit && !winfo.shouldExit) {
+    // printf("mrt-3\n");
     usleep(1);
     mxcb_update_window(&winfo);
   }
+  printf("AfterUpdate!\n");
 
   // -- Cleanup
   mvk_destroy_pipeline(&vkrs);
   mvk_destroy_pipeline_cache(&vkrs);
   mvk_destroy_descriptor_pool(&vkrs);
+  // printf("mrt-4\n");
   mvk_destroy_vertex_buffer(&vkrs);
   mvk_destroy_framebuffers(&vkrs);
   mvk_destroy_shaders(&vkrs);
   mvk_destroy_renderpass(&vkrs);
+  // printf("mrt-5\n");
   mvk_destroy_descriptor_and_pipeline_layouts(&vkrs);
   mvk_destroy_uniform_buffer(&vkrs);
   mvk_destroy_depth_buffer(&vkrs);
   mvk_destroy_swap_chain(&vkrs);
   mvk_destroy_command_buffer(&vkrs);
+  // printf("mrt-6\n");
   mvk_destroy_command_pool(&vkrs);
   mxcb_destroy_window(&winfo);
   mvk_destroy_device(&vkrs);
   mvk_destroy_instance(&vkrs);
-  printf("hasConcluded(SUCCESS)\n");
+  printf("mvkConcluded(SUCCESS)\n");
   thr->has_concluded = 1;
   return 0;
 }
@@ -224,8 +228,7 @@ VkResult draw_cube(vk_render_state *p_vkrs)
   present.pResults = NULL;
 
   /* Make sure command buffer is finished before presenting */
-  do
-  {
+  do {
     res = vkWaitForFences(p_vkrs->device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
   } while (res == VK_TIMEOUT);
 
@@ -376,7 +379,8 @@ VkResult draw_cube(vk_render_state *p_vkrs)
 //   return VK_SUCCESS;
 // }
 
-// void setupDebug(VkDebugReportCallbackEXT *debugReport, VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo, std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions)
+// void setupDebug(VkDebugReportCallbackEXT *debugReport, VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo,
+// std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions)
 // {
 //   debugCallbackCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
 //   debugCallbackCreateInfo.pfnCallback = VulkanDebugCallback;
