@@ -2693,11 +2693,16 @@ int process_workflow_with_systems(mc_command_hub_v1 *command_hub, mc_workflow_pr
           workflow_context->current_issue->contextual_issue->contextual_issue->type == PROCESS_ACTION_USER_TEMPLATE_COMMAND) {
 
         if (workflow_context->current_issue->contextual_issue->queued_procedures) {
-          MCerror(2694, "TODO");
+
+          mc_procedure_template_v1 const *queued_procedure = workflow_context->current_issue->contextual_issue->queued_procedures;
+          MCcall(add_action_to_workflow(command_hub, workflow_context, queued_procedure->type, queued_procedure->command,
+                                        queued_procedure->data));
+          workflow_context->current_issue->queued_procedures = queued_procedure->next;
           continue;
         }
 
-        add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, "--template concludes", NULL);
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, "--template concludes",
+                                      NULL));
 
         printf("pwwSys-continue\n");
         continue;
@@ -2996,7 +3001,7 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
     MCcall(does_dialogue_match_pattern(workflow_context->current_issue->dialogue, process_template->dialogue,
                                        workflow_context->current_issue->contextual_data, &pattern_match));
     if (!pattern_match) {
-      MCerror(2956, "Shouldn't happen, just matched");
+      MCerror(2999, "Shouldn't happen, just matched");
     }
 
     // Add the template invocation
@@ -3120,7 +3125,7 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
       mc_procedure_template_v1 *procedure = (mc_procedure_template_v1 *)malloc(sizeof(mc_procedure_template_v1));
       procedure->type = action->type;
       allocate_and_copy_cstr(procedure->command, action->dialogue);
-      procedure->data = NULL;
+      procedure->data = action->data;
 
       // Prepend & continue...
       procedure->next = procedure_template->initial_procedure;
@@ -3299,6 +3304,8 @@ int process_command_with_templates(mc_command_hub_v1 *command_hub, mc_workflow_p
     // mc_process_action_v1 *unprovoked_command = workflow_context->current_issue;
     // workflow_context->current_issue =
     // }
+
+    printf("process_template:%p %s\n", process_template, process_template->dialogue);
     // Add the template command
     MCcall(
         add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_TEMPLATE_COMMAND, command, process_template));

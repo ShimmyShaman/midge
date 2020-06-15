@@ -334,7 +334,7 @@ typedef struct mc_process_action_v1 {
   char *dialogue;
   void *data;
 
-  mc_procedure_template_v1 *queued_procedures;
+  mc_procedure_template_v1 const *queued_procedures;
   mc_void_collection_v1 *contextual_data;
 } mc_process_action_v1;
 
