@@ -2099,6 +2099,40 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
   }
 }
 
+int render_command_interface_node()
+{
+  // struct {
+  //   int width, height;
+  // } *screen_size;
+
+  // screen_size->width = 1024;
+  // screen_size->height = 640;
+
+  // int node_image_width = 280;
+  // int node_image_height = 40;
+
+  // // Ensure the node image exists and is of appropriate size
+  // node_image *node_image;
+  // set_node_image_dimensions(node_image_width, node_image_height, &node_image);
+
+  // // Background
+  // color background_color;
+  // render_rectangle(0, 0, node_image_width, node_image_height, background_color);
+
+  // // Draw all _Visual_ children in render order
+  // for (int i = 0; i < children ...) {
+  //   // sort by render order
+  // }
+
+  // // save the image somewhere
+  // ...
+
+  // // send command to update all ancestors
+  // render_events->alert_render_node(node->parent);
+
+  return 0;
+}
+
 int (*mc_dummy_function)(int, void **);
 int mc_dummy_function_v1(int argc, void **argv)
 {
@@ -2477,7 +2511,7 @@ int mc_main(int argc, const char *const *argv)
   // return 0;
 
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
-                 " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
 
   printf("mm-3\n");
   const char *commands =
@@ -2531,10 +2565,13 @@ int mc_main(int argc, const char *const *argv)
       "mc_dummy_function|"
       ".runScript invoke_function_with_args_script|"
       "enddemo|"
+      // Begin Vulkan
       "invoke cling_process|"
       "mthread_info *rthr;|"
       "invoke cling_process|"
       "begin_mthread(midge_render_thread, &rthr, (void *)&rthr);|"
+      "invoke cling_process|"
+      "usleep(1000000);|"
       // // "demo|"
       // // "call dummy thrice|"
       // // "invoke mc_dummy_function|"

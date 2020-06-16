@@ -300,6 +300,17 @@ typedef struct mc_command_hub_v1 {
   mc_process_action_v1 *demo_issue;
 } mc_command_hub_v1;
 
+typedef enum {
+  Null = 0,
+  None,
+  Visual,
+  Abstract,
+} node_type;
+
+typedef struct mc_visual_node_v1 {
+
+} mc_visual_node_v1;
+
 typedef struct mc_node_v1 {
   mc_struct_id_v1 *struct_id;
   const char *name;
@@ -313,6 +324,11 @@ typedef struct mc_node_v1 {
   unsigned int children_alloc;
   unsigned int child_count;
   mc_node_v1 **children;
+
+  node_type type;
+  union {
+    mc_visual_node_v1 *visual;
+  };
 } mc_node_v1;
 
 typedef struct mc_process_action_v1 {
