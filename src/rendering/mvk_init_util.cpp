@@ -87,7 +87,7 @@ VkResult mvk_init_global_extension_properties(layer_properties &layer_props)
       "end for\n"
       "|"
  */
-VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_layers)
+VkResult mvk_init_global_layer_properties(vk_render_state *p_vkrs)
 {
   uint32_t instance_layer_count;
   VkLayerProperties *vk_props = NULL;
@@ -125,18 +125,109 @@ VkResult mvk_init_global_layer_properties(std::vector<layer_properties> *p_vk_la
   for (uint32_t i = 0; i < instance_layer_count; i++) {
     layer_properties layer_props;
     layer_props.properties = vk_props[i];
+    // printf("vk_props[%i]:%s-%s\n", i, vk_props[i].layerName, vk_props[i].description);
     res = mvk_init_global_extension_properties(layer_props);
     if (res)
       return res;
-    p_vk_layers->push_back(layer_props);
+    p_vkrs->instance_layer_properties.push_back(layer_props);
   }
   free(vk_props);
 
   return res;
 }
 
-// VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_name)
+int mvk_checkLayerSupport(vk_render_state *p_vkrs)
+{
+  for (const char *layerName : p_vkrs->instance_layer_names) {
+    bool layerFound = false;
+
+    for (const auto &layerProperties : p_vkrs->instance_layer_properties) {
+      if (strcmp(layerName, layerProperties.properties.layerName) == 0) {
+        layerFound = true;
+        break;
+      }
+    }
+
+    if (!layerFound) {
+      printf("Could not find layer name='%s' in available layers!\n", layerName);
+      return 124;
+    }
+  }
+  return 0;
+}
+
 #define func void
+VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type,
+                                                   uint64_t src_obj, size_t location, int32_t msg_code, const char *layerPrefix,
+                                                   const char *msg, void *user_data)
+{
+  printf("\n");
+  printf("VKDBG: ");
+  if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
+    printf("INFO: ");
+  }
+  if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
+    printf("WARNING: ");
+  }
+  if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
+    printf("PERFORMANCE: ");
+  }
+  if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+    printf("ERROR: ");
+  }
+  if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
+    printf("DEBUG: ");
+  }
+  printf("@[%s]: ", layerPrefix);
+  printf("%s\n", msg);
+
+  return false;
+}
+
+// void mvk_setupDebug(vk_render_state *p_vkrs, VkDebugReportCallbackEXT *debugReport,
+//                     VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo)
+// {
+//   debugCallbackCreateInfo->sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+//   debugCallbackCreateInfo->pfnCallback = &VulkanDebugCallback;
+//   debugCallbackCreateInfo->flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
+//                                    VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT |
+//                                    VK_DEBUG_REPORT_DEBUG_BIT_EXT | 0;
+//   debugCallbackCreateInfo->pUserData = nullptr;
+//   debugCallbackCreateInfo->pNext = nullptr;
+
+/* Register the callback */
+// VkDebugReportCallbackEXT callback;
+// VkResult result = vkCreateDebugReportCallbackEXT(instance, &callbackCreateInfo, nullptr, &callback);
+
+// p_vkrs->instance_layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
+/*
+//	vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_threading" );
+      vulkanInstanceLayers.push_back( "VK_LAYER_GOOGLE_threading" );
+      vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_draw_state" );
+      vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_image" );
+      vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_mem_tracker" );
+      vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_object_tracker" );
+      vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_param_checker" );
+      */
+
+//	_device_layers.push_back( "VK_LAYER_LUNARG_standard_validation" );				// depricated
+/*
+//	_device_layers.push_back( "VK_LAYER_LUNARG_threading" );
+      _device_layers.push_back( "VK_LAYER_GOOGLE_threading" );
+      _device_layers.push_back( "VK_LAYER_LUNARG_draw_state" );
+      _device_layers.push_back( "VK_LAYER_LUNARG_image" );
+      _device_layers.push_back( "VK_LAYER_LUNARG_mem_tracker" );
+      _device_layers.push_back( "VK_LAYER_LUNARG_object_tracker" );
+      _device_layers.push_back( "VK_LAYER_LUNARG_param_checker" );
+      */
+// /* Load VK_EXT_debug_report entry points in debug builds */
+// PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT =
+//     reinterpret_cast(vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
+// PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT =
+//     reinterpret_cast(vkGetInstanceProcAddr(instance, "vkDebugReportMessageEXT"));
+// PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
+//     reinterpret_cast(vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT"));
+// }
 
 func mvk_init_instance(VkResult *res, vk_render_state *p_vkrs, char const *const app_short_name)
 {
@@ -150,23 +241,35 @@ func mvk_init_instance(VkResult *res, vk_render_state *p_vkrs, char const *const
   app_info.apiVersion = VK_API_VERSION_1_0;
 
   // -- Layers & Extensions --
+  p_vkrs->instance_layer_names.push_back("VK_LAYER_KHRONOS_validation");
   p_vkrs->instance_extension_names.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
   p_vkrs->instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+  // p_vkrs->instance_extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+  p_vkrs->instance_extension_names.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+
+  mvk_checkLayerSupport(p_vkrs);
+
+  // -- Debug --
+  // VkDebugReportCallbackEXT debugReport = VK_NULL_HANDLE;
+  // VkDebugReportCallbackCreateInfoEXT debugCallbackCreateInfo;
+  // mvk_setupDebug(p_vkrs, &debugReport, &debugCallbackCreateInfo);
 
   VkInstanceCreateInfo inst_info = {};
   inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  inst_info.pNext = NULL;
   inst_info.flags = 0;
   inst_info.pApplicationInfo = &app_info;
   inst_info.enabledLayerCount = p_vkrs->instance_layer_names.size();
   inst_info.ppEnabledLayerNames = p_vkrs->instance_layer_names.size() ? p_vkrs->instance_layer_names.data() : NULL;
   inst_info.enabledExtensionCount = p_vkrs->instance_extension_names.size();
   inst_info.ppEnabledExtensionNames = p_vkrs->instance_extension_names.data();
+  // inst_info.pNext = (const void *)debugCallbackCreateInfo;
 
   printf("create VkInstance...");
   *res = vkCreateInstance(&inst_info, NULL, &p_vkrs->inst);
   assert(*res == VK_SUCCESS);
   printf("SUCCESS\n");
+
+  // mvk_setupDebug(p_vkrs);
 }
 
 void mvk_init_device_extension_names(vk_render_state *p_vkrs)
@@ -446,7 +549,7 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
 /*
  * Initializes the swap chain and the images it uses.
  */
-VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_image_usage_flags)
+VkResult mvk_init_swapchain(vk_render_state *p_vkrs)
 {
   /* DEPENDS on p_vkrs->cmd and p_vkrs->queue initialized */
 
@@ -539,7 +642,7 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs, VkImageUsageFlags default_i
   swapchain_ci.oldSwapchain = VK_NULL_HANDLE;
   swapchain_ci.clipped = true;
   swapchain_ci.imageColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-  swapchain_ci.imageUsage = default_image_usage_flags;
+  swapchain_ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
   swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   swapchain_ci.queueFamilyIndexCount = 0;
   swapchain_ci.pQueueFamilyIndices = NULL;
@@ -717,12 +820,11 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
   return res;
 }
 
-VkResult mvk_init_renderpass(vk_render_state *p_vkrs, bool include_depth, bool clear, VkImageLayout finalLayout,
-                             VkImageLayout initialLayout)
+VkResult mvk_init_renderpass(vk_render_state *p_vkrs)
 {
   /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
-  assert(clear || (initialLayout != VK_IMAGE_LAYOUT_UNDEFINED));
+  bool clear = true;
 
   VkResult res;
   /* Need attachments for render target and depth buffer */
@@ -733,10 +835,11 @@ VkResult mvk_init_renderpass(vk_render_state *p_vkrs, bool include_depth, bool c
   attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
   attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  attachments[0].initialLayout = initialLayout;
-  attachments[0].finalLayout = finalLayout;
+  attachments[0].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  attachments[0].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
   attachments[0].flags = 0;
 
+  const bool include_depth = false;
   if (include_depth) {
     attachments[1].format = p_vkrs->depth.format;
     attachments[1].samples = NUM_SAMPLES;
@@ -1423,6 +1526,8 @@ void mvk_destroy_swap_chain(vk_render_state *p_vkrs)
     vkDestroyImageView(p_vkrs->device, p_vkrs->buffers[i].view, NULL);
   }
   vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain, NULL);
+  
+  vkDestroySurfaceKHR(p_vkrs->inst, p_vkrs->surface, NULL);
 }
 
 void mvk_destroy_renderpass(vk_render_state *p_vkrs) { vkDestroyRenderPass(p_vkrs->device, p_vkrs->render_pass, NULL); }
@@ -1433,4 +1538,6 @@ void mvk_destroy_device(vk_render_state *p_vkrs)
   vkDestroyDevice(p_vkrs->device, NULL);
 }
 
-void mvk_destroy_instance(vk_render_state *p_vkrs) { vkDestroyInstance(p_vkrs->inst, NULL); }
+void mvk_destroy_instance(vk_render_state *p_vkrs) { 
+  
+  vkDestroyInstance(p_vkrs->inst, NULL); }

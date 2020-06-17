@@ -48,7 +48,7 @@ static glsl_shader fragment_shader = {
 };
 
 VkResult draw_cube(vk_render_state *p_vkrs);
-VkResult render_through_queue(renderer_queue *renderer_queue);
+VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue);
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
@@ -69,11 +69,11 @@ extern "C" void *midge_render_thread(void *vargp)
   vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
 
-  bool depth_present = true;
+  bool depth_present = false;
 
   // -- Initialization
   VkResult result;
-  MRT_RUN(mvk_init_global_layer_properties(&vkrs.instance_layer_properties));
+  MRT_RUN(mvk_init_global_layer_properties(&vkrs));
   mvk_init_device_extension_names(&vkrs);
 
   // -- Renderer
@@ -87,12 +87,11 @@ extern "C" void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_command_buffer(&vkrs));
   MRT_RUN(mvk_execute_begin_command_buffer(&vkrs));
   mvk_init_device_queue(&vkrs);
-  MRT_RUN(mvk_init_swapchain(&vkrs, 0));
+  MRT_RUN(mvk_init_swapchain(&vkrs));
   MRT_RUN(mvk_init_depth_buffer(&vkrs));
   MRT_RUN(mvk_init_uniform_buffer(&vkrs));
   MRT_RUN(mvk_init_descriptor_and_pipeline_layouts(&vkrs, false, 0));
-  MRT_RUN(mvk_init_renderpass(&vkrs, depth_present, true, VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                              VK_IMAGE_LAYOUT_UNDEFINED));
+  MRT_RUN(mvk_init_renderpass(&vkrs));
   MRT_RUN(mvk_init_shader(&vkrs, &vertex_shader, 0));
   MRT_RUN(mvk_init_shader(&vkrs, &fragment_shader, 1));
   MRT_RUN(mvk_init_framebuffers(&vkrs, depth_present));
@@ -153,9 +152,7 @@ extern "C" void *midge_render_thread(void *vargp)
   return 0;
 }
 
-VkResult render_sequence(renderer_queue *render_queue)
-{
-}
+VkResult render_sequence(renderer_queue *render_queue) { return VK_SUCCESS; }
 
 VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue)
 {
@@ -163,18 +160,18 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
 
     node_render_sequence *sequence = render_queue->items[i];
 
-VkRenderPassBeginInfo renderPassBeginInfo;
-  renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassBeginInfo.pNext = NULL;
-  renderPassBeginInfo.renderPass = p_vkrs->render_pass;
-  renderPassBeginInfo.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
-  rp_begin.renderArea.offset.x = 0;
-  rp_begin.renderArea.offset.y = 0;
-  rp_begin.renderArea.extent.width = p_vkrs->window_width;
-  rp_begin.renderArea.extent.height = p_vkrs->window_height;
-  rp_begin.clearValueCount = 2;
-  rp_begin.pClearValues = clear_values;
-    sequence->
+    // VkRenderPassBeginInfo renderPassBeginInfo;
+    //   renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    //   renderPassBeginInfo.pNext = NULL;
+    //   renderPassBeginInfo.renderPass = p_vkrs->render_pass;
+    //   renderPassBeginInfo.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
+    //   rp_begin.renderArea.offset.x = 0;
+    //   rp_begin.renderArea.offset.y = 0;
+    //   rp_begin.renderArea.extent.width = p_vkrs->window_width;
+    //   rp_begin.renderArea.extent.height = p_vkrs->window_height;
+    //   rp_begin.clearValueCount = 2;
+    //   rp_begin.pClearValues = clear_values;
+    //     sequence->
   }
 
   return VK_SUCCESS;
@@ -332,7 +329,7 @@ VkResult draw_cube(vk_render_state *p_vkrs)
 //   instance_create_info.ppEnabledLayerNames = instanceLayers.data();
 //   instance_create_info.enabledExtensionCount = instanceExtensions.size();
 //   instance_create_info.ppEnabledExtensionNames = instanceExtensions.data();
-//   // instance_create_info.pNext = debugCallbackCreateInfo;
+// instance_create_info.pNext = debugCallbackCreateInfo;
 
 //   // printf("vkinst=%p\n", p_vkstate->instance);
 //   printf("aboutToVkCreateInstance()\n");

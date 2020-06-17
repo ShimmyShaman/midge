@@ -1,3 +1,29 @@
+GOAL:
+
+
+
+use the char commands to call a core_function method
+core_function method:
+  defines a viewport
+  defines a CI render sequence
+  defines an image pointer
+  
+  defines another sequence
+  renders cube
+  renders ci child image
+  to another image pointer
+  
+ which holds a rectangle viewport
+and a list of commands and submits it as a pointed array, ptr to image storage
+to the command hub to be rendered as an image and stored to the ptr
+
+use the char commands to transfer any stored sequences to the render thread for
+processing
+
+renderthread while checks for stored sequences
+finds one and renders it to image target...
+
+present global image
 create CI-node
 
 
