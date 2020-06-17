@@ -198,6 +198,133 @@ int cling_process(int argc, void **argv)
   return clint_process(str);
 }
 
+int init_void_collection(mc_void_collection_v1 **collection);
+
+int force_render_update(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+
+  // printf("fru-0\n");
+
+  node_render_sequence *sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
+  sequence->extent_width = 280;
+  sequence->extent_height = 40;
+  sequence->render_commands_allocated = 4;
+  sequence->render_commands = (render_command *)() sequence->image =
+      (void *)&command_hub->global_node->children[0]->data.visual->image;
+
+  render_color *greenish = (render_color *)malloc(sizeof(render_color));
+  greenish->r = 0.88f;
+  greenish->g = 0.24f;
+  greenish->b = 0.13f;
+  greenish->a = 1.f;
+
+  render_command *render_cmd = (render_command *)malloc(sizeof(render_command));
+  render_cmd->type = COLORED_RECTANGLE;
+  render_cmd->x = 0;
+  render_cmd->y = 0;
+  render_cmd->extent_w = 280;
+  render_cmd->extent_h = 40;
+  render_cmd->data = (void *)greenish;
+  MCcall(append_to_collection(&sequence->render_commands->items, &sequence->render_commands->allocated,
+                              &sequence->render_commands->count, render_cmd));
+
+  // Add to the render queue
+  // TODO -- render queue depth key
+  MCcall(append_to_collection(&command_hub->render_queue->items, &command_hub->render_queue->allocated,
+                              &command_hub->render_queue->count, sequence));
+
+  // For the global node (and whole screen)
+  sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
+  sequence->extent_width = 280;
+  sequence->extent_height = 40;
+  MCcall(init_void_collection(&sequence->render_commands));
+  sequence->image = (void *)&command_hub->global_node->data.global_root->image;
+
+  render_color *dark_slate_gray = (render_color *)malloc(sizeof(render_color));
+  dark_slate_gray->r = 0.18f;
+  dark_slate_gray->g = 0.18f;
+  dark_slate_gray->b = 0.31f;
+  dark_slate_gray->a = 1.f;
+
+  render_cmd = (render_command *)malloc(sizeof(render_command));
+  render_cmd->type = COLORED_RECTANGLE;
+  render_cmd->x = 0;
+  render_cmd->y = 0;
+  render_cmd->extent_w = 1024;
+  render_cmd->extent_h = 640;
+  render_cmd->data = (void *)dark_slate_gray;
+  MCcall(append_to_collection(&sequence->render_commands->items, &sequence->render_commands->allocated,
+                              &sequence->render_commands->count, render_cmd));
+  render_cmd = (render_command *)malloc(sizeof(render_command));
+
+  render_cmd->type = TEXTURED_RECTANGLE;
+  render_cmd->x = 1024 - 280 - 8;
+  render_cmd->y = 640 - 40 - 8;
+  render_cmd->extent_w = 280;
+  render_cmd->extent_h = 40;
+  render_cmd->data = (void *)&command_hub->global_node->children[0]->data.visual->image;
+  MCcall(append_to_collection(&sequence->render_commands->items, &sequence->render_commands->allocated,
+                              &sequence->render_commands->count, render_cmd));
+
+  // Add to the render queue
+  // TODO -- render queue depth key
+  MCcall(append_to_collection(&command_hub->render_queue->items, &command_hub->render_queue->allocated,
+                              &command_hub->render_queue->count, sequence));
+
+  // Set the render queue
+  command_hub->render_thread_renderer_queue->items = (node_render_sequence **)command_hub->render_queue->items;
+  command_hub->render_thread_renderer_queue->count = command_hub->render_queue->count;
+  printf("setting render queue from core functions\n");
+
+  // Update the node render system
+
+  // struct {
+  //   int width, height;
+  // } *screen_size;
+
+  // render_command commands[24];
+
+  // commands[0].type = COLORED_RECTANGLE;
+  // commands[0].x = 0;
+  // commands[0].y = 0;
+  // commands[0].extent_w = 280;
+  // commands[0].extent_h = 40;
+  // commands[0].data = &dark_slate_gray;
+
+  // screen_size->width = 1024;
+  // screen_size->height = 640;
+
+  // int node_image_width = 280;
+  // int node_image_height = 40;
+
+  // // Ensure the node image exists and is of appropriate size
+  // node_image *node_image;
+  // set_node_image_dimensions(node_image_width, node_image_height, &node_image);
+
+  // // Background
+  // color background_color;
+  // render_rectangle(0, 0, node_image_width, node_image_height, background_color);
+
+  // // Draw all _Visual_ children in render order
+  // for (int i = 0; i < children ...) {
+  //   // sort by render order
+  // }
+
+  // // save the image somewhere
+  // ...
+
+  // // send command to update all ancestors
+  // render_events->alert_render_node(node->parent);
+
+  // command_hub->render_queue
+
+  return 0;
+}
+
 /* Conforms the given type_identity to a mc_type_identity if it is available. Searches first the given func_info, failing that
  * then searches the current nodespace.
  * @conformed_type_identity : (char **) Return Value.

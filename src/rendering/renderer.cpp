@@ -2,6 +2,7 @@
 
 #include "rendering/renderer.h"
 #include "rendering/cube_data.h"
+#include "rendering/node_render.h"
 
 #define MRT_RUN(CALL)         \
   result = CALL;              \
@@ -50,10 +51,11 @@ VkResult draw_cube(vk_render_state *p_vkrs);
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
-void *midge_render_thread(void *vargp)
+extern "C" void *midge_render_thread(void *vargp)
 {
   // -- Arguments
-  mthread_info *thr = *(mthread_info **)vargp;
+  render_thread_info *render_thread = (render_thread_info *)vargp;
+  mthread_info *thr = render_thread->thread_info;
   // printf("mrt-2: %p\n", thr);
 
   // -- States
@@ -110,6 +112,11 @@ void *midge_render_thread(void *vargp)
     // printf("mrt-3\n");
     usleep(1);
     mxcb_update_window(&winfo);
+
+    if (!render_thread->renderer_queue->in_use && render_thread->renderer_queue->count) {
+      printf("received render queue in renderer : %i items\n", render_thread->renderer_queue->count);
+      render_thread->renderer_queue->in_use = true;
+    }
   }
   printf("AfterUpdate!\n");
 

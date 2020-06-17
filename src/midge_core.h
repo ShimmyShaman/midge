@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "rendering/node_render.h"
+
 #ifndef __cplusplus
 typedef unsigned char bool;
 static const bool false = 0;
@@ -291,6 +293,8 @@ typedef struct mc_command_hub_v1 {
   mc_node_v1 *global_node;
   mc_node_v1 *nodespace;
   mc_void_collection_v1 *template_collection;
+  mc_void_collection_v1 *render_queue;
+  renderer_queue *render_thread_renderer_queue;
   mc_process_unit_v1 *process_matrix;
   mc_workflow_process_v1 *focused_workflow;
   unsigned int scripts_alloc;
@@ -300,16 +304,20 @@ typedef struct mc_command_hub_v1 {
   mc_process_action_v1 *demo_issue;
 } mc_command_hub_v1;
 
-typedef enum {
-  Null = 0,
-  None,
-  Visual,
-  Abstract,
+typedef enum node_type {
+  NODE_TYPE_NONE = 1,
+  NODE_TYPE_GLOBAL_ROOT,
+  NODE_TYPE_VISUAL,
+  NODE_TYPE_ABSTRACT,
 } node_type;
 
-typedef struct mc_visual_node_v1 {
+typedef struct mc_visual_node_data_v1 {
+  void *image;
+} mc_visual_node_data_v1;
 
-} mc_visual_node_v1;
+typedef struct mc_global_root_node_data_v1 {
+  void *image;
+} mc_global_root_data_v1;
 
 typedef struct mc_node_v1 {
   mc_struct_id_v1 *struct_id;
@@ -327,8 +335,9 @@ typedef struct mc_node_v1 {
 
   node_type type;
   union {
-    mc_visual_node_v1 *visual;
-  };
+    mc_visual_node_data_v1 *visual;
+    mc_global_root_data_v1 *global_root;
+  } data;
 } mc_node_v1;
 
 typedef struct mc_process_action_v1 {

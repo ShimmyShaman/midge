@@ -1,3 +1,36 @@
+create CI-node
+
+
+
+edit and save function
+bring up edit window
+submit to command system
+font & writing
+ui system and focus setting
+a visual to click on
+control information
+you need a rendering system
+
+
+
+
+rendering system:
+	is alerted to rerender a set of nodes and their children
+	each node renders to its own image as a composite of itself and its children
+  then rerenders all ascendants of the node
+  
+  need to know about the node:
+    ptr to node
+    delegate method which contains the primitive render instructions/or ptr to list containing
+	    render calls...	
+  
+  
+  
+    ##################################################################################
+    
+    
+
+
 .createscript finishThreshold = 1		 script = 1, demo = 2
 	script_name:
 	...

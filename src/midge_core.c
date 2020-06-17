@@ -2099,46 +2099,14 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
   }
 }
 
-int render_command_interface_node()
-{
-  // struct {
-  //   int width, height;
-  // } *screen_size;
-
-  // screen_size->width = 1024;
-  // screen_size->height = 640;
-
-  // int node_image_width = 280;
-  // int node_image_height = 40;
-
-  // // Ensure the node image exists and is of appropriate size
-  // node_image *node_image;
-  // set_node_image_dimensions(node_image_width, node_image_height, &node_image);
-
-  // // Background
-  // color background_color;
-  // render_rectangle(0, 0, node_image_width, node_image_height, background_color);
-
-  // // Draw all _Visual_ children in render order
-  // for (int i = 0; i < children ...) {
-  //   // sort by render order
-  // }
-
-  // // save the image somewhere
-  // ...
-
-  // // send command to update all ancestors
-  // render_events->alert_render_node(node->parent);
-
-  return 0;
-}
-
 int (*mc_dummy_function)(int, void **);
 int mc_dummy_function_v1(int argc, void **argv)
 {
   printf("\n\n**dummy**\n\n");
   return 0;
 }
+
+void *midge_render_thread(void *vargp);
 
 int init_core_functions(mc_command_hub_v1 *command_hub);
 int init_process_matrix(mc_command_hub_v1 *command_hub);
@@ -2156,6 +2124,12 @@ int mc_main(int argc, const char *const *argv)
     printf("pointer sizes aren't equal!!!\n");
     return -1;
   }
+
+  // Begin Vulkan
+  render_thread_info render_thread;
+  render_thread.render_thread_initialized = false;
+  render_thread.renderer_queue = (renderer_queue *)malloc(sizeof(renderer_queue));
+  begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
 
   mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
   { // TYPE:DEFINITION parameter_info
@@ -2481,6 +2455,8 @@ int mc_main(int argc, const char *const *argv)
   MCcall(init_command_hub_process_matrix(command_hub));
   command_hub->focused_workflow = NULL;
   MCcall(init_void_collection_v1(&command_hub->template_collection));
+  MCcall(init_void_collection_v1(&command_hub->render_queue));
+  command_hub->render_thread_renderer_queue = render_thread.renderer_queue;
   command_hub->uid_counter = 2000;
   command_hub->scripts_alloc = 32;
   command_hub->scripts = (void **)malloc(sizeof(void *) * command_hub->scripts_alloc);
@@ -2512,6 +2488,11 @@ int mc_main(int argc, const char *const *argv)
 
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
                 " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+
+  // Wait for render thread initialization before continuing with the next set of commands
+  while (!render_thread.render_thread_initialized) {
+    usleep(1);
+  }
 
   printf("mm-3\n");
   const char *commands =
@@ -2565,13 +2546,6 @@ int mc_main(int argc, const char *const *argv)
       "mc_dummy_function|"
       ".runScript invoke_function_with_args_script|"
       "enddemo|"
-      // Begin Vulkan
-      "invoke cling_process|"
-      "mthread_info *rthr;|"
-      "invoke cling_process|"
-      "begin_mthread(midge_render_thread, &rthr, (void *)&rthr);|"
-      "invoke cling_process|"
-      "usleep(1000000);|"
       // // "demo|"
       // // "call dummy thrice|"
       // // "invoke mc_dummy_function|"
@@ -2609,8 +2583,10 @@ int mc_main(int argc, const char *const *argv)
       "|"
       "enddemo|"
       // // -- END DEMO create function $create_function_name
-      // "invoke construct_and_attach_child_node|"
-      // "command_interface_node|"
+      "invoke construct_and_attach_child_node|"
+      "command_interface_node|"
+      "invoke force_render_update|"
+
       // "create function print_word|"
       // "@create_function_name|"
       // "void|"
@@ -2633,17 +2609,6 @@ int mc_main(int argc, const char *const *argv)
       // printf("process(end)\n");
       // clint->process("end_mthread(rthr);");
       // printf("\n! MIDGE COMPLETE !\n");
-      // "invoke clint_process \"printf(\"clint_processed!\\n\");|"
-      "invoke cling_process|"
-      "updateUI(rthr);|"
-      "invoke cling_process|"
-      "end_mthread(rthr);|"
-      // "invoke cling_process|"
-      // "writing|"
-      // "invoke cling_process|"
-      // "writing|"
-      // "invoke cling_process|"
-      // "writing|"
       "midgequit|";
 
   // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
@@ -2697,9 +2662,10 @@ int mc_main(int argc, const char *const *argv)
   else {
     printf("\n>> global has no children\n");
   }
-
   // printf("\n\nProcess Matrix:\n");
   // print_process_unit(command_hub->process_matrix, 5, 5, 1);
+
+  end_mthread(render_thread.thread_info);
 
   printf("\n\n</midge_core>\n");
   return 0;
@@ -5603,6 +5569,21 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_dummy_function_definition_v1->variable_parameter_begin_index = -1;
     mc_dummy_function_definition_v1->struct_usage_count = 0;
     mc_dummy_function_definition_v1->struct_usage = NULL;
+  }
+
+  mc_function_info_v1 *force_render_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)force_render_update_definition_v1));
+  {
+    force_render_update_definition_v1->struct_id = NULL;
+    force_render_update_definition_v1->name = "force_render_update";
+    force_render_update_definition_v1->latest_iteration = 1U;
+    force_render_update_definition_v1->return_type = "void";
+    force_render_update_definition_v1->parameter_count = 0;
+    force_render_update_definition_v1->parameters = NULL;
+    force_render_update_definition_v1->variable_parameter_begin_index = -1;
+    force_render_update_definition_v1->struct_usage_count = 0;
+    force_render_update_definition_v1->struct_usage = NULL;
   }
 
   mc_function_info_v1 *cling_process_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
