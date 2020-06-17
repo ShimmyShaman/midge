@@ -48,6 +48,7 @@ static glsl_shader fragment_shader = {
 };
 
 VkResult draw_cube(vk_render_state *p_vkrs);
+VkResult render_through_queue(renderer_queue *renderer_queue);
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
@@ -113,9 +114,16 @@ extern "C" void *midge_render_thread(void *vargp)
     usleep(1);
     mxcb_update_window(&winfo);
 
+    render_thread->render_thread_initialized = true;
+
     if (!render_thread->renderer_queue->in_use && render_thread->renderer_queue->count) {
       printf("received render queue in renderer : %i items\n", render_thread->renderer_queue->count);
       render_thread->renderer_queue->in_use = true;
+
+      render_through_queue(&vkrs, render_thread->renderer_queue);
+      render_thread->renderer_queue->count = 0;
+      render_thread->renderer_queue->items = NULL;
+      render_thread->renderer_queue->in_use = false;
     }
   }
   printf("AfterUpdate!\n");
@@ -143,6 +151,33 @@ extern "C" void *midge_render_thread(void *vargp)
   printf("mvkConcluded(SUCCESS)\n");
   thr->has_concluded = 1;
   return 0;
+}
+
+VkResult render_sequence(renderer_queue *render_queue)
+{
+}
+
+VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue)
+{
+  for (int i = 0; i < render_queue->count; ++i) {
+
+    node_render_sequence *sequence = render_queue->items[i];
+
+VkRenderPassBeginInfo renderPassBeginInfo;
+  renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  renderPassBeginInfo.pNext = NULL;
+  renderPassBeginInfo.renderPass = p_vkrs->render_pass;
+  renderPassBeginInfo.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
+  rp_begin.renderArea.offset.x = 0;
+  rp_begin.renderArea.offset.y = 0;
+  rp_begin.renderArea.extent.width = p_vkrs->window_width;
+  rp_begin.renderArea.extent.height = p_vkrs->window_height;
+  rp_begin.clearValueCount = 2;
+  rp_begin.pClearValues = clear_values;
+    sequence->
+  }
+
+  return VK_SUCCESS;
 }
 
 VkResult draw_cube(vk_render_state *p_vkrs)
@@ -256,7 +291,8 @@ VkResult draw_cube(vk_render_state *p_vkrs)
   return res;
 }
 
-// VkResult vk_init_layers_extensions(std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions)
+// VkResult vk_init_layers_extensions(std::vector<const char *> *instanceLayers, std::vector<const char *>
+// *instanceExtensions)
 // {
 //   // Set up extensions
 //   instanceExtensions->push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
@@ -370,9 +406,10 @@ VkResult draw_cube(vk_render_state *p_vkrs)
 //   device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 //   device_create_info.queueCreateInfoCount = 1;
 //   device_create_info.pQueueCreateInfos = &device_queue_create_info;
-//   //	device_create_info.enabledLayerCount		= _device_layers.size();				// depricated
-//   //	device_create_info.ppEnabledLayerNames		= _device_layers.data();				// depricated
-//   device_create_info.enabledExtensionCount = device_extensions.size();
+//   //	device_create_info.enabledLayerCount		= _device_layers.size();				//
+//   depricated
+//   //	device_create_info.ppEnabledLayerNames		= _device_layers.data();				//
+//   depricated device_create_info.enabledExtensionCount = device_extensions.size();
 //   device_create_info.ppEnabledExtensionNames = device_extensions.data();
 
 //   res = vkCreateDevice(p_vkstate->gpu, &device_create_info, nullptr, &p_vkstate->device);
