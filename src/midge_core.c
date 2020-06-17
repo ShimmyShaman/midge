@@ -294,28 +294,6 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
   return 0;
 }
 
-int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, void *item)
-{
-  if (*collection_count + 1 > *collection_alloc) {
-    unsigned int realloc_amount = *collection_alloc + 8 + *collection_alloc / 3;
-    // printf("reallocate collection size %i->%i\n", *collection_alloc, realloc_amount);
-    void **new_collection = (void **)malloc(sizeof(void *) * realloc_amount);
-    if (new_collection == NULL) {
-      MCerror(304, "append_to_collection malloc error");
-    }
-
-    memcpy(new_collection, *collection, *collection_count * sizeof(void *));
-    free(*collection);
-
-    *collection = new_collection;
-    *collection_alloc = realloc_amount;
-  }
-
-  (*collection)[*collection_count] = item;
-  ++*collection_count;
-  return 0;
-}
-
 int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, int index)
 {
   *collection[index] = NULL;
@@ -2129,6 +2107,9 @@ int mc_main(int argc, const char *const *argv)
   render_thread_info render_thread;
   render_thread.render_thread_initialized = false;
   render_thread.renderer_queue = (renderer_queue *)malloc(sizeof(renderer_queue));
+  render_thread.renderer_queue->count = 0;
+  render_thread.renderer_queue->in_use = false;
+  render_thread.renderer_queue->items = NULL;
   begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
 
   mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
@@ -2665,6 +2646,11 @@ int mc_main(int argc, const char *const *argv)
   // printf("\n\nProcess Matrix:\n");
   // print_process_unit(command_hub->process_matrix, 5, 5, 1);
 
+  int ms = 0;
+  while (ms < 8000 && !render_thread.thread_info->has_concluded) {
+    ++ms;
+    usleep(1000);
+  }
   end_mthread(render_thread.thread_info);
 
   printf("\n\n</midge_core>\n");

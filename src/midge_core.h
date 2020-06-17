@@ -71,19 +71,6 @@ typedef unsigned int uint;
     dest = mc_tmp_cstr;                                         \
   }
 
-#define MCcall(function)                      \
-  {                                           \
-    int mc_res = function;                    \
-    if (mc_res) {                             \
-      printf("--" #function ":%i\n", mc_res); \
-      return mc_res;                          \
-    }                                         \
-  }
-
-#define MCerror(error_code, error_message, ...)                          \
-  printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
-  return error_code;
-
 #define cprintf(dest, format, ...)                            \
   {                                                           \
     int cprintf_n = snprintf(NULL, 0, format, ##__VA_ARGS__); \
@@ -200,18 +187,6 @@ struct mc_process_action_detail_v1;
 struct mc_process_unit_v1;
 struct mc_template_v1;
 struct mc_procedure_template_v1;
-
-typedef struct mc_struct_id_v1 {
-  const char *identifier;
-  unsigned int version;
-} mc_struct_id_v1;
-
-typedef struct mc_void_collection_v1 {
-  mc_struct_id_v1 *struct_id;
-  unsigned int allocated;
-  unsigned int count;
-  void **items;
-} mc_void_collection_v1;
 
 typedef struct mc_key_value_pair_v1 {
   mc_struct_id_v1 *struct_id;

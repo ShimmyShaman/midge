@@ -212,9 +212,10 @@ int force_render_update(int argc, void **argv)
   node_render_sequence *sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
   sequence->extent_width = 280;
   sequence->extent_height = 40;
-  sequence->render_commands_allocated = 4;
-  sequence->render_commands = (render_command *)() sequence->image =
-      (void *)&command_hub->global_node->children[0]->data.visual->image;
+  sequence->render_command_count = 1;
+  sequence->render_commands_allocated = 1;
+  sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
+  sequence->image = (void *)&command_hub->global_node->children[0]->data.visual->image;
 
   render_color *greenish = (render_color *)malloc(sizeof(render_color));
   greenish->r = 0.88f;
@@ -222,15 +223,12 @@ int force_render_update(int argc, void **argv)
   greenish->b = 0.13f;
   greenish->a = 1.f;
 
-  render_command *render_cmd = (render_command *)malloc(sizeof(render_command));
-  render_cmd->type = COLORED_RECTANGLE;
-  render_cmd->x = 0;
-  render_cmd->y = 0;
-  render_cmd->extent_w = 280;
-  render_cmd->extent_h = 40;
-  render_cmd->data = (void *)greenish;
-  MCcall(append_to_collection(&sequence->render_commands->items, &sequence->render_commands->allocated,
-                              &sequence->render_commands->count, render_cmd));
+  sequence->render_commands[0].type = COLORED_RECTANGLE;
+  sequence->render_commands[0].x = 0;
+  sequence->render_commands[0].y = 0;
+  sequence->render_commands[0].extent_w = 280;
+  sequence->render_commands[0].extent_h = 40;
+  sequence->render_commands[0].data = (void *)greenish;
 
   // Add to the render queue
   // TODO -- render queue depth key
@@ -241,7 +239,9 @@ int force_render_update(int argc, void **argv)
   sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
   sequence->extent_width = 280;
   sequence->extent_height = 40;
-  MCcall(init_void_collection(&sequence->render_commands));
+  sequence->render_command_count = 2;
+  sequence->render_commands_allocated = 2;
+  sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
   sequence->image = (void *)&command_hub->global_node->data.global_root->image;
 
   render_color *dark_slate_gray = (render_color *)malloc(sizeof(render_color));
@@ -250,25 +250,19 @@ int force_render_update(int argc, void **argv)
   dark_slate_gray->b = 0.31f;
   dark_slate_gray->a = 1.f;
 
-  render_cmd = (render_command *)malloc(sizeof(render_command));
-  render_cmd->type = COLORED_RECTANGLE;
-  render_cmd->x = 0;
-  render_cmd->y = 0;
-  render_cmd->extent_w = 1024;
-  render_cmd->extent_h = 640;
-  render_cmd->data = (void *)dark_slate_gray;
-  MCcall(append_to_collection(&sequence->render_commands->items, &sequence->render_commands->allocated,
-                              &sequence->render_commands->count, render_cmd));
-  render_cmd = (render_command *)malloc(sizeof(render_command));
+  sequence->render_commands[0].type = COLORED_RECTANGLE;
+  sequence->render_commands[0].x = 0;
+  sequence->render_commands[0].y = 0;
+  sequence->render_commands[0].extent_w = 1024;
+  sequence->render_commands[0].extent_h = 640;
+  sequence->render_commands[0].data = (void *)dark_slate_gray;
 
-  render_cmd->type = TEXTURED_RECTANGLE;
-  render_cmd->x = 1024 - 280 - 8;
-  render_cmd->y = 640 - 40 - 8;
-  render_cmd->extent_w = 280;
-  render_cmd->extent_h = 40;
-  render_cmd->data = (void *)&command_hub->global_node->children[0]->data.visual->image;
-  MCcall(append_to_collection(&sequence->render_commands->items, &sequence->render_commands->allocated,
-                              &sequence->render_commands->count, render_cmd));
+  sequence->render_commands[1].type = TEXTURED_RECTANGLE;
+  sequence->render_commands[1].x = 1024 - 280 - 8;
+  sequence->render_commands[1].y = 640 - 40 - 8;
+  sequence->render_commands[1].extent_w = 280;
+  sequence->render_commands[1].extent_h = 40;
+  sequence->render_commands[1].data = (void *)&command_hub->global_node->children[0]->data.visual->image;
 
   // Add to the render queue
   // TODO -- render queue depth key
