@@ -66,6 +66,8 @@ extern "C" void *midge_render_thread(void *vargp)
   vk_render_state vkrs;
   vkrs.window_width = 1024;
   vkrs.window_height = 640;
+  vkrs.maximal_image_width = 1024;
+  vkrs.maximal_image_height = 1024;
   vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
 
@@ -89,6 +91,7 @@ extern "C" void *midge_render_thread(void *vargp)
   mvk_init_device_queue(&vkrs);
   MRT_RUN(mvk_init_swapchain(&vkrs));
   MRT_RUN(mvk_init_depth_buffer(&vkrs));
+  MRT_RUN(mvk_init_headless_image(&vkrs));
   MRT_RUN(mvk_init_uniform_buffer(&vkrs));
   MRT_RUN(mvk_init_descriptor_and_pipeline_layouts(&vkrs, false, 0));
   MRT_RUN(mvk_init_renderpass(&vkrs));
@@ -139,6 +142,7 @@ extern "C" void *midge_render_thread(void *vargp)
   // printf("mrt-5\n");
   mvk_destroy_descriptor_and_pipeline_layouts(&vkrs);
   mvk_destroy_uniform_buffer(&vkrs);
+  mvk_destroy_headless_image(&vkrs);
   mvk_destroy_depth_buffer(&vkrs);
   mvk_destroy_swap_chain(&vkrs);
   mvk_destroy_command_buffer(&vkrs);
@@ -159,6 +163,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
   for (int i = 0; i < render_queue->count; ++i) {
 
     node_render_sequence *sequence = render_queue->items[i];
+
+    // if()
 
     // VkRenderPassBeginInfo renderPassBeginInfo;
     //   renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

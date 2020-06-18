@@ -212,6 +212,7 @@ int force_render_update(int argc, void **argv)
   node_render_sequence *sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
   sequence->extent_width = 280;
   sequence->extent_height = 40;
+  sequence->render_target = NODE_RENDER_TARGET_HOST_IMAGE;
   sequence->render_command_count = 1;
   sequence->render_commands_allocated = 1;
   sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
@@ -223,7 +224,7 @@ int force_render_update(int argc, void **argv)
   greenish->b = 0.13f;
   greenish->a = 1.f;
 
-  sequence->render_commands[0].type = COLORED_RECTANGLE;
+  sequence->render_commands[0].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[0].x = 0;
   sequence->render_commands[0].y = 0;
   sequence->render_commands[0].extent_w = 280;
@@ -239,6 +240,7 @@ int force_render_update(int argc, void **argv)
   sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
   sequence->extent_width = 280;
   sequence->extent_height = 40;
+  sequence->render_target = NODE_RENDER_TARGET_PRESENT;
   sequence->render_command_count = 2;
   sequence->render_commands_allocated = 2;
   sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
@@ -250,14 +252,14 @@ int force_render_update(int argc, void **argv)
   dark_slate_gray->b = 0.31f;
   dark_slate_gray->a = 1.f;
 
-  sequence->render_commands[0].type = COLORED_RECTANGLE;
+  sequence->render_commands[0].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[0].x = 0;
   sequence->render_commands[0].y = 0;
   sequence->render_commands[0].extent_w = 1024;
   sequence->render_commands[0].extent_h = 640;
   sequence->render_commands[0].data = (void *)dark_slate_gray;
 
-  sequence->render_commands[1].type = TEXTURED_RECTANGLE;
+  sequence->render_commands[1].type = RENDER_COMMAND_TEXTURED_RECTANGLE;
   sequence->render_commands[1].x = 1024 - 280 - 8;
   sequence->render_commands[1].y = 640 - 40 - 8;
   sequence->render_commands[1].extent_w = 280;

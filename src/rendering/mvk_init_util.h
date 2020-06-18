@@ -86,6 +86,7 @@ typedef struct vk_render_state {
   VkFramebuffer *framebuffers;
   mxcb_window_info *xcb_winfo;
   uint32_t window_width, window_height;
+  uint32_t maximal_image_width, maximal_image_height;
   VkFormat format;
 
   uint32_t swapchainImageCount;
@@ -127,6 +128,15 @@ typedef struct vk_render_state {
   glm::mat4 Clip;
   glm::mat4 MVP;
 
+  // HEADLESS IMAGE
+  struct {
+    VkFormat format;
+
+    VkImage image;
+    VkDeviceMemory memory;
+    VkImageView view;
+  } headless;
+
   // Buffer for initialization commands
   VkCommandBuffer cmd;
   VkPipelineLayout pipeline_layout;
@@ -153,6 +163,7 @@ void mvk_init_device_extension_names(vk_render_state *p_vkrs);
 void mvk_init_instance(VkResult *res, vk_render_state *p_vkrs, char const *const app_short_name);
 VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, uint32_t required_gpu_count);
 VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs);
+VkResult mvk_init_headless_image(vk_render_state *p_vkrs);
 VkResult mvk_init_device(vk_render_state *p_vkrs);
 VkResult init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
@@ -188,6 +199,7 @@ void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs);
 void mvk_destroy_command_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_command_pool(vk_render_state *p_vkrs);
+void mvk_destroy_headless_image(vk_render_state *p_vkrs);
 void mvk_destroy_depth_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_swap_chain(vk_render_state *p_vkrs);
 void mvk_destroy_renderpass(vk_render_state *p_vkrs);

@@ -466,6 +466,93 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
   return res;
 }
 
+uint32_t getMemoryTypeIndex(vk_render_state *p_vkrs, uint32_t typeBits, VkMemoryPropertyFlags properties)
+{
+  VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
+  vkGetPhysicalDeviceMemoryProperties(p_vkrs->gpus[0], &deviceMemoryProperties);
+  for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; i++) {
+    if ((typeBits & 1) == 1) {
+      if ((deviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+        return i;
+      }
+    }
+    typeBits >>= 1;
+  }
+  return 0;
+}
+
+VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
+{
+  /* allow custom depth formats */
+  VkFormat colorFormat = p_vkrs->format;
+
+  // Color attachment
+  VkImageCreateInfo imageCreateInfo = {};
+  imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageCreateInfo.format = colorFormat;
+  imageCreateInfo.extent.width = p_vkrs->maximal_image_width;
+  imageCreateInfo.extent.height = p_vkrs->maximal_image_height;
+  imageCreateInfo.extent.depth = 1;
+  imageCreateInfo.mipLevels = 1;
+  imageCreateInfo.arrayLayers = 1;
+  imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+  // VkFormatProperties props;
+  // vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], p_vkrs->depth.format, &props);
+  // if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+  //   imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
+  // }
+  // else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+  //   imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  // }
+  // else {
+  //   /* Try other depth formats? */
+  //   printf("depth_format:%i is unsupported\n", p_vkrs->depth.format);
+  //   return (VkResult)MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT;
+  // }
+
+  VkResult res = vkCreateImage(p_vkrs->device, &imageCreateInfo, nullptr, &p_vkrs->headless.image);
+  assert(res == VK_SUCCESS);
+
+  VkMemoryRequirements memReqs;
+  vkGetImageMemoryRequirements(p_vkrs->device, p_vkrs->headless.image, &memReqs);
+  
+  VkMemoryAllocateInfo memAlloc = {};
+  memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  memAlloc.allocationSize = memReqs.size;
+  memAlloc.memoryTypeIndex = getMemoryTypeIndex(p_vkrs, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  res = vkAllocateMemory(p_vkrs->device, &memAlloc, nullptr, &p_vkrs->headless.memory);
+  assert(res == VK_SUCCESS);
+  res = vkBindImageMemory(p_vkrs->device, p_vkrs->headless.image, p_vkrs->headless.memory, 0);
+  assert(res == VK_SUCCESS);
+
+  VkImageViewCreateInfo colorImageView = {};
+  colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  colorImageView.format = colorFormat;
+  colorImageView.subresourceRange = {};
+  colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  colorImageView.subresourceRange.baseMipLevel = 0;
+  colorImageView.subresourceRange.levelCount = 1;
+  colorImageView.subresourceRange.baseArrayLayer = 0;
+  colorImageView.subresourceRange.layerCount = 1;
+  colorImageView.image = p_vkrs->headless.image;
+  res = vkCreateImageView(p_vkrs->device, &colorImageView, nullptr, &p_vkrs->headless.view);
+  assert(res == VK_SUCCESS);
+
+  return res;
+}
+
+void mvk_destroy_headless_image(vk_render_state *p_vkrs){
+
+  vkDestroyImageView(p_vkrs->device, p_vkrs->headless.view, NULL);
+  vkDestroyImage(p_vkrs->device, p_vkrs->headless.image, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->headless.memory, NULL);
+}
+
 /*
  * Constructs the surface, finds a graphics and present queue for it as well as a supported format.
  */
@@ -1526,7 +1613,7 @@ void mvk_destroy_swap_chain(vk_render_state *p_vkrs)
     vkDestroyImageView(p_vkrs->device, p_vkrs->buffers[i].view, NULL);
   }
   vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain, NULL);
-  
+
   vkDestroySurfaceKHR(p_vkrs->inst, p_vkrs->surface, NULL);
 }
 
@@ -1538,6 +1625,4 @@ void mvk_destroy_device(vk_render_state *p_vkrs)
   vkDestroyDevice(p_vkrs->device, NULL);
 }
 
-void mvk_destroy_instance(vk_render_state *p_vkrs) { 
-  
-  vkDestroyInstance(p_vkrs->inst, NULL); }
+void mvk_destroy_instance(vk_render_state *p_vkrs) { vkDestroyInstance(p_vkrs->inst, NULL); }

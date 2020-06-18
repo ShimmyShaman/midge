@@ -52,10 +52,9 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
 }
 
 typedef enum render_command_type {
-  Null = 0,
-  NONE,
-  COLORED_RECTANGLE,
-  TEXTURED_RECTANGLE,
+  RENDER_COMMAND_NONE = 1,
+  RENDER_COMMAND_COLORED_RECTANGLE,
+  RENDER_COMMAND_TEXTURED_RECTANGLE,
 } render_command_type;
 
 typedef struct render_color {
@@ -68,8 +67,15 @@ typedef struct render_command {
   void *data;
 } render_command;
 
+typedef enum node_render_target {
+  NODE_RENDER_TARGET_NONE = 1,
+  NODE_RENDER_TARGET_HOST_IMAGE,
+  NODE_RENDER_TARGET_PRESENT,
+} node_render_target;
+
 typedef struct node_render_sequence {
   unsigned int extent_width, extent_height;
+  node_render_target render_target;
   int render_command_count;
   int render_commands_allocated;
   render_command *render_commands;
