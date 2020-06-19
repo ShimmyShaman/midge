@@ -22,16 +22,19 @@ static glsl_shader vertex_shader = {
     .text = "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
-            "layout (std140, binding = 0) uniform bufferVals {\n"
+            "layout (std140, binding = 0) uniform UBO0 {\n"
             "    mat4 mvp;\n"
-            "    vec2 offset;\n"
-            "} myBufferVals;\n"
+            "} globalUI;\n"
+            "layout (binding = 1) uniform UBO1 {\n"
+            "    vec2 drawOffset;\n"
+            "} element;\n"
             "layout (location = 0) in vec4 pos;\n"
             "layout (location = 1) in vec4 inColor;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = inColor;\n"
-            "   gl_Position = myBufferVals.mvp * pos;\n"
+            "   gl_Position = globalUI.mvp * pos;\n"
+            "   gl_Position.xy += element.drawOffset.xy;"
             "}\n",
     .stage = VK_SHADER_STAGE_VERTEX_BIT,
 };
@@ -71,6 +74,9 @@ extern "C" void *midge_render_thread(void *vargp)
   vkrs.maximal_image_height = 1024;
   vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
+
+  vkrs.render_offset[0] = 0.4f;
+  vkrs.render_offset[1] = 0;
 
   bool depth_present = false;
 
@@ -210,9 +216,26 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
     mvk_init_viewports(p_vkrs, sequence->extent_width, sequence->extent_height);
     mvk_init_scissors(p_vkrs, sequence->extent_width, sequence->extent_height);
 
+    // const unsigned int MAX_DESC_SET_WRITES = 4;
+    // VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
+    // VkDescriptorBufferInfo bufferInfos[MAX_DESC_SET_WRITES];
+
     for (int j = 0; j < sequence->render_command_count; ++j) {
 
       vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
+
+      // // Binding Descriptor Sets
+      // int wdsIndex = 0;
+      // VkWriteDescriptorSet *write = &writes[wdsIndex];
+      // writes->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      // writes->pNext = NULL;
+      // writes->dstSet = p_vkrs->desc_set[0];
+      // writes->descriptorCount = 1;
+      // writes->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      // writes->pBufferInfo = &p_vkrs->uniform_data.buffer_info;
+      // writes->dstArrayElement = 0;
+      // writes->dstBinding = 0;
+
       vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                               p_vkrs->desc_set.data(), 0, NULL);
 

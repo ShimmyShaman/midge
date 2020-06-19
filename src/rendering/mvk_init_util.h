@@ -118,6 +118,12 @@ typedef struct vk_render_state {
   } uniform_data;
 
   struct {
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDescriptorBufferInfo buffer_info;
+  } offset_data;
+
+  struct {
     VkDescriptorImageInfo image_info;
   } texture_data;
 
@@ -135,6 +141,8 @@ typedef struct vk_render_state {
   mat4s Model;
   mat4s Clip;
   mat4s MVP;
+
+  vec2 render_offset;
 
   // HEADLESS IMAGE
   struct {
