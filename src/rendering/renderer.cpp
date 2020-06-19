@@ -24,13 +24,14 @@ static glsl_shader vertex_shader = {
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding = 0) uniform bufferVals {\n"
             "    mat4 mvp;\n"
+            "    vec2 offset;\n"
             "} myBufferVals;\n"
             "layout (location = 0) in vec4 pos;\n"
             "layout (location = 1) in vec4 inColor;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = inColor;\n"
-            "   gl_Position = pos;\n"
+            "   gl_Position = myBufferVals.mvp * pos;\n"
             "}\n",
     .stage = VK_SHADER_STAGE_VERTEX_BIT,
 };
@@ -206,8 +207,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
     rp_begin.pClearValues = clear_values;
 
     vkCmdBeginRenderPass(p_vkrs->cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-    mvk_init_viewports(p_vkrs, sequence->extent_width - 90, sequence->extent_height);
-    mvk_init_scissors(p_vkrs, sequence->extent_width, sequence->extent_height - 80);
+    mvk_init_viewports(p_vkrs, sequence->extent_width, sequence->extent_height);
+    mvk_init_scissors(p_vkrs, sequence->extent_width, sequence->extent_height);
 
     for (int j = 0; j < sequence->render_command_count; ++j) {
 

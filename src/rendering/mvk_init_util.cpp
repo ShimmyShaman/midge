@@ -804,8 +804,9 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
     fov *= static_cast<float>(p_vkrs->window_height) / static_cast<float>(p_vkrs->window_width);
   }
 
-  glm_perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f,
-                  (vec4 *)&p_vkrs->Projection);
+  glm_ortho_default((float)p_vkrs->window_width / p_vkrs->window_height, (vec4 *)&p_vkrs->Projection);
+  // glm_perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f,
+  //                 (vec4 *)&p_vkrs->Projection);
   glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)&p_vkrs->View);
 
   glm_mat4_copy(GLM_MAT4_IDENTITY, (vec4 *)&p_vkrs->Model);
@@ -815,8 +816,8 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   glm_mat4_copy(clip, (vec4 *)&p_vkrs->Clip);
 
   glm_mat4_mul((vec4 *)&p_vkrs->View, (vec4 *)&p_vkrs->Model, (vec4 *)&p_vkrs->MVP);
-  glm_mat4_mul((vec4 *)p_vkrs->Projection.col, (vec4 *)p_vkrs->MVP.col, (vec4 *)p_vkrs->MVP.col);
-  glm_mat4_mul((vec4 *)p_vkrs->Clip.col, (vec4 *)p_vkrs->MVP.col, (vec4 *)p_vkrs->MVP.col);
+  glm_mat4_mul((vec4 *)&p_vkrs->Projection, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
+  glm_mat4_mul((vec4 *)&p_vkrs->Clip, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
 
   /* VULKAN_KEY_START */
   VkBufferCreateInfo buf_info = {};
@@ -869,19 +870,25 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool use_texture,
                                                   VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags)
 {
-  VkDescriptorSetLayoutBinding layout_bindings[2];
+  VkDescriptorSetLayoutBinding layout_bindings[3];
   layout_bindings[0].binding = 0;
   layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   layout_bindings[0].descriptorCount = 1;
   layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
   layout_bindings[0].pImmutableSamplers = NULL;
 
+  layout_bindings[1].binding = 1;
+  layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  layout_bindings[1].descriptorCount = 1;
+  layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  layout_bindings[1].pImmutableSamplers = NULL;
+
   if (use_texture) {
-    layout_bindings[1].binding = 1;
-    layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    layout_bindings[1].descriptorCount = 1;
-    layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    layout_bindings[1].pImmutableSamplers = NULL;
+    layout_bindings[2].binding = 2;
+    layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    layout_bindings[2].descriptorCount = 1;
+    layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    layout_bindings[2].pImmutableSamplers = NULL;
   }
 
   /* Next take layout bindings and use them to create a descriptor set layout
@@ -890,7 +897,7 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
   descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   descriptor_layout.pNext = NULL;
   descriptor_layout.flags = descSetLayoutCreateFlags;
-  descriptor_layout.bindingCount = use_texture ? 2 : 1;
+  descriptor_layout.bindingCount = use_texture ? 3 : 2;
   descriptor_layout.pBindings = layout_bindings;
 
   VkResult res;
@@ -1310,9 +1317,8 @@ VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData,
 #define XYZW(X, Y, Z) X, Y, Z, 1.f
 #define RGBA(R, G, B) R, G, B, 1.f
 static const float g_vb_shape_data[] = { // Rectangle
-    XYZW(-0.5f, -0.5f, 0), RGBA(1.f, 0.f, 0.f), XYZW(0.5f, -0.5f, 0), RGBA(1.f, 0.f, 0.f),
-    XYZW(-0.5f, 0.5f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(-0.5f, 0.5f, 0), RGBA(1.f, 0.f, 0.f),
-    XYZW(0.5f, -0.5f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(0.5f, 0.5f, 0),  RGBA(1.f, 0.f, 0.f)};
+    XYZW(-1.f, -1.f, 0), RGBA(1.f, 0.f, 0.f), XYZW(1.f, -1.f, 0), RGBA(1.f, 0.f, 0.f), XYZW(-1.f, 1.f, 0), RGBA(1.f, 0.f, 0.f),
+    XYZW(-1.f, 1.f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(1.f, -1.f, 0), RGBA(1.f, 0.f, 0.f), XYZW(1.f, 1.f, 0),  RGBA(1.f, 0.f, 0.f)};
 
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {
