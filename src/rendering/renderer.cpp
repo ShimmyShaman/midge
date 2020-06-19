@@ -26,7 +26,8 @@ static glsl_shader vertex_shader = {
             "    mat4 mvp;\n"
             "} globalUI;\n"
             "layout (binding = 1) uniform UBO1 {\n"
-            "    vec2 drawOffset;\n"
+            "    vec2 offset;\n"
+            "    vec2 scale;\n"
             "} element;\n"
             "layout (location = 0) in vec4 pos;\n"
             "layout (location = 1) in vec4 inColor;\n"
@@ -34,7 +35,8 @@ static glsl_shader vertex_shader = {
             "void main() {\n"
             "   outColor = inColor;\n"
             "   gl_Position = globalUI.mvp * pos;\n"
-            "   gl_Position.xy += element.drawOffset.xy;"
+            "   gl_Position.xy *= element.scale.xy;\n"
+            "   gl_Position.xy += element.offset.xy;\n"
             "}\n",
     .stage = VK_SHADER_STAGE_VERTEX_BIT,
 };
@@ -76,6 +78,7 @@ extern "C" void *midge_render_thread(void *vargp)
   vkrs.xcb_winfo = &winfo;
 
   glm_vec2_copy((vec2){-0.2, 0.3}, vkrs.ui_element.offset);
+  glm_vec2_copy((vec2){1.f, 1.f}, vkrs.ui_element.scale);
 
   bool depth_present = false;
 
@@ -241,16 +244,17 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
         const VkDeviceSize offsets[1] = {0};
 
         // Convert
-        p_vkrs->ui_element.offset[0] = (float)cmd->x / (float)p_vkrs->window_width;
-        p_vkrs->ui_element.offset[1] = (float)cmd->y / (float)p_vkrs->window_height;
+        p_vkrs->ui_element.offset[0] = -0.5f + (float)cmd->x / (float)p_vkrs->window_width;
+        p_vkrs->ui_element.offset[1] = -0.5f + (float)cmd->y / (float)p_vkrs->window_height;
+        p_vkrs->ui_element.scale[0] = (float)(cmd->width - cmd->x) / (float)p_vkrs->window_height;
+        p_vkrs->ui_element.scale[1] = (float)(cmd->height - cmd->y) / (float)p_vkrs->window_height;
 
         {
           uint8_t *pData;
-          res =
-              vkMapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem, 0, sizeof(p_vkrs->ui_element.offset), 0, (void **)&pData);
+          res = vkMapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem, 0, sizeof(p_vkrs->ui_element), 0, (void **)&pData);
           assert(res == VK_SUCCESS);
 
-          memcpy(pData, &p_vkrs->ui_element.offset, sizeof(p_vkrs->ui_element.offset));
+          memcpy(pData, &p_vkrs->ui_element, sizeof(p_vkrs->ui_element));
 
           vkUnmapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem);
         }

@@ -257,22 +257,22 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[0].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[0].x = 0;
   sequence->render_commands[0].y = 0;
-  sequence->render_commands[0].extent_w = 1024;
-  sequence->render_commands[0].extent_h = 640;
+  sequence->render_commands[0].width = 1024;
+  sequence->render_commands[0].height = 640;
   sequence->render_commands[0].data = (void *)dark_slate_gray;
 
   sequence->render_commands[1].type = RENDER_COMMAND_SAMPLE_CUBE;
   sequence->render_commands[1].x = 0;
   sequence->render_commands[1].y = 0;
-  sequence->render_commands[1].extent_w = 1024;
-  sequence->render_commands[1].extent_h = 640;
+  sequence->render_commands[1].width = 1024;
+  sequence->render_commands[1].height = 640;
   sequence->render_commands[1].data = (void *)&command_hub->global_node->children[0]->data.visual->image;
 
   sequence->render_commands[2].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[2].x = 1024 - 280 - 8;
   sequence->render_commands[2].y = 640 - 40 - 8;
-  sequence->render_commands[2].extent_w = 280;
-  sequence->render_commands[2].extent_h = 40;
+  sequence->render_commands[2].width = 280;
+  sequence->render_commands[2].height = 40;
   sequence->render_commands[2].data = (void *)greenish;
 
   // Add to the render queue

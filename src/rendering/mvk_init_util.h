@@ -144,6 +144,7 @@ typedef struct vk_render_state {
 
   struct {
     vec2 offset;
+    vec2 scale;
   } ui_element;
 
   // HEADLESS IMAGE

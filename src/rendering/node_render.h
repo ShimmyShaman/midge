@@ -65,7 +65,7 @@ typedef struct render_color {
 
 typedef struct render_command {
   render_command_type type;
-  unsigned int x, y, extent_w, extent_h;
+  unsigned int x, y, width, height;
   void *data;
 } render_command;
 
