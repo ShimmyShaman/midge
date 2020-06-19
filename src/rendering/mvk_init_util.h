@@ -6,8 +6,10 @@
 #include <vector>
 
 #define GLM_FORCE_RADIANS
-#include "glm/glm.hpp"
-#include <glm/gtc/matrix_transform.hpp>
+#include <cglm/cglm.h>
+#include <cglm/types-struct.h>
+// #include "glm/glm.hpp"
+// #include <glm/gtc/matrix_transform.hpp>
 
 #include "rendering/xcbwindow.h"
 
@@ -128,11 +130,11 @@ typedef struct vk_render_state {
     vertex_input_description vi_desc;
   } cube_vertices;
 
-  glm::mat4 Projection;
-  glm::mat4 View;
-  glm::mat4 Model;
-  glm::mat4 Clip;
-  glm::mat4 MVP;
+  mat4s Projection;
+  mat4s View;
+  mat4s Model;
+  mat4s Clip;
+  mat4s MVP;
 
   // HEADLESS IMAGE
   struct {

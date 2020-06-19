@@ -797,21 +797,26 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 {
   VkResult res;
   bool pass;
-  float fov = glm::radians(45.0f);
+
+  float fov = glm_rad(45.0f);
+
   if (p_vkrs->window_width > p_vkrs->window_height) {
     fov *= static_cast<float>(p_vkrs->window_height) / static_cast<float>(p_vkrs->window_width);
   }
-  p_vkrs->Projection =
-      glm::perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f);
-  p_vkrs->View = glm::lookAt(glm::vec3(0, 0, -10), // Camera is at (-5,3,-10), in World Space
-                             glm::vec3(0, 0, 0),   // and looks at the origin
-                             glm::vec3(0, -1, 0)   // Head is up (set to 0,-1,0 to look upside-down)
-  );
-  p_vkrs->Model = glm::mat4(1.0f);
-  // Vulkan clip space has inverted Y and half Z.
-  p_vkrs->Clip = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
 
-  p_vkrs->MVP = p_vkrs->Clip * p_vkrs->Projection * p_vkrs->View * p_vkrs->Model;
+  glm_perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f,
+                  (vec4 *)&p_vkrs->Projection);
+  glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)&p_vkrs->View);
+
+  glm_mat4_copy(GLM_MAT4_IDENTITY, (vec4 *)&p_vkrs->Model);
+
+  // Vulkan clip space has inverted Y and half Z.
+  mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
+  glm_mat4_copy(clip, (vec4 *)&p_vkrs->Clip);
+
+  glm_mat4_mul((vec4 *)&p_vkrs->View, (vec4 *)&p_vkrs->Model, (vec4 *)&p_vkrs->MVP);
+  glm_mat4_mul((vec4 *)p_vkrs->Projection.col, (vec4 *)p_vkrs->MVP.col, (vec4 *)p_vkrs->MVP.col);
+  glm_mat4_mul((vec4 *)p_vkrs->Clip.col, (vec4 *)p_vkrs->MVP.col, (vec4 *)p_vkrs->MVP.col);
 
   /* VULKAN_KEY_START */
   VkBufferCreateInfo buf_info = {};

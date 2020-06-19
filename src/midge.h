@@ -92,7 +92,7 @@ void run()
   try {
     // Include Paths
     // clint->AddIncludePath("/usr/include");
-    clint->AddIncludePath("/home/jason/midge/dep/glm");
+    clint->AddIncludePath("/home/jason/midge/dep/cglm/include");
     // clint->AddIncludePath("/home/jason/midge/dep/glslang");
 
     // Libraries
