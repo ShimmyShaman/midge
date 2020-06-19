@@ -53,6 +53,8 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
 
 typedef enum render_command_type {
   RENDER_COMMAND_NONE = 1,
+  RENDER_COMMAND_BACKGROUND_COLOR,
+  RENDER_COMMAND_SAMPLE_CUBE,
   RENDER_COMMAND_COLORED_RECTANGLE,
   RENDER_COMMAND_TEXTURED_RECTANGLE,
 } render_command_type;

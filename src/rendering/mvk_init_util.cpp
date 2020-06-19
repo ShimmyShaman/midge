@@ -519,7 +519,7 @@ VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
 
   VkMemoryRequirements memReqs;
   vkGetImageMemoryRequirements(p_vkrs->device, p_vkrs->headless.image, &memReqs);
-  
+
   VkMemoryAllocateInfo memAlloc = {};
   memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   memAlloc.allocationSize = memReqs.size;
@@ -546,7 +546,8 @@ VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
   return res;
 }
 
-void mvk_destroy_headless_image(vk_render_state *p_vkrs){
+void mvk_destroy_headless_image(vk_render_state *p_vkrs)
+{
 
   vkDestroyImageView(p_vkrs->device, p_vkrs->headless.view, NULL);
   vkDestroyImage(p_vkrs->device, p_vkrs->headless.image, NULL);
@@ -802,7 +803,7 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   }
   p_vkrs->Projection =
       glm::perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f);
-  p_vkrs->View = glm::lookAt(glm::vec3(-5, 3, -10), // Camera is at (-5,3,-10), in World Space
+  p_vkrs->View = glm::lookAt(glm::vec3(0, 0, -10), // Camera is at (-5,3,-10), in World Space
                              glm::vec3(0, 0, 0),    // and looks at the origin
                              glm::vec3(0, -1, 0)    // Head is up (set to 0,-1,0 to look upside-down)
   );
@@ -1248,7 +1249,7 @@ VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth)
   return res;
 }
 
-VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
+VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
                                 bool use_texture)
 {
   VkResult res;
@@ -1263,11 +1264,11 @@ VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData,
   buf_info.pQueueFamilyIndices = NULL;
   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   buf_info.flags = 0;
-  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->vertex_buffer.buf);
+  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->cube_vertices.buf);
   assert(res == VK_SUCCESS);
 
   VkMemoryRequirements mem_reqs;
-  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->vertex_buffer.buf, &mem_reqs);
+  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->cube_vertices.buf, &mem_reqs);
 
   VkMemoryAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -1280,34 +1281,86 @@ VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData,
                                      &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
-  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->vertex_buffer.mem));
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_vertices.mem));
   assert(res == VK_SUCCESS);
-  p_vkrs->vertex_buffer.buffer_info.range = mem_reqs.size;
-  p_vkrs->vertex_buffer.buffer_info.offset = 0;
+  p_vkrs->cube_vertices.buffer_info.range = mem_reqs.size;
+  p_vkrs->cube_vertices.buffer_info.offset = 0;
 
   uint8_t *pData;
-  res = vkMapMemory(p_vkrs->device, p_vkrs->vertex_buffer.mem, 0, mem_reqs.size, 0, (void **)&pData);
+  res = vkMapMemory(p_vkrs->device, p_vkrs->cube_vertices.mem, 0, mem_reqs.size, 0, (void **)&pData);
   assert(res == VK_SUCCESS);
 
   memcpy(pData, vertexData, dataSize);
 
-  vkUnmapMemory(p_vkrs->device, p_vkrs->vertex_buffer.mem);
+  vkUnmapMemory(p_vkrs->device, p_vkrs->cube_vertices.mem);
 
-  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->vertex_buffer.buf, p_vkrs->vertex_buffer.mem, 0);
+  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->cube_vertices.buf, p_vkrs->cube_vertices.mem, 0);
   assert(res == VK_SUCCESS);
 
-  p_vkrs->vi_binding.binding = 0;
-  p_vkrs->vi_binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-  p_vkrs->vi_binding.stride = dataStride;
+  p_vkrs->cube_vertices.vi_desc = p_vkrs->pos_color_vertex_input_description;
 
-  p_vkrs->vi_attribs[0].binding = 0;
-  p_vkrs->vi_attribs[0].location = 0;
-  p_vkrs->vi_attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-  p_vkrs->vi_attribs[0].offset = 0;
-  p_vkrs->vi_attribs[1].binding = 0;
-  p_vkrs->vi_attribs[1].location = 1;
-  p_vkrs->vi_attribs[1].format = use_texture ? VK_FORMAT_R32G32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT;
-  p_vkrs->vi_attribs[1].offset = 16;
+  return res;
+}
+
+#define XYZW(X, Y, Z) X, Y, Z, 1.f
+#define RGBA(R, G, B) R, G, B, 1.f
+static const float g_vb_shape_data[] = { // Rectangle
+    XYZW(-1, -1, -1), RGBA(1.f, 0.f, 0.f), XYZW(1, -1, -1), RGBA(1.f, 0.f, 0.f), XYZW(-1, 1, -1), RGBA(1.f, 0.f, 0.f),
+    XYZW(-1, 1, -1),  RGBA(1.f, 0.f, 0.f), XYZW(1, -1, -1), RGBA(1.f, 0.f, 0.f), XYZW(1, 1, -1),  RGBA(1.f, 0.f, 0.f)};
+
+VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
+{
+  // const void *vertexData, uint32_t dataSize, uint32_t dataStride,
+  //                               bool use_texture;
+
+  const int data_size_in_bytes = sizeof(g_vb_shape_data);
+
+  VkResult res;
+  bool pass;
+
+  VkBufferCreateInfo buf_info = {};
+  buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buf_info.pNext = NULL;
+  buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  buf_info.size = data_size_in_bytes;
+  buf_info.queueFamilyIndexCount = 0;
+  buf_info.pQueueFamilyIndices = NULL;
+  buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  buf_info.flags = 0;
+  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->shape_vertices.buf);
+  assert(res == VK_SUCCESS);
+
+  VkMemoryRequirements mem_reqs;
+  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->shape_vertices.buf, &mem_reqs);
+
+  VkMemoryAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.pNext = NULL;
+  alloc_info.memoryTypeIndex = 0;
+
+  alloc_info.allocationSize = mem_reqs.size;
+  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
+                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                     &alloc_info.memoryTypeIndex);
+  assert(pass && "No mappable, coherent memory");
+
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->shape_vertices.mem));
+  assert(res == VK_SUCCESS);
+  p_vkrs->shape_vertices.buffer_info.range = mem_reqs.size;
+  p_vkrs->shape_vertices.buffer_info.offset = 0;
+
+  uint8_t *pData;
+  res = vkMapMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&pData);
+  assert(res == VK_SUCCESS);
+
+  memcpy(pData, g_vb_shape_data, data_size_in_bytes);
+
+  vkUnmapMemory(p_vkrs->device, p_vkrs->shape_vertices.mem);
+
+  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->shape_vertices.buf, p_vkrs->shape_vertices.mem, 0);
+  assert(res == VK_SUCCESS);
+
+  p_vkrs->shape_vertices.vi_desc = p_vkrs->pos_color_vertex_input_description;
 
   return res;
 }
@@ -1401,6 +1454,21 @@ VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBo
 {
   VkResult res;
 
+  p_vkrs->pos_color_vertex_input_description.binding.binding = 0;
+  p_vkrs->pos_color_vertex_input_description.binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+  p_vkrs->pos_color_vertex_input_description.binding.stride = 8 * sizeof(float);
+
+  p_vkrs->pos_color_vertex_input_description.attribs[0].binding = 0;
+  p_vkrs->pos_color_vertex_input_description.attribs[0].location = 0;
+  p_vkrs->pos_color_vertex_input_description.attribs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+  p_vkrs->pos_color_vertex_input_description.attribs[0].offset = 0;
+
+  p_vkrs->pos_color_vertex_input_description.attribs[1].binding = 0;
+  p_vkrs->pos_color_vertex_input_description.attribs[1].location = 1;
+  p_vkrs->pos_color_vertex_input_description.attribs[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+  // use_texture ? VK_FORMAT_R32G32_SFLOAT : VK_FORMAT_R32G32B32A32_SFLOAT;
+  p_vkrs->pos_color_vertex_input_description.attribs[1].offset = 16;
+
   VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
   VkPipelineDynamicStateCreateInfo dynamicState = {};
   memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
@@ -1416,9 +1484,9 @@ VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBo
     vi.pNext = NULL;
     vi.flags = 0;
     vi.vertexBindingDescriptionCount = 1;
-    vi.pVertexBindingDescriptions = &p_vkrs->vi_binding;
+    vi.pVertexBindingDescriptions = &p_vkrs->pos_color_vertex_input_description.binding;
     vi.vertexAttributeDescriptionCount = 2;
-    vi.pVertexAttributeDescriptions = p_vkrs->vi_attribs;
+    vi.pVertexAttributeDescriptions = p_vkrs->pos_color_vertex_input_description.attribs;
   }
   VkPipelineInputAssemblyStateCreateInfo ia;
   ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -1533,24 +1601,24 @@ VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBo
   return res;
 }
 
-void mvk_init_viewports(vk_render_state *p_vkrs)
+void mvk_init_viewports(vk_render_state *p_vkrs, unsigned int width, unsigned int height)
 {
-  p_vkrs->viewport.height = (float)p_vkrs->window_height;
-  p_vkrs->viewport.width = (float)p_vkrs->window_width;
+  p_vkrs->viewport.width = (float)width;
+  p_vkrs->viewport.height = (float)height;
   p_vkrs->viewport.minDepth = (float)0.0f;
   p_vkrs->viewport.maxDepth = (float)1.0f;
   p_vkrs->viewport.x = 0;
   p_vkrs->viewport.y = 0;
-  vkCmdSetViewport(p_vkrs->cmd, 0, NUM_VIEWPORTS, &p_vkrs->viewport);
+  vkCmdSetViewport(p_vkrs->cmd, 0, 1, &p_vkrs->viewport);
 }
 
-void mvk_init_scissors(vk_render_state *p_vkrs)
+void mvk_init_scissors(vk_render_state *p_vkrs, unsigned int width, unsigned int height)
 {
-  p_vkrs->scissor.extent.width = p_vkrs->window_width;
-  p_vkrs->scissor.extent.height = p_vkrs->window_height;
+  p_vkrs->scissor.extent.width = width;
+  p_vkrs->scissor.extent.height = height;
   p_vkrs->scissor.offset.x = 0;
   p_vkrs->scissor.offset.y = 0;
-  vkCmdSetScissor(p_vkrs->cmd, 0, NUM_SCISSORS, &p_vkrs->scissor);
+  vkCmdSetScissor(p_vkrs->cmd, 0, 1, &p_vkrs->scissor);
 }
 
 void mvk_destroy_pipeline(vk_render_state *p_vkrs) { vkDestroyPipeline(p_vkrs->device, p_vkrs->pipeline, NULL); }
@@ -1559,10 +1627,16 @@ void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs) { vkDestroyPipelineCach
 
 void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs) { vkDestroyDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, NULL); }
 
-void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs)
+void mvk_destroy_shape_vertices(vk_render_state *p_vkrs)
 {
-  vkDestroyBuffer(p_vkrs->device, p_vkrs->vertex_buffer.buf, NULL);
-  vkFreeMemory(p_vkrs->device, p_vkrs->vertex_buffer.mem, NULL);
+  vkDestroyBuffer(p_vkrs->device, p_vkrs->shape_vertices.buf, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, NULL);
+}
+
+void mvk_destroy_cube_vertices(vk_render_state *p_vkrs)
+{
+  vkDestroyBuffer(p_vkrs->device, p_vkrs->cube_vertices.buf, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->cube_vertices.mem, NULL);
 }
 
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs)

@@ -209,14 +209,16 @@ int force_render_update(int argc, void **argv)
 
   // printf("fru-0\n");
 
+  // Command Interface Box
   node_render_sequence *sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
-  sequence->extent_width = 280;
-  sequence->extent_height = 40;
-  sequence->render_target = NODE_RENDER_TARGET_HOST_IMAGE;
-  sequence->render_command_count = 1;
-  sequence->render_commands_allocated = 1;
-  sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
-  sequence->image = (void *)&command_hub->global_node->children[0]->data.visual->image;
+  free(sequence); // TODO
+  // sequence->extent_width = 280;
+  // sequence->extent_height = 40;
+  // sequence->render_target = NODE_RENDER_TARGET_HOST_IMAGE;
+  // sequence->render_command_count = 1;
+  // sequence->render_commands_allocated = 1;
+  // sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
+  // sequence->image = (void *)&command_hub->global_node->children[0]->data.visual->image;
 
   render_color *greenish = (render_color *)malloc(sizeof(render_color));
   greenish->r = 0.88f;
@@ -224,25 +226,25 @@ int force_render_update(int argc, void **argv)
   greenish->b = 0.13f;
   greenish->a = 1.f;
 
-  sequence->render_commands[0].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[0].x = 0;
-  sequence->render_commands[0].y = 0;
-  sequence->render_commands[0].extent_w = 280;
-  sequence->render_commands[0].extent_h = 40;
-  sequence->render_commands[0].data = (void *)greenish;
+  // sequence->render_commands[0].type = RENDER_COMMAND_COLORED_RECTANGLE;
+  // sequence->render_commands[0].x = 0;
+  // sequence->render_commands[0].y = 0;
+  // sequence->render_commands[0].extent_w = 280;
+  // sequence->render_commands[0].extent_h = 40;
+  // sequence->render_commands[0].data = (void *)greenish;
 
-  // Add to the render queue
-  // TODO -- render queue depth key
-  MCcall(append_to_collection(&command_hub->render_queue->items, &command_hub->render_queue->allocated,
-                              &command_hub->render_queue->count, sequence));
+  // // Add to the render queue
+  // // TODO -- render queue depth key
+  // MCcall(append_to_collection(&command_hub->render_queue->items, &command_hub->render_queue->allocated,
+  //                             &command_hub->render_queue->count, sequence));
 
   // For the global node (and whole screen)
   sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
-  sequence->extent_width = 280;
-  sequence->extent_height = 40;
+  sequence->extent_width = 1024;
+  sequence->extent_height = 640;
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
-  sequence->render_command_count = 2;
-  sequence->render_commands_allocated = 2;
+  sequence->render_command_count = 1;
+  sequence->render_commands_allocated = 3;
   sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
   sequence->image = (void *)&command_hub->global_node->data.global_root->image;
 
@@ -259,12 +261,19 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[0].extent_h = 640;
   sequence->render_commands[0].data = (void *)dark_slate_gray;
 
-  sequence->render_commands[1].type = RENDER_COMMAND_TEXTURED_RECTANGLE;
-  sequence->render_commands[1].x = 1024 - 280 - 8;
-  sequence->render_commands[1].y = 640 - 40 - 8;
-  sequence->render_commands[1].extent_w = 280;
-  sequence->render_commands[1].extent_h = 40;
+  sequence->render_commands[1].type = RENDER_COMMAND_SAMPLE_CUBE;
+  sequence->render_commands[1].x = 0;
+  sequence->render_commands[1].y = 0;
+  sequence->render_commands[1].extent_w = 1024;
+  sequence->render_commands[1].extent_h = 640;
   sequence->render_commands[1].data = (void *)&command_hub->global_node->children[0]->data.visual->image;
+
+  sequence->render_commands[2].type = RENDER_COMMAND_COLORED_RECTANGLE;
+  sequence->render_commands[2].x = 1024 - 280 - 8;
+  sequence->render_commands[2].y = 640 - 40 - 8;
+  sequence->render_commands[2].extent_w = 280;
+  sequence->render_commands[2].extent_h = 40;
+  sequence->render_commands[2].data = (void *)greenish;
 
   // Add to the render queue
   // TODO -- render queue depth key

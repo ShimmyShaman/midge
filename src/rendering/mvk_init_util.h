@@ -49,6 +49,11 @@ typedef struct _swap_chain_buffers {
   VkImageView view;
 } swap_chain_buffer;
 
+typedef struct _vertex_input_description {
+  VkVertexInputBindingDescription binding;
+  VkVertexInputAttributeDescription attribs[2];
+} vertex_input_description;
+
 /*
  * A layer can expose extensions, keep track of those
  * extensions here.
@@ -114,13 +119,14 @@ typedef struct vk_render_state {
     VkDescriptorImageInfo image_info;
   } texture_data;
 
+  vertex_input_description pos_color_vertex_input_description;
+
   struct {
     VkBuffer buf;
     VkDeviceMemory mem;
     VkDescriptorBufferInfo buffer_info;
-  } vertex_buffer;
-  VkVertexInputBindingDescription vi_binding;
-  VkVertexInputAttributeDescription vi_attribs[2];
+    vertex_input_description vi_desc;
+  } cube_vertices;
 
   glm::mat4 Projection;
   glm::mat4 View;
@@ -136,6 +142,13 @@ typedef struct vk_render_state {
     VkDeviceMemory memory;
     VkImageView view;
   } headless;
+
+  struct {
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDescriptorBufferInfo buffer_info;
+    vertex_input_description vi_desc;
+  } shape_vertices;
 
   // Buffer for initialization commands
   VkCommandBuffer cmd;
@@ -180,19 +193,21 @@ VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
 VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index);
 VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth);
-VkResult mvk_init_vertex_buffer(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
+VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
                                 bool use_texture);
+VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs);
 VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture);
 VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture);
 VkResult mvk_init_pipeline_cache(vk_render_state *p_vkrs);
 VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBool32 include_vi);
-void mvk_init_viewports(vk_render_state *p_vkrs);
-void mvk_init_scissors(vk_render_state *p_vkrs);
+void mvk_init_viewports(vk_render_state *p_vkrs, unsigned int width, unsigned int height);
+void mvk_init_scissors(vk_render_state *p_vkrs, unsigned int width, unsigned int height);
 
 void mvk_destroy_pipeline(vk_render_state *p_vkrs);
 void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs);
 void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs);
-void mvk_destroy_vertex_buffer(vk_render_state *p_vkrs);
+void mvk_destroy_shape_vertices(vk_render_state *p_vkrs);
+void mvk_destroy_cube_vertices(vk_render_state *p_vkrs);
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs);
 void mvk_destroy_shaders(vk_render_state *p_vkrs);
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs);

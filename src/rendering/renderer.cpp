@@ -98,14 +98,15 @@ extern "C" void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_shader(&vkrs, &vertex_shader, 0));
   MRT_RUN(mvk_init_shader(&vkrs, &fragment_shader, 1));
   MRT_RUN(mvk_init_framebuffers(&vkrs, depth_present));
-  MRT_RUN(mvk_init_vertex_buffer(&vkrs, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
+  MRT_RUN(mvk_init_cube_vertices(&vkrs, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                  sizeof(g_vb_solid_face_colors_Data[0]), false));
+  MRT_RUN(mvk_init_shape_vertices(&vkrs));
   MRT_RUN(mvk_init_descriptor_pool(&vkrs, false));
   MRT_RUN(mvk_init_descriptor_set(&vkrs, false));
   MRT_RUN(mvk_init_pipeline_cache(&vkrs));
   MRT_RUN(mvk_init_pipeline(&vkrs, depth_present, true)); // Maybe false?
 
-  MRT_RUN(draw_cube(&vkrs));
+  // MRT_RUN(draw_cube(&vkrs));
 
   // -- Update
   printf("mvkInitSuccess!\n");
@@ -135,7 +136,8 @@ extern "C" void *midge_render_thread(void *vargp)
   mvk_destroy_pipeline_cache(&vkrs);
   mvk_destroy_descriptor_pool(&vkrs);
   // printf("mrt-4\n");
-  mvk_destroy_vertex_buffer(&vkrs);
+  mvk_destroy_shape_vertices(&vkrs);
+  mvk_destroy_cube_vertices(&vkrs);
   mvk_destroy_framebuffers(&vkrs);
   mvk_destroy_shaders(&vkrs);
   mvk_destroy_renderpass(&vkrs);
@@ -164,20 +166,124 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
 
     node_render_sequence *sequence = render_queue->items[i];
 
-    // if()
+    if (sequence->render_target != NODE_RENDER_TARGET_PRESENT)
+      return VK_ERROR_UNKNOWN;
 
-    // VkRenderPassBeginInfo renderPassBeginInfo;
-    //   renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    //   renderPassBeginInfo.pNext = NULL;
-    //   renderPassBeginInfo.renderPass = p_vkrs->render_pass;
-    //   renderPassBeginInfo.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
-    //   rp_begin.renderArea.offset.x = 0;
-    //   rp_begin.renderArea.offset.y = 0;
-    //   rp_begin.renderArea.extent.width = p_vkrs->window_width;
-    //   rp_begin.renderArea.extent.height = p_vkrs->window_height;
-    //   rp_begin.clearValueCount = 2;
-    //   rp_begin.pClearValues = clear_values;
-    //     sequence->
+    VkClearValue clear_values[2];
+    clear_values[0].color.float32[0] = 0.19f;
+    clear_values[0].color.float32[1] = 0.34f;
+    clear_values[0].color.float32[2] = 0.83f;
+    clear_values[0].color.float32[3] = 1.f;
+    clear_values[1].depthStencil.depth = 1.0f;
+    clear_values[1].depthStencil.stencil = 0;
+
+    VkSemaphore imageAcquiredSemaphore;
+    VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+    imageAcquiredSemaphoreCreateInfo.flags = 0;
+
+    VkResult res = vkCreateSemaphore(p_vkrs->device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
+    assert(res == VK_SUCCESS);
+
+    // Get the index of the next available swapchain image:
+    res = vkAcquireNextImageKHR(p_vkrs->device, p_vkrs->swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
+                                &p_vkrs->current_buffer);
+    // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
+    // return codes
+    assert(res == VK_SUCCESS);
+
+    VkRenderPassBeginInfo rp_begin;
+    rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rp_begin.pNext = NULL;
+    rp_begin.renderPass = p_vkrs->render_pass;
+    rp_begin.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
+    rp_begin.renderArea.offset.x = 0;
+    rp_begin.renderArea.offset.y = 0;
+    rp_begin.renderArea.extent.width = sequence->extent_width;
+    rp_begin.renderArea.extent.height = sequence->extent_height;
+    rp_begin.clearValueCount = 2;
+    rp_begin.pClearValues = clear_values;
+
+    vkCmdBeginRenderPass(p_vkrs->cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+    mvk_init_viewports(p_vkrs, sequence->extent_width - 90, sequence->extent_height);
+    mvk_init_scissors(p_vkrs, sequence->extent_width, sequence->extent_height - 80);
+
+    for (int j = 0; j < sequence->render_command_count; ++j) {
+
+      vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
+      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                              p_vkrs->desc_set.data(), 0, NULL);
+
+      render_command *cmd = &sequence->render_commands[j];
+      switch (cmd->type) {
+      case RENDER_COMMAND_COLORED_RECTANGLE: {
+        const VkDeviceSize offsets[1] = {0};
+
+        vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->shape_vertices.buf, offsets);
+        vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
+
+        // vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->cube_vertices.buf, offsets);
+        // vkCmdDraw(p_vkrs->cmd, 12 * 3, 1, 0, 0);
+      } break;
+
+      default:
+        printf("COULD NOT HANDLE RENDER COMMAND TYPE=%i\n", cmd->type);
+        continue;
+      }
+    }
+
+    vkCmdEndRenderPass(p_vkrs->cmd);
+    res = vkEndCommandBuffer(p_vkrs->cmd);
+    assert(res == VK_SUCCESS);
+
+    VkFenceCreateInfo fenceInfo;
+    VkFence drawFence;
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.pNext = NULL;
+    fenceInfo.flags = 0;
+    vkCreateFence(p_vkrs->device, &fenceInfo, NULL, &drawFence);
+    assert(res == VK_SUCCESS);
+
+    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    VkSubmitInfo submit_info[1] = {};
+    submit_info[0].pNext = NULL;
+    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info[0].waitSemaphoreCount = 1;
+    submit_info[0].pWaitSemaphores = &imageAcquiredSemaphore;
+    submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
+    submit_info[0].commandBufferCount = 1;
+    const VkCommandBuffer cmd_bufs[] = {p_vkrs->cmd};
+    submit_info[0].pCommandBuffers = cmd_bufs;
+    submit_info[0].signalSemaphoreCount = 0;
+    submit_info[0].pSignalSemaphores = NULL;
+
+    /* Queue the command buffer for execution */
+    res = vkQueueSubmit(p_vkrs->graphics_queue, 1, submit_info, drawFence);
+    assert(res == VK_SUCCESS);
+
+    /* Now present the image in the window */
+    VkPresentInfoKHR present;
+    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present.pNext = NULL;
+    present.swapchainCount = 1;
+    present.pSwapchains = &p_vkrs->swap_chain;
+    present.pImageIndices = &p_vkrs->current_buffer;
+    present.pWaitSemaphores = NULL;
+    present.waitSemaphoreCount = 0;
+    present.pResults = NULL;
+
+    /* Make sure command buffer is finished before presenting */
+    do {
+      res = vkWaitForFences(p_vkrs->device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+    } while (res == VK_TIMEOUT);
+    assert(res == VK_SUCCESS);
+
+    res = vkQueuePresentKHR(p_vkrs->present_queue, &present);
+    assert(res == VK_SUCCESS);
+
+    vkDestroySemaphore(p_vkrs->device, imageAcquiredSemaphore, NULL);
+    vkDestroyFence(p_vkrs->device, drawFence, NULL);
   }
 
   return VK_SUCCESS;
@@ -186,10 +292,10 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
 VkResult draw_cube(vk_render_state *p_vkrs)
 {
   VkClearValue clear_values[2];
-  clear_values[0].color.float32[0] = 0.2f;
-  clear_values[0].color.float32[1] = 0.2f;
-  clear_values[0].color.float32[2] = 0.2f;
-  clear_values[0].color.float32[3] = 0.2f;
+  clear_values[0].color.float32[0] = 0.19f;
+  clear_values[0].color.float32[1] = 0.34f;
+  clear_values[0].color.float32[2] = 0.83f;
+  clear_values[0].color.float32[3] = 1.f;
   clear_values[1].depthStencil.depth = 1.0f;
   clear_values[1].depthStencil.stencil = 0;
 
@@ -228,10 +334,10 @@ VkResult draw_cube(vk_render_state *p_vkrs)
                           p_vkrs->desc_set.data(), 0, NULL);
 
   const VkDeviceSize offsets[1] = {0};
-  vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->vertex_buffer.buf, offsets);
+  vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->cube_vertices.buf, offsets);
 
-  mvk_init_viewports(p_vkrs);
-  mvk_init_scissors(p_vkrs);
+  mvk_init_viewports(p_vkrs, p_vkrs->window_width, p_vkrs->window_height);
+  mvk_init_scissors(p_vkrs, p_vkrs->window_width, p_vkrs->window_height);
 
   vkCmdDraw(p_vkrs->cmd, 12 * 3, 1, 0, 0);
   vkCmdEndRenderPass(p_vkrs->cmd);
