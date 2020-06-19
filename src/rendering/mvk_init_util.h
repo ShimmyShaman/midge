@@ -121,7 +121,7 @@ typedef struct vk_render_state {
     VkBuffer buf;
     VkDeviceMemory mem;
     VkDescriptorBufferInfo buffer_info;
-  } offset_data;
+  } ui_element_data;
 
   struct {
     VkDescriptorImageInfo image_info;
@@ -142,7 +142,9 @@ typedef struct vk_render_state {
   mat4s Clip;
   mat4s MVP;
 
-  vec2 render_offset;
+  struct {
+    vec2 offset;
+  } ui_element;
 
   // HEADLESS IMAGE
   struct {

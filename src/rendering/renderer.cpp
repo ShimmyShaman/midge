@@ -75,8 +75,7 @@ extern "C" void *midge_render_thread(void *vargp)
   vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
 
-  vkrs.render_offset[0] = 0.4f;
-  vkrs.render_offset[1] = 0;
+  glm_vec2_copy((vec2){-0.2, 0.3}, vkrs.ui_element.offset);
 
   bool depth_present = false;
 
@@ -224,25 +223,40 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
 
       vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
 
-      // // Binding Descriptor Sets
+      // // // Binding Descriptor Sets
       // int wdsIndex = 0;
-      // VkWriteDescriptorSet *write = &writes[wdsIndex];
-      // writes->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      // writes->pNext = NULL;
-      // writes->dstSet = p_vkrs->desc_set[0];
-      // writes->descriptorCount = 1;
-      // writes->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      // writes->pBufferInfo = &p_vkrs->uniform_data.buffer_info;
-      // writes->dstArrayElement = 0;
-      // writes->dstBinding = 0;
-
-      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
-                              p_vkrs->desc_set.data(), 0, NULL);
+      // VkWriteDescriptorSet &write = writes[wdsIndex];
+      // write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      // write.pNext = NULL;
+      // write.dstSet = p_vkrs->desc_set[0];
+      // write.descriptorCount = 1;
+      // write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      // write.pBufferInfo = &p_vkrs->offset_data.buffer_info;
+      // write.dstArrayElement = 0;
+      // write.dstBinding = 0;
 
       render_command *cmd = &sequence->render_commands[j];
       switch (cmd->type) {
       case RENDER_COMMAND_COLORED_RECTANGLE: {
         const VkDeviceSize offsets[1] = {0};
+
+        // Convert
+        p_vkrs->ui_element.offset[0] = (float)cmd->x / (float)p_vkrs->window_width;
+        p_vkrs->ui_element.offset[1] = (float)cmd->y / (float)p_vkrs->window_height;
+
+        {
+          uint8_t *pData;
+          res =
+              vkMapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem, 0, sizeof(p_vkrs->ui_element.offset), 0, (void **)&pData);
+          assert(res == VK_SUCCESS);
+
+          memcpy(pData, &p_vkrs->ui_element.offset, sizeof(p_vkrs->ui_element.offset));
+
+          vkUnmapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem);
+        }
+
+        vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+                                p_vkrs->desc_set.data(), 0, NULL);
 
         vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->shape_vertices.buf, offsets);
         vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
