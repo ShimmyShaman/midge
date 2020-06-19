@@ -30,7 +30,7 @@ static glsl_shader vertex_shader = {
             "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
             "   outColor = inColor;\n"
-            "   gl_Position = myBufferVals.mvp * pos;\n"
+            "   gl_Position = pos;\n"
             "}\n",
     .stage = VK_SHADER_STAGE_VERTEX_BIT,
 };

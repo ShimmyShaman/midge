@@ -804,8 +804,8 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   p_vkrs->Projection =
       glm::perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f);
   p_vkrs->View = glm::lookAt(glm::vec3(0, 0, -10), // Camera is at (-5,3,-10), in World Space
-                             glm::vec3(0, 0, 0),    // and looks at the origin
-                             glm::vec3(0, -1, 0)    // Head is up (set to 0,-1,0 to look upside-down)
+                             glm::vec3(0, 0, 0),   // and looks at the origin
+                             glm::vec3(0, -1, 0)   // Head is up (set to 0,-1,0 to look upside-down)
   );
   p_vkrs->Model = glm::mat4(1.0f);
   // Vulkan clip space has inverted Y and half Z.
@@ -1305,8 +1305,9 @@ VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData,
 #define XYZW(X, Y, Z) X, Y, Z, 1.f
 #define RGBA(R, G, B) R, G, B, 1.f
 static const float g_vb_shape_data[] = { // Rectangle
-    XYZW(-1, -1, -1), RGBA(1.f, 0.f, 0.f), XYZW(1, -1, -1), RGBA(1.f, 0.f, 0.f), XYZW(-1, 1, -1), RGBA(1.f, 0.f, 0.f),
-    XYZW(-1, 1, -1),  RGBA(1.f, 0.f, 0.f), XYZW(1, -1, -1), RGBA(1.f, 0.f, 0.f), XYZW(1, 1, -1),  RGBA(1.f, 0.f, 0.f)};
+    XYZW(-0.5f, -0.5f, 0), RGBA(1.f, 0.f, 0.f), XYZW(0.5f, -0.5f, 0), RGBA(1.f, 0.f, 0.f),
+    XYZW(-0.5f, 0.5f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(-0.5f, 0.5f, 0), RGBA(1.f, 0.f, 0.f),
+    XYZW(0.5f, -0.5f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(0.5f, 0.5f, 0),  RGBA(1.f, 0.f, 0.f)};
 
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {
