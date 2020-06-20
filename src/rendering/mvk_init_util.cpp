@@ -907,6 +907,49 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   p_vkrs->ui_element_data.buffer_info.offset = 0;
   p_vkrs->ui_element_data.buffer_info.range = sizeof(p_vkrs->ui_element);
 
+  /* VULKAN_KEY_START */
+  buf_info = {};
+  buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buf_info.pNext = NULL;
+  buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+  buf_info.size = sizeof(p_vkrs->ui_element_f.fragment);
+  buf_info.queueFamilyIndexCount = 0;
+  buf_info.pQueueFamilyIndices = NULL;
+  buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  buf_info.flags = 0;
+  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->ui_element_f.fragment_data.buf);
+  assert(res == VK_SUCCESS);
+
+  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.buf, &mem_reqs);
+
+  alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.pNext = NULL;
+  alloc_info.memoryTypeIndex = 0;
+
+  alloc_info.allocationSize = mem_reqs.size;
+  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
+                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                     &alloc_info.memoryTypeIndex);
+  assert(pass && "No mappable, coherent memory");
+
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->ui_element_f.fragment_data.mem));
+  assert(res == VK_SUCCESS);
+
+  res = vkMapMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.mem, 0, mem_reqs.size, 0, (void **)&pData);
+  assert(res == VK_SUCCESS);
+
+  memcpy(pData, &p_vkrs->ui_element_f.fragment, sizeof(p_vkrs->ui_element_f.fragment));
+
+  vkUnmapMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.mem);
+
+  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.buf, p_vkrs->ui_element_f.fragment_data.mem, 0);
+  assert(res == VK_SUCCESS);
+
+  p_vkrs->ui_element_f.fragment_data.buffer_info.buffer = p_vkrs->ui_element_f.fragment_data.buf;
+  p_vkrs->ui_element_f.fragment_data.buffer_info.offset = 0;
+  p_vkrs->ui_element_f.fragment_data.buffer_info.range = sizeof(p_vkrs->ui_element_f.fragment);
+
   return res;
 }
 
@@ -926,13 +969,19 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
   layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
   layout_bindings[1].pImmutableSamplers = NULL;
 
-  if (use_texture) {
-    layout_bindings[2].binding = 2;
-    layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    layout_bindings[2].descriptorCount = 1;
-    layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    layout_bindings[2].pImmutableSamplers = NULL;
-  }
+  layout_bindings[2].binding = 2;
+  layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  layout_bindings[2].descriptorCount = 1;
+  layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  layout_bindings[2].pImmutableSamplers = NULL;
+
+  // if (use_texture) {
+  //   layout_bindings[2].binding = 2;
+  //   layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  //   layout_bindings[2].descriptorCount = 1;
+  //   layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  //   layout_bindings[2].pImmutableSamplers = NULL;
+  // }
 
   /* Next take layout bindings and use them to create a descriptor set layout
    */
@@ -940,7 +989,7 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
   descriptor_layout.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   descriptor_layout.pNext = NULL;
   descriptor_layout.flags = descSetLayoutCreateFlags;
-  descriptor_layout.bindingCount = use_texture ? 3 : 2;
+  descriptor_layout.bindingCount = 3;
   descriptor_layout.pBindings = layout_bindings;
 
   VkResult res;
@@ -1359,10 +1408,10 @@ VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData,
 
 #define XYZW(X, Y, Z) X, Y, Z, 1.f
 #define RGBA(R, G, B) R, G, B, 1.f
+#define WHITE 1.f, 1.f, 1.f, 1.f
 static const float g_vb_shape_data[] = { // Rectangle
-    XYZW(-0.5f, -0.5f, 0), RGBA(1.f, 0.f, 0.f), XYZW(0.5f, -0.5f, 0), RGBA(1.f, 0.f, 0.f),
-    XYZW(-0.5f, 0.5f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(-0.5f, 0.5f, 0), RGBA(1.f, 0.f, 0.f),
-    XYZW(0.5f, -0.5f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(0.5f, 0.5f, 0),  RGBA(1.f, 0.f, 0.f)};
+    XYZW(-0.5f, -0.5f, 0), WHITE, XYZW(0.5f, -0.5f, 0), WHITE, XYZW(-0.5f, 0.5f, 0), WHITE,
+    XYZW(-0.5f, 0.5f, 0),  WHITE, XYZW(0.5f, -0.5f, 0), WHITE, XYZW(0.5f, 0.5f, 0),  WHITE};
 
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {
@@ -1432,17 +1481,19 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture)
   type_count[0].descriptorCount = 1;
   type_count[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   type_count[1].descriptorCount = 1;
+  type_count[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  type_count[2].descriptorCount = 1;
 
-  if (use_texture) {
-    type_count[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    type_count[2].descriptorCount = 1;
-  }
+  // if (use_texture) {
+  //   type_count[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  //   type_count[2].descriptorCount = 1;
+  // }
 
   VkDescriptorPoolCreateInfo descriptor_pool = {};
   descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   descriptor_pool.pNext = NULL;
   descriptor_pool.maxSets = 1;
-  descriptor_pool.poolSizeCount = use_texture ? 3 : 2;
+  descriptor_pool.poolSizeCount = 3;
   descriptor_pool.pPoolSizes = type_count;
 
   res = vkCreateDescriptorPool(p_vkrs->device, &descriptor_pool, NULL, &p_vkrs->desc_pool);
@@ -1489,18 +1540,28 @@ VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture)
   writes[1].dstArrayElement = 0;
   writes[1].dstBinding = 1;
 
-  if (use_texture) {
-    writes[2] = {};
-    writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writes[2].dstSet = p_vkrs->desc_set[0];
-    writes[2].descriptorCount = 1;
-    writes[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writes[2].pImageInfo = &p_vkrs->texture_data.image_info;
-    writes[2].dstArrayElement = 0;
-    writes[2].dstBinding = 2;
-  }
+  writes[2] = {};
+  writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  writes[2].pNext = NULL;
+  writes[2].dstSet = p_vkrs->desc_set[0];
+  writes[2].descriptorCount = 1;
+  writes[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  writes[2].pBufferInfo = &p_vkrs->ui_element_f.fragment_data.buffer_info;
+  writes[2].dstArrayElement = 0;
+  writes[2].dstBinding = 2;
 
-  vkUpdateDescriptorSets(p_vkrs->device, use_texture ? 3 : 2, writes, 0, NULL);
+  // if (use_texture) {
+  //   writes[2] = {};
+  //   writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  //   writes[2].dstSet = p_vkrs->desc_set[0];
+  //   writes[2].descriptorCount = 1;
+  //   writes[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  //   writes[2].pImageInfo = &p_vkrs->texture_data.image_info;
+  //   writes[2].dstArrayElement = 0;
+  //   writes[2].dstBinding = 2;
+  // }
+
+  vkUpdateDescriptorSets(p_vkrs->device, 3, writes, 0, NULL);
   return res;
 }
 
@@ -1729,6 +1790,9 @@ void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
 
   vkDestroyBuffer(p_vkrs->device, p_vkrs->ui_element_data.buf, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->ui_element_data.mem, NULL);
+
+  vkDestroyBuffer(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.buf, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.mem, NULL);
 }
 
 void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs)

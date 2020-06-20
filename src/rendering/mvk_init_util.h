@@ -124,6 +124,22 @@ typedef struct vk_render_state {
   } ui_element_data;
 
   struct {
+    vec2 offset;
+    vec2 scale;
+  } ui_element;
+
+  struct {
+    struct {
+      VkBuffer buf;
+      VkDeviceMemory mem;
+      VkDescriptorBufferInfo buffer_info;
+    } fragment_data;
+    struct {
+      vec4 tint_color;
+    } fragment;
+  } ui_element_f;
+
+  struct {
     VkDescriptorImageInfo image_info;
   } texture_data;
 
@@ -141,11 +157,6 @@ typedef struct vk_render_state {
   mat4s Model;
   mat4s Clip;
   mat4s MVP;
-
-  struct {
-    vec2 offset;
-    vec2 scale;
-  } ui_element;
 
   // HEADLESS IMAGE
   struct {

@@ -45,10 +45,13 @@ static glsl_shader fragment_shader = {
     .text = "#version 400\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
+            "layout (binding = 2) uniform UBO2 {\n"
+            "    vec4 tint;\n"
+            "} element;\n"
             "layout (location = 0) in vec4 color;\n"
             "layout (location = 0) out vec4 outColor;\n"
             "void main() {\n"
-            "   outColor = color;\n"
+            "   outColor = element.tint * color;\n"
             "}\n",
     .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
 };
@@ -79,6 +82,7 @@ extern "C" void *midge_render_thread(void *vargp)
 
   glm_vec2_copy((vec2){-0.2, 0.3}, vkrs.ui_element.offset);
   glm_vec2_copy((vec2){1.f, 1.f}, vkrs.ui_element.scale);
+  glm_vec4_copy((vec4){0.f, 1.0f, 1.f, 1.f}, vkrs.ui_element_f.fragment.tint_color);
 
   bool depth_present = false;
 
@@ -243,15 +247,17 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
       case RENDER_COMMAND_COLORED_RECTANGLE: {
         const VkDeviceSize offsets[1] = {0};
 
-        // Convert
-        p_vkrs->ui_element.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
-        p_vkrs->ui_element.scale[1] = 2.f * cmd->height / (float)p_vkrs->window_height;
-        p_vkrs->ui_element.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(p_vkrs->window_width) +
-                                       1.0f * (float)cmd->width / (float)(p_vkrs->window_width);
-        p_vkrs->ui_element.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(p_vkrs->window_height) +
-                                       1.0f * (float)cmd->height / (float)(p_vkrs->window_height);
-
         {
+          // Vertex Data
+          // Convert
+          p_vkrs->ui_element.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
+          p_vkrs->ui_element.scale[1] = 2.f * cmd->height / (float)p_vkrs->window_height;
+          p_vkrs->ui_element.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(p_vkrs->window_width) +
+                                         1.0f * (float)cmd->width / (float)(p_vkrs->window_width);
+          p_vkrs->ui_element.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(p_vkrs->window_height) +
+                                         1.0f * (float)cmd->height / (float)(p_vkrs->window_height);
+
+          // Buffer Copy
           uint8_t *pData;
           res = vkMapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem, 0, sizeof(p_vkrs->ui_element), 0, (void **)&pData);
           assert(res == VK_SUCCESS);
@@ -260,15 +266,26 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
 
           vkUnmapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem);
         }
+        {
+          // Fragment Data
+          glm_vec4_copy((float *)cmd->data, p_vkrs->ui_element_f.fragment.tint_color);
+
+          // Buffer Copy
+          uint8_t *pData;
+          res = vkMapMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.mem, 0, sizeof(p_vkrs->ui_element_f.fragment), 0,
+                            (void **)&pData);
+          assert(res == VK_SUCCESS);
+
+          memcpy(pData, &p_vkrs->ui_element_f.fragment, sizeof(p_vkrs->ui_element_f.fragment));
+
+          vkUnmapMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.mem);
+        }
 
         vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
                                 p_vkrs->desc_set.data(), 0, NULL);
 
         vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->shape_vertices.buf, offsets);
         vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
-
-        // vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->cube_vertices.buf, offsets);
-        // vkCmdDraw(p_vkrs->cmd, 12 * 3, 1, 0, 0);
       } break;
 
       default:
