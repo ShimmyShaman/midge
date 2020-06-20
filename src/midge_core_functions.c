@@ -255,10 +255,10 @@ int force_render_update(int argc, void **argv)
   dark_slate_gray->a = 1.f;
 
   sequence->render_commands[0].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[0].x = 0;
-  sequence->render_commands[0].y = 0;
-  sequence->render_commands[0].width = 1024;
-  sequence->render_commands[0].height = 640;
+  sequence->render_commands[0].x = 2;
+  sequence->render_commands[0].y = 2;
+  sequence->render_commands[0].width = 1020;
+  sequence->render_commands[0].height = 636;
   sequence->render_commands[0].data = (void *)dark_slate_gray;
 
   sequence->render_commands[1].type = RENDER_COMMAND_SAMPLE_CUBE;

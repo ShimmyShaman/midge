@@ -1360,8 +1360,9 @@ VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData,
 #define XYZW(X, Y, Z) X, Y, Z, 1.f
 #define RGBA(R, G, B) R, G, B, 1.f
 static const float g_vb_shape_data[] = { // Rectangle
-    XYZW(-1.f, -1.f, 0), RGBA(1.f, 0.f, 0.f), XYZW(1.f, -1.f, 0), RGBA(1.f, 0.f, 0.f), XYZW(-1.f, 1.f, 0), RGBA(1.f, 0.f, 0.f),
-    XYZW(-1.f, 1.f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(1.f, -1.f, 0), RGBA(1.f, 0.f, 0.f), XYZW(1.f, 1.f, 0),  RGBA(1.f, 0.f, 0.f)};
+    XYZW(-0.5f, -0.5f, 0), RGBA(1.f, 0.f, 0.f), XYZW(0.5f, -0.5f, 0), RGBA(1.f, 0.f, 0.f),
+    XYZW(-0.5f, 0.5f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(-0.5f, 0.5f, 0), RGBA(1.f, 0.f, 0.f),
+    XYZW(0.5f, -0.5f, 0),  RGBA(1.f, 0.f, 0.f), XYZW(0.5f, 0.5f, 0),  RGBA(1.f, 0.f, 0.f)};
 
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {

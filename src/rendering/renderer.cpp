@@ -244,10 +244,12 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
         const VkDeviceSize offsets[1] = {0};
 
         // Convert
-        p_vkrs->ui_element.offset[0] = -0.5f + (float)cmd->x / (float)p_vkrs->window_width;
-        p_vkrs->ui_element.offset[1] = -0.5f + (float)cmd->y / (float)p_vkrs->window_height;
-        p_vkrs->ui_element.scale[0] = (float)(cmd->width - cmd->x) / (float)p_vkrs->window_height;
-        p_vkrs->ui_element.scale[1] = (float)(cmd->height - cmd->y) / (float)p_vkrs->window_height;
+        p_vkrs->ui_element.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
+        p_vkrs->ui_element.scale[1] = 2.f * cmd->height / (float)p_vkrs->window_height;
+        p_vkrs->ui_element.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(p_vkrs->window_width) +
+                                       1.0f * (float)cmd->width / (float)(p_vkrs->window_width);
+        p_vkrs->ui_element.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(p_vkrs->window_height) +
+                                       1.0f * (float)cmd->height / (float)(p_vkrs->window_height);
 
         {
           uint8_t *pData;
