@@ -221,9 +221,9 @@ int force_render_update(int argc, void **argv)
   // sequence->image = (void *)&command_hub->global_node->children[0]->data.visual->image;
 
   render_color *greenish = (render_color *)malloc(sizeof(render_color));
-  greenish->r = 0.88f;
-  greenish->g = 0.24f;
-  greenish->b = 0.13f;
+  greenish->r = 0.11f;
+  greenish->g = 0.55f;
+  greenish->b = 0.32f;
   greenish->a = 1.f;
 
   // sequence->render_commands[0].type = RENDER_COMMAND_COLORED_RECTANGLE;
@@ -254,26 +254,27 @@ int force_render_update(int argc, void **argv)
   dark_slate_gray->b = 0.31f;
   dark_slate_gray->a = 1.f;
 
-  sequence->render_commands[0].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[0].x = 2;
-  sequence->render_commands[0].y = 2;
-  sequence->render_commands[0].width = 1020;
-  sequence->render_commands[0].height = 636;
-  sequence->render_commands[0].data = (void *)dark_slate_gray;
+  int rci = 0;
+  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
+  sequence->render_commands[rci].x = 2;
+  sequence->render_commands[rci].y = 2;
+  sequence->render_commands[rci].width = 1020;
+  sequence->render_commands[rci].height = 636;
+  sequence->render_commands[rci++].data = (void *)dark_slate_gray;
 
-  sequence->render_commands[1].type = RENDER_COMMAND_SAMPLE_CUBE;
-  sequence->render_commands[1].x = 0;
-  sequence->render_commands[1].y = 0;
-  sequence->render_commands[1].width = 1024;
-  sequence->render_commands[1].height = 640;
-  sequence->render_commands[1].data = (void *)&command_hub->global_node->children[0]->data.visual->image;
+  // sequence->render_commands[rci].type = RENDER_COMMAND_SAMPLE_CUBE;
+  // sequence->render_commands[rci].x = 0;
+  // sequence->render_commands[rci].y = 0;
+  // sequence->render_commands[rci].width = 1024;
+  // sequence->render_commands[rci].height = 640;
+  // sequence->render_commands[rci++].data = NULL;
 
-  sequence->render_commands[2].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[2].x = 1024 - 280 - 8;
-  sequence->render_commands[2].y = 640 - 40 - 8;
-  sequence->render_commands[2].width = 280;
-  sequence->render_commands[2].height = 40;
-  sequence->render_commands[2].data = (void *)greenish;
+  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
+  sequence->render_commands[rci].x = 1024 - 280 - 8;
+  sequence->render_commands[rci].y = 640 - 40 - 8;
+  sequence->render_commands[rci].width = 280;
+  sequence->render_commands[rci].height = 40;
+  sequence->render_commands[rci++].data = (void *)greenish;
 
   // Add to the render queue
   // TODO -- render queue depth key

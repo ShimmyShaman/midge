@@ -42,6 +42,26 @@ struct glsl_shader {
   VkShaderStageFlagBits stage;
 };
 
+typedef struct queued_copy_info {
+  void *p_source;
+  VkDeviceSize dest_offset;
+  size_t size_in_bytes;
+} queued_copy_info;
+
+typedef struct coloured_rect_draw_data {
+  struct {
+    // Vertex Fields
+    vec2 offset;
+    vec2 scale;
+  } vert;
+
+  struct {
+    // Fragment Fields
+    vec4 tint_color;
+  } frag;
+
+} coloured_rect_draw_data;
+
 /*
  * Keep each of our swap chain buffers' image, command buffer and view in one
  * spot
@@ -101,6 +121,21 @@ typedef struct vk_render_state {
   std::vector<swap_chain_buffer> buffers;
   // VkSemaphore imageAcquiredSemaphore;
 
+  struct {
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+    VkDescriptorBufferInfo buffer_info;
+    VkDeviceSize frame_utilized_amount;
+
+    unsigned int queued_copies_alloc;
+    unsigned int queued_copies_count;
+    queued_copy_info *queued_copies;
+  } render_data_buffer;
+
+  unsigned int descriptor_sets_count;
+  unsigned int descriptor_sets_allocated;
+  VkDescriptorSet *descriptor_sets;
+
   VkCommandPool cmd_pool;
 
   struct {
@@ -115,29 +150,11 @@ typedef struct vk_render_state {
     VkBuffer buf;
     VkDeviceMemory mem;
     VkDescriptorBufferInfo buffer_info;
-  } uniform_data;
+  } global_vert_uniform_buffer;
 
-  struct {
-    VkBuffer buf;
-    VkDeviceMemory mem;
-    VkDescriptorBufferInfo buffer_info;
-  } ui_element_data;
-
-  struct {
-    vec2 offset;
-    vec2 scale;
-  } ui_element;
-
-  struct {
-    struct {
-      VkBuffer buf;
-      VkDeviceMemory mem;
-      VkDescriptorBufferInfo buffer_info;
-    } fragment_data;
-    struct {
-      vec4 tint_color;
-    } fragment;
-  } ui_element_f;
+  unsigned int ui_elements_allocated;
+  unsigned int ui_element_index;
+  coloured_rect_draw_data *ui_elements;
 
   struct {
     VkDescriptorImageInfo image_info;

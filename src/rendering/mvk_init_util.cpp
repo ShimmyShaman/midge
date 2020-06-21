@@ -829,11 +829,11 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   buf_info.pQueueFamilyIndices = NULL;
   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   buf_info.flags = 0;
-  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->uniform_data.buf);
+  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->global_vert_uniform_buffer.buf);
   assert(res == VK_SUCCESS);
 
   VkMemoryRequirements mem_reqs;
-  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->uniform_data.buf, &mem_reqs);
+  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, &mem_reqs);
 
   VkMemoryAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -846,38 +846,39 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
                                      &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
-  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->uniform_data.mem));
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->global_vert_uniform_buffer.mem));
   assert(res == VK_SUCCESS);
 
   uint8_t *pData;
-  res = vkMapMemory(p_vkrs->device, p_vkrs->uniform_data.mem, 0, mem_reqs.size, 0, (void **)&pData);
+  res = vkMapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, 0, mem_reqs.size, 0, (void **)&pData);
   assert(res == VK_SUCCESS);
 
   memcpy(pData, &p_vkrs->MVP, sizeof(p_vkrs->MVP));
 
-  vkUnmapMemory(p_vkrs->device, p_vkrs->uniform_data.mem);
+  vkUnmapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem);
 
-  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->uniform_data.buf, p_vkrs->uniform_data.mem, 0);
+  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, p_vkrs->global_vert_uniform_buffer.mem, 0);
   assert(res == VK_SUCCESS);
 
-  p_vkrs->uniform_data.buffer_info.buffer = p_vkrs->uniform_data.buf;
-  p_vkrs->uniform_data.buffer_info.offset = 0;
-  p_vkrs->uniform_data.buffer_info.range = sizeof(p_vkrs->MVP);
+  p_vkrs->global_vert_uniform_buffer.buffer_info.buffer = p_vkrs->global_vert_uniform_buffer.buf;
+  p_vkrs->global_vert_uniform_buffer.buffer_info.offset = 0;
+  p_vkrs->global_vert_uniform_buffer.buffer_info.range = sizeof(p_vkrs->MVP);
 
-  /* VULKAN_KEY_START */
+  /* SHARED BUFFER */
+  const VkDeviceSize RENDER_DATA_BUFFER_ALLOCATED_SIZE = 8192;
   buf_info = {};
   buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   buf_info.pNext = NULL;
   buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-  buf_info.size = sizeof(p_vkrs->ui_element);
+  buf_info.size = RENDER_DATA_BUFFER_ALLOCATED_SIZE;
   buf_info.queueFamilyIndexCount = 0;
   buf_info.pQueueFamilyIndices = NULL;
   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   buf_info.flags = 0;
-  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->ui_element_data.buf);
+  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->render_data_buffer.buffer);
   assert(res == VK_SUCCESS);
 
-  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->ui_element_data.buf, &mem_reqs);
+  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->render_data_buffer.buffer, &mem_reqs);
 
   alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -890,65 +891,20 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
                                      &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
-  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->ui_element_data.mem));
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->render_data_buffer.memory));
   assert(res == VK_SUCCESS);
 
-  res = vkMapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem, 0, mem_reqs.size, 0, (void **)&pData);
+  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->render_data_buffer.buffer, p_vkrs->render_data_buffer.memory, 0);
   assert(res == VK_SUCCESS);
 
-  memcpy(pData, &p_vkrs->ui_element, sizeof(p_vkrs->ui_element));
+  p_vkrs->render_data_buffer.buffer_info.buffer = p_vkrs->render_data_buffer.buffer;
+  p_vkrs->render_data_buffer.buffer_info.offset = 0;
+  p_vkrs->render_data_buffer.buffer_info.range = RENDER_DATA_BUFFER_ALLOCATED_SIZE;
 
-  vkUnmapMemory(p_vkrs->device, p_vkrs->ui_element_data.mem);
-
-  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->ui_element_data.buf, p_vkrs->ui_element_data.mem, 0);
-  assert(res == VK_SUCCESS);
-
-  p_vkrs->ui_element_data.buffer_info.buffer = p_vkrs->ui_element_data.buf;
-  p_vkrs->ui_element_data.buffer_info.offset = 0;
-  p_vkrs->ui_element_data.buffer_info.range = sizeof(p_vkrs->ui_element);
-
-  /* VULKAN_KEY_START */
-  buf_info = {};
-  buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  buf_info.pNext = NULL;
-  buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-  buf_info.size = sizeof(p_vkrs->ui_element_f.fragment);
-  buf_info.queueFamilyIndexCount = 0;
-  buf_info.pQueueFamilyIndices = NULL;
-  buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  buf_info.flags = 0;
-  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->ui_element_f.fragment_data.buf);
-  assert(res == VK_SUCCESS);
-
-  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.buf, &mem_reqs);
-
-  alloc_info = {};
-  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  alloc_info.pNext = NULL;
-  alloc_info.memoryTypeIndex = 0;
-
-  alloc_info.allocationSize = mem_reqs.size;
-  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                     &alloc_info.memoryTypeIndex);
-  assert(pass && "No mappable, coherent memory");
-
-  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->ui_element_f.fragment_data.mem));
-  assert(res == VK_SUCCESS);
-
-  res = vkMapMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.mem, 0, mem_reqs.size, 0, (void **)&pData);
-  assert(res == VK_SUCCESS);
-
-  memcpy(pData, &p_vkrs->ui_element_f.fragment, sizeof(p_vkrs->ui_element_f.fragment));
-
-  vkUnmapMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.mem);
-
-  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.buf, p_vkrs->ui_element_f.fragment_data.mem, 0);
-  assert(res == VK_SUCCESS);
-
-  p_vkrs->ui_element_f.fragment_data.buffer_info.buffer = p_vkrs->ui_element_f.fragment_data.buf;
-  p_vkrs->ui_element_f.fragment_data.buffer_info.offset = 0;
-  p_vkrs->ui_element_f.fragment_data.buffer_info.range = sizeof(p_vkrs->ui_element_f.fragment);
+  p_vkrs->render_data_buffer.queued_copies_alloc = 256U;
+  p_vkrs->render_data_buffer.queued_copies_count = 0U;
+  p_vkrs->render_data_buffer.queued_copies =
+      (queued_copy_info *)malloc(sizeof(queued_copy_info) * p_vkrs->render_data_buffer.queued_copies_alloc);
 
   return res;
 }
@@ -1518,37 +1474,42 @@ VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture)
   res = vkAllocateDescriptorSets(p_vkrs->device, alloc_info, p_vkrs->desc_set.data());
   assert(res == VK_SUCCESS);
 
-  VkWriteDescriptorSet writes[3];
+  // p_vkrs->descriptor_sets_allocated = 16;
+  //   p_vkrs->descriptor_sets.resize(p_vkrs->descriptor_sets_allocated);
+  //   res = vkAllocateDescriptorSets(p_vkrs->device, alloc_info, p_vkrs->desc_set.data());
+  //   assert(res == VK_SUCCESS);
 
-  writes[0] = {};
-  writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  writes[0].pNext = NULL;
-  writes[0].dstSet = p_vkrs->desc_set[0];
-  writes[0].descriptorCount = 1;
-  writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  writes[0].pBufferInfo = &p_vkrs->uniform_data.buffer_info;
-  writes[0].dstArrayElement = 0;
-  writes[0].dstBinding = 0;
+  // VkWriteDescriptorSet writes[3];
 
-  writes[1] = {};
-  writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  writes[1].pNext = NULL;
-  writes[1].dstSet = p_vkrs->desc_set[0];
-  writes[1].descriptorCount = 1;
-  writes[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  writes[1].pBufferInfo = &p_vkrs->ui_element_data.buffer_info;
-  writes[1].dstArrayElement = 0;
-  writes[1].dstBinding = 1;
+  // writes[0] = {};
+  // writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  // writes[0].pNext = NULL;
+  // writes[0].dstSet = p_vkrs->desc_set[0];
+  // writes[0].descriptorCount = 1;
+  // writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  // writes[0].pBufferInfo = &p_vkrs->global_vert_uniform_buffer.buffer_info;
+  // writes[0].dstArrayElement = 0;
+  // writes[0].dstBinding = 0;
 
-  writes[2] = {};
-  writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  writes[2].pNext = NULL;
-  writes[2].dstSet = p_vkrs->desc_set[0];
-  writes[2].descriptorCount = 1;
-  writes[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  writes[2].pBufferInfo = &p_vkrs->ui_element_f.fragment_data.buffer_info;
-  writes[2].dstArrayElement = 0;
-  writes[2].dstBinding = 2;
+  // writes[1] = {};
+  // writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  // writes[1].pNext = NULL;
+  // writes[1].dstSet = p_vkrs->desc_set[0];
+  // writes[1].descriptorCount = 1;
+  // writes[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  // writes[1].pBufferInfo = &p_vkrs->ui_element_data.buffer_info;
+  // writes[1].dstArrayElement = 0;
+  // writes[1].dstBinding = 1;
+
+  // writes[2] = {};
+  // writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  // writes[2].pNext = NULL;
+  // writes[2].dstSet = p_vkrs->desc_set[0];
+  // writes[2].descriptorCount = 1;
+  // writes[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  // writes[2].pBufferInfo = &p_vkrs->ui_element_f.fragment_data.buffer_info;
+  // writes[2].dstArrayElement = 0;
+  // writes[2].dstBinding = 2;
 
   // if (use_texture) {
   //   writes[2] = {};
@@ -1561,7 +1522,7 @@ VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture)
   //   writes[2].dstBinding = 2;
   // }
 
-  vkUpdateDescriptorSets(p_vkrs->device, 3, writes, 0, NULL);
+  // vkUpdateDescriptorSets(p_vkrs->device, 3, writes, 0, NULL);
   return res;
 }
 
@@ -1645,18 +1606,19 @@ VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBo
   cb.flags = 0;
   cb.pNext = NULL;
   VkPipelineColorBlendAttachmentState att_state[1];
-  att_state[0].colorWriteMask = 0xf;
-  att_state[0].blendEnable = VK_FALSE;
-  att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
+  att_state[0].colorWriteMask =
+      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+  att_state[0].blendEnable = VK_TRUE;
+  att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+  att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
   att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
-  att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-  att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-  att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+  att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
   att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+  att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
   cb.attachmentCount = 1;
   cb.pAttachments = att_state;
   cb.logicOpEnable = VK_FALSE;
-  cb.logicOp = VK_LOGIC_OP_NO_OP;
+  cb.logicOp = VK_LOGIC_OP_COPY;
   cb.blendConstants[0] = 1.0f;
   cb.blendConstants[1] = 1.0f;
   cb.blendConstants[2] = 1.0f;
@@ -1785,14 +1747,11 @@ void mvk_destroy_shaders(vk_render_state *p_vkrs)
 
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
 {
-  vkDestroyBuffer(p_vkrs->device, p_vkrs->uniform_data.buf, NULL);
-  vkFreeMemory(p_vkrs->device, p_vkrs->uniform_data.mem, NULL);
+  vkDestroyBuffer(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, NULL);
 
-  vkDestroyBuffer(p_vkrs->device, p_vkrs->ui_element_data.buf, NULL);
-  vkFreeMemory(p_vkrs->device, p_vkrs->ui_element_data.mem, NULL);
-
-  vkDestroyBuffer(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.buf, NULL);
-  vkFreeMemory(p_vkrs->device, p_vkrs->ui_element_f.fragment_data.mem, NULL);
+  vkDestroyBuffer(p_vkrs->device, p_vkrs->render_data_buffer.buffer, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, NULL);
 }
 
 void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs)
