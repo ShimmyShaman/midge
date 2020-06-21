@@ -179,6 +179,9 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
 
     node_render_sequence *sequence = render_queue->items[i];
 
+    if (sequence->render_command_count < 1) {
+      return VK_ERROR_UNKNOWN;
+    }
     if (sequence->render_target != NODE_RENDER_TARGET_PRESENT)
       return VK_ERROR_UNKNOWN;
 
@@ -206,16 +209,20 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
     // return codes
     assert(res == VK_SUCCESS);
 
-    // TODO
-    const VkDeviceSize MINIMUM_UBO_ALLOCATION_TODO = 64U;
-
     // Reset State
     const unsigned int MAX_DESC_SET_WRITES = 32;
     VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
     VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
+
+    res = vkResetDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, 0);
+    assert(res == VK_SUCCESS);
+    p_vkrs->descriptor_sets_count = 0U;
+
     // // Binding Descriptor Sets
     int write_index = 0, buffer_info_index = 0;
-    p_vkrs->descriptor_sets_count = 0;
+
+    p_vkrs->render_data_buffer.frame_utilized_amount = 0;
+    p_vkrs->render_data_buffer.queued_copies_count = 0U;
 
     // Begin Command Buffer Recording
     // VkCommandBufferBeginInfo beginInfo{};
@@ -259,16 +266,14 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
         glm_vec4_copy((float *)cmd->data, rect_draw_data.frag.tint_color);
 
         // Descriptor writes to point to buffer data
-        VkDescriptorSet desc_set = p_vkrs->desc_set[0]; // p_vkrs->descriptor_sets[p_vkrs->descriptor_sets_count++];
+        // VkDescriptorSet desc_set = p_vkrs->desc_set[0]; // p_vkrs->descriptor_sets[p_vkrs->descriptor_sets_count++];
 
         // Queue Buffer Write
         // TODO -- refactor this
-        VkDescriptorBufferInfo element_vert_buffer_info;
-
-        element_vert_buffer_info = buffer_infos[buffer_info_index++];
-        element_vert_buffer_info.buffer = p_vkrs->render_data_buffer.buffer;
-        element_vert_buffer_info.offset = p_vkrs->render_data_buffer.frame_utilized_amount;
-        element_vert_buffer_info.range = sizeof(rect_draw_data.vert);
+        VkDescriptorBufferInfo *element_vert_buffer_info = &buffer_infos[buffer_info_index++];
+        element_vert_buffer_info->buffer = p_vkrs->render_data_buffer.buffer;
+        element_vert_buffer_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
+        element_vert_buffer_info->range = sizeof(rect_draw_data.vert);
 
         p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = &rect_draw_data.vert;
         p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
@@ -276,20 +281,42 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
         p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
             sizeof(rect_draw_data.vert);
         p_vkrs->render_data_buffer.frame_utilized_amount +=
-            ((element_vert_buffer_info.range / MINIMUM_UBO_ALLOCATION_TODO) + 1UL) * 64UL;
+            ((element_vert_buffer_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
+            p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
 
-        VkDescriptorBufferInfo fragment_buffer_info;
+        VkDescriptorBufferInfo *fragment_buffer_info = &buffer_infos[buffer_info_index++];
+        fragment_buffer_info->buffer = p_vkrs->render_data_buffer.buffer;
+        fragment_buffer_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
+        fragment_buffer_info->range = sizeof(rect_draw_data.frag);
 
-        fragment_buffer_info = buffer_infos[buffer_info_index++];
-        fragment_buffer_info.buffer = p_vkrs->render_data_buffer.buffer;
-        fragment_buffer_info.offset = p_vkrs->render_data_buffer.frame_utilized_amount;
-        fragment_buffer_info.range = sizeof(rect_draw_data.frag);
-
-        p_vkrs->render_data_buffer.frame_utilized_amount +=
-            ((fragment_buffer_info.range / MINIMUM_UBO_ALLOCATION_TODO) + 1UL) * 64UL;
         p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = &rect_draw_data.frag;
+        p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
+            p_vkrs->render_data_buffer.frame_utilized_amount;
         p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
             sizeof(rect_draw_data.frag);
+        p_vkrs->render_data_buffer.frame_utilized_amount +=
+            ((fragment_buffer_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
+            p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
+
+            // TODO -- divide here and redo the iteration in two parts with buffer copy between
+
+        // Allocate the descriptor set from the pool.
+        VkDescriptorSetAllocateInfo setAllocInfo = {};
+        setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        setAllocInfo.pNext = NULL;
+        // Use the pool we created earlier ( the one dedicated to this frame )
+        setAllocInfo.descriptorPool = p_vkrs->desc_pool;
+        // We only need to allocate one
+        setAllocInfo.descriptorSetCount = 1;
+        setAllocInfo.pSetLayouts = p_vkrs->desc_layout.data();
+
+        unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
+        printf("referencing %i\n", descriptor_set_index);
+        res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
+        assert(res == VK_SUCCESS);
+
+        VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
+        p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
 
         // Global Vertex Shader Uniform Buffer
         VkWriteDescriptorSet *write = &writes[write_index++];
@@ -309,7 +336,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
         write->dstSet = desc_set;
         write->descriptorCount = 1;
         write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        write->pBufferInfo = &element_vert_buffer_info;
+        write->pBufferInfo = element_vert_buffer_info;
         write->dstArrayElement = 0;
         write->dstBinding = 1;
 
@@ -320,11 +347,11 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
         write->dstSet = desc_set;
         write->descriptorCount = 1;
         write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        write->pBufferInfo = &fragment_buffer_info;
+        write->pBufferInfo = fragment_buffer_info;
         write->dstArrayElement = 0;
         write->dstBinding = 2;
 
-        printf("%i write->sType:%i\n", write_index, writes[2].sType);
+        // printf("%i write->sType:%i\n", p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment, writes[2].sType);
 
         vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
@@ -350,8 +377,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
           vkCmdSetScissor(p_vkrs->cmd, 0, 1, &scissor);
         }
 
-        vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, 1,
-                                p_vkrs->desc_set.data(), 0, NULL);
+        vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0,
+                                setAllocInfo.descriptorSetCount, &p_vkrs->descriptor_sets[descriptor_set_index], 0, NULL);
 
         vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
 
@@ -440,111 +467,112 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
 
 VkResult draw_cube(vk_render_state *p_vkrs)
 {
-  VkClearValue clear_values[2];
-  clear_values[0].color.float32[0] = 0.19f;
-  clear_values[0].color.float32[1] = 0.34f;
-  clear_values[0].color.float32[2] = 0.83f;
-  clear_values[0].color.float32[3] = 1.f;
-  clear_values[1].depthStencil.depth = 1.0f;
-  clear_values[1].depthStencil.stencil = 0;
+  VkResult res = VK_SUCCESS;
+  // VkClearValue clear_values[2];
+  // clear_values[0].color.float32[0] = 0.19f;
+  // clear_values[0].color.float32[1] = 0.34f;
+  // clear_values[0].color.float32[2] = 0.83f;
+  // clear_values[0].color.float32[3] = 1.f;
+  // clear_values[1].depthStencil.depth = 1.0f;
+  // clear_values[1].depthStencil.stencil = 0;
 
-  VkSemaphore imageAcquiredSemaphore;
-  VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-  imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  imageAcquiredSemaphoreCreateInfo.pNext = NULL;
-  imageAcquiredSemaphoreCreateInfo.flags = 0;
+  // VkSemaphore imageAcquiredSemaphore;
+  // VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
+  // imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  // imageAcquiredSemaphoreCreateInfo.pNext = NULL;
+  // imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-  VkResult res = vkCreateSemaphore(p_vkrs->device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
-  assert(res == VK_SUCCESS);
+  // VkResult res = vkCreateSemaphore(p_vkrs->device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
+  // assert(res == VK_SUCCESS);
 
-  // Get the index of the next available swapchain image:
-  res = vkAcquireNextImageKHR(p_vkrs->device, p_vkrs->swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
-                              &p_vkrs->current_buffer);
-  // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
-  // return codes
-  assert(res == VK_SUCCESS);
+  // // Get the index of the next available swapchain image:
+  // res = vkAcquireNextImageKHR(p_vkrs->device, p_vkrs->swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
+  //                             &p_vkrs->current_buffer);
+  // // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
+  // // return codes
+  // assert(res == VK_SUCCESS);
 
-  VkRenderPassBeginInfo rp_begin;
-  rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  rp_begin.pNext = NULL;
-  rp_begin.renderPass = p_vkrs->render_pass;
-  rp_begin.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
-  rp_begin.renderArea.offset.x = 0;
-  rp_begin.renderArea.offset.y = 0;
-  rp_begin.renderArea.extent.width = p_vkrs->window_width;
-  rp_begin.renderArea.extent.height = p_vkrs->window_height;
-  rp_begin.clearValueCount = 2;
-  rp_begin.pClearValues = clear_values;
+  // VkRenderPassBeginInfo rp_begin;
+  // rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  // rp_begin.pNext = NULL;
+  // rp_begin.renderPass = p_vkrs->render_pass;
+  // rp_begin.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
+  // rp_begin.renderArea.offset.x = 0;
+  // rp_begin.renderArea.offset.y = 0;
+  // rp_begin.renderArea.extent.width = p_vkrs->window_width;
+  // rp_begin.renderArea.extent.height = p_vkrs->window_height;
+  // rp_begin.clearValueCount = 2;
+  // rp_begin.pClearValues = clear_values;
 
-  vkCmdBeginRenderPass(p_vkrs->cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+  // vkCmdBeginRenderPass(p_vkrs->cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-  vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
-  vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
-                          p_vkrs->desc_set.data(), 0, NULL);
+  // vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
+  // vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+  //                         p_vkrs->desc_set.data(), 0, NULL);
 
-  const VkDeviceSize offsets[1] = {0};
-  vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->cube_vertices.buf, offsets);
+  // const VkDeviceSize offsets[1] = {0};
+  // vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->cube_vertices.buf, offsets);
 
-  mvk_init_viewports(p_vkrs, p_vkrs->window_width, p_vkrs->window_height);
-  mvk_init_scissors(p_vkrs, p_vkrs->window_width, p_vkrs->window_height);
+  // mvk_init_viewports(p_vkrs, p_vkrs->window_width, p_vkrs->window_height);
+  // mvk_init_scissors(p_vkrs, p_vkrs->window_width, p_vkrs->window_height);
 
-  vkCmdDraw(p_vkrs->cmd, 12 * 3, 1, 0, 0);
-  vkCmdEndRenderPass(p_vkrs->cmd);
-  res = vkEndCommandBuffer(p_vkrs->cmd);
-  const VkCommandBuffer cmd_bufs[] = {p_vkrs->cmd};
-  VkFenceCreateInfo fenceInfo;
-  VkFence drawFence;
-  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  fenceInfo.pNext = NULL;
-  fenceInfo.flags = 0;
-  vkCreateFence(p_vkrs->device, &fenceInfo, NULL, &drawFence);
+  // vkCmdDraw(p_vkrs->cmd, 12 * 3, 1, 0, 0);
+  // vkCmdEndRenderPass(p_vkrs->cmd);
+  // res = vkEndCommandBuffer(p_vkrs->cmd);
+  // const VkCommandBuffer cmd_bufs[] = {p_vkrs->cmd};
+  // VkFenceCreateInfo fenceInfo;
+  // VkFence drawFence;
+  // fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  // fenceInfo.pNext = NULL;
+  // fenceInfo.flags = 0;
+  // vkCreateFence(p_vkrs->device, &fenceInfo, NULL, &drawFence);
 
-  VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  VkSubmitInfo submit_info[1] = {};
-  submit_info[0].pNext = NULL;
-  submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submit_info[0].waitSemaphoreCount = 1;
-  submit_info[0].pWaitSemaphores = &imageAcquiredSemaphore;
-  submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
-  submit_info[0].commandBufferCount = 1;
-  submit_info[0].pCommandBuffers = cmd_bufs;
-  submit_info[0].signalSemaphoreCount = 0;
-  submit_info[0].pSignalSemaphores = NULL;
+  // VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  // VkSubmitInfo submit_info[1] = {};
+  // submit_info[0].pNext = NULL;
+  // submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  // submit_info[0].waitSemaphoreCount = 1;
+  // submit_info[0].pWaitSemaphores = &imageAcquiredSemaphore;
+  // submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
+  // submit_info[0].commandBufferCount = 1;
+  // submit_info[0].pCommandBuffers = cmd_bufs;
+  // submit_info[0].signalSemaphoreCount = 0;
+  // submit_info[0].pSignalSemaphores = NULL;
 
-  /* Queue the command buffer for execution */
-  res = vkQueueSubmit(p_vkrs->graphics_queue, 1, submit_info, drawFence);
-  assert(res == VK_SUCCESS);
+  // /* Queue the command buffer for execution */
+  // res = vkQueueSubmit(p_vkrs->graphics_queue, 1, submit_info, drawFence);
+  // assert(res == VK_SUCCESS);
 
-  /* Now present the image in the window */
+  // /* Now present the image in the window */
 
-  VkPresentInfoKHR present;
-  present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-  present.pNext = NULL;
-  present.swapchainCount = 1;
-  present.pSwapchains = &p_vkrs->swap_chain;
-  present.pImageIndices = &p_vkrs->current_buffer;
-  present.pWaitSemaphores = NULL;
-  present.waitSemaphoreCount = 0;
-  present.pResults = NULL;
+  // VkPresentInfoKHR present;
+  // present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  // present.pNext = NULL;
+  // present.swapchainCount = 1;
+  // present.pSwapchains = &p_vkrs->swap_chain;
+  // present.pImageIndices = &p_vkrs->current_buffer;
+  // present.pWaitSemaphores = NULL;
+  // present.waitSemaphoreCount = 0;
+  // present.pResults = NULL;
 
-  /* Make sure command buffer is finished before presenting */
-  do {
-    res = vkWaitForFences(p_vkrs->device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-  } while (res == VK_TIMEOUT);
+  // /* Make sure command buffer is finished before presenting */
+  // do {
+  //   res = vkWaitForFences(p_vkrs->device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+  // } while (res == VK_TIMEOUT);
 
-  assert(res == VK_SUCCESS);
-  res = vkQueuePresentKHR(p_vkrs->present_queue, &present);
-  assert(res == VK_SUCCESS);
+  // assert(res == VK_SUCCESS);
+  // res = vkQueuePresentKHR(p_vkrs->present_queue, &present);
+  // assert(res == VK_SUCCESS);
 
-  const struct timespec ts = {1L, 0L};
-  nanosleep(&ts, NULL);
+  // const struct timespec ts = {1L, 0L};
+  // nanosleep(&ts, NULL);
 
-  /* VULKAN_KEY_END */
-  // if (p_vkrs->save_images)
-  //   write_ppm(p_vkrs, "15-draw_cube");
+  // /* VULKAN_KEY_END */
+  // // if (p_vkrs->save_images)
+  // //   write_ppm(p_vkrs, "15-draw_cube");
 
-  vkDestroySemaphore(p_vkrs->device, imageAcquiredSemaphore, NULL);
-  vkDestroyFence(p_vkrs->device, drawFence, NULL);
+  // vkDestroySemaphore(p_vkrs->device, imageAcquiredSemaphore, NULL);
+  // vkDestroyFence(p_vkrs->device, drawFence, NULL);
 
   return res;
 }

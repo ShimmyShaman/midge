@@ -901,6 +901,8 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   p_vkrs->render_data_buffer.buffer_info.offset = 0;
   p_vkrs->render_data_buffer.buffer_info.range = RENDER_DATA_BUFFER_ALLOCATED_SIZE;
 
+  p_vkrs->render_data_buffer.frame_utilized_amount = 0;
+
   p_vkrs->render_data_buffer.queued_copies_alloc = 256U;
   p_vkrs->render_data_buffer.queued_copies_count = 0U;
   p_vkrs->render_data_buffer.queued_copies =
@@ -950,7 +952,7 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
 
   VkResult res;
 
-  p_vkrs->desc_layout.resize(NUM_DESCRIPTOR_SETS);
+  p_vkrs->desc_layout.resize(1);
   res = vkCreateDescriptorSetLayout(p_vkrs->device, &descriptor_layout, NULL, p_vkrs->desc_layout.data());
   assert(res == VK_SUCCESS);
 
@@ -960,7 +962,7 @@ VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool 
   pPipelineLayoutCreateInfo.pNext = NULL;
   pPipelineLayoutCreateInfo.pushConstantRangeCount = 0;
   pPipelineLayoutCreateInfo.pPushConstantRanges = NULL;
-  pPipelineLayoutCreateInfo.setLayoutCount = NUM_DESCRIPTOR_SETS;
+  pPipelineLayoutCreateInfo.setLayoutCount = 1;
   pPipelineLayoutCreateInfo.pSetLayouts = p_vkrs->desc_layout.data();
 
   res = vkCreatePipelineLayout(p_vkrs->device, &pPipelineLayoutCreateInfo, NULL, &p_vkrs->pipeline_layout);
@@ -1432,13 +1434,13 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture)
    * init_descriptor_and_pipeline_layouts() */
 
   VkResult res;
-  VkDescriptorPoolSize type_count[3];
+
+  const int DESCRIPTOR_POOL_COUNT = 2;
+  VkDescriptorPoolSize type_count[DESCRIPTOR_POOL_COUNT];
   type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  type_count[0].descriptorCount = 1;
-  type_count[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  type_count[1].descriptorCount = 1;
-  type_count[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  type_count[2].descriptorCount = 1;
+  type_count[0].descriptorCount = 64;
+  type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  type_count[1].descriptorCount = 64;
 
   // if (use_texture) {
   //   type_count[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -1448,8 +1450,8 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture)
   VkDescriptorPoolCreateInfo descriptor_pool = {};
   descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   descriptor_pool.pNext = NULL;
-  descriptor_pool.maxSets = 1;
-  descriptor_pool.poolSizeCount = 3;
+  descriptor_pool.maxSets = 128;
+  descriptor_pool.poolSizeCount = DESCRIPTOR_POOL_COUNT;
   descriptor_pool.pPoolSizes = type_count;
 
   res = vkCreateDescriptorPool(p_vkrs->device, &descriptor_pool, NULL, &p_vkrs->desc_pool);
@@ -1461,18 +1463,16 @@ VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture)
 {
   /* DEPENDS on init_descriptor_pool() */
 
-  VkResult res;
+  VkResult res = VK_SUCCESS;
 
-  VkDescriptorSetAllocateInfo alloc_info[1];
-  alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  alloc_info[0].pNext = NULL;
-  alloc_info[0].descriptorPool = p_vkrs->desc_pool;
-  alloc_info[0].descriptorSetCount = NUM_DESCRIPTOR_SETS;
-  alloc_info[0].pSetLayouts = p_vkrs->desc_layout.data();
+  // VkDescriptorSetAllocateInfo alloc_info[1];
+  // alloc_info[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  // alloc_info[0].pNext = NULL;
+  // alloc_info[0].descriptorPool = p_vkrs->desc_pool;
+  // alloc_info[0].descriptorSetCount = MAX_DESCRIPTOR_SETS;
+  // alloc_info[0].pSetLayouts = p_vkrs->desc_layout.data();
 
-  p_vkrs->desc_set.resize(NUM_DESCRIPTOR_SETS);
-  res = vkAllocateDescriptorSets(p_vkrs->device, alloc_info, p_vkrs->desc_set.data());
-  assert(res == VK_SUCCESS);
+  p_vkrs->descriptor_sets_count = 0;
 
   // p_vkrs->descriptor_sets_allocated = 16;
   //   p_vkrs->descriptor_sets.resize(p_vkrs->descriptor_sets_allocated);
@@ -1756,7 +1756,7 @@ void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
 
 void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs)
 {
-  for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++)
+  for (int i = 0; i < 1; i++)
     vkDestroyDescriptorSetLayout(p_vkrs->device, p_vkrs->desc_layout[i], NULL);
   vkDestroyPipelineLayout(p_vkrs->device, p_vkrs->pipeline_layout, NULL);
 }

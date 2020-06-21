@@ -16,6 +16,7 @@
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
 #define NUM_DESCRIPTOR_SETS 1
+#define MAX_DESCRIPTOR_SETS 128
 
 /* Number of viewports and number of scissors have to be the same */
 /* at pipeline creation and in any call to set them dynamically   */
@@ -132,10 +133,6 @@ typedef struct vk_render_state {
     queued_copy_info *queued_copies;
   } render_data_buffer;
 
-  unsigned int descriptor_sets_count;
-  unsigned int descriptor_sets_allocated;
-  VkDescriptorSet *descriptor_sets;
-
   VkCommandPool cmd_pool;
 
   struct {
@@ -202,7 +199,8 @@ typedef struct vk_render_state {
   VkPipelineShaderStageCreateInfo shaderStages[2];
 
   VkDescriptorPool desc_pool;
-  std::vector<VkDescriptorSet> desc_set;
+  unsigned int descriptor_sets_count;
+  VkDescriptorSet descriptor_sets[MAX_DESCRIPTOR_SETS];
 
   uint32_t current_buffer;
   uint32_t queue_family_count;
