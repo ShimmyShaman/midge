@@ -243,7 +243,7 @@ int force_render_update(int argc, void **argv)
   sequence->extent_width = 1024;
   sequence->extent_height = 640;
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
-  sequence->render_command_count = 2;
+  sequence->render_command_count = 1;
   sequence->render_commands_allocated = 3;
   sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
   sequence->image = (void *)&command_hub->global_node->data.global_root->image;
