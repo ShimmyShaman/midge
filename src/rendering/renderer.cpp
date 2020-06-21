@@ -125,24 +125,26 @@ extern "C" void *midge_render_thread(void *vargp)
   printf("mvkInitSuccess!\n");
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
+  uint frame_updates = 0;
   while (!thr->should_exit && !winfo.shouldExit) {
     // printf("mrt-3\n");
-    usleep(1);
+    // usleep(1);
     mxcb_update_window(&winfo);
 
     render_thread->render_thread_initialized = true;
 
     if (!render_thread->renderer_queue->in_use && render_thread->renderer_queue->count) {
-      printf("received render queue in renderer : %i items\n", render_thread->renderer_queue->count);
+      // printf("received render queue in renderer : %i items\n", render_thread->renderer_queue->count);
       render_thread->renderer_queue->in_use = true;
 
       render_through_queue(&vkrs, render_thread->renderer_queue);
-      render_thread->renderer_queue->count = 0;
-      render_thread->renderer_queue->items = NULL;
+      // render_thread->renderer_queue->count = 0;
+      // render_thread->renderer_queue->items = NULL;
       render_thread->renderer_queue->in_use = false;
+      ++frame_updates;
     }
   }
-  printf("AfterUpdate!\n");
+  printf("AfterUpdate! frame_updates = %i\n", frame_updates);
 
   // -- Cleanup
   mvk_destroy_pipeline(&vkrs);
@@ -173,13 +175,11 @@ extern "C" void *midge_render_thread(void *vargp)
 
 VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence)
 {
-  // Reset State
-  const unsigned int MAX_DESC_SET_WRITES = 32;
-  VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
-  VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
+  // Descriptor Writes
+  VkResult res;
 
-  // // Binding Descriptor Sets
-  int write_index = 0, buffer_info_index = 0;
+  coloured_rect_draw_data rect_draws[128];
+  int rect_draws_index = 0;
 
   p_vkrs->render_data_buffer.frame_utilized_amount = 0;
   p_vkrs->render_data_buffer.queued_copies_count = 0U;
@@ -189,9 +189,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
     render_command *cmd = &sequence->render_commands[j];
     switch (cmd->type) {
     case RENDER_COMMAND_COLORED_RECTANGLE: {
-
       // Set
-      coloured_rect_draw_data rect_draw_data;
+      coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
 
       // Vertex Data
       rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
@@ -204,15 +203,18 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       // Fragment Data
       glm_vec4_copy((float *)cmd->data, rect_draw_data.frag.tint_color);
 
-      // Descriptor writes to point to buffer data
-      // VkDescriptorSet desc_set = p_vkrs->desc_set[0]; // p_vkrs->descriptor_sets[p_vkrs->descriptor_sets_count++];
-
       // Queue Buffer Write
+      const unsigned int MAX_DESC_SET_WRITES = 8;
+      VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
+      VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
+      int buffer_info_index = 0;
+      int write_index = 0;
+
       // TODO -- refactor this
-      VkDescriptorBufferInfo *element_vert_buffer_info = &buffer_infos[buffer_info_index++];
-      element_vert_buffer_info->buffer = p_vkrs->render_data_buffer.buffer;
-      element_vert_buffer_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
-      element_vert_buffer_info->range = sizeof(rect_draw_data.vert);
+      VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
+      vert_ubo_info->buffer = p_vkrs->render_data_buffer.buffer;
+      vert_ubo_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
+      vert_ubo_info->range = sizeof(rect_draw_data.vert);
 
       p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = &rect_draw_data.vert;
       p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
@@ -220,13 +222,13 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
           sizeof(rect_draw_data.vert);
       p_vkrs->render_data_buffer.frame_utilized_amount +=
-          ((element_vert_buffer_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
+          ((vert_ubo_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
           p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
 
-      VkDescriptorBufferInfo *fragment_buffer_info = &buffer_infos[buffer_info_index++];
-      fragment_buffer_info->buffer = p_vkrs->render_data_buffer.buffer;
-      fragment_buffer_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
-      fragment_buffer_info->range = sizeof(rect_draw_data.frag);
+      VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
+      frag_ubo_info->buffer = p_vkrs->render_data_buffer.buffer;
+      frag_ubo_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
+      frag_ubo_info->range = sizeof(rect_draw_data.frag);
 
       p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = &rect_draw_data.frag;
       p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
@@ -234,65 +236,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
           sizeof(rect_draw_data.frag);
       p_vkrs->render_data_buffer.frame_utilized_amount +=
-          ((fragment_buffer_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
+          ((frag_ubo_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
           p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
-
-      // TODO -- divide here and redo the iteration in two parts with buffer copy between
-
-      // Allocate the descriptor set from the pool.
-      VkDescriptorSetAllocateInfo setAllocInfo = {};
-      setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-      setAllocInfo.pNext = NULL;
-      // Use the pool we created earlier ( the one dedicated to this frame )
-      setAllocInfo.descriptorPool = p_vkrs->desc_pool;
-      // We only need to allocate one
-      setAllocInfo.descriptorSetCount = 1;
-      setAllocInfo.pSetLayouts = p_vkrs->desc_layout.data();
-
-      unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
-      printf("referencing %i\n", descriptor_set_index);
-      VkResult res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
-      assert(res == VK_SUCCESS);
-
-      VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
-      p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
-
-      // Global Vertex Shader Uniform Buffer
-      VkWriteDescriptorSet *write = &writes[write_index++];
-      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      write->pNext = NULL;
-      write->dstSet = desc_set;
-      write->descriptorCount = 1;
-      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      write->pBufferInfo = &p_vkrs->global_vert_uniform_buffer.buffer_info;
-      write->dstArrayElement = 0;
-      write->dstBinding = 0;
-
-      // Element Vertex Shader Uniform Buffer
-      write = &writes[write_index++];
-      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      write->pNext = NULL;
-      write->dstSet = desc_set;
-      write->descriptorCount = 1;
-      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      write->pBufferInfo = element_vert_buffer_info;
-      write->dstArrayElement = 0;
-      write->dstBinding = 1;
-
-      // Element Fragment Shader Uniform Buffer
-      write = &writes[write_index++];
-      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      write->pNext = NULL;
-      write->dstSet = desc_set;
-      write->descriptorCount = 1;
-      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      write->pBufferInfo = fragment_buffer_info;
-      write->dstArrayElement = 0;
-      write->dstBinding = 2;
-
-      // printf("%i write->sType:%i\n", p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment, writes[2].sType);
-
-      vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
       // Setup viewport:
       {
@@ -316,8 +261,59 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         vkCmdSetScissor(p_vkrs->cmd, 0, 1, &scissor);
       }
 
-      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0,
-                              setAllocInfo.descriptorSetCount, &p_vkrs->descriptor_sets[descriptor_set_index], 0, NULL);
+      // Allocate the descriptor set from the pool.
+      VkDescriptorSetAllocateInfo setAllocInfo = {};
+      setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+      setAllocInfo.pNext = NULL;
+      // Use the pool we created earlier ( the one dedicated to this frame )
+      setAllocInfo.descriptorPool = p_vkrs->desc_pool;
+      // We only need to allocate one
+      setAllocInfo.descriptorSetCount = 1;
+      setAllocInfo.pSetLayouts = p_vkrs->desc_layout.data();
+
+      unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
+      res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
+      assert(res == VK_SUCCESS);
+
+      VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
+      p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
+
+      // Global Vertex Shader Uniform Buffer
+      VkWriteDescriptorSet *write = &writes[write_index++];
+      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      write->pNext = NULL;
+      write->dstSet = desc_set;
+      write->descriptorCount = 1;
+      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      write->pBufferInfo = &p_vkrs->global_vert_uniform_buffer.buffer_info;
+      write->dstArrayElement = 0;
+      write->dstBinding = 0;
+
+      // Element Vertex Shader Uniform Buffer
+      write = &writes[write_index++];
+      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      write->pNext = NULL;
+      write->dstSet = desc_set;
+      write->descriptorCount = 1;
+      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      write->pBufferInfo = vert_ubo_info;
+      write->dstArrayElement = 0;
+      write->dstBinding = 1;
+
+      // Element Fragment Shader Uniform Buffer
+      write = &writes[write_index++];
+      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      write->pNext = NULL;
+      write->dstSet = desc_set;
+      write->descriptorCount = 1;
+      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      write->pBufferInfo = frag_ubo_info;
+      write->dstArrayElement = 0;
+      write->dstBinding = 2;
+
+      vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
+
+      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, 1, &desc_set, 0, NULL);
 
       vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
 
@@ -331,6 +327,24 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       printf("COULD NOT HANDLE RENDER COMMAND TYPE=%i\n", cmd->type);
       continue;
     }
+  }
+
+  if (p_vkrs->render_data_buffer.queued_copies_count) {
+    uint8_t *pData;
+    res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0, p_vkrs->render_data_buffer.frame_utilized_amount, 0,
+                      (void **)&pData);
+    assert(res == VK_SUCCESS);
+
+    // Buffer Copies
+    for (int k = 0; k < p_vkrs->render_data_buffer.queued_copies_count; ++k) {
+      // printf("BufferCopy: %p (+%lu) bytes:%lu\n", pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+      //        p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+      //        p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
+      memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+             p_vkrs->render_data_buffer.queued_copies[k].p_source, p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
+    }
+
+    vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
   }
   return VK_SUCCESS;
 }
@@ -404,21 +418,6 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
     vkCmdEndRenderPass(p_vkrs->cmd);
     res = vkEndCommandBuffer(p_vkrs->cmd);
     assert(res == VK_SUCCESS);
-
-    if (p_vkrs->render_data_buffer.queued_copies_count) {
-      uint8_t *pData;
-      res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0, p_vkrs->render_data_buffer.frame_utilized_amount, 0,
-                        (void **)&pData);
-      assert(res == VK_SUCCESS);
-
-      // Buffer Copies
-      for (int k = 0; k < p_vkrs->render_data_buffer.queued_copies_count; ++k) {
-        memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-               p_vkrs->render_data_buffer.queued_copies[k].p_source, p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
-      }
-
-      vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
-    }
 
     VkFenceCreateInfo fenceInfo;
     VkFence drawFence;

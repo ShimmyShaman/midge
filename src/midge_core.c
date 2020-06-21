@@ -2567,7 +2567,7 @@ int mc_main(int argc, const char *const *argv)
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"
       "invoke force_render_update|"
-      "invoke force_render_update|"
+      // "invoke force_render_update|"
 
       // "create function print_word|"
       // "@create_function_name|"
