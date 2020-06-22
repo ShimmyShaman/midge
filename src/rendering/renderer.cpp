@@ -4,6 +4,9 @@
 #include "rendering/cube_data.h"
 #include "rendering/node_render.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 #define MRT_RUN(CALL)         \
   result = CALL;              \
   if (result != VK_SUCCESS) { \
@@ -58,6 +61,7 @@ static glsl_shader fragment_shader = {
 
 VkResult draw_cube(vk_render_state *p_vkrs);
 VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue);
+VkResult create_texture_image(vk_render_state *p_vkrs);
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
@@ -99,6 +103,7 @@ extern "C" void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_device(&vkrs));
 
   MRT_RUN(mvk_init_command_pool(&vkrs));
+  MRT_RUN(create_texture_image(&vkrs));
   MRT_RUN(mvk_init_command_buffer(&vkrs));
   MRT_RUN(mvk_execute_begin_command_buffer(&vkrs));
   mvk_init_device_queue(&vkrs);
@@ -138,8 +143,8 @@ extern "C" void *midge_render_thread(void *vargp)
       render_thread->renderer_queue->in_use = true;
 
       render_through_queue(&vkrs, render_thread->renderer_queue);
-      // render_thread->renderer_queue->count = 0;
-      // render_thread->renderer_queue->items = NULL;
+      render_thread->renderer_queue->count = 0;
+      render_thread->renderer_queue->items = NULL;
       render_thread->renderer_queue->in_use = false;
       ++frame_updates;
     }
@@ -585,220 +590,181 @@ VkResult draw_cube(vk_render_state *p_vkrs)
   return res;
 }
 
-// VkResult vk_init_layers_extensions(std::vector<const char *> *instanceLayers, std::vector<const char *>
-// *instanceExtensions)
-// {
-//   // Set up extensions
-//   instanceExtensions->push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-//   instanceExtensions->push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+VkResult create_texture_image(vk_render_state *p_vkrs)
+{
+  int texWidth, texHeight, texChannels;
+  stbi_uc *pixels = stbi_load("res/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+  VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-//   return VK_SUCCESS;
-// }
+  printf("loaded texture.png> width:%i height:%i channels:%i\n", texWidth, texHeight, texChannels);
 
-// VkResult initVulkan(vk_render_state *p_vkrs, mxcb_window_info *p_wnfo)
-// {
-//   VkResult res;
+  if (!pixels) {
+    return VK_ERROR_UNKNOWN;
+  }
 
-//   // -- Application Info --
-//   VkApplicationInfo application_info;
-//   application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-//   // application_info.apiVersion = VK_MAKE_VERSION(1, 0, 2); // 1.0.2 should work on all vulkan enabled drivers.
-//   // application_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
-//   application_info.pApplicationName = "Vulkan API Tutorial Series";
+  // Copy to buffer
+  VkBuffer stagingBuffer;
+  VkDeviceMemory stagingBufferMemory;
 
-//   // -- Layers & Extensions --
-//   std::vector<const char *> instanceLayers;
-//   std::vector<const char *> instanceExtensions;
-//   // vk_init_layers_extensions(&instanceLayers, &instanceExtensions);
-//   instanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-//   instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+  VkBufferCreateInfo bufferInfo{};
+  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bufferInfo.size = imageSize;
+  bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-//   // -- Debug --
-//   VkDebugReportCallbackEXT debugReport = VK_NULL_HANDLE;
-//   VkDebugReportCallbackCreateInfoEXT debugCallbackCreateInfo;
-//   // setupDebug(&debugReport, &debugCallbackCreateInfo, &instanceLayers, &instanceExtensions);
+  VkResult res = vkCreateBuffer(p_vkrs->device, &bufferInfo, nullptr, &stagingBuffer);
+  assert(res == VK_SUCCESS);
 
-//   // -- VK Instance --
-//   VkInstanceCreateInfo instance_create_info;
-//   instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-//   instance_create_info.pApplicationInfo = &application_info;
-//   instance_create_info.enabledLayerCount = instanceLayers.size();
-//   instance_create_info.ppEnabledLayerNames = instanceLayers.data();
-//   instance_create_info.enabledExtensionCount = instanceExtensions.size();
-//   instance_create_info.ppEnabledExtensionNames = instanceExtensions.data();
-// instance_create_info.pNext = debugCallbackCreateInfo;
+  VkMemoryRequirements memRequirements;
+  vkGetBufferMemoryRequirements(p_vkrs->device, stagingBuffer, &memRequirements);
 
-//   // printf("vkinst=%p\n", p_vkstate->instance);
-//   printf("aboutToVkCreateInstance()\n");
-//   res = vkCreateInstance(&instance_create_info, NULL, &p_vkrs->instance);
-//   if (res != VK_SUCCESS)
-//   {
-//     printf("Failed to create vulkan instance!\n");
-//     return res;
-//   }
-//   printf("vkCreateInstance(SUCCESS)\n");
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  bool pass = get_memory_type_index_from_properties(p_vkrs, memRequirements.memoryTypeBits,
+                                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                    &allocInfo.memoryTypeIndex);
+  assert(pass && "No mappable, coherent memory");
 
-//   // initDebug();
-//   res = initDevice(p_vkrs);
-//   if (res != VK_SUCCESS)
-//   {
-//     printf("Failed to create vulkan instance!\n");
-//     return res;
-//   }
+  res = vkAllocateMemory(p_vkrs->device, &allocInfo, nullptr, &stagingBufferMemory);
+  assert(res == VK_SUCCESS);
 
-//   // Window
-//   // printf("initOSWindow\n");
-//   initOSWindow(p_wnfo, 800, 480);
-//   initOSSurface(p_wnfo, p_vkrs->instance, &p_vkrs->surface);
-//   // init_swapchain_extension(p_vkrs, p_wnfo);
-//   return VK_SUCCESS;
-// }
+  res = vkBindBufferMemory(p_vkrs->device, stagingBuffer, stagingBufferMemory, 0);
+  assert(res == VK_SUCCESS);
 
-// VkResult initDevice(vk_render_state *p_vkstate)
-// {
-//   VkResult res;
-//   std::vector<const char *> device_extensions; // TODO -- does this get filled with values anywhere?
+  // VkResult res = createBuffer(p_vkrs, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+  //                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer,
+  //                             &stagingBufferMemory);
+  // assert(res == VK_SUCCESS);
 
-//   {
-//     uint32_t gpu_count = 0;
-//     vkEnumeratePhysicalDevices(p_vkstate->instance, &gpu_count, NULL);
-//     std::vector<VkPhysicalDevice> gpu_list(gpu_count);
-//     vkEnumeratePhysicalDevices(p_vkstate->instance, &gpu_count, gpu_list.data());
-//     p_vkstate->gpu = gpu_list[0];
-//     vkGetPhysicalDeviceProperties(p_vkstate->gpu, &p_vkstate->gpu_properties);
-//   }
-//   {
-//     uint32_t family_count = 0;
-//     vkGetPhysicalDeviceQueueFamilyProperties(p_vkstate->gpu, &family_count, nullptr);
-//     std::vector<VkQueueFamilyProperties> family_property_list(family_count);
-//     vkGetPhysicalDeviceQueueFamilyProperties(p_vkstate->gpu, &family_count, family_property_list.data());
+  void *data;
+  res = vkMapMemory(p_vkrs->device, stagingBufferMemory, 0, imageSize, 0, &data);
+  assert(res == VK_SUCCESS);
+  memcpy(data, pixels, static_cast<size_t>(imageSize));
+  vkUnmapMemory(p_vkrs->device, stagingBufferMemory);
 
-//     bool found = false;
-//     for (uint32_t i = 0; i < family_count; ++i)
-//     {
-//       if (family_property_list[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-//       {
-//         found = true;
-//         p_vkstate->graphics_family_index = i;
-//       }
-//     }
-//     if (!found)
-//     {
-//       printf("Vulkan ERROR: Queue family supporting graphics not found.\n");
-//       return VK_NOT_READY;
-//     }
-//   }
+  stbi_image_free(pixels);
 
-//   float queue_priorities[]{1.0f};
-//   VkDeviceQueueCreateInfo device_queue_create_info{};
-//   device_queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-//   device_queue_create_info.queueFamilyIndex = p_vkstate->graphics_family_index;
-//   device_queue_create_info.queueCount = 1;
-//   device_queue_create_info.pQueuePriorities = queue_priorities;
+  // Create Image
+  VkImage textureImage;
+  VkDeviceMemory textureImageMemory;
 
-//   VkDeviceCreateInfo device_create_info{};
-//   device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-//   device_create_info.queueCreateInfoCount = 1;
-//   device_create_info.pQueueCreateInfos = &device_queue_create_info;
-//   //	device_create_info.enabledLayerCount		= _device_layers.size();				//
-//   depricated
-//   //	device_create_info.ppEnabledLayerNames		= _device_layers.data();				//
-//   depricated device_create_info.enabledExtensionCount = device_extensions.size();
-//   device_create_info.ppEnabledExtensionNames = device_extensions.data();
+  VkImageCreateInfo imageInfo{};
+  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageInfo.extent.width = static_cast<uint32_t>(texWidth);
+  imageInfo.extent.height = static_cast<uint32_t>(texHeight);
+  imageInfo.extent.depth = 1;
+  imageInfo.mipLevels = 1;
+  imageInfo.arrayLayers = 1;
+  imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+  imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageInfo.flags = 0; // Optional
 
-//   res = vkCreateDevice(p_vkstate->gpu, &device_create_info, nullptr, &p_vkstate->device);
-//   if (res != VK_SUCCESS)
-//   {
-//     printf("unhandled error 8258528");
-//     return res;
-//   }
+  res = vkCreateImage(p_vkrs->device, &imageInfo, nullptr, &textureImage);
+  assert(res == VK_SUCCESS);
 
-//   vkGetDeviceQueue(p_vkstate->device, p_vkstate->graphics_family_index, 0, &p_vkstate->queue);
-//   return VK_SUCCESS;
-// }
+  vkGetImageMemoryRequirements(p_vkrs->device, textureImage, &memRequirements);
 
-// void setupDebug(VkDebugReportCallbackEXT *debugReport, VkDebugReportCallbackCreateInfoEXT *debugCallbackCreateInfo,
-// std::vector<const char *> *instanceLayers, std::vector<const char *> *instanceExtensions)
-// {
-//   debugCallbackCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-//   debugCallbackCreateInfo.pfnCallback = VulkanDebugCallback;
-//   debugCallbackCreateInfo.flags =
-//       //		VK_DEBUG_REPORT_INFORMATION_BIT_EXT |
-//       VK_DEBUG_REPORT_WARNING_BIT_EXT |
-//       VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT |
-//       VK_DEBUG_REPORT_ERROR_BIT_EXT |
-//       //		VK_DEBUG_REPORT_DEBUG_BIT_EXT |
-//       0;
+  allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  pass = get_memory_type_index_from_properties(p_vkrs, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                               &allocInfo.memoryTypeIndex);
+  assert(pass && "No mappable, coherent memory");
 
-//   instanceLayers.push_back("VK_LAYER_LUNARG_standard_validation");
-//   /*
-// //	vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_threading" );
-// 	vulkanInstanceLayers.push_back( "VK_LAYER_GOOGLE_threading" );
-// 	vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_draw_state" );
-// 	vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_image" );
-// 	vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_mem_tracker" );
-// 	vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_object_tracker" );
-// 	vulkanInstanceLayers.push_back( "VK_LAYER_LUNARG_param_checker" );
-// 	*/
-//   instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+  res = vkAllocateMemory(p_vkrs->device, &allocInfo, nullptr, &textureImageMemory);
+  assert(res == VK_SUCCESS);
 
-//   //	_device_layers.push_back( "VK_LAYER_LUNARG_standard_validation" );				// depricated
-//   /*
-// //	_device_layers.push_back( "VK_LAYER_LUNARG_threading" );
-// 	_device_layers.push_back( "VK_LAYER_GOOGLE_threading" );
-// 	_device_layers.push_back( "VK_LAYER_LUNARG_draw_state" );
-// 	_device_layers.push_back( "VK_LAYER_LUNARG_image" );
-// 	_device_layers.push_back( "VK_LAYER_LUNARG_mem_tracker" );
-// 	_device_layers.push_back( "VK_LAYER_LUNARG_object_tracker" );
-// 	_device_layers.push_back( "VK_LAYER_LUNARG_param_checker" );
-// 	*/
-// }
+  res = vkBindImageMemory(p_vkrs->device, textureImage, textureImageMemory, 0);
+  assert(res == VK_SUCCESS);
 
-// VKAPI_ATTR VkBool32 VKAPI_CALL
-// VulkanDebugCallback(
-//     VkDebugReportFlagsEXT flags,
-//     VkDebugReportObjectTypeEXT obj_type,
-//     uint64_t src_obj,
-//     size_t location,
-//     int32_t msg_code,
-//     const char *layerPrefix,
-//     const char *msg,
-//     void *user_data)
-// {
-//   printf("VKDBG: ");
-//   if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-//   {
-//     printf("INFO: ");
-//   }
-//   if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-//   {
-//     printf("WARNING: ");
-//   }
-//   if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-//   {
-//     printf("PERFORMANCE: ");
-//   }
-//   if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-//   {
-//     printf("ERROR: ");
-//   }
-//   if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-//   {
-//     printf("DEBUG: ");
-//   }
-//   printf("@[%s]: ", layerPrefix);
-//   printf("%s\n", msg);
+  // Single-Use Command Buffer
+  VkCommandBufferAllocateInfo cmdBufferAllocInfo{};
+  cmdBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  cmdBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  cmdBufferAllocInfo.commandPool = p_vkrs->cmd_pool;
+  cmdBufferAllocInfo.commandBufferCount = 1;
 
-//   return false;
-// }
+  VkCommandBuffer commandBuffer;
+  vkAllocateCommandBuffers(p_vkrs->device, &cmdBufferAllocInfo, &commandBuffer);
 
-// void deInitVulkan(vk_render_state *p_vkrs)
-// {
-//   vkDestroyDevice(p_vkrs->device, NULL);
-//   p_vkrs->device = NULL;
+  VkCommandBufferBeginInfo beginInfo{};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-//   // deInitDebug() TODO
+  vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-//   vkDestroyInstance(p_vkrs->instance, NULL);
-//   p_vkrs->instance = NULL;
-// }
+  // Transition layout
+  VkImageMemoryBarrier barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = oldLayout;
+  barrier.newLayout = newLayout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  VkPipelineStageFlags sourceStage;
+  VkPipelineStageFlags destinationStage;
+
+  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  }
+  else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  }
+  else {
+    throw std::invalid_argument("unsupported layout transition!");
+  }
+
+  vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+  // End single time commands
+  vkEndCommandBuffer(commandBuffer);
+
+  VkSubmitInfo submitInfo{};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &commandBuffer;
+
+  vkQueueSubmit(p_vkrs->graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueWaitIdle(p_vkrs->graphics_queue);
+
+  vkFreeCommandBuffers(p_vkrs->device, p_vkrs->cmd_pool, 1, &commandBuffer);
+
+  // Transition Image Layout
+  VkImageMemoryBarrier barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = oldLayout;
+  barrier.newLayout = newLayout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = textureImage;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+  barrier.srcAccessMask = 0; // TODO
+  barrier.dstAccessMask = 0; // TODO
+  vkCmdPipelineBarrier(commandBuffer, 0 /* TODO */, 0 /* TODO */, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+  return VK_SUCCESS;
+}

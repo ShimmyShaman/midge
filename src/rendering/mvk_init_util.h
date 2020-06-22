@@ -260,4 +260,8 @@ void mvk_destroy_renderpass(vk_render_state *p_vkrs);
 void mvk_destroy_device(vk_render_state *p_vkrs);
 void mvk_destroy_instance(vk_render_state *p_vkrs);
 
+bool get_memory_type_index_from_properties(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask,
+                                           uint32_t *typeIndex);
+VkResult createBuffer(vk_render_state *p_vkrs, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags mem_properties,
+                      VkBuffer *buffer, VkDeviceMemory *bufferMemory);
 #endif // MVK_INIT_UTIL_H

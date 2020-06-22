@@ -5,7 +5,8 @@
 /*
  * Obtains the memory type from the available properties, returning false if no memory type was matched.
  */
-bool memory_type_from_properties(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex)
+bool get_memory_type_index_from_properties(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask,
+                                           uint32_t *typeIndex)
 {
   // Search memtypes to find first index with those properties
   for (uint32_t i = 0; i < p_vkrs->memory_properties.memoryTypeCount; i++) {
@@ -446,8 +447,8 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
 
   mem_alloc.allocationSize = mem_reqs.size;
   /* Use the memory properties to determine the type of memory required */
-  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                     &mem_alloc.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                               &mem_alloc.memoryTypeIndex);
   assert(pass);
 
   /* Allocate memory */
@@ -623,12 +624,14 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
   // the surface has no preferred format.  Otherwise, at least one
   // supported format will be returned.
   if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
-    p_vkrs->format = VK_FORMAT_B8G8R8A8_UNORM;
+    p_vkrs->format = VK_FORMAT_R8G8B8A8_SRGB;
+    // p_vkrs->format = VK_FORMAT_B8G8R8A8_UNORM;
   }
   else {
     assert(formatCount >= 1);
     p_vkrs->format = surfFormats[0].format;
   }
+  printf("swapchain format = %i\n", p_vkrs->format);
   free(surfFormats);
 
   return VK_SUCCESS;
@@ -841,9 +844,9 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   alloc_info.memoryTypeIndex = 0;
 
   alloc_info.allocationSize = mem_reqs.size;
-  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                     &alloc_info.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                               &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->global_vert_uniform_buffer.mem));
@@ -886,9 +889,9 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   alloc_info.memoryTypeIndex = 0;
 
   alloc_info.allocationSize = mem_reqs.size;
-  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                     &alloc_info.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                               &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->render_data_buffer.memory));
@@ -1338,9 +1341,9 @@ VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData,
   alloc_info.memoryTypeIndex = 0;
 
   alloc_info.allocationSize = mem_reqs.size;
-  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                     &alloc_info.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                               &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_vertices.mem));
@@ -1402,9 +1405,9 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
   alloc_info.memoryTypeIndex = 0;
 
   alloc_info.allocationSize = mem_reqs.size;
-  pass = memory_type_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                     &alloc_info.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                               &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->shape_vertices.mem));
@@ -1795,3 +1798,33 @@ void mvk_destroy_device(vk_render_state *p_vkrs)
 }
 
 void mvk_destroy_instance(vk_render_state *p_vkrs) { vkDestroyInstance(p_vkrs->inst, NULL); }
+
+VkResult createBuffer(vk_render_state *p_vkrs, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags mem_properties,
+                      VkBuffer *buffer, VkDeviceMemory *bufferMemory)
+{
+  VkBufferCreateInfo bufferInfo{};
+  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bufferInfo.size = size;
+  bufferInfo.usage = usage;
+  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  VkResult res = vkCreateBuffer(p_vkrs->device, &bufferInfo, nullptr, buffer);
+  assert(res == VK_SUCCESS);
+
+  VkMemoryRequirements memRequirements;
+  vkGetBufferMemoryRequirements(p_vkrs->device, *buffer, &memRequirements);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  assert(get_memory_type_index_from_properties(p_vkrs, memRequirements.memoryTypeBits, mem_properties,
+                                               &allocInfo.memoryTypeIndex) == true);
+
+  res = vkAllocateMemory(p_vkrs->device, &allocInfo, nullptr, bufferMemory);
+  assert(res == VK_SUCCESS);
+
+  res = vkBindBufferMemory(p_vkrs->device, *buffer, *bufferMemory, 0);
+  assert(res == VK_SUCCESS);
+
+  return res;
+}

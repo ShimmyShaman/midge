@@ -6,10 +6,11 @@
             "compilerPath": "/usr/bin/gcc",
             "includePath": [
                 "/home/jason/midge/src",
+                "/home/jason/cling/inst/include",
+                "/usr/include",
                 "/home/jason/midge/dep/cglm/include",
                 "/home/jason/midge/dep/glslang",
-                "/home/jason/cling/inst/include",
-                "/usr/include"
+                "/home/jason/midge/dep/stb"
             ],
             "cStandard": "c11",
             "cppStandard": "c++17",
