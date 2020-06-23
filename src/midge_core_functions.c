@@ -226,6 +226,12 @@ int force_render_update(int argc, void **argv)
   greenish->b = 0.32f;
   greenish->a = 1.f;
 
+  render_color *burlywood = (render_color *)malloc(sizeof(render_color));
+  burlywood->r = 0.87f;
+  burlywood->g = 0.72f;
+  burlywood->b = 0.52f;
+  burlywood->a = 1.f;
+
   render_color *dark_slate_gray = (render_color *)malloc(sizeof(render_color));
   dark_slate_gray->r = 0.18f;
   dark_slate_gray->g = 0.18f;
@@ -261,7 +267,6 @@ int force_render_update(int argc, void **argv)
   sequence->extent_width = 1024;
   sequence->extent_height = 640;
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
-  sequence->render_command_count = 7;
   sequence->render_commands_allocated = 32;
   sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
   sequence->image = (void *)&command_hub->global_node->data.global_root->image;
@@ -280,6 +285,20 @@ int force_render_update(int argc, void **argv)
   // sequence->render_commands[rci].width = 1024;
   // sequence->render_commands[rci].height = 640;
   // sequence->render_commands[rci++].data = NULL;
+
+  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
+  sequence->render_commands[rci].x = 244;
+  sequence->render_commands[rci].y = 52;
+  sequence->render_commands[rci].width = 536;
+  sequence->render_commands[rci].height = 536;
+  sequence->render_commands[rci++].data = burlywood;
+
+  sequence->render_commands[rci].type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+  sequence->render_commands[rci].x = 256;
+  sequence->render_commands[rci].y = 64;
+  sequence->render_commands[rci].width = 512;
+  sequence->render_commands[rci].height = 512;
+  sequence->render_commands[rci++].data = NULL;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 300 - 8;
@@ -324,6 +343,7 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci++].data = (void *)black;
 
   // Add to the render queue
+  sequence->render_command_count = rci;
   // TODO -- render queue depth key
   MCcall(append_to_collection(&command_hub->render_queue->items, &command_hub->render_queue->allocated,
                               &command_hub->render_queue->count, sequence));

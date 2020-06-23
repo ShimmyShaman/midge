@@ -63,6 +63,27 @@ typedef struct coloured_rect_draw_data {
 
 } coloured_rect_draw_data;
 
+typedef struct sampled_image {
+  VkFormat format;
+  VkSampler sampler;
+  VkImage image;
+  VkDeviceMemory memory;
+  VkImageView view;
+
+} sampled_image;
+
+typedef struct textured_image_vertex {
+  vec2 position;
+  vec3 color;
+  vec2 tex_coord;
+} textured_image_vertex;
+
+typedef struct render_program {
+  VkDescriptorSetLayout desc_layout;
+  VkPipelineLayout pipeline_layout;
+  VkPipeline pipeline;
+} render_program;
+
 /*
  * Keep each of our swap chain buffers' image, command buffer and view in one
  * spot
@@ -101,7 +122,7 @@ typedef struct vk_render_state {
 
   std::vector<const char *> device_extension_names;
   // std::vector<VkExtensionProperties> device_extension_properties;
-  std::vector<VkPhysicalDevice> gpus;
+  VkPhysicalDevice *gpus;
   VkDevice device;
   VkQueue graphics_queue;
   VkQueue present_queue;
@@ -132,6 +153,9 @@ typedef struct vk_render_state {
     unsigned int queued_copies_count;
     queued_copy_info *queued_copies;
   } render_data_buffer;
+
+  sampled_image texture_image;
+  render_program texture_prog;
 
   VkCommandPool cmd_pool;
 
@@ -188,6 +212,12 @@ typedef struct vk_render_state {
     vertex_input_description vi_desc;
   } shape_vertices;
 
+  struct {
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDescriptorBufferInfo buffer_info;
+  } textured_shape_vertices;
+
   // Buffer for initialization commands
   VkCommandBuffer cmd;
   VkPipelineLayout pipeline_layout;
@@ -213,7 +243,7 @@ VkResult mvk_init_global_layer_properties(vk_render_state *p_vkrs);
 void mvk_init_device_extension_names(vk_render_state *p_vkrs);
 // VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_name);
 void mvk_init_instance(VkResult *res, vk_render_state *p_vkrs, char const *const app_short_name);
-VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs, uint32_t required_gpu_count);
+VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs);
 VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_headless_image(vk_render_state *p_vkrs);
 VkResult mvk_init_device(vk_render_state *p_vkrs);
@@ -221,16 +251,16 @@ VkResult init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain(vk_render_state *p_vkrs);
 VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs);
-VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs, bool use_texture,
-                                                  VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags);
+VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs);
 VkResult mvk_init_renderpass(vk_render_state *p_vkrs);
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs);
 VkResult mvk_init_command_buffer(vk_render_state *p_vkrs);
-VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
-VkResult mvk_execute_end_command_buffer(vk_render_state *p_vkrs);
+// VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
+// VkResult mvk_execute_end_command_buffer(vk_render_state *p_vkrs);
 VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
 VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index);
+VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs);
 VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth);
 VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
                                 bool use_texture);
@@ -245,10 +275,10 @@ void mvk_init_scissors(vk_render_state *p_vkrs, unsigned int width, unsigned int
 void mvk_destroy_pipeline(vk_render_state *p_vkrs);
 void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs);
 void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs);
-void mvk_destroy_shape_vertices(vk_render_state *p_vkrs);
-void mvk_destroy_cube_vertices(vk_render_state *p_vkrs);
+void mvk_destroy_resources(vk_render_state *p_vkrs);
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs);
 void mvk_destroy_shaders(vk_render_state *p_vkrs);
+void mvk_destroy_textured_render_prog(vk_render_state *p_vkrs);
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs);
 void mvk_destroy_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs);
 void mvk_destroy_command_buffer(vk_render_state *p_vkrs);
@@ -264,4 +294,5 @@ bool get_memory_type_index_from_properties(vk_render_state *p_vkrs, uint32_t typ
                                            uint32_t *typeIndex);
 VkResult createBuffer(vk_render_state *p_vkrs, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags mem_properties,
                       VkBuffer *buffer, VkDeviceMemory *bufferMemory);
+VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader_text, std::vector<unsigned int> &spirv);
 #endif // MVK_INIT_UTIL_H
