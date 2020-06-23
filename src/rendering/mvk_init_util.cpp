@@ -1178,7 +1178,7 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -1647,12 +1647,12 @@ VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData,
 #define WHITE_RGBA 1.f, 1.f, 1.f, 1.f
 #define WHITE_RGB 1.f, 1.f, 1.f
 static const float g_vb_shape_data[] = { // Rectangle
-    XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
-    XYZW(-0.5f, 0.5f, 0),  WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA, XYZW(0.5f, 0.5f, 0),  WHITE_RGBA};
+    XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA,
+    XYZW(-0.5f, 0.5f, 0),  WHITE_RGBA, XYZW(0.5f, 0.5f, 0),  WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA};
 static const float g_vb_textured_shape_2D_data[] = { // Rectangle
-    XY(-0.5f, -0.5f), WHITE_RGB, XY(0.f, 0.f), XY(0.5f, -0.5f), WHITE_RGB, XY(1.f, 0.f),
-    XY(-0.5f, 0.5f),  WHITE_RGB, XY(0.f, 1.f), XY(-0.5f, 0.5f), WHITE_RGB, XY(0.f, 1.f),
-    XY(0.5f, -0.5f),  WHITE_RGB, XY(1.f, 0.f), XY(0.5f, 0.5f),  WHITE_RGB, XY(1.f, 1.f)};
+    XY(-0.5f, -0.5f), WHITE_RGB, XY(0.f, 0.f), XY(-0.5f, 0.5f), WHITE_RGB, XY(0.f, 1.f),
+    XY(0.5f, -0.5f),  WHITE_RGB, XY(1.f, 0.f), XY(-0.5f, 0.5f), WHITE_RGB, XY(0.f, 1.f),
+    XY(0.5f, 0.5f),   WHITE_RGB, XY(1.f, 1.f), XY(0.5f, -0.5f), WHITE_RGB, XY(1.f, 0.f)};
 
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {
@@ -1917,7 +1917,7 @@ VkResult mvk_init_pipeline(vk_render_state *p_vkrs)
   rs.flags = 0;
   rs.polygonMode = VK_POLYGON_MODE_FILL;
   rs.cullMode = VK_CULL_MODE_BACK_BIT;
-  rs.frontFace = VK_FRONT_FACE_CLOCKWISE;
+  rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
   rs.depthClampEnable = VK_FALSE;
   rs.rasterizerDiscardEnable = VK_FALSE;
   rs.depthBiasEnable = VK_FALSE;
