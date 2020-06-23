@@ -296,8 +296,8 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].type = RENDER_COMMAND_TEXTURED_RECTANGLE;
   sequence->render_commands[rci].x = 256;
   sequence->render_commands[rci].y = 64;
-  sequence->render_commands[rci].width = 512;
-  sequence->render_commands[rci].height = 512;
+  sequence->render_commands[rci].width = 256;
+  sequence->render_commands[rci].height = 256;
   sequence->render_commands[rci++].data = NULL;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;

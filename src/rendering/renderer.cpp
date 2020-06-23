@@ -62,6 +62,7 @@ static glsl_shader fragment_shader = {
 VkResult draw_cube(vk_render_state *p_vkrs);
 VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue);
 VkResult create_texture_image(vk_render_state *p_vkrs);
+VkResult load_font_resources(vk_render_state *p_vkrs);
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
@@ -126,9 +127,10 @@ extern "C" void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_pipeline(&vkrs)); // Maybe false?
 
   // MRT_RUN(draw_cube(&vkrs));
+  MRT_RUN(load_font_resources(&vkrs));
 
   // -- Update
-  printf("mvkInitSuccess!\n");
+  printf("Vulkan Initialized!\n");
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
   uint frame_updates = 0;
@@ -445,8 +447,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
 
       VkDescriptorImageInfo image_sampler_info = {};
       image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      image_sampler_info.imageView = p_vkrs->texture_image.view;
-      image_sampler_info.sampler = p_vkrs->texture_image.sampler;
+      image_sampler_info.imageView = p_vkrs->font_image.view;
+      image_sampler_info.sampler = p_vkrs->font_image.sampler;
 
       // Element Fragment Shader Combined Image Sampler
       write = &writes[write_index++];
@@ -848,17 +850,11 @@ void copyBufferToImage(vk_render_state *p_vkrs, VkBuffer buffer, VkImage image, 
   }
 }
 
-VkResult create_texture_image(vk_render_state *p_vkrs)
+VkResult load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const int texHeight, const int texChannels,
+                            const unsigned char *const pixels, sampled_image *image_sampler)
 {
-  int texWidth, texHeight, texChannels;
-  stbi_uc *pixels = stbi_load("res/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+
   VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-  printf("loaded texture.png> width:%i height:%i channels:%i\n", texWidth, texHeight, texChannels);
-
-  if (!pixels) {
-    return VK_ERROR_UNKNOWN;
-  }
 
   // Copy to buffer
   VkBuffer stagingBuffer;
@@ -896,10 +892,8 @@ VkResult create_texture_image(vk_render_state *p_vkrs)
   memcpy(data, pixels, static_cast<size_t>(imageSize));
   vkUnmapMemory(p_vkrs->device, stagingBufferMemory);
 
-  stbi_image_free(pixels);
-
   // Create Image
-  p_vkrs->texture_image.format = VK_FORMAT_R8G8B8A8_SRGB;
+  image_sampler->format = VK_FORMAT_R8G8B8A8_SRGB;
   VkImageCreateInfo imageInfo{};
   imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -908,7 +902,7 @@ VkResult create_texture_image(vk_render_state *p_vkrs)
   imageInfo.extent.depth = 1;
   imageInfo.mipLevels = 1;
   imageInfo.arrayLayers = 1;
-  imageInfo.format = p_vkrs->texture_image.format;
+  imageInfo.format = image_sampler->format;
   imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -916,10 +910,10 @@ VkResult create_texture_image(vk_render_state *p_vkrs)
   imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.flags = 0; // Optional
 
-  res = vkCreateImage(p_vkrs->device, &imageInfo, nullptr, &p_vkrs->texture_image.image);
+  res = vkCreateImage(p_vkrs->device, &imageInfo, nullptr, &image_sampler->image);
   assert(res == VK_SUCCESS);
 
-  vkGetImageMemoryRequirements(p_vkrs->device, p_vkrs->texture_image.image, &memRequirements);
+  vkGetImageMemoryRequirements(p_vkrs->device, image_sampler->image, &memRequirements);
 
   allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -928,19 +922,19 @@ VkResult create_texture_image(vk_render_state *p_vkrs)
                                                &allocInfo.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
-  res = vkAllocateMemory(p_vkrs->device, &allocInfo, nullptr, &p_vkrs->texture_image.memory);
+  res = vkAllocateMemory(p_vkrs->device, &allocInfo, nullptr, &image_sampler->memory);
   assert(res == VK_SUCCESS);
 
-  res = vkBindImageMemory(p_vkrs->device, p_vkrs->texture_image.image, p_vkrs->texture_image.memory, 0);
+  res = vkBindImageMemory(p_vkrs->device, image_sampler->image, image_sampler->memory, 0);
   assert(res == VK_SUCCESS);
 
-  res = transitionImageLayout(p_vkrs, p_vkrs->texture_image.image, p_vkrs->texture_image.format, VK_IMAGE_LAYOUT_UNDEFINED,
+  res = transitionImageLayout(p_vkrs, image_sampler->image, image_sampler->format, VK_IMAGE_LAYOUT_UNDEFINED,
                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
   assert(res == VK_SUCCESS);
-  copyBufferToImage(p_vkrs, stagingBuffer, p_vkrs->texture_image.image, static_cast<uint32_t>(texWidth),
+  copyBufferToImage(p_vkrs, stagingBuffer, image_sampler->image, static_cast<uint32_t>(texWidth),
                     static_cast<uint32_t>(texHeight));
-  res = transitionImageLayout(p_vkrs, p_vkrs->texture_image.image, p_vkrs->texture_image.format,
-                              VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  res = transitionImageLayout(p_vkrs, image_sampler->image, image_sampler->format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   assert(res == VK_SUCCESS);
 
   // Destroy staging resources
@@ -950,16 +944,16 @@ VkResult create_texture_image(vk_render_state *p_vkrs)
   // Image View
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-  viewInfo.image = p_vkrs->texture_image.image;
+  viewInfo.image = image_sampler->image;
   viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  viewInfo.format = p_vkrs->texture_image.format;
+  viewInfo.format = image_sampler->format;
   viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   viewInfo.subresourceRange.baseMipLevel = 0;
   viewInfo.subresourceRange.levelCount = 1;
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount = 1;
 
-  res = vkCreateImageView(p_vkrs->device, &viewInfo, nullptr, &p_vkrs->texture_image.view);
+  res = vkCreateImageView(p_vkrs->device, &viewInfo, nullptr, &image_sampler->view);
   assert(res == VK_SUCCESS);
 
   // Sampler
@@ -978,8 +972,57 @@ VkResult create_texture_image(vk_render_state *p_vkrs)
   samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
   samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
-  res = vkCreateSampler(p_vkrs->device, &samplerInfo, nullptr, &p_vkrs->texture_image.sampler);
+  res = vkCreateSampler(p_vkrs->device, &samplerInfo, nullptr, &image_sampler->sampler);
   assert(res == VK_SUCCESS);
+
+  return res;
+}
+
+VkResult create_texture_image(vk_render_state *p_vkrs)
+{
+  int texWidth, texHeight, texChannels;
+  stbi_uc *pixels = stbi_load("res/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+  VkDeviceSize imageSize = texWidth * texHeight * 4;
+
+  printf("loaded texture.png> width:%i height:%i channels:%i\n", texWidth, texHeight, texChannels);
+
+  if (!pixels) {
+    return VK_ERROR_UNKNOWN;
+  }
+
+  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, pixels, &p_vkrs->texture_image);
+
+  stbi_image_free(pixels);
+
+  return VK_SUCCESS;
+}
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_STATIC
+#include "stb_truetype.h"
+
+VkResult load_font_resources(vk_render_state *p_vkrs)
+{
+  stbi_uc ttf_buffer[1 << 20];
+  fread(ttf_buffer, 1, 1 << 20, fopen("/home/jason/midge/res/font/LiberationMono-Regular.ttf", "rb"));
+
+  const int texWidth = 256, texHeight = 256, texChannels = 4;
+  stbi_uc temp_bitmap[texWidth * texHeight];
+  stbtt_bakedchar cdata[96];                                                                  // ASCII 32..126 is 95 glyphs
+  stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, texWidth, texHeight, 32, 96, cdata); // no guarantee this fits!
+
+  stbi_uc pixels[texWidth * texHeight * 4];
+  {
+    int p = 0;
+    for (int i = 0; i < texWidth * texHeight; ++i) {
+      pixels[p++] = temp_bitmap[i];
+      pixels[p++] = temp_bitmap[i];
+      pixels[p++] = temp_bitmap[i];
+      pixels[p++] = 255;
+    }
+  }
+
+  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, pixels, &p_vkrs->font_image);
 
   return VK_SUCCESS;
 }

@@ -2051,12 +2051,18 @@ void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs) { vkDestroyPipelineCach
 
 void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs) { vkDestroyDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, NULL); }
 
+void mvk_destroy_sampled_image(vk_render_state *p_vkrs, sampled_image *sampled_image)
+{
+  vkDestroySampler(p_vkrs->device, sampled_image->sampler, nullptr);
+  vkDestroyImageView(p_vkrs->device, sampled_image->view, nullptr);
+  vkDestroyImage(p_vkrs->device, sampled_image->image, nullptr);
+  vkFreeMemory(p_vkrs->device, sampled_image->memory, nullptr);
+}
+
 void mvk_destroy_resources(vk_render_state *p_vkrs)
 {
-  vkDestroySampler(p_vkrs->device, p_vkrs->texture_image.sampler, nullptr);
-  vkDestroyImageView(p_vkrs->device, p_vkrs->texture_image.view, nullptr);
-  vkDestroyImage(p_vkrs->device, p_vkrs->texture_image.image, nullptr);
-  vkFreeMemory(p_vkrs->device, p_vkrs->texture_image.memory, nullptr);
+  mvk_destroy_sampled_image(p_vkrs, &p_vkrs->texture_image);
+  mvk_destroy_sampled_image(p_vkrs, &p_vkrs->font_image);
 
   vkDestroyBuffer(p_vkrs->device, p_vkrs->shape_vertices.buf, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, NULL);

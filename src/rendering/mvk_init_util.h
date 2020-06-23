@@ -157,6 +157,8 @@ typedef struct vk_render_state {
   sampled_image texture_image;
   render_program texture_prog;
 
+  sampled_image font_image;
+
   VkCommandPool cmd_pool;
 
   struct {
