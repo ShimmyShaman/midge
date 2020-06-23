@@ -268,7 +268,7 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs);
 VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture);
 VkResult mvk_init_descriptor_set(vk_render_state *p_vkrs, bool use_texture);
 VkResult mvk_init_pipeline_cache(vk_render_state *p_vkrs);
-VkResult mvk_init_pipeline(vk_render_state *p_vkrs, VkBool32 include_depth, VkBool32 include_vi);
+VkResult mvk_init_pipeline(vk_render_state *p_vkrs);
 void mvk_init_viewports(vk_render_state *p_vkrs, unsigned int width, unsigned int height);
 void mvk_init_scissors(vk_render_state *p_vkrs, unsigned int width, unsigned int height);
 

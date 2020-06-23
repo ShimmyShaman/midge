@@ -22,7 +22,7 @@
   }
 
 static glsl_shader vertex_shader = {
-    .text = "#version 400\n"
+    .text = "#version 450\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (std140, binding = 0) uniform UBO0 {\n"
@@ -45,7 +45,7 @@ static glsl_shader vertex_shader = {
 };
 
 static glsl_shader fragment_shader = {
-    .text = "#version 400\n"
+    .text = "#version 450\n"
             "#extension GL_ARB_separate_shader_objects : enable\n"
             "#extension GL_ARB_shading_language_420pack : enable\n"
             "layout (binding = 2) uniform UBO2 {\n"
@@ -123,7 +123,7 @@ extern "C" void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_descriptor_pool(&vkrs, false));
   MRT_RUN(mvk_init_descriptor_set(&vkrs, false));
   MRT_RUN(mvk_init_pipeline_cache(&vkrs));
-  MRT_RUN(mvk_init_pipeline(&vkrs, depth_present, true)); // Maybe false?
+  MRT_RUN(mvk_init_pipeline(&vkrs)); // Maybe false?
 
   // MRT_RUN(draw_cube(&vkrs));
 
@@ -331,16 +331,15 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
 
     case RENDER_COMMAND_TEXTURED_RECTANGLE: {
       // // Set
-      //  &rect_draw_data = rect_draws[rect_draws_index++];
+      coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
 
-      // // Vertex Data
-      // rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
-      // rect_draw_data.vert.scale[1] = 2.f * cmd->height / (float)p_vkrs->window_height;
-      // rect_draw_data.vert.offset[0] =
-      //     -1.0f + 2.0f * (float)cmd->x / (float)(p_vkrs->window_width) + 1.0f * (float)cmd->width /
-      //     (float)(p_vkrs->window_width);
-      // rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(p_vkrs->window_height) +
-      //                                 1.0f * (float)cmd->height / (float)(p_vkrs->window_height);
+      // Vertex Data
+      rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
+      rect_draw_data.vert.scale[1] = 2.f * cmd->height / (float)p_vkrs->window_height;
+      rect_draw_data.vert.offset[0] =
+          -1.0f + 2.0f * (float)cmd->x / (float)(p_vkrs->window_width) + 1.0f * (float)cmd->width / (float)(p_vkrs->window_width);
+      rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(p_vkrs->window_height) +
+                                      1.0f * (float)cmd->height / (float)(p_vkrs->window_height);
 
       // // Fragment Data
       // glm_vec4_copy((float *)cmd->data, rect_draw_data.frag.tint_color);
@@ -353,19 +352,19 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       int write_index = 0;
 
       // // TODO -- refactor this
-      // VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
-      // vert_ubo_info->buffer = p_vkrs->render_data_buffer.buffer;
-      // vert_ubo_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
-      // vert_ubo_info->range = sizeof(rect_draw_data.vert);
+      VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
+      vert_ubo_info->buffer = p_vkrs->render_data_buffer.buffer;
+      vert_ubo_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
+      vert_ubo_info->range = sizeof(rect_draw_data.vert);
 
-      // p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = &rect_draw_data.vert;
-      // p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
-      //     p_vkrs->render_data_buffer.frame_utilized_amount;
-      // p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
-      //     sizeof(rect_draw_data.vert);
-      // p_vkrs->render_data_buffer.frame_utilized_amount +=
-      //     ((vert_ubo_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
-      //     p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
+      p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = &rect_draw_data.vert;
+      p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
+          p_vkrs->render_data_buffer.frame_utilized_amount;
+      p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
+          sizeof(rect_draw_data.vert);
+      p_vkrs->render_data_buffer.frame_utilized_amount +=
+          ((vert_ubo_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
+          p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
 
       // VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
       // frag_ubo_info->buffer = p_vkrs->render_data_buffer.buffer;
@@ -398,10 +397,10 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         VkRect2D scissor;
         scissor.offset.x = (int32_t)(cmd->x);
         scissor.offset.y = (int32_t)(cmd->y);
-        // scissor.extent.width = (uint32_t)(cmd->width);
-        // scissor.extent.height = (uint32_t)(cmd->height);
-        scissor.extent.width = (uint32_t)sequence->extent_width;
-        scissor.extent.height = (uint32_t)sequence->extent_height;
+        scissor.extent.width = (uint32_t)(cmd->width);
+        scissor.extent.height = (uint32_t)(cmd->height);
+        // scissor.extent.width = (uint32_t)sequence->extent_width;
+        // scissor.extent.height = (uint32_t)sequence->extent_height;
         vkCmdSetScissor(p_vkrs->cmd, 0, 1, &scissor);
       }
 
@@ -433,16 +432,16 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       write->dstArrayElement = 0;
       write->dstBinding = 0;
 
-      // // Element Vertex Shader Uniform Buffer
-      // write = &writes[write_index++];
-      // write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      // write->pNext = NULL;
-      // write->dstSet = desc_set;
-      // write->descriptorCount = 1;
-      // write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      // write->pBufferInfo = vert_ubo_info;
-      // write->dstArrayElement = 0;
-      // write->dstBinding = 1;
+      // Element Vertex Shader Uniform Buffer
+      write = &writes[write_index++];
+      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      write->pNext = NULL;
+      write->dstSet = desc_set;
+      write->descriptorCount = 1;
+      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      write->pBufferInfo = vert_ubo_info;
+      write->dstArrayElement = 0;
+      write->dstBinding = 1;
 
       VkDescriptorImageInfo image_sampler_info = {};
       image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -458,7 +457,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
       write->pImageInfo = &image_sampler_info;
       write->dstArrayElement = 0;
-      write->dstBinding = 1;
+      write->dstBinding = 2;
 
       vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
@@ -471,6 +470,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->textured_shape_vertices.buf, offsets);
 
       vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
+
+      printf("Drew TEXTURED_RECT\n");
     } break;
 
     default:

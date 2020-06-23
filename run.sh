@@ -56,7 +56,7 @@ if [ $retval -ne 0 ]; then
 else
     echo Running
     echo "#######################"
-    export EXTRA_CLING_ARGS='-Wmacro-redefined'
+    # export EXTRA_CLING_ARGS='-Wmacro-redefined'
     ./bin/midge
     # -x c
     # chmod u=rwx ./bin/vulkanexp
