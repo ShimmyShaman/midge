@@ -63,7 +63,8 @@ VkResult draw_cube(vk_render_state *p_vkrs);
 VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue);
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue);
 VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, uint *texture_uid);
-VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, uint *texture_uid);
+VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, bool use_as_render_target,
+                                    uint *texture_uid);
 VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float height, uint *resource_uid);
 
 // A normal C function that is executed as a thread
@@ -84,7 +85,7 @@ extern "C" void *midge_render_thread(void *vargp)
   vkrs.window_height = 640;
   vkrs.maximal_image_width = 1024;
   vkrs.maximal_image_height = 1024;
-  vkrs.depth.format = VK_FORMAT_UNDEFINED;
+  // vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
   vkrs.textures.allocated = 0;
 
@@ -111,7 +112,7 @@ extern "C" void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_command_buffer(&vkrs));
   // MRT_RUN(mvk_execute_begin_command_buffer(&vkrs));
   MRT_RUN(mvk_init_swapchain(&vkrs));
-  MRT_RUN(mvk_init_depth_buffer(&vkrs));
+  // MRT_RUN(mvk_init_depth_buffer(&vkrs));
   MRT_RUN(mvk_init_headless_image(&vkrs));
   MRT_RUN(mvk_init_uniform_buffer(&vkrs));
   MRT_RUN(mvk_init_descriptor_and_pipeline_layouts(&vkrs));
@@ -210,18 +211,18 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
 
       // Vertex Data
-      rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
-      rect_draw_data.vert.scale[1] = 2.f * cmd->height / (float)p_vkrs->window_height;
-      rect_draw_data.vert.offset[0] =
-          -1.0f + 2.0f * (float)cmd->x / (float)(p_vkrs->window_width) + 1.0f * (float)cmd->width / (float)(p_vkrs->window_width);
-      rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(p_vkrs->window_height) +
-                                      1.0f * (float)cmd->height / (float)(p_vkrs->window_height);
+      rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)sequence->extent_height;
+      rect_draw_data.vert.scale[1] = 2.f * cmd->height / (float)sequence->extent_height;
+      rect_draw_data.vert.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->extent_width) +
+                                      1.0f * (float)cmd->width / (float)(sequence->extent_width);
+      rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->extent_height) +
+                                      1.0f * (float)cmd->height / (float)(sequence->extent_height);
 
       // Fragment Data
-      rect_draw_data.frag.tint_color[0] = cmd->colored_rect_info.color.r;
-      rect_draw_data.frag.tint_color[1] = cmd->colored_rect_info.color.g;
-      rect_draw_data.frag.tint_color[2] = cmd->colored_rect_info.color.b;
-      rect_draw_data.frag.tint_color[3] = cmd->colored_rect_info.color.a;
+      rect_draw_data.frag.tint_color[0] = cmd->data.colored_rect_info.color.r;
+      rect_draw_data.frag.tint_color[1] = cmd->data.colored_rect_info.color.g;
+      rect_draw_data.frag.tint_color[2] = cmd->data.colored_rect_info.color.b;
+      rect_draw_data.frag.tint_color[3] = cmd->data.colored_rect_info.color.a;
 
       // Queue Buffer Write
       const unsigned int MAX_DESC_SET_WRITES = 8;
@@ -459,8 +460,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
 
       VkDescriptorImageInfo image_sampler_info = {};
       image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      image_sampler_info.imageView = p_vkrs->textures.samples[cmd->textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
-      image_sampler_info.sampler = p_vkrs->textures.samples[cmd->textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].sampler;
+      image_sampler_info.imageView = p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
+      image_sampler_info.sampler =
+          p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].sampler;
 
       // Element Fragment Shader Combined Image Sampler
       write = &writes[write_index++];
@@ -519,18 +521,19 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
     switch (resource_cmd->type) {
     case RESOURCE_COMMAND_LOAD_TEXTURE: {
-      VkResult res = load_texture_from_file(p_vkrs, resource_cmd->path, resource_cmd->p_uid);
+      VkResult res = load_texture_from_file(p_vkrs, resource_cmd->data.path, resource_cmd->p_uid);
       assert(res == VK_SUCCESS);
 
     } break;
     case RESOURCE_COMMAND_CREATE_TEXTURE: {
       VkResult res =
-          create_empty_render_target(p_vkrs, resource_cmd->extents.width, resource_cmd->extents.height, resource_cmd->p_uid);
+          create_empty_render_target(p_vkrs, resource_cmd->data.create_texture.width, resource_cmd->data.create_texture.height,
+                                     resource_cmd->data.create_texture.use_as_render_target, resource_cmd->p_uid);
       assert(res == VK_SUCCESS);
 
     } break;
     case RESOURCE_COMMAND_LOAD_FONT: {
-      VkResult res = load_font(p_vkrs, resource_cmd->font.path, resource_cmd->font.height, resource_cmd->p_uid);
+      VkResult res = load_font(p_vkrs, resource_cmd->data.font.path, resource_cmd->data.font.height, resource_cmd->p_uid);
       assert(res == VK_SUCCESS);
 
     } break;
@@ -546,6 +549,8 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
 VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue)
 {
+  VkResult res;
+
   for (int i = 0; i < render_queue->count; ++i) {
 
     node_render_sequence *sequence = render_queue->items[i];
@@ -564,7 +569,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
       imageAcquiredSemaphoreCreateInfo.pNext = NULL;
       imageAcquiredSemaphoreCreateInfo.flags = 0;
 
-      VkResult res = vkCreateSemaphore(p_vkrs->device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
+      res = vkCreateSemaphore(p_vkrs->device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
       assert(res == VK_SUCCESS);
 
       // Get the index of the next available swapchain image:
@@ -667,102 +672,98 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
       vkDestroyFence(p_vkrs->device, drawFence, NULL);
     } break;
     case NODE_RENDER_TARGET_IMAGE: {
-      continue;
-
       // Obtain the target image
-      // sampled_image *target_image = sequence->
+      sampled_image *target_image = &p_vkrs->textures.samples[sequence->data.target_image.image_uid - RESOURCE_UID_BEGIN];
 
-      // VkImageView attachments[2];
-      // attachments[0] = offscreenPass.color.view;
+      if (!target_image->framebuffer) {
+        // Create?
+        VkFramebufferCreateInfo framebuffer_create_info{};
+        framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebuffer_create_info.pNext = NULL;
+        framebuffer_create_info.renderPass = p_vkrs->offscreen_render_pass;
+        framebuffer_create_info.attachmentCount = 1;
+        framebuffer_create_info.pAttachments = &target_image->view;
+        framebuffer_create_info.width = target_image->width;
+        framebuffer_create_info.height = target_image->height;
+        framebuffer_create_info.layers = 1;
 
-      // VkFramebufferCreateInfo fbufCreateInfo = vks::initializers::framebufferCreateInfo();
-      // fbufCreateInfo.renderPass = offscreenPass.renderPass;
-      // fbufCreateInfo.attachmentCount = 2;
-      // fbufCreateInfo.pAttachments = attachments;
-      // fbufCreateInfo.width = offscreenPass.width;
-      // fbufCreateInfo.height = offscreenPass.height;
-      // fbufCreateInfo.layers = 1;
+        res = vkCreateFramebuffer(p_vkrs->device, &framebuffer_create_info, NULL, &target_image->framebuffer);
+        assert(res == VK_SUCCESS);
+        // res = vkResetDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, 0);
+        // assert(res == VK_SUCCESS);
+        // p_vkrs->descriptor_sets_count = 0U;
+      }
 
-      // VK_CHECK_RESULT(vkCreateFramebuffer(device, &fbufCreateInfo, nullptr, &offscreenPass.frameBuffer));
-      // VkResult res = vkResetDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, 0);
-      // assert(res == VK_SUCCESS);
-      // p_vkrs->descriptor_sets_count = 0U;
+      // Begin Command Buffer Recording
+      res = vkResetCommandPool(p_vkrs->device, p_vkrs->cmd_pool, 0);
+      assert(res == VK_SUCCESS);
 
-      // // Begin Command Buffer Recording
-      // res = vkResetCommandPool(p_vkrs->device, p_vkrs->cmd_pool, 0);
-      // assert(res == VK_SUCCESS);
+      VkCommandBufferBeginInfo beginInfo{};
+      beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+      beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // Optional
+      beginInfo.pInheritanceInfo = NULL;                             // Optional
+      vkBeginCommandBuffer(p_vkrs->cmd, &beginInfo);
 
-      // VkCommandBufferBeginInfo beginInfo{};
-      // beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      // beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // Optional
-      // beginInfo.pInheritanceInfo = nullptr;                          // Optional
-      // vkBeginCommandBuffer(p_vkrs->cmd, &beginInfo);
+      VkClearValue clear_values[1];
+      clear_values[0].color.float32[0] = 0.34f;
+      clear_values[0].color.float32[1] = 0.83f;
+      clear_values[0].color.float32[2] = 0.19f;
+      clear_values[0].color.float32[3] = 1.f;
 
-      // VkClearValue clear_values[2];
-      // clear_values[0].color.float32[0] = 0.19f;
-      // clear_values[0].color.float32[1] = 0.34f;
-      // clear_values[0].color.float32[2] = 0.83f;
-      // clear_values[0].color.float32[3] = 1.f;
-      // clear_values[1].depthStencil.depth = 1.0f;
-      // clear_values[1].depthStencil.stencil = 0;
+      VkRenderPassBeginInfo rp_begin;
+      rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+      rp_begin.pNext = NULL;
+      rp_begin.renderPass = p_vkrs->offscreen_render_pass;
+      rp_begin.framebuffer = target_image->framebuffer;
+      rp_begin.renderArea.offset.x = 0;
+      rp_begin.renderArea.offset.y = 0;
+      rp_begin.renderArea.extent.width = target_image->width;
+      rp_begin.renderArea.extent.height = target_image->height;
+      rp_begin.clearValueCount = 1;
+      rp_begin.pClearValues = clear_values;
 
-      // uint32_t current_buffer;
-      // VkFrameBuffer framebuffer; //  p_vkrs->framebuffers[current_buffer]
+      vkCmdBeginRenderPass(p_vkrs->cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-      // VkRenderPassBeginInfo rp_begin;
-      // rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-      // rp_begin.pNext = NULL;
-      // rp_begin.renderPass = p_vkrs->present_render_pass;
-      // rp_begin.framebuffer = framebuffer;
-      // rp_begin.renderArea.offset.x = 0;
-      // rp_begin.renderArea.offset.y = 0;
-      // rp_begin.renderArea.extent.width = sequence->extent_width;
-      // rp_begin.renderArea.extent.height = sequence->extent_height;
-      // rp_begin.clearValueCount = 2;
-      // rp_begin.pClearValues = clear_values;
+      render_sequence(p_vkrs, sequence);
 
-      // vkCmdBeginRenderPass(p_vkrs->cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+      vkCmdEndRenderPass(p_vkrs->cmd);
+      res = vkEndCommandBuffer(p_vkrs->cmd);
+      assert(res == VK_SUCCESS);
 
-      // render_sequence(p_vkrs, sequence);
+      VkFenceCreateInfo fenceInfo;
+      VkFence drawFence;
+      fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+      fenceInfo.pNext = NULL;
+      fenceInfo.flags = 0;
+      vkCreateFence(p_vkrs->device, &fenceInfo, NULL, &drawFence);
+      assert(res == VK_SUCCESS);
 
-      // vkCmdEndRenderPass(p_vkrs->cmd);
-      // res = vkEndCommandBuffer(p_vkrs->cmd);
-      // assert(res == VK_SUCCESS);
+      VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+      VkSubmitInfo submit_info[1] = {};
+      submit_info[0].pNext = NULL;
+      submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+      submit_info[0].waitSemaphoreCount = 0;
+      submit_info[0].pWaitSemaphores = NULL;
+      submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
+      submit_info[0].commandBufferCount = 1;
+      const VkCommandBuffer cmd_bufs[] = {p_vkrs->cmd};
+      submit_info[0].pCommandBuffers = cmd_bufs;
+      submit_info[0].signalSemaphoreCount = 0;
+      submit_info[0].pSignalSemaphores = NULL;
 
-      // VkFenceCreateInfo fenceInfo;
-      // VkFence drawFence;
-      // fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-      // fenceInfo.pNext = NULL;
-      // fenceInfo.flags = 0;
-      // vkCreateFence(p_vkrs->device, &fenceInfo, NULL, &drawFence);
-      // assert(res == VK_SUCCESS);
+      /* Queue the command buffer for execution */
+      res = vkQueueSubmit(p_vkrs->graphics_queue, 1, submit_info, drawFence);
+      assert(res == VK_SUCCESS);
 
-      // VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-      // VkSubmitInfo submit_info[1] = {};
-      // submit_info[0].pNext = NULL;
-      // submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-      // submit_info[0].waitSemaphoreCount = 0;
-      // submit_info[0].pWaitSemaphores = NULL;
-      // submit_info[0].pWaitDstStageMask = &pipe_stage_flags;
-      // submit_info[0].commandBufferCount = 1;
-      // const VkCommandBuffer cmd_bufs[] = {p_vkrs->cmd};
-      // submit_info[0].pCommandBuffers = cmd_bufs;
-      // submit_info[0].signalSemaphoreCount = 0;
-      // submit_info[0].pSignalSemaphores = NULL;
+      /* Make sure command buffer is finished before leaving */
+      do {
+        res = vkWaitForFences(p_vkrs->device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
+      } while (res == VK_TIMEOUT);
+      assert(res == VK_SUCCESS);
+      res = vkResetFences(p_vkrs->device, 1, &drawFence);
+      assert(res == VK_SUCCESS);
 
-      // /* Queue the command buffer for execution */
-      // res = vkQueueSubmit(p_vkrs->graphics_queue, 1, submit_info, drawFence);
-      // assert(res == VK_SUCCESS);
-
-      // /* Make sure command buffer is finished before presenting */
-      // do {
-      //   res = vkWaitForFences(p_vkrs->device, 1, &drawFence, VK_TRUE, FENCE_TIMEOUT);
-      // } while (res == VK_TIMEOUT);
-      // assert(res == VK_SUCCESS);
-      // res = vkResetFences(p_vkrs->device, 1, &drawFence);
-      // assert(res == VK_SUCCESS);
-
-      // vkDestroyFence(p_vkrs->device, drawFence, NULL);
+      vkDestroyFence(p_vkrs->device, drawFence, NULL);
     } break;
     default:
       return VK_ERROR_UNKNOWN;
@@ -997,10 +998,11 @@ void copyBufferToImage(vk_render_state *p_vkrs, VkBuffer buffer, VkImage image, 
 }
 
 VkResult load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const int texHeight, const int texChannels,
-                            const unsigned char *const pixels, sampled_image *image_sampler)
+                            bool use_as_render_target, const unsigned char *const pixels, sampled_image *image_sampler)
 {
-
-  VkDeviceSize imageSize = texWidth * texHeight * 4;
+  image_sampler->width = texWidth;
+  image_sampler->height = texHeight;
+  image_sampler->size = texWidth * texHeight * 4; // TODO
 
   // Copy to buffer
   VkBuffer stagingBuffer;
@@ -1008,7 +1010,7 @@ VkResult load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const i
 
   VkBufferCreateInfo bufferInfo{};
   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  bufferInfo.size = imageSize;
+  bufferInfo.size = image_sampler->size;
   bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -1033,13 +1035,21 @@ VkResult load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const i
   assert(res == VK_SUCCESS);
 
   void *data;
-  res = vkMapMemory(p_vkrs->device, stagingBufferMemory, 0, imageSize, 0, &data);
+  res = vkMapMemory(p_vkrs->device, stagingBufferMemory, 0, image_sampler->size, 0, &data);
   assert(res == VK_SUCCESS);
-  memcpy(data, pixels, static_cast<size_t>(imageSize));
+  memcpy(data, pixels, static_cast<size_t>(image_sampler->size));
   vkUnmapMemory(p_vkrs->device, stagingBufferMemory);
 
   // Create Image
-  image_sampler->format = VK_FORMAT_R8G8B8A8_SRGB;
+  VkImageUsageFlags image_usage;
+  if (use_as_render_target) {
+    image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_sampler->format = p_vkrs->format;
+  }
+  else {
+    image_usage = 0;
+    image_sampler->format = VK_IMAGE_FORMAT;
+  }
   VkImageCreateInfo imageInfo{};
   imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -1051,7 +1061,7 @@ VkResult load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const i
   imageInfo.format = image_sampler->format;
   imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | image_usage;
   imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.flags = 0; // Optional
@@ -1150,7 +1160,7 @@ VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filep
     p_vkrs->textures.allocated = new_allocated;
   }
 
-  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
   *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
   ++p_vkrs->textures.count;
 
@@ -1161,7 +1171,8 @@ VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filep
   return VK_SUCCESS;
 }
 
-VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, uint *resource_uid)
+VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, bool use_as_render_target,
+                                    uint *resource_uid)
 {
   int texChannels = 4;
   stbi_uc *pixels = (stbi_uc *)malloc(sizeof(stbi_uc) * width * height * texChannels);
@@ -1187,7 +1198,8 @@ VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, c
     p_vkrs->textures.allocated = new_allocated;
   }
 
-  load_image_sampler(p_vkrs, width, height, texChannels, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  load_image_sampler(p_vkrs, width, height, texChannels, use_as_render_target, pixels,
+                     &p_vkrs->textures.samples[p_vkrs->textures.count]);
   *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
   ++p_vkrs->textures.count;
 
@@ -1270,7 +1282,7 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float he
     p_vkrs->textures.allocated = new_allocated;
   }
 
-  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
   *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
   ++p_vkrs->textures.count;
 

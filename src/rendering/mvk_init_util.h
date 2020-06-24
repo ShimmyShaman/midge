@@ -33,6 +33,7 @@ const uint RESOURCE_UID_BEGIN = 300;
  * renderpass creation and pipeline creation.
  */
 #define NUM_SAMPLES VK_SAMPLE_COUNT_1_BIT
+#define VK_IMAGE_FORMAT VK_FORMAT_R8G8B8A8_SRGB;
 
 typedef enum MVkResult {
   MVK_ERROR_GRAPHIC_QUEUE_NOT_FOUND = -1900,
@@ -67,6 +68,8 @@ typedef struct coloured_rect_draw_data {
 
 typedef struct sampled_image {
   VkFormat format;
+  uint width, height;
+  VkDeviceSize size;
   VkSampler sampler;
   VkImage image;
   VkDeviceMemory memory;
@@ -265,7 +268,7 @@ VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs);
 VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_headless_image(vk_render_state *p_vkrs);
 VkResult mvk_init_device(vk_render_state *p_vkrs);
-VkResult init_depth_buffer(vk_render_state *p_vkrs);
+// VkResult init_depth_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain(vk_render_state *p_vkrs);
 VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs);

@@ -375,106 +375,106 @@ VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs)
   return res;
 }
 
-VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
-{
-  // printf("mvk_init_depth_buffer\n");
-  VkResult res;
-  bool pass;
-  VkImageCreateInfo image_info = {};
-  VkFormatProperties props;
+// VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
+// {
+//   // printf("mvk_init_depth_buffer\n");
+//   VkResult res;
+//   bool pass;
+//   VkImageCreateInfo image_info = {};
+//   VkFormatProperties props;
 
-  /* allow custom depth formats */
-  if (p_vkrs->depth.format == VK_FORMAT_UNDEFINED)
-    p_vkrs->depth.format = VK_FORMAT_D16_UNORM;
+//   /* allow custom depth formats */
+//   if (p_vkrs->depth.format == VK_FORMAT_UNDEFINED)
+//     p_vkrs->depth.format = VK_FORMAT_D16_UNORM;
 
-  const VkFormat depth_format = p_vkrs->depth.format;
-  vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], depth_format, &props);
-  if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-    image_info.tiling = VK_IMAGE_TILING_LINEAR;
-  }
-  else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-  }
-  else {
-    /* Try other depth formats? */
-    printf("depth_format:%i is unsupported\n", depth_format);
-    return (VkResult)MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT;
-  }
+//   const VkFormat depth_format = p_vkrs->depth.format;
+//   vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], depth_format, &props);
+//   if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+//     image_info.tiling = VK_IMAGE_TILING_LINEAR;
+//   }
+//   else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+//     image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+//   }
+//   else {
+//     /* Try other depth formats? */
+//     printf("depth_format:%i is unsupported\n", depth_format);
+//     return (VkResult)MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT;
+//   }
 
-  image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  image_info.pNext = NULL;
-  image_info.imageType = VK_IMAGE_TYPE_2D;
-  image_info.format = depth_format;
-  image_info.extent.width = p_vkrs->window_width;
-  image_info.extent.height = p_vkrs->window_height;
-  image_info.extent.depth = 1;
-  image_info.mipLevels = 1;
-  image_info.arrayLayers = 1;
-  image_info.samples = NUM_SAMPLES;
-  image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  image_info.queueFamilyIndexCount = 0;
-  image_info.pQueueFamilyIndices = NULL;
-  image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  image_info.flags = 0;
+//   image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+//   image_info.pNext = NULL;
+//   image_info.imageType = VK_IMAGE_TYPE_2D;
+//   image_info.format = depth_format;
+//   image_info.extent.width = p_vkrs->window_width;
+//   image_info.extent.height = p_vkrs->window_height;
+//   image_info.extent.depth = 1;
+//   image_info.mipLevels = 1;
+//   image_info.arrayLayers = 1;
+//   image_info.samples = NUM_SAMPLES;
+//   image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//   image_info.queueFamilyIndexCount = 0;
+//   image_info.pQueueFamilyIndices = NULL;
+//   image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+//   image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+//   image_info.flags = 0;
 
-  VkMemoryAllocateInfo mem_alloc = {};
-  mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  mem_alloc.pNext = NULL;
-  mem_alloc.allocationSize = 0;
-  mem_alloc.memoryTypeIndex = 0;
+//   VkMemoryAllocateInfo mem_alloc = {};
+//   mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+//   mem_alloc.pNext = NULL;
+//   mem_alloc.allocationSize = 0;
+//   mem_alloc.memoryTypeIndex = 0;
 
-  VkImageViewCreateInfo view_info = {};
-  view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-  view_info.pNext = NULL;
-  view_info.image = VK_NULL_HANDLE;
-  view_info.format = depth_format;
-  view_info.components.r = VK_COMPONENT_SWIZZLE_R;
-  view_info.components.g = VK_COMPONENT_SWIZZLE_G;
-  view_info.components.b = VK_COMPONENT_SWIZZLE_B;
-  view_info.components.a = VK_COMPONENT_SWIZZLE_A;
-  view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-  view_info.subresourceRange.baseMipLevel = 0;
-  view_info.subresourceRange.levelCount = 1;
-  view_info.subresourceRange.baseArrayLayer = 0;
-  view_info.subresourceRange.layerCount = 1;
-  view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  view_info.flags = 0;
+//   VkImageViewCreateInfo view_info = {};
+//   view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+//   view_info.pNext = NULL;
+//   view_info.image = VK_NULL_HANDLE;
+//   view_info.format = depth_format;
+//   view_info.components.r = VK_COMPONENT_SWIZZLE_R;
+//   view_info.components.g = VK_COMPONENT_SWIZZLE_G;
+//   view_info.components.b = VK_COMPONENT_SWIZZLE_B;
+//   view_info.components.a = VK_COMPONENT_SWIZZLE_A;
+//   view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+//   view_info.subresourceRange.baseMipLevel = 0;
+//   view_info.subresourceRange.levelCount = 1;
+//   view_info.subresourceRange.baseArrayLayer = 0;
+//   view_info.subresourceRange.layerCount = 1;
+//   view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+//   view_info.flags = 0;
 
-  if (depth_format == VK_FORMAT_D16_UNORM_S8_UINT || depth_format == VK_FORMAT_D24_UNORM_S8_UINT ||
-      depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
-    view_info.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-  }
+//   if (depth_format == VK_FORMAT_D16_UNORM_S8_UINT || depth_format == VK_FORMAT_D24_UNORM_S8_UINT ||
+//       depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT) {
+//     view_info.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+//   }
 
-  VkMemoryRequirements mem_reqs;
+//   VkMemoryRequirements mem_reqs;
 
-  /* Create image */
-  res = vkCreateImage(p_vkrs->device, &image_info, NULL, &p_vkrs->depth.image);
-  assert(res == VK_SUCCESS);
+//   /* Create image */
+//   res = vkCreateImage(p_vkrs->device, &image_info, NULL, &p_vkrs->depth.image);
+//   assert(res == VK_SUCCESS);
 
-  vkGetImageMemoryRequirements(p_vkrs->device, p_vkrs->depth.image, &mem_reqs);
+//   vkGetImageMemoryRequirements(p_vkrs->device, p_vkrs->depth.image, &mem_reqs);
 
-  mem_alloc.allocationSize = mem_reqs.size;
-  /* Use the memory properties to determine the type of memory required */
-  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                               &mem_alloc.memoryTypeIndex);
-  assert(pass);
+//   mem_alloc.allocationSize = mem_reqs.size;
+//   /* Use the memory properties to determine the type of memory required */
+//   pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+//                                                &mem_alloc.memoryTypeIndex);
+//   assert(pass);
 
-  /* Allocate memory */
-  res = vkAllocateMemory(p_vkrs->device, &mem_alloc, NULL, &p_vkrs->depth.mem);
-  assert(res == VK_SUCCESS);
+//   /* Allocate memory */
+//   res = vkAllocateMemory(p_vkrs->device, &mem_alloc, NULL, &p_vkrs->depth.mem);
+//   assert(res == VK_SUCCESS);
 
-  /* Bind memory */
-  res = vkBindImageMemory(p_vkrs->device, p_vkrs->depth.image, p_vkrs->depth.mem, 0);
-  assert(res == VK_SUCCESS);
+//   /* Bind memory */
+//   res = vkBindImageMemory(p_vkrs->device, p_vkrs->depth.image, p_vkrs->depth.mem, 0);
+//   assert(res == VK_SUCCESS);
 
-  /* Create image view */
-  view_info.image = p_vkrs->depth.image;
-  res = vkCreateImageView(p_vkrs->device, &view_info, NULL, &p_vkrs->depth.view);
-  assert(res == VK_SUCCESS);
+//   /* Create image view */
+//   view_info.image = p_vkrs->depth.image;
+//   res = vkCreateImageView(p_vkrs->device, &view_info, NULL, &p_vkrs->depth.view);
+//   assert(res == VK_SUCCESS);
 
-  return res;
-}
+//   return res;
+// }
 
 uint32_t getMemoryTypeIndex(vk_render_state *p_vkrs, uint32_t typeBits, VkMemoryPropertyFlags properties)
 {
@@ -634,7 +634,6 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs)
   // supported format will be returned.
   if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
     p_vkrs->format = VK_FORMAT_R8G8B8A8_SRGB;
-    // p_vkrs->format = VK_FORMAT_B8G8R8A8_UNORM;
   }
   else {
     assert(formatCount >= 1);
@@ -1256,8 +1255,8 @@ VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
   /* Need attachments for render target and depth buffer */
   VkAttachmentDescription attachments[2];
   attachments[0].format = p_vkrs->format;
-  attachments[0].samples = NUM_SAMPLES;
-  attachments[0].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+  attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+  attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR ;
   attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
   attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;

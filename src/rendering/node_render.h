@@ -73,7 +73,7 @@ typedef struct render_command {
     struct {
       uint texture_uid;
     } textured_rect_info;
-  };
+  } data;
 } render_command;
 
 typedef enum resource_command_type {
@@ -99,7 +99,7 @@ typedef struct node_render_sequence {
     struct {
       uint image_uid;
     } target_image;
-  };
+  } data;
 } node_render_sequence;
 
 typedef struct renderer_queue {
@@ -115,12 +115,13 @@ typedef struct resource_command {
     const char *path;
     struct {
       uint width, height;
-    } extents;
+      bool use_as_render_target;
+    } create_texture;
     struct {
       const char *path;
       float height;
     } font;
-  };
+  } data;
 } resource_command;
 
 typedef struct resource_queue {
