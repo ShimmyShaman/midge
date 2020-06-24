@@ -2,6 +2,28 @@ GOAL:
 
 
 
+generate image ID system
+pass image IDs through render commands
+FontWrite Command
+
+
+
+
+sequence is submitted on its own to render custom text
+ - FontWrite
+ - requires text image id
+ - requires target image id
+ - requires text
+text is rendered to image and not presented
+
+
+visualNode
+  - visualNode::commandinterface
+    - visualNode::textbox
+      - *ui_elements
+        - background
+        - textlines
+
 use the char commands to call a core_function method
 core_function method:
   defines a viewport

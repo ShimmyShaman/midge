@@ -1231,7 +1231,7 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = p_vkrs->texture_prog.pipeline_layout;
-    pipelineInfo.renderPass = p_vkrs->render_pass;
+    pipelineInfo.renderPass = p_vkrs->present_render_pass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -1246,7 +1246,7 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
   return VK_SUCCESS;
 }
 
-VkResult mvk_init_renderpass(vk_render_state *p_vkrs)
+VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
 {
   /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 
@@ -1318,8 +1318,74 @@ VkResult mvk_init_renderpass(vk_render_state *p_vkrs)
   rp_info.dependencyCount = 1;
   rp_info.pDependencies = &subpass_dependency;
 
-  res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->render_pass);
+  res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->present_render_pass);
   assert(res == VK_SUCCESS);
+  return res;
+}
+
+VkResult mvk_init_offscreen_renderpass(vk_render_state *p_vkrs)
+{
+  VkResult res;
+  /* Need attachments for render target and depth buffer */
+  VkAttachmentDescription color_attachment;
+  color_attachment.format = p_vkrs->format;
+  color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  color_attachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  color_attachment.flags = 0;
+
+  VkAttachmentReference color_reference = {};
+  color_reference.attachment = 0;
+  color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass = {};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.flags = 0;
+  subpass.inputAttachmentCount = 0;
+  subpass.pInputAttachments = NULL;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_reference;
+  subpass.pResolveAttachments = NULL;
+  subpass.pDepthStencilAttachment = NULL;
+  subpass.preserveAttachmentCount = 0;
+  subpass.pPreserveAttachments = NULL;
+
+  // Subpass dependency to wait for wsi image acquired semaphore before starting layout transition
+  VkSubpassDependency subpass_dependencies[2];
+
+  subpass_dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+  subpass_dependencies[0].dstSubpass = 0;
+  subpass_dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  subpass_dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  subpass_dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  subpass_dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  subpass_dependencies[1].srcSubpass = 0;
+  subpass_dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+  subpass_dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  subpass_dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  subpass_dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  subpass_dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  VkRenderPassCreateInfo rp_info = {};
+  rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  rp_info.pNext = NULL;
+  rp_info.attachmentCount = 1;
+  rp_info.pAttachments = &color_attachment;
+  rp_info.subpassCount = 1;
+  rp_info.pSubpasses = &subpass;
+  rp_info.dependencyCount = 2;
+  rp_info.pDependencies = subpass_dependencies;
+
+  res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->offscreen_render_pass);
+  assert(res == VK_SUCCESS);
+
   return res;
 }
 
@@ -1568,7 +1634,7 @@ VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth)
   VkFramebufferCreateInfo fb_info = {};
   fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
   fb_info.pNext = NULL;
-  fb_info.renderPass = p_vkrs->render_pass;
+  fb_info.renderPass = p_vkrs->present_render_pass;
   fb_info.attachmentCount = include_depth ? 2 : 1;
   fb_info.pAttachments = attachments;
   fb_info.width = p_vkrs->window_width;
@@ -2010,7 +2076,7 @@ VkResult mvk_init_pipeline(vk_render_state *p_vkrs)
   pipeline.pDepthStencilState = &ds;
   pipeline.pStages = p_vkrs->shaderStages;
   pipeline.stageCount = 2;
-  pipeline.renderPass = p_vkrs->render_pass;
+  pipeline.renderPass = p_vkrs->present_render_pass;
   pipeline.subpass = 0;
 
   res = vkCreateGraphicsPipelines(p_vkrs->device, p_vkrs->pipelineCache, 1, &pipeline, NULL, &p_vkrs->pipeline);
@@ -2053,10 +2119,12 @@ void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs) { vkDestroyDescriptorP
 
 void mvk_destroy_sampled_image(vk_render_state *p_vkrs, sampled_image *sampled_image)
 {
-  vkDestroySampler(p_vkrs->device, sampled_image->sampler, nullptr);
-  vkDestroyImageView(p_vkrs->device, sampled_image->view, nullptr);
-  vkDestroyImage(p_vkrs->device, sampled_image->image, nullptr);
-  vkFreeMemory(p_vkrs->device, sampled_image->memory, nullptr);
+  vkDestroySampler(p_vkrs->device, sampled_image->sampler, NULL);
+  vkDestroyImageView(p_vkrs->device, sampled_image->view, NULL);
+  vkDestroyImage(p_vkrs->device, sampled_image->image, NULL);
+  vkFreeMemory(p_vkrs->device, sampled_image->memory, NULL);
+  if (sampled_image->framebuffer)
+    vkDestroyFramebuffer(p_vkrs->device, sampled_image->framebuffer, NULL);
 }
 
 void mvk_destroy_resources(vk_render_state *p_vkrs)
@@ -2131,7 +2199,11 @@ void mvk_destroy_swap_chain(vk_render_state *p_vkrs)
   vkDestroySurfaceKHR(p_vkrs->inst, p_vkrs->surface, NULL);
 }
 
-void mvk_destroy_renderpass(vk_render_state *p_vkrs) { vkDestroyRenderPass(p_vkrs->device, p_vkrs->render_pass, NULL); }
+void mvk_destroy_renderpass(vk_render_state *p_vkrs)
+{
+  vkDestroyRenderPass(p_vkrs->device, p_vkrs->present_render_pass, NULL);
+  vkDestroyRenderPass(p_vkrs->device, p_vkrs->offscreen_render_pass, NULL);
+}
 
 void mvk_destroy_device(vk_render_state *p_vkrs)
 {

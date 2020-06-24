@@ -71,7 +71,7 @@ typedef struct sampled_image {
   VkImage image;
   VkDeviceMemory memory;
   VkImageView view;
-
+  VkFramebuffer framebuffer;
 } sampled_image;
 
 typedef struct textured_image_vertex {
@@ -241,7 +241,7 @@ typedef struct vk_render_state {
   VkPipelineLayout pipeline_layout;
   std::vector<VkDescriptorSetLayout> desc_layout;
   VkPipelineCache pipelineCache;
-  VkRenderPass render_pass;
+  VkRenderPass present_render_pass, offscreen_render_pass;
   VkPipeline pipeline;
 
   VkPipelineShaderStageCreateInfo shaderStages[2];
@@ -270,7 +270,8 @@ VkResult mvk_init_swapchain_extension(vk_render_state *p_vkrs);
 VkResult mvk_init_swapchain(vk_render_state *p_vkrs);
 VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs);
 VkResult mvk_init_descriptor_and_pipeline_layouts(vk_render_state *p_vkrs);
-VkResult mvk_init_renderpass(vk_render_state *p_vkrs);
+VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs);
+VkResult mvk_init_offscreen_renderpass(vk_render_state *p_vkrs);
 VkResult mvk_init_command_pool(vk_render_state *p_vkrs);
 VkResult mvk_init_command_buffer(vk_render_state *p_vkrs);
 // VkResult mvk_execute_begin_command_buffer(vk_render_state *p_vkrs);
