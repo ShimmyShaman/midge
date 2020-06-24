@@ -2110,6 +2110,11 @@ int mc_main(int argc, const char *const *argv)
   render_thread.renderer_queue->count = 0;
   render_thread.renderer_queue->in_use = false;
   render_thread.renderer_queue->items = NULL;
+  pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
+  render_thread.resource_queue.count = 0;
+  render_thread.resource_queue.allocated = 8;
+  render_thread.resource_queue.commands =
+      (resource_command *)malloc(sizeof(resource_command) * render_thread.resource_queue.allocated);
   begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
 
   mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
@@ -2438,6 +2443,8 @@ int mc_main(int argc, const char *const *argv)
   MCcall(init_void_collection_v1(&command_hub->template_collection));
   MCcall(init_void_collection_v1(&command_hub->render_queue));
   command_hub->render_thread_renderer_queue = render_thread.renderer_queue;
+  command_hub->renderer.resource_queue = &render_thread.resource_queue;
+  command_hub->ui_elements = (mc_ui_element_v1 *)malloc(sizeof(mc_ui_element_v1) * 32);
   command_hub->uid_counter = 2000;
   command_hub->scripts_alloc = 32;
   command_hub->scripts = (void **)malloc(sizeof(void *) * command_hub->scripts_alloc);
@@ -2647,12 +2654,16 @@ int mc_main(int argc, const char *const *argv)
   // printf("\n\nProcess Matrix:\n");
   // print_process_unit(command_hub->process_matrix, 5, 5, 1);
 
+  // End render thread
   int ms = 0;
   while (ms < 8000 && !render_thread.thread_info->has_concluded) {
     ++ms;
     usleep(1000);
   }
   end_mthread(render_thread.thread_info);
+
+  // Destroy render thread resources
+  pthread_mutex_destroy(&render_thread.resource_queue.mutex);
 
   printf("\n\n</midge_core>\n");
   return 0;

@@ -24,6 +24,8 @@
 #define NUM_VIEWPORTS 1
 #define NUM_SCISSORS NUM_VIEWPORTS
 
+const uint RESOURCE_UID_BEGIN = 300;
+
 /* Amount of time, in nanoseconds, to wait for a command buffer to complete */
 #define FENCE_TIMEOUT 100000000
 
@@ -83,6 +85,11 @@ typedef struct render_program {
   VkPipelineLayout pipeline_layout;
   VkPipeline pipeline;
 } render_program;
+
+typedef struct loaded_font_info {
+  const char *name;
+  uint resource_uid;
+} loaded_font_info;
 
 /*
  * Keep each of our swap chain buffers' image, command buffer and view in one
@@ -154,10 +161,19 @@ typedef struct vk_render_state {
     queued_copy_info *queued_copies;
   } render_data_buffer;
 
-  sampled_image texture_image;
-  render_program texture_prog;
+  struct {
+    uint count;
+    uint allocated;
+    sampled_image *samples;
+  } textures;
 
-  sampled_image font_image;
+  struct {
+    uint count;
+    uint allocated;
+    loaded_font_info *fonts;
+  } loaded_fonts;
+
+  render_program texture_prog;
 
   VkCommandPool cmd_pool;
 

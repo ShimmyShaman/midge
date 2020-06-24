@@ -61,8 +61,10 @@ static glsl_shader fragment_shader = {
 
 VkResult draw_cube(vk_render_state *p_vkrs);
 VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue);
-VkResult create_texture_image(vk_render_state *p_vkrs);
-VkResult load_font_resources(vk_render_state *p_vkrs);
+VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue);
+VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, uint *texture_uid);
+VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, uint *texture_uid);
+VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float height, uint *resource_uid);
 
 // A normal C function that is executed as a thread
 // when its name is specified in pthread_create()
@@ -84,6 +86,7 @@ extern "C" void *midge_render_thread(void *vargp)
   vkrs.maximal_image_height = 1024;
   vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
+  vkrs.textures.allocated = 0;
 
   // glm_vec2_copy((vec2){-0.2, 0.3}, vkrs.ui_element.offset);
   // glm_vec2_copy((vec2){1.f, 1.f}, vkrs.ui_element.scale);
@@ -105,7 +108,6 @@ extern "C" void *midge_render_thread(void *vargp)
 
   MRT_RUN(mvk_init_command_pool(&vkrs));
   mvk_init_device_queue(&vkrs);
-  MRT_RUN(create_texture_image(&vkrs));
   MRT_RUN(mvk_init_command_buffer(&vkrs));
   // MRT_RUN(mvk_execute_begin_command_buffer(&vkrs));
   MRT_RUN(mvk_init_swapchain(&vkrs));
@@ -127,20 +129,24 @@ extern "C" void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_pipeline(&vkrs)); // Maybe false?
 
   // MRT_RUN(draw_cube(&vkrs));
-  MRT_RUN(load_font_resources(&vkrs));
 
   // -- Update
   printf("Vulkan Initialized!\n");
+  mxcb_update_window(&winfo);
+  render_thread->render_thread_initialized = true;
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
   uint frame_updates = 0;
   while (!thr->should_exit && !winfo.shouldExit) {
-    // printf("mrt-3\n");
-    // usleep(1);
-    mxcb_update_window(&winfo);
+    // Resource Commands
+    pthread_mutex_lock(&render_thread->resource_queue.mutex);
+    if (render_thread->resource_queue.count) {
+      handle_resource_commands(&vkrs, &render_thread->resource_queue);
+      render_thread->resource_queue.count = 0;
+    }
+    pthread_mutex_unlock(&render_thread->resource_queue.mutex);
 
-    render_thread->render_thread_initialized = true;
-
+    // Render Commands
     if (!render_thread->renderer_queue->in_use && render_thread->renderer_queue->count) {
       // printf("received render queue in renderer : %i items\n", render_thread->renderer_queue->count);
       render_thread->renderer_queue->in_use = true;
@@ -151,6 +157,8 @@ extern "C" void *midge_render_thread(void *vargp)
       render_thread->renderer_queue->in_use = false;
       ++frame_updates;
     }
+
+    mxcb_update_window(&winfo);
   }
   printf("AfterUpdate! frame_updates = %i\n", frame_updates);
 
@@ -447,8 +455,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
 
       VkDescriptorImageInfo image_sampler_info = {};
       image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      image_sampler_info.imageView = p_vkrs->font_image.view;
-      image_sampler_info.sampler = p_vkrs->font_image.sampler;
+      image_sampler_info.imageView = p_vkrs->textures.samples[*(uint *)cmd->data - RESOURCE_UID_BEGIN].view;
+      image_sampler_info.sampler = p_vkrs->textures.samples[*(uint *)cmd->data - RESOURCE_UID_BEGIN].sampler;
 
       // Element Fragment Shader Combined Image Sampler
       write = &writes[write_index++];
@@ -472,8 +480,6 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->textured_shape_vertices.buf, offsets);
 
       vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
-
-      printf("Drew TEXTURED_RECT\n");
     } break;
 
     default:
@@ -499,6 +505,38 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
 
     vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
   }
+  return VK_SUCCESS;
+}
+
+VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue)
+{
+  for (int i = 0; i < resource_queue->count; ++i) {
+    resource_command *resource_cmd = &resource_queue->commands[i];
+
+    switch (resource_cmd->type) {
+    case RESOURCE_COMMAND_LOAD_TEXTURE: {
+      VkResult res = load_texture_from_file(p_vkrs, resource_cmd->path, resource_cmd->p_uid);
+      assert(res == VK_SUCCESS);
+
+    } break;
+    case RESOURCE_COMMAND_CREATE_TEXTURE: {
+      VkResult res =
+          create_empty_render_target(p_vkrs, resource_cmd->extents.width, resource_cmd->extents.height, resource_cmd->p_uid);
+      assert(res == VK_SUCCESS);
+
+    } break;
+    case RESOURCE_COMMAND_LOAD_FONT: {
+      VkResult res = load_font(p_vkrs, resource_cmd->font.path, resource_cmd->font.height, resource_cmd->p_uid);
+      assert(res == VK_SUCCESS);
+
+    } break;
+
+    default:
+      printf("COULD NOT HANDLE RESOURCE COMMAND TYPE=%i\n", resource_cmd->type);
+      continue;
+    }
+  }
+
   return VK_SUCCESS;
 }
 
@@ -978,21 +1016,73 @@ VkResult load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const i
   return res;
 }
 
-VkResult create_texture_image(vk_render_state *p_vkrs)
+VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, uint *resource_uid)
 {
   int texWidth, texHeight, texChannels;
-  stbi_uc *pixels = stbi_load("res/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+  stbi_uc *pixels = stbi_load(filepath, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
   VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-  printf("loaded texture.png> width:%i height:%i channels:%i\n", texWidth, texHeight, texChannels);
 
   if (!pixels) {
     return VK_ERROR_UNKNOWN;
+  };
+
+  // TODO -- Refactor
+  if (p_vkrs->textures.allocated < p_vkrs->textures.count + 1) {
+    int new_allocated = p_vkrs->textures.allocated + 4 + p_vkrs->textures.allocated / 4;
+    sampled_image *new_ary = (sampled_image *)malloc(sizeof(sampled_image) * new_allocated);
+
+    if (p_vkrs->textures.allocated) {
+      memcpy(new_ary, p_vkrs->textures.samples, sizeof(sampled_image) * p_vkrs->textures.allocated);
+      free(p_vkrs->textures.samples);
+    }
+    p_vkrs->textures.samples = new_ary;
+    p_vkrs->textures.allocated = new_allocated;
   }
 
-  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, pixels, &p_vkrs->texture_image);
+  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
+  ++p_vkrs->textures.count;
 
   stbi_image_free(pixels);
+
+  printf("loaded %s> width:%i height:%i channels:%i\n", filepath, texWidth, texHeight, texChannels);
+
+  return VK_SUCCESS;
+}
+
+VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, uint *resource_uid)
+{
+  int texChannels = 4;
+  stbi_uc *pixels = (stbi_uc *)malloc(sizeof(stbi_uc) * width * height * texChannels);
+  VkDeviceSize imageSize = width * height * 4;
+  for (int i = 0; i < (int)imageSize; ++i) {
+    pixels[i] = 255;
+  }
+
+  if (!pixels) {
+    return VK_ERROR_UNKNOWN;
+  };
+
+  // TODO -- Refactor
+  if (p_vkrs->textures.allocated < p_vkrs->textures.count + 1) {
+    int new_allocated = p_vkrs->textures.allocated + 4 + p_vkrs->textures.allocated / 4;
+    sampled_image *new_ary = (sampled_image *)malloc(sizeof(sampled_image) * new_allocated);
+
+    if (p_vkrs->textures.allocated) {
+      memcpy(new_ary, p_vkrs->textures.samples, sizeof(sampled_image) * p_vkrs->textures.allocated);
+      free(p_vkrs->textures.samples);
+    }
+    p_vkrs->textures.samples = new_ary;
+    p_vkrs->textures.allocated = new_allocated;
+  }
+
+  load_image_sampler(p_vkrs, width, height, texChannels, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
+  ++p_vkrs->textures.count;
+
+  stbi_image_free(pixels);
+
+  printf("generated empty texture> width:%i height:%i channels:%i\n", width, height, texChannels);
 
   return VK_SUCCESS;
 }
@@ -1001,8 +1091,42 @@ VkResult create_texture_image(vk_render_state *p_vkrs)
 #define STBTT_STATIC
 #include "stb_truetype.h"
 
-VkResult load_font_resources(vk_render_state *p_vkrs)
+VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float height, uint *resource_uid)
 {
+  // Font is a common resource -- check font cache for existing
+  char *font_name;
+  {
+
+    int index_of_last_slash = -1;
+    for (int i = 0;; i++) {
+      if (filepath[i] == '\0') {
+        printf("INVALID FORMAT filepath='%s'\n", filepath);
+        return VK_ERROR_UNKNOWN;
+      }
+      if (filepath[i] == '.') {
+        int si = index_of_last_slash >= 0 ? (index_of_last_slash + 1) : 0;
+        font_name = (char *)malloc(sizeof(char) * (i - si + 1));
+        strncpy(font_name, filepath + si, i - si);
+        font_name[i - si] = '\0';
+        break;
+      }
+      else if (filepath[i] == '\\' || filepath[i] == '/') {
+        index_of_last_slash = i;
+      }
+    }
+
+    for (int i = 0; i < p_vkrs->loaded_fonts.count; ++i) {
+      if (!strcmp(p_vkrs->loaded_fonts.fonts[i].name, font_name)) {
+        *resource_uid = p_vkrs->loaded_fonts.fonts[i].resource_uid;
+
+        printf("using cached font texture> name:%s height:%.2f resource_uid:%u\n", font_name, height, *resource_uid);
+        free(font_name);
+
+        return VK_SUCCESS;
+      }
+    }
+  }
+
   stbi_uc ttf_buffer[1 << 20];
   fread(ttf_buffer, 1, 1 << 20, fopen("/home/jason/midge/res/font/LiberationMono-Regular.ttf", "rb"));
 
@@ -1022,7 +1146,42 @@ VkResult load_font_resources(vk_render_state *p_vkrs)
     }
   }
 
-  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, pixels, &p_vkrs->font_image);
+  // TODO -- Refactor
+  if (p_vkrs->textures.allocated < p_vkrs->textures.count + 1) {
+    int new_allocated = p_vkrs->textures.allocated + 4 + p_vkrs->textures.allocated / 4;
+    sampled_image *new_ary = (sampled_image *)malloc(sizeof(sampled_image) * new_allocated);
+
+    if (p_vkrs->textures.allocated) {
+      memcpy(new_ary, p_vkrs->textures.samples, sizeof(sampled_image) * p_vkrs->textures.allocated);
+      free(p_vkrs->textures.samples);
+    }
+    p_vkrs->textures.samples = new_ary;
+    p_vkrs->textures.allocated = new_allocated;
+  }
+
+  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
+  ++p_vkrs->textures.count;
+
+  // Font is a common resource -- cache so multiple loads reference the same resource uid
+  {
+    if (p_vkrs->loaded_fonts.allocated < p_vkrs->loaded_fonts.count + 1) {
+      int new_allocated = p_vkrs->loaded_fonts.allocated + 4 + p_vkrs->loaded_fonts.allocated / 4;
+      loaded_font_info *new_ary = (loaded_font_info *)malloc(sizeof(loaded_font_info) * new_allocated);
+
+      if (p_vkrs->loaded_fonts.allocated) {
+        memcpy(new_ary, p_vkrs->loaded_fonts.fonts, sizeof(loaded_font_info) * p_vkrs->loaded_fonts.allocated);
+        free(p_vkrs->loaded_fonts.fonts);
+      }
+      p_vkrs->loaded_fonts.fonts = new_ary;
+      p_vkrs->loaded_fonts.allocated = new_allocated;
+    }
+
+    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].name = font_name;
+    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count++].resource_uid = *resource_uid;
+  }
+
+  printf("generated font texture> name:%s height:%.2f resource_uid:%u\n", font_name, height, *resource_uid);
 
   return VK_SUCCESS;
 }

@@ -263,13 +263,21 @@ typedef struct mc_workflow_process_v1 {
   bool requires_activation;
 } mc_workflow_process_v1;
 
+typedef struct mc_ui_element_v1 {
+  uint resource_uid;
+} mc_ui_element_v1;
+
 typedef struct mc_command_hub_v1 {
   mc_struct_id_v1 *struct_id;
   mc_node_v1 *global_node;
   mc_node_v1 *nodespace;
+  mc_ui_element_v1 *ui_elements;
   mc_void_collection_v1 *template_collection;
   mc_void_collection_v1 *render_queue;
   renderer_queue *render_thread_renderer_queue;
+  struct {
+    resource_queue *resource_queue;
+  } renderer;
   mc_process_unit_v1 *process_matrix;
   mc_workflow_process_v1 *focused_workflow;
   unsigned int scripts_alloc;

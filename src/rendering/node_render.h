@@ -69,6 +69,13 @@ typedef struct render_command {
   void *data;
 } render_command;
 
+typedef enum resource_command_type {
+  RESOURCE_COMMAND_NONE = 1,
+  RESOURCE_COMMAND_LOAD_TEXTURE,
+  RESOURCE_COMMAND_CREATE_TEXTURE,
+  RESOURCE_COMMAND_LOAD_FONT,
+} resource_command_type;
+
 typedef enum node_render_target {
   NODE_RENDER_TARGET_NONE = 1,
   NODE_RENDER_TARGET_HOST_IMAGE,
@@ -90,9 +97,32 @@ typedef struct renderer_queue {
   node_render_sequence **items;
 } renderer_queue;
 
+typedef struct resource_command {
+  resource_command_type type;
+  uint *p_uid;
+  union {
+    const char *path;
+    struct {
+      uint width, height;
+    } extents;
+    struct {
+      const char *path;
+      float height;
+    } font;
+  };
+} resource_command;
+
+typedef struct resource_queue {
+  pthread_mutex_t mutex;
+  int count;
+  int allocated;
+  resource_command *commands;
+} resource_queue;
+
 typedef struct render_thread_info {
   mthread_info *thread_info;
   renderer_queue *renderer_queue;
+  resource_queue resource_queue;
   bool render_thread_initialized;
 } render_thread_info;
 

@@ -2061,8 +2061,10 @@ void mvk_destroy_sampled_image(vk_render_state *p_vkrs, sampled_image *sampled_i
 
 void mvk_destroy_resources(vk_render_state *p_vkrs)
 {
-  mvk_destroy_sampled_image(p_vkrs, &p_vkrs->texture_image);
-  mvk_destroy_sampled_image(p_vkrs, &p_vkrs->font_image);
+  for (int i = 0; i < p_vkrs->textures.count; ++i) {
+    mvk_destroy_sampled_image(p_vkrs, &p_vkrs->textures.samples[i]);
+  }
+  free(p_vkrs->textures.samples);
 
   vkDestroyBuffer(p_vkrs->device, p_vkrs->shape_vertices.buf, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, NULL);

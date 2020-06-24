@@ -205,9 +205,93 @@ int force_render_update(int argc, void **argv)
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
-  /*mcfuncreplace*/
+                                  /*mcfuncreplace*/
 
-  // printf("fru-0\n");
+  // Set the resource command queue
+  pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
+  int *cmd_count = &command_hub->renderer.resource_queue->count;
+  *cmd_count = 0;
+
+  // TODO -- REFACTOR
+  if (command_hub->renderer.resource_queue->allocated < *cmd_count + 1) {
+    int new_allocated = (*cmd_count + 1) + 4 + (*cmd_count + 1) / 4;
+    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
+
+    if (command_hub->renderer.resource_queue->allocated) {
+      memcpy(new_ary, command_hub->renderer.resource_queue->commands, sizeof(resource_command) * *cmd_count);
+      free(command_hub->renderer.resource_queue->commands);
+    }
+    command_hub->renderer.resource_queue->commands = new_ary;
+    command_hub->renderer.resource_queue->allocated = new_allocated;
+    printf("refactor-1\n");
+  }
+
+  resource_command *command = &command_hub->renderer.resource_queue->commands[(*cmd_count)++];
+  command->type = RESOURCE_COMMAND_LOAD_TEXTURE;
+  command->p_uid = &command_hub->ui_elements[0].resource_uid;
+  command->path = "res/texture.jpg";
+
+  // TODO -- REFACTOR
+  if (command_hub->renderer.resource_queue->allocated < *cmd_count + 1) {
+    int new_allocated = (*cmd_count + 1) + 4 + (*cmd_count + 1) / 4;
+    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
+
+    if (command_hub->renderer.resource_queue->allocated) {
+      memcpy(new_ary, command_hub->renderer.resource_queue->commands, sizeof(resource_command) * *cmd_count);
+      free(command_hub->renderer.resource_queue->commands);
+    }
+    command_hub->renderer.resource_queue->commands = new_ary;
+    command_hub->renderer.resource_queue->allocated = new_allocated;
+    printf("refactor-2\n");
+  }
+
+  command = &command_hub->renderer.resource_queue->commands[(*cmd_count)++];
+  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+  command->p_uid = &command_hub->ui_elements[1].resource_uid;
+  command->extents.width = 512;
+  command->extents.height = 128;
+
+  // TODO -- REFACTOR
+  if (command_hub->renderer.resource_queue->allocated < *cmd_count + 1) {
+    int new_allocated = (*cmd_count + 1) + 4 + (*cmd_count + 1) / 4;
+    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
+
+    if (command_hub->renderer.resource_queue->allocated) {
+      memcpy(new_ary, command_hub->renderer.resource_queue->commands, sizeof(resource_command) * *cmd_count);
+      free(command_hub->renderer.resource_queue->commands);
+    }
+    command_hub->renderer.resource_queue->commands = new_ary;
+    command_hub->renderer.resource_queue->allocated = new_allocated;
+    printf("refactor-3\n");
+  }
+
+  command = &command_hub->renderer.resource_queue->commands[(*cmd_count)++];
+  command->type = RESOURCE_COMMAND_LOAD_FONT;
+  command->p_uid = &command_hub->ui_elements[2].resource_uid;
+  command->font.path = "res/font/LiberationMono-Regular.ttf";
+  command->font.height = 24.0f;
+
+  // TODO -- REFACTOR
+  if (command_hub->renderer.resource_queue->allocated < *cmd_count + 1) {
+    int new_allocated = (*cmd_count + 1) + 4 + (*cmd_count + 1) / 4;
+    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
+
+    if (command_hub->renderer.resource_queue->allocated) {
+      memcpy(new_ary, command_hub->renderer.resource_queue->commands, sizeof(resource_command) * *cmd_count);
+      free(command_hub->renderer.resource_queue->commands);
+    }
+    command_hub->renderer.resource_queue->commands = new_ary;
+    command_hub->renderer.resource_queue->allocated = new_allocated;
+    printf("refactor-3\n");
+  }
+
+  command = &command_hub->renderer.resource_queue->commands[(*cmd_count)++];
+  command->type = RESOURCE_COMMAND_LOAD_FONT;
+  command->p_uid = &command_hub->ui_elements[3].resource_uid;
+  command->font.path = "res/font/LiberationMono-Regular.ttf";
+  command->font.height = 24.0f;
+
+  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
 
   // Command Interface Box
   node_render_sequence *sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
@@ -296,9 +380,9 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].type = RENDER_COMMAND_TEXTURED_RECTANGLE;
   sequence->render_commands[rci].x = 256;
   sequence->render_commands[rci].y = 64;
-  sequence->render_commands[rci].width = 256;
-  sequence->render_commands[rci].height = 256;
-  sequence->render_commands[rci++].data = NULL;
+  sequence->render_commands[rci].width = 512;
+  sequence->render_commands[rci].height = 512;
+  sequence->render_commands[rci++].data = (void *)&command_hub->ui_elements[3].resource_uid;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 300 - 8;
