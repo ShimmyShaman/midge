@@ -321,14 +321,15 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].y = 32;
   sequence->render_commands[rci].width = 64;
   sequence->render_commands[rci].height = 64;
-  sequence->render_commands[rci++].data.colored_rect_info.color = purple;
+  sequence->render_commands[rci++].data.colored_rect_info.color = dark_slate_gray;
 
-  // sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  // sequence->render_commands[rci].x = 2;
-  // sequence->render_commands[rci].y = 2;
-  // sequence->render_commands[rci].width = 1020;
-  // sequence->render_commands[rci].height = 636;
-  // sequence->render_commands[rci++].colored_rect_info.color = (void *)dark_slate_gray;
+  sequence->render_commands[rci].type = RENDER_COMMAND_PRINT_LETTER;
+  sequence->render_commands[rci].x = 90;
+  sequence->render_commands[rci].y = 42;
+  sequence->render_commands[rci].width = 0;
+  sequence->render_commands[rci].height = 0;
+  sequence->render_commands[rci++].data.print_letter.letter = 'A';
+  sequence->render_commands[rci++].data.print_letter.font_resource_uid = command_hub->ui_elements[2].resource_uid;
 
   sequence->render_command_count = rci;
 

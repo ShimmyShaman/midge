@@ -488,30 +488,195 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
     } break;
 
-    default:
-      printf("COULD NOT HANDLE RENDER COMMAND TYPE=%i\n", cmd->type);
-      continue;
+    case RENDER_COMMAND_PRINT_LETTER: {
+      // // Set
+      coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
+
+      // Get the font image
+      sampled_image *font_texture = &p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN];
+
+      // Vertex Data
+      rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
+      rect_draw_data.vert.scale[1] = 2.f * cmd->height / (float)p_vkrs->window_height;
+      rect_draw_data.vert.offset[0] =
+          -1.0f + 2.0f * (float)cmd->x / (float)(p_vkrs->window_width) + 1.0f * (float)cmd->width / (float)(p_vkrs->window_width);
+      rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(p_vkrs->window_height) +
+                                      1.0f * (float)cmd->height / (float)(p_vkrs->window_height);
+
+      if (cmd->data.print_letter.letter < 32 || cmd->data.print_letter.letter > 127) {
+        printf("TODO character not supported.\n");
+        continue;
+      }
+
+      stbtt_aligned_quad q;
+      float x, y;
+      stbtt_GetBakedQuad(cdata, font_texture->width, font_texture->height, cmd->data.print_letter.letter - 32, &x, &y, &q,
+                         1); // 1=opengl & d3d10+,0=d3d9
+      glTexCoord2f(q.s0, q.t1);
+      glVertex2f(q.x0, q.y0);
+      glTexCoord2f(q.s1, q.t1);
+      glVertex2f(q.x1, q.y0);
+      glTexCoord2f(q.s1, q.t0);
+      glVertex2f(q.x1, q.y1);
+      glTexCoord2f(q.s0, q.t0);
+      glVertex2f(q.x0, q.y1);
     }
+      // // Fragment Data
+      // glm_vec4_copy((float *)cmd->data, rect_draw_data.frag.tint_color);
+
+      // Queue Buffer Write
+      const unsigned int MAX_DESC_SET_WRITES = 8;
+      VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
+      VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
+      int buffer_info_index = 0;
+      int write_index = 0;
+
+      // // TODO -- refactor this
+      VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
+      vert_ubo_info->buffer = p_vkrs->render_data_buffer.buffer;
+      vert_ubo_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
+      vert_ubo_info->range = sizeof(rect_draw_data.vert);
+
+      p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = &rect_draw_data.vert;
+      p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
+          p_vkrs->render_data_buffer.frame_utilized_amount;
+      p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
+          sizeof(rect_draw_data.vert);
+      p_vkrs->render_data_buffer.frame_utilized_amount +=
+          ((vert_ubo_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
+          p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
+
+      // VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
+      // frag_ubo_info->buffer = p_vkrs->render_data_buffer.buffer;
+      // frag_ubo_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
+      // frag_ubo_info->range = sizeof(rect_draw_data.frag);
+
+      // p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = &rect_draw_data.frag;
+      // p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
+      //     p_vkrs->render_data_buffer.frame_utilized_amount;
+      // p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
+      //     sizeof(rect_draw_data.frag);
+      // p_vkrs->render_data_buffer.frame_utilized_amount +=
+      //     ((frag_ubo_info->range / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
+      //     p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
+
+      // Setup viewport:
+      {
+        VkViewport viewport;
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = (float)sequence->extent_width;
+        viewport.height = (float)sequence->extent_height;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(p_vkrs->cmd, 0, 1, &viewport);
+      }
+
+      // Apply scissor/clipping rectangle
+      {
+        VkRect2D scissor;
+        scissor.offset.x = (int32_t)(cmd->x);
+        scissor.offset.y = (int32_t)(cmd->y);
+        scissor.extent.width = (uint32_t)(cmd->width);
+        scissor.extent.height = (uint32_t)(cmd->height);
+        // scissor.extent.width = (uint32_t)sequence->extent_width;
+        // scissor.extent.height = (uint32_t)sequence->extent_height;
+        vkCmdSetScissor(p_vkrs->cmd, 0, 1, &scissor);
+      }
+
+      // Allocate the descriptor set from the pool.
+      VkDescriptorSetAllocateInfo setAllocInfo = {};
+      setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+      setAllocInfo.pNext = NULL;
+      // Use the pool we created earlier ( the one dedicated to this frame )
+      setAllocInfo.descriptorPool = p_vkrs->desc_pool;
+      // We only need to allocate one
+      setAllocInfo.descriptorSetCount = 1;
+      setAllocInfo.pSetLayouts = &p_vkrs->texture_prog.desc_layout;
+
+      unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
+      res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
+      assert(res == VK_SUCCESS);
+
+      VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
+      p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
+
+      // Global Vertex Shader Uniform Buffer
+      VkWriteDescriptorSet *write = &writes[write_index++];
+      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      write->pNext = NULL;
+      write->dstSet = desc_set;
+      write->descriptorCount = 1;
+      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      write->pBufferInfo = &p_vkrs->global_vert_uniform_buffer.buffer_info;
+      write->dstArrayElement = 0;
+      write->dstBinding = 0;
+
+      // Element Vertex Shader Uniform Buffer
+      write = &writes[write_index++];
+      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      write->pNext = NULL;
+      write->dstSet = desc_set;
+      write->descriptorCount = 1;
+      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      write->pBufferInfo = vert_ubo_info;
+      write->dstArrayElement = 0;
+      write->dstBinding = 1;
+
+      VkDescriptorImageInfo image_sampler_info = {};
+      image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      image_sampler_info.imageView = font_texture.view;
+      image_sampler_info.sampler = font_texture.sampler;
+
+      // Element Fragment Shader Combined Image Sampler
+      write = &writes[write_index++];
+      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      write->pNext = NULL;
+      write->dstSet = desc_set;
+      write->descriptorCount = 1;
+      write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      write->pImageInfo = &image_sampler_info;
+      write->dstArrayElement = 0;
+      write->dstBinding = 2;
+
+      vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
+
+      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->texture_prog.pipeline_layout, 0, 1, &desc_set,
+                              0, NULL);
+
+      vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->texture_prog.pipeline);
+
+      const VkDeviceSize offsets[1] = {0};
+      vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->textured_shape_vertices.buf, offsets);
+
+      vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
+    }
+    break;
+
+  default:
+    printf("COULD NOT HANDLE RENDER COMMAND TYPE=%i\n", cmd->type);
+    continue;
+  }
+}
+
+if (p_vkrs->render_data_buffer.queued_copies_count) {
+  uint8_t *pData;
+  res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0, p_vkrs->render_data_buffer.frame_utilized_amount, 0,
+                    (void **)&pData);
+  assert(res == VK_SUCCESS);
+
+  // Buffer Copies
+  for (int k = 0; k < p_vkrs->render_data_buffer.queued_copies_count; ++k) {
+    // printf("BufferCopy: %p (+%lu) bytes:%lu\n", pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+    //        p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+    //        p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
+    memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset, p_vkrs->render_data_buffer.queued_copies[k].p_source,
+           p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
   }
 
-  if (p_vkrs->render_data_buffer.queued_copies_count) {
-    uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0, p_vkrs->render_data_buffer.frame_utilized_amount, 0,
-                      (void **)&pData);
-    assert(res == VK_SUCCESS);
-
-    // Buffer Copies
-    for (int k = 0; k < p_vkrs->render_data_buffer.queued_copies_count; ++k) {
-      // printf("BufferCopy: %p (+%lu) bytes:%lu\n", pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-      //        p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-      //        p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
-      memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-             p_vkrs->render_data_buffer.queued_copies[k].p_source, p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
-    }
-
-    vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
-  }
-  return VK_SUCCESS;
+  vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
+}
+return VK_SUCCESS;
 }
 
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue)

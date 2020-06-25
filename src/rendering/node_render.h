@@ -57,6 +57,7 @@ typedef enum render_command_type {
   RENDER_COMMAND_SAMPLE_CUBE,
   RENDER_COMMAND_COLORED_RECTANGLE,
   RENDER_COMMAND_TEXTURED_RECTANGLE,
+  RENDER_COMMAND_PRINT_LETTER,
 } render_command_type;
 
 typedef struct render_color {
@@ -70,6 +71,10 @@ typedef struct render_command {
     struct {
       render_color color;
     } colored_rect_info;
+    struct {
+      char letter;
+      uint font_resource_uid;
+    } print_letter;
     struct {
       uint texture_uid;
     } textured_rect_info;
