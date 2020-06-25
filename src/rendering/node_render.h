@@ -74,6 +74,7 @@ typedef struct render_command {
     struct {
       char letter;
       uint font_resource_uid;
+      render_color color;
     } print_letter;
     struct {
       uint texture_uid;

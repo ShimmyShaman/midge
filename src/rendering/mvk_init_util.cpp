@@ -876,12 +876,12 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   p_vkrs->global_vert_uniform_buffer.buffer_info.range = sizeof(p_vkrs->MVP);
 
   /* SHARED BUFFER */
-  const VkDeviceSize RENDER_DATA_BUFFER_ALLOCATED_SIZE = 8192;
+  p_vkrs->render_data_buffer.allocated_size = 8192;
   buf_info = {};
   buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   buf_info.pNext = NULL;
   buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-  buf_info.size = RENDER_DATA_BUFFER_ALLOCATED_SIZE;
+  buf_info.size = p_vkrs->render_data_buffer.allocated_size;
   buf_info.queueFamilyIndexCount = 0;
   buf_info.pQueueFamilyIndices = NULL;
   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -907,10 +907,6 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 
   res = vkBindBufferMemory(p_vkrs->device, p_vkrs->render_data_buffer.buffer, p_vkrs->render_data_buffer.memory, 0);
   assert(res == VK_SUCCESS);
-
-  p_vkrs->render_data_buffer.buffer_info.buffer = p_vkrs->render_data_buffer.buffer;
-  p_vkrs->render_data_buffer.buffer_info.offset = 0;
-  p_vkrs->render_data_buffer.buffer_info.range = RENDER_DATA_BUFFER_ALLOCATED_SIZE;
 
   p_vkrs->render_data_buffer.frame_utilized_amount = 0;
 
@@ -1280,7 +1276,7 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     assert(res == VK_SUCCESS);
   }
 
-  static glsl_shader texture_vertex_shader = {
+  static glsl_shader vertex_shader = {
       .text = "#version 450\n"
               "#extension GL_ARB_separate_shader_objects : enable\n"
               "\n"
@@ -1306,13 +1302,13 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
       .stage = VK_SHADER_STAGE_VERTEX_BIT,
   };
 
-  static glsl_shader texture_fragment_shader = {
+  static glsl_shader fragment_shader = {
       .text = "#version 450\n"
               "#extension GL_ARB_separate_shader_objects : enable\n"
               "\n"
               "layout (binding = 2) uniform UBO2 {\n"
               "    vec4 tint;\n"
-              "    vec4 srcTexCoord;\n"
+              "    vec4 texCoordBounds;\n"
               "} element;\n"
               "\n"
               "layout(binding = 3) uniform sampler2D texSampler;\n"
@@ -1323,7 +1319,10 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
               "\n"
               "void main() {\n"
               "\n"
-              "   outColor = vec4(1, 1, 1, 1);//texture(texSampler, fragTexCoord);\n"
+              "   vec2 texCoords = vec2(\n"
+              "       element.texCoordBounds.x + fragTexCoord.x * (element.texCoordBounds.y - element.texCoordBounds.x),\n"
+              "       element.texCoordBounds.z + fragTexCoord.y * (element.texCoordBounds.w - element.texCoordBounds.z));\n"
+              "   outColor = texture(texSampler, texCoords);\n"
               "}\n",
       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
   };
@@ -1336,11 +1335,11 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     shaderStateCreateInfo->pNext = NULL;
     shaderStateCreateInfo->pSpecializationInfo = NULL;
     shaderStateCreateInfo->flags = 0;
-    shaderStateCreateInfo->stage = texture_vertex_shader.stage;
+    shaderStateCreateInfo->stage = vertex_shader.stage;
     shaderStateCreateInfo->pName = "main";
 
     std::vector<unsigned int> vtx_spv;
-    VkResult res = GLSLtoSPV(texture_vertex_shader.stage, texture_vertex_shader.text, vtx_spv);
+    VkResult res = GLSLtoSPV(vertex_shader.stage, vertex_shader.text, vtx_spv);
     assert(res == VK_SUCCESS);
 
     VkShaderModuleCreateInfo moduleCreateInfo;
@@ -1359,11 +1358,11 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     shaderStateCreateInfo->pNext = NULL;
     shaderStateCreateInfo->pSpecializationInfo = NULL;
     shaderStateCreateInfo->flags = 0;
-    shaderStateCreateInfo->stage = texture_fragment_shader.stage;
+    shaderStateCreateInfo->stage = fragment_shader.stage;
     shaderStateCreateInfo->pName = "main";
 
     std::vector<unsigned int> vtx_spv;
-    VkResult res = GLSLtoSPV(texture_fragment_shader.stage, texture_fragment_shader.text, vtx_spv);
+    VkResult res = GLSLtoSPV(fragment_shader.stage, fragment_shader.text, vtx_spv);
     assert(res == VK_SUCCESS);
 
     VkShaderModuleCreateInfo moduleCreateInfo;
@@ -1968,6 +1967,7 @@ VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData,
 }
 
 #define XY(X, Y) X, Y
+#define UV(U, V) U, V
 #define XYZW(X, Y, Z) X, Y, Z, 1.f
 #define RGB(R, G, B) R, G, B
 #define RGBA(R, G, B) R, G, B, 1.f
@@ -1977,8 +1977,8 @@ static const float g_vb_shape_data[] = { // Rectangle
     XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA,
     XYZW(-0.5f, 0.5f, 0),  WHITE_RGBA, XYZW(0.5f, 0.5f, 0),  WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA};
 static const float g_vb_textured_shape_2D_data[] = { // Rectangle
-    XY(-0.5f, -0.5f), XY(0.f, 0.f), XY(-0.5f, 0.5f), XY(0.f, 1.f), XY(0.5f, -0.5f), XY(1.f, 0.f),
-    XY(-0.5f, 0.5f),  XY(0.f, 1.f), XY(0.5f, 0.5f),  XY(1.f, 1.f), XY(0.5f, -0.5f), XY(1.f, 0.f)};
+    XY(-0.5f, -0.5f), UV(0.f, 0.f), XY(-0.5f, 0.5f), UV(0.f, 1.f), XY(0.5f, -0.5f), UV(1.f, 0.f),
+    XY(-0.5f, 0.5f),  UV(0.f, 1.f), XY(0.5f, 0.5f),  UV(1.f, 1.f), XY(0.5f, -0.5f), UV(1.f, 0.f)};
 
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {

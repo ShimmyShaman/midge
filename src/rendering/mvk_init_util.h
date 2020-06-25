@@ -73,6 +73,25 @@ typedef struct coloured_rect_draw_data {
 
 } coloured_rect_draw_data;
 
+typedef struct vert_data_scale_offset {
+  struct {
+    float x, y;
+  } offset;
+  struct {
+    float x, y;
+  } scale;
+} vert_data_scale_offset;
+
+struct render_color;
+typedef struct frag_ubo_tint_texcoordbounds {
+  struct {
+    float r, g, b, a;
+  } tint;
+  struct {
+    float s0, s1, t0, t1;
+  } tex_coord_bounds;
+} frag_ubo_tint_texcoordbounds;
+
 typedef struct sampled_image {
   VkFormat format;
   uint width, height;
@@ -161,9 +180,9 @@ typedef struct vk_render_state {
   // VkSemaphore imageAcquiredSemaphore;
 
   struct {
+    VkDeviceSize allocated_size;
     VkBuffer buffer;
     VkDeviceMemory memory;
-    VkDescriptorBufferInfo buffer_info;
     VkDeviceSize frame_utilized_amount;
 
     unsigned int queued_copies_alloc;
