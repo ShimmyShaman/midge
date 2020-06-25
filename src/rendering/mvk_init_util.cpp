@@ -1027,17 +1027,14 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
               "} element;\n"
               "\n"
               "layout(location = 0) in vec2 inPosition;\n"
-              "layout(location = 1) in vec3 inColor;\n"
-              "layout(location = 2) in vec2 inTexCoord;\n"
+              "layout(location = 1) in vec2 inTexCoord;\n"
               "\n"
-              "layout(location = 0) out vec3 fragColor;\n"
               "layout(location = 1) out vec2 fragTexCoord;\n"
               "\n"
               "void main() {\n"
               "   gl_Position = globalUI.mvp * vec4(inPosition, 0.0, 1.0);\n"
               "   gl_Position.xy *= element.scale.xy;\n"
               "   gl_Position.xy += element.offset.xy;\n"
-              "   fragColor = inColor;\n"
               "   fragTexCoord = inTexCoord;\n"
               "}\n",
       .stage = VK_SHADER_STAGE_VERTEX_BIT,
@@ -1049,7 +1046,6 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
               "\n"
               "layout(binding = 2) uniform sampler2D texSampler;\n"
               "\n"
-              "layout(location = 0) in vec3 fragColor;\n"
               "layout(location = 1) in vec2 fragTexCoord;\n"
               "\n"
               "layout(location = 0) out vec4 outColor;\n"
@@ -1112,7 +1108,7 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
 
   // Vertex Bindings
   VkVertexInputBindingDescription bindingDescription{};
-  const int VERTEX_ATTRIBUTE_COUNT = 3;
+  const int VERTEX_ATTRIBUTE_COUNT = 2;
   VkVertexInputAttributeDescription attributeDescriptions[VERTEX_ATTRIBUTE_COUNT];
   {
     bindingDescription.binding = 0;
@@ -1126,13 +1122,8 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
 
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(textured_image_vertex, color);
-
-    attributeDescriptions[2].binding = 0;
-    attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[2].offset = offsetof(textured_image_vertex, tex_coord);
+    attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[1].offset = offsetof(textured_image_vertex, tex_coord);
   }
 
   {
@@ -1245,6 +1236,277 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
   return VK_SUCCESS;
 }
 
+VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
+{
+  VkResult res;
+
+  // CreateDescriptorSetLayout
+  {
+    const int binding_count = 4;
+    VkDescriptorSetLayoutBinding layout_bindings[binding_count];
+    layout_bindings[0].binding = 0;
+    layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[0].descriptorCount = 1;
+    layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_bindings[0].pImmutableSamplers = NULL;
+
+    layout_bindings[1].binding = 1;
+    layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[1].descriptorCount = 1;
+    layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_bindings[1].pImmutableSamplers = NULL;
+
+    layout_bindings[2].binding = 2;
+    layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[2].descriptorCount = 1;
+    layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    layout_bindings[2].pImmutableSamplers = NULL;
+
+    layout_bindings[3].binding = 3;
+    layout_bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    layout_bindings[3].descriptorCount = 1;
+    layout_bindings[3].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    layout_bindings[3].pImmutableSamplers = NULL;
+
+    VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {};
+    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutCreateInfo.pNext = NULL;
+    layoutCreateInfo.flags = 0;
+    layoutCreateInfo.bindingCount = binding_count;
+    layoutCreateInfo.pBindings = layout_bindings;
+
+    p_vkrs->desc_layout.resize(1);
+    res = vkCreateDescriptorSetLayout(p_vkrs->device, &layoutCreateInfo, NULL, &p_vkrs->font_prog.desc_layout);
+    assert(res == VK_SUCCESS);
+  }
+
+  static glsl_shader texture_vertex_shader = {
+      .text = "#version 450\n"
+              "#extension GL_ARB_separate_shader_objects : enable\n"
+              "\n"
+              "layout (std140, binding = 0) uniform UBO0 {\n"
+              "    mat4 mvp;\n"
+              "} globalUI;\n"
+              "layout (binding = 1) uniform UBO1 {\n"
+              "    vec2 offset;\n"
+              "    vec2 scale;\n"
+              "} element;\n"
+              "\n"
+              "layout(location = 0) in vec2 inPosition;\n"
+              "layout(location = 1) in vec2 inTexCoord;\n"
+              "\n"
+              "layout(location = 1) out vec2 fragTexCoord;\n"
+              "\n"
+              "void main() {\n"
+              "   gl_Position = globalUI.mvp * vec4(inPosition, 0.0, 1.0);\n"
+              "   gl_Position.xy *= element.scale.xy;\n"
+              "   gl_Position.xy += element.offset.xy;\n"
+              "   fragTexCoord = inTexCoord;\n"
+              "}\n",
+      .stage = VK_SHADER_STAGE_VERTEX_BIT,
+  };
+
+  static glsl_shader texture_fragment_shader = {
+      .text = "#version 450\n"
+              "#extension GL_ARB_separate_shader_objects : enable\n"
+              "\n"
+              "layout (binding = 2) uniform UBO2 {\n"
+              "    vec4 tint;\n"
+              "    vec4 srcTexCoord;\n"
+              "} element;\n"
+              "\n"
+              "layout(binding = 3) uniform sampler2D texSampler;\n"
+              "\n"
+              "layout(location = 1) in vec2 fragTexCoord;\n"
+              "\n"
+              "layout(location = 0) out vec4 outColor;\n"
+              "\n"
+              "void main() {\n"
+              "\n"
+              "   outColor = vec4(1, 1, 1, 1);//texture(texSampler, fragTexCoord);\n"
+              "}\n",
+      .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+  };
+
+  const int SHADER_STAGE_MODULES = 2;
+  VkPipelineShaderStageCreateInfo shaderStages[SHADER_STAGE_MODULES];
+  {
+    VkPipelineShaderStageCreateInfo *shaderStateCreateInfo = &shaderStages[0];
+    shaderStateCreateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStateCreateInfo->pNext = NULL;
+    shaderStateCreateInfo->pSpecializationInfo = NULL;
+    shaderStateCreateInfo->flags = 0;
+    shaderStateCreateInfo->stage = texture_vertex_shader.stage;
+    shaderStateCreateInfo->pName = "main";
+
+    std::vector<unsigned int> vtx_spv;
+    VkResult res = GLSLtoSPV(texture_vertex_shader.stage, texture_vertex_shader.text, vtx_spv);
+    assert(res == VK_SUCCESS);
+
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.flags = 0;
+    moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
+    moduleCreateInfo.pCode = vtx_spv.data();
+
+    res = vkCreateShaderModule(p_vkrs->device, &moduleCreateInfo, NULL, &shaderStateCreateInfo->module);
+    assert(res == VK_SUCCESS);
+  }
+  {
+    VkPipelineShaderStageCreateInfo *shaderStateCreateInfo = &shaderStages[1];
+    shaderStateCreateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStateCreateInfo->pNext = NULL;
+    shaderStateCreateInfo->pSpecializationInfo = NULL;
+    shaderStateCreateInfo->flags = 0;
+    shaderStateCreateInfo->stage = texture_fragment_shader.stage;
+    shaderStateCreateInfo->pName = "main";
+
+    std::vector<unsigned int> vtx_spv;
+    VkResult res = GLSLtoSPV(texture_fragment_shader.stage, texture_fragment_shader.text, vtx_spv);
+    assert(res == VK_SUCCESS);
+
+    VkShaderModuleCreateInfo moduleCreateInfo;
+    moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleCreateInfo.pNext = NULL;
+    moduleCreateInfo.flags = 0;
+    moduleCreateInfo.codeSize = vtx_spv.size() * sizeof(unsigned int);
+    moduleCreateInfo.pCode = vtx_spv.data();
+
+    res = vkCreateShaderModule(p_vkrs->device, &moduleCreateInfo, NULL, &shaderStateCreateInfo->module);
+    assert(res == VK_SUCCESS);
+  }
+
+  // Vertex Bindings
+  VkVertexInputBindingDescription bindingDescription{};
+  const int VERTEX_ATTRIBUTE_COUNT = 2;
+  VkVertexInputAttributeDescription attributeDescriptions[VERTEX_ATTRIBUTE_COUNT];
+  {
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(textured_image_vertex);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    attributeDescriptions[0].binding = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset = offsetof(textured_image_vertex, position);
+
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[1].offset = offsetof(textured_image_vertex, tex_coord);
+  }
+
+  {
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = VERTEX_ATTRIBUTE_COUNT;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.pNext = NULL;
+    inputAssembly.flags = 0;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkPipelineDynamicStateCreateInfo dynamicState = {};
+    memset(dynamicStateEnables, 0, sizeof dynamicStateEnables);
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.pNext = NULL;
+    dynamicState.pDynamicStates = dynamicStateEnables;
+    dynamicState.dynamicStateCount = 0;
+
+    VkPipelineViewportStateCreateInfo viewportState = {};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.pNext = NULL;
+    viewportState.flags = 0;
+    viewportState.viewportCount = NUM_VIEWPORTS;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    viewportState.scissorCount = NUM_SCISSORS;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    viewportState.pScissors = NULL;
+    viewportState.pViewports = NULL;
+
+    VkPipelineRasterizationStateCreateInfo rasterizer{};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+
+    VkPipelineMultisampleStateCreateInfo multisampling{};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineColorBlendAttachmentState att_state[1];
+    att_state[0].colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    att_state[0].blendEnable = VK_TRUE;
+    att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
+    att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
+
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.flags = 0;
+    colorBlending.pNext = NULL;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = att_state;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY;
+    colorBlending.blendConstants[0] = 1.0f;
+    colorBlending.blendConstants[1] = 1.0f;
+    colorBlending.blendConstants[2] = 1.0f;
+    colorBlending.blendConstants[3] = 1.0f;
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &p_vkrs->font_prog.desc_layout;
+
+    res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, nullptr, &p_vkrs->font_prog.pipeline_layout);
+    assert(res == VK_SUCCESS && "failed to create pipeline layout!");
+
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.pNext = NULL;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = p_vkrs->font_prog.pipeline_layout;
+    pipelineInfo.renderPass = p_vkrs->present_render_pass;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &p_vkrs->font_prog.pipeline);
+    assert(res == VK_SUCCESS && "failed to create pipeline!");
+  }
+
+  for (int i = 0; i < SHADER_STAGE_MODULES; ++i) {
+    vkDestroyShaderModule(p_vkrs->device, shaderStages[i].module, nullptr);
+  }
+
+  return VK_SUCCESS;
+}
+
 VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
 {
   /* DEPENDS on init_swap_chain() and init_depth_buffer() */
@@ -1256,7 +1518,7 @@ VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
   VkAttachmentDescription attachments[2];
   attachments[0].format = p_vkrs->format;
   attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-  attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR ;
+  attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
   attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
   attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1715,9 +1977,8 @@ static const float g_vb_shape_data[] = { // Rectangle
     XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA,
     XYZW(-0.5f, 0.5f, 0),  WHITE_RGBA, XYZW(0.5f, 0.5f, 0),  WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA};
 static const float g_vb_textured_shape_2D_data[] = { // Rectangle
-    XY(-0.5f, -0.5f), WHITE_RGB, XY(0.f, 0.f), XY(-0.5f, 0.5f), WHITE_RGB, XY(0.f, 1.f),
-    XY(0.5f, -0.5f),  WHITE_RGB, XY(1.f, 0.f), XY(-0.5f, 0.5f), WHITE_RGB, XY(0.f, 1.f),
-    XY(0.5f, 0.5f),   WHITE_RGB, XY(1.f, 1.f), XY(0.5f, -0.5f), WHITE_RGB, XY(1.f, 0.f)};
+    XY(-0.5f, -0.5f), XY(0.f, 0.f), XY(-0.5f, 0.5f), XY(0.f, 1.f), XY(0.5f, -0.5f), XY(1.f, 0.f),
+    XY(-0.5f, 0.5f),  XY(0.f, 1.f), XY(0.5f, 0.5f),  XY(1.f, 1.f), XY(0.5f, -0.5f), XY(1.f, 0.f)};
 
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {
@@ -2108,6 +2369,10 @@ void mvk_destroy_textured_render_prog(vk_render_state *p_vkrs)
   vkDestroyPipeline(p_vkrs->device, p_vkrs->texture_prog.pipeline, NULL);
   vkDestroyDescriptorSetLayout(p_vkrs->device, p_vkrs->texture_prog.desc_layout, NULL);
   vkDestroyPipelineLayout(p_vkrs->device, p_vkrs->texture_prog.pipeline_layout, NULL);
+
+  vkDestroyPipeline(p_vkrs->device, p_vkrs->font_prog.pipeline, NULL);
+  vkDestroyDescriptorSetLayout(p_vkrs->device, p_vkrs->font_prog.desc_layout, NULL);
+  vkDestroyPipelineLayout(p_vkrs->device, p_vkrs->font_prog.pipeline_layout, NULL);
 }
 
 void mvk_destroy_pipeline(vk_render_state *p_vkrs) { vkDestroyPipeline(p_vkrs->device, p_vkrs->pipeline, NULL); }

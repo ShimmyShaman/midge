@@ -4,9 +4,6 @@
 #include "rendering/cube_data.h"
 #include "rendering/node_render.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #define MRT_RUN(CALL)         \
   result = CALL;              \
   if (result != VK_SUCCESS) { \
@@ -121,6 +118,7 @@ extern "C" void *midge_render_thread(void *vargp)
   MRT_RUN(mvk_init_shader(&vkrs, &vertex_shader, 0));
   MRT_RUN(mvk_init_shader(&vkrs, &fragment_shader, 1));
   MRT_RUN(mvk_init_textured_render_prog(&vkrs));
+  MRT_RUN(mvk_init_font_render_prog(&vkrs));
   MRT_RUN(mvk_init_framebuffers(&vkrs, depth_present));
   MRT_RUN(mvk_init_cube_vertices(&vkrs, g_vb_solid_face_colors_Data, sizeof(g_vb_solid_face_colors_Data),
                                  sizeof(g_vb_solid_face_colors_Data[0]), false));
@@ -492,9 +490,22 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       // // Set
       coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
 
+      printf("here0\n");
       // Get the font image
-      sampled_image *font_texture = &p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN];
+      loaded_font_info *font = NULL;
+      for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
+        if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->data.print_letter.font_resource_uid) {
+          font = &p_vkrs->loaded_fonts.fonts[f];
+          break;
+        }
+      }
+      if (!font) {
+        printf("Could not find requested font\n");
+        return VK_ERROR_UNKNOWN;
+      }
+      sampled_image *font_image = &p_vkrs->textures.samples[font->resource_uid - RESOURCE_UID_BEGIN];
 
+      printf("here2\n");
       // Vertex Data
       rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)p_vkrs->window_height;
       rect_draw_data.vert.scale[1] = 2.f * cmd->height / (float)p_vkrs->window_height;
@@ -507,20 +518,28 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         printf("TODO character not supported.\n");
         continue;
       }
+      printf("here3\n");
 
       stbtt_aligned_quad q;
       float x, y;
-      stbtt_GetBakedQuad(cdata, font_texture->width, font_texture->height, cmd->data.print_letter.letter - 32, &x, &y, &q,
+      stbtt_GetBakedQuad(font->char_data, font_image->width, font_image->height, cmd->data.print_letter.letter - 32, &x, &y, &q,
                          1); // 1=opengl & d3d10+,0=d3d9
-      glTexCoord2f(q.s0, q.t1);
-      glVertex2f(q.x0, q.y0);
-      glTexCoord2f(q.s1, q.t1);
-      glVertex2f(q.x1, q.y0);
-      glTexCoord2f(q.s1, q.t0);
-      glVertex2f(q.x1, q.y1);
-      glTexCoord2f(q.s0, q.t0);
-      glVertex2f(q.x0, q.y1);
-    }
+
+      printf("here4\n");
+      printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0, q.x1,
+             q.y0, q.y1);
+      printf("here5\n");
+      break;
+
+      // glTexCoord2f(q.s0, q.t1);
+      // glVertex2f(q.x0, q.y0);
+      // glTexCoord2f(q.s1, q.t1);
+      // glVertex2f(q.x1, q.y0);
+      // glTexCoord2f(q.s1, q.t0);
+      // glVertex2f(q.x1, q.y1);
+      // glTexCoord2f(q.s0, q.t0);
+      // glVertex2f(q.x0, q.y1);
+
       // // Fragment Data
       // glm_vec4_copy((float *)cmd->data, rect_draw_data.frag.tint_color);
 
@@ -625,8 +644,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
 
       VkDescriptorImageInfo image_sampler_info = {};
       image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      image_sampler_info.imageView = font_texture.view;
-      image_sampler_info.sampler = font_texture.sampler;
+      image_sampler_info.imageView = font_image->view;
+      image_sampler_info.sampler = font_image->sampler;
 
       // Element Fragment Shader Combined Image Sampler
       write = &writes[write_index++];
@@ -650,33 +669,32 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->textured_shape_vertices.buf, offsets);
 
       vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
+    } break;
+
+    default:
+      printf("COULD NOT HANDLE RENDER COMMAND TYPE=%i\n", cmd->type);
+      continue;
     }
-    break;
-
-  default:
-    printf("COULD NOT HANDLE RENDER COMMAND TYPE=%i\n", cmd->type);
-    continue;
-  }
-}
-
-if (p_vkrs->render_data_buffer.queued_copies_count) {
-  uint8_t *pData;
-  res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0, p_vkrs->render_data_buffer.frame_utilized_amount, 0,
-                    (void **)&pData);
-  assert(res == VK_SUCCESS);
-
-  // Buffer Copies
-  for (int k = 0; k < p_vkrs->render_data_buffer.queued_copies_count; ++k) {
-    // printf("BufferCopy: %p (+%lu) bytes:%lu\n", pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-    //        p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-    //        p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
-    memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset, p_vkrs->render_data_buffer.queued_copies[k].p_source,
-           p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
   }
 
-  vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
-}
-return VK_SUCCESS;
+  if (p_vkrs->render_data_buffer.queued_copies_count) {
+    uint8_t *pData;
+    res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0, p_vkrs->render_data_buffer.frame_utilized_amount, 0,
+                      (void **)&pData);
+    assert(res == VK_SUCCESS);
+
+    // Buffer Copies
+    for (int k = 0; k < p_vkrs->render_data_buffer.queued_copies_count; ++k) {
+      // printf("BufferCopy: %p (+%lu) bytes:%lu\n", pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+      //        p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+      //        p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
+      memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+             p_vkrs->render_data_buffer.queued_copies[k].p_source, p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
+    }
+
+    vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
+  }
+  return VK_SUCCESS;
 }
 
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue)
@@ -1375,10 +1393,6 @@ VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, c
   return VK_SUCCESS;
 }
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#define STBTT_STATIC
-#include "stb_truetype.h"
-
 VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float height, uint *resource_uid)
 {
   // Font is a common resource -- check font cache for existing
@@ -1420,7 +1434,7 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float he
 
   const int texWidth = 256, texHeight = 256, texChannels = 4;
   stbi_uc temp_bitmap[texWidth * texHeight];
-  stbtt_bakedchar cdata[96];                                                                  // ASCII 32..126 is 95 glyphs
+  stbtt_bakedchar *cdata = (stbtt_bakedchar *)malloc(sizeof(stbtt_bakedchar) * 96);           // ASCII 32..126 is 95 glyphs
   stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, texWidth, texHeight, 32, 96, cdata); // no guarantee this fits!
 
   stbi_uc pixels[texWidth * texHeight * 4];
@@ -1466,7 +1480,8 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float he
     }
 
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].name = font_name;
-    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count++].resource_uid = *resource_uid;
+    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].resource_uid = *resource_uid;
+    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count++].char_data = cdata;
   }
 
   printf("generated font texture> name:%s height:%.2f resource_uid:%u\n", font_name, height, *resource_uid);

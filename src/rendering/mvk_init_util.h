@@ -13,6 +13,13 @@
 
 #include "rendering/xcbwindow.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_STATIC
+#include "stb_truetype.h"
+
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
 #define NUM_DESCRIPTOR_SETS 1
@@ -79,7 +86,6 @@ typedef struct sampled_image {
 
 typedef struct textured_image_vertex {
   vec2 position;
-  vec3 color;
   vec2 tex_coord;
 } textured_image_vertex;
 
@@ -92,6 +98,7 @@ typedef struct render_program {
 typedef struct loaded_font_info {
   const char *name;
   uint resource_uid;
+  stbtt_bakedchar *char_data;
 } loaded_font_info;
 
 /*
@@ -176,7 +183,7 @@ typedef struct vk_render_state {
     loaded_font_info *fonts;
   } loaded_fonts;
 
-  render_program texture_prog;
+  render_program texture_prog, font_prog;
 
   VkCommandPool cmd_pool;
 
@@ -283,6 +290,7 @@ VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs);
 void mvk_init_device_queue(vk_render_state *p_vkrs);
 VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shader, int stage_index);
 VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs);
+VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs);
 VkResult mvk_init_framebuffers(vk_render_state *p_vkrs, bool include_depth);
 VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
                                 bool use_texture);

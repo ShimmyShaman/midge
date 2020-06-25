@@ -328,7 +328,7 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].y = 42;
   sequence->render_commands[rci].width = 0;
   sequence->render_commands[rci].height = 0;
-  sequence->render_commands[rci++].data.print_letter.letter = 'A';
+  sequence->render_commands[rci].data.print_letter.letter = 'A';
   sequence->render_commands[rci++].data.print_letter.font_resource_uid = command_hub->ui_elements[2].resource_uid;
 
   sequence->render_command_count = rci;
@@ -371,9 +371,9 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].type = RENDER_COMMAND_TEXTURED_RECTANGLE;
   sequence->render_commands[rci].x = 256;
   sequence->render_commands[rci].y = 64;
-  sequence->render_commands[rci].width = 512;
-  sequence->render_commands[rci].height = 128;
-  sequence->render_commands[rci++].data.textured_rect_info.texture_uid = command_hub->ui_elements[1].resource_uid;
+  sequence->render_commands[rci].width = 256;
+  sequence->render_commands[rci].height = 256;
+  sequence->render_commands[rci++].data.textured_rect_info.texture_uid = command_hub->ui_elements[2].resource_uid;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 300 - 8;
