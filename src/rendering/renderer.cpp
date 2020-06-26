@@ -248,7 +248,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
   int rect_draws_index = 0;
 
   // TODO -- this isn't very seamly
-  const int COPY_BUFFER_SIZE = 2048;
+  const int COPY_BUFFER_SIZE = 8192;
   u_char copy_buffer[COPY_BUFFER_SIZE];
   u_int32_t copy_buffer_used = 0;
 
@@ -558,16 +558,12 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
     } break;
 
-    case RENDER_COMMAND_PRINT_LETTER: {
-      if (cmd->data.print_letter.letter < 32 || cmd->data.print_letter.letter > 127) {
-        printf("TODO character not supported.\n");
-        continue;
-      }
+    case RENDER_COMMAND_PRINT_TEXT: {
 
       // Get the font image
       loaded_font_info *font = NULL;
       for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
-        if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->data.print_letter.font_resource_uid) {
+        if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->data.print_text.font_resource_uid) {
           font = &p_vkrs->loaded_fonts.fonts[f];
           break;
         }
@@ -578,140 +574,153 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       }
       sampled_image *font_image = &p_vkrs->textures.samples[font->resource_uid - RESOURCE_UID_BEGIN];
 
-      // Source texture bounds
-      stbtt_aligned_quad q;
       float align_x = cmd->x;
       float align_y = cmd->y;
-      stbtt_GetBakedQuad(font->char_data, font_image->width, font_image->height, cmd->data.print_letter.letter - 32, &align_x,
-                         &align_y, &q,
-                         1); // 1=opengl & d3d10+,0=d3d9
 
-      {
-        // opengl y invert
-        float t = q.y1;
-        q.y1 += (q.y1 - q.y0);
-        q.y0 = t;
+      int text_length = strlen(cmd->data.print_text.text);
+      for (int c = 0; c < text_length; ++c) {
+
+        char letter = cmd->data.print_text.text[c];
+        if (letter < 32 || letter > 127) {
+          printf("TODO character not supported.\n");
+          continue;
+        }
+
+        // Source texture bounds
+        stbtt_aligned_quad q;
+        stbtt_GetBakedQuad(font->char_data, font_image->width, font_image->height, letter - 32, &align_x, &align_y, &q,
+                           1); // 1=opengl & d3d10+,0=d3d9
+
+        // stbtt_bakedchar *b = font->char_data + (letter - 32);
+        // q.y0 += b->y1 - b->y0;
+        // q.y1 += b->y1 - b->y0;
+        // {
+        //   // opengl y invert
+        //   float t = q.y1;
+        //   q.y1 += (q.y1 - q.y0);
+        //   q.y0 = t;
+        // }
+        float width = q.x1 - q.x0;
+        float height = q.y1 - q.y0;
+
+        printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0,
+               q.x1, q.y0, q.y1);
+        printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
+
+        // Vertex Uniform Buffer Object
+        vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
+        copy_buffer_used += sizeof(vert_data_scale_offset);
+
+        vert_ubo_data->scale.x = 2.f * width / (float)sequence->image_height;
+        vert_ubo_data->scale.y = 2.f * height / (float)sequence->image_height;
+        vert_ubo_data->offset.x =
+            -1.0f + 2.0f * (float)q.x0 / (float)(sequence->image_width) + 1.0f * (float)width / (float)(sequence->image_width);
+        vert_ubo_data->offset.y =
+            -1.0f + 2.0f * (float)q.y0 / (float)(sequence->image_height) + 1.0f * (float)height / (float)(sequence->image_height);
+
+        // Fragment Data
+        frag_ubo_tint_texcoordbounds *frag_ubo_data = (frag_ubo_tint_texcoordbounds *)&copy_buffer[copy_buffer_used];
+        copy_buffer_used += sizeof(frag_ubo_tint_texcoordbounds);
+
+        memcpy(&frag_ubo_data->tint, &cmd->data.print_text.color, sizeof(float) * 4);
+        frag_ubo_data->tex_coord_bounds.s0 = q.s0;
+        frag_ubo_data->tex_coord_bounds.s1 = q.s1;
+        frag_ubo_data->tex_coord_bounds.t0 = q.t0;
+        frag_ubo_data->tex_coord_bounds.t1 = q.t1;
+
+        // Setup viewport and clip
+        set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
+        set_scissor_cmd(p_vkrs, q.x0, q.y0, width, height);
+
+        // Allocate the descriptor set from the pool.
+        VkDescriptorSetAllocateInfo setAllocInfo = {};
+        setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        setAllocInfo.pNext = NULL;
+        setAllocInfo.descriptorPool = p_vkrs->desc_pool;
+        setAllocInfo.descriptorSetCount = 1;
+        setAllocInfo.pSetLayouts = &p_vkrs->font_prog.desc_layout;
+
+        unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
+        res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
+        assert(res == VK_SUCCESS);
+
+        VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
+        p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
+
+        // Queue Buffer and Descriptor Writes
+        const unsigned int MAX_DESC_SET_WRITES = 8;
+        VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
+        VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
+        int buffer_info_index = 0;
+        int write_index = 0;
+
+        VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
+        write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+
+        VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
+        write_desc_and_queue_render_data(p_vkrs, sizeof(frag_ubo_tint_texcoordbounds), frag_ubo_data, frag_ubo_info);
+
+        // Global Vertex Shader Uniform Buffer
+        VkWriteDescriptorSet *write = &writes[write_index++];
+        write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write->pNext = NULL;
+        write->dstSet = desc_set;
+        write->descriptorCount = 1;
+        write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write->pBufferInfo = &vpc_desc_buffer_info;
+        write->dstArrayElement = 0;
+        write->dstBinding = 0;
+
+        // Element Vertex Shader Uniform Buffer
+        write = &writes[write_index++];
+        write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write->pNext = NULL;
+        write->dstSet = desc_set;
+        write->descriptorCount = 1;
+        write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write->pBufferInfo = vert_ubo_info;
+        write->dstArrayElement = 0;
+        write->dstBinding = 1;
+
+        // Element Fragment Shader Uniform Buffer
+        write = &writes[write_index++];
+        write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write->pNext = NULL;
+        write->dstSet = desc_set;
+        write->descriptorCount = 1;
+        write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write->pBufferInfo = frag_ubo_info;
+        write->dstArrayElement = 0;
+        write->dstBinding = 2;
+
+        VkDescriptorImageInfo image_sampler_info = {};
+        image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_sampler_info.imageView = font_image->view;
+        image_sampler_info.sampler = font_image->sampler;
+
+        // Element Fragment Shader Combined Image Sampler
+        write = &writes[write_index++];
+        write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write->pNext = NULL;
+        write->dstSet = desc_set;
+        write->descriptorCount = 1;
+        write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write->pImageInfo = &image_sampler_info;
+        write->dstArrayElement = 0;
+        write->dstBinding = 3;
+
+        vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
+
+        vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->font_prog.pipeline_layout, 0, 1, &desc_set,
+                                0, NULL);
+
+        vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->font_prog.pipeline);
+
+        const VkDeviceSize offsets[1] = {0};
+        vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->textured_shape_vertices.buf, offsets);
+
+        vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
       }
-      float width = q.x1 - q.x0;
-      float height = q.y1 - q.y0;
-
-      printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0, q.x1,
-             q.y0, q.y1);
-      printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
-
-      // Vertex Uniform Buffer Object
-      vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
-      copy_buffer_used += sizeof(vert_data_scale_offset);
-
-      vert_ubo_data->scale.x = 2.f * width / (float)sequence->image_height;
-      vert_ubo_data->scale.y = 2.f * height / (float)sequence->image_height;
-      vert_ubo_data->offset.x =
-          -1.0f + 2.0f * (float)q.x0 / (float)(sequence->image_width) + 1.0f * (float)width / (float)(sequence->image_width);
-      vert_ubo_data->offset.y =
-          -1.0f + 2.0f * (float)q.y0 / (float)(sequence->image_height) + 1.0f * (float)height / (float)(sequence->image_height);
-
-      // Fragment Data
-      frag_ubo_tint_texcoordbounds *frag_ubo_data = (frag_ubo_tint_texcoordbounds *)&copy_buffer[copy_buffer_used];
-      copy_buffer_used += sizeof(frag_ubo_tint_texcoordbounds);
-
-      memcpy(&frag_ubo_data->tint, &cmd->data.print_letter.color, sizeof(float) * 4);
-      frag_ubo_data->tex_coord_bounds.s0 = q.s0;
-      frag_ubo_data->tex_coord_bounds.s1 = q.s1;
-      frag_ubo_data->tex_coord_bounds.t0 = q.t0;
-      frag_ubo_data->tex_coord_bounds.t1 = q.t1;
-
-      // Setup viewport and clip
-      set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-      set_scissor_cmd(p_vkrs, q.x0, q.y0, width, height);
-
-      // Allocate the descriptor set from the pool.
-      VkDescriptorSetAllocateInfo setAllocInfo = {};
-      setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-      setAllocInfo.pNext = NULL;
-      setAllocInfo.descriptorPool = p_vkrs->desc_pool;
-      setAllocInfo.descriptorSetCount = 1;
-      setAllocInfo.pSetLayouts = &p_vkrs->font_prog.desc_layout;
-
-      unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
-      res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
-      assert(res == VK_SUCCESS);
-
-      VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
-      p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
-
-      // Queue Buffer and Descriptor Writes
-      const unsigned int MAX_DESC_SET_WRITES = 8;
-      VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
-      VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
-      int buffer_info_index = 0;
-      int write_index = 0;
-
-      VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
-      write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
-
-      VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
-      write_desc_and_queue_render_data(p_vkrs, sizeof(frag_ubo_tint_texcoordbounds), frag_ubo_data, frag_ubo_info);
-
-      // Global Vertex Shader Uniform Buffer
-      VkWriteDescriptorSet *write = &writes[write_index++];
-      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      write->pNext = NULL;
-      write->dstSet = desc_set;
-      write->descriptorCount = 1;
-      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      write->pBufferInfo = &vpc_desc_buffer_info;
-      write->dstArrayElement = 0;
-      write->dstBinding = 0;
-
-      // Element Vertex Shader Uniform Buffer
-      write = &writes[write_index++];
-      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      write->pNext = NULL;
-      write->dstSet = desc_set;
-      write->descriptorCount = 1;
-      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      write->pBufferInfo = vert_ubo_info;
-      write->dstArrayElement = 0;
-      write->dstBinding = 1;
-
-      // Element Fragment Shader Uniform Buffer
-      write = &writes[write_index++];
-      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      write->pNext = NULL;
-      write->dstSet = desc_set;
-      write->descriptorCount = 1;
-      write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      write->pBufferInfo = frag_ubo_info;
-      write->dstArrayElement = 0;
-      write->dstBinding = 2;
-
-      VkDescriptorImageInfo image_sampler_info = {};
-      image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      image_sampler_info.imageView = font_image->view;
-      image_sampler_info.sampler = font_image->sampler;
-
-      // Element Fragment Shader Combined Image Sampler
-      write = &writes[write_index++];
-      write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      write->pNext = NULL;
-      write->dstSet = desc_set;
-      write->descriptorCount = 1;
-      write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-      write->pImageInfo = &image_sampler_info;
-      write->dstArrayElement = 0;
-      write->dstBinding = 3;
-
-      vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
-
-      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->font_prog.pipeline_layout, 0, 1, &desc_set, 0,
-                              NULL);
-
-      vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->font_prog.pipeline);
-
-      const VkDeviceSize offsets[1] = {0};
-      vkCmdBindVertexBuffers(p_vkrs->cmd, 0, 1, &p_vkrs->textured_shape_vertices.buf, offsets);
-
-      vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
     } break;
 
     default:

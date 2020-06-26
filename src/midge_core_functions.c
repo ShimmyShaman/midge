@@ -323,12 +323,12 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].data.colored_rect_info.height = 68;
   sequence->render_commands[rci++].data.colored_rect_info.color = dark_slate_gray;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_PRINT_LETTER;
+  sequence->render_commands[rci].type = RENDER_COMMAND_PRINT_TEXT;
   sequence->render_commands[rci].x = 82;
-  sequence->render_commands[rci].y = 32;
-  sequence->render_commands[rci].data.print_letter.letter = 'A';
-  sequence->render_commands[rci].data.print_letter.color = burlywood;
-  sequence->render_commands[rci++].data.print_letter.font_resource_uid = command_hub->ui_elements[2].resource_uid;
+  sequence->render_commands[rci].y = 32 + 24;
+  sequence->render_commands[rci].data.print_text.text = "The quick brown fox jumps over the lazy dog!";
+  sequence->render_commands[rci].data.print_text.color = black;
+  sequence->render_commands[rci++].data.print_text.font_resource_uid = command_hub->ui_elements[2].resource_uid;
 
   sequence->render_command_count = rci;
 

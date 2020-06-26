@@ -876,7 +876,7 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   p_vkrs->global_vert_uniform_buffer.buffer_info.range = sizeof(p_vkrs->MVP);
 
   /* SHARED BUFFER */
-  p_vkrs->render_data_buffer.allocated_size = 8192;
+  p_vkrs->render_data_buffer.allocated_size = 65536;
   buf_info = {};
   buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   buf_info.pNext = NULL;
@@ -1323,8 +1323,8 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
               "       element.texCoordBounds.x + fragTexCoord.x * (element.texCoordBounds.y - element.texCoordBounds.x),\n"
               "       element.texCoordBounds.z + fragTexCoord.y * (element.texCoordBounds.w - element.texCoordBounds.z));\n"
               "   outColor = texture(texSampler, texCoords);\n"
-              "   if(outColor.r < 0.1)\n"
-              "      discard;\n"
+              // "   if(outColor.r < 0.1)\n"
+              // "      discard;\n"
               "   outColor.a = outColor.r;\n"
               "   outColor.rgb = element.tint.rgb;\n"
               "}\n",
@@ -2099,9 +2099,9 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture)
   const int DESCRIPTOR_POOL_COUNT = 2;
   VkDescriptorPoolSize type_count[DESCRIPTOR_POOL_COUNT];
   type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  type_count[0].descriptorCount = 64;
+  type_count[0].descriptorCount = 256;
   type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  type_count[1].descriptorCount = 64;
+  type_count[1].descriptorCount = 128;
 
   VkDescriptorPoolCreateInfo descriptor_pool = {};
   descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
