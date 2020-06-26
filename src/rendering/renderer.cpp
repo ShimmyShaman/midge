@@ -247,11 +247,29 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
   coloured_rect_draw_data rect_draws[128];
   int rect_draws_index = 0;
 
-  u_char copy_buffer[512 + sequence->render_command_count * 40];
+  // TODO -- this isn't very seamly
+  const int COPY_BUFFER_SIZE = 2048;
+  u_char copy_buffer[COPY_BUFFER_SIZE];
   u_int32_t copy_buffer_used = 0;
 
   p_vkrs->render_data_buffer.frame_utilized_amount = 0;
   p_vkrs->render_data_buffer.queued_copies_count = 0U;
+
+  mat4 vpc;
+  VkDescriptorBufferInfo vpc_desc_buffer_info;
+  {
+    // Construct the Vulkan View/Projection/Clip for the render target image
+    mat4 view;
+    mat4 proj;
+    mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
+
+    glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)&view);
+    glm_ortho_default((float)sequence->image_width / sequence->image_height, (vec4 *)&proj);
+    glm_mat4_mul((vec4 *)&proj, (vec4 *)&view, (vec4 *)&vpc);
+    glm_mat4_mul((vec4 *)&clip, (vec4 *)&vpc, (vec4 *)&vpc);
+
+    write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), &vpc, &vpc_desc_buffer_info);
+  }
 
   for (int j = 0; j < sequence->render_command_count; ++j) {
 
@@ -545,7 +563,6 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         printf("TODO character not supported.\n");
         continue;
       }
-      printf("seq_height:%u\n", sequence->image_height);
 
       // Get the font image
       loaded_font_info *font = NULL;
@@ -560,16 +577,6 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         return VK_ERROR_UNKNOWN;
       }
       sampled_image *font_image = &p_vkrs->textures.samples[font->resource_uid - RESOURCE_UID_BEGIN];
-
-      // glTexCoord2f(q.s0, q.t1);
-      // glVertex2f(q.x0, q.y0);
-      // glTexCoord2f(q.s1, q.t1);
-      // glVertex2f(q.x1, q.y0);
-      // glTexCoord2f(q.s1, q.t0);
-      // glVertex2f(q.x1, q.y1);
-      // glTexCoord2f(q.s0, q.t0);
-      // glVertex2f(q.x0, q.y1);
-      printf("seq_height3:%u\n", sequence->image_height);
 
       // Source texture bounds
       stbtt_aligned_quad q;
@@ -590,36 +597,18 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
 
       printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0, q.x1,
              q.y0, q.y1);
+      printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
       // Vertex Uniform Buffer Object
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(vert_data_scale_offset);
 
-      // TODO - I'd prefer float to uint for cmd pixel positions
-      float aspect_ratio = (float)sequence->image_width / (float)sequence->image_height;
-      printf("aspect_ratio:%.3f\n", aspect_ratio);
-
-      printf("width:%.3f sequence->image_height:%u \n", width, sequence->image_height);
-
+      vert_ubo_data->scale.x = 2.f * width / (float)sequence->image_height;
+      vert_ubo_data->scale.y = 2.f * height / (float)sequence->image_height;
       vert_ubo_data->offset.x =
-          -0.5f + 1.0f * (float)q.x0 / (float)sequence->image_width + 1.f * (float)width / (float)sequence->image_height;
-      printf("%.3f = -0.5f + 1.0f * %.3f / %.3f + 1.f * %.3f / %.3f \n", vert_ubo_data->offset.x, (float)q.x0,
-             (float)sequence->image_width, (float)width, (float)sequence->image_height);
-      vert_ubo_data->offset.y = -0.5f + 1.0f * height / (float)sequence->image_height;
-      // -1.f + 2.0f * (float)q.y0 / (float)(sequence->image_height) + 1.f * (float)height / (float)(sequence->image_height);
-      vert_ubo_data->scale.x = width / (float)sequence->image_width * aspect_ratio;
-      printf("%.3f = %.3f / %.3f * %.3f\n", vert_ubo_data->scale.x, width, (float)sequence->image_width, aspect_ratio);
-      vert_ubo_data->scale.y = 2.0f * height / (float)sequence->image_height;
-
-      // rect_draw_data.vert.scale[0] = 2.f * cmd->data.colored_rect_info.width / (float)sequence->image_height;
-      // rect_draw_data.vert.scale[1] = 2.f * cmd->data.colored_rect_info.height / (float)sequence->image_height;
-      // rect_draw_data.vert.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
-      //                                 1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
-      // rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
-      //                                 1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
-
-      printf("offset.x:%.3f offset.y:%.3f scale.x:%.3f scale.y:%.3f \n", vert_ubo_data->offset.x, vert_ubo_data->offset.y,
-             vert_ubo_data->scale.x, vert_ubo_data->scale.y);
+          -1.0f + 2.0f * (float)q.x0 / (float)(sequence->image_width) + 1.0f * (float)width / (float)(sequence->image_width);
+      vert_ubo_data->offset.y =
+          -1.0f + 2.0f * (float)q.y0 / (float)(sequence->image_height) + 1.0f * (float)height / (float)(sequence->image_height);
 
       // Fragment Data
       frag_ubo_tint_texcoordbounds *frag_ubo_data = (frag_ubo_tint_texcoordbounds *)&copy_buffer[copy_buffer_used];
@@ -632,9 +621,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       frag_ubo_data->tex_coord_bounds.t1 = q.t1;
 
       // Setup viewport and clip
-      set_viewport_cmd(p_vkrs, 0, 0, 512, 128); // q.x0, q.y0, (float)width, (float)height);
-      printf("viewport: x:%.3f y:%.3f width:%.3f height%.3f\n", q.x0, q.y0, width, height);
-      set_scissor_cmd(p_vkrs, 0, 0, 512, 128); // q.x0, q.y0, width, height);
+      set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
+      set_scissor_cmd(p_vkrs, q.x0, q.y0, width, height);
 
       // Allocate the descriptor set from the pool.
       VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -671,7 +659,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       write->dstSet = desc_set;
       write->descriptorCount = 1;
       write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      write->pBufferInfo = &p_vkrs->global_vert_uniform_buffer.buffer_info;
+      write->pBufferInfo = &vpc_desc_buffer_info;
       write->dstArrayElement = 0;
       write->dstBinding = 0;
 
@@ -732,6 +720,10 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
     }
   }
 
+  if (copy_buffer_used >= COPY_BUFFER_SIZE) {
+    printf("ERROR Copy Buffer Allocation is insufficient!!\n");
+    return VK_ERROR_UNKNOWN;
+  }
   if (p_vkrs->render_data_buffer.queued_copies_count) {
     uint8_t *pData;
     res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0, p_vkrs->render_data_buffer.frame_utilized_amount, 0,

@@ -1296,7 +1296,7 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
               "void main() {\n"
               "   gl_Position = globalUI.mvp * vec4(inPosition, 0.0, 1.0);\n"
               "   gl_Position.xy *= element.scale.xy;\n"
-              // "   gl_Position.xy += element.offset.xy;\n"
+              "   gl_Position.xy += element.offset.xy;\n"
               "   fragTexCoord = inTexCoord;\n"
               "}\n",
       .stage = VK_SHADER_STAGE_VERTEX_BIT,
@@ -1323,6 +1323,10 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
               "       element.texCoordBounds.x + fragTexCoord.x * (element.texCoordBounds.y - element.texCoordBounds.x),\n"
               "       element.texCoordBounds.z + fragTexCoord.y * (element.texCoordBounds.w - element.texCoordBounds.z));\n"
               "   outColor = texture(texSampler, texCoords);\n"
+              "   if(outColor.r < 0.1)\n"
+              "      discard;\n"
+              "   outColor.a = outColor.r;\n"
+              "   outColor.rgb = element.tint.rgb;\n"
               "}\n",
       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
   };
@@ -1447,12 +1451,12 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState att_state[1];
-    att_state[0].colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    att_state[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT; // TODO
     att_state[0].blendEnable = VK_TRUE;
     att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
+    // If this is true, then why is the render target blending when placed in another image
     att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
