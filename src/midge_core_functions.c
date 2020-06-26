@@ -302,8 +302,8 @@ int force_render_update(int argc, void **argv)
 
   // Font Writing
   sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
-  sequence->extent_width = 512;
-  sequence->extent_height = 128;
+  sequence->image_width = 512;
+  sequence->image_height = 128;
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->render_commands_allocated = 32;
   sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
@@ -312,22 +312,20 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 2;
   sequence->render_commands[rci].y = 2;
-  sequence->render_commands[rci].width = 508;
-  sequence->render_commands[rci].height = 124;
+  sequence->render_commands[rci].data.colored_rect_info.width = 508;
+  sequence->render_commands[rci].data.colored_rect_info.height = 124;
   sequence->render_commands[rci++].data.colored_rect_info.color = teal;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 80;
-  sequence->render_commands[rci].y = 32;
-  sequence->render_commands[rci].width = 64;
-  sequence->render_commands[rci].height = 64;
+  sequence->render_commands[rci].y = 30;
+  sequence->render_commands[rci].data.colored_rect_info.width = 68;
+  sequence->render_commands[rci].data.colored_rect_info.height = 68;
   sequence->render_commands[rci++].data.colored_rect_info.color = dark_slate_gray;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_PRINT_LETTER;
-  sequence->render_commands[rci].x = 90;
-  sequence->render_commands[rci].y = 42;
-  sequence->render_commands[rci].width = 48;
-  sequence->render_commands[rci].height = 48;
+  sequence->render_commands[rci].x = 82;
+  sequence->render_commands[rci].y = 32;
   sequence->render_commands[rci].data.print_letter.letter = 'A';
   sequence->render_commands[rci].data.print_letter.color = burlywood;
   sequence->render_commands[rci++].data.print_letter.font_resource_uid = command_hub->ui_elements[2].resource_uid;
@@ -341,8 +339,8 @@ int force_render_update(int argc, void **argv)
 
   // For the global node (and whole screen)
   sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
-  sequence->extent_width = 1024;
-  sequence->extent_height = 640;
+  sequence->image_width = 1024;
+  sequence->image_height = 640;
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
   sequence->render_commands_allocated = 32;
   sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
@@ -351,8 +349,8 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 2;
   sequence->render_commands[rci].y = 2;
-  sequence->render_commands[rci].width = 1020;
-  sequence->render_commands[rci].height = 636;
+  sequence->render_commands[rci].data.colored_rect_info.width = 1020;
+  sequence->render_commands[rci].data.colored_rect_info.height = 636;
   sequence->render_commands[rci++].data.colored_rect_info.color = dark_slate_gray;
 
   // sequence->render_commands[rci].type = RENDER_COMMAND_SAMPLE_CUBE;
@@ -365,57 +363,57 @@ int force_render_update(int argc, void **argv)
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 244;
   sequence->render_commands[rci].y = 52;
-  sequence->render_commands[rci].width = 536;
-  sequence->render_commands[rci].height = 536;
+  sequence->render_commands[rci].data.colored_rect_info.width = 536;
+  sequence->render_commands[rci].data.colored_rect_info.height = 536;
   sequence->render_commands[rci++].data.colored_rect_info.color = burlywood;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_TEXTURED_RECTANGLE;
   sequence->render_commands[rci].x = 256;
   sequence->render_commands[rci].y = 64;
-  sequence->render_commands[rci].width = 512;
-  sequence->render_commands[rci].height = 128;
+  sequence->render_commands[rci].data.textured_rect_info.width = 512;
+  sequence->render_commands[rci].data.textured_rect_info.height = 128;
   sequence->render_commands[rci++].data.textured_rect_info.texture_uid = command_hub->ui_elements[1].resource_uid;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 300 - 8;
   sequence->render_commands[rci].y = 640 - 40 - 8;
-  sequence->render_commands[rci].width = 300;
-  sequence->render_commands[rci].height = 40;
+  sequence->render_commands[rci].data.colored_rect_info.width = 300;
+  sequence->render_commands[rci].data.colored_rect_info.height = 40;
   sequence->render_commands[rci++].data.colored_rect_info.color = greenish;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 300 - 8 + 4;
   sequence->render_commands[rci].y = 640 - 40 - 8 + 4;
-  sequence->render_commands[rci].width = 240;
-  sequence->render_commands[rci].height = 32;
+  sequence->render_commands[rci].data.colored_rect_info.width = 240;
+  sequence->render_commands[rci].data.colored_rect_info.height = 32;
   sequence->render_commands[rci++].data.colored_rect_info.color = ghost_white;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 300 - 8 + 4;
   sequence->render_commands[rci].y = 640 - 40 - 8 + 4;
-  sequence->render_commands[rci].width = 2;
-  sequence->render_commands[rci].height = 32;
+  sequence->render_commands[rci].data.colored_rect_info.width = 2;
+  sequence->render_commands[rci].data.colored_rect_info.height = 32;
   sequence->render_commands[rci++].data.colored_rect_info.color = black;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 300 - 8 + 4;
   sequence->render_commands[rci].y = 640 - 40 - 8 + 4;
-  sequence->render_commands[rci].width = 240;
-  sequence->render_commands[rci].height = 2;
+  sequence->render_commands[rci].data.colored_rect_info.width = 240;
+  sequence->render_commands[rci].data.colored_rect_info.height = 2;
   sequence->render_commands[rci++].data.colored_rect_info.color = black;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 60 - 8 + 4 - 2;
   sequence->render_commands[rci].y = 640 - 40 - 8 + 4;
-  sequence->render_commands[rci].width = 2;
-  sequence->render_commands[rci].height = 32;
+  sequence->render_commands[rci].data.colored_rect_info.width = 2;
+  sequence->render_commands[rci].data.colored_rect_info.height = 32;
   sequence->render_commands[rci++].data.colored_rect_info.color = black;
 
   sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
   sequence->render_commands[rci].x = 1024 - 300 - 8 + 4;
   sequence->render_commands[rci].y = 640 - 8 - 4 - 2;
-  sequence->render_commands[rci].width = 240;
-  sequence->render_commands[rci].height = 2;
+  sequence->render_commands[rci].data.colored_rect_info.width = 240;
+  sequence->render_commands[rci].data.colored_rect_info.height = 2;
   sequence->render_commands[rci++].data.colored_rect_info.color = black;
 
   // Add to the render queue

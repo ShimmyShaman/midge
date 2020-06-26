@@ -262,12 +262,12 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
 
       // Vertex Data
-      rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)sequence->extent_height;
-      rect_draw_data.vert.scale[1] = 2.f * cmd->height / (float)sequence->extent_height;
-      rect_draw_data.vert.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->extent_width) +
-                                      1.0f * (float)cmd->width / (float)(sequence->extent_width);
-      rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->extent_height) +
-                                      1.0f * (float)cmd->height / (float)(sequence->extent_height);
+      rect_draw_data.vert.scale[0] = 2.f * cmd->data.colored_rect_info.width / (float)sequence->image_height;
+      rect_draw_data.vert.scale[1] = 2.f * cmd->data.colored_rect_info.height / (float)sequence->image_height;
+      rect_draw_data.vert.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
+                                      1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
+      rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
+                                      1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
 
       // Fragment Data
       rect_draw_data.frag.tint_color[0] = cmd->data.colored_rect_info.color.r;
@@ -317,8 +317,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         VkViewport viewport;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = (float)sequence->extent_width;
-        viewport.height = (float)sequence->extent_height;
+        viewport.width = (float)sequence->image_width;
+        viewport.height = (float)sequence->image_height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(p_vkrs->cmd, 0, 1, &viewport);
@@ -329,8 +329,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         VkRect2D scissor;
         scissor.offset.x = (int32_t)(cmd->x);
         scissor.offset.y = (int32_t)(cmd->y);
-        scissor.extent.width = (uint32_t)(cmd->width);
-        scissor.extent.height = (uint32_t)(cmd->height);
+        scissor.extent.width = (uint32_t)(cmd->data.colored_rect_info.width);
+        scissor.extent.height = (uint32_t)(cmd->data.colored_rect_info.height);
         vkCmdSetScissor(p_vkrs->cmd, 0, 1, &scissor);
       }
 
@@ -401,12 +401,12 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
 
       // Vertex Data
-      rect_draw_data.vert.scale[0] = 2.f * cmd->width / (float)sequence->extent_height;
-      rect_draw_data.vert.scale[1] = 2.f * cmd->height / (float)sequence->extent_height;
-      rect_draw_data.vert.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->extent_width) +
-                                      1.0f * (float)cmd->width / (float)(sequence->extent_width);
-      rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->extent_height) +
-                                      1.0f * (float)cmd->height / (float)(sequence->extent_height);
+      rect_draw_data.vert.scale[0] = 2.f * cmd->data.colored_rect_info.width / (float)sequence->image_height;
+      rect_draw_data.vert.scale[1] = 2.f * cmd->data.colored_rect_info.height / (float)sequence->image_height;
+      rect_draw_data.vert.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
+                                      1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
+      rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
+                                      1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
 
       // // Fragment Data
       // glm_vec4_copy((float *)cmd->data, rect_draw_data.frag.tint_color);
@@ -452,8 +452,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         VkViewport viewport;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = (float)sequence->extent_width;
-        viewport.height = (float)sequence->extent_height;
+        viewport.width = (float)sequence->image_width;
+        viewport.height = (float)sequence->image_height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(p_vkrs->cmd, 0, 1, &viewport);
@@ -464,10 +464,10 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         VkRect2D scissor;
         scissor.offset.x = (int32_t)(cmd->x);
         scissor.offset.y = (int32_t)(cmd->y);
-        scissor.extent.width = (uint32_t)(cmd->width);
-        scissor.extent.height = (uint32_t)(cmd->height);
-        // scissor.extent.width = (uint32_t)sequence->extent_width;
-        // scissor.extent.height = (uint32_t)sequence->extent_height;
+        scissor.extent.width = (uint32_t)(cmd->data.colored_rect_info.width);
+        scissor.extent.height = (uint32_t)(cmd->data.colored_rect_info.height);
+        // scissor.extent.width = (uint32_t)sequence->image_width;
+        // scissor.extent.height = (uint32_t)sequence->image_height;
         vkCmdSetScissor(p_vkrs->cmd, 0, 1, &scissor);
       }
 
@@ -541,11 +541,11 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
     } break;
 
     case RENDER_COMMAND_PRINT_LETTER: {
-
       if (cmd->data.print_letter.letter < 32 || cmd->data.print_letter.letter > 127) {
         printf("TODO character not supported.\n");
         continue;
       }
+      printf("seq_height:%u\n", sequence->image_height);
 
       // Get the font image
       loaded_font_info *font = NULL;
@@ -569,12 +569,24 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       // glVertex2f(q.x1, q.y1);
       // glTexCoord2f(q.s0, q.t0);
       // glVertex2f(q.x0, q.y1);
+      printf("seq_height3:%u\n", sequence->image_height);
 
       // Source texture bounds
       stbtt_aligned_quad q;
-      float x, y;
-      stbtt_GetBakedQuad(font->char_data, font_image->width, font_image->height, cmd->data.print_letter.letter - 32, &x, &y, &q,
+      float align_x = cmd->x;
+      float align_y = cmd->y;
+      stbtt_GetBakedQuad(font->char_data, font_image->width, font_image->height, cmd->data.print_letter.letter - 32, &align_x,
+                         &align_y, &q,
                          1); // 1=opengl & d3d10+,0=d3d9
+
+      {
+        // opengl y invert
+        float t = q.y1;
+        q.y1 += (q.y1 - q.y0);
+        q.y0 = t;
+      }
+      float width = q.x1 - q.x0;
+      float height = q.y1 - q.y0;
 
       printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0, q.x1,
              q.y0, q.y1);
@@ -583,12 +595,31 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(vert_data_scale_offset);
 
-      vert_ubo_data->scale.x = 2.f * cmd->width / (float)sequence->extent_height;
-      vert_ubo_data->scale.y = 2.f * cmd->height / (float)sequence->extent_height;
-      vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->extent_width) +
-                                1.0f * (float)cmd->width / (float)(sequence->extent_width);
-      vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->extent_height) +
-                                1.0f * (float)cmd->height / (float)(sequence->extent_height);
+      // TODO - I'd prefer float to uint for cmd pixel positions
+      float aspect_ratio = (float)sequence->image_width / (float)sequence->image_height;
+      printf("aspect_ratio:%.3f\n", aspect_ratio);
+
+      printf("width:%.3f sequence->image_height:%u \n", width, sequence->image_height);
+
+      vert_ubo_data->offset.x =
+          -0.5f + 1.0f * (float)q.x0 / (float)sequence->image_width + 1.f * (float)width / (float)sequence->image_height;
+      printf("%.3f = -0.5f + 1.0f * %.3f / %.3f + 1.f * %.3f / %.3f \n", vert_ubo_data->offset.x, (float)q.x0,
+             (float)sequence->image_width, (float)width, (float)sequence->image_height);
+      vert_ubo_data->offset.y = -0.5f + 1.0f * height / (float)sequence->image_height;
+      // -1.f + 2.0f * (float)q.y0 / (float)(sequence->image_height) + 1.f * (float)height / (float)(sequence->image_height);
+      vert_ubo_data->scale.x = width / (float)sequence->image_width * aspect_ratio;
+      printf("%.3f = %.3f / %.3f * %.3f\n", vert_ubo_data->scale.x, width, (float)sequence->image_width, aspect_ratio);
+      vert_ubo_data->scale.y = 2.0f * height / (float)sequence->image_height;
+
+      // rect_draw_data.vert.scale[0] = 2.f * cmd->data.colored_rect_info.width / (float)sequence->image_height;
+      // rect_draw_data.vert.scale[1] = 2.f * cmd->data.colored_rect_info.height / (float)sequence->image_height;
+      // rect_draw_data.vert.offset[0] = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
+      //                                 1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
+      // rect_draw_data.vert.offset[1] = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
+      //                                 1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
+
+      printf("offset.x:%.3f offset.y:%.3f scale.x:%.3f scale.y:%.3f \n", vert_ubo_data->offset.x, vert_ubo_data->offset.y,
+             vert_ubo_data->scale.x, vert_ubo_data->scale.y);
 
       // Fragment Data
       frag_ubo_tint_texcoordbounds *frag_ubo_data = (frag_ubo_tint_texcoordbounds *)&copy_buffer[copy_buffer_used];
@@ -601,8 +632,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
       frag_ubo_data->tex_coord_bounds.t1 = q.t1;
 
       // Setup viewport and clip
-      set_viewport_cmd(p_vkrs, x, y, (float)sequence->extent_width, (float)sequence->extent_height);
-      set_scissor_cmd(p_vkrs, cmd->x, cmd->y, cmd->width, cmd->height);
+      set_viewport_cmd(p_vkrs, 0, 0, 512, 128); // q.x0, q.y0, (float)width, (float)height);
+      printf("viewport: x:%.3f y:%.3f width:%.3f height%.3f\n", q.x0, q.y0, width, height);
+      set_scissor_cmd(p_vkrs, 0, 0, 512, 128); // q.x0, q.y0, width, height);
 
       // Allocate the descriptor set from the pool.
       VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -814,8 +846,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_qu
       rp_begin.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
       rp_begin.renderArea.offset.x = 0;
       rp_begin.renderArea.offset.y = 0;
-      rp_begin.renderArea.extent.width = sequence->extent_width;
-      rp_begin.renderArea.extent.height = sequence->extent_height;
+      rp_begin.renderArea.extent.width = sequence->image_width;
+      rp_begin.renderArea.extent.height = sequence->image_height;
       rp_begin.clearValueCount = 2;
       rp_begin.pClearValues = clear_values;
 

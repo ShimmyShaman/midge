@@ -1296,7 +1296,7 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
               "void main() {\n"
               "   gl_Position = globalUI.mvp * vec4(inPosition, 0.0, 1.0);\n"
               "   gl_Position.xy *= element.scale.xy;\n"
-              "   gl_Position.xy += element.offset.xy;\n"
+              // "   gl_Position.xy += element.offset.xy;\n"
               "   fragTexCoord = inTexCoord;\n"
               "}\n",
       .stage = VK_SHADER_STAGE_VERTEX_BIT,

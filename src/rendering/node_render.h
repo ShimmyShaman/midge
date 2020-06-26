@@ -66,9 +66,10 @@ typedef struct render_color {
 
 typedef struct render_command {
   render_command_type type;
-  unsigned int x, y, width, height;
+  unsigned int x, y;
   union {
     struct {
+      unsigned int width, height;
       render_color color;
     } colored_rect_info;
     struct {
@@ -77,6 +78,7 @@ typedef struct render_command {
       render_color color;
     } print_letter;
     struct {
+      unsigned int width, height;
       uint texture_uid;
     } textured_rect_info;
   } data;
@@ -96,7 +98,7 @@ typedef enum node_render_target {
 } node_render_target;
 
 typedef struct node_render_sequence {
-  unsigned int extent_width, extent_height;
+  unsigned int image_width, image_height;
   node_render_target render_target;
   int render_command_count;
   int render_commands_allocated;
