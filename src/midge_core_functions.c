@@ -276,7 +276,7 @@ int force_render_update(int argc, void **argv)
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_TEXTURE;
   command->p_uid = &command_hub->ui_elements[0].resource_uid;
-  command->data.path = "res/texture.jpg";
+  command->data.load_texture.path = "res/texture.jpg";
 
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;

@@ -762,7 +762,7 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
     switch (resource_cmd->type) {
     case RESOURCE_COMMAND_LOAD_TEXTURE: {
-      VkResult res = load_texture_from_file(p_vkrs, resource_cmd->data.path, resource_cmd->p_uid);
+      VkResult res = load_texture_from_file(p_vkrs, resource_cmd->data.load_texture.path, resource_cmd->p_uid);
       assert(res == VK_SUCCESS);
 
     } break;

@@ -114,7 +114,9 @@ typedef struct resource_command {
   resource_command_type type;
   uint *p_uid;
   union {
-    const char *path;
+    struct {
+      const char *path;
+    } load_texture;
     struct {
       uint width, height;
       bool use_as_render_target;

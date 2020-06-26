@@ -2107,15 +2107,15 @@ int mc_main(int argc, const char *const *argv)
   render_thread_info render_thread;
   render_thread.render_thread_initialized = false;
   {
-    // Render Queue
-    pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
-    render_thread.resource_queue.count = 0;
-    render_thread.resource_queue.allocated = 0;
-
     // Resource Queue
     pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
     render_thread.resource_queue.count = 0;
     render_thread.resource_queue.allocated = 0;
+
+    // Render Queue
+    pthread_mutex_init(&render_thread.render_queue.mutex, NULL);
+    render_thread.render_queue.count = 0;
+    render_thread.render_queue.allocated = 0;
   }
   // -- Start Thread
   begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
