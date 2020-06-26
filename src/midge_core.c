@@ -2106,15 +2106,18 @@ int mc_main(int argc, const char *const *argv)
   // Begin Vulkan
   render_thread_info render_thread;
   render_thread.render_thread_initialized = false;
-  render_thread.renderer_queue = (renderer_queue *)malloc(sizeof(renderer_queue));
-  render_thread.renderer_queue->count = 0;
-  render_thread.renderer_queue->in_use = false;
-  render_thread.renderer_queue->items = NULL;
-  pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
-  render_thread.resource_queue.count = 0;
-  render_thread.resource_queue.allocated = 8;
-  render_thread.resource_queue.commands =
-      (resource_command *)malloc(sizeof(resource_command) * render_thread.resource_queue.allocated);
+  {
+    // Render Queue
+    pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
+    render_thread.resource_queue.count = 0;
+    render_thread.resource_queue.allocated = 0;
+
+    // Resource Queue
+    pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
+    render_thread.resource_queue.count = 0;
+    render_thread.resource_queue.allocated = 0;
+  }
+  // -- Start Thread
   begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
 
   mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
@@ -2441,8 +2444,7 @@ int mc_main(int argc, const char *const *argv)
   MCcall(init_command_hub_process_matrix(command_hub));
   command_hub->focused_workflow = NULL;
   MCcall(init_void_collection_v1(&command_hub->template_collection));
-  MCcall(init_void_collection_v1(&command_hub->render_queue));
-  command_hub->render_thread_renderer_queue = render_thread.renderer_queue;
+  command_hub->renderer.render_queue = &render_thread.render_queue;
   command_hub->renderer.resource_queue = &render_thread.resource_queue;
   command_hub->ui_elements = (mc_ui_element_v1 *)malloc(sizeof(mc_ui_element_v1) * 32);
   command_hub->uid_counter = 2000;

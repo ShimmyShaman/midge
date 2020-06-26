@@ -273,10 +273,10 @@ typedef struct mc_command_hub_v1 {
   mc_node_v1 *nodespace;
   mc_ui_element_v1 *ui_elements;
   mc_void_collection_v1 *template_collection;
-  mc_void_collection_v1 *render_queue;
-  renderer_queue *render_thread_renderer_queue;
+  mc_void_collection_v1 *render_sequence_pool;
   struct {
     resource_queue *resource_queue;
+    render_queue *render_queue;
   } renderer;
   mc_process_unit_v1 *process_matrix;
   mc_workflow_process_v1 *focused_workflow;

@@ -51,21 +51,21 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
   return 0;
 }
 
-typedef enum render_command_type {
+typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,
   RENDER_COMMAND_BACKGROUND_COLOR,
   RENDER_COMMAND_SAMPLE_CUBE,
   RENDER_COMMAND_COLORED_RECTANGLE,
   RENDER_COMMAND_TEXTURED_RECTANGLE,
   RENDER_COMMAND_PRINT_TEXT,
-} render_command_type;
+} element_render_command_type;
 
 typedef struct render_color {
   float r, g, b, a;
 } render_color;
 
-typedef struct render_command {
-  render_command_type type;
+typedef struct element_render_command {
+  element_render_command_type type;
   unsigned int x, y;
   union {
     struct {
@@ -82,7 +82,7 @@ typedef struct render_command {
       uint texture_uid;
     } textured_rect_info;
   } data;
-} render_command;
+} element_render_command;
 
 typedef enum resource_command_type {
   RESOURCE_COMMAND_NONE = 1,
@@ -97,24 +97,18 @@ typedef enum node_render_target {
   NODE_RENDER_TARGET_IMAGE,
 } node_render_target;
 
-typedef struct node_render_sequence {
+typedef struct image_render_queue {
   unsigned int image_width, image_height;
   node_render_target render_target;
-  int render_command_count;
-  int render_commands_allocated;
-  render_command *render_commands;
+  int command_count;
+  int commands_allocated;
+  element_render_command *commands;
   union {
     struct {
       uint image_uid;
     } target_image;
   } data;
-} node_render_sequence;
-
-typedef struct renderer_queue {
-  bool in_use;
-  int count;
-  node_render_sequence **items;
-} renderer_queue;
+} image_render_queue;
 
 typedef struct resource_command {
   resource_command_type type;
@@ -139,9 +133,16 @@ typedef struct resource_queue {
   resource_command *commands;
 } resource_queue;
 
+typedef struct render_queue {
+  pthread_mutex_t mutex;
+  int count;
+  int allocated;
+  image_render_queue *image_renders;
+} render_queue;
+
 typedef struct render_thread_info {
   mthread_info *thread_info;
-  renderer_queue *renderer_queue;
+  render_queue render_queue;
   resource_queue resource_queue;
   bool render_thread_initialized;
 } render_thread_info;

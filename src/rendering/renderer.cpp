@@ -57,7 +57,7 @@ static glsl_shader fragment_shader = {
 };
 
 VkResult draw_cube(vk_render_state *p_vkrs);
-VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue);
+VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queue);
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue);
 VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, uint *texture_uid);
 VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, bool use_as_render_target,
@@ -141,22 +141,24 @@ extern "C" void *midge_render_thread(void *vargp)
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue.mutex);
     if (render_thread->resource_queue.count) {
+      printf("Vulkan entered resources!\n");
       handle_resource_commands(&vkrs, &render_thread->resource_queue);
       render_thread->resource_queue.count = 0;
+      printf("Vulkan loaded resources!\n");
     }
     pthread_mutex_unlock(&render_thread->resource_queue.mutex);
 
     // Render Commands
-    if (!render_thread->renderer_queue->in_use && render_thread->renderer_queue->count) {
-      // printf("received render queue in renderer : %i items\n", render_thread->renderer_queue->count);
-      render_thread->renderer_queue->in_use = true;
+    pthread_mutex_lock(&render_thread->render_queue.mutex);
+    if (render_thread->render_queue.count) {
+      printf("Vulkan entered render_queue!\n");
+      render_through_queue(&vkrs, &render_thread->render_queue);
+      render_thread->render_queue.count = 0;
 
-      render_through_queue(&vkrs, render_thread->renderer_queue);
-      render_thread->renderer_queue->count = 0;
-      render_thread->renderer_queue->items = NULL;
-      render_thread->renderer_queue->in_use = false;
+      printf("Vulkan rendered render_queue!\n");
       ++frame_updates;
     }
+    pthread_mutex_unlock(&render_thread->render_queue.mutex);
 
     mxcb_update_window(&winfo);
   }
@@ -239,7 +241,7 @@ int set_scissor_cmd(vk_render_state *p_vkrs, int32_t x, int32_t y, uint32_t widt
   return 0;
 }
 
-VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence)
+VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 {
   // Descriptor Writes
   VkResult res;
@@ -271,9 +273,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
     write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), &vpc, &vpc_desc_buffer_info);
   }
 
-  for (int j = 0; j < sequence->render_command_count; ++j) {
+  for (int j = 0; j < sequence->command_count; ++j) {
 
-    render_command *cmd = &sequence->render_commands[j];
+    element_render_command *cmd = &sequence->commands[j];
     switch (cmd->type) {
     case RENDER_COMMAND_COLORED_RECTANGLE: {
       // Set
@@ -603,9 +605,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, node_render_sequence *sequence
         float width = q.x1 - q.x0;
         float height = q.y1 - q.y0;
 
-        printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0,
-               q.x1, q.y0, q.y1);
-        printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
+        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0,
+        //        q.x1, q.y0, q.y1);
+        // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
         // Vertex Uniform Buffer Object
         vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
@@ -786,19 +788,19 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
   return VK_SUCCESS;
 }
 
-VkResult render_through_queue(vk_render_state *p_vkrs, renderer_queue *render_queue)
+VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queue)
 {
   VkResult res;
 
   for (int i = 0; i < render_queue->count; ++i) {
 
-    node_render_sequence *sequence = render_queue->items[i];
+    image_render_queue *sequence = &render_queue->image_renders[i];
 
-    if (sequence->render_command_count < 1) {
+    if (sequence->command_count < 1) {
       return VK_ERROR_UNKNOWN;
     }
 
-    printf("sequence: rt:%i cmd_count:%i\n", sequence->render_target, sequence->render_command_count);
+    printf("sequence: rt:%i cmd_count:%i\n", sequence->render_target, sequence->command_count);
 
     switch (sequence->render_target) {
     case NODE_RENDER_TARGET_PRESENT: {

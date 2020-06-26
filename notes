@@ -2,62 +2,34 @@ GOAL:
 
 
 
-generate image ID system
-pass image IDs through render commands
-FontWrite Command
 
+onscreen debugging of mouse position
 
-
-
-sequence is submitted on its own to render custom text
- - FontWrite
- - requires text image id
- - requires target image id
- - requires text
-text is rendered to image and not presented
 
 
 visualNode
+  - visualNode
+
+
+
+globalRoot
+  - visualNode::debugWindow
+    - visualNode::textblock
+	  - 
   - visualNode::commandinterface
     - visualNode::textbox
       - *ui_elements
         - background
         - textlines
 
-use the char commands to call a core_function method
-core_function method:
-  defines a viewport
-  defines a CI render sequence
-  defines an image pointer
-  
-  defines another sequence
-  renders cube
-  renders ci child image
-  to another image pointer
-  
- which holds a rectangle viewport
-and a list of commands and submits it as a pointed array, ptr to image storage
-to the command hub to be rendered as an image and stored to the ptr
 
-use the char commands to transfer any stored sequences to the render thread for
-processing
-
-renderthread while checks for stored sequences
-finds one and renders it to image target...
-
-present global image
-create CI-node
-
-
-
-edit and save function
-bring up edit window
-submit to command system
-font & writing
-ui system and focus setting
-a visual to click on
 control information
-you need a rendering system
+a visual to click on
+ui system and focus setting
+font & writing
+submit to command system
+bring up edit window
+edit and save function
 
 
 

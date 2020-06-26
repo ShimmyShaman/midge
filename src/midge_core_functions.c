@@ -200,6 +200,67 @@ int cling_process(int argc, void **argv)
 
 int init_void_collection(mc_void_collection_v1 **collection);
 
+int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command)
+{
+  if (resource_queue->allocated < resource_queue->count + 1) {
+    int new_allocated = (resource_queue->count + 1) + 4 + (resource_queue->count + 1) / 4;
+    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
+
+    if (resource_queue->allocated) {
+      memcpy(new_ary, resource_queue->commands, sizeof(resource_command) * resource_queue->count);
+      free(resource_queue->commands);
+    }
+    resource_queue->commands = new_ary;
+    resource_queue->allocated = new_allocated;
+  }
+
+  *p_command = &resource_queue->commands[resource_queue->count++];
+  return 0;
+}
+
+int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p_command)
+{
+  if (render_queue->allocated < render_queue->count + 1) {
+    int new_allocated = render_queue->allocated + 4 + render_queue->allocated / 4;
+    image_render_queue *new_ary = (image_render_queue *)malloc(sizeof(image_render_queue) * new_allocated);
+
+    if (render_queue->allocated) {
+      memcpy(new_ary, render_queue->image_renders, sizeof(image_render_queue) * render_queue->count);
+      free(render_queue->image_renders);
+    }
+    for (int i = 0; i < new_allocated - render_queue->allocated; ++i) {
+      new_ary[render_queue->allocated + i].commands_allocated = 4;
+      new_ary[render_queue->allocated + i].command_count = 0;
+      new_ary[render_queue->allocated + i].commands = (element_render_command *)malloc(
+          sizeof(element_render_command) * new_ary[render_queue->allocated + i].commands_allocated);
+    }
+
+    render_queue->image_renders = new_ary;
+    render_queue->allocated = new_allocated;
+  }
+
+  *p_command = &render_queue->image_renders[render_queue->count++];
+  return 0;
+}
+
+int obtain_element_render_command(image_render_queue *image_queue, element_render_command **p_command)
+{
+  if (image_queue->commands_allocated < image_queue->command_count + 1) {
+    int new_allocated = image_queue->commands_allocated + 4 + image_queue->commands_allocated / 4;
+    element_render_command *new_ary = (element_render_command *)malloc(sizeof(element_render_command) * new_allocated);
+
+    if (image_queue->commands_allocated) {
+      memcpy(new_ary, image_queue->commands, sizeof(element_render_command) * image_queue->command_count);
+      free(image_queue->commands);
+    }
+    image_queue->commands = new_ary;
+    image_queue->commands_allocated = new_allocated;
+  }
+
+  *p_command = &image_queue->commands[image_queue->command_count++];
+  return 0;
+}
+
 int force_render_update(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -207,67 +268,24 @@ int force_render_update(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
                                   /*mcfuncreplace*/
 
-  // Set the resource command queue
+  // Obtain the resource command queue
   pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
-  int *cmd_count = &command_hub->renderer.resource_queue->count;
-  *cmd_count = 0;
 
   // TODO -- REFACTOR
-  if (command_hub->renderer.resource_queue->allocated < *cmd_count + 1) {
-    int new_allocated = (*cmd_count + 1) + 4 + (*cmd_count + 1) / 4;
-    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
-
-    if (command_hub->renderer.resource_queue->allocated) {
-      memcpy(new_ary, command_hub->renderer.resource_queue->commands, sizeof(resource_command) * *cmd_count);
-      free(command_hub->renderer.resource_queue->commands);
-    }
-    command_hub->renderer.resource_queue->commands = new_ary;
-    command_hub->renderer.resource_queue->allocated = new_allocated;
-    printf("refactor-1\n");
-  }
-
-  resource_command *command = &command_hub->renderer.resource_queue->commands[(*cmd_count)++];
+  resource_command *command;
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_TEXTURE;
   command->p_uid = &command_hub->ui_elements[0].resource_uid;
   command->data.path = "res/texture.jpg";
 
-  // TODO -- REFACTOR
-  if (command_hub->renderer.resource_queue->allocated < *cmd_count + 1) {
-    int new_allocated = (*cmd_count + 1) + 4 + (*cmd_count + 1) / 4;
-    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
-
-    if (command_hub->renderer.resource_queue->allocated) {
-      memcpy(new_ary, command_hub->renderer.resource_queue->commands, sizeof(resource_command) * *cmd_count);
-      free(command_hub->renderer.resource_queue->commands);
-    }
-    command_hub->renderer.resource_queue->commands = new_ary;
-    command_hub->renderer.resource_queue->allocated = new_allocated;
-    printf("refactor-2\n");
-  }
-  command_hub->ui_elements[1].resource_uid = 0;
-
-  command = &command_hub->renderer.resource_queue->commands[(*cmd_count)++];
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = &command_hub->ui_elements[1].resource_uid;
   command->data.create_texture.width = 512;
   command->data.create_texture.height = 128;
   command->data.create_texture.use_as_render_target = true;
 
-  // TODO -- REFACTOR
-  if (command_hub->renderer.resource_queue->allocated < *cmd_count + 1) {
-    int new_allocated = (*cmd_count + 1) + 4 + (*cmd_count + 1) / 4;
-    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
-
-    if (command_hub->renderer.resource_queue->allocated) {
-      memcpy(new_ary, command_hub->renderer.resource_queue->commands, sizeof(resource_command) * *cmd_count);
-      free(command_hub->renderer.resource_queue->commands);
-    }
-    command_hub->renderer.resource_queue->commands = new_ary;
-    command_hub->renderer.resource_queue->allocated = new_allocated;
-    printf("refactor-3\n");
-  }
-
-  command = &command_hub->renderer.resource_queue->commands[(*cmd_count)++];
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_uid = &command_hub->ui_elements[2].resource_uid;
   command->data.font.path = "res/font/LiberationMono-Regular.ttf";
@@ -280,16 +298,8 @@ int force_render_update(int argc, void **argv)
     usleep(100);
   }
 
-  // Command Interface Box
-  node_render_sequence *sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
-  free(sequence); // TODO
-  // sequence->extent_width = 280;
-  // sequence->extent_height = 40;
-  // sequence->render_target = NODE_RENDER_TARGET_HOST_IMAGE;
-  // sequence->render_command_count = 1;
-  // sequence->render_commands_allocated = 1;
-  // sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
-  // sequence->image = (void *)&command_hub->global_node->children[0]->data.visual->image;
+  // Obtain the render command queue
+  pthread_mutex_lock(&command_hub->renderer.render_queue->mutex);
 
   render_color greenish = {0.11f, 0.55f, 0.32f, 1.f};
   render_color teal = {0.0f, 0.52f, 0.52f, 1.f};
@@ -298,176 +308,128 @@ int force_render_update(int argc, void **argv)
   render_color dark_slate_gray = {0.18f, 0.18f, 0.31f, 1.f};
   render_color ghost_white = {0.97f, 0.97f, 1.f, 1.f};
   render_color black = {0.f, 0.f, 0.f, 1.f};
-  int rci = 0;
 
   // Font Writing
-  sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
+  image_render_queue *sequence;
+  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = 512;
   sequence->image_height = 128;
-  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-  sequence->render_commands_allocated = 32;
-  sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
   sequence->data.target_image.image_uid = command_hub->ui_elements[1].resource_uid;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 2;
-  sequence->render_commands[rci].y = 2;
-  sequence->render_commands[rci].data.colored_rect_info.width = 508;
-  sequence->render_commands[rci].data.colored_rect_info.height = 124;
-  sequence->render_commands[rci++].data.colored_rect_info.color = teal;
+  element_render_command *element_cmd;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 2;
+  element_cmd->y = 2;
+  element_cmd->data.colored_rect_info.width = 508;
+  element_cmd->data.colored_rect_info.height = 124;
+  element_cmd->data.colored_rect_info.color = teal;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 80;
-  sequence->render_commands[rci].y = 30;
-  sequence->render_commands[rci].data.colored_rect_info.width = 68;
-  sequence->render_commands[rci].data.colored_rect_info.height = 68;
-  sequence->render_commands[rci++].data.colored_rect_info.color = dark_slate_gray;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 80;
+  element_cmd->y = 30;
+  element_cmd->data.colored_rect_info.width = 68;
+  element_cmd->data.colored_rect_info.height = 68;
+  element_cmd->data.colored_rect_info.color = dark_slate_gray;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_PRINT_TEXT;
-  sequence->render_commands[rci].x = 82;
-  sequence->render_commands[rci].y = 32 + 24;
-  sequence->render_commands[rci].data.print_text.text = "The quick brown fox jumps over the lazy dog!";
-  sequence->render_commands[rci].data.print_text.color = black;
-  sequence->render_commands[rci++].data.print_text.font_resource_uid = command_hub->ui_elements[2].resource_uid;
-
-  sequence->render_command_count = rci;
-
-  // Add to the render queue
-  // TODO -- render queue depth key
-  MCcall(append_to_collection(&command_hub->render_queue->items, &command_hub->render_queue->allocated,
-                              &command_hub->render_queue->count, sequence));
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+  element_cmd->x = 82;
+  element_cmd->y = 32 + 24;
+  element_cmd->data.print_text.text = "The quick brown fox jumps over the lazy dog!";
+  element_cmd->data.print_text.color = black;
+  element_cmd->data.print_text.font_resource_uid = command_hub->ui_elements[2].resource_uid;
 
   // For the global node (and whole screen)
-  sequence = (node_render_sequence *)malloc(sizeof(node_render_sequence));
+  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = 1024;
   sequence->image_height = 640;
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
-  sequence->render_commands_allocated = 32;
-  sequence->render_commands = (render_command *)malloc(sizeof(render_command) * sequence->render_commands_allocated);
 
-  rci = 0;
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 2;
-  sequence->render_commands[rci].y = 2;
-  sequence->render_commands[rci].data.colored_rect_info.width = 1020;
-  sequence->render_commands[rci].data.colored_rect_info.height = 636;
-  sequence->render_commands[rci++].data.colored_rect_info.color = dark_slate_gray;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 2;
+  element_cmd->y = 2;
+  element_cmd->data.colored_rect_info.width = 1020;
+  element_cmd->data.colored_rect_info.height = 636;
+  element_cmd->data.colored_rect_info.color = dark_slate_gray;
 
-  // sequence->render_commands[rci].type = RENDER_COMMAND_SAMPLE_CUBE;
-  // sequence->render_commands[rci].x = 0;
-  // sequence->render_commands[rci].y = 0;
-  // sequence->render_commands[rci].width = 1024;
-  // sequence->render_commands[rci].height = 640;
-  // sequence->render_commands[rci++].data = NULL;
+  // MCcall(obtain_element_render_command(sequence, &element_cmd));
+  // element_cmd->type = RENDER_COMMAND_SAMPLE_CUBE;
+  // element_cmd->x = 0;
+  // element_cmd->y = 0;
+  // element_cmd->width = 1024;
+  // element_cmd->height = 640;
+  // element_cmd->data = NULL;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 244;
-  sequence->render_commands[rci].y = 52;
-  sequence->render_commands[rci].data.colored_rect_info.width = 536;
-  sequence->render_commands[rci].data.colored_rect_info.height = 536;
-  sequence->render_commands[rci++].data.colored_rect_info.color = burlywood;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 244;
+  element_cmd->y = 52;
+  element_cmd->data.colored_rect_info.width = 536;
+  element_cmd->data.colored_rect_info.height = 536;
+  element_cmd->data.colored_rect_info.color = burlywood;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_TEXTURED_RECTANGLE;
-  sequence->render_commands[rci].x = 256;
-  sequence->render_commands[rci].y = 64;
-  sequence->render_commands[rci].data.textured_rect_info.width = 512;
-  sequence->render_commands[rci].data.textured_rect_info.height = 128;
-  sequence->render_commands[rci++].data.textured_rect_info.texture_uid = command_hub->ui_elements[1].resource_uid;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+  element_cmd->x = 256;
+  element_cmd->y = 64;
+  element_cmd->data.textured_rect_info.width = 512;
+  element_cmd->data.textured_rect_info.height = 128;
+  element_cmd->data.textured_rect_info.texture_uid = command_hub->ui_elements[1].resource_uid;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 1024 - 300 - 8;
-  sequence->render_commands[rci].y = 640 - 40 - 8;
-  sequence->render_commands[rci].data.colored_rect_info.width = 300;
-  sequence->render_commands[rci].data.colored_rect_info.height = 40;
-  sequence->render_commands[rci++].data.colored_rect_info.color = greenish;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 1024 - 300 - 8;
+  element_cmd->y = 640 - 40 - 8;
+  element_cmd->data.colored_rect_info.width = 300;
+  element_cmd->data.colored_rect_info.height = 40;
+  element_cmd->data.colored_rect_info.color = greenish;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 1024 - 300 - 8 + 4;
-  sequence->render_commands[rci].y = 640 - 40 - 8 + 4;
-  sequence->render_commands[rci].data.colored_rect_info.width = 240;
-  sequence->render_commands[rci].data.colored_rect_info.height = 32;
-  sequence->render_commands[rci++].data.colored_rect_info.color = ghost_white;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 1024 - 300 - 8 + 4;
+  element_cmd->y = 640 - 40 - 8 + 4;
+  element_cmd->data.colored_rect_info.width = 240;
+  element_cmd->data.colored_rect_info.height = 32;
+  element_cmd->data.colored_rect_info.color = ghost_white;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 1024 - 300 - 8 + 4;
-  sequence->render_commands[rci].y = 640 - 40 - 8 + 4;
-  sequence->render_commands[rci].data.colored_rect_info.width = 2;
-  sequence->render_commands[rci].data.colored_rect_info.height = 32;
-  sequence->render_commands[rci++].data.colored_rect_info.color = black;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 1024 - 300 - 8 + 4;
+  element_cmd->y = 640 - 40 - 8 + 4;
+  element_cmd->data.colored_rect_info.width = 2;
+  element_cmd->data.colored_rect_info.height = 32;
+  element_cmd->data.colored_rect_info.color = black;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 1024 - 300 - 8 + 4;
-  sequence->render_commands[rci].y = 640 - 40 - 8 + 4;
-  sequence->render_commands[rci].data.colored_rect_info.width = 240;
-  sequence->render_commands[rci].data.colored_rect_info.height = 2;
-  sequence->render_commands[rci++].data.colored_rect_info.color = black;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 1024 - 300 - 8 + 4;
+  element_cmd->y = 640 - 40 - 8 + 4;
+  element_cmd->data.colored_rect_info.width = 240;
+  element_cmd->data.colored_rect_info.height = 2;
+  element_cmd->data.colored_rect_info.color = black;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 1024 - 60 - 8 + 4 - 2;
-  sequence->render_commands[rci].y = 640 - 40 - 8 + 4;
-  sequence->render_commands[rci].data.colored_rect_info.width = 2;
-  sequence->render_commands[rci].data.colored_rect_info.height = 32;
-  sequence->render_commands[rci++].data.colored_rect_info.color = black;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 1024 - 60 - 8 + 4 - 2;
+  element_cmd->y = 640 - 40 - 8 + 4;
+  element_cmd->data.colored_rect_info.width = 2;
+  element_cmd->data.colored_rect_info.height = 32;
+  element_cmd->data.colored_rect_info.color = black;
 
-  sequence->render_commands[rci].type = RENDER_COMMAND_COLORED_RECTANGLE;
-  sequence->render_commands[rci].x = 1024 - 300 - 8 + 4;
-  sequence->render_commands[rci].y = 640 - 8 - 4 - 2;
-  sequence->render_commands[rci].data.colored_rect_info.width = 240;
-  sequence->render_commands[rci].data.colored_rect_info.height = 2;
-  sequence->render_commands[rci++].data.colored_rect_info.color = black;
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 1024 - 300 - 8 + 4;
+  element_cmd->y = 640 - 8 - 4 - 2;
+  element_cmd->data.colored_rect_info.width = 240;
+  element_cmd->data.colored_rect_info.height = 2;
+  element_cmd->data.colored_rect_info.color = black;
 
-  // Add to the render queue
-  sequence->render_command_count = rci;
-  // TODO -- render queue depth key
-  MCcall(append_to_collection(&command_hub->render_queue->items, &command_hub->render_queue->allocated,
-                              &command_hub->render_queue->count, sequence));
-
-  // Set the render queue
-  command_hub->render_thread_renderer_queue->items = (node_render_sequence **)command_hub->render_queue->items;
-  command_hub->render_thread_renderer_queue->count = command_hub->render_queue->count;
-  printf("setting render queue from core functions\n");
-
-  // Update the node render system
-
-  // struct {
-  //   int width, height;
-  // } *screen_size;
-
-  // render_command commands[24];
-
-  // commands[0].type = COLORED_RECTANGLE;
-  // commands[0].x = 0;
-  // commands[0].y = 0;
-  // commands[0].extent_w = 280;
-  // commands[0].extent_h = 40;
-  // commands[0].data = &dark_slate_gray;
-
-  // screen_size->width = 1024;
-  // screen_size->height = 640;
-
-  // int node_image_width = 280;
-  // int node_image_height = 40;
-
-  // // Ensure the node image exists and is of appropriate size
-  // node_image *node_image;
-  // set_node_image_dimensions(node_image_width, node_image_height, &node_image);
-
-  // // Background
-  // color background_color;
-  // render_rectangle(0, 0, node_image_width, node_image_height, background_color);
-
-  // // Draw all _Visual_ children in render order
-  // for (int i = 0; i < children ...) {
-  //   // sort by render order
-  // }
-
-  // // save the image somewhere
-  // ...
-
-  // // send command to update all ancestors
-  // render_events->alert_render_node(node->parent);
-
-  // command_hub->render_queue
+  pthread_mutex_unlock(&command_hub->renderer.render_queue->mutex);
 
   return 0;
 }
