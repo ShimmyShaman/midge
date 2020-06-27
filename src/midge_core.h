@@ -267,6 +267,19 @@ typedef struct mc_ui_element_v1 {
   uint resource_uid;
 } mc_ui_element_v1;
 
+typedef struct mc_interactive_console_v1 {
+  struct {
+    int x, y;
+    unsigned int width, height;
+  } bounds;
+  int (*logic_delegate)(int argc, void **args);
+  struct {
+    uint image_resource_uid;
+    bool requires_render_update;
+    int (*delegate)(int argc, void **args);
+  } visual;
+} mc_interactive_console_v1;
+
 typedef struct mc_command_hub_v1 {
   mc_struct_id_v1 *struct_id;
   mc_node_v1 *global_node;
@@ -285,6 +298,7 @@ typedef struct mc_command_hub_v1 {
   void **scripts;
   unsigned int uid_counter;
   mc_process_action_v1 *demo_issue;
+  mc_interactive_console_v1 *interactive_console;
 } mc_command_hub_v1;
 
 typedef enum node_type {
@@ -293,14 +307,6 @@ typedef enum node_type {
   NODE_TYPE_VISUAL,
   NODE_TYPE_ABSTRACT,
 } node_type;
-
-typedef struct mc_visual_node_data_v1 {
-  void *image;
-} mc_visual_node_data_v1;
-
-typedef struct mc_global_root_node_data_v1 {
-  void *image;
-} mc_global_root_data_v1;
 
 typedef struct mc_node_v1 {
   mc_struct_id_v1 *struct_id;
@@ -318,8 +324,14 @@ typedef struct mc_node_v1 {
 
   node_type type;
   union {
-    mc_visual_node_data_v1 *visual;
-    mc_global_root_data_v1 *global_root;
+    struct {
+      uint image_resource_uid;
+      bool requires_render_update;
+      struct {int x, y; uint width, height;} bounds;
+    } visual;
+    struct {
+      uint image_resource_uid;
+    } global_root;
   } data;
 } mc_node_v1;
 
@@ -414,6 +426,9 @@ typedef struct mc_procedure_template_v1 {
 // } mc_process_matrix_node_v1;
 
 int (*find_function_info)(int, void **);
+int (*render_midge_background)(int, void **);
+int (*build_initial_workspace)(int, void **);
+int (*build_interactive_console)(int, void **);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \

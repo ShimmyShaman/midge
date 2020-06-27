@@ -19,7 +19,7 @@
 
 typedef struct mc_struct_id_v1 {
   const char *identifier;
-  unsigned int version;
+  unsigned short version;
 } mc_struct_id_v1;
 
 typedef struct mc_void_collection_v1 {

@@ -2185,6 +2185,7 @@ int mc_main(int argc, const char *const *argv)
 //         void **fields;              \
 //         const char *sizeof_cstr;    \
 //     }
+
     mc_parameter_info_v1 *field;
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     struct_info_definition_v1->fields[0] = field;
@@ -2474,6 +2475,7 @@ int mc_main(int argc, const char *const *argv)
   // Parse & Declare/add Core functions in midge_core_functions.c
   MCcall(init_core_functions(command_hub));
   MCcall(init_process_matrix(command_hub));
+  MCcall(build_interactive_console(0, NULL));
   // return 0;
 
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
@@ -2482,6 +2484,31 @@ int mc_main(int argc, const char *const *argv)
   // Wait for render thread initialization before continuing with the next set of commands
   while (!render_thread.render_thread_initialized) {
     usleep(1);
+  }
+
+  clock_t previous_clock = clock();
+  clock_t loop_initial_clock = previous_clock;
+  while (1) {
+    // Handle Input
+
+    // Update State
+    {
+      clock_t current_clock = clock();
+      float elapsed = (float)((current_clock - previous_clock) / CLOCKS_PER_SEC);
+
+      previous_clock = current_clock;
+    }
+
+    // Render State Changes
+    // -- TODO render all sub-images first
+    if (command_hub->interactive_console->visual.requires_render_update) {
+      command_hub->interactive_console->visual.delegate(0, NULL);
+    }
+
+    // Do an Z-based control render of everything
+    MCcall(render_midge_background(0, NULL));
+
+    break;
   }
 
   printf("mm-3\n");
@@ -2573,10 +2600,11 @@ int mc_main(int argc, const char *const *argv)
       "|"
       "enddemo|"
       // // -- END DEMO create function $create_function_name
+      // "invoke force_render_update|"
       "invoke construct_and_attach_child_node|"
       "command_interface_node|"
-      "invoke force_render_update|"
-      // "invoke force_render_update|"
+      // "invoke set_nodespace|"
+      // "command_interface_node|"
 
       // "create function print_word|"
       // "@create_function_name|"
@@ -5741,6 +5769,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("parse_script_to_mc = &parse_script_to_mc_v1;");
   clint_process("conform_type_identity = &conform_type_identity_v1;");
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
+  clint_process("render_midge_background = &render_midge_background_v1;");
+  clint_process("build_interactive_console = &build_interactive_console_v1;");
 
   free(input);
   free(output);
