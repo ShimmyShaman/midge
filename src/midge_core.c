@@ -1988,6 +1988,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
   return 0;
 }
 
+#include <time.h>
+
 int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int print_children, int indent)
 {
   if (indent > 0)
@@ -2116,6 +2118,9 @@ int mc_main(int argc, const char *const *argv)
     pthread_mutex_init(&render_thread.render_queue.mutex, NULL);
     render_thread.render_queue.count = 0;
     render_thread.render_queue.allocated = 0;
+
+    pthread_mutex_init(&render_thread.input_buffer.mutex, NULL);
+    render_thread.input_buffer.event_count = 0;
   }
   // -- Start Thread
   begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
@@ -2481,219 +2486,101 @@ int mc_main(int argc, const char *const *argv)
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
                 " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
 
-  // Wait for render thread initialization before continuing with the next set of commands
-  while (!render_thread.render_thread_initialized) {
+  // Wait for render thread initialization and all resources to load before continuing with the next set of commands
+  while (!render_thread.render_thread_initialized || render_thread.resource_queue.count) {
     usleep(1);
   }
 
-  clock_t previous_clock = clock();
-  clock_t loop_initial_clock = previous_clock;
+  // struct timeval loop_initial_time, previous_update_time, current_update_time;
+  // struct rusage usage;
+  // getrusage(RUSAGE_SELF, &usage);
+  // loop_initial_time = usage.ru_utime;
+  // current_update_time = usage.ru_utime;
+
+  bool rerender_required = true;
   while (1) {
     // Handle Input
+    pthread_mutex_lock(&render_thread.input_buffer.mutex);
+
+    if (render_thread.input_buffer.event_count > 0) {
+      bool exit_loop = false;
+      for (int i = 0; i < render_thread.input_buffer.event_count; ++i) {
+        if (render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_RELEASE) {
+          switch (render_thread.input_buffer.events[i].code) {
+          case INPUT_EVENT_CODE_ESCAPE:
+            exit_loop = true;
+            break;
+
+          default:
+            printf("unhandled_input_event:%i\n", render_thread.input_buffer.events[i].code);
+            break;
+          }
+        }
+      }
+      render_thread.input_buffer.event_count = 0;
+
+      if (exit_loop)
+        break;
+    }
+
+    pthread_mutex_unlock(&render_thread.input_buffer.mutex);
 
     // Update State
     {
-      clock_t current_clock = clock();
-      float elapsed = (float)((current_clock - previous_clock) / CLOCKS_PER_SEC);
+        // TIME %)U%@)*(Y%@UFHOFEHIO)
+        // previous_update_time = current_update_time;
+        // getrusage(RUSAGE_SELF, &usage);
+        // current_update_time = usage.ru_utime;
+        // int v = clock_gettime();
+        // clockid_t clock_id;
+        // struct timespec *tp;
+        // clock_gettime(clock_id, &tp);
 
-      previous_clock = current_clock;
+        // printf("seconds:%i\n", clock_gettime(2));
+        // if (current_update_time.tv_sec - loop_initial_time.tv_sec > 6) {
+        //   printf("6 Seconds! Closing time...\n");
+        //   break;
+        // }
+    } {
     }
-
-    // Render State Changes
-    // -- TODO render all sub-images first
-    if (command_hub->interactive_console->visual.requires_render_update) {
-      command_hub->interactive_console->visual.delegate(0, NULL);
-    }
-
-    // Do an Z-based control render of everything
-    MCcall(render_midge_background(0, NULL));
-
-    break;
-  }
-
-  printf("mm-3\n");
-  const char *commands =
-      // Create invoke function script
-      ".createScript\n"
-      "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
-      "ifs !finfo\n"
-      "err 2455 \"Could not find function_info for specified function\"\n"
-      "end\n"
-      ""
-      "dcs int rind 0\n"
-      "dcl 'char *' responses[32]\n"
-      ""
-      "dcs int linit finfo->parameter_count\n"
-      "ifs finfo->variable_parameter_begin_index >= 0\n"
-      "ass linit finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "for i 0 linit\n"
-      "dcl char provocation[512]\n"
-      "nvk strcpy provocation finfo->parameters[i]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$pi responses[rind] provocation\n"
-      "ass rind + rind 1\n"
-      "end for\n"
-      // "nvk printf \"func_name:%s\\n\" finfo->name\n"
-      "ifs finfo->variable_parameter_begin_index >= 0\n"
-      "dcs int pind finfo->variable_parameter_begin_index\n"
-      "whl 1\n"
-      "dcl char provocation[512]\n"
-      "nvk strcpy provocation finfo->parameters[pind]->name\n"
-      "nvk strcat provocation \": \"\n"
-      "$pi responses[rind] provocation\n"
-      "nvi bool end_it strcmp responses[rind] \"finish\"\n"
-      "ifs !end_it\n"
-      "brk\n"
-      "end\n"
-      // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
-      "ass rind + rind 1\n"
-      "ass pind + pind 1\n"
-      "ass pind % pind finfo->parameter_count\n"
-      "ifs pind < finfo->variable_parameter_begin_index\n"
-      "ass pind finfo->variable_parameter_begin_index\n"
-      "end\n"
-      "end\n"
-      "end\n"
-      "$nv @function_to_invoke $ya rind responses\n"
-      "|"
-      "invoke_function_with_args_script|"
-      "demo|"
-      "invoke @function_to_invoke|"
-      "mc_dummy_function|"
-      ".runScript invoke_function_with_args_script|"
-      "enddemo|"
-      // // "demo|"
-      // // "call dummy thrice|"
-      // // "invoke mc_dummy_function|"
-      // // "invoke mc_dummy_function|"
-      // // "invoke mc_dummy_function|"
-      // // "enddemo|"
-      "demo|"
-      "create function @create_function_name|"
-      "construct_and_attach_child_node|"
-      "invoke declare_function_pointer|"
-      // ---- SCRIPT SEQUENCE ----
-      // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
-      // ---- char *parameter_name]...);
-      // > function_name:
-      "@create_function_name|"
-      // > return_type:
-      "void|"
-      // > parameter_type:
-      "const char *|"
-      // > parameter_name:
-      "node_name|"
-      // > Parameter 1 type:
-      "finish|"
-      // ---- END SCRIPT SEQUENCE ----
-      // ---- SCRIPT SEQUENCE ----
-      // ---- void instantiate_function(char *function_name, char *mc_script);
-      "invoke instantiate_function|"
-      "@create_function_name|"
-      // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
-      "dcd node * child\n"
-      "cpy char * child->name node_name\n"
-      "ass child->parent command_hub->nodespace\n"
-      "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
-      "(void *)child\n"
-      "|"
-      "enddemo|"
-      // // -- END DEMO create function $create_function_name
-      // "invoke force_render_update|"
-      "invoke construct_and_attach_child_node|"
-      "command_interface_node|"
-      // "invoke set_nodespace|"
-      // "command_interface_node|"
-
-      // "create function print_word|"
-      // "@create_function_name|"
-      // "void|"
-      // "char *|"
-      // "word|"
-      // "finish|"
-      // "@create_function_name|"
-      // "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
-      // "|"
-      // "invoke print_word|"
-      // "===========$================$===============$============$============|"
-      // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
-      //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
-
-      // clint->process("mthread_info *rthr;");
-      // // printf("process(begin)\n");
-      // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
-      // printf("process(updateUI)\n");
-      // clint->process("updateUI(rthr);");
-      // printf("process(end)\n");
-      // clint->process("end_mthread(rthr);");
-      // printf("\n! MIDGE COMPLETE !\n");
-      "midgequit|";
-
-  // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
-
-  // Command Loop
-  printf("\n:> ");
-  int n = strlen(commands);
-  int s = 0;
-  char cstr[2048];
-  mc_process_action_v1 *suggestion = NULL;
-  void *vargs[12]; // TODO -- count
-  for (int i = 0; i < n; ++i) {
-    if (commands[i] != '|')
-      continue;
-    strncpy(cstr, commands + s, i - s);
-    cstr[i - s] = '\0';
-    s = i + 1;
-
-    vargs[0] = (void *)command_hub;
-    vargs[4] = (void *)cstr;
-    vargs[6] = (void *)&suggestion;
-
-    if (!strcmp(cstr, "midgequit")) {
-      printf("midgequit\n");
+    if (render_thread.thread_info->has_concluded) {
+      printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
       break;
     }
 
-    // printf("========================================\n");
-    if (suggestion) {
-      printf("%s]%s\n>: ", get_action_type_string(suggestion->type), suggestion->dialogue);
-      release_process_action(suggestion);
-      suggestion = NULL;
+    // Render State Changes
+    pthread_mutex_lock(&render_thread.render_queue.mutex);
+
+    // Clear the render queue?
+    // render_thread.render_queue.count = 0;
+
+    // -- Render all sub-images first
+    if (command_hub->interactive_console->visual.requires_render_update) {
+      command_hub->interactive_console->visual.delegate(0, NULL);
+      command_hub->interactive_console->visual.requires_render_update = false;
+
+      rerender_required = true;
     }
-    MCcall(submit_user_command(12, vargs));
 
-    // if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
-    // {
-    //   printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
-    //   break;
-    // }
-    // if (reply != NULL)
-    // {
-    //   printf("%s", reply);
-    // }
+    // Do an Z-based control render of everything
+    if (rerender_required) {
+      MCcall(render_midge_background(0, NULL));
+      rerender_required = false;
+    }
+
+    pthread_mutex_unlock(&render_thread.render_queue.mutex);
   }
 
-  if (global->child_count > 0) {
-    mc_node_v1 *child = (mc_node_v1 *)global->children[0];
-    printf("\n>> global has a child named %s!\n", child->name);
-  }
-  else {
-    printf("\n>> global has no children\n");
-  }
   // printf("\n\nProcess Matrix:\n");
   // print_process_unit(command_hub->process_matrix, 5, 5, 1);
 
   // End render thread
-  int ms = 0;
-  while (ms < 8000 && !render_thread.thread_info->has_concluded) {
-    ++ms;
-    usleep(1000);
-  }
   end_mthread(render_thread.thread_info);
 
   // Destroy render thread resources
   pthread_mutex_destroy(&render_thread.resource_queue.mutex);
+  pthread_mutex_destroy(&render_thread.render_queue.mutex);
+  pthread_mutex_destroy(&render_thread.input_buffer.mutex);
 
   printf("\n\n</midge_core>\n");
   return 0;

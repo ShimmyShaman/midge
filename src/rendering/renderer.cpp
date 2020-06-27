@@ -132,7 +132,7 @@ extern "C" void *midge_render_thread(void *vargp)
 
   // -- Update
   printf("Vulkan Initialized!\n");
-  mxcb_update_window(&winfo);
+  mxcb_update_window(&winfo, &render_thread->input_buffer);
   render_thread->render_thread_initialized = true;
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
@@ -151,7 +151,7 @@ extern "C" void *midge_render_thread(void *vargp)
     // Render Commands
     pthread_mutex_lock(&render_thread->render_queue.mutex);
     if (render_thread->render_queue.count) {
-      printf("Vulkan entered render_queue!\n");
+      printf("Vulkan entered render_queue! %u sequences\n", render_thread->render_queue.count);
       render_through_queue(&vkrs, &render_thread->render_queue);
       render_thread->render_queue.count = 0;
 
@@ -160,7 +160,7 @@ extern "C" void *midge_render_thread(void *vargp)
     }
     pthread_mutex_unlock(&render_thread->render_queue.mutex);
 
-    mxcb_update_window(&winfo);
+    mxcb_update_window(&winfo, &render_thread->input_buffer);
   }
   printf("AfterUpdate! frame_updates = %i\n", frame_updates);
 
@@ -186,6 +186,7 @@ extern "C" void *midge_render_thread(void *vargp)
   mxcb_destroy_window(&winfo);
   mvk_destroy_device(&vkrs);
   mvk_destroy_instance(&vkrs);
+
   printf("mvkConcluded(SUCCESS)\n");
   thr->has_concluded = 1;
   return 0;

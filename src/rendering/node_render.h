@@ -2,7 +2,7 @@
 #ifndef NODE_RENDER_H
 #define NODE_RENDER_H
 
-#include "m_threads.h"
+#include "midge_common.h"
 
 #define MCcall(function)                      \
   {                                           \
@@ -130,15 +130,15 @@ typedef struct resource_command {
 
 typedef struct resource_queue {
   pthread_mutex_t mutex;
-  int count;
-  int allocated;
+  unsigned int count;
+  unsigned int allocated;
   resource_command *commands;
 } resource_queue;
 
 typedef struct render_queue {
   pthread_mutex_t mutex;
-  int count;
-  int allocated;
+  unsigned int count;
+  unsigned int allocated;
   image_render_queue *image_renders;
 } render_queue;
 
@@ -147,6 +147,7 @@ typedef struct render_thread_info {
   render_queue render_queue;
   resource_queue resource_queue;
   bool render_thread_initialized;
+  window_input_buffer input_buffer;
 } render_thread_info;
 
 #endif // NODE_RENDER_H

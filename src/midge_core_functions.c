@@ -248,6 +248,7 @@ int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p
   }
 
   *p_command = &render_queue->image_renders[render_queue->count++];
+  (*p_command)->command_count = 0;
   return 0;
 }
 
@@ -1501,7 +1502,180 @@ int render_midge_background_v1(int argc, void **argv)
   return 0;
 }
 
-int update_interactive_console_v1(int argc, void **argv) { return 0; }
+int update_interactive_console_v1(int argc, void **argv)
+{
+
+  // const char *commands =
+  //     // Create invoke function script
+  //     ".createScript\n"
+  //     "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
+  //     "ifs !finfo\n"
+  //     "err 2455 \"Could not find function_info for specified function\"\n"
+  //     "end\n"
+  //     ""
+  //     "dcs int rind 0\n"
+  //     "dcl 'char *' responses[32]\n"
+  //     ""
+  //     "dcs int linit finfo->parameter_count\n"
+  //     "ifs finfo->variable_parameter_begin_index >= 0\n"
+  //     "ass linit finfo->variable_parameter_begin_index\n"
+  //     "end\n"
+  //     "for i 0 linit\n"
+  //     "dcl char provocation[512]\n"
+  //     "nvk strcpy provocation finfo->parameters[i]->name\n"
+  //     "nvk strcat provocation \": \"\n"
+  //     "$pi responses[rind] provocation\n"
+  //     "ass rind + rind 1\n"
+  //     "end for\n"
+  //     // "nvk printf \"func_name:%s\\n\" finfo->name\n"
+  //     "ifs finfo->variable_parameter_begin_index >= 0\n"
+  //     "dcs int pind finfo->variable_parameter_begin_index\n"
+  //     "whl 1\n"
+  //     "dcl char provocation[512]\n"
+  //     "nvk strcpy provocation finfo->parameters[pind]->name\n"
+  //     "nvk strcat provocation \": \"\n"
+  //     "$pi responses[rind] provocation\n"
+  //     "nvi bool end_it strcmp responses[rind] \"finish\"\n"
+  //     "ifs !end_it\n"
+  //     "brk\n"
+  //     "end\n"
+  //     // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
+  //     "ass rind + rind 1\n"
+  //     "ass pind + pind 1\n"
+  //     "ass pind % pind finfo->parameter_count\n"
+  //     "ifs pind < finfo->variable_parameter_begin_index\n"
+  //     "ass pind finfo->variable_parameter_begin_index\n"
+  //     "end\n"
+  //     "end\n"
+  //     "end\n"
+  //     "$nv @function_to_invoke $ya rind responses\n"
+  //     "|"
+  //     "invoke_function_with_args_script|"
+  //     "demo|"
+  //     "invoke @function_to_invoke|"
+  //     "mc_dummy_function|"
+  //     ".runScript invoke_function_with_args_script|"
+  //     "enddemo|"
+  //     // // "demo|"
+  //     // // "call dummy thrice|"
+  //     // // "invoke mc_dummy_function|"
+  //     // // "invoke mc_dummy_function|"
+  //     // // "invoke mc_dummy_function|"
+  //     // // "enddemo|"
+  //     "demo|"
+  //     "create function @create_function_name|"
+  //     "construct_and_attach_child_node|"
+  //     "invoke declare_function_pointer|"
+  //     // ---- SCRIPT SEQUENCE ----
+  //     // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
+  //     // ---- char *parameter_name]...);
+  //     // > function_name:
+  //     "@create_function_name|"
+  //     // > return_type:
+  //     "void|"
+  //     // > parameter_type:
+  //     "const char *|"
+  //     // > parameter_name:
+  //     "node_name|"
+  //     // > Parameter 1 type:
+  //     "finish|"
+  //     // ---- END SCRIPT SEQUENCE ----
+  //     // ---- SCRIPT SEQUENCE ----
+  //     // ---- void instantiate_function(char *function_name, char *mc_script);
+  //     "invoke instantiate_function|"
+  //     "@create_function_name|"
+  //     // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
+  //     "dcd node * child\n"
+  //     "cpy char * child->name node_name\n"
+  //     "ass child->parent command_hub->nodespace\n"
+  //     "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
+  //     "(void *)child\n"
+  //     "|"
+  //     "enddemo|"
+  //     // // -- END DEMO create function $create_function_name
+  //     // "invoke force_render_update|"
+  //     "invoke construct_and_attach_child_node|"
+  //     "command_interface_node|"
+  //     // "invoke set_nodespace|"
+  //     // "command_interface_node|"
+
+  //     // "create function print_word|"
+  //     // "@create_function_name|"
+  //     // "void|"
+  //     // "char *|"
+  //     // "word|"
+  //     // "finish|"
+  //     // "@create_function_name|"
+  //     // "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
+  //     // "|"
+  //     // "invoke print_word|"
+  //     // "===========$================$===============$============$============|"
+  //     // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
+  //     //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+
+  //     // clint->process("mthread_info *rthr;");
+  //     // // printf("process(begin)\n");
+  //     // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
+  //     // printf("process(updateUI)\n");
+  //     // clint->process("updateUI(rthr);");
+  //     // printf("process(end)\n");
+  //     // clint->process("end_mthread(rthr);");
+  //     // printf("\n! MIDGE COMPLETE !\n");
+  //     "midgequit|";
+
+  // // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
+
+  // // Command Loop
+  // printf("\n:> ");
+  // int n = strlen(commands);
+  // int s = 0;
+  // char cstr[2048];
+  // mc_process_action_v1 *suggestion = NULL;
+  // void *vargs[12]; // TODO -- count
+  // for (int i = 0; i < n; ++i) {
+  //   if (commands[i] != '|')
+  //     continue;
+  //   strncpy(cstr, commands + s, i - s);
+  //   cstr[i - s] = '\0';
+  //   s = i + 1;
+
+  //   vargs[0] = (void *)command_hub;
+  //   vargs[4] = (void *)cstr;
+  //   vargs[6] = (void *)&suggestion;
+
+  //   if (!strcmp(cstr, "midgequit")) {
+  //     printf("midgequit\n");
+  //     break;
+  //   }
+
+  //   // printf("========================================\n");
+  //   if (suggestion) {
+  //     printf("%s]%s\n>: ", get_action_type_string(suggestion->type), suggestion->dialogue);
+  //     release_process_action(suggestion);
+  //     suggestion = NULL;
+  //   }
+  //   MCcall(submit_user_command(12, vargs));
+
+  //   // if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+  //   // {
+  //   //   printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
+  //   //   break;
+  //   // }
+  //   // if (reply != NULL)
+  //   // {
+  //   //   printf("%s", reply);
+  //   // }
+  // }
+
+  // if (global->child_count > 0) {
+  //   mc_node_v1 *child = (mc_node_v1 *)global->children[0];
+  //   printf("\n>> global has a child named %s!\n", child->name);
+  // }
+  // else {
+  //   printf("\n>> global has no children\n");
+  // }
+  return 0;
+}
 
 int render_interactive_console_v1(int argc, void **argv)
 {
@@ -1509,6 +1683,9 @@ int render_interactive_console_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
+
+  // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
+  //        command_hub->interactive_console->visual.image_resource_uid);
 
   // For the global node (and whole screen)
   image_render_queue *sequence;
@@ -1519,13 +1696,6 @@ int render_interactive_console_v1(int argc, void **argv)
   sequence->data.target_image.image_uid = command_hub->interactive_console->visual.image_resource_uid;
 
   element_render_command *element_cmd;
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-  element_cmd->x = 0;
-  element_cmd->y = 0;
-  element_cmd->data.colored_rect_info.width = command_hub->interactive_console->bounds.width;
-  element_cmd->data.colored_rect_info.height = command_hub->interactive_console->bounds.height;
-  element_cmd->data.colored_rect_info.color = COLOR_GHOST_WHITE;
 
   MCcall(obtain_element_render_command(sequence, &element_cmd));
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;

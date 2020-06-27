@@ -82,7 +82,6 @@ typedef struct vert_data_scale_offset {
   } scale;
 } vert_data_scale_offset;
 
-struct render_color;
 typedef struct frag_ubo_tint_texcoordbounds {
   struct {
     float r, g, b, a;
