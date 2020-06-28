@@ -1507,6 +1507,7 @@ int render_midge_background_v1(int argc, void **argv)
 
 int update_interactive_console_v1(int argc, void **argv)
 {
+  
 
   // const char *commands =
   //     // Create invoke function script
@@ -1781,8 +1782,6 @@ int build_interactive_console_v1(int argc, void **argv)
   // interactive_console_node->child_count = 0;
   console->logic_delegate = &update_interactive_console_v1;
   console->handle_input_delegate = &interactive_console_handle_input_v1;
-
-  // interactive_console->
 
   // Visuals
   console->visual.image_resource_uid = 0;

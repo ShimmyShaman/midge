@@ -2495,48 +2495,43 @@ int mc_main(int argc, const char *const *argv)
     usleep(1);
   }
 
-  struct timespec prev_frametime, current_frametime;
+  struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &prev_frametime);
-  // struct timeval mc_main_begin_time_time, previous_update_time, current_update_time;
-  // struct rusage usage;
-  // getrusage(RUSAGE_SELF, &usage);
-  // mc_main_begin_time_time = usage.ru_utime;
-  // current_update_time = usage.ru_utime;
+  clock_gettime(CLOCK_REALTIME, &logic_update_frametime);
+  printf("App took %.2f seconds to begin.\n",
+         current_frametime.tv_sec - prev_frametime.tv_sec + 1e-9 * (current_frametime.tv_nsec - prev_frametime.tv_nsec));
 
   bool rerender_required = true;
   int ui = 0;
   while (1) {
     // Time
+    frame_time elapsed;
+    bool logic_update_due = false;
     {
       long ms;  // Milliseconds
       time_t s; // Seconds
       memcpy(&prev_frametime, &current_frametime, sizeof(struct timespec));
       clock_gettime(CLOCK_REALTIME, &current_frametime);
 
-      float elapsed =
-          current_frametime.tv_sec - prev_frametime.tv_sec + 1.0e-9 * (current_frametime.tv_nsec - prev_frametime.tv_nsec);
-      float app_elapsed = current_frametime.tv_sec - mc_main_begin_time.tv_sec +
-                          1.0e-9 * (current_frametime.tv_nsec - mc_main_begin_time.tv_nsec);
+      elapsed.frame_sec = current_frametime.tv_sec - prev_frametime.tv_sec;
+      elapsed.frame_nsec = current_frametime.tv_nsec - prev_frametime.tv_nsec;
+      elapsed.app_sec = current_frametime.tv_sec - mc_main_begin_time.tv_sec;
+      elapsed.app_nsec = current_frametime.tv_nsec - mc_main_begin_time.tv_nsec;
 
-      if (ui++ > 100000) {
-        ui = 0;
-        printf("Elapsed:%f  SinceApp:%f\n", elapsed, app_elapsed);
+      // Logic Update
+      const int ONE_MS_IN_NS = 1000000;
+      const int FIFTY_PER_SEC = 20 * ONE_MS_IN_NS;
+      if (1e9 * (current_frametime.tv_sec - logic_update_frametime.tv_sec) + current_frametime.tv_nsec -
+              logic_update_frametime.tv_nsec >
+          FIFTY_PER_SEC) {
+        logic_update_due = true;
+
+        logic_update_frametime.tv_nsec += FIFTY_PER_SEC;
+        if (logic_update_frametime.tv_nsec > 1000 * ONE_MS_IN_NS) {
+          logic_update_frametime.tv_nsec -= 1000 * ONE_MS_IN_NS;
+          ++logic_update_frametime.tv_sec;
+        }
       }
-
-      // TIME %)U%@)*(Y%@UFHOFEHIO)
-      // previous_update_time = current_update_time;
-      // getrusage(RUSAGE_SELF, &usage);
-      // current_update_time = usage.ru_utime;
-      // int v = clock_gettime();
-      // clockid_t clock_id;
-      // struct timespec *tp;
-      // clock_gettime(clock_id, &tp);
-
-      // printf("seconds:%i\n", clock_gettime(2));
-      // if (current_update_time.tv_sec - mc_main_begin_time_time.tv_sec > 6) {
-      //   printf("6 Seconds! Closing time...\n");
-      //   break;
-      // }
     }
 
     // Handle Input
@@ -2570,6 +2565,9 @@ int mc_main(int argc, const char *const *argv)
 
     // Update State
     {
+      if (logic_update_due) {
+        command_hub->interactive_console->logic_delegate(0, NULL);
+      }
     }
     if (render_thread.thread_info->has_concluded) {
       printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");

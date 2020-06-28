@@ -30,4 +30,9 @@ typedef struct window_input_buffer {
   uint event_count;
 } window_input_buffer;
 
+typedef struct frame_time {
+  long frame_sec, frame_nsec;
+  long app_sec, app_nsec;
+}frame_time;
+
 #endif // MIDGE_COMMON_H
