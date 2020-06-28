@@ -1369,7 +1369,7 @@ VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, c
   return VK_SUCCESS;
 }
 
-VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float height, uint *resource_uid)
+VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float font_height, uint *resource_uid)
 {
   // Font is a common resource -- check font cache for existing
   char *font_name;
@@ -1394,10 +1394,10 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float he
     }
 
     for (int i = 0; i < p_vkrs->loaded_fonts.count; ++i) {
-      if (!strcmp(p_vkrs->loaded_fonts.fonts[i].name, font_name)) {
+      if (p_vkrs->loaded_fonts.fonts[i].height == font_height && !strcmp(p_vkrs->loaded_fonts.fonts[i].name, font_name)) {
         *resource_uid = p_vkrs->loaded_fonts.fonts[i].resource_uid;
 
-        printf("using cached font texture> name:%s height:%.2f resource_uid:%u\n", font_name, height, *resource_uid);
+        printf("using cached font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height, *resource_uid);
         free(font_name);
 
         return VK_SUCCESS;
@@ -1410,8 +1410,8 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float he
 
   const int texWidth = 256, texHeight = 256, texChannels = 4;
   stbi_uc temp_bitmap[texWidth * texHeight];
-  stbtt_bakedchar *cdata = (stbtt_bakedchar *)malloc(sizeof(stbtt_bakedchar) * 96);           // ASCII 32..126 is 95 glyphs
-  stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, texWidth, texHeight, 32, 96, cdata); // no guarantee this fits!
+  stbtt_bakedchar *cdata = (stbtt_bakedchar *)malloc(sizeof(stbtt_bakedchar) * 96);                  // ASCII 32..126 is 95 glyphs
+  stbtt_BakeFontBitmap(ttf_buffer, 0, font_height, temp_bitmap, texWidth, texHeight, 32, 96, cdata); // no guarantee this fits!
 
   stbi_uc pixels[texWidth * texHeight * 4];
   {
@@ -1456,11 +1456,12 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float he
     }
 
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].name = font_name;
+    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].height = font_height;
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].resource_uid = *resource_uid;
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count++].char_data = cdata;
   }
 
-  printf("generated font texture> name:%s height:%.2f resource_uid:%u\n", font_name, height, *resource_uid);
+  printf("generated font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height, *resource_uid);
 
   return VK_SUCCESS;
 }

@@ -1323,9 +1323,9 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
               "       element.texCoordBounds.x + fragTexCoord.x * (element.texCoordBounds.y - element.texCoordBounds.x),\n"
               "       element.texCoordBounds.z + fragTexCoord.y * (element.texCoordBounds.w - element.texCoordBounds.z));\n"
               "   outColor = texture(texSampler, texCoords);\n"
-              // "   if(outColor.r < 0.1)\n"
-              // "      discard;\n"
-              "   outColor.a = outColor.r;\n"
+              "   if(outColor.r < 0.01)\n"
+              "      discard;\n"
+              "   outColor.a = min(max(0, outColor.r - 0.2) * 0.2f + outColor.r * 1.5, 1.0);\n"
               "   outColor.rgb = element.tint.rgb;\n"
               "}\n",
       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
