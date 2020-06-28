@@ -14,6 +14,7 @@
 #define COLOR_DARK_SLATE_GRAY (render_color){0.18f, 0.18f, 0.31f, 1.f};
 #define COLOR_GHOST_WHITE (render_color){0.97f, 0.97f, 1.f, 1.f};
 #define COLOR_BLACK (render_color){0.f, 0.f, 0.f, 1.f};
+#define COLOR_YELLOW (render_color){1.f, 1.f, 0.f, 1.f};
 
 int find_function_info_v1(int argc, void **argv)
 {
@@ -1709,17 +1710,25 @@ int render_interactive_console_v1(int argc, void **argv)
   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
-  sequence->image_width = command_hub->interactive_console->bounds.width;
-  sequence->image_height = command_hub->interactive_console->bounds.height;
+  sequence->image_width = command_hub->interactive_console->input_line.width;
+  sequence->image_height = command_hub->interactive_console->input_line.height;
   sequence->data.target_image.image_uid = command_hub->interactive_console->input_line.image_resource_uid;
 
   MCcall(obtain_element_render_command(sequence, &element_cmd));
   element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
   element_cmd->x = 2;
-  element_cmd->y = 2+22;
+  element_cmd->y = 2 + 22;
   element_cmd->data.print_text.text = command_hub->interactive_console->input_line.text;
   element_cmd->data.print_text.font_resource_uid = command_hub->interactive_console->font_resource_uid;
   element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
+
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = command_hub->interactive_console->input_line.width - command_hub->interactive_console->input_line.height;
+  element_cmd->y = 0;
+  element_cmd->data.colored_rect_info.width = command_hub->interactive_console->input_line.height;
+  element_cmd->data.colored_rect_info.height = command_hub->interactive_console->input_line.height;
+  element_cmd->data.colored_rect_info.color = COLOR_YELLOW;
 
   // Render
   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
