@@ -1,4 +1,7 @@
 /* midge_core.c */
+// #define __USE_POSIX199309
+#define _POSIX_C_SOURCE 200809L
+#include <sys/time.h>
 
 #include "midge_core.h"
 
@@ -1988,8 +1991,6 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
   return 0;
 }
 
-#include <time.h>
-
 int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int print_children, int indent)
 {
   if (indent > 0)
@@ -2094,6 +2095,9 @@ int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
 int mc_main(int argc, const char *const *argv)
 {
+  struct timespec mc_main_begin_time;
+  clock_gettime(CLOCK_REALTIME, &mc_main_begin_time);
+
   mc_dummy_function = &mc_dummy_function_v1;
   printf("mm-0\n");
   int sizeof_void_ptr = sizeof(void *);
@@ -2491,14 +2495,50 @@ int mc_main(int argc, const char *const *argv)
     usleep(1);
   }
 
-  // struct timeval loop_initial_time, previous_update_time, current_update_time;
+  struct timespec prev_frametime, current_frametime;
+  clock_gettime(CLOCK_REALTIME, &prev_frametime);
+  // struct timeval mc_main_begin_time_time, previous_update_time, current_update_time;
   // struct rusage usage;
   // getrusage(RUSAGE_SELF, &usage);
-  // loop_initial_time = usage.ru_utime;
+  // mc_main_begin_time_time = usage.ru_utime;
   // current_update_time = usage.ru_utime;
 
   bool rerender_required = true;
+  int ui = 0;
   while (1) {
+    // Time
+    {
+      long ms;  // Milliseconds
+      time_t s; // Seconds
+      memcpy(&prev_frametime, &current_frametime, sizeof(struct timespec));
+      clock_gettime(CLOCK_REALTIME, &current_frametime);
+
+      float elapsed =
+          current_frametime.tv_sec - prev_frametime.tv_sec + 1.0e-9 * (current_frametime.tv_nsec - prev_frametime.tv_nsec);
+      float app_elapsed = current_frametime.tv_sec - mc_main_begin_time.tv_sec +
+                          1.0e-9 * (current_frametime.tv_nsec - mc_main_begin_time.tv_nsec);
+
+      if (ui++ > 100000) {
+        ui = 0;
+        printf("Elapsed:%f  SinceApp:%f\n", elapsed, app_elapsed);
+      }
+
+      // TIME %)U%@)*(Y%@UFHOFEHIO)
+      // previous_update_time = current_update_time;
+      // getrusage(RUSAGE_SELF, &usage);
+      // current_update_time = usage.ru_utime;
+      // int v = clock_gettime();
+      // clockid_t clock_id;
+      // struct timespec *tp;
+      // clock_gettime(clock_id, &tp);
+
+      // printf("seconds:%i\n", clock_gettime(2));
+      // if (current_update_time.tv_sec - mc_main_begin_time_time.tv_sec > 6) {
+      //   printf("6 Seconds! Closing time...\n");
+      //   break;
+      // }
+    }
+
     // Handle Input
     pthread_mutex_lock(&render_thread.input_buffer.mutex);
 
@@ -2530,20 +2570,6 @@ int mc_main(int argc, const char *const *argv)
 
     // Update State
     {
-      // TIME %)U%@)*(Y%@UFHOFEHIO)
-      // previous_update_time = current_update_time;
-      // getrusage(RUSAGE_SELF, &usage);
-      // current_update_time = usage.ru_utime;
-      // int v = clock_gettime();
-      // clockid_t clock_id;
-      // struct timespec *tp;
-      // clock_gettime(clock_id, &tp);
-
-      // printf("seconds:%i\n", clock_gettime(2));
-      // if (current_update_time.tv_sec - loop_initial_time.tv_sec > 6) {
-      //   printf("6 Seconds! Closing time...\n");
-      //   break;
-      // }
     }
     if (render_thread.thread_info->has_concluded) {
       printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
