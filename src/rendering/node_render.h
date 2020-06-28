@@ -100,6 +100,7 @@ typedef enum node_render_target {
 typedef struct image_render_queue {
   unsigned int image_width, image_height;
   node_render_target render_target;
+  render_color clear_color;
   int command_count;
   int commands_allocated;
   element_render_command *commands;

@@ -19,12 +19,14 @@ typedef enum {
   INPUT_EVENT_CODE_ESCAPE = 9,
 } window_input_event_code;
 
+typedef struct window_input_event {
+  window_input_event_type type;
+  window_input_event_code code;
+} window_input_event;
+
 typedef struct window_input_buffer {
   pthread_mutex_t mutex;
-  struct {
-    window_input_event_type type;
-    int code;
-  } events[MAX_QUEUED_KEY_EVENTS];
+  window_input_event events[MAX_QUEUED_KEY_EVENTS];
   uint event_count;
 } window_input_buffer;
 

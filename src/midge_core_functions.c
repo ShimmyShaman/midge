@@ -6,6 +6,7 @@
 #define node mc_node_v1
 /*mcfuncreplace*/
 
+#define COLOR_CORNFLOWER_BLUE (render_color){0.19f, 0.34f, 0.83f, 1.f};
 #define COLOR_GREENISH (render_color){0.11f, 0.55f, 0.32f, 1.f};
 #define COLOR_TEAL (render_color){0.0f, 0.52f, 0.52f, 1.f};
 #define COLOR_PURPLE (render_color){160.f / 255.f, 32.f / 255.f, 240.f / 255.f, 1.f};
@@ -1478,18 +1479,19 @@ int render_midge_background_v1(int argc, void **argv)
   // For the global node (and whole screen)
   image_render_queue *sequence;
   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-  sequence->image_width = 1024;
-  sequence->image_height = 640;
+  sequence->image_width = 1440;
+  sequence->image_height = 900;
+  sequence->clear_color = COLOR_DARK_SLATE_GRAY;
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
 
   element_render_command *element_cmd;
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-  element_cmd->x = 2;
-  element_cmd->y = 2;
-  element_cmd->data.colored_rect_info.width = 1020;
-  element_cmd->data.colored_rect_info.height = 636;
-  element_cmd->data.colored_rect_info.color = COLOR_DARK_SLATE_GRAY;
+  // MCcall(obtain_element_render_command(sequence, &element_cmd));
+  // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  // element_cmd->x = 2;
+  // element_cmd->y = 2;
+  // element_cmd->data.colored_rect_info.width = 1436;
+  // element_cmd->data.colored_rect_info.height = 896;
+  // element_cmd->data.colored_rect_info.color = COLOR_DARK_SLATE_GRAY;
 
   MCcall(obtain_element_render_command(sequence, &element_cmd));
   element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
@@ -1677,6 +1679,21 @@ int update_interactive_console_v1(int argc, void **argv)
   return 0;
 }
 
+int interactive_console_handle_input_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+
+  window_input_event *event = (window_input_event *)argv[0];
+
+  if (event->type == INPUT_EVENT_KEY_RELEASE)
+    printf("ic_input:%i\n", event->code);
+
+  return 0;
+}
+
 int render_interactive_console_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -1686,16 +1703,31 @@ int render_interactive_console_v1(int argc, void **argv)
 
   // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
   //        command_hub->interactive_console->visual.image_resource_uid);
-
-  // For the global node (and whole screen)
   image_render_queue *sequence;
+  element_render_command *element_cmd;
+  // Input Line
+  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+  sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+  sequence->image_width = command_hub->interactive_console->bounds.width;
+  sequence->image_height = command_hub->interactive_console->bounds.height;
+  sequence->data.target_image.image_uid = command_hub->interactive_console->input_line.image_resource_uid;
+
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+  element_cmd->x = 2;
+  element_cmd->y = 2+22;
+  element_cmd->data.print_text.text = command_hub->interactive_console->input_line.text;
+  element_cmd->data.print_text.font_resource_uid = command_hub->interactive_console->font_resource_uid;
+  element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
+
+  // Render
   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = command_hub->interactive_console->bounds.width;
   sequence->image_height = command_hub->interactive_console->bounds.height;
+  sequence->clear_color = COLOR_CORNFLOWER_BLUE;
   sequence->data.target_image.image_uid = command_hub->interactive_console->visual.image_resource_uid;
-
-  element_render_command *element_cmd;
 
   MCcall(obtain_element_render_command(sequence, &element_cmd));
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
@@ -1703,7 +1735,23 @@ int render_interactive_console_v1(int argc, void **argv)
   element_cmd->y = 2;
   element_cmd->data.colored_rect_info.width = command_hub->interactive_console->bounds.width - 4;
   element_cmd->data.colored_rect_info.height = command_hub->interactive_console->bounds.height - 4;
-  element_cmd->data.colored_rect_info.color = COLOR_BLACK;
+  element_cmd->data.colored_rect_info.color = (render_color){0.05f, 0.05f, 0.05f, 1.f};
+
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 0;
+  element_cmd->y = command_hub->interactive_console->bounds.height - 28;
+  element_cmd->data.colored_rect_info.width = command_hub->interactive_console->bounds.width;
+  element_cmd->data.colored_rect_info.height = 28;
+  element_cmd->data.colored_rect_info.color = COLOR_TEAL;
+
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+  element_cmd->x = 2;
+  element_cmd->y = command_hub->interactive_console->bounds.height - 24 - 2;
+  element_cmd->data.textured_rect_info.width = command_hub->interactive_console->input_line.width;
+  element_cmd->data.textured_rect_info.height = command_hub->interactive_console->input_line.height;
+  element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->input_line.image_resource_uid;
 
   return 0;
 }
@@ -1731,18 +1779,24 @@ int build_interactive_console_v1(int argc, void **argv)
   // interactive_console_node->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), interactive_console_node->children_alloc);
   // interactive_console_node->child_count = 0;
   console->logic_delegate = &update_interactive_console_v1;
+  console->handle_input_delegate = &interactive_console_handle_input_v1;
 
   // interactive_console->
 
   // Visuals
   console->visual.image_resource_uid = 0;
   console->visual.requires_render_update = true;
-  console->bounds.x = 42;
-  console->bounds.y = 24;
-  console->bounds.width = 512;
-  console->bounds.height = 256;
-  console->visual.delegate = &render_interactive_console_v1;
+  console->bounds.x = 668;
+  console->bounds.y = 510 - 200;
+  console->bounds.width = 768;
+  console->bounds.height = 384;
+  console->visual.render_delegate = &render_interactive_console_v1;
   // interactive_console_node->data.visual.background = (mc_visual_element_v1)
+
+  console->input_line.requires_render_update = true;
+  console->input_line.text = "Hello User!";
+  console->input_line.width = console->bounds.width - 4;
+  console->input_line.height = 24;
 
   // Obtain visual resources
   pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
@@ -1756,13 +1810,20 @@ int build_interactive_console_v1(int argc, void **argv)
   command->data.create_texture.height = console->bounds.height;
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
 
-  // void * data = {0, 0, 1};
-  // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-  // element_cmd->x = 1024 - 60 - 8 + 4 - 2;
-  // element_cmd->y = 640 - 40 - 8 + 4;
-  // element_cmd->data.colored_rect_info.width = 2;
-  // element_cmd->data.colored_rect_info.height = 32;
-  // element_cmd->data.colored_rect_info.color = COLOR_BLACK;
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+  command->p_uid = &console->input_line.image_resource_uid;
+  command->data.create_texture.use_as_render_target = true;
+  command->data.create_texture.width = console->input_line.width;
+  command->data.create_texture.height = console->input_line.height;
+  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
+
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+  command->type = RESOURCE_COMMAND_LOAD_FONT;
+  command->p_uid = &console->font_resource_uid;
+  command->data.font.height = 18;
+  command->data.font.path = "res/font/LiberationMono-Regular.ttf";
+  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
 
   return 0;
 }

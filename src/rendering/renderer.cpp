@@ -78,10 +78,10 @@ extern "C" void *midge_render_thread(void *vargp)
       .shouldExit = 0,
   };
   vk_render_state vkrs;
-  vkrs.window_width = 1024;
-  vkrs.window_height = 640;
-  vkrs.maximal_image_width = 1024;
-  vkrs.maximal_image_height = 1024;
+  vkrs.window_width = 1440;
+  vkrs.window_height = 900;
+  vkrs.maximal_image_width = 2048;
+  vkrs.maximal_image_height = 2048;
   // vkrs.depth.format = VK_FORMAT_UNDEFINED;
   vkrs.xcb_winfo = &winfo;
   vkrs.textures.allocated = 0;
@@ -797,9 +797,9 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
 
     image_render_queue *sequence = &render_queue->image_renders[i];
 
-    if (sequence->command_count < 1) {
-      return VK_ERROR_UNKNOWN;
-    }
+    // if (sequence->command_count < 1) {
+    //   return VK_ERROR_UNKNOWN;
+    // }
 
     printf("sequence: rt:%i cmd_count:%i\n", sequence->render_target, sequence->command_count);
 
@@ -836,10 +836,10 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
       vkBeginCommandBuffer(p_vkrs->cmd, &beginInfo);
 
       VkClearValue clear_values[2];
-      clear_values[0].color.float32[0] = 0.19f;
-      clear_values[0].color.float32[1] = 0.34f;
-      clear_values[0].color.float32[2] = 0.83f;
-      clear_values[0].color.float32[3] = 1.f;
+      clear_values[0].color.float32[0] = sequence->clear_color.r;
+      clear_values[0].color.float32[1] = sequence->clear_color.g;
+      clear_values[0].color.float32[2] = sequence->clear_color.b;
+      clear_values[0].color.float32[3] = sequence->clear_color.a;
       clear_values[1].depthStencil.depth = 1.0f;
       clear_values[1].depthStencil.stencil = 0;
 
@@ -947,10 +947,10 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
       vkBeginCommandBuffer(p_vkrs->cmd, &beginInfo);
 
       VkClearValue clear_values[1];
-      clear_values[0].color.float32[0] = 0.34f;
-      clear_values[0].color.float32[1] = 0.83f;
-      clear_values[0].color.float32[2] = 0.19f;
-      clear_values[0].color.float32[3] = 1.f;
+      clear_values[0].color.float32[0] = sequence->clear_color.r;
+      clear_values[0].color.float32[1] = sequence->clear_color.g;
+      clear_values[0].color.float32[2] = sequence->clear_color.b;
+      clear_values[0].color.float32[3] = sequence->clear_color.a;
 
       VkRenderPassBeginInfo rp_begin;
       rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

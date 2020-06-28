@@ -273,11 +273,21 @@ typedef struct mc_interactive_console_v1 {
     unsigned int width, height;
   } bounds;
   int (*logic_delegate)(int argc, void **args);
+  int (*handle_input_delegate)(int argc, void **args);
   struct {
     uint image_resource_uid;
     bool requires_render_update;
-    int (*delegate)(int argc, void **args);
+    int (*render_delegate)(int argc, void **args);
   } visual;
+
+  uint font_resource_uid;
+  
+  struct {
+    uint image_resource_uid;
+    uint width, height;
+    const char *text;
+    bool requires_render_update;
+  } input_line;
 } mc_interactive_console_v1;
 
 typedef struct mc_command_hub_v1 {
@@ -327,7 +337,10 @@ typedef struct mc_node_v1 {
     struct {
       uint image_resource_uid;
       bool requires_render_update;
-      struct {int x, y; uint width, height;} bounds;
+      struct {
+        int x, y;
+        uint width, height;
+      } bounds;
     } visual;
     struct {
       uint image_resource_uid;

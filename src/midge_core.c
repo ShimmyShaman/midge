@@ -2511,9 +2511,12 @@ int mc_main(int argc, const char *const *argv)
             exit_loop = true;
             break;
 
-          default:
-            printf("unhandled_input_event:%i\n", render_thread.input_buffer.events[i].code);
-            break;
+          default: {
+            // printf("unhandled_input_event:%i\n", render_thread.input_buffer.events[i].code);
+            void *vargs[1];
+            vargs[0] = &render_thread.input_buffer.events[i];
+            command_hub->interactive_console->handle_input_delegate(1, vargs);
+          } break;
           }
         }
       }
@@ -2527,21 +2530,20 @@ int mc_main(int argc, const char *const *argv)
 
     // Update State
     {
-        // TIME %)U%@)*(Y%@UFHOFEHIO)
-        // previous_update_time = current_update_time;
-        // getrusage(RUSAGE_SELF, &usage);
-        // current_update_time = usage.ru_utime;
-        // int v = clock_gettime();
-        // clockid_t clock_id;
-        // struct timespec *tp;
-        // clock_gettime(clock_id, &tp);
+      // TIME %)U%@)*(Y%@UFHOFEHIO)
+      // previous_update_time = current_update_time;
+      // getrusage(RUSAGE_SELF, &usage);
+      // current_update_time = usage.ru_utime;
+      // int v = clock_gettime();
+      // clockid_t clock_id;
+      // struct timespec *tp;
+      // clock_gettime(clock_id, &tp);
 
-        // printf("seconds:%i\n", clock_gettime(2));
-        // if (current_update_time.tv_sec - loop_initial_time.tv_sec > 6) {
-        //   printf("6 Seconds! Closing time...\n");
-        //   break;
-        // }
-    } {
+      // printf("seconds:%i\n", clock_gettime(2));
+      // if (current_update_time.tv_sec - loop_initial_time.tv_sec > 6) {
+      //   printf("6 Seconds! Closing time...\n");
+      //   break;
+      // }
     }
     if (render_thread.thread_info->has_concluded) {
       printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
@@ -2556,7 +2558,7 @@ int mc_main(int argc, const char *const *argv)
 
     // -- Render all sub-images first
     if (command_hub->interactive_console->visual.requires_render_update) {
-      command_hub->interactive_console->visual.delegate(0, NULL);
+      command_hub->interactive_console->visual.render_delegate(0, NULL);
       command_hub->interactive_console->visual.requires_render_update = false;
 
       rerender_required = true;
