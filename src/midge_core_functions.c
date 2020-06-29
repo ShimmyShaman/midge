@@ -6,6 +6,18 @@
 #define node mc_node_v1
 /*mcfuncreplace*/
 
+int special_update_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+
+  frame_time *elapsed = (frame_time *)argv[0];
+
+  return 0;
+}
+
 int find_function_info_v1(int argc, void **argv)
 {
   if (argc != 3) {
@@ -1880,6 +1892,27 @@ int render_global_node_v1(int argc, void **argv)
   return 0;
 }
 
+int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, void *state)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+                                  /*mcfuncreplace*/
+
+  bool reset_timer_on_update = true; // future argument
+
+  update_callback_timer *callback_timer;
+  MCcall(obtain_item_from_collection((void **)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
+                                     &command_hub->update_timers.count, sizeof(update_callback_timer), (void **)&callback_timer));
+
+  callback_timer->last_update = (struct timespec){0L, 0L};
+  callback_timer->reset_timer_on_update = true;
+  callback_timer->update_delegate = fnptr_update_callback;
+  callback_timer->state = state;
+
+  return 0;
+}
+
 #define CODE_LINE_COUNT 16
 #define MAX_LINE_WIDTH 120
 typedef struct code_line {
@@ -1894,14 +1927,15 @@ typedef struct function_edit_info {
   uint cursorCol, cursorLine;
 } function_edit_info;
 
-int render_function_editor_v1(int argc, void **argv)
+int function_editor_render_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
 
-  // frame_time const *const elapsed = (frame_time const *const)argv[0];
+  // printf("function_editor_render_v1-a\n");
+  frame_time const *const elapsed = (frame_time const *const)argv[0];
   mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 
   // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
@@ -1922,7 +1956,7 @@ int render_function_editor_v1(int argc, void **argv)
       sequence->image_height = lines[i].height;
       sequence->data.target_image.image_uid = lines[i].image_resource_uid;
 
-      if (lines[i].text && strlen(lines[i].text)) {
+      if (strlen(lines[i].text)) {
         MCcall(obtain_element_render_command(sequence, &element_cmd));
         element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
         element_cmd->x = 4;
@@ -1962,16 +1996,26 @@ int render_function_editor_v1(int argc, void **argv)
     element_cmd->data.textured_rect_info.texture_uid = lines[i].image_resource_uid;
   }
 
+  // Cursor
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 6 + (uint)(state->cursorCol * 10.31f);
+  element_cmd->y = 11 - 1 + state->cursorLine * 24;
+  element_cmd->data.colored_rect_info.width = 2;
+  element_cmd->data.colored_rect_info.height = 25;
+  element_cmd->data.colored_rect_info.color = (render_color){0.83f, 0.83f, 0.83f, 1.f};
+
   return 0;
 }
 
-int update_function_editor_v1(int argc, void **argv)
+int function_editor_update_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
                                   /*mcfuncreplace*/
 
+  // printf("function_editor_update_v1-a\n");
   frame_time const *const elapsed = (frame_time const *const)argv[0];
   mc_node_v1 *fedit = (mc_node_v1 *)argv[1];
 
@@ -1992,56 +2036,33 @@ int function_editor_handle_input_v1(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
                                   /*mcfuncreplace*/
 
+  // printf("function_editor_handle_input_v1-a\n");
   frame_time const *const elapsed = (frame_time const *const)argv[0];
-  mc_node_v1 *fedit = (mc_node_v1 *)argv[1];
+  mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
   mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];
+
+  if (fedit->data.visual.hidden)
+    return 0;
+
+  if (event->type != INPUT_EVENT_KEY_PRESS)
+    return 0;
 
   function_edit_info *state = (function_edit_info *)fedit->extra;
 
-  // bool shouldCursorBeVisible= elapsed->app_nsec > 500000000L;
-  // if(state->cursorVisible != shouldCursorBeVisible){
-
-  printf("fehi-Input:%i\n", event->event->code);
   char c = '\0';
-  int res = get_key_input_code_char(false, event->event->code, &c);
+  int res = get_key_input_code_char(event->shiftDown, event->code, &c);
   if (res)
     return 0; // TODO
 
-  printf("char c:'%c'\n", c);
-  printf("state:'%p'\n", state);
   // Update the text
-  for (int i = state->cursorCol + 1; i < MAX_LINE_WIDTH; ++i) {
-  printf("fehi-i:%i\n", i);
+  for (int i = MAX_LINE_WIDTH - 1; i > state->cursorCol; --i) {
     state->lines[state->cursorLine].text[i] = state->lines[state->cursorLine].text[i - 1];
   }
-  printf("fehi-0\n");
   state->lines[state->cursorLine].text[state->cursorCol] = c;
-  printf("fehi-1\n");
+  ++state->cursorCol;
+
   state->lines[state->cursorLine].requires_render_update = true;
-  printf("fehi-2\n");
   fedit->data.visual.requires_render_update = true;
-  printf("fehi-3\n");
-
-  return 0;
-}
-
-int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, void *state)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-                                  /*mcfuncreplace*/
-
-  bool reset_timer_on_update = true; // future argument
-
-  update_callback_timer *callback_timer;
-  MCcall(obtain_item_from_collection((void **)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
-                                     &command_hub->update_timers.count, sizeof(update_callback_timer), (void **)&callback_timer));
-
-  callback_timer->last_update = (struct timespec){0L, 0L};
-  callback_timer->reset_timer_on_update = true;
-  callback_timer->update_delegate = &update_function_editor_v1;
-  callback_timer->state = state;
 
   return 0;
 }
@@ -2052,7 +2073,7 @@ int build_function_editor_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
-  printf("bfe-a\n");
+  // printf("bfe-a\n");
 
   // Build the function editor window
   // Instantiate: node global;
@@ -2067,11 +2088,11 @@ int build_function_editor_v1(int argc, void **argv)
   fedit->data.visual.bounds.height = 400;
   fedit->data.visual.image_resource_uid = 0;
   fedit->data.visual.requires_render_update = true;
-  fedit->data.visual.render_delegate = &render_function_editor_v1;
+  fedit->data.visual.render_delegate = &function_editor_render_v1;
   fedit->data.visual.hidden = true;
-  fedit->data.visual.input_handler = &function_editor_handle_input_v1;
+  fedit->data.visual.input_handler = &function_editor_handle_input;
 
-  register_update_timer(&update_function_editor_v1, 500 * 1000, (void *)fedit);
+  register_update_timer(function_editor_update, 500 * 1000, (void *)fedit);
 
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
                               &command_hub->global_node->child_count, fedit));
@@ -2082,7 +2103,7 @@ int build_function_editor_v1(int argc, void **argv)
 
   // Code Lines
   function_edit_info *state = (function_edit_info *)malloc(sizeof(function_edit_info));
-  printf("state:'%p'\n", state);
+  // printf("state:'%p'\n", state);
   state->cursorLine = 0;
   state->cursorCol = 0;
   code_line *code_lines = state->lines;
@@ -2102,7 +2123,7 @@ int build_function_editor_v1(int argc, void **argv)
     command->data.create_texture.width = code_lines[i].width = fedit->data.visual.bounds.width - 4;
     command->data.create_texture.height = code_lines[i].height = 28;
   }
-  fedit->extra = state;
+  fedit->extra = (void *)state;
 
   // Function Editor Image
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));

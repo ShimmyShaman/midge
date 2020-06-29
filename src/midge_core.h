@@ -335,7 +335,9 @@ typedef enum node_type {
 } node_type;
 
 typedef struct mc_input_event_v1 {
-  window_input_event *event;
+  bool shiftDown, ctrlDown, altDown;
+  window_input_event_type type;
+  window_input_event_code code;
   bool handled;
 } mc_input_event_v1;
 
@@ -349,7 +351,7 @@ typedef struct node_visual_info {
     uint width, height;
   } bounds;
   int (*render_delegate)(int, void **);
-  int (*input_handler)(int, void **);
+  int (**input_handler)(int, void **);
 
 } node_visual_info;
 
@@ -473,7 +475,11 @@ int (*find_function_info)(int, void **);
 int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
 int (*build_function_editor)(int, void **);
+int (*function_editor_update)(int, void **);
+int (*function_editor_handle_input)(int, void **);
+int (*function_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
+int (*special_update)(int, void **);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \

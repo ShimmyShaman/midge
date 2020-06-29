@@ -69,7 +69,7 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
 
   value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
   value_list[0] = p_wnfo->screen->black_pixel;
-  value_list[1] = XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE;
+  value_list[1] = XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE;
 
   xcb_create_window(p_wnfo->connection, XCB_COPY_FROM_PARENT, p_wnfo->window, p_wnfo->screen->root, dimensions.offset.x,
                     dimensions.offset.y, dimensions.extent.width, dimensions.extent.height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT,

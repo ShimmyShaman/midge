@@ -206,45 +206,6 @@ int parse_past_type_identifier(const char *text, int *index, char **identifier)
   }
 }
 
-int set_int_value(int argc, void **argv)
-{
-  printf("set_int_value()\n");
-  int *var = (int *)argv[0];
-  int value = *(int *)argv[1];
-
-  *var = value;
-  return 0;
-}
-
-int increment_int_value(int argc, void **argv)
-{
-  printf("increment_int_value()\n");
-  int *var = (int *)argv[0];
-
-  ++*var;
-  return 0;
-}
-
-int set_pointer_value(int argc, void **argv)
-{
-  printf("set_pointer_value()\n");
-  void **var = (void **)argv[0];
-  void *value = (void *)argv[1];
-  printf("was:%p  now:%p\n", *var, value);
-
-  *var = value;
-  return 0;
-}
-
-int increment_pointer(int argc, void **argv)
-{
-  printf("increment_pointer()\n");
-  unsigned long **var = (unsigned long **)argv[0];
-
-  ++*var;
-  return 0;
-}
-
 int init_void_collection_v1(mc_void_collection_v1 **output)
 {
   *output = (mc_void_collection_v1 *)malloc(sizeof(mc_void_collection_v1));
@@ -2503,6 +2464,7 @@ int mc_main(int argc, const char *const *argv)
   printf("App took %.2f seconds to begin.\n",
          current_frametime.tv_sec - mc_main_begin_time.tv_sec + 1e-9 * (current_frametime.tv_nsec - mc_main_begin_time.tv_nsec));
 
+  special_update = NULL;
   bool rerender_required = true;
   int ui = 0;
   while (1) {
@@ -2534,6 +2496,15 @@ int mc_main(int argc, const char *const *argv)
           ++logic_update_frametime.tv_sec;
         }
       }
+
+      // Special update
+      if (current_frametime.tv_sec == 5) {
+        if (special_update) {
+          void *vargs[1];
+          vargs[0] = &elapsed;
+          special_update(1, vargs);
+        }
+      }
     }
 
     // Handle Input
@@ -2542,7 +2513,9 @@ int mc_main(int argc, const char *const *argv)
     if (render_thread.input_buffer.event_count > 0) {
       bool exit_loop = false;
       for (int i = 0; i < render_thread.input_buffer.event_count && !exit_loop; ++i) {
-        if (render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_RELEASE) {
+        switch (render_thread.input_buffer.events[i].type) {
+        case INPUT_EVENT_KEY_RELEASE:
+        case INPUT_EVENT_KEY_PRESS: {
           switch (render_thread.input_buffer.events[i].code) {
           case INPUT_EVENT_CODE_ESCAPE:
             exit_loop = true;
@@ -2551,8 +2524,13 @@ int mc_main(int argc, const char *const *argv)
           default: {
             // printf("unhandled_input_event:%i\n", render_thread.input_buffer.events[i].code);
             mc_input_event_v1 input_event;
-            input_event.event = &render_thread.input_buffer.events[i];
+            input_event.type = render_thread.input_buffer.events[i].type;
+            input_event.code = render_thread.input_buffer.events[i].code;
+            input_event.altDown = false;
+            input_event.ctrlDown = false;
+            input_event.shiftDown = false;
             input_event.handled = false;
+
             {
               void *vargs[1];
               vargs[0] = &input_event;
@@ -2563,18 +2541,24 @@ int mc_main(int argc, const char *const *argv)
               mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
               if (child->type != NODE_TYPE_VISUAL)
                 continue;
-              if (!child->data.visual.input_handler)
+              // printf("checking input delegate exists\n");
+              if (!*child->data.visual.input_handler)
                 continue;
 
               void *vargs[3];
               vargs[0] = &elapsed;
               vargs[1] = &child;
               vargs[2] = &input_event;
-              MCcall(child->data.visual.input_handler(3, vargs));
+              // printf("calling input delegate\n");
+              // printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
+              MCcall((*child->data.visual.input_handler)(3, vargs));
             }
             break;
           }
           }
+        }
+        default:
+          break;
         }
       }
       render_thread.input_buffer.event_count = 0;
@@ -5724,7 +5708,11 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
   clint_process("build_interactive_console = &build_interactive_console_v1;");
   clint_process("build_function_editor = &build_function_editor_v1;");
+  clint_process("function_editor_update = &function_editor_update_v1;");
+  clint_process("function_editor_render = &function_editor_render_v1;");
+  clint_process("function_editor_handle_input = &function_editor_handle_input_v1;");
   clint_process("render_global_node = &render_global_node_v1;");
+  clint_process("special_update = &special_update_v1;");
 
   free(input);
   free(output);
