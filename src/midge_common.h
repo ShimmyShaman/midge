@@ -27,7 +27,20 @@ typedef enum {
 
   // From XCB codes I THINK... Poor way of doing it
   INPUT_EVENT_CODE_ESCAPE = 9,
+  INPUT_EVENT_CODE_Q = 24,
 } window_input_event_code;
+
+int get_key_input_code_char(bool shift, window_input_event_code code, char *c)
+{
+  switch (code) {
+  case INPUT_EVENT_CODE_Q:
+    *c = 'q';
+    return 0;
+
+  default:
+    return -1;
+  }
+}
 
 typedef struct window_input_event {
   window_input_event_type type;
@@ -43,6 +56,6 @@ typedef struct window_input_buffer {
 typedef struct frame_time {
   long frame_sec, frame_nsec;
   long app_sec, app_nsec;
-}frame_time;
+} frame_time;
 
 #endif // MIDGE_COMMON_H

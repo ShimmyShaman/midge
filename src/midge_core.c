@@ -1,7 +1,6 @@
 /* midge_core.c */
 // #define __USE_POSIX199309
 #define _POSIX_C_SOURCE 200809L
-#include <sys/time.h>
 
 #include "midge_core.h"
 
@@ -2462,6 +2461,7 @@ int mc_main(int argc, const char *const *argv)
   command_hub->scripts_alloc = 32;
   command_hub->scripts = (void **)malloc(sizeof(void *) * command_hub->scripts_alloc);
   command_hub->scripts_count = 0;
+  command_hub->update_timers.count = command_hub->update_timers.allocated = 0;
 
   // declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
   // template_collection->templates_alloc = 400;
@@ -2541,19 +2541,39 @@ int mc_main(int argc, const char *const *argv)
 
     if (render_thread.input_buffer.event_count > 0) {
       bool exit_loop = false;
-      for (int i = 0; i < render_thread.input_buffer.event_count; ++i) {
+      for (int i = 0; i < render_thread.input_buffer.event_count && !exit_loop; ++i) {
         if (render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_RELEASE) {
           switch (render_thread.input_buffer.events[i].code) {
           case INPUT_EVENT_CODE_ESCAPE:
             exit_loop = true;
-            break;
+            continue;
 
           default: {
             // printf("unhandled_input_event:%i\n", render_thread.input_buffer.events[i].code);
-            void *vargs[1];
-            vargs[0] = &render_thread.input_buffer.events[i];
-            command_hub->interactive_console->handle_input_delegate(1, vargs);
-          } break;
+            mc_input_event_v1 input_event;
+            input_event.event = &render_thread.input_buffer.events[i];
+            input_event.handled = false;
+            {
+              void *vargs[1];
+              vargs[0] = &input_event;
+              command_hub->interactive_console->handle_input_delegate(1, vargs);
+            }
+
+            for (int i = 0; !input_event.handled && i < command_hub->global_node->child_count; ++i) {
+              mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
+              if (child->type != NODE_TYPE_VISUAL)
+                continue;
+              if (!child->data.visual.input_handler)
+                continue;
+
+              void *vargs[3];
+              vargs[0] = &elapsed;
+              vargs[1] = &child;
+              vargs[2] = &input_event;
+              MCcall(child->data.visual.input_handler(3, vargs));
+            }
+            break;
+          }
           }
         }
       }
@@ -2591,9 +2611,10 @@ int mc_main(int argc, const char *const *argv)
       if (child->type == NODE_TYPE_VISUAL && child->data.visual.requires_render_update) {
         child->data.visual.requires_render_update = false;
 
-        void *vargs[1];
-        vargs[0] = &child;
-        child->data.visual.render_delegate(1, vargs);
+        void *vargs[2];
+        vargs[0] = &elapsed;
+        vargs[1] = &child;
+        child->data.visual.render_delegate(2, vargs);
 
         rerender_required = true;
       }

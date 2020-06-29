@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "rendering/node_render.h"
 
@@ -294,6 +295,13 @@ typedef struct mc_interactive_console_v1 {
   } input_line;
 } mc_interactive_console_v1;
 
+typedef struct update_callback_timer {
+  struct timespec last_update;
+  bool reset_timer_on_update;
+  int (*update_delegate)(int, void **);
+  void *state;
+} update_callback_timer;
+
 typedef struct mc_command_hub_v1 {
   mc_struct_id_v1 *struct_id;
   mc_node_v1 *global_node;
@@ -305,6 +313,10 @@ typedef struct mc_command_hub_v1 {
     resource_queue *resource_queue;
     render_queue *render_queue;
   } renderer;
+  struct {
+    uint count, allocated;
+    update_callback_timer *callbacks;
+  } update_timers;
   mc_process_unit_v1 *process_matrix;
   mc_workflow_process_v1 *focused_workflow;
   unsigned int scripts_alloc;
@@ -322,6 +334,11 @@ typedef enum node_type {
   NODE_TYPE_ABSTRACT,
 } node_type;
 
+typedef struct mc_input_event_v1 {
+  window_input_event *event;
+  bool handled;
+} mc_input_event_v1;
+
 typedef struct node_visual_info {
 
   bool requires_render_update;
@@ -332,6 +349,7 @@ typedef struct node_visual_info {
     uint width, height;
   } bounds;
   int (*render_delegate)(int, void **);
+  int (*input_handler)(int, void **);
 
 } node_visual_info;
 

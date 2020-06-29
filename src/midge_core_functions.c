@@ -200,8 +200,30 @@ int cling_process(int argc, void **argv)
 
 int init_void_collection(mc_void_collection_v1 **collection);
 
+int obtain_item_from_collection(void **items, uint *allocated, uint *count, uint size_of_type, void **item)
+{
+
+  if (*allocated < *count + 1) {
+    uint new_allocated = (*count + 1) + 4 + (*count + 1) / 4;
+    void *new_ary = (void *)malloc(size_of_type * new_allocated);
+
+    if (*allocated) {
+      memcpy(new_ary, *items, size_of_type * (*count));
+      free(*items);
+    }
+    *items = new_ary;
+    *allocated = new_allocated;
+  }
+
+  *item = items[*count];
+  ++(*count);
+  return 0;
+}
+
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command)
 {
+  // MCcall(obtain_item_from_collection((void **)resource_queue->commands, &resource_queue->allocated, &resource_queue->count,
+  //                                    sizeof(resource_command), (void **)p_command));
   if (resource_queue->allocated < resource_queue->count + 1) {
     int new_allocated = (resource_queue->count + 1) + 4 + (resource_queue->count + 1) / 4;
     resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
@@ -215,6 +237,7 @@ int obtain_resource_command(resource_queue *resource_queue, resource_command **p
   }
 
   *p_command = &resource_queue->commands[resource_queue->count++];
+
   return 0;
 }
 
@@ -246,6 +269,8 @@ int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p
 
 int obtain_element_render_command(image_render_queue *image_queue, element_render_command **p_command)
 {
+  // MCcall(obtain_item_from_collection((void **)image_queue->commands, &image_queue->commands_allocated,
+  //                                    &image_queue->command_count, sizeof(element_render_command), (void **)p_command));
   if (image_queue->commands_allocated < image_queue->command_count + 1) {
     int new_allocated = image_queue->commands_allocated + 4 + image_queue->commands_allocated / 4;
     element_render_command *new_ary = (element_render_command *)malloc(sizeof(element_render_command) * new_allocated);
@@ -259,6 +284,7 @@ int obtain_element_render_command(image_render_queue *image_queue, element_rende
   }
 
   *p_command = &image_queue->commands[image_queue->command_count++];
+
   return 0;
 }
 
@@ -1485,6 +1511,10 @@ int update_interactive_console_v1(int argc, void **argv)
 
     ((mc_node_v1 *)command_hub->global_node->children[0])->data.visual.hidden = false;
     ((mc_node_v1 *)command_hub->global_node->children[0])->data.visual.requires_render_update = true;
+
+    command_hub->interactive_console->input_line.text = "...";
+    command_hub->interactive_console->input_line.requires_render_update = true;
+    command_hub->interactive_console->visual.requires_render_update = true;
   }
 
   // const char *commands =
@@ -1775,7 +1805,7 @@ int build_interactive_console_v1(int argc, void **argv)
   // interactive_console_node->data.visual.background = (mc_visual_element_v1)
 
   console->input_line.requires_render_update = true;
-  console->input_line.text = "Hello User!";
+  console->input_line.text = "...";
   console->input_line.width = console->bounds.width - 4;
   console->input_line.height = 24;
 
@@ -1851,11 +1881,12 @@ int render_global_node_v1(int argc, void **argv)
 }
 
 #define CODE_LINE_COUNT 16
+#define MAX_LINE_WIDTH 120
 typedef struct code_line {
   uint index;
   bool requires_render_update;
   uint image_resource_uid;
-  const char *text;
+  char text[MAX_LINE_WIDTH];
   uint width, height;
 } code_line;
 typedef struct function_edit_info {
@@ -1870,10 +1901,9 @@ int render_function_editor_v1(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
 
-  frame_time *elapsed = (frame_time *)argv[0];
+  // frame_time const *const elapsed = (frame_time const *const)argv[0];
   mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 
-  printf("rfe-0\n");
   // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
   //        command_hub->interactive_console->visual.image_resource_uid);
   image_render_queue *sequence;
@@ -1881,12 +1911,10 @@ int render_function_editor_v1(int argc, void **argv)
   // Lines
   function_edit_info *state = (function_edit_info *)visual_node->extra;
   code_line *lines = state->lines;
-  printf("rfe-1\n");
   for (int i = 0; i < CODE_LINE_COUNT; ++i) {
     if (lines[i].requires_render_update) {
       lines[i].requires_render_update = false;
 
-      printf("rfe-2\n");
       MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
       sequence->render_target = NODE_RENDER_TARGET_IMAGE;
       sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
@@ -1894,7 +1922,6 @@ int render_function_editor_v1(int argc, void **argv)
       sequence->image_height = lines[i].height;
       sequence->data.target_image.image_uid = lines[i].image_resource_uid;
 
-      printf("rfe-3\n");
       if (lines[i].text && strlen(lines[i].text)) {
         MCcall(obtain_element_render_command(sequence, &element_cmd));
         element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
@@ -1906,7 +1933,6 @@ int render_function_editor_v1(int argc, void **argv)
       }
     }
   }
-  printf("rfe-10\n");
 
   // Render
   // printf("OIRS: w:%u h:%u uid:%u\n", visual_node->data.visual.bounds.width, visual_node->data.visual.bounds.height,
@@ -1939,12 +1965,94 @@ int render_function_editor_v1(int argc, void **argv)
   return 0;
 }
 
+int update_function_editor_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+                                  /*mcfuncreplace*/
+
+  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  mc_node_v1 *fedit = (mc_node_v1 *)argv[1];
+
+  function_edit_info *state = (function_edit_info *)fedit->extra;
+
+  // bool shouldCursorBeVisible= elapsed->app_nsec > 500000000L;
+  // if(state->cursorVisible != shouldCursorBeVisible){
+
+  // }
+
+  return 0;
+}
+
+int function_editor_handle_input_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+                                  /*mcfuncreplace*/
+
+  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  mc_node_v1 *fedit = (mc_node_v1 *)argv[1];
+  mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];
+
+  function_edit_info *state = (function_edit_info *)fedit->extra;
+
+  // bool shouldCursorBeVisible= elapsed->app_nsec > 500000000L;
+  // if(state->cursorVisible != shouldCursorBeVisible){
+
+  printf("fehi-Input:%i\n", event->event->code);
+  char c = '\0';
+  int res = get_key_input_code_char(false, event->event->code, &c);
+  if (res)
+    return 0; // TODO
+
+  printf("char c:'%c'\n", c);
+  printf("state:'%p'\n", state);
+  // Update the text
+  for (int i = state->cursorCol + 1; i < MAX_LINE_WIDTH; ++i) {
+  printf("fehi-i:%i\n", i);
+    state->lines[state->cursorLine].text[i] = state->lines[state->cursorLine].text[i - 1];
+  }
+  printf("fehi-0\n");
+  state->lines[state->cursorLine].text[state->cursorCol] = c;
+  printf("fehi-1\n");
+  state->lines[state->cursorLine].requires_render_update = true;
+  printf("fehi-2\n");
+  fedit->data.visual.requires_render_update = true;
+  printf("fehi-3\n");
+
+  return 0;
+}
+
+int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, void *state)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+                                  /*mcfuncreplace*/
+
+  bool reset_timer_on_update = true; // future argument
+
+  update_callback_timer *callback_timer;
+  MCcall(obtain_item_from_collection((void **)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
+                                     &command_hub->update_timers.count, sizeof(update_callback_timer), (void **)&callback_timer));
+
+  callback_timer->last_update = (struct timespec){0L, 0L};
+  callback_timer->reset_timer_on_update = true;
+  callback_timer->update_delegate = &update_function_editor_v1;
+  callback_timer->state = state;
+
+  return 0;
+}
+
 int build_function_editor_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
+  printf("bfe-a\n");
 
   // Build the function editor window
   // Instantiate: node global;
@@ -1961,6 +2069,9 @@ int build_function_editor_v1(int argc, void **argv)
   fedit->data.visual.requires_render_update = true;
   fedit->data.visual.render_delegate = &render_function_editor_v1;
   fedit->data.visual.hidden = true;
+  fedit->data.visual.input_handler = &function_editor_handle_input_v1;
+
+  register_update_timer(&update_function_editor_v1, 500 * 1000, (void *)fedit);
 
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
                               &command_hub->global_node->child_count, fedit));
@@ -1971,13 +2082,18 @@ int build_function_editor_v1(int argc, void **argv)
 
   // Code Lines
   function_edit_info *state = (function_edit_info *)malloc(sizeof(function_edit_info));
+  printf("state:'%p'\n", state);
+  state->cursorLine = 0;
+  state->cursorCol = 0;
   code_line *code_lines = state->lines;
   for (int i = 0; i < CODE_LINE_COUNT; ++i) {
 
     code_lines[i].index = i;
     code_lines[i].requires_render_update = true;
-    code_lines[i].text = "!this is twenty nine letters!"; //! this is twenty nine letters!!this is twenty nine letters!!this is
-                                                          //! twenty nine letters!";
+    code_lines[i].text[0] = '\0';
+    //  "!this is twenty nine letters! "
+    //  "!this is twenty nine letters! "
+    //  "!this is twenty nine letters! ";
 
     MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
     command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
