@@ -141,7 +141,7 @@ extern "C" void *midge_render_thread(void *vargp)
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue.mutex);
     if (render_thread->resource_queue.count) {
-      printf("Vulkan entered resources!\n");
+      // printf("Vulkan entered resources!\n");
       handle_resource_commands(&vkrs, &render_thread->resource_queue);
       render_thread->resource_queue.count = 0;
       printf("Vulkan loaded resources!\n");
@@ -151,11 +151,19 @@ extern "C" void *midge_render_thread(void *vargp)
     // Render Commands
     pthread_mutex_lock(&render_thread->render_queue.mutex);
     if (render_thread->render_queue.count) {
-      printf("Vulkan entered render_queue! %u sequences\n", render_thread->render_queue.count);
+      // {
+      //   // DEBUG
+      //   uint cmd_count = 0;
+      //   for (int r = 0; r < render_thread->render_queue.count; ++r) {
+      //     cmd_count += render_thread->render_queue.image_renders[r].command_count;
+      //   }
+      //   printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n", render_thread->render_queue.count,
+      //   cmd_count);
+      // }
       render_through_queue(&vkrs, &render_thread->render_queue);
       render_thread->render_queue.count = 0;
 
-      printf("Vulkan rendered render_queue!\n");
+      // printf("Vulkan rendered render_queue!\n");
       ++frame_updates;
     }
     pthread_mutex_unlock(&render_thread->render_queue.mutex);
@@ -279,8 +287,6 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
     element_render_command *cmd = &sequence->commands[j];
     switch (cmd->type) {
     case RENDER_COMMAND_COLORED_RECTANGLE: {
-      // Set
-      coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
 
       // Vertex Uniform Buffer Object
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
@@ -377,8 +383,6 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
     } break;
 
     case RENDER_COMMAND_TEXTURED_RECTANGLE: {
-      // // Set
-      coloured_rect_draw_data &rect_draw_data = rect_draws[rect_draws_index++];
 
       // Vertex Uniform Buffer Object
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
@@ -391,9 +395,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
                                 1.0f * (float)cmd->data.textured_rect_info.height / (float)(sequence->image_height);
 
-      printf("x:%u y:%u tri.width:%u tri.height:%u seq.width:%u seq.height:%u\n", cmd->x, cmd->y,
-             cmd->data.textured_rect_info.width, cmd->data.textured_rect_info.height, sequence->image_width,
-             sequence->image_height);
+      // printf("x:%u y:%u tri.width:%u tri.height:%u seq.width:%u seq.height:%u\n", cmd->x, cmd->y,
+      //        cmd->data.textured_rect_info.width, cmd->data.textured_rect_info.height, sequence->image_width,
+      //        sequence->image_height);
 
       // Setup viewport and clip
       set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
@@ -523,9 +527,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         float width = q.x1 - q.x0;
         float height = q.y1 - q.y0;
 
-        printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0,
-               q.x1, q.y0, q.y1);
-        printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
+        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0,
+        //        q.x1, q.y0, q.y1);
+        // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
         // Vertex Uniform Buffer Object
         vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
@@ -561,6 +565,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         setAllocInfo.pSetLayouts = &p_vkrs->font_prog.desc_layout;
 
         unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
+        // printf("cmd->text:'%s' descriptor_set_index=%u\n", cmd->data.print_text.text, descriptor_set_index);
         res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
         assert(res == VK_SUCCESS);
 
@@ -568,7 +573,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
 
         // Queue Buffer and Descriptor Writes
-        const unsigned int MAX_DESC_SET_WRITES = 8;
+        const unsigned int MAX_DESC_SET_WRITES = 4;
         VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
         VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
         int buffer_info_index = 0;
@@ -718,7 +723,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
     //   return VK_ERROR_UNKNOWN;
     // }
 
-    printf("sequence: rt:%i cmd_count:%i\n", sequence->render_target, sequence->command_count);
+    // printf("sequence: rt:%i cmd_count:%i\n", sequence->render_target, sequence->command_count);
 
     switch (sequence->render_target) {
     case NODE_RENDER_TARGET_PRESENT: {
@@ -852,6 +857,10 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
         // assert(res == VK_SUCCESS);
         // p_vkrs->descriptor_sets_count = 0U;
       }
+
+      res = vkResetDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, 0);
+      assert(res == VK_SUCCESS);
+      p_vkrs->descriptor_sets_count = 0U;
 
       // Begin Command Buffer Recording
       res = vkResetCommandPool(p_vkrs->device, p_vkrs->cmd_pool, 0);

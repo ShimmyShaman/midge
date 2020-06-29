@@ -5,6 +5,16 @@
 
 #include "m_threads.h"
 
+#define COLOR_CORNFLOWER_BLUE (render_color){0.19f, 0.34f, 0.83f, 1.f};
+#define COLOR_GREENISH (render_color){0.11f, 0.55f, 0.32f, 1.f};
+#define COLOR_TEAL (render_color){0.0f, 0.52f, 0.52f, 1.f};
+#define COLOR_PURPLE (render_color){160.f / 255.f, 32.f / 255.f, 240.f / 255.f, 1.f};
+#define COLOR_BURLY_WOOD (render_color){0.87f, 0.72f, 0.52f, 1.f};
+#define COLOR_DARK_SLATE_GRAY (render_color){0.18f, 0.18f, 0.31f, 1.f};
+#define COLOR_GHOST_WHITE (render_color){0.97f, 0.97f, 1.f, 1.f};
+#define COLOR_BLACK (render_color){0.f, 0.f, 0.f, 1.f};
+#define COLOR_YELLOW (render_color){1.f, 1.f, 0.f, 1.f};
+
 #define MAX_QUEUED_KEY_EVENTS 128
 typedef enum {
   INPUT_EVENT_NONE = 0,

@@ -2099,14 +2099,14 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture)
   const int DESCRIPTOR_POOL_COUNT = 2;
   VkDescriptorPoolSize type_count[DESCRIPTOR_POOL_COUNT];
   type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  type_count[0].descriptorCount = 256;
+  type_count[0].descriptorCount = 4096;
   type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  type_count[1].descriptorCount = 128;
+  type_count[1].descriptorCount = 256;
 
   VkDescriptorPoolCreateInfo descriptor_pool = {};
   descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   descriptor_pool.pNext = NULL;
-  descriptor_pool.maxSets = 128;
+  descriptor_pool.maxSets = MAX_DESCRIPTOR_SETS;
   descriptor_pool.poolSizeCount = DESCRIPTOR_POOL_COUNT;
   descriptor_pool.pPoolSizes = type_count;
 

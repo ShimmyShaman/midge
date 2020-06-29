@@ -2437,6 +2437,7 @@ int mc_main(int argc, const char *const *argv)
   global->children_alloc = 40;
   global->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), global->children_alloc);
   global->child_count = 0;
+  global->data.global_root.image_resource_uid = 0;
 
   MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count,
                               (void *)parameter_info_definition_v1));
@@ -2485,6 +2486,7 @@ int mc_main(int argc, const char *const *argv)
   MCcall(init_core_functions(command_hub));
   MCcall(init_process_matrix(command_hub));
   MCcall(build_interactive_console(0, NULL));
+  MCcall(build_function_editor(0, NULL));
   // return 0;
 
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
@@ -2496,10 +2498,10 @@ int mc_main(int argc, const char *const *argv)
   }
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
-  clock_gettime(CLOCK_REALTIME, &prev_frametime);
+  clock_gettime(CLOCK_REALTIME, &current_frametime);
   clock_gettime(CLOCK_REALTIME, &logic_update_frametime);
   printf("App took %.2f seconds to begin.\n",
-         current_frametime.tv_sec - prev_frametime.tv_sec + 1e-9 * (current_frametime.tv_nsec - prev_frametime.tv_nsec));
+         current_frametime.tv_sec - mc_main_begin_time.tv_sec + 1e-9 * (current_frametime.tv_nsec - mc_main_begin_time.tv_nsec));
 
   bool rerender_required = true;
   int ui = 0;
@@ -2566,7 +2568,10 @@ int mc_main(int argc, const char *const *argv)
     // Update State
     {
       if (logic_update_due) {
-        command_hub->interactive_console->logic_delegate(0, NULL);
+        // Interactive Console
+        void *vargs[1];
+        vargs[0] = &elapsed;
+        command_hub->interactive_console->logic_delegate(1, vargs);
       }
     }
     if (render_thread.thread_info->has_concluded) {
@@ -2580,17 +2585,31 @@ int mc_main(int argc, const char *const *argv)
     // Clear the render queue?
     // render_thread.render_queue.count = 0;
 
+    // -- Render all node descendants first
+    for (int i = 0; i < command_hub->global_node->child_count; ++i) {
+      mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
+      if (child->type == NODE_TYPE_VISUAL && child->data.visual.requires_render_update) {
+        child->data.visual.requires_render_update = false;
+
+        void *vargs[1];
+        vargs[0] = &child;
+        child->data.visual.render_delegate(1, vargs);
+
+        rerender_required = true;
+      }
+    }
+
     // -- Render all sub-images first
     if (command_hub->interactive_console->visual.requires_render_update) {
-      command_hub->interactive_console->visual.render_delegate(0, NULL);
       command_hub->interactive_console->visual.requires_render_update = false;
+      command_hub->interactive_console->visual.render_delegate(0, NULL);
 
       rerender_required = true;
     }
 
     // Do an Z-based control render of everything
     if (rerender_required) {
-      MCcall(render_midge_background(0, NULL));
+      MCcall(render_global_node(0, NULL));
       rerender_required = false;
     }
 
@@ -5682,8 +5701,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("parse_script_to_mc = &parse_script_to_mc_v1;");
   clint_process("conform_type_identity = &conform_type_identity_v1;");
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
-  clint_process("render_midge_background = &render_midge_background_v1;");
   clint_process("build_interactive_console = &build_interactive_console_v1;");
+  clint_process("build_function_editor = &build_function_editor_v1;");
+  clint_process("render_global_node = &render_global_node_v1;");
 
   free(input);
   free(output);

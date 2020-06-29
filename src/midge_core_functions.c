@@ -6,16 +6,6 @@
 #define node mc_node_v1
 /*mcfuncreplace*/
 
-#define COLOR_CORNFLOWER_BLUE (render_color){0.19f, 0.34f, 0.83f, 1.f};
-#define COLOR_GREENISH (render_color){0.11f, 0.55f, 0.32f, 1.f};
-#define COLOR_TEAL (render_color){0.0f, 0.52f, 0.52f, 1.f};
-#define COLOR_PURPLE (render_color){160.f / 255.f, 32.f / 255.f, 240.f / 255.f, 1.f};
-#define COLOR_BURLY_WOOD (render_color){0.87f, 0.72f, 0.52f, 1.f};
-#define COLOR_DARK_SLATE_GRAY (render_color){0.18f, 0.18f, 0.31f, 1.f};
-#define COLOR_GHOST_WHITE (render_color){0.97f, 0.97f, 1.f, 1.f};
-#define COLOR_BLACK (render_color){0.f, 0.f, 0.f, 1.f};
-#define COLOR_YELLOW (render_color){1.f, 1.f, 0.f, 1.f};
-
 int find_function_info_v1(int argc, void **argv)
 {
   if (argc != 3) {
@@ -1470,44 +1460,32 @@ int parse_script_to_mc_v1(int argc, void **argv)
 //   return 0;
 // }
 
-int render_midge_background_v1(int argc, void **argv)
+int update_interactive_console_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
-  /*mcfuncreplace*/
+                                  /*mcfuncreplace*/
 
-  // For the global node (and whole screen)
-  image_render_queue *sequence;
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-  sequence->image_width = 1440;
-  sequence->image_height = 900;
-  sequence->clear_color = COLOR_DARK_SLATE_GRAY;
-  sequence->render_target = NODE_RENDER_TARGET_PRESENT;
+  frame_time *elapsed = (frame_time *)argv[0];
+  const char *commands[1] = {// Create invoke function script
+                             ".beginNewFunction"};
 
-  element_render_command *element_cmd;
-  // MCcall(obtain_element_render_command(sequence, &element_cmd));
-  // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-  // element_cmd->x = 2;
-  // element_cmd->y = 2;
-  // element_cmd->data.colored_rect_info.width = 1436;
-  // element_cmd->data.colored_rect_info.height = 896;
-  // element_cmd->data.colored_rect_info.color = COLOR_DARK_SLATE_GRAY;
+  if (command_hub->interactive_console->logic.action_count < 1 && elapsed->app_sec >= 4) {
+    // Enter text into the textbox
+    ++command_hub->interactive_console->logic.action_count;
 
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
-  element_cmd->x = command_hub->interactive_console->bounds.x;
-  element_cmd->y = command_hub->interactive_console->bounds.y;
-  element_cmd->data.textured_rect_info.width = command_hub->interactive_console->bounds.width;
-  element_cmd->data.textured_rect_info.height = command_hub->interactive_console->bounds.height;
-  element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->visual.image_resource_uid;
+    command_hub->interactive_console->input_line.text = commands[0];
+    command_hub->interactive_console->input_line.requires_render_update = true;
+    command_hub->interactive_console->visual.requires_render_update = true;
+  }
+  else if (command_hub->interactive_console->logic.action_count < 2 && elapsed->app_sec >= 5) {
+    // Submit the text in the textbox
+    ++command_hub->interactive_console->logic.action_count;
 
-  return 0;
-}
-
-int update_interactive_console_v1(int argc, void **argv)
-{
-  
+    ((mc_node_v1 *)command_hub->global_node->children[0])->data.visual.hidden = false;
+    ((mc_node_v1 *)command_hub->global_node->children[0])->data.visual.requires_render_update = true;
+  }
 
   // const char *commands =
   //     // Create invoke function script
@@ -1765,7 +1743,7 @@ int build_interactive_console_v1(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
 
-  // Build the function editor window
+  // Build the interactive console
   mc_interactive_console_v1 *console = (mc_interactive_console_v1 *)malloc(sizeof(mc_interactive_console_v1));
   command_hub->interactive_console = console;
 
@@ -1782,6 +1760,9 @@ int build_interactive_console_v1(int argc, void **argv)
   // interactive_console_node->child_count = 0;
   console->logic_delegate = &update_interactive_console_v1;
   console->handle_input_delegate = &interactive_console_handle_input_v1;
+
+  // Logic
+  command_hub->interactive_console->logic.action_count = 0;
 
   // Visuals
   console->visual.image_resource_uid = 0;
@@ -1824,6 +1805,211 @@ int build_interactive_console_v1(int argc, void **argv)
   command->data.font.height = 20;
   command->data.font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
-  int hello_user;
+
+  return 0;
+}
+
+int render_global_node_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+
+  // For the global node (and whole screen)
+  image_render_queue *sequence;
+  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  sequence->image_width = 1440;
+  sequence->image_height = 900;
+  sequence->clear_color = COLOR_DARK_SLATE_GRAY;
+  sequence->render_target = NODE_RENDER_TARGET_PRESENT;
+
+  element_render_command *element_cmd;
+
+  for (int i = 0; i < command_hub->global_node->child_count; ++i) {
+    mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
+    if (child->type == NODE_TYPE_VISUAL && !child->data.visual.hidden && child->data.visual.image_resource_uid) {
+      MCcall(obtain_element_render_command(sequence, &element_cmd));
+      element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+      element_cmd->x = child->data.visual.bounds.x;
+      element_cmd->y = child->data.visual.bounds.y;
+      element_cmd->data.textured_rect_info.width = child->data.visual.bounds.width;
+      element_cmd->data.textured_rect_info.height = child->data.visual.bounds.height;
+      element_cmd->data.textured_rect_info.texture_uid = child->data.visual.image_resource_uid;
+    }
+  }
+
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+  element_cmd->x = command_hub->interactive_console->bounds.x;
+  element_cmd->y = command_hub->interactive_console->bounds.y;
+  element_cmd->data.textured_rect_info.width = command_hub->interactive_console->bounds.width;
+  element_cmd->data.textured_rect_info.height = command_hub->interactive_console->bounds.height;
+  element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->visual.image_resource_uid;
+
+  return 0;
+}
+
+#define CODE_LINE_COUNT 16
+typedef struct code_line {
+  uint index;
+  bool requires_render_update;
+  uint image_resource_uid;
+  const char *text;
+  uint width, height;
+} code_line;
+typedef struct function_edit_info {
+  code_line lines[CODE_LINE_COUNT];
+  uint cursorCol, cursorLine;
+} function_edit_info;
+
+int render_function_editor_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+
+  frame_time *elapsed = (frame_time *)argv[0];
+  mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
+
+  printf("rfe-0\n");
+  // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
+  //        command_hub->interactive_console->visual.image_resource_uid);
+  image_render_queue *sequence;
+  element_render_command *element_cmd;
+  // Lines
+  function_edit_info *state = (function_edit_info *)visual_node->extra;
+  code_line *lines = state->lines;
+  printf("rfe-1\n");
+  for (int i = 0; i < CODE_LINE_COUNT; ++i) {
+    if (lines[i].requires_render_update) {
+      lines[i].requires_render_update = false;
+
+      printf("rfe-2\n");
+      MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+      sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+      sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+      sequence->image_width = lines[i].width;
+      sequence->image_height = lines[i].height;
+      sequence->data.target_image.image_uid = lines[i].image_resource_uid;
+
+      printf("rfe-3\n");
+      if (lines[i].text && strlen(lines[i].text)) {
+        MCcall(obtain_element_render_command(sequence, &element_cmd));
+        element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+        element_cmd->x = 4;
+        element_cmd->y = 2 + 18;
+        element_cmd->data.print_text.text = lines[i].text;
+        element_cmd->data.print_text.font_resource_uid = command_hub->interactive_console->font_resource_uid;
+        element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
+      }
+    }
+  }
+  printf("rfe-10\n");
+
+  // Render
+  // printf("OIRS: w:%u h:%u uid:%u\n", visual_node->data.visual.bounds.width, visual_node->data.visual.bounds.height,
+  //        visual_node->data.visual.image_resource_uid);
+  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+  sequence->image_width = visual_node->data.visual.bounds.width;
+  sequence->image_height = visual_node->data.visual.bounds.height;
+  sequence->clear_color = COLOR_GHOST_WHITE;
+  sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
+
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 2;
+  element_cmd->y = 2;
+  element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
+  element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
+  element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+
+  for (int i = 0; i < CODE_LINE_COUNT; ++i) {
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+    element_cmd->x = 2;
+    element_cmd->y = 8 + i * 24;
+    element_cmd->data.textured_rect_info.width = lines[i].width;
+    element_cmd->data.textured_rect_info.height = lines[i].height;
+    element_cmd->data.textured_rect_info.texture_uid = lines[i].image_resource_uid;
+  }
+
+  return 0;
+}
+
+int build_function_editor_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+  /*mcfuncreplace*/
+
+  // Build the function editor window
+  // Instantiate: node global;
+  mc_node_v1 *fedit = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
+  fedit->name = "function_editor";
+  fedit->parent = command_hub->global_node;
+  fedit->type = NODE_TYPE_VISUAL;
+
+  fedit->data.visual.bounds.x = 20;
+  fedit->data.visual.bounds.y = 120;
+  fedit->data.visual.bounds.width = 640;
+  fedit->data.visual.bounds.height = 400;
+  fedit->data.visual.image_resource_uid = 0;
+  fedit->data.visual.requires_render_update = true;
+  fedit->data.visual.render_delegate = &render_function_editor_v1;
+  fedit->data.visual.hidden = true;
+
+  MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
+                              &command_hub->global_node->child_count, fedit));
+
+  // Obtain visual resources
+  pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
+  resource_command *command;
+
+  // Code Lines
+  function_edit_info *state = (function_edit_info *)malloc(sizeof(function_edit_info));
+  code_line *code_lines = state->lines;
+  for (int i = 0; i < CODE_LINE_COUNT; ++i) {
+
+    code_lines[i].index = i;
+    code_lines[i].requires_render_update = true;
+    code_lines[i].text = "!this is twenty nine letters!"; //! this is twenty nine letters!!this is twenty nine letters!!this is
+                                                          //! twenty nine letters!";
+
+    MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+    command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+    command->p_uid = &code_lines[i].image_resource_uid;
+    command->data.create_texture.use_as_render_target = true;
+    command->data.create_texture.width = code_lines[i].width = fedit->data.visual.bounds.width - 4;
+    command->data.create_texture.height = code_lines[i].height = 28;
+  }
+  fedit->extra = state;
+
+  // Function Editor Image
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+  command->p_uid = &fedit->data.visual.image_resource_uid;
+  command->data.create_texture.use_as_render_target = true;
+  command->data.create_texture.width = fedit->data.visual.bounds.width;
+  command->data.create_texture.height = fedit->data.visual.bounds.height;
+  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
+
+  // MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+  // command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+  // command->p_uid = &console->input_line.image_resource_uid;
+  // command->data.create_texture.use_as_render_target = true;
+  // command->data.create_texture.width = console->input_line.width;
+  // command->data.create_texture.height = console->input_line.height;
+  // pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
+
+  // MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+  // command->type = RESOURCE_COMMAND_LOAD_FONT;
+  // command->p_uid = &console->font_resource_uid;
+  // command->data.font.height = 20;
+  // command->data.font.path = "res/font/DroidSansMono.ttf";
+  // pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   return 0;
 }

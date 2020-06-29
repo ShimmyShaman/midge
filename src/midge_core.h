@@ -272,16 +272,20 @@ typedef struct mc_interactive_console_v1 {
     int x, y;
     unsigned int width, height;
   } bounds;
+
   int (*logic_delegate)(int argc, void **args);
+  struct {
+    int action_count;
+  } logic;
+
   int (*handle_input_delegate)(int argc, void **args);
   struct {
     uint image_resource_uid;
     bool requires_render_update;
     int (*render_delegate)(int argc, void **args);
   } visual;
-
   uint font_resource_uid;
-  
+
   struct {
     uint image_resource_uid;
     uint width, height;
@@ -318,6 +322,19 @@ typedef enum node_type {
   NODE_TYPE_ABSTRACT,
 } node_type;
 
+typedef struct node_visual_info {
+
+  bool requires_render_update;
+  bool hidden;
+  uint image_resource_uid;
+  struct {
+    int x, y;
+    uint width, height;
+  } bounds;
+  int (*render_delegate)(int, void **);
+
+} node_visual_info;
+
 typedef struct mc_node_v1 {
   mc_struct_id_v1 *struct_id;
   const char *name;
@@ -334,18 +351,14 @@ typedef struct mc_node_v1 {
 
   node_type type;
   union {
+    node_visual_info visual;
     struct {
       uint image_resource_uid;
-      bool requires_render_update;
-      struct {
-        int x, y;
-        uint width, height;
-      } bounds;
-    } visual;
-    struct {
-      uint image_resource_uid;
+      int (*render_delegate)(int, void **);
     } global_root;
   } data;
+
+  void *extra;
 } mc_node_v1;
 
 typedef struct mc_process_action_v1 {
@@ -439,9 +452,10 @@ typedef struct mc_procedure_template_v1 {
 // } mc_process_matrix_node_v1;
 
 int (*find_function_info)(int, void **);
-int (*render_midge_background)(int, void **);
 int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
+int (*build_function_editor)(int, void **);
+int (*render_global_node)(int, void **);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \
