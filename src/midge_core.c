@@ -2488,8 +2488,16 @@ int mc_main(int argc, const char *const *argv)
 
       elapsed.frame_sec = current_frametime.tv_sec - prev_frametime.tv_sec;
       elapsed.frame_nsec = current_frametime.tv_nsec - prev_frametime.tv_nsec;
+      if (elapsed.frame_nsec < 0) {
+        --elapsed.frame_sec;
+        elapsed.frame_nsec += 1e9;
+      }
       elapsed.app_sec = current_frametime.tv_sec - mc_main_begin_time.tv_sec;
       elapsed.app_nsec = current_frametime.tv_nsec - mc_main_begin_time.tv_nsec;
+      if (elapsed.app_nsec < 0) {
+        --elapsed.app_sec;
+        elapsed.app_nsec += 1e9;
+      }
 
       // Logic Update
       const int ONE_MS_IN_NS = 1000000;
@@ -5739,7 +5747,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   char *output;
   MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
 
-  clint_process("int (*declare_function_pointer)(int, void **);");
+  // clint_process("int (*declare_function_pointer)(int, void **);");
   clint_process("int (*instantiate_function)(int, void **);");
   clint_process("int (*parse_script_to_mc)(int, void **);");
   clint_process("int (*conform_type_identity)(int, void **);");

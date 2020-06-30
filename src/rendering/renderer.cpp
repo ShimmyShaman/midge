@@ -529,7 +529,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
         // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0,
         //        q.x1, q.y0, q.y1);
-        printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
+        // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
         // Vertex Uniform Buffer Object
         vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
@@ -1373,7 +1373,7 @@ VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, c
 
   stbi_image_free(pixels);
 
-  printf("generated empty texture> width:%i height:%i channels:%i\n", width, height, texChannels);
+  // printf("generated empty texture> width:%i height:%i channels:%i\n", width, height, texChannels);
 
   return VK_SUCCESS;
 }

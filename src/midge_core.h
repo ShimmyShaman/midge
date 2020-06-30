@@ -471,6 +471,8 @@ typedef struct mc_procedure_template_v1 {
 //   };
 // } mc_process_matrix_node_v1;
 
+
+int (*declare_function_pointer)(int, void **);
 int (*find_function_info)(int, void **);
 int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
