@@ -2464,7 +2464,16 @@ int mc_main(int argc, const char *const *argv)
   printf("App took %.2f seconds to begin.\n",
          current_frametime.tv_sec - mc_main_begin_time.tv_sec + 1e-9 * (current_frametime.tv_nsec - mc_main_begin_time.tv_nsec));
 
-  special_update = NULL;
+  mc_input_event_v1 input_event;
+  input_event.type = INPUT_EVENT_NONE;
+  input_event.code = INPUT_EVENT_CODE_NONE;
+  input_event.altDown = false;
+  input_event.ctrlDown = false;
+  input_event.shiftDown = false;
+  input_event.handled = true;
+
+  int DEBUG_secs_of_last_5sec_update = 0;
+
   bool rerender_required = true;
   int ui = 0;
   while (1) {
@@ -2498,7 +2507,8 @@ int mc_main(int argc, const char *const *argv)
       }
 
       // Special update
-      if (current_frametime.tv_sec == 5) {
+      if (current_frametime.tv_sec - DEBUG_secs_of_last_5sec_update > 4) {
+        DEBUG_secs_of_last_5sec_update = current_frametime.tv_sec;
         if (special_update) {
           void *vargs[1];
           vargs[0] = &elapsed;
@@ -2511,6 +2521,9 @@ int mc_main(int argc, const char *const *argv)
     pthread_mutex_lock(&render_thread.input_buffer.mutex);
 
     if (render_thread.input_buffer.event_count > 0) {
+      // New Input Event
+      input_event.handled = false;
+
       bool exit_loop = false;
       for (int i = 0; i < render_thread.input_buffer.event_count && !exit_loop; ++i) {
         switch (render_thread.input_buffer.events[i].type) {
@@ -2520,23 +2533,35 @@ int mc_main(int argc, const char *const *argv)
           case INPUT_EVENT_CODE_ESCAPE:
             exit_loop = true;
             continue;
+          case INPUT_EVENT_CODE_LEFT_ALT:
+          case INPUT_EVENT_CODE_RIGHT_ALT:
+            input_event.altDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
+            break;
+          case INPUT_EVENT_CODE_LEFT_SHIFT:
+          case INPUT_EVENT_CODE_RIGHT_SHIFT:
+            input_event.shiftDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
+            break;
+          case INPUT_EVENT_CODE_LEFT_CTRL:
+          case INPUT_EVENT_CODE_RIGHT_CTRL:
+            input_event.ctrlDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
+            break;
 
           default: {
-            // printf("unhandled_input_event:%i\n", render_thread.input_buffer.events[i].code);
-            mc_input_event_v1 input_event;
+            printf("unhandled_input_event:%i::%i\n", render_thread.input_buffer.events[i].type,
+                   render_thread.input_buffer.events[i].code);
+
+            // Set input event for controls to handle
             input_event.type = render_thread.input_buffer.events[i].type;
             input_event.code = render_thread.input_buffer.events[i].code;
-            input_event.altDown = false;
-            input_event.ctrlDown = false;
-            input_event.shiftDown = false;
-            input_event.handled = false;
 
+            // Interactive Console
             {
               void *vargs[1];
               vargs[0] = &input_event;
               command_hub->interactive_console->handle_input_delegate(1, vargs);
             }
 
+            // Global Node Hierarchy
             for (int i = 0; !input_event.handled && i < command_hub->global_node->child_count; ++i) {
               mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
               if (child->type != NODE_TYPE_VISUAL)
@@ -5534,6 +5559,30 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_dummy_function_definition_v1->variable_parameter_begin_index = -1;
     mc_dummy_function_definition_v1->struct_usage_count = 0;
     mc_dummy_function_definition_v1->struct_usage = NULL;
+  }
+
+  mc_function_info_v1 *special_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                              &command_hub->global_node->function_count, (void *)special_update_definition_v1));
+  {
+    special_update_definition_v1->struct_id = NULL;
+    special_update_definition_v1->name = "special_update";
+    special_update_definition_v1->latest_iteration = 1U;
+    special_update_definition_v1->return_type = "void";
+    special_update_definition_v1->parameter_count = 1;
+    special_update_definition_v1->parameters =
+        (mc_parameter_info_v1 **)malloc(sizeof(void *) * special_update_definition_v1->parameter_count);
+    special_update_definition_v1->variable_parameter_begin_index = -1;
+    special_update_definition_v1->struct_usage_count = 0;
+    special_update_definition_v1->struct_usage = NULL;
+
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    special_update_definition_v1->parameters[0] = field;
+    field->type_name = "frame_time";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "frameTime";
   }
 
   mc_function_info_v1 *force_render_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));

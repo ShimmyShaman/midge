@@ -29,7 +29,7 @@ int find_function_info_v1(int argc, void **argv)
   char *function_name = *(char **)argv[2];
 
   *func_info = NULL;
-  // printf("ffi-nodespace.name:%s\n", nodespace->name);
+  printf("ffi-nodespace.name:%s\n", nodespace->name);
   for (int i = 0; i < nodespace->function_count; ++i) {
 
     // printf("ffi-3\n");
@@ -37,7 +37,7 @@ int find_function_info_v1(int argc, void **argv)
     function_info *finfo = nodespace->functions[i];
 
     // printf("ffi-4a\n");
-    // printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
+    printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
     // printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
@@ -47,7 +47,7 @@ int find_function_info_v1(int argc, void **argv)
 
     // Matches
     *func_info = finfo;
-    // printf("find_function_info:set with '%s'\n", finfo->name);
+    printf("find_function_info:set with '%s'\n", finfo->name);
     return 0;
   }
   // printf("dopu\n");
@@ -62,7 +62,7 @@ int find_function_info_v1(int argc, void **argv)
     mc_vargs[2] = argv[2];
     MCcall(find_function_info(3, mc_vargs));
   }
-  // printf("find_function_info: '%s' could not be found!\n", function_name);
+  printf("find_function_info: '%s' could not be found!\n", function_name);
   return 0;
 }
 
@@ -588,7 +588,7 @@ int instantiate_function_v1(int argc, void **argv)
   printf("~instantiate()\n");
 
   char *function_name = *(char **)argv[0];
-  char *script = *(char **)argv[1];
+  char *midge_c = *(char **)argv[1];
 
   // Find the function info
   mc_function_info_v1 *func_info = NULL;
@@ -605,14 +605,14 @@ int instantiate_function_v1(int argc, void **argv)
   // printf("@ifv-0\n");
 
   // Translate the code-block from script into workable midge-cling C
-  char *midge_c;
-  {
-    void *mc_vargs[3];
-    mc_vargs[0] = (void *)&midge_c;
-    mc_vargs[1] = (void *)&func_info;
-    mc_vargs[2] = (void *)&script;
-    MCcall(parse_script_to_mc(3, mc_vargs));
-  }
+  // char *midge_c;
+  // {
+  //   void *mc_vargs[3];
+  //   mc_vargs[0] = (void *)&midge_c;
+  //   mc_vargs[1] = (void *)&func_info;
+  //   mc_vargs[2] = (void *)&script;
+  //   MCcall(parse_script_to_mc(3, mc_vargs));
+  // }
 
   // printf("@ifv-1\n");
 
@@ -1498,6 +1498,22 @@ int parse_script_to_mc_v1(int argc, void **argv)
 //   return 0;
 // }
 
+#define CODE_LINE_COUNT 16
+#define MAX_LINE_WIDTH 120
+typedef struct code_line {
+  uint index;
+  bool requires_render_update;
+  uint image_resource_uid;
+  char text[MAX_LINE_WIDTH];
+  uint width, height;
+} code_line;
+typedef struct function_edit_info {
+  code_line lines[CODE_LINE_COUNT];
+  uint cursorCol, cursorLine;
+
+  function_info const *functionInfo;
+} function_edit_info;
+
 int update_interactive_console_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -1507,7 +1523,7 @@ int update_interactive_console_v1(int argc, void **argv)
 
   frame_time *elapsed = (frame_time *)argv[0];
   const char *commands[1] = {// Create invoke function script
-                             ".beginNewFunction"};
+                             ".rewriteFunction special_update"};
 
   if (command_hub->interactive_console->logic.action_count < 1 && elapsed->app_sec >= 4) {
     // Enter text into the textbox
@@ -1521,183 +1537,232 @@ int update_interactive_console_v1(int argc, void **argv)
     // Submit the text in the textbox
     ++command_hub->interactive_console->logic.action_count;
 
-    ((mc_node_v1 *)command_hub->global_node->children[0])->data.visual.hidden = false;
-    ((mc_node_v1 *)command_hub->global_node->children[0])->data.visual.requires_render_update = true;
+    node *function_editor = (mc_node_v1 *)command_hub->global_node->children[0];
+
+    function_edit_info *feState = (function_edit_info *)function_editor->extra;
+    {
+      void *vargs[3];
+      vargs[0] = &feState->functionInfo;
+      vargs[1] = &command_hub->global_node;
+      const char *functionName = "special_update";
+      vargs[2] = &functionName;
+      find_function_info(3, vargs);
+    }
+    if (!feState->functionInfo) {
+      printf("couldn't find function '%s' to edit!\n", "special_update");
+      return 0;
+    }
+
+    // Write the current signature in
+    strcpy(feState->lines[0].text, feState->functionInfo->return_type);
+    strcat(feState->lines[0].text, " ");
+    strcat(feState->lines[0].text, feState->functionInfo->name);
+    strcat(feState->lines[0].text, "(");
+    for (int i = 0; i < feState->functionInfo->parameter_count; ++i) {
+      if (i > 0) {
+        strcat(feState->lines[0].text, ", ");
+      }
+      strcat(feState->lines[0].text, feState->functionInfo->parameters[i]->type_name);
+      strcat(feState->lines[0].text, " ");
+      for (int j = 0; j < feState->functionInfo->parameters[i]->type_deref_count; ++j)
+        strcat(feState->lines[0].text, "*");
+      strcat(feState->lines[0].text, feState->functionInfo->parameters[i]->name);
+    }
+    strcat(feState->lines[0].text, ") {");
+    strcpy(feState->lines[1].text, "  printf(\"I got here Ma!\n\");");
+    strcpy(feState->lines[2].text, "}");
+
+    feState->lines[0].requires_render_update = true;
+    feState->lines[1].requires_render_update = true;
+    feState->lines[2].requires_render_update = true;
+    for (int i = 3; i < CODE_LINE_COUNT; ++i) {
+      feState->lines[i].requires_render_update = (feState->lines[i].text[0] != '\0');
+      feState->lines[i].text[0] = '\0';
+    }
+
+    feState->cursorLine = 1;
+    feState->cursorCol = 2;
+
+    function_editor->data.visual.hidden = false;
+    function_editor->data.visual.requires_render_update = true;
 
     command_hub->interactive_console->input_line.text = "...";
     command_hub->interactive_console->input_line.requires_render_update = true;
     command_hub->interactive_console->visual.requires_render_update = true;
+    // printf("ohfohe\n");
   }
+  {
+    // const char *commands =
+    //     // Create invoke function script
+    //     ".createScript\n"
+    //     "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
+    //     "ifs !finfo\n"
+    //     "err 2455 \"Could not find function_info for specified function\"\n"
+    //     "end\n"
+    //     ""
+    //     "dcs int rind 0\n"
+    //     "dcl 'char *' responses[32]\n"
+    //     ""
+    //     "dcs int linit finfo->parameter_count\n"
+    //     "ifs finfo->variable_parameter_begin_index >= 0\n"
+    //     "ass linit finfo->variable_parameter_begin_index\n"
+    //     "end\n"
+    //     "for i 0 linit\n"
+    //     "dcl char provocation[512]\n"
+    //     "nvk strcpy provocation finfo->parameters[i]->name\n"
+    //     "nvk strcat provocation \": \"\n"
+    //     "$pi responses[rind] provocation\n"
+    //     "ass rind + rind 1\n"
+    //     "end for\n"
+    //     // "nvk printf \"func_name:%s\\n\" finfo->name\n"
+    //     "ifs finfo->variable_parameter_begin_index >= 0\n"
+    //     "dcs int pind finfo->variable_parameter_begin_index\n"
+    //     "whl 1\n"
+    //     "dcl char provocation[512]\n"
+    //     "nvk strcpy provocation finfo->parameters[pind]->name\n"
+    //     "nvk strcat provocation \": \"\n"
+    //     "$pi responses[rind] provocation\n"
+    //     "nvi bool end_it strcmp responses[rind] \"finish\"\n"
+    //     "ifs !end_it\n"
+    //     "brk\n"
+    //     "end\n"
+    //     // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
+    //     "ass rind + rind 1\n"
+    //     "ass pind + pind 1\n"
+    //     "ass pind % pind finfo->parameter_count\n"
+    //     "ifs pind < finfo->variable_parameter_begin_index\n"
+    //     "ass pind finfo->variable_parameter_begin_index\n"
+    //     "end\n"
+    //     "end\n"
+    //     "end\n"
+    //     "$nv @function_to_invoke $ya rind responses\n"
+    //     "|"
+    //     "invoke_function_with_args_script|"
+    //     "demo|"
+    //     "invoke @function_to_invoke|"
+    //     "mc_dummy_function|"
+    //     ".runScript invoke_function_with_args_script|"
+    //     "enddemo|"
+    //     // // "demo|"
+    //     // // "call dummy thrice|"
+    //     // // "invoke mc_dummy_function|"
+    //     // // "invoke mc_dummy_function|"
+    //     // // "invoke mc_dummy_function|"
+    //     // // "enddemo|"
+    //     "demo|"
+    //     "create function @create_function_name|"
+    //     "construct_and_attach_child_node|"
+    //     "invoke declare_function_pointer|"
+    //     // ---- SCRIPT SEQUENCE ----
+    //     // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
+    //     // ---- char *parameter_name]...);
+    //     // > function_name:
+    //     "@create_function_name|"
+    //     // > return_type:
+    //     "void|"
+    //     // > parameter_type:
+    //     "const char *|"
+    //     // > parameter_name:
+    //     "node_name|"
+    //     // > Parameter 1 type:
+    //     "finish|"
+    //     // ---- END SCRIPT SEQUENCE ----
+    //     // ---- SCRIPT SEQUENCE ----
+    //     // ---- void instantiate_function(char *function_name, char *mc_script);
+    //     "invoke instantiate_function|"
+    //     "@create_function_name|"
+    //     // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
+    //     "dcd node * child\n"
+    //     "cpy char * child->name node_name\n"
+    //     "ass child->parent command_hub->nodespace\n"
+    //     "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count
+    //     "
+    //     "(void *)child\n"
+    //     "|"
+    //     "enddemo|"
+    //     // // -- END DEMO create function $create_function_name
+    //     // "invoke force_render_update|"
+    //     "invoke construct_and_attach_child_node|"
+    //     "command_interface_node|"
+    //     // "invoke set_nodespace|"
+    //     // "command_interface_node|"
 
-  // const char *commands =
-  //     // Create invoke function script
-  //     ".createScript\n"
-  //     "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
-  //     "ifs !finfo\n"
-  //     "err 2455 \"Could not find function_info for specified function\"\n"
-  //     "end\n"
-  //     ""
-  //     "dcs int rind 0\n"
-  //     "dcl 'char *' responses[32]\n"
-  //     ""
-  //     "dcs int linit finfo->parameter_count\n"
-  //     "ifs finfo->variable_parameter_begin_index >= 0\n"
-  //     "ass linit finfo->variable_parameter_begin_index\n"
-  //     "end\n"
-  //     "for i 0 linit\n"
-  //     "dcl char provocation[512]\n"
-  //     "nvk strcpy provocation finfo->parameters[i]->name\n"
-  //     "nvk strcat provocation \": \"\n"
-  //     "$pi responses[rind] provocation\n"
-  //     "ass rind + rind 1\n"
-  //     "end for\n"
-  //     // "nvk printf \"func_name:%s\\n\" finfo->name\n"
-  //     "ifs finfo->variable_parameter_begin_index >= 0\n"
-  //     "dcs int pind finfo->variable_parameter_begin_index\n"
-  //     "whl 1\n"
-  //     "dcl char provocation[512]\n"
-  //     "nvk strcpy provocation finfo->parameters[pind]->name\n"
-  //     "nvk strcat provocation \": \"\n"
-  //     "$pi responses[rind] provocation\n"
-  //     "nvi bool end_it strcmp responses[rind] \"finish\"\n"
-  //     "ifs !end_it\n"
-  //     "brk\n"
-  //     "end\n"
-  //     // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
-  //     "ass rind + rind 1\n"
-  //     "ass pind + pind 1\n"
-  //     "ass pind % pind finfo->parameter_count\n"
-  //     "ifs pind < finfo->variable_parameter_begin_index\n"
-  //     "ass pind finfo->variable_parameter_begin_index\n"
-  //     "end\n"
-  //     "end\n"
-  //     "end\n"
-  //     "$nv @function_to_invoke $ya rind responses\n"
-  //     "|"
-  //     "invoke_function_with_args_script|"
-  //     "demo|"
-  //     "invoke @function_to_invoke|"
-  //     "mc_dummy_function|"
-  //     ".runScript invoke_function_with_args_script|"
-  //     "enddemo|"
-  //     // // "demo|"
-  //     // // "call dummy thrice|"
-  //     // // "invoke mc_dummy_function|"
-  //     // // "invoke mc_dummy_function|"
-  //     // // "invoke mc_dummy_function|"
-  //     // // "enddemo|"
-  //     "demo|"
-  //     "create function @create_function_name|"
-  //     "construct_and_attach_child_node|"
-  //     "invoke declare_function_pointer|"
-  //     // ---- SCRIPT SEQUENCE ----
-  //     // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
-  //     // ---- char *parameter_name]...);
-  //     // > function_name:
-  //     "@create_function_name|"
-  //     // > return_type:
-  //     "void|"
-  //     // > parameter_type:
-  //     "const char *|"
-  //     // > parameter_name:
-  //     "node_name|"
-  //     // > Parameter 1 type:
-  //     "finish|"
-  //     // ---- END SCRIPT SEQUENCE ----
-  //     // ---- SCRIPT SEQUENCE ----
-  //     // ---- void instantiate_function(char *function_name, char *mc_script);
-  //     "invoke instantiate_function|"
-  //     "@create_function_name|"
-  //     // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
-  //     "dcd node * child\n"
-  //     "cpy char * child->name node_name\n"
-  //     "ass child->parent command_hub->nodespace\n"
-  //     "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc &child->parent->child_count "
-  //     "(void *)child\n"
-  //     "|"
-  //     "enddemo|"
-  //     // // -- END DEMO create function $create_function_name
-  //     // "invoke force_render_update|"
-  //     "invoke construct_and_attach_child_node|"
-  //     "command_interface_node|"
-  //     // "invoke set_nodespace|"
-  //     // "command_interface_node|"
+    //     // "create function print_word|"
+    //     // "@create_function_name|"
+    //     // "void|"
+    //     // "char *|"
+    //     // "word|"
+    //     // "finish|"
+    //     // "@create_function_name|"
+    //     // "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
+    //     // "|"
+    //     // "invoke print_word|"
+    //     // "===========$================$===============$============$============|"
+    //     // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
+    //     //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
 
-  //     // "create function print_word|"
-  //     // "@create_function_name|"
-  //     // "void|"
-  //     // "char *|"
-  //     // "word|"
-  //     // "finish|"
-  //     // "@create_function_name|"
-  //     // "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
-  //     // "|"
-  //     // "invoke print_word|"
-  //     // "===========$================$===============$============$============|"
-  //     // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
-  //     //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+    //     // clint->process("mthread_info *rthr;");
+    //     // // printf("process(begin)\n");
+    //     // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
+    //     // printf("process(updateUI)\n");
+    //     // clint->process("updateUI(rthr);");
+    //     // printf("process(end)\n");
+    //     // clint->process("end_mthread(rthr);");
+    //     // printf("\n! MIDGE COMPLETE !\n");
+    //     "midgequit|";
 
-  //     // clint->process("mthread_info *rthr;");
-  //     // // printf("process(begin)\n");
-  //     // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
-  //     // printf("process(updateUI)\n");
-  //     // clint->process("updateUI(rthr);");
-  //     // printf("process(end)\n");
-  //     // clint->process("end_mthread(rthr);");
-  //     // printf("\n! MIDGE COMPLETE !\n");
-  //     "midgequit|";
+    // // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
 
-  // // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
+    // // Command Loop
+    // printf("\n:> ");
+    // int n = strlen(commands);
+    // int s = 0;
+    // char cstr[2048];
+    // mc_process_action_v1 *suggestion = NULL;
+    // void *vargs[12]; // TODO -- count
+    // for (int i = 0; i < n; ++i) {
+    //   if (commands[i] != '|')
+    //     continue;
+    //   strncpy(cstr, commands + s, i - s);
+    //   cstr[i - s] = '\0';
+    //   s = i + 1;
 
-  // // Command Loop
-  // printf("\n:> ");
-  // int n = strlen(commands);
-  // int s = 0;
-  // char cstr[2048];
-  // mc_process_action_v1 *suggestion = NULL;
-  // void *vargs[12]; // TODO -- count
-  // for (int i = 0; i < n; ++i) {
-  //   if (commands[i] != '|')
-  //     continue;
-  //   strncpy(cstr, commands + s, i - s);
-  //   cstr[i - s] = '\0';
-  //   s = i + 1;
+    //   vargs[0] = (void *)command_hub;
+    //   vargs[4] = (void *)cstr;
+    //   vargs[6] = (void *)&suggestion;
 
-  //   vargs[0] = (void *)command_hub;
-  //   vargs[4] = (void *)cstr;
-  //   vargs[6] = (void *)&suggestion;
+    //   if (!strcmp(cstr, "midgequit")) {
+    //     printf("midgequit\n");
+    //     break;
+    //   }
 
-  //   if (!strcmp(cstr, "midgequit")) {
-  //     printf("midgequit\n");
-  //     break;
-  //   }
+    //   // printf("========================================\n");
+    //   if (suggestion) {
+    //     printf("%s]%s\n>: ", get_action_type_string(suggestion->type), suggestion->dialogue);
+    //     release_process_action(suggestion);
+    //     suggestion = NULL;
+    //   }
+    //   MCcall(submit_user_command(12, vargs));
 
-  //   // printf("========================================\n");
-  //   if (suggestion) {
-  //     printf("%s]%s\n>: ", get_action_type_string(suggestion->type), suggestion->dialogue);
-  //     release_process_action(suggestion);
-  //     suggestion = NULL;
-  //   }
-  //   MCcall(submit_user_command(12, vargs));
+    //   // if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+    //   // {
+    //   //   printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
+    //   //   break;
+    //   // }
+    //   // if (reply != NULL)
+    //   // {
+    //   //   printf("%s", reply);
+    //   // }
+    // }
 
-  //   // if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
-  //   // {
-  //   //   printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
-  //   //   break;
-  //   // }
-  //   // if (reply != NULL)
-  //   // {
-  //   //   printf("%s", reply);
-  //   // }
-  // }
-
-  // if (global->child_count > 0) {
-  //   mc_node_v1 *child = (mc_node_v1 *)global->children[0];
-  //   printf("\n>> global has a child named %s!\n", child->name);
-  // }
-  // else {
-  //   printf("\n>> global has no children\n");
-  // }
+    // if (global->child_count > 0) {
+    //   mc_node_v1 *child = (mc_node_v1 *)global->children[0];
+    //   printf("\n>> global has a child named %s!\n", child->name);
+    // }
+    // else {
+    //   printf("\n>> global has no children\n");
+    // }
+  }
   return 0;
 }
 
@@ -1913,20 +1978,6 @@ int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs
   return 0;
 }
 
-#define CODE_LINE_COUNT 16
-#define MAX_LINE_WIDTH 120
-typedef struct code_line {
-  uint index;
-  bool requires_render_update;
-  uint image_resource_uid;
-  char text[MAX_LINE_WIDTH];
-  uint width, height;
-} code_line;
-typedef struct function_edit_info {
-  code_line lines[CODE_LINE_COUNT];
-  uint cursorCol, cursorLine;
-} function_edit_info;
-
 int function_editor_render_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -2048,6 +2099,83 @@ int function_editor_handle_input_v1(int argc, void **argv)
     return 0;
 
   function_edit_info *state = (function_edit_info *)fedit->extra;
+
+  if (event->code == INPUT_EVENT_CODE_ENTER || event->code == INPUT_EVENT_CODE_RETURN) {
+    if (event->ctrlDown) {
+      // Submit the result
+      uint code_allocation = 256;
+      char *code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
+      code_from_function_editor[0] = '\0';
+      uint bracket_count = 0;
+      for (int i = 0; i < CODE_LINE_COUNT; ++i) {
+        int line_start_index = 0;
+        for (int j = 0; j < MAX_LINE_WIDTH; ++j) {
+          if (state->lines[i].text[j] == '\0') {
+            if (bracket_count && j - line_start_index > 0) {
+              append_to_cstr(&code_allocation, &code_from_function_editor, state->lines[i].text + line_start_index);
+            }
+            break;
+          }
+          if (!bracket_count) {
+            if (state->lines[i].text[j] == '{') {
+              // begin code tracking
+              ++bracket_count;
+              line_start_index = j + 1;
+            }
+          }
+          else {
+            if (state->lines[i].text[j] == '{')
+              ++bracket_count;
+            else if (state->lines[i].text[j] == '}') {
+              --bracket_count;
+              if (!bracket_count) {
+                // End
+                // -- Copy up to now
+                if (j - line_start_index > 0) {
+                  char line_to_now[MAX_LINE_WIDTH];
+                  strncpy(line_to_now, state->lines[i].text + line_start_index, j - line_start_index);
+                  line_to_now[j] = '\0';
+                  append_to_cstr(&code_allocation, &code_from_function_editor, line_to_now);
+                }
+
+                // -- Break from upper loop
+                i = CODE_LINE_COUNT;
+                break;
+              }
+            }
+            else if (state->lines[i].text[j] == '\n') {
+              // -- Copy up to now
+              if (j - line_start_index > 0) {
+                char line_to_now[MAX_LINE_WIDTH];
+                strncpy(line_to_now, state->lines[i].text, j - line_start_index);
+                line_to_now[j] = '\0';
+
+                printf("here-'%s'\n", line_to_now);
+
+                append_to_cstr(&code_allocation, &code_from_function_editor, line_to_now);
+              }
+              append_to_cstr(&code_allocation, &code_from_function_editor, "\\n");
+              line_start_index = j + 1;
+            }
+          }
+        }
+      }
+
+      printf("\ncode_from_function_editor:%s\n\n", code_from_function_editor);
+      // Declare the new function
+      {
+        void *mc_vargs[3];
+        mc_vargs[0] = (void *)&state->functionInfo->name;
+        mc_vargs[1] = (void *)&code_from_function_editor;
+        MCcall(instantiate_function(2, mc_vargs));
+      }
+
+      return 0;
+    }
+    else {
+      // TODO
+    }
+  }
 
   char c = '\0';
   int res = get_key_input_code_char(event->shiftDown, event->code, &c);

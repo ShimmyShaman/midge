@@ -28,6 +28,14 @@ typedef enum {
   // From XCB codes I THINK... Poor way of doing it
   INPUT_EVENT_CODE_ESCAPE = 9,
   INPUT_EVENT_CODE_Q = 24,
+  INPUT_EVENT_CODE_LEFT_ALT = 64,
+  INPUT_EVENT_CODE_RIGHT_ALT = 108,
+  INPUT_EVENT_CODE_LEFT_SHIFT = 50,
+  INPUT_EVENT_CODE_RIGHT_SHIFT = 62,
+  INPUT_EVENT_CODE_LEFT_CTRL = 37,
+  INPUT_EVENT_CODE_RIGHT_CTRL = 105,
+  INPUT_EVENT_CODE_ENTER = 36,
+  INPUT_EVENT_CODE_RETURN = 104,
 } window_input_event_code;
 
 int get_key_input_code_char(bool shift, window_input_event_code code, char *c)
