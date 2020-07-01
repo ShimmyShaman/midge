@@ -491,6 +491,30 @@ int release_process_action(mc_process_action_v1 *process_action)
 //   }
 // }
 
+int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra)
+{
+  if (strlen(*cstr) + chars_of_extra + 1 >= *allocated_size) {
+    unsigned int new_allocated_size = chars_of_extra + *allocated_size + 16 + (chars_of_extra + *allocated_size) / 10;
+    // printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    // printf("atc-4\n");
+    memcpy(newptr, *cstr, sizeof(char) * *allocated_size);
+    // printf("atc-5\n");
+    free(*cstr);
+    // printf("atc-6\n");
+    *cstr = newptr;
+    // printf("atc-7\n");
+    *allocated_size = new_allocated_size;
+    // printf("atc-8\n");
+  }
+
+  // printf("atc-9\n");
+  strcat(*cstr, extra);
+  // printf("atc-10\n");
+
+  return 0;
+}
+
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
 {
   int n = strlen(extra);

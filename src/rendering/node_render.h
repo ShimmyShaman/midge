@@ -73,7 +73,7 @@ typedef struct element_render_command {
       render_color color;
     } colored_rect_info;
     struct {
-      const char *text;
+      const char **text;
       uint font_resource_uid;
       render_color color;
     } print_text;

@@ -501,10 +501,15 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       float align_x = cmd->x;
       float align_y = cmd->y;
 
-      int text_length = strlen(cmd->data.print_text.text);
+      int text_length =
+          *cmd->data.print_text.text ? strlen(*cmd->data.print_text.text) : 0; // TODO using this field is not thread -safe
       for (int c = 0; c < text_length; ++c) {
 
-        char letter = cmd->data.print_text.text[c];
+        if (align_x > font_image->width) {
+          break;
+        }
+
+        char letter = (*cmd->data.print_text.text)[c];
         if (letter < 32 || letter > 127) {
           printf("TODO character not supported.\n");
           continue;
@@ -1383,7 +1388,6 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float fo
   // Font is a common resource -- check font cache for existing
   char *font_name;
   {
-
     int index_of_last_slash = -1;
     for (int i = 0;; i++) {
       if (filepath[i] == '\0') {

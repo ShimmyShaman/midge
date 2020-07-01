@@ -12,7 +12,7 @@ typedef struct node {
 } node;
 /* End-Dependencies */
 
-function_info *find_function_info(node *nodespace, char const *const function_name)
+function_info *find_function_info(node *nodespace, char *function_name)
 {
   printf("ffi-nodespace.name:%s\n", nodespace->name);
   for (int i = 0; i < nodespace->function_count; ++i) {
