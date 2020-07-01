@@ -1527,6 +1527,138 @@ int parse_past_empty_text(char const *const code, int *i)
   return 0;
 }
 
+int transcribe_for_statement(char const *const code, int *i, uint *transcription_alloc, char **transcription)
+{
+  MCerror(1532, "TODO");
+
+  return 0;
+}
+
+int transcribe_if_statement(char const *const code, int *i, uint *transcription_alloc, char **transcription)
+{
+  MCerror(1539, "TODO");
+
+  return 0;
+}
+
+int transcribe_while_statement(char const *const code, int *i, uint *transcription_alloc, char **transcription)
+{
+  MCerror(1546, "TODO");
+
+  return 0;
+}
+
+int transcribe_return_statement(char const *const code, int *i, uint *transcription_alloc, char **transcription)
+{
+  MCerror(1553, "TODO");
+
+  return 0;
+}
+
+int transcribe_function(char const *const code, int *i, uint *transcription_alloc, char **transcription)
+{
+  char *identifier;
+  MCcall(parse_past_identifier(code, i, &identifier, true, false));
+  MCcall(parse_past_empty_text(code, i));
+  MCcall(parse_past(code, i, "("));
+  MCcall(parse_past_empty_text(code, i));
+
+  struct {
+    char *type_name;
+    int deref_count;
+    char *identity;
+  } parameters[16];
+  uint parameter_count;
+
+  MCerror(1573, "TODO");
+
+  // while (code[*i] != ')') {
+  //   MCcall(parse_past_conformed_type_identifier);
+  //   }
+
+  return 0;
+}
+
+int transcribe_declaration(char const *const code, int *i, uint *transcription_alloc, char **transcription)
+{
+  MCerror(1567, "TODO");
+
+  return 0;
+}
+
+int transcribe_c_block_to_mc(char const *const code, char **ptr_transcription)
+{
+  uint transcription_alloc = 4;
+  char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
+  transcription[0] = '\0';
+
+  int i = 0;
+  while (1) {
+    parse_past_empty_text(code, &i);
+
+    switch (code[i]) {
+    case '{': {
+      MCcall(append_to_cstr(&transcription_alloc, &transcription, "{\n"));
+      char *block;
+      MCcall(transcribe_c_block_to_mc(code, &block));
+      MCcall(append_to_cstr(&transcription_alloc, &transcription, block));
+
+      MCcall(parse_past(code, &i, "}"));
+      MCcall(append_to_cstr(&transcription_alloc, &transcription, "}\n"));
+    } break;
+    case '}':
+    case '\0': {
+      *ptr_transcription = transcription;
+      return 0;
+    } break;
+    default:
+      if (isalpha(code[i])) {
+        if (!strncmp(code + i, "for", 3)) {
+          MCcall(transcribe_for_statement(code, &i, &transcription_alloc, &transcription));
+          break;
+        }
+        if (!strncmp(code + i, "if", 2)) {
+          MCcall(transcribe_if_statement(code, &i, &transcription_alloc, &transcription));
+          break;
+        }
+        if (!strncmp(code + i, "while", 5)) {
+          MCcall(transcribe_while_statement(code, &i, &transcription_alloc, &transcription));
+          break;
+        }
+        if (!strncmp(code + i, "return", 6)) {
+          MCcall(transcribe_return_statement(code, &i, &transcription_alloc, &transcription));
+          break;
+        }
+        if (!strncmp(code + i, "continue", 8)) {
+          MCcall(parse_past(code, &i, "continue"));
+          MCcall(parse_past_empty_text(code, &i));
+          MCcall(parse_past(code, &i, ";"));
+          MCcall(append_to_cstr(&transcription_alloc, &transcription, "continue;\n"));
+          break;
+        }
+
+        // Code
+        int p = i;
+        char *t;
+        MCcall(parse_past_identifier(code, &p, &t, false, false));
+        free(t);
+        MCcall(parse_past_empty_text(code, &p));
+        if (code[p] == '(') {
+          MCcall(transcribe_function(code, &i, &transcription_alloc, &transcription));
+          break;
+        }
+
+        // Decl (/Assignment)
+        MCcall(transcribe_declaration(code, &i, &transcription_alloc, &transcription));
+        break;
+      }
+      else {
+        MCerror(1540, "Unhandled char:'%c'", code[i]);
+      }
+    }
+  }
+}
+
 int load_into_function_editor(char const *const core_function_name)
 {
   /*mcfuncreplace*/
@@ -1692,14 +1824,12 @@ int load_into_function_editor(char const *const core_function_name)
           append_to_cstrn(&line_alloc, &line, function_definition_text + s, i - s);
         }
 
-        printf("Line:'%s'\n", line);
-
         // Add to the collection
         if (feState->text.lines_count + 1 >= feState->text.lines_allocated) {
           uint new_alloc = feState->text.lines_allocated + 4 + feState->text.lines_allocated / 4;
           char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
           if (feState->text.lines_allocated) {
-            memcpy(new_ary, feState->text.lines, feState->text.lines_allocated);
+            memcpy(new_ary, feState->text.lines, feState->text.lines_allocated * sizeof(char *));
             free(feState->text.lines);
           }
 
@@ -1708,6 +1838,10 @@ int load_into_function_editor(char const *const core_function_name)
         }
 
         feState->text.lines[feState->text.lines_count++] = line;
+        printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s, feState->text.lines[feState->text.lines_count - 1]);
+        printf("strlen:%zu\n", strlen(feState->text.lines[feState->text.lines_count - 1]));
+        if (feState->text.lines_count > 1)
+          printf("dawn:%c\n", feState->text.lines[1][4]);
 
         // Reset
         s = i + 1;
@@ -1717,30 +1851,48 @@ int load_into_function_editor(char const *const core_function_name)
       }
     }
   }
+  printf("dawn:%c\n", feState->text.lines[1][4]);
+  printf("life-6\n");
 
   // Set for render update
   feState->line_display_offset = 0;
   for (i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
     if (feState->line_display_offset + i < feState->text.lines_count) {
+      printf("life-6a\n");
       if (feState->render_lines[i].text) {
+        printf("life-6b\n");
         feState->render_lines[i].requires_render_update =
             strcmp(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
+        printf("life-6c\n");
         free(feState->render_lines[i].text);
+        printf("life-6d\n");
       }
       else {
-        feState->render_lines[i].requires_render_update = strlen(feState->text.lines[feState->line_display_offset + i]);
+        printf("life-6e\n");
+        printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text.lines_count);
+        printf("dawn:%i\n", feState->text.lines_allocated);
+        printf("dawn:%c\n", feState->text.lines[1][4]);
+        printf("dawn:%zu\n", strlen(feState->text.lines[feState->line_display_offset + i]));
+        feState->render_lines[i].requires_render_update = !feState->text.lines[feState->line_display_offset + i] ||
+                                                          strlen(feState->text.lines[feState->line_display_offset + i]);
       }
 
+      printf("life-6f\n");
       // Assign
       allocate_and_copy_cstr(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
+      printf("life-6g\n");
     }
     else {
+      printf("life-6h\n");
       if (feState->render_lines[i].text) {
+        printf("life-6i\n");
         feState->render_lines[i].requires_render_update = true;
         free(feState->render_lines[i].text);
+        printf("life-6j\n");
         feState->render_lines[i].text = NULL;
       }
     }
+    printf("life-6k\n");
   }
 
   printf("life-7\n");
@@ -1999,7 +2151,7 @@ int render_interactive_console_v1(int argc, void **argv)
   element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
   element_cmd->x = 2;
   element_cmd->y = 2 + 18;
-  element_cmd->data.print_text.text = command_hub->interactive_console->input_line.text;
+  element_cmd->data.print_text.text = &command_hub->interactive_console->input_line.text;
   element_cmd->data.print_text.font_resource_uid = command_hub->interactive_console->font_resource_uid;
   element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
 
@@ -2191,6 +2343,7 @@ int function_editor_render_v1(int argc, void **argv)
   // Lines
   function_edit_info *state = (function_edit_info *)visual_node->extra;
   code_line *lines = state->render_lines;
+
   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
     if (lines[i].requires_render_update) {
       lines[i].requires_render_update = false;
@@ -2202,19 +2355,17 @@ int function_editor_render_v1(int argc, void **argv)
       sequence->image_height = lines[i].height;
       sequence->data.target_image.image_uid = lines[i].image_resource_uid;
 
-      if (strlen(lines[i].text)) {
+      if (lines[i].text && strlen(lines[i].text)) {
         MCcall(obtain_element_render_command(sequence, &element_cmd));
         element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
         element_cmd->x = 4;
         element_cmd->y = 2 + 18;
-        element_cmd->data.print_text.text = &lines[i].text;
+        element_cmd->data.print_text.text = (const char **)&lines[i].text;
         element_cmd->data.print_text.font_resource_uid = command_hub->interactive_console->font_resource_uid;
         element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
       }
     }
   }
-
-  printf("fer-0\n");
 
   // Render
   // printf("OIRS: w:%u h:%u uid:%u\n", visual_node->data.visual.bounds.width, visual_node->data.visual.bounds.height,
@@ -2332,6 +2483,7 @@ int function_editor_handle_input_v1(int argc, void **argv)
             if (bracket_count && j - line_start_index > 0) {
               append_to_cstr(&code_allocation, &code_from_function_editor, state->text.lines[i] + line_start_index);
             }
+            append_to_cstr(&code_allocation, &code_from_function_editor, "\n");
             break;
           }
           if (!bracket_count) {
@@ -2361,30 +2513,20 @@ int function_editor_handle_input_v1(int argc, void **argv)
                 break;
               }
             }
-            else if (state->text.lines[i][j] == '\n') {
-              // -- Copy up to now
-              if (j - line_start_index > 0) {
-                char line_to_now[j - line_start_index + 1];
-                strncpy(line_to_now, state->text.lines[i], j - line_start_index);
-                line_to_now[j] = '\0';
-
-                printf("here-'%s'\n", line_to_now);
-
-                append_to_cstr(&code_allocation, &code_from_function_editor, line_to_now);
-              }
-              append_to_cstr(&code_allocation, &code_from_function_editor, "\\n");
-              line_start_index = j + 1;
-            }
           }
         }
       }
 
       printf("\ncode_from_function_editor:%s\n\n", code_from_function_editor);
+      char *transcription;
+      MCcall(transcribe_c_block_to_mc(code_from_function_editor, &transcription));
+      free(code_from_function_editor);
+
       // Declare the new function
       {
         void *mc_vargs[3];
         mc_vargs[0] = (void *)&state->functionInfo->name;
-        mc_vargs[1] = (void *)&code_from_function_editor;
+        mc_vargs[1] = (void *)&transcription;
         MCcall(instantiate_function(2, mc_vargs));
       }
 

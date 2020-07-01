@@ -505,9 +505,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
           *cmd->data.print_text.text ? strlen(*cmd->data.print_text.text) : 0; // TODO using this field is not thread -safe
       for (int c = 0; c < text_length; ++c) {
 
-        if (align_x > font_image->width) {
-          break;
-        }
+        // if (align_x > font_image->width) {
+        //   break;
+        // }
 
         char letter = (*cmd->data.print_text.text)[c];
         if (letter < 32 || letter > 127) {

@@ -471,7 +471,6 @@ typedef struct mc_procedure_template_v1 {
 //   };
 // } mc_process_matrix_node_v1;
 
-
 int (*declare_function_pointer)(int, void **);
 int (*find_function_info)(int, void **);
 int (*build_initial_workspace)(int, void **);
@@ -482,6 +481,13 @@ int (*function_editor_handle_input)(int, void **);
 int (*function_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
 int (*special_update)(int, void **);
+
+int parse_past(const char *text, int *index, const char *sequence);
+int parse_past_number(const char *text, int *index, char **output);
+int parse_past_character_literal(const char *text, int *index, char **output);
+int mc_parse_past_literal_string(const char *text, int *index, char **output);
+int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing);
+int parse_past_type_identifier(const char *text, int *index, char **identifier);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \

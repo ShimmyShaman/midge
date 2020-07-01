@@ -509,7 +509,7 @@ int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra
   }
 
   // printf("atc-9\n");
-  strcat(*cstr, extra);
+  strncat(*cstr, extra, chars_of_extra);
   // printf("atc-10\n");
 
   return 0;

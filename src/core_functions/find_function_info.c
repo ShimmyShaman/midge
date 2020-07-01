@@ -17,26 +17,16 @@ function_info *find_function_info(node *nodespace, char *function_name)
   printf("ffi-nodespace.name:%s\n", nodespace->name);
   for (int i = 0; i < nodespace->function_count; ++i) {
 
-    // printf("ffi-3\n");
-    // printf("dope\n");
     function_info *finfo = nodespace->functions[i];
 
-    // printf("ffi-4a\n");
     printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
-    // printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
-    // printf("dwde\n");
-
-    // printf("ffi-5\n");
 
     // Matches
     printf("find_function_info:set with '%s'\n", finfo->name);
     return finfo;
   }
-  // printf("dopu\n");
-
-  // printf("ffi-2\n");
 
   if (nodespace->parent) {
     // Search in the parent nodespace
