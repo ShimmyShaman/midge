@@ -1778,7 +1778,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         }
         // printf("dopey\n");
         if (func_info) {
-          if (!strcmp(func_info->return_type, "void")) {
+          if (!func_info->return_type.deref_count && !strcmp(func_info->return_type.name, "void")) {
             MCerror(-1002, "compile error: cannot assign from a void function!");
           }
           else {
@@ -2447,6 +2447,7 @@ int mc_main(int argc, const char *const *argv)
   command_hub->scripts = (void **)malloc(sizeof(void *) * command_hub->scripts_alloc);
   command_hub->scripts_count = 0;
   command_hub->update_timers.count = command_hub->update_timers.allocated = 0;
+  command_hub->error_definition_index = 100;
 
   // declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
   // template_collection->templates_alloc = 400;
@@ -5585,7 +5586,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_dummy_function_definition_v1->struct_id = NULL;
     mc_dummy_function_definition_v1->name = "mc_dummy_function";
     mc_dummy_function_definition_v1->latest_iteration = 1U;
-    mc_dummy_function_definition_v1->return_type = "void";
+    allocate_and_copy_cstr(mc_dummy_function_definition_v1->return_type.name, "void");
+    mc_dummy_function_definition_v1->return_type.deref_count = 0;
     mc_dummy_function_definition_v1->parameter_count = 0;
     mc_dummy_function_definition_v1->parameters = NULL;
     mc_dummy_function_definition_v1->variable_parameter_begin_index = -1;
@@ -5600,7 +5602,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     special_update_definition_v1->struct_id = NULL;
     special_update_definition_v1->name = "special_update";
     special_update_definition_v1->latest_iteration = 1U;
-    special_update_definition_v1->return_type = "void";
+    allocate_and_copy_cstr(special_update_definition_v1->return_type.name, "void");
+    special_update_definition_v1->return_type.deref_count = 0;
     special_update_definition_v1->parameter_count = 1;
     special_update_definition_v1->parameters =
         (mc_parameter_info_v1 **)malloc(sizeof(void *) * special_update_definition_v1->parameter_count);
@@ -5624,7 +5627,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     force_render_update_definition_v1->struct_id = NULL;
     force_render_update_definition_v1->name = "force_render_update";
     force_render_update_definition_v1->latest_iteration = 1U;
-    force_render_update_definition_v1->return_type = "void";
+    allocate_and_copy_cstr(force_render_update_definition_v1->return_type.name, "void");
+    force_render_update_definition_v1->return_type.deref_count = 0;
     force_render_update_definition_v1->parameter_count = 0;
     force_render_update_definition_v1->parameters = NULL;
     force_render_update_definition_v1->variable_parameter_begin_index = -1;
@@ -5639,7 +5643,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     cling_process_definition_v1->struct_id = NULL;
     cling_process_definition_v1->name = "cling_process";
     cling_process_definition_v1->latest_iteration = 1U;
-    cling_process_definition_v1->return_type = "void";
+    allocate_and_copy_cstr(cling_process_definition_v1->return_type.name, "void");
+    cling_process_definition_v1->return_type.deref_count = 0;
     cling_process_definition_v1->parameter_count = 1;
     cling_process_definition_v1->parameters =
         (mc_parameter_info_v1 **)malloc(sizeof(void *) * cling_process_definition_v1->parameter_count);
@@ -5663,7 +5668,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     find_function_info_definition_v1->struct_id = NULL;
     find_function_info_definition_v1->name = "find_function_info";
     find_function_info_definition_v1->latest_iteration = 1U;
-    find_function_info_definition_v1->return_type = "function_info *";
+    allocate_and_copy_cstr(find_function_info_definition_v1->return_type.name, "function_info");
+    find_function_info_definition_v1->return_type.deref_count = 1;
     find_function_info_definition_v1->parameter_count = 2;
     find_function_info_definition_v1->parameters =
         (mc_parameter_info_v1 **)malloc(sizeof(void *) * find_function_info_definition_v1->parameter_count);
@@ -5693,7 +5699,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     declare_function_pointer_definition_v1->struct_id = NULL;
     declare_function_pointer_definition_v1->name = "declare_function_pointer";
     declare_function_pointer_definition_v1->latest_iteration = 1U;
-    declare_function_pointer_definition_v1->return_type = "void";
+    allocate_and_copy_cstr(declare_function_pointer_definition_v1->return_type.name, "void");
+    declare_function_pointer_definition_v1->return_type.deref_count = 0;
     declare_function_pointer_definition_v1->parameter_count = 4;
     declare_function_pointer_definition_v1->parameters =
         (mc_parameter_info_v1 **)malloc(sizeof(void *) * declare_function_pointer_definition_v1->parameter_count);
@@ -5735,7 +5742,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     instantiate_function_definition_v1->struct_id = NULL;
     instantiate_function_definition_v1->name = "instantiate_function";
     instantiate_function_definition_v1->latest_iteration = 1U;
-    instantiate_function_definition_v1->return_type = "void";
+    allocate_and_copy_cstr(instantiate_function_definition_v1->return_type.name, "void");
+    instantiate_function_definition_v1->return_type.deref_count = 0;
     instantiate_function_definition_v1->parameter_count = 2;
     instantiate_function_definition_v1->parameters =
         (mc_parameter_info_v1 **)malloc(sizeof(void *) * instantiate_function_definition_v1->parameter_count);

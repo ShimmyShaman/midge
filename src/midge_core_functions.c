@@ -66,6 +66,24 @@ int find_function_info_v1(int argc, void **argv)
   return 0;
 }
 
+int convert_return_type_string(char *return_type, char **return_type_name, unsigned int *return_type_deref_count)
+{
+  int n = strlen(return_type);
+  *return_type_deref_count = 0;
+  int i;
+  for (i = n - 1; i > 0; --i) {
+    if (return_type[i] == '*')
+      ++*return_type_deref_count;
+    else if (return_type[i] == ' ')
+      continue;
+    else
+      break;
+  }
+  allocate_and_copy_cstrn(*return_type_name, return_type, i + 1);
+
+  return 0;
+}
+
 int declare_function_pointer_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -78,8 +96,9 @@ int declare_function_pointer_v1(int argc, void **argv)
   char *name = *(char **)argv[0];
   char *return_type = *(char **)argv[1];
 
-  // printf("dfp-name:%s\n", name);
-  // printf("dfp-rett:%s\n", return_type);
+  char *return_type_name;
+  unsigned int return_type_deref_count;
+  MCcall(convert_return_type_string(return_type, &return_type_name, &return_type_deref_count));
 
   // TODO -- check
   // printf("dfp-0\n");
@@ -89,7 +108,8 @@ int declare_function_pointer_v1(int argc, void **argv)
   function_info *func_info = (function_info *)malloc(sizeof(function_info));
   func_info->name = name;
   func_info->latest_iteration = 0U;
-  func_info->return_type = return_type;
+  func_info->return_type.name = return_type_name;
+  func_info->return_type.deref_count = return_type_deref_count;
   func_info->parameter_count = (argc - 2) / 2;
   func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * func_info->parameter_count);
   func_info->variable_parameter_begin_index = -1;
@@ -194,7 +214,8 @@ int declare_function_pointer_v1(int argc, void **argv)
   strcpy(buf, "int (*");
   strcat(buf, name);
   strcat(buf, ")(int,void**);");
-  printf("dfp>cling_declare:%s\n -- with %i parameters returning %s\n", buf, func_info->parameter_count, func_info->return_type);
+  printf("dfp>cling_declare:%s\n -- with %i parameters returning %s\n", buf, func_info->parameter_count,
+         func_info->return_type.name);
   clint_declare(buf);
   // printf("dfp-concludes\n");
   return 0;
@@ -579,6 +600,8 @@ int conform_type_identity_v1(int argc, void **argv)
   return 0;
 }
 
+#define RETURN_VALUE_IDENTIFIER "mc_return_value"
+
 int instantiate_function_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -678,12 +701,46 @@ int instantiate_function_v1(int argc, void **argv)
     free(conformed_type_name);
   }
 
+  // Append return-value
+  if (!func_info->return_type.deref_count || !strcmp(func_info->return_type.name, "void")) {
+    // MC conformed type name
+    char *conformed_type_name;
+    {
+      void *mc_vargs[3];
+      mc_vargs[0] = (void *)&conformed_type_name;
+      mc_vargs[1] = (void *)&func_info;
+      mc_vargs[2] = (void *)&func_info->return_type.name;
+      // printf("@ifv-4\n");
+      MCcall(conform_type_identity(3, mc_vargs));
+      // printf("@ifv-5\n");
+      //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name, conformed_type_name);
+    }
+
+    // Deref
+    char derefbuf[24];
+    for (int j = 0; j < func_info->return_type.deref_count; ++j)
+      derefbuf[j] = '*';
+    derefbuf[func_info->return_type.deref_count] = '\0';
+
+    // Decl
+    sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", conformed_type_name, derefbuf, RETURN_VALUE_IDENTIFIER);
+
+    // Deref + 1 (unless its the return value)
+    derefbuf[0] = ' ';
+    for (int j = 0; j < func_info->return_type.deref_count; ++j)
+      derefbuf[1 + j] = '*';
+    derefbuf[1 + func_info->return_type.deref_count] = '*';
+    derefbuf[1 + func_info->return_type.deref_count + 1] = '\0';
+
+    // Assignment
+    sprintf(param_buf + strlen(param_buf), "*(%s%s)argv[%i];\n", conformed_type_name, derefbuf, func_info->parameter_count);
+
+    free(conformed_type_name);
+  }
+
   // printf("@ifv-3\n");
   // Declare the function
   const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
-                                            "  // MidgeC Function Locals\n"
-                                            "  void *mc_vargs[128];\n"
-                                            "\n"
                                             "  // Function Parameters\n"
                                             "%s"
                                             "\n"
@@ -1635,6 +1692,71 @@ int transcribe_expression(function_info *owner, char *code, int *i, uint *transc
   return 0;
 }
 
+int transcribe_error_statement(char *code, int *i, uint *transcription_alloc, char **transcription)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+/*mcfuncreplace*/
+#end
+
+  MCcall(parse_past(code, i, "ERR("));
+
+  // Obtain the error code
+  int s = *i;
+  for (;; ++*i) {
+    if (!isalnum(code[*i]) && code[*i] != '_') {
+      break;
+    }
+  }
+
+  const char *MC_ERROR_PREPEND = "MCERROR_";
+  int error_def_len = strlen(MC_ERROR_PREPEND) + *i - s;
+  char *error_def = (char *)malloc(sizeof(char) * (error_def_len + 1));
+  strcpy(error_def, MC_ERROR_PREPEND);
+  strncat(error_def, code + s, *i - s);
+  error_def[error_def_len] = '\0';
+
+  {
+    bool defined;
+    char buf[1024];
+    sprintf(buf,
+            "{\n"
+            "  #ifdef %s\n"
+            "    *((bool *)%p) = true;\n"
+            "  #else\n"
+            "    *((bool *)%p) = false;\n"
+            "  #endif\n"
+            "}",
+            error_def, &defined, &defined);
+    clint_process(buf);
+
+    if (!defined) {
+      sprintf(buf, "#define %s %u", error_def, command_hub->error_definition_index++);
+      clint_process(buf);
+    }
+  }
+
+  // Determine if error has already been defined
+
+  // allocate_and_copy_cstrn(error_code, code + s, *i - s);
+
+  // MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
+  // MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+
+  // MCcall(transcribe_c_block_to_mc(NULL, code, i, transcription_alloc, transcription));
+  // printf("returned from cblock: tforstatement\n");
+  // MCcall(parse_past(code, i, "}"));
+
+  // MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
+
+  // printf("\n----------------\nERROR-:%s\n", "PARSE_PAST_SEQUENCE_NOT_FOUND");
+  // dprintf(format, ) printf("> %s", "text ends before sequence completion.");
+  // // TODO -- call stack
+  // return MCERROR_PARSE_PAST_SEQUENCE_NOT_FOUND;
+
+  return 0;
+}
+
 int transcribe_for_statement(char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   int s = *i;
@@ -1759,8 +1881,7 @@ int transcribe_return_statement(char *code, int *i, uint *transcription_alloc, c
 int transcribe_function_call(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
+  mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
   // Read code
@@ -1886,6 +2007,10 @@ int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *tra
     } break;
     default:
       if (isalpha(code[*i])) {
+        if (!strncmp(code + *i, "ERR", 3)) {
+          MCcall(transcribe_error_statement(code, i, transcription_alloc, transcription));
+          break;
+        }
         if (!strncmp(code + *i, "for", 3)) {
           MCcall(transcribe_for_statement(code, i, transcription_alloc, transcription));
           break;
@@ -2724,8 +2849,12 @@ int function_editor_update_v1(int argc, void **argv)
   return 0;
 }
 
-int read_function_definition_from_editor(function_edit_info *state, function_info **defined_function_info)
+int read_and_declare_function_from_editor(function_edit_info *state, function_info **defined_function_info)
 {
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
   uint code_allocation = 64;
   char *function_header;
   char *code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
@@ -2775,21 +2904,10 @@ int read_function_definition_from_editor(function_edit_info *state, function_inf
     }
   }
 
-  // Construct the function info
-  // TODO -- check it doesn't already exist
-  function_info *func_info = (function_info *)malloc(sizeof(function_info));
-  func_info->struct_id = NULL; // TODO
-  func_info->latest_iteration = 1;
-  func_info->variable_parameter_begin_index = -1;
-  func_info->parameter_count = 0;
-  func_info->struct_usage_count = 0;
-  func_info->mc_code = code_from_function_editor;
-
-  // Parse the function header
+  // Parse the function return type & name
   char *return_type;
   int index = 0;
-  MCcall(parse_past_conformed_type_identifier(func_info, function_header, &index, &return_type));
-  func_info->return_type = return_type;
+  MCcall(parse_past_conformed_type_identifier(NULL, function_header, &index, &return_type));
 
   MCcall(parse_past_empty_text(function_header, &index));
   if (function_header[index] == '*') {
@@ -2797,11 +2915,67 @@ int read_function_definition_from_editor(function_edit_info *state, function_inf
                       "return-type that uses deref handle not implemented");
   }
 
-  MCcall(parse_past_identifier(function_header, &index, (char **)&func_info->name, false, false));
+  char *function_name;
+  MCcall(parse_past_identifier(function_header, &index, &function_name, false, false));
   MCcall(parse_past_empty_text(function_header, &index));
   MCcall(parse_past(function_header, &index, "("));
   MCcall(parse_past_empty_text(function_header, &index));
 
+  // Obtain the information for the function
+  function_info *func_info;
+  {
+    // Check if the function info already exists in the namespace
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&func_info;
+    mc_vargs[1] = (void *)&command_hub->global_node; // TODO -- from state?
+    mc_vargs[2] = (void *)&function_name;
+    MCcall(find_function_info(3, mc_vargs));
+  }
+
+  if (func_info) {
+    ++func_info->latest_iteration;
+
+    // Free previous resources
+    for (int i = 0; i < func_info->struct_usage_count; ++i) {
+      mc_struct_info_v1 *str = (mc_struct_info_v1 *)func_info->struct_usage[i];
+      if (str->struct_id) {
+      } // TODO
+      // TODO free_struct(str);
+    }
+    // parameters
+
+    if (func_info->mc_code)
+      free(func_info->mc_code); // OR can it also be script code??
+    func_info->mc_code = NULL;
+
+    free(function_name);
+  }
+  else {
+    // Create
+    func_info = (function_info *)malloc(sizeof(function_info));
+    func_info->struct_id = NULL; // TODO
+    func_info->latest_iteration = 0;
+    func_info->name = function_name;
+
+    // Attach to global -- TODO
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+                                &command_hub->global_node->function_count, func_info));
+
+    // Declare with cling
+    char buf[1024];
+    sprintf(buf, "int (*%s)(int, void **);", func_info->name);
+    clint_process(buf);
+  }
+
+  func_info->struct_usage_count = 0;
+  func_info->parameter_count = 0;
+  func_info->variable_parameter_begin_index = -1;
+  func_info->mc_code = code_from_function_editor;
+
+  MCcall(convert_return_type_string(return_type, &func_info->return_type.name, &func_info->return_type.deref_count));
+  free(return_type);
+
+  // Parse the parameters
   struct {
     char *type;
     uint type_deref_count;
@@ -2850,9 +3024,8 @@ int read_function_definition_from_editor(function_edit_info *state, function_inf
 int function_editor_handle_input_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-                                  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
 
   // printf("function_editor_handle_input_v1-a\n");
   frame_time const *const elapsed = (frame_time const *const)argv[0];
@@ -2872,9 +3045,9 @@ int function_editor_handle_input_v1(int argc, void **argv)
 
       // Read the code from the editor
       function_info *func_info;
-      MCcall(read_function_definition_from_editor(state, &func_info));
+      MCcall(read_and_declare_function_from_editor(state, &func_info));
 
-      // Compile the function
+      // Compile the function definition
       uint transcription_alloc = 4;
       char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
       transcription[0] = '\0';
@@ -2883,7 +3056,7 @@ int function_editor_handle_input_v1(int argc, void **argv)
 
       printf("final transcription:\n%s\n", transcription);
 
-      // Declare the new function
+      // Define the new function
       {
         void *mc_vargs[3];
         mc_vargs[0] = (void *)&func_info->name;

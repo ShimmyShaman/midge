@@ -79,6 +79,11 @@ typedef unsigned int uint;
     sprintf(dest, format, ##__VA_ARGS__);                     \
   }
 
+#define dprintf(format, ...)       \
+  {                                \
+    printf(format, ##__VA_ARGS__); \
+  }
+
 typedef enum {
 
   PROCESS_ACTION_NULL = 1,
@@ -227,7 +232,10 @@ typedef struct mc_function_info_v1 {
   mc_struct_id_v1 *struct_id;
   const char *name;
   unsigned int latest_iteration;
-  const char *return_type;
+  struct {
+    char *name;
+    unsigned int deref_count;
+  } return_type;
   char *mc_code;
   unsigned int parameter_count;
   mc_parameter_info_v1 **parameters;
@@ -326,6 +334,8 @@ typedef struct mc_command_hub_v1 {
   unsigned int uid_counter;
   mc_process_action_v1 *demo_issue;
   mc_interactive_console_v1 *interactive_console;
+
+  unsigned int error_definition_index;
 } mc_command_hub_v1;
 
 typedef enum node_type {
