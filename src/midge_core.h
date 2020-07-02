@@ -482,12 +482,15 @@ int (*function_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
 int (*special_update)(int, void **);
 
+int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);
 int parse_past_number(const char *text, int *index, char **output);
 int parse_past_character_literal(const char *text, int *index, char **output);
 int mc_parse_past_literal_string(const char *text, int *index, char **output);
 int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing);
 int parse_past_type_identifier(const char *text, int *index, char **identifier);
+int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra);
+int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \
