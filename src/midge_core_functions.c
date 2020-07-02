@@ -602,7 +602,7 @@ int instantiate_function_v1(int argc, void **argv)
       MCerror(184, "cannot find function info for function_name=%s", function_name);
     }
   }
-  // printf("@ifv-0\n");
+  printf("@ifv-0\n");
 
   // Translate the code-block from script into workable midge-cling C
   // char *midge_c;
@@ -633,7 +633,7 @@ int instantiate_function_v1(int argc, void **argv)
   func_identity_buf[0] = '\0';
   sprintf(func_identity_buf, function_identifier_format, func_info->name, func_info->latest_iteration);
 
-  // printf("@ifv-2\n");
+  printf("@ifv-2\n");
   // Construct the function parameters
   char param_buf[4096];
   param_buf[0] = '\0';
@@ -722,6 +722,7 @@ int parse_past_conformed_type_identifier(function_info *func_info, char *code, i
   *conformed_type_identity = NULL;
 
   if (!isalpha(code[*i])) {
+    MCcall(print_parse_error(code, *i, "parse_past_conformed_type_identifier", ""));
     MCerror(459, "Type must begin with alpha character was:'%c'", code[*i]);
   }
 
@@ -1648,6 +1649,7 @@ int transcribe_for_statement(char *code, int *i, uint *transcription_alloc, char
   MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
 
   MCcall(transcribe_c_block_to_mc(NULL, code, i, transcription_alloc, transcription));
+  printf("returned from cblock: tforstatement\n");
   MCcall(parse_past(code, i, "}"));
 
   MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
@@ -1691,6 +1693,7 @@ int transcribe_if_statement(char *code, int *i, uint *transcription_alloc, char 
   MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
 
   MCcall(transcribe_c_block_to_mc(NULL, code, i, transcription_alloc, transcription));
+  printf("returned from cblock: ifstate\n");
   MCcall(parse_past(code, i, "}"));
   MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
 
@@ -1712,10 +1715,14 @@ int transcribe_if_statement(char *code, int *i, uint *transcription_alloc, char 
         MCcall(append_to_cstr(transcription_alloc, transcription, "else {\n"));
 
         MCcall(transcribe_c_block_to_mc(NULL, code, i, transcription_alloc, transcription));
+        printf("returned from cblock: ifstatement\n");
 
         MCcall(parse_past(code, i, "}"));
         MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
       }
+    }
+    else {
+      break;
     }
   }
   return 0;
@@ -1777,7 +1784,7 @@ int transcribe_function_call(function_info *owner, char *code, int *i, uint *tra
     arguments[argument_count] = (char *)malloc(sizeof(char) * arg_alloc);
     arguments[argument_count][0] = '\0';
     MCcall(transcribe_expression(owner, code, i, &arg_alloc, &arguments[argument_count++]));
-    printf("arguments[%i]='%s'\n", argument_count - 1, arguments[argument_count - 1]);
+    // printf("arguments[%i]='%s'\n", argument_count - 1, arguments[argument_count - 1]);
   }
 
   MCcall(parse_past(code, i, ")"));
@@ -1865,6 +1872,7 @@ int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *tra
     case '{': {
       MCcall(append_to_cstr(transcription_alloc, transcription, "{\n"));
       MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
+      // printf("returned from cblock: cblock-'{'\n");
 
       MCcall(parse_past(code, i, "}"));
       MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
@@ -1916,13 +1924,13 @@ int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *tra
         }
 
         // Decl (/Assignment)
-        printf("transcription before_declaration:\n%s\n", *transcription);
+        // printf("transcription before_declaration:\n%s\n", *transcription);
         MCcall(print_parse_error(code, *i, "transcribe_c_block_to_mc", "before_declaration"));
         MCcall(transcribe_declaration(code, i, transcription_alloc, transcription));
         break;
       }
       else {
-        printf("transcription to now:\n%s\n", *transcription);
+        // printf("transcription to now:\n%s\n", *transcription);
         MCcall(print_parse_error(code, *i, "transcribe_c_block_to_mc", "default-nonAlpha"));
         MCerror(1540, "Unhandled char:'%c'", code[*i]);
       }
@@ -2716,6 +2724,129 @@ int function_editor_update_v1(int argc, void **argv)
   return 0;
 }
 
+int read_function_definition_from_editor(function_edit_info *state, function_info **defined_function_info)
+{
+  uint code_allocation = 64;
+  char *function_header;
+  char *code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
+  code_from_function_editor[0] = '\0';
+  uint bracket_count = 0;
+  bool hit_code_block = false;
+  for (int i = 0; i < state->text.lines_count; ++i) {
+    int line_start_index = 0;
+    for (int j = 0;; ++j) {
+      if (state->text.lines[i][j] == '\0') {
+        if (j - line_start_index > 0) {
+          append_to_cstr(&code_allocation, &code_from_function_editor, state->text.lines[i] + line_start_index);
+        }
+        append_to_cstr(&code_allocation, &code_from_function_editor, "\n");
+        break;
+      }
+      if (state->text.lines[i][j] == '{') {
+        ++bracket_count;
+        if (!hit_code_block) {
+          hit_code_block = true;
+          if (j - line_start_index > 0) {
+            append_to_cstr(&code_allocation, &code_from_function_editor, state->text.lines[i] + line_start_index);
+          }
+          function_header = code_from_function_editor;
+          code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
+          code_from_function_editor[0] = '\0';
+          line_start_index = j + 1;
+        }
+      }
+      else if (state->text.lines[i][j] == '}') {
+        --bracket_count;
+        if (!bracket_count && hit_code_block) {
+          // End
+          // -- Copy up to now
+          if (j - line_start_index > 0) {
+            char line_to_now[j - line_start_index + 1];
+            strncpy(line_to_now, state->text.lines[i] + line_start_index, j - line_start_index);
+            line_to_now[j] = '\0';
+            append_to_cstr(&code_allocation, &code_from_function_editor, line_to_now);
+          }
+
+          // -- Break from upper loop
+          i = state->text.lines_count;
+          break;
+        }
+      }
+    }
+  }
+
+  // Construct the function info
+  // TODO -- check it doesn't already exist
+  function_info *func_info = (function_info *)malloc(sizeof(function_info));
+  func_info->struct_id = NULL; // TODO
+  func_info->latest_iteration = 1;
+  func_info->variable_parameter_begin_index = -1;
+  func_info->parameter_count = 0;
+  func_info->struct_usage_count = 0;
+  func_info->mc_code = code_from_function_editor;
+
+  // Parse the function header
+  char *return_type;
+  int index = 0;
+  MCcall(parse_past_conformed_type_identifier(func_info, function_header, &index, &return_type));
+  func_info->return_type = return_type;
+
+  MCcall(parse_past_empty_text(function_header, &index));
+  if (function_header[index] == '*') {
+    print_parse_error(function_header, index, "read_function_definition_from_editor",
+                      "return-type that uses deref handle not implemented");
+  }
+
+  MCcall(parse_past_identifier(function_header, &index, (char **)&func_info->name, false, false));
+  MCcall(parse_past_empty_text(function_header, &index));
+  MCcall(parse_past(function_header, &index, "("));
+  MCcall(parse_past_empty_text(function_header, &index));
+
+  struct {
+    char *type;
+    uint type_deref_count;
+    char *name;
+  } parameters[32];
+  uint parameter_count = 0;
+
+  while (function_header[index] != ')') {
+    if (parameter_count) {
+      MCcall(parse_past(function_header, &index, ","));
+      MCcall(parse_past_empty_text(function_header, &index));
+    }
+    MCcall(parse_past_conformed_type_identifier(func_info, function_header, &index, &parameters[parameter_count].type));
+    MCcall(parse_past_empty_text(function_header, &index));
+    parameters[parameter_count].type_deref_count = 0;
+    while (function_header[index] == '*') {
+      ++parameters[parameter_count].type_deref_count;
+      ++index;
+      MCcall(parse_past_empty_text(function_header, &index));
+    }
+
+    MCcall(parse_past_identifier(function_header, &index, &parameters[parameter_count].name, false, false));
+    MCcall(parse_past_empty_text(function_header, &index));
+    ++parameter_count;
+  }
+
+  func_info->parameter_count = parameter_count;
+  func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * parameter_count);
+  for (int p = 0; p < parameter_count; ++p) {
+    mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    parameter->struct_id = NULL;  // TODO
+    parameter->type_version = 0U; // TODO
+    parameter->type_name = parameters[p].type;
+    parameter->type_deref_count = parameters[p].type_deref_count;
+    parameter->name = parameters[p].name;
+
+    func_info->parameters[p] = parameter;
+  }
+  free(function_header);
+
+  *defined_function_info = func_info;
+
+  return 0;
+}
+
 int function_editor_handle_input_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -2740,69 +2871,22 @@ int function_editor_handle_input_v1(int argc, void **argv)
     if (event->ctrlDown) {
 
       // Read the code from the editor
-      uint code_allocation = 256;
-      char *code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
-      code_from_function_editor[0] = '\0';
-      uint bracket_count = 0;
-      for (int i = 0; i < state->text.lines_count; ++i) {
-        int line_start_index = 0;
-        for (int j = 0;; ++j) {
-          if (state->text.lines[i][j] == '\0') {
-            if (bracket_count && j - line_start_index > 0) {
-              append_to_cstr(&code_allocation, &code_from_function_editor, state->text.lines[i] + line_start_index);
-            }
-            append_to_cstr(&code_allocation, &code_from_function_editor, "\n");
-            break;
-          }
-          if (!bracket_count) {
-            if (state->text.lines[i][j] == '{') {
-              // begin code tracking
-              ++bracket_count;
-              line_start_index = j + 1;
-            }
-          }
-          else {
-            if (state->text.lines[i][j] == '{')
-              ++bracket_count;
-            else if (state->text.lines[i][j] == '}') {
-              --bracket_count;
-              if (!bracket_count) {
-                // End
-                // -- Copy up to now
-                if (j - line_start_index > 0) {
-                  char line_to_now[j - line_start_index + 1];
-                  strncpy(line_to_now, state->text.lines[i] + line_start_index, j - line_start_index);
-                  line_to_now[j] = '\0';
-                  append_to_cstr(&code_allocation, &code_from_function_editor, line_to_now);
-                }
+      function_info *func_info;
+      MCcall(read_function_definition_from_editor(state, &func_info));
 
-                // -- Break from upper loop
-                i = state->text.lines_count;
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      printf("\ncode_from_function_editor:%s\n\n", code_from_function_editor);
-
-      function_info *fnfo = (function_info *)malloc(sizeof(function_info));
-      // fnfo->name
-
+      // Compile the function
       uint transcription_alloc = 4;
       char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
       transcription[0] = '\0';
       int code_index = 0;
-      MCcall(transcribe_c_block_to_mc(fnfo, code_from_function_editor, &code_index, &transcription_alloc, &transcription));
-      free(code_from_function_editor);
+      MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
 
       printf("final transcription:\n%s\n", transcription);
 
       // Declare the new function
       {
         void *mc_vargs[3];
-        mc_vargs[0] = (void *)&state->functionInfo->name;
+        mc_vargs[0] = (void *)&func_info->name;
         mc_vargs[1] = (void *)&transcription;
         MCcall(instantiate_function(2, mc_vargs));
       }

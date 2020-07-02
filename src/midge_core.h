@@ -228,6 +228,7 @@ typedef struct mc_function_info_v1 {
   const char *name;
   unsigned int latest_iteration;
   const char *return_type;
+  char *mc_code;
   unsigned int parameter_count;
   mc_parameter_info_v1 **parameters;
   int variable_parameter_begin_index;
