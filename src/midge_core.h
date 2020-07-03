@@ -17,8 +17,6 @@ static const bool false = 0;
 static const bool true = 1;
 #endif
 
-typedef void **midgeo;
-typedef void **midgeary;
 typedef unsigned int uint;
 
 #define SCRIPT_NAME_PREFIX "mc_script_"

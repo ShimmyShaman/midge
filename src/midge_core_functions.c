@@ -702,7 +702,7 @@ int instantiate_function_v1(int argc, void **argv)
   }
 
   // Append return-value
-  if (!func_info->return_type.deref_count || !strcmp(func_info->return_type.name, "void")) {
+  if (func_info->return_type.deref_count || strcmp(func_info->return_type.name, "void")) {
     // MC conformed type name
     char *conformed_type_name;
     {
@@ -759,7 +759,7 @@ int instantiate_function_v1(int argc, void **argv)
 
   // Set the method to the function pointer
   char decl_buf[1024];
-  sprintf(decl_buf, "%s = &%s;", func_info->name, func_identity_buf);
+  sprintf(decl_buf, "cm_%s = &%s;", func_info->name, func_identity_buf);
   // printf("ifv>clint_process:\n%s\n", decl_buf);
   clint_process(decl_buf);
 
@@ -1696,8 +1696,7 @@ int transcribe_error_statement(char *code, int *i, uint *transcription_alloc, ch
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
-/*mcfuncreplace*/
-#end
+  /*mcfuncreplace*/
 
   MCcall(parse_past(code, i, "ERR("));
 
@@ -1711,11 +1710,14 @@ int transcribe_error_statement(char *code, int *i, uint *transcription_alloc, ch
 
   const char *MC_ERROR_PREPEND = "MCERROR_";
   int error_def_len = strlen(MC_ERROR_PREPEND) + *i - s;
+  char *error_name;
+  allocate_and_copy_cstrn(error_name, code + s, *i - s);
   char *error_def = (char *)malloc(sizeof(char) * (error_def_len + 1));
   strcpy(error_def, MC_ERROR_PREPEND);
   strncat(error_def, code + s, *i - s);
   error_def[error_def_len] = '\0';
 
+  // Ensure the error type has a definition
   {
     bool defined;
     char buf[1024];
@@ -1736,28 +1738,42 @@ int transcribe_error_statement(char *code, int *i, uint *transcription_alloc, ch
     }
   }
 
-  // Determine if error has already been defined
+  MCcall(parse_past_empty_text(code, i));
 
-  // allocate_and_copy_cstrn(error_code, code + s, *i - s);
+  // Transcribe
+  MCcall(append_to_cstr(transcription_alloc, transcription, "  printf(\"\\n----------------\\n  ERROR-:"));
+  MCcall(append_to_cstr(transcription_alloc, transcription, error_name));
+  MCcall(append_to_cstr(transcription_alloc, transcription, "\");\n"));
 
-  // MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
-  // MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+  if (code[*i] == ',') {
+    MCcall(append_to_cstr(transcription_alloc, transcription, "  dprintf("));
 
-  // MCcall(transcribe_c_block_to_mc(NULL, code, i, transcription_alloc, transcription));
-  // printf("returned from cblock: tforstatement\n");
-  // MCcall(parse_past(code, i, "}"));
+    // format & vargs
+    MCcall(parse_past_empty_text(code, i));
+    ++*i;
+    s = *i;
+    for (;; ++*i) {
+      if (code[*i] == ')') {
+        break;
+      }
+    }
+    MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
 
-  // MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
+    MCcall(append_to_cstr(transcription_alloc, transcription, ");\n"));
+  }
 
-  // printf("\n----------------\nERROR-:%s\n", "PARSE_PAST_SEQUENCE_NOT_FOUND");
-  // dprintf(format, ) printf("> %s", "text ends before sequence completion.");
-  // // TODO -- call stack
-  // return MCERROR_PARSE_PAST_SEQUENCE_NOT_FOUND;
+  // TODO -- some kinda call stack?
+
+  // The end of the statement & transcribe return
+  MCcall(parse_past(code, i, ");"));
+  MCcall(append_to_cstr(transcription_alloc, transcription, "  return "));
+  MCcall(append_to_cstr(transcription_alloc, transcription, error_def));
+  MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
 
   return 0;
 }
 
-int transcribe_for_statement(char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_for_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   int s = *i;
 
@@ -1770,8 +1786,8 @@ int transcribe_for_statement(char *code, int *i, uint *transcription_alloc, char
   MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
   MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
 
-  MCcall(transcribe_c_block_to_mc(NULL, code, i, transcription_alloc, transcription));
-  printf("returned from cblock: tforstatement\n");
+  MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
+  // printf("returned from cblock: tforstatement\n");
   MCcall(parse_past(code, i, "}"));
 
   MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
@@ -1801,10 +1817,9 @@ int transcribe_for_statement(char *code, int *i, uint *transcription_alloc, char
   return 0;
 }
 
-int transcribe_if_statement(char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_if_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   int s = *i;
-
   for (;; ++*i) {
     if (code[*i] == '{') {
       ++*i;
@@ -1814,7 +1829,7 @@ int transcribe_if_statement(char *code, int *i, uint *transcription_alloc, char 
   MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
   MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
 
-  MCcall(transcribe_c_block_to_mc(NULL, code, i, transcription_alloc, transcription));
+  MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
   printf("returned from cblock: ifstate\n");
   MCcall(parse_past(code, i, "}"));
   MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
@@ -1830,13 +1845,13 @@ int transcribe_if_statement(char *code, int *i, uint *transcription_alloc, char 
 
       if (code[*i] == 'i' && code[*i + 1] == 'f') {
         MCcall(append_to_cstr(transcription_alloc, transcription, "else "));
-        MCcall(transcribe_if_statement(code, i, transcription_alloc, transcription));
+        MCcall(transcribe_if_statement(owner, code, i, transcription_alloc, transcription));
       }
       else {
         MCcall(parse_past(code, i, "{"));
         MCcall(append_to_cstr(transcription_alloc, transcription, "else {\n"));
 
-        MCcall(transcribe_c_block_to_mc(NULL, code, i, transcription_alloc, transcription));
+        MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
         printf("returned from cblock: ifstatement\n");
 
         MCcall(parse_past(code, i, "}"));
@@ -1857,24 +1872,35 @@ int transcribe_while_statement(char *code, int *i, uint *transcription_alloc, ch
   return 0;
 }
 
-int transcribe_return_statement(char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_return_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   MCcall(parse_past(code, i, "return"));
   MCcall(parse_past_empty_text(code, i));
 
-  MCcall(append_to_cstr(transcription_alloc, transcription, "mc_return_value = "));
+  printf("trs-0\n");
+  printf("converted return_type:%s-%u\n", owner->return_type.name, owner->return_type.deref_count);
+  printf("trs-%i\n", owner->return_type.deref_count);
+  printf("trs-0\n");
+  if (owner->return_type.deref_count || strcmp(owner->return_type.name, "void")) {
+    printf("trs-1\n");
+    MCcall(append_to_cstr(transcription_alloc, transcription, "mc_return_value = "));
 
-  int s = *i;
+    int s = *i;
 
-  for (;; ++*i) {
-    if (code[*i] == ';') {
-      ++*i;
-      break;
+    for (;; ++*i) {
+      if (code[*i] == ';') {
+        break;
+      }
     }
+    MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
+    MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
   }
-  MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
+  MCcall(parse_past(code, i, ";"));
+
+  printf("trs-3\n");
   MCcall(append_to_cstr(transcription_alloc, transcription, "\nreturn 0;\n"));
 
+  printf("trs-4\n");
   return 0;
 }
 
@@ -2012,11 +2038,11 @@ int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *tra
           break;
         }
         if (!strncmp(code + *i, "for", 3)) {
-          MCcall(transcribe_for_statement(code, i, transcription_alloc, transcription));
+          MCcall(transcribe_for_statement(owner, code, i, transcription_alloc, transcription));
           break;
         }
         if (!strncmp(code + *i, "if", 2)) {
-          MCcall(transcribe_if_statement(code, i, transcription_alloc, transcription));
+          MCcall(transcribe_if_statement(owner, code, i, transcription_alloc, transcription));
           break;
         }
         if (!strncmp(code + *i, "while", 5)) {
@@ -2024,7 +2050,7 @@ int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *tra
           break;
         }
         if (!strncmp(code + *i, "return", 6)) {
-          MCcall(transcribe_return_statement(code, i, transcription_alloc, transcription));
+          MCcall(transcribe_return_statement(owner, code, i, transcription_alloc, transcription));
           break;
         }
         if (!strncmp(code + *i, "continue", 8)) {
@@ -2259,10 +2285,10 @@ int load_into_function_editor(char const *const core_function_name)
         }
 
         feState->text.lines[feState->text.lines_count++] = line;
-        printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s, feState->text.lines[feState->text.lines_count - 1]);
-        printf("strlen:%zu\n", strlen(feState->text.lines[feState->text.lines_count - 1]));
-        if (feState->text.lines_count > 1)
-          printf("dawn:%c\n", feState->text.lines[1][4]);
+        // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s, feState->text.lines[feState->text.lines_count -
+        // 1]); printf("strlen:%zu\n", strlen(feState->text.lines[feState->text.lines_count - 1])); if (feState->text.lines_count
+        // > 1)
+        //   printf("dawn:%c\n", feState->text.lines[1][4]);
 
         // Reset
         s = i + 1;
@@ -2272,8 +2298,8 @@ int load_into_function_editor(char const *const core_function_name)
       }
     }
   }
-  printf("dawn:%c\n", feState->text.lines[1][4]);
-  printf("life-6\n");
+  // printf("dawn:%c\n", feState->text.lines[1][4]);
+  // printf("life-6\n");
 
   // Set for render update
   feState->line_display_offset = 0;
@@ -2356,7 +2382,9 @@ int update_interactive_console_v1(int argc, void **argv)
     // Submit the text in the textbox
     ++command_hub->interactive_console->logic.action_count;
 
-    MCcall(load_into_function_editor("parse_past"));
+    // Files
+    // "parse_past"
+    MCcall(load_into_function_editor("print_parse_error"));
   }
   {
     // const char *commands =
@@ -2963,10 +2991,11 @@ int read_and_declare_function_from_editor(function_edit_info *state, function_in
 
     // Declare with cling
     char buf[1024];
-    sprintf(buf, "int (*%s)(int, void **);", func_info->name);
+    sprintf(buf, "int (*cm_%s)(int, void **);", func_info->name);
     clint_process(buf);
   }
 
+  printf("radffe-0\n");
   func_info->struct_usage_count = 0;
   func_info->parameter_count = 0;
   func_info->variable_parameter_begin_index = -1;
@@ -2975,6 +3004,7 @@ int read_and_declare_function_from_editor(function_edit_info *state, function_in
   MCcall(convert_return_type_string(return_type, &func_info->return_type.name, &func_info->return_type.deref_count));
   free(return_type);
 
+  // printf("radffe-1\n");
   // Parse the parameters
   struct {
     char *type;
@@ -3002,6 +3032,7 @@ int read_and_declare_function_from_editor(function_edit_info *state, function_in
     ++parameter_count;
   }
 
+  printf("radffe-2\n");
   func_info->parameter_count = parameter_count;
   func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * parameter_count);
   for (int p = 0; p < parameter_count; ++p) {
@@ -3017,6 +3048,8 @@ int read_and_declare_function_from_editor(function_edit_info *state, function_in
   free(function_header);
 
   *defined_function_info = func_info;
+
+  // printf("radffe-3\n");
 
   return 0;
 }

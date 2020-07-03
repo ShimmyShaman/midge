@@ -4,15 +4,6 @@
 
 #include "midge_core.h"
 
-int print_struct_id(int argc, void **argv)
-{
-  midgeo struct_id = (midgeo)argv;
-
-  printf("[struct:%s (version:%i)]\n", (char *)struct_id[0], *(uint *)struct_id[1]);
-
-  return 0;
-}
-
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
 {
   char buf[30];
