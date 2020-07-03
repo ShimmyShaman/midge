@@ -8,18 +8,21 @@ void print_parse_error(char *text, int index, char *function_name, char *section
   char buf[30];
   int off = 6 - index;
   for (int i = 0; i < 13; ++i) {
-    if (index - 13 + i < 0)
+    if (index - 13 + i < 0) {
       buf[i] = ' ';
-    else
+    }
+    else {
       buf[i] = text[index - 13 + i];
+    }
   }
   buf[13] = '|';
   buf[14] = text[index];
   buf[15] = '|';
   char eof = text[index] == '\0';
   for (int i = 0; i < 13; ++i) {
-    if (eof)
+    if (eof) {
       buf[16 + i] = ' ';
+    }
     else {
       eof = text[index + 1 + i] == '\0';
       buf[16 + i] = text[index + 1 + i];

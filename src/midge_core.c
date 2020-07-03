@@ -5756,6 +5756,14 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->type_deref_count = 1;
     field->name = "script";
   }
+  
+  // clint_process("int (*declare_function_pointer)(int, void **);");
+  clint_process("int (*instantiate_function)(int, void **);");
+  clint_process("int (*parse_script_to_mc)(int, void **);");
+  clint_process("int (*conform_type_identity)(int, void **);");
+  clint_process("int (*create_default_mc_struct)(int, void **);");
+
+  //  printf("processed_core_function:\n%s\n", output);
 
   // Parse
   FILE *f = fopen("/home/jason/midge/src/midge_core_functions.c", "rb");
@@ -5770,13 +5778,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   char *output;
   MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
 
-  // clint_process("int (*declare_function_pointer)(int, void **);");
-  clint_process("int (*instantiate_function)(int, void **);");
-  clint_process("int (*parse_script_to_mc)(int, void **);");
-  clint_process("int (*conform_type_identity)(int, void **);");
-  clint_process("int (*create_default_mc_struct)(int, void **);");
-
-  //  printf("processed_core_function:\n%s\n", output);
   clint_declare(output);
 
   // Attach declared function pointers with declared functions
@@ -5787,6 +5788,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("conform_type_identity = &conform_type_identity_v1;");
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
   clint_process("build_interactive_console = &build_interactive_console_v1;");
+  clint_process("build_core_display = &build_core_display_v1;");
   clint_process("build_function_editor = &build_function_editor_v1;");
   clint_process("function_editor_update = &function_editor_update_v1;");
   clint_process("function_editor_render = &function_editor_render_v1;");
