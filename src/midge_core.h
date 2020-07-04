@@ -346,7 +346,7 @@ typedef enum node_type {
 typedef struct mc_input_event_v1 {
   bool shiftDown, ctrlDown, altDown;
   window_input_event_type type;
-  window_input_event_code code;
+  window_input_event_detail detail;
   bool handled;
 } mc_input_event_v1;
 
@@ -492,6 +492,7 @@ int (*render_global_node)(int, void **);
 int (*special_update)(int, void **);
 int (*build_core_display)(int, void **);
 int (*core_display_handle_input)(int, void **);
+int (*core_display_entry_handle_input)(int, void **);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);

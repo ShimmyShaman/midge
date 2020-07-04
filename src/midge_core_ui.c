@@ -18,88 +18,11 @@ int special_update_v1(int argc, void **argv)
   return 0;
 }
 
-int core_display_render_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-                                  /*mcfuncreplace*/
+typedef struct core_display_data {
+  uint font_resource_uid;
+} core_display_data;
 
-  printf("core_display_render_v1-a\n");
-  frame_time const *const elapsed = (frame_time const *const)argv[0];
-  mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
-
-  printf("visual_node is %s\n", visual_node->name);
-
-  image_render_queue *sequence;
-  element_render_command *element_cmd;
-
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-  sequence->image_width = visual_node->data.visual.bounds.width;
-  sequence->image_height = visual_node->data.visual.bounds.height;
-  sequence->clear_color = COLOR_GHOST_WHITE;
-  sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
-
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-  element_cmd->x = 2;
-  element_cmd->y = 2;
-  element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
-  element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
-  element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
-
-  //   // Lines
-  //   function_edit_info *state = (function_edit_info *)visual_node->extra;
-  //   code_line *lines = state->render_lines;
-
-  //   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-  //     if (lines[i].requires_render_update) {
-  //       lines[i].requires_render_update = false;
-
-  //       MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-  //       sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-  //       sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
-  //       sequence->image_width = lines[i].width;
-  //       sequence->image_height = lines[i].height;
-  //       sequence->data.target_image.image_uid = lines[i].image_resource_uid;
-
-  //       if (lines[i].text && strlen(lines[i].text)) {
-  //         MCcall(obtain_element_render_command(sequence, &element_cmd));
-  //         element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
-  //         element_cmd->x = 4;
-  //         element_cmd->y = 2 + 18;
-  //         element_cmd->data.print_text.text = (const char **)&lines[i].text;
-  //         element_cmd->data.print_text.font_resource_uid = command_hub->interactive_console->font_resource_uid;
-  //         element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
-  //       }
-  //     }
-  //   }
-
-  //   // Render
-  //   // printf("OIRS: w:%u h:%u uid:%u\n", visual_node->data.visual.bounds.width, visual_node->data.visual.bounds.height,
-  //   //        visual_node->data.visual.image_resource_uid);
-  //   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-  //   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-  //   sequence->image_width = visual_node->data.visual.bounds.width;
-  //   sequence->image_height = visual_node->data.visual.bounds.height;
-  //   sequence->clear_color = COLOR_GHOST_WHITE;
-  //   sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
-
-  //   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-  //     MCcall(obtain_element_render_command(sequence, &element_cmd));
-  //     element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
-  //     element_cmd->x = 2;
-  //     element_cmd->y = 8 + i * 24;
-  //     element_cmd->data.textured_rect_info.width = lines[i].width;
-  //     element_cmd->data.textured_rect_info.height = lines[i].height;
-  //     element_cmd->data.textured_rect_info.texture_uid = lines[i].image_resource_uid;
-  //   }
-
-  return 0;
-}
-
-int core_display_handle_input_v1(int argc, void **argv)
+int core_display_entry_handle_input_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
@@ -189,21 +112,142 @@ int core_display_handle_input_v1(int argc, void **argv)
 
 int build_core_entry(node *core_display, const char *name)
 {
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
 
-  mc_node_v1 *core_objects_display = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
-  core_objects_display->name = "core_objects_display";
-  core_objects_display->parent = command_hub->global_node;
-  core_objects_display->type = NODE_TYPE_VISUAL;
+  mc_node_v1 *core_entry = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
+  allocate_and_copy_cstr(core_entry->name, name);
+  core_entry->parent = core_display;
+  core_entry->type = NODE_TYPE_VISUAL;
 
-  core_objects_display->data.visual.bounds.x = 0;
-  core_objects_display->data.visual.bounds.y = 0;
-  core_objects_display->data.visual.bounds.width = 296;
-  core_objects_display->data.visual.bounds.height = 26;
-  core_objects_display->data.visual.image_resource_uid = 0;
-  core_objects_display->data.visual.requires_render_update = true;
-  core_objects_display->data.visual.render_delegate = &core_display_render_v1;
-  core_objects_display->data.visual.hidden = false;
-  core_objects_display->data.visual.input_handler = &core_display_handle_input;
+  core_entry->data.visual.bounds.x = 0;
+  core_entry->data.visual.bounds.y = 0;
+  core_entry->data.visual.bounds.width = 296;
+  core_entry->data.visual.bounds.height = 26;
+  core_entry->data.visual.image_resource_uid = 0;
+  core_entry->data.visual.requires_render_update = true;
+  core_entry->data.visual.render_delegate = NULL;
+  core_entry->data.visual.hidden = false;
+  core_entry->data.visual.input_handler = &core_display_entry_handle_input;
+
+  MCcall(append_to_collection((void ***)&core_display->children, &core_display->children_alloc, &core_display->child_count,
+                              core_entry));
+
+  return 0;
+}
+
+int update_core_entries(node *core_display)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  for (int i = 0; i < core_display->child_count; ++i) {
+    node *child = (node *)core_display->children[i];
+
+    child->data.visual.bounds.x = core_display->data.visual.bounds.x + 2;
+    child->data.visual.bounds.y = core_display->data.visual.bounds.y + 2 + i * 26;
+    child->data.visual.bounds.width = 296;
+    child->data.visual.bounds.height = 26;
+  }
+
+  return 0;
+}
+
+int core_display_render_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+                                  /*mcfuncreplace*/
+
+  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
+
+  if (visual_node->data.visual.hidden)
+    return 0;
+  core_display_data *cdd = (core_display_data *)visual_node->extra;
+
+  image_render_queue *sequence;
+  element_render_command *element_cmd;
+
+  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+  sequence->image_width = visual_node->data.visual.bounds.width;
+  sequence->image_height = visual_node->data.visual.bounds.height;
+  sequence->clear_color = COLOR_GHOST_WHITE;
+  sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
+
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 2;
+  element_cmd->y = 2;
+  element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
+  element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
+  element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+
+  for (int i = 0; i < visual_node->child_count; ++i) {
+    node *child = (node *)visual_node->children[i];
+
+    printf("core_child.bounds x=%u y=%u width=%u height=%u\n", child->data.visual.bounds.x, child->data.visual.bounds.y,
+           child->data.visual.bounds.width, child->data.visual.bounds.height);
+
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+    element_cmd->x = child->data.visual.bounds.x;
+    element_cmd->y = child->data.visual.bounds.y;
+    element_cmd->data.colored_rect_info.width = child->data.visual.bounds.width;
+    element_cmd->data.colored_rect_info.height = child->data.visual.bounds.height;
+    element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.19f, 0.28f, 1.f};
+
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+    element_cmd->x = child->data.visual.bounds.x + 6;
+    element_cmd->y = child->data.visual.bounds.y + 18;
+    element_cmd->data.print_text.font_resource_uid = cdd->font_resource_uid;
+    element_cmd->data.print_text.text = &child->name;
+    element_cmd->data.print_text.color = COLOR_GHOST_WHITE;
+  }
+
+  return 0;
+}
+
+int core_display_handle_input_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  mc_node_v1 *core_display = *(mc_node_v1 **)argv[1];
+  mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];
+
+  if (core_display->data.visual.hidden)
+    return 0;
+
+  for (int i = 0; !event->handled && i < core_display->child_count; ++i) {
+    node *child = (node *)core_display->children[i];
+
+    // Check is visual and has input handler and mouse event is within bounds
+    if (child->type != NODE_TYPE_VISUAL)
+      continue;
+    if (!*child->data.visual.input_handler)
+      continue;
+    if (event->detail.mouse.x < child->data.visual.bounds.x || event->detail.mouse.y < child->data.visual.bounds.y ||
+        event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
+        event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
+      continue;
+
+    switch (event->type) {
+    case INPUT_EVENT_MOUSE_PRESS:
+      event->handled = true;
+      break;
+
+    default:
+      break;
+    }
+  }
 
   return 0;
 }
@@ -221,6 +265,10 @@ int build_core_display_v1(int argc, void **argv)
   core_objects_display->parent = command_hub->global_node;
   core_objects_display->type = NODE_TYPE_VISUAL;
 
+  core_objects_display->child_count = 0;
+  core_objects_display->children_alloc = 4;
+  core_objects_display->children = (node **)malloc(sizeof(void *) * core_objects_display->children_alloc);
+
   core_objects_display->data.visual.bounds.x = 0;
   core_objects_display->data.visual.bounds.y = 0;
   core_objects_display->data.visual.bounds.width = 300;
@@ -231,39 +279,20 @@ int build_core_display_v1(int argc, void **argv)
   core_objects_display->data.visual.hidden = false;
   core_objects_display->data.visual.input_handler = &core_display_handle_input;
 
+  core_display_data *cdd = (core_display_data *)malloc(sizeof(core_display_data));
+  core_objects_display->extra = cdd;
+  cdd->font_resource_uid = 0;
+
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
                               &command_hub->global_node->child_count, core_objects_display));
+
+  MCcall(build_core_entry(core_objects_display, "special_update"));
+
+  MCcall(update_core_entries(core_objects_display));
 
   // Obtain visual resources
   pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
   resource_command *command;
-
-  // Code Lines
-  //   function_edit_info *state = (function_edit_info *)malloc(sizeof(function_edit_info));
-  //   // printf("state:'%p'\n", state);
-  //   state->cursorLine = 0;
-  //   state->cursorCol = 0;
-  //   state->line_display_offset = 0;
-  //   state->text.lines_allocated = 0;
-  //   state->text.lines_count = 0;
-  //   code_line *code_lines = state->render_lines;
-  //   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-
-  //     code_lines[i].index = i;
-  //     code_lines[i].requires_render_update = true;
-  //     code_lines[i].text = NULL;
-  //     //  "!this is twenty nine letters! "
-  //     //  "!this is twenty nine letters! "
-  //     //  "!this is twenty nine letters! ";
-
-  //     MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  //     command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-  //     command->p_uid = &code_lines[i].image_resource_uid;
-  //     command->data.create_texture.use_as_render_target = true;
-  //     command->data.create_texture.width = code_lines[i].width = fedit->data.visual.bounds.width - 4;
-  //     command->data.create_texture.height = code_lines[i].height = 28;
-  //   }
-  //   fedit->extra = (void *)state;
 
   // Function Editor Image
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
@@ -272,6 +301,14 @@ int build_core_display_v1(int argc, void **argv)
   command->data.create_texture.use_as_render_target = true;
   command->data.create_texture.width = core_objects_display->data.visual.bounds.width;
   command->data.create_texture.height = core_objects_display->data.visual.bounds.height;
+  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
+
+  // Font
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+  command->type = RESOURCE_COMMAND_LOAD_FONT;
+  command->p_uid = &cdd->font_resource_uid;
+  command->data.font.height = 18;
+  command->data.font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   return 0;
 }

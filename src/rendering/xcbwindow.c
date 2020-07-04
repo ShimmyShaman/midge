@@ -69,7 +69,7 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
 
   value_mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
   value_list[0] = p_wnfo->screen->black_pixel;
-  value_list[1] = XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_EXPOSURE;
+  value_list[1] = XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_EXPOSURE;
 
   xcb_create_window(p_wnfo->connection, XCB_COPY_FROM_PARENT, p_wnfo->window, p_wnfo->screen->root, dimensions.offset.x,
                     dimensions.offset.y, dimensions.extent.width, dimensions.extent.height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
@@ -146,7 +146,7 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
       if (input_buffer->event_count >= MAX_QUEUED_KEY_EVENTS)
         break;
       input_buffer->events[input_buffer->event_count].type = INPUT_EVENT_KEY_PRESS;
-      input_buffer->events[input_buffer->event_count++].code = (window_input_event_code)event->pad0;
+      input_buffer->events[input_buffer->event_count++].detail.keyboard.key = (key_event_code)event->pad0;
       pthread_mutex_unlock(&input_buffer->mutex);
     } break;
     case XCB_KEY_RELEASE: {
@@ -154,7 +154,18 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
       if (input_buffer->event_count >= MAX_QUEUED_KEY_EVENTS)
         break;
       input_buffer->events[input_buffer->event_count].type = INPUT_EVENT_KEY_RELEASE;
-      input_buffer->events[input_buffer->event_count++].code = (window_input_event_code)event->pad0;
+      input_buffer->events[input_buffer->event_count++].detail.keyboard.key = (key_event_code)event->pad0;
+      pthread_mutex_unlock(&input_buffer->mutex);
+    } break;
+    case XCB_BUTTON_PRESS: {
+      xcb_button_press_event_t *press = (xcb_button_press_event_t *)event;
+      pthread_mutex_lock(&input_buffer->mutex);
+      if (input_buffer->event_count >= MAX_QUEUED_KEY_EVENTS)
+        break;
+      input_buffer->events[input_buffer->event_count].type = INPUT_EVENT_MOUSE_PRESS;
+      input_buffer->events[input_buffer->event_count].detail.mouse.button = (mouse_event_code)press->detail;
+      input_buffer->events[input_buffer->event_count].detail.mouse.x = press->event_x;
+      input_buffer->events[input_buffer->event_count++].detail.mouse.y = press->event_y;
       pthread_mutex_unlock(&input_buffer->mutex);
     } break;
     default:

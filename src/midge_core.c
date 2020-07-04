@@ -2482,7 +2482,7 @@ int mc_main(int argc, const char *const *argv)
 
   mc_input_event_v1 input_event;
   input_event.type = INPUT_EVENT_NONE;
-  input_event.code = INPUT_EVENT_CODE_NONE;
+  // input_event.detail = INPUT_EVENT_CODE_NONE;
   input_event.altDown = false;
   input_event.ctrlDown = false;
   input_event.shiftDown = false;
@@ -2551,39 +2551,62 @@ int mc_main(int argc, const char *const *argv)
       bool exit_loop = false;
       for (int i = 0; i < render_thread.input_buffer.event_count && !exit_loop; ++i) {
         switch (render_thread.input_buffer.events[i].type) {
+        case INPUT_EVENT_MOUSE_PRESS: {
+          // Set input event for controls to handle
+          input_event.type = render_thread.input_buffer.events[i].type;
+          input_event.detail = render_thread.input_buffer.events[i].detail;
+
+          // Global Node Hierarchy
+          for (int i = 0; !input_event.handled && i < command_hub->global_node->child_count; ++i) {
+            mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
+
+            // Check is visual and has input handler and mouse event is within bounds
+            if (child->type != NODE_TYPE_VISUAL || child->data.visual.hidden || !*child->data.visual.input_handler)
+              continue;
+            if (input_event.detail.mouse.x < child->data.visual.bounds.x ||
+                input_event.detail.mouse.y < child->data.visual.bounds.y ||
+                input_event.detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
+                input_event.detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
+              continue;
+
+            void *vargs[3];
+            vargs[0] = &elapsed;
+            vargs[1] = &child;
+            vargs[2] = &input_event;
+            // printf("calling input delegate\n");
+            // printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
+            MCcall((*child->data.visual.input_handler)(3, vargs));
+          }
+
+          // if (!input_event.handled) {
+          //   printf("unhandled_mouse_event:%i::%i\n", render_thread.input_buffer.events[i].type,
+          //          render_thread.input_buffer.events[i].detail.mouse.button);
+          // }
+        } break;
+
         case INPUT_EVENT_KEY_RELEASE:
         case INPUT_EVENT_KEY_PRESS: {
-          switch (render_thread.input_buffer.events[i].code) {
-          case INPUT_EVENT_CODE_ESCAPE:
+          switch (render_thread.input_buffer.events[i].detail.keyboard.key) {
+          case KEY_CODE_ESCAPE:
             exit_loop = true;
             continue;
-          case INPUT_EVENT_CODE_LEFT_ALT:
-          case INPUT_EVENT_CODE_RIGHT_ALT:
+          case KEY_CODE_LEFT_ALT:
+          case KEY_CODE_RIGHT_ALT:
             input_event.altDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
             break;
-          case INPUT_EVENT_CODE_LEFT_SHIFT:
-          case INPUT_EVENT_CODE_RIGHT_SHIFT:
+          case KEY_CODE_LEFT_SHIFT:
+          case KEY_CODE_RIGHT_SHIFT:
             input_event.shiftDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
             break;
-          case INPUT_EVENT_CODE_LEFT_CTRL:
-          case INPUT_EVENT_CODE_RIGHT_CTRL:
+          case KEY_CODE_LEFT_CTRL:
+          case KEY_CODE_RIGHT_CTRL:
             input_event.ctrlDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
             break;
 
           default: {
-            printf("unhandled_input_event:%i::%i\n", render_thread.input_buffer.events[i].type,
-                   render_thread.input_buffer.events[i].code);
-
             // Set input event for controls to handle
             input_event.type = render_thread.input_buffer.events[i].type;
-            input_event.code = render_thread.input_buffer.events[i].code;
-
-            // // Interactive Console
-            // {
-            //   void *vargs[1];
-            //   vargs[0] = &input_event;
-            //   command_hub->interactive_console->handle_input_delegate(1, vargs);
-            // }
+            input_event.detail = render_thread.input_buffer.events[i].detail;
 
             // Global Node Hierarchy
             for (int i = 0; !input_event.handled && i < command_hub->global_node->child_count; ++i) {
@@ -2601,6 +2624,11 @@ int mc_main(int argc, const char *const *argv)
               // printf("calling input delegate\n");
               // printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
               MCcall((*child->data.visual.input_handler)(3, vargs));
+            }
+
+            if (!input_event.handled) {
+              printf("unhandled_keyboard_event:%i::%i\n", render_thread.input_buffer.events[i].type,
+                     render_thread.input_buffer.events[i].detail.keyboard.key);
             }
             break;
           }
@@ -5812,6 +5840,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("special_update = &special_update_v1;");
   clint_process("build_core_display = &build_core_display_v1;");
   clint_process("core_display_handle_input = &core_display_handle_input_v1;");
+  clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;");
 
   return 0;
 }

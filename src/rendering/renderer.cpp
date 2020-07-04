@@ -390,8 +390,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(vert_data_scale_offset);
 
-      vert_ubo_data->scale.x = 2.f * (float)cmd->data.textured_rect_info.width  * scale_multiplier;
-      vert_ubo_data->scale.y = 2.f * (float)cmd->data.textured_rect_info.height  * scale_multiplier;
+      vert_ubo_data->scale.x = 2.f * (float)cmd->data.textured_rect_info.width * scale_multiplier;
+      vert_ubo_data->scale.y = 2.f * (float)cmd->data.textured_rect_info.height * scale_multiplier;
       vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
                                 1.0f * (float)cmd->data.textured_rect_info.width / (float)(sequence->image_width);
       vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
@@ -519,6 +519,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
         // Source texture bounds
         stbtt_aligned_quad q;
+
         stbtt_GetBakedQuad(font->char_data, font_image->width, font_image->height, letter - 32, &align_x, &align_y, &q,
                            1); // 1=opengl & d3d10+,0=d3d9
 
@@ -534,16 +535,16 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         float width = q.x1 - q.x0;
         float height = q.y1 - q.y0;
 
-        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f\n", q.s0, q.s1, q.t0, q.t1, q.x0,
-        //        q.x1, q.y0, q.y1);
+        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n", q.s0, q.s1,
+        //        q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
         // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
         // Vertex Uniform Buffer Object
         vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
         copy_buffer_used += sizeof(vert_data_scale_offset);
 
-        vert_ubo_data->scale.x = 2.f * width  * scale_multiplier;
-        vert_ubo_data->scale.y = 2.f * height  * scale_multiplier;
+        vert_ubo_data->scale.x = 2.f * width * scale_multiplier;
+        vert_ubo_data->scale.y = 2.f * height * scale_multiplier;
         vert_ubo_data->offset.x =
             -1.0f + 2.0f * (float)q.x0 / (float)(sequence->image_width) + 1.0f * (float)width / (float)(sequence->image_width);
         vert_ubo_data->offset.y =
@@ -561,7 +562,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
         // Setup viewport and clip
         set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-        set_scissor_cmd(p_vkrs, q.x0, q.y0, width, height);
+        set_scissor_cmd(p_vkrs, q.x0 < 0 ? 0 : q.x0, q.y0 < 0 ? 0 : q.y0, width, height);
 
         // Allocate the descriptor set from the pool.
         VkDescriptorSetAllocateInfo setAllocInfo = {};

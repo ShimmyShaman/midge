@@ -2813,7 +2813,7 @@ int update_interactive_console_v1(int argc, void **argv)
       event.ctrlDown = true;
       event.handled = false;
       event.type = INPUT_EVENT_KEY_PRESS;
-      event.code = INPUT_EVENT_CODE_ENTER;
+      event.detail.keyboard.key = KEY_CODE_ENTER;
       vargs[2] = &event;
       MCcall(function_editor_handle_input(3, vargs));
     }
@@ -3004,7 +3004,7 @@ int interactive_console_handle_input_v1(int argc, void **argv)
   window_input_event *event = (window_input_event *)argv[0];
 
   if (event->type == INPUT_EVENT_KEY_RELEASE)
-    printf("ic_input:%i\n", event->code);
+    printf("ic_input:%i\n", event->detail.keyboard.key);
 
   return 0;
 }
@@ -3505,7 +3505,7 @@ int function_editor_handle_input_v1(int argc, void **argv)
 
   function_edit_info *state = (function_edit_info *)fedit->extra;
 
-  if (event->code == INPUT_EVENT_CODE_ENTER || event->code == INPUT_EVENT_CODE_RETURN) {
+  if (event->detail.keyboard.key == KEY_CODE_ENTER || event->detail.keyboard.key == KEY_CODE_RETURN) {
     if (event->ctrlDown) {
 
       // Read the code from the editor
@@ -3537,7 +3537,7 @@ int function_editor_handle_input_v1(int argc, void **argv)
   }
 
   char c = '\0';
-  int res = get_key_input_code_char(event->shiftDown, event->code, &c);
+  int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c);
   if (res)
     return 0; // TODO
 
