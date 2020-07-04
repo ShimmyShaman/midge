@@ -23,31 +23,31 @@ int core_display_render_v1(int argc, void **argv)
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
-  /*mcfuncreplace*/
+                                  /*mcfuncreplace*/
 
-    printf("core_display_render_v1-a\n");
-    frame_time const *const elapsed = (frame_time const *const)argv[0];
-    mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
+  printf("core_display_render_v1-a\n");
+  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 
-    printf("visual_node is %s\n", visual_node->name);
+  printf("visual_node is %s\n", visual_node->name);
 
-    image_render_queue *sequence;
-    element_render_command *element_cmd;
+  image_render_queue *sequence;
+  element_render_command *element_cmd;
 
-    MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-    sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-    sequence->image_width = visual_node->data.visual.bounds.width;
-    sequence->image_height = visual_node->data.visual.bounds.height;
-    sequence->clear_color = COLOR_GHOST_WHITE;
-    sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
+  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+  sequence->image_width = visual_node->data.visual.bounds.width;
+  sequence->image_height = visual_node->data.visual.bounds.height;
+  sequence->clear_color = COLOR_GHOST_WHITE;
+  sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
 
-    MCcall(obtain_element_render_command(sequence, &element_cmd));
-    element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-    element_cmd->x = 2;
-    element_cmd->y = 2;
-    element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
-    element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
-    element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+  element_cmd->x = 2;
+  element_cmd->y = 2;
+  element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
+  element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
+  element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
 
   //   // Lines
   //   function_edit_info *state = (function_edit_info *)visual_node->extra;
@@ -85,7 +85,6 @@ int core_display_render_v1(int argc, void **argv)
   //   sequence->image_height = visual_node->data.visual.bounds.height;
   //   sequence->clear_color = COLOR_GHOST_WHITE;
   //   sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
-
 
   //   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
   //     MCcall(obtain_element_render_command(sequence, &element_cmd));
@@ -188,11 +187,31 @@ int core_display_handle_input_v1(int argc, void **argv)
   return 0;
 }
 
+int build_core_entry(node *core_display, const char *name)
+{
+
+  mc_node_v1 *core_objects_display = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
+  core_objects_display->name = "core_objects_display";
+  core_objects_display->parent = command_hub->global_node;
+  core_objects_display->type = NODE_TYPE_VISUAL;
+
+  core_objects_display->data.visual.bounds.x = 0;
+  core_objects_display->data.visual.bounds.y = 0;
+  core_objects_display->data.visual.bounds.width = 296;
+  core_objects_display->data.visual.bounds.height = 26;
+  core_objects_display->data.visual.image_resource_uid = 0;
+  core_objects_display->data.visual.requires_render_update = true;
+  core_objects_display->data.visual.render_delegate = &core_display_render_v1;
+  core_objects_display->data.visual.hidden = false;
+  core_objects_display->data.visual.input_handler = &core_display_handle_input;
+
+  return 0;
+}
+
 int build_core_display_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
+  mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
   // Build the function editor window
@@ -204,7 +223,7 @@ int build_core_display_v1(int argc, void **argv)
 
   core_objects_display->data.visual.bounds.x = 0;
   core_objects_display->data.visual.bounds.y = 0;
-  core_objects_display->data.visual.bounds.width = 200;
+  core_objects_display->data.visual.bounds.width = 300;
   core_objects_display->data.visual.bounds.height = 900;
   core_objects_display->data.visual.image_resource_uid = 0;
   core_objects_display->data.visual.requires_render_update = true;
@@ -246,13 +265,13 @@ int build_core_display_v1(int argc, void **argv)
   //   }
   //   fedit->extra = (void *)state;
 
-    // Function Editor Image
-    MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-    command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-    command->p_uid = &core_objects_display->data.visual.image_resource_uid;
-    command->data.create_texture.use_as_render_target = true;
-    command->data.create_texture.width = core_objects_display->data.visual.bounds.width;
-    command->data.create_texture.height = core_objects_display->data.visual.bounds.height;
+  // Function Editor Image
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+  command->p_uid = &core_objects_display->data.visual.image_resource_uid;
+  command->data.create_texture.use_as_render_target = true;
+  command->data.create_texture.width = core_objects_display->data.visual.bounds.width;
+  command->data.create_texture.height = core_objects_display->data.visual.bounds.height;
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   return 0;
 }
