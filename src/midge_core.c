@@ -2458,12 +2458,12 @@ int mc_main(int argc, const char *const *argv)
   // MCcall(append_to_collection(&template_collection->templates, &template_collection->templates_alloc,
   // &template_collection->template_count, (void *)template_process));
 
-  printf("mm-2\n");
   // Parse & Declare/add Core functions in midge_core_functions.c
   MCcall(init_core_functions(command_hub));
   MCcall(init_process_matrix(command_hub));
-  MCcall(build_interactive_console(0, NULL));
+  // MCcall(build_interactive_console(0, NULL));
   MCcall(build_function_editor(0, NULL));
+  MCcall(build_core_display(0, NULL));
   // return 0;
 
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
@@ -2578,12 +2578,12 @@ int mc_main(int argc, const char *const *argv)
             input_event.type = render_thread.input_buffer.events[i].type;
             input_event.code = render_thread.input_buffer.events[i].code;
 
-            // Interactive Console
-            {
-              void *vargs[1];
-              vargs[0] = &input_event;
-              command_hub->interactive_console->handle_input_delegate(1, vargs);
-            }
+            // // Interactive Console
+            // {
+            //   void *vargs[1];
+            //   vargs[0] = &input_event;
+            //   command_hub->interactive_console->handle_input_delegate(1, vargs);
+            // }
 
             // Global Node Hierarchy
             for (int i = 0; !input_event.handled && i < command_hub->global_node->child_count; ++i) {
@@ -2619,14 +2619,14 @@ int mc_main(int argc, const char *const *argv)
     pthread_mutex_unlock(&render_thread.input_buffer.mutex);
 
     // Update State
-    {
-      if (logic_update_due) {
-        // Interactive Console
-        void *vargs[1];
-        vargs[0] = &elapsed;
-        command_hub->interactive_console->logic_delegate(1, vargs);
-      }
-    }
+    // {
+    //   if (logic_update_due) {
+    //     // Interactive Console
+    //     void *vargs[1];
+    //     vargs[0] = &elapsed;
+    //     command_hub->interactive_console->logic_delegate(1, vargs);
+    //   }
+    // }
     if (render_thread.thread_info->has_concluded) {
       printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
       break;
@@ -2653,13 +2653,13 @@ int mc_main(int argc, const char *const *argv)
       }
     }
 
-    // -- Render all sub-images first
-    if (command_hub->interactive_console->visual.requires_render_update) {
-      command_hub->interactive_console->visual.requires_render_update = false;
-      command_hub->interactive_console->visual.render_delegate(0, NULL);
+    // // -- Render all sub-images first
+    // if (command_hub->interactive_console->visual.requires_render_update) {
+    //   command_hub->interactive_console->visual.requires_render_update = false;
+    //   command_hub->interactive_console->visual.render_delegate(0, NULL);
 
-      rerender_required = true;
-    }
+    //   rerender_required = true;
+    // }
 
     // Do an Z-based control render of everything
     if (rerender_required) {
@@ -5756,7 +5756,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->type_deref_count = 1;
     field->name = "script";
   }
-  
+
   // clint_process("int (*declare_function_pointer)(int, void **);");
   clint_process("int (*instantiate_function)(int, void **);");
   clint_process("int (*parse_script_to_mc)(int, void **);");
@@ -5777,8 +5777,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   char *output;
   MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
-
   clint_declare(output);
+  free(input);
+  free(output);
 
   // Attach declared function pointers with declared functions
   clint_process("find_function_info = &find_function_info_v1;");
@@ -5788,16 +5789,29 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("conform_type_identity = &conform_type_identity_v1;");
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
   clint_process("build_interactive_console = &build_interactive_console_v1;");
-  clint_process("build_core_display = &build_core_display_v1;");
   clint_process("build_function_editor = &build_function_editor_v1;");
   clint_process("function_editor_update = &function_editor_update_v1;");
   clint_process("function_editor_render = &function_editor_render_v1;");
   clint_process("function_editor_handle_input = &function_editor_handle_input_v1;");
   clint_process("render_global_node = &render_global_node_v1;");
-  clint_process("special_update = &special_update_v1;");
 
+  f = fopen("/home/jason/midge/src/midge_core_ui.c", "rb");
+  fseek(f, 0, SEEK_END);
+  fsize = ftell(f);
+  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+  input = (char *)malloc(fsize + 1);
+  fread(input, sizeof(char), fsize, f);
+  fclose(f);
+
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
+  clint_declare(output);
   free(input);
   free(output);
+
+  clint_process("special_update = &special_update_v1;");
+  clint_process("build_core_display = &build_core_display_v1;");
+  clint_process("core_display_handle_input = &core_display_handle_input_v1;");
 
   return 0;
 }

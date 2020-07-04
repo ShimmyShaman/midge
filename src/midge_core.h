@@ -490,6 +490,8 @@ int (*function_editor_handle_input)(int, void **);
 int (*function_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
 int (*special_update)(int, void **);
+int (*build_core_display)(int, void **);
+int (*core_display_handle_input)(int, void **);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);

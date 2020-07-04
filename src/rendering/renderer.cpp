@@ -281,6 +281,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
     write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), &vpc, &vpc_desc_buffer_info);
   }
+  float scale_multiplier =
+      1.f / (float)(sequence->image_width < sequence->image_height ? sequence->image_width : sequence->image_height);
 
   for (int j = 0; j < sequence->command_count; ++j) {
 
@@ -292,8 +294,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(vert_data_scale_offset);
 
-      vert_ubo_data->scale.x = 2.f * cmd->data.colored_rect_info.width / (float)sequence->image_height;
-      vert_ubo_data->scale.y = 2.f * cmd->data.colored_rect_info.height / (float)sequence->image_height;
+      vert_ubo_data->scale.x = 2.f * cmd->data.colored_rect_info.width * scale_multiplier;
+      vert_ubo_data->scale.y = 2.f * cmd->data.colored_rect_info.height * scale_multiplier;
       vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
                                 1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
       vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
@@ -388,8 +390,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(vert_data_scale_offset);
 
-      vert_ubo_data->scale.x = 2.f * (float)cmd->data.textured_rect_info.width / (float)sequence->image_height;
-      vert_ubo_data->scale.y = 2.f * (float)cmd->data.textured_rect_info.height / (float)sequence->image_height;
+      vert_ubo_data->scale.x = 2.f * (float)cmd->data.textured_rect_info.width  * scale_multiplier;
+      vert_ubo_data->scale.y = 2.f * (float)cmd->data.textured_rect_info.height  * scale_multiplier;
       vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
                                 1.0f * (float)cmd->data.textured_rect_info.width / (float)(sequence->image_width);
       vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
@@ -540,8 +542,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
         copy_buffer_used += sizeof(vert_data_scale_offset);
 
-        vert_ubo_data->scale.x = 2.f * width / (float)sequence->image_height;
-        vert_ubo_data->scale.y = 2.f * height / (float)sequence->image_height;
+        vert_ubo_data->scale.x = 2.f * width  * scale_multiplier;
+        vert_ubo_data->scale.y = 2.f * height  * scale_multiplier;
         vert_ubo_data->offset.x =
             -1.0f + 2.0f * (float)q.x0 / (float)(sequence->image_width) + 1.0f * (float)width / (float)(sequence->image_width);
         vert_ubo_data->offset.y =

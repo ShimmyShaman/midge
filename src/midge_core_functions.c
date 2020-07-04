@@ -6,18 +6,6 @@
 #define node mc_node_v1
 /*mcfuncreplace*/
 
-int special_update_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-  /*mcfuncreplace*/
-
-  frame_time *elapsed = (frame_time *)argv[0];
-
-  return 0;
-}
-
 int find_function_info_v1(int argc, void **argv)
 {
   if (argc != 3) {
@@ -3186,13 +3174,13 @@ int render_global_node_v1(int argc, void **argv)
     }
   }
 
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
-  element_cmd->x = command_hub->interactive_console->bounds.x;
-  element_cmd->y = command_hub->interactive_console->bounds.y;
-  element_cmd->data.textured_rect_info.width = command_hub->interactive_console->bounds.width;
-  element_cmd->data.textured_rect_info.height = command_hub->interactive_console->bounds.height;
-  element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->visual.image_resource_uid;
+  // MCcall(obtain_element_render_command(sequence, &element_cmd));
+  // element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+  // element_cmd->x = command_hub->interactive_console->bounds.x;
+  // element_cmd->y = command_hub->interactive_console->bounds.y;
+  // element_cmd->data.textured_rect_info.width = command_hub->interactive_console->bounds.width;
+  // element_cmd->data.textured_rect_info.height = command_hub->interactive_console->bounds.height;
+  // element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->visual.image_resource_uid;
 
   return 0;
 }
