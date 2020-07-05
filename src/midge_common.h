@@ -29,15 +29,61 @@ typedef enum key_event_code {
 
   // From XCB codes I THINK... Poor way of doing it
   KEY_CODE_ESCAPE = 9,
+  KEY_CODE_D1 = 10,
+  KEY_CODE_D2 = 11,
+  KEY_CODE_D3 = 12,
+  KEY_CODE_D4 = 13,
+  KEY_CODE_D5 = 14,
+  KEY_CODE_D6 = 15,
+  KEY_CODE_D7 = 16,
+  KEY_CODE_D8 = 17,
+  KEY_CODE_D9 = 18,
+  KEY_CODE_D0 = 19,
+  KEY_CODE_D_SUBTRACT = 20,
+  KEY_CODE_D_EQUALS = 21,
+  KEY_CODE_BACKSPACE = 22,
+  KEY_CODE_TAB = 23,
   KEY_CODE_Q = 24,
-  KEY_CODE_LEFT_ALT = 64,
-  KEY_CODE_RIGHT_ALT = 108,
-  KEY_CODE_LEFT_SHIFT = 50,
-  KEY_CODE_RIGHT_SHIFT = 62,
-  KEY_CODE_LEFT_CTRL = 37,
-  KEY_CODE_RIGHT_CTRL = 105,
+  KEY_CODE_W = 25,
+  KEY_CODE_E = 26,
+  KEY_CODE_R = 27,
+  KEY_CODE_T = 28,
+  KEY_CODE_Y = 29,
+  KEY_CODE_U = 30,
+  KEY_CODE_I = 31,
+  KEY_CODE_O = 32,
+  KEY_CODE_P = 33,
+  KEY_CODE_SQUARE_OPEN_BRACKET = 34,
+  KEY_CODE_SQUARE_CLOSE_BRACKET = 35,
   KEY_CODE_ENTER = 36,
+  KEY_CODE_LEFT_CTRL = 37,
+  KEY_CODE_A = 38,
+  KEY_CODE_S = 39,
+  KEY_CODE_D = 40,
+  KEY_CODE_F = 41,
+  KEY_CODE_G = 42,
+  KEY_CODE_H = 43,
+  KEY_CODE_J = 44,
+  KEY_CODE_K = 45,
+  KEY_CODE_L = 46,
+  KEY_CODE_SEMI_COLON = 47,
+  KEY_CODE_QUOTE = 48,
+  KEY_CODE_LEFT_SHIFT = 50,
+  KEY_CODE_Z = 52,
+  KEY_CODE_X = 53,
+  KEY_CODE_C = 54,
+  KEY_CODE_V = 55,
+  KEY_CODE_B = 56,
+  KEY_CODE_N = 57,
+  KEY_CODE_M = 58,
+  KEY_CODE_COMMA = 59,
+  KEY_CODE_DECIMAL = 60,
+  KEY_CODE_FORWARD_SLASH = 61,
+  KEY_CODE_RIGHT_SHIFT = 62,
+  KEY_CODE_LEFT_ALT = 64,
   KEY_CODE_RETURN = 104,
+  KEY_CODE_RIGHT_CTRL = 105,
+  KEY_CODE_RIGHT_ALT = 108,
 } key_event_code;
 
 typedef enum mouse_event_code {
@@ -50,18 +96,6 @@ typedef enum mouse_event_code {
   MOUSE_BUTTON_PREVIOUS = 8,
   MOUSE_BUTTON_NEXT = 9,
 } mouse_event_code;
-
-int get_key_input_code_char(bool shift, key_event_code code, char *c)
-{
-  switch (code) {
-  case KEY_CODE_Q:
-    *c = 'q';
-    return 0;
-
-  default:
-    return -1;
-  }
-}
 
 typedef union window_input_event_detail {
   struct {
@@ -88,5 +122,149 @@ typedef struct frame_time {
   long frame_sec, frame_nsec;
   long app_sec, app_nsec;
 } frame_time;
+
+int get_key_input_code_char(bool shift, key_event_code code, char *c)
+{
+  switch (code) {
+  case KEY_CODE_D1:
+    *c = shift ? '!' : '1';
+    return 0;
+  case KEY_CODE_D2:
+    *c = shift ? '@' : '2';
+    return 0;
+  case KEY_CODE_D3:
+    *c = shift ? '#' : '3';
+    return 0;
+  case KEY_CODE_D4:
+    *c = shift ? '$' : '4';
+    return 0;
+  case KEY_CODE_D5:
+    *c = shift ? '%' : '5';
+    return 0;
+  case KEY_CODE_D6:
+    *c = shift ? '^' : '6';
+    return 0;
+  case KEY_CODE_D7:
+    *c = shift ? '&' : '7';
+    return 0;
+  case KEY_CODE_D8:
+    *c = shift ? '*' : '8';
+    return 0;
+  case KEY_CODE_D9:
+    *c = shift ? '(' : '9';
+    return 0;
+  case KEY_CODE_D0:
+    *c = shift ? ')' : '0';
+    return 0;
+  case KEY_CODE_D_SUBTRACT:
+    *c = shift ? '_' : '-';
+    return 0;
+  case KEY_CODE_D_EQUALS:
+    *c = shift ? '+' : '=';
+    return 0;
+  case KEY_CODE_Q:
+    *c = shift ? 'Q' : 'q';
+    return 0;
+  case KEY_CODE_W:
+    *c = shift ? 'W' : 'w';
+    return 0;
+  case KEY_CODE_E:
+    *c = shift ? 'E' : 'e';
+    return 0;
+  case KEY_CODE_R:
+    *c = shift ? 'R' : 'r';
+    return 0;
+  case KEY_CODE_T:
+    *c = shift ? 'T' : 't';
+    return 0;
+  case KEY_CODE_Y:
+    *c = shift ? 'Y' : 'y';
+    return 0;
+  case KEY_CODE_U:
+    *c = shift ? 'U' : 'u';
+    return 0;
+  case KEY_CODE_I:
+    *c = shift ? 'I' : 'i';
+    return 0;
+  case KEY_CODE_O:
+    *c = shift ? 'O' : 'o';
+    return 0;
+  case KEY_CODE_P:
+    *c = shift ? 'P' : 'p';
+    return 0;
+  case KEY_CODE_SQUARE_OPEN_BRACKET:
+    *c = shift ? '{' : '[';
+    return 0;
+  case KEY_CODE_SQUARE_CLOSE_BRACKET:
+    *c = shift ? '}' : ']';
+    return 0;
+  case KEY_CODE_A:
+    *c = shift ? 'A' : 'a';
+    return 0;
+  case KEY_CODE_S:
+    *c = shift ? 'S' : 's';
+    return 0;
+  case KEY_CODE_D:
+    *c = shift ? 'D' : 'd';
+    return 0;
+  case KEY_CODE_F:
+    *c = shift ? 'F' : 'f';
+    return 0;
+  case KEY_CODE_G:
+    *c = shift ? 'G' : 'g';
+    return 0;
+  case KEY_CODE_H:
+    *c = shift ? 'H' : 'h';
+    return 0;
+  case KEY_CODE_J:
+    *c = shift ? 'J' : 'j';
+    return 0;
+  case KEY_CODE_K:
+    *c = shift ? 'K' : 'k';
+    return 0;
+  case KEY_CODE_L:
+    *c = shift ? 'L' : 'l';
+    return 0;
+  case KEY_CODE_SEMI_COLON:
+    *c = shift ? ':' : ';';
+    return 0;
+  case KEY_CODE_QUOTE:
+    *c = shift ? '"' : '\'';
+    return 0;
+  case KEY_CODE_Z:
+    *c = shift ? 'Z' : 'z';
+    return 0;
+  case KEY_CODE_X:
+    *c = shift ? 'X' : 'x';
+    return 0;
+  case KEY_CODE_C:
+    *c = shift ? 'C' : 'c';
+    return 0;
+  case KEY_CODE_V:
+    *c = shift ? 'V' : 'v';
+    return 0;
+  case KEY_CODE_B:
+    *c = shift ? 'B' : 'b';
+    return 0;
+  case KEY_CODE_N:
+    *c = shift ? 'N' : 'n';
+    return 0;
+  case KEY_CODE_M:
+    *c = shift ? 'M' : 'm';
+    return 0;
+  case KEY_CODE_COMMA:
+    *c = shift ? '<' : ',';
+    return 0;
+  case KEY_CODE_DECIMAL:
+    *c = shift ? '>' : '.';
+    return 0;
+  case KEY_CODE_FORWARD_SLASH:
+    *c = shift ? '?' : '/';
+    return 0;
+
+  default:
+    return -1;
+  }
+}
 
 #endif // MIDGE_COMMON_H

@@ -463,24 +463,30 @@ typedef struct mc_procedure_template_v1 {
 
 } mc_procedure_template_v1;
 
-// typedef struct mc_process_matrix_node_v1 {
-//   mc_struct_id_v1 *struct_id;
+#define FUNCTION_EDITOR_RENDERED_CODE_LINES 16
+typedef struct code_line {
+  uint index;
+  bool requires_render_update;
+  uint image_resource_uid;
+  char *text;
+  uint width, height;
+} code_line;
+typedef struct function_editor_state {
+  code_line render_lines[FUNCTION_EDITOR_RENDERED_CODE_LINES];
+  struct {
+    uint lines_allocated, lines_count;
+    char **lines;
+  } text;
+uint font_resource_uid;
+  uint line_display_offset;
+  uint cursorCol, cursorLine;
 
-//   mc_process_action_detail_v1 *action;
-//   // The action previous in the current sequence back to after a demo_initiation or idle/resolution action
-//   mc_process_action_detail_v1 *sequence_root_issue;
-//   mc_process_action_detail_v1 *previous_issue;
-//   mc_process_action_detail_v1 *contextual_issue;
-
-//   mc_process_action_detail_v1 *continuance;
-
-//   union {
-//     mc_void_collection_v1 *consensus_process_units;
-//     mc_void_collection_v1 *branches;
-//   };
-// } mc_process_matrix_node_v1;
+  mc_function_info_v1 *func_info;
+} function_editor_state;
+int load_existing_function_into_function_editor(mc_function_info_v1 *function);
 
 int (*declare_function_pointer)(int, void **);
+// function_info **result (may be NULL); node **nodespace, char **function_name
 int (*find_function_info)(int, void **);
 int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);

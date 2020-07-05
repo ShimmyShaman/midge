@@ -5629,6 +5629,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     special_update_definition_v1->variable_parameter_begin_index = -1;
     special_update_definition_v1->struct_usage_count = 0;
     special_update_definition_v1->struct_usage = NULL;
+    allocate_and_copy_cstr(special_update_definition_v1->mc_code, "  // Empty\n");
 
     mc_parameter_info_v1 *field;
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));

@@ -240,9 +240,30 @@ int core_display_handle_input_v1(int argc, void **argv)
       continue;
 
     switch (event->type) {
-    case INPUT_EVENT_MOUSE_PRESS:
+    case INPUT_EVENT_MOUSE_PRESS: {
       event->handled = true;
-      break;
+
+      // Find the core object the name represents
+      {
+        function_info *function;
+        void *vargs[3];
+        vargs[0] = (void **)&function;
+        vargs[1] = (void **)&command_hub->global_node;
+        vargs[2] = (void **)&child->name;
+        find_function_info(3, vargs);
+
+        if (function) {
+          // Exists as function
+          // Make visible the function editor and set
+          // mc_node_v1 *function_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way...
+          // function_editor->data.visual.hidden = false;
+          // function_editor->data.visual.requires_render_update = true;
+
+          MCcall(load_existing_function_into_function_editor(function));
+          break;
+        }
+      }
+    } break;
 
     default:
       break;
