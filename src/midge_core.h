@@ -463,7 +463,7 @@ typedef struct mc_procedure_template_v1 {
 
 } mc_procedure_template_v1;
 
-#define FUNCTION_EDITOR_RENDERED_CODE_LINES 16
+#define FUNCTION_EDITOR_RENDERED_CODE_LINES 25
 typedef struct code_line {
   uint index;
   bool requires_render_update;
@@ -477,7 +477,7 @@ typedef struct function_editor_state {
     uint lines_allocated, lines_count;
     char **lines;
   } text;
-uint font_resource_uid;
+  uint font_resource_uid;
   uint line_display_offset;
   uint cursorCol, cursorLine;
 
@@ -616,4 +616,64 @@ int get_process_originator_type(process_action_type action_type, process_origina
     break;
   }
 }
+
+const char *function_editor_handle_input_v1_code =
+    "// printf(\"function_editor_handle_input_v1-a\\n\");\n"
+    "frame_time const *const elapsed = (frame_time const *const)argv[0];\n"
+    "mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];\n"
+    "mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];\n"
+    "\n"
+    "if (fedit->data.visual.hidden)\n"
+    "  return 0;\n"
+    "\n"
+    "event->handled = true;\n"
+    "function_editor_state *state = (function_editor_state *)fedit->extra;\n"
+    "\n"
+    "event->handled = true;\n"
+    "\n"
+    "if (event->type == INPUT_EVENT_MOUSE_PRESS) {\n"
+    "  if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_DOWN) {\n"
+    "    ++state->line_display_offset;\n"
+    "  }\n"
+    "  else if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_UP) {\n"
+    "    --state->line_display_offset;\n"
+    "  }\n"
+    "}\n"
+    "else if (event->type == INPUT_EVENT_KEY_PRESS) {\n"
+    "  MCcall(function_editor_handle_keyboard_input(fedit, event));\n"
+    "}\n"
+    "else {\n"
+    "  return 0;\n"
+    "}\n"
+    "\n"
+    "// printf(\"fehi-4\\n\");\n"
+    "// Update all modified rendered lines\n"
+    "for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {\n"
+    "  if (i + state->line_display_offset < 0 || i + state->line_display_offset >= state->text.lines_count) {\n"
+    "\n"
+    "    // printf(\"fehi-5\\n\");\n"
+    "    if (!state->render_lines[i].text)\n"
+    "      continue;\n"
+    "\n"
+    "    // printf(\"was:'%s' now:NULL\\n\", state->render_lines[i].text);\n"
+    "    free(state->render_lines[i].text);\n"
+    "    state->render_lines[i].text = NULL;\n"
+    "  }\n"
+    "  else {\n"
+    "    // printf(\"fehi-6\\n\");\n"
+    "    if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text.lines[i + "
+    "state->line_display_offset]))\n"
+    "      continue;\n"
+    "\n"
+    "    // printf(\"was:'%s' now:'%s'\\n\", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);\n"
+    "    // Update\n"
+    "    if (state->render_lines[i].text)\n"
+    "      free(state->render_lines[i].text);\n"
+    "    allocate_and_copy_cstr(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);\n"
+    "  }\n"
+    "\n"
+    "  // printf(\"fehi-7\\n\");\n"
+    "  state->render_lines[i].requires_render_update = true;\n"
+    "  fedit->data.visual.requires_render_update = true;\n"
+    "}\n";
 #endif // MIDGE_CORE_H

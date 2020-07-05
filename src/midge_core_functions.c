@@ -742,7 +742,7 @@ int instantiate_function_v1(int argc, void **argv)
 
   // Set the method to the function pointer
   char decl_buf[1024];
-  sprintf(decl_buf, "cm_%s = &%s;", func_info->name, func_identity_buf);
+  sprintf(decl_buf, "%s = &%s;", func_info->name, func_identity_buf);
   // printf("ifv>clint_process:\n%s\n", decl_buf);
   clint_process(decl_buf);
 
@@ -1997,8 +1997,15 @@ typedef enum mc_token_type {
   MC_TOKEN_DEREFERENCE_SEQUENCE,
   MC_TOKEN_KEYWORD_OR_NAME,
   MC_TOKEN_SQUARE_OPEN_BRACKET,
+  MC_TOKEN_OPEN_BRACKET,
   MC_TOKEN_EQUALITY_OPERATOR,
   MC_TOKEN_ASSIGNMENT_OPERATOR,
+  MC_TOKEN_IF_KEYWORD,
+  MC_TOKEN_ELSE_KEYWORD,
+  MC_TOKEN_WHILE_KEYWORD,
+  MC_TOKEN_SWITCH_KEYWORD,
+  MC_TOKEN_RETURN_KEYWORD,
+  MC_TOKEN_CONST_KEYWORD,
 } mc_token_type;
 typedef struct mc_token {
   mc_token_type type;
@@ -2278,6 +2285,12 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
     MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
     return 0;
   }
+  case '(': {
+    output->type = MC_TOKEN_OPEN_BRACKET;
+    allocate_and_copy_cstr(output->text, "(");
+    output->start_index = i;
+    return 0;
+  }
   case '[': {
     output->type = MC_TOKEN_SQUARE_OPEN_BRACKET;
     allocate_and_copy_cstr(output->text, "[");
@@ -2305,20 +2318,77 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
 
       {
         // Keywords
-        if (!strncmp(code + i, "if", 2)) {
-          MCerror(2193, "TODO");
+        if (!strncmp(code + s, "if", 2)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_IF_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
         }
-        if (!strncmp(code + i, "else", 2)) {
-          MCerror(2193, "TODO");
+        if (!strncmp(code + s, "else", 4)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_ELSE_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
         }
-        if (!strncmp(code + i, "while", 2)) {
-          MCerror(2193, "TODO");
+        if (!strncmp(code + s, "while", 5)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_WHILE_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
         }
-        if (!strncmp(code + i, "switch", 2)) {
-          MCerror(2193, "TODO");
+        if (!strncmp(code + s, "switch", 6)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_SWITCH_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
         }
-        if (!strncmp(code + i, "return", 2)) {
-          MCerror(2193, "TODO");
+        if (!strncmp(code + s, "return", 6)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_RETURN_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
+        }
+        if (!strncmp(code + s, "const", 5)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_CONST_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
         }
       }
 
@@ -2346,59 +2416,218 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
 int transcribe_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   // Determine the type of statement
-  mc_token token;
-  MCcall(peek_mc_token(code, *i, 0, &token));
-  switch (token.type) {
+  mc_token token0;
+  MCcall(peek_mc_token(code, *i, 0, &token0));
+  switch (token0.type) {
   case MC_TOKEN_KEYWORD_OR_NAME: {
-    mc_token next_token;
-    MCcall(peek_mc_token(code, *i, 1, &next_token));
-    switch (next_token.type) {
-    case MC_TOKEN_KEYWORD_OR_NAME: {
+    mc_token token1;
+    MCcall(peek_mc_token(code, *i, 1, &token1));
+    switch (token1.type) {
+    case MC_TOKEN_CONST_KEYWORD: {
       // Some sort of declarative statement
-      mc_token after_token;
-      MCcall(peek_mc_token(code, *i, 2, &after_token));
-      switch (after_token.type) {
-      case MC_TOKEN_SQUARE_OPEN_BRACKET: {
-        // Array declarative
-        MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
-        break;
-      }
-      case MC_TOKEN_ASSIGNMENT_OPERATOR: {
-        // Array declarative
-        MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
-        break;
-      }
+      mc_token token2;
+      MCcall(peek_mc_token(code, *i, 2, &token2));
+      switch (token2.type) {
+      case MC_TOKEN_DEREFERENCE_SEQUENCE: {
+        // Some sort of declarative statement
+        mc_token token3;
+        MCcall(peek_mc_token(code, *i, 3, &token3));
+        switch (token3.type) {
+        case MC_TOKEN_CONST_KEYWORD: {
+          // Some sort of declarative statement
+          mc_token token4;
+          MCcall(peek_mc_token(code, *i, 4, &token4));
+          switch (token4.type) {
+          case MC_TOKEN_KEYWORD_OR_NAME: {
+            // Some sort of declarative statement
+            mc_token token5;
+            MCcall(peek_mc_token(code, *i, 5, &token5));
+            switch (token5.type) {
+            case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+              // Array declarative
+              MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
+              break;
+            }
+            case MC_TOKEN_ASSIGNMENT_OPERATOR: {
+              // Array declarative
+              MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
+              break;
+            }
+            default: {
+              print_parse_error(code, token5.start_index, "see-below", "");
+              MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:KEYWORD_OR_NAME:ERR-token:%i:%s", token5.type,
+                      token5.text);
+            }
+            }
+            free(token5.text);
+          } break;
+          default: {
+            print_parse_error(code, token4.start_index, "see-below", "");
+            MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:ERR-token:%i:%s", token4.type, token4.text);
+          }
+          }
+          free(token4.text);
+        } break;
+        default: {
+          print_parse_error(code, token2.start_index, "see-below", "");
+          MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:ERR-token:%i:%s", token3.type, token3.text);
+        }
+        }
+        free(token3.text);
+      } break;
       default: {
-        MCerror(2277, "MC_TOKEN_IDENTIFIER:MC_TOKEN_IDENTIFIER:Unsupported-token:%i:%s", after_token.type, after_token.text);
+        print_parse_error(code, token2.start_index, "see-below", "");
+        MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:ERR-token:%i:%s", token2.type, token2.text);
       }
       }
-      free(after_token.text);
+      free(token2.text);
     } break;
-    case MC_TOKEN_ASSIGNMENT_OPERATOR: {
-      // Array declarative
-      // printf("MC_TOKEN_ASSIGNMENT_OPERATOR,before:\n%s\n", *transcription);
-      MCcall(transcribe_assignment(owner, code, i, transcription_alloc, transcription));
-      // printf("MC_TOKEN_ASSIGNMENT_OPERATOR,after:\n%s\n", *transcription);
-    } break;
-    case MC_TOKEN_SQUARE_OPEN_BRACKET: {
-      // Array Access
-      MCcall(transcribe_array_access(owner, code, i, transcription_alloc, transcription));
-      break;
-    }
     default: {
-      MCerror(2282, "MC_TOKEN_IDENTIFIER:Unsupported-token:%i:%s", next_token.type, next_token.text);
+      MCerror(2282, "MC_TOKEN_KEYWORD_OR_NAME:ERR-token:%i:%s", token1.type, token1.text);
     }
     }
-
-    free(next_token.text);
+    free(token1.text);
   } break;
+  //   case MC_TOKEN_CONST_KEYWORD: {
+  //     // Some sort of declarative statement
+  //     mc_token token2;
+  //     MCcall(peek_mc_token(code, *i, 2, &token2));
+  //     switch (token2.type) {
+  //     case MC_TOKEN_DEREFERENCE_SEQUENCE: {
+  //       // Some sort of declarative statement
+  //       mc_token token3;
+  //       MCcall(peek_mc_token(code, *i, 3, &token3));
+  //       switch (token3.type) {
+  //       case MC_TOKEN_CONST_KEYWORD: {
+  //         // Some sort of declarative statement
+  //         mc_token token4;
+  //         MCcall(peek_mc_token(code, *i, 2, &token4));
+  //         switch (token4.type) {
+  //           // Some sort of declarative statement
+  //           mc_token token3;
+  //           MCcall(peek_mc_token(code, *i, 3, &token3));
+  //           switch (token3.type) {
+  //           case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+  //             // Array declarative
+  //             MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
+  //             break;
+  //           }
+  //           case MC_TOKEN_ASSIGNMENT_OPERATOR: {
+  //             // Array declarative
+  //             MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
+  //             break;
+  //           }
+  //           default: {
+  //             print_parse_error(code, token3.start_index, "see-below", "");
+  //             MCerror(2461, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:Unsupported-token:%i:%s", token3.type, token3.text);
+  //           }
+  //           }
+  //           free(token3.text);
+  //         }
+  //         break;
+  //       default: {
+  //         print_parse_error(code, token2.start_index, "see-below", "");
+  //         MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:Unsupported-token:%i:%s", token2.type, token2.text);
+  //       }
+  //       }
+  //         free(token2.text);
+  //       }
+  //       break;
+  //     case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+  //       // Array declarative
+  //       MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
+  //       break;
+  //     }
+  //     case MC_TOKEN_ASSIGNMENT_OPERATOR: {
+  //       // Array declarative
+  //       MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
+  //       break;
+  //     }
+  //     default: {
+  //       print_parse_error(code, token3.start_index, "see-below", "");
+  //       MCerror(2461, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:Unsupported-token:%i:%s", token3.type, token3.text);
+  //     }
+  //     }
+  //       free(token3.text);
+  //     }
+  //     break;
+  //   default: {
+  //     print_parse_error(code, token2.start_index, "see-below", "");
+  //     MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:Unsupported-token:%i:%s", token2.type, token2.text);
+  //   }
+  //   }
+  //     free(token2.text);
+  //   }
+  //   break;
+  // case MC_TOKEN_KEYWORD_OR_NAME: {
+  //   // Some sort of declarative statement
+  //   mc_token token2;
+  //   MCcall(peek_mc_token(code, *i, 2, &token2));
+  //   switch (token2.type) {
+  //   case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+  //     // Array declarative
+  //     MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
+  //     break;
+  //   }
+  //   case MC_TOKEN_ASSIGNMENT_OPERATOR: {
+  //     // Array declarative
+  //     MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
+  //     break;
+  //   }
+  //   default: {
+  //     printf("was:'%s'\n", token1.text);
+  //     print_parse_error(code, token2.start_index, "see-below", "");
+  //     MCerror(2277, "MC_TOKEN_KEYWORD_OR_NAME:MC_TOKEN_KEYWORD_OR_NAME:Unsupported-token:%i:%s", token2.type, token2.text);
+  //   }
+  //   }
+  //   free(token2.text);
+  // } break;
+  // case MC_TOKEN_ASSIGNMENT_OPERATOR: {
+  //   // Array declarative
+  //   // printf("MC_TOKEN_ASSIGNMENT_OPERATOR,before:\n%s\n", *transcription);
+  //   MCcall(transcribe_assignment(owner, code, i, transcription_alloc, transcription));
+  //   // printf("MC_TOKEN_ASSIGNMENT_OPERATOR,after:\n%s\n", *transcription);
+  // } break;
+  // case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+  //   // Array Access
+  //   MCcall(transcribe_array_access(owner, code, i, transcription_alloc, transcription));
+  // } break;
+  // case MC_TOKEN_OPEN_BRACKET: {
+  //   // Array Access
+  //   MCcall(transcribe_function_call(owner, code, i, transcription_alloc, transcription));
+  // } break;
   default: {
-    MCerror(2287, "unsupported token:%i:%s", token.type, token.text);
+    MCerror(2282, "Unsupported-token:%i:%s", token0.type, token0.text);
   }
   }
 
-  free(token.text);
+  free(token0.text);
 
+  return 0;
+}
+
+int transcribe_comment(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+{
+  MCcall(transcribe_past(code, i, transcription_alloc, transcription, "/"));
+  int s = *i;
+  if (code[*i] == '/') {
+    // Line Comment
+    for (;; ++*i) {
+      if (code[*i] == '\n' || code[*i] == '\0') {
+        break;
+      }
+    }
+  }
+  else {
+    // Multi-Line Comment
+    for (;; ++*i) {
+      if ((code[*i] == '*' && code[*i + 1] == '/') || code[*i] == '\0') {
+        break;
+      }
+    }
+  }
+
+  MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
   return 0;
 }
 
@@ -2420,6 +2649,13 @@ int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *tra
     case '}':
     case '\0': {
       return 0;
+    }
+    case '/': {
+      if (code[*i + 1] != '/' && code[*i + 1] != '*') {
+        MCerror(2426, "Unexpected");
+      }
+
+      MCcall(transcribe_comment(owner, code, i, transcription_alloc, transcription));
     }
     case '*': {
       MCcall(transcribe_statement(owner, code, i, transcription_alloc, transcription));
@@ -3439,7 +3675,7 @@ int function_editor_render_v1(int argc, void **argv)
   MCcall(obtain_element_render_command(sequence, &element_cmd));
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   element_cmd->x = 6 + (uint)(state->cursorCol * 10.31f);
-  element_cmd->y = 11 - 1 + state->cursorLine * 24;
+  element_cmd->y = 11 - 1 + (state->cursorLine - state->line_display_offset) * 24;
   element_cmd->data.colored_rect_info.width = 2;
   element_cmd->data.colored_rect_info.height = 25;
   element_cmd->data.colored_rect_info.color = (render_color){0.83f, 0.83f, 0.83f, 1.f};
@@ -3582,7 +3818,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 
     // Declare with cling
     char buf[1024];
-    sprintf(buf, "int (*cm_%s)(int, void **);", func_info->name);
+    sprintf(buf, "int (*%s)(int, void **);", func_info->name);
     clint_process(buf);
   }
 
@@ -3645,22 +3881,11 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
   return 0;
 }
 
-int function_editor_handle_input_v1(int argc, void **argv)
+int function_editor_handle_keyboard_input(node *fedit, mc_input_event_v1 *event)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
-
-  // printf("function_editor_handle_input_v1-a\n");
-  frame_time const *const elapsed = (frame_time const *const)argv[0];
-  mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
-  mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];
-
-  if (fedit->data.visual.hidden)
-    return 0;
-
-  if (event->type != INPUT_EVENT_KEY_PRESS)
-    return 0;
 
   function_editor_state *state = (function_editor_state *)fedit->extra;
 
@@ -3841,6 +4066,42 @@ int function_editor_handle_input_v1(int argc, void **argv)
   } break;
   }
 
+  return 0;
+}
+
+int function_editor_handle_input_v1(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  // printf("function_editor_handle_input_v1-a\n");
+  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
+  mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];
+
+  if (fedit->data.visual.hidden)
+    return 0;
+
+  function_editor_state *state = (function_editor_state *)fedit->extra;
+
+  event->handled = true;
+
+  if (event->type == INPUT_EVENT_MOUSE_PRESS) {
+    if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_DOWN) {
+      ++state->line_display_offset;
+    }
+    else if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_UP) {
+      --state->line_display_offset;
+    }
+  }
+  else if (event->type == INPUT_EVENT_KEY_PRESS) {
+    MCcall(function_editor_handle_keyboard_input(fedit, event));
+  }
+  else {
+    return 0;
+  }
+
   // printf("fehi-4\n");
   // Update all modified rendered lines
   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
@@ -3859,7 +4120,7 @@ int function_editor_handle_input_v1(int argc, void **argv)
       if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]))
         continue;
 
-      printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+      // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
       // Update
       if (state->render_lines[i].text)
         free(state->render_lines[i].text);

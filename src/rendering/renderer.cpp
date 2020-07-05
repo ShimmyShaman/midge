@@ -290,6 +290,16 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
     switch (cmd->type) {
     case RENDER_COMMAND_COLORED_RECTANGLE: {
 
+      // Bounds check
+      if (cmd->data.colored_rect_info.width == 0 || cmd->x >= sequence->image_width || cmd->data.colored_rect_info.height == 0 ||
+          cmd->y >= sequence->image_height)
+        continue;
+
+      // Setup viewport and clip
+      set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
+      set_scissor_cmd(p_vkrs, max(cmd->x, 0), max(cmd->y, 0), cmd->data.colored_rect_info.width,
+                      cmd->data.colored_rect_info.height);
+
       // Vertex Uniform Buffer Object
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(vert_data_scale_offset);
@@ -306,10 +316,6 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       copy_buffer_used += sizeof(render_color);
 
       memcpy(frag_ubo_data, &cmd->data.colored_rect_info.color, sizeof(float) * 4);
-
-      // Setup viewport and clip
-      set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-      set_scissor_cmd(p_vkrs, cmd->x, cmd->y, cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
 
       // Allocate the descriptor set from the pool.
       VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -535,7 +541,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         float width = q.x1 - q.x0;
         float height = q.y1 - q.y0;
 
-        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n", q.s0, q.s1,
+        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n", q.s0,
+        // q.s1,
         //        q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
         // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 

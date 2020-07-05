@@ -5,6 +5,13 @@
 
 #include "m_threads.h"
 
+#ifndef max
+#define max(x, y) x < y ? y : x
+#endif
+#ifndef min
+#define min(x, y) x > y ? y : x
+#endif
+
 #define COLOR_CORNFLOWER_BLUE (render_color){0.19f, 0.34f, 0.83f, 1.f};
 #define COLOR_GREENISH (render_color){0.11f, 0.55f, 0.32f, 1.f};
 #define COLOR_TEAL (render_color){0.0f, 0.52f, 0.52f, 1.f};
