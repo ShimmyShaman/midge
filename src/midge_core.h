@@ -11,6 +11,11 @@
 
 #include "rendering/node_render.h"
 
+#define _POSIX_C_SOURCE 200809L
+#ifndef CLOCK_REALTIME
+#define CLOCK_REALTIME 0
+#endif
+
 #ifndef __cplusplus
 typedef unsigned char bool;
 static const bool false = 0;
@@ -303,7 +308,8 @@ typedef struct mc_interactive_console_v1 {
 } mc_interactive_console_v1;
 
 typedef struct update_callback_timer {
-  struct timespec last_update;
+  struct timespec next_update;
+  struct timespec period;
   bool reset_timer_on_update;
   int (*update_delegate)(int, void **);
   void *state;
@@ -509,6 +515,7 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
 int parse_past_type_identifier(const char *text, int *index, char **identifier);
 int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra);
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
+int increment_time_spec(struct timespec *time, struct timespec* amount, struct timespec *outTime);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \

@@ -238,6 +238,7 @@ int core_display_handle_input_v1(int argc, void **argv)
         event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
         event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
       continue;
+    printf("x:%u y:%u button:%u\n", event->detail.mouse.x, event->detail.mouse.y, event->detail.mouse.button);
 
     switch (event->type) {
     case INPUT_EVENT_MOUSE_PRESS: {

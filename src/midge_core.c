@@ -1,6 +1,5 @@
 /* midge_core.c */
 // #define __USE_POSIX199309
-#define _POSIX_C_SOURCE 200809L
 
 #include "midge_core.h"
 
@@ -2055,6 +2054,18 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
   }
 }
 
+int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime)
+{
+  outTime->tv_sec = time->tv_sec + amount->tv_sec;
+  outTime->tv_nsec = time->tv_nsec + amount->tv_nsec;
+  if (outTime->tv_nsec >= 1000000000) {
+    ++outTime->tv_sec;
+    outTime->tv_nsec -= 1000000000;
+  }
+
+  return 0;
+}
+
 int (*mc_dummy_function)(int, void **);
 int mc_dummy_function_v1(int argc, void **argv)
 {
@@ -2527,6 +2538,28 @@ int mc_main(int argc, const char *const *argv)
         if (logic_update_frametime.tv_nsec > 1000 * ONE_MS_IN_NS) {
           logic_update_frametime.tv_nsec -= 1000 * ONE_MS_IN_NS;
           ++logic_update_frametime.tv_sec;
+        }
+      }
+
+      // Update Timers
+      for (int i = 0; i < command_hub->update_timers.count; ++i) {
+        update_callback_timer *timer = &command_hub->update_timers.callbacks[i];
+
+        // printf("::%u<>%u\n", timer->next_update.tv_sec, current_frametime.tv_sec);
+        if (current_frametime.tv_sec > timer->next_update.tv_sec ||
+            (current_frametime.tv_sec == timer->next_update.tv_sec && current_frametime.tv_nsec >= timer->next_update.tv_nsec)) {
+          // Update
+          {
+            void *vargs[2];
+            vargs[0] = (void *)&elapsed;
+            vargs[1] = (void *)timer->state;
+            timer->update_delegate(2, vargs);
+          }
+
+          if (timer->reset_timer_on_update)
+            increment_time_spec(&current_frametime, &timer->period, &timer->next_update);
+          else
+            increment_time_spec(&timer->next_update, &timer->period, &timer->next_update);
         }
       }
 

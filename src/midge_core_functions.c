@@ -3572,20 +3572,20 @@ int render_global_node_v1(int argc, void **argv)
   return 0;
 }
 
-int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, void *state)
+int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update, void *state)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
                                   /*mcfuncreplace*/
 
-  bool reset_timer_on_update = true; // future argument
-
   update_callback_timer *callback_timer;
   MCcall(obtain_item_from_collection((void **)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
                                      &command_hub->update_timers.count, sizeof(update_callback_timer), (void **)&callback_timer));
 
-  callback_timer->last_update = (struct timespec){0L, 0L};
+  clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
+  callback_timer->period = (struct timespec){usecs_period / 1000000, (usecs_period % 1000000) * 1000};
+  increment_time_spec(&callback_timer->next_update, &callback_timer->period, &callback_timer->next_update);
   callback_timer->reset_timer_on_update = true;
   callback_timer->update_delegate = fnptr_update_callback;
   callback_timer->state = state;
@@ -4135,6 +4135,55 @@ int function_editor_handle_input_v1(int argc, void **argv)
   return 0;
 }
 
+typedef struct debug_data_state {
+  int sequenceStep;
+} debug_data_state;
+
+int debug_automation(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+                                  // find_struct_info/find_function_info and do the same there.
+                                  /*mcfuncreplace*/
+
+  // printf("function_editor_update_v1-a\n");
+  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  debug_data_state *debugState = (debug_data_state *)argv[1];
+
+  // function_editor_state *state = (function_editor_state *)fedit->extra;
+
+  switch (debugState->sequenceStep) {
+  case 0: {
+    // Select
+    ++debugState->sequenceStep;
+
+    node *core_display = (node *)command_hub->global_node->children[1];
+    mc_input_event_v1 sim;
+    sim.type = INPUT_EVENT_MOUSE_PRESS;
+    sim.handled = false;
+    sim.shiftDown = false;
+    sim.altDown = false;
+    sim.ctrlDown = false;
+    sim.detail.mouse.button = MOUSE_BUTTON_LEFT;
+    sim.detail.mouse.x = 51;
+    sim.detail.mouse.y = 40;
+    {
+      void *vargs[3];
+      vargs[0] = argv[0];
+      vargs[1] = &core_display;
+      vargs[2] = &sim;
+      core_display_handle_input(3, vargs);
+    }
+
+  } break;
+
+  default:
+    break;
+  }
+
+  return 0;
+}
+
 int build_function_editor_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -4142,6 +4191,10 @@ int build_function_editor_v1(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
   // printf("bfe-a\n");
+
+  debug_data_state *debugState = (debug_data_state *)malloc(sizeof(debug_data_state));
+  debugState->sequenceStep = 0;
+  register_update_timer(&debug_automation, 340 * 1000, true, (void *)debugState);
 
   // Build the function editor window
   // Instantiate: node global;
@@ -4159,8 +4212,6 @@ int build_function_editor_v1(int argc, void **argv)
   fedit->data.visual.render_delegate = &function_editor_render_v1;
   fedit->data.visual.hidden = true;
   fedit->data.visual.input_handler = &function_editor_handle_input;
-
-  register_update_timer(function_editor_update, 500 * 1000, (void *)fedit);
 
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
                               &command_hub->global_node->child_count, fedit));
