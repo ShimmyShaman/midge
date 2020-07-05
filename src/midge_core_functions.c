@@ -2511,6 +2511,7 @@ int load_existing_function_into_function_editor(function_info *function)
   function_editor_state *feState = (function_editor_state *)function_editor->extra;
   for (int j = 0; j < feState->text.lines_count; ++j) {
     free(feState->text.lines[j]);
+    feState->text.lines[j] = NULL;
   }
   feState->text.lines_count = 0;
 
@@ -2588,6 +2589,9 @@ int load_existing_function_into_function_editor(function_info *function)
             memcpy(new_ary, feState->text.lines, feState->text.lines_allocated * sizeof(char *));
             free(feState->text.lines);
           }
+          for (int i = feState->text.lines_allocated; i < new_alloc; ++i) {
+            new_ary[i] = NULL;
+          }
 
           feState->text.lines_allocated = new_alloc;
           feState->text.lines = new_ary;
@@ -2658,7 +2662,7 @@ int load_existing_function_into_function_editor(function_info *function)
   function_editor->data.visual.hidden = false;
   function_editor->data.visual.requires_render_update = true;
 
-  // printf("ohfohe\n");
+  printf("ohfohe\n");
 
   return 0;
 }
@@ -2837,6 +2841,9 @@ int load_source_file_into_function_editor(char const *const core_function_name)
           if (feState->text.lines_allocated) {
             memcpy(new_ary, feState->text.lines, feState->text.lines_allocated * sizeof(char *));
             free(feState->text.lines);
+          }
+          for (int i = feState->text.lines_allocated; i < new_alloc; ++i) {
+            new_ary[i] = NULL;
           }
 
           feState->text.lines_allocated = new_alloc;
@@ -3687,12 +3694,12 @@ int function_editor_handle_input_v1(int argc, void **argv)
 
     // Bring all forward characters back one
     int line_len = strlen(state->text.lines[state->cursorLine]);
-    for (int i = state->cursorCol; i < line_len; ++i) {
+    for (int i = state->cursorCol - 1; i < line_len; ++i) {
       state->text.lines[state->cursorLine][i] = state->text.lines[state->cursorLine][i + 1];
     }
 
     --state->cursorCol;
-  }
+  } break;
   case KEY_CODE_ENTER:
   case KEY_CODE_RETURN: {
     event->handled = true;
@@ -3723,10 +3730,90 @@ int function_editor_handle_input_v1(int argc, void **argv)
       return 0;
     }
     else {
-      // TODO
+      // Newline -- carrying over any extra
+      char *cursorLine = state->text.lines[state->cursorLine];
+
+      printf("fehi-0\n");
+      // Automatic indent
+      int automaticIndent = 0;
+      int cursorLineLen = strlen(cursorLine);
+      for (; automaticIndent < state->cursorCol && automaticIndent < cursorLineLen; ++automaticIndent) {
+        if (cursorLine[automaticIndent] != ' ')
+          break;
+      }
+
+      // Increment lines after by one place
+      if (state->text.lines_count + 1 >= state->text.lines_allocated) {
+        uint new_alloc = state->text.lines_allocated + 4 + state->text.lines_allocated / 4;
+        char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
+        if (state->text.lines_allocated) {
+          memcpy(new_ary, state->text.lines, state->text.lines_allocated * sizeof(char *));
+          free(state->text.lines);
+        }
+        for (int i = state->text.lines_allocated; i < new_alloc; ++i) {
+          new_ary[i] = NULL;
+        }
+
+        state->text.lines_allocated = new_alloc;
+        state->text.lines = new_ary;
+      }
+      // printf("state->text.lines_allocated:%u state->text.lines_count:%u state->cursorLine:%u\n", state->text.lines_allocated,
+      //        state->text.lines_count, state->cursorLine);
+      for (int i = state->text.lines_count; i > state->cursorLine + 1; --i) {
+
+        state->text.lines[i] = state->text.lines[i - 1];
+      }
+      state->text.lines[state->cursorLine + 1] = NULL;
+      ++state->text.lines_count;
+
+      // printf("fehi-1\n");
+      if (state->cursorCol >= cursorLineLen) {
+        // printf("fehi-1A\n");
+        // Just create new line
+        char *newLine = (char *)malloc(sizeof(char) * (automaticIndent + 1));
+        for (int i = 0; i < automaticIndent; ++i) {
+          newLine[i] = ' ';
+        }
+        newLine[automaticIndent] = '\0';
+        state->text.lines[state->cursorLine + 1] = newLine;
+      }
+      else if (state->cursorCol) {
+        // printf("fehi-1B\n");
+        // Split current line at cursor column position
+        char *firstSplit = (char *)malloc(sizeof(char) * (state->cursorCol + 1));
+        memcpy(firstSplit, cursorLine, sizeof(char) * state->cursorCol);
+        firstSplit[state->cursorCol] = '\0';
+
+        char *secondSplit = (char *)malloc(sizeof(char) * (automaticIndent + cursorLineLen - state->cursorCol + 1));
+        for (int i = 0; i < automaticIndent; ++i) {
+          secondSplit[i] = ' ';
+        }
+        memcpy(secondSplit + automaticIndent, cursorLine + state->cursorCol,
+               sizeof(char) * (cursorLineLen - state->cursorCol + 1));
+        secondSplit[cursorLineLen - state->cursorCol] = '\0';
+
+        free(cursorLine);
+        state->text.lines[state->cursorLine] = firstSplit;
+        state->text.lines[state->cursorLine + 1] = secondSplit;
+      }
+      else {
+        // printf("fehi-1C\n");
+        // Move the rest of the current line forwards
+        state->text.lines[state->cursorLine + 1] = cursorLine;
+        state->text.lines[state->cursorLine] = (char *)malloc(sizeof(char) * (automaticIndent + 1));
+        for (int i = 0; i < automaticIndent; ++i) {
+          state->text.lines[state->cursorLine][i] = ' ';
+        }
+      }
+
+      // printf("fehi-2\n");
+      // Cursor Position Update
+      ++state->cursorLine;
+      state->cursorCol = automaticIndent;
     }
   } break;
   default: {
+    // printf("fehi-3\n");
     char c = '\0';
     int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c);
     if (res)
@@ -3754,16 +3841,33 @@ int function_editor_handle_input_v1(int argc, void **argv)
   } break;
   }
 
-  // Update the rendered line for the text
-  if (state->cursorLine > state->line_display_offset &&
-      state->cursorLine - state->line_display_offset < FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+  // printf("fehi-4\n");
+  // Update all modified rendered lines
+  for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+    if (i + state->line_display_offset < 0 || i + state->line_display_offset >= state->text.lines_count) {
 
-    if (state->render_lines[state->cursorLine - state->line_display_offset].text) {
-      free(state->render_lines[state->cursorLine - state->line_display_offset].text);
+      // printf("fehi-5\n");
+      if (!state->render_lines[i].text)
+        continue;
+
+      // printf("was:'%s' now:NULL\n", state->render_lines[i].text);
+      free(state->render_lines[i].text);
+      state->render_lines[i].text = NULL;
     }
-    allocate_and_copy_cstr(state->render_lines[state->cursorLine - state->line_display_offset].text,
-                           state->text.lines[state->cursorLine]);
-    state->render_lines[state->cursorLine - state->line_display_offset].requires_render_update = true;
+    else {
+      // printf("fehi-6\n");
+      if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]))
+        continue;
+
+      printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+      // Update
+      if (state->render_lines[i].text)
+        free(state->render_lines[i].text);
+      allocate_and_copy_cstr(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+    }
+
+    // printf("fehi-7\n");
+    state->render_lines[i].requires_render_update = true;
     fedit->data.visual.requires_render_update = true;
   }
 
@@ -3812,8 +3916,9 @@ int build_function_editor_v1(int argc, void **argv)
   state->cursorCol = 0;
   state->line_display_offset = 0;
   state->text.lines_allocated = 8;
-  state->text.lines = (char **)malloc(sizeof(char) * state->text.lines_allocated);
+  state->text.lines = (char **)calloc(sizeof(char *), state->text.lines_allocated);
   state->text.lines_count = 0;
+
   code_line *code_lines = state->render_lines;
   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
 

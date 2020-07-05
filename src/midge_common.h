@@ -69,6 +69,7 @@ typedef enum key_event_code {
   KEY_CODE_SEMI_COLON = 47,
   KEY_CODE_QUOTE = 48,
   KEY_CODE_LEFT_SHIFT = 50,
+  KEY_CODE_BACK_SLASH = 51,
   KEY_CODE_Z = 52,
   KEY_CODE_X = 53,
   KEY_CODE_C = 54,
@@ -81,6 +82,7 @@ typedef enum key_event_code {
   KEY_CODE_FORWARD_SLASH = 61,
   KEY_CODE_RIGHT_SHIFT = 62,
   KEY_CODE_LEFT_ALT = 64,
+  KEY_CODE_SPACE = 65,
   KEY_CODE_RETURN = 104,
   KEY_CODE_RIGHT_CTRL = 105,
   KEY_CODE_RIGHT_ALT = 108,
@@ -231,6 +233,9 @@ int get_key_input_code_char(bool shift, key_event_code code, char *c)
   case KEY_CODE_QUOTE:
     *c = shift ? '"' : '\'';
     return 0;
+  case KEY_CODE_BACK_SLASH:
+    *c = shift ? '|' : '\\';
+    return 0;
   case KEY_CODE_Z:
     *c = shift ? 'Z' : 'z';
     return 0;
@@ -260,6 +265,9 @@ int get_key_input_code_char(bool shift, key_event_code code, char *c)
     return 0;
   case KEY_CODE_FORWARD_SLASH:
     *c = shift ? '?' : '/';
+    return 0;
+  case KEY_CODE_SPACE:
+    *c = shift ? ' ' : ' ';
     return 0;
 
   default:
