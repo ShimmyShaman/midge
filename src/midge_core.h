@@ -515,7 +515,7 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
 int parse_past_type_identifier(const char *text, int *index, char **identifier);
 int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra);
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
-int increment_time_spec(struct timespec *time, struct timespec* amount, struct timespec *outTime);
+int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \
@@ -625,10 +625,6 @@ int get_process_originator_type(process_action_type action_type, process_origina
 }
 
 const char *function_editor_handle_input_v1_code =
-    "// printf(\"function_editor_handle_input_v1-a\\n\");\n"
-    "frame_time const *const elapsed = (frame_time const *const)argv[0];\n"
-    "mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];\n"
-    "mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];\n"
     "\n"
     "if (fedit->data.visual.hidden)\n"
     "  return 0;\n"

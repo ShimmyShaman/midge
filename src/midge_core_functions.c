@@ -752,7 +752,7 @@ int instantiate_function_v1(int argc, void **argv)
   return 0;
 }
 
-int parse_past_conformed_type_identifier(function_info *func_info, char *code, int *i, char **conformed_type_identity)
+int _parse_past_conformed_type_identifier(function_info *func_info, char *code, int *i, char **conformed_type_identity)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
@@ -762,7 +762,7 @@ int parse_past_conformed_type_identifier(function_info *func_info, char *code, i
   *conformed_type_identity = NULL;
 
   if (!isalpha(code[*i])) {
-    MCcall(print_parse_error(code, *i, "parse_past_conformed_type_identifier", ""));
+    MCcall(print_parse_error(code, *i, "_parse_past_conformed_type_identifier", ""));
     MCerror(459, "Type must begin with alpha character was:'%c'", code[*i]);
   }
 
@@ -799,6 +799,66 @@ int parse_past_conformed_type_identifier(function_info *func_info, char *code, i
   free(type_identity);
 
   *conformed_type_identity = conformed_result;
+  return 0;
+}
+
+int parse_past_empty_text(char const *const code, int *i)
+{
+  while (code[*i] == ' ' || code[*i] == '\n' || code[*i] == '\t') {
+    ++(*i);
+  }
+  return 0;
+}
+
+int parse_past_conformed_type_declaration(function_info *owner, char *code, int *i, char **type_declaration)
+{
+  bool leadingConst = !strncmp(code + *i, "const", 5);
+  if (leadingConst) {
+    MCcall(parse_past(code, i, "const"));
+    MCcall(parse_past_empty_text(code, i));
+  }
+
+  MCcall(_parse_past_conformed_type_identifier(owner, code, i, type_declaration));
+  MCcall(parse_past_empty_text(code, i));
+
+  printf("ppctd-0:'%s'\n", *type_declaration);
+  if (leadingConst) {
+    char *prependedConstStr = (char *)malloc(sizeof(char) * (6 + strlen(*type_declaration) + 1));
+    strcpy(prependedConstStr, "const ");
+    strcat(prependedConstStr, *type_declaration);
+    free(*type_declaration);
+    *type_declaration = prependedConstStr;
+  }
+
+  printf("ppctd-1:'%s'\n", *type_declaration);
+  uint type_declaration_alloc = strlen(*type_declaration) + 1;
+  while (1) {
+    if (!strncmp(code + *i, "const", 5)) {
+      MCcall(append_to_cstr(&type_declaration_alloc, type_declaration, " const"));
+      MCcall(parse_past(code, i, "const"));
+      MCcall(parse_past_empty_text(code, i));
+      printf("ppctd-2:'%s'\n", *type_declaration);
+      continue;
+    }
+
+    uint type_deref_count = 0;
+    while (code[*i] == '*') {
+      ++type_deref_count;
+      ++*i;
+      MCcall(parse_past_empty_text(code, i));
+    }
+    if (type_deref_count) {
+      MCcall(append_to_cstr(&type_declaration_alloc, type_declaration, " "));
+      for (int j = 0; j < type_deref_count; ++j) {
+        MCcall(append_to_cstr(&type_declaration_alloc, type_declaration, "*"));
+      }
+      printf("ppctd-3:'%s'\n", *type_declaration);
+      continue;
+    }
+    break;
+  }
+  printf("ppctd-f:'%s'\n", *type_declaration);
+
   return 0;
 }
 
@@ -921,7 +981,7 @@ int parse_past_expression(function_info *func_info, void *nodespace, char *code,
     case '(': {
       // Assume to be a casting - do containment other ways
       parse_past(code, i, "(");
-      MCcall(parse_past_conformed_type_identifier(func_info, code, i, &primary));
+      MCcall(parse_past_conformed_type_declaration(func_info, code, i, &primary));
       parse_past(code, i, ")");
 
       MCcall(parse_past_expression(func_info, (void *)nodespace, code, i, &temp));
@@ -1092,7 +1152,7 @@ int parse_script_to_mc_v1(int argc, void **argv)
 
       // Type Identifier
       char *type_identifier;
-      MCcall(parse_past_conformed_type_identifier(func_info, code, &i, &type_identifier));
+      MCcall(parse_past_conformed_type_declaration(func_info, code, &i, &type_identifier));
       MCcall(parse_past(code, &i, " "));
 
       // Destination Name
@@ -1136,7 +1196,7 @@ int parse_script_to_mc_v1(int argc, void **argv)
         // break;
         // Identifier
         char *type_identifier;
-        MCcall(parse_past_conformed_type_identifier(func_info, code, &i, &type_identifier));
+        MCcall(parse_past_conformed_type_declaration(func_info, code, &i, &type_identifier));
         MCcall(parse_past(code, &i, " "));
         // parse_past(code, &i, "child");
         // break;
@@ -1539,14 +1599,6 @@ int parse_script_to_mc_v1(int argc, void **argv)
 //   return 0;
 // }
 
-int parse_past_empty_text(char const *const code, int *i)
-{
-  while (code[*i] == ' ' || code[*i] == '\n' || code[*i] == '\t') {
-    ++(*i);
-  }
-  return 0;
-}
-
 int parse_past_mc_identifier(const char *text, int *index, char **identifier, bool include_member_access,
                              bool include_referencing)
 {
@@ -1631,6 +1683,94 @@ int transcribe_past(char const *const code, int *index, uint *transcription_allo
 
 int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription);
 
+typedef enum mc_token_type {
+  MC_TOKEN_NULL = 0,
+  // One or more '*'
+  MC_TOKEN_DEREFERENCE_SEQUENCE,
+  MC_TOKEN_KEYWORD_OR_NAME,
+  MC_TOKEN_SQUARE_OPEN_BRACKET,
+  MC_TOKEN_OPEN_BRACKET,
+  MC_TOKEN_EQUALITY_OPERATOR,
+  MC_TOKEN_ASSIGNMENT_OPERATOR,
+  MC_TOKEN_IF_KEYWORD,
+  MC_TOKEN_ELSE_KEYWORD,
+  MC_TOKEN_WHILE_KEYWORD,
+  MC_TOKEN_SWITCH_KEYWORD,
+  MC_TOKEN_RETURN_KEYWORD,
+  MC_TOKEN_CONST_KEYWORD,
+} mc_token_type;
+typedef struct mc_token {
+  mc_token_type type;
+  char *text;
+  unsigned int start_index;
+} mc_token;
+int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output);
+
+int transcribe_bracketed_expression(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+{
+  MCcall(parse_past(code, i, "("));
+  MCcall(parse_past_empty_text(code, i));
+
+  // Determine the type of statement
+  mc_token token0;
+  MCcall(peek_mc_token(code, *i, 1, &token0));
+  switch (token0.type) {
+  case MC_TOKEN_CONST_KEYWORD: {
+    // Type cast
+    char *type_declaration;
+    MCcall(parse_past_conformed_type_declaration(owner, code, i, &type_declaration));
+    MCcall(parse_past_empty_text(code, i));
+    MCcall(parse_past(code, i, ")"));
+
+    mc_token token1;
+    MCcall(peek_mc_token(code, *i, 0, &token1));
+    switch (token1.type) {
+    case MC_TOKEN_KEYWORD_OR_NAME: {
+      mc_token token2;
+      MCcall(peek_mc_token(code, *i, 1, &token2));
+      switch (token2.type) {
+      case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+        char *identifier;
+        MCcall(parse_past_identifier(code, i, &identifier, true, true));
+        MCcall(parse_past_empty_text(code, i));
+
+        // Transcribe it all
+        MCcall(append_to_cstr(transcription_alloc, transcription, "("));
+        MCcall(append_to_cstr(transcription_alloc, transcription, type_declaration));
+        MCcall(append_to_cstr(transcription_alloc, transcription, ")"));
+        MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
+        MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+
+        free(identifier);
+      } break;
+      default: {
+        MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ":CONST:KEYWORD_OR_NAME"));
+        MCerror(1748, "Unsupported-token:%i:%s", token2.type, token2.text);
+      }
+      }
+
+      free(token1.text);
+    } break;
+    default: {
+      MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ":CONST"));
+      MCerror(1756, "Unsupported-token:%i:%s", token1.type, token1.text);
+    }
+    }
+
+    free(type_declaration);
+    free(token1.text);
+  } break;
+  default: {
+    MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ":"));
+    MCerror(1764, "Unsupported-token:%i:%s", token0.type, token0.text);
+  }
+  }
+
+  free(token0.text);
+
+  return 0;
+}
+
 int transcribe_expression(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   int s = *i;
@@ -1653,6 +1793,9 @@ int transcribe_expression(function_info *owner, char *code, int *i, uint *transc
   case '*': {
     MCcall(transcribe_past(code, i, transcription_alloc, transcription, "*"));
     MCcall(transcribe_expression(owner, code, i, transcription_alloc, transcription));
+  } break;
+  case '(': {
+    MCcall(transcribe_bracketed_expression(owner, code, i, transcription_alloc, transcription));
   } break;
   default: {
     if (isalpha(code[*i]) || code[*i] == '_') {
@@ -1876,7 +2019,7 @@ int transcribe_for_statement(function_info *owner, char *code, int *i, uint *tra
   //   MCerror(1536, "TODO - no init");
   // }
   // else {
-  //   MCcall(parse_past_conformed_type_identifier(NULL, code, i, &iterator_type));
+  //   MCcall(parse_past_conformed_type_declaration(NULL, code, i, &iterator_type));
   //   MCcall(parse_past_empty_text(code, i));
   //   if (code[*i] == '=') {
   //     MCerror(1544, "TODO - assign case");
@@ -1888,6 +2031,61 @@ int transcribe_for_statement(function_info *owner, char *code, int *i, uint *tra
   return 0;
 }
 
+int parse_expression_lacking_function_call(char *code, int *i, char **expression)
+{
+  *expression = NULL;
+
+  int bracketCount = 0;
+
+  for (int j = *i;; ++j) {
+    switch (code[j]) {
+    case '\0': {
+      MCerror(2043, "TODO:was:'%c'", code[j]);
+    } break;
+    case ')': {
+      --bracketCount;
+
+      if (bracketCount >= 0) {
+        break;
+      }
+
+      // Skip to next case label
+    }
+    case ']':
+    case ';': {
+      // Expression is free of function call - transcribe directly
+      *expression = (char *)malloc(sizeof(char) * (j - *i + 1));
+      strncpy(*expression, code + *i, j - *i);
+      (*expression)[j - *i] = '\0';
+      *i = j;
+      return 0;
+    }
+    case '(': {
+      int p = j - 1;
+      while (p >= *i && code[p] == ' ') {
+        --p;
+      }
+      if (p < j) {
+        // A cast
+        ++bracketCount;
+        break;
+      }
+      if (!isalnum(code[p]) && code[p] != '_') {
+        ++bracketCount;
+        break;
+      }
+
+      // Function call
+      MCerror(2060, "TODO");
+    }
+    default:
+      break;
+    }
+  }
+
+  return 0;
+}
+
 int transcribe_if_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   // Header
@@ -1895,17 +2093,28 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
   MCcall(parse_past_empty_text(code, i));
   MCcall(parse_past(code, i, "("));
   MCcall(parse_past_empty_text(code, i));
-  unsigned int expression_alloc = 4;
-  char *expression = (char *)malloc(sizeof(char) * expression_alloc);
-  expression[0] = '\0';
-  MCcall(transcribe_expression(owner, code, i, &expression_alloc, &expression));
-  MCcall(parse_past_empty_text(code, i));
-  MCcall(parse_past(code, i, ")"));
-  MCcall(parse_past_empty_text(code, i));
 
-  MCcall(append_to_cstr(transcription_alloc, transcription, "if ("));
-  MCcall(append_to_cstr(transcription_alloc, transcription, expression));
-  MCcall(append_to_cstr(transcription_alloc, transcription, ") {\n"));
+  char *expression;
+  MCcall(parse_expression_lacking_function_call(code, i, &expression));
+  if (!expression) {
+    MCerror(2045, "TODO -- transcribe function call differently");
+    // unsigned int expression_alloc = 4;
+    // char *expression = (char *)malloc(sizeof(char) * expression_alloc);
+    // expression[0] = '\0';
+    // MCcall(transcribe_expression(owner, code, i, &expression_alloc, &expression));
+  }
+  else {
+    printf("expression lacking function call:'%s'\n", expression);
+
+    MCcall(parse_past_empty_text(code, i));
+    MCcall(parse_past(code, i, ")"));
+    MCcall(parse_past_empty_text(code, i));
+
+    MCcall(append_to_cstr(transcription_alloc, transcription, "if ("));
+    MCcall(append_to_cstr(transcription_alloc, transcription, expression));
+    MCcall(append_to_cstr(transcription_alloc, transcription, ") {\n"));
+  }
+
   if (code[*i] != '{') {
     MCerror(1948, "NOT supporting unbracketed if statements yet");
   }
@@ -1990,29 +2199,6 @@ int transcribe_return_statement(function_info *owner, char *code, int *i, uint *
   printf("trs-4\n");
   return 0;
 }
-
-typedef enum mc_token_type {
-  MC_TOKEN_NULL = 0,
-  // One or more '*'
-  MC_TOKEN_DEREFERENCE_SEQUENCE,
-  MC_TOKEN_KEYWORD_OR_NAME,
-  MC_TOKEN_SQUARE_OPEN_BRACKET,
-  MC_TOKEN_OPEN_BRACKET,
-  MC_TOKEN_EQUALITY_OPERATOR,
-  MC_TOKEN_ASSIGNMENT_OPERATOR,
-  MC_TOKEN_IF_KEYWORD,
-  MC_TOKEN_ELSE_KEYWORD,
-  MC_TOKEN_WHILE_KEYWORD,
-  MC_TOKEN_SWITCH_KEYWORD,
-  MC_TOKEN_RETURN_KEYWORD,
-  MC_TOKEN_CONST_KEYWORD,
-} mc_token_type;
-typedef struct mc_token {
-  mc_token_type type;
-  char *text;
-  unsigned int start_index;
-} mc_token;
-int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output);
 
 int transcribe_function_call(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
@@ -2101,7 +2287,7 @@ int transcribe_declarative_array(function_info *owner, char *code, int *i, uint 
 {
   // printf("befr transcribe_declarative_array:\n%s\n", *transcription);
   char *type_name;
-  MCcall(parse_past_conformed_type_identifier(owner, code, i, &type_name));
+  MCcall(parse_past_conformed_type_declaration(owner, code, i, &type_name));
   MCcall(parse_past_empty_text(code, i));
 
   uint type_deref_count = 0;
@@ -2144,27 +2330,22 @@ int transcribe_declarative_array(function_info *owner, char *code, int *i, uint 
 
 int transcribe_declarative_assignment(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
+  // printf("tda-transcription:\n'%s'\n", *transcription);
   // Type
-  char *type_name;
-  MCcall(parse_past_conformed_type_identifier(owner, code, i, &type_name));
+  char *type_declaration;
+  MCcall(parse_past_conformed_type_declaration(owner, code, i, &type_declaration));
   MCcall(parse_past_empty_text(code, i));
 
-  uint type_deref_count = 0;
-  while (code[*i] == '*') {
-    ++type_deref_count;
-    MCcall(parse_past_empty_text(code, i));
-  }
-
-  printf("type_name:'%s' deref_count:%u\n", type_name, type_deref_count);
+  printf("type_declaration:'%s'\n", type_declaration);
   char *identifier;
   MCcall(parse_past_mc_identifier(code, i, &identifier, false, false));
   MCcall(parse_past_empty_text(code, i));
 
-  MCcall(append_to_cstr(transcription_alloc, transcription, type_name));
-  MCcall(append_to_cstr(transcription_alloc, transcription, " "));
-  for (uint j = 0; j < type_deref_count; ++j) {
-    MCcall(append_to_cstr(transcription_alloc, transcription, "*"));
+  MCcall(append_to_cstr(transcription_alloc, transcription, type_declaration));
+  if (type_declaration[strlen(type_declaration) - 1] != '*') {
+    MCcall(append_to_cstr(transcription_alloc, transcription, " "));
   }
+
   MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
   MCcall(append_to_cstr(transcription_alloc, transcription, " "));
 
@@ -2178,7 +2359,7 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
   MCcall(parse_past(code, i, ";"));
   MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
 
-  free(type_name);
+  free(type_declaration);
   free(identifier);
   // printf("after transcribe_declarative_assignment:\n'%s'\n", *transcription);
   return 0;
@@ -2415,195 +2596,148 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
 
 int transcribe_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
-  // Determine the type of statement
-  mc_token token0;
-  MCcall(peek_mc_token(code, *i, 0, &token0));
-  switch (token0.type) {
-  case MC_TOKEN_KEYWORD_OR_NAME: {
-    mc_token token1;
-    MCcall(peek_mc_token(code, *i, 1, &token1));
-    switch (token1.type) {
-    case MC_TOKEN_CONST_KEYWORD: {
-      // Some sort of declarative statement
-      mc_token token2;
-      MCcall(peek_mc_token(code, *i, 2, &token2));
-      switch (token2.type) {
-      case MC_TOKEN_DEREFERENCE_SEQUENCE: {
+  // Determine if statement has function call matching one of the following two patterns
+  // -- :function_call()
+  // -- :type *identifier = function_call()
+
+  for (int j = *i;; ++j) {
+    switch (code[j]) {
+    case '\0': {
+      MCerror(2539, "Invalid");
+    } break;
+    case ';': {
+      // Statement is free of function call - transcribe directly
+      MCcall(append_to_cstrn(transcription_alloc, transcription, code + *i, j - *i + 1));
+      MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+      *i = j + 1;
+      return 0;
+    }
+    case '(': {
+      int p = j - 1;
+      while (p >= *i && code[p] == ' ') {
+        --p;
+      }
+      if (p < j) {
+        // A cast
+        break;
+      }
+      if (!isalnum(code[p]) && code[p] != '_') {
+        break;
+      }
+
+      // Function call
+      MCerror(2561, "TODO");
+    } break;
+    default:
+      break;
+    }
+  }
+
+  return 0;
+  {
+    /*// Determine the type of statement
+    mc_token token0;
+    MCcall(peek_mc_token(code, *i, 0, &token0));
+    switch (token0.type) {
+    case MC_TOKEN_KEYWORD_OR_NAME: {
+      mc_token token1;
+      MCcall(peek_mc_token(code, *i, 1, &token1));
+      switch (token1.type) {
+      case MC_TOKEN_CONST_KEYWORD: {
         // Some sort of declarative statement
-        mc_token token3;
-        MCcall(peek_mc_token(code, *i, 3, &token3));
-        switch (token3.type) {
-        case MC_TOKEN_CONST_KEYWORD: {
+        mc_token token2;
+        MCcall(peek_mc_token(code, *i, 2, &token2));
+        switch (token2.type) {
+        case MC_TOKEN_DEREFERENCE_SEQUENCE: {
           // Some sort of declarative statement
-          mc_token token4;
-          MCcall(peek_mc_token(code, *i, 4, &token4));
-          switch (token4.type) {
-          case MC_TOKEN_KEYWORD_OR_NAME: {
+          mc_token token3;
+          MCcall(peek_mc_token(code, *i, 3, &token3));
+          switch (token3.type) {
+          case MC_TOKEN_CONST_KEYWORD: {
             // Some sort of declarative statement
-            mc_token token5;
-            MCcall(peek_mc_token(code, *i, 5, &token5));
-            switch (token5.type) {
-            case MC_TOKEN_SQUARE_OPEN_BRACKET: {
-              // Array declarative
-              MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
-              break;
-            }
-            case MC_TOKEN_ASSIGNMENT_OPERATOR: {
-              // Array declarative
-              MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
-              break;
-            }
+            mc_token token4;
+            MCcall(peek_mc_token(code, *i, 4, &token4));
+            switch (token4.type) {
+            case MC_TOKEN_KEYWORD_OR_NAME: {
+              // Some sort of declarative statement
+              mc_token token5;
+              MCcall(peek_mc_token(code, *i, 5, &token5));
+              switch (token5.type) {
+              case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+                // Array declarative
+                MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
+              } break;
+              case MC_TOKEN_ASSIGNMENT_OPERATOR: {
+                // Array declarative
+                MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
+              } break;
+              default: {
+                print_parse_error(code, token5.start_index, "see-below", "");
+                MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:KEYWORD_OR_NAME:ERR-token:%i:%s", token5.type,
+                        token5.text);
+              }
+              }
+              free(token5.text);
+            } break;
             default: {
-              print_parse_error(code, token5.start_index, "see-below", "");
-              MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:KEYWORD_OR_NAME:ERR-token:%i:%s", token5.type,
-                      token5.text);
+              print_parse_error(code, token4.start_index, "see-below", "");
+              MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:ERR-token:%i:%s", token4.type, token4.text);
             }
             }
-            free(token5.text);
+            free(token4.text);
           } break;
           default: {
-            print_parse_error(code, token4.start_index, "see-below", "");
-            MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:ERR-token:%i:%s", token4.type, token4.text);
+            print_parse_error(code, token2.start_index, "see-below", "");
+            MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:ERR-token:%i:%s", token3.type, token3.text);
           }
           }
-          free(token4.text);
+          free(token3.text);
         } break;
         default: {
           print_parse_error(code, token2.start_index, "see-below", "");
-          MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:ERR-token:%i:%s", token3.type, token3.text);
+          MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:ERR-token:%i:%s", token2.type, token2.text);
         }
         }
-        free(token3.text);
+        free(token2.text);
       } break;
+      case MC_TOKEN_DEREFERENCE_SEQUENCE: {
+        // Some sort of declarative statement
+        mc_token token2;
+        MCcall(peek_mc_token(code, *i, 2, &token2));
+        switch (token2.type) {
+        case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+          // Array declarative
+          MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
+        } break;
+        case MC_TOKEN_ASSIGNMENT_OPERATOR: {
+          // Array declarative
+          MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
+        } break;
+        default: {
+          print_parse_error(code, token2.start_index, "see-below", "");
+          MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:DEREFERENCE_SEQUENCE:ERR-token:%i:%s", token2.type, token2.text);
+        }
+        }
+        free(token2.text);
+      }
       default: {
-        print_parse_error(code, token2.start_index, "see-below", "");
-        MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:ERR-token:%i:%s", token2.type, token2.text);
+        print_parse_error(code, token1.start_index, "see-below", "");
+        MCerror(2282, "MC_TOKEN_KEYWORD_OR_NAME:ERR-token:%i:%s", token1.type, token1.text);
       }
       }
-      free(token2.text);
+      free(token1.text);
     } break;
+    // case MC_TOKEN_OPEN_BRACKET: {
+    //   // Array Access
+    //   MCcall(transcribe_function_call(owner, code, i, transcription_alloc, transcription));
+    // } break;
     default: {
-      MCerror(2282, "MC_TOKEN_KEYWORD_OR_NAME:ERR-token:%i:%s", token1.type, token1.text);
+      MCerror(2282, "Unsupported-token:%i:%s", token0.type, token0.text);
     }
     }
-    free(token1.text);
-  } break;
-  //   case MC_TOKEN_CONST_KEYWORD: {
-  //     // Some sort of declarative statement
-  //     mc_token token2;
-  //     MCcall(peek_mc_token(code, *i, 2, &token2));
-  //     switch (token2.type) {
-  //     case MC_TOKEN_DEREFERENCE_SEQUENCE: {
-  //       // Some sort of declarative statement
-  //       mc_token token3;
-  //       MCcall(peek_mc_token(code, *i, 3, &token3));
-  //       switch (token3.type) {
-  //       case MC_TOKEN_CONST_KEYWORD: {
-  //         // Some sort of declarative statement
-  //         mc_token token4;
-  //         MCcall(peek_mc_token(code, *i, 2, &token4));
-  //         switch (token4.type) {
-  //           // Some sort of declarative statement
-  //           mc_token token3;
-  //           MCcall(peek_mc_token(code, *i, 3, &token3));
-  //           switch (token3.type) {
-  //           case MC_TOKEN_SQUARE_OPEN_BRACKET: {
-  //             // Array declarative
-  //             MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
-  //             break;
-  //           }
-  //           case MC_TOKEN_ASSIGNMENT_OPERATOR: {
-  //             // Array declarative
-  //             MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
-  //             break;
-  //           }
-  //           default: {
-  //             print_parse_error(code, token3.start_index, "see-below", "");
-  //             MCerror(2461, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:Unsupported-token:%i:%s", token3.type, token3.text);
-  //           }
-  //           }
-  //           free(token3.text);
-  //         }
-  //         break;
-  //       default: {
-  //         print_parse_error(code, token2.start_index, "see-below", "");
-  //         MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:Unsupported-token:%i:%s", token2.type, token2.text);
-  //       }
-  //       }
-  //         free(token2.text);
-  //       }
-  //       break;
-  //     case MC_TOKEN_SQUARE_OPEN_BRACKET: {
-  //       // Array declarative
-  //       MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
-  //       break;
-  //     }
-  //     case MC_TOKEN_ASSIGNMENT_OPERATOR: {
-  //       // Array declarative
-  //       MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
-  //       break;
-  //     }
-  //     default: {
-  //       print_parse_error(code, token3.start_index, "see-below", "");
-  //       MCerror(2461, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:Unsupported-token:%i:%s", token3.type, token3.text);
-  //     }
-  //     }
-  //       free(token3.text);
-  //     }
-  //     break;
-  //   default: {
-  //     print_parse_error(code, token2.start_index, "see-below", "");
-  //     MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:Unsupported-token:%i:%s", token2.type, token2.text);
-  //   }
-  //   }
-  //     free(token2.text);
-  //   }
-  //   break;
-  // case MC_TOKEN_KEYWORD_OR_NAME: {
-  //   // Some sort of declarative statement
-  //   mc_token token2;
-  //   MCcall(peek_mc_token(code, *i, 2, &token2));
-  //   switch (token2.type) {
-  //   case MC_TOKEN_SQUARE_OPEN_BRACKET: {
-  //     // Array declarative
-  //     MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
-  //     break;
-  //   }
-  //   case MC_TOKEN_ASSIGNMENT_OPERATOR: {
-  //     // Array declarative
-  //     MCcall(transcribe_declarative_assignment(owner, code, i, transcription_alloc, transcription));
-  //     break;
-  //   }
-  //   default: {
-  //     printf("was:'%s'\n", token1.text);
-  //     print_parse_error(code, token2.start_index, "see-below", "");
-  //     MCerror(2277, "MC_TOKEN_KEYWORD_OR_NAME:MC_TOKEN_KEYWORD_OR_NAME:Unsupported-token:%i:%s", token2.type, token2.text);
-  //   }
-  //   }
-  //   free(token2.text);
-  // } break;
-  // case MC_TOKEN_ASSIGNMENT_OPERATOR: {
-  //   // Array declarative
-  //   // printf("MC_TOKEN_ASSIGNMENT_OPERATOR,before:\n%s\n", *transcription);
-  //   MCcall(transcribe_assignment(owner, code, i, transcription_alloc, transcription));
-  //   // printf("MC_TOKEN_ASSIGNMENT_OPERATOR,after:\n%s\n", *transcription);
-  // } break;
-  // case MC_TOKEN_SQUARE_OPEN_BRACKET: {
-  //   // Array Access
-  //   MCcall(transcribe_array_access(owner, code, i, transcription_alloc, transcription));
-  // } break;
-  // case MC_TOKEN_OPEN_BRACKET: {
-  //   // Array Access
-  //   MCcall(transcribe_function_call(owner, code, i, transcription_alloc, transcription));
-  // } break;
-  default: {
-    MCerror(2282, "Unsupported-token:%i:%s", token0.type, token0.text);
-  }
-  }
 
-  free(token0.text);
-
-  return 0;
+    free(token0.text);*/
+  }
 }
 
 int transcribe_comment(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
@@ -2628,6 +2762,7 @@ int transcribe_comment(function_info *owner, char *code, int *i, uint *transcrip
   }
 
   MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
+  MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
   return 0;
 }
 
@@ -2656,7 +2791,7 @@ int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *tra
       }
 
       MCcall(transcribe_comment(owner, code, i, transcription_alloc, transcription));
-    }
+    } break;
     case '*': {
       MCcall(transcribe_statement(owner, code, i, transcription_alloc, transcription));
     } break;
@@ -2857,6 +2992,7 @@ int load_existing_function_into_function_editor(function_info *function)
       if (feState->render_lines[i].text) {
         // printf("life-6b\n");
         feState->render_lines[i].requires_render_update =
+            feState->render_lines[i].requires_render_update ||
             strcmp(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
         // printf("life-6c\n");
         free(feState->render_lines[i].text);
@@ -2868,7 +3004,8 @@ int load_existing_function_into_function_editor(function_info *function)
         // printf("dawn:%i\n", feState->text.lines_allocated);
         // printf("dawn:%c\n", feState->text.lines[1][4]);
         // printf("dawn:%zu\n", strlen(feState->text.lines[feState->line_display_offset + i]));
-        feState->render_lines[i].requires_render_update = !feState->text.lines[feState->line_display_offset + i] ||
+        feState->render_lines[i].requires_render_update = feState->render_lines[i].requires_render_update ||
+                                                          !feState->text.lines[feState->line_display_offset + i] ||
                                                           strlen(feState->text.lines[feState->line_display_offset + i]);
       }
 
@@ -2938,7 +3075,7 @@ int load_source_file_into_function_editor(char const *const core_function_name)
 
   // Return Type
   char *return_type;
-  MCcall(parse_past_conformed_type_identifier(NULL, function_definition_text, &i, &return_type));
+  MCcall(parse_past_conformed_type_declaration(NULL, function_definition_text, &i, &return_type));
   MCcall(parse_past_empty_text(function_definition_text, &i));
 
   // Function Name
@@ -2974,8 +3111,8 @@ int load_source_file_into_function_editor(char const *const core_function_name)
     }
 
     // Type
-    MCcall(parse_past_conformed_type_identifier(NULL, function_definition_text, &i,
-                                                (char **)&parameters[parameter_count].type_name));
+    MCcall(parse_past_conformed_type_declaration(NULL, function_definition_text, &i,
+                                                 (char **)&parameters[parameter_count].type_name));
     MCcall(parse_past_empty_text(function_definition_text, &i));
 
     // Deref
@@ -3111,6 +3248,7 @@ int load_source_file_into_function_editor(char const *const core_function_name)
       if (feState->render_lines[i].text) {
         printf("life-6b\n");
         feState->render_lines[i].requires_render_update =
+            feState->render_lines[i].requires_render_update ||
             strcmp(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
         printf("life-6c\n");
         free(feState->render_lines[i].text);
@@ -3122,7 +3260,8 @@ int load_source_file_into_function_editor(char const *const core_function_name)
         printf("dawn:%i\n", feState->text.lines_allocated);
         printf("dawn:%c\n", feState->text.lines[1][4]);
         printf("dawn:%zu\n", strlen(feState->text.lines[feState->line_display_offset + i]));
-        feState->render_lines[i].requires_render_update = !feState->text.lines[feState->line_display_offset + i] ||
+        feState->render_lines[i].requires_render_update = feState->render_lines[i].requires_render_update ||
+                                                          !feState->text.lines[feState->line_display_offset + i] ||
                                                           strlen(feState->text.lines[feState->line_display_offset + i]);
       }
 
@@ -3762,7 +3901,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
   // Parse the function return type & name
   char *return_type;
   int index = 0;
-  MCcall(parse_past_conformed_type_identifier(NULL, function_header, &index, &return_type));
+  MCcall(parse_past_conformed_type_declaration(NULL, function_header, &index, &return_type));
 
   MCcall(parse_past_empty_text(function_header, &index));
   if (function_header[index] == '*') {
@@ -3845,7 +3984,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
       MCcall(parse_past(function_header, &index, ","));
       MCcall(parse_past_empty_text(function_header, &index));
     }
-    MCcall(parse_past_conformed_type_identifier(func_info, function_header, &index, &parameters[parameter_count].type));
+    MCcall(parse_past_conformed_type_declaration(func_info, function_header, &index, &parameters[parameter_count].type));
     MCcall(parse_past_empty_text(function_header, &index));
     parameters[parameter_count].type_deref_count = 0;
     while (function_header[index] == '*') {
@@ -4105,7 +4244,7 @@ int function_editor_handle_input_v1(int argc, void **argv)
   // printf("fehi-4\n");
   // Update all modified rendered lines
   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-    if (i + state->line_display_offset < 0 || i + state->line_display_offset >= state->text.lines_count) {
+    if (i + state->line_display_offset >= state->text.lines_count) {
 
       // printf("fehi-5\n");
       if (!state->render_lines[i].text)
@@ -4173,6 +4312,27 @@ int debug_automation(int argc, void **argv)
       vargs[1] = &core_display;
       vargs[2] = &sim;
       core_display_handle_input(3, vargs);
+    }
+
+  } break;
+  case 1: {
+    // Select
+    ++debugState->sequenceStep;
+
+    node *function_editor = (node *)command_hub->global_node->children[0];
+    mc_input_event_v1 sim;
+    sim.type = INPUT_EVENT_KEY_PRESS;
+    sim.handled = false;
+    sim.shiftDown = false;
+    sim.altDown = false;
+    sim.ctrlDown = true;
+    sim.detail.keyboard.key = KEY_CODE_ENTER;
+    {
+      void *vargs[3];
+      vargs[0] = argv[0];
+      vargs[1] = &command_hub->global_node->children[0];
+      vargs[2] = &sim;
+      MCcall(function_editor_handle_input(3, vargs));
     }
 
   } break;

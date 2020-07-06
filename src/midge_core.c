@@ -43,6 +43,7 @@ int parse_past(const char *text, int *index, const char *sequence)
       return -1;
     }
     else if (sequence[i] != text[*index + i]) {
+      print_parse_error(text, *index + i, "see_below", "");
       printf("!parse_past() expected:'%c' was:'%c'\n", sequence[i], text[*index + i]);
       return 1 + i;
     }
