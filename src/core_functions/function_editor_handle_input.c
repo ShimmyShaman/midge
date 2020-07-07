@@ -1,4 +1,4 @@
-int function_editor_handle_input(frame_time const *elapsed, node *fedit, input_event *event)
+void function_editor_handle_input(frame_time *elapsed, node *fedit, mc_input_event_v1 *event)
 {
   printf("function_editor_handle_input-b\n");
 
@@ -20,7 +20,7 @@ int function_editor_handle_input(frame_time const *elapsed, node *fedit, input_e
     }
   }
   else if (event->type == INPUT_EVENT_KEY_PRESS) {
-    MCcall(function_editor_handle_keyboard_input(fedit, event));
+    function_editor_handle_keyboard_input(fedit, event);
   }
   else {
     return;
