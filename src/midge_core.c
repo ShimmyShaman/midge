@@ -2492,13 +2492,13 @@ int mc_main(int argc, const char *const *argv)
   printf("App took %.2f seconds to begin.\n",
          current_frametime.tv_sec - mc_main_begin_time.tv_sec + 1e-9 * (current_frametime.tv_nsec - mc_main_begin_time.tv_nsec));
 
-  mc_input_event_v1 input_event;
-  input_event.type = INPUT_EVENT_NONE;
+  mc_input_event_v1 *input_event = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+  input_event->type = INPUT_EVENT_NONE;
   // input_event.detail = INPUT_EVENT_CODE_NONE;
-  input_event.altDown = false;
-  input_event.ctrlDown = false;
-  input_event.shiftDown = false;
-  input_event.handled = true;
+  input_event->altDown = false;
+  input_event->ctrlDown = false;
+  input_event->shiftDown = false;
+  input_event->handled = true;
 
   int DEBUG_secs_of_last_5sec_update = 0;
 
@@ -2506,7 +2506,7 @@ int mc_main(int argc, const char *const *argv)
   int ui = 0;
   while (1) {
     // Time
-    frame_time elapsed;
+    frame_time *elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
     bool logic_update_due = false;
     {
       long ms;  // Milliseconds
@@ -2514,17 +2514,17 @@ int mc_main(int argc, const char *const *argv)
       memcpy(&prev_frametime, &current_frametime, sizeof(struct timespec));
       clock_gettime(CLOCK_REALTIME, &current_frametime);
 
-      elapsed.frame_sec = current_frametime.tv_sec - prev_frametime.tv_sec;
-      elapsed.frame_nsec = current_frametime.tv_nsec - prev_frametime.tv_nsec;
-      if (elapsed.frame_nsec < 0) {
-        --elapsed.frame_sec;
-        elapsed.frame_nsec += 1e9;
+      elapsed->frame_secs = current_frametime.tv_sec - prev_frametime.tv_sec;
+      elapsed->frame_nsecs = current_frametime.tv_nsec - prev_frametime.tv_nsec;
+      if (elapsed->frame_nsecs < 0) {
+        --elapsed->frame_secs;
+        elapsed->frame_nsecs += 1e9;
       }
-      elapsed.app_sec = current_frametime.tv_sec - mc_main_begin_time.tv_sec;
-      elapsed.app_nsec = current_frametime.tv_nsec - mc_main_begin_time.tv_nsec;
-      if (elapsed.app_nsec < 0) {
-        --elapsed.app_sec;
-        elapsed.app_nsec += 1e9;
+      elapsed->app_secs = current_frametime.tv_sec - mc_main_begin_time.tv_sec;
+      elapsed->app_nsecs = current_frametime.tv_nsec - mc_main_begin_time.tv_nsec;
+      if (elapsed->app_nsecs < 0) {
+        --elapsed->app_secs;
+        elapsed->app_nsecs += 1e9;
       }
 
       // Logic Update
@@ -2554,7 +2554,7 @@ int mc_main(int argc, const char *const *argv)
             void *vargs[2];
             vargs[0] = (void *)&elapsed;
             vargs[1] = (void *)timer->state;
-            timer->update_delegate(2, vargs);
+            MCcall(timer->update_delegate(2, vargs));
           }
 
           if (timer->reset_timer_on_update)
@@ -2570,7 +2570,7 @@ int mc_main(int argc, const char *const *argv)
         if (special_update) {
           void *vargs[1];
           vargs[0] = &elapsed;
-          special_update(1, vargs);
+          MCcall(special_update(1, vargs));
         }
       }
     }
@@ -2580,27 +2580,27 @@ int mc_main(int argc, const char *const *argv)
 
     if (render_thread.input_buffer.event_count > 0) {
       // New Input Event
-      input_event.handled = false;
+      input_event->handled = false;
 
       bool exit_loop = false;
       for (int i = 0; i < render_thread.input_buffer.event_count && !exit_loop; ++i) {
         switch (render_thread.input_buffer.events[i].type) {
         case INPUT_EVENT_MOUSE_PRESS: {
           // Set input event for controls to handle
-          input_event.type = render_thread.input_buffer.events[i].type;
-          input_event.detail = render_thread.input_buffer.events[i].detail;
+          input_event->type = render_thread.input_buffer.events[i].type;
+          input_event->detail = render_thread.input_buffer.events[i].detail;
 
           // Global Node Hierarchy
-          for (int i = 0; !input_event.handled && i < command_hub->global_node->child_count; ++i) {
+          for (int i = 0; !input_event->handled && i < command_hub->global_node->child_count; ++i) {
             mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
 
             // Check is visual and has input handler and mouse event is within bounds
             if (child->type != NODE_TYPE_VISUAL || child->data.visual.hidden || !*child->data.visual.input_handler)
               continue;
-            if (input_event.detail.mouse.x < child->data.visual.bounds.x ||
-                input_event.detail.mouse.y < child->data.visual.bounds.y ||
-                input_event.detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
-                input_event.detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
+            if (input_event->detail.mouse.x < child->data.visual.bounds.x ||
+                input_event->detail.mouse.y < child->data.visual.bounds.y ||
+                input_event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
+                input_event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
               continue;
 
             void *vargs[3];
@@ -2626,24 +2626,24 @@ int mc_main(int argc, const char *const *argv)
             continue;
           case KEY_CODE_LEFT_ALT:
           case KEY_CODE_RIGHT_ALT:
-            input_event.altDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
+            input_event->altDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
             break;
           case KEY_CODE_LEFT_SHIFT:
           case KEY_CODE_RIGHT_SHIFT:
-            input_event.shiftDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
+            input_event->shiftDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
             break;
           case KEY_CODE_LEFT_CTRL:
           case KEY_CODE_RIGHT_CTRL:
-            input_event.ctrlDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
+            input_event->ctrlDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
             break;
 
           default: {
             // Set input event for controls to handle
-            input_event.type = render_thread.input_buffer.events[i].type;
-            input_event.detail = render_thread.input_buffer.events[i].detail;
+            input_event->type = render_thread.input_buffer.events[i].type;
+            input_event->detail = render_thread.input_buffer.events[i].detail;
 
             // Global Node Hierarchy
-            for (int i = 0; !input_event.handled && i < command_hub->global_node->child_count; ++i) {
+            for (int i = 0; !input_event->handled && i < command_hub->global_node->child_count; ++i) {
               mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
               if (child->type != NODE_TYPE_VISUAL)
                 continue;
@@ -2660,7 +2660,7 @@ int mc_main(int argc, const char *const *argv)
               MCcall((*child->data.visual.input_handler)(3, vargs));
             }
 
-            if (!input_event.handled) {
+            if (!input_event->handled) {
               printf("unhandled_keyboard_event:%i::%i\n", render_thread.input_buffer.events[i].type,
                      render_thread.input_buffer.events[i].detail.keyboard.key);
             }
@@ -5629,6 +5629,27 @@ int init_process_matrix(mc_command_hub_v1 *command_hub)
   return 0;
 }
 
+int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *core_function_name)
+{
+  char buf[256];
+  sprintf(buf, "/home/jason/midge/src/core_functions/%s.c", core_function_name);
+
+  FILE *f = fopen(buf, "rb");
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+  char *input = (char *)malloc(fsize + 1);
+  fread(input, sizeof(char), fsize, f);
+  fclose(f);
+
+  mc_function_info_v1 *func_info;
+  MCcall(parse_and_process_function_declaration(input, &func_info, true));
+
+  free(input);
+  return 0;
+}
+
 int init_core_functions(mc_command_hub_v1 *command_hub)
 {
   // Function Definitions
@@ -5820,46 +5841,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->name = "script";
   }
 
-  mc_function_info_v1 *function_editor_handle_input_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)function_editor_handle_input_v1));
-  {
-    function_editor_handle_input_v1->struct_id = NULL;
-    function_editor_handle_input_v1->name = "function_editor_handle_input";
-    function_editor_handle_input_v1->latest_iteration = 1U;
-    allocate_and_copy_cstr(function_editor_handle_input_v1->return_type.name, "void");
-    function_editor_handle_input_v1->return_type.deref_count = 0;
-    function_editor_handle_input_v1->parameter_count = 3;
-    function_editor_handle_input_v1->parameters =
-        (mc_parameter_info_v1 **)malloc(sizeof(void *) * function_editor_handle_input_v1->parameter_count);
-    function_editor_handle_input_v1->variable_parameter_begin_index = -1;
-    function_editor_handle_input_v1->struct_usage_count = 0;
-    function_editor_handle_input_v1->struct_usage = NULL;
-    allocate_and_copy_cstr(function_editor_handle_input_v1->mc_code, function_editor_handle_input_v1_code);
-
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_editor_handle_input_v1->parameters[0] = field;
-    field->type_name = "frame_time";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "frameTime";
-
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_editor_handle_input_v1->parameters[1] = field;
-    field->type_name = "node";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "fedit";
-
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_editor_handle_input_v1->parameters[2] = field;
-    field->type_name = "input_event";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "event";
-  }
-
   // clint_process("int (*declare_function_pointer)(int, void **);");
   clint_process("int (*instantiate_function)(int, void **);");
   clint_process("int (*parse_script_to_mc)(int, void **);");
@@ -5900,8 +5881,52 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("build_function_editor = &build_function_editor_v1;");
   clint_process("function_editor_update = &function_editor_update_v1;");
   clint_process("function_editor_render = &function_editor_render_v1;");
-  clint_process("function_editor_handle_input = &function_editor_handle_input_v1;");
   clint_process("render_global_node = &render_global_node_v1;");
+  clint_process("parse_and_process_function_declaration = &parse_and_process_function_declaration_v1;");
+
+  printf("hopeh\n");
+  MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
+  // mc_function_info_v1 *function_editor_handle_input_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+  //                             &command_hub->global_node->function_count, (void *)function_editor_handle_input_v1));
+  // {
+  //   function_editor_handle_input_v1->struct_id = NULL;
+  //   function_editor_handle_input_v1->name = "function_editor_handle_input";
+  //   function_editor_handle_input_v1->latest_iteration = 1U;
+  //   allocate_and_copy_cstr(function_editor_handle_input_v1->return_type.name, "void");
+  //   function_editor_handle_input_v1->return_type.deref_count = 0;
+  //   function_editor_handle_input_v1->parameter_count = 3;
+  //   function_editor_handle_input_v1->parameters =
+  //       (mc_parameter_info_v1 **)malloc(sizeof(void *) * function_editor_handle_input_v1->parameter_count);
+  //   function_editor_handle_input_v1->variable_parameter_begin_index = -1;
+  //   function_editor_handle_input_v1->struct_usage_count = 0;
+  //   function_editor_handle_input_v1->struct_usage = NULL;
+  //   allocate_and_copy_cstr(function_editor_handle_input_v1->mc_code, function_editor_handle_input_v1_code);
+
+  //   mc_parameter_info_v1 *field;
+  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  //   function_editor_handle_input_v1->parameters[0] = field;
+  //   field->type_name = "frame_time";
+  //   field->type_version = 1U;
+  //   field->type_deref_count = 1;
+  //   field->name = "frameTime";
+
+  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  //   function_editor_handle_input_v1->parameters[1] = field;
+  //   field->type_name = "node";
+  //   field->type_version = 1U;
+  //   field->type_deref_count = 1;
+  //   field->name = "fedit";
+
+  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  //   function_editor_handle_input_v1->parameters[2] = field;
+  //   field->type_name = "mc_input_event_v1";
+  //   field->type_version = 1U;
+  //   field->type_deref_count = 1;
+  //   field->name = "event";
+  // }
+  // clint_process("function_editor_handle_input = &function_editor_handle_input_v1;");
+  printf("hopee\n");
 
   f = fopen("/home/jason/midge/src/midge_core_ui.c", "rb");
   fseek(f, 0, SEEK_END);

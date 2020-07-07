@@ -13,7 +13,7 @@ int special_update_v1(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
 
-  frame_time *elapsed = (frame_time *)argv[0];
+  frame_time const *elapsed = *(frame_time const **)argv[0];
 
   return 0;
 }
@@ -29,9 +29,9 @@ int core_display_entry_handle_input_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   //   // printf("function_editor_handle_input_v1-a\n");
-  //   frame_time const *const elapsed = (frame_time const *const)argv[0];
+  // frame_time const *elapsed = *(frame_time const **)argv[0];
   //   mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
-  //   mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];
+  //   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
   //   if (fedit->data.visual.hidden)
   //     return 0;
@@ -162,7 +162,7 @@ int core_display_render_v1(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
                                   /*mcfuncreplace*/
 
-  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  frame_time const *elapsed = *(frame_time const **)argv[0];
   mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 
   if (visual_node->data.visual.hidden)
@@ -219,9 +219,9 @@ int core_display_handle_input_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  frame_time const *const elapsed = (frame_time const *const)argv[0];
+  frame_time const *elapsed = *(frame_time const **)argv[0];
   mc_node_v1 *core_display = *(mc_node_v1 **)argv[1];
-  mc_input_event_v1 *event = (mc_input_event_v1 *)argv[2];
+  mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
   if (core_display->data.visual.hidden)
     return 0;

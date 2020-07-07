@@ -128,8 +128,8 @@ typedef struct window_input_buffer {
 } window_input_buffer;
 
 typedef struct frame_time {
-  long frame_sec, frame_nsec;
-  long app_sec, app_nsec;
+  long frame_secs, frame_nsecs;
+  long app_secs, app_nsecs;
 } frame_time;
 
 int get_key_input_code_char(bool shift, key_event_code code, char *c)
