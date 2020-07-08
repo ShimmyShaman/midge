@@ -3981,8 +3981,8 @@ int read_function_from_editor(function_editor_state *state, char **function_decl
   return 0;
 }
 
-int parse_and_process_function_declaration_v1(char *function_declaration, function_info **function_definition,
-                                              bool skip_clint_declaration)
+int parse_and_process_function_definition_v1(char *function_definition_text, function_info **function_definition,
+                                             bool skip_clint_declaration)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
@@ -3991,19 +3991,19 @@ int parse_and_process_function_declaration_v1(char *function_declaration, functi
   // Parse the function return type & name
   char *return_type;
   int index = 0;
-  MCcall(parse_past_conformed_type_declaration(NULL, function_declaration, &index, &return_type));
+  MCcall(parse_past_conformed_type_declaration(NULL, function_definition_text, &index, &return_type));
 
-  MCcall(parse_past_empty_text(function_declaration, &index));
-  if (function_declaration[index] == '*') {
-    print_parse_error(function_declaration, index, "read_function_definition_from_editor",
+  MCcall(parse_past_empty_text(function_definition_text, &index));
+  if (function_definition_text[index] == '*') {
+    print_parse_error(function_definition_text, index, "read_function_definition_from_editor",
                       "return-type that uses deref handle not implemented");
   }
 
   char *function_name;
-  MCcall(parse_past_mc_identifier(function_declaration, &index, &function_name, false, false));
-  MCcall(parse_past_empty_text(function_declaration, &index));
-  MCcall(parse_past(function_declaration, &index, "("));
-  MCcall(parse_past_empty_text(function_declaration, &index));
+  MCcall(parse_past_mc_identifier(function_definition_text, &index, &function_name, false, false));
+  MCcall(parse_past_empty_text(function_definition_text, &index));
+  MCcall(parse_past(function_definition_text, &index, "("));
+  MCcall(parse_past_empty_text(function_definition_text, &index));
 
   // Obtain the information for the function
   function_info *func_info;
@@ -4070,26 +4070,26 @@ int parse_and_process_function_declaration_v1(char *function_declaration, functi
   } parameters[32];
   uint parameter_count = 0;
 
-  while (function_declaration[index] != ')') {
+  while (function_definition_text[index] != ')') {
     if (parameter_count) {
-      MCcall(parse_past(function_declaration, &index, ","));
-      MCcall(parse_past_empty_text(function_declaration, &index));
+      MCcall(parse_past(function_definition_text, &index, ","));
+      MCcall(parse_past_empty_text(function_definition_text, &index));
     }
-    MCcall(parse_past_conformed_type_declaration(func_info, function_declaration, &index, &parameters[parameter_count].type));
-    MCcall(parse_past_empty_text(function_declaration, &index));
+    MCcall(parse_past_conformed_type_declaration(func_info, function_definition_text, &index, &parameters[parameter_count].type));
+    MCcall(parse_past_empty_text(function_definition_text, &index));
     parameters[parameter_count].type_deref_count = 0;
-    while (function_declaration[index] == '*') {
+    while (function_definition_text[index] == '*') {
       ++parameters[parameter_count].type_deref_count;
       ++index;
-      MCcall(parse_past_empty_text(function_declaration, &index));
+      MCcall(parse_past_empty_text(function_definition_text, &index));
     }
 
-    MCcall(parse_past_mc_identifier(function_declaration, &index, &parameters[parameter_count].name, false, false));
-    MCcall(parse_past_empty_text(function_declaration, &index));
+    MCcall(parse_past_mc_identifier(function_definition_text, &index, &parameters[parameter_count].name, false, false));
+    MCcall(parse_past_empty_text(function_definition_text, &index));
     ++parameter_count;
   }
-  MCcall(parse_past(function_declaration, &index, ")"));
-  MCcall(parse_past_empty_text(function_declaration, &index));
+  MCcall(parse_past(function_definition_text, &index, ")"));
+  MCcall(parse_past_empty_text(function_definition_text, &index));
 
   printf("papfd-2\n");
   func_info->parameter_count = parameter_count;
@@ -4105,20 +4105,20 @@ int parse_and_process_function_declaration_v1(char *function_declaration, functi
     func_info->parameters[p] = parameter;
   }
 
-  MCcall(parse_past(function_declaration, &index, "{"));
-  MCcall(parse_past_empty_text(function_declaration, &index));
+  MCcall(parse_past(function_definition_text, &index, "{"));
+  MCcall(parse_past_empty_text(function_definition_text, &index));
 
   printf("papfd-3\n");
   // Find the index of the last closing curly bracket
-  int last_curly_index = strlen(function_declaration) - 1;
+  int last_curly_index = strlen(function_definition_text) - 1;
   {
     bool found_curly = false;
     while (1) {
-      printf(":%c:\n", function_declaration[last_curly_index]);
-      if (function_declaration[last_curly_index] == '}') {
+      printf(":%c:\n", function_definition_text[last_curly_index]);
+      if (function_definition_text[last_curly_index] == '}') {
         --last_curly_index;
-        while (function_declaration[last_curly_index] == ' ' && function_declaration[last_curly_index] == '\n' &&
-               function_declaration[last_curly_index] == '\t') {
+        while (function_definition_text[last_curly_index] == ' ' && function_definition_text[last_curly_index] == '\n' &&
+               function_definition_text[last_curly_index] == '\t') {
           --last_curly_index;
         }
         break;
@@ -4134,7 +4134,7 @@ int parse_and_process_function_declaration_v1(char *function_declaration, functi
 
   printf("papfd-4\n");
   char *code_block = (char *)malloc(sizeof(char) * (last_curly_index - index + 1));
-  strncpy(code_block, function_declaration + index, last_curly_index - index);
+  strncpy(code_block, function_definition_text + index, last_curly_index - index);
   code_block[last_curly_index - index] = '\0';
   func_info->mc_code = code_block;
 
@@ -4374,7 +4374,7 @@ int function_editor_handle_keyboard_input(node *fedit, mc_input_event_v1 *event)
       MCcall(read_function_from_editor(state, &function_declaration));
 
       function_info *func_info;
-      MCcall(parse_and_process_function_declaration(function_declaration, &func_info, false));
+      MCcall(parse_and_process_function_definition(function_declaration, &func_info, false));
       free(function_declaration);
 
       // Compile the function definition
@@ -4586,9 +4586,8 @@ typedef struct debug_data_state {
 int debug_automation(int argc, void **argv)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-                                  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
 
   // printf("function_editor_update_v1-a\n");
   frame_time const *elapsed = *(frame_time const **)argv[0];

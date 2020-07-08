@@ -516,7 +516,8 @@ int parse_past_type_identifier(const char *text, int *index, char **identifier);
 int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra);
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
 int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime);
-int (*parse_and_process_function_declaration)(char *function_declaration, mc_function_info_v1 **function_definition, bool skip_clint_declaration);
+int (*parse_and_process_function_definition)(char *function_definition_text, mc_function_info_v1 **function_definition,
+                                             bool skip_clint_declaration);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \

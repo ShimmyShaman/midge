@@ -6,17 +6,6 @@
 #define node mc_node_v1
 /*mcfuncreplace*/
 
-int special_update_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  frame_time const *elapsed = *(frame_time const **)argv[0];
-
-  return 0;
-}
-
 typedef struct core_display_data {
   uint font_resource_uid;
 } core_display_data;

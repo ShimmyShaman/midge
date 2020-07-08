@@ -5643,8 +5643,10 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   fread(input, sizeof(char), fsize, f);
   fclose(f);
 
-  mc_function_info_v1 *func_info;
-  MCcall(parse_and_process_function_declaration(input, &func_info, true));
+  printf("file-read:\n%s||\n", input);
+
+  // mc_function_info_v1 *func_info;
+  // MCcall(parse_and_process_function_definition(input, &func_info, true));
 
   free(input);
   return 0;
@@ -5852,7 +5854,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("function_editor_update = &function_editor_update_v1;");
   clint_process("function_editor_render = &function_editor_render_v1;");
   clint_process("render_global_node = &render_global_node_v1;");
-  clint_process("parse_and_process_function_declaration = &parse_and_process_function_declaration_v1;");
+  clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;");
 
   printf("hopeh\n");
   // MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
@@ -5916,6 +5918,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("core_display_handle_input = &core_display_handle_input_v1;");
   clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;");
 
+  // MCcall(parse_and_process_core_function(command_hub, "special_update"));
   mc_function_info_v1 *special_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
                               &command_hub->global_node->function_count, (void *)special_update_definition_v1));
