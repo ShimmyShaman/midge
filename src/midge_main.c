@@ -5643,10 +5643,35 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   fread(input, sizeof(char), fsize, f);
   fclose(f);
 
-  printf("file-read:\n%s||\n", input);
+  // Find the index of the function declaration
+  int offset = 0;
+  {
+    for (int i = 0; !offset; ++i) {
+      switch (input[i]) {
+      case '#': {
+        // Preprocessor - move to the end of the line
+        while (input[i] != '\n') {
+          ++i;
+          if (input[i] == '\0') {
+            MCerror(5658, "TODO");
+          }
+        }
+        ++i;
+      } break;
 
-  // mc_function_info_v1 *func_info;
-  // MCcall(parse_and_process_function_definition(input, &func_info, true));
+      default: {
+        if (isalpha(input[i]) || input[i] == '_') {
+          offset = i;
+        }
+      } break;
+      }
+    }
+  }
+
+  printf("file-read:\n%s||\n", input + offset);
+
+  mc_function_info_v1 *func_info;
+  MCcall(parse_and_process_function_definition(input + offset, &func_info, true));
 
   free(input);
   return 0;
@@ -5918,32 +5943,32 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("core_display_handle_input = &core_display_handle_input_v1;");
   clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;");
 
-  // MCcall(parse_and_process_core_function(command_hub, "special_update"));
-  mc_function_info_v1 *special_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)special_update_definition_v1));
-  {
-    special_update_definition_v1->struct_id = NULL;
-    special_update_definition_v1->name = "special_update";
-    special_update_definition_v1->latest_iteration = 1U;
-    allocate_and_copy_cstr(special_update_definition_v1->return_type.name, "void");
-    special_update_definition_v1->return_type.deref_count = 0;
-    special_update_definition_v1->parameter_count = 1;
-    special_update_definition_v1->parameters =
-        (mc_parameter_info_v1 **)malloc(sizeof(void *) * special_update_definition_v1->parameter_count);
-    special_update_definition_v1->variable_parameter_begin_index = -1;
-    special_update_definition_v1->struct_usage_count = 0;
-    special_update_definition_v1->struct_usage = NULL;
-    allocate_and_copy_cstr(special_update_definition_v1->mc_code, "  printf(\"I'm a yankee-doodle\\n\");\n");
+  MCcall(parse_and_process_core_function(command_hub, "special_update"));
+  // mc_function_info_v1 *special_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
+  //                             &command_hub->global_node->function_count, (void *)special_update_definition_v1));
+  // {
+  //   special_update_definition_v1->struct_id = NULL;
+  //   special_update_definition_v1->name = "special_update";
+  //   special_update_definition_v1->latest_iteration = 1U;
+  //   allocate_and_copy_cstr(special_update_definition_v1->return_type.name, "void");
+  //   special_update_definition_v1->return_type.deref_count = 0;
+  //   special_update_definition_v1->parameter_count = 1;
+  //   special_update_definition_v1->parameters =
+  //       (mc_parameter_info_v1 **)malloc(sizeof(void *) * special_update_definition_v1->parameter_count);
+  //   special_update_definition_v1->variable_parameter_begin_index = -1;
+  //   special_update_definition_v1->struct_usage_count = 0;
+  //   special_update_definition_v1->struct_usage = NULL;
+  //   allocate_and_copy_cstr(special_update_definition_v1->mc_code, "  printf(\"I'm a yankee-doodle\\n\");\n");
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    special_update_definition_v1->parameters[0] = field;
-    field->type_name = "frame_time";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "frameTime";
-  }
-  clint_process("special_update = &special_update_v1;");
+  //   mc_parameter_info_v1 *field;
+  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  //   special_update_definition_v1->parameters[0] = field;
+  //   field->type_name = "frame_time";
+  //   field->type_version = 1U;
+  //   field->type_deref_count = 1;
+  //   field->name = "frameTime";
+  // }
+  // clint_process("special_update = &special_update_v1;");
   return 0;
 }

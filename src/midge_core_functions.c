@@ -4624,23 +4624,23 @@ int debug_automation(int argc, void **argv)
     // Select
     ++debugState->sequenceStep;
 
-    node *function_editor = (node *)command_hub->global_node->children[0];
-    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    sim->type = INPUT_EVENT_KEY_PRESS;
-    sim->handled = false;
-    sim->shiftDown = false;
-    sim->altDown = false;
-    sim->ctrlDown = true;
-    sim->detail.keyboard.key = KEY_CODE_ENTER;
-    {
-      void *vargs[3];
-      vargs[0] = argv[0];
-      vargs[1] = &command_hub->global_node->children[0];
-      vargs[2] = &sim;
-      MCcall(function_editor_handle_input(3, vargs));
-    }
+    // node *function_editor = (node *)command_hub->global_node->children[0];
+    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    // sim->type = INPUT_EVENT_KEY_PRESS;
+    // sim->handled = false;
+    // sim->shiftDown = false;
+    // sim->altDown = false;
+    // sim->ctrlDown = true;
+    // sim->detail.keyboard.key = KEY_CODE_ENTER;
+    // {
+    //   void *vargs[3];
+    //   vargs[0] = argv[0];
+    //   vargs[1] = &command_hub->global_node->children[0];
+    //   vargs[2] = &sim;
+    //   MCcall(function_editor_handle_input(3, vargs));
+    // }
 
-    free(sim);
+    // free(sim);
   } break;
 
   default:
