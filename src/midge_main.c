@@ -1,7 +1,7 @@
 /* midge_core.c */
 // #define __USE_POSIX199309
 
-#include "midge_core.h"
+#include "midge_main.h"
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
 {
@@ -5629,10 +5629,11 @@ int init_process_matrix(mc_command_hub_v1 *command_hub)
   return 0;
 }
 
+// function should be appended with a version number in the form of "_v?", where '?' is any unsigned integer.
 int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *core_function_name)
 {
   char buf[256];
-  sprintf(buf, "/home/jason/midge/src/core_functions/%s.c", core_function_name);
+  sprintf(buf, "/home/jason/midge/src/core/%s.c", core_function_name);
 
   FILE *f = fopen(buf, "rb");
   fseek(f, 0, SEEK_END);
@@ -5646,29 +5647,64 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   // Find the index of the function declaration
   int offset = 0;
   {
+    int cfn_len = strlen(core_function_name);
     for (int i = 0; !offset; ++i) {
-      switch (input[i]) {
-      case '#': {
-        // Preprocessor - move to the end of the line
-        while (input[i] != '\n') {
-          ++i;
-          if (input[i] == '\0') {
-            MCerror(5658, "TODO");
+      if (input[i] == '\0') {
+        MCerror(5658, "TODO");
+      }
+      else if (input[i] == core_function_name[0] && !strncmp(input + i, core_function_name, cfn_len)) {
+        // Set the offset
+        // -- to the beginning of the function name
+        offset = i;
+        while (isalnum(input[offset]) || input[offset] == '_') {
+          --offset;
+        }
+        // -- past deref & empty
+        bool b = true;
+        while (b) {
+          switch (input[offset]) {
+          case '*':
+          case ' ':
+          case '\n':
+          case '\t': {
+            --offset;
+          } break;
+          default: {
+            b = false;
+          } break;
           }
         }
-        ++i;
-      } break;
-
-      default: {
-        if (isalpha(input[i]) || input[i] == '_') {
-          offset = i;
+        // -- past the type identifier
+        while (isalnum(input[offset]) || input[offset] == '_') {
+          --offset;
         }
-      } break;
+        ++offset;
+
+        // Remove the name appendage
+        int s = i + cfn_len;
+        for (i = s;; ++i) {
+          if (input[i] == '\0') {
+            MCerror(5686, "TODO");
+          }
+          if (input[i] == '(') {
+            break;
+          }
+        }
+
+        s = i - s;
+        for (;; ++i) {
+          input[i - s] = input[i];
+          if (input[i] == '\0') {
+            break;
+          }
+        }
+
+        break;
       }
     }
   }
 
-  printf("file-read:\n%s||\n", input + offset);
+  printf("file-read:\n%s\n###########################\n", input + offset);
 
   mc_function_info_v1 *func_info;
   MCcall(parse_and_process_function_definition(input + offset, &func_info, true));
@@ -5970,5 +6006,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   //   field->name = "frameTime";
   // }
   // clint_process("special_update = &special_update_v1;");
+  printf("end:init_core_functions()\n");
   return 0;
 }

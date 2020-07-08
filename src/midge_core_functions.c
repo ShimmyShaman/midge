@@ -1,4 +1,4 @@
-#include "midge_core.h"
+#include "core/midge_core.h"
 
 /*mcfuncreplace*/
 #define function_info mc_function_info_v1
@@ -3987,6 +3987,8 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
+
+  printf("function_definition_text:\n%s\n", function_definition_text);
 
   // Parse the function return type & name
   char *return_type;

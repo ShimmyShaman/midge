@@ -116,7 +116,9 @@ void run()
     clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
     clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
     // clint->loadFile("/home/jason/midge/src/mcl_type_defs.h");
-    clint->loadFile("/home/jason/midge/src/midge_core.c");
+    clint->loadFile("/home/jason/midge/src/core/midge_core.h");
+    clint->loadFile("/home/jason/midge/src/midge_main.h");
+    clint->loadFile("/home/jason/midge/src/midge_main.c");
 
     printf("</AppSourceLoading>\n\n");
 

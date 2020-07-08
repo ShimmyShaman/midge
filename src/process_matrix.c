@@ -1,4 +1,4 @@
-#include "midge_core.h"
+#include "core/midge_core.h"
 
 /*mcfuncreplace*/
 #define function_info mc_function_info_v1
