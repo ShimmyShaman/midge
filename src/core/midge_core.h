@@ -504,7 +504,10 @@ int increment_time_spec(struct timespec *time, struct timespec *amount, struct t
 int (*parse_and_process_function_definition)(char *function_definition_text, mc_function_info_v1 **function_definition,
                                              bool skip_clint_declaration);
 
+int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc, char **transcription);
+
 int (*declare_function_pointer)(int, void **);
+int (*instantiate_function)(int, void **);
 // function_info **result (may be NULL); node **nodespace, char **function_name
 int (*find_function_info)(int, void **);
 int (*build_initial_workspace)(int, void **);

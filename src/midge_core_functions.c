@@ -1681,8 +1681,6 @@ int transcribe_past(char const *const code, int *index, uint *transcription_allo
   }
 }
 
-int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription);
-
 typedef enum mc_token_type {
   MC_TOKEN_NULL = 0,
   // One or more '*'
@@ -2848,7 +2846,7 @@ int transcribe_inde_crement_statement(function_info *owner, char *code, int *i, 
   return 0;
 }
 
-int transcribe_c_block_to_mc(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   while (1) {
     MCcall(parse_past_empty_text(code, i));
@@ -3988,7 +3986,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  printf("function_definition_text:\n%s\n", function_definition_text);
+  // printf("function_definition_text:\n%s\n", function_definition_text);
 
   // Parse the function return type & name
   char *return_type;

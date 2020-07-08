@@ -5704,12 +5704,38 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
     }
   }
 
-  printf("file-read:\n%s\n###########################\n", input + offset);
+  // printf("file-read:\n%s\n###########################\n", input + offset);
 
   mc_function_info_v1 *func_info;
   MCcall(parse_and_process_function_definition(input + offset, &func_info, true));
 
   free(input);
+  printf("papcf-FunctionInfo:\n");
+  printf(" -- name:%s:\n", func_info->name);
+  printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
+  printf(" -- return_type.name:%s:\n", func_info->return_type.name);
+  printf(" -- return_type.deref_count:%u:\n", func_info->return_type.deref_count);
+  printf(" -- parameter_count:%u:\n", func_info->parameter_count);
+  printf(" -- struct_usage_count:%u:\n", func_info->struct_usage_count);
+  printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
+  printf(" -- mc_code:\n%s#######################\n", func_info->mc_code);
+
+  // Compile the function definition
+  uint transcription_alloc = 4;
+  char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
+  transcription[0] = '\0';
+  int code_index = 0;
+  MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
+
+  printf("final transcription:\n%s\n", transcription);
+
+  // Define the new function
+  {
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&func_info->name;
+    mc_vargs[1] = (void *)&transcription;
+    MCcall(instantiate_function(2, mc_vargs));
+  }
   return 0;
 }
 
@@ -5878,8 +5904,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->name = "script";
   }
 
-  // clint_process("int (*declare_function_pointer)(int, void **);");
-  clint_process("int (*instantiate_function)(int, void **);");
   clint_process("int (*parse_script_to_mc)(int, void **);");
   clint_process("int (*conform_type_identity)(int, void **);");
   clint_process("int (*create_default_mc_struct)(int, void **);");
@@ -5915,6 +5939,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("function_editor_update = &function_editor_update_v1;");
   clint_process("function_editor_render = &function_editor_render_v1;");
   clint_process("render_global_node = &render_global_node_v1;");
+  clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;");
   clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;");
 
   printf("hopeh\n");
