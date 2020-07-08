@@ -767,22 +767,18 @@ int _parse_past_conformed_type_identifier(function_info *func_info, char *code, 
   }
 
   char *type_identity;
-  int type_end_index;
-  for (type_end_index = *i;; ++type_end_index) {
-    if (code[type_end_index] == ' ' || code[type_end_index] == '\0') {
-      if (code[type_end_index] == ' ' && code[type_end_index + 1] == '*') {
-        do {
-          ++type_end_index;
-        } while (code[type_end_index] == '*');
-      }
-
-      type_identity = (char *)malloc(sizeof(char) * (type_end_index - *i + 1));
-      strncpy(type_identity, code + *i, type_end_index - *i);
-      type_identity[type_end_index - *i] = '\0';
-      *i = type_end_index;
+  int s = *i;
+  for (;; ++*i) {
+    if (code[*i] == '\0') {
+      MCerror(772, "ERROR");
+    }
+    if (!isalnum(code[*i]) && code[*i] != '_') {
       break;
     }
   }
+  type_identity = (char *)malloc(sizeof(char) * (*i - s + 1));
+  strncpy(type_identity, code + s, *i - s);
+  type_identity[*i - s] = '\0';
 
   char *conformed_result;
   {
@@ -1675,6 +1671,7 @@ int transcribe_past(char const *const code, int *index, uint *transcription_allo
       return -1;
     }
     else if (sequence[i] != code[*index + i]) {
+      print_parse_error(code, *index + i, "see_below", "");
       printf("!parse_past() expected:'%c' was:'%c'\n", sequence[i], code[*index + i]);
       return 1 + i;
     }
@@ -1689,7 +1686,9 @@ typedef enum mc_token_type {
   MC_TOKEN_SQUARE_OPEN_BRACKET,
   MC_TOKEN_OPEN_BRACKET,
   MC_TOKEN_EQUALITY_OPERATOR,
+  MC_TOKEN_POINTER_OPERATOR,
   MC_TOKEN_ASSIGNMENT_OPERATOR,
+  MC_TOKEN_SUBTRACT_OPERATOR,
   MC_TOKEN_IF_KEYWORD,
   MC_TOKEN_ELSE_KEYWORD,
   MC_TOKEN_WHILE_KEYWORD,
@@ -1704,6 +1703,7 @@ typedef struct mc_token {
 } mc_token;
 int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output);
 
+int transcribe_expression(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription);
 int transcribe_bracketed_expression(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   MCcall(parse_past(code, i, "("));
@@ -1758,6 +1758,13 @@ int transcribe_bracketed_expression(function_info *owner, char *code, int *i, ui
     free(type_declaration);
     free(token1.text);
   } break;
+  case MC_TOKEN_SUBTRACT_OPERATOR: {
+    // Expression
+    MCcall(append_to_cstr(transcription_alloc, transcription, "("));
+    MCcall(transcribe_expression(owner, code, i, transcription_alloc, transcription));
+    MCcall(parse_past_empty_text(code, i));
+    MCcall(transcribe_past(code, i, transcription_alloc, transcription, ")"));
+  } break;
   default: {
     MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ":"));
     MCerror(1764, "Unsupported-token:%i:%s", token0.type, token0.text);
@@ -1792,6 +1799,10 @@ int transcribe_expression(function_info *owner, char *code, int *i, uint *transc
     MCcall(transcribe_past(code, i, transcription_alloc, transcription, "*"));
     MCcall(transcribe_expression(owner, code, i, transcription_alloc, transcription));
   } break;
+  case '&': {
+    MCcall(transcribe_past(code, i, transcription_alloc, transcription, "&"));
+    MCcall(transcribe_expression(owner, code, i, transcription_alloc, transcription));
+  } break;
   case '(': {
     MCcall(transcribe_bracketed_expression(owner, code, i, transcription_alloc, transcription));
   } break;
@@ -1822,6 +1833,23 @@ int transcribe_expression(function_info *owner, char *code, int *i, uint *transc
         case ')':
           MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
           break;
+        case '(': {
+          // Uh oh
+          // check it isn't sizeof
+          if (*i - s == 6 && !strncmp(code + s, "sizeof", 6)) {
+            MCcall(append_to_cstr(transcription_alloc, transcription, "sizeof"));
+            MCcall(transcribe_past(code, i, transcription_alloc, transcription, "("));
+
+            // Type cast
+            char *type_declaration;
+            MCcall(parse_past_conformed_type_declaration(owner, code, i, &type_declaration));
+            MCcall(parse_past_empty_text(code, i));
+            MCcall(append_to_cstr(transcription_alloc, transcription, type_declaration));
+            MCcall(transcribe_past(code, i, transcription_alloc, transcription, ")"));
+            break;
+          }
+          MCerror(1836, "TODO");
+        } break;
         default:
           if (isalnum(code[*i]) || code[*i] == '_') {
             ++*i;
@@ -2114,13 +2142,19 @@ int transcribe_comment(function_info *owner, char *code, int *i, uint *transcrip
       }
     }
   }
-  else {
+  else if (code[*i] == '*') {
     // Multi-Line Comment
     for (;; ++*i) {
-      if ((code[*i] == '*' && code[*i + 1] == '/') || code[*i] == '\0') {
+      if (code[*i] == '\0')
+        break;
+      if ((code[*i] == '*' && code[*i + 1] == '/')) {
+        *i += 2;
         break;
       }
     }
+  }
+  else {
+    MCerror(2129, "Not Supported");
   }
 
   MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
@@ -2309,8 +2343,6 @@ int transcribe_switch_statement(function_info *owner, char *code, int *i, uint *
   MCcall(parse_past_empty_text(code, i));
 
   while (code[*i] != '}') {
-    MCcall(append_to_cstr(transcription_alloc, transcription, "\n  "));
-
     // Hunt for 'case' or 'default:'
     if (code[*i] == 'c') {
       MCcall(transcribe_past(code, i, transcription_alloc, transcription, "case "));
@@ -2324,12 +2356,14 @@ int transcribe_switch_statement(function_info *owner, char *code, int *i, uint *
           break;
         }
       }
+      MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
       MCcall(parse_past_empty_text(code, i));
-      MCcall(parse_past(code, i, ":"));
+      MCcall(transcribe_past(code, i, transcription_alloc, transcription, ":"));
       MCcall(parse_past_empty_text(code, i));
 
-      MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
-      MCcall(append_to_cstr(transcription_alloc, transcription, ":"));
+      if (!strncmp(code + (*i), "case ", 5)) {
+        continue;
+      }
     }
     else if (code[*i] == '/') {
       MCcall(transcribe_comment(owner, code, i, transcription_alloc, transcription));
@@ -2661,7 +2695,7 @@ int transcribe_array_access(function_info *owner, char *code, int *i, uint *tran
   default: {
     // Unhandled
     MCcall(print_parse_error(code, *i, "transcribe_array_access", "after-array-access"));
-    MCerror(2156, "TODO:'%c'", code[*i]);
+    MCerror(2687, "TODO:'%c'", code[*i]);
   }
   }
 
@@ -2676,6 +2710,32 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
   // printf("peek_mc_token:%i\n", i);
   MCcall(parse_past_empty_text(code, &i));
   switch (code[i]) {
+  case '-': {
+    if (code[i + 1] == '>') {
+      if (!tokens_ahead) {
+        output->type = MC_TOKEN_POINTER_OPERATOR;
+        allocate_and_copy_cstr(output->text, "->");
+        output->start_index = i;
+        return 0;
+      }
+      else {
+        MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+        return 0;
+      }
+    }
+    else {
+      if (!tokens_ahead) {
+        output->type = MC_TOKEN_SUBTRACT_OPERATOR;
+        allocate_and_copy_cstr(output->text, "-");
+        output->start_index = i;
+        return 0;
+      }
+      else {
+        MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+        return 0;
+      }
+    }
+  } break;
   case '*': {
     int s = i;
     while (code[i] == '*' || code[i] == ' ')
@@ -2811,7 +2871,7 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
 
     // Unhandled
     MCcall(print_parse_error(code, i, "peek_mc_token", "default"));
-    MCerror(2156, "TODO:'%c'", code[i]);
+    MCerror(2837, "TODO:'%c'", code[i]);
   }
   }
 
@@ -2999,11 +3059,13 @@ int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *
 {
   while (1) {
     MCcall(parse_past_empty_text(code, i));
-    // printf("transcription:\n%s\n", *transcription);
+    // printf("##################\ntranscription: (current_char:%c)\n%s\n##################\n", code[*i], *transcription);
 
     switch (code[*i]) {
     case '{': {
-      MCcall(append_to_cstr(transcription_alloc, transcription, "{\n"));
+      MCcall(transcribe_past(code, i, transcription_alloc, transcription, "{"));
+      MCcall(parse_past_empty_text(code, i));
+      MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
       MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
       // printf("returned from cblock: cblock-'{'\n");
 
