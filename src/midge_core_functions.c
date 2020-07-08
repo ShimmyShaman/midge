@@ -25,7 +25,7 @@ int find_function_info_v1(int argc, void **argv)
     function_info *finfo = nodespace->functions[i];
 
     // printf("ffi-4a\n");
-    printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
+    // printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
     // printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
@@ -35,7 +35,7 @@ int find_function_info_v1(int argc, void **argv)
 
     // Matches
     *func_info = finfo;
-    printf("find_function_info:set with '%s'\n", finfo->name);
+    // printf("find_function_info:set with '%s'\n", finfo->name);
     return 0;
   }
   // printf("dopu\n");
@@ -50,7 +50,7 @@ int find_function_info_v1(int argc, void **argv)
     mc_vargs[2] = argv[2];
     MCcall(find_function_info(3, mc_vargs));
   }
-  printf("find_function_info: '%s' could not be found!\n", function_name);
+  // printf("find_function_info: '%s' could not be found!\n", function_name);
   return 0;
 }
 
@@ -2385,7 +2385,7 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
   MCcall(parse_past_conformed_type_declaration(owner, code, i, &type_declaration));
   MCcall(parse_past_empty_text(code, i));
 
-  printf("type_declaration:'%s'\n", type_declaration);
+  // printf("type_declaration:'%s'\n", type_declaration);
   char *identifier;
   MCcall(parse_past_mc_identifier(code, i, &identifier, false, false));
   MCcall(parse_past_empty_text(code, i));
@@ -2850,7 +2850,7 @@ int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *
 {
   while (1) {
     MCcall(parse_past_empty_text(code, i));
-    printf("transcription:\n%s\n", *transcription);
+    // printf("transcription:\n%s\n", *transcription);
 
     switch (code[*i]) {
     case '{': {
@@ -3387,7 +3387,6 @@ int load_source_file_into_function_editor(char const *const core_function_name)
   return 0;
 }
 
-int function_editor_handle_input_v1(int argc, void **argv);
 int update_interactive_console_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -4320,11 +4319,15 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
   return 0;
 }
 
-int function_editor_handle_keyboard_input(node *fedit, mc_input_event_v1 *event)
+int function_editor_handle_keyboard_input(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
+
+  frame_time *elapsed = *(frame_time **)argv[0];
+  mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
+  mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
   function_editor_state *state = (function_editor_state *)fedit->extra;
 
@@ -4512,72 +4515,72 @@ int function_editor_handle_keyboard_input(node *fedit, mc_input_event_v1 *event)
   return 0;
 }
 
-int function_editor_handle_input_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
+// int function_editor_handle_input_v1(int argc, void **argv)
+// {
+//   /*mcfuncreplace*/
+//   mc_command_hub_v1 *command_hub;
+//   /*mcfuncreplace*/
 
-  // printf("function_editor_handle_input_v1-a\n");
-  frame_time *elapsed = *(frame_time **)argv[0];
-  mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
-  mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
+//   // printf("function_editor_handle_input_v1-a\n");
+//   frame_time *elapsed = *(frame_time **)argv[0];
+//   mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
+//   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
-  if (fedit->data.visual.hidden)
-    return 0;
+//   if (fedit->data.visual.hidden)
+//     return 0;
 
-  function_editor_state *state = (function_editor_state *)fedit->extra;
+//   function_editor_state *state = (function_editor_state *)fedit->extra;
 
-  event->handled = true;
+//   event->handled = true;
 
-  printf("feditor:%i\n", event->type);
-  if (event->type == INPUT_EVENT_MOUSE_PRESS) {
-    if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_DOWN) {
-      ++state->line_display_offset;
-    }
-    else if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_UP) {
-      --state->line_display_offset;
-    }
-  }
-  else if (event->type == INPUT_EVENT_KEY_PRESS) {
-    MCcall(function_editor_handle_keyboard_input(fedit, event));
-  }
-  else {
-    return 0;
-  }
+//   printf("feditor:%i\n", event->type);
+//   if (event->type == INPUT_EVENT_MOUSE_PRESS) {
+//     if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_DOWN) {
+//       ++state->line_display_offset;
+//     }
+//     else if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_UP) {
+//       --state->line_display_offset;
+//     }
+//   }
+//   else if (event->type == INPUT_EVENT_KEY_PRESS) {
+//     MCcall(function_editor_handle_keyboard_input(fedit, event));
+//   }
+//   else {
+//     return 0;
+//   }
 
-  // printf("fehi-4\n");
-  // Update all modified rendered lines
-  for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-    if (i + state->line_display_offset >= state->text.lines_count) {
+//   // printf("fehi-4\n");
+//   // Update all modified rendered lines
+//   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+//     if (i + state->line_display_offset >= state->text.lines_count) {
 
-      // printf("fehi-5\n");
-      if (!state->render_lines[i].text)
-        continue;
+//       // printf("fehi-5\n");
+//       if (!state->render_lines[i].text)
+//         continue;
 
-      // printf("was:'%s' now:NULL\n", state->render_lines[i].text);
-      free(state->render_lines[i].text);
-      state->render_lines[i].text = NULL;
-    }
-    else {
-      // printf("fehi-6\n");
-      if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]))
-        continue;
+//       // printf("was:'%s' now:NULL\n", state->render_lines[i].text);
+//       free(state->render_lines[i].text);
+//       state->render_lines[i].text = NULL;
+//     }
+//     else {
+//       // printf("fehi-6\n");
+//       if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]))
+//         continue;
 
-      // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
-      // Update
-      if (state->render_lines[i].text)
-        free(state->render_lines[i].text);
-      allocate_and_copy_cstr(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
-    }
+//       // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+//       // Update
+//       if (state->render_lines[i].text)
+//         free(state->render_lines[i].text);
+//       allocate_and_copy_cstr(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+//     }
 
-    // printf("fehi-7\n");
-    state->render_lines[i].requires_render_update = true;
-    fedit->data.visual.requires_render_update = true;
-  }
+//     // printf("fehi-7\n");
+//     state->render_lines[i].requires_render_update = true;
+//     fedit->data.visual.requires_render_update = true;
+//   }
 
-  return 0;
-}
+//   return 0;
+// }
 
 typedef struct debug_data_state {
   int sequenceStep;

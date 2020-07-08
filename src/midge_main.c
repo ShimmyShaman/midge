@@ -5,27 +5,29 @@
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
 {
-  char buf[30];
-  int off = 6 - index;
-  for (int i = 0; i < 13; ++i) {
-    if (index - 13 + i < 0)
+  const int LEN = 84;
+  const int FH = LEN / 2 - 2;
+  const int SH = LEN - FH - 3 - 1;
+  char buf[LEN];
+  for (int i = 0; i < FH; ++i) {
+    if (index - FH + i < 0)
       buf[i] = ' ';
     else
-      buf[i] = text[index - 13 + i];
+      buf[i] = text[index - FH + i];
   }
-  buf[13] = '|';
-  buf[14] = text[index];
-  buf[15] = '|';
+  buf[FH] = '|';
+  buf[FH + 1] = text[index];
+  buf[FH + 2] = '|';
   char eof = text[index] == '\0';
-  for (int i = 0; i < 13; ++i) {
+  for (int i = 0; i < SH; ++i) {
     if (eof)
-      buf[16 + i] = ' ';
+      buf[FH + 3 + i] = ' ';
     else {
       eof = text[index + 1 + i] == '\0';
-      buf[16 + i] = text[index + 1 + i];
+      buf[FH + 3 + i] = text[index + 1 + i];
     }
   }
-  buf[29] = '\0';
+  buf[LEN - 1] = '\0';
 
   printf("\n%s>%s#unhandled-char:'%s'\n", function_name, section_id, buf);
 
@@ -5648,9 +5650,24 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   int offset = 0;
   {
     int cfn_len = strlen(core_function_name);
+    int in_comment = 0;
     for (int i = 0; !offset; ++i) {
       if (input[i] == '\0') {
         MCerror(5658, "TODO");
+      }
+      else if (in_comment) {
+        if (in_comment == 1 && input[i] == '*' && input[i + 1] == '/') {
+          in_comment = 0;
+        }
+        else if (in_comment == 2 && input[i] == '\n') {
+          in_comment = 0;
+        }
+      }
+      else if (input[i] == '/' && input[i + 1] == '*') {
+        in_comment = 1;
+      }
+      else if (input[i] == '/' && input[i + 1] == '/') {
+        in_comment = 2;
       }
       else if (input[i] == core_function_name[0] && !strncmp(input + i, core_function_name, cfn_len)) {
         // Set the offset
@@ -5718,7 +5735,8 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   printf(" -- parameter_count:%u:\n", func_info->parameter_count);
   printf(" -- struct_usage_count:%u:\n", func_info->struct_usage_count);
   printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
-  printf(" -- mc_code:\n%s#######################\n", func_info->mc_code);
+  // printf(" -- mc_code:\n%s\n", func_info->mc_code);
+  printf("#######################\n");
 
   // Compile the function definition
   uint transcription_alloc = 4;
@@ -5942,6 +5960,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;");
   clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;");
 
+  MCcall(parse_and_process_core_function(command_hub, "special_update"));
+  MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
+  // MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_keyboard_input"));
   printf("hopeh\n");
   // MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
   // mc_function_info_v1 *function_editor_handle_input_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
@@ -6004,8 +6025,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("core_display_handle_input = &core_display_handle_input_v1;");
   clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;");
 
-  MCcall(parse_and_process_core_function(command_hub, "special_update"));
-  MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
   printf("end:init_core_functions()\n");
   return 0;
 }
