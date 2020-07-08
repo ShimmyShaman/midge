@@ -231,8 +231,8 @@ int core_display_handle_input_v1(int argc, void **argv)
     // Check is visual and has input handler and mouse event is within bounds
     if (child->type != NODE_TYPE_VISUAL)
       continue;
-    if (!*child->data.visual.input_handler)
-      continue;
+    // if (!*child->data.visual.input_handler)
+    //   continue;
     if (event->detail.mouse.x < child->data.visual.bounds.x || event->detail.mouse.y < child->data.visual.bounds.y ||
         event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
         event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
