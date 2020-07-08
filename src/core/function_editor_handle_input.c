@@ -24,7 +24,9 @@ void function_editor_handle_input_v1(frame_time *elapsed, mc_node_v1 *fedit, mc_
     }
   }
   else if (event->type == INPUT_EVENT_KEY_PRESS) {
-    function_editor_handle_keyboard_input(fedit, event);
+    // printf("fehi-3a\n");
+    function_editor_handle_keyboard_input(elapsed, fedit, event);
+    // printf("fehi-3b\n");
   }
   else {
     return;
@@ -35,7 +37,7 @@ void function_editor_handle_input_v1(frame_time *elapsed, mc_node_v1 *fedit, mc_
   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
     if (i + state->line_display_offset >= state->text.lines_count) {
 
-      //   printf("fehi-5\n");
+      // printf("fehi-5\n");
       if (!state->render_lines[i].text) {
         continue;
       }

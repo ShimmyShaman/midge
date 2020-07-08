@@ -514,7 +514,7 @@ int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
 int (*build_function_editor)(int, void **);
 int (*function_editor_update)(int, void **);
-// int (*function_editor_handle_keyboard_input)(int, void **);
+int (*function_editor_handle_keyboard_input)(int, void **);
 int (*function_editor_handle_input)(int, void **);
 int (*function_editor_render)(int, void **);
 int (*render_global_node)(int, void **);

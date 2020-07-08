@@ -5735,7 +5735,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   printf(" -- parameter_count:%u:\n", func_info->parameter_count);
   printf(" -- struct_usage_count:%u:\n", func_info->struct_usage_count);
   printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
-  // printf(" -- mc_code:\n%s\n", func_info->mc_code);
+  printf(" -- mc_code:\n%s\n", func_info->mc_code);
   printf("#######################\n");
 
   // Compile the function definition
@@ -5961,8 +5961,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;");
 
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
+  MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
-  // MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_keyboard_input"));
   printf("hopeh\n");
   // MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
   // mc_function_info_v1 *function_editor_handle_input_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));

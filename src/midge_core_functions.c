@@ -2102,6 +2102,32 @@ int parse_expression_lacking_function_call(function_info *owner, char *code, int
   return 0;
 }
 
+int transcribe_comment(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+{
+  MCcall(transcribe_past(code, i, transcription_alloc, transcription, "/"));
+  int s = *i;
+  if (code[*i] == '/') {
+    // Line Comment
+    for (;; ++*i) {
+      if (code[*i] == '\n' || code[*i] == '\0') {
+        break;
+      }
+    }
+  }
+  else {
+    // Multi-Line Comment
+    for (;; ++*i) {
+      if ((code[*i] == '*' && code[*i + 1] == '/') || code[*i] == '\0') {
+        break;
+      }
+    }
+  }
+
+  MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
+  MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+  return 0;
+}
+
 int transcribe_if_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   // Header
@@ -2210,9 +2236,154 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
   return 0;
 }
 
-int transcribe_while_statement(char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_while_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   MCerror(1546, "TODO");
+
+  return 0;
+}
+
+int transcribe_switch_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+{
+  // Header
+  MCcall(parse_past(code, i, "switch"));
+  MCcall(parse_past_empty_text(code, i));
+  MCcall(parse_past(code, i, "("));
+  MCcall(parse_past_empty_text(code, i));
+
+  char *expression;
+  MCcall(parse_expression_lacking_function_call(owner, code, i, &expression));
+  if (!expression) {
+
+    // TODO TODO TODO
+    // ASSUMING THAT none of the code will contain a midge function in them, so transcribing directly
+    int bracketCount = 1;
+    for (int j = *i; bracketCount; ++j) {
+      // printf("bracketCount:%i\n", bracketCount);
+      switch (code[j]) {
+      case '\0':
+      case '{': {
+        // printf("bracketCount-f:%i\n", bracketCount);
+        MCcall(print_parse_error(code, j, "--transcribe_if_statement", "direct-transcribe"));
+        MCerror(2127, "FORMAT PROBLEM");
+      } break;
+      case ')': {
+        --bracketCount;
+        if (!bracketCount) {
+          expression = (char *)malloc(sizeof(char) * (j - *i + 1));
+          strncpy(expression, code + *i, j - *i);
+          expression[j - *i] = '\0';
+          *i = j;
+        }
+      } break;
+      case '(': {
+        ++bracketCount;
+      } break;
+      default:
+        break;
+      }
+    }
+
+    printf("switch_statement:Direct_parse_expression:'%s'\n", expression);
+    MCcall(parse_past_empty_text(code, i));
+    MCcall(parse_past(code, i, ")"));
+    MCcall(parse_past_empty_text(code, i));
+  }
+  else {
+    printf("expression lacking function call:'%s'\n", expression);
+
+    MCcall(parse_past_empty_text(code, i));
+    MCcall(parse_past(code, i, ")"));
+    MCcall(parse_past_empty_text(code, i));
+  }
+
+  MCcall(append_to_cstr(transcription_alloc, transcription, "switch ("));
+  MCcall(append_to_cstr(transcription_alloc, transcription, expression));
+  MCcall(append_to_cstr(transcription_alloc, transcription, ") {\n"));
+
+  if (code[*i] != '{') {
+    MCerror(1948, "NOT supporting unbracketed if statements yet");
+  }
+
+  MCcall(parse_past(code, i, "{"));
+  MCcall(parse_past_empty_text(code, i));
+
+  while (code[*i] != '}') {
+    MCcall(append_to_cstr(transcription_alloc, transcription, "\n  "));
+
+    // Hunt for 'case' or 'default:'
+    if (code[*i] == 'c') {
+      MCcall(transcribe_past(code, i, transcription_alloc, transcription, "case "));
+      MCcall(parse_past_empty_text(code, i));
+      int s = *i;
+      for (;; ++*i) {
+        if (code[*i] == '\0') {
+          MCerror(2294, "FORMAT error");
+        }
+        if (!isalnum(code[*i]) && code[*i] != '_') {
+          break;
+        }
+      }
+      MCcall(parse_past_empty_text(code, i));
+      MCcall(parse_past(code, i, ":"));
+      MCcall(parse_past_empty_text(code, i));
+
+      MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
+      MCcall(append_to_cstr(transcription_alloc, transcription, ":"));
+    }
+    else if (code[*i] == '/') {
+      MCcall(transcribe_comment(owner, code, i, transcription_alloc, transcription));
+      MCcall(parse_past_empty_text(code, i));
+      continue;
+    }
+    else {
+      MCcall(transcribe_past(code, i, transcription_alloc, transcription, "default:"));
+      MCcall(parse_past_empty_text(code, i));
+    }
+
+    // For now... expect a bracket after
+    MCcall(transcribe_past(code, i, transcription_alloc, transcription, "{"));
+    MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+    MCcall(parse_past_empty_text(code, i));
+
+    MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
+
+    MCcall(transcribe_past(code, i, transcription_alloc, transcription, "}"));
+    MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+    MCcall(parse_past_empty_text(code, i));
+
+    // break / continue / default or case
+    if (code[*i] == 'b') {
+      MCcall(transcribe_past(code, i, transcription_alloc, transcription, "break"));
+      MCcall(parse_past_empty_text(code, i));
+      MCcall(transcribe_past(code, i, transcription_alloc, transcription, ";"));
+      MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+      MCcall(parse_past_empty_text(code, i));
+    }
+    else if (code[*i] == 'd' || (code[*i] == 'c' && code[*i] == 'a')) {
+      continue;
+    }
+    else if (code[*i] == 'c') {
+      MCcall(transcribe_past(code, i, transcription_alloc, transcription, "continue"));
+      MCcall(parse_past_empty_text(code, i));
+      MCcall(transcribe_past(code, i, transcription_alloc, transcription, ";"));
+      MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+      MCcall(parse_past_empty_text(code, i));
+    }
+    else if (code[*i] == '/') {
+      continue;
+    }
+    else if (code[*i] == '}') {
+      break;
+    }
+    else {
+      MCerror(2346, "FORMAT-error");
+    }
+  }
+
+  MCcall(transcribe_past(code, i, transcription_alloc, transcription, "}"));
+  MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
+  MCcall(parse_past_empty_text(code, i));
 
   return 0;
 }
@@ -2313,13 +2484,17 @@ int transcribe_function_call(function_info *owner, char *code, int *i, uint *tra
     MCcall(append_to_cstr(transcription_alloc, transcription, buf));
     MCcall(append_to_cstr(transcription_alloc, transcription, "];\n"));
     for (int j = 0; j < argument_count; ++j) {
-      MCcall(append_to_cstr(transcription_alloc, transcription, "  mc_vargs[0] = (void *)&"));
+      MCcall(append_to_cstr(transcription_alloc, transcription, "  mc_vargs["));
+      sprintf(buf, "%i", j);
+      MCcall(append_to_cstr(transcription_alloc, transcription, buf));
+      MCcall(append_to_cstr(transcription_alloc, transcription, "] = (void *)&"));
       MCcall(append_to_cstr(transcription_alloc, transcription, arguments[j]));
       MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
     }
     MCcall(append_to_cstr(transcription_alloc, transcription, "  "));
     MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
     MCcall(append_to_cstr(transcription_alloc, transcription, "("));
+    sprintf(buf, "%i", argument_count);
     MCcall(append_to_cstr(transcription_alloc, transcription, buf));
     MCcall(append_to_cstr(transcription_alloc, transcription, ", mc_vargs);\n"));
     MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
@@ -2789,32 +2964,6 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
   }
 }
 
-int transcribe_comment(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
-{
-  MCcall(transcribe_past(code, i, transcription_alloc, transcription, "/"));
-  int s = *i;
-  if (code[*i] == '/') {
-    // Line Comment
-    for (;; ++*i) {
-      if (code[*i] == '\n' || code[*i] == '\0') {
-        break;
-      }
-    }
-  }
-  else {
-    // Multi-Line Comment
-    for (;; ++*i) {
-      if ((code[*i] == '*' && code[*i + 1] == '/') || code[*i] == '\0') {
-        break;
-      }
-    }
-  }
-
-  MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
-  MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
-  return 0;
-}
-
 int transcribe_inde_crement_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   if (code[*i] == '+') {
@@ -2899,7 +3048,11 @@ int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *
           break;
         }
         if (!strncmp(code + *i, "while", 5)) {
-          MCcall(transcribe_while_statement(code, i, transcription_alloc, transcription));
+          MCcall(transcribe_while_statement(owner, code, i, transcription_alloc, transcription));
+          break;
+        }
+        if (!strncmp(code + *i, "switch", 6)) {
+          MCcall(transcribe_switch_statement(owner, code, i, transcription_alloc, transcription));
           break;
         }
         if (!strncmp(code + *i, "return", 6)) {
@@ -4319,201 +4472,202 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
   return 0;
 }
 
-int function_editor_handle_keyboard_input(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
+// int function_editor_handle_keyboard_input(int argc, void **argv)
+// {
+//   /*mcfuncreplace*/
+//   mc_command_hub_v1 *command_hub;
+//   /*mcfuncreplace*/
 
-  frame_time *elapsed = *(frame_time **)argv[0];
-  mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
-  mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
+//   frame_time *elapsed = *(frame_time **)argv[0];
+//   mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
+//   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
-  function_editor_state *state = (function_editor_state *)fedit->extra;
+//   function_editor_state *state = (function_editor_state *)fedit->extra;
 
-  switch (event->detail.keyboard.key) {
-  case KEY_CODE_BACKSPACE: {
-    event->handled = true;
-    if (!state->cursorCol) {
-      if (state->cursorLine) {
-        // Combine previous line & second line into one
-        int previous_line_len = strlen(state->text.lines[state->cursorLine - 1]);
-        char *combined = (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text.lines[state->cursorLine]) + 1));
-        strcpy(combined, state->text.lines[state->cursorLine - 1]);
-        strcat(combined, state->text.lines[state->cursorLine]);
+//   switch (event->detail.keyboard.key) {
+//   case KEY_CODE_BACKSPACE: {
+//     event->handled = true;
+//     if (!state->cursorCol) {
+//       if (state->cursorLine) {
+//         // Combine previous line & second line into one
+//         int previous_line_len = strlen(state->text.lines[state->cursorLine - 1]);
+//         char *combined = (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text.lines[state->cursorLine]) + 1));
+//         strcpy(combined, state->text.lines[state->cursorLine - 1]);
+//         strcat(combined, state->text.lines[state->cursorLine]);
 
-        free(state->text.lines[state->cursorLine - 1]);
-        free(state->text.lines[state->cursorLine]);
-        state->text.lines[state->cursorLine - 1] = combined;
+//         free(state->text.lines[state->cursorLine - 1]);
+//         free(state->text.lines[state->cursorLine]);
+//         state->text.lines[state->cursorLine - 1] = combined;
 
-        // Bring all lines up one position
-        for (int i = state->cursorLine + 1; i < state->text.lines_count; ++i) {
-          state->text.lines[i - 1] = state->text.lines[i];
-        }
-        state->text.lines[state->text.lines_count - 1] = NULL;
-        --state->text.lines_count;
+//         // Bring all lines up one position
+//         for (int i = state->cursorLine + 1; i < state->text.lines_count; ++i) {
+//           state->text.lines[i - 1] = state->text.lines[i];
+//         }
+//         state->text.lines[state->text.lines_count - 1] = NULL;
+//         --state->text.lines_count;
 
-        --state->cursorLine;
-        state->cursorCol = previous_line_len;
-      }
-      break;
-    }
+//         --state->cursorLine;
+//         state->cursorCol = previous_line_len;
+//       }
+//       break;
+//     }
 
-    // Bring all forward characters back one
-    int line_len = strlen(state->text.lines[state->cursorLine]);
-    for (int i = state->cursorCol - 1; i < line_len; ++i) {
-      state->text.lines[state->cursorLine][i] = state->text.lines[state->cursorLine][i + 1];
-    }
+//     // Bring all forward characters back one
+//     int line_len = strlen(state->text.lines[state->cursorLine]);
+//     for (int i = state->cursorCol - 1; i < line_len; ++i) {
+//       state->text.lines[state->cursorLine][i] = state->text.lines[state->cursorLine][i + 1];
+//     }
 
-    --state->cursorCol;
-  } break;
-  case KEY_CODE_ENTER:
-  case KEY_CODE_RETURN: {
-    event->handled = true;
-    if (event->ctrlDown) {
+//     --state->cursorCol;
+//   } break;
+//   case KEY_CODE_ENTER:
+//   case KEY_CODE_RETURN: {
+//     event->handled = true;
+//     if (event->ctrlDown) {
 
-      // Read the code from the editor
-      char *function_declaration;
-      MCcall(read_function_from_editor(state, &function_declaration));
+//       // Read the code from the editor
+//       char *function_declaration;
+//       MCcall(read_function_from_editor(state, &function_declaration));
 
-      function_info *func_info;
-      MCcall(parse_and_process_function_definition(function_declaration, &func_info, false));
-      free(function_declaration);
+//       function_info *func_info;
+//       MCcall(parse_and_process_function_definition(function_declaration, &func_info, false));
+//       free(function_declaration);
 
-      // Compile the function definition
-      uint transcription_alloc = 4;
-      char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
-      transcription[0] = '\0';
-      int code_index = 0;
-      MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
+//       // Compile the function definition
+//       uint transcription_alloc = 4;
+//       char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
+//       transcription[0] = '\0';
+//       int code_index = 0;
+//       MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
 
-      printf("final transcription:\n%s\n", transcription);
+//       printf("final transcription:\n%s\n", transcription);
 
-      // Define the new function
-      {
-        void *mc_vargs[3];
-        mc_vargs[0] = (void *)&func_info->name;
-        mc_vargs[1] = (void *)&transcription;
-        MCcall(instantiate_function(2, mc_vargs));
-      }
+//       // Define the new function
+//       {
+//         void *mc_vargs[3];
+//         mc_vargs[0] = (void *)&func_info->name;
+//         mc_vargs[1] = (void *)&transcription;
+//         MCcall(instantiate_function(2, mc_vargs));
+//       }
 
-      event->handled = true;
-      return 0;
-    }
-    else {
-      // Newline -- carrying over any extra
-      char *cursorLine = state->text.lines[state->cursorLine];
+//       event->handled = true;
+//       return 0;
+//     }
+//     else {
+//       // Newline -- carrying over any extra
+//       char *cursorLine = state->text.lines[state->cursorLine];
 
-      printf("fehi-0\n");
-      // Automatic indent
-      int automaticIndent = 0;
-      int cursorLineLen = strlen(cursorLine);
-      for (; automaticIndent < state->cursorCol && automaticIndent < cursorLineLen; ++automaticIndent) {
-        if (cursorLine[automaticIndent] != ' ')
-          break;
-      }
+//       printf("fehi-0\n");
+//       // Automatic indent
+//       int automaticIndent = 0;
+//       int cursorLineLen = strlen(cursorLine);
+//       for (; automaticIndent < state->cursorCol && automaticIndent < cursorLineLen; ++automaticIndent) {
+//         if (cursorLine[automaticIndent] != ' ')
+//           break;
+//       }
 
-      // Increment lines after by one place
-      if (state->text.lines_count + 1 >= state->text.lines_allocated) {
-        uint new_alloc = state->text.lines_allocated + 4 + state->text.lines_allocated / 4;
-        char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-        if (state->text.lines_allocated) {
-          memcpy(new_ary, state->text.lines, state->text.lines_allocated * sizeof(char *));
-          free(state->text.lines);
-        }
-        for (int i = state->text.lines_allocated; i < new_alloc; ++i) {
-          new_ary[i] = NULL;
-        }
+//       // Increment lines after by one place
+//       if (state->text.lines_count + 1 >= state->text.lines_allocated) {
+//         uint new_alloc = state->text.lines_allocated + 4 + state->text.lines_allocated / 4;
+//         char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
+//         if (state->text.lines_allocated) {
+//           memcpy(new_ary, state->text.lines, state->text.lines_allocated * sizeof(char *));
+//           free(state->text.lines);
+//         }
+//         for (int i = state->text.lines_allocated; i < new_alloc; ++i) {
+//           new_ary[i] = NULL;
+//         }
 
-        state->text.lines_allocated = new_alloc;
-        state->text.lines = new_ary;
-      }
-      // printf("state->text.lines_allocated:%u state->text.lines_count:%u state->cursorLine:%u\n", state->text.lines_allocated,
-      //        state->text.lines_count, state->cursorLine);
-      for (int i = state->text.lines_count; i > state->cursorLine + 1; --i) {
+//         state->text.lines_allocated = new_alloc;
+//         state->text.lines = new_ary;
+//       }
+//       // printf("state->text.lines_allocated:%u state->text.lines_count:%u state->cursorLine:%u\n",
+//       state->text.lines_allocated,
+//       //        state->text.lines_count, state->cursorLine);
+//       for (int i = state->text.lines_count; i > state->cursorLine + 1; --i) {
 
-        state->text.lines[i] = state->text.lines[i - 1];
-      }
-      state->text.lines[state->cursorLine + 1] = NULL;
-      ++state->text.lines_count;
+//         state->text.lines[i] = state->text.lines[i - 1];
+//       }
+//       state->text.lines[state->cursorLine + 1] = NULL;
+//       ++state->text.lines_count;
 
-      // printf("fehi-1\n");
-      if (state->cursorCol >= cursorLineLen) {
-        // printf("fehi-1A\n");
-        // Just create new line
-        char *newLine = (char *)malloc(sizeof(char) * (automaticIndent + 1));
-        for (int i = 0; i < automaticIndent; ++i) {
-          newLine[i] = ' ';
-        }
-        newLine[automaticIndent] = '\0';
-        state->text.lines[state->cursorLine + 1] = newLine;
-      }
-      else if (state->cursorCol) {
-        // printf("fehi-1B\n");
-        // Split current line at cursor column position
-        char *firstSplit = (char *)malloc(sizeof(char) * (state->cursorCol + 1));
-        memcpy(firstSplit, cursorLine, sizeof(char) * state->cursorCol);
-        firstSplit[state->cursorCol] = '\0';
+//       // printf("fehi-1\n");
+//       if (state->cursorCol >= cursorLineLen) {
+//         // printf("fehi-1A\n");
+//         // Just create new line
+//         char *newLine = (char *)malloc(sizeof(char) * (automaticIndent + 1));
+//         for (int i = 0; i < automaticIndent; ++i) {
+//           newLine[i] = ' ';
+//         }
+//         newLine[automaticIndent] = '\0';
+//         state->text.lines[state->cursorLine + 1] = newLine;
+//       }
+//       else if (state->cursorCol) {
+//         // printf("fehi-1B\n");
+//         // Split current line at cursor column position
+//         char *firstSplit = (char *)malloc(sizeof(char) * (state->cursorCol + 1));
+//         memcpy(firstSplit, cursorLine, sizeof(char) * state->cursorCol);
+//         firstSplit[state->cursorCol] = '\0';
 
-        char *secondSplit = (char *)malloc(sizeof(char) * (automaticIndent + cursorLineLen - state->cursorCol + 1));
-        for (int i = 0; i < automaticIndent; ++i) {
-          secondSplit[i] = ' ';
-        }
-        memcpy(secondSplit + automaticIndent, cursorLine + state->cursorCol,
-               sizeof(char) * (cursorLineLen - state->cursorCol + 1));
-        secondSplit[cursorLineLen - state->cursorCol] = '\0';
+//         char *secondSplit = (char *)malloc(sizeof(char) * (automaticIndent + cursorLineLen - state->cursorCol + 1));
+//         for (int i = 0; i < automaticIndent; ++i) {
+//           secondSplit[i] = ' ';
+//         }
+//         memcpy(secondSplit + automaticIndent, cursorLine + state->cursorCol,
+//                sizeof(char) * (cursorLineLen - state->cursorCol + 1));
+//         secondSplit[cursorLineLen - state->cursorCol] = '\0';
 
-        free(cursorLine);
-        state->text.lines[state->cursorLine] = firstSplit;
-        state->text.lines[state->cursorLine + 1] = secondSplit;
-      }
-      else {
-        // printf("fehi-1C\n");
-        // Move the rest of the current line forwards
-        state->text.lines[state->cursorLine + 1] = cursorLine;
-        state->text.lines[state->cursorLine] = (char *)malloc(sizeof(char) * (automaticIndent + 1));
-        for (int i = 0; i < automaticIndent; ++i) {
-          state->text.lines[state->cursorLine][i] = ' ';
-        }
-      }
+//         free(cursorLine);
+//         state->text.lines[state->cursorLine] = firstSplit;
+//         state->text.lines[state->cursorLine + 1] = secondSplit;
+//       }
+//       else {
+//         // printf("fehi-1C\n");
+//         // Move the rest of the current line forwards
+//         state->text.lines[state->cursorLine + 1] = cursorLine;
+//         state->text.lines[state->cursorLine] = (char *)malloc(sizeof(char) * (automaticIndent + 1));
+//         for (int i = 0; i < automaticIndent; ++i) {
+//           state->text.lines[state->cursorLine][i] = ' ';
+//         }
+//       }
 
-      // printf("fehi-2\n");
-      // Cursor Position Update
-      ++state->cursorLine;
-      state->cursorCol = automaticIndent;
-    }
-  } break;
-  default: {
-    // printf("fehi-3\n");
-    char c = '\0';
-    int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c);
-    if (res)
-      return 0; // TODO
-    event->handled = true;
+//       // printf("fehi-2\n");
+//       // Cursor Position Update
+//       ++state->cursorLine;
+//       state->cursorCol = automaticIndent;
+//     }
+//   } break;
+//   default: {
+//     // printf("fehi-3\n");
+//     char c = '\0';
+//     int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c);
+//     if (res)
+//       return 0; // TODO
+//     event->handled = true;
 
-    // Update the text
-    {
-      int current_line_len = strlen(state->text.lines[state->cursorLine]);
-      char *new_line = (char *)malloc(sizeof(char) * (current_line_len + 1 + 1));
-      if (state->cursorCol) {
-        strncpy(new_line, state->text.lines[state->cursorLine], state->cursorCol);
-      }
-      new_line[state->cursorCol] = c;
-      if (current_line_len - state->cursorCol) {
-        strcat(new_line + state->cursorCol + 1, state->text.lines[state->cursorLine]);
-      }
-      new_line[current_line_len + 1] = '\0';
+//     // Update the text
+//     {
+//       int current_line_len = strlen(state->text.lines[state->cursorLine]);
+//       char *new_line = (char *)malloc(sizeof(char) * (current_line_len + 1 + 1));
+//       if (state->cursorCol) {
+//         strncpy(new_line, state->text.lines[state->cursorLine], state->cursorCol);
+//       }
+//       new_line[state->cursorCol] = c;
+//       if (current_line_len - state->cursorCol) {
+//         strcat(new_line + state->cursorCol + 1, state->text.lines[state->cursorLine]);
+//       }
+//       new_line[current_line_len + 1] = '\0';
 
-      free(state->text.lines[state->cursorLine]);
-      state->text.lines[state->cursorLine] = new_line;
+//       free(state->text.lines[state->cursorLine]);
+//       state->text.lines[state->cursorLine] = new_line;
 
-      ++state->cursorCol;
-    }
-  } break;
-  }
+//       ++state->cursorCol;
+//     }
+//   } break;
+//   }
 
-  return 0;
-}
+//   return 0;
+// }
 
 // int function_editor_handle_input_v1(int argc, void **argv)
 // {
@@ -4564,7 +4718,8 @@ int function_editor_handle_keyboard_input(int argc, void **argv)
 //     }
 //     else {
 //       // printf("fehi-6\n");
-//       if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]))
+//       if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text.lines[i +
+//       state->line_display_offset]))
 //         continue;
 
 //       // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
