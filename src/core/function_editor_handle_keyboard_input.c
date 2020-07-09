@@ -9,11 +9,37 @@ function_editor_state *state = (function_editor_state *)fedit->extra;
   switch (event->detail.keyboard.key) {
   case KEY_CODE_DELETE: {
     event->handled = true;
-    
+
     int line_len = strlen(state->text.lines[state->cursorLine]);
-    if(state->cursorCol == line_len) {
+    if (state->cursorCol == line_len) {
+      if(state->cursorLine == state->text.lines_count) {
+        // Do nothing
+        break;
+      }
+  
+      // Append the next line onto this one
+      int current_line_len = strlen(state->text.lines[state->cursorLine]);
+      int next_line_len = strlen(state->text.lines[state->cursorLine + 1]);
+      char *new_line = (char *)malloc(sizeof(char) * (current_line_len + next_line_len + 1));
+      strcpy(new_line, state->text.lines[state->cursorLine]);
+      strcat(new_line, state->text.lines[state->cursorLine + 1]);
       
+      free(state->text.lines[state->cursorLine]);
+      state->text.lines[state->cursorLine] = new_line;
+      
+      // Move all lines after the next line up one
+      for(int i = state->cursorLine + 2; i < state->text.lines_count; ++i) {
+        state->text.lines[i - 1] = state->text.lines[i];
+      }
+      state->text.lines[state->text.lines_count - 1] = NULL;
+      --state->text.lines_count;
+      break;
     }
+    
+    // Just delete the character in front
+    strcpy(state-text.linees[state->cursorLine] + state->cursorCol,
+        state->text.lines[state->cursorLine] + state->cursorCol + 1);
+            
   } break;
   case KEY_CODE_BACKSPACE: {
     event->handled = true;
@@ -142,9 +168,8 @@ function_editor_state *state = (function_editor_state *)fedit->extra;
         for (int i = 0; i < automaticIndent; ++i) {
           secondSplit[i] = ' ';
         }
-        memcpy(secondSplit + automaticIndent, cursorLine + state->cursorCol,
-               sizeof(char) * (cursorLineLen - state->cursorCol + 1));
-        secondSplit[cursorLineLen - state->cursorCol] = '\0';
+        secondSplit[automaticIndent] = '\0';
+        strcat(secondSplit, cursorLine + state->cursorCol);
 
         free(cursorLine);
         state->text.lines[state->cursorLine] = firstSplit;
@@ -158,6 +183,7 @@ function_editor_state *state = (function_editor_state *)fedit->extra;
         for (int i = 0; i < automaticIndent; ++i) {
           state->text.lines[state->cursorLine][i] = ' ';
         }
+        state->text.lines[state->cursorLine][automaticIndent] = '\0';
       }
 
       printf("fehi-2\n");

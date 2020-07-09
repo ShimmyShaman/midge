@@ -2,9 +2,8 @@
 
 #include "core/midge_core.h"
 
-void function_editor_handle_input_v1(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
-{
-  //   printf("function_editor_handle_input-begin\n");
+void function_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
+//   printf("function_editor_handle_input-begin\n");
 
   if (fedit->data.visual.hidden) {
     return;
@@ -17,10 +16,15 @@ void function_editor_handle_input_v1(frame_time *elapsed, mc_node_v1 *fedit, mc_
   //   printf("fehi-3\n");
   if (event->type == INPUT_EVENT_MOUSE_PRESS) {
     if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_DOWN) {
-      ++state->line_display_offset;
+      state->line_display_offset += 3;
     }
     else if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_UP) {
-      --state->line_display_offset;
+      if(state->line_display_offset < 3) {
+        state->line_display_offset = 0;
+      }
+      else {
+        state->line_display_offset -= 3;
+      }
     }
   }
   else if (event->type == INPUT_EVENT_KEY_PRESS) {
