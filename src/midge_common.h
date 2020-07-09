@@ -90,6 +90,24 @@ typedef enum key_event_code {
   KEY_CODE_RIGHT_SHIFT = 62,
   KEY_CODE_LEFT_ALT = 64,
   KEY_CODE_SPACE = 65,
+  KEY_CODE_NUM_STAR = 63,
+  KEY_CODE_NUM_SUBTRACT = 82,
+  KEY_CODE_NUM_PLUS = 86,
+  KEY_CODE_NUM_FORWARD_SLASH = 106,
+  KEY_CODE_NUM0 = 90,
+  KEY_CODE_NUM1 = 87,
+  KEY_CODE_NUM2 = 88,
+  KEY_CODE_NUM3 = 89,
+  KEY_CODE_NUM4 = 83,
+  KEY_CODE_NUM5 = 84,
+  KEY_CODE_NUM6 = 85,
+  KEY_CODE_NUM7 = 79,
+  KEY_CODE_NUM8 = 80,
+  KEY_CODE_NUM9 = 81,
+  KEY_CODE_NUM_DECIMAL = 91,
+  KEY_CODE_NUM_X_EQUALS = 125,
+  KEY_CODE_NUM_X_OPEN_BRACKET = 187,
+  KEY_CODE_NUM_X_CLOSE_BRACKET = 188,
   KEY_CODE_RETURN = 104,
   KEY_CODE_RIGHT_CTRL = 105,
   KEY_CODE_RIGHT_ALT = 108,
@@ -99,6 +117,7 @@ typedef enum key_event_code {
   KEY_CODE_ARROW_DOWN = 116,
   KEY_CODE_ARROW_LEFT = 113,
   KEY_CODE_ARROW_RIGHT = 114,
+  KEY_CODE_DELETE = 119,
 } key_event_code;
 
 typedef enum mouse_event_code {
@@ -281,6 +300,60 @@ int get_key_input_code_char(bool shift, key_event_code code, char *c)
     return 0;
   case KEY_CODE_SPACE:
     *c = shift ? ' ' : ' ';
+    return 0;
+  case KEY_CODE_NUM_STAR:
+    *c = '*';
+    return 0;
+  case KEY_CODE_NUM_SUBTRACT:
+    *c = '-';
+    return 0;
+  case KEY_CODE_NUM_PLUS:
+    *c = '+';
+    return 0;
+  case KEY_CODE_NUM_FORWARD_SLASH:
+    *c = '/';
+    return 0;
+  case KEY_CODE_NUM0:
+    *c = '0';
+    return 0;
+  case KEY_CODE_NUM1:
+    *c = '1';
+    return 0;
+  case KEY_CODE_NUM2:
+    *c = '2';
+    return 0;
+  case KEY_CODE_NUM3:
+    *c = '3';
+    return 0;
+  case KEY_CODE_NUM4:
+    *c = '4';
+    return 0;
+  case KEY_CODE_NUM5:
+    *c = '5';
+    return 0;
+  case KEY_CODE_NUM6:
+    *c = '6';
+    return 0;
+  case KEY_CODE_NUM7:
+    *c = '7';
+    return 0;
+  case KEY_CODE_NUM8:
+    *c = '8';
+    return 0;
+  case KEY_CODE_NUM9:
+    *c = '9';
+    return 0;
+  case KEY_CODE_NUM_DECIMAL:
+    *c = '.';
+    return 0;
+  case KEY_CODE_NUM_X_EQUALS:
+    *c = '=';
+    return 0;
+  case KEY_CODE_NUM_X_OPEN_BRACKET:
+    *c = '(';
+    return 0;
+  case KEY_CODE_NUM_X_CLOSE_BRACKET:
+    *c = ')';
     return 0;
 
   default:
