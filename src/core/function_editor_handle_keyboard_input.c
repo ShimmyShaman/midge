@@ -2,8 +2,9 @@
 
 #include "core/midge_core.h"
 
-void function_editor_handle_keyboard_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
-function_editor_state *state = (function_editor_state *)fedit->extra;
+void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
+{
+  function_editor_state *state = (function_editor_state *)fedit->extra;
   // printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
@@ -12,34 +13,34 @@ function_editor_state *state = (function_editor_state *)fedit->extra;
 
     int line_len = strlen(state->text.lines[state->cursorLine]);
     if (state->cursorCol == line_len) {
-      if(state->cursorLine == state->text.lines_count) {
+      if (state->cursorLine == state->text.lines_count) {
         // Do nothing
         break;
       }
-  
+
       // Append the next line onto this one
       int current_line_len = strlen(state->text.lines[state->cursorLine]);
       int next_line_len = strlen(state->text.lines[state->cursorLine + 1]);
       char *new_line = (char *)malloc(sizeof(char) * (current_line_len + next_line_len + 1));
       strcpy(new_line, state->text.lines[state->cursorLine]);
       strcat(new_line, state->text.lines[state->cursorLine + 1]);
-      
+
       free(state->text.lines[state->cursorLine]);
       state->text.lines[state->cursorLine] = new_line;
-      
+
       // Move all lines after the next line up one
-      for(int i = state->cursorLine + 2; i < state->text.lines_count; ++i) {
+      for (int i = state->cursorLine + 2; i < state->text.lines_count; ++i) {
         state->text.lines[i - 1] = state->text.lines[i];
       }
       state->text.lines[state->text.lines_count - 1] = NULL;
       --state->text.lines_count;
       break;
     }
-    
+
     // Just delete the character in front
-    strcpy(state-text.linees[state->cursorLine] + state->cursorCol,
-        state->text.lines[state->cursorLine] + state->cursorCol + 1);
-            
+    strcpy(state->text.lines[state->cursorLine] + state->cursorCol,
+           state->text.lines[state->cursorLine] + state->cursorCol + 1);
+
   } break;
   case KEY_CODE_BACKSPACE: {
     event->handled = true;
@@ -47,7 +48,8 @@ function_editor_state *state = (function_editor_state *)fedit->extra;
       if (state->cursorLine) {
         // Combine previous line & second line into one
         int previous_line_len = strlen(state->text.lines[state->cursorLine - 1]);
-        char *combined = (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text.lines[state->cursorLine]) + 1));
+        char *combined =
+            (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text.lines[state->cursorLine]) + 1));
         strcpy(combined, state->text.lines[state->cursorLine - 1]);
         strcat(combined, state->text.lines[state->cursorLine]);
 

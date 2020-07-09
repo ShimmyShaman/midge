@@ -9,7 +9,7 @@ Language: Cpp
 AlignEscapedNewlines: Left
 DerivePointerAlignment: false
 PointerAlignment: Right
-ColumnLimit: 130
+ColumnLimit: 120
 BreakStringLiterals: true
 BreakBeforeBraces: Stroustrup
 ---
