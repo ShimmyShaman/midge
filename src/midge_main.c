@@ -115,7 +115,8 @@ int mc_parse_past_literal_string(const char *text, int *index, char **output)
   return 0;
 }
 
-int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing)
+int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access,
+                          bool include_referencing)
 {
   int o = *index;
   bool hit_alpha = false;
@@ -222,7 +223,8 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
     // printf("here31\n");
     for (int i = 0; i < contextual_action->contextual_data->count; ++i) {
       // printf("here34\n");
-      // printf("comparing %s<>%s:%s\n", key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data->items[i])->key,
+      // printf("comparing %s<>%s:%s\n", key, ((mc_key_value_pair_v1
+      // *)contextual_action->contextual_data->items[i])->key,
       //        (char *)((mc_key_value_pair_v1 *)contextual_action->contextual_data->items[i])->value);
       if (!strcmp(key, ((mc_key_value_pair_v1 *)contextual_action->contextual_data->items[i])->key)) {
         *value = ((mc_key_value_pair_v1 *)contextual_action->contextual_data->items[i])->value;
@@ -250,7 +252,8 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
   return 0;
 }
 
-int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, int index)
+int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
+                           int index)
 {
   *collection[index] = NULL;
   for (int i = index + 1; i < *collection_count; ++i)
@@ -590,14 +593,15 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   if (scr_local->struct_info) {
     mc_struct_info_v1 *sinfo = (mc_struct_info_v1 *)scr_local->struct_info;
 
-    char *substituted_type =
-        (char *)malloc(sizeof(char) * (strlen(scr_local->type) - strlen(raw_type_id) + strlen(sinfo->declared_mc_name) + 1));
+    char *substituted_type = (char *)malloc(
+        sizeof(char) * (strlen(scr_local->type) - strlen(raw_type_id) + strlen(sinfo->declared_mc_name) + 1));
     strcpy(substituted_type, sinfo->declared_mc_name);
     strcat(substituted_type, scr_local->type + strlen(raw_type_id));
     substituted_type[strlen(scr_local->type) - strlen(raw_type_id) + strlen(sinfo->declared_mc_name)] = '\0';
     // printf("kt:%s rt:%s dmc:%s st:%s\n", kvp->type, raw_type_id, sinfo->declared_mc_name, substituted_type);
 
-    sprintf(scr_local->replacement_code, "(*(%s *)script_instance->locals[%u])", substituted_type, scr_local->locals_index);
+    sprintf(scr_local->replacement_code, "(*(%s *)script_instance->locals[%u])", substituted_type,
+            scr_local->locals_index);
     // printf("\nkrpstcde:'%s'\n", kvp->replacement_code);
 
     size_of_var = (char *)malloc(sizeof(char) * (8 + 1 + strlen(substituted_type)));
@@ -606,7 +610,8 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
     free(substituted_type);
   }
   else {
-    sprintf(scr_local->replacement_code, "(*(%s *)script_instance->locals[%u])", scr_local->type, scr_local->locals_index);
+    sprintf(scr_local->replacement_code, "(*(%s *)script_instance->locals[%u])", scr_local->type,
+            scr_local->locals_index);
     // printf("\nkrpnncde:'%s','%s'\n", type_identifier, kvp->replacement_code);
 
     size_of_var = (char *)malloc(sizeof(char) * (8 + 1 + strlen(scr_local->type)));
@@ -627,8 +632,8 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   return 0;
 }
 
-int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned int local_indexes_count, const char *key,
-                                   char **output)
+int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned int local_indexes_count,
+                                   const char *key, char **output)
 {
   void **mc_dvp;
   *output = NULL;
@@ -745,8 +750,8 @@ int mcqck_get_script_local_replace(void *nodespace, void **local_index, unsigned
   }
 }
 
-int parse_past_script_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code, int *i,
-                                 char **output)
+int parse_past_script_expression(void *nodespace, void **local_index, unsigned int local_indexes_count, char *code,
+                                 int *i, char **output)
 {
   char *primary, *temp;
 
@@ -1040,8 +1045,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
             char *array_identifier;
-            MCcall(
-                parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &array_identifier));
+            MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
+                                                &array_identifier));
             sprintf(buf,
                     "    sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"mcsfnv_vargs[%%i] = (void *)%%p;\\n\",\n"
                     "            mcsfnv_arg_count, &%s[mc_ii]);\n",
@@ -1063,7 +1068,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
             printf("translation:%s\n", translation);
             MCerror(1037, "TODO this case");
             // char *argument;
-            // MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+            // MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
+            // &argument));
             // // MCcall(parse_past_identifier(code, &i, &argument, true, true));
             // // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument,
             // &replace_name));
@@ -1105,11 +1111,13 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                      " &mc_script_func_res, mcsfnv_function_name, mcsfnv_arg_count);\n");
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
-        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"}\\n\");\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation,
+                              "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"}\\n\");\n"));
         // sprintf(buf, "  printf(\"\\n%s\\n\", mcsfnv_buf);\n");
         // MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         MCcall(append_to_cstr(&translation_alloc, &translation, "  clint_process(mcsfnv_buf);\n"));
-        MCcall(append_to_cstr(&translation_alloc, &translation, "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"}\\n\");\n"));
+        MCcall(append_to_cstr(&translation_alloc, &translation,
+                              "  sprintf(mcsfnv_buf + strlen(mcsfnv_buf), \"}\\n\");\n"));
         sprintf(buf, "  if (mc_script_func_res) {\n"
                      "    printf(\"--function '%%s' error:%%i\\n\", mcsfnv_function_name, mc_script_func_res);\n"
                      "    return mc_script_func_res;\n"
@@ -1127,12 +1135,14 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Identifier
         char *response_location;
-        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &response_location));
+        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
+                                            &response_location));
         MCcall(parse_past(code, &i, " "));
 
         // Variable Name
         char *provocation;
-        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
+        MCcall(
+            parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &provocation));
         if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4864, "expected statement end:'%c'", code[i]);
         }
@@ -1330,19 +1340,21 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           new_type_identifier[strlen(type_identifier) + 1] = '\0';
 
           // Normal Declaration
-          MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script,
-                                             buf, local_scope_depth, new_type_identifier, var_name));
+          MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
+                                             &local_indexes_count, script, buf, local_scope_depth, new_type_identifier,
+                                             var_name));
           // printf("dcl-here-0\n");
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
           // printf("dcl-here-1\n");
 
           // Allocate the array
           char *replace_var_name;
-          MCcall(
-              mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_var_name));
+          MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name,
+                                                &replace_var_name));
           // printf("dcl-here-2\n");
 
-          sprintf(buf, "%s = (%s)malloc(sizeof(%s) * (%s));\n", replace_var_name, new_type_identifier, type_identifier, left);
+          sprintf(buf, "%s = (%s)malloc(sizeof(%s) * (%s));\n", replace_var_name, new_type_identifier, type_identifier,
+                  left);
           // printf("dcl-here-3\n");
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
           // printf("dcl-here-4\n");
@@ -1356,8 +1368,9 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         }
         else {
           // Normal Declaration
-          MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script,
-                                             buf, local_scope_depth, type_identifier, var_name));
+          MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
+                                             &local_indexes_count, script, buf, local_scope_depth, type_identifier,
+                                             var_name));
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         }
         free(var_name);
@@ -1386,13 +1399,14 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         }
 
         // Generate Local
-        MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script,
-                                           buf, local_scope_depth, type_identifier, var_name));
+        MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
+                                           script, buf, local_scope_depth, type_identifier, var_name));
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
         // Assign
         char *replace_var_name;
-        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_var_name));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name,
+                                              &replace_var_name));
 
         sprintf(buf, "%s = %s;\n", replace_var_name, left);
         MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1545,7 +1559,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       if (isalpha(code[i])) {
         MCcall(parse_past_identifier(code, &i, &initiate, false, false));
 
-        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, initiate, &initiate_final));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, initiate,
+                                              &initiate_final));
         if (!initiate_final)
           initiate_final = initiate;
       }
@@ -1567,7 +1582,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
       if (isalpha(code[i])) {
         MCcall(parse_past_identifier(code, &i, &maximum, false, false));
 
-        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, maximum, &maximum_final));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, maximum,
+                                              &maximum_final));
         if (!maximum_final)
           maximum_final = maximum;
       }
@@ -1589,11 +1605,12 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
       char *int_cstr;
       allocate_and_copy_cstr(int_cstr, "int");
-      MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script, buf,
-                                         local_scope_depth, int_cstr, iterator));
+      MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
+                                         script, buf, local_scope_depth, int_cstr, iterator));
       append_to_cstr(&translation_alloc, &translation, buf);
       char *iterator_replace;
-      MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, iterator, &iterator_replace));
+      MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, iterator,
+                                            &iterator_replace));
 
       sprintf(buf, "for(%s = %s; %s < %s; ++%s) {\n", iterator_replace, initiate_final, iterator_replace, maximum_final,
               iterator_replace);
@@ -1622,18 +1639,20 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         // Set Value
         char *sizeof_expr;
-        MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &sizeof_expr));
+        MCcall(
+            parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &sizeof_expr));
         if (code[i] != '\n' && code[i] != '\0') {
           MCerror(-4829, "expected statement end");
         }
 
         // Script Local
-        MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script,
-                                           buf, local_scope_depth, type_identifier, var_name));
+        MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
+                                           script, buf, local_scope_depth, type_identifier, var_name));
         append_to_cstr(&translation_alloc, &translation, buf);
 
         char *replace_name;
-        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name,
+                                              &replace_name));
 
         // Statement
         char *trimmed_type_identifier = (char *)malloc(sizeof(char) * (strlen(type_identifier)));
@@ -1675,7 +1694,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
 
         //   // right
         //   char *right;
-        //   MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
+        //   MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
+        //   &right));
 
         //   buf[0] = '\0';
         //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
@@ -1715,8 +1735,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         //       return 34242;
         //     }
         //     MCcall(parse_past(code, &i, " "));
-        //     MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &right));
-        //     sprintf(buf + strlen(buf), " %s %s", comparator, right);
+        //     MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
+        //     &right)); sprintf(buf + strlen(buf), " %s %s", comparator, right);
         //   }
         //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         //   MCcall(append_to_cstr(&translation_alloc, &translation, "));\n"));
@@ -1747,12 +1767,13 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         MCcall(parse_past_identifier(code, &i, &var_name, false, false));
         MCcall(parse_past(code, &i, " "));
 
-        MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script,
-                                           buf, local_scope_depth, type_identifier, var_name));
+        MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
+                                           script, buf, local_scope_depth, type_identifier, var_name));
         append_to_cstr(&translation_alloc, &translation, buf);
 
         char *replace_name;
-        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
+        MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name,
+                                              &replace_name));
         // printf("nvi gen replace_name:%s=%s\n", var_name, replace_name);
 
         // Invoke
@@ -1792,7 +1813,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           MCcall(parse_past(code, &i, " "));
 
           char *argument;
-          MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+          MCcall(
+              parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
           // MCcall(parse_past_identifier(code, &i, &argument, true, true));
           // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument,
           // &replace_name)); char *arg_entry = argument; if (replace_name)
@@ -1807,7 +1829,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                       "    MCerror(1813, \"Missing process context data for '%s'\");"
                       "  }\n"
                       "  mc_vargs[%i] = (void *)&mc_context_data_%i;\n",
-                      arg_index + 1, argument + 1, arg_index + 1, arg_index + 1, argument, arg_index + 1, arg_index + 1);
+                      arg_index + 1, argument + 1, arg_index + 1, arg_index + 1, argument, arg_index + 1,
+                      arg_index + 1);
             }
             else {
               sprintf(buf, "mc_vargs[%i] = (void *)&%s;\n", arg_index + 1, argument);
@@ -1855,7 +1878,8 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
           MCcall(parse_past(code, &i, " "));
 
           char *argument;
-          MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+          MCcall(
+              parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
 
           sprintf(buf, "%s%s", first_arg ? "" : ", ", argument);
           MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -2005,7 +2029,8 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf("contDiag:'%s'\n", process_unit->continuance->dialogue == NULL ? "(null)" : process_unit->continuance->dialogue);
+    printf("contDiag:'%s'\n",
+           process_unit->continuance->dialogue == NULL ? "(null)" : process_unit->continuance->dialogue);
   }
 
   if (detail_level > 3) {
@@ -2016,7 +2041,8 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf("prevDlg:'%s'\n", process_unit->previous_issue->dialogue == NULL ? "(null)" : process_unit->previous_issue->dialogue);
+    printf("prevDlg:'%s'\n",
+           process_unit->previous_issue->dialogue == NULL ? "(null)" : process_unit->previous_issue->dialogue);
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
@@ -2024,8 +2050,9 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
-    printf("seqRootDlg:'%s'\n",
-           process_unit->sequence_root_issue->dialogue == NULL ? "(null)" : process_unit->sequence_root_issue->dialogue);
+    printf("seqRootDlg:'%s'\n", process_unit->sequence_root_issue->dialogue == NULL
+                                    ? "(null)"
+                                    : process_unit->sequence_root_issue->dialogue);
 
     for (int i = 0; i < indent; ++i)
       printf("    ");
@@ -2044,7 +2071,8 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
   case PROCESS_MATRIX_NODE:
     if (print_children) {
       for (int i = 0; i < process_unit->children->count; ++i)
-        print_process_unit((mc_process_unit_v1 *)process_unit->children->items[i], print_children, print_children, indent + 1);
+        print_process_unit((mc_process_unit_v1 *)process_unit->children->items[i], print_children, print_children,
+                           indent + 1);
     }
     else {
       for (int i = 0; i < indent; ++i)
@@ -2497,8 +2525,8 @@ int mc_main(int argc, const char *const *argv)
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);
   clock_gettime(CLOCK_REALTIME, &logic_update_frametime);
-  printf("App took %.2f seconds to begin.\n",
-         current_frametime.tv_sec - mc_main_begin_time.tv_sec + 1e-9 * (current_frametime.tv_nsec - mc_main_begin_time.tv_nsec));
+  printf("App took %.2f seconds to begin.\n", current_frametime.tv_sec - mc_main_begin_time.tv_sec +
+                                                  1e-9 * (current_frametime.tv_nsec - mc_main_begin_time.tv_nsec));
 
   mc_input_event_v1 *input_event = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
   input_event->type = INPUT_EVENT_NONE;
@@ -2556,7 +2584,8 @@ int mc_main(int argc, const char *const *argv)
 
         // printf("::%u<>%u\n", timer->next_update.tv_sec, current_frametime.tv_sec);
         if (current_frametime.tv_sec > timer->next_update.tv_sec ||
-            (current_frametime.tv_sec == timer->next_update.tv_sec && current_frametime.tv_nsec >= timer->next_update.tv_nsec)) {
+            (current_frametime.tv_sec == timer->next_update.tv_sec &&
+             current_frametime.tv_nsec >= timer->next_update.tv_nsec)) {
           // Update
           {
             void *vargs[2];
@@ -2755,11 +2784,13 @@ int mc_main(int argc, const char *const *argv)
   return 0;
 }
 
-int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context, process_action_type type,
-                           const char *const dialogue, void *data);
-int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue, process_action_type type,
-                             const char *const dialogue, void *data, mc_process_action_v1 **output);
-int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action, mc_process_unit_v1 **output);
+int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context,
+                           process_action_type type, const char *const dialogue, void *data);
+int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue,
+                             process_action_type type, const char *const dialogue, void *data,
+                             mc_process_action_v1 **output);
+int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action,
+                                       mc_process_unit_v1 **output);
 int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_focused_issue,
                                 char const *const dialogue, bool force_resolution, mc_process_action_v1 **output);
 
@@ -2837,19 +2868,21 @@ int process_workflow_with_systems(mc_command_hub_v1 *command_hub, mc_workflow_pr
     case PROCESS_ACTION_PM_SEQUENCE_RESOLVED:
       if (workflow_context->current_issue->contextual_issue &&
           workflow_context->current_issue->contextual_issue->contextual_issue &&
-          workflow_context->current_issue->contextual_issue->contextual_issue->type == PROCESS_ACTION_USER_TEMPLATE_COMMAND) {
+          workflow_context->current_issue->contextual_issue->contextual_issue->type ==
+              PROCESS_ACTION_USER_TEMPLATE_COMMAND) {
 
         if (workflow_context->current_issue->contextual_issue->queued_procedures) {
 
-          mc_procedure_template_v1 const *queued_procedure = workflow_context->current_issue->contextual_issue->queued_procedures;
-          MCcall(add_action_to_workflow(command_hub, workflow_context, queued_procedure->type, queued_procedure->command,
-                                        queued_procedure->data));
+          mc_procedure_template_v1 const *queued_procedure =
+              workflow_context->current_issue->contextual_issue->queued_procedures;
+          MCcall(add_action_to_workflow(command_hub, workflow_context, queued_procedure->type,
+                                        queued_procedure->command, queued_procedure->data));
           workflow_context->current_issue->queued_procedures = queued_procedure->next;
           continue;
         }
 
-        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, "--template concludes",
-                                      NULL));
+        MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED,
+                                      "--template concludes", NULL));
 
         // printf("pwwSys-continue\n");
         continue;
@@ -2898,27 +2931,33 @@ int format_user_response(mc_command_hub_v1 *command_hub, char *command, mc_workf
 
   // Format according to previous type
   else if (workflow_context->current_issue == NULL) {
-    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
+    MCcall(
+        add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
   }
   else {
     switch (workflow_context->current_issue->type) {
     case PROCESS_ACTION_PM_SEQUENCE_RESOLVED: {
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
+      MCcall(
+          add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
     } break;
     case PROCESS_ACTION_PM_IDLE: {
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
+      MCcall(
+          add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
     } break;
     case PROCESS_ACTION_DEMO_INITIATION: {
       MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_DEMO_COMMAND, command, NULL));
     } break;
     case PROCESS_ACTION_PM_UNRESOLVED_COMMAND: {
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
+      MCcall(
+          add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_UNPROVOKED_COMMAND, command, NULL));
     } break;
     case PROCESS_ACTION_PM_QUERY_CREATED_SCRIPT_NAME: {
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_CREATED_SCRIPT_NAME, command, NULL));
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_CREATED_SCRIPT_NAME, command,
+                                    NULL));
     } break;
     case PROCESS_ACTION_PM_VARIABLE_REQUEST: {
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_VARIABLE_RESPONSE, command, NULL));
+      MCcall(
+          add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_VARIABLE_RESPONSE, command, NULL));
     } break;
     case PROCESS_ACTION_SCRIPT_QUERY: {
       MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_SCRIPT_RESPONSE, command, NULL));
@@ -3061,7 +3100,8 @@ int process_workflow_script(mc_command_hub_v1 *command_hub, mc_workflow_process_
   // printf("script exited: %u: %i / %i\n", script_instance->sequence_uid, script_instance->segments_complete,
   //        script_instance->script->segment_count);
 
-  // printf("focused_issue->seq:%u script_instance->seq:%u\n", focused_issue->sequence_uid, script_instance->sequence_uid);
+  // printf("focused_issue->seq:%u script_instance->seq:%u\n", focused_issue->sequence_uid,
+  // script_instance->sequence_uid);
   if (workflow_context->current_issue->sequence_uid != script_instance->sequence_uid) {
     MCerror(2734, "incorrect script / process_action association : %u!=%u", script_instance->sequence_uid,
             workflow_context->current_issue->sequence_uid);
@@ -3080,8 +3120,8 @@ int process_workflow_script(mc_command_hub_v1 *command_hub, mc_workflow_process_
       free(script_instance->response);
 
     // printf("spchs-5\n");
-    MCcall(
-        add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, "-- script completed!", NULL));
+    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED,
+                                  "-- script completed!", NULL));
 
     // printf("spchs-6\n");
     return 0;
@@ -3153,7 +3193,8 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
 
     // Add the template invocation
     MCcall(add_action_to_workflow(command_hub, workflow_context, process_template->initial_procedure->type,
-                                  process_template->initial_procedure->command, process_template->initial_procedure->data));
+                                  process_template->initial_procedure->command,
+                                  process_template->initial_procedure->data));
 
     // Set the remainder template procedure process with the new issue
     workflow_context->current_issue->queued_procedures = process_template->initial_procedure->next;
@@ -3169,7 +3210,8 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
     }
 
     // Obtain the script_instance that queried the response
-    mc_script_instance_v1 *script_instance = (mc_script_instance_v1 *)workflow_context->current_issue->previous_issue->data;
+    mc_script_instance_v1 *script_instance =
+        (mc_script_instance_v1 *)workflow_context->current_issue->previous_issue->data;
 
     // Set the requested data on the script_instance
     if (workflow_context->current_issue->dialogue != NULL) {
@@ -3184,7 +3226,8 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
     script_instance->awaiting_data_set_index = -1;
 
     // Continue script_instance execution
-    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_SCRIPT_EXECUTION, NULL, script_instance));
+    MCcall(
+        add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_SCRIPT_EXECUTION, NULL, script_instance));
 
     return 0;
   }
@@ -3215,7 +3258,8 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
     }
 
     if (request_action->contextual_issue->type == PROCESS_ACTION_USER_DEMO_COMMAND) {
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_IDLE, "...continue demo...", NULL));
+      MCcall(
+          add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_IDLE, "...continue demo...", NULL));
 
       return 0;
     }
@@ -3235,7 +3279,8 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
       return 0;
     }
 
-    // MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_IDLE, "...continue demo...", NULL));
+    // MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_IDLE, "...continue demo...",
+    // NULL));
 
     return 0;
   }
@@ -3288,7 +3333,8 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
     // User response to query from system to name recently created script
 
     // Get the script from the query issue
-    mc_script_v1 *script = (mc_script_v1 *)((mc_process_action_v1 *)workflow_context->current_issue->previous_issue)->data;
+    mc_script_v1 *script =
+        (mc_script_v1 *)((mc_process_action_v1 *)workflow_context->current_issue->previous_issue)->data;
     if (!script) {
       MCerror(9427, "aint supposed to be the case");
     }
@@ -3296,8 +3342,8 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
     script->name = workflow_context->current_issue->dialogue;
 
     if (!workflow_context->current_issue->contextual_issue) {
-      // MCerror(7248, "TODO -- handle the case where the stack would return to empty. How is this chain of actions stored?");//
-      // No Storage of discarded actions yet
+      // MCerror(7248, "TODO -- handle the case where the stack would return to empty. How is this chain of actions
+      // stored?");// No Storage of discarded actions yet
       return 0;
     }
 
@@ -3305,7 +3351,8 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
     mc_process_action_v1 *idle_action;
     char *resolution_message;
     cprintf(resolution_message, "<> script '%s' created!\n", script->name);
-    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, resolution_message, NULL));
+    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED,
+                                  resolution_message, NULL));
     free(resolution_message);
 
     return 0;
@@ -3405,8 +3452,8 @@ int process_unprovoked_command_with_system(mc_command_hub_v1 *command_hub, mc_wo
     // Set corresponding issue
     char *initiation_msg;
     cprintf(initiation_msg, "-- initiating script '%s'...", script->name);
-    MCcall(
-        add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_SCRIPT_EXECUTION, initiation_msg, script_instance));
+    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_SCRIPT_EXECUTION, initiation_msg,
+                                  script_instance));
     free(initiation_msg);
     // printf("spchi-14\n");
 
@@ -3423,8 +3470,8 @@ int process_unprovoked_command_with_system(mc_command_hub_v1 *command_hub, mc_wo
 
   // -- Couldn't find one
   // -- Send Unresolved command message
-  MCcall(
-      add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_UNRESOLVED_COMMAND, "Unresolved Command.", NULL));
+  MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_UNRESOLVED_COMMAND,
+                                "Unresolved Command.", NULL));
 
   return 0;
 }
@@ -3454,8 +3501,8 @@ int process_command_with_templates(mc_command_hub_v1 *command_hub, mc_workflow_p
 
     // printf("process_template:%p %s\n", process_template, process_template->dialogue);
     // Add the template command
-    MCcall(
-        add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_TEMPLATE_COMMAND, command, process_template));
+    MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_USER_TEMPLATE_COMMAND, command,
+                                  process_template));
     *command_handled = true;
 
     return 0;
@@ -3499,7 +3546,8 @@ int process_variable_response(mc_command_hub_v1 *command_hub, mc_process_action_
       // printf("gvra-4\n");
       char *dialogue;
       cprintf(dialogue, "Enter value for @%s=", var_name);
-      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_VARIABLE_REQUEST, dialogue, var_name));
+      MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_VARIABLE_REQUEST, dialogue,
+                                    var_name));
 
       free(dialogue);
       dialogue = NULL;
@@ -3563,8 +3611,8 @@ int does_process_unit_match_detail_consensus(mc_process_action_detail_v1 *proces
 int compare_process_unit_field(mc_process_unit_v1 *process_unit_a, mc_process_unit_v1 *process_unit_b, int field_index,
                                bool *result);
 int search_process_matrix_for_best_match(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *matrix_branch,
-                                         unsigned int const *const field_search_priority, mc_process_unit_v1 **best_match,
-                                         int *best_matched_prioritized_field_count)
+                                         unsigned int const *const field_search_priority,
+                                         mc_process_unit_v1 **best_match, int *best_matched_prioritized_field_count)
 {
   // Search for a specific match within the children
   if (matrix_branch->type == PROCESS_MATRIX_NODE) {
@@ -3662,7 +3710,8 @@ int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_actio
   //   // printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue->type),
   //   //        focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
   //   // printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue->type),
-  //   //        focused_issue->contextual_issue->dialogue == NULL ? "(null)" : focused_issue->contextual_issue->dialogue);
+  //   //        focused_issue->contextual_issue->dialogue == NULL ? "(null)" :
+  //   focused_issue->contextual_issue->dialogue);
 
   //   mc_process_unit_v1 *process_unit;
   //   MCcall(construct_process_unit_from_action(command_hub, focused_issue, &process_unit));
@@ -3742,7 +3791,8 @@ int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_actio
   return 0;
 }
 
-int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *command_action, void **p_response_action)
+int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action_v1 *command_action,
+                               void **p_response_action)
 {
   // printf("atrc-0\n");
   *p_response_action = NULL;
@@ -3779,10 +3829,11 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   printf("#### ATRC ####\n");
   // printf("atrc-6a\n");
   // Replace the current unresolved action with the process action
-  printf("-#ATRC# Beginning Process:%s-'%s'\n", get_action_type_string(best_match->action->type), best_match->action->dialogue);
+  printf("-#ATRC# Beginning Process:%s-'%s'\n", get_action_type_string(best_match->action->type),
+         best_match->action->dialogue);
 
-  printf("continuance: %s : %s : %i\n", get_action_type_string(best_match->continuance->type), best_match->continuance->dialogue,
-         best_match->continuance->process_movement);
+  printf("continuance: %s : %s : %i\n", get_action_type_string(best_match->continuance->type),
+         best_match->continuance->dialogue, best_match->continuance->process_movement);
   // ERROR
   // ERROR
   // ERROR
@@ -3790,13 +3841,13 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   // ERROR
   mc_process_action_v1 *replacement;
   command_action->next_issue = NULL;
-  MCcall(construct_process_action(command_hub, command_action, best_match->continuance->type, best_match->continuance->dialogue,
-                                  NULL, &replacement));
+  MCcall(construct_process_action(command_hub, command_action, best_match->continuance->type,
+                                  best_match->continuance->dialogue, NULL, &replacement));
 
   if (best_match->action->dialogue_has_pattern) {
     bool match;
-    MCcall(does_dialogue_match_pattern(process_unit->action->dialogue, best_match->action->dialogue, replacement->contextual_data,
-                                       &match));
+    MCcall(does_dialogue_match_pattern(process_unit->action->dialogue, best_match->action->dialogue,
+                                       replacement->contextual_data, &match));
     if (!match) {
       MCerror(3738, "TODO");
     }
@@ -3809,8 +3860,8 @@ int attempt_to_resolve_command(mc_command_hub_v1 *command_hub, mc_process_action
   return 0;
 }
 
-int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context, process_action_type type,
-                           const char *const dialogue, void *data)
+int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v1 *workflow_context,
+                           process_action_type type, const char *const dialogue, void *data)
 {
   if (workflow_context->requires_activation) {
     MCerror(3731, "TODO");
@@ -3849,8 +3900,9 @@ int add_action_to_workflow(mc_command_hub_v1 *command_hub, mc_workflow_process_v
   return 0;
 }
 
-int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue, process_action_type type,
-                             const char *const dialogue, void *data, mc_process_action_v1 **output)
+int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *current_issue,
+                             process_action_type type, const char *const dialogue, void *data,
+                             mc_process_action_v1 **output)
 {
   // printf("cpa-0\n");
   *output = (mc_process_action_v1 *)malloc(sizeof(mc_process_action_v1));
@@ -3872,7 +3924,8 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
 
   switch ((*output)->process_movement) {
   case PROCESS_MOVEMENT_CONTINUE: {
-    // printf("CONTINUE: context %p<>%p\n", current_issue, (current_issue == NULL ? NULL : current_issue->contextual_issue));
+    // printf("CONTINUE: context %p<>%p\n", current_issue, (current_issue == NULL ? NULL :
+    // current_issue->contextual_issue));
     (*output)->contextual_issue = (current_issue == NULL ? NULL : current_issue->contextual_issue);
     (*output)->previous_issue = current_issue;
 
@@ -3923,8 +3976,10 @@ int construct_process_action(mc_command_hub_v1 *command_hub, mc_process_action_v
     // Generate anew
     ++command_hub->uid_counter;
     (*output)->sequence_uid = command_hub->uid_counter;
-    // printf("new seq uid:%u to action type:%s dialogue:%s | %p<>%p\n", (*output)->sequence_uid, get_action_type_string(type),
-    //        dialogue, (*output)->previous_issue, (*output)->contextual_issue == NULL ? NULL : (*output)->contextual_issue);
+    // printf("new seq uid:%u to action type:%s dialogue:%s | %p<>%p\n", (*output)->sequence_uid,
+    // get_action_type_string(type),
+    //        dialogue, (*output)->previous_issue, (*output)->contextual_issue == NULL ? NULL :
+    //        (*output)->contextual_issue);
   }
   else
     (*output)->sequence_uid = current_issue->sequence_uid;
@@ -4079,7 +4134,8 @@ int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub)
   return 0;
 }
 
-int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action, mc_process_unit_v1 **output)
+int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_process_action_v1 *action,
+                                       mc_process_unit_v1 **output)
 {
   // printf("cpufa-0\n");
   *output = (mc_process_unit_v1 *)malloc(sizeof(mc_process_unit_v1));
@@ -4151,8 +4207,8 @@ int construct_completion_action(mc_command_hub_v1 *command_hub, mc_process_actio
   if (force_resolution) {
     // Resolve
     // printf("cca-RESOLUTION\n");
-    MCcall(construct_process_action(command_hub, current_focused_issue, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, dialogue, NULL,
-                                    output));
+    MCcall(construct_process_action(command_hub, current_focused_issue, PROCESS_ACTION_PM_SEQUENCE_RESOLVED, dialogue,
+                                    NULL, output));
     return 0;
   }
 
@@ -4311,7 +4367,8 @@ int does_process_unit_detail_match(mc_process_action_detail_v1 *process_unit_det
   return 0;
 }
 
-int does_process_unit_match_action_and_continuance(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *comparable, bool *result)
+int does_process_unit_match_action_and_continuance(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *comparable,
+                                                   bool *result)
 {
   MCerror(4071, "TODO");
   //   // For a process unit to match:
@@ -4332,8 +4389,8 @@ int does_process_unit_match_action_and_continuance(mc_process_unit_v1 *process_u
   //   }
   //   if (comparable->continuance_dialogue_has_pattern) {
   //     bool match;
-  //     MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, comparable->continuance_dialogue, &match));
-  //     if (!match) {
+  //     MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, comparable->continuance_dialogue,
+  //     &match)); if (!match) {
   //       *result = false;
   //       return 0;
   //     }
@@ -4449,31 +4506,34 @@ int does_process_unit_match_detail_consensus(mc_process_action_detail_v1 *proces
   return 0;
 }
 
-int does_process_unit_match_consensus(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *consensus_unit, bool *match_result)
+int does_process_unit_match_consensus(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *consensus_unit,
+                                      bool *match_result)
 {
   MCcall(does_process_unit_match_detail_consensus(process_unit->action, consensus_unit->action, match_result));
   if (!*match_result) {
     return 0;
   }
 
-  MCcall(does_process_unit_match_detail_consensus(process_unit->previous_issue, consensus_unit->previous_issue, match_result));
-  if (!*match_result) {
-    return 0;
-  }
-
-  MCcall(
-      does_process_unit_match_detail_consensus(process_unit->contextual_issue, consensus_unit->contextual_issue, match_result));
-  if (!*match_result) {
-    return 0;
-  }
-
-  MCcall(does_process_unit_match_detail_consensus(process_unit->sequence_root_issue, consensus_unit->sequence_root_issue,
+  MCcall(does_process_unit_match_detail_consensus(process_unit->previous_issue, consensus_unit->previous_issue,
                                                   match_result));
+  if (!*match_result) {
+    return 0;
+  }
+
+  MCcall(does_process_unit_match_detail_consensus(process_unit->contextual_issue, consensus_unit->contextual_issue,
+                                                  match_result));
+  if (!*match_result) {
+    return 0;
+  }
+
+  MCcall(does_process_unit_match_detail_consensus(process_unit->sequence_root_issue,
+                                                  consensus_unit->sequence_root_issue, match_result));
 
   return 0;
 }
 
-int does_process_unit_match_continuance(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *branch_unit, bool *match_result)
+int does_process_unit_match_continuance(mc_process_unit_v1 *process_unit, mc_process_unit_v1 *branch_unit,
+                                        bool *match_result)
 {
   MCerror(4266, "TODO");
   //   if (process_unit->continuance_action_type != branch_unit->continuance_action_type) {
@@ -4481,17 +4541,19 @@ int does_process_unit_match_continuance(mc_process_unit_v1 *process_unit, mc_pro
   //     return 0;
   //   }
 
-  //   MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, branch_unit->continuance_dialogue, match_result));
+  //   MCcall(does_dialogue_match_pattern(process_unit->continuance_dialogue, branch_unit->continuance_dialogue,
+  //   match_result));
 
   //   return 0;
   // }
 
   // int calculate_process_unit_match_score(mc_process_unit_v1 *matrix_unit, bool include_utilization_strength,
   //                                        process_action_type action_type, char const *const action_dialogue,
-  //                                        process_action_type previous_issue_type, char const *const previous_issue_dialogue,
-  //                                        process_action_type contextual_issue_type, char const *const
-  //                                        contextual_issue_dialogue, process_action_type sequence_root_issue_type, char const
-  //                                        *const sequence_root_issue_dialogue, unsigned int *score)
+  //                                        process_action_type previous_issue_type, char const *const
+  //                                        previous_issue_dialogue, process_action_type contextual_issue_type, char
+  //                                        const *const contextual_issue_dialogue, process_action_type
+  //                                        sequence_root_issue_type, char const *const sequence_root_issue_dialogue,
+  //                                        unsigned int *score)
   // {
   //   if (include_utilization_strength) {
   //     MCerror(2808, "TODO");
@@ -4554,8 +4616,8 @@ int does_process_unit_match_continuance(mc_process_unit_v1 *process_unit, mc_pro
   //   }
   //   else {
   //     bool match;
-  //     MCcall(does_dialogue_match_pattern(matrix_unit->contextual_issue->dialogue, contextual_issue_dialogue, &match));
-  //     if (match) {
+  //     MCcall(does_dialogue_match_pattern(matrix_unit->contextual_issue->dialogue, contextual_issue_dialogue,
+  //     &match)); if (match) {
   //       *score += 200;
   //     }
   //   }
@@ -4574,8 +4636,8 @@ int does_process_unit_match_continuance(mc_process_unit_v1 *process_unit, mc_pro
   //   }
   //   else {
   //     bool match;
-  //     MCcall(does_dialogue_match_pattern(matrix_unit->sequence_root_issue->dialogue, sequence_root_issue_dialogue, &match));
-  //     if (match) {
+  //     MCcall(does_dialogue_match_pattern(matrix_unit->sequence_root_issue->dialogue, sequence_root_issue_dialogue,
+  //     &match)); if (match) {
   //       *score += 200;
   //     }
   //   }
@@ -4702,7 +4764,8 @@ int form_consensus_from_process_unit_detail(mc_process_action_detail_v1 *consens
   return 0;
 }
 
-int form_consensus_from_process_unit_collection(mc_process_unit_v1 *consensus_unit, mc_void_collection_v1 *unit_collection)
+int form_consensus_from_process_unit_collection(mc_process_unit_v1 *consensus_unit,
+                                                mc_void_collection_v1 *unit_collection)
 {
   // Specify detail fields where they can be specified
   MCcall(release_process_action_detail(&consensus_unit->action));
@@ -4715,15 +4778,16 @@ int form_consensus_from_process_unit_collection(mc_process_unit_v1 *consensus_un
     MCerror(4129, "TODO");
   }
 
-  MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->action, &consensus_unit->action));
+  MCcall(
+      clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->action, &consensus_unit->action));
   MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->previous_issue,
                                      &consensus_unit->previous_issue));
   MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->contextual_issue,
                                      &consensus_unit->contextual_issue));
   MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->sequence_root_issue,
                                      &consensus_unit->sequence_root_issue));
-  MCcall(
-      clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->continuance, &consensus_unit->continuance));
+  MCcall(clone_process_action_detail(((mc_process_unit_v1 *)unit_collection->items[0])->continuance,
+                                     &consensus_unit->continuance));
 
   for (int i = 1; i < unit_collection->count; ++i) {
     mc_process_unit_v1 *collection_unit = (mc_process_unit_v1 *)unit_collection->items[i];
@@ -4731,8 +4795,10 @@ int form_consensus_from_process_unit_collection(mc_process_unit_v1 *consensus_un
     // consensus
     MCcall(form_consensus_from_process_unit_detail(consensus_unit->action, collection_unit->action));
     MCcall(form_consensus_from_process_unit_detail(consensus_unit->previous_issue, collection_unit->previous_issue));
-    MCcall(form_consensus_from_process_unit_detail(consensus_unit->contextual_issue, collection_unit->contextual_issue));
-    MCcall(form_consensus_from_process_unit_detail(consensus_unit->sequence_root_issue, collection_unit->sequence_root_issue));
+    MCcall(
+        form_consensus_from_process_unit_detail(consensus_unit->contextual_issue, collection_unit->contextual_issue));
+    MCcall(form_consensus_from_process_unit_detail(consensus_unit->sequence_root_issue,
+                                                   collection_unit->sequence_root_issue));
     MCcall(form_consensus_from_process_unit_detail(consensus_unit->continuance, collection_unit->continuance));
   }
 
@@ -4758,8 +4824,8 @@ int find_most_specific_branch_to_form_with(mc_process_unit_v1 *branch_unit, mc_p
   // if (focused_process_unit->action->dialogue) {
   //   if (branch_unit->action->dialogue) {
   //     bool match;
-  //     MCcall(does_dialogue_match_pattern(focused_process_unit->action->dialogue, branch_unit->action->dialogue, &match));
-  //     if (match) {
+  //     MCcall(does_dialogue_match_pattern(focused_process_unit->action->dialogue, branch_unit->action->dialogue,
+  //     &match)); if (match) {
   //       *unit_to_form_with = branch_unit;
   //       return 0;
   //     }
@@ -4768,8 +4834,8 @@ int find_most_specific_branch_to_form_with(mc_process_unit_v1 *branch_unit, mc_p
   //     mc_process_unit_v1 *branch_child = (mc_process_unit_v1 *)branch_unit->branches->items[i];
   //     if (branch_child->action->dialogue) {
   //       bool match;
-  //       MCcall(does_dialogue_match_pattern(focused_process_unit->action->dialogue, branch_child->action->dialogue, &match));
-  //       if (match) {
+  //       MCcall(does_dialogue_match_pattern(focused_process_unit->action->dialogue, branch_child->action->dialogue,
+  //       &match)); if (match) {
   //         *unit_to_form_with = branch_child;
   //         return 0;
   //       }
@@ -4892,7 +4958,8 @@ int find_most_specific_branch_to_form_with(mc_process_unit_v1 *branch_unit, mc_p
   return 0;
 }
 
-int compare_dialogue(mc_process_action_detail_v1 *action_detail_a, mc_process_action_detail_v1 *action_detail_b, bool *result)
+int compare_dialogue(mc_process_action_detail_v1 *action_detail_a, mc_process_action_detail_v1 *action_detail_b,
+                     bool *result)
 {
   if (!action_detail_a->dialogue) {
     *result = !(action_detail_b->dialogue);
@@ -5008,7 +5075,8 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
     if (former_unit->continuance->process_movement > 4 || former_unit->continuance->process_movement < 1) {
       MCerror(4918, "addProblemMOVEMENT:%i", former_unit->continuance->process_movement);
     }
-    if (focused_process_unit->continuance->process_movement > 4 || focused_process_unit->continuance->process_movement < 1) {
+    if (focused_process_unit->continuance->process_movement > 4 ||
+        focused_process_unit->continuance->process_movement < 1) {
       MCerror(4921, "addProblemMOVEMENT:%i", focused_process_unit->continuance->process_movement);
     }
 
@@ -5654,6 +5722,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
 
   // Find the index of the function declaration
   int offset = 0;
+  // unsigned int function_iteration = 0; TODO
   {
     int cfn_len = strlen(core_function_name);
     int in_comment = 0;
@@ -5712,6 +5781,14 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
           if (input[i] == '(') {
             break;
           }
+          // if (input[i] == '_' && input[i + 1] == 'v' && isdigit(input[i + 2])) {
+          //   // Parse iteration reference
+          //   printf("ITERATION::");
+          //   for (int j = i + 2; isdigit(input[j]); ++j) {
+          //     printf(":%u:", (unsigned int)(input[j]));
+          //   }
+          //   printf("\n");
+          // }
         }
 
         s = i - s;
@@ -5771,8 +5848,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 {
   // Function Definitions
   mc_function_info_v1 *mc_dummy_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)mc_dummy_function_definition_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                              &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                              (void *)mc_dummy_function_definition_v1));
   {
     mc_dummy_function_definition_v1->struct_id = NULL;
     mc_dummy_function_definition_v1->source_filepath = NULL;
@@ -5788,8 +5866,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   }
 
   mc_function_info_v1 *force_render_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)force_render_update_definition_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                              &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                              (void *)force_render_update_definition_v1));
   {
     force_render_update_definition_v1->struct_id = NULL;
     force_render_update_definition_v1->name = "force_render_update";
@@ -5804,8 +5883,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   }
 
   mc_function_info_v1 *cling_process_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)cling_process_definition_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                              &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                              (void *)cling_process_definition_v1));
   {
     cling_process_definition_v1->struct_id = NULL;
     cling_process_definition_v1->name = "cling_process";
@@ -5829,8 +5909,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   }
 
   mc_function_info_v1 *find_function_info_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)find_function_info_definition_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                              &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                              (void *)find_function_info_definition_v1));
   {
     find_function_info_definition_v1->struct_id = NULL;
     find_function_info_definition_v1->name = "find_function_info";
@@ -5859,9 +5940,11 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->name = "function_name";
   }
 
-  mc_function_info_v1 *declare_function_pointer_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)declare_function_pointer_definition_v1));
+  mc_function_info_v1 *declare_function_pointer_definition_v1 =
+      (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                              &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                              (void *)declare_function_pointer_definition_v1));
   {
     declare_function_pointer_definition_v1->struct_id = NULL;
     declare_function_pointer_definition_v1->name = "declare_function_pointer";
@@ -5903,8 +5986,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   }
 
   mc_function_info_v1 *instantiate_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                              &command_hub->global_node->function_count, (void *)instantiate_function_definition_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                              &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                              (void *)instantiate_function_definition_v1));
   {
     instantiate_function_definition_v1->struct_id = NULL;
     instantiate_function_definition_v1->name = "instantiate_function";

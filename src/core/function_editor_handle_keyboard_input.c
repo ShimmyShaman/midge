@@ -306,8 +306,162 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     fedit->data.visual.requires_render_update = true;
   } break;
   default: {
-    if (event->ctrlDown) {
+    if (event->altDown) {
       switch (event->detail.keyboard.key) {
+      case KEY_CODE_K: {
+        for (int i = 0; i < 6; ++i) { // FROM KEY_CODE_ARROW_DOWN above (TODO refactor into function)
+          if (state->cursorLine + 1 >= state->text.lines_count) {
+            // Do Nothing
+            break;
+          }
+
+          // Increment
+          ++state->cursorLine;
+          int line_len = strlen(state->text.lines[state->cursorLine]);
+          if (state->cursorCol > line_len) {
+            state->cursorCol = line_len;
+          }
+
+          // Update the cursor visual
+          state->cursor_requires_render_update = true;
+          fedit->data.visual.requires_render_update = true;
+
+          // Adjust display offset
+          if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+            // Move display offset down
+            state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+          }
+        }
+      } break;
+      case KEY_CODE_I: {
+        for (int i = 0; i < 6; ++i) { // FROM KEY_CODE_ARROW_UP above (TODO refactor into function)
+          if (state->cursorLine == 0) {
+            // Do Nothing
+            break;
+          }
+
+          // Increment
+          --state->cursorLine;
+          int line_len = strlen(state->text.lines[state->cursorLine]);
+          if (state->cursorCol > line_len) {
+            state->cursorCol = line_len;
+          }
+
+          // Update the cursor visual
+          state->cursor_requires_render_update = true;
+          fedit->data.visual.requires_render_update = true;
+
+          // Adjust display offset
+          if (state->cursorLine < state->line_display_offset) {
+            // Move display offset up
+            state->line_display_offset = state->cursorLine;
+          }
+        }
+      } break;
+      default: {
+        break;
+      }
+      }
+    }
+    else if (event->ctrlDown) {
+      switch (event->detail.keyboard.key) {
+      case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
+        // Increment
+        if (state->cursorCol == 0) {
+          if (state->cursorLine == 0) {
+            // Nothing can be done
+            break;
+          }
+
+          --state->cursorLine;
+          state->cursorCol = strlen(state->text.lines[state->cursorLine]);
+
+          // Adjust display offset
+          if (state->cursorLine < state->line_display_offset) {
+            // Move display offset up
+            state->line_display_offset = state->cursorLine;
+          }
+        }
+        else {
+          --state->cursorCol;
+        }
+
+        // Update the cursor visual
+        state->cursor_requires_render_update = true;
+        fedit->data.visual.requires_render_update = true;
+      } break;
+      case KEY_CODE_L: { // FROM KEY_CODE_ARROW_RIGHT above (TODO refactor into function)
+        int line_len = strlen(state->text.lines[state->cursorLine]);
+
+        if (state->cursorCol == line_len) {
+          if (state->cursorLine + 1 >= state->text.lines_count) {
+            // Do Nothing
+            break;
+          }
+
+          ++state->cursorLine;
+          state->cursorCol = 0;
+
+          // Adjust display offset
+          if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+            // Move display offset down
+            state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+          }
+        }
+        else {
+          ++state->cursorCol;
+        }
+
+        // Update the cursor visual
+        state->cursor_requires_render_update = true;
+        fedit->data.visual.requires_render_update = true;
+      } break;
+      case KEY_CODE_K: { // FROM KEY_CODE_ARROW_DOWN above (TODO refactor into function)
+        if (state->cursorLine + 1 >= state->text.lines_count) {
+          // Do Nothing
+          break;
+        }
+
+        // Increment
+        ++state->cursorLine;
+        int line_len = strlen(state->text.lines[state->cursorLine]);
+        if (state->cursorCol > line_len) {
+          state->cursorCol = line_len;
+        }
+
+        // Update the cursor visual
+        state->cursor_requires_render_update = true;
+        fedit->data.visual.requires_render_update = true;
+
+        // Adjust display offset
+        if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+          // Move display offset down
+          state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+        }
+      } break;
+      case KEY_CODE_I: { // FROM KEY_CODE_ARROW_UP above (TODO refactor into function)
+        if (state->cursorLine == 0) {
+          // Do Nothing
+          break;
+        }
+
+        // Increment
+        --state->cursorLine;
+        int line_len = strlen(state->text.lines[state->cursorLine]);
+        if (state->cursorCol > line_len) {
+          state->cursorCol = line_len;
+        }
+
+        // Update the cursor visual
+        state->cursor_requires_render_update = true;
+        fedit->data.visual.requires_render_update = true;
+
+        // Adjust display offset
+        if (state->cursorLine < state->line_display_offset) {
+          // Move display offset up
+          state->line_display_offset = state->cursorLine;
+        }
+      } break;
       case KEY_CODE_S: {
         // Read the code from the editor
         char *function_definition;
