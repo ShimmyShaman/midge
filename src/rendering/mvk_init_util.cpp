@@ -1325,6 +1325,7 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
               "   outColor = texture(texSampler, texCoords);\n"
               "   if(outColor.r < 0.01)\n"
               "      discard;\n"
+              // "   outColor.a = 0.3 + 0.7 * outColor.r;\n"
               "   outColor.a = min(max(0, outColor.r - 0.2) * 0.2f + outColor.r * 1.5, 1.0);\n"
               "   outColor.rgb = element.tint.rgb;\n"
               "}\n",
