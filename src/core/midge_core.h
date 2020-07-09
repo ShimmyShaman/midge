@@ -469,7 +469,7 @@ typedef struct mc_procedure_template_v1 {
 
 } mc_procedure_template_v1;
 
-#define FUNCTION_EDITOR_RENDERED_CODE_LINES 25
+#define FUNCTION_EDITOR_RENDERED_CODE_LINES 31
 typedef struct code_line {
   uint index;
   bool requires_render_update;

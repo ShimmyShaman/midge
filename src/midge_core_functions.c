@@ -4075,7 +4075,7 @@ int function_editor_render_v1(int argc, void **argv)
         MCcall(obtain_element_render_command(sequence, &element_cmd));
         element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
         element_cmd->x = 4;
-        element_cmd->y = 2 + 18;
+        element_cmd->y = 2 + 12;
         element_cmd->data.print_text.text = (const char **)&lines[i].text;
         element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
         element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
@@ -4108,7 +4108,7 @@ int function_editor_render_v1(int argc, void **argv)
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
     element_cmd->x = 2;
-    element_cmd->y = 8 + i * 24;
+    element_cmd->y = 8 + i * 22;
     element_cmd->data.textured_rect_info.width = lines[i].width;
     element_cmd->data.textured_rect_info.height = lines[i].height;
     element_cmd->data.textured_rect_info.texture_uid = lines[i].image_resource_uid;
@@ -4117,13 +4117,13 @@ int function_editor_render_v1(int argc, void **argv)
   // printf("fer-q\n");
   // Cursor
   state->cursor_requires_render_update = false;
-  
+
   MCcall(obtain_element_render_command(sequence, &element_cmd));
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   element_cmd->x = 6 + (uint)(state->cursorCol * 10.31f);
-  element_cmd->y = 11 - 1 + (state->cursorLine - state->line_display_offset) * 24;
+  element_cmd->y = 7 + (state->cursorLine - state->line_display_offset) * 22;
   element_cmd->data.colored_rect_info.width = 2;
-  element_cmd->data.colored_rect_info.height = 25;
+  element_cmd->data.colored_rect_info.height = 22;
   element_cmd->data.colored_rect_info.color = (render_color){0.83f, 0.83f, 0.83f, 1.f};
 
   return 0;
