@@ -5,7 +5,7 @@
 void function_editor_handle_keyboard_input_v1(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
   function_editor_state *state = (function_editor_state *)fedit->extra;
-  printf("keyboard key = %i\n", event->detail.keyboard.key);
+  // printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
   case KEY_CODE_BACKSPACE: {
@@ -207,6 +207,71 @@ void function_editor_handle_keyboard_input_v1(frame_time *elapsed, mc_node_v1 *f
       // Move display offset down
       state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
     }
+  } break;
+  case KEY_CODE_ARROW_LEFT: {
+    // Increment
+    if (state->cursorCol == 0) {
+      if (state->cursorLine == 0) {
+        // Nothing can be done
+        break;
+      }
+
+      --state->cursorLine;
+      state->cursorCol = strlen(state->text.lines[state->cursorLine]);
+
+      // Adjust display offset
+      if (state->cursorLine < state->line_display_offset) {
+        // Move display offset up
+        state->line_display_offset = state->cursorLine;
+      }
+    }
+    else {
+      --state->cursorCol;
+    }
+
+    // Update the cursor visual
+    state->cursor_requires_render_update = true;
+    fedit->data.visual.requires_render_update = true;
+  } break;
+  case KEY_CODE_ARROW_RIGHT: {
+    int line_len = strlen(state->text.lines[state->cursorLine]);
+
+    if (state->cursorCol == line_len) {
+      if (state->cursorLine + 1 >= state->text.lines_count) {
+        // Do Nothing
+        break;
+      }
+
+      ++state->cursorLine;
+      state->cursorCol = 0;
+
+      // Adjust display offset
+      if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+        // Move display offset down
+        state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+      }
+    }
+    else {
+      ++state->cursorCol;
+    }
+
+    // Update the cursor visual
+    state->cursor_requires_render_update = true;
+    fedit->data.visual.requires_render_update = true;
+  } break;
+  case KEY_CODE_HOME: {
+    state->cursorCol = 0;
+
+    // Update the cursor visual
+    state->cursor_requires_render_update = true;
+    fedit->data.visual.requires_render_update = true;
+  } break;
+  case KEY_CODE_END: {
+    state->cursorCol = strlen(state->text.lines[state->cursorLine]);
+
+    // Update the cursor visual
+    state->cursor_requires_render_update = true;
+    fedit->data.visual.requires_render_update = true;
   } break;
   default: {
     // printf("fehi-3\n");
