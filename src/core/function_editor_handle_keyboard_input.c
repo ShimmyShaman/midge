@@ -2,12 +2,19 @@
 
 #include "core/midge_core.h"
 
-void function_editor_handle_keyboard_input_v1(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
-{
-  function_editor_state *state = (function_editor_state *)fedit->extra;
+void function_editor_handle_keyboard_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
+function_editor_state *state = (function_editor_state *)fedit->extra;
   // printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
+  case KEY_CODE_DELETE: {
+    event->handled = true;
+    
+    int line_len = strlen(state->text.lines[state->cursorLine]);
+    if(state->cursorCol == line_len) {
+      
+    }
+  } break;
   case KEY_CODE_BACKSPACE: {
     event->handled = true;
     if (!state->cursorCol) {
@@ -330,10 +337,13 @@ void function_editor_handle_keyboard_input_v1(frame_time *elapsed, mc_node_v1 *f
           strncpy(new_line, state->text.lines[state->cursorLine], state->cursorCol);
         }
         new_line[state->cursorCol] = c;
+        new_line[state->cursorCol + 1] = '\0';
         if (current_line_len - state->cursorCol) {
-          strcat(new_line + state->cursorCol + 1, state->text.lines[state->cursorLine]);
+          strcat(new_line, state->text.lines[state->cursorLine] + state->cursorCol);
         }
         new_line[current_line_len + 1] = '\0';
+
+        printf("new_line:'%s'\n", new_line);
 
         free(state->text.lines[state->cursorLine]);
         state->text.lines[state->cursorLine] = new_line;
