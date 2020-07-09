@@ -161,8 +161,8 @@ int declare_function_pointer_v1(int argc, void **argv)
         }
       }
       if (!already_added) {
-        MCcall(append_to_collection((void ***)&func_info->struct_usage, &struct_usage_alloc, &func_info->struct_usage_count,
-                                    (void *)sinfo));
+        MCcall(append_to_collection((void ***)&func_info->struct_usage, &struct_usage_alloc,
+                                    &func_info->struct_usage_count, (void *)sinfo));
       }
       // printf("dfp-6\n");
     }
@@ -243,7 +243,8 @@ int obtain_item_from_collection(void **items, uint *allocated, uint *count, uint
 
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command)
 {
-  // MCcall(obtain_item_from_collection((void **)resource_queue->commands, &resource_queue->allocated, &resource_queue->count,
+  // MCcall(obtain_item_from_collection((void **)resource_queue->commands, &resource_queue->allocated,
+  // &resource_queue->count,
   //                                    sizeof(resource_command), (void **)p_command));
   if (resource_queue->allocated < resource_queue->count + 1) {
     int new_allocated = (resource_queue->count + 1) + 4 + (resource_queue->count + 1) / 4;
@@ -291,7 +292,8 @@ int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p
 int obtain_element_render_command(image_render_queue *image_queue, element_render_command **p_command)
 {
   // MCcall(obtain_item_from_collection((void **)image_queue->commands, &image_queue->commands_allocated,
-  //                                    &image_queue->command_count, sizeof(element_render_command), (void **)p_command));
+  //                                    &image_queue->command_count, sizeof(element_render_command), (void
+  //                                    **)p_command));
   if (image_queue->commands_allocated < image_queue->command_count + 1) {
     int new_allocated = image_queue->commands_allocated + 4 + image_queue->commands_allocated / 4;
     element_render_command *new_ary = (element_render_command *)malloc(sizeof(element_render_command) * new_allocated);
@@ -474,8 +476,8 @@ int force_render_update(int argc, void **argv)
   return 0;
 }
 
-/* Conforms the given type_identity to a mc_type_identity if it is available. Searches first the given func_info, failing that
- * then searches the current nodespace.
+/* Conforms the given type_identity to a mc_type_identity if it is available. Searches first the given func_info,
+ * failing that then searches the current nodespace.
  * @conformed_type_identity : (char **) Return Value.
  * @func_info : *(function_info **) The function info, may be NULL.
  * @type_identity : *(const char * const *) The type name to check for
@@ -555,9 +557,11 @@ int conform_type_identity_v1(int argc, void **argv)
 
       // Add reference to function infos struct usages
       if (func_info) {
-        struct_info **new_collection = (struct_info **)malloc(sizeof(struct_info *) * (func_info->struct_usage_count + 1));
+        struct_info **new_collection =
+            (struct_info **)malloc(sizeof(struct_info *) * (func_info->struct_usage_count + 1));
         if (func_info->struct_usage_count)
-          memcpy((void *)new_collection, func_info->struct_usage, sizeof(struct_info *) * func_info->struct_usage_count);
+          memcpy((void *)new_collection, func_info->struct_usage,
+                 sizeof(struct_info *) * func_info->struct_usage_count);
         new_collection[func_info->struct_usage_count] = str_info;
         if (func_info->struct_usage)
           free(func_info->struct_usage);
@@ -635,9 +639,6 @@ int instantiate_function_v1(int argc, void **argv)
   // } declared_types[200];
   // int declared_type_count = 0;
 
-  // Increment function iteration
-  ++func_info->latest_iteration;
-
   // Construct the function identifier
   const char *function_identifier_format = "%s_v%u";
   char func_identity_buf[256];
@@ -659,7 +660,8 @@ int instantiate_function_v1(int argc, void **argv)
       // printf("@ifv-4\n");
       MCcall(conform_type_identity(3, mc_vargs));
       // printf("@ifv-5\n");
-      //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name, conformed_type_name);
+      //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name,
+      //  conformed_type_name);
     }
 
     // Deref
@@ -669,7 +671,8 @@ int instantiate_function_v1(int argc, void **argv)
     derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
 
     // Decl
-    sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", conformed_type_name, derefbuf, func_info->parameters[i]->name);
+    sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", conformed_type_name, derefbuf,
+            func_info->parameters[i]->name);
 
     // Deref + 1 (unless its the return value)
     derefbuf[0] = ' ';
@@ -696,7 +699,8 @@ int instantiate_function_v1(int argc, void **argv)
       // printf("@ifv-4\n");
       MCcall(conform_type_identity(3, mc_vargs));
       // printf("@ifv-5\n");
-      //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name, conformed_type_name);
+      //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name,
+      //  conformed_type_name);
     }
 
     // Deref
@@ -716,7 +720,8 @@ int instantiate_function_v1(int argc, void **argv)
     derefbuf[1 + func_info->return_type.deref_count + 1] = '\0';
 
     // Assignment
-    sprintf(param_buf + strlen(param_buf), "*(%s%s)argv[%i];\n", conformed_type_name, derefbuf, func_info->parameter_count);
+    sprintf(param_buf + strlen(param_buf), "*(%s%s)argv[%i];\n", conformed_type_name, derefbuf,
+            func_info->parameter_count);
 
     free(conformed_type_name);
   }
@@ -732,7 +737,8 @@ int instantiate_function_v1(int argc, void **argv)
                                             "\n"
                                             "  return 0;\n"
                                             "}";
-  int function_declaration_length = snprintf(NULL, 0, function_declaration_format, func_identity_buf, param_buf, midge_c);
+  int function_declaration_length =
+      snprintf(NULL, 0, function_declaration_format, func_identity_buf, param_buf, midge_c);
   char *function_declaration = (char *)malloc(sizeof(char) * (function_declaration_length + 1));
   sprintf(function_declaration, function_declaration_format, func_identity_buf, param_buf, midge_c);
 
@@ -1256,8 +1262,8 @@ int parse_script_to_mc_v1(int argc, void **argv)
         //   new_type_identifier[strlen(type_identifier) + 1] = '\0';
 
         //   // Normal Declaration
-        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
-        //   script,
+        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
+        //   &local_indexes_count, script,
         //                                      buf, local_scope_depth, new_type_identifier, var_name));
         //   // printf("dcl-here-0\n");
         //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
@@ -1270,7 +1276,8 @@ int parse_script_to_mc_v1(int argc, void **argv)
         //       &replace_var_name));
         //   // printf("dcl-here-2\n");
 
-        //   sprintf(buf, "%s = (%s)malloc(sizeof(%s) * (%s));\n", replace_var_name, new_type_identifier, type_identifier, left);
+        //   sprintf(buf, "%s = (%s)malloc(sizeof(%s) * (%s));\n", replace_var_name, new_type_identifier,
+        //   type_identifier, left);
         //   // printf("dcl-here-3\n");
         //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         //   // printf("dcl-here-4\n");
@@ -1284,8 +1291,8 @@ int parse_script_to_mc_v1(int argc, void **argv)
         // }
         // else {
         //   // Normal Declaration
-        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
-        //   script,
+        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
+        //   &local_indexes_count, script,
         //                                      buf, local_scope_depth, type_identifier, var_name));
         //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         // }
@@ -1316,8 +1323,8 @@ int parse_script_to_mc_v1(int argc, void **argv)
         //   }
 
         //   // Generate Local
-        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count,
-        //   script,
+        //   MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
+        //   &local_indexes_count, script,
         //                                      buf, local_scope_depth, type_identifier, var_name));
         //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
 
@@ -1356,12 +1363,14 @@ int parse_script_to_mc_v1(int argc, void **argv)
         // MCcall(parse_past_identifier(code, &i, &var_name, false, false));
         // MCcall(parse_past(code, &i, " "));
 
-        // MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc, &local_indexes_count, script,
+        // MCcall(mcqck_generate_script_local((void *)nodespace, &local_index, &local_indexes_alloc,
+        // &local_indexes_count, script,
         //                                    buf, local_scope_depth, type_identifier, var_name));
         // append_to_cstr(&translation_alloc, &translation, buf);
 
         // char *replace_name;
-        // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name, &replace_name));
+        // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, var_name,
+        // &replace_name));
         // // printf("nvi gen replace_name:%s=%s\n", var_name, replace_name);
 
         // // Invoke
@@ -1401,7 +1410,8 @@ int parse_script_to_mc_v1(int argc, void **argv)
         //   MCcall(parse_past(code, &i, " "));
 
         //   char *argument;
-        //   MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i, &argument));
+        //   MCcall(parse_past_script_expression((void *)nodespace, local_index, local_indexes_count, code, &i,
+        //   &argument));
         //   // MCcall(parse_past_identifier(code, &i, &argument, true, true));
         //   // MCcall(mcqck_get_script_local_replace((void *)nodespace, local_index, local_indexes_count, argument,
         //   // &replace_name)); char *arg_entry = argument; if (replace_name)
@@ -1432,8 +1442,8 @@ int parse_script_to_mc_v1(int argc, void **argv)
 
         // if (func_info) {
 
-        //   // append_to_cstr(&translation_alloc, &translation, "  printf(\"here-22  =%s\\n\", (char *)mc_vargs[2]);\n");
-        //   sprintf(buf, "  %s(%i, mc_vargs", function_name, arg_index + 1);
+        //   // append_to_cstr(&translation_alloc, &translation, "  printf(\"here-22  =%s\\n\", (char
+        //   *)mc_vargs[2]);\n"); sprintf(buf, "  %s(%i, mc_vargs", function_name, arg_index + 1);
         //   MCcall(append_to_cstr(&translation_alloc, &translation, buf));
         // }
 
@@ -1556,10 +1566,11 @@ int parse_script_to_mc_v1(int argc, void **argv)
 //       (mc_struct_info_v1 **)calloc(sizeof(mc_struct_info_v1 *), visual_hierarchy_node->structs_alloc);
 //   visual_hierarchy_node->struct_count = 0;
 //   visual_hierarchy_node->children_alloc = 40;
-//   visual_hierarchy_node->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), visual_hierarchy_node->children_alloc);
-//   visual_hierarchy_node->child_count = 0;
+//   visual_hierarchy_node->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *),
+//   visual_hierarchy_node->children_alloc); visual_hierarchy_node->child_count = 0;
 
-//   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
+//   MCcall(append_to_collection((void ***)&command_hub->global_node->children,
+//   &command_hub->global_node->children_alloc,
 //                               &command_hub->global_node->child_count, visual_hierarchy_node));
 
 //   // Visuals
@@ -1704,7 +1715,8 @@ typedef struct mc_token {
 int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output);
 
 int transcribe_expression(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription);
-int transcribe_bracketed_expression(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_bracketed_expression(function_info *owner, char *code, int *i, uint *transcription_alloc,
+                                    char **transcription)
 {
   MCcall(parse_past(code, i, "("));
   MCcall(parse_past_empty_text(code, i));
@@ -2270,14 +2282,16 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
   return 0;
 }
 
-int transcribe_while_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_while_statement(function_info *owner, char *code, int *i, uint *transcription_alloc,
+                               char **transcription)
 {
   MCerror(1546, "TODO");
 
   return 0;
 }
 
-int transcribe_switch_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_switch_statement(function_info *owner, char *code, int *i, uint *transcription_alloc,
+                                char **transcription)
 {
   // Header
   MCcall(parse_past(code, i, "switch"));
@@ -2422,7 +2436,8 @@ int transcribe_switch_statement(function_info *owner, char *code, int *i, uint *
   return 0;
 }
 
-int transcribe_return_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_return_statement(function_info *owner, char *code, int *i, uint *transcription_alloc,
+                                char **transcription)
 {
   MCcall(parse_past(code, i, "return"));
   MCcall(parse_past_empty_text(code, i));
@@ -2541,7 +2556,8 @@ int transcribe_function_call(function_info *owner, char *code, int *i, uint *tra
   return 0;
 }
 
-int transcribe_declarative_array(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_declarative_array(function_info *owner, char *code, int *i, uint *transcription_alloc,
+                                 char **transcription)
 {
   // printf("befr transcribe_declarative_array:\n%s\n", *transcription);
   char *type_name;
@@ -2586,7 +2602,8 @@ int transcribe_declarative_array(function_info *owner, char *code, int *i, uint 
   return 0;
 }
 
-int transcribe_declarative_assignment(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_declarative_assignment(function_info *owner, char *code, int *i, uint *transcription_alloc,
+                                      char **transcription)
 {
   // printf("tda-transcription:\n'%s'\n", *transcription);
   // Type
@@ -2957,15 +2974,16 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
               } break;
               default: {
                 print_parse_error(code, token5.start_index, "see-below", "");
-                MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:KEYWORD_OR_NAME:ERR-token:%i:%s", token5.type,
-                        token5.text);
+                MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:KEYWORD_OR_NAME:ERR-token:%i:%s",
+    token5.type, token5.text);
               }
               }
               free(token5.text);
             } break;
             default: {
               print_parse_error(code, token4.start_index, "see-below", "");
-              MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:ERR-token:%i:%s", token4.type, token4.text);
+              MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:ERR-token:%i:%s", token4.type,
+    token4.text);
             }
             }
             free(token4.text);
@@ -3024,7 +3042,8 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
   }
 }
 
-int transcribe_inde_crement_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_inde_crement_statement(function_info *owner, char *code, int *i, uint *transcription_alloc,
+                                      char **transcription)
 {
   if (code[*i] == '+') {
     MCcall(parse_past(code, i, "+"));
@@ -3055,11 +3074,13 @@ int transcribe_inde_crement_statement(function_info *owner, char *code, int *i, 
   return 0;
 }
 
-int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
+int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *transcription_alloc,
+                                char **transcription)
 {
   while (1) {
     MCcall(parse_past_empty_text(code, i));
-    // printf("##################\ntranscription: (current_char:%c)\n%s\n##################\n", code[*i], *transcription);
+    // printf("##################\ntranscription: (current_char:%c)\n%s\n##################\n", code[*i],
+    // *transcription);
 
     switch (code[*i]) {
     case '{': {
@@ -3274,9 +3295,9 @@ int load_existing_function_into_function_editor(function_info *function)
         }
 
         feState->text.lines[feState->text.lines_count++] = line;
-        // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s, feState->text.lines[feState->text.lines_count -
-        // 1]); printf("strlen:%zu\n", strlen(feState->text.lines[feState->text.lines_count - 1])); if
-        // (feState->text.lines_count > 1)
+        // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s,
+        // feState->text.lines[feState->text.lines_count - 1]); printf("strlen:%zu\n",
+        // strlen(feState->text.lines[feState->text.lines_count - 1])); if (feState->text.lines_count > 1)
         //   printf("dawn:%c\n", feState->text.lines[1][4]);
 
         // Reset
@@ -3388,7 +3409,8 @@ int load_existing_function_into_function_editor(function_info *function)
 //     char *definition_function_name;
 //     MCcall(parse_past_mc_identifier(function_definition_text, &i, &definition_function_name, false, false));
 //     if (strcmp(definition_function_name, core_function_name)) {
-//       MCerror(1552, "argument error: function_name in code='%s' does not equal argument '%s'\n", definition_function_name,
+//       MCerror(1552, "argument error: function_name in code='%s' does not equal argument '%s'\n",
+//       definition_function_name,
 //               core_function_name);
 //     }
 //     free(definition_function_name);
@@ -3408,7 +3430,8 @@ int load_existing_function_into_function_editor(function_info *function)
 //   uint parameter_count = 0;
 //   while (function_definition_text[i] != ')') {
 //     if (parameter_count > 0) {
-//       printf(":%s:%u:%s\n", parameters[parameter_count - 1].type_name, parameters[parameter_count - 1].type_deref_count,
+//       printf(":%s:%u:%s\n", parameters[parameter_count - 1].type_name, parameters[parameter_count -
+//       1].type_deref_count,
 //              parameters[parameter_count - 1].name);
 
 //       MCcall(parse_past(function_definition_text, &i, ","));
@@ -3429,8 +3452,8 @@ int load_existing_function_into_function_editor(function_info *function)
 //     MCcall(parse_past_empty_text(function_definition_text, &i));
 
 //     // Identifier
-//     MCcall(parse_past_mc_identifier(function_definition_text, &i, (char **)&parameters[parameter_count].name, false, false));
-//     MCcall(parse_past_empty_text(function_definition_text, &i));
+//     MCcall(parse_past_mc_identifier(function_definition_text, &i, (char **)&parameters[parameter_count].name, false,
+//     false)); MCcall(parse_past_empty_text(function_definition_text, &i));
 //     ++parameter_count;
 //   }
 //   parse_past(function_definition_text, &i, ")");
@@ -3529,7 +3552,8 @@ int load_existing_function_into_function_editor(function_info *function)
 //         }
 
 //         feState->text.lines[feState->text.lines_count++] = line;
-//         // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s, feState->text.lines[feState->text.lines_count -
+//         // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s,
+//         feState->text.lines[feState->text.lines_count -
 //         // 1]); printf("strlen:%zu\n", strlen(feState->text.lines[feState->text.lines_count - 1])); if
 //         // (feState->text.lines_count > 1)
 //         //   printf("dawn:%c\n", feState->text.lines[1][4]);
@@ -3567,7 +3591,8 @@ int load_existing_function_into_function_editor(function_info *function)
 //         printf("dawn:%zu\n", strlen(feState->text.lines[feState->line_display_offset + i]));
 //         feState->render_lines[i].requires_render_update = feState->render_lines[i].requires_render_update ||
 //                                                           !feState->text.lines[feState->line_display_offset + i] ||
-//                                                           strlen(feState->text.lines[feState->line_display_offset + i]);
+//                                                           strlen(feState->text.lines[feState->line_display_offset +
+//                                                           i]);
 //       }
 
 //       printf("life-6f\n");
@@ -3613,7 +3638,8 @@ int load_existing_function_into_function_editor(function_info *function)
 //   const char *commands[1] = {// Create invoke function script
 //                              ".rewriteFunction special_update"};
 
-//   if (command_hub->interactive_console->logic.action_count == 0 && elapsed->app_secs >= 2 && elapsed->app_nsecs >= 300 * 1e6) {
+//   if (command_hub->interactive_console->logic.action_count == 0 && elapsed->app_secs >= 2 && elapsed->app_nsecs >=
+//   300 * 1e6) {
 //     // Enter text into the textbox
 //     ++command_hub->interactive_console->logic.action_count;
 
@@ -4018,7 +4044,8 @@ int render_global_node_v1(int argc, void **argv)
   return 0;
 }
 
-int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update, void *state)
+int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
+                          void *state)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
@@ -4026,8 +4053,9 @@ int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs
                                   /*mcfuncreplace*/
 
   update_callback_timer *callback_timer;
-  MCcall(obtain_item_from_collection((void **)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
-                                     &command_hub->update_timers.count, sizeof(update_callback_timer), (void **)&callback_timer));
+  MCcall(obtain_item_from_collection((void **)&command_hub->update_timers.callbacks,
+                                     &command_hub->update_timers.allocated, &command_hub->update_timers.count,
+                                     sizeof(update_callback_timer), (void **)&callback_timer));
 
   clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
   callback_timer->period = (struct timespec){usecs_period / 1000000, (usecs_period % 1000000) * 1000};
@@ -4235,6 +4263,9 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   }
 
   if (func_info) {
+    // Increment function iteration
+    ++func_info->latest_iteration;
+
     // Free previous resources
     for (int i = 0; i < func_info->struct_usage_count; ++i) {
       mc_struct_info_v1 *str = (mc_struct_info_v1 *)func_info->struct_usage[i];
@@ -4255,12 +4286,13 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     func_info = (function_info *)malloc(sizeof(function_info));
     func_info->struct_id = NULL; // TODO
     func_info->source_filepath = NULL;
-    func_info->latest_iteration = 0;
+    func_info->latest_iteration = 1;
     func_info->name = function_name;
 
     // Attach to global -- TODO
-    MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                                &command_hub->global_node->function_count, func_info));
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                func_info));
 
     // Declare with cling
     if (!skip_clint_declaration) {
@@ -4292,7 +4324,8 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
       MCcall(parse_past(function_definition_text, &index, ","));
       MCcall(parse_past_empty_text(function_definition_text, &index));
     }
-    MCcall(parse_past_conformed_type_declaration(func_info, function_definition_text, &index, &parameters[parameter_count].type));
+    MCcall(parse_past_conformed_type_declaration(func_info, function_definition_text, &index,
+                                                 &parameters[parameter_count].type));
     MCcall(parse_past_empty_text(function_definition_text, &index));
     parameters[parameter_count].type_deref_count = 0;
     while (function_definition_text[index] == '*') {
@@ -4334,7 +4367,8 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
       printf(":%c:\n", function_definition_text[last_curly_index]);
       if (function_definition_text[last_curly_index] == '}') {
         --last_curly_index;
-        while (function_definition_text[last_curly_index] == ' ' && function_definition_text[last_curly_index] == '\n' &&
+        while (function_definition_text[last_curly_index] == ' ' &&
+               function_definition_text[last_curly_index] == '\n' &&
                function_definition_text[last_curly_index] == '\t') {
           --last_curly_index;
         }
@@ -4468,8 +4502,9 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
     func_info->latest_iteration = 0;
 
     // Attach to global -- TODO
-    MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-                                &command_hub->global_node->function_count, func_info));
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                func_info));
 
     // Declare with cling
     char buf[1024];
@@ -4500,7 +4535,8 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
       MCcall(parse_past(function_header, &index, ","));
       MCcall(parse_past_empty_text(function_header, &index));
     }
-    MCcall(parse_past_conformed_type_declaration(func_info, function_header, &index, &parameters[parameter_count].type));
+    MCcall(
+        parse_past_conformed_type_declaration(func_info, function_header, &index, &parameters[parameter_count].type));
     MCcall(parse_past_empty_text(function_header, &index));
     parameters[parameter_count].type_deref_count = 0;
     while (function_header[index] == '*') {
@@ -4555,9 +4591,9 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //       if (state->cursorLine) {
 //         // Combine previous line & second line into one
 //         int previous_line_len = strlen(state->text.lines[state->cursorLine - 1]);
-//         char *combined = (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text.lines[state->cursorLine]) + 1));
-//         strcpy(combined, state->text.lines[state->cursorLine - 1]);
-//         strcat(combined, state->text.lines[state->cursorLine]);
+//         char *combined = (char *)malloc(sizeof(char) * (previous_line_len +
+//         strlen(state->text.lines[state->cursorLine]) + 1)); strcpy(combined, state->text.lines[state->cursorLine -
+//         1]); strcat(combined, state->text.lines[state->cursorLine]);
 
 //         free(state->text.lines[state->cursorLine - 1]);
 //         free(state->text.lines[state->cursorLine]);
@@ -4602,7 +4638,8 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //       char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
 //       transcription[0] = '\0';
 //       int code_index = 0;
-//       MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
+//       MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc,
+//       &transcription));
 
 //       printf("final transcription:\n%s\n", transcription);
 
@@ -4786,7 +4823,8 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //       state->line_display_offset]))
 //         continue;
 
-//       // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+//       // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i +
+//       state->line_display_offset]);
 //       // Update
 //       if (state->render_lines[i].text)
 //         free(state->render_lines[i].text);

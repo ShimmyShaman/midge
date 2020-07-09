@@ -5718,11 +5718,13 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
 
   char *input = (char *)malloc(fsize + 1);
   fread(input, sizeof(char), fsize, f);
+  input[fsize] = '\0';
   fclose(f);
+  printf("file-read(%li):\n%s<EOF>\n###########################\n", fsize, input);
 
   // Find the index of the function declaration
   int offset = 0;
-  // unsigned int function_iteration = 0; TODO
+  unsigned int function_iteration = 0;
   {
     int cfn_len = strlen(core_function_name);
     int in_comment = 0;
@@ -5731,6 +5733,13 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
         MCerror(5658, "TODO");
       }
       else if (in_comment) {
+        if (input[i] == '_' && !strncmp(input + i, "_mc_iteration=", 14)) {
+          // Parse iteration reference
+          for (int j = i + 15; isdigit(input[j]); ++j) {
+            function_iteration = function_iteration * 10 + (input[j] - '0');
+          }
+          printf("function_iteration=%u '%c'\n", function_iteration, input[i + 14]);
+        }
         if (in_comment == 1 && input[i] == '*' && input[i + 1] == '/') {
           in_comment = 0;
         }
@@ -5781,14 +5790,6 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
           if (input[i] == '(') {
             break;
           }
-          // if (input[i] == '_' && input[i + 1] == 'v' && isdigit(input[i + 2])) {
-          //   // Parse iteration reference
-          //   printf("ITERATION::");
-          //   for (int j = i + 2; isdigit(input[j]); ++j) {
-          //     printf(":%u:", (unsigned int)(input[j]));
-          //   }
-          //   printf("\n");
-          // }
         }
 
         s = i - s;
@@ -5804,13 +5805,16 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
     }
   }
 
-  // printf("file-read:\n%s\n###########################\n", input + offset);
+  printf("file-read:\n%s<EOF>\n###########################\n", input + offset);
 
   mc_function_info_v1 *func_info;
   MCcall(parse_and_process_function_definition(input + offset, &func_info, true));
 
   // Set Provided Source Path
   allocate_and_copy_cstr(func_info->source_filepath, buf);
+  if (function_iteration) {
+    func_info->latest_iteration = function_iteration;
+  }
 
   free(input);
   printf("papcf-FunctionInfo:\n");

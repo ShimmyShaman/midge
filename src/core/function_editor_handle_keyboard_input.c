@@ -5,12 +5,13 @@
 void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
   function_editor_state *state = (function_editor_state *)fedit->extra;
-  // printf("keyboard key = %i\n", event->detail.keyboard.key);
+  printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
   case KEY_CODE_DELETE: {
     event->handled = true;
 
+    printf("delete-0\n");
     int line_len = strlen(state->text.lines[state->cursorLine]);
     if (state->cursorCol == line_len) {
       if (state->cursorLine == state->text.lines_count) {
@@ -37,9 +38,14 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
       break;
     }
 
-    // Just delete the character in front
-    strcpy(state->text.lines[state->cursorLine] + state->cursorCol,
-           state->text.lines[state->cursorLine] + state->cursorCol + 1);
+    // Move all characters back one
+    for (int i = state->cursorCol + 1;; ++i) {
+      char c = state->text.lines[state->cursorLine][i];
+      state->text.lines[state->cursorLine][i - 1] = c;
+      if (c == '\0') {
+        break;
+      }
+    }
 
   } break;
   case KEY_CODE_BACKSPACE: {
@@ -292,6 +298,7 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     fedit->data.visual.requires_render_update = true;
   } break;
   case KEY_CODE_HOME: {
+    printf("past\n");
     state->cursorCol = 0;
 
     // Update the cursor visual
@@ -487,9 +494,12 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
         int buf_len = strlen(buf);
         fwrite(buf, sizeof(char), buf_len, f);
         // printf("here-3b\n");
-        // fseek(f, buf_len * sizeof(char), SEEK_SET);
 
-        // printf("here-3b\n");
+        sprintf(buf, "// [_mc_iteration=%u]\n", state->func_info->latest_iteration);
+        buf_len = strlen(buf);
+        fwrite(buf, sizeof(char), buf_len, f);
+
+        printf("function_definition:%s\n", function_definition);
         int definition_len = strlen(function_definition);
         fwrite(function_definition, sizeof(char), definition_len, f);
         fclose(f);
