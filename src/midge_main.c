@@ -6035,6 +6035,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   char *input = (char *)malloc(fsize + 1);
   fread(input, sizeof(char), fsize, f);
+  input[fsize] = '\0';
   fclose(f);
 
   char *output;
@@ -6071,6 +6072,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   input = (char *)malloc(fsize + 1);
   fread(input, sizeof(char), fsize, f);
+  input[fsize] = '\0';
   fclose(f);
 
   MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
