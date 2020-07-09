@@ -2649,7 +2649,7 @@ int mc_main(int argc, const char *const *argv)
               mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
               if (child->type != NODE_TYPE_VISUAL)
                 continue;
-              printf("checking input delegate exists\n");
+              // printf("checking input delegate exists\n");
               if (!*child->data.visual.input_handler)
                 continue;
 
@@ -2658,7 +2658,7 @@ int mc_main(int argc, const char *const *argv)
               vargs[1] = &child;
               vargs[2] = &input_event;
               // printf("calling input delegate\n");
-              printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
+              // printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
               MCcall((*child->data.visual.input_handler)(3, vargs));
             }
 

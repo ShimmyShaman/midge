@@ -93,6 +93,12 @@ typedef enum key_event_code {
   KEY_CODE_RETURN = 104,
   KEY_CODE_RIGHT_CTRL = 105,
   KEY_CODE_RIGHT_ALT = 108,
+  KEY_CODE_HOME = 110,
+  KEY_CODE_END = 115,
+  KEY_CODE_ARROW_UP = 111,
+  KEY_CODE_ARROW_DOWN = 116,
+  KEY_CODE_ARROW_LEFT = 113,
+  KEY_CODE_ARROW_RIGHT = 114,
 } key_event_code;
 
 typedef enum mouse_event_code {

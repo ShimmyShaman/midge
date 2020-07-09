@@ -5,6 +5,7 @@
 void function_editor_handle_keyboard_input_v1(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
   function_editor_state *state = (function_editor_state *)fedit->extra;
+  printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
   case KEY_CODE_BACKSPACE: {
@@ -159,6 +160,52 @@ void function_editor_handle_keyboard_input_v1(frame_time *elapsed, mc_node_v1 *f
       // Cursor Position Update
       ++state->cursorLine;
       state->cursorCol = automaticIndent;
+    }
+  } break;
+  case KEY_CODE_ARROW_UP: {
+    if (state->cursorLine == 0) {
+      // Do Nothing
+      break;
+    }
+
+    // Increment
+    --state->cursorLine;
+    int line_len = strlen(state->text.lines[state->cursorLine]);
+    if (state->cursorCol > line_len) {
+      state->cursorCol = line_len;
+    }
+
+    // Update the cursor visual
+    state->cursor_requires_render_update = true;
+    fedit->data.visual.requires_render_update = true;
+
+    // Adjust display offset
+    if (state->cursorLine < state->line_display_offset) {
+      // Move display offset up
+      state->line_display_offset = state->cursorLine;
+    }
+  } break;
+  case KEY_CODE_ARROW_DOWN: {
+    if (state->cursorLine + 1 >= state->text.lines_count) {
+      // Do Nothing
+      break;
+    }
+
+    // Increment
+    ++state->cursorLine;
+    int line_len = strlen(state->text.lines[state->cursorLine]);
+    if (state->cursorCol > line_len) {
+      state->cursorCol = line_len;
+    }
+
+    // Update the cursor visual
+    state->cursor_requires_render_update = true;
+    fedit->data.visual.requires_render_update = true;
+
+    // Adjust display offset
+    if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+      // Move display offset down
+      state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
     }
   } break;
   default: {

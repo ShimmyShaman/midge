@@ -4116,6 +4116,8 @@ int function_editor_render_v1(int argc, void **argv)
 
   // printf("fer-q\n");
   // Cursor
+  state->cursor_requires_render_update = false;
+  
   MCcall(obtain_element_render_command(sequence, &element_cmd));
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   element_cmd->x = 6 + (uint)(state->cursorCol * 10.31f);

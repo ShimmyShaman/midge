@@ -298,6 +298,7 @@ int build_core_display_v1(int argc, void **argv)
 
   MCcall(build_core_entry(core_objects_display, "special_update"));
   MCcall(build_core_entry(core_objects_display, "function_editor_handle_input"));
+  MCcall(build_core_entry(core_objects_display, "function_editor_handle_keyboard_input"));
 
   MCcall(update_core_entries(core_objects_display));
 

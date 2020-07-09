@@ -486,6 +486,7 @@ typedef struct function_editor_state {
   uint font_resource_uid;
   uint line_display_offset;
   uint cursorCol, cursorLine;
+  bool cursor_requires_render_update;
 
   mc_function_info_v1 *func_info;
 } function_editor_state;
