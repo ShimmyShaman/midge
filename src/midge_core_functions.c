@@ -3184,6 +3184,7 @@ int load_existing_function_into_function_editor(function_info *function)
   // Begin Writing into the Function Editor textbox
   node *function_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
   function_editor_state *feState = (function_editor_state *)function_editor->extra;
+  feState->func_info = function;
   for (int j = 0; j < feState->text.lines_count; ++j) {
     free(feState->text.lines[j]);
     feState->text.lines[j] = NULL;
@@ -3344,636 +3345,637 @@ int load_existing_function_into_function_editor(function_info *function)
   return 0;
 }
 
-int load_source_file_into_function_editor(char const *const core_function_name)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  printf("life-begin\n");
-  // Load File
-  char *filepath;
-  cprintf(filepath, "/home/jason/midge/src/core_functions/%s.c", core_function_name);
-
-  char *function_definition_text;
-  MCcall(read_file(filepath, &function_definition_text));
-
-  printf("life-0\n");
-  int i = 0;
-
-  // Move to end of dependencies
-  for (;; ++i) {
-    if (function_definition_text[i] == '\0') {
-      MCerror(1526, "eof not expected");
-    }
-    const char *END_DEPENDENCIES_MARKER = "/* End-Dependencies */";
-    if (function_definition_text[i] == '/' &&
-        !strncmp(function_definition_text + i, END_DEPENDENCIES_MARKER, strlen(END_DEPENDENCIES_MARKER))) {
-      i += strlen(END_DEPENDENCIES_MARKER);
-      break;
-    }
-  }
-  parse_past_empty_text(function_definition_text, &i);
-
-  printf("life-1\n");
-
-  // Return Type
-  char *return_type;
-  MCcall(parse_past_conformed_type_declaration(NULL, function_definition_text, &i, &return_type));
-  MCcall(parse_past_empty_text(function_definition_text, &i));
-
-  // Function Name
-  {
-    char *definition_function_name;
-    MCcall(parse_past_mc_identifier(function_definition_text, &i, &definition_function_name, false, false));
-    if (strcmp(definition_function_name, core_function_name)) {
-      MCerror(1552, "argument error: function_name in code='%s' does not equal argument '%s'\n", definition_function_name,
-              core_function_name);
-    }
-    free(definition_function_name);
-  }
-
-  printf("life-2\n");
-  // Parameters
-  parse_past_empty_text(function_definition_text, &i);
-  parse_past(function_definition_text, &i, "(");
-  parse_past_empty_text(function_definition_text, &i);
-
-  struct {
-    char *type_name;
-    uint type_deref_count;
-    char *name;
-  } parameters[32];
-  uint parameter_count = 0;
-  while (function_definition_text[i] != ')') {
-    if (parameter_count > 0) {
-      printf(":%s:%u:%s\n", parameters[parameter_count - 1].type_name, parameters[parameter_count - 1].type_deref_count,
-             parameters[parameter_count - 1].name);
-
-      MCcall(parse_past(function_definition_text, &i, ","));
-      MCcall(parse_past_empty_text(function_definition_text, &i));
-    }
-
-    // Type
-    MCcall(parse_past_conformed_type_declaration(NULL, function_definition_text, &i,
-                                                 (char **)&parameters[parameter_count].type_name));
-    MCcall(parse_past_empty_text(function_definition_text, &i));
-
-    // Deref
-    parameters[parameter_count].type_deref_count = 0;
-    while (function_definition_text[i] == '*') {
-      ++parameters[parameter_count].type_deref_count;
-      ++i;
-    }
-    MCcall(parse_past_empty_text(function_definition_text, &i));
-
-    // Identifier
-    MCcall(parse_past_mc_identifier(function_definition_text, &i, (char **)&parameters[parameter_count].name, false, false));
-    MCcall(parse_past_empty_text(function_definition_text, &i));
-    ++parameter_count;
-  }
-  parse_past(function_definition_text, &i, ")");
-
-  printf("life-3\n");
-  parse_past_empty_text(function_definition_text, &i);
-  MCcall(parse_past(function_definition_text, &i, "{"));
-  int bracket_count = 1;
-
-  // Begin Writing into the Function Editor textbox
-  node *function_editor = (mc_node_v1 *)command_hub->global_node->children[0];
-  function_editor_state *feState = (function_editor_state *)function_editor->extra;
-  for (int j = 0; j < feState->text.lines_count; ++j) {
-    free(feState->text.lines[j]);
-  }
-  feState->text.lines_count = 0;
-
-  // Line Alloc
-  uint line_alloc = 2;
-  char *line = (char *)malloc(sizeof(char) * line_alloc);
-  line[0] = '\0';
-
-  // Write the current signature
-  append_to_cstr(&line_alloc, &line, return_type);
-  free(return_type);
-  append_to_cstr(&line_alloc, &line, " ");
-  append_to_cstr(&line_alloc, &line, core_function_name);
-  append_to_cstr(&line_alloc, &line, "(");
-
-  for (int i = 0; i < parameter_count; ++i) {
-    if (i > 0) {
-      append_to_cstr(&line_alloc, &line, ", ");
-    }
-    append_to_cstr(&line_alloc, &line, parameters[i].type_name);
-    append_to_cstr(&line_alloc, &line, " ");
-    for (int j = 0; j < parameters[i].type_deref_count; ++j)
-      append_to_cstr(&line_alloc, &line, "*");
-    append_to_cstr(&line_alloc, &line, parameters[i].name);
-  }
-  append_to_cstr(&line_alloc, &line, ") {");
-
-  printf("life-5\n");
-  // Code Block
-  {
-    // Write the code in
-    // Search for each line
-    bool loop = true;
-    int s = i;
-    for (; loop; ++i) {
-      // printf(">>'%c'\n", function_definition_text[i]);
-      bool copy_line = false;
-      switch (function_definition_text[i]) {
-      case '\0':
-        MCerror(1576, "load_source_file_into_function_editor::Uneven bracket count");
-      case '\n': {
-        printf("newline!\n");
-        copy_line = true;
-      } break;
-      case '{':
-        ++bracket_count;
-        break;
-      case '}': {
-        --bracket_count;
-        if (!bracket_count) {
-          copy_line = true;
-          append_to_cstr(&line_alloc, &line, "}");
-          loop = false;
-          break;
-        }
-      }
-      default:
-        break;
-      }
-
-      // printf("i-s=%i\n", i - s);
-      if (copy_line) {
-        // Transfer text to the buffer line
-        if (i - s > 0) {
-          append_to_cstrn(&line_alloc, &line, function_definition_text + s, i - s);
-        }
-
-        // Add to the collection
-        if (feState->text.lines_count + 1 >= feState->text.lines_allocated) {
-          uint new_alloc = feState->text.lines_allocated + 4 + feState->text.lines_allocated / 4;
-          char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-          if (feState->text.lines_allocated) {
-            memcpy(new_ary, feState->text.lines, feState->text.lines_allocated * sizeof(char *));
-            free(feState->text.lines);
-          }
-          for (int i = feState->text.lines_allocated; i < new_alloc; ++i) {
-            new_ary[i] = NULL;
-          }
-
-          feState->text.lines_allocated = new_alloc;
-          feState->text.lines = new_ary;
-        }
-
-        feState->text.lines[feState->text.lines_count++] = line;
-        // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s, feState->text.lines[feState->text.lines_count -
-        // 1]); printf("strlen:%zu\n", strlen(feState->text.lines[feState->text.lines_count - 1])); if
-        // (feState->text.lines_count > 1)
-        //   printf("dawn:%c\n", feState->text.lines[1][4]);
-
-        // Reset
-        s = i + 1;
-        line_alloc = 2;
-        line = (char *)malloc(sizeof(char) * line_alloc);
-        line[0] = '\0';
-      }
-    }
-  }
-  // printf("dawn:%c\n", feState->text.lines[1][4]);
-  // printf("life-6\n");
-
-  // Set for render update
-  feState->line_display_offset = 0;
-  for (i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-    if (feState->line_display_offset + i < feState->text.lines_count) {
-      printf("life-6a\n");
-      if (feState->render_lines[i].text) {
-        printf("life-6b\n");
-        feState->render_lines[i].requires_render_update =
-            feState->render_lines[i].requires_render_update ||
-            strcmp(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
-        printf("life-6c\n");
-        free(feState->render_lines[i].text);
-        printf("life-6d\n");
-      }
-      else {
-        printf("life-6e\n");
-        printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text.lines_count);
-        printf("dawn:%i\n", feState->text.lines_allocated);
-        printf("dawn:%c\n", feState->text.lines[1][4]);
-        printf("dawn:%zu\n", strlen(feState->text.lines[feState->line_display_offset + i]));
-        feState->render_lines[i].requires_render_update = feState->render_lines[i].requires_render_update ||
-                                                          !feState->text.lines[feState->line_display_offset + i] ||
-                                                          strlen(feState->text.lines[feState->line_display_offset + i]);
-      }
-
-      printf("life-6f\n");
-      // Assign
-      allocate_and_copy_cstr(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
-      printf("life-6g\n");
-    }
-    else {
-      printf("life-6h\n");
-      if (feState->render_lines[i].text) {
-        printf("life-6i\n");
-        feState->render_lines[i].requires_render_update = true;
-        free(feState->render_lines[i].text);
-        printf("life-6j\n");
-        feState->render_lines[i].text = NULL;
-      }
-    }
-    printf("life-6k\n");
-  }
-
-  printf("life-7\n");
-  feState->cursorLine = 1;
-  feState->cursorCol = strlen(feState->text.lines[feState->cursorLine]);
-
-  function_editor->data.visual.hidden = false;
-  function_editor->data.visual.requires_render_update = true;
-
-  command_hub->interactive_console->input_line.text = "...";
-  command_hub->interactive_console->input_line.requires_render_update = true;
-  command_hub->interactive_console->visual.requires_render_update = true;
-  printf("ohfohe\n");
-
-  return 0;
-}
-
-int update_interactive_console_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  frame_time const *elapsed = *(frame_time const **)argv[0];
-  const char *commands[1] = {// Create invoke function script
-                             ".rewriteFunction special_update"};
-
-  if (command_hub->interactive_console->logic.action_count == 0 && elapsed->app_secs >= 2 && elapsed->app_nsecs >= 300 * 1e6) {
-    // Enter text into the textbox
-    ++command_hub->interactive_console->logic.action_count;
-
-    command_hub->interactive_console->input_line.text = commands[0];
-    command_hub->interactive_console->input_line.requires_render_update = true;
-    command_hub->interactive_console->visual.requires_render_update = true;
-  }
-  else if (command_hub->interactive_console->logic.action_count == 1 && elapsed->app_secs >= 2 &&
-           elapsed->app_nsecs >= 550 * 1e6) {
-    // Submit the text in the textbox
-    ++command_hub->interactive_console->logic.action_count;
-
-    // Files
-    // "parse_past"
-    MCcall(load_source_file_into_function_editor("print_parse_error"));
-  }
-  else if (command_hub->interactive_console->logic.action_count == 2 && elapsed->app_secs >= 2 &&
-           elapsed->app_nsecs >= 800 * 1e6) {
-
-    ++command_hub->interactive_console->logic.action_count;
-
-    {
-      void *vargs[3];
-      vargs[0] = &elapsed;
-      vargs[1] = &command_hub->global_node->children[0];
-      mc_input_event_v1 event;
-      event.altDown = false;
-      event.shiftDown = false;
-      event.ctrlDown = true;
-      event.handled = false;
-      event.type = INPUT_EVENT_KEY_PRESS;
-      event.detail.keyboard.key = KEY_CODE_ENTER;
-      vargs[2] = &event;
-      MCcall(function_editor_handle_input(3, vargs));
-    }
-  }
-  {
-    // const char *commands =
-    //     // Create invoke function script
-    //     ".createScript\n"
-    //     "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
-    //     "ifs !finfo\n"
-    //     "err 2455 \"Could not find function_info for specified function\"\n"
-    //     "end\n"
-    //     ""
-    //     "dcs int rind 0\n"
-    //     "dcl 'char *' responses[32]\n"
-    //     ""
-    //     "dcs int linit finfo->parameter_count\n"
-    //     "ifs finfo->variable_parameter_begin_index >= 0\n"
-    //     "ass linit finfo->variable_parameter_begin_index\n"
-    //     "end\n"
-    //     "for i 0 linit\n"
-    //     "dcl char provocation[512]\n"
-    //     "nvk strcpy provocation finfo->parameters[i]->name\n"
-    //     "nvk strcat provocation \": \"\n"
-    //     "$pi responses[rind] provocation\n"
-    //     "ass rind + rind 1\n"
-    //     "end for\n"
-    //     // "nvk printf \"func_name:%s\\n\" finfo->name\n"
-    //     "ifs finfo->variable_parameter_begin_index >= 0\n"
-    //     "dcs int pind finfo->variable_parameter_begin_index\n"
-    //     "whl 1\n"
-    //     "dcl char provocation[512]\n"
-    //     "nvk strcpy provocation finfo->parameters[pind]->name\n"
-    //     "nvk strcat provocation \": \"\n"
-    //     "$pi responses[rind] provocation\n"
-    //     "nvi bool end_it strcmp responses[rind] \"finish\"\n"
-    //     "ifs !end_it\n"
-    //     "brk\n"
-    //     "end\n"
-    //     // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
-    //     "ass rind + rind 1\n"
-    //     "ass pind + pind 1\n"
-    //     "ass pind % pind finfo->parameter_count\n"
-    //     "ifs pind < finfo->variable_parameter_begin_index\n"
-    //     "ass pind finfo->variable_parameter_begin_index\n"
-    //     "end\n"
-    //     "end\n"
-    //     "end\n"
-    //     "$nv @function_to_invoke $ya rind responses\n"
-    //     "|"
-    //     "invoke_function_with_args_script|"
-    //     "demo|"
-    //     "invoke @function_to_invoke|"
-    //     "mc_dummy_function|"
-    //     ".runScript invoke_function_with_args_script|"
-    //     "enddemo|"
-    //     // // "demo|"
-    //     // // "call dummy thrice|"
-    //     // // "invoke mc_dummy_function|"
-    //     // // "invoke mc_dummy_function|"
-    //     // // "invoke mc_dummy_function|"
-    //     // // "enddemo|"
-    //     "demo|"
-    //     "create function @create_function_name|"
-    //     "construct_and_attach_child_node|"
-    //     "invoke declare_function_pointer|"
-    //     // ---- SCRIPT SEQUENCE ----
-    //     // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
-    //     // ---- char *parameter_name]...);
-    //     // > function_name:
-    //     "@create_function_name|"
-    //     // > return_type:
-    //     "void|"
-    //     // > parameter_type:
-    //     "const char *|"
-    //     // > parameter_name:
-    //     "node_name|"
-    //     // > Parameter 1 type:
-    //     "finish|"
-    //     // ---- END SCRIPT SEQUENCE ----
-    //     // ---- SCRIPT SEQUENCE ----
-    //     // ---- void instantiate_function(char *function_name, char *mc_script);
-    //     "invoke instantiate_function|"
-    //     "@create_function_name|"
-    //     // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
-    //     "dcd node * child\n"
-    //     "cpy char * child->name node_name\n"
-    //     "ass child->parent command_hub->nodespace\n"
-    //     "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc
-    //     &child->parent->child_count
-    //     "
-    //     "(void *)child\n"
-    //     "|"
-    //     "enddemo|"
-    //     // // -- END DEMO create function $create_function_name
-    //     // "invoke force_render_update|"
-    //     "invoke construct_and_attach_child_node|"
-    //     "command_interface_node|"
-    //     // "invoke set_nodespace|"
-    //     // "command_interface_node|"
-
-    //     // "create function print_word|"
-    //     // "@create_function_name|"
-    //     // "void|"
-    //     // "char *|"
-    //     // "word|"
-    //     // "finish|"
-    //     // "@create_function_name|"
-    //     // "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
-    //     // "|"
-    //     // "invoke print_word|"
-    //     // "===========$================$===============$============$============|"
-    //     // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
-    //     //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
-
-    //     // clint->process("mthread_info *rthr;");
-    //     // // printf("process(begin)\n");
-    //     // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
-    //     // printf("process(updateUI)\n");
-    //     // clint->process("updateUI(rthr);");
-    //     // printf("process(end)\n");
-    //     // clint->process("end_mthread(rthr);");
-    //     // printf("\n! MIDGE COMPLETE !\n");
-    //     "midgequit|";
-
-    // // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
-
-    // // Command Loop
-    // printf("\n:> ");
-    // int n = strlen(commands);
-    // int s = 0;
-    // char cstr[2048];
-    // mc_process_action_v1 *suggestion = NULL;
-    // void *vargs[12]; // TODO -- count
-    // for (int i = 0; i < n; ++i) {
-    //   if (commands[i] != '|')
-    //     continue;
-    //   strncpy(cstr, commands + s, i - s);
-    //   cstr[i - s] = '\0';
-    //   s = i + 1;
-
-    //   vargs[0] = (void *)command_hub;
-    //   vargs[4] = (void *)cstr;
-    //   vargs[6] = (void *)&suggestion;
-
-    //   if (!strcmp(cstr, "midgequit")) {
-    //     printf("midgequit\n");
-    //     break;
-    //   }
-
-    //   // printf("========================================\n");
-    //   if (suggestion) {
-    //     printf("%s]%s\n>: ", get_action_type_string(suggestion->type), suggestion->dialogue);
-    //     release_process_action(suggestion);
-    //     suggestion = NULL;
-    //   }
-    //   MCcall(submit_user_command(12, vargs));
-
-    //   // if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
-    //   // {
-    //   //   printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
-    //   //   break;
-    //   // }
-    //   // if (reply != NULL)
-    //   // {
-    //   //   printf("%s", reply);
-    //   // }
-    // }
-
-    // if (global->child_count > 0) {
-    //   mc_node_v1 *child = (mc_node_v1 *)global->children[0];
-    //   printf("\n>> global has a child named %s!\n", child->name);
-    // }
-    // else {
-    //   printf("\n>> global has no children\n");
-    // }
-  }
-  return 0;
-}
-
-int interactive_console_handle_input_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-  /*mcfuncreplace*/
-
-  window_input_event *event = (window_input_event *)argv[0];
-
-  if (event->type == INPUT_EVENT_KEY_RELEASE)
-    printf("ic_input:%i\n", event->detail.keyboard.key);
-
-  return 0;
-}
-
-int render_interactive_console_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-  /*mcfuncreplace*/
-
-  // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
-  //        command_hub->interactive_console->visual.image_resource_uid);
-  image_render_queue *sequence;
-  element_render_command *element_cmd;
-  // Input Line
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-  sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
-  sequence->image_width = command_hub->interactive_console->input_line.width;
-  sequence->image_height = command_hub->interactive_console->input_line.height;
-  sequence->data.target_image.image_uid = command_hub->interactive_console->input_line.image_resource_uid;
-
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
-  element_cmd->x = 2;
-  element_cmd->y = 2 + 18;
-  element_cmd->data.print_text.text = &command_hub->interactive_console->input_line.text;
-  element_cmd->data.print_text.font_resource_uid = command_hub->interactive_console->font_resource_uid;
-  element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
-
-  // Render
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-  sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-  sequence->image_width = command_hub->interactive_console->bounds.width;
-  sequence->image_height = command_hub->interactive_console->bounds.height;
-  sequence->clear_color = COLOR_CORNFLOWER_BLUE;
-  sequence->data.target_image.image_uid = command_hub->interactive_console->visual.image_resource_uid;
-
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-  element_cmd->x = 2;
-  element_cmd->y = 2;
-  element_cmd->data.colored_rect_info.width = command_hub->interactive_console->bounds.width - 4;
-  element_cmd->data.colored_rect_info.height = command_hub->interactive_console->bounds.height - 4;
-  element_cmd->data.colored_rect_info.color = (render_color){0.05f, 0.05f, 0.05f, 1.f};
-
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-  element_cmd->x = 0;
-  element_cmd->y = command_hub->interactive_console->bounds.height - 28;
-  element_cmd->data.colored_rect_info.width = command_hub->interactive_console->bounds.width;
-  element_cmd->data.colored_rect_info.height = 28;
-  element_cmd->data.colored_rect_info.color = COLOR_TEAL;
-
-  MCcall(obtain_element_render_command(sequence, &element_cmd));
-  element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
-  element_cmd->x = 2;
-  element_cmd->y = command_hub->interactive_console->bounds.height - 24 - 2;
-  element_cmd->data.textured_rect_info.width = command_hub->interactive_console->input_line.width;
-  element_cmd->data.textured_rect_info.height = command_hub->interactive_console->input_line.height;
-  element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->input_line.image_resource_uid;
-
-  return 0;
-}
-
-int build_interactive_console_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-  /*mcfuncreplace*/
-
-  // Build the interactive console
-  mc_interactive_console_v1 *console = (mc_interactive_console_v1 *)malloc(sizeof(mc_interactive_console_v1));
-  command_hub->interactive_console = console;
-
-  // interactive_console_node->functions_alloc = 40;
-  // interactive_console_node->functions =
-  //     (mc_function_info_v1 **)calloc(sizeof(mc_function_info_v1 *), interactive_console_node->functions_alloc);
-  // interactive_console_node->function_count = 0;
-  // interactive_console_node->structs_alloc = 40;
-  // interactive_console_node->structs =
-  //     (mc_struct_info_v1 **)calloc(sizeof(mc_struct_info_v1 *), interactive_console_node->structs_alloc);
-  // interactive_console_node->struct_count = 0;
-  // interactive_console_node->children_alloc = 40;
-  // interactive_console_node->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), interactive_console_node->children_alloc);
-  // interactive_console_node->child_count = 0;
-  console->logic_delegate = &update_interactive_console_v1;
-  console->handle_input_delegate = &interactive_console_handle_input_v1;
-
-  // Logic
-  command_hub->interactive_console->logic.action_count = 0;
-
-  // Visuals
-  console->visual.image_resource_uid = 0;
-  console->visual.requires_render_update = true;
-  console->bounds.x = 668;
-  console->bounds.y = 510 - 200;
-  console->bounds.width = 768;
-  console->bounds.height = 384;
-  console->visual.render_delegate = &render_interactive_console_v1;
-  // interactive_console_node->data.visual.background = (mc_visual_element_v1)
-
-  console->input_line.requires_render_update = true;
-  console->input_line.text = "...";
-  console->input_line.width = console->bounds.width - 4;
-  console->input_line.height = 24;
-
-  // Obtain visual resources
-  pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
-
-  resource_command *command;
-  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-  command->p_uid = &console->visual.image_resource_uid;
-  command->data.create_texture.use_as_render_target = true;
-  command->data.create_texture.width = console->bounds.width;
-  command->data.create_texture.height = console->bounds.height;
-  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
-
-  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-  command->p_uid = &console->input_line.image_resource_uid;
-  command->data.create_texture.use_as_render_target = true;
-  command->data.create_texture.width = console->input_line.width;
-  command->data.create_texture.height = console->input_line.height;
-  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
-
-  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &console->font_resource_uid;
-  command->data.font.height = 20;
-  command->data.font.path = "res/font/DroidSansMono.ttf";
-  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
-
-  return 0;
-}
+// int load_source_file_into_function_editor(char const *const core_function_name)
+// {
+//   /*mcfuncreplace*/
+//   mc_command_hub_v1 *command_hub;
+//   /*mcfuncreplace*/
+
+//   printf("life-begin\n");
+//   // Load File
+//   char *filepath;
+//   cprintf(filepath, "/home/jason/midge/src/core_functions/%s.c", core_function_name);
+
+//   char *function_definition_text;
+//   MCcall(read_file(filepath, &function_definition_text));
+
+//   printf("life-0\n");
+//   int i = 0;
+
+//   // Move to end of dependencies
+//   for (;; ++i) {
+//     if (function_definition_text[i] == '\0') {
+//       MCerror(1526, "eof not expected");
+//     }
+//     const char *END_DEPENDENCIES_MARKER = "/* End-Dependencies */";
+//     if (function_definition_text[i] == '/' &&
+//         !strncmp(function_definition_text + i, END_DEPENDENCIES_MARKER, strlen(END_DEPENDENCIES_MARKER))) {
+//       i += strlen(END_DEPENDENCIES_MARKER);
+//       break;
+//     }
+//   }
+//   parse_past_empty_text(function_definition_text, &i);
+
+//   printf("life-1\n");
+
+//   // Return Type
+//   char *return_type;
+//   MCcall(parse_past_conformed_type_declaration(NULL, function_definition_text, &i, &return_type));
+//   MCcall(parse_past_empty_text(function_definition_text, &i));
+
+//   // Function Name
+//   {
+//     char *definition_function_name;
+//     MCcall(parse_past_mc_identifier(function_definition_text, &i, &definition_function_name, false, false));
+//     if (strcmp(definition_function_name, core_function_name)) {
+//       MCerror(1552, "argument error: function_name in code='%s' does not equal argument '%s'\n", definition_function_name,
+//               core_function_name);
+//     }
+//     free(definition_function_name);
+//   }
+
+//   printf("life-2\n");
+//   // Parameters
+//   parse_past_empty_text(function_definition_text, &i);
+//   parse_past(function_definition_text, &i, "(");
+//   parse_past_empty_text(function_definition_text, &i);
+
+//   struct {
+//     char *type_name;
+//     uint type_deref_count;
+//     char *name;
+//   } parameters[32];
+//   uint parameter_count = 0;
+//   while (function_definition_text[i] != ')') {
+//     if (parameter_count > 0) {
+//       printf(":%s:%u:%s\n", parameters[parameter_count - 1].type_name, parameters[parameter_count - 1].type_deref_count,
+//              parameters[parameter_count - 1].name);
+
+//       MCcall(parse_past(function_definition_text, &i, ","));
+//       MCcall(parse_past_empty_text(function_definition_text, &i));
+//     }
+
+//     // Type
+//     MCcall(parse_past_conformed_type_declaration(NULL, function_definition_text, &i,
+//                                                  (char **)&parameters[parameter_count].type_name));
+//     MCcall(parse_past_empty_text(function_definition_text, &i));
+
+//     // Deref
+//     parameters[parameter_count].type_deref_count = 0;
+//     while (function_definition_text[i] == '*') {
+//       ++parameters[parameter_count].type_deref_count;
+//       ++i;
+//     }
+//     MCcall(parse_past_empty_text(function_definition_text, &i));
+
+//     // Identifier
+//     MCcall(parse_past_mc_identifier(function_definition_text, &i, (char **)&parameters[parameter_count].name, false, false));
+//     MCcall(parse_past_empty_text(function_definition_text, &i));
+//     ++parameter_count;
+//   }
+//   parse_past(function_definition_text, &i, ")");
+
+//   printf("life-3\n");
+//   parse_past_empty_text(function_definition_text, &i);
+//   MCcall(parse_past(function_definition_text, &i, "{"));
+//   int bracket_count = 1;
+
+//   // Begin Writing into the Function Editor textbox
+//   node *function_editor = (mc_node_v1 *)command_hub->global_node->children[0];
+//   function_editor_state *feState = (function_editor_state *)function_editor->extra;
+//   for (int j = 0; j < feState->text.lines_count; ++j) {
+//     free(feState->text.lines[j]);
+//   }
+//   feState->text.lines_count = 0;
+
+//   // Line Alloc
+//   uint line_alloc = 2;
+//   char *line = (char *)malloc(sizeof(char) * line_alloc);
+//   line[0] = '\0';
+
+//   // Write the current signature
+//   append_to_cstr(&line_alloc, &line, return_type);
+//   free(return_type);
+//   append_to_cstr(&line_alloc, &line, " ");
+//   append_to_cstr(&line_alloc, &line, core_function_name);
+//   append_to_cstr(&line_alloc, &line, "(");
+
+//   for (int i = 0; i < parameter_count; ++i) {
+//     if (i > 0) {
+//       append_to_cstr(&line_alloc, &line, ", ");
+//     }
+//     append_to_cstr(&line_alloc, &line, parameters[i].type_name);
+//     append_to_cstr(&line_alloc, &line, " ");
+//     for (int j = 0; j < parameters[i].type_deref_count; ++j)
+//       append_to_cstr(&line_alloc, &line, "*");
+//     append_to_cstr(&line_alloc, &line, parameters[i].name);
+//   }
+//   append_to_cstr(&line_alloc, &line, ") {");
+
+//   printf("life-5\n");
+//   // Code Block
+//   {
+//     // Write the code in
+//     // Search for each line
+//     bool loop = true;
+//     int s = i;
+//     for (; loop; ++i) {
+//       // printf(">>'%c'\n", function_definition_text[i]);
+//       bool copy_line = false;
+//       switch (function_definition_text[i]) {
+//       case '\0':
+//         MCerror(1576, "load_source_file_into_function_editor::Uneven bracket count");
+//       case '\n': {
+//         printf("newline!\n");
+//         copy_line = true;
+//       } break;
+//       case '{':
+//         ++bracket_count;
+//         break;
+//       case '}': {
+//         --bracket_count;
+//         if (!bracket_count) {
+//           copy_line = true;
+//           append_to_cstr(&line_alloc, &line, "}");
+//           loop = false;
+//           break;
+//         }
+//       }
+//       default:
+//         break;
+//       }
+
+//       // printf("i-s=%i\n", i - s);
+//       if (copy_line) {
+//         // Transfer text to the buffer line
+//         if (i - s > 0) {
+//           append_to_cstrn(&line_alloc, &line, function_definition_text + s, i - s);
+//         }
+
+//         // Add to the collection
+//         if (feState->text.lines_count + 1 >= feState->text.lines_allocated) {
+//           uint new_alloc = feState->text.lines_allocated + 4 + feState->text.lines_allocated / 4;
+//           char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
+//           if (feState->text.lines_allocated) {
+//             memcpy(new_ary, feState->text.lines, feState->text.lines_allocated * sizeof(char *));
+//             free(feState->text.lines);
+//           }
+//           for (int i = feState->text.lines_allocated; i < new_alloc; ++i) {
+//             new_ary[i] = NULL;
+//           }
+
+//           feState->text.lines_allocated = new_alloc;
+//           feState->text.lines = new_ary;
+//         }
+
+//         feState->text.lines[feState->text.lines_count++] = line;
+//         // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s, feState->text.lines[feState->text.lines_count -
+//         // 1]); printf("strlen:%zu\n", strlen(feState->text.lines[feState->text.lines_count - 1])); if
+//         // (feState->text.lines_count > 1)
+//         //   printf("dawn:%c\n", feState->text.lines[1][4]);
+
+//         // Reset
+//         s = i + 1;
+//         line_alloc = 2;
+//         line = (char *)malloc(sizeof(char) * line_alloc);
+//         line[0] = '\0';
+//       }
+//     }
+//   }
+//   // printf("dawn:%c\n", feState->text.lines[1][4]);
+//   // printf("life-6\n");
+
+//   // Set for render update
+//   feState->line_display_offset = 0;
+//   for (i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+//     if (feState->line_display_offset + i < feState->text.lines_count) {
+//       printf("life-6a\n");
+//       if (feState->render_lines[i].text) {
+//         printf("life-6b\n");
+//         feState->render_lines[i].requires_render_update =
+//             feState->render_lines[i].requires_render_update ||
+//             strcmp(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
+//         printf("life-6c\n");
+//         free(feState->render_lines[i].text);
+//         printf("life-6d\n");
+//       }
+//       else {
+//         printf("life-6e\n");
+//         printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text.lines_count);
+//         printf("dawn:%i\n", feState->text.lines_allocated);
+//         printf("dawn:%c\n", feState->text.lines[1][4]);
+//         printf("dawn:%zu\n", strlen(feState->text.lines[feState->line_display_offset + i]));
+//         feState->render_lines[i].requires_render_update = feState->render_lines[i].requires_render_update ||
+//                                                           !feState->text.lines[feState->line_display_offset + i] ||
+//                                                           strlen(feState->text.lines[feState->line_display_offset + i]);
+//       }
+
+//       printf("life-6f\n");
+//       // Assign
+//       allocate_and_copy_cstr(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
+//       printf("life-6g\n");
+//     }
+//     else {
+//       printf("life-6h\n");
+//       if (feState->render_lines[i].text) {
+//         printf("life-6i\n");
+//         feState->render_lines[i].requires_render_update = true;
+//         free(feState->render_lines[i].text);
+//         printf("life-6j\n");
+//         feState->render_lines[i].text = NULL;
+//       }
+//     }
+//     printf("life-6k\n");
+//   }
+
+//   printf("life-7\n");
+//   feState->cursorLine = 1;
+//   feState->cursorCol = strlen(feState->text.lines[feState->cursorLine]);
+
+//   function_editor->data.visual.hidden = false;
+//   function_editor->data.visual.requires_render_update = true;
+
+//   command_hub->interactive_console->input_line.text = "...";
+//   command_hub->interactive_console->input_line.requires_render_update = true;
+//   command_hub->interactive_console->visual.requires_render_update = true;
+//   printf("ohfohe\n");
+
+//   return 0;
+// }
+
+// int update_interactive_console_v1(int argc, void **argv)
+// {
+//   /*mcfuncreplace*/
+//   mc_command_hub_v1 *command_hub;
+//   /*mcfuncreplace*/
+
+//   frame_time const *elapsed = *(frame_time const **)argv[0];
+//   const char *commands[1] = {// Create invoke function script
+//                              ".rewriteFunction special_update"};
+
+//   if (command_hub->interactive_console->logic.action_count == 0 && elapsed->app_secs >= 2 && elapsed->app_nsecs >= 300 * 1e6) {
+//     // Enter text into the textbox
+//     ++command_hub->interactive_console->logic.action_count;
+
+//     command_hub->interactive_console->input_line.text = commands[0];
+//     command_hub->interactive_console->input_line.requires_render_update = true;
+//     command_hub->interactive_console->visual.requires_render_update = true;
+//   }
+//   else if (command_hub->interactive_console->logic.action_count == 1 && elapsed->app_secs >= 2 &&
+//            elapsed->app_nsecs >= 550 * 1e6) {
+//     // Submit the text in the textbox
+//     ++command_hub->interactive_console->logic.action_count;
+
+//     // Files
+//     // "parse_past"
+//     MCcall(load_source_file_into_function_editor("print_parse_error"));
+//   }
+//   else if (command_hub->interactive_console->logic.action_count == 2 && elapsed->app_secs >= 2 &&
+//            elapsed->app_nsecs >= 800 * 1e6) {
+
+//     ++command_hub->interactive_console->logic.action_count;
+
+//     {
+//       void *vargs[3];
+//       vargs[0] = &elapsed;
+//       vargs[1] = &command_hub->global_node->children[0];
+//       mc_input_event_v1 event;
+//       event.altDown = false;
+//       event.shiftDown = false;
+//       event.ctrlDown = true;
+//       event.handled = false;
+//       event.type = INPUT_EVENT_KEY_PRESS;
+//       event.detail.keyboard.key = KEY_CODE_ENTER;
+//       vargs[2] = &event;
+//       MCcall(function_editor_handle_input(3, vargs));
+//     }
+//   }
+//   {
+//     // const char *commands =
+//     //     // Create invoke function script
+//     //     ".createScript\n"
+//     //     "nvi 'function_info *' finfo find_function_info nodespace @function_to_invoke\n"
+//     //     "ifs !finfo\n"
+//     //     "err 2455 \"Could not find function_info for specified function\"\n"
+//     //     "end\n"
+//     //     ""
+//     //     "dcs int rind 0\n"
+//     //     "dcl 'char *' responses[32]\n"
+//     //     ""
+//     //     "dcs int linit finfo->parameter_count\n"
+//     //     "ifs finfo->variable_parameter_begin_index >= 0\n"
+//     //     "ass linit finfo->variable_parameter_begin_index\n"
+//     //     "end\n"
+//     //     "for i 0 linit\n"
+//     //     "dcl char provocation[512]\n"
+//     //     "nvk strcpy provocation finfo->parameters[i]->name\n"
+//     //     "nvk strcat provocation \": \"\n"
+//     //     "$pi responses[rind] provocation\n"
+//     //     "ass rind + rind 1\n"
+//     //     "end for\n"
+//     //     // "nvk printf \"func_name:%s\\n\" finfo->name\n"
+//     //     "ifs finfo->variable_parameter_begin_index >= 0\n"
+//     //     "dcs int pind finfo->variable_parameter_begin_index\n"
+//     //     "whl 1\n"
+//     //     "dcl char provocation[512]\n"
+//     //     "nvk strcpy provocation finfo->parameters[pind]->name\n"
+//     //     "nvk strcat provocation \": \"\n"
+//     //     "$pi responses[rind] provocation\n"
+//     //     "nvi bool end_it strcmp responses[rind] \"finish\"\n"
+//     //     "ifs !end_it\n"
+//     //     "brk\n"
+//     //     "end\n"
+//     //     // "nvk printf \"responses[1]='%s'\\n\" responses[1]\n"
+//     //     "ass rind + rind 1\n"
+//     //     "ass pind + pind 1\n"
+//     //     "ass pind % pind finfo->parameter_count\n"
+//     //     "ifs pind < finfo->variable_parameter_begin_index\n"
+//     //     "ass pind finfo->variable_parameter_begin_index\n"
+//     //     "end\n"
+//     //     "end\n"
+//     //     "end\n"
+//     //     "$nv @function_to_invoke $ya rind responses\n"
+//     //     "|"
+//     //     "invoke_function_with_args_script|"
+//     //     "demo|"
+//     //     "invoke @function_to_invoke|"
+//     //     "mc_dummy_function|"
+//     //     ".runScript invoke_function_with_args_script|"
+//     //     "enddemo|"
+//     //     // // "demo|"
+//     //     // // "call dummy thrice|"
+//     //     // // "invoke mc_dummy_function|"
+//     //     // // "invoke mc_dummy_function|"
+//     //     // // "invoke mc_dummy_function|"
+//     //     // // "enddemo|"
+//     //     "demo|"
+//     //     "create function @create_function_name|"
+//     //     "construct_and_attach_child_node|"
+//     //     "invoke declare_function_pointer|"
+//     //     // ---- SCRIPT SEQUENCE ----
+//     //     // ---- void declare_function_pointer(char *function_name, char *return_type, [char *parameter_type,
+//     //     // ---- char *parameter_name]...);
+//     //     // > function_name:
+//     //     "@create_function_name|"
+//     //     // > return_type:
+//     //     "void|"
+//     //     // > parameter_type:
+//     //     "const char *|"
+//     //     // > parameter_name:
+//     //     "node_name|"
+//     //     // > Parameter 1 type:
+//     //     "finish|"
+//     //     // ---- END SCRIPT SEQUENCE ----
+//     //     // ---- SCRIPT SEQUENCE ----
+//     //     // ---- void instantiate_function(char *function_name, char *mc_script);
+//     //     "invoke instantiate_function|"
+//     //     "@create_function_name|"
+//     //     // "nvk printf \"got here, node_name=%s\\n\" node_name\n"
+//     //     "dcd node * child\n"
+//     //     "cpy char * child->name node_name\n"
+//     //     "ass child->parent command_hub->nodespace\n"
+//     //     "nvk append_to_collection (void ***)&child->parent->children &child->parent->children_alloc
+//     //     &child->parent->child_count
+//     //     "
+//     //     "(void *)child\n"
+//     //     "|"
+//     //     "enddemo|"
+//     //     // // -- END DEMO create function $create_function_name
+//     //     // "invoke force_render_update|"
+//     //     "invoke construct_and_attach_child_node|"
+//     //     "command_interface_node|"
+//     //     // "invoke set_nodespace|"
+//     //     // "command_interface_node|"
+
+//     //     // "create function print_word|"
+//     //     // "@create_function_name|"
+//     //     // "void|"
+//     //     // "char *|"
+//     //     // "word|"
+//     //     // "finish|"
+//     //     // "@create_function_name|"
+//     //     // "nvk printf \"\\n\\nThe %s is the Word!!!\\n\" word\n"
+//     //     // "|"
+//     //     // "invoke print_word|"
+//     //     // "===========$================$===============$============$============|"
+//     //     // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
+//     //     //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
+
+//     //     // clint->process("mthread_info *rthr;");
+//     //     // // printf("process(begin)\n");
+//     //     // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
+//     //     // printf("process(updateUI)\n");
+//     //     // clint->process("updateUI(rthr);");
+//     //     // printf("process(end)\n");
+//     //     // clint->process("end_mthread(rthr);");
+//     //     // printf("\n! MIDGE COMPLETE !\n");
+//     //     "midgequit|";
+
+//     // // MCerror(2553, "TODO ?? have to reuse @create_function_name variable in processes...");
+
+//     // // Command Loop
+//     // printf("\n:> ");
+//     // int n = strlen(commands);
+//     // int s = 0;
+//     // char cstr[2048];
+//     // mc_process_action_v1 *suggestion = NULL;
+//     // void *vargs[12]; // TODO -- count
+//     // for (int i = 0; i < n; ++i) {
+//     //   if (commands[i] != '|')
+//     //     continue;
+//     //   strncpy(cstr, commands + s, i - s);
+//     //   cstr[i - s] = '\0';
+//     //   s = i + 1;
+
+//     //   vargs[0] = (void *)command_hub;
+//     //   vargs[4] = (void *)cstr;
+//     //   vargs[6] = (void *)&suggestion;
+
+//     //   if (!strcmp(cstr, "midgequit")) {
+//     //     printf("midgequit\n");
+//     //     break;
+//     //   }
+
+//     //   // printf("========================================\n");
+//     //   if (suggestion) {
+//     //     printf("%s]%s\n>: ", get_action_type_string(suggestion->type), suggestion->dialogue);
+//     //     release_process_action(suggestion);
+//     //     suggestion = NULL;
+//     //   }
+//     //   MCcall(submit_user_command(12, vargs));
+
+//     //   // if (*(int *)interaction_context[0] == INTERACTION_CONTEXT_BROKEN)
+//     //   // {
+//     //   //   printf("\nUNHANDLED_COMMAND_SEQUENCE\n");
+//     //   //   break;
+//     //   // }
+//     //   // if (reply != NULL)
+//     //   // {
+//     //   //   printf("%s", reply);
+//     //   // }
+//     // }
+
+//     // if (global->child_count > 0) {
+//     //   mc_node_v1 *child = (mc_node_v1 *)global->children[0];
+//     //   printf("\n>> global has a child named %s!\n", child->name);
+//     // }
+//     // else {
+//     //   printf("\n>> global has no children\n");
+//     // }
+//   }
+//   return 0;
+// }
+
+// int interactive_console_handle_input_v1(int argc, void **argv)
+// {
+//   /*mcfuncreplace*/
+//   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+//                                   // find_struct_info/find_function_info and do the same there.
+//   /*mcfuncreplace*/
+
+//   window_input_event *event = (window_input_event *)argv[0];
+
+//   if (event->type == INPUT_EVENT_KEY_RELEASE)
+//     printf("ic_input:%i\n", event->detail.keyboard.key);
+
+//   return 0;
+// }
+
+// int render_interactive_console_v1(int argc, void **argv)
+// {
+//   /*mcfuncreplace*/
+//   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+//                                   // find_struct_info/find_function_info and do the same there.
+//   /*mcfuncreplace*/
+
+//   // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
+//   //        command_hub->interactive_console->visual.image_resource_uid);
+//   image_render_queue *sequence;
+//   element_render_command *element_cmd;
+//   // Input Line
+//   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+//   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+//   sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+//   sequence->image_width = command_hub->interactive_console->input_line.width;
+//   sequence->image_height = command_hub->interactive_console->input_line.height;
+//   sequence->data.target_image.image_uid = command_hub->interactive_console->input_line.image_resource_uid;
+
+//   MCcall(obtain_element_render_command(sequence, &element_cmd));
+//   element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+//   element_cmd->x = 2;
+//   element_cmd->y = 2 + 18;
+//   element_cmd->data.print_text.text = &command_hub->interactive_console->input_line.text;
+//   element_cmd->data.print_text.font_resource_uid = command_hub->interactive_console->font_resource_uid;
+//   element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
+
+//   // Render
+//   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+//   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+//   sequence->image_width = command_hub->interactive_console->bounds.width;
+//   sequence->image_height = command_hub->interactive_console->bounds.height;
+//   sequence->clear_color = COLOR_CORNFLOWER_BLUE;
+//   sequence->data.target_image.image_uid = command_hub->interactive_console->visual.image_resource_uid;
+
+//   MCcall(obtain_element_render_command(sequence, &element_cmd));
+//   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+//   element_cmd->x = 2;
+//   element_cmd->y = 2;
+//   element_cmd->data.colored_rect_info.width = command_hub->interactive_console->bounds.width - 4;
+//   element_cmd->data.colored_rect_info.height = command_hub->interactive_console->bounds.height - 4;
+//   element_cmd->data.colored_rect_info.color = (render_color){0.05f, 0.05f, 0.05f, 1.f};
+
+//   MCcall(obtain_element_render_command(sequence, &element_cmd));
+//   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+//   element_cmd->x = 0;
+//   element_cmd->y = command_hub->interactive_console->bounds.height - 28;
+//   element_cmd->data.colored_rect_info.width = command_hub->interactive_console->bounds.width;
+//   element_cmd->data.colored_rect_info.height = 28;
+//   element_cmd->data.colored_rect_info.color = COLOR_TEAL;
+
+//   MCcall(obtain_element_render_command(sequence, &element_cmd));
+//   element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+//   element_cmd->x = 2;
+//   element_cmd->y = command_hub->interactive_console->bounds.height - 24 - 2;
+//   element_cmd->data.textured_rect_info.width = command_hub->interactive_console->input_line.width;
+//   element_cmd->data.textured_rect_info.height = command_hub->interactive_console->input_line.height;
+//   element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->input_line.image_resource_uid;
+
+//   return 0;
+// }
+
+// int build_interactive_console_v1(int argc, void **argv)
+// {
+//   /*mcfuncreplace*/
+//   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
+//                                   // find_struct_info/find_function_info and do the same there.
+//   /*mcfuncreplace*/
+
+//   // Build the interactive console
+//   mc_interactive_console_v1 *console = (mc_interactive_console_v1 *)malloc(sizeof(mc_interactive_console_v1));
+//   command_hub->interactive_console = console;
+
+//   // interactive_console_node->functions_alloc = 40;
+//   // interactive_console_node->functions =
+//   //     (mc_function_info_v1 **)calloc(sizeof(mc_function_info_v1 *), interactive_console_node->functions_alloc);
+//   // interactive_console_node->function_count = 0;
+//   // interactive_console_node->structs_alloc = 40;
+//   // interactive_console_node->structs =
+//   //     (mc_struct_info_v1 **)calloc(sizeof(mc_struct_info_v1 *), interactive_console_node->structs_alloc);
+//   // interactive_console_node->struct_count = 0;
+//   // interactive_console_node->children_alloc = 40;
+//   // interactive_console_node->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *),
+//   interactive_console_node->children_alloc);
+//   // interactive_console_node->child_count = 0;
+//   console->logic_delegate = &update_interactive_console_v1;
+//   console->handle_input_delegate = &interactive_console_handle_input_v1;
+
+//   // Logic
+//   command_hub->interactive_console->logic.action_count = 0;
+
+//   // Visuals
+//   console->visual.image_resource_uid = 0;
+//   console->visual.requires_render_update = true;
+//   console->bounds.x = 668;
+//   console->bounds.y = 510 - 200;
+//   console->bounds.width = 768;
+//   console->bounds.height = 384;
+//   console->visual.render_delegate = &render_interactive_console_v1;
+//   // interactive_console_node->data.visual.background = (mc_visual_element_v1)
+
+//   console->input_line.requires_render_update = true;
+//   console->input_line.text = "...";
+//   console->input_line.width = console->bounds.width - 4;
+//   console->input_line.height = 24;
+
+//   // Obtain visual resources
+//   pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
+
+//   resource_command *command;
+//   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+//   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+//   command->p_uid = &console->visual.image_resource_uid;
+//   command->data.create_texture.use_as_render_target = true;
+//   command->data.create_texture.width = console->bounds.width;
+//   command->data.create_texture.height = console->bounds.height;
+//   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
+
+//   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+//   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+//   command->p_uid = &console->input_line.image_resource_uid;
+//   command->data.create_texture.use_as_render_target = true;
+//   command->data.create_texture.width = console->input_line.width;
+//   command->data.create_texture.height = console->input_line.height;
+//   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
+
+//   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+//   command->type = RESOURCE_COMMAND_LOAD_FONT;
+//   command->p_uid = &console->font_resource_uid;
+//   command->data.font.height = 20;
+//   command->data.font.path = "res/font/DroidSansMono.ttf";
+//   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
+
+//   return 0;
+// }
 
 int render_global_node_v1(int argc, void **argv)
 {
@@ -4233,8 +4235,6 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   }
 
   if (func_info) {
-    ++func_info->latest_iteration;
-
     // Free previous resources
     for (int i = 0; i < func_info->struct_usage_count; ++i) {
       mc_struct_info_v1 *str = (mc_struct_info_v1 *)func_info->struct_usage[i];
@@ -4254,6 +4254,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     // Create
     func_info = (function_info *)malloc(sizeof(function_info));
     func_info->struct_id = NULL; // TODO
+    func_info->source_filepath = NULL;
     func_info->latest_iteration = 0;
     func_info->name = function_name;
 
@@ -4443,8 +4444,6 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
   }
 
   if (func_info) {
-    ++func_info->latest_iteration;
-
     // Free previous resources
     for (int i = 0; i < func_info->struct_usage_count; ++i) {
       mc_struct_info_v1 *str = (mc_struct_info_v1 *)func_info->struct_usage[i];
@@ -4464,8 +4463,9 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
     // Create
     func_info = (function_info *)malloc(sizeof(function_info));
     func_info->struct_id = NULL; // TODO
-    func_info->latest_iteration = 0;
+    func_info->source_filepath = NULL;
     func_info->name = function_name;
+    func_info->latest_iteration = 0;
 
     // Attach to global -- TODO
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
@@ -4831,7 +4831,7 @@ int debug_automation(int argc, void **argv)
     sim->ctrlDown = false;
     sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
     sim->detail.mouse.x = 51;
-    sim->detail.mouse.y = 41;
+    sim->detail.mouse.y = 16;
     {
       void *vargs[3];
       vargs[0] = argv[0];
@@ -4894,7 +4894,7 @@ int build_function_editor_v1(int argc, void **argv)
   fedit->data.visual.bounds.x = 298;
   fedit->data.visual.bounds.y = 40;
   fedit->data.visual.bounds.width = 1140;
-  fedit->data.visual.bounds.height = 700;
+  fedit->data.visual.bounds.height = 830;
   fedit->data.visual.image_resource_uid = 0;
   fedit->data.visual.requires_render_update = true;
   fedit->data.visual.render_delegate = &function_editor_render_v1;
@@ -4911,6 +4911,7 @@ int build_function_editor_v1(int argc, void **argv)
   // Code Lines
   function_editor_state *state = (function_editor_state *)malloc(sizeof(function_editor_state));
   // printf("state:'%p'\n", state);
+  state->func_info = NULL;
   state->font_resource_uid = 0;
   state->cursorLine = 0;
   state->cursorCol = 0;

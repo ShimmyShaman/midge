@@ -2235,7 +2235,7 @@ int mc_main(int argc, const char *const *argv)
     function_info_definition_v1->name = "function_info";
     function_info_definition_v1->version = 1U;
     function_info_definition_v1->declared_mc_name = "mc_function_info_v1";
-    function_info_definition_v1->field_count = 9;
+    function_info_definition_v1->field_count = 10;
     function_info_definition_v1->fields = (void **)calloc(sizeof(void *), function_info_definition_v1->field_count);
     function_info_definition_v1->sizeof_cstr = "sizeof_function_info_v1";
 
@@ -2265,45 +2265,51 @@ int mc_main(int argc, const char *const *argv)
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
-    field->name = "name";
+    field->name = "source_filepath";
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     function_info_definition_v1->fields[2] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "name";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[3] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "latest_iteration";
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[3] = field;
+    function_info_definition_v1->fields[4] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "return_type";
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[4] = field;
+    function_info_definition_v1->fields[5] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "parameter_count";
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[5] = field;
+    function_info_definition_v1->fields[6] = field;
     field->type_name = "parameter_info";
     field->type_version = 0U;
     field->type_deref_count = 2;
     field->name = "parameters";
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[6] = field;
+    function_info_definition_v1->fields[7] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "variable_parameter_begin_index";
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[7] = field;
+    function_info_definition_v1->fields[8] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "struct_usage_count";
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[8] = field;
+    function_info_definition_v1->fields[9] = field;
     field->type_name = "struct_id";
     field->type_version = 0U;
     field->type_deref_count = 2;
@@ -5726,8 +5732,12 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   mc_function_info_v1 *func_info;
   MCcall(parse_and_process_function_definition(input + offset, &func_info, true));
 
+  // Set Provided Source Path
+  allocate_and_copy_cstr(func_info->source_filepath, buf);
+
   free(input);
   printf("papcf-FunctionInfo:\n");
+  printf(" -- source_filepath:%s:\n", func_info->source_filepath);
   printf(" -- name:%s:\n", func_info->name);
   printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
   printf(" -- return_type.name:%s:\n", func_info->return_type.name);
@@ -5765,6 +5775,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
                               &command_hub->global_node->function_count, (void *)mc_dummy_function_definition_v1));
   {
     mc_dummy_function_definition_v1->struct_id = NULL;
+    mc_dummy_function_definition_v1->source_filepath = NULL;
     mc_dummy_function_definition_v1->name = "mc_dummy_function";
     mc_dummy_function_definition_v1->latest_iteration = 1U;
     allocate_and_copy_cstr(mc_dummy_function_definition_v1->return_type.name, "void");
@@ -5952,7 +5963,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("parse_script_to_mc = &parse_script_to_mc_v1;");
   clint_process("conform_type_identity = &conform_type_identity_v1;");
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
-  clint_process("build_interactive_console = &build_interactive_console_v1;");
+  // clint_process("build_interactive_console = &build_interactive_console_v1;");
   clint_process("build_function_editor = &build_function_editor_v1;");
   clint_process("function_editor_update = &function_editor_update_v1;");
   clint_process("function_editor_render = &function_editor_render_v1;");
@@ -5963,48 +5974,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
   MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
-  printf("hopeh\n");
-  // MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
-  // mc_function_info_v1 *function_editor_handle_input_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-  // MCcall(append_to_collection((void ***)&command_hub->global_node->functions, &command_hub->global_node->functions_alloc,
-  //                             &command_hub->global_node->function_count, (void *)function_editor_handle_input_v1));
-  // {
-  //   function_editor_handle_input_v1->struct_id = NULL;
-  //   function_editor_handle_input_v1->name = "function_editor_handle_input";
-  //   function_editor_handle_input_v1->latest_iteration = 1U;
-  //   allocate_and_copy_cstr(function_editor_handle_input_v1->return_type.name, "void");
-  //   function_editor_handle_input_v1->return_type.deref_count = 0;
-  //   function_editor_handle_input_v1->parameter_count = 3;
-  //   function_editor_handle_input_v1->parameters =
-  //       (mc_parameter_info_v1 **)malloc(sizeof(void *) * function_editor_handle_input_v1->parameter_count);
-  //   function_editor_handle_input_v1->variable_parameter_begin_index = -1;
-  //   function_editor_handle_input_v1->struct_usage_count = 0;
-  //   function_editor_handle_input_v1->struct_usage = NULL;
-  //   allocate_and_copy_cstr(function_editor_handle_input_v1->mc_code, function_editor_handle_input_v1_code);
-
-  //   mc_parameter_info_v1 *field;
-  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-  //   function_editor_handle_input_v1->parameters[0] = field;
-  //   field->type_name = "frame_time";
-  //   field->type_version = 1U;
-  //   field->type_deref_count = 1;
-  //   field->name = "frameTime";
-
-  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-  //   function_editor_handle_input_v1->parameters[1] = field;
-  //   field->type_name = "node";
-  //   field->type_version = 1U;
-  //   field->type_deref_count = 1;
-  //   field->name = "fedit";
-
-  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-  //   function_editor_handle_input_v1->parameters[2] = field;
-  //   field->type_name = "mc_input_event_v1";
-  //   field->type_version = 1U;
-  //   field->type_deref_count = 1;
-  //   field->name = "event";
-  // }
-  // clint_process("function_editor_handle_input = &function_editor_handle_input_v1;");
   printf("hopee\n");
 
   f = fopen("/home/jason/midge/src/midge_core_ui.c", "rb");

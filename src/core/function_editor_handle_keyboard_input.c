@@ -63,17 +63,14 @@ void function_editor_handle_keyboard_input_v1(frame_time *elapsed, mc_node_v1 *f
       int code_index = 0;
       transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription);
 
-      printf("final transcription:\n%s\n", transcription);
-
       // Define the new function
       instantiate_function(func_info->name, transcription);
-      //   {
-      //     void *mc_vargs[3];
-      //     mc_vargs[0] = (void *)&func_info->name;
-      //     mc_vargs[1] = (void *)&transcription;
-      //     MCcall(instantiate_function(2, mc_vargs));
-      //   }
 
+      if (!state->func_info) {
+        MCerror(70, "TODO");
+      }
+
+      printf("redefined function '%s' to iteration %i\n", func_info->name, func_info->latest_iteration);
       event->handled = true;
       return;
     }
@@ -274,31 +271,75 @@ void function_editor_handle_keyboard_input_v1(frame_time *elapsed, mc_node_v1 *f
     fedit->data.visual.requires_render_update = true;
   } break;
   default: {
-    // printf("fehi-3\n");
-    char c = '\0';
-    int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c);
-    if (res) {
-      return; // TODO
+    if (event->ctrlDown) {
+      switch (event->detail.keyboard.key) {
+      case KEY_CODE_S: {
+        // Read the code from the editor
+        char *function_definition;
+        read_function_from_editor(state, &function_definition);
+
+        printf("here-0\n");
+        // Save the file
+        if (!state->func_info->source_filepath) {
+          printf("function has no source filepath\n");
+          break;
+        }
+
+        // printf("here-1\n");
+        // save_function_to_source_file()
+        FILE *f = fopen(state->func_info->source_filepath, "w");
+        // fseek(f, 0, SEEK_SET);
+
+        // printf("here-2\n");
+        char buf[128];
+        sprintf(buf, "/* %s.c */\n\n#include \"core/midge_core.h\"\n\n", state->func_info->name);
+        // printf("buf:'%s'\n", buf);
+        // printf("here-3a\n");
+        int buf_len = strlen(buf);
+        fwrite(buf, sizeof(char), buf_len, f);
+        // printf("here-3b\n");
+        // fseek(f, buf_len * sizeof(char), SEEK_SET);
+
+        // printf("here-3b\n");
+        int definition_len = strlen(function_definition);
+        fwrite(function_definition, sizeof(char), definition_len, f);
+        fclose(f);
+
+        printf("saved function to file '%s'\n", state->func_info->source_filepath);
+        // printf("here-4\n");
+      } break;
+      default: {
+        break;
+      }
+      }
     }
-    event->handled = true;
-
-    // Update the text
-    {
-      int current_line_len = strlen(state->text.lines[state->cursorLine]);
-      char *new_line = (char *)malloc(sizeof(char) * (current_line_len + 1 + 1));
-      if (state->cursorCol) {
-        strncpy(new_line, state->text.lines[state->cursorLine], state->cursorCol);
+    else {
+      // printf("fehi-3\n");
+      char c = '\0';
+      int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c);
+      if (res) {
+        return; // TODO
       }
-      new_line[state->cursorCol] = c;
-      if (current_line_len - state->cursorCol) {
-        strcat(new_line + state->cursorCol + 1, state->text.lines[state->cursorLine]);
+      event->handled = true;
+
+      // Update the text
+      {
+        int current_line_len = strlen(state->text.lines[state->cursorLine]);
+        char *new_line = (char *)malloc(sizeof(char) * (current_line_len + 1 + 1));
+        if (state->cursorCol) {
+          strncpy(new_line, state->text.lines[state->cursorLine], state->cursorCol);
+        }
+        new_line[state->cursorCol] = c;
+        if (current_line_len - state->cursorCol) {
+          strcat(new_line + state->cursorCol + 1, state->text.lines[state->cursorLine]);
+        }
+        new_line[current_line_len + 1] = '\0';
+
+        free(state->text.lines[state->cursorLine]);
+        state->text.lines[state->cursorLine] = new_line;
+
+        ++state->cursorCol;
       }
-      new_line[current_line_len + 1] = '\0';
-
-      free(state->text.lines[state->cursorLine]);
-      state->text.lines[state->cursorLine] = new_line;
-
-      ++state->cursorCol;
     }
   } break;
   }

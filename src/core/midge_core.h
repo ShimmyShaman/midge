@@ -233,6 +233,7 @@ typedef struct mc_parameter_info_v1 {
 
 typedef struct mc_function_info_v1 {
   mc_struct_id_v1 *struct_id;
+  char *source_filepath;
   const char *name;
   unsigned int latest_iteration;
   struct {
@@ -469,7 +470,7 @@ typedef struct mc_procedure_template_v1 {
 
 } mc_procedure_template_v1;
 
-#define FUNCTION_EDITOR_RENDERED_CODE_LINES 31
+#define FUNCTION_EDITOR_RENDERED_CODE_LINES 37
 typedef struct code_line {
   uint index;
   bool requires_render_update;
