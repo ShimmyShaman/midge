@@ -328,7 +328,7 @@ int build_core_display_v1(int argc, void **argv)
   MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_keyboard_input"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_input"));
-  MCcall(build_core_entry(core_objects_display, "core_editor_state"));
+  MCcall(build_core_entry(core_objects_display, "code_editor_state"));
 
   MCcall(update_core_entries(core_objects_display));
 

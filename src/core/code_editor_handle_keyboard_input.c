@@ -5,7 +5,7 @@
 // [_mc_iteration=1]
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
-  code_editor_state *state = (code_editor_state *)fedit->extra;
+  mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
   printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {

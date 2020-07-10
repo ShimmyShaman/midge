@@ -486,7 +486,7 @@ typedef struct code_line {
   char *text;
   uint width, height;
 } code_line;
-typedef struct code_editor_state {
+typedef struct mc_code_editor_state_v1 {
   code_line render_lines[CODE_EDITOR_RENDERED_CODE_LINES];
   mc_text_line_list_v1 *text;
   uint font_resource_uid;
@@ -495,7 +495,7 @@ typedef struct code_editor_state {
   bool cursor_requires_render_update;
 
   mc_function_info_v1 *func_info;
-} code_editor_state;
+} mc_code_editor_state_v1;
 int load_existing_function_into_code_editor(mc_function_info_v1 *function);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);

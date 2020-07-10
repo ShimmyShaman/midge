@@ -11,7 +11,7 @@ const char *code_editor_handle_input_v1_code =
     "  return;\n"
     "}\n"
     "\n"
-    "code_editor_state *state = (code_editor_state *)fedit->extra;\n"
+    "mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;\n"
     "\n"
     "event->handled = true;\n"
     "\n"

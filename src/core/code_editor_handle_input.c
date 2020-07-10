@@ -9,7 +9,7 @@ void code_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input
     return;
   }
 
-  code_editor_state *state = (code_editor_state *)fedit->extra;
+  mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
 
   event->handled = true;
 
