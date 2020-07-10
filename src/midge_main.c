@@ -266,32 +266,6 @@ int remove_from_collection(void ***collection, unsigned int *collection_alloc, u
   return 0;
 }
 
-int find_struct_info(void *vp_nodespace, const char *const struct_name, void **struct_info)
-{
-  mc_node_v1 *node = (mc_node_v1 *)vp_nodespace;
-  // declare_and_assign_anon_struct(node_v1, node, vp_nodespace);
-
-  *struct_info = NULL;
-  for (int i = 0; i < node->struct_count; ++i) {
-    if (strcmp(node->structs[i]->name, struct_name))
-      continue;
-
-    // Matches
-    *struct_info = (void *)node->structs[i];
-    // printf("find_struct_info:set with '%s'\n", finfo->name);
-    return 0;
-  }
-
-  // if (node->parent)
-  // {
-  //   // Search in the parent nodespace
-  //   MCcall(find_struct_info(node->parent, struct_name, struct_info));
-  // }
-
-  // printf("find_struct_info: '%s' could not be found in nodespace=%s!\n", struct_name, node->name);
-  return 0;
-}
-
 int release_process_action(mc_process_action_v1 *process_action)
 {
   free(process_action);
@@ -588,7 +562,14 @@ int mcqck_generate_script_local(void *nodespace, void ***local_index, unsigned i
   scr_local->replacement_code = (char *)malloc(sizeof(char) * (64 + strlen(scr_local->type)));
 
   // -- Determine if the structure is midge-specified
-  MCcall(find_struct_info(nodespace, raw_type_id, &scr_local->struct_info));
+  mc_struct_info_v1 *p_struct_info;
+  {
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&nodespace;
+    mc_vargs[1] = (void *)&raw_type_id;
+    mc_vargs[2] = (void *)&scr_local->struct_info;
+    MCcall(find_struct_info(3, mc_vargs));
+  }
   char *size_of_var;
   if (scr_local->struct_info) {
     mc_struct_info_v1 *sinfo = (mc_struct_info_v1 *)scr_local->struct_info;
@@ -2106,6 +2087,7 @@ int mc_dummy_function_v1(int argc, void **argv)
 
 void *midge_render_thread(void *vargp);
 
+int init_core_structures(mc_command_hub_v1 *command_hub);
 int init_core_functions(mc_command_hub_v1 *command_hub);
 int init_process_matrix(mc_command_hub_v1 *command_hub);
 int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub);
@@ -2146,307 +2128,6 @@ int mc_main(int argc, const char *const *argv)
   // -- Start Thread
   begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
 
-  mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
-  { // TYPE:DEFINITION parameter_info
-    parameter_info_definition_v1->struct_id = NULL;
-    parameter_info_definition_v1->name = "parameter_info";
-    parameter_info_definition_v1->version = 1U;
-    parameter_info_definition_v1->declared_mc_name = "mc_parameter_info_v1";
-    parameter_info_definition_v1->field_count = 5;
-    parameter_info_definition_v1->fields = (void **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
-    parameter_info_definition_v1->sizeof_cstr = "sizeof_parameter_info_v1";
-
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    parameter_info_definition_v1->fields[0] = field;
-    field->type_name = "struct_info";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "struct_id";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    parameter_info_definition_v1->fields[1] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "type_name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    parameter_info_definition_v1->fields[2] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "type_version";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    parameter_info_definition_v1->fields[3] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "type_deref_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    parameter_info_definition_v1->fields[4] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "name";
-  }
-
-  mc_struct_info_v1 *struct_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
-  { // TYPE:DEFINITION struct_info
-    struct_info_definition_v1->struct_id = NULL;
-    struct_info_definition_v1->name = "struct_info";
-    struct_info_definition_v1->version = 1U;
-    parameter_info_definition_v1->declared_mc_name = "mc_struct_info_v1";
-    struct_info_definition_v1->field_count = 7;
-    struct_info_definition_v1->fields = (void **)calloc(sizeof(void *), struct_info_definition_v1->field_count);
-    struct_info_definition_v1->sizeof_cstr = "sizeof_struct_info_v1";
-
-    // FUNCTION_INFO STRUCT INFO
-    // #define struct_info_v1              \
-//     struct                          \
-//     {                               \
-//         struct_info *struct_id;                \
-//         const char *name;           \
-//         unsigned int version;       \
-        // const char *declared_mc_name; \
-//         unsigned int field_count;   \
-//         void **fields;              \
-//         const char *sizeof_cstr;    \
-//     }
-
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    struct_info_definition_v1->fields[0] = field;
-    field->type_name = "struct_info";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "struct_id";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    struct_info_definition_v1->fields[1] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "type_name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    struct_info_definition_v1->fields[2] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "version";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    struct_info_definition_v1->fields[3] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "declared_mc_name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    struct_info_definition_v1->fields[4] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "field_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    struct_info_definition_v1->fields[5] = field;
-    field->type_name = "parameter_info";
-    field->type_version = 0U;
-    field->type_deref_count = 2;
-    field->name = "fields";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    struct_info_definition_v1->fields[6] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "sizeof_cstr";
-  }
-
-  mc_struct_info_v1 *function_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
-  { // TYPE:DEFINITION function_info
-    function_info_definition_v1->struct_id = NULL;
-    function_info_definition_v1->name = "function_info";
-    function_info_definition_v1->version = 1U;
-    function_info_definition_v1->declared_mc_name = "mc_function_info_v1";
-    function_info_definition_v1->field_count = 10;
-    function_info_definition_v1->fields = (void **)calloc(sizeof(void *), function_info_definition_v1->field_count);
-    function_info_definition_v1->sizeof_cstr = "sizeof_function_info_v1";
-
-    // FUNCTION_INFO STRUCT INFO
-    // #define function_info_v1                             \
-//     struct                                           \
-//     {                                                \
-//         void *struct_id;                             \
-//         const char *name;                            \
-//         unsigned int latest_iteration;               \
-//         const char *return_type;                     \
-//         unsigned int parameter_count;                \
-//         void **parameters;                           \
-//         unsigned int variable_parameter_begin_index; \
-//         unsigned int struct_usage_count;             \
-//         void **struct_usage;                         \
-//     }
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[0] = field;
-    field->type_name = "struct_info";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "struct_id";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[1] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "source_filepath";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[2] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[3] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "latest_iteration";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[4] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "return_type";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[5] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "parameter_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[6] = field;
-    field->type_name = "parameter_info";
-    field->type_version = 0U;
-    field->type_deref_count = 2;
-    field->name = "parameters";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[7] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "variable_parameter_begin_index";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[8] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "struct_usage_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    function_info_definition_v1->fields[9] = field;
-    field->type_name = "struct_id";
-    field->type_version = 0U;
-    field->type_deref_count = 2;
-    field->name = "struct_usage";
-  }
-
-  printf("mm-1\n");
-  mc_struct_info_v1 *node_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
-  { // TYPE:DEFINITION function_info
-    node_definition_v1->struct_id = NULL;
-    node_definition_v1->name = "node";
-    node_definition_v1->version = 1U;
-    node_definition_v1->declared_mc_name = "mc_node_v1";
-    node_definition_v1->field_count = 12;
-    node_definition_v1->fields = (void **)calloc(sizeof(void *), node_definition_v1->field_count);
-    node_definition_v1->sizeof_cstr = "sizeof_node_v1"; // TODO -- remove this
-
-    // #define node_v1                          \
-//     struct                               \
-//     {                                    \
-        // mc_struct_id_v1 *struct_id;      \
-        // const char *name;                \
-        // mc_node_v1 *parent;              \
-        // unsigned int functions_alloc;    \
-        // unsigned int function_count;     \
-        // mc_function_info_v1 **functions; \
-        // unsigned int structs_alloc;      \
-        // unsigned int struct_count;       \
-        // mc_struct_info_v1 **structs;     \
-        // unsigned int children_alloc;     \
-        // unsigned int child_count;        \
-        // mc_node_v1 **children;           \
-//     }
-
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[0] = field;
-    field->type_name = "struct_id";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "struct_id";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[1] = field;
-    field->type_name = "const char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[2] = field;
-    field->type_name = "node";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "parent";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[3] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "functions_alloc";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[4] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "function_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[5] = field;
-    field->type_name = "function_info";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "functions";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[6] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "structs_alloc";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[7] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "struct_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[8] = field;
-    field->type_name = "struct_info";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "structs";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[9] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "children_alloc";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[10] = field;
-    field->type_name = "unsigned int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "child_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    node_definition_v1->fields[11] = field;
-    field->type_name = "node";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "children";
-  }
-
   // Instantiate: node global;
   mc_node_v1 *global = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
   global->name = "global";
@@ -2461,15 +2142,6 @@ int mc_main(int argc, const char *const *argv)
   global->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), global->children_alloc);
   global->child_count = 0;
   global->data.global_root.image_resource_uid = 0;
-
-  MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count,
-                              (void *)parameter_info_definition_v1));
-  MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count,
-                              (void *)struct_info_definition_v1));
-  MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count,
-                              (void *)function_info_definition_v1));
-  MCcall(append_to_collection((void ***)&global->structs, &global->structs_alloc, &global->struct_count,
-                              (void *)node_definition_v1));
 
   // Execute commands
   mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)calloc(sizeof(mc_command_hub_v1), 1);
@@ -2507,6 +2179,7 @@ int mc_main(int argc, const char *const *argv)
   // &template_collection->template_count, (void *)template_process));
 
   // Parse & Declare/add Core functions in midge_core_functions.c
+  MCcall(init_core_structures(command_hub));
   MCcall(init_core_functions(command_hub));
   MCcall(init_process_matrix(command_hub));
   // MCcall(build_interactive_console(0, NULL));
@@ -5836,7 +5509,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   int code_index = 0;
   MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
 
-  // printf("final transcription:\n%s\n", transcription);
+  printf("final transcription:\n%s\n", transcription);
 
   // Define the new function
   {
@@ -5845,6 +5518,413 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
     mc_vargs[1] = (void *)&transcription;
     MCcall(instantiate_function(2, mc_vargs));
   }
+  return 0;
+}
+
+int init_core_structures(mc_command_hub_v1 *command_hub)
+{
+  {
+    mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+    MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
+                                &command_hub->global_node->struct_count, (void *)parameter_info_definition_v1));
+
+    parameter_info_definition_v1->struct_id = NULL;
+    parameter_info_definition_v1->name = "parameter_info";
+    parameter_info_definition_v1->version = 1U;
+    parameter_info_definition_v1->declared_mc_name = "mc_parameter_info_v1";
+    parameter_info_definition_v1->field_count = 5;
+    parameter_info_definition_v1->fields = (void **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
+    parameter_info_definition_v1->sizeof_cstr = "sizeof_parameter_info_v1";
+
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    parameter_info_definition_v1->fields[0] = field;
+    field->type_name = "struct_info";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "struct_id";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    parameter_info_definition_v1->fields[1] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "type_name";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    parameter_info_definition_v1->fields[2] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "type_version";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    parameter_info_definition_v1->fields[3] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "type_deref_count";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    parameter_info_definition_v1->fields[4] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "name";
+  }
+
+  { // TYPE:DEFINITION struct_info
+    mc_struct_info_v1 *struct_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+    MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
+                                &command_hub->global_node->struct_count, (void *)struct_info_definition_v1));
+
+    struct_info_definition_v1->struct_id = NULL;
+    struct_info_definition_v1->name = "struct_info";
+    struct_info_definition_v1->version = 1U;
+    struct_info_definition_v1->declared_mc_name = "mc_struct_info_v1";
+    struct_info_definition_v1->field_count = 7;
+    struct_info_definition_v1->fields = (void **)calloc(sizeof(void *), struct_info_definition_v1->field_count);
+    struct_info_definition_v1->sizeof_cstr = "sizeof_struct_info_v1";
+
+    // FUNCTION_INFO STRUCT INFO
+    // #define struct_info_v1              \
+//     struct                          \
+//     {                               \
+//         struct_info *struct_id;                \
+//         const char *name;           \
+//         unsigned int version;       \
+        // const char *declared_mc_name; \
+//         unsigned int field_count;   \
+//         void **fields;              \
+//         const char *sizeof_cstr;    \
+//     }
+
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    struct_info_definition_v1->fields[0] = field;
+    field->type_name = "struct_info";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "struct_id";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    struct_info_definition_v1->fields[1] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "type_name";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    struct_info_definition_v1->fields[2] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "version";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    struct_info_definition_v1->fields[3] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "declared_mc_name";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    struct_info_definition_v1->fields[4] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "field_count";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    struct_info_definition_v1->fields[5] = field;
+    field->type_name = "parameter_info";
+    field->type_version = 0U;
+    field->type_deref_count = 2;
+    field->name = "fields";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    struct_info_definition_v1->fields[6] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "sizeof_cstr";
+  }
+
+  {
+    mc_struct_info_v1 *function_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+    MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
+                                &command_hub->global_node->struct_count, (void *)function_info_definition_v1));
+
+    function_info_definition_v1->struct_id = NULL;
+    function_info_definition_v1->name = "function_info";
+    function_info_definition_v1->version = 1U;
+    function_info_definition_v1->declared_mc_name = "mc_function_info_v1";
+    function_info_definition_v1->field_count = 10;
+    function_info_definition_v1->fields = (void **)calloc(sizeof(void *), function_info_definition_v1->field_count);
+    function_info_definition_v1->sizeof_cstr = "sizeof_function_info_v1";
+
+    // FUNCTION_INFO STRUCT INFO
+    // #define function_info_v1                             \
+//     struct                                           \
+//     {                                                \
+//         void *struct_id;                             \
+//         const char *name;                            \
+//         unsigned int latest_iteration;               \
+//         const char *return_type;                     \
+//         unsigned int parameter_count;                \
+//         void **parameters;                           \
+//         unsigned int variable_parameter_begin_index; \
+//         unsigned int struct_usage_count;             \
+//         void **struct_usage;                         \
+//     }
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[0] = field;
+    field->type_name = "struct_info";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "struct_id";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[1] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "source_filepath";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[2] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "name";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[3] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "latest_iteration";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[4] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "return_type";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[5] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "parameter_count";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[6] = field;
+    field->type_name = "parameter_info";
+    field->type_version = 0U;
+    field->type_deref_count = 2;
+    field->name = "parameters";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[7] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "variable_parameter_begin_index";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[8] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "struct_usage_count";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    function_info_definition_v1->fields[9] = field;
+    field->type_name = "struct_id";
+    field->type_version = 0U;
+    field->type_deref_count = 2;
+    field->name = "struct_usage";
+  }
+
+  {
+    mc_struct_info_v1 *node_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+    MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
+                                &command_hub->global_node->struct_count, (void *)node_definition_v1));
+
+    node_definition_v1->struct_id = NULL;
+    node_definition_v1->name = "node";
+    node_definition_v1->version = 1U;
+    node_definition_v1->declared_mc_name = "mc_node_v1";
+    node_definition_v1->field_count = 12;
+    node_definition_v1->fields = (void **)calloc(sizeof(void *), node_definition_v1->field_count);
+    node_definition_v1->sizeof_cstr = "sizeof_node_v1"; // TODO -- remove this
+
+    // #define node_v1                          \
+//     struct                               \
+//     {                                    \
+        // mc_struct_id_v1 *struct_id;      \
+        // const char *name;                \
+        // mc_node_v1 *parent;              \
+        // unsigned int functions_alloc;    \
+        // unsigned int function_count;     \
+        // mc_function_info_v1 **functions; \
+        // unsigned int structs_alloc;      \
+        // unsigned int struct_count;       \
+        // mc_struct_info_v1 **structs;     \
+        // unsigned int children_alloc;     \
+        // unsigned int child_count;        \
+        // mc_node_v1 **children;           \
+//     }
+
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[0] = field;
+    field->type_name = "struct_id";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "struct_id";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[1] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "name";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[2] = field;
+    field->type_name = "node";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "parent";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[3] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "functions_alloc";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[4] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "function_count";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[5] = field;
+    field->type_name = "function_info";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "functions";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[6] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "structs_alloc";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[7] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "struct_count";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[8] = field;
+    field->type_name = "struct_info";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "structs";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[9] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "children_alloc";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[10] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "child_count";
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    node_definition_v1->fields[11] = field;
+    field->type_name = "node";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "children";
+  }
+
+  {
+    mc_struct_info_v1 *core_editor_state_strdef = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+    MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
+                                &command_hub->global_node->struct_count, (void *)core_editor_state_strdef));
+
+    core_editor_state_strdef->struct_id = NULL;
+    core_editor_state_strdef->name = "code_editor_state";
+    core_editor_state_strdef->version = 1U;
+    core_editor_state_strdef->declared_mc_name = "mc_code_editor_state_v1";
+    core_editor_state_strdef->field_count = 9;
+    core_editor_state_strdef->fields = (void **)calloc(sizeof(void *), core_editor_state_strdef->field_count);
+    core_editor_state_strdef->sizeof_cstr = NULL;
+
+    // typedef struct code_editor_state {
+    //   code_line render_lines[CODE_EDITOR_RENDERED_CODE_LINES];
+    //   mc_text_line_list_v1 *text;
+    //   uint font_resource_uid;
+    //   uint line_display_offset;
+    //   uint cursorCol, cursorLine;
+    //   bool cursor_requires_render_update;
+
+    //   mc_function_info_v1 *func_info;
+    // } code_editor_state;
+
+    mc_parameter_info_v1 *field;
+    int f = 0;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "rendered_code_line";
+    field->type_version = 1U;
+    field->type_deref_count = 2;
+    field->name = "render_lines";
+
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "text_line_list";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "text";
+
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "font_resource_uid";
+
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "line_display_offset";
+
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "cursorLine";
+
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "cursorCol";
+
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "bool";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "cursor_requires_render_update";
+
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "void";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "focused_definition";
+
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    core_editor_state_strdef->fields[f++] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "definition_type";
+  }
+
   return 0;
 }
 
@@ -6060,6 +6140,10 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;");
   clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;");
 
+  printf("Setting Dummy Methods\n");
+  clint_process("find_struct_info = &find_struct_info_v0;");
+  printf("Loading Core Methods\n");
+  MCcall(parse_and_process_core_function(command_hub, "find_struct_info"));
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));

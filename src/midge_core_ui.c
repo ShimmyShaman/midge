@@ -253,6 +253,33 @@ int core_display_handle_input_v1(int argc, void **argv)
           break;
         }
       }
+      {
+        mc_struct_info_v1 *p_struct_info;
+        void *mc_vargs[3];
+        mc_vargs[0] = (void *)&command_hub->global_node;
+        mc_vargs[1] = (void *)&child->name;
+        mc_vargs[2] = (void *)&p_struct_info;
+        MCcall(find_struct_info(3, mc_vargs));
+
+        printf("could ");
+        if (!p_struct_info) {
+          printf("NOT ");
+        }
+        else {
+        }
+        printf("find struct:'%s'\n", child->name);
+
+        if (p_struct_info) {
+          // Exists as function
+          // Make visible the function editor and set
+          // mc_node_v1 *code_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way...
+          // code_editor->data.visual.hidden = false;
+          // code_editor->data.visual.requires_render_update = true;
+
+          // MCcall(load_existing_function_into_code_editor(function));
+          break;
+        }
+      }
     } break;
 
     default:
@@ -301,6 +328,7 @@ int build_core_display_v1(int argc, void **argv)
   MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_keyboard_input"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_input"));
+  MCcall(build_core_entry(core_objects_display, "core_editor_state"));
 
   MCcall(update_core_entries(core_objects_display));
 

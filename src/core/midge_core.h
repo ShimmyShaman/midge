@@ -519,6 +519,8 @@ int (*declare_function_pointer)(int, void **);
 int (*instantiate_function)(int, void **);
 // function_info **result (may be NULL); node **nodespace, char **function_name
 int (*find_function_info)(int, void **);
+// mc_struct_info_v1 *find_struct_info(mc_node_v1 *nodespace, char *struct_name) -- result is last
+int (*find_struct_info)(int, void **);
 int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
 int (*build_code_editor)(int, void **);

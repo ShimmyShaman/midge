@@ -6,6 +6,13 @@
 #define node mc_node_v1
 /*mcfuncreplace*/
 
+int find_struct_info_v0(int argc, void **argv)
+{
+  struct_info **result = (struct_info **)argv[2];
+  *result = NULL;
+  return 0;
+}
+
 int find_function_info_v1(int argc, void **argv)
 {
   if (argc != 3) {
@@ -17,7 +24,6 @@ int find_function_info_v1(int argc, void **argv)
   char *function_name = *(char **)argv[2];
 
   *func_info = NULL;
-  printf("ffi-nodespace.name:%s\n", nodespace->name);
   for (int i = 0; i < nodespace->function_count; ++i) {
 
     // printf("ffi-3\n");
@@ -25,13 +31,15 @@ int find_function_info_v1(int argc, void **argv)
     function_info *finfo = nodespace->functions[i];
 
     // printf("ffi-4a\n");
-    // printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
+    printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
     // printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
     // printf("dwde\n");
 
     // printf("ffi-5\n");
+    // if (!strcmp(finfo->name, "find_struct_info"))
+    //   return 8828;
 
     // Matches
     *func_info = finfo;
@@ -138,14 +146,20 @@ int declare_function_pointer_v1(int argc, void **argv)
     }
     parameter_info->type_name = type_name;
 
-    // printf("dfp-4a\n");
+    printf("dfp-4a\n");
     // printf("chn:%p\n", command_hub->nodespace);
     // printf("ptn:%s\n", parameter_info->type_name);
     //  printf("dfp-4b\n");
-    void *p_struct_info = NULL;
-    MCcall(find_struct_info((void *)command_hub->nodespace, parameter_info->type_name, &p_struct_info));
+    mc_struct_info_v1 *p_struct_info;
+    {
+      void *mc_vargs[3];
+      mc_vargs[0] = (void *)&command_hub->nodespace;
+      mc_vargs[1] = (void *)&parameter_info->type_name;
+      mc_vargs[2] = (void *)&p_struct_info;
+      MCcall(find_struct_info(3, mc_vargs));
+    }
     if (!strcmp(parameter_info->type_name, "node") && !p_struct_info) {
-      MCerror(109, "Its not finding node in find_struct_info");
+      MCerror(156, "DEBUG Its not finding node in find_struct_info");
     }
     if (p_struct_info) {
       struct_info *sinfo = (struct_info *)p_struct_info;
@@ -489,6 +503,8 @@ int conform_type_identity_v1(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
 
+  printf("conform_type_identity()\n");
+
   // Parameters
   char **conformed_type_identity = (char **)argv[0];
   function_info *func_info = *(function_info **)argv[1];
@@ -544,8 +560,14 @@ int conform_type_identity_v1(int argc, void **argv)
 
   if (!matched) {
     // Look for type in nodespace
-    void *p_struct_info;
-    MCcall(find_struct_info((void *)command_hub->nodespace, finalized_identity, &p_struct_info));
+    mc_struct_info_v1 *p_struct_info;
+    {
+      void *mc_vargs[3];
+      mc_vargs[0] = (void *)&command_hub->nodespace;
+      mc_vargs[1] = (void *)&finalized_identity;
+      mc_vargs[2] = (void *)&p_struct_info;
+      MCcall(find_struct_info(3, mc_vargs));
+    }
     if (p_struct_info) {
       struct_info *str_info = (struct_info *)p_struct_info;
       matched = true;
@@ -2628,7 +2650,7 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
   MCcall(parse_past_conformed_type_declaration(owner, code, i, &type_declaration));
   MCcall(parse_past_empty_text(code, i));
 
-  // printf("type_declaration:'%s'\n", type_declaration);
+  printf("type_declaration:'%s'\n", type_declaration);
   char *identifier;
   MCcall(parse_past_mc_identifier(code, i, &identifier, false, false));
   MCcall(parse_past_empty_text(code, i));
@@ -2645,15 +2667,22 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
   MCcall(transcribe_past(code, i, transcription_alloc, transcription, "="));
   MCcall(parse_past_empty_text(code, i));
 
-  MCcall(append_to_cstr(transcription_alloc, transcription, " "));
-  MCcall(transcribe_expression(owner, code, i, transcription_alloc, transcription));
-  MCcall(parse_past_empty_text(code, i));
-  MCcall(parse_past(code, i, ";"));
-  MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
+  char *expression;
+  MCcall(parse_expression_lacking_function_call(owner, code, i, &expression));
+  if (!expression) {
+    MCerror(2673, "TODO");
+  }
+  else {
+    MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+    MCcall(transcribe_expression(owner, code, i, transcription_alloc, transcription));
+    MCcall(parse_past_empty_text(code, i));
+    MCcall(parse_past(code, i, ";"));
+    MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
+  }
 
   free(type_declaration);
   free(identifier);
-  // printf("after transcribe_declarative_assignment:\n'%s'\n", *transcription);
+  printf("after transcribe_declarative_assignment:\n'%s'\n", *transcription);
   return 0;
 }
 
@@ -2917,6 +2946,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
   // Determine if statement has function call matching one of the following two patterns
   // -- :function_call()
   // -- :type *identifier = function_call()
+  MCerror(2949, "This is wrong :: should pick up declarative assignment from find_struct_info");
 
   for (int j = *i;; ++j) {
     switch (code[j]) {
