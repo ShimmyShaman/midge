@@ -3,8 +3,9 @@
 #include "core/midge_core.h"
 
 // [_mc_iteration=1]
-void function_editor_handle_keyboard_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
-function_editor_state *state = (function_editor_state *)fedit->extra;
+void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
+{
+  function_editor_state *state = (function_editor_state *)fedit->extra;
   printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
@@ -201,7 +202,7 @@ function_editor_state *state = (function_editor_state *)fedit->extra;
     }
   } break;
   case KEY_CODE_ARROW_UP: {
-    move_cursor_up(&state->cursorLine,&state->cursorCol,  state->text);
+    move_cursor_up(fedit, state);
   } break;
   case KEY_CODE_ARROW_DOWN: {
     if (state->cursorLine + 1 >= state->text->lines_count) {
@@ -322,27 +323,7 @@ function_editor_state *state = (function_editor_state *)fedit->extra;
       } break;
       case KEY_CODE_I: {
         for (int i = 0; i < 6; ++i) { // FROM KEY_CODE_ARROW_UP above (TODO refactor into function)
-          if (state->cursorLine == 0) {
-            // Do Nothing
-            break;
-          }
-
-          // Increment
-          --state->cursorLine;
-          int line_len = strlen(state->text->lines[state->cursorLine]);
-          if (state->cursorCol > line_len) {
-            state->cursorCol = line_len;
-          }
-
-          // Update the cursor visual
-          state->cursor_requires_render_update = true;
-          fedit->data.visual.requires_render_update = true;
-
-          // Adjust display offset
-          if (state->cursorLine < state->line_display_offset) {
-            // Move display offset up
-            state->line_display_offset = state->cursorLine;
-          }
+          move_cursor_up(fedit, state);
         }
       } break;
       default: {
@@ -427,27 +408,7 @@ function_editor_state *state = (function_editor_state *)fedit->extra;
         }
       } break;
       case KEY_CODE_I: { // FROM KEY_CODE_ARROW_UP above (TODO refactor into function)
-        if (state->cursorLine == 0) {
-          // Do Nothing
-          break;
-        }
-
-        // Increment
-        --state->cursorLine;
-        int line_len = strlen(state->text->lines[state->cursorLine]);
-        if (state->cursorCol > line_len) {
-          state->cursorCol = line_len;
-        }
-
-        // Update the cursor visual
-        state->cursor_requires_render_update = true;
-        fedit->data.visual.requires_render_update = true;
-
-        // Adjust display offset
-        if (state->cursorLine < state->line_display_offset) {
-          // Move display offset up
-          state->line_display_offset = state->cursorLine;
-        }
+        move_cursor_up(fedit, state);
       } break;
       case KEY_CODE_S: {
         // Read the code from the editor
