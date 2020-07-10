@@ -5805,7 +5805,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
     }
   }
 
-  printf("file-read:\n%s<EOF>\n###########################\n", input + offset);
+  // printf("file-read:\n%s<EOF>\n###########################\n", input + offset);
 
   mc_function_info_v1 *func_info;
   MCcall(parse_and_process_function_definition(input + offset, &func_info, true));
@@ -5836,7 +5836,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   int code_index = 0;
   MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
 
-  printf("final transcription:\n%s\n", transcription);
+  // printf("final transcription:\n%s\n", transcription);
 
   // Define the new function
   {
@@ -6061,6 +6061,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;");
 
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
+  MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
   printf("hopee\n");

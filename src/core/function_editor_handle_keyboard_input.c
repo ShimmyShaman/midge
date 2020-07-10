@@ -2,9 +2,9 @@
 
 #include "core/midge_core.h"
 
-void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
-{
-  function_editor_state *state = (function_editor_state *)fedit->extra;
+// [_mc_iteration=1]
+void function_editor_handle_keyboard_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
+function_editor_state *state = (function_editor_state *)fedit->extra;
   printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
@@ -12,36 +12,36 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     event->handled = true;
 
     printf("delete-0\n");
-    int line_len = strlen(state->text.lines[state->cursorLine]);
+    int line_len = strlen(state->text->lines[state->cursorLine]);
     if (state->cursorCol == line_len) {
-      if (state->cursorLine == state->text.lines_count) {
+      if (state->cursorLine == state->text->lines_count) {
         // Do nothing
         break;
       }
 
       // Append the next line onto this one
-      int current_line_len = strlen(state->text.lines[state->cursorLine]);
-      int next_line_len = strlen(state->text.lines[state->cursorLine + 1]);
+      int current_line_len = strlen(state->text->lines[state->cursorLine]);
+      int next_line_len = strlen(state->text->lines[state->cursorLine + 1]);
       char *new_line = (char *)malloc(sizeof(char) * (current_line_len + next_line_len + 1));
-      strcpy(new_line, state->text.lines[state->cursorLine]);
-      strcat(new_line, state->text.lines[state->cursorLine + 1]);
+      strcpy(new_line, state->text->lines[state->cursorLine]);
+      strcat(new_line, state->text->lines[state->cursorLine + 1]);
 
-      free(state->text.lines[state->cursorLine]);
-      state->text.lines[state->cursorLine] = new_line;
+      free(state->text->lines[state->cursorLine]);
+      state->text->lines[state->cursorLine] = new_line;
 
       // Move all lines after the next line up one
-      for (int i = state->cursorLine + 2; i < state->text.lines_count; ++i) {
-        state->text.lines[i - 1] = state->text.lines[i];
+      for (int i = state->cursorLine + 2; i < state->text->lines_count; ++i) {
+        state->text->lines[i - 1] = state->text->lines[i];
       }
-      state->text.lines[state->text.lines_count - 1] = NULL;
-      --state->text.lines_count;
+      state->text->lines[state->text->lines_count - 1] = NULL;
+      --state->text->lines_count;
       break;
     }
 
     // Move all characters back one
     for (int i = state->cursorCol + 1;; ++i) {
-      char c = state->text.lines[state->cursorLine][i];
-      state->text.lines[state->cursorLine][i - 1] = c;
+      char c = state->text->lines[state->cursorLine][i];
+      state->text->lines[state->cursorLine][i - 1] = c;
       if (c == '\0') {
         break;
       }
@@ -53,22 +53,22 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     if (!state->cursorCol) {
       if (state->cursorLine) {
         // Combine previous line & second line into one
-        int previous_line_len = strlen(state->text.lines[state->cursorLine - 1]);
+        int previous_line_len = strlen(state->text->lines[state->cursorLine - 1]);
         char *combined =
-            (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text.lines[state->cursorLine]) + 1));
-        strcpy(combined, state->text.lines[state->cursorLine - 1]);
-        strcat(combined, state->text.lines[state->cursorLine]);
+            (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text->lines[state->cursorLine]) + 1));
+        strcpy(combined, state->text->lines[state->cursorLine - 1]);
+        strcat(combined, state->text->lines[state->cursorLine]);
 
-        free(state->text.lines[state->cursorLine - 1]);
-        free(state->text.lines[state->cursorLine]);
-        state->text.lines[state->cursorLine - 1] = combined;
+        free(state->text->lines[state->cursorLine - 1]);
+        free(state->text->lines[state->cursorLine]);
+        state->text->lines[state->cursorLine - 1] = combined;
 
         // Bring all lines up one position
-        for (int i = state->cursorLine + 1; i < state->text.lines_count; ++i) {
-          state->text.lines[i - 1] = state->text.lines[i];
+        for (int i = state->cursorLine + 1; i < state->text->lines_count; ++i) {
+          state->text->lines[i - 1] = state->text->lines[i];
         }
-        state->text.lines[state->text.lines_count - 1] = NULL;
-        --state->text.lines_count;
+        state->text->lines[state->text->lines_count - 1] = NULL;
+        --state->text->lines_count;
 
         --state->cursorLine;
         state->cursorCol = previous_line_len;
@@ -77,9 +77,9 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     }
 
     // Bring all forward characters back one
-    int line_len = strlen(state->text.lines[state->cursorLine]);
+    int line_len = strlen(state->text->lines[state->cursorLine]);
     for (int i = state->cursorCol - 1; i < line_len; ++i) {
-      state->text.lines[state->cursorLine][i] = state->text.lines[state->cursorLine][i + 1];
+      state->text->lines[state->cursorLine][i] = state->text->lines[state->cursorLine][i + 1];
     }
 
     --state->cursorCol;
@@ -118,7 +118,7 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     else {
       printf("fehi-0\n");
       // Newline -- carrying over any extra
-      char *cursorLine = state->text.lines[state->cursorLine];
+      char *cursorLine = state->text->lines[state->cursorLine];
 
       // Automatic indent
       int automaticIndent = 0;
@@ -130,29 +130,29 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
       }
 
       // Increment lines after by one place
-      if (state->text.lines_count + 1 >= state->text.lines_allocated) {
-        uint new_alloc = state->text.lines_allocated + 4 + state->text.lines_allocated / 4;
+      if (state->text->lines_count + 1 >= state->text->lines_allocated) {
+        uint new_alloc = state->text->lines_allocated + 4 + state->text->lines_allocated / 4;
         char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-        if (state->text.lines_allocated) {
-          memcpy(new_ary, state->text.lines, state->text.lines_allocated * sizeof(char *));
-          free(state->text.lines);
+        if (state->text->lines_allocated) {
+          memcpy(new_ary, state->text->lines, state->text->lines_allocated * sizeof(char *));
+          free(state->text->lines);
         }
-        for (int i = state->text.lines_allocated; i < new_alloc; ++i) {
+        for (int i = state->text->lines_allocated; i < new_alloc; ++i) {
           new_ary[i] = NULL;
         }
 
-        state->text.lines_allocated = new_alloc;
-        state->text.lines = new_ary;
+        state->text->lines_allocated = new_alloc;
+        state->text->lines = new_ary;
       }
-      // printf("state->text.lines_allocated:%u state->text.lines_count:%u state->cursorLine:%u\n",
-      //   state->text.lines_allocated,
-      //  state->text.lines_count, state->cursorLine);
-      for (int i = state->text.lines_count; i > state->cursorLine + 1; --i) {
+      // printf("state->text->lines_allocated:%u state->text->lines_count:%u state->cursorLine:%u\n",
+      //   state->text->lines_allocated,
+      //  state->text->lines_count, state->cursorLine);
+      for (int i = state->text->lines_count; i > state->cursorLine + 1; --i) {
 
-        state->text.lines[i] = state->text.lines[i - 1];
+        state->text->lines[i] = state->text->lines[i - 1];
       }
-      state->text.lines[state->cursorLine + 1] = NULL;
-      ++state->text.lines_count;
+      state->text->lines[state->cursorLine + 1] = NULL;
+      ++state->text->lines_count;
 
       // printf("fehi-1\n");
       if (state->cursorCol >= cursorLineLen) {
@@ -163,7 +163,7 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
           newLine[i] = ' ';
         }
         newLine[automaticIndent] = '\0';
-        state->text.lines[state->cursorLine + 1] = newLine;
+        state->text->lines[state->cursorLine + 1] = newLine;
       }
       else if (state->cursorCol) {
         // printf("fehi-1B\n");
@@ -180,18 +180,18 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
         strcat(secondSplit, cursorLine + state->cursorCol);
 
         free(cursorLine);
-        state->text.lines[state->cursorLine] = firstSplit;
-        state->text.lines[state->cursorLine + 1] = secondSplit;
+        state->text->lines[state->cursorLine] = firstSplit;
+        state->text->lines[state->cursorLine + 1] = secondSplit;
       }
       else {
         // printf("fehi-1C\n");
         // Move the rest of the current line forwards
-        state->text.lines[state->cursorLine + 1] = cursorLine;
-        state->text.lines[state->cursorLine] = (char *)malloc(sizeof(char) * (automaticIndent + 1));
+        state->text->lines[state->cursorLine + 1] = cursorLine;
+        state->text->lines[state->cursorLine] = (char *)malloc(sizeof(char) * (automaticIndent + 1));
         for (int i = 0; i < automaticIndent; ++i) {
-          state->text.lines[state->cursorLine][i] = ' ';
+          state->text->lines[state->cursorLine][i] = ' ';
         }
-        state->text.lines[state->cursorLine][automaticIndent] = '\0';
+        state->text->lines[state->cursorLine][automaticIndent] = '\0';
       }
 
       printf("fehi-2\n");
@@ -201,37 +201,17 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     }
   } break;
   case KEY_CODE_ARROW_UP: {
-    if (state->cursorLine == 0) {
-      // Do Nothing
-      break;
-    }
-
-    // Increment
-    --state->cursorLine;
-    int line_len = strlen(state->text.lines[state->cursorLine]);
-    if (state->cursorCol > line_len) {
-      state->cursorCol = line_len;
-    }
-
-    // Update the cursor visual
-    state->cursor_requires_render_update = true;
-    fedit->data.visual.requires_render_update = true;
-
-    // Adjust display offset
-    if (state->cursorLine < state->line_display_offset) {
-      // Move display offset up
-      state->line_display_offset = state->cursorLine;
-    }
+    move_cursor_up(&state->cursorLine,&state->cursorCol,  state->text);
   } break;
   case KEY_CODE_ARROW_DOWN: {
-    if (state->cursorLine + 1 >= state->text.lines_count) {
+    if (state->cursorLine + 1 >= state->text->lines_count) {
       // Do Nothing
       break;
     }
 
     // Increment
     ++state->cursorLine;
-    int line_len = strlen(state->text.lines[state->cursorLine]);
+    int line_len = strlen(state->text->lines[state->cursorLine]);
     if (state->cursorCol > line_len) {
       state->cursorCol = line_len;
     }
@@ -255,7 +235,7 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
       }
 
       --state->cursorLine;
-      state->cursorCol = strlen(state->text.lines[state->cursorLine]);
+      state->cursorCol = strlen(state->text->lines[state->cursorLine]);
 
       // Adjust display offset
       if (state->cursorLine < state->line_display_offset) {
@@ -272,10 +252,10 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     fedit->data.visual.requires_render_update = true;
   } break;
   case KEY_CODE_ARROW_RIGHT: {
-    int line_len = strlen(state->text.lines[state->cursorLine]);
+    int line_len = strlen(state->text->lines[state->cursorLine]);
 
     if (state->cursorCol == line_len) {
-      if (state->cursorLine + 1 >= state->text.lines_count) {
+      if (state->cursorLine + 1 >= state->text->lines_count) {
         // Do Nothing
         break;
       }
@@ -306,7 +286,7 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     fedit->data.visual.requires_render_update = true;
   } break;
   case KEY_CODE_END: {
-    state->cursorCol = strlen(state->text.lines[state->cursorLine]);
+    state->cursorCol = strlen(state->text->lines[state->cursorLine]);
 
     // Update the cursor visual
     state->cursor_requires_render_update = true;
@@ -317,14 +297,14 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
       switch (event->detail.keyboard.key) {
       case KEY_CODE_K: {
         for (int i = 0; i < 6; ++i) { // FROM KEY_CODE_ARROW_DOWN above (TODO refactor into function)
-          if (state->cursorLine + 1 >= state->text.lines_count) {
+          if (state->cursorLine + 1 >= state->text->lines_count) {
             // Do Nothing
             break;
           }
 
           // Increment
           ++state->cursorLine;
-          int line_len = strlen(state->text.lines[state->cursorLine]);
+          int line_len = strlen(state->text->lines[state->cursorLine]);
           if (state->cursorCol > line_len) {
             state->cursorCol = line_len;
           }
@@ -349,7 +329,7 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
 
           // Increment
           --state->cursorLine;
-          int line_len = strlen(state->text.lines[state->cursorLine]);
+          int line_len = strlen(state->text->lines[state->cursorLine]);
           if (state->cursorCol > line_len) {
             state->cursorCol = line_len;
           }
@@ -381,7 +361,7 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
           }
 
           --state->cursorLine;
-          state->cursorCol = strlen(state->text.lines[state->cursorLine]);
+          state->cursorCol = strlen(state->text->lines[state->cursorLine]);
 
           // Adjust display offset
           if (state->cursorLine < state->line_display_offset) {
@@ -398,10 +378,10 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
         fedit->data.visual.requires_render_update = true;
       } break;
       case KEY_CODE_L: { // FROM KEY_CODE_ARROW_RIGHT above (TODO refactor into function)
-        int line_len = strlen(state->text.lines[state->cursorLine]);
+        int line_len = strlen(state->text->lines[state->cursorLine]);
 
         if (state->cursorCol == line_len) {
-          if (state->cursorLine + 1 >= state->text.lines_count) {
+          if (state->cursorLine + 1 >= state->text->lines_count) {
             // Do Nothing
             break;
           }
@@ -424,14 +404,14 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
         fedit->data.visual.requires_render_update = true;
       } break;
       case KEY_CODE_K: { // FROM KEY_CODE_ARROW_DOWN above (TODO refactor into function)
-        if (state->cursorLine + 1 >= state->text.lines_count) {
+        if (state->cursorLine + 1 >= state->text->lines_count) {
           // Do Nothing
           break;
         }
 
         // Increment
         ++state->cursorLine;
-        int line_len = strlen(state->text.lines[state->cursorLine]);
+        int line_len = strlen(state->text->lines[state->cursorLine]);
         if (state->cursorCol > line_len) {
           state->cursorCol = line_len;
         }
@@ -454,7 +434,7 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
 
         // Increment
         --state->cursorLine;
-        int line_len = strlen(state->text.lines[state->cursorLine]);
+        int line_len = strlen(state->text->lines[state->cursorLine]);
         if (state->cursorCol > line_len) {
           state->cursorCol = line_len;
         }
@@ -523,22 +503,22 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
 
       // Update the text
       {
-        int current_line_len = strlen(state->text.lines[state->cursorLine]);
+        int current_line_len = strlen(state->text->lines[state->cursorLine]);
         char *new_line = (char *)malloc(sizeof(char) * (current_line_len + 1 + 1));
         if (state->cursorCol) {
-          strncpy(new_line, state->text.lines[state->cursorLine], state->cursorCol);
+          strncpy(new_line, state->text->lines[state->cursorLine], state->cursorCol);
         }
         new_line[state->cursorCol] = c;
         new_line[state->cursorCol + 1] = '\0';
         if (current_line_len - state->cursorCol) {
-          strcat(new_line, state->text.lines[state->cursorLine] + state->cursorCol);
+          strcat(new_line, state->text->lines[state->cursorLine] + state->cursorCol);
         }
         new_line[current_line_len + 1] = '\0';
 
         printf("new_line:'%s'\n", new_line);
 
-        free(state->text.lines[state->cursorLine]);
-        state->text.lines[state->cursorLine] = new_line;
+        free(state->text->lines[state->cursorLine]);
+        state->text->lines[state->cursorLine] = new_line;
 
         ++state->cursorCol;
       }

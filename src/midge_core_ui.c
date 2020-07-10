@@ -41,7 +41,8 @@ int core_display_entry_handle_input_v1(int argc, void **argv)
   //       char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
   //       transcription[0] = '\0';
   //       int code_index = 0;
-  //       MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
+  //       MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc,
+  //       &transcription));
 
   //       printf("final transcription:\n%s\n", transcription);
 
@@ -119,8 +120,8 @@ int build_core_entry(node *core_display, const char *name)
   core_entry->data.visual.hidden = false;
   core_entry->data.visual.input_handler = &core_display_entry_handle_input;
 
-  MCcall(append_to_collection((void ***)&core_display->children, &core_display->children_alloc, &core_display->child_count,
-                              core_entry));
+  MCcall(append_to_collection((void ***)&core_display->children, &core_display->children_alloc,
+                              &core_display->child_count, core_entry));
 
   return 0;
 }
@@ -297,8 +298,9 @@ int build_core_display_v1(int argc, void **argv)
                               &command_hub->global_node->child_count, core_objects_display));
 
   MCcall(build_core_entry(core_objects_display, "special_update"));
-  MCcall(build_core_entry(core_objects_display, "function_editor_handle_input"));
+  MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
   MCcall(build_core_entry(core_objects_display, "function_editor_handle_keyboard_input"));
+  MCcall(build_core_entry(core_objects_display, "function_editor_handle_input"));
 
   MCcall(update_core_entries(core_objects_display));
 

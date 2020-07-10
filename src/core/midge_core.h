@@ -182,6 +182,7 @@ typedef enum {
 
 struct mc_struct_id_v1;
 struct mc_void_collection_v1;
+struct mc_text_line_list_v1;
 struct mc_key_value_pair_v1;
 struct mc_script_local_v1;
 struct mc_struct_info_v1;
@@ -196,6 +197,13 @@ struct mc_process_action_detail_v1;
 struct mc_process_unit_v1;
 struct mc_template_v1;
 struct mc_procedure_template_v1;
+
+typedef struct mc_text_line_list_v1 {
+  mc_struct_id_v1 *struct_id;
+  unsigned int lines_allocated;
+  unsigned int lines_count;
+  char **lines;
+} mc_text_line_list_v1;
 
 typedef struct mc_key_value_pair_v1 {
   mc_struct_id_v1 *struct_id;
@@ -480,10 +488,7 @@ typedef struct code_line {
 } code_line;
 typedef struct function_editor_state {
   code_line render_lines[FUNCTION_EDITOR_RENDERED_CODE_LINES];
-  struct {
-    uint lines_allocated, lines_count;
-    char **lines;
-  } text;
+  mc_text_line_list_v1 *text;
   uint font_resource_uid;
   uint line_display_offset;
   uint cursorCol, cursorLine;
@@ -498,7 +503,8 @@ int parse_past(const char *text, int *index, const char *sequence);
 int parse_past_number(const char *text, int *index, char **output);
 int parse_past_character_literal(const char *text, int *index, char **output);
 int mc_parse_past_literal_string(const char *text, int *index, char **output);
-int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access, bool include_referencing);
+int parse_past_identifier(const char *text, int *index, char **identifier, bool include_member_access,
+                          bool include_referencing);
 int parse_past_type_identifier(const char *text, int *index, char **identifier);
 int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra);
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
@@ -506,7 +512,8 @@ int increment_time_spec(struct timespec *time, struct timespec *amount, struct t
 int (*parse_and_process_function_definition)(char *function_definition_text, mc_function_info_v1 **function_definition,
                                              bool skip_clint_declaration);
 
-int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc, char **transcription);
+int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,
+                                char **transcription);
 
 int (*declare_function_pointer)(int, void **);
 int (*instantiate_function)(int, void **);
@@ -516,6 +523,7 @@ int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
 int (*build_function_editor)(int, void **);
 int (*function_editor_update)(int, void **);
+int (*move_cursor_up)(int, void **);
 int (*function_editor_handle_keyboard_input)(int, void **);
 int (*function_editor_handle_input)(int, void **);
 int (*function_editor_render)(int, void **);

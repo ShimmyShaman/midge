@@ -814,9 +814,18 @@ int parse_past_empty_text(char const *const code, int *i)
 
 int parse_past_conformed_type_declaration(function_info *owner, char *code, int *i, char **type_declaration)
 {
+  *type_declaration = NULL;
+
   bool leadingConst = !strncmp(code + *i, "const", 5);
   if (leadingConst) {
     MCcall(parse_past(code, i, "const"));
+    MCcall(parse_past_empty_text(code, i));
+  }
+
+  char *primitive_modifier = NULL;
+  if (!strncmp(code + *i, "unsigned", 8)) {
+    allocate_and_copy_cstr(primitive_modifier, "unsigned ");
+    MCcall(parse_past(code, i, "unsigned"));
     MCcall(parse_past_empty_text(code, i));
   }
 
@@ -824,6 +833,13 @@ int parse_past_conformed_type_declaration(function_info *owner, char *code, int 
   MCcall(parse_past_empty_text(code, i));
 
   printf("ppctd-0:'%s'\n", *type_declaration);
+  if (primitive_modifier) {
+    char *prependedModStr = (char *)malloc(sizeof(char) * (strlen(primitive_modifier) + strlen(*type_declaration) + 1));
+    strcpy(prependedModStr, primitive_modifier);
+    strcat(prependedModStr, *type_declaration);
+    free(*type_declaration);
+    *type_declaration = prependedModStr;
+  }
   if (leadingConst) {
     char *prependedConstStr = (char *)malloc(sizeof(char) * (6 + strlen(*type_declaration) + 1));
     strcpy(prependedConstStr, "const ");
@@ -2528,24 +2544,25 @@ int transcribe_function_call(function_info *owner, char *code, int *i, uint *tra
   else {
     MCcall(append_to_cstr(transcription_alloc, transcription, "{\n"));
     MCcall(append_to_cstr(transcription_alloc, transcription, "  void *mc_vargs["));
-    char buf[4];
+    char buf[256];
     sprintf(buf, "%i", argument_count);
     MCcall(append_to_cstr(transcription_alloc, transcription, buf));
     MCcall(append_to_cstr(transcription_alloc, transcription, "];\n"));
     for (int j = 0; j < argument_count; ++j) {
-      MCcall(append_to_cstr(transcription_alloc, transcription, "  mc_vargs["));
-      sprintf(buf, "%i", j);
+      if (arguments[j][0] == '&') {
+        sprintf(buf,
+                "  void *p_mc_vargs_%i = (void *)&%s;\n"
+                "  mc_vargs[%i] = (void *)&p_mc_vargs_%i;\n",
+                j, arguments[j] + 1, j, j);
+      }
+      else {
+        sprintf(buf, "  mc_vargs[%i] = (void *)&%s;\n", j, arguments[j]);
+      }
       MCcall(append_to_cstr(transcription_alloc, transcription, buf));
-      MCcall(append_to_cstr(transcription_alloc, transcription, "] = (void *)&"));
-      MCcall(append_to_cstr(transcription_alloc, transcription, arguments[j]));
-      MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
     }
-    MCcall(append_to_cstr(transcription_alloc, transcription, "  "));
-    MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
-    MCcall(append_to_cstr(transcription_alloc, transcription, "("));
-    sprintf(buf, "%i", argument_count);
+
+    sprintf(buf, "  %s(%i, mc_vargs);\n", identifier, argument_count);
     MCcall(append_to_cstr(transcription_alloc, transcription, buf));
-    MCcall(append_to_cstr(transcription_alloc, transcription, ", mc_vargs);\n"));
     MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
   }
 
@@ -3206,11 +3223,11 @@ int load_existing_function_into_function_editor(function_info *function)
   node *function_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
   function_editor_state *feState = (function_editor_state *)function_editor->extra;
   feState->func_info = function;
-  for (int j = 0; j < feState->text.lines_count; ++j) {
-    free(feState->text.lines[j]);
-    feState->text.lines[j] = NULL;
+  for (int j = 0; j < feState->text->lines_count; ++j) {
+    free(feState->text->lines[j]);
+    feState->text->lines[j] = NULL;
   }
-  feState->text.lines_count = 0;
+  feState->text->lines_count = 0;
 
   // Line Alloc
   uint line_alloc = 32;
@@ -3238,7 +3255,7 @@ int load_existing_function_into_function_editor(function_info *function)
     append_to_cstr(&line_alloc, &line, function->parameters[i]->name);
   }
   append_to_cstr(&line_alloc, &line, ") {");
-  feState->text.lines[feState->text.lines_count++] = line;
+  feState->text->lines[feState->text->lines_count++] = line;
 
   // Code Block
   {
@@ -3279,26 +3296,26 @@ int load_existing_function_into_function_editor(function_info *function)
         }
 
         // Add to the collection
-        if (feState->text.lines_count + 1 >= feState->text.lines_allocated) {
-          uint new_alloc = feState->text.lines_allocated + 4 + feState->text.lines_allocated / 4;
+        if (feState->text->lines_count + 1 >= feState->text->lines_allocated) {
+          uint new_alloc = feState->text->lines_allocated + 4 + feState->text->lines_allocated / 4;
           char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-          if (feState->text.lines_allocated) {
-            memcpy(new_ary, feState->text.lines, feState->text.lines_allocated * sizeof(char *));
-            free(feState->text.lines);
+          if (feState->text->lines_allocated) {
+            memcpy(new_ary, feState->text->lines, feState->text->lines_allocated * sizeof(char *));
+            free(feState->text->lines);
           }
-          for (int i = feState->text.lines_allocated; i < new_alloc; ++i) {
+          for (int i = feState->text->lines_allocated; i < new_alloc; ++i) {
             new_ary[i] = NULL;
           }
 
-          feState->text.lines_allocated = new_alloc;
-          feState->text.lines = new_ary;
+          feState->text->lines_allocated = new_alloc;
+          feState->text->lines = new_ary;
         }
 
-        feState->text.lines[feState->text.lines_count++] = line;
-        // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s,
-        // feState->text.lines[feState->text.lines_count - 1]); printf("strlen:%zu\n",
-        // strlen(feState->text.lines[feState->text.lines_count - 1])); if (feState->text.lines_count > 1)
-        //   printf("dawn:%c\n", feState->text.lines[1][4]);
+        feState->text->lines[feState->text->lines_count++] = line;
+        // printf("Line:(%i:%i)>'%s'\n", feState->text->lines_count - 1, i - s,
+        // feState->text->lines[feState->text->lines_count - 1]); printf("strlen:%zu\n",
+        // strlen(feState->text->lines[feState->text->lines_count - 1])); if (feState->text->lines_count > 1)
+        //   printf("dawn:%c\n", feState->text->lines[1][4]);
 
         // Reset
         s = i + 1;
@@ -3313,31 +3330,32 @@ int load_existing_function_into_function_editor(function_info *function)
   // Set for render update
   feState->line_display_offset = 0;
   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-    if (feState->line_display_offset + i < feState->text.lines_count) {
+    if (feState->line_display_offset + i < feState->text->lines_count) {
       // printf("life-6a\n");
       if (feState->render_lines[i].text) {
         // printf("life-6b\n");
         feState->render_lines[i].requires_render_update =
             feState->render_lines[i].requires_render_update ||
-            strcmp(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
+            strcmp(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
         // printf("life-6c\n");
         free(feState->render_lines[i].text);
         // printf("life-6d\n");
       }
       else {
         // printf("life-6e\n");
-        // printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text.lines_count);
-        // printf("dawn:%i\n", feState->text.lines_allocated);
-        // printf("dawn:%c\n", feState->text.lines[1][4]);
-        // printf("dawn:%zu\n", strlen(feState->text.lines[feState->line_display_offset + i]));
-        feState->render_lines[i].requires_render_update = feState->render_lines[i].requires_render_update ||
-                                                          !feState->text.lines[feState->line_display_offset + i] ||
-                                                          strlen(feState->text.lines[feState->line_display_offset + i]);
+        // printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text->lines_count);
+        // printf("dawn:%i\n", feState->text->lines_allocated);
+        // printf("dawn:%c\n", feState->text->lines[1][4]);
+        // printf("dawn:%zu\n", strlen(feState->text->lines[feState->line_display_offset + i]));
+        feState->render_lines[i].requires_render_update =
+            feState->render_lines[i].requires_render_update ||
+            !feState->text->lines[feState->line_display_offset + i] ||
+            strlen(feState->text->lines[feState->line_display_offset + i]);
       }
 
       // printf("life-6f\n");
       // Assign
-      allocate_and_copy_cstr(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
+      allocate_and_copy_cstr(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
       // printf("life-6g\n");
     }
     else {
@@ -3355,7 +3373,7 @@ int load_existing_function_into_function_editor(function_info *function)
 
   // printf("life-7\n");
   feState->cursorLine = 1;
-  feState->cursorCol = strlen(feState->text.lines[feState->cursorLine]);
+  feState->cursorCol = strlen(feState->text->lines[feState->cursorLine]);
 
   // printf("life-7a\n");
   function_editor->data.visual.hidden = false;
@@ -3466,10 +3484,10 @@ int load_existing_function_into_function_editor(function_info *function)
 //   // Begin Writing into the Function Editor textbox
 //   node *function_editor = (mc_node_v1 *)command_hub->global_node->children[0];
 //   function_editor_state *feState = (function_editor_state *)function_editor->extra;
-//   for (int j = 0; j < feState->text.lines_count; ++j) {
-//     free(feState->text.lines[j]);
+//   for (int j = 0; j < feState->text->lines_count; ++j) {
+//     free(feState->text->lines[j]);
 //   }
-//   feState->text.lines_count = 0;
+//   feState->text->lines_count = 0;
 
 //   // Line Alloc
 //   uint line_alloc = 2;
@@ -3536,27 +3554,27 @@ int load_existing_function_into_function_editor(function_info *function)
 //         }
 
 //         // Add to the collection
-//         if (feState->text.lines_count + 1 >= feState->text.lines_allocated) {
-//           uint new_alloc = feState->text.lines_allocated + 4 + feState->text.lines_allocated / 4;
+//         if (feState->text->lines_count + 1 >= feState->text->lines_allocated) {
+//           uint new_alloc = feState->text->lines_allocated + 4 + feState->text->lines_allocated / 4;
 //           char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-//           if (feState->text.lines_allocated) {
-//             memcpy(new_ary, feState->text.lines, feState->text.lines_allocated * sizeof(char *));
-//             free(feState->text.lines);
+//           if (feState->text->lines_allocated) {
+//             memcpy(new_ary, feState->text->lines, feState->text->lines_allocated * sizeof(char *));
+//             free(feState->text->lines);
 //           }
-//           for (int i = feState->text.lines_allocated; i < new_alloc; ++i) {
+//           for (int i = feState->text->lines_allocated; i < new_alloc; ++i) {
 //             new_ary[i] = NULL;
 //           }
 
-//           feState->text.lines_allocated = new_alloc;
-//           feState->text.lines = new_ary;
+//           feState->text->lines_allocated = new_alloc;
+//           feState->text->lines = new_ary;
 //         }
 
-//         feState->text.lines[feState->text.lines_count++] = line;
-//         // printf("Line:(%i:%i)>'%s'\n", feState->text.lines_count - 1, i - s,
-//         feState->text.lines[feState->text.lines_count -
-//         // 1]); printf("strlen:%zu\n", strlen(feState->text.lines[feState->text.lines_count - 1])); if
-//         // (feState->text.lines_count > 1)
-//         //   printf("dawn:%c\n", feState->text.lines[1][4]);
+//         feState->text->lines[feState->text->lines_count++] = line;
+//         // printf("Line:(%i:%i)>'%s'\n", feState->text->lines_count - 1, i - s,
+//         feState->text->lines[feState->text->lines_count -
+//         // 1]); printf("strlen:%zu\n", strlen(feState->text->lines[feState->text->lines_count - 1])); if
+//         // (feState->text->lines_count > 1)
+//         //   printf("dawn:%c\n", feState->text->lines[1][4]);
 
 //         // Reset
 //         s = i + 1;
@@ -3566,38 +3584,38 @@ int load_existing_function_into_function_editor(function_info *function)
 //       }
 //     }
 //   }
-//   // printf("dawn:%c\n", feState->text.lines[1][4]);
+//   // printf("dawn:%c\n", feState->text->lines[1][4]);
 //   // printf("life-6\n");
 
 //   // Set for render update
 //   feState->line_display_offset = 0;
 //   for (i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-//     if (feState->line_display_offset + i < feState->text.lines_count) {
+//     if (feState->line_display_offset + i < feState->text->lines_count) {
 //       printf("life-6a\n");
 //       if (feState->render_lines[i].text) {
 //         printf("life-6b\n");
 //         feState->render_lines[i].requires_render_update =
 //             feState->render_lines[i].requires_render_update ||
-//             strcmp(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
+//             strcmp(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
 //         printf("life-6c\n");
 //         free(feState->render_lines[i].text);
 //         printf("life-6d\n");
 //       }
 //       else {
 //         printf("life-6e\n");
-//         printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text.lines_count);
-//         printf("dawn:%i\n", feState->text.lines_allocated);
-//         printf("dawn:%c\n", feState->text.lines[1][4]);
-//         printf("dawn:%zu\n", strlen(feState->text.lines[feState->line_display_offset + i]));
+//         printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text->lines_count);
+//         printf("dawn:%i\n", feState->text->lines_allocated);
+//         printf("dawn:%c\n", feState->text->lines[1][4]);
+//         printf("dawn:%zu\n", strlen(feState->text->lines[feState->line_display_offset + i]));
 //         feState->render_lines[i].requires_render_update = feState->render_lines[i].requires_render_update ||
-//                                                           !feState->text.lines[feState->line_display_offset + i] ||
-//                                                           strlen(feState->text.lines[feState->line_display_offset +
+//                                                           !feState->text->lines[feState->line_display_offset + i] ||
+//                                                           strlen(feState->text->lines[feState->line_display_offset +
 //                                                           i]);
 //       }
 
 //       printf("life-6f\n");
 //       // Assign
-//       allocate_and_copy_cstr(feState->render_lines[i].text, feState->text.lines[feState->line_display_offset + i]);
+//       allocate_and_copy_cstr(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
 //       printf("life-6g\n");
 //     }
 //     else {
@@ -3615,7 +3633,7 @@ int load_existing_function_into_function_editor(function_info *function)
 
 //   printf("life-7\n");
 //   feState->cursorLine = 1;
-//   feState->cursorCol = strlen(feState->text.lines[feState->cursorLine]);
+//   feState->cursorCol = strlen(feState->text->lines[feState->cursorLine]);
 
 //   function_editor->data.visual.hidden = false;
 //   function_editor->data.visual.requires_render_update = true;
@@ -4191,28 +4209,28 @@ int read_function_from_editor(function_editor_state *state, char **function_decl
   code_from_function_editor[0] = '\0';
   uint bracket_count = 0;
   bool hit_code_block = false;
-  for (int i = 0; i < state->text.lines_count; ++i) {
+  for (int i = 0; i < state->text->lines_count; ++i) {
     for (int j = 0;; ++j) {
-      if (state->text.lines[i][j] == '\0') {
-        append_to_cstr(&code_allocation, &code_from_function_editor, state->text.lines[i]);
+      if (state->text->lines[i][j] == '\0') {
+        append_to_cstr(&code_allocation, &code_from_function_editor, state->text->lines[i]);
         append_to_cstr(&code_allocation, &code_from_function_editor, "\n");
         break;
       }
-      if (state->text.lines[i][j] == '{') {
+      if (state->text->lines[i][j] == '{') {
         ++bracket_count;
         if (!hit_code_block) {
           hit_code_block = true;
         }
       }
-      else if (state->text.lines[i][j] == '}') {
+      else if (state->text->lines[i][j] == '}') {
         --bracket_count;
         if (!bracket_count && hit_code_block) {
           // End
           // -- Copy up to now
-          append_to_cstrn(&code_allocation, &code_from_function_editor, state->text.lines[i], j + 1);
+          append_to_cstrn(&code_allocation, &code_from_function_editor, state->text->lines[i], j + 1);
 
           // -- Break from upper loop
-          i = state->text.lines_count;
+          i = state->text->lines_count;
           break;
         }
       }
@@ -4406,22 +4424,22 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
   code_from_function_editor[0] = '\0';
   uint bracket_count = 0;
   bool hit_code_block = false;
-  for (int i = 0; i < state->text.lines_count; ++i) {
+  for (int i = 0; i < state->text->lines_count; ++i) {
     int line_start_index = 0;
     for (int j = 0;; ++j) {
-      if (state->text.lines[i][j] == '\0') {
+      if (state->text->lines[i][j] == '\0') {
         if (j - line_start_index > 0) {
-          append_to_cstr(&code_allocation, &code_from_function_editor, state->text.lines[i] + line_start_index);
+          append_to_cstr(&code_allocation, &code_from_function_editor, state->text->lines[i] + line_start_index);
         }
         append_to_cstr(&code_allocation, &code_from_function_editor, "\n");
         break;
       }
-      if (state->text.lines[i][j] == '{') {
+      if (state->text->lines[i][j] == '{') {
         ++bracket_count;
         if (!hit_code_block) {
           hit_code_block = true;
           if (j - line_start_index > 0) {
-            append_to_cstr(&code_allocation, &code_from_function_editor, state->text.lines[i] + line_start_index);
+            append_to_cstr(&code_allocation, &code_from_function_editor, state->text->lines[i] + line_start_index);
           }
           function_header = code_from_function_editor;
           code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
@@ -4429,20 +4447,20 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
           line_start_index = j + 1;
         }
       }
-      else if (state->text.lines[i][j] == '}') {
+      else if (state->text->lines[i][j] == '}') {
         --bracket_count;
         if (!bracket_count && hit_code_block) {
           // End
           // -- Copy up to now
           if (j - line_start_index > 0) {
             char line_to_now[j - line_start_index + 1];
-            strncpy(line_to_now, state->text.lines[i] + line_start_index, j - line_start_index);
+            strncpy(line_to_now, state->text->lines[i] + line_start_index, j - line_start_index);
             line_to_now[j] = '\0';
             append_to_cstr(&code_allocation, &code_from_function_editor, line_to_now);
           }
 
           // -- Break from upper loop
-          i = state->text.lines_count;
+          i = state->text->lines_count;
           break;
         }
       }
@@ -4590,21 +4608,21 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //     if (!state->cursorCol) {
 //       if (state->cursorLine) {
 //         // Combine previous line & second line into one
-//         int previous_line_len = strlen(state->text.lines[state->cursorLine - 1]);
+//         int previous_line_len = strlen(state->text->lines[state->cursorLine - 1]);
 //         char *combined = (char *)malloc(sizeof(char) * (previous_line_len +
-//         strlen(state->text.lines[state->cursorLine]) + 1)); strcpy(combined, state->text.lines[state->cursorLine -
-//         1]); strcat(combined, state->text.lines[state->cursorLine]);
+//         strlen(state->text->lines[state->cursorLine]) + 1)); strcpy(combined, state->text->lines[state->cursorLine -
+//         1]); strcat(combined, state->text->lines[state->cursorLine]);
 
-//         free(state->text.lines[state->cursorLine - 1]);
-//         free(state->text.lines[state->cursorLine]);
-//         state->text.lines[state->cursorLine - 1] = combined;
+//         free(state->text->lines[state->cursorLine - 1]);
+//         free(state->text->lines[state->cursorLine]);
+//         state->text->lines[state->cursorLine - 1] = combined;
 
 //         // Bring all lines up one position
-//         for (int i = state->cursorLine + 1; i < state->text.lines_count; ++i) {
-//           state->text.lines[i - 1] = state->text.lines[i];
+//         for (int i = state->cursorLine + 1; i < state->text->lines_count; ++i) {
+//           state->text->lines[i - 1] = state->text->lines[i];
 //         }
-//         state->text.lines[state->text.lines_count - 1] = NULL;
-//         --state->text.lines_count;
+//         state->text->lines[state->text->lines_count - 1] = NULL;
+//         --state->text->lines_count;
 
 //         --state->cursorLine;
 //         state->cursorCol = previous_line_len;
@@ -4613,9 +4631,9 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //     }
 
 //     // Bring all forward characters back one
-//     int line_len = strlen(state->text.lines[state->cursorLine]);
+//     int line_len = strlen(state->text->lines[state->cursorLine]);
 //     for (int i = state->cursorCol - 1; i < line_len; ++i) {
-//       state->text.lines[state->cursorLine][i] = state->text.lines[state->cursorLine][i + 1];
+//       state->text->lines[state->cursorLine][i] = state->text->lines[state->cursorLine][i + 1];
 //     }
 
 //     --state->cursorCol;
@@ -4656,7 +4674,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //     }
 //     else {
 //       // Newline -- carrying over any extra
-//       char *cursorLine = state->text.lines[state->cursorLine];
+//       char *cursorLine = state->text->lines[state->cursorLine];
 
 //       printf("fehi-0\n");
 //       // Automatic indent
@@ -4668,29 +4686,29 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //       }
 
 //       // Increment lines after by one place
-//       if (state->text.lines_count + 1 >= state->text.lines_allocated) {
-//         uint new_alloc = state->text.lines_allocated + 4 + state->text.lines_allocated / 4;
+//       if (state->text->lines_count + 1 >= state->text->lines_allocated) {
+//         uint new_alloc = state->text->lines_allocated + 4 + state->text->lines_allocated / 4;
 //         char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-//         if (state->text.lines_allocated) {
-//           memcpy(new_ary, state->text.lines, state->text.lines_allocated * sizeof(char *));
-//           free(state->text.lines);
+//         if (state->text->lines_allocated) {
+//           memcpy(new_ary, state->text->lines, state->text->lines_allocated * sizeof(char *));
+//           free(state->text->lines);
 //         }
-//         for (int i = state->text.lines_allocated; i < new_alloc; ++i) {
+//         for (int i = state->text->lines_allocated; i < new_alloc; ++i) {
 //           new_ary[i] = NULL;
 //         }
 
-//         state->text.lines_allocated = new_alloc;
-//         state->text.lines = new_ary;
+//         state->text->lines_allocated = new_alloc;
+//         state->text->lines = new_ary;
 //       }
-//       // printf("state->text.lines_allocated:%u state->text.lines_count:%u state->cursorLine:%u\n",
-//       state->text.lines_allocated,
-//       //        state->text.lines_count, state->cursorLine);
-//       for (int i = state->text.lines_count; i > state->cursorLine + 1; --i) {
+//       // printf("state->text->lines_allocated:%u state->text->lines_count:%u state->cursorLine:%u\n",
+//       state->text->lines_allocated,
+//       //        state->text->lines_count, state->cursorLine);
+//       for (int i = state->text->lines_count; i > state->cursorLine + 1; --i) {
 
-//         state->text.lines[i] = state->text.lines[i - 1];
+//         state->text->lines[i] = state->text->lines[i - 1];
 //       }
-//       state->text.lines[state->cursorLine + 1] = NULL;
-//       ++state->text.lines_count;
+//       state->text->lines[state->cursorLine + 1] = NULL;
+//       ++state->text->lines_count;
 
 //       // printf("fehi-1\n");
 //       if (state->cursorCol >= cursorLineLen) {
@@ -4701,7 +4719,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //           newLine[i] = ' ';
 //         }
 //         newLine[automaticIndent] = '\0';
-//         state->text.lines[state->cursorLine + 1] = newLine;
+//         state->text->lines[state->cursorLine + 1] = newLine;
 //       }
 //       else if (state->cursorCol) {
 //         // printf("fehi-1B\n");
@@ -4719,16 +4737,16 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //         secondSplit[cursorLineLen - state->cursorCol] = '\0';
 
 //         free(cursorLine);
-//         state->text.lines[state->cursorLine] = firstSplit;
-//         state->text.lines[state->cursorLine + 1] = secondSplit;
+//         state->text->lines[state->cursorLine] = firstSplit;
+//         state->text->lines[state->cursorLine + 1] = secondSplit;
 //       }
 //       else {
 //         // printf("fehi-1C\n");
 //         // Move the rest of the current line forwards
-//         state->text.lines[state->cursorLine + 1] = cursorLine;
-//         state->text.lines[state->cursorLine] = (char *)malloc(sizeof(char) * (automaticIndent + 1));
+//         state->text->lines[state->cursorLine + 1] = cursorLine;
+//         state->text->lines[state->cursorLine] = (char *)malloc(sizeof(char) * (automaticIndent + 1));
 //         for (int i = 0; i < automaticIndent; ++i) {
-//           state->text.lines[state->cursorLine][i] = ' ';
+//           state->text->lines[state->cursorLine][i] = ' ';
 //         }
 //       }
 
@@ -4748,19 +4766,19 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 
 //     // Update the text
 //     {
-//       int current_line_len = strlen(state->text.lines[state->cursorLine]);
+//       int current_line_len = strlen(state->text->lines[state->cursorLine]);
 //       char *new_line = (char *)malloc(sizeof(char) * (current_line_len + 1 + 1));
 //       if (state->cursorCol) {
-//         strncpy(new_line, state->text.lines[state->cursorLine], state->cursorCol);
+//         strncpy(new_line, state->text->lines[state->cursorLine], state->cursorCol);
 //       }
 //       new_line[state->cursorCol] = c;
 //       if (current_line_len - state->cursorCol) {
-//         strcat(new_line + state->cursorCol + 1, state->text.lines[state->cursorLine]);
+//         strcat(new_line + state->cursorCol + 1, state->text->lines[state->cursorLine]);
 //       }
 //       new_line[current_line_len + 1] = '\0';
 
-//       free(state->text.lines[state->cursorLine]);
-//       state->text.lines[state->cursorLine] = new_line;
+//       free(state->text->lines[state->cursorLine]);
+//       state->text->lines[state->cursorLine] = new_line;
 
 //       ++state->cursorCol;
 //     }
@@ -4807,7 +4825,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //   // printf("fehi-4\n");
 //   // Update all modified rendered lines
 //   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-//     if (i + state->line_display_offset >= state->text.lines_count) {
+//     if (i + state->line_display_offset >= state->text->lines_count) {
 
 //       // printf("fehi-5\n");
 //       if (!state->render_lines[i].text)
@@ -4819,16 +4837,16 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //     }
 //     else {
 //       // printf("fehi-6\n");
-//       if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text.lines[i +
+//       if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text->lines[i +
 //       state->line_display_offset]))
 //         continue;
 
-//       // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i +
+//       // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text->lines[i +
 //       state->line_display_offset]);
 //       // Update
 //       if (state->render_lines[i].text)
 //         free(state->render_lines[i].text);
-//       allocate_and_copy_cstr(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+//       allocate_and_copy_cstr(state->render_lines[i].text, state->text->lines[i + state->line_display_offset]);
 //     }
 
 //     // printf("fehi-7\n");
@@ -4954,9 +4972,10 @@ int build_function_editor_v1(int argc, void **argv)
   state->cursorLine = 0;
   state->cursorCol = 0;
   state->line_display_offset = 0;
-  state->text.lines_allocated = 8;
-  state->text.lines = (char **)calloc(sizeof(char *), state->text.lines_allocated);
-  state->text.lines_count = 0;
+  state->text = (mc_text_line_list_v1 *)malloc(sizeof(mc_text_line_list_v1));
+  state->text->lines_allocated = 8;
+  state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_allocated);
+  state->text->lines_count = 0;
 
   code_line *code_lines = state->render_lines;
   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {

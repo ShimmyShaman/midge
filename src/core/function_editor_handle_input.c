@@ -39,7 +39,7 @@ void function_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_i
   //   printf("fehi-4\n");
   // Update all modified rendered lines
   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
-    if (i + state->line_display_offset >= state->text.lines_count) {
+    if (i + state->line_display_offset >= state->text->lines_count) {
 
       // printf("fehi-5\n");
       if (!state->render_lines[i].text) {
@@ -53,16 +53,16 @@ void function_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_i
     else {
       //   printf("fehi-6\n");
       if (state->render_lines[i].text &&
-          !strcmp(state->render_lines[i].text, state->text.lines[i + state->line_display_offset])) {
+          !strcmp(state->render_lines[i].text, state->text->lines[i + state->line_display_offset])) {
         continue;
       }
 
-      // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+      // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text->lines[i + state->line_display_offset]);
       // Update
       if (state->render_lines[i].text) {
         free(state->render_lines[i].text);
       }
-      allocate_and_copy_cstr(state->render_lines[i].text, state->text.lines[i + state->line_display_offset]);
+      allocate_and_copy_cstr(state->render_lines[i].text, state->text->lines[i + state->line_display_offset]);
     }
 
     // printf("fehi-7\n");
