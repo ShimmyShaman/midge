@@ -5720,7 +5720,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   fread(input, sizeof(char), fsize, f);
   input[fsize] = '\0';
   fclose(f);
-  printf("file-read(%li):\n%s<EOF>\n###########################\n", fsize, input);
+  // printf("file-read(%li):\n%s<EOF>\n###########################\n", fsize, input);
 
   // Find the index of the function declaration
   int offset = 0;
@@ -5738,7 +5738,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
           for (int j = i + 15; isdigit(input[j]); ++j) {
             function_iteration = function_iteration * 10 + (input[j] - '0');
           }
-          printf("function_iteration=%u '%c'\n", function_iteration, input[i + 14]);
+          // printf("function_iteration=%u '%c'\n", function_iteration, input[i + 14]);
         }
         if (in_comment == 1 && input[i] == '*' && input[i + 1] == '/') {
           in_comment = 0;

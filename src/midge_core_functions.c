@@ -832,7 +832,7 @@ int parse_past_conformed_type_declaration(function_info *owner, char *code, int 
   MCcall(_parse_past_conformed_type_identifier(owner, code, i, type_declaration));
   MCcall(parse_past_empty_text(code, i));
 
-  printf("ppctd-0:'%s'\n", *type_declaration);
+  // printf("ppctd-0:'%s'\n", *type_declaration);
   if (primitive_modifier) {
     char *prependedModStr = (char *)malloc(sizeof(char) * (strlen(primitive_modifier) + strlen(*type_declaration) + 1));
     strcpy(prependedModStr, primitive_modifier);
@@ -848,14 +848,14 @@ int parse_past_conformed_type_declaration(function_info *owner, char *code, int 
     *type_declaration = prependedConstStr;
   }
 
-  printf("ppctd-1:'%s'\n", *type_declaration);
+  // printf("ppctd-1:'%s'\n", *type_declaration);
   uint type_declaration_alloc = strlen(*type_declaration) + 1;
   while (1) {
     if (!strncmp(code + *i, "const", 5)) {
       MCcall(append_to_cstr(&type_declaration_alloc, type_declaration, " const"));
       MCcall(parse_past(code, i, "const"));
       MCcall(parse_past_empty_text(code, i));
-      printf("ppctd-2:'%s'\n", *type_declaration);
+      // printf("ppctd-2:'%s'\n", *type_declaration);
       continue;
     }
 
@@ -870,12 +870,12 @@ int parse_past_conformed_type_declaration(function_info *owner, char *code, int 
       for (int j = 0; j < type_deref_count; ++j) {
         MCcall(append_to_cstr(&type_declaration_alloc, type_declaration, "*"));
       }
-      printf("ppctd-3:'%s'\n", *type_declaration);
+      // printf("ppctd-3:'%s'\n", *type_declaration);
       continue;
     }
     break;
   }
-  printf("ppctd-f:'%s'\n", *type_declaration);
+  // printf("ppctd-f:'%s'\n", *type_declaration);
 
   return 0;
 }
@@ -2260,7 +2260,7 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
   MCcall(parse_past_empty_text(code, i));
 
   MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
-  printf("returned from cblock: ifstate\n");
+  // printf("returned from cblock: ifstate\n");
   MCcall(parse_past(code, i, "}"));
   MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
 
@@ -2285,7 +2285,7 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
         MCcall(append_to_cstr(transcription_alloc, transcription, "else {\n"));
 
         MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
-        printf("returned from cblock: ifstatement\n");
+        // printf("returned from cblock: ifstatement\n");
 
         MCcall(parse_past(code, i, "}"));
         MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
@@ -2458,12 +2458,12 @@ int transcribe_return_statement(function_info *owner, char *code, int *i, uint *
   MCcall(parse_past(code, i, "return"));
   MCcall(parse_past_empty_text(code, i));
 
-  printf("trs-0\n");
-  printf("converted return_type:%s-%u\n", owner->return_type.name, owner->return_type.deref_count);
-  printf("trs-%i\n", owner->return_type.deref_count);
-  printf("trs-0\n");
+  // printf("trs-0\n");
+  // printf("converted return_type:%s-%u\n", owner->return_type.name, owner->return_type.deref_count);
+  // printf("trs-%i\n", owner->return_type.deref_count);
+  // printf("trs-0\n");
   if (owner->return_type.deref_count || strcmp(owner->return_type.name, "void")) {
-    printf("trs-1\n");
+    // printf("trs-1\n");
     MCcall(append_to_cstr(transcription_alloc, transcription, "mc_return_value = "));
 
     int s = *i;
@@ -2478,10 +2478,10 @@ int transcribe_return_statement(function_info *owner, char *code, int *i, uint *
   }
   MCcall(parse_past(code, i, ";"));
 
-  printf("trs-3\n");
+  // printf("trs-3\n");
   MCcall(append_to_cstr(transcription_alloc, transcription, "\nreturn 0;\n"));
 
-  printf("trs-4\n");
+  // printf("trs-4\n");
   return 0;
 }
 
@@ -4320,7 +4320,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     }
   }
 
-  printf("papfd-0\n");
+  // printf("papfd-0\n");
   func_info->struct_usage_count = 0;
   func_info->parameter_count = 0;
   func_info->variable_parameter_begin_index = -1;
@@ -4359,7 +4359,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   MCcall(parse_past(function_definition_text, &index, ")"));
   MCcall(parse_past_empty_text(function_definition_text, &index));
 
-  printf("papfd-2\n");
+  // printf("papfd-2\n");
   func_info->parameter_count = parameter_count;
   func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * parameter_count);
   for (int p = 0; p < parameter_count; ++p) {
@@ -4376,13 +4376,13 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   MCcall(parse_past(function_definition_text, &index, "{"));
   MCcall(parse_past_empty_text(function_definition_text, &index));
 
-  printf("papfd-3\n");
+  // printf("papfd-3\n");
   // Find the index of the last closing curly bracket
   int last_curly_index = strlen(function_definition_text) - 1;
   {
     bool found_curly = false;
     while (1) {
-      printf(":%c:\n", function_definition_text[last_curly_index]);
+      // printf(":%c:\n", function_definition_text[last_curly_index]);
       if (function_definition_text[last_curly_index] == '}') {
         --last_curly_index;
         while (function_definition_text[last_curly_index] == ' ' &&
@@ -4401,13 +4401,13 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     MCerror(4126, "TODO");
   }
 
-  printf("papfd-4\n");
+  // printf("papfd-4\n");
   char *code_block = (char *)malloc(sizeof(char) * (last_curly_index - index + 1));
   strncpy(code_block, function_definition_text + index, last_curly_index - index);
   code_block[last_curly_index - index] = '\0';
   func_info->mc_code = code_block;
 
-  printf("papfd-5\n");
+  // printf("papfd-5\n");
   *function_definition = func_info;
   return 0;
 }
