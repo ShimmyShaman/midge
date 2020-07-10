@@ -1,15 +1,15 @@
-/* function_editor_handle_input.c */
+/* code_editor_handle_input.c */
 
 #include "core/midge_core.h"
 
-void function_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
-//   printf("function_editor_handle_input-begin\n");
+void code_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
+//   printf("code_editor_handle_input-begin\n");
 
   if (fedit->data.visual.hidden) {
     return;
   }
 
-  function_editor_state *state = (function_editor_state *)fedit->extra;
+  code_editor_state *state = (code_editor_state *)fedit->extra;
 
   event->handled = true;
 
@@ -29,7 +29,7 @@ void function_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_i
   }
   else if (event->type == INPUT_EVENT_KEY_PRESS) {
     // printf("fehi-3a\n");
-    function_editor_handle_keyboard_input(elapsed, fedit, event);
+    code_editor_handle_keyboard_input(elapsed, fedit, event);
     // printf("fehi-3b\n");
   }
   else {
@@ -38,7 +38,7 @@ void function_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_i
 
   //   printf("fehi-4\n");
   // Update all modified rendered lines
-  for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+  for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
     if (i + state->line_display_offset >= state->text->lines_count) {
 
       // printf("fehi-5\n");

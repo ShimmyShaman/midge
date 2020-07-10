@@ -478,7 +478,7 @@ typedef struct mc_procedure_template_v1 {
 
 } mc_procedure_template_v1;
 
-#define FUNCTION_EDITOR_RENDERED_CODE_LINES 37
+#define CODE_EDITOR_RENDERED_CODE_LINES 37
 typedef struct code_line {
   uint index;
   bool requires_render_update;
@@ -486,8 +486,8 @@ typedef struct code_line {
   char *text;
   uint width, height;
 } code_line;
-typedef struct function_editor_state {
-  code_line render_lines[FUNCTION_EDITOR_RENDERED_CODE_LINES];
+typedef struct code_editor_state {
+  code_line render_lines[CODE_EDITOR_RENDERED_CODE_LINES];
   mc_text_line_list_v1 *text;
   uint font_resource_uid;
   uint line_display_offset;
@@ -495,8 +495,8 @@ typedef struct function_editor_state {
   bool cursor_requires_render_update;
 
   mc_function_info_v1 *func_info;
-} function_editor_state;
-int load_existing_function_into_function_editor(mc_function_info_v1 *function);
+} code_editor_state;
+int load_existing_function_into_code_editor(mc_function_info_v1 *function);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);
@@ -521,12 +521,12 @@ int (*instantiate_function)(int, void **);
 int (*find_function_info)(int, void **);
 int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
-int (*build_function_editor)(int, void **);
-int (*function_editor_update)(int, void **);
+int (*build_code_editor)(int, void **);
+int (*code_editor_update)(int, void **);
 int (*move_cursor_up)(int, void **);
-int (*function_editor_handle_keyboard_input)(int, void **);
-int (*function_editor_handle_input)(int, void **);
-int (*function_editor_render)(int, void **);
+int (*code_editor_handle_keyboard_input)(int, void **);
+int (*code_editor_handle_input)(int, void **);
+int (*code_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
 int (*special_update)(int, void **);
 int (*build_core_display)(int, void **);

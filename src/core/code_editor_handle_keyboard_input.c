@@ -1,11 +1,11 @@
-/* function_editor_handle_keyboard_input.c */
+/* code_editor_handle_keyboard_input.c */
 
 #include "core/midge_core.h"
 
 // [_mc_iteration=1]
-void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
+void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
-  function_editor_state *state = (function_editor_state *)fedit->extra;
+  code_editor_state *state = (code_editor_state *)fedit->extra;
   printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
@@ -222,9 +222,9 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
     fedit->data.visual.requires_render_update = true;
 
     // Adjust display offset
-    if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+    if (state->cursorLine >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
       // Move display offset down
-      state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+      state->line_display_offset = state->cursorLine - CODE_EDITOR_RENDERED_CODE_LINES + 1;
     }
   } break;
   case KEY_CODE_ARROW_LEFT: {
@@ -265,9 +265,9 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
       state->cursorCol = 0;
 
       // Adjust display offset
-      if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+      if (state->cursorLine >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
         // Move display offset down
-        state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+        state->line_display_offset = state->cursorLine - CODE_EDITOR_RENDERED_CODE_LINES + 1;
       }
     }
     else {
@@ -315,9 +315,9 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
           fedit->data.visual.requires_render_update = true;
 
           // Adjust display offset
-          if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+          if (state->cursorLine >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
             // Move display offset down
-            state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+            state->line_display_offset = state->cursorLine - CODE_EDITOR_RENDERED_CODE_LINES + 1;
           }
         }
       } break;
@@ -371,9 +371,9 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
           state->cursorCol = 0;
 
           // Adjust display offset
-          if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+          if (state->cursorLine >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
             // Move display offset down
-            state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+            state->line_display_offset = state->cursorLine - CODE_EDITOR_RENDERED_CODE_LINES + 1;
           }
         }
         else {
@@ -402,9 +402,9 @@ void function_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedi
         fedit->data.visual.requires_render_update = true;
 
         // Adjust display offset
-        if (state->cursorLine >= state->line_display_offset + FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+        if (state->cursorLine >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
           // Move display offset down
-          state->line_display_offset = state->cursorLine - FUNCTION_EDITOR_RENDERED_CODE_LINES + 1;
+          state->line_display_offset = state->cursorLine - CODE_EDITOR_RENDERED_CODE_LINES + 1;
         }
       } break;
       case KEY_CODE_I: { // FROM KEY_CODE_ARROW_UP above (TODO refactor into function)

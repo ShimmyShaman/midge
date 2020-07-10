@@ -4,14 +4,14 @@
 
 #include "core/midge_core.h"
 
-const char *function_editor_handle_input_v1_code =
+const char *code_editor_handle_input_v1_code =
     "printf(\"fehi-0\\n\");\n"
     "\n"
     "if (fedit->data.visual.hidden) {\n"
     "  return;\n"
     "}\n"
     "\n"
-    "function_editor_state *state = (function_editor_state *)fedit->extra;\n"
+    "code_editor_state *state = (code_editor_state *)fedit->extra;\n"
     "\n"
     "event->handled = true;\n"
     "\n"
@@ -24,7 +24,7 @@ const char *function_editor_handle_input_v1_code =
     "  }\n"
     "}\n"
     "else if (event->type == INPUT_EVENT_KEY_PRESS) {\n"
-    "  function_editor_handle_keyboard_input(fedit, event);\n"
+    "  code_editor_handle_keyboard_input(fedit, event);\n"
     "}\n"
     "else {\n"
     "  return;\n"
@@ -32,7 +32,7 @@ const char *function_editor_handle_input_v1_code =
     "\n"
     "printf(\"fehi-4\\n\");\n"
     "// Update all modified rendered lines\n"
-    "for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {\n"
+    "for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {\n"
     "  if (i + state->line_display_offset >= state->text.lines_count) {\n"
     "\n"
     "    printf(\"fehi-5\\n\");\n"

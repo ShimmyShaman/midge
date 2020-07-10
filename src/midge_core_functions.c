@@ -3211,7 +3211,7 @@ int read_file(char *filepath, char **contents)
   return 0;
 }
 
-int load_existing_function_into_function_editor(function_info *function)
+int load_existing_function_into_code_editor(function_info *function)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
@@ -3220,8 +3220,8 @@ int load_existing_function_into_function_editor(function_info *function)
   printf("life-begin\n");
 
   // Begin Writing into the Function Editor textbox
-  node *function_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
-  function_editor_state *feState = (function_editor_state *)function_editor->extra;
+  node *code_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
+  code_editor_state *feState = (code_editor_state *)code_editor->extra;
   feState->func_info = function;
   for (int j = 0; j < feState->text->lines_count; ++j) {
     free(feState->text->lines[j]);
@@ -3329,7 +3329,7 @@ int load_existing_function_into_function_editor(function_info *function)
 
   // Set for render update
   feState->line_display_offset = 0;
-  for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+  for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
     if (feState->line_display_offset + i < feState->text->lines_count) {
       // printf("life-6a\n");
       if (feState->render_lines[i].text) {
@@ -3376,15 +3376,15 @@ int load_existing_function_into_function_editor(function_info *function)
   feState->cursorCol = strlen(feState->text->lines[feState->cursorLine]);
 
   // printf("life-7a\n");
-  function_editor->data.visual.hidden = false;
-  function_editor->data.visual.requires_render_update = true;
+  code_editor->data.visual.hidden = false;
+  code_editor->data.visual.requires_render_update = true;
 
   printf("ohfohe\n");
 
   return 0;
 }
 
-// int load_source_file_into_function_editor(char const *const core_function_name)
+// int load_source_file_into_code_editor(char const *const core_function_name)
 // {
 //   /*mcfuncreplace*/
 //   mc_command_hub_v1 *command_hub;
@@ -3482,8 +3482,8 @@ int load_existing_function_into_function_editor(function_info *function)
 //   int bracket_count = 1;
 
 //   // Begin Writing into the Function Editor textbox
-//   node *function_editor = (mc_node_v1 *)command_hub->global_node->children[0];
-//   function_editor_state *feState = (function_editor_state *)function_editor->extra;
+//   node *code_editor = (mc_node_v1 *)command_hub->global_node->children[0];
+//   code_editor_state *feState = (code_editor_state *)code_editor->extra;
 //   for (int j = 0; j < feState->text->lines_count; ++j) {
 //     free(feState->text->lines[j]);
 //   }
@@ -3525,7 +3525,7 @@ int load_existing_function_into_function_editor(function_info *function)
 //       bool copy_line = false;
 //       switch (function_definition_text[i]) {
 //       case '\0':
-//         MCerror(1576, "load_source_file_into_function_editor::Uneven bracket count");
+//         MCerror(1576, "load_source_file_into_code_editor::Uneven bracket count");
 //       case '\n': {
 //         printf("newline!\n");
 //         copy_line = true;
@@ -3589,7 +3589,7 @@ int load_existing_function_into_function_editor(function_info *function)
 
 //   // Set for render update
 //   feState->line_display_offset = 0;
-//   for (i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+//   for (i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
 //     if (feState->line_display_offset + i < feState->text->lines_count) {
 //       printf("life-6a\n");
 //       if (feState->render_lines[i].text) {
@@ -3635,8 +3635,8 @@ int load_existing_function_into_function_editor(function_info *function)
 //   feState->cursorLine = 1;
 //   feState->cursorCol = strlen(feState->text->lines[feState->cursorLine]);
 
-//   function_editor->data.visual.hidden = false;
-//   function_editor->data.visual.requires_render_update = true;
+//   code_editor->data.visual.hidden = false;
+//   code_editor->data.visual.requires_render_update = true;
 
 //   command_hub->interactive_console->input_line.text = "...";
 //   command_hub->interactive_console->input_line.requires_render_update = true;
@@ -3672,7 +3672,7 @@ int load_existing_function_into_function_editor(function_info *function)
 
 //     // Files
 //     // "parse_past"
-//     MCcall(load_source_file_into_function_editor("print_parse_error"));
+//     MCcall(load_source_file_into_code_editor("print_parse_error"));
 //   }
 //   else if (command_hub->interactive_console->logic.action_count == 2 && elapsed->app_secs >= 2 &&
 //            elapsed->app_nsecs >= 800 * 1e6) {
@@ -3691,7 +3691,7 @@ int load_existing_function_into_function_editor(function_info *function)
 //       event.type = INPUT_EVENT_KEY_PRESS;
 //       event.detail.keyboard.key = KEY_CODE_ENTER;
 //       vargs[2] = &event;
-//       MCcall(function_editor_handle_input(3, vargs));
+//       MCcall(code_editor_handle_input(3, vargs));
 //     }
 //   }
 //   {
@@ -4085,14 +4085,14 @@ int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs
   return 0;
 }
 
-int function_editor_render_v1(int argc, void **argv)
+int code_editor_render_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
   /*mcfuncreplace*/
 
-  // printf("function_editor_render_v1-a\n");
+  // printf("code_editor_render_v1-a\n");
   frame_time const *elapsed = *(frame_time const **)argv[0];
   mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 
@@ -4101,11 +4101,11 @@ int function_editor_render_v1(int argc, void **argv)
   image_render_queue *sequence;
   element_render_command *element_cmd;
   // Lines
-  function_editor_state *state = (function_editor_state *)visual_node->extra;
+  code_editor_state *state = (code_editor_state *)visual_node->extra;
   code_line *lines = state->render_lines;
 
   // printf("fer-b\n");
-  for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+  for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
     if (lines[i].requires_render_update) {
       lines[i].requires_render_update = false;
 
@@ -4152,7 +4152,7 @@ int function_editor_render_v1(int argc, void **argv)
   element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
 
   // printf("fer-n\n");
-  for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+  for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
     element_cmd->x = 2;
@@ -4177,18 +4177,18 @@ int function_editor_render_v1(int argc, void **argv)
   return 0;
 }
 
-int function_editor_update_v1(int argc, void **argv)
+int code_editor_update_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
                                   // find_struct_info/find_function_info and do the same there.
                                   /*mcfuncreplace*/
 
-  // printf("function_editor_update_v1-a\n");
+  // printf("code_editor_update_v1-a\n");
   frame_time const *elapsed = *(frame_time const **)argv[0];
   mc_node_v1 *fedit = (mc_node_v1 *)argv[1];
 
-  function_editor_state *state = (function_editor_state *)fedit->extra;
+  code_editor_state *state = (code_editor_state *)fedit->extra;
 
   // bool shouldCursorBeVisible= elapsed->app_nsec > 500000000L;
   // if(state->cursorVisible != shouldCursorBeVisible){
@@ -4198,22 +4198,22 @@ int function_editor_update_v1(int argc, void **argv)
   return 0;
 }
 
-int read_function_from_editor(function_editor_state *state, char **function_declaration)
+int read_function_from_editor(code_editor_state *state, char **function_declaration)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
   uint code_allocation = 64;
-  char *code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
-  code_from_function_editor[0] = '\0';
+  char *code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
+  code_from_code_editor[0] = '\0';
   uint bracket_count = 0;
   bool hit_code_block = false;
   for (int i = 0; i < state->text->lines_count; ++i) {
     for (int j = 0;; ++j) {
       if (state->text->lines[i][j] == '\0') {
-        append_to_cstr(&code_allocation, &code_from_function_editor, state->text->lines[i]);
-        append_to_cstr(&code_allocation, &code_from_function_editor, "\n");
+        append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i]);
+        append_to_cstr(&code_allocation, &code_from_code_editor, "\n");
         break;
       }
       if (state->text->lines[i][j] == '{') {
@@ -4227,7 +4227,7 @@ int read_function_from_editor(function_editor_state *state, char **function_decl
         if (!bracket_count && hit_code_block) {
           // End
           // -- Copy up to now
-          append_to_cstrn(&code_allocation, &code_from_function_editor, state->text->lines[i], j + 1);
+          append_to_cstrn(&code_allocation, &code_from_code_editor, state->text->lines[i], j + 1);
 
           // -- Break from upper loop
           i = state->text->lines_count;
@@ -4237,7 +4237,7 @@ int read_function_from_editor(function_editor_state *state, char **function_decl
     }
   }
 
-  *function_declaration = code_from_function_editor;
+  *function_declaration = code_from_code_editor;
   printf("function_declaration:\n%s\n", *function_declaration);
 
   return 0;
@@ -4412,7 +4412,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   return 0;
 }
 
-int read_and_declare_function_from_editor(function_editor_state *state, function_info **defined_function_info)
+int read_and_declare_function_from_editor(code_editor_state *state, function_info **defined_function_info)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
@@ -4420,8 +4420,8 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 
   uint code_allocation = 64;
   char *function_header;
-  char *code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
-  code_from_function_editor[0] = '\0';
+  char *code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
+  code_from_code_editor[0] = '\0';
   uint bracket_count = 0;
   bool hit_code_block = false;
   for (int i = 0; i < state->text->lines_count; ++i) {
@@ -4429,9 +4429,9 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
     for (int j = 0;; ++j) {
       if (state->text->lines[i][j] == '\0') {
         if (j - line_start_index > 0) {
-          append_to_cstr(&code_allocation, &code_from_function_editor, state->text->lines[i] + line_start_index);
+          append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i] + line_start_index);
         }
-        append_to_cstr(&code_allocation, &code_from_function_editor, "\n");
+        append_to_cstr(&code_allocation, &code_from_code_editor, "\n");
         break;
       }
       if (state->text->lines[i][j] == '{') {
@@ -4439,11 +4439,11 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
         if (!hit_code_block) {
           hit_code_block = true;
           if (j - line_start_index > 0) {
-            append_to_cstr(&code_allocation, &code_from_function_editor, state->text->lines[i] + line_start_index);
+            append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i] + line_start_index);
           }
-          function_header = code_from_function_editor;
-          code_from_function_editor = (char *)malloc(sizeof(char) * code_allocation);
-          code_from_function_editor[0] = '\0';
+          function_header = code_from_code_editor;
+          code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
+          code_from_code_editor[0] = '\0';
           line_start_index = j + 1;
         }
       }
@@ -4456,7 +4456,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
             char line_to_now[j - line_start_index + 1];
             strncpy(line_to_now, state->text->lines[i] + line_start_index, j - line_start_index);
             line_to_now[j] = '\0';
-            append_to_cstr(&code_allocation, &code_from_function_editor, line_to_now);
+            append_to_cstr(&code_allocation, &code_from_code_editor, line_to_now);
           }
 
           // -- Break from upper loop
@@ -4534,7 +4534,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
   func_info->struct_usage_count = 0;
   func_info->parameter_count = 0;
   func_info->variable_parameter_begin_index = -1;
-  func_info->mc_code = code_from_function_editor;
+  func_info->mc_code = code_from_code_editor;
 
   MCcall(convert_return_type_string(return_type, &func_info->return_type.name, &func_info->return_type.deref_count));
   free(return_type);
@@ -4590,7 +4590,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
   return 0;
 }
 
-// int function_editor_handle_keyboard_input(int argc, void **argv)
+// int code_editor_handle_keyboard_input(int argc, void **argv)
 // {
 //   /*mcfuncreplace*/
 //   mc_command_hub_v1 *command_hub;
@@ -4600,7 +4600,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //   mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
 //   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
-//   function_editor_state *state = (function_editor_state *)fedit->extra;
+//   code_editor_state *state = (code_editor_state *)fedit->extra;
 
 //   switch (event->detail.keyboard.key) {
 //   case KEY_CODE_BACKSPACE: {
@@ -4788,13 +4788,13 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //   return 0;
 // }
 
-// int function_editor_handle_input_v1(int argc, void **argv)
+// int code_editor_handle_input_v1(int argc, void **argv)
 // {
 //   /*mcfuncreplace*/
 //   mc_command_hub_v1 *command_hub;
 //   /*mcfuncreplace*/
 
-//   // printf("function_editor_handle_input_v1-a\n");
+//   // printf("code_editor_handle_input_v1-a\n");
 //   frame_time *elapsed = *(frame_time **)argv[0];
 //   mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
 //   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
@@ -4802,7 +4802,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //   if (fedit->data.visual.hidden)
 //     return 0;
 
-//   function_editor_state *state = (function_editor_state *)fedit->extra;
+//   code_editor_state *state = (code_editor_state *)fedit->extra;
 
 //   event->handled = true;
 
@@ -4816,7 +4816,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 //     }
 //   }
 //   else if (event->type == INPUT_EVENT_KEY_PRESS) {
-//     MCcall(function_editor_handle_keyboard_input(fedit, event));
+//     MCcall(code_editor_handle_keyboard_input(fedit, event));
 //   }
 //   else {
 //     return 0;
@@ -4824,7 +4824,7 @@ int read_and_declare_function_from_editor(function_editor_state *state, function
 
 //   // printf("fehi-4\n");
 //   // Update all modified rendered lines
-//   for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+//   for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
 //     if (i + state->line_display_offset >= state->text->lines_count) {
 
 //       // printf("fehi-5\n");
@@ -4867,11 +4867,11 @@ int debug_automation(int argc, void **argv)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  // printf("function_editor_update_v1-a\n");
+  // printf("code_editor_update_v1-a\n");
   frame_time const *elapsed = *(frame_time const **)argv[0];
   debug_data_state *debugState = (debug_data_state *)argv[1];
 
-  // function_editor_state *state = (function_editor_state *)fedit->extra;
+  // code_editor_state *state = (code_editor_state *)fedit->extra;
 
   switch (debugState->sequenceStep) {
   case 0: {
@@ -4902,7 +4902,7 @@ int debug_automation(int argc, void **argv)
     // Select
     ++debugState->sequenceStep;
 
-    // node *function_editor = (node *)command_hub->global_node->children[0];
+    // node *code_editor = (node *)command_hub->global_node->children[0];
     // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
     // sim->type = INPUT_EVENT_KEY_PRESS;
     // sim->handled = false;
@@ -4915,7 +4915,7 @@ int debug_automation(int argc, void **argv)
     //   vargs[0] = argv[0];
     //   vargs[1] = &command_hub->global_node->children[0];
     //   vargs[2] = &sim;
-    //   MCcall(function_editor_handle_input(3, vargs));
+    //   MCcall(code_editor_handle_input(3, vargs));
     // }
 
     // free(sim);
@@ -4928,7 +4928,7 @@ int debug_automation(int argc, void **argv)
   return 0;
 }
 
-int build_function_editor_v1(int argc, void **argv)
+int build_code_editor_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
@@ -4943,7 +4943,7 @@ int build_function_editor_v1(int argc, void **argv)
   // Build the function editor window
   // Instantiate: node global;
   mc_node_v1 *fedit = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
-  fedit->name = "function_editor";
+  fedit->name = "code_editor";
   fedit->parent = command_hub->global_node;
   fedit->type = NODE_TYPE_VISUAL;
 
@@ -4953,9 +4953,9 @@ int build_function_editor_v1(int argc, void **argv)
   fedit->data.visual.bounds.height = 830;
   fedit->data.visual.image_resource_uid = 0;
   fedit->data.visual.requires_render_update = true;
-  fedit->data.visual.render_delegate = &function_editor_render_v1;
+  fedit->data.visual.render_delegate = &code_editor_render_v1;
   fedit->data.visual.hidden = true;
-  fedit->data.visual.input_handler = &function_editor_handle_input;
+  fedit->data.visual.input_handler = &code_editor_handle_input;
 
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
                               &command_hub->global_node->child_count, fedit));
@@ -4965,7 +4965,7 @@ int build_function_editor_v1(int argc, void **argv)
   resource_command *command;
 
   // Code Lines
-  function_editor_state *state = (function_editor_state *)malloc(sizeof(function_editor_state));
+  code_editor_state *state = (code_editor_state *)malloc(sizeof(code_editor_state));
   // printf("state:'%p'\n", state);
   state->func_info = NULL;
   state->font_resource_uid = 0;
@@ -4978,7 +4978,7 @@ int build_function_editor_v1(int argc, void **argv)
   state->text->lines_count = 0;
 
   code_line *code_lines = state->render_lines;
-  for (int i = 0; i < FUNCTION_EDITOR_RENDERED_CODE_LINES; ++i) {
+  for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
 
     code_lines[i].index = i;
     code_lines[i].requires_render_update = true;

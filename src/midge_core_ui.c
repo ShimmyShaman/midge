@@ -16,7 +16,7 @@ int core_display_entry_handle_input_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  //   // printf("function_editor_handle_input_v1-a\n");
+  //   // printf("code_editor_handle_input_v1-a\n");
   // frame_time const *elapsed = *(frame_time const **)argv[0];
   //   mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
   //   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
@@ -85,7 +85,7 @@ int core_display_entry_handle_input_v1(int argc, void **argv)
 
   //   // Update the rendered line for the text
   //   if (state->cursorLine > state->line_display_offset &&
-  //       state->cursorLine - state->line_display_offset < +FUNCTION_EDITOR_RENDERED_CODE_LINES) {
+  //       state->cursorLine - state->line_display_offset < +CODE_EDITOR_RENDERED_CODE_LINES) {
 
   //     if (state->render_lines[state->cursorLine - state->line_display_offset].text) {
   //       free(state->render_lines[state->cursorLine - state->line_display_offset].text);
@@ -245,11 +245,11 @@ int core_display_handle_input_v1(int argc, void **argv)
         if (function) {
           // Exists as function
           // Make visible the function editor and set
-          // mc_node_v1 *function_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way...
-          // function_editor->data.visual.hidden = false;
-          // function_editor->data.visual.requires_render_update = true;
+          // mc_node_v1 *code_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way...
+          // code_editor->data.visual.hidden = false;
+          // code_editor->data.visual.requires_render_update = true;
 
-          MCcall(load_existing_function_into_function_editor(function));
+          MCcall(load_existing_function_into_code_editor(function));
           break;
         }
       }
@@ -299,8 +299,8 @@ int build_core_display_v1(int argc, void **argv)
 
   MCcall(build_core_entry(core_objects_display, "special_update"));
   MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
-  MCcall(build_core_entry(core_objects_display, "function_editor_handle_keyboard_input"));
-  MCcall(build_core_entry(core_objects_display, "function_editor_handle_input"));
+  MCcall(build_core_entry(core_objects_display, "code_editor_handle_keyboard_input"));
+  MCcall(build_core_entry(core_objects_display, "code_editor_handle_input"));
 
   MCcall(update_core_entries(core_objects_display));
 

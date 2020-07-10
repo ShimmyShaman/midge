@@ -2510,7 +2510,7 @@ int mc_main(int argc, const char *const *argv)
   MCcall(init_core_functions(command_hub));
   MCcall(init_process_matrix(command_hub));
   // MCcall(build_interactive_console(0, NULL));
-  MCcall(build_function_editor(0, NULL));
+  MCcall(build_code_editor(0, NULL));
   MCcall(build_core_display(0, NULL));
   // return 0;
 
@@ -6053,17 +6053,17 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("conform_type_identity = &conform_type_identity_v1;");
   clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
   // clint_process("build_interactive_console = &build_interactive_console_v1;");
-  clint_process("build_function_editor = &build_function_editor_v1;");
-  clint_process("function_editor_update = &function_editor_update_v1;");
-  clint_process("function_editor_render = &function_editor_render_v1;");
+  clint_process("build_code_editor = &build_code_editor_v1;");
+  clint_process("code_editor_update = &code_editor_update_v1;");
+  clint_process("code_editor_render = &code_editor_render_v1;");
   clint_process("render_global_node = &render_global_node_v1;");
   clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;");
   clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;");
 
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
-  MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_keyboard_input"));
-  MCcall(parse_and_process_core_function(command_hub, "function_editor_handle_input"));
+  MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));
+  MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));
   printf("hopee\n");
 
   f = fopen("/home/jason/midge/src/midge_core_ui.c", "rb");
