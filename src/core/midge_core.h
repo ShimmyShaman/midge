@@ -525,15 +525,16 @@ int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
 int (*build_code_editor)(int, void **);
 int (*code_editor_update)(int, void **);
-int (*move_cursor_up)(int, void **);
 int (*code_editor_handle_keyboard_input)(int, void **);
 int (*code_editor_handle_input)(int, void **);
 int (*code_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
 int (*special_update)(int, void **);
 int (*build_core_display)(int, void **);
+int (*move_cursor_up)(int, void **);
 int (*core_display_handle_input)(int, void **);
 int (*core_display_entry_handle_input)(int, void **);
+int (*load_existing_struct_into_code_editor)(int, void **);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \
