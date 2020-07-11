@@ -5271,7 +5271,7 @@ int debug_automation(int argc, void **argv)
     sim->ctrlDown = false;
     sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
     sim->detail.mouse.x = 51;
-    sim->detail.mouse.y = 16;
+    sim->detail.mouse.y = 121;
     {
       void *vargs[3];
       vargs[0] = argv[0];
@@ -5356,7 +5356,7 @@ int build_code_editor_v1(int argc, void **argv)
   state->cursorLine = 0;
   state->cursorCol = 0;
   state->line_display_offset = 0;
-  state->text = (mc_text_line_list_v1 *)malloc(sizeof(mc_text_line_list_v1));
+  state->text = (mc_cstring_list_v1 *)malloc(sizeof(mc_cstring_list_v1));
   state->text->lines_allocated = 8;
   state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_allocated);
   state->text->lines_count = 0;

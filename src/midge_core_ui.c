@@ -259,8 +259,8 @@ int core_display_handle_input_v1(int argc, void **argv)
       if (p_struct_info) {
         {
           void *mc_vargs[2];
-          mc_vargs[0] = (void *)&p_struct_info;
-          mc_vargs[1] = (void *)&command_hub->global_node->children[0];
+          mc_vargs[0] = (void *)&command_hub->global_node->children[0];
+          mc_vargs[1] = (void *)&p_struct_info;
           MCcall(load_existing_struct_into_code_editor(2, mc_vargs));
         }
         break;

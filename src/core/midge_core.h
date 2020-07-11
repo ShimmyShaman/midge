@@ -182,7 +182,7 @@ typedef enum {
 
 struct mc_struct_id_v1;
 struct mc_void_collection_v1;
-struct mc_text_line_list_v1;
+struct mc_cstring_list_v1;
 struct mc_key_value_pair_v1;
 struct mc_script_local_v1;
 struct mc_struct_info_v1;
@@ -198,12 +198,12 @@ struct mc_process_unit_v1;
 struct mc_template_v1;
 struct mc_procedure_template_v1;
 
-typedef struct mc_text_line_list_v1 {
+typedef struct mc_cstring_list_v1 {
   mc_struct_id_v1 *struct_id;
   unsigned int lines_allocated;
   unsigned int lines_count;
   char **lines;
-} mc_text_line_list_v1;
+} mc_cstring_list_v1;
 
 typedef struct mc_key_value_pair_v1 {
   mc_struct_id_v1 *struct_id;
@@ -488,7 +488,7 @@ typedef struct code_line {
 } code_line;
 typedef struct mc_code_editor_state_v1 {
   code_line render_lines[CODE_EDITOR_RENDERED_CODE_LINES];
-  mc_text_line_list_v1 *text;
+  mc_cstring_list_v1 *text;
   uint font_resource_uid;
   uint line_display_offset;
   uint cursorCol, cursorLine;

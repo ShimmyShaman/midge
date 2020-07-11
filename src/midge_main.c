@@ -5850,7 +5850,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
 
     // typedef struct mc_code_editor_state_v1 {
     //   code_line render_lines[CODE_EDITOR_RENDERED_CODE_LINES];
-    //   mc_text_line_list_v1 *text;
+    //   mc_cstring_list_v1 *text;
     //   uint font_resource_uid;
     //   uint line_display_offset;
     //   uint cursorCol, cursorLine;
