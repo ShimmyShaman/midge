@@ -23,7 +23,7 @@
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
 #define NUM_DESCRIPTOR_SETS 1
-#define MAX_DESCRIPTOR_SETS 128
+#define MAX_DESCRIPTOR_SETS 4096
 
 /* Number of viewports and number of scissors have to be the same */
 /* at pipeline creation and in any call to set them dynamically   */
@@ -341,7 +341,8 @@ void mvk_destroy_instance(vk_render_state *p_vkrs);
 
 bool get_memory_type_index_from_properties(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask,
                                            uint32_t *typeIndex);
-VkResult createBuffer(vk_render_state *p_vkrs, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags mem_properties,
-                      VkBuffer *buffer, VkDeviceMemory *bufferMemory);
-VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader_text, std::vector<unsigned int> &spirv);
+VkResult createBuffer(vk_render_state *p_vkrs, VkDeviceSize size, VkBufferUsageFlags usage,
+                      VkMemoryPropertyFlags mem_properties, VkBuffer *buffer, VkDeviceMemory *bufferMemory);
+VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader_text,
+                   std::vector<unsigned int> &spirv);
 #endif // MVK_INIT_UTIL_H

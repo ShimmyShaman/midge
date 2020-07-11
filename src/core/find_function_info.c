@@ -19,7 +19,7 @@ function_info *find_function_info(node *nodespace, char *function_name)
 
     function_info *finfo = nodespace->functions[i];
 
-    printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
+    // printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
     if (strcmp(finfo->name, function_name))
       continue;
 

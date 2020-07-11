@@ -31,7 +31,7 @@ int find_function_info_v1(int argc, void **argv)
     function_info *finfo = nodespace->functions[i];
 
     // printf("ffi-4a\n");
-    printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
+    // printf("findfunc-cmp: '%s'<>'%s'\n", finfo->name, function_name);
     // printf("ffi-4b\n");
     if (strcmp(finfo->name, function_name))
       continue;
@@ -2555,7 +2555,7 @@ int transcribe_switch_statement(function_info *owner, char *code, int *i, uint *
       MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
       MCcall(parse_past_empty_text(code, i));
     }
-    else if (code[*i] == 'd' || (code[*i] == 'c' && code[*i] == 'a')) {
+    else if (code[*i] == 'd' || (code[*i] == 'c' && !strncmp(code + (*i), "case ", 5))) {
       continue;
     }
     else if (code[*i] == 'c') {

@@ -11,10 +11,10 @@ for (int i = 0; i < nodespace->struct_count; ++i) {
 
     // printf("fsi-4\n");
     if (strcmp(sinfo->name, struct_name)) {
-      printf("findstruct-cmp: '%s'!='%s'\n", sinfo->name, struct_name);
+      // printf("findstruct-cmp: '%s'!='%s'\n", sinfo->name, struct_name);
       continue;
     }
-    printf("findstruct-cmp: '%s'=='%s'\n", sinfo->name, struct_name);
+    // printf("findstruct-cmp: '%s'=='%s'\n", sinfo->name, struct_name);
 
     // printf("fsi-5\n");
 

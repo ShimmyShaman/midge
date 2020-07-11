@@ -2102,7 +2102,7 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs, bool use_texture)
   type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   type_count[0].descriptorCount = 4096;
   type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  type_count[1].descriptorCount = 256;
+  type_count[1].descriptorCount = 1024;
 
   VkDescriptorPoolCreateInfo descriptor_pool = {};
   descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

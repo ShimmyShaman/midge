@@ -60,8 +60,8 @@ VkResult draw_cube(vk_render_state *p_vkrs);
 VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queue);
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue);
 VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, uint *texture_uid);
-VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, bool use_as_render_target,
-                                    uint *texture_uid);
+VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height,
+                                    bool use_as_render_target, uint *texture_uid);
 VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float height, uint *resource_uid);
 
 // A normal C function that is executed as a thread
@@ -216,7 +216,8 @@ int write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long size
   p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = p_src;
   p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
       p_vkrs->render_data_buffer.frame_utilized_amount;
-  p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes = size_in_bytes;
+  p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
+      size_in_bytes;
   p_vkrs->render_data_buffer.frame_utilized_amount +=
       ((size_in_bytes / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
       p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
@@ -291,8 +292,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
     case RENDER_COMMAND_COLORED_RECTANGLE: {
 
       // Bounds check
-      if (cmd->data.colored_rect_info.width == 0 || cmd->x >= sequence->image_width || cmd->data.colored_rect_info.height == 0 ||
-          cmd->y >= sequence->image_height)
+      if (cmd->data.colored_rect_info.width == 0 || cmd->x >= sequence->image_width ||
+          cmd->data.colored_rect_info.height == 0 || cmd->y >= sequence->image_height)
         continue;
 
       // Setup viewport and clip
@@ -380,7 +381,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
       vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
-      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, 1, &desc_set, 0, NULL);
+      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, 1, &desc_set, 0,
+                              NULL);
 
       vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
 
@@ -462,7 +464,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
       VkDescriptorImageInfo image_sampler_info = {};
       image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      image_sampler_info.imageView = p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
+      image_sampler_info.imageView =
+          p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
       image_sampler_info.sampler =
           p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].sampler;
 
@@ -479,8 +482,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
       vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
-      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->texture_prog.pipeline_layout, 0, 1, &desc_set,
-                              0, NULL);
+      vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->texture_prog.pipeline_layout, 0, 1,
+                              &desc_set, 0, NULL);
 
       vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->texture_prog.pipeline);
 
@@ -509,8 +512,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       float align_x = cmd->x;
       float align_y = cmd->y;
 
-      int text_length =
-          *cmd->data.print_text.text ? strlen(*cmd->data.print_text.text) : 0; // TODO using this field is not thread -safe
+      int text_length = *cmd->data.print_text.text ? strlen(*cmd->data.print_text.text)
+                                                   : 0; // TODO using this field is not thread -safe
       for (int c = 0; c < text_length; ++c) {
 
         // if (align_x > font_image->width) {
@@ -541,8 +544,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         float width = q.x1 - q.x0;
         float height = q.y1 - q.y0;
 
-        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n", q.s0,
-        // q.s1,
+        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n",
+        // q.s0, q.s1,
         //        q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
         // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
@@ -552,10 +555,10 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
         vert_ubo_data->scale.x = 2.f * width * scale_multiplier;
         vert_ubo_data->scale.y = 2.f * height * scale_multiplier;
-        vert_ubo_data->offset.x =
-            -1.0f + 2.0f * (float)q.x0 / (float)(sequence->image_width) + 1.0f * (float)width / (float)(sequence->image_width);
-        vert_ubo_data->offset.y =
-            -1.0f + 2.0f * (float)q.y0 / (float)(sequence->image_height) + 1.0f * (float)height / (float)(sequence->image_height);
+        vert_ubo_data->offset.x = -1.0f + 2.0f * (float)q.x0 / (float)(sequence->image_width) +
+                                  1.0f * (float)width / (float)(sequence->image_width);
+        vert_ubo_data->offset.y = -1.0f + 2.0f * (float)q.y0 / (float)(sequence->image_height) +
+                                  1.0f * (float)height / (float)(sequence->image_height);
 
         // Fragment Data
         frag_ubo_tint_texcoordbounds *frag_ubo_data = (frag_ubo_tint_texcoordbounds *)&copy_buffer[copy_buffer_used];
@@ -651,8 +654,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
         vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
-        vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->font_prog.pipeline_layout, 0, 1, &desc_set,
-                                0, NULL);
+        vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->font_prog.pipeline_layout, 0, 1,
+                                &desc_set, 0, NULL);
 
         vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->font_prog.pipeline);
 
@@ -675,8 +678,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
   }
   if (p_vkrs->render_data_buffer.queued_copies_count) {
     uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0, p_vkrs->render_data_buffer.frame_utilized_amount, 0,
-                      (void **)&pData);
+    res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0,
+                      p_vkrs->render_data_buffer.frame_utilized_amount, 0, (void **)&pData);
     assert(res == VK_SUCCESS);
 
     // Buffer Copies
@@ -685,7 +688,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       //        p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
       //        p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
       memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-             p_vkrs->render_data_buffer.queued_copies[k].p_source, p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
+             p_vkrs->render_data_buffer.queued_copies[k].p_source,
+             p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
     }
 
     vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
@@ -705,14 +709,15 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
     } break;
     case RESOURCE_COMMAND_CREATE_TEXTURE: {
-      VkResult res =
-          create_empty_render_target(p_vkrs, resource_cmd->data.create_texture.width, resource_cmd->data.create_texture.height,
-                                     resource_cmd->data.create_texture.use_as_render_target, resource_cmd->p_uid);
+      VkResult res = create_empty_render_target(
+          p_vkrs, resource_cmd->data.create_texture.width, resource_cmd->data.create_texture.height,
+          resource_cmd->data.create_texture.use_as_render_target, resource_cmd->p_uid);
       assert(res == VK_SUCCESS);
 
     } break;
     case RESOURCE_COMMAND_LOAD_FONT: {
-      VkResult res = load_font(p_vkrs, resource_cmd->data.font.path, resource_cmd->data.font.height, resource_cmd->p_uid);
+      VkResult res =
+          load_font(p_vkrs, resource_cmd->data.font.path, resource_cmd->data.font.height, resource_cmd->p_uid);
       assert(res == VK_SUCCESS);
 
     } break;
@@ -752,8 +757,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
       assert(res == VK_SUCCESS);
 
       // Get the index of the next available swapchain image:
-      res = vkAcquireNextImageKHR(p_vkrs->device, p_vkrs->swap_chain, UINT64_MAX, imageAcquiredSemaphore, VK_NULL_HANDLE,
-                                  &p_vkrs->current_buffer);
+      res = vkAcquireNextImageKHR(p_vkrs->device, p_vkrs->swap_chain, UINT64_MAX, imageAcquiredSemaphore,
+                                  VK_NULL_HANDLE, &p_vkrs->current_buffer);
       // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
       // return codes
       assert(res == VK_SUCCESS);
@@ -852,7 +857,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
     } break;
     case NODE_RENDER_TARGET_IMAGE: {
       // Obtain the target image
-      sampled_image *target_image = &p_vkrs->textures.samples[sequence->data.target_image.image_uid - RESOURCE_UID_BEGIN];
+      sampled_image *target_image =
+          &p_vkrs->textures.samples[sequence->data.target_image.image_uid - RESOURCE_UID_BEGIN];
 
       if (!target_image->framebuffer) {
         // Create?
@@ -998,7 +1004,8 @@ VkResult draw_cube(vk_render_state *p_vkrs)
   // vkCmdBeginRenderPass(p_vkrs->cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
   // vkCmdBindPipeline(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
-  // vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, NUM_DESCRIPTOR_SETS,
+  // vkCmdBindDescriptorSets(p_vkrs->cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0,
+  // NUM_DESCRIPTOR_SETS,
   //                         p_vkrs->desc_set.data(), 0, NULL);
 
   // const VkDeviceSize offsets[1] = {0};
@@ -1206,9 +1213,9 @@ VkResult load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const i
   VkMemoryAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
-  bool pass = get_memory_type_index_from_properties(p_vkrs, memRequirements.memoryTypeBits,
-                                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                    &allocInfo.memoryTypeIndex);
+  bool pass = get_memory_type_index_from_properties(
+      p_vkrs, memRequirements.memoryTypeBits,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &allocInfo.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &allocInfo, nullptr, &stagingBufferMemory);
@@ -1257,8 +1264,8 @@ VkResult load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const i
   allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
-  pass = get_memory_type_index_from_properties(p_vkrs, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                               &allocInfo.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(p_vkrs, memRequirements.memoryTypeBits,
+                                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &allocInfo.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &allocInfo, nullptr, &image_sampler->memory);
@@ -1343,7 +1350,8 @@ VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filep
     p_vkrs->textures.allocated = new_allocated;
   }
 
-  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels,
+                     &p_vkrs->textures.samples[p_vkrs->textures.count]);
   *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
   ++p_vkrs->textures.count;
 
@@ -1354,8 +1362,8 @@ VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filep
   return VK_SUCCESS;
 }
 
-VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height, bool use_as_render_target,
-                                    uint *resource_uid)
+VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height,
+                                    bool use_as_render_target, uint *resource_uid)
 {
   int texChannels = 4;
   stbi_uc *pixels = (stbi_uc *)malloc(sizeof(stbi_uc) * width * height * texChannels);
@@ -1417,10 +1425,12 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float fo
     }
 
     for (int i = 0; i < p_vkrs->loaded_fonts.count; ++i) {
-      if (p_vkrs->loaded_fonts.fonts[i].height == font_height && !strcmp(p_vkrs->loaded_fonts.fonts[i].name, font_name)) {
+      if (p_vkrs->loaded_fonts.fonts[i].height == font_height &&
+          !strcmp(p_vkrs->loaded_fonts.fonts[i].name, font_name)) {
         *resource_uid = p_vkrs->loaded_fonts.fonts[i].resource_uid;
 
-        printf("using cached font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height, *resource_uid);
+        printf("using cached font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height,
+               *resource_uid);
         free(font_name);
 
         return VK_SUCCESS;
@@ -1433,8 +1443,9 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float fo
 
   const int texWidth = 256, texHeight = 256, texChannels = 4;
   stbi_uc temp_bitmap[texWidth * texHeight];
-  stbtt_bakedchar *cdata = (stbtt_bakedchar *)malloc(sizeof(stbtt_bakedchar) * 96);                  // ASCII 32..126 is 95 glyphs
-  stbtt_BakeFontBitmap(ttf_buffer, 0, font_height, temp_bitmap, texWidth, texHeight, 32, 96, cdata); // no guarantee this fits!
+  stbtt_bakedchar *cdata = (stbtt_bakedchar *)malloc(sizeof(stbtt_bakedchar) * 96); // ASCII 32..126 is 95 glyphs
+  stbtt_BakeFontBitmap(ttf_buffer, 0, font_height, temp_bitmap, texWidth, texHeight, 32, 96,
+                       cdata); // no guarantee this fits!
 
   stbi_uc pixels[texWidth * texHeight * 4];
   {
@@ -1460,7 +1471,8 @@ VkResult load_font(vk_render_state *p_vkrs, const char *const filepath, float fo
     p_vkrs->textures.allocated = new_allocated;
   }
 
-  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels,
+                     &p_vkrs->textures.samples[p_vkrs->textures.count]);
   *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
   ++p_vkrs->textures.count;
 

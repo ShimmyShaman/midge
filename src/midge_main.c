@@ -6147,6 +6147,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));
+  MCcall(parse_and_process_core_function(command_hub, "parse_and_instantiate_struct_definition_from_editor"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));
   MCcall(parse_and_process_core_function(command_hub, "load_existing_struct_into_code_editor"));

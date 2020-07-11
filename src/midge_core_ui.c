@@ -123,6 +123,18 @@ int build_core_entry(node *core_display, const char *name)
   MCcall(append_to_collection((void ***)&core_display->children, &core_display->children_alloc,
                               &core_display->child_count, core_entry));
 
+  // Obtain visual resources
+  pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
+  resource_command *command;
+
+  // Function Editor Image
+  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+  command->p_uid = &core_entry->data.visual.image_resource_uid;
+  command->data.create_texture.use_as_render_target = true;
+  command->data.create_texture.width = core_entry->data.visual.bounds.width;
+  command->data.create_texture.height = core_entry->data.visual.bounds.height;
+  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   return 0;
 }
 
@@ -161,6 +173,32 @@ int core_display_render_v1(int argc, void **argv)
   image_render_queue *sequence;
   element_render_command *element_cmd;
 
+  for (int i = 0; i < visual_node->child_count; ++i) {
+    node *child = (node *)visual_node->children[i];
+
+    if (!child->data.visual.requires_render_update) {
+      continue;
+    }
+
+    printf("core_child.bounds x=%u y=%u width=%u height=%u\n", child->data.visual.bounds.x, child->data.visual.bounds.y,
+           child->data.visual.bounds.width, child->data.visual.bounds.height);
+
+    MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+    sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+    sequence->image_width = child->data.visual.bounds.width;
+    sequence->image_height = child->data.visual.bounds.height;
+    sequence->clear_color = (render_color){0.12f, 0.16f, 0.22f, 1.f};
+    sequence->data.target_image.image_uid = child->data.visual.image_resource_uid;
+
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+    element_cmd->x = 6;
+    element_cmd->y = 18;
+    element_cmd->data.print_text.font_resource_uid = cdd->font_resource_uid;
+    element_cmd->data.print_text.text = &child->name;
+    element_cmd->data.print_text.color = COLOR_GHOST_WHITE;
+  }
+
   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = visual_node->data.visual.bounds.width;
@@ -179,24 +217,13 @@ int core_display_render_v1(int argc, void **argv)
   for (int i = 0; i < visual_node->child_count; ++i) {
     node *child = (node *)visual_node->children[i];
 
-    printf("core_child.bounds x=%u y=%u width=%u height=%u\n", child->data.visual.bounds.x, child->data.visual.bounds.y,
-           child->data.visual.bounds.width, child->data.visual.bounds.height);
-
     MCcall(obtain_element_render_command(sequence, &element_cmd));
-    element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+    element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
     element_cmd->x = child->data.visual.bounds.x;
     element_cmd->y = child->data.visual.bounds.y;
-    element_cmd->data.colored_rect_info.width = child->data.visual.bounds.width;
-    element_cmd->data.colored_rect_info.height = child->data.visual.bounds.height;
-    element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.19f, 0.28f, 1.f};
-
-    MCcall(obtain_element_render_command(sequence, &element_cmd));
-    element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
-    element_cmd->x = child->data.visual.bounds.x + 6;
-    element_cmd->y = child->data.visual.bounds.y + 18;
-    element_cmd->data.print_text.font_resource_uid = cdd->font_resource_uid;
-    element_cmd->data.print_text.text = &child->name;
-    element_cmd->data.print_text.color = COLOR_GHOST_WHITE;
+    element_cmd->data.textured_rect_info.width = child->data.visual.bounds.width;
+    element_cmd->data.textured_rect_info.height = child->data.visual.bounds.height;
+    element_cmd->data.textured_rect_info.texture_uid = child->data.visual.image_resource_uid;
   }
 
   return 0;
@@ -312,7 +339,8 @@ int build_core_display_v1(int argc, void **argv)
   MCcall(build_core_entry(core_objects_display, "find_struct_info"));
   MCcall(build_core_entry(core_objects_display, "special_update"));
   MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
-  // MCcall(build_core_entry(core_objects_display, "save_function_to_file"));
+  MCcall(build_core_entry(core_objects_display, "save_function_to_file"));
+  MCcall(build_core_entry(core_objects_display, "parse_and_instantiate_struct_definition_from_editor"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_keyboard_input"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_input"));
   MCcall(build_core_entry(core_objects_display, "code_editor_state"));
@@ -330,7 +358,6 @@ int build_core_display_v1(int argc, void **argv)
   command->data.create_texture.use_as_render_target = true;
   command->data.create_texture.width = core_objects_display->data.visual.bounds.width;
   command->data.create_texture.height = core_objects_display->data.visual.bounds.height;
-  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
 
   // Font
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
