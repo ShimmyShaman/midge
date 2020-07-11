@@ -52,6 +52,26 @@ int parse_past(const char *text, int *index, const char *sequence)
   }
 }
 
+int parse_past_variable_name(const char *text, int *index, char **output)
+{
+  if (!isalpha(text[*index]) && text[*index] != '_') {
+    MCerror(58, "Expected first char to be an alphabetical char or underscore.");
+  }
+
+  for (int i = *index;; ++i) {
+    if (isalnum(text[i]) || text[i] == '_')
+      continue;
+
+    *output = (char *)malloc(sizeof(char) * (i - *index + 1));
+    strncpy(*output, text + *index, i - *index);
+    (*output)[i - *index] = '\0';
+    *index = i;
+    return 0;
+  }
+
+  return 0;
+}
+
 int parse_past_number(const char *text, int *index, char **output)
 {
   for (int i = *index;; ++i) {
@@ -5533,7 +5553,8 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     parameter_info_definition_v1->version = 1U;
     parameter_info_definition_v1->declared_mc_name = "mc_parameter_info_v1";
     parameter_info_definition_v1->field_count = 5;
-    parameter_info_definition_v1->fields = (void **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
+    parameter_info_definition_v1->fields =
+        (mc_parameter_info_v1 **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
     parameter_info_definition_v1->sizeof_cstr = "sizeof_parameter_info_v1";
 
     mc_parameter_info_v1 *field;
@@ -5579,7 +5600,8 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     struct_info_definition_v1->version = 1U;
     struct_info_definition_v1->declared_mc_name = "mc_struct_info_v1";
     struct_info_definition_v1->field_count = 7;
-    struct_info_definition_v1->fields = (void **)calloc(sizeof(void *), struct_info_definition_v1->field_count);
+    struct_info_definition_v1->fields =
+        (mc_parameter_info_v1 **)calloc(sizeof(void *), struct_info_definition_v1->field_count);
     struct_info_definition_v1->sizeof_cstr = "sizeof_struct_info_v1";
 
     // FUNCTION_INFO STRUCT INFO
@@ -5650,7 +5672,8 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     function_info_definition_v1->version = 1U;
     function_info_definition_v1->declared_mc_name = "mc_function_info_v1";
     function_info_definition_v1->field_count = 10;
-    function_info_definition_v1->fields = (void **)calloc(sizeof(void *), function_info_definition_v1->field_count);
+    function_info_definition_v1->fields =
+        (mc_parameter_info_v1 **)calloc(sizeof(void *), function_info_definition_v1->field_count);
     function_info_definition_v1->sizeof_cstr = "sizeof_function_info_v1";
 
     // FUNCTION_INFO STRUCT INFO
@@ -5740,7 +5763,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     node_definition_v1->version = 1U;
     node_definition_v1->declared_mc_name = "mc_node_v1";
     node_definition_v1->field_count = 12;
-    node_definition_v1->fields = (void **)calloc(sizeof(void *), node_definition_v1->field_count);
+    node_definition_v1->fields = (mc_parameter_info_v1 **)calloc(sizeof(void *), node_definition_v1->field_count);
     node_definition_v1->sizeof_cstr = "sizeof_node_v1"; // TODO -- remove this
 
     // #define node_v1                          \
@@ -5845,19 +5868,9 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     code_editor_state_strdef->version = 1U;
     code_editor_state_strdef->declared_mc_name = "mc_code_editor_state_v1";
     code_editor_state_strdef->field_count = 9;
-    code_editor_state_strdef->fields = (void **)calloc(sizeof(void *), code_editor_state_strdef->field_count);
+    code_editor_state_strdef->fields =
+        (mc_parameter_info_v1 **)calloc(sizeof(void *), code_editor_state_strdef->field_count);
     code_editor_state_strdef->sizeof_cstr = NULL;
-
-    // typedef struct mc_code_editor_state_v1 {
-    //   code_line render_lines[CODE_EDITOR_RENDERED_CODE_LINES];
-    //   mc_cstring_list_v1 *text;
-    //   uint font_resource_uid;
-    //   uint line_display_offset;
-    //   uint cursorCol, cursorLine;
-    //   bool cursor_requires_render_update;
-
-    //   mc_function_info_v1 *func_info;
-    // } mc_code_editor_state_v1;
 
     mc_parameter_info_v1 *field;
     int f = 0;
@@ -6147,7 +6160,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));
-  MCcall(parse_and_process_core_function(command_hub, "parse_and_instantiate_struct_definition_from_editor"));
+  // MCcall(parse_and_process_core_function(command_hub, "parse_and_instantiate_struct_definition_from_editor"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));
   MCcall(parse_and_process_core_function(command_hub, "load_existing_struct_into_code_editor"));

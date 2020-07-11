@@ -93,12 +93,12 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       switch (state->source_data_type) {
       case CODE_EDITOR_SOURCE_DATA_FUNCTION: {
         // Read the code from the editor
-        char *function_declaration;
-        read_function_from_editor(state, &function_declaration);
+        char *function_definition;
+        read_editor_text_into_cstr(state, &function_definition);
 
         mc_function_info_v1 *func_info;
-        parse_and_process_function_definition(function_declaration, &func_info, false);
-        free(function_declaration);
+        parse_and_process_function_definition(function_definition, &func_info, false);
+        free(function_definition);
 
         // Compile the function definition
         uint transcription_alloc = 4;
@@ -114,12 +114,12 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         event->handled = true;
         break;
       }
-      case CODE_EDITOR_SOURCE_DATA_STRUCT: {
-        // Read the code from the editor
-        parse_and_instantiate_struct_definition_from_editor(fedit);
-        event->handled = true;
-        break;
-      }
+      // case CODE_EDITOR_SOURCE_DATA_STRUCT: {
+      //   // Read the code from the editor
+      //   // parse_and_instantiate_struct_definition_from_editor(fedit);
+      //   event->handled = true;
+      //   break;
+      // }
       default: {
         // Do Nothing? TODO
         printf("instantiating data_source:%i is not supported\n", state->source_data_type);
@@ -433,7 +433,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
           // Read the code from the editor
           char *function_definition;
-          read_function_from_editor(state, &function_definition);
+          read_editor_text_into_cstr(state, &function_definition);
 
           save_function_to_file(function, function_definition);
         } break;

@@ -227,7 +227,7 @@ typedef struct mc_struct_info_v1 {
   unsigned int version;
   const char *declared_mc_name;
   unsigned int field_count;
-  void **fields;
+  mc_parameter_info_v1 **fields;
   const char *sizeof_cstr;
 } mc_struct_info_v1;
 
@@ -503,9 +503,13 @@ typedef struct mc_code_editor_state_v1 {
   void *source_data;
 } mc_code_editor_state_v1;
 int load_existing_function_into_code_editor(mc_function_info_v1 *function);
+int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
+int parse_struct_definition(char *code_definition, mc_struct_info_v1 **structure_info);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);
+int parse_past_variable_name(const char *text, int *index, char **output);
+int parse_past_empty_text(char const *const code, int *i);
 int parse_past_number(const char *text, int *index, char **output);
 int parse_past_character_literal(const char *text, int *index, char **output);
 int mc_parse_past_literal_string(const char *text, int *index, char **output);
