@@ -100,12 +100,6 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
 
   feState->text->lines[feState->text->lines_count++] = line;
 
-  printf("state lines:\n");
-  printf("struct:'%s'", p_struct_info->name);
-  for (int i = 0; i < feState->text->lines_count; ++i) {
-    printf("%i:'%s'\n", i, feState->text->lines[i]);
-  }
-
   {
     // Set for render update
     feState->line_display_offset = 0;

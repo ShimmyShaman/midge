@@ -309,6 +309,7 @@ int build_core_display_v1(int argc, void **argv)
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
                               &command_hub->global_node->child_count, core_objects_display));
 
+  MCcall(build_core_entry(core_objects_display, "find_struct_info"));
   MCcall(build_core_entry(core_objects_display, "special_update"));
   MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_keyboard_input"));

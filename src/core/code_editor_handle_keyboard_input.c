@@ -2,11 +2,10 @@
 
 #include "core/midge_core.h"
 
-// [_mc_iteration=1]
-void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
-{
-  mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
-  printf("keyboard key = %i\n", event->detail.keyboard.key);
+// [_mc_iteration=2]
+void code_editor_handle_keyboard_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
+mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
+  //  printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
   case KEY_CODE_DELETE: {
@@ -440,7 +439,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         buf_len = strlen(buf);
         fwrite(buf, sizeof(char), buf_len, f);
 
-        printf("function_definition:%s\n", function_definition);
+        // printf("function_definition:%s\n", function_definition);
         int definition_len = strlen(function_definition);
         fwrite(function_definition, sizeof(char), definition_len, f);
         fclose(f);

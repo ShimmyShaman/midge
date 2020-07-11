@@ -5408,7 +5408,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
       else if (in_comment) {
         if (input[i] == '_' && !strncmp(input + i, "_mc_iteration=", 14)) {
           // Parse iteration reference
-          for (int j = i + 15; isdigit(input[j]); ++j) {
+          for (int j = i + 14; isdigit(input[j]); ++j) {
             function_iteration = function_iteration * 10 + (input[j] - '0');
           }
           // printf("function_iteration=%u '%c'\n", function_iteration, input[i + 14]);
