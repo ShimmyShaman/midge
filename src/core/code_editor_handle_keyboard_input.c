@@ -3,8 +3,9 @@
 #include "core/midge_core.h"
 
 // [_mc_iteration=2]
-void code_editor_handle_keyboard_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
-mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
+void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
+{
+  mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
   //  printf("keyboard key = %i\n", event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
@@ -89,31 +90,35 @@ mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
     event->handled = true;
     if (event->ctrlDown) {
 
-      // Read the code from the editor
-      char *function_declaration;
-      read_function_from_editor(state, &function_declaration);
+      switch (state->source_data_type) {
+      case CODE_EDITOR_SOURCE_DATA_FUNCTION: {
+        // Read the code from the editor
+        char *function_declaration;
+        read_function_from_editor(state, &function_declaration);
 
-      mc_function_info_v1 *func_info;
-      parse_and_process_function_definition(function_declaration, &func_info, false);
-      free(function_declaration);
+        mc_function_info_v1 *func_info;
+        parse_and_process_function_definition(function_declaration, &func_info, false);
+        free(function_declaration);
 
-      // Compile the function definition
-      uint transcription_alloc = 4;
-      char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
-      transcription[0] = '\0';
-      int code_index = 0;
-      transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription);
+        // Compile the function definition
+        uint transcription_alloc = 4;
+        char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
+        transcription[0] = '\0';
+        int code_index = 0;
+        transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription);
 
-      // Define the new function
-      instantiate_function(func_info->name, transcription);
+        // Define the new function
+        instantiate_function(func_info->name, transcription);
 
-      if (!state->func_info) {
-        MCerror(70, "TODO");
+        printf("redefined function '%s' to iteration %i\n", func_info->name, func_info->latest_iteration);
+        event->handled = true;
+        break;
       }
-
-      printf("redefined function '%s' to iteration %i\n", func_info->name, func_info->latest_iteration);
-      event->handled = true;
-      return;
+      default: {
+        // Do Nothing? TODO
+        printf("instantiating data_source:%i is not supported\n", state->source_data_type);
+      } break;
+      }
     }
     else {
       printf("fehi-0\n");
@@ -410,42 +415,26 @@ mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
         move_cursor_up(fedit, state);
       } break;
       case KEY_CODE_S: {
-        // Read the code from the editor
-        char *function_definition;
-        read_function_from_editor(state, &function_definition);
-
-        printf("here-0\n");
         // Save the file
-        if (!state->func_info->source_filepath) {
-          printf("function has no source filepath\n");
-          break;
+        char *filepath;
+        switch (state->source_data_type) {
+        case CODE_EDITOR_SOURCE_DATA_FUNCTION: {
+          mc_function_info_v1 *function = (mc_function_info_v1 *)state->source_data;
+          if (!function->source_filepath) {
+            printf("function has no source filepath\n");
+            break;
+          }
+
+          // Read the code from the editor
+          char *function_definition;
+          read_function_from_editor(state, &function_definition);
+
+          save_function_to_file(function, function_definition);
+        } break;
+        default: {
+          printf("printing source_data_type=%i is not supported\n");
+        } break;
         }
-
-        // printf("here-1\n");
-        // save_function_to_source_file()
-        FILE *f = fopen(state->func_info->source_filepath, "w");
-        // fseek(f, 0, SEEK_SET);
-
-        // printf("here-2\n");
-        char buf[128];
-        sprintf(buf, "/* %s.c */\n\n#include \"core/midge_core.h\"\n\n", state->func_info->name);
-        // printf("buf:'%s'\n", buf);
-        // printf("here-3a\n");
-        int buf_len = strlen(buf);
-        fwrite(buf, sizeof(char), buf_len, f);
-        // printf("here-3b\n");
-
-        sprintf(buf, "// [_mc_iteration=%u]\n", state->func_info->latest_iteration);
-        buf_len = strlen(buf);
-        fwrite(buf, sizeof(char), buf_len, f);
-
-        // printf("function_definition:%s\n", function_definition);
-        int definition_len = strlen(function_definition);
-        fwrite(function_definition, sizeof(char), definition_len, f);
-        fclose(f);
-
-        printf("saved function to file '%s'\n", state->func_info->source_filepath);
-        // printf("here-4\n");
       } break;
       default: {
         break;
@@ -457,7 +446,8 @@ mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
       char c = '\0';
       int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c);
       if (res) {
-        return; // TODO
+        break;
+        // TODO
       }
       event->handled = true;
 

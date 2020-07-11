@@ -3606,7 +3606,8 @@ int load_existing_function_into_code_editor(function_info *function)
   // Begin Writing into the Function Editor textbox
   node *code_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
   mc_code_editor_state_v1 *feState = (mc_code_editor_state_v1 *)code_editor->extra;
-  feState->func_info = function;
+  feState->source_data_type = CODE_EDITOR_SOURCE_DATA_FUNCTION;
+  feState->source_data = function;
   for (int j = 0; j < feState->text->lines_count; ++j) {
     free(feState->text->lines[j]);
     feState->text->lines[j] = NULL;
@@ -5351,7 +5352,8 @@ int build_code_editor_v1(int argc, void **argv)
   // Code Lines
   mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)malloc(sizeof(mc_code_editor_state_v1));
   // printf("state:'%p'\n", state);
-  state->func_info = NULL;
+  state->source_data_type = CODE_EDITOR_SOURCE_DATA_NONE;
+  state->source_data = NULL;
   state->font_resource_uid = 0;
   state->cursorLine = 0;
   state->cursorCol = 0;

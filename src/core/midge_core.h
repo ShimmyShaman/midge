@@ -486,6 +486,11 @@ typedef struct code_line {
   char *text;
   uint width, height;
 } code_line;
+typedef enum code_editor_data_source {
+  CODE_EDITOR_SOURCE_DATA_NONE = 0,
+  CODE_EDITOR_SOURCE_DATA_FUNCTION,
+  CODE_EDITOR_SOURCE_DATA_STRUCT,
+} code_editor_data_source;
 typedef struct mc_code_editor_state_v1 {
   code_line render_lines[CODE_EDITOR_RENDERED_CODE_LINES];
   mc_cstring_list_v1 *text;
@@ -494,7 +499,8 @@ typedef struct mc_code_editor_state_v1 {
   uint cursorCol, cursorLine;
   bool cursor_requires_render_update;
 
-  mc_function_info_v1 *func_info;
+  code_editor_data_source source_data_type;
+  void *source_data;
 } mc_code_editor_state_v1;
 int load_existing_function_into_code_editor(mc_function_info_v1 *function);
 
@@ -519,21 +525,23 @@ int (*declare_function_pointer)(int, void **);
 int (*instantiate_function)(int, void **);
 // function_info **result (may be NULL); node **nodespace, char **function_name
 int (*find_function_info)(int, void **);
-// mc_struct_info_v1 *find_struct_info(mc_node_v1 *nodespace, char *struct_name) -- result is last
-int (*find_struct_info)(int, void **);
 int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
 int (*build_code_editor)(int, void **);
 int (*code_editor_update)(int, void **);
-int (*code_editor_handle_keyboard_input)(int, void **);
-int (*code_editor_handle_input)(int, void **);
 int (*code_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
-int (*special_update)(int, void **);
 int (*build_core_display)(int, void **);
-int (*move_cursor_up)(int, void **);
 int (*core_display_handle_input)(int, void **);
 int (*core_display_entry_handle_input)(int, void **);
+
+// mc_struct_info_v1 *find_struct_info(mc_node_v1 *nodespace, char *struct_name) -- result is last
+int (*find_struct_info)(int, void **);
+int (*special_update)(int, void **);
+int (*move_cursor_up)(int, void **);
+int (*save_function_to_file)(int, void **);
+int (*code_editor_handle_keyboard_input)(int, void **);
+int (*code_editor_handle_input)(int, void **);
 int (*load_existing_struct_into_code_editor)(int, void **);
 
 #define allocate_anon_struct(ptr_to_struct, size) \

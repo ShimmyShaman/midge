@@ -2,8 +2,9 @@
 
 #include "core/midge_core.h"
 
+// [_mc_iteration=2]
 void code_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
-//   printf("code_editor_handle_input-begin\n");
+   printf("code_editor_handle_input-begin\n");
 
   if (fedit->data.visual.hidden) {
     return;
