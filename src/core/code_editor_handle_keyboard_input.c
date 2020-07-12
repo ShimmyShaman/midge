@@ -6,7 +6,7 @@
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
   mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
-  //  printf("keyboard key = %i\n", event->detail.keyboard.key);
+  // printf("keyboard key = (%i%i%i)+%i\n", event->altDown, event->ctrlDown, event->shiftDown, event->detail.keyboard.key);
 
   switch (event->detail.keyboard.key) {
   case KEY_CODE_DELETE: {
@@ -438,7 +438,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
           save_function_to_file(function, function_definition);
         } break;
         default: {
-          printf("printing source_data_type=%i is not supported\n");
+          printf("saving source_data_type=%i is not supported\n");
         } break;
         }
       } break;
@@ -471,7 +471,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         }
         new_line[current_line_len + 1] = '\0';
 
-        printf("new_line:'%s'\n", new_line);
+        // printf("new_line:'%s'\n", new_line);
 
         free(state->text->lines[state->cursorLine]);
         state->text->lines[state->cursorLine] = new_line;

@@ -3,7 +3,8 @@
 #include "core/midge_core.h"
 
 // [_mc_iteration=2]
-void code_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input_event_v1 * event) {
+void code_editor_handle_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
+{
   //  printf("code_editor_handle_input-begin\n");
 
   if (fedit->data.visual.hidden) {
@@ -20,7 +21,7 @@ void code_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input
       state->line_display_offset += 3;
     }
     else if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_UP) {
-      if(state->line_display_offset < 3) {
+      if (state->line_display_offset < 3) {
         state->line_display_offset = 0;
       }
       else {
@@ -29,9 +30,15 @@ void code_editor_handle_input(frame_time * elapsed, mc_node_v1 * fedit, mc_input
     }
   }
   else if (event->type == INPUT_EVENT_KEY_PRESS) {
+    // printf("code_editor_handle_input: KEY_PRESS:%i\n", event->detail.keyboard.key);
+
     // printf("fehi-3a\n");
     code_editor_handle_keyboard_input(elapsed, fedit, event);
     // printf("fehi-3b\n");
+  }
+  else if (event->type == INPUT_EVENT_KEY_RELEASE) {
+
+    // printf("code_editor_handle_input: KEY_RELEASE:%i\n", event->detail.keyboard.key);
   }
   else {
     return;

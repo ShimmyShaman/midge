@@ -2347,7 +2347,11 @@ int mc_main(int argc, const char *const *argv)
           //          render_thread.input_buffer.events[i].detail.mouse.button);
           // }
         } break;
-
+        case INPUT_EVENT_FOCUS_IN:
+        case INPUT_EVENT_FOCUS_OUT: {
+          input_event->altDown = false;
+          // printf("alt is %s\n", input_event->altDown ? "DOWN" : "UP");
+        } break;
         case INPUT_EVENT_KEY_RELEASE:
         case INPUT_EVENT_KEY_PRESS: {
           switch (render_thread.input_buffer.events[i].detail.keyboard.key) {
@@ -2357,6 +2361,7 @@ int mc_main(int argc, const char *const *argv)
           case KEY_CODE_LEFT_ALT:
           case KEY_CODE_RIGHT_ALT:
             input_event->altDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
+            // printf("alt is %s\n", input_event->altDown ? "DOWN" : "UP");
             break;
           case KEY_CODE_LEFT_SHIFT:
           case KEY_CODE_RIGHT_SHIFT:
@@ -5519,7 +5524,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   printf(" -- parameter_count:%u:\n", func_info->parameter_count);
   printf(" -- struct_usage_count:%u:\n", func_info->struct_usage_count);
   printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
-  printf(" -- mc_code:\n%s\n", func_info->mc_code);
+  // printf(" -- mc_code:\n%s\n", func_info->mc_code);
   printf("#######################\n");
 
   // Compile the function definition
@@ -5529,7 +5534,7 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   int code_index = 0;
   MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
 
-  printf("final transcription:\n%s\n", transcription);
+  // printf("final transcription:\n%s\n", transcription);
 
   // Define the new function
   {

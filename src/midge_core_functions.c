@@ -572,14 +572,14 @@ int conform_type_identity_v1(int argc, void **argv)
       struct_info *str_info = (struct_info *)p_struct_info;
       matched = true;
 
-      printf("ctn-3\n");
+      // printf("ctn-3\n");
       // Change Name
       free(finalized_identity);
       allocate_and_copy_cstr(finalized_identity, str_info->declared_mc_name);
 
       // Add reference to function infos struct usages
       if (func_info) {
-        printf("ctn-4\n");
+        // printf("ctn-4\n");
         struct_info **new_collection =
             (struct_info **)malloc(sizeof(struct_info *) * (func_info->struct_usage_count + 1));
         if (func_info->struct_usage_count) {
@@ -590,13 +590,13 @@ int conform_type_identity_v1(int argc, void **argv)
         if (func_info->struct_usage)
           free(func_info->struct_usage);
 
-        printf("ctn-6\n");
+        // printf("ctn-6\n");
         func_info->struct_usage_count = func_info->struct_usage_count + 1;
         func_info->struct_usage = new_collection;
       }
     }
   }
-  printf("ctn-8\n");
+  // printf("ctn-8\n");
 
   // Re-add any deref operators
   if (type_deref_count) {
@@ -642,7 +642,7 @@ int instantiate_function_v1(int argc, void **argv)
       MCerror(184, "cannot find function info for function_name=%s", function_name);
     }
   }
-  printf("@ifv-0\n");
+  // printf("@ifv-0\n");
 
   // Translate the code-block from script into workable midge-cling C
   // char *midge_c;
@@ -670,7 +670,7 @@ int instantiate_function_v1(int argc, void **argv)
   func_identity_buf[0] = '\0';
   sprintf(func_identity_buf, function_identifier_format, func_info->name, func_info->latest_iteration);
 
-  printf("@ifv-2\n");
+  // printf("@ifv-2\n");
   // Construct the function parameters
   char param_buf[4096];
   param_buf[0] = '\0';
@@ -2265,7 +2265,7 @@ int parse_expression_lacking_midge_function_call(function_info *owner, char *cod
 
         char *argExpression;
         MCcall(parse_expression_lacking_midge_function_call(owner, code, &j, &argExpression));
-        printf("argExpression:'%s'\n", argExpression);
+        // printf("argExpression:'%s'\n", argExpression);
         if (!argExpression) {
           free(argExpression);
           return 0;
@@ -2364,7 +2364,7 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
       }
     }
 
-    printf("if_statement:Direct_parse_expression:'%s'\n", expression);
+    // printf("if_statement:Direct_parse_expression:'%s'\n", expression);
     MCcall(parse_past_empty_text(code, i));
     MCcall(parse_past(code, i, ")"));
     MCcall(parse_past_empty_text(code, i));
@@ -2374,7 +2374,7 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
     MCcall(append_to_cstr(transcription_alloc, transcription, ") {\n"));
   }
   else {
-    printf("ifs:expression lacking function call:'%s'\n", expression);
+    // printf("ifs:expression lacking function call:'%s'\n", expression);
 
     MCcall(parse_past_empty_text(code, i));
     MCcall(parse_past(code, i, ")"));
@@ -2840,13 +2840,13 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
 
   free(type_declaration);
   free(identifier);
-  printf("after transcribe_declarative_assignment:\n'%s'\n", *transcription);
+  // printf("after transcribe_declarative_assignment:\n'%s'\n", *transcription);
   return 0;
 }
 
 int transcribe_assignment(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
-  printf("before transcribe_assignment:\n'%s'\n", *transcription);
+  // printf("before transcribe_assignment:\n'%s'\n", *transcription);
   char *identifier;
   MCcall(parse_past_mc_identifier(code, i, &identifier, false, false));
   MCcall(parse_past_empty_text(code, i));
@@ -2972,14 +2972,14 @@ int transcribe_array_access(function_info *owner, char *code, int *i, uint *tran
 
   free(expression);
   free(identifier);
-  printf("after transcribe_array_access:\n'%s'\n", *transcription);
+  // printf("after transcribe_array_access:\n'%s'\n", *transcription);
   return 0;
 }
 
 int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
 {
   MCcall(parse_past_empty_text(code, &i));
-  printf("peek_mc_token(): %u:'%c'\n", tokens_ahead, code[i]);
+  // printf("peek_mc_token(): %u:'%c'\n", tokens_ahead, code[i]);
   switch (code[i]) {
   case '-': {
     if (code[i + 1] == '>') {
@@ -3202,7 +3202,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       // Statement is free of function call - transcribe directly
       int n = strlen(*transcription);
       MCcall(append_to_cstrn(transcription_alloc, transcription, code + *i, j - *i + 1));
-      printf("statement_transcribed:'%s'\n", *transcription + n);
+      // printf("statement_transcribed:'%s'\n", *transcription + n);
       MCcall(append_to_cstr(transcription_alloc, transcription, "\n"));
       *i = j + 1;
       return 0;
@@ -3214,11 +3214,11 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       }
       if (p < *i) {
         // A cast
-        printf("-- a cast\n");
+        // printf("-- a cast\n");
         break;
       }
       if (!isalnum(code[p]) && code[p] != '_') {
-        printf("is not alnum_\n");
+        // printf("is not alnum_\n");
         break;
       }
 
@@ -3257,7 +3257,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
 
         char *argExpression;
         MCcall(parse_expression_lacking_midge_function_call(owner, code, &j, &argExpression));
-        printf("argExpression:'%s'\n", argExpression);
+        // printf("argExpression:'%s'\n", argExpression);
         if (!argExpression) {
           free(argExpression);
           return 0;
@@ -4931,7 +4931,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   MCcall(convert_return_type_string(return_type, &func_info->return_type.name, &func_info->return_type.deref_count));
   free(return_type);
 
-  printf("papfd-1\n");
+  // printf("papfd-1\n");
   // Parse the parameters
   struct {
     char *type;
@@ -4962,7 +4962,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   MCcall(parse_past(function_definition_text, &index, ")"));
   MCcall(parse_past_empty_text(function_definition_text, &index));
 
-  printf("papfd-2\n");
+  // printf("papfd-2\n");
   func_info->parameter_count = parameter_count;
   func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * parameter_count);
   for (int p = 0; p < parameter_count; ++p) {
@@ -5010,7 +5010,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   code_block[last_curly_index - index] = '\0';
   func_info->mc_code = code_block;
 
-  printf("papfd-5\n");
+  // printf("papfd-5\n");
   *function_definition = func_info;
   return 0;
 }
