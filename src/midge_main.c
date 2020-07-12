@@ -52,6 +52,14 @@ int parse_past(const char *text, int *index, const char *sequence)
   }
 }
 
+int parse_past_empty_text(char const *const code, int *i)
+{
+  while (code[*i] == ' ' || code[*i] == '\n' || code[*i] == '\t') {
+    ++(*i);
+  }
+  return 0;
+}
+
 int parse_past_variable_name(const char *text, int *index, char **output)
 {
   if (!isalpha(text[*index]) && text[*index] != '_') {
@@ -67,6 +75,23 @@ int parse_past_variable_name(const char *text, int *index, char **output)
     (*output)[i - *index] = '\0';
     *index = i;
     return 0;
+  }
+
+  return 0;
+}
+
+/* IS necessary to be at a '*' if one is there, is not necessary to have any '*' there. ie. parse past empty text first.
+   Will initialize deref_count to 0, and may remain at 0 after return;
+*/
+int parse_past_dereference_sequence(const char *text, int *i, unsigned int *deref_count)
+{
+  *deref_count = 0;
+  for (;; ++*i) {
+    if (text[*i] != '*')
+      break;
+    ++*deref_count;
+
+    MCcall(parse_past_empty_text(text, i));
   }
 
   return 0;
@@ -6197,10 +6222,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));
-  // MCcall(parse_and_process_core_function(command_hub, "parse_and_instantiate_struct_definition_from_editor"));
+  MCcall(parse_and_process_core_function(command_hub, "load_existing_struct_into_code_editor"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));
-  MCcall(parse_and_process_core_function(command_hub, "load_existing_struct_into_code_editor"));
   printf("hopee\n");
 
   f = fopen("/home/jason/midge/src/midge_core_ui.c", "rb");

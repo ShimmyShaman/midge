@@ -8,7 +8,36 @@
 
 int find_struct_info_v0(int argc, void **argv)
 {
+  node *nodespace = *(node **)argv[0];
+  char *struct_name = *(char **)argv[1];
   struct_info **result = (struct_info **)argv[2];
+  for (int i = 0; i < nodespace->struct_count; ++i) {
+
+    struct_info *sinfo = nodespace->structs[i];
+
+    if (strcmp(sinfo->name, struct_name)) {
+      continue;
+    }
+
+    // Matches
+    *result = sinfo;
+    return 0;
+  }
+
+  if (nodespace->parent) {
+    // Search in the parent nodespace
+    struct_info *sinfo;
+    {
+      void *mc_vargs[3];
+      mc_vargs[0] = &nodespace;
+      mc_vargs[1] = &struct_name;
+      mc_vargs[2] = argv[2];
+      find_struct_info(3, mc_vargs);
+    }
+    *result = sinfo;
+    return 0;
+  }
+
   *result = NULL;
   return 0;
 }
@@ -491,10 +520,11 @@ int force_render_update(int argc, void **argv)
 }
 
 /* Conforms the given type_identity to a mc_type_identity if it is available. Searches first the given func_info,
- * failing that then searches the current nodespace.
- * @conformed_type_identity : (char **) Return Value.
+ * failing that then searches the current nodespace. else just returns the given type
+ * @nodespace : *(node **) Return Value.
  * @func_info : *(function_info **) The function info, may be NULL.
- * @type_identity : *(const char * const *) The type name to check for
+ * @type_identity : *(const char **) The type name to check for
+ * @conformed_type_result : (conformed_type_result **) Return Value.
  */
 int conform_type_identity_v1(int argc, void **argv)
 {
@@ -504,16 +534,21 @@ int conform_type_identity_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   printf("conform_type_identity()\n");
+  if (argc != 4) {
+    return 537;
+  }
 
   // Parameters
-  char **conformed_type_identity = (char **)argv[0];
+  node *nodespace = (node *)argv[0];
   function_info *func_info = *(function_info **)argv[1];
   const char *const type_identity = *(const char *const *)argv[2];
+  char **conformed_type_identity = (char **)argv[3];
 
   // if (!strcmp(type_identity, "node")) {
   //   allocate_and_copy_cstr((*conformed_type_identity), "mc_node_v1 *");
   //   return 0;
   // }
+  printf("type_identity='%s'\n", type_identity);
 
   char *finalized_identity;
   allocate_and_copy_cstr(finalized_identity, type_identity);
@@ -553,6 +588,9 @@ int conform_type_identity_v1(int argc, void **argv)
         matched = true;
         free(finalized_identity);
         allocate_and_copy_cstr(finalized_identity, func_info->struct_usage[i]->declared_mc_name);
+
+        // MC structures require another dereference
+        // ++type_deref_count;
         break;
       }
     }
@@ -568,9 +606,13 @@ int conform_type_identity_v1(int argc, void **argv)
       mc_vargs[2] = (void *)&p_struct_info;
       MCcall(find_struct_info(3, mc_vargs));
     }
+    printf("cti-could %sfind type '%s'\n", p_struct_info ? "" : "NOT ", finalized_identity);
     if (p_struct_info) {
       struct_info *str_info = (struct_info *)p_struct_info;
       matched = true;
+
+      // MC structures require another dereference
+      // ++type_deref_count;
 
       // printf("ctn-3\n");
       // Change Name
@@ -611,6 +653,7 @@ int conform_type_identity_v1(int argc, void **argv)
   }
 
   // No modification, use the original value
+  printf("finalized_identity='%s'\n", finalized_identity);
   allocate_and_copy_cstr((*conformed_type_identity), finalized_identity);
   free(finalized_identity);
 
@@ -676,17 +719,25 @@ int instantiate_function_v1(int argc, void **argv)
   param_buf[0] = '\0';
   for (int i = 0; i < func_info->parameter_count; ++i) {
     // MC conformed type name
-    char *conformed_type_name;
+    char *parameter_type;
     {
+      struct_info *type_struct_info;
+
       void *mc_vargs[3];
-      mc_vargs[0] = (void *)&conformed_type_name;
-      mc_vargs[1] = (void *)&func_info;
-      mc_vargs[2] = (void *)&func_info->parameters[i]->type_name;
-      // printf("@ifv-4\n");
-      MCcall(conform_type_identity(3, mc_vargs));
-      // printf("@ifv-5\n");
-      //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name,
-      //  conformed_type_name);
+      mc_vargs[0] = (void *)&command_hub->nodespace;
+      mc_vargs[1] = (void *)&func_info->parameters[i]->type_name;
+      mc_vargs[2] = (void *)&type_struct_info;
+      MCcall(find_struct_info(3, mc_vargs));
+
+      if (type_struct_info) {
+        allocate_and_copy_cstr(parameter_type, type_struct_info->declared_mc_name);
+        if (!func_info->parameters[i]->type_deref_count) {
+          MCerror(734, "TODO some deref acrobatics to deal with mc_types");
+        }
+      }
+      else {
+        allocate_and_copy_cstr(parameter_type, func_info->parameters[i]->type_name);
+      }
     }
 
     // Deref
@@ -696,8 +747,7 @@ int instantiate_function_v1(int argc, void **argv)
     derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
 
     // Decl
-    sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", conformed_type_name, derefbuf,
-            func_info->parameters[i]->name);
+    sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", parameter_type, derefbuf, func_info->parameters[i]->name);
 
     // Deref + 1 (unless its the return value)
     derefbuf[0] = ' ';
@@ -707,26 +757,36 @@ int instantiate_function_v1(int argc, void **argv)
     derefbuf[1 + func_info->parameters[i]->type_deref_count + 1] = '\0';
 
     // Assignment
-    sprintf(param_buf + strlen(param_buf), "*(%s%s)argv[%i];\n", conformed_type_name, derefbuf, i);
+    sprintf(param_buf + strlen(param_buf), "*(%s%s)argv[%i];\n", parameter_type, derefbuf, i);
 
-    free(conformed_type_name);
+    free(parameter_type);
   }
 
   // Append return-value
   if (func_info->return_type.deref_count || strcmp(func_info->return_type.name, "void")) {
     // MC conformed type name
-    char *conformed_type_name;
+    char *return_type;
     {
+      struct_info *type_struct_info;
+
       void *mc_vargs[3];
-      mc_vargs[0] = (void *)&conformed_type_name;
-      mc_vargs[1] = (void *)&func_info;
-      mc_vargs[2] = (void *)&func_info->return_type.name;
-      // printf("@ifv-4\n");
-      MCcall(conform_type_identity(3, mc_vargs));
-      // printf("@ifv-5\n");
-      //  printf("ifv:paramName:'%s' conformed_type_name:'%s'\n",func_info->parameters[i]->type_name,
-      //  conformed_type_name);
+      mc_vargs[0] = (void *)&command_hub->nodespace;
+      mc_vargs[1] = (void *)&func_info->return_type.name;
+      mc_vargs[2] = (void *)&type_struct_info;
+      MCcall(find_struct_info(3, mc_vargs));
+
+      if (type_struct_info) {
+        allocate_and_copy_cstr(return_type, type_struct_info->declared_mc_name);
+        if (!func_info->return_type.deref_count) {
+          MCerror(734, "TODO some deref acrobatics to deal with mc_types");
+        }
+      }
+      else {
+        allocate_and_copy_cstr(return_type, func_info->return_type.name);
+      }
     }
+    printf("ifv-return_type:'%s' func_info->return_type.deref_count:'%u'\n", return_type,
+           func_info->return_type.deref_count);
 
     // Deref
     char derefbuf[24];
@@ -735,7 +795,7 @@ int instantiate_function_v1(int argc, void **argv)
     derefbuf[1 + func_info->return_type.deref_count] = '\0';
 
     // Decl
-    sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", conformed_type_name, derefbuf, RETURN_VALUE_IDENTIFIER);
+    sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", return_type, derefbuf, RETURN_VALUE_IDENTIFIER);
 
     // Deref + 1 (unless its the return value)
     derefbuf[0] = ' ';
@@ -745,10 +805,9 @@ int instantiate_function_v1(int argc, void **argv)
     derefbuf[1 + func_info->return_type.deref_count + 1] = '\0';
 
     // Assignment
-    sprintf(param_buf + strlen(param_buf), "(%s%s)argv[%i];\n", conformed_type_name, derefbuf,
-            func_info->parameter_count);
+    sprintf(param_buf + strlen(param_buf), "(%s%s)argv[%i];\n", return_type, derefbuf, func_info->parameter_count);
 
-    free(conformed_type_name);
+    free(return_type);
   }
 
   // printf("@ifv-3\n");
@@ -811,29 +870,27 @@ int _parse_past_conformed_type_identifier(function_info *func_info, char *code, 
   strncpy(type_identity, code + s, *i - s);
   type_identity[*i - s] = '\0';
 
-  char *conformed_result;
   {
-    void *mc_vargs[3];
-    mc_vargs[0] = (void *)&conformed_result;
+    char *mc_conformed_type;
+    void *mc_vargs[4];
+    mc_vargs[0] = (void *)&command_hub->nodespace;
     mc_vargs[1] = (void *)&func_info;
     mc_vargs[2] = (void *)&type_identity;
-    // printf("@ppcti-2\n");
-    MCcall(conform_type_identity(3, mc_vargs));
-    // printf("@ppcti-3\n");
-    // printf("ppcti:paramName:'%s' conformed_type_name:'%s'\n", type_identity, conformed_result);
-  }
-  // printf("@ppcti-4\n");
-  free(type_identity);
+    mc_vargs[3] = (void *)&mc_conformed_type;
+    MCcall(conform_type_identity(4, mc_vargs));
+    // printf("@ifv-5\n");
+    // printf("ifv:paramName:'%s' conformed_type_name:'%s'\n", func_info->parameters[i]->type_name,
+    // conformed_type_name);
 
-  *conformed_type_identity = conformed_result;
-  return 0;
-}
-
-int parse_past_empty_text(char const *const code, int *i)
-{
-  while (code[*i] == ' ' || code[*i] == '\n' || code[*i] == '\t') {
-    ++(*i);
+    if (mc_conformed_type) {
+      // Require an extra dereference for parameters
+      free(type_identity);
+      cprintf(type_identity, "%s *", mc_conformed_type);
+      free(mc_conformed_type);
+    }
   }
+
+  *conformed_type_identity = type_identity;
   return 0;
 }
 
@@ -4854,15 +4911,21 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   // printf("function_definition_text:\n%s\n", function_definition_text);
 
   // Parse the function return type & name
-  char *return_type;
   int index = 0;
-  MCcall(parse_past_conformed_type_declaration(NULL, function_definition_text, &index, &return_type));
 
   MCcall(parse_past_empty_text(function_definition_text, &index));
   if (function_definition_text[index] == '*') {
     print_parse_error(function_definition_text, index, "read_function_definition_from_editor",
                       "return-type that uses deref handle not implemented");
   }
+
+  struct {
+    char *name;
+    uint deref_count;
+  } return_type;
+  MCcall(parse_past_variable_name(function_definition_text, &index, &return_type.name));
+  MCcall(parse_past_empty_text(function_definition_text, &index));
+  MCcall(parse_past_dereference_sequence(function_definition_text, &index, &return_type.deref_count));
 
   char *function_name;
   MCcall(parse_past_mc_identifier(function_definition_text, &index, &function_name, false, false));
@@ -4927,14 +4990,14 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   func_info->struct_usage_count = 0;
   func_info->parameter_count = 0;
   func_info->variable_parameter_begin_index = -1;
+  func_info->return_type.name = return_type.name;
+  func_info->return_type.deref_count = return_type.deref_count;
+  printf("papfd-1 func_info->return_type.name='%s', func_info->return_type.deref_count='%u'\n",
+         func_info->return_type.name, func_info->return_type.deref_count);
 
-  MCcall(convert_return_type_string(return_type, &func_info->return_type.name, &func_info->return_type.deref_count));
-  free(return_type);
-
-  // printf("papfd-1\n");
   // Parse the parameters
   struct {
-    char *type;
+    char *type_name;
     uint type_deref_count;
     char *name;
   } parameters[32];
@@ -4945,15 +5008,11 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
       MCcall(parse_past(function_definition_text, &index, ","));
       MCcall(parse_past_empty_text(function_definition_text, &index));
     }
-    MCcall(parse_past_conformed_type_declaration(func_info, function_definition_text, &index,
-                                                 &parameters[parameter_count].type));
+    MCcall(parse_past_variable_name(function_definition_text, &index, &parameters[parameter_count].type_name));
     MCcall(parse_past_empty_text(function_definition_text, &index));
-    parameters[parameter_count].type_deref_count = 0;
-    while (function_definition_text[index] == '*') {
-      ++parameters[parameter_count].type_deref_count;
-      ++index;
-      MCcall(parse_past_empty_text(function_definition_text, &index));
-    }
+    MCcall(parse_past_dereference_sequence(function_definition_text, &index,
+                                           &parameters[parameter_count].type_deref_count));
+    MCcall(parse_past_empty_text(function_definition_text, &index));
 
     MCcall(parse_past_mc_identifier(function_definition_text, &index, &parameters[parameter_count].name, false, false));
     MCcall(parse_past_empty_text(function_definition_text, &index));
@@ -4969,7 +5028,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     parameter->struct_id = NULL;  // TODO
     parameter->type_version = 0U; // TODO
-    parameter->type_name = parameters[p].type;
+    parameter->type_name = parameters[p].type_name;
     parameter->type_deref_count = parameters[p].type_deref_count;
     parameter->name = parameters[p].name;
 
@@ -5507,23 +5566,23 @@ int debug_automation(int argc, void **argv)
     // Select
     ++debugState->sequenceStep;
 
-    node *code_editor = (node *)command_hub->global_node->children[0];
-    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    sim->type = INPUT_EVENT_KEY_PRESS;
-    sim->handled = false;
-    sim->shiftDown = false;
-    sim->altDown = false;
-    sim->ctrlDown = true;
-    sim->detail.keyboard.key = KEY_CODE_ENTER;
-    {
-      void *vargs[3];
-      vargs[0] = argv[0];
-      vargs[1] = &command_hub->global_node->children[0];
-      vargs[2] = &sim;
-      MCcall(code_editor_handle_input(3, vargs));
-    }
+    // node *code_editor = (node *)command_hub->global_node->children[0];
+    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    // sim->type = INPUT_EVENT_KEY_PRESS;
+    // sim->handled = false;
+    // sim->shiftDown = false;
+    // sim->altDown = false;
+    // sim->ctrlDown = true;
+    // sim->detail.keyboard.key = KEY_CODE_ENTER;
+    // {
+    //   void *vargs[3];
+    //   vargs[0] = argv[0];
+    //   vargs[1] = &command_hub->global_node->children[0];
+    //   vargs[2] = &sim;
+    //   MCcall(code_editor_handle_input(3, vargs));
+    // }
 
-    free(sim);
+    // free(sim);
   } break;
 
   default:

@@ -1,4 +1,4 @@
-/* special_update.c */
+/* load_existing_struct_into_code_editor.c */
 
 #include "core/midge_core.h"
 

@@ -235,6 +235,7 @@ typedef struct mc_struct_info_v1 {
 typedef struct mc_parameter_info_v1 {
   mc_struct_id_v1 *struct_id;
   const char *type_name;
+  const char *mc_declared_type;
   unsigned int type_version;
   unsigned int type_deref_count;
   const char *name;
@@ -514,6 +515,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);
 int parse_past_variable_name(const char *text, int *index, char **output);
+int parse_past_dereference_sequence(const char *text, int *i, unsigned int *deref_count);
 int parse_past_empty_text(char const *const code, int *i);
 int parse_past_number(const char *text, int *index, char **output);
 int parse_past_character_literal(const char *text, int *index, char **output);
