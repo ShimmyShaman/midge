@@ -297,20 +297,6 @@ int get_process_contextual_data(mc_process_action_v1 *contextual_action, const c
   return 0;
 }
 
-int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
-                           int index)
-{
-  *collection[index] = NULL;
-  for (int i = index + 1; i < *collection_count; ++i)
-    *collection[i - 1] = *collection[i];
-
-  --*collection_count;
-  if (index > 0)
-    *collection[*collection_count] = NULL;
-
-  return 0;
-}
-
 int release_process_action(mc_process_action_v1 *process_action)
 {
   free(process_action);

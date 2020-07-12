@@ -53,6 +53,20 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
   return 0;
 }
 
+int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
+                           int index)
+{
+  *collection[index] = NULL;
+  for (int i = index + 1; i < *collection_count; ++i)
+    *collection[i - 1] = *collection[i];
+
+  --*collection_count;
+  if (index > 0)
+    *collection[*collection_count] = NULL;
+
+  return 0;
+}
+
 typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,
   RENDER_COMMAND_BACKGROUND_COLOR,
