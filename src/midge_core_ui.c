@@ -180,8 +180,8 @@ int core_display_render_v1(int argc, void **argv)
       continue;
     }
 
-    printf("core_child.bounds x=%u y=%u width=%u height=%u\n", child->data.visual.bounds.x, child->data.visual.bounds.y,
-           child->data.visual.bounds.width, child->data.visual.bounds.height);
+    // printf("core_child.bounds x=%u y=%u width=%u height=%u\n", child->data.visual.bounds.x, child->data.visual.bounds.y,
+    //        child->data.visual.bounds.width, child->data.visual.bounds.height);
 
     MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
     sequence->render_target = NODE_RENDER_TARGET_IMAGE;
@@ -341,6 +341,7 @@ int build_core_display_v1(int argc, void **argv)
   MCcall(build_core_entry(core_objects_display, "special_update"));
   MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
   MCcall(build_core_entry(core_objects_display, "save_function_to_file"));
+  MCcall(build_core_entry(core_objects_display, "load_existing_struct_into_code_editor"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_keyboard_input"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_input"));
   MCcall(build_core_entry(core_objects_display, "code_editor_state"));

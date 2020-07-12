@@ -2142,7 +2142,7 @@ int transcribe_for_statement(function_info *owner, char *code, int *i, uint *tra
   MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
   // printf("returned from cblock: tforstatement\n");
 
-  print_parse_error(code, *i, "trans-forstatem", "before-final_curly");
+  // print_parse_error(code, *i, "trans-forstatem", "before-final_curly");
   MCcall(parse_past(code, i, "}"));
 
   MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
