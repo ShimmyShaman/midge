@@ -2820,26 +2820,53 @@ int transcribe_declarative_array(function_info *owner, char *code, int *i, uint 
 int transcribe_declarative_statement(function_info *owner, char *code, int *i, uint *transcription_alloc,
                                      char **transcription)
 {
-  // Type
-  char *type_declaration;
-  MCcall(parse_past_conformed_type_declaration(owner, code, i, &type_declaration));
-  MCcall(parse_past_empty_text(code, i));
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
 
-  printf("type_declaration:'%s'\n", type_declaration);
+  // Type
+  struct {
+    char *name;
+    uint deref_count;
+  } type;
+  MCcall(parse_past_variable_name(code, i, &type.name));
+  MCcall(parse_past_empty_text(code, i));
+  MCcall(parse_past_dereference_sequence(code, i, &type.deref_count));
+  MCcall(parse_past_empty_text(code, i));
+  {
+    struct_info *type_struct_info;
+
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&command_hub->nodespace;
+    mc_vargs[1] = (void *)&type.name;
+    mc_vargs[2] = (void *)&type_struct_info;
+    MCcall(find_struct_info(3, mc_vargs));
+
+    if (type_struct_info) {
+      free(type.name);
+      allocate_and_copy_cstr(type.name, type_struct_info->declared_mc_name);
+      // if (!type.deref_count) {
+      //   MCerror(734, "TODO some deref acrobatics to deal with mc_types");
+      // }
+    }
+  }
+
+  // printf("type_declaration:'%s'\n", type_declaration);
   char *identifier;
   MCcall(parse_past_mc_identifier(code, i, &identifier, false, false));
   MCcall(parse_past_empty_text(code, i));
   MCcall(parse_past(code, i, ";"));
 
-  MCcall(append_to_cstr(transcription_alloc, transcription, type_declaration));
-  if (type_declaration[strlen(type_declaration) - 1] != '*') {
-    MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+  MCcall(append_to_cstr(transcription_alloc, transcription, type.name));
+  MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+  for (int d = 0; d < type.deref_count; ++d) {
+    MCcall(append_to_cstr(transcription_alloc, transcription, "*"));
   }
 
   MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
   MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
 
-  free(type_declaration);
+  free(type.name);
   free(identifier);
 
   return 0;
@@ -2848,11 +2875,37 @@ int transcribe_declarative_statement(function_info *owner, char *code, int *i, u
 int transcribe_declarative_assignment(function_info *owner, char *code, int *i, uint *transcription_alloc,
                                       char **transcription)
 {
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
   // printf("tda-transcription:\n'%s'\n", *transcription);
   // Type
-  char *type_declaration;
-  MCcall(parse_past_conformed_type_declaration(owner, code, i, &type_declaration));
+  struct {
+    char *name;
+    uint deref_count;
+  } type;
+  MCcall(parse_past_variable_name(code, i, &type.name));
   MCcall(parse_past_empty_text(code, i));
+  MCcall(parse_past_dereference_sequence(code, i, &type.deref_count));
+  MCcall(parse_past_empty_text(code, i));
+  {
+    struct_info *type_struct_info;
+
+    void *mc_vargs[3];
+    mc_vargs[0] = (void *)&command_hub->nodespace;
+    mc_vargs[1] = (void *)&type.name;
+    mc_vargs[2] = (void *)&type_struct_info;
+    MCcall(find_struct_info(3, mc_vargs));
+
+    if (type_struct_info) {
+      free(type.name);
+      allocate_and_copy_cstr(type.name, type_struct_info->declared_mc_name);
+      // if (!type.deref_count) {
+      //   MCerror(734, "TODO some deref acrobatics to deal with mc_types");
+      // }
+    }
+  }
 
   // printf("type_declaration:'%s'\n", type_declaration);
   char *identifier;
@@ -2865,9 +2918,10 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
   char *expression;
   MCcall(parse_expression_lacking_midge_function_call(owner, code, i, &expression));
   if (expression) {
-    MCcall(append_to_cstr(transcription_alloc, transcription, type_declaration));
-    if (type_declaration[strlen(type_declaration) - 1] != '*') {
-      MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+    MCcall(append_to_cstr(transcription_alloc, transcription, type.name));
+    MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+    for (int d = 0; d < type.deref_count; ++d) {
+      MCcall(append_to_cstr(transcription_alloc, transcription, "*"));
     }
 
     MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
@@ -2881,9 +2935,10 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
     free(expression);
   }
   else {
-    MCcall(append_to_cstr(transcription_alloc, transcription, type_declaration));
-    if (type_declaration[strlen(type_declaration) - 1] != '*') {
-      MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+    MCcall(append_to_cstr(transcription_alloc, transcription, type.name));
+    MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+    for (int d = 0; d < type.deref_count; ++d) {
+      MCcall(append_to_cstr(transcription_alloc, transcription, "*"));
     }
 
     MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
@@ -2895,7 +2950,7 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
     free(var);
   }
 
-  free(type_declaration);
+  free(type.name);
   free(identifier);
   // printf("after transcribe_declarative_assignment:\n'%s'\n", *transcription);
   return 0;
@@ -4715,6 +4770,7 @@ int parse_struct_definition(char *code_definition, struct_info **structure_info)
   // Fields
   struct {
     char *type;
+    uint deref_count;
     char *name;
   } fields[128];
   unsigned int field_count = 0;
@@ -4722,7 +4778,9 @@ int parse_struct_definition(char *code_definition, struct_info **structure_info)
   MCcall(parse_past(code_definition, &i, "{"));
   MCcall(parse_past_empty_text(code_definition, &i));
   while (code_definition[i] != '}') {
-    MCcall(parse_past_conformed_type_declaration(NULL, code_definition, &i, &fields[field_count].type));
+    MCcall(parse_past_variable_name(code_definition, &i, &fields[field_count].type));
+    MCcall(parse_past_empty_text(code_definition, &i));
+    MCcall(parse_past_dereference_sequence(code_definition, &i, &fields[field_count].deref_count));
     MCcall(parse_past_empty_text(code_definition, &i));
     MCcall(parse_past_variable_name(code_definition, &i, &fields[field_count].name));
     MCcall(parse_past_empty_text(code_definition, &i));
@@ -4747,7 +4805,7 @@ int parse_struct_definition(char *code_definition, struct_info **structure_info)
     result->fields[f]->type_version = 0;
     result->fields[f]->type_name = fields[f].type;
     result->fields[f]->name = fields[f].name;
-    result->fields[f]->type_deref_count = 0;
+    result->fields[f]->type_deref_count = fields[f].deref_count;
   }
 
   *structure_info = result;
@@ -4833,6 +4891,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
       mc_parameter_info_v1 *equivalent = NULL;
       for (int j = 0; j < defined_struct->field_count; ++j) {
         mc_parameter_info_v1 *defined_field_info = (mc_parameter_info_v1 *)defined_struct->fields[j];
+        printf(">>'%s'\n", defined_field_info->type_name);
         if (strcmp(field_info->name, defined_field_info->name) ||
             strcmp(field_info->type_name, defined_field_info->type_name) ||
             field_info->type_deref_count != defined_field_info->type_deref_count) {
