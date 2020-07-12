@@ -114,12 +114,12 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         event->handled = true;
         break;
       }
-      // case CODE_EDITOR_SOURCE_DATA_STRUCT: {
-      //   // Read the code from the editor
-      //   // parse_and_instantiate_struct_definition_from_editor(fedit);
-      //   event->handled = true;
-      //   break;
-      // }
+      case CODE_EDITOR_SOURCE_DATA_STRUCT: {
+        // Read the code from the editor
+        define_struct_from_code_editor(state);
+        event->handled = true;
+        break;
+      }
       default: {
         // Do Nothing? TODO
         printf("instantiating data_source:%i is not supported\n", state->source_data_type);

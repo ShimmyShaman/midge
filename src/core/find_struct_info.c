@@ -3,8 +3,9 @@
 #include "core/midge_core.h"
 
 // [_mc_iteration=3]
-mc_struct_info_v1 *find_struct_info(mc_node_v1 * nodespace, char * struct_name) {
-for (int i = 0; i < nodespace->struct_count; ++i) {
+mc_struct_info_v1 *find_struct_info(mc_node_v1 *nodespace, char *struct_name)
+{
+  for (int i = 0; i < nodespace->struct_count; ++i) {
 
     // printf("fsi-3\n");
     mc_struct_info_v1 *sinfo = nodespace->structs[i];

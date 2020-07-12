@@ -5544,6 +5544,37 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
 int init_core_structures(mc_command_hub_v1 *command_hub)
 {
   {
+    clint_declare("typedef struct mc_special_data_v1 { int num; } mc_special_data_v1;");
+    mc_struct_info_v1 *special_struct_strdef = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+    MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
+                                &command_hub->global_node->struct_count, (void *)special_struct_strdef));
+
+    special_struct_strdef->struct_id = NULL;
+    special_struct_strdef->name = "special_data";
+    special_struct_strdef->version = 1U;
+    special_struct_strdef->declared_mc_name = "mc_special_data_v1";
+    special_struct_strdef->field_count = 1;
+    special_struct_strdef->fields = (mc_parameter_info_v1 **)calloc(sizeof(void *), special_struct_strdef->field_count);
+    special_struct_strdef->sizeof_cstr = NULL;
+
+    mc_parameter_info_v1 *field;
+    int f = 0;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    special_struct_strdef->fields[f++] = field;
+    field->type_name = "int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "num";
+
+    // field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    // special_struct_strdef->fields[f++] = field;
+    // field->type_name = "text_line_list";
+    // field->type_version = 1U;
+    // field->type_deref_count = 1;
+    // field->name = "text";
+  }
+
+  {
     mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
     MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
                                 &command_hub->global_node->struct_count, (void *)parameter_info_definition_v1));
@@ -6157,6 +6188,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("find_struct_info = &find_struct_info_v0;");
   printf("Loading Core Methods\n");
   MCcall(parse_and_process_core_function(command_hub, "find_struct_info"));
+  MCcall(parse_and_process_core_function(command_hub, "special_modification"));
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));

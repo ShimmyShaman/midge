@@ -109,8 +109,8 @@ int declare_function_pointer_v1(int argc, void **argv)
   func_info->parameter_count = (argc - 2) / 2;
   func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(void *) * func_info->parameter_count);
   func_info->variable_parameter_begin_index = -1;
-  unsigned int struct_usage_alloc = 2;
-  func_info->struct_usage = (mc_struct_info_v1 **)malloc(sizeof(mc_struct_info_v1 *) * struct_usage_alloc);
+  uint struct_usage_alloc = 0;
+  func_info->struct_usage = NULL;
   func_info->struct_usage_count = 0;
   // printf("dfp-1\n");
 
@@ -579,21 +579,24 @@ int conform_type_identity_v1(int argc, void **argv)
 
       // Add reference to function infos struct usages
       if (func_info) {
+        printf("ctn-4\n");
         struct_info **new_collection =
             (struct_info **)malloc(sizeof(struct_info *) * (func_info->struct_usage_count + 1));
-        if (func_info->struct_usage_count)
+        if (func_info->struct_usage_count) {
           memcpy((void *)new_collection, func_info->struct_usage,
                  sizeof(struct_info *) * func_info->struct_usage_count);
+        }
         new_collection[func_info->struct_usage_count] = str_info;
         if (func_info->struct_usage)
           free(func_info->struct_usage);
 
-        // printf("ctn-4\n");
+        printf("ctn-6\n");
         func_info->struct_usage_count = func_info->struct_usage_count + 1;
         func_info->struct_usage = new_collection;
       }
     }
   }
+  printf("ctn-8\n");
 
   // Re-add any deref operators
   if (type_deref_count) {
@@ -3081,12 +3084,13 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
       while (isalnum(code[i]) || code[i] == '_')
         ++i;
 
+      int slen = i - s;
       {
         // Keywords
-        if (!strncmp(code + s, "if", i - s)) {
+        if (slen == 2 && !strncmp(code + s, "if", slen)) {
           if (!tokens_ahead) {
             output->type = MC_TOKEN_IF_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            allocate_and_copy_cstrn(output->text, code + s, slen);
             output->start_index = s;
             return 0;
           }
@@ -3095,10 +3099,10 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
             return 0;
           }
         }
-        if (!strncmp(code + s, "else", i - s)) {
+        if (slen == 4 && !strncmp(code + s, "else", slen)) {
           if (!tokens_ahead) {
             output->type = MC_TOKEN_ELSE_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            allocate_and_copy_cstrn(output->text, code + s, slen);
             output->start_index = s;
             return 0;
           }
@@ -3107,10 +3111,10 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
             return 0;
           }
         }
-        if (!strncmp(code + s, "while", i - s)) {
+        if (slen == 5 && !strncmp(code + s, "while", slen)) {
           if (!tokens_ahead) {
             output->type = MC_TOKEN_WHILE_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            allocate_and_copy_cstrn(output->text, code + s, slen);
             output->start_index = s;
             return 0;
           }
@@ -3119,10 +3123,10 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
             return 0;
           }
         }
-        if (!strncmp(code + s, "switch", i - s)) {
+        if (slen == 6 && !strncmp(code + s, "switch", slen)) {
           if (!tokens_ahead) {
             output->type = MC_TOKEN_SWITCH_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            allocate_and_copy_cstrn(output->text, code + s, slen);
             output->start_index = s;
             return 0;
           }
@@ -3131,10 +3135,10 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
             return 0;
           }
         }
-        if (!strncmp(code + s, "return", i - s)) {
+        if (slen == 6 && !strncmp(code + s, "return", slen)) {
           if (!tokens_ahead) {
             output->type = MC_TOKEN_RETURN_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            allocate_and_copy_cstrn(output->text, code + s, slen);
             output->start_index = s;
             return 0;
           }
@@ -3143,10 +3147,10 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
             return 0;
           }
         }
-        if (!strncmp(code + s, "const", i - s)) {
+        if (slen == 5 && !strncmp(code + s, "const", slen)) {
           if (!tokens_ahead) {
             output->type = MC_TOKEN_CONST_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, i - s);
+            allocate_and_copy_cstrn(output->text, code + s, slen);
             output->start_index = s;
             return 0;
           }
@@ -3159,7 +3163,7 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
 
       if (!tokens_ahead) {
         output->type = MC_TOKEN_KEYWORD_OR_NAME;
-        allocate_and_copy_cstrn(output->text, code + s, i - s);
+        allocate_and_copy_cstrn(output->text, code + s, slen);
         output->start_index = s;
         return 0;
       }
@@ -3185,6 +3189,10 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
 
   // QUICK FIX
   bool fix_quickly = true;
+  if (!strncmp(code + *i, "special_data s;", 15)) {
+    printf("fixquicklyfixed\n");
+    fix_quickly = false;
+  }
   for (int j = *i; fix_quickly; ++j) {
     switch (code[j]) {
     case '\0': {
@@ -4668,172 +4676,55 @@ int parse_struct_definition(char *code_definition, struct_info **structure_info)
   }
   MCcall(parse_past(code_definition, &i, "}"));
 
-  // struct_info *sinfo;
-  // {
-  //   // Check if the function info already exists in the namespace
-  //   void *vargs[3];
-  //   vargs[0] = &command_hub->nodespace;
-  //   vargs[1] = &struct_name;
-  //   vargs[2] = &sinfo;
-  //   MCcall(find_struct_info(3, vargs));
-  // }
+  mc_struct_info_v1 *result = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+  result->name = struct_name;
+  result->field_count = field_count;
+  result->fields = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * result->field_count);
+  for (int f = 0; f < result->field_count; ++f) {
+    result->fields[f] = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
 
-  // if (sinfo) {
-  //   // Check if anything new is being defined
+    result->fields[f]->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+    allocate_and_copy_cstr(result->fields[f]->struct_id->identifier, "parameter_info");
+    result->fields[f]->struct_id->version = 1;
 
-  //   // Redefinition
-  // }
-  // else {
-  //   // New Declaration
-  //   MCerror(4665, "TODO");
-  // }
+    result->fields[f]->type_version = 0;
+    result->fields[f]->type_name = fields[f].type;
+    result->fields[f]->name = fields[f].name;
+    result->fields[f]->type_deref_count = 0;
+  }
 
-  // char *function_name;
-  // MCcall(parse_past_mc_identifier(function_definition_text, &index, &function_name, false, false));
-  // MCcall(parse_past_empty_text(function_definition_text, &index));
-  // MCcall(parse_past(function_definition_text, &index, "("));
-  // MCcall(parse_past_empty_text(function_definition_text, &index));
+  *structure_info = result;
+  return 0;
+}
 
-  // // Obtain the information for the function
-  // function_info *func_info;
-  // {
-  //   // Check if the function info already exists in the namespace
-  //   void *mc_vargs[3];
-  //   mc_vargs[0] = (void *)&func_info;
-  //   mc_vargs[1] = (void *)&command_hub->global_node; // TODO -- from state?
-  //   mc_vargs[2] = (void *)&function_name;
-  //   MCcall(find_function_info(3, mc_vargs));
-  // }
+int declare_struct_from_info(mc_struct_info_v1 *str)
+{
+  uint cstr_alloc = 256;
+  char *cstr = (char *)malloc(sizeof(char) * cstr_alloc);
 
-  // if (func_info) {
-  //   // Increment function iteration
-  //   ++func_info->latest_iteration;
+  cprintf(str->declared_mc_name, "mc_%s_v%i", str->name, str->version);
 
-  //   // Free previous resources
-  //   for (int i = 0; i < func_info->struct_usage_count; ++i) {
-  //     mc_struct_info_v1 *str = (mc_struct_info_v1 *)func_info->struct_usage[i];
-  //     if (str->struct_id) {
-  //     } // TODO
-  //     // TODO free_struct(str);
-  //   }
-  //   // parameters
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, "typedef struct "));
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, " {\n"));
+  for (int i = 0; i < str->field_count; ++i) {
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, "  "));
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->type_name));
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, " "));
+    for (int j = 0; j < str->fields[i]->type_deref_count; ++j) {
+      MCcall(append_to_cstr(&cstr_alloc, &cstr, "*"));
+    }
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->name));
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, ";\n"));
+  }
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, "} "));
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, ";"));
 
-  //   if (func_info->mc_code)
-  //     free(func_info->mc_code); // OR can it also be script code??
-  //   func_info->mc_code = NULL;
+  printf("declare_struct_from_info:\n%s\n", cstr);
+  clint_declare(cstr);
+  free(cstr);
 
-  //   free(function_name);
-  // }
-  // else {
-  //   // Create
-  //   func_info = (function_info *)malloc(sizeof(function_info));
-  //   func_info->struct_id = NULL; // TODO
-  //   func_info->source_filepath = NULL;
-  //   func_info->latest_iteration = 1;
-  //   func_info->name = function_name;
-
-  //   // Attach to global -- TODO
-  //   MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
-  //                               &command_hub->global_node->functions_alloc,
-  //                               &command_hub->global_node->function_count, func_info));
-
-  //   // Declare with cling
-  //   if (!skip_clint_declaration) {
-  //     char buf[1024];
-  //     sprintf(buf, "int (*%s)(int, void **);", func_info->name);
-  //     clint_process(buf);
-  //   }
-  // }
-
-  // // printf("papfd-0\n");
-  // func_info->struct_usage_count = 0;
-  // func_info->parameter_count = 0;
-  // func_info->variable_parameter_begin_index = -1;
-
-  // MCcall(convert_return_type_string(return_type, &func_info->return_type.name, &func_info->return_type.deref_count));
-  // free(return_type);
-
-  // printf("papfd-1\n");
-  // // Parse the parameters
-  // struct {
-  //   char *type;
-  //   uint type_deref_count;
-  //   char *name;
-  // } parameters[32];
-  // uint parameter_count = 0;
-
-  // while (function_definition_text[index] != ')') {
-  //   if (parameter_count) {
-  //     MCcall(parse_past(function_definition_text, &index, ","));
-  //     MCcall(parse_past_empty_text(function_definition_text, &index));
-  //   }
-  //   MCcall(parse_past_conformed_type_declaration(func_info, function_definition_text, &index,
-  //                                                &parameters[parameter_count].type));
-  //   MCcall(parse_past_empty_text(function_definition_text, &index));
-  //   parameters[parameter_count].type_deref_count = 0;
-  //   while (function_definition_text[index] == '*') {
-  //     ++parameters[parameter_count].type_deref_count;
-  //     ++index;
-  //     MCcall(parse_past_empty_text(function_definition_text, &index));
-  //   }
-
-  //   MCcall(parse_past_mc_identifier(function_definition_text, &index, &parameters[parameter_count].name, false,
-  //   false)); MCcall(parse_past_empty_text(function_definition_text, &index));
-  //   ++parameter_count;
-  // }
-  // MCcall(parse_past(function_definition_text, &index, ")"));
-  // MCcall(parse_past_empty_text(function_definition_text, &index));
-
-  // printf("papfd-2\n");
-  // func_info->parameter_count = parameter_count;
-  // func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * parameter_count);
-  // for (int p = 0; p < parameter_count; ++p) {
-  //   mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-  //   parameter->struct_id = NULL;  // TODO
-  //   parameter->type_version = 0U; // TODO
-  //   parameter->type_name = parameters[p].type;
-  //   parameter->type_deref_count = parameters[p].type_deref_count;
-  //   parameter->name = parameters[p].name;
-
-  //   func_info->parameters[p] = parameter;
-  // }
-
-  // MCcall(parse_past(function_definition_text, &index, "{"));
-  // MCcall(parse_past_empty_text(function_definition_text, &index));
-
-  // // printf("papfd-3\n");
-  // // Find the index of the last closing curly bracket
-  // int last_curly_index = strlen(function_definition_text) - 1;
-  // {
-  //   bool found_curly = false;
-  //   while (1) {
-  //     // printf(":%c:\n", function_definition_text[last_curly_index]);
-  //     if (function_definition_text[last_curly_index] == '}') {
-  //       --last_curly_index;
-  //       while (function_definition_text[last_curly_index] == ' ' &&
-  //              function_definition_text[last_curly_index] == '\n' &&
-  //              function_definition_text[last_curly_index] == '\t') {
-  //         --last_curly_index;
-  //       }
-  //       break;
-  //     }
-
-  //     --last_curly_index;
-  //   }
-  // }
-
-  // if (last_curly_index <= index) {
-  //   MCerror(4126, "TODO");
-  // }
-
-  // // printf("papfd-4\n");
-  // char *code_block = (char *)malloc(sizeof(char) * (last_curly_index - index + 1));
-  // strncpy(code_block, function_definition_text + index, last_curly_index - index);
-  // code_block[last_curly_index - index] = '\0';
-  // func_info->mc_code = code_block;
-
-  // // printf("papfd-5\n");
-  // *function_definition = func_info;
   return 0;
 }
 
@@ -4846,6 +4737,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
   parse_struct_definition(struct_definition, &defined_struct);
   free(struct_definition);
 
+  printf("dsfce-0\n");
   if (state->source_data_type != CODE_EDITOR_SOURCE_DATA_STRUCT || !state->source_data) {
     // New Definition
     MCerror(4851, "TODO");
@@ -4854,29 +4746,79 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
     // Compare to see if they are effectively different
     mc_struct_info_v1 *editor_struct = (mc_struct_info_v1 *)state->source_data;
 
-    bool different = strcmp(editor_struct->name, defined_struct->name);
-    if (!different) {
-      different = editor_struct->field_count != defined_struct->field_count;
-    }
-    for (int i = 0; !different && i < editor_struct->field_count; ++i) {
-      different = strcmp(editor_struct->fields[0]->type_name, defined_struct->fields[0]->type_name);
-      if (different) {
-        break;
-      }
-      different = editor_struct->fields[0]->type_deref_count != defined_struct->fields[0]->type_deref_count;
-      if (different) {
-        break;
-      }
-      different = strcmp(editor_struct->fields[0]->name, defined_struct->fields[0]->name);
+    bool definition_changed = false;
+    if (strcmp(editor_struct->name, defined_struct->name)) {
+      definition_changed = true;
+      MCerror(4720, "TODO");
     }
 
-    if (!different) {
+    // Look for removed fields
+    uint editor_struct_fields_alloc = editor_struct->field_count;
+    for (int i = 0; i < editor_struct->field_count; ++i) {
+      mc_parameter_info_v1 *field_info = (mc_parameter_info_v1 *)editor_struct->fields[i];
+
+      mc_parameter_info_v1 *equivalent = NULL;
+      for (int j = 0; j < defined_struct->field_count; ++j) {
+        mc_parameter_info_v1 *defined_field_info = (mc_parameter_info_v1 *)defined_struct->fields[j];
+        if (strcmp(field_info->name, defined_field_info->type_name) ||
+            strcmp(field_info->type_name, defined_field_info->type_name) ||
+            field_info->type_deref_count != defined_field_info->type_deref_count ||
+            field_info->type_version != defined_field_info->type_version) {
+          continue;
+        }
+
+        equivalent = defined_field_info;
+        break;
+      }
+      if (equivalent) {
+        continue;
+      }
+
+      // Field is missing in new definition
+      definition_changed = true;
+      MCerror(4745, "TODO");
+    }
+
+    // Look for added fields
+    for (int i = 0; i < defined_struct->field_count; ++i) {
+      mc_parameter_info_v1 *defined_field_info = (mc_parameter_info_v1 *)defined_struct->fields[i];
+
+      mc_parameter_info_v1 *equivalent = NULL;
+      for (int j = 0; j < editor_struct->field_count; ++j) {
+        mc_parameter_info_v1 *field_info = (mc_parameter_info_v1 *)editor_struct->fields[j];
+        if (strcmp(field_info->name, defined_field_info->type_name) ||
+            strcmp(field_info->type_name, defined_field_info->type_name) ||
+            field_info->type_deref_count != defined_field_info->type_deref_count ||
+            field_info->type_version != defined_field_info->type_version) {
+          continue;
+        }
+
+        equivalent = defined_field_info;
+        break;
+      }
+      if (equivalent) {
+        continue;
+      }
+
+      // Field is added in new definition
+      definition_changed = true;
+
+      // Add it
+      append_to_collection((void ***)&editor_struct->fields, &editor_struct_fields_alloc, &editor_struct->field_count,
+                           equivalent);
+    }
+
+    printf("dsfce-5\n");
+    if (!definition_changed) {
       // No update needed
+      printf("structure definition not changed...\n");
       return 0;
     }
 
+    printf("dsfce-8\n");
     // Redefinition
-    MCerror(4879, "TODO");
+    ++editor_struct->version;
+    declare_struct_from_info(editor_struct);
   }
 
   return 0;
@@ -4945,6 +4887,8 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     func_info->source_filepath = NULL;
     func_info->latest_iteration = 1;
     func_info->name = function_name;
+    func_info->struct_usage_count = 0;
+    func_info->struct_usage = NULL;
 
     // Attach to global -- TODO
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
@@ -5046,7 +4990,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   code_block[last_curly_index - index] = '\0';
   func_info->mc_code = code_block;
 
-  // printf("papfd-5\n");
+  printf("papfd-5\n");
   *function_definition = func_info;
   return 0;
 }
@@ -5157,6 +5101,8 @@ int read_and_declare_function_from_editor(mc_code_editor_state_v1 *state, functi
     func_info->source_filepath = NULL;
     func_info->name = function_name;
     func_info->latest_iteration = 0;
+    func_info->struct_usage_count = 0;
+    func_info->struct_usage = NULL;
 
     // Attach to global -- TODO
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
@@ -5526,7 +5472,7 @@ int debug_automation(int argc, void **argv)
     sim->ctrlDown = false;
     sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
     sim->detail.mouse.x = 51;
-    sim->detail.mouse.y = 121;
+    sim->detail.mouse.y = 197;
     {
       void *vargs[3];
       vargs[0] = argv[0];
@@ -5541,23 +5487,23 @@ int debug_automation(int argc, void **argv)
     // Select
     ++debugState->sequenceStep;
 
-    // node *code_editor = (node *)command_hub->global_node->children[0];
-    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    // sim->type = INPUT_EVENT_KEY_PRESS;
-    // sim->handled = false;
-    // sim->shiftDown = false;
-    // sim->altDown = false;
-    // sim->ctrlDown = true;
-    // sim->detail.keyboard.key = KEY_CODE_ENTER;
-    // {
-    //   void *vargs[3];
-    //   vargs[0] = argv[0];
-    //   vargs[1] = &command_hub->global_node->children[0];
-    //   vargs[2] = &sim;
-    //   MCcall(code_editor_handle_input(3, vargs));
-    // }
+    node *code_editor = (node *)command_hub->global_node->children[0];
+    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    sim->type = INPUT_EVENT_KEY_PRESS;
+    sim->handled = false;
+    sim->shiftDown = false;
+    sim->altDown = false;
+    sim->ctrlDown = true;
+    sim->detail.keyboard.key = KEY_CODE_ENTER;
+    {
+      void *vargs[3];
+      vargs[0] = argv[0];
+      vargs[1] = &command_hub->global_node->children[0];
+      vargs[2] = &sim;
+      MCcall(code_editor_handle_input(3, vargs));
+    }
 
-    // free(sim);
+    free(sim);
   } break;
 
   default:

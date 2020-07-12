@@ -39,8 +39,10 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
       MCerror(304, "append_to_collection malloc error");
     }
 
-    memcpy(new_collection, *collection, *collection_count * sizeof(void *));
-    free(*collection);
+    if (*collection_alloc) {
+      memcpy(new_collection, *collection, *collection_count * sizeof(void *));
+      free(*collection);
+    }
 
     *collection = new_collection;
     *collection_alloc = realloc_amount;

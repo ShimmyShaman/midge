@@ -75,11 +75,12 @@ typedef unsigned int uint;
     dest = mc_tmp_cstr;                                         \
   }
 
-#define cprintf(dest, format, ...)                            \
-  {                                                           \
-    int cprintf_n = snprintf(NULL, 0, format, ##__VA_ARGS__); \
-    dest = (char *)malloc(sizeof(char) * (cprintf_n + 1));    \
-    sprintf(dest, format, ##__VA_ARGS__);                     \
+#define cprintf(dest, format, ...)                                       \
+  {                                                                      \
+    int cprintf_n = snprintf(NULL, 0, format, ##__VA_ARGS__);            \
+    char *mc_temp_cstr = (char *)malloc(sizeof(char) * (cprintf_n + 1)); \
+    sprintf(mc_temp_cstr, format, ##__VA_ARGS__);                        \
+    dest = mc_temp_cstr;                                                 \
   }
 
 #define dprintf(format, ...)       \
@@ -502,9 +503,13 @@ typedef struct mc_code_editor_state_v1 {
   code_editor_data_source source_data_type;
   void *source_data;
 } mc_code_editor_state_v1;
+struct mc_special_state_v1 {
+  int num;
+} mc_special_state_v1;
 int load_existing_function_into_code_editor(mc_function_info_v1 *function);
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
 int parse_struct_definition(char *code_definition, mc_struct_info_v1 **structure_info);
+int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);
@@ -541,6 +546,7 @@ int (*core_display_entry_handle_input)(int, void **);
 
 // mc_struct_info_v1 *find_struct_info(mc_node_v1 *nodespace, char *struct_name) -- result is last
 int (*find_struct_info)(int, void **);
+int (*special_modification)(int, void **);
 int (*special_update)(int, void **);
 int (*move_cursor_up)(int, void **);
 int (*save_function_to_file)(int, void **);
