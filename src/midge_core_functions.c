@@ -4699,24 +4699,38 @@ int parse_struct_definition(char *code_definition, struct_info **structure_info)
 
 int declare_struct_from_info(mc_struct_info_v1 *str)
 {
+  // printf("declare_struct_from_info()\n");
   uint cstr_alloc = 256;
   char *cstr = (char *)malloc(sizeof(char) * cstr_alloc);
+  cstr[0] = '\0';
 
+  if (str->declared_mc_name) {
+    free(str->declared_mc_name);
+  }
   cprintf(str->declared_mc_name, "mc_%s_v%i", str->name, str->version);
 
+  // printf("dsfi-0\n");
   MCcall(append_to_cstr(&cstr_alloc, &cstr, "typedef struct "));
   MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
   MCcall(append_to_cstr(&cstr_alloc, &cstr, " {\n"));
+  // printf("dsfi-0\n");
   for (int i = 0; i < str->field_count; ++i) {
+    // printf("dsfi-1: str->fields[i]:%p\n", str->fields[i]);
+    // printf("dsfi-2: str->fields[i]->type_name:%p\n", str->fields[i]->type_name);
+    // printf("dsfi-2: str->fields[i]->type_name:%s\n", str->fields[i]->type_name);
+
     MCcall(append_to_cstr(&cstr_alloc, &cstr, "  "));
     MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->type_name));
     MCcall(append_to_cstr(&cstr_alloc, &cstr, " "));
     for (int j = 0; j < str->fields[i]->type_deref_count; ++j) {
       MCcall(append_to_cstr(&cstr_alloc, &cstr, "*"));
     }
+    // printf("dsfi-2: str->fields[i]->name:%p\n", str->fields[i]->name);
+    // printf("dsfi-2: str->fields[i]->name:%s\n", str->fields[i]->name);
     MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->name));
     MCcall(append_to_cstr(&cstr_alloc, &cstr, ";\n"));
   }
+  printf("dsfi-1\n");
   MCcall(append_to_cstr(&cstr_alloc, &cstr, "} "));
   MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
   MCcall(append_to_cstr(&cstr_alloc, &cstr, ";"));
@@ -4751,19 +4765,20 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
       definition_changed = true;
       MCerror(4720, "TODO");
     }
+    printf("dsfce-1\n");
 
     // Look for removed fields
     uint editor_struct_fields_alloc = editor_struct->field_count;
     for (int i = 0; i < editor_struct->field_count; ++i) {
       mc_parameter_info_v1 *field_info = (mc_parameter_info_v1 *)editor_struct->fields[i];
 
+      printf("dsfce-2\n");
       mc_parameter_info_v1 *equivalent = NULL;
       for (int j = 0; j < defined_struct->field_count; ++j) {
         mc_parameter_info_v1 *defined_field_info = (mc_parameter_info_v1 *)defined_struct->fields[j];
-        if (strcmp(field_info->name, defined_field_info->type_name) ||
+        if (strcmp(field_info->name, defined_field_info->name) ||
             strcmp(field_info->type_name, defined_field_info->type_name) ||
-            field_info->type_deref_count != defined_field_info->type_deref_count ||
-            field_info->type_version != defined_field_info->type_version) {
+            field_info->type_deref_count != defined_field_info->type_deref_count) {
           continue;
         }
 
@@ -4776,8 +4791,11 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
 
       // Field is missing in new definition
       definition_changed = true;
+      printf("field %s (%ux*)%s has been removed in redefinition\n", field_info->type_name,
+             field_info->type_deref_count, field_info->name);
       MCerror(4745, "TODO");
     }
+    printf("dsfce-3\n");
 
     // Look for added fields
     for (int i = 0; i < defined_struct->field_count; ++i) {
@@ -4786,12 +4804,14 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
       mc_parameter_info_v1 *equivalent = NULL;
       for (int j = 0; j < editor_struct->field_count; ++j) {
         mc_parameter_info_v1 *field_info = (mc_parameter_info_v1 *)editor_struct->fields[j];
-        if (strcmp(field_info->name, defined_field_info->type_name) ||
+        printf("dsfce-3b\n");
+        if (strcmp(field_info->name, defined_field_info->name) ||
             strcmp(field_info->type_name, defined_field_info->type_name) ||
             field_info->type_deref_count != defined_field_info->type_deref_count ||
             field_info->type_version != defined_field_info->type_version) {
           continue;
         }
+        printf("dsfce-4\n");
 
         equivalent = defined_field_info;
         break;
@@ -4805,7 +4825,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
 
       // Add it
       append_to_collection((void ***)&editor_struct->fields, &editor_struct_fields_alloc, &editor_struct->field_count,
-                           equivalent);
+                           defined_field_info);
     }
 
     printf("dsfce-5\n");

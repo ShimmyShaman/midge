@@ -5550,9 +5550,9 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)special_struct_strdef));
 
     special_struct_strdef->struct_id = NULL;
-    special_struct_strdef->name = "special_data";
+    allocate_and_copy_cstr(special_struct_strdef->name, "special_data");
     special_struct_strdef->version = 1U;
-    special_struct_strdef->declared_mc_name = "mc_special_data_v1";
+    allocate_and_copy_cstr(special_struct_strdef->declared_mc_name, "mc_special_data_v1");
     special_struct_strdef->field_count = 1;
     special_struct_strdef->fields = (mc_parameter_info_v1 **)calloc(sizeof(void *), special_struct_strdef->field_count);
     special_struct_strdef->sizeof_cstr = NULL;

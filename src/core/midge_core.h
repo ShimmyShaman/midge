@@ -224,9 +224,9 @@ typedef struct mc_script_local_v1 {
 
 typedef struct mc_struct_info_v1 {
   mc_struct_id_v1 *struct_id;
-  const char *name;
+  char *name;
   unsigned int version;
-  const char *declared_mc_name;
+  char *declared_mc_name;
   unsigned int field_count;
   mc_parameter_info_v1 **fields;
   const char *sizeof_cstr;
