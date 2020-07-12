@@ -1,4 +1,4 @@
-# **midge**
+# __midge__
 
 A productivity oriented development environment.
 
@@ -9,9 +9,10 @@ evaluation and quicker readjustments of projects.
 
 #### Maximal configuration of development environment
   
-The development environment itself (as much as possible) is built using dynamic
-recompilation which allows reconfiguration by the developer however it may serve
-best.
+The development environment itself (as much as possible) is built using the
+dynamic recompilation which allows reconfiguration by the developer however
+it may serve best. This can be done by accessing the code that runs the
+development environment _by using the development environment_.
 
 #### Automation of process and workflow generation
 
