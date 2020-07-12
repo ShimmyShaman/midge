@@ -5585,9 +5585,9 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)parameter_info_definition_v1));
 
     parameter_info_definition_v1->struct_id = NULL;
-    parameter_info_definition_v1->name = "parameter_info";
+    allocate_and_copy_cstr(parameter_info_definition_v1->name, "parameter_info");
     parameter_info_definition_v1->version = 1U;
-    parameter_info_definition_v1->declared_mc_name = "mc_parameter_info_v1";
+    allocate_and_copy_cstr(parameter_info_definition_v1->declared_mc_name, "mc_parameter_info_v1");
     parameter_info_definition_v1->field_count = 5;
     parameter_info_definition_v1->fields =
         (mc_parameter_info_v1 **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
@@ -5632,9 +5632,9 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)struct_info_definition_v1));
 
     struct_info_definition_v1->struct_id = NULL;
-    struct_info_definition_v1->name = "struct_info";
+    allocate_and_copy_cstr(struct_info_definition_v1->name, "struct_info");
     struct_info_definition_v1->version = 1U;
-    struct_info_definition_v1->declared_mc_name = "mc_struct_info_v1";
+    allocate_and_copy_cstr(struct_info_definition_v1->declared_mc_name, "mc_struct_info_v1");
     struct_info_definition_v1->field_count = 7;
     struct_info_definition_v1->fields =
         (mc_parameter_info_v1 **)calloc(sizeof(void *), struct_info_definition_v1->field_count);
@@ -5704,9 +5704,9 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)function_info_definition_v1));
 
     function_info_definition_v1->struct_id = NULL;
-    function_info_definition_v1->name = "function_info";
+    allocate_and_copy_cstr(function_info_definition_v1->name, "function_info");
     function_info_definition_v1->version = 1U;
-    function_info_definition_v1->declared_mc_name = "mc_function_info_v1";
+    allocate_and_copy_cstr(function_info_definition_v1->declared_mc_name, "mc_function_info_v1");
     function_info_definition_v1->field_count = 10;
     function_info_definition_v1->fields =
         (mc_parameter_info_v1 **)calloc(sizeof(void *), function_info_definition_v1->field_count);
@@ -5795,9 +5795,9 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)node_definition_v1));
 
     node_definition_v1->struct_id = NULL;
-    node_definition_v1->name = "node";
+    allocate_and_copy_cstr(node_definition_v1->name, "node");
     node_definition_v1->version = 1U;
-    node_definition_v1->declared_mc_name = "mc_node_v1";
+    allocate_and_copy_cstr(node_definition_v1->declared_mc_name, "mc_node_v1");
     node_definition_v1->field_count = 12;
     node_definition_v1->fields = (mc_parameter_info_v1 **)calloc(sizeof(void *), node_definition_v1->field_count);
     node_definition_v1->sizeof_cstr = "sizeof_node_v1"; // TODO -- remove this
@@ -5900,9 +5900,9 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)code_editor_state_strdef));
 
     code_editor_state_strdef->struct_id = NULL;
-    code_editor_state_strdef->name = "code_editor_state";
+    allocate_and_copy_cstr(code_editor_state_strdef->name, "code_editor_state");
     code_editor_state_strdef->version = 1U;
-    code_editor_state_strdef->declared_mc_name = "mc_code_editor_state_v1";
+    allocate_and_copy_cstr(code_editor_state_strdef->declared_mc_name, "mc_code_editor_state_v1");
     code_editor_state_strdef->field_count = 9;
     code_editor_state_strdef->fields =
         (mc_parameter_info_v1 **)calloc(sizeof(void *), code_editor_state_strdef->field_count);
