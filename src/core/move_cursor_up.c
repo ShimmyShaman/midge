@@ -22,6 +22,11 @@ void move_cursor_up(mc_node_v1 *code_editor_node, mc_code_editor_state_v1 *state
   if (state->cursorCol > line_len) {
     state->cursorCol = line_len;
   }
+  // if (state->cursorZenCol > line_len) {
+  //   state->cursorCol = line_len;
+  // } else {
+  //   state->cursorCol = state->cursorZenCol;
+  // }
 
   // Update the cursor visual
   state->cursor_requires_render_update = true;

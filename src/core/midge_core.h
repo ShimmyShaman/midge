@@ -482,24 +482,25 @@ typedef struct mc_procedure_template_v1 {
 } mc_procedure_template_v1;
 
 #define CODE_EDITOR_RENDERED_CODE_LINES 37
-typedef struct code_line {
+typedef struct rendered_code_line {
   uint index;
   bool requires_render_update;
   uint image_resource_uid;
   char *text;
   uint width, height;
-} code_line;
+} rendered_code_line;
 typedef enum code_editor_data_source {
   CODE_EDITOR_SOURCE_DATA_NONE = 0,
   CODE_EDITOR_SOURCE_DATA_FUNCTION,
   CODE_EDITOR_SOURCE_DATA_STRUCT,
 } code_editor_data_source;
 typedef struct mc_code_editor_state_v1 {
-  code_line render_lines[CODE_EDITOR_RENDERED_CODE_LINES];
+  rendered_code_line **render_lines;
   mc_cstring_list_v1 *text;
   uint font_resource_uid;
   uint line_display_offset;
-  uint cursorCol, cursorLine;
+  uint cursorCol;
+  uint cursorLine;
   bool cursor_requires_render_update;
 
   code_editor_data_source source_data_type;
@@ -515,6 +516,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);
 int parse_past_variable_name(const char *text, int *index, char **output);
+int parse_past_type_declaration_text(const char *code, int *i, char **type_declaration_text);
 int parse_past_dereference_sequence(const char *text, int *i, unsigned int *deref_count);
 int parse_past_empty_text(char const *const code, int *i);
 int parse_past_number(const char *text, int *index, char **output);

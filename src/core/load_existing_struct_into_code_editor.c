@@ -110,13 +110,13 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
     for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
       if (feState->line_display_offset + i < feState->text->lines_count) {
         // printf("life-6a\n");
-        if (feState->render_lines[i].text) {
+        if (feState->render_lines[i]->text) {
           // printf("life-6b\n");
-          feState->render_lines[i].requires_render_update =
-              feState->render_lines[i].requires_render_update ||
-              strcmp(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
+          feState->render_lines[i]->requires_render_update =
+              feState->render_lines[i]->requires_render_update ||
+              strcmp(feState->render_lines[i]->text, feState->text->lines[feState->line_display_offset + i]);
           // printf("life-6c\n");
-          free(feState->render_lines[i].text);
+          free(feState->render_lines[i]->text);
           // printf("life-6d\n");
         }
         else {
@@ -125,25 +125,25 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
           // printf("dawn:%i\n", feState->text->lines_allocated);
           // printf("dawn:%c\n", feState->text->lines[1][4]);
           // printf("dawn:%zu\n", strlen(feState->text->lines[feState->line_display_offset + i]));
-          feState->render_lines[i].requires_render_update =
-              feState->render_lines[i].requires_render_update ||
+          feState->render_lines[i]->requires_render_update =
+              feState->render_lines[i]->requires_render_update ||
               !feState->text->lines[feState->line_display_offset + i] ||
               strlen(feState->text->lines[feState->line_display_offset + i]);
         }
 
         // printf("life-6f\n");
         // Assign
-        allocate_and_copy_cstr(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
+        allocate_and_copy_cstr(feState->render_lines[i]->text, feState->text->lines[feState->line_display_offset + i]);
         // printf("life-6g\n");
       }
       else {
         // printf("life-6h\n");
-        if (feState->render_lines[i].text) {
+        if (feState->render_lines[i]->text) {
           // printf("life-6i\n");
-          feState->render_lines[i].requires_render_update = true;
-          free(feState->render_lines[i].text);
+          feState->render_lines[i]->requires_render_update = true;
+          free(feState->render_lines[i]->text);
           // printf("life-6j\n");
-          feState->render_lines[i].text = NULL;
+          feState->render_lines[i]->text = NULL;
         }
       }
       // printf("life-6k\n");

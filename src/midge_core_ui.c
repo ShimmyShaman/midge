@@ -180,7 +180,8 @@ int core_display_render_v1(int argc, void **argv)
       continue;
     }
 
-    // printf("core_child.bounds x=%u y=%u width=%u height=%u\n", child->data.visual.bounds.x, child->data.visual.bounds.y,
+    // printf("core_child.bounds x=%u y=%u width=%u height=%u\n", child->data.visual.bounds.x,
+    // child->data.visual.bounds.y,
     //        child->data.visual.bounds.width, child->data.visual.bounds.height);
 
     MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));

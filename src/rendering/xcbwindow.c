@@ -147,6 +147,9 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
         p_wnfo->shouldExit = 1;
       }
       break;
+    case XCB_EXPOSE: {
+      // Nothing?
+    } break;
     case XCB_FOCUS_IN: {
       pthread_mutex_lock(&input_buffer->mutex);
       if (input_buffer->event_count >= MAX_QUEUED_KEY_EVENTS)

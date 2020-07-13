@@ -245,6 +245,44 @@ int parse_past_type_identifier(const char *text, int *index, char **identifier)
   }
 }
 
+// Can parse 'const unsigned int' etc. NO dereference operators!
+int parse_past_type_declaration_text(const char *code, int *i, char **type_declaration_text)
+{
+  allocate_and_copy_cstr(*type_declaration_text, "");
+
+  char *parciple;
+  bool complex = false;
+  MCcall(parse_past_variable_name(code, i, &parciple));
+  while (!strcmp(parciple, "unsigned") || !strcmp(parciple, "signed") || !strcmp(parciple, "const")) {
+
+    char *comb;
+    if (complex) {
+      cprintf(comb, "%s %s", *type_declaration_text, parciple);
+    }
+    else {
+      complex = true;
+      cprintf(comb, "%s", parciple);
+    }
+    free(parciple);
+    parciple = NULL;
+    free(*type_declaration_text);
+    *type_declaration_text = comb;
+
+    MCcall(parse_past_empty_text(code, i));
+    MCcall(parse_past_variable_name(code, i, &parciple));
+  }
+  {
+    char *comb;
+    cprintf(comb, "%s%s%s", *type_declaration_text, complex ? " " : "", parciple);
+    free(parciple);
+    parciple = NULL;
+    free(*type_declaration_text);
+    *type_declaration_text = comb;
+  }
+
+  return 0;
+}
+
 int parse_struct_definition_v0(char *code_definition, mc_struct_info_v1 **structure_info)
 {
   /*mcfuncreplace*/
@@ -275,7 +313,8 @@ int parse_struct_definition_v0(char *code_definition, mc_struct_info_v1 **struct
   MCcall(parse_past(code_definition, &i, "{"));
   MCcall(parse_past_empty_text(code_definition, &i));
   while (code_definition[i] != '}') {
-    MCcall(parse_past_variable_name(code_definition, &i, &fields[field_count].type));
+
+    MCcall(parse_past_type_declaration_text(code_definition, &i, &fields[field_count].type));
     MCcall(parse_past_empty_text(code_definition, &i));
     MCcall(parse_past_dereference_sequence(code_definition, &i, &fields[field_count].deref_count));
     MCcall(parse_past_empty_text(code_definition, &i));
@@ -2331,11 +2370,16 @@ int mc_main(int argc, const char *const *argv)
 
   MCcall(init_core_structures(command_hub));
   MCcall(init_core_functions(command_hub));
+  printf("mm-2\n");
   MCcall(init_process_matrix(command_hub));
+  printf("mm-3\n");
   // MCcall(build_interactive_console(0, NULL));
   MCcall(build_code_editor(0, NULL));
+  printf("mm-4\n");
   MCcall(build_core_display(0, NULL));
+  printf("mm-5\n");
   // return 0;
+  printf("mm-6\n");
 
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
                 " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");

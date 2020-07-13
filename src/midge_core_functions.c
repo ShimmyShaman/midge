@@ -1963,12 +1963,13 @@ int transcribe_expression(function_info *owner, char *code, int *i, uint *transc
     if (isalpha(code[*i]) || code[*i] == '_') {
       int s = *i;
       while (1) {
-
+        // printf("code[*i]=='%c'\n", code[*i]);
         switch (code[*i]) {
         case '[': {
           MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
         } break;
         case '-': {
+          // printf("housed '-'\n");
           if (code[*i + 1] == '>') {
             *i += 2;
             continue;
@@ -1980,6 +1981,14 @@ int transcribe_expression(function_info *owner, char *code, int *i, uint *transc
           continue;
         }
         case ']':
+          // printf("']': after:'%c%c'\n", (code + *i + 1)[0], (code + *i + 1)[1]);
+          // printf("']': compare %i<>%i,%i,%i\n", (code + *i + 1)[0], '-', '-', '-');
+          // if (code[*i + 1] == '.' || !strncmp(code + *i + 1, "->", 2)) {
+          //   ++*i;
+          //   continue;
+          // }
+          MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
+          break;
         case ' ':
         case ',':
         case ';':
@@ -2054,8 +2063,17 @@ int transcribe_expression(function_info *owner, char *code, int *i, uint *transc
       MCcall(transcribe_expression(owner, code, i, transcription_alloc, transcription));
       continue;
     }
+    case '-': {
+      if (code[*i + 1] == '>') {
+        MCcall(transcribe_past(code, i, transcription_alloc, transcription, "->"));
+        MCcall(transcribe_expression(owner, code, i, transcription_alloc, transcription));
+        continue;
+      }
+      else {
+        // Do nothing, skip to next case-statement block
+      }
+    }
     case '+':
-    case '-':
     case '/':
     case '*':
     case '%': {
@@ -2829,7 +2847,7 @@ int transcribe_declarative_statement(function_info *owner, char *code, int *i, u
     char *name;
     uint deref_count;
   } type;
-  MCcall(parse_past_variable_name(code, i, &type.name));
+  MCcall(parse_past_type_declaration_text(code, i, &type.name));
   MCcall(parse_past_empty_text(code, i));
   MCcall(parse_past_dereference_sequence(code, i, &type.deref_count));
   MCcall(parse_past_empty_text(code, i));
@@ -2885,7 +2903,7 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
     char *name;
     uint deref_count;
   } type;
-  MCcall(parse_past_variable_name(code, i, &type.name));
+  MCcall(parse_past_type_declaration_text(code, i, &type.name));
   MCcall(parse_past_empty_text(code, i));
   MCcall(parse_past_dereference_sequence(code, i, &type.deref_count));
   MCcall(parse_past_empty_text(code, i));
@@ -3837,13 +3855,13 @@ int load_existing_function_into_code_editor(function_info *function)
   for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
     if (feState->line_display_offset + i < feState->text->lines_count) {
       // printf("life-6a\n");
-      if (feState->render_lines[i].text) {
+      if (feState->render_lines[i]->text) {
         // printf("life-6b\n");
-        feState->render_lines[i].requires_render_update =
-            feState->render_lines[i].requires_render_update ||
-            strcmp(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
+        feState->render_lines[i]->requires_render_update =
+            feState->render_lines[i]->requires_render_update ||
+            strcmp(feState->render_lines[i]->text, feState->text->lines[feState->line_display_offset + i]);
         // printf("life-6c\n");
-        free(feState->render_lines[i].text);
+        free(feState->render_lines[i]->text);
         // printf("life-6d\n");
       }
       else {
@@ -3852,25 +3870,25 @@ int load_existing_function_into_code_editor(function_info *function)
         // printf("dawn:%i\n", feState->text->lines_allocated);
         // printf("dawn:%c\n", feState->text->lines[1][4]);
         // printf("dawn:%zu\n", strlen(feState->text->lines[feState->line_display_offset + i]));
-        feState->render_lines[i].requires_render_update =
-            feState->render_lines[i].requires_render_update ||
+        feState->render_lines[i]->requires_render_update =
+            feState->render_lines[i]->requires_render_update ||
             !feState->text->lines[feState->line_display_offset + i] ||
             strlen(feState->text->lines[feState->line_display_offset + i]);
       }
 
       // printf("life-6f\n");
       // Assign
-      allocate_and_copy_cstr(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
+      allocate_and_copy_cstr(feState->render_lines[i]->text, feState->text->lines[feState->line_display_offset + i]);
       // printf("life-6g\n");
     }
     else {
       // printf("life-6h\n");
-      if (feState->render_lines[i].text) {
+      if (feState->render_lines[i]->text) {
         // printf("life-6i\n");
-        feState->render_lines[i].requires_render_update = true;
-        free(feState->render_lines[i].text);
+        feState->render_lines[i]->requires_render_update = true;
+        free(feState->render_lines[i]->text);
         // printf("life-6j\n");
-        feState->render_lines[i].text = NULL;
+        feState->render_lines[i]->text = NULL;
       }
     }
     // printf("life-6k\n");
@@ -4097,13 +4115,13 @@ int load_existing_function_into_code_editor(function_info *function)
 //   for (i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
 //     if (feState->line_display_offset + i < feState->text->lines_count) {
 //       printf("life-6a\n");
-//       if (feState->render_lines[i].text) {
+//       if (feState->render_lines[i]->text) {
 //         printf("life-6b\n");
-//         feState->render_lines[i].requires_render_update =
-//             feState->render_lines[i].requires_render_update ||
-//             strcmp(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
+//         feState->render_lines[i]->requires_render_update =
+//             feState->render_lines[i]->requires_render_update ||
+//             strcmp(feState->render_lines[i]->text, feState->text->lines[feState->line_display_offset + i]);
 //         printf("life-6c\n");
-//         free(feState->render_lines[i].text);
+//         free(feState->render_lines[i]->text);
 //         printf("life-6d\n");
 //       }
 //       else {
@@ -4112,7 +4130,7 @@ int load_existing_function_into_code_editor(function_info *function)
 //         printf("dawn:%i\n", feState->text->lines_allocated);
 //         printf("dawn:%c\n", feState->text->lines[1][4]);
 //         printf("dawn:%zu\n", strlen(feState->text->lines[feState->line_display_offset + i]));
-//         feState->render_lines[i].requires_render_update = feState->render_lines[i].requires_render_update ||
+//         feState->render_lines[i]->requires_render_update = feState->render_lines[i]->requires_render_update ||
 //                                                           !feState->text->lines[feState->line_display_offset + i] ||
 //                                                           strlen(feState->text->lines[feState->line_display_offset +
 //                                                           i]);
@@ -4120,17 +4138,17 @@ int load_existing_function_into_code_editor(function_info *function)
 
 //       printf("life-6f\n");
 //       // Assign
-//       allocate_and_copy_cstr(feState->render_lines[i].text, feState->text->lines[feState->line_display_offset + i]);
+//       allocate_and_copy_cstr(feState->render_lines[i]->text, feState->text->lines[feState->line_display_offset + i]);
 //       printf("life-6g\n");
 //     }
 //     else {
 //       printf("life-6h\n");
-//       if (feState->render_lines[i].text) {
+//       if (feState->render_lines[i]->text) {
 //         printf("life-6i\n");
-//         feState->render_lines[i].requires_render_update = true;
-//         free(feState->render_lines[i].text);
+//         feState->render_lines[i]->requires_render_update = true;
+//         free(feState->render_lines[i]->text);
 //         printf("life-6j\n");
-//         feState->render_lines[i].text = NULL;
+//         feState->render_lines[i]->text = NULL;
 //       }
 //     }
 //     printf("life-6k\n");
@@ -4607,29 +4625,28 @@ int code_editor_render_v1(int argc, void **argv)
   element_render_command *element_cmd;
   // Lines
   mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)visual_node->extra;
-  code_line *lines = state->render_lines;
 
   // printf("fer-b\n");
   for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
-    if (lines[i].requires_render_update) {
-      lines[i].requires_render_update = false;
+    if (state->render_lines[i]->requires_render_update) {
+      state->render_lines[i]->requires_render_update = false;
 
       // printf("fer-c\n");
       MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
       sequence->render_target = NODE_RENDER_TARGET_IMAGE;
       sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
-      sequence->image_width = lines[i].width;
-      sequence->image_height = lines[i].height;
-      sequence->data.target_image.image_uid = lines[i].image_resource_uid;
+      sequence->image_width = state->render_lines[i]->width;
+      sequence->image_height = state->render_lines[i]->height;
+      sequence->data.target_image.image_uid = state->render_lines[i]->image_resource_uid;
 
       // printf("fer-d\n");
-      if (lines[i].text && strlen(lines[i].text)) {
+      if (state->render_lines[i]->text && strlen(state->render_lines[i]->text)) {
         // printf("fer-e\n");
         MCcall(obtain_element_render_command(sequence, &element_cmd));
         element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
         element_cmd->x = 4;
         element_cmd->y = 2 + 12;
-        element_cmd->data.print_text.text = (const char **)&lines[i].text;
+        element_cmd->data.print_text.text = (const char **)&state->render_lines[i]->text;
         element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
         element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
       }
@@ -4662,9 +4679,9 @@ int code_editor_render_v1(int argc, void **argv)
     element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
     element_cmd->x = 2;
     element_cmd->y = 8 + i * 22;
-    element_cmd->data.textured_rect_info.width = lines[i].width;
-    element_cmd->data.textured_rect_info.height = lines[i].height;
-    element_cmd->data.textured_rect_info.texture_uid = lines[i].image_resource_uid;
+    element_cmd->data.textured_rect_info.width = state->render_lines[i]->width;
+    element_cmd->data.textured_rect_info.height = state->render_lines[i]->height;
+    element_cmd->data.textured_rect_info.texture_uid = state->render_lines[i]->image_resource_uid;
   }
 
   // printf("fer-q\n");
@@ -4785,7 +4802,6 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
       mc_parameter_info_v1 *equivalent = NULL;
       for (int j = 0; j < defined_struct->field_count; ++j) {
         mc_parameter_info_v1 *defined_field_info = (mc_parameter_info_v1 *)defined_struct->fields[j];
-        printf(">>'%s'\n", defined_field_info->type_name);
         if (strcmp(field_info->name, defined_field_info->name) ||
             strcmp(field_info->type_name, defined_field_info->type_name) ||
             field_info->type_deref_count != defined_field_info->type_deref_count) {
@@ -4819,8 +4835,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
         printf("dsfce-3b\n");
         if (strcmp(field_info->name, defined_field_info->name) ||
             strcmp(field_info->type_name, defined_field_info->type_name) ||
-            field_info->type_deref_count != defined_field_info->type_deref_count ||
-            field_info->type_version != defined_field_info->type_version) {
+            field_info->type_deref_count != defined_field_info->type_deref_count) {
           continue;
         }
         printf("dsfce-4\n");
@@ -4878,7 +4893,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     char *name;
     uint deref_count;
   } return_type;
-  MCcall(parse_past_variable_name(function_definition_text, &index, &return_type.name));
+  MCcall(parse_past_type_declaration_text(function_definition_text, &index, &return_type.name));
   MCcall(parse_past_empty_text(function_definition_text, &index));
   MCcall(parse_past_dereference_sequence(function_definition_text, &index, &return_type.deref_count));
 
@@ -4963,7 +4978,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
       MCcall(parse_past(function_definition_text, &index, ","));
       MCcall(parse_past_empty_text(function_definition_text, &index));
     }
-    MCcall(parse_past_variable_name(function_definition_text, &index, &parameters[parameter_count].type_name));
+    MCcall(parse_past_type_declaration_text(function_definition_text, &index, &parameters[parameter_count].type_name));
     MCcall(parse_past_empty_text(function_definition_text, &index));
     MCcall(parse_past_dereference_sequence(function_definition_text, &index,
                                            &parameters[parameter_count].type_deref_count));
@@ -5447,29 +5462,29 @@ int read_and_declare_function_from_editor(mc_code_editor_state_v1 *state, functi
 //     if (i + state->line_display_offset >= state->text->lines_count) {
 
 //       // printf("fehi-5\n");
-//       if (!state->render_lines[i].text)
+//       if (!state->render_lines[i]->text)
 //         continue;
 
-//       // printf("was:'%s' now:NULL\n", state->render_lines[i].text);
-//       free(state->render_lines[i].text);
-//       state->render_lines[i].text = NULL;
+//       // printf("was:'%s' now:NULL\n", state->render_lines[i]->text);
+//       free(state->render_lines[i]->text);
+//       state->render_lines[i]->text = NULL;
 //     }
 //     else {
 //       // printf("fehi-6\n");
-//       if (state->render_lines[i].text && !strcmp(state->render_lines[i].text, state->text->lines[i +
+//       if (state->render_lines[i]->text && !strcmp(state->render_lines[i]->text, state->text->lines[i +
 //       state->line_display_offset]))
 //         continue;
 
-//       // printf("was:'%s' now:'%s'\n", state->render_lines[i].text, state->text->lines[i +
+//       // printf("was:'%s' now:'%s'\n", state->render_lines[i]->text, state->text->lines[i +
 //       state->line_display_offset]);
 //       // Update
-//       if (state->render_lines[i].text)
-//         free(state->render_lines[i].text);
-//       allocate_and_copy_cstr(state->render_lines[i].text, state->text->lines[i + state->line_display_offset]);
+//       if (state->render_lines[i]->text)
+//         free(state->render_lines[i]->text);
+//       allocate_and_copy_cstr(state->render_lines[i]->text, state->text->lines[i + state->line_display_offset]);
 //     }
 
 //     // printf("fehi-7\n");
-//     state->render_lines[i].requires_render_update = true;
+//     state->render_lines[i]->requires_render_update = true;
 //     fedit->data.visual.requires_render_update = true;
 //   }
 
@@ -5596,23 +5611,24 @@ int build_code_editor_v1(int argc, void **argv)
   state->text->lines_allocated = 8;
   state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_allocated);
   state->text->lines_count = 0;
+  state->render_lines = (rendered_code_line **)malloc(sizeof(rendered_code_line *) * CODE_EDITOR_RENDERED_CODE_LINES);
 
-  code_line *code_lines = state->render_lines;
   for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
+    state->render_lines[i] = (rendered_code_line *)malloc(sizeof(rendered_code_line));
 
-    code_lines[i].index = i;
-    code_lines[i].requires_render_update = true;
-    code_lines[i].text = NULL;
+    state->render_lines[i]->index = i;
+    state->render_lines[i]->requires_render_update = true;
+    state->render_lines[i]->text = NULL;
     //  "!this is twenty nine letters! "
     //  "!this is twenty nine letters! "
     //  "!this is twenty nine letters! ";
 
     MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
     command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-    command->p_uid = &code_lines[i].image_resource_uid;
+    command->p_uid = &state->render_lines[i]->image_resource_uid;
     command->data.create_texture.use_as_render_target = true;
-    command->data.create_texture.width = code_lines[i].width = fedit->data.visual.bounds.width - 4;
-    command->data.create_texture.height = code_lines[i].height = 28;
+    command->data.create_texture.width = state->render_lines[i]->width = fedit->data.visual.bounds.width - 4;
+    command->data.create_texture.height = state->render_lines[i]->height = 28;
   }
   fedit->extra = (void *)state;
 
