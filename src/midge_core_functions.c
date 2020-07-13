@@ -4731,6 +4731,10 @@ int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
         --bracket_count;
         if (!bracket_count && hit_code_block) {
           // End
+          if (state->text->lines[i][j + 1] == ';') {
+            ++j;
+          }
+
           // -- Copy up to now
           append_to_cstrn(&code_allocation, &code_from_code_editor, state->text->lines[i], j + 1);
 
@@ -4743,116 +4747,6 @@ int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
   }
 
   *output = code_from_code_editor;
-
-  return 0;
-}
-
-int parse_struct_definition(char *code_definition, struct_info **structure_info)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  int i = 0;
-  MCcall(parse_past_empty_text(code_definition, &i));
-  MCcall(parse_past(code_definition, &i, "struct"));
-  MCcall(parse_past_empty_text(code_definition, &i));
-
-  int s = i;
-  while (isalnum(code_definition[i]) || code_definition[i] == '_') {
-    ++i;
-  }
-
-  // Struct Name
-  char *struct_name;
-  allocate_and_copy_cstrn(struct_name, code_definition + s, i - s);
-
-  // Fields
-  struct {
-    char *type;
-    uint deref_count;
-    char *name;
-  } fields[128];
-  unsigned int field_count = 0;
-  MCcall(parse_past_empty_text(code_definition, &i));
-  MCcall(parse_past(code_definition, &i, "{"));
-  MCcall(parse_past_empty_text(code_definition, &i));
-  while (code_definition[i] != '}') {
-    MCcall(parse_past_variable_name(code_definition, &i, &fields[field_count].type));
-    MCcall(parse_past_empty_text(code_definition, &i));
-    MCcall(parse_past_dereference_sequence(code_definition, &i, &fields[field_count].deref_count));
-    MCcall(parse_past_empty_text(code_definition, &i));
-    MCcall(parse_past_variable_name(code_definition, &i, &fields[field_count].name));
-    MCcall(parse_past_empty_text(code_definition, &i));
-    MCcall(parse_past(code_definition, &i, ";"));
-    ++field_count;
-
-    MCcall(parse_past_empty_text(code_definition, &i));
-  }
-  MCcall(parse_past(code_definition, &i, "}"));
-
-  mc_struct_info_v1 *result = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
-  result->name = struct_name;
-  result->field_count = field_count;
-  result->fields = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * result->field_count);
-  for (int f = 0; f < result->field_count; ++f) {
-    result->fields[f] = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-
-    result->fields[f]->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
-    allocate_and_copy_cstr(result->fields[f]->struct_id->identifier, "parameter_info");
-    result->fields[f]->struct_id->version = 1;
-
-    result->fields[f]->type_version = 0;
-    result->fields[f]->type_name = fields[f].type;
-    result->fields[f]->name = fields[f].name;
-    result->fields[f]->type_deref_count = fields[f].deref_count;
-  }
-
-  *structure_info = result;
-  return 0;
-}
-
-int declare_struct_from_info(mc_struct_info_v1 *str)
-{
-  // printf("declare_struct_from_info()\n");
-  uint cstr_alloc = 256;
-  char *cstr = (char *)malloc(sizeof(char) * cstr_alloc);
-  cstr[0] = '\0';
-
-  if (str->declared_mc_name) {
-    free(str->declared_mc_name);
-  }
-  cprintf(str->declared_mc_name, "mc_%s_v%i", str->name, str->version);
-
-  // printf("dsfi-0\n");
-  MCcall(append_to_cstr(&cstr_alloc, &cstr, "typedef struct "));
-  MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
-  MCcall(append_to_cstr(&cstr_alloc, &cstr, " {\n"));
-  // printf("dsfi-0\n");
-  for (int i = 0; i < str->field_count; ++i) {
-    // printf("dsfi-1: str->fields[i]:%p\n", str->fields[i]);
-    // printf("dsfi-2: str->fields[i]->type_name:%p\n", str->fields[i]->type_name);
-    // printf("dsfi-2: str->fields[i]->type_name:%s\n", str->fields[i]->type_name);
-
-    MCcall(append_to_cstr(&cstr_alloc, &cstr, "  "));
-    MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->type_name));
-    MCcall(append_to_cstr(&cstr_alloc, &cstr, " "));
-    for (int j = 0; j < str->fields[i]->type_deref_count; ++j) {
-      MCcall(append_to_cstr(&cstr_alloc, &cstr, "*"));
-    }
-    // printf("dsfi-2: str->fields[i]->name:%p\n", str->fields[i]->name);
-    // printf("dsfi-2: str->fields[i]->name:%s\n", str->fields[i]->name);
-    MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->name));
-    MCcall(append_to_cstr(&cstr_alloc, &cstr, ";\n"));
-  }
-  printf("dsfi-1\n");
-  MCcall(append_to_cstr(&cstr_alloc, &cstr, "} "));
-  MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
-  MCcall(append_to_cstr(&cstr_alloc, &cstr, ";"));
-
-  printf("declare_struct_from_info:\n%s\n", cstr);
-  clint_declare(cstr);
-  free(cstr);
 
   return 0;
 }

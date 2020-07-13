@@ -341,6 +341,7 @@ int build_core_display_v1(int argc, void **argv)
   MCcall(build_core_entry(core_objects_display, "special_update"));
   MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
   MCcall(build_core_entry(core_objects_display, "save_function_to_file"));
+  MCcall(build_core_entry(core_objects_display, "save_struct_to_file"));
   MCcall(build_core_entry(core_objects_display, "load_existing_struct_into_code_editor"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_keyboard_input"));
   MCcall(build_core_entry(core_objects_display, "code_editor_handle_input"));

@@ -224,6 +224,7 @@ typedef struct mc_script_local_v1 {
 
 typedef struct mc_struct_info_v1 {
   mc_struct_id_v1 *struct_id;
+  char *source_filepath;
   char *name;
   unsigned int version;
   char *declared_mc_name;
@@ -509,7 +510,6 @@ struct mc_special_state_v1 {
 } mc_special_state_v1;
 int load_existing_function_into_code_editor(mc_function_info_v1 *function);
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
-int parse_struct_definition(char *code_definition, mc_struct_info_v1 **structure_info);
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
@@ -528,6 +528,8 @@ int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
 int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime);
 int (*parse_and_process_function_definition)(char *function_definition_text, mc_function_info_v1 **function_definition,
                                              bool skip_clint_declaration);
+int (*parse_struct_definition)(char *code_definition, mc_struct_info_v1 **structure_info);
+int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
 
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,
                                 char **transcription);
@@ -552,6 +554,7 @@ int (*special_modification)(int, void **);
 int (*special_update)(int, void **);
 int (*move_cursor_up)(int, void **);
 int (*save_function_to_file)(int, void **);
+int (*save_struct_to_file)(int, void **);
 int (*code_editor_handle_keyboard_input)(int, void **);
 int (*code_editor_handle_input)(int, void **);
 int (*load_existing_struct_into_code_editor)(int, void **);

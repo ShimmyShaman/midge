@@ -5,7 +5,7 @@
 // [_mc_iteration=2]
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
-  mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
+mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
   // printf("keyboard key = (%i%i%i)+%i\n", event->altDown, event->ctrlDown, event->shiftDown,
   // event->detail.keyboard.key);
 
@@ -437,6 +437,24 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
           read_editor_text_into_cstr(state, &function_definition);
 
           save_function_to_file(function, function_definition);
+
+          free(function_definition);
+        } break;
+        case CODE_EDITOR_SOURCE_DATA_STRUCT: {
+          mc_struct_info_v1 *structure = (mc_struct_info_v1 *)state->source_data;
+          if (!structure->source_filepath) {
+            printf("structure has no source filepath\n");
+            break;
+          }
+
+          // // Read the code from the editor
+          char *structure_definition;
+          read_editor_text_into_cstr(state, &structure_definition);
+
+          // printf("structure_definition:\n%s||\n", structure_definition);
+
+          save_struct_to_file(structure, structure_definition);
+          free(structure_definition);
         } break;
         default: {
           printf("saving source_data_type=%i is not supported\n", state->source_data_type);

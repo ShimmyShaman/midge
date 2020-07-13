@@ -245,6 +245,122 @@ int parse_past_type_identifier(const char *text, int *index, char **identifier)
   }
 }
 
+int parse_struct_definition_v0(char *code_definition, mc_struct_info_v1 **structure_info)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  int i = 0;
+  MCcall(parse_past(code_definition, &i, "struct"));
+  MCcall(parse_past_empty_text(code_definition, &i));
+
+  int s = i;
+  while (isalnum(code_definition[i]) || code_definition[i] == '_') {
+    ++i;
+  }
+
+  // Struct Name
+  char *struct_name;
+  allocate_and_copy_cstrn(struct_name, code_definition + s, i - s);
+
+  // Fields
+  struct {
+    char *type;
+    uint deref_count;
+    char *name;
+  } fields[128];
+  unsigned int field_count = 0;
+  MCcall(parse_past_empty_text(code_definition, &i));
+  MCcall(parse_past(code_definition, &i, "{"));
+  MCcall(parse_past_empty_text(code_definition, &i));
+  while (code_definition[i] != '}') {
+    MCcall(parse_past_variable_name(code_definition, &i, &fields[field_count].type));
+    MCcall(parse_past_empty_text(code_definition, &i));
+    MCcall(parse_past_dereference_sequence(code_definition, &i, &fields[field_count].deref_count));
+    MCcall(parse_past_empty_text(code_definition, &i));
+    MCcall(parse_past_variable_name(code_definition, &i, &fields[field_count].name));
+    MCcall(parse_past_empty_text(code_definition, &i));
+    MCcall(parse_past(code_definition, &i, ";"));
+    ++field_count;
+
+    MCcall(parse_past_empty_text(code_definition, &i));
+  }
+  MCcall(parse_past(code_definition, &i, "};"));
+
+  mc_struct_info_v1 *result = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+  result->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+  allocate_and_copy_cstr(result->struct_id->identifier, "struct_info");
+  result->struct_id->version = 1U;
+  result->source_filepath = NULL;
+  result->name = struct_name;
+  result->version = 1U;
+  result->declared_mc_name = NULL;
+  result->sizeof_cstr = 0; // Get rid of? TODO
+  result->field_count = field_count;
+  result->fields = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * result->field_count);
+  for (int f = 0; f < result->field_count; ++f) {
+    result->fields[f] = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+
+    result->fields[f]->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+    allocate_and_copy_cstr(result->fields[f]->struct_id->identifier, "parameter_info");
+    result->fields[f]->struct_id->version = 1;
+
+    result->fields[f]->type_version = 0;
+    result->fields[f]->type_name = fields[f].type;
+    result->fields[f]->name = fields[f].name;
+    result->fields[f]->type_deref_count = fields[f].deref_count;
+  }
+
+  *structure_info = result;
+  return 0;
+}
+
+int declare_struct_from_info_v0(mc_struct_info_v1 *str)
+{
+  printf("declare_struct_from_info()\n");
+  uint cstr_alloc = 256;
+  char *cstr = (char *)malloc(sizeof(char) * cstr_alloc);
+  cstr[0] = '\0';
+
+  if (str->declared_mc_name) {
+    free(str->declared_mc_name);
+  }
+  cprintf(str->declared_mc_name, "mc_%s_v%i", str->name, str->version);
+
+  printf("dsfi-0\n");
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, "typedef struct "));
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, " {\n"));
+  printf("dsfi-1\n");
+  for (int i = 0; i < str->field_count; ++i) {
+    // printf("dsfi-1: str->fields[i]:%p\n", str->fields[i]);
+    // printf("dsfi-2: str->fields[i]->type_name:%p\n", str->fields[i]->type_name);
+    // printf("dsfi-2: str->fields[i]->type_name:%s\n", str->fields[i]->type_name);
+
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, "  "));
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->type_name));
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, " "));
+    for (int j = 0; j < str->fields[i]->type_deref_count; ++j) {
+      MCcall(append_to_cstr(&cstr_alloc, &cstr, "*"));
+    }
+    // printf("dsfi-2: str->fields[i]->name:%p\n", str->fields[i]->name);
+    // printf("dsfi-2: str->fields[i]->name:%s\n", str->fields[i]->name);
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->name));
+    MCcall(append_to_cstr(&cstr_alloc, &cstr, ";\n"));
+  }
+  printf("dsfi-4\n");
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, "} "));
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
+  MCcall(append_to_cstr(&cstr_alloc, &cstr, ";"));
+
+  printf("~declare_struct_from_info:\n%s\n", cstr);
+  clint_declare(cstr);
+  free(cstr);
+
+  return 0;
+}
+
 int init_void_collection_v1(mc_void_collection_v1 **output)
 {
   *output = (mc_void_collection_v1 *)malloc(sizeof(mc_void_collection_v1));
@@ -2210,6 +2326,9 @@ int mc_main(int argc, const char *const *argv)
   // &template_collection->template_count, (void *)template_process));
 
   // Parse & Declare/add Core functions in midge_core_functions.c
+  parse_struct_definition = &parse_struct_definition_v0;
+  declare_struct_from_info = &declare_struct_from_info_v0;
+
   MCcall(init_core_structures(command_hub));
   MCcall(init_core_functions(command_hub));
   MCcall(init_process_matrix(command_hub));
@@ -5557,38 +5676,190 @@ int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *
   return 0;
 }
 
+int load_and_process_core_structure(mc_command_hub_v1 *command_hub, const char *core_struct_name)
+{
+  char buf[256];
+  sprintf(buf, "/home/jason/midge/src/core/%s.c", core_struct_name);
+
+  FILE *f = fopen(buf, "rb");
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+  char *input = (char *)malloc(fsize + 1);
+  fread(input, sizeof(char), fsize, f);
+  input[fsize] = '\0';
+  fclose(f);
+  // printf("file-read(%li):\n%s<EOF>\n###########################\n", fsize, input);
+
+  // Find the index of the function declaration
+  int offset = 0;
+  unsigned int struct_version = 0;
+  {
+    int cfn_len = strlen(core_struct_name);
+    int in_comment = 0;
+    for (int i = 0; !offset; ++i) {
+      if (input[i] == '\0') {
+        MCerror(5658, "TODO:%i", i);
+      }
+      else if (in_comment) {
+        const char *VERSION_PREPEND = "_mc_version=";
+        int vp_len = strlen(VERSION_PREPEND);
+        if (input[i] == '_' && !strncmp(input + i, VERSION_PREPEND, vp_len)) {
+          // Parse iteration reference
+          for (int j = i + vp_len; isdigit(input[j]); ++j) {
+            struct_version = struct_version * 10 + (input[j] - '0');
+          }
+          // printf("struct_version=%u '%c'\n", struct_version, input[i + 14]);
+        }
+        if (in_comment == 1 && input[i] == '*' && input[i + 1] == '/') {
+          in_comment = 0;
+        }
+        else if (in_comment == 2 && input[i] == '\n') {
+          in_comment = 0;
+        }
+      }
+      else if (input[i] == '/' && input[i + 1] == '*') {
+        in_comment = 1;
+      }
+      else if (input[i] == '/' && input[i + 1] == '/') {
+        in_comment = 2;
+      }
+      else if (input[i] == core_struct_name[0] && !strncmp(input + i, core_struct_name, cfn_len)) {
+        // Set the offset
+        // -- to the beginning of the struct name
+        offset = i;
+        while (isalnum(input[offset]) || input[offset] == '_') {
+          --offset;
+        }
+        // -- past deref & empty
+        bool b = true;
+        while (b) {
+          switch (input[offset]) {
+          case '*':
+          case ' ':
+          case '\n':
+          case '\t': {
+            --offset;
+          } break;
+          default: {
+            b = false;
+          } break;
+          }
+        }
+        // -- past the type identifier
+        while (isalnum(input[offset]) || input[offset] == '_') {
+          --offset;
+        }
+        ++offset;
+
+        // Remove the name appendage
+        // int s = i + cfn_len;
+        // for (i = s;; ++i) {
+        //   if (input[i] == '\0') {
+        //     MCerror(5686, "TODO");
+        //   }
+        //   if (input[i] == '(') {
+        //     break;
+        //   }
+        // }
+
+        // s = i - s;
+        // for (;; ++i) {
+        //   input[i - s] = input[i];
+        //   if (input[i] == '\0') {
+        //     break;
+        //   }
+        // }
+
+        break;
+      }
+    }
+  }
+
+  // printf("file-read:\n%s<EOF>\n###########################\n", input + offset);
+
+  mc_struct_info_v1 *structure;
+  MCcall(parse_struct_definition(input + offset, &structure));
+
+  // Set Provided Source Path
+  allocate_and_copy_cstr(structure->source_filepath, buf);
+  if (struct_version) {
+    structure->version = struct_version;
+  }
+
+  free(input);
+  printf("papcs-StructInfo:\n");
+  printf(" -- source_filepath:%s:\n", structure->source_filepath);
+  printf(" -- name:%s:\n", structure->name);
+  printf(" -- declared_mc_name:%s:\n", structure->declared_mc_name);
+  printf(" -- version:%u:\n", structure->version);
+  printf(" -- field_count:%u:\n", structure->field_count);
+  printf("#######################\n");
+
+  MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
+                              &command_hub->global_node->struct_count, (void *)structure));
+
+  printf("papcs-declare_struct_from_info:\n");
+  MCcall(declare_struct_from_info(structure));
+  printf("papcs-after declare_struct_from_info:\n");
+
+  // // Compile the function definition
+  // uint transcription_alloc = 4;
+  // char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
+  // transcription[0] = '\0';
+  // int code_index = 0;
+  // MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
+
+  // // printf("final transcription:\n%s\n", transcription);
+
+  // // Define the new function
+  // {
+  //   void *mc_vargs[3];
+  //   mc_vargs[0] = (void *)&func_info->name;
+  //   mc_vargs[1] = (void *)&transcription;
+  //   MCcall(instantiate_function(2, mc_vargs));
+  // }
+  return 0;
+}
+
 int init_core_structures(mc_command_hub_v1 *command_hub)
 {
-  {
-    clint_declare("typedef struct mc_special_data_v1 { int num; } mc_special_data_v1;");
-    mc_struct_info_v1 *special_struct_strdef = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
-    MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
-                                &command_hub->global_node->struct_count, (void *)special_struct_strdef));
+  MCcall(load_and_process_core_structure(command_hub, "special_data"));
 
-    special_struct_strdef->struct_id = NULL;
-    allocate_and_copy_cstr(special_struct_strdef->name, "special_data");
-    special_struct_strdef->version = 1U;
-    allocate_and_copy_cstr(special_struct_strdef->declared_mc_name, "mc_special_data_v1");
-    special_struct_strdef->field_count = 1;
-    special_struct_strdef->fields = (mc_parameter_info_v1 **)calloc(sizeof(void *), special_struct_strdef->field_count);
-    special_struct_strdef->sizeof_cstr = NULL;
+  // {
+  //   clint_declare("typedef struct mc_special_data_v1 { int num; } mc_special_data_v1;");
+  //   mc_struct_info_v1 *special_struct_strdef = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+  //   MCcall(append_to_collection((void ***)&command_hub->global_node->structs,
+  //   &command_hub->global_node->structs_alloc,
+  //                               &command_hub->global_node->struct_count, (void *)special_struct_strdef));
 
-    mc_parameter_info_v1 *field;
-    int f = 0;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    special_struct_strdef->fields[f++] = field;
-    field->type_name = "int";
-    field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "num";
+  //   special_struct_strdef->struct_id = NULL;
+  //   special_struct_strdef->source_filepath = NULL;
+  //   allocate_and_copy_cstr(special_struct_strdef->source_filepath, "/home/jason/midge/src/core/special_data.c");
+  //   allocate_and_copy_cstr(special_struct_strdef->name, "special_data");
+  //   special_struct_strdef->version = 1U;
+  //   allocate_and_copy_cstr(special_struct_strdef->declared_mc_name, "mc_special_data_v1");
+  //   special_struct_strdef->field_count = 1;
+  //   special_struct_strdef->fields = (mc_parameter_info_v1 **)calloc(sizeof(void *),
+  //   special_struct_strdef->field_count); special_struct_strdef->sizeof_cstr = NULL;
 
-    // field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    // special_struct_strdef->fields[f++] = field;
-    // field->type_name = "text_line_list";
-    // field->type_version = 1U;
-    // field->type_deref_count = 1;
-    // field->name = "text";
-  }
+  //   mc_parameter_info_v1 *field;
+  //   int f = 0;
+  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  //   special_struct_strdef->fields[f++] = field;
+  //   field->type_name = "int";
+  //   field->type_version = 0U;
+  //   field->type_deref_count = 0;
+  //   field->name = "num";
+
+  //   // field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  //   // special_struct_strdef->fields[f++] = field;
+  //   // field->type_name = "text_line_list";
+  //   // field->type_version = 1U;
+  //   // field->type_deref_count = 1;
+  //   // field->name = "text";
+  // }
 
   {
     mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
@@ -5596,6 +5867,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)parameter_info_definition_v1));
 
     parameter_info_definition_v1->struct_id = NULL;
+    parameter_info_definition_v1->source_filepath = NULL;
     allocate_and_copy_cstr(parameter_info_definition_v1->name, "parameter_info");
     parameter_info_definition_v1->version = 1U;
     allocate_and_copy_cstr(parameter_info_definition_v1->declared_mc_name, "mc_parameter_info_v1");
@@ -5643,6 +5915,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)struct_info_definition_v1));
 
     struct_info_definition_v1->struct_id = NULL;
+    struct_info_definition_v1->source_filepath = NULL;
     allocate_and_copy_cstr(struct_info_definition_v1->name, "struct_info");
     struct_info_definition_v1->version = 1U;
     allocate_and_copy_cstr(struct_info_definition_v1->declared_mc_name, "mc_struct_info_v1");
@@ -5715,6 +5988,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)function_info_definition_v1));
 
     function_info_definition_v1->struct_id = NULL;
+    function_info_definition_v1->source_filepath = NULL;
     allocate_and_copy_cstr(function_info_definition_v1->name, "function_info");
     function_info_definition_v1->version = 1U;
     allocate_and_copy_cstr(function_info_definition_v1->declared_mc_name, "mc_function_info_v1");
@@ -5806,6 +6080,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)node_definition_v1));
 
     node_definition_v1->struct_id = NULL;
+    node_definition_v1->source_filepath = NULL;
     allocate_and_copy_cstr(node_definition_v1->name, "node");
     node_definition_v1->version = 1U;
     allocate_and_copy_cstr(node_definition_v1->declared_mc_name, "mc_node_v1");
@@ -5911,6 +6186,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
                                 &command_hub->global_node->struct_count, (void *)code_editor_state_strdef));
 
     code_editor_state_strdef->struct_id = NULL;
+    code_editor_state_strdef->source_filepath = NULL;
     allocate_and_copy_cstr(code_editor_state_strdef->name, "code_editor_state");
     code_editor_state_strdef->version = 1U;
     allocate_and_copy_cstr(code_editor_state_strdef->declared_mc_name, "mc_code_editor_state_v1");
@@ -6208,6 +6484,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "special_update"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));
+  MCcall(parse_and_process_core_function(command_hub, "save_struct_to_file"));
   MCcall(parse_and_process_core_function(command_hub, "load_existing_struct_into_code_editor"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));
