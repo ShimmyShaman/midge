@@ -4851,8 +4851,8 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
       definition_changed = true;
 
       // Add it
-      append_to_collection((void ***)&editor_struct->fields, &editor_struct_fields_alloc, &editor_struct->field_count,
-                           defined_field_info);
+      insert_in_collection((void ***)&editor_struct->fields, &editor_struct_fields_alloc, &editor_struct->field_count,
+                           i, defined_field_info);
     }
 
     printf("dsfce-5\n");

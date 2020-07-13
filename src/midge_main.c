@@ -6250,7 +6250,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
 
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     code_editor_state_strdef->fields[f++] = field;
-    field->type_name = "text_line_list";
+    field->type_name = "mc_cstring_list_v1";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "text";
