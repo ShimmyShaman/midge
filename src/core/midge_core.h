@@ -499,8 +499,8 @@ typedef struct mc_code_editor_state_v1 {
   mc_cstring_list_v1 *text;
   uint font_resource_uid;
   uint line_display_offset;
-  uint cursorCol;
   uint cursorLine;
+  uint cursorCol;
   bool cursor_requires_render_update;
 
   code_editor_data_source source_data_type;

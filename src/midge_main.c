@@ -6292,17 +6292,17 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
 
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     code_editor_state_strdef->fields[f++] = field;
-    field->type_name = "void";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "focused_definition";
+    field->type_name = "code_editor_data_source";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "source_data_type";
 
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     code_editor_state_strdef->fields[f++] = field;
-    field->type_name = "unsigned int";
+    field->type_name = "void";
     field->type_version = 0U;
-    field->type_deref_count = 0;
-    field->name = "definition_type";
+    field->type_deref_count = 1;
+    field->name = "source_data";
   }
 
   return 0;

@@ -2,8 +2,8 @@
 
 #include "core/midge_core.h"
 
-// [_mc_iteration=1]
-void move_cursor_up(mc_node_v1 *code_editor_node, mc_code_editor_state_v1 *state)
+// [_mc_iteration=2]
+void move_cursor_up(node *code_editor_node, code_editor_state *state)
 {
   if (state->cursorLine == 0) {
     // Do Nothing
@@ -21,6 +21,10 @@ void move_cursor_up(mc_node_v1 *code_editor_node, mc_code_editor_state_v1 *state
   }
   if (state->cursorCol > line_len) {
     state->cursorCol = line_len;
+
+    // if(state->cursor_zen_col == 0) {
+    //   state->cursor_zen_col = state->cursorCol;
+    // }
   }
   // if (state->cursorZenCol > line_len) {
   //   state->cursorCol = line_len;
