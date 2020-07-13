@@ -2,9 +2,8 @@
 
 #include "core/midge_core.h"
 
-// [_mc_iteration=2]
-void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
-{
+// [_mc_iteration=3]
+void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event) {
 mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
   // printf("keyboard key = (%i%i%i)+%i\n", event->altDown, event->ctrlDown, event->shiftDown,
   // event->detail.keyboard.key);
@@ -420,6 +419,13 @@ mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
       } break;
       case KEY_CODE_I: { // FROM KEY_CODE_ARROW_UP above (TODO refactor into function)
         move_cursor_up(fedit, state);
+      } break;
+      case KEY_CODE_SEMI_COLON: {
+        state->cursorCol = strlen(state->text->lines[state->cursorLine]);
+        
+        // Update the cursor visual
+        state->cursor_requires_render_update = true;
+        fedit->data.visual.requires_render_update = true;
       } break;
       case KEY_CODE_S: {
         // Save the file
