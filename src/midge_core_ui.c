@@ -8,6 +8,9 @@
 
 typedef struct core_display_data {
   uint font_resource_uid;
+  struct {
+    unsigned int x, y, width, height;
+  } function_button_bounds;
 } core_display_data;
 
 int core_display_entry_handle_input_v1(int argc, void **argv)
@@ -149,8 +152,8 @@ int update_core_entries(node *core_display)
 
     child->data.visual.bounds.x = core_display->data.visual.bounds.x + 2;
     child->data.visual.bounds.y = core_display->data.visual.bounds.y + 2 + i * 26;
-    child->data.visual.bounds.width = 296;
-    child->data.visual.bounds.height = 26;
+    // child->data.visual.bounds.width = 296;
+    // child->data.visual.bounds.height = 26;
   }
 
   return 0;
@@ -227,6 +230,34 @@ int core_display_render_v1(int argc, void **argv)
     element_cmd->data.textured_rect_info.texture_uid = child->data.visual.image_resource_uid;
   }
 
+  // Function Button
+  {
+    // MCcall(obtain_element_render_command(sequence, &element_cmd));
+    // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+    // element_cmd->x = cdd->function_button_bounds.x;
+    // element_cmd->y = cdd->function_button_bounds.y;
+    // element_cmd->data.colored_rect_info.width = cdd->function_button_bounds.width;
+    // element_cmd->data.colored_rect_info.height = cdd->function_button_bounds.height;
+    // element_cmd->data.colored_rect_info.color = COLOR_PURPLE;
+
+    // MCcall(obtain_element_render_command(sequence, &element_cmd));
+    // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+    // element_cmd->x = cdd->function_button_bounds.x + 2;
+    // element_cmd->y = cdd->function_button_bounds.y + 2;
+    // element_cmd->data.colored_rect_info.width = cdd->function_button_bounds.width - 4;
+    // element_cmd->data.colored_rect_info.height = cdd->function_button_bounds.height - 4;
+    // element_cmd->data.colored_rect_info.color = (render_color){0.03f, 0.33f, 0.03f, 1.f};
+
+    // MCcall(obtain_element_render_command(sequence, &element_cmd));
+    // element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+    // element_cmd->x = cdd->function_button_bounds.x + 2;
+    // element_cmd->y = cdd->function_button_bounds.y + 18;
+    // element_cmd->data.print_text.font_resource_uid = cdd->font_resource_uid;
+    // const char *function_text = "function";
+    // element_cmd->data.print_text.text = &function_text;
+    // element_cmd->data.print_text.color = COLOR_GHOST_WHITE;
+  }
+
   return 0;
 }
 
@@ -242,6 +273,20 @@ int core_display_handle_input_v1(int argc, void **argv)
 
   if (core_display->data.visual.hidden)
     return 0;
+
+  core_display_data *cdd = (core_display_data *)core_display->extra;
+
+  // Function Button
+  // if (event->detail.mouse.x >= cdd->function_button_bounds.x &&
+  //     event->detail.mouse.y >= cdd->function_button_bounds.y &&
+  //     event->detail.mouse.x < cdd->function_button_bounds.x + cdd->function_button_bounds.width &&
+  //     event->detail.mouse.y < cdd->function_button_bounds.y + cdd->function_button_bounds.height) {
+  //   MCcall(build_core_entry(core_display, "unnamed"));
+  //   MCcall(update_core_entries(core_display));
+
+  //   core_display->data.visual.requires_render_update = true;
+  //   return 0;
+  // }
 
   for (int i = 0; !event->handled && i < core_display->child_count; ++i) {
     node *child = (node *)core_display->children[i];
@@ -350,6 +395,11 @@ int build_core_display_v1(int argc, void **argv)
   MCcall(build_core_entry(core_objects_display, "code_editor_state"));
 
   MCcall(update_core_entries(core_objects_display));
+
+  // cdd->function_button_bounds.x = 2;
+  // cdd->function_button_bounds.y = core_objects_display->data.visual.bounds.height - 26;
+  // cdd->function_button_bounds.width = 80;
+  // cdd->function_button_bounds.height = 24;
 
   // Obtain visual resources
   pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
