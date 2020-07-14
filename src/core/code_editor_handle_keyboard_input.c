@@ -344,6 +344,8 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
     }
     else if (event->ctrlDown) {
       switch (event->detail.keyboard.key) {
+      case KEY_CODE_C: {
+      } break;
       case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
         // Increment
         if (state->cursorCol == 0) {

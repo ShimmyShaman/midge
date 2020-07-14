@@ -334,6 +334,10 @@ typedef struct mc_command_hub_v1 {
   mc_ui_element_v1 *ui_elements;
   mc_void_collection_v1 *template_collection;
   mc_void_collection_v1 *render_sequence_pool;
+
+  // char *selected_text; TODO for xcb implicit pasting
+  char *clipboard_text;
+
   struct {
     resource_queue *resource_queue;
     render_queue *render_queue;
