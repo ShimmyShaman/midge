@@ -4675,28 +4675,91 @@ int code_editor_render_v1(int argc, void **argv)
   element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
   element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
 
+  const int EDITOR_LINE_STRIDE = 22;
+  const float EDITOR_FONT_HORIZONTAL_STRIDE = 10.31f;
   if (state->selection_exists) {
+    // Set selection bounds
+    int selection_start_line, selection_start_col, selection_end_line, selection_end_col;
+    if (state->selection_begin_line > state->cursorLine ||
+        (state->selection_begin_line == state->cursorLine && state->selection_begin_col > state->cursorCol)) {
+      // The selection begin comes after the cursor
+      selection_start_line = (int)state->cursorLine - state->line_display_offset;
+      selection_start_col = state->cursorCol;
+      selection_end_line = (int)state->selection_begin_line - state->line_display_offset;
+      selection_end_col = state->selection_begin_col;
+    }
+    else {
+      // The selection begin comes before the cursor
+      selection_start_line = (int)state->selection_begin_line - state->line_display_offset;
+      selection_start_col = state->selection_begin_col;
+      selection_end_line = (int)state->cursorLine - state->line_display_offset;
+      selection_end_col = state->cursorCol;
+    }
 
-    int selection_render_begin_line = (int)state->selection_begin_line - state->line_display_offset;
-    int selection_render_end_line = (int)state->cursorLine - state->line_display_offset;
+    // First line (partial)
+    if (selection_start_line - state->line_display_offset >= 0 &&
+        selection_start_line - state->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES) {
+      int selected_columns;
+      if (state->cursorLine == state->selection_begin_line) {
+        selected_columns = selection_end_col - selection_start_col;
+      }
+      else if (state->render_lines[selection_start_line]->text) {
+        selected_columns = strlen(state->render_lines[selection_start_line]->text) - selection_start_col;
+      }
+      else
+        selected_columns = 0;
 
-    if (selection_render_begin_line >= 0 && selection_render_begin_line < CODE_EDITOR_RENDERED_CODE_LINES) {
-      // First line
-      MCcall(obtain_element_render_command(sequence, &element_cmd));
-      element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-      element_cmd->x = 6 + (uint)(state->selection_begin_col * 10.31f);
-      element_cmd->y = 2 + selection_render_begin_line * 22;
-      element_cmd->data.colored_rect_info.width = (state->cursorCol - state->selection_begin_col) * 10.31f;
-      element_cmd->data.colored_rect_info.height = 22;
-      element_cmd->data.colored_rect_info.color = (render_color){153.f / 255.f, 94.f / 255.f, 37.f / 255.f, 0.7f};
+      if (selected_columns > 0) {
+        MCcall(obtain_element_render_command(sequence, &element_cmd));
+        element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+        element_cmd->x = 6 + (uint)(selection_start_col * EDITOR_FONT_HORIZONTAL_STRIDE);
+        element_cmd->y = 7 + (selection_start_line - state->line_display_offset) * EDITOR_LINE_STRIDE;
+        element_cmd->data.colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
+        element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
+        element_cmd->data.colored_rect_info.color = (render_color){173.f / 255.f, 109.f / 255.f, 42.f / 255.f, 0.7f};
+      }
     }
 
     // Lines between (if they exist)
-    // for(int i = selection_render_begin_line + 1; i <= selection_render_end_line && i <
-    // CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
-    // }
+    int between_offset_start = max(0, selection_start_line + 1 - state->line_display_offset);
+    int between_offset_exclusive_end =
+        min(selection_end_line - state->line_display_offset, CODE_EDITOR_RENDERED_CODE_LINES);
+    for (int i = between_offset_start; i < between_offset_exclusive_end; ++i) {
+
+      if (state->render_lines[i + state->line_display_offset]->text) {
+        int selected_columns = strlen(state->render_lines[i + state->line_display_offset]->text);
+
+        if (selected_columns > 0) {
+          MCcall(obtain_element_render_command(sequence, &element_cmd));
+          element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+          element_cmd->x = 6;
+          element_cmd->y = 7 + i * EDITOR_LINE_STRIDE;
+          element_cmd->data.colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
+          element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
+          element_cmd->data.colored_rect_info.color = (render_color){173.f / 255.f, 109.f / 255.f, 42.f / 255.f, 0.7f};
+        }
+      }
+    }
 
     // Last line (if it exists)
+    if (selection_end_line > selection_start_line && selection_end_line - state->line_display_offset >= 0 &&
+        selection_end_line - state->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES) {
+
+      if (state->render_lines[selection_end_line - state->line_display_offset]->text) {
+        int selected_columns =
+            min(selection_end_col, strlen(state->render_lines[selection_end_line - state->line_display_offset]->text));
+
+        if (selected_columns > 0) {
+          MCcall(obtain_element_render_command(sequence, &element_cmd));
+          element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+          element_cmd->x = 6;
+          element_cmd->y = 7 + (selection_end_line - state->line_display_offset) * EDITOR_LINE_STRIDE;
+          element_cmd->data.colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
+          element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
+          element_cmd->data.colored_rect_info.color = (render_color){173.f / 255.f, 109.f / 255.f, 42.f / 255.f, 0.7f};
+        }
+      }
+    }
   }
 
   // printf("fer-n\n");
@@ -4704,7 +4767,7 @@ int code_editor_render_v1(int argc, void **argv)
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
     element_cmd->x = 2;
-    element_cmd->y = 8 + i * 22;
+    element_cmd->y = 8 + i * EDITOR_LINE_STRIDE;
     element_cmd->data.textured_rect_info.width = state->render_lines[i]->width;
     element_cmd->data.textured_rect_info.height = state->render_lines[i]->height;
     element_cmd->data.textured_rect_info.texture_uid = state->render_lines[i]->image_resource_uid;
@@ -4716,10 +4779,10 @@ int code_editor_render_v1(int argc, void **argv)
 
   MCcall(obtain_element_render_command(sequence, &element_cmd));
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-  element_cmd->x = 6 + (uint)(state->cursorCol * 10.31f);
-  element_cmd->y = 7 + (state->cursorLine - state->line_display_offset) * 22;
+  element_cmd->x = 6 + (uint)(state->cursorCol * EDITOR_FONT_HORIZONTAL_STRIDE);
+  element_cmd->y = 7 + (state->cursorLine - state->line_display_offset) * EDITOR_LINE_STRIDE;
   element_cmd->data.colored_rect_info.width = 2;
-  element_cmd->data.colored_rect_info.height = 22;
+  element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
   element_cmd->data.colored_rect_info.color = (render_color){0.83f, 0.83f, 0.83f, 1.f};
 
   return 0;
