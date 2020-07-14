@@ -3898,6 +3898,8 @@ int load_existing_function_into_code_editor(function_info *function)
   feState->cursorLine = 1;
   feState->cursorCol = strlen(feState->text->lines[feState->cursorLine]);
 
+  feState->selection_exists = false;
+
   // printf("life-7a\n");
   code_editor->data.visual.hidden = false;
   code_editor->data.visual.requires_render_update = true;
@@ -4634,7 +4636,7 @@ int code_editor_render_v1(int argc, void **argv)
       // printf("fer-c\n");
       MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
       sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-      sequence->clear_color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+      sequence->clear_color = COLOR_TRANSPARENT;
       sequence->image_width = state->render_lines[i]->width;
       sequence->image_height = state->render_lines[i]->height;
       sequence->data.target_image.image_uid = state->render_lines[i]->image_resource_uid;
@@ -4672,6 +4674,30 @@ int code_editor_render_v1(int argc, void **argv)
   element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
   element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
   element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+
+  if (state->selection_exists) {
+
+    int selection_render_begin_line = (int)state->selection_begin_line - state->line_display_offset;
+    int selection_render_end_line = (int)state->cursorLine - state->line_display_offset;
+
+    if (selection_render_begin_line >= 0 && selection_render_begin_line < CODE_EDITOR_RENDERED_CODE_LINES) {
+      // First line
+      MCcall(obtain_element_render_command(sequence, &element_cmd));
+      element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+      element_cmd->x = 6 + (uint)(state->selection_begin_col * 10.31f);
+      element_cmd->y = 2 + selection_render_begin_line * 22;
+      element_cmd->data.colored_rect_info.width = (state->cursorCol - state->selection_begin_col) * 10.31f;
+      element_cmd->data.colored_rect_info.height = 22;
+      element_cmd->data.colored_rect_info.color = (render_color){153.f / 255.f, 94.f / 255.f, 37.f / 255.f, 0.7f};
+    }
+
+    // Lines between (if they exist)
+    // for(int i = selection_render_begin_line + 1; i <= selection_render_end_line && i <
+    // CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
+    // }
+
+    // Last line (if it exists)
+  }
 
   // printf("fer-n\n");
   for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {

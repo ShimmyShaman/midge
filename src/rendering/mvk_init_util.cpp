@@ -159,8 +159,8 @@ int mvk_checkLayerSupport(vk_render_state *p_vkrs)
 
 #define func void
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanDebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type,
-                                                   uint64_t src_obj, size_t location, int32_t msg_code, const char *layerPrefix,
-                                                   const char *msg, void *user_data)
+                                                   uint64_t src_obj, size_t location, int32_t msg_code,
+                                                   const char *layerPrefix, const char *msg, void *user_data)
 {
   printf("\n");
   printf("VKDBG: ");
@@ -330,7 +330,8 @@ VkResult mvk_init_device(vk_render_state *p_vkrs)
   device_info.queueCreateInfoCount = 1;
   device_info.pQueueCreateInfos = &queue_info;
   device_info.enabledExtensionCount = p_vkrs->device_extension_names.size();
-  device_info.ppEnabledExtensionNames = device_info.enabledExtensionCount ? p_vkrs->device_extension_names.data() : NULL;
+  device_info.ppEnabledExtensionNames =
+      device_info.enabledExtensionCount ? p_vkrs->device_extension_names.data() : NULL;
   device_info.pEnabledFeatures = &deviceFeatures;
 
   res = vkCreateDevice(p_vkrs->gpus[0], &device_info, NULL, &p_vkrs->device);
@@ -745,7 +746,8 @@ VkResult mvk_init_swapchain(vk_render_state *p_vkrs)
   swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   swapchain_ci.queueFamilyIndexCount = 0;
   swapchain_ci.pQueueFamilyIndices = NULL;
-  uint32_t queueFamilyIndices[2] = {(uint32_t)p_vkrs->graphics_queue_family_index, (uint32_t)p_vkrs->present_queue_family_index};
+  uint32_t queueFamilyIndices[2] = {(uint32_t)p_vkrs->graphics_queue_family_index,
+                                    (uint32_t)p_vkrs->present_queue_family_index};
   if (p_vkrs->graphics_queue_family_index != p_vkrs->present_queue_family_index) {
     // If the graphics and present queues are from different queue families,
     // we either have to explicitly transfer ownership of images between the
@@ -816,7 +818,8 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   }
 
   glm_ortho_default((float)p_vkrs->window_width / p_vkrs->window_height, (vec4 *)&p_vkrs->Projection);
-  // glm_perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f, 100.0f,
+  // glm_perspective(fov, static_cast<float>(p_vkrs->window_width) / static_cast<float>(p_vkrs->window_height), 0.1f,
+  // 100.0f,
   //                 (vec4 *)&p_vkrs->Projection);
   glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)&p_vkrs->View);
 
@@ -852,9 +855,9 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   alloc_info.memoryTypeIndex = 0;
 
   alloc_info.allocationSize = mem_reqs.size;
-  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                               &alloc_info.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(
+      p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->global_vert_uniform_buffer.mem));
@@ -868,7 +871,8 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 
   vkUnmapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem);
 
-  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, p_vkrs->global_vert_uniform_buffer.mem, 0);
+  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf,
+                           p_vkrs->global_vert_uniform_buffer.mem, 0);
   assert(res == VK_SUCCESS);
 
   p_vkrs->global_vert_uniform_buffer.buffer_info.buffer = p_vkrs->global_vert_uniform_buffer.buf;
@@ -897,9 +901,9 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   alloc_info.memoryTypeIndex = 0;
 
   alloc_info.allocationSize = mem_reqs.size;
-  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                               &alloc_info.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(
+      p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->render_data_buffer.memory));
@@ -1179,8 +1183,10 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
     att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
-    att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    // att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    // att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -1221,7 +1227,8 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &p_vkrs->texture_prog.pipeline);
+    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
+                                    &p_vkrs->texture_prog.pipeline);
     assert(res == VK_SUCCESS && "failed to create pipeline!");
   }
 
@@ -1303,32 +1310,34 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
   };
 
   static glsl_shader fragment_shader = {
-      .text = "#version 450\n"
-              "#extension GL_ARB_separate_shader_objects : enable\n"
-              "\n"
-              "layout (binding = 2) uniform UBO2 {\n"
-              "    vec4 tint;\n"
-              "    vec4 texCoordBounds;\n"
-              "} element;\n"
-              "\n"
-              "layout(binding = 3) uniform sampler2D texSampler;\n"
-              "\n"
-              "layout(location = 1) in vec2 fragTexCoord;\n"
-              "\n"
-              "layout(location = 0) out vec4 outColor;\n"
-              "\n"
-              "void main() {\n"
-              "\n"
-              "   vec2 texCoords = vec2(\n"
-              "       element.texCoordBounds.x + fragTexCoord.x * (element.texCoordBounds.y - element.texCoordBounds.x),\n"
-              "       element.texCoordBounds.z + fragTexCoord.y * (element.texCoordBounds.w - element.texCoordBounds.z));\n"
-              "   outColor = texture(texSampler, texCoords);\n"
-              "   if(outColor.r < 0.01)\n"
-              "      discard;\n"
-              // "   outColor.a = 0.3 + 0.7 * outColor.r;\n"
-              "   outColor.a = min(max(0, outColor.r - 0.2) * 0.2f + outColor.r * 1.5, 1.0);\n"
-              "   outColor.rgb = element.tint.rgb;\n"
-              "}\n",
+      .text =
+          "#version 450\n"
+          "#extension GL_ARB_separate_shader_objects : enable\n"
+          "\n"
+          "layout (binding = 2) uniform UBO2 {\n"
+          "    vec4 tint;\n"
+          "    vec4 texCoordBounds;\n"
+          "} element;\n"
+          "\n"
+          "layout(binding = 3) uniform sampler2D texSampler;\n"
+          "\n"
+          "layout(location = 1) in vec2 fragTexCoord;\n"
+          "\n"
+          "layout(location = 0) out vec4 outColor;\n"
+          "\n"
+          "void main() {\n"
+          "\n"
+          "   vec2 texCoords = vec2(\n"
+          "       element.texCoordBounds.x + fragTexCoord.x * (element.texCoordBounds.y - element.texCoordBounds.x),\n"
+          "       element.texCoordBounds.z + fragTexCoord.y * (element.texCoordBounds.w - element.texCoordBounds.z));\n"
+          "   outColor = texture(texSampler, texCoords);\n"
+          "   if(outColor.r < 0.01)\n"
+          "      discard;\n"
+          // "   outColor.a = 0.3 + 0.7 * outColor.r;\n"
+          "   outColor.a = min(max(0, outColor.r - 0.2) * 0.2f + outColor.r * 1.5, 1.0);\n"
+          "   outColor.rgb = element.tint.rgb * outColor.a;\n"
+          "   outColor.a = 1.0f;"
+          "}\n",
       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
   };
 
@@ -1452,7 +1461,8 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState att_state[1];
-    att_state[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT; // TODO
+    att_state[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
+                                  VK_COLOR_COMPONENT_A_BIT; // TODO
     att_state[0].blendEnable = VK_TRUE;
     att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -1460,6 +1470,8 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     // If this is true, then why is the render target blending when placed in another image
     att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    // att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    // att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -1500,7 +1512,8 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &p_vkrs->font_prog.pipeline);
+    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr,
+                                    &p_vkrs->font_prog.pipeline);
     assert(res == VK_SUCCESS && "failed to create pipeline!");
   }
 
@@ -1767,7 +1780,8 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   // Use glslangValidator from file
   // Generate the shader file
   const char *ext = NULL;
-  if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) == VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) {
+  if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) ==
+      VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT) {
     ext = "vert";
   }
   else if ((shader_type & VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT) ==
@@ -1868,7 +1882,8 @@ VkResult mvk_init_shader(vk_render_state *p_vkrs, struct glsl_shader *glsl_shade
   p_vkrs->shaderStages[stage_index].pNext = NULL;
   p_vkrs->shaderStages[stage_index].pSpecializationInfo = NULL;
   p_vkrs->shaderStages[stage_index].flags = 0;
-  p_vkrs->shaderStages[stage_index].stage = glsl_shader->stage; // VK_SHADER_STAGE_VERTEX_BIT; VK_SHADER_STAGE_FRAGMENT_BIT
+  p_vkrs->shaderStages[stage_index].stage =
+      glsl_shader->stage; // VK_SHADER_STAGE_VERTEX_BIT; VK_SHADER_STAGE_FRAGMENT_BIT
   p_vkrs->shaderStages[stage_index].pName = "main";
 
   VkResult res = GLSLtoSPV(glsl_shader->stage, glsl_shader->text, vtx_spv);
@@ -1945,9 +1960,9 @@ VkResult mvk_init_cube_vertices(vk_render_state *p_vkrs, const void *vertexData,
   alloc_info.memoryTypeIndex = 0;
 
   alloc_info.allocationSize = mem_reqs.size;
-  pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                               &alloc_info.memoryTypeIndex);
+  pass = get_memory_type_index_from_properties(
+      p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      &alloc_info.memoryTypeIndex);
   assert(pass && "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_vertices.mem));
@@ -2017,9 +2032,9 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     alloc_info.memoryTypeIndex = 0;
 
     alloc_info.allocationSize = mem_reqs.size;
-    pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                 &alloc_info.memoryTypeIndex);
+    pass = get_memory_type_index_from_properties(
+        p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &alloc_info.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->shape_vertices.mem));
@@ -2065,9 +2080,9 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     alloc_info.memoryTypeIndex = 0;
 
     alloc_info.allocationSize = mem_reqs.size;
-    pass = get_memory_type_index_from_properties(p_vkrs, mem_reqs.memoryTypeBits,
-                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                 &alloc_info.memoryTypeIndex);
+    pass = get_memory_type_index_from_properties(
+        p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &alloc_info.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->textured_shape_vertices.mem));
@@ -2083,7 +2098,8 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 
     vkUnmapMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.mem);
 
-    res = vkBindBufferMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.buf, p_vkrs->textured_shape_vertices.mem, 0);
+    res =
+        vkBindBufferMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.buf, p_vkrs->textured_shape_vertices.mem, 0);
     assert(res == VK_SUCCESS);
   }
 
@@ -2382,9 +2398,15 @@ void mvk_destroy_textured_render_prog(vk_render_state *p_vkrs)
 
 void mvk_destroy_pipeline(vk_render_state *p_vkrs) { vkDestroyPipeline(p_vkrs->device, p_vkrs->pipeline, NULL); }
 
-void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs) { vkDestroyPipelineCache(p_vkrs->device, p_vkrs->pipelineCache, NULL); }
+void mvk_destroy_pipeline_cache(vk_render_state *p_vkrs)
+{
+  vkDestroyPipelineCache(p_vkrs->device, p_vkrs->pipelineCache, NULL);
+}
 
-void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs) { vkDestroyDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, NULL); }
+void mvk_destroy_descriptor_pool(vk_render_state *p_vkrs)
+{
+  vkDestroyDescriptorPool(p_vkrs->device, p_vkrs->desc_pool, NULL);
+}
 
 void mvk_destroy_sampled_image(vk_render_state *p_vkrs, sampled_image *sampled_image)
 {
@@ -2482,8 +2504,8 @@ void mvk_destroy_device(vk_render_state *p_vkrs)
 
 void mvk_destroy_instance(vk_render_state *p_vkrs) { vkDestroyInstance(p_vkrs->inst, NULL); }
 
-VkResult createBuffer(vk_render_state *p_vkrs, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags mem_properties,
-                      VkBuffer *buffer, VkDeviceMemory *bufferMemory)
+VkResult createBuffer(vk_render_state *p_vkrs, VkDeviceSize size, VkBufferUsageFlags usage,
+                      VkMemoryPropertyFlags mem_properties, VkBuffer *buffer, VkDeviceMemory *bufferMemory)
 {
   VkBufferCreateInfo bufferInfo{};
   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

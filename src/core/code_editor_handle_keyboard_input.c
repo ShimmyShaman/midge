@@ -3,8 +3,9 @@
 #include "core/midge_core.h"
 
 // [_mc_iteration=3]
-void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event) {
-mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
+void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
+{
+  mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
   // printf("keyboard key = (%i%i%i)+%i\n", event->altDown, event->ctrlDown, event->shiftDown,
   // event->detail.keyboard.key);
 
@@ -368,22 +369,33 @@ mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
         state->cursor_requires_render_update = true;
         fedit->data.visual.requires_render_update = true;
       } break;
-      case KEY_CODE_L: { // FROM KEY_CODE_ARROW_RIGHT above (TODO refactor into function)
-        int line_len = strlen(state->text->lines[state->cursorLine]);
+      case KEY_CODE_L: { // FROM KEY_CODE_ARROW_RIGHT above (TODO refactor into function) (this one has selection)
 
-        if (state->cursorCol == line_len) {
-          if (state->cursorLine + 1 >= state->text->lines_count) {
-            // Do Nothing
-            break;
+        if (event->shiftDown) {
+          if (!state->selection_exists) {
+            state->selection_exists = true;
+            state->selection_begin_line = state->cursorLine;
+            state->selection_begin_col = state->cursorCol;
           }
+        }
+        else {
+          if (state->selection_exists) {
+            state->selection_exists = false;
+          }
+        }
 
-          ++state->cursorLine;
-          state->cursorCol = 0;
+        int line_len = strlen(state->text->lines[state->cursorLine]);
+        if (state->cursorCol == line_len) {
+          if (state->cursorLine + 1 < state->text->lines_count) {
 
-          // Adjust display offset
-          if (state->cursorLine >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
-            // Move display offset down
-            state->line_display_offset = state->cursorLine - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+            ++state->cursorLine;
+            state->cursorCol = 0;
+
+            // Adjust display offset
+            if (state->cursorLine >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+              // Move display offset down
+              state->line_display_offset = state->cursorLine - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+            }
           }
         }
         else {
@@ -422,7 +434,7 @@ mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
       } break;
       case KEY_CODE_SEMI_COLON: {
         state->cursorCol = strlen(state->text->lines[state->cursorLine]);
-        
+
         // Update the cursor visual
         state->cursor_requires_render_update = true;
         fedit->data.visual.requires_render_update = true;

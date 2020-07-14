@@ -501,6 +501,9 @@ typedef struct mc_code_editor_state_v1 {
   uint line_display_offset;
   uint cursorLine;
   uint cursorCol;
+  bool selection_exists;
+  uint selection_begin_line;
+  uint selection_begin_col;
   bool cursor_requires_render_update;
 
   code_editor_data_source source_data_type;
