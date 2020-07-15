@@ -2345,6 +2345,7 @@ int mc_main(int argc, const char *const *argv)
   command_hub->scripts_count = 0;
   command_hub->update_timers.count = command_hub->update_timers.allocated = 0;
   command_hub->error_definition_index = 100;
+  allocate_and_copy_cstr(command_hub->clipboard_text, "");
 
   // declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
   // template_collection->templates_alloc = 400;
@@ -6529,6 +6530,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));
   MCcall(parse_and_process_core_function(command_hub, "save_struct_to_file"));
+  MCcall(parse_and_process_core_function(command_hub, "read_selected_editor_text"));
   MCcall(parse_and_process_core_function(command_hub, "load_existing_struct_into_code_editor"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));

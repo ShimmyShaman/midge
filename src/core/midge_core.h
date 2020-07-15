@@ -502,7 +502,7 @@ typedef struct mc_code_editor_state_v1 {
   rendered_code_line **render_lines;
   mc_cstring_list_v1 *text;
   uint font_resource_uid;
-  uint line_display_offset;
+  int line_display_offset;
   uint cursorLine;
   uint cursorCol;
   bool selection_exists;
@@ -564,9 +564,10 @@ int (*special_update)(int, void **);
 int (*move_cursor_up)(int, void **);
 int (*save_function_to_file)(int, void **);
 int (*save_struct_to_file)(int, void **);
+int (*read_selected_editor_text)(int, void **);
+int (*load_existing_struct_into_code_editor)(int, void **);
 int (*code_editor_handle_keyboard_input)(int, void **);
 int (*code_editor_handle_input)(int, void **);
-int (*load_existing_struct_into_code_editor)(int, void **);
 
 #define allocate_anon_struct(ptr_to_struct, size) \
   mc_dvp = (void **)&ptr_to_struct;               \

@@ -3658,6 +3658,7 @@ int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *
 
       MCcall(transcribe_comment(owner, code, i, transcription_alloc, transcription));
     } break;
+    case '(':
     case '*': {
       MCcall(transcribe_statement(owner, code, i, transcription_alloc, transcription));
     } break;
@@ -4719,7 +4720,7 @@ int code_editor_render_v1(int argc, void **argv)
         MCcall(obtain_element_render_command(sequence, &element_cmd));
         element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
         element_cmd->x = 6 + (uint)(selection_start_col * EDITOR_FONT_HORIZONTAL_STRIDE);
-        element_cmd->y = 7 + (selection_start_line - state->line_display_offset) * EDITOR_LINE_STRIDE;
+        element_cmd->y = 7 + (selection_start_line - (int)state->line_display_offset) * EDITOR_LINE_STRIDE;
         element_cmd->data.colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
         element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
         element_cmd->data.colored_rect_info.color = (render_color){173.f / 255.f, 109.f / 255.f, 42.f / 255.f, 0.7f};

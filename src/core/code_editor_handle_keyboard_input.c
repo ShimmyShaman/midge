@@ -345,6 +345,31 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
     else if (event->ctrlDown) {
       switch (event->detail.keyboard.key) {
       case KEY_CODE_C: {
+        char *text;
+        if (state->selection_exists) {
+          // Copy selection into buffer
+          text = read_selected_editor_text(state);
+        }
+        else {
+          // Copy the current line into the buffer
+          if (state->text->lines[state->cursorLine] && strlen(state->text->lines[state->cursorLine])) {
+            cprintf(text, "%s\n", state->text->lines[state->cursorLine]);
+          }
+          else {
+            // Copy empty text
+            allocate_and_copy_cstr(text, "\n");
+          }
+        }
+
+        if (command_hub->clipboard_text) {
+          free(command_hub->clipboard_text);
+        }
+
+        allocate_and_copy_cstr(command_hub->clipboard_text, text);
+        free(text);
+      } break;
+      case KEY_CODE_V: {
+        insert_text_into_editor(state, &command_hub->clipboard_text, state->cursorLine, state->cursorCol);
       } break;
       case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
         // Increment
@@ -488,8 +513,9 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
     }
     else {
       // printf("fehi-3\n");
-      char c = '\0';
-      int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c);
+      char c[2];
+      c[1] = '\0';
+      int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c[0]);
       if (res) {
         break;
         // TODO
@@ -497,26 +523,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       event->handled = true;
 
       // Update the text
-      {
-        int current_line_len = strlen(state->text->lines[state->cursorLine]);
-        char *new_line = (char *)malloc(sizeof(char) * (current_line_len + 1 + 1));
-        if (state->cursorCol) {
-          strncpy(new_line, state->text->lines[state->cursorLine], state->cursorCol);
-        }
-        new_line[state->cursorCol] = c;
-        new_line[state->cursorCol + 1] = '\0';
-        if (current_line_len - state->cursorCol) {
-          strcat(new_line, state->text->lines[state->cursorLine] + state->cursorCol);
-        }
-        new_line[current_line_len + 1] = '\0';
-
-        // printf("new_line:'%s'\n", new_line);
-
-        free(state->text->lines[state->cursorLine]);
-        state->text->lines[state->cursorLine] = new_line;
-
-        ++state->cursorCol;
-      }
+      insert_text_into_editor(state, c, state->cursorLine, state->cursorCol);
     }
   } break;
   }
