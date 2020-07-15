@@ -23,72 +23,88 @@ void insert_text_into_editor(code_editor_state *state, char *text, int line_inde
 
   printf("itie-0\n");
 
+  // The line
   int i = 0;
   unsigned int line_alloc = col + 6;
   char *line = (char *)malloc(sizeof(char) * line_alloc);
   line[0] = '\0';
 
-  char *after_section = NULL;
-  if (col && current_line_len - col >= 0) {
-    printf("itie-1\n");
-    // Copy the 'before' section of the current line
+  // Copy the 'before' section of the current line
+  if (col == 0 || current_line_len == 0) {
+    // Do nothing
+  }
+  else {
     append_to_cstrn(&line_alloc, &line, state->text->lines[line_index], col);
-
-    bool eof = false;
-    for (;; ++i) {
-      if (text[i] == '\0') {
-        eof = true;
-        break;
-      }
-      else if (text[i] == '\n') {
-        ++i;
-        break;
-      }
-    }
-    append_to_cstrn(&line_alloc, &line, text, i);
-
-    printf("itie-2\n");
-    if (eof) {
-      // Append the 'after' section of the current line
-      append_to_cstr(&line_alloc, &line, state->text->lines[line_index] + col);
-    }
-    else if (col == current_line_len) {
-      allocate_and_copy_cstr(after_section, state->text->lines[line_index] + col);
-    }
-
-    printf("itie-3\n");
-    // Set to the current line
-    free(state->text->lines[line_index]);
-    state->text->lines[line_index] = line;
-    printf("itie- setting line:'%s'\n", line);
-
-    // if ((int)line_index - state->line_display_offset > 0 &&
-    //     line_index - state->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES) {
-    //   state->render_lines[line_index - state->line_display_offset]->requires_render_update = true;
-    //   state->cursor_requires_render_update = true; // TODO this field should be a
-    //                                                // code-editor_lines_requires_render_update one ie.
-    // }
-
-    printf("itie-4\n");
-    if (eof) {
-
-      state->cursorCol += insert_len;
-      return;
-    }
-
-    ++line_index;
   }
 
-  printf("itie-5\n");
-  mc_cstring_list_v1 line_list;
-  line_list.lines_allocated = 0;
-  line_list.lines_count = 0;
-
+  // Move through the text to identify the end of any line (or the text)
+  bool eof = false;
   while (1) {
+    if (text[i] == '\0') {
+      eof = true;
+      break;
+    }
+    else if (text[i] == '\n') {
+      break;
+    }
+    ++i;
+  }
+  ++i;
+
+  if (i > 0) {
+    append_to_cstrn(&line_alloc, &line, text, i);
+  }
+
+  // 'After' Section
+  char *after_section;
+  printf("itie-2\n");
+  if (eof) {
+    // Append the 'after' section of the current line
+    append_to_cstr(&line_alloc, &line, state->text->lines[line_index] + col);
+  }
+  else {
+    // Set the 'after' section for later use
+    if (col == current_line_len) {
+      allocate_and_copy_cstr(after_section, "");
+    }
+    else {
+      allocate_and_copy_cstr(after_section, state->text->lines[line_index] + col);
+    }
+  }
+
+  // Set to the current line
+  printf("itie-3\n");
+  free(state->text->lines[line_index]);
+  state->text->lines[line_index] = line;
+  printf("itie- setting line:'%s'\n", line);
+
+  // if ((int)line_index - state->line_display_offset > 0 &&
+  //     line_index - state->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES) {
+  //   state->render_lines[line_index - state->line_display_offset]->requires_render_update = true;
+  //   state->cursor_requires_render_update = true; // TODO this field should be a
+  //                                                // code-editor_lines_requires_render_update one ie.
+  // }
+
+  printf("itie-4\n");
+  if (eof) {
+    // In-line cursor adjustment
+    state->cursorCol += insert_len;
+    return;
+  }
+  ++line_index;
+
+  // Batch the remaining line updates
+  printf("itie-5\n");
+  while (1) {
+    // New line
+    line_alloc = 1;
+    line = (char *)malloc(sizeof(char) * line_alloc);
+    line[0] = '\0';
+
     // Find the end of the next line
     int s = i;
     bool eof = false;
-    for (;; ++i) {
+    while (1) {
       if (text[i] == '\0') {
         eof = true;
         break;
@@ -96,26 +112,39 @@ void insert_text_into_editor(code_editor_state *state, char *text, int line_inde
       else if (text[i] == '\n') {
         break;
       }
+      ++i;
     }
 
-    append_to_cstrn(&line_alloc, &line, text + s, i - s);
+    printf("itie-6\n");
+    if (i - s > 0) {
+      append_to_cstrn(&line_alloc, &line, text + s, i - s);
+    }
+    else {
+      // Nothing
+    }
 
+    printf("itie-7\n");
     if (eof) {
+      state->cursorLine = line_index;
+      state->cursorCol = strlen(line);
+
       append_to_cstr(&line_alloc, &line, after_section);
+      free(after_section);
     }
 
-    append_to_collection((void ***)&line_list.lines, &line_list.lines_allocated, &line_list.lines_count, line);
+    printf("itie-8\n");
+    insert_in_collection((void ***)&state->text->lines, &state->text->lines_alloc, &state->text->lines_count,
+                         line_index, line);
+    ++line_index;
 
     if (eof) {
       break;
     }
 
-    // Past the newline
+    // Increment
     ++i;
 
-    line_alloc = 1;
-    char *line = (char *)malloc(sizeof(char) * line_alloc);
-    line[0] = '\0';
+    printf("itie-9\n");
   }
 
   // Insert into editor

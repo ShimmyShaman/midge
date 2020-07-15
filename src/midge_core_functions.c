@@ -3836,7 +3836,7 @@ int load_existing_function_into_code_editor(function_info *function)
   feState->source_data = function;
   for (int j = 0; j < feState->text->lines_count; ++j) {
     free(feState->text->lines[j]);
-    feState->text->lines[j] = NULL;
+    allocate_and_copy_cstr(feState->text->lines[j], "");
   }
   feState->text->lines_count = 0;
 
@@ -3907,18 +3907,18 @@ int load_existing_function_into_code_editor(function_info *function)
         }
 
         // Add to the collection
-        if (feState->text->lines_count + 1 >= feState->text->lines_allocated) {
-          uint new_alloc = feState->text->lines_allocated + 4 + feState->text->lines_allocated / 4;
+        if (feState->text->lines_count + 1 >= feState->text->lines_alloc) {
+          uint new_alloc = feState->text->lines_alloc + 4 + feState->text->lines_alloc / 4;
           char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-          if (feState->text->lines_allocated) {
-            memcpy(new_ary, feState->text->lines, feState->text->lines_allocated * sizeof(char *));
+          if (feState->text->lines_alloc) {
+            memcpy(new_ary, feState->text->lines, feState->text->lines_alloc * sizeof(char *));
             free(feState->text->lines);
           }
-          for (int i = feState->text->lines_allocated; i < new_alloc; ++i) {
+          for (int i = feState->text->lines_alloc; i < new_alloc; ++i) {
             new_ary[i] = NULL;
           }
 
-          feState->text->lines_allocated = new_alloc;
+          feState->text->lines_alloc = new_alloc;
           feState->text->lines = new_ary;
         }
 
@@ -3955,7 +3955,7 @@ int load_existing_function_into_code_editor(function_info *function)
       else {
         // printf("life-6e\n");
         // printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text->lines_count);
-        // printf("dawn:%i\n", feState->text->lines_allocated);
+        // printf("dawn:%i\n", feState->text->lines_alloc);
         // printf("dawn:%c\n", feState->text->lines[1][4]);
         // printf("dawn:%zu\n", strlen(feState->text->lines[feState->line_display_offset + i]));
         feState->render_lines[i]->requires_render_update =
@@ -4167,18 +4167,18 @@ int load_existing_function_into_code_editor(function_info *function)
 //         }
 
 //         // Add to the collection
-//         if (feState->text->lines_count + 1 >= feState->text->lines_allocated) {
-//           uint new_alloc = feState->text->lines_allocated + 4 + feState->text->lines_allocated / 4;
+//         if (feState->text->lines_count + 1 >= feState->text->lines_alloc) {
+//           uint new_alloc = feState->text->lines_alloc + 4 + feState->text->lines_alloc / 4;
 //           char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-//           if (feState->text->lines_allocated) {
-//             memcpy(new_ary, feState->text->lines, feState->text->lines_allocated * sizeof(char *));
+//           if (feState->text->lines_alloc) {
+//             memcpy(new_ary, feState->text->lines, feState->text->lines_alloc * sizeof(char *));
 //             free(feState->text->lines);
 //           }
-//           for (int i = feState->text->lines_allocated; i < new_alloc; ++i) {
+//           for (int i = feState->text->lines_alloc; i < new_alloc; ++i) {
 //             new_ary[i] = NULL;
 //           }
 
-//           feState->text->lines_allocated = new_alloc;
+//           feState->text->lines_alloc = new_alloc;
 //           feState->text->lines = new_ary;
 //         }
 
@@ -4217,7 +4217,7 @@ int load_existing_function_into_code_editor(function_info *function)
 //       else {
 //         printf("life-6e\n");
 //         printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text->lines_count);
-//         printf("dawn:%i\n", feState->text->lines_allocated);
+//         printf("dawn:%i\n", feState->text->lines_alloc);
 //         printf("dawn:%c\n", feState->text->lines[1][4]);
 //         printf("dawn:%zu\n", strlen(feState->text->lines[feState->line_display_offset + i]));
 //         feState->render_lines[i]->requires_render_update = feState->render_lines[i]->requires_render_update ||
@@ -5518,8 +5518,8 @@ int build_code_editor_v1(int argc, void **argv)
   state->cursorCol = 0;
   state->line_display_offset = 0;
   state->text = (mc_cstring_list_v1 *)malloc(sizeof(mc_cstring_list_v1));
-  state->text->lines_allocated = 8;
-  state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_allocated);
+  state->text->lines_alloc = 8;
+  state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_alloc);
   state->text->lines_count = 0;
   state->render_lines = (rendered_code_line **)malloc(sizeof(rendered_code_line *) * CODE_EDITOR_RENDERED_CODE_LINES);
 

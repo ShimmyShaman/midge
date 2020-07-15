@@ -22,18 +22,18 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
   feState->text->lines_count = 0;
 
   // Prepare the collection
-  if (feState->text->lines_count + 1 >= feState->text->lines_allocated) {
-    uint new_alloc = feState->text->lines_allocated + 4 + feState->text->lines_allocated / 4;
+  if (feState->text->lines_count + 1 >= feState->text->lines_alloc) {
+    uint new_alloc = feState->text->lines_alloc + 4 + feState->text->lines_alloc / 4;
     char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-    if (feState->text->lines_allocated) {
-      memcpy(new_ary, feState->text->lines, feState->text->lines_allocated * sizeof(char *));
+    if (feState->text->lines_alloc) {
+      memcpy(new_ary, feState->text->lines, feState->text->lines_alloc * sizeof(char *));
       free(feState->text->lines);
     }
-    for (int i = feState->text->lines_allocated; i < new_alloc; ++i) {
+    for (int i = feState->text->lines_alloc; i < new_alloc; ++i) {
       new_ary[i] = NULL;
     }
 
-    feState->text->lines_allocated = new_alloc;
+    feState->text->lines_alloc = new_alloc;
     feState->text->lines = new_ary;
   }
 
@@ -63,18 +63,18 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
     append_to_cstr(&line_alloc, &line, ";");
 
     // Add to the collection
-    if (feState->text->lines_count + 1 >= feState->text->lines_allocated) {
-      uint new_alloc = feState->text->lines_allocated + 4 + feState->text->lines_allocated / 4;
+    if (feState->text->lines_count + 1 >= feState->text->lines_alloc) {
+      uint new_alloc = feState->text->lines_alloc + 4 + feState->text->lines_alloc / 4;
       char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-      if (feState->text->lines_allocated) {
-        memcpy(new_ary, feState->text->lines, feState->text->lines_allocated * sizeof(char *));
+      if (feState->text->lines_alloc) {
+        memcpy(new_ary, feState->text->lines, feState->text->lines_alloc * sizeof(char *));
         free(feState->text->lines);
       }
-      for (int i = feState->text->lines_allocated; i < new_alloc; ++i) {
+      for (int i = feState->text->lines_alloc; i < new_alloc; ++i) {
         new_ary[i] = NULL;
       }
 
-      feState->text->lines_allocated = new_alloc;
+      feState->text->lines_alloc = new_alloc;
       feState->text->lines = new_ary;
     }
 
@@ -87,18 +87,18 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
   append_to_cstr(&line_alloc, &line, "};");
 
   // Prepare the collection -- TODO refactor this code out (triplicated this function)
-  if (feState->text->lines_count + 1 >= feState->text->lines_allocated) {
-    uint new_alloc = feState->text->lines_allocated + 4 + feState->text->lines_allocated / 4;
+  if (feState->text->lines_count + 1 >= feState->text->lines_alloc) {
+    uint new_alloc = feState->text->lines_alloc + 4 + feState->text->lines_alloc / 4;
     char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-    if (feState->text->lines_allocated) {
-      memcpy(new_ary, feState->text->lines, feState->text->lines_allocated * sizeof(char *));
+    if (feState->text->lines_alloc) {
+      memcpy(new_ary, feState->text->lines, feState->text->lines_alloc * sizeof(char *));
       free(feState->text->lines);
     }
-    for (int i = feState->text->lines_allocated; i < new_alloc; ++i) {
+    for (int i = feState->text->lines_alloc; i < new_alloc; ++i) {
       new_ary[i] = NULL;
     }
 
-    feState->text->lines_allocated = new_alloc;
+    feState->text->lines_alloc = new_alloc;
     feState->text->lines = new_ary;
   }
 
@@ -122,7 +122,7 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
         else {
           // printf("life-6e\n");
           // printf("dawn:%i %i\n", feState->line_display_offset + i, feState->text->lines_count);
-          // printf("dawn:%i\n", feState->text->lines_allocated);
+          // printf("dawn:%i\n", feState->text->lines_alloc);
           // printf("dawn:%c\n", feState->text->lines[1][4]);
           // printf("dawn:%zu\n", strlen(feState->text->lines[feState->line_display_offset + i]));
           feState->render_lines[i]->requires_render_update =

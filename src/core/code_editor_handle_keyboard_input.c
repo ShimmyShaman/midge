@@ -142,28 +142,27 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       }
 
       // Increment lines after by one place
-      if (state->text->lines_count + 1 >= state->text->lines_allocated) {
-        uint new_alloc = state->text->lines_allocated + 4 + state->text->lines_allocated / 4;
+      if (state->text->lines_count + 1 >= state->text->lines_alloc) {
+        uint new_alloc = state->text->lines_alloc + 4 + state->text->lines_alloc / 4;
         char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-        if (state->text->lines_allocated) {
-          memcpy(new_ary, state->text->lines, state->text->lines_allocated * sizeof(char *));
+        if (state->text->lines_alloc) {
+          memcpy(new_ary, state->text->lines, state->text->lines_alloc * sizeof(char *));
           free(state->text->lines);
         }
-        for (int i = state->text->lines_allocated; i < new_alloc; ++i) {
+        for (int i = state->text->lines_alloc; i < new_alloc; ++i) {
           new_ary[i] = NULL;
         }
 
-        state->text->lines_allocated = new_alloc;
+        state->text->lines_alloc = new_alloc;
         state->text->lines = new_ary;
       }
-      // printf("state->text->lines_allocated:%u state->text->lines_count:%u state->cursorLine:%u\n",
-      //   state->text->lines_allocated,
+      // printf("state->text->lines_alloc:%u state->text->lines_count:%u state->cursorLine:%u\n",
+      //   state->text->lines_alloc,
       //  state->text->lines_count, state->cursorLine);
       for (int i = state->text->lines_count; i > state->cursorLine + 1; --i) {
 
         state->text->lines[i] = state->text->lines[i - 1];
       }
-      state->text->lines[state->cursorLine + 1] = NULL;
       ++state->text->lines_count;
 
       // printf("fehi-1\n");
@@ -369,12 +368,25 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         free(text);
       } break;
       case KEY_CODE_V: {
+        int insertion_line;
+        int insertion_col;
+        if (state->selection_exists &&
+            (state->selection_begin_line < state->cursorLine ||
+             (state->selection_begin_line == state->cursorLine && state->selection_begin_col < state->cursorCol))) {
+          insertion_line = state->selection_begin_line;
+          insertion_col = state->selection_begin_col;
+        }
+        else {
+          insertion_line = state->cursorLine;
+          insertion_col = state->cursorCol;
+        }
+
         printf("paste args:\n");
         printf("-- state:%p\n", state);
         printf("-- command_hub->clipboard_text:'%s'\n", command_hub->clipboard_text);
-        printf("-- state->cursorLine:%i\n", state->cursorLine);
-        printf("-- state->cursorCol:%i\n", state->cursorCol);
-        insert_text_into_editor(state, command_hub->clipboard_text, state->cursorLine, state->cursorCol);
+        printf("-- insertion_line:%i\n", insertion_line);
+        printf("-- insertion_col:%i\n", insertion_col);
+        insert_text_into_editor(state, command_hub->clipboard_text, insertion_line, insertion_col);
       } break;
       case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
         // Increment
@@ -527,12 +539,29 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       event->handled = true;
 
       // Update the text
-      printf("-- state:%p\n", state);
-      printf("-- command_hub->clipboard_text:'%s'\n", c);
-      printf("-- state->cursorLine:%i\n", state->cursorLine);
-      printf("-- state->cursorCol:%i\n", state->cursorCol);
-      c[1] = '\0';
-      insert_text_into_editor(state, &c[0], state->cursorLine, state->cursorCol);
+      {
+        // TODO clear selection
+        int insertion_line;
+        int insertion_col;
+        if (state->selection_exists &&
+            (state->selection_begin_line < state->cursorLine ||
+             (state->selection_begin_line == state->cursorLine && state->selection_begin_col < state->cursorCol))) {
+          insertion_line = state->selection_begin_line;
+          insertion_col = state->selection_begin_col;
+        }
+        else {
+          insertion_line = state->cursorLine;
+          insertion_col = state->cursorCol;
+        }
+
+        printf("paste args:\n");
+        printf("-- state:%p\n", state);
+        printf("-- c:'%s'\n", &c[0]);
+        printf("-- insertion_line:%i\n", insertion_line);
+        printf("-- insertion_col:%i\n", insertion_col);
+        c[1] = '\0';
+        insert_text_into_editor(state, &c[0], insertion_line, insertion_col);
+      }
     }
   } break;
   }

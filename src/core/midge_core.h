@@ -201,7 +201,7 @@ struct mc_procedure_template_v1;
 
 typedef struct mc_cstring_list_v1 {
   mc_struct_id_v1 *struct_id;
-  unsigned int lines_allocated;
+  unsigned int lines_alloc;
   unsigned int lines_count;
   char **lines;
 } mc_cstring_list_v1;
