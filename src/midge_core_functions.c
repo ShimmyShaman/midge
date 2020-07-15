@@ -833,14 +833,15 @@ int instantiate_function_v1(int argc, void **argv)
   sprintf(function_declaration, function_declaration_format, func_identity_buf, param_buf, midge_c);
 
   // Declare the function
-  printf("ifv>cling_declare:\n%s\n", function_declaration);
-  clint_declare(function_declaration);
+  // printf("ifv>cling_declare:\n%s\n", function_declaration);
+  printf("declaring function '%s'\n", func_identity_buf);
+  MCcall(clint_declare(function_declaration));
 
   // Set the method to the function pointer
   char decl_buf[1024];
   sprintf(decl_buf, "%s = &%s;", func_info->name, func_identity_buf);
   // printf("ifv>clint_process:\n%s\n", decl_buf);
-  clint_process(decl_buf);
+  MCcall(clint_process(decl_buf));
 
   free(function_declaration);
   free(midge_c);
@@ -2328,7 +2329,7 @@ int transcribe_error_statement(char *code, int *i, uint *transcription_alloc, ch
   // Transcribe
   MCcall(append_to_cstr(transcription_alloc, transcription, "  printf(\"\\n----------------\\n  ERROR-:"));
   MCcall(append_to_cstr(transcription_alloc, transcription, error_name));
-  MCcall(append_to_cstr(transcription_alloc, transcription, "\");\n"));
+  MCcall(append_to_cstr(transcription_alloc, transcription, ":>\");\n"));
 
   if (code[*i] == ',') {
     MCcall(append_to_cstr(transcription_alloc, transcription, "  dprintf("));
@@ -2344,7 +2345,7 @@ int transcribe_error_statement(char *code, int *i, uint *transcription_alloc, ch
     }
     MCcall(append_to_cstrn(transcription_alloc, transcription, code + s, *i - s));
 
-    MCcall(append_to_cstr(transcription_alloc, transcription, ");\n"));
+    MCcall(append_to_cstr(transcription_alloc, transcription, "\"\\n\");\n"));
   }
 
   // TODO -- some kinda call stack?
@@ -2864,7 +2865,13 @@ int transcribe_function_call(function_info *owner, char *code, int *i, uint *tra
       MCcall(append_to_cstr(transcription_alloc, transcription, buf));
     }
 
-    sprintf(buf, "  %s(%i, mc_vargs);\n", identifier, argument_count);
+    sprintf(buf,
+            "  int mc_func_call_result = %s(%i, mc_vargs);\n"
+            "  printf(\"-- %s:%%i\\n\", mc_func_call_result);\n"
+            "  if(mc_func_call_result) {\n"
+            "    return mc_func_call_result;\n"
+            "  }\n",
+            identifier, argument_count, identifier);
     MCcall(append_to_cstr(transcription_alloc, transcription, buf));
     MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
   }

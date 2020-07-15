@@ -10,6 +10,8 @@ void move_cursor_up(node *code_editor_node, code_editor_state *state)
     return;
   }
 
+  // ERR(ERROR_CHECK, "This is the way things go around");
+
   // Increment
   --state->cursorLine;
   int line_len;

@@ -42,7 +42,8 @@ void loadSourceFiles(const char *root_dir, int indent)
       loadSourceFiles(path, indent + 2);
     }
     else {
-      if (!strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".h") || !strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".c") ||
+      if (!strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".h") ||
+          !strcmp(&entry->d_name[strlen(entry->d_name) - 2], ".c") ||
           !strcmp(&entry->d_name[strlen(entry->d_name) - 4], ".cpp")) {
         char path[1024];
         char *filePath = strcpy(path, root_dir);
@@ -135,8 +136,9 @@ void run()
     // clint->process("end_mthread(rthr);");
     // printf("\n! MIDGE COMPLETE !\n");
 
-    /* Goal: is the ability to change a structure (which contains a resource which must be destroyed & initialized) which is used
-     * in-a-loop in a seperate thread routine > then change the thread routine to make use of that structure change
+    /* Goal: is the ability to change a structure (which contains a resource which must be destroyed & initialized)
+     * which is used in-a-loop in a seperate thread routine > then change the thread routine to make use of that
+     * structure change
      */
 
     // clint->loadFile("/home/jason/midge/src/c_code_lexer.h");
