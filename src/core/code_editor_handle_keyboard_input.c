@@ -13,7 +13,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   case KEY_CODE_DELETE: {
     event->handled = true;
 
-    if(state->selection_exists) {
+    if (state->selection_exists) {
       // Delete the selection
       delete_selection(state);
       break;
@@ -374,25 +374,12 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         free(text);
       } break;
       case KEY_CODE_V: {
-        int insertion_line;
-        int insertion_col;
-        if (state->selection_exists &&
-            (state->selection_begin_line < state->cursorLine ||
-             (state->selection_begin_line == state->cursorLine && state->selection_begin_col < state->cursorCol))) {
-          insertion_line = state->selection_begin_line;
-          insertion_col = state->selection_begin_col;
-        }
-        else {
-          insertion_line = state->cursorLine;
-          insertion_col = state->cursorCol;
+        if (state->selection_exists) {
+          // Delete selection
+          delete_selection(state);
         }
 
-        printf("paste args:\n");
-        printf("-- state:%p\n", state);
-        printf("-- command_hub->clipboard_text:'%s'\n", command_hub->clipboard_text);
-        printf("-- insertion_line:%i\n", insertion_line);
-        printf("-- insertion_col:%i\n", insertion_col);
-        insert_text_into_editor(state, command_hub->clipboard_text, insertion_line, insertion_col);
+        insert_text_into_editor(state, command_hub->clipboard_text, state->cursorLine, state->cursorCol);
       } break;
       case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
         // Increment
@@ -546,27 +533,13 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
       // Update the text
       {
-        // TODO clear selection
-        int insertion_line;
-        int insertion_col;
-        if (state->selection_exists &&
-            (state->selection_begin_line < state->cursorLine ||
-             (state->selection_begin_line == state->cursorLine && state->selection_begin_col < state->cursorCol))) {
-          insertion_line = state->selection_begin_line;
-          insertion_col = state->selection_begin_col;
-        }
-        else {
-          insertion_line = state->cursorLine;
-          insertion_col = state->cursorCol;
+        if (state->selection_exists) {
+          // Delete selection
+          delete_selection(state);
         }
 
-        printf("paste args:\n");
-        printf("-- state:%p\n", state);
-        printf("-- c:'%s'\n", &c[0]);
-        printf("-- insertion_line:%i\n", insertion_line);
-        printf("-- insertion_col:%i\n", insertion_col);
         c[1] = '\0';
-        insert_text_into_editor(state, &c[0], insertion_line, insertion_col);
+        insert_text_into_editor(state, &c[0], state->cursorLine, state->cursorCol);
       }
     }
   } break;
