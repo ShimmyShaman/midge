@@ -4792,10 +4792,10 @@ int code_editor_render_v1(int argc, void **argv)
         selected_columns = selection_end_col - selection_start_col;
       }
       else if (state->render_lines[selection_start_line]->text) {
-        selected_columns = strlen(state->render_lines[selection_start_line]->text) - selection_start_col;
+        selected_columns = strlen(state->render_lines[selection_start_line]->text) - selection_start_col + 1;
       }
       else
-        selected_columns = 0;
+        selected_columns = 1;
 
       if (selected_columns > 0) {
         MCcall(obtain_element_render_command(sequence, &element_cmd));
@@ -4815,7 +4815,7 @@ int code_editor_render_v1(int argc, void **argv)
     for (int i = between_offset_start; i < between_offset_exclusive_end; ++i) {
 
       if (state->render_lines[i + state->line_display_offset]->text) {
-        int selected_columns = strlen(state->render_lines[i + state->line_display_offset]->text);
+        int selected_columns = strlen(state->render_lines[i + state->line_display_offset]->text) + 1;
 
         if (selected_columns > 0) {
           MCcall(obtain_element_render_command(sequence, &element_cmd));
