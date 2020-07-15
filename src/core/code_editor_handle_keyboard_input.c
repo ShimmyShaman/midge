@@ -13,6 +13,12 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   case KEY_CODE_DELETE: {
     event->handled = true;
 
+    if(state->selection_exists) {
+      // Delete the selection
+      delete_selection(state);
+      break;
+    }
+
     printf("delete-0\n");
     int line_len = strlen(state->text->lines[state->cursorLine]);
     if (state->cursorCol == line_len) {

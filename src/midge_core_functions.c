@@ -4766,7 +4766,7 @@ int code_editor_render_v1(int argc, void **argv)
   const int EDITOR_LINE_STRIDE = 22;
   const float EDITOR_FONT_HORIZONTAL_STRIDE = 10.31f;
   if (state->selection_exists) {
-    // Set selection bounds
+    // Obtain selection bounds
     int selection_start_line, selection_start_col, selection_end_line, selection_end_col;
     if (state->selection_begin_line > state->cursorLine ||
         (state->selection_begin_line == state->cursorLine && state->selection_begin_col > state->cursorCol)) {

@@ -6531,6 +6531,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));
   MCcall(parse_and_process_core_function(command_hub, "save_struct_to_file"));
   MCcall(parse_and_process_core_function(command_hub, "insert_text_into_editor"));
+  MCcall(parse_and_process_core_function(command_hub, "delete_selection"));
   MCcall(parse_and_process_core_function(command_hub, "read_selected_editor_text"));
   MCcall(parse_and_process_core_function(command_hub, "load_existing_struct_into_code_editor"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));
