@@ -565,6 +565,7 @@ int (*move_cursor_up)(int, void **);
 int (*save_function_to_file)(int, void **);
 int (*save_struct_to_file)(int, void **);
 int (*read_selected_editor_text)(int, void **);
+int (*insert_text_into_editor)(int, void **);
 int (*load_existing_struct_into_code_editor)(int, void **);
 int (*code_editor_handle_keyboard_input)(int, void **);
 int (*code_editor_handle_input)(int, void **);

@@ -1861,17 +1861,168 @@ typedef struct mc_token {
 } mc_token;
 int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output);
 
+int parse_expression_lacking_midge_function_call(function_info *owner, char *code, int *i, char **expression)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  *expression = NULL;
+
+  for (int j = *i;; ++j) {
+    switch (code[j]) {
+    case '\0': {
+      MCerror(2043, "TODO:was:'%c'", code[j]);
+    } break;
+    case ')':
+    case ']':
+    case ',':
+    case ';': {
+      // Expression is free of function call - transcribe directly
+      *expression = (char *)malloc(sizeof(char) * (j - *i + 1));
+      strncpy(*expression, code + *i, j - *i);
+      (*expression)[j - *i] = '\0';
+      *i = j;
+      return 0;
+    }
+    case '[': {
+      ++j;
+      char *innerExpression;
+      MCcall(parse_expression_lacking_midge_function_call(owner, code, &j, &innerExpression));
+      if (!innerExpression) {
+        free(innerExpression);
+        return 0;
+      }
+      free(innerExpression);
+      MCcall(parse_past(code, &j, "]"));
+      --j;
+      // Just continue
+    } break;
+    case '(': {
+      int p = j - 1;
+      while (p >= *i && code[p] == ' ') {
+        --p;
+      }
+      if (p <= *i || (!isalnum(code[p]) && code[p] != '_')) {
+        // Treat it as a cast
+        MCcall(parse_past(code, &j, "("));
+        char *innerExpression;
+        MCcall(parse_expression_lacking_midge_function_call(owner, code, &j, &innerExpression));
+        if (!innerExpression) {
+          free(innerExpression);
+          return 0;
+        }
+        free(innerExpression);
+        MCcall(parse_past(code, &j, ")"));
+        --j;
+
+        // free(declared_type);
+        break;
+      }
+
+      // Function call
+      // -- but the get the name
+      while (isalnum(code[p]) || code[p] == '_') {
+        --p;
+      }
+      ++p;
+      char *function_name = (char *)malloc(sizeof(char) * (j - p + 1));
+      strncpy(function_name, code + p, j - p);
+      function_name[j - p] = '\0';
+
+      function_info *func_info;
+      {
+        void *mc_vargs[3];
+        mc_vargs[0] = (void *)&func_info;
+        mc_vargs[1] = (void *)&command_hub->nodespace;
+        mc_vargs[2] = (void *)&function_name;
+        find_function_info(3, mc_vargs);
+      }
+      free(function_name);
+
+      if (func_info) {
+        return 0;
+      }
+
+      // Non-midge function -- continue
+      MCcall(parse_past(code, &j, "("));
+      MCcall(parse_past_empty_text(code, &j));
+      while (1) {
+        if (code[j] == '\0') {
+          MCerror(2247, "EOF");
+        }
+
+        char *argExpression;
+        MCcall(parse_expression_lacking_midge_function_call(owner, code, &j, &argExpression));
+        // printf("argExpression:'%s'\n", argExpression);
+        if (!argExpression) {
+          free(argExpression);
+          return 0;
+        }
+        free(argExpression);
+        MCcall(parse_past_empty_text(code, &j));
+        if (code[j] == ',') {
+          ++j;
+          MCcall(parse_past_empty_text(code, &j));
+          continue;
+        }
+        break;
+      }
+      MCcall(parse_past(code, &j, ")"));
+      --j;
+      break;
+    }
+    default:
+      break;
+    }
+  }
+
+  return 0;
+}
+
 int transcribe_expression(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription);
 int transcribe_bracketed_expression(function_info *owner, char *code, int *i, uint *transcription_alloc,
                                     char **transcription)
 {
+  char *expression;
+  MCcall(parse_expression_lacking_midge_function_call(owner, code, i, &expression));
+  if (expression) {
+    append_to_cstr(transcription_alloc, transcription, expression);
+    return 0;
+  }
+
   MCcall(parse_past(code, i, "("));
   MCcall(parse_past_empty_text(code, i));
 
   // Determine the type of statement
   mc_token token0;
-  MCcall(peek_mc_token(code, *i, 1, &token0));
+  MCcall(peek_mc_token(code, *i, 0, &token0));
   switch (token0.type) {
+  case MC_TOKEN_KEYWORD_OR_NAME: {
+    mc_token token1;
+    MCcall(peek_mc_token(code, *i, 1, &token1));
+    switch (token1.type) {
+    case MC_TOKEN_STAR_OPERATOR: {
+      mc_token token2;
+      MCcall(peek_mc_token(code, *i, 1, &token2));
+      switch (token2.type) {
+      case MC_TOKEN_STAR_OPERATOR: {
+        MCerror(1884, "type cast TODO");
+      } break;
+      default: {
+        MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ""));
+        MCerror(1881, "MC_TOKEN_KEYWORD_OR_NAME:STAR:%s:%s", get_mc_token_type_name(token2.type), token2.text);
+      }
+      }
+      free(token2.text);
+    } break;
+    default: {
+      MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ""));
+      MCerror(1881, "MC_TOKEN_KEYWORD_OR_NAME:%s:%s", get_mc_token_type_name(token1.type), token1.text);
+    }
+    }
+    free(token1.text);
+  } break;
   case MC_TOKEN_CONST_KEYWORD: {
     // Type cast
     char *type_declaration;
@@ -1880,37 +2031,37 @@ int transcribe_bracketed_expression(function_info *owner, char *code, int *i, ui
     MCcall(parse_past(code, i, ")"));
 
     mc_token token1;
-    MCcall(peek_mc_token(code, *i, 0, &token1));
+    MCcall(peek_mc_token(code, *i, 1, &token1));
     switch (token1.type) {
     case MC_TOKEN_KEYWORD_OR_NAME: {
       mc_token token2;
-      MCcall(peek_mc_token(code, *i, 1, &token2));
+      MCcall(peek_mc_token(code, *i, 2, &token2));
       switch (token2.type) {
-      case MC_TOKEN_SQUARE_OPEN_BRACKET: {
-        char *identifier;
-        MCcall(parse_past_identifier(code, i, &identifier, true, true));
-        MCcall(parse_past_empty_text(code, i));
+      // case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+      //   char *identifier;
+      //   MCcall(parse_past_identifier(code, i, &identifier, true, true));
+      //   MCcall(parse_past_empty_text(code, i));
 
-        // Transcribe it all
-        MCcall(append_to_cstr(transcription_alloc, transcription, "("));
-        MCcall(append_to_cstr(transcription_alloc, transcription, type_declaration));
-        MCcall(append_to_cstr(transcription_alloc, transcription, ")"));
-        MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
-        MCcall(append_to_cstr(transcription_alloc, transcription, " "));
+      //   // Transcribe it all
+      //   MCcall(append_to_cstr(transcription_alloc, transcription, "("));
+      //   MCcall(append_to_cstr(transcription_alloc, transcription, type_declaration));
+      //   MCcall(append_to_cstr(transcription_alloc, transcription, ")"));
+      //   MCcall(append_to_cstr(transcription_alloc, transcription, identifier));
+      //   MCcall(append_to_cstr(transcription_alloc, transcription, " "));
 
-        free(identifier);
-      } break;
+      //   free(identifier);
+      // } break;
       default: {
         MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ":CONST:KEYWORD_OR_NAME"));
         MCerror(1748, "Unsupported-token:%i:%s", token2.type, token2.text);
       }
       }
 
-      free(token1.text);
+      free(token2.text);
     } break;
     default: {
-      MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ":CONST"));
-      MCerror(1756, "Unsupported-token:%i:%s", token1.type, token1.text);
+      MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ""));
+      MCerror(1926, "MC_TOKEN_CONST_KEYWORD:KEYWORD_OR_NAME:%s:%s", get_mc_token_type_name(token1.type), token1.text);
     }
     }
 
@@ -1925,8 +2076,8 @@ int transcribe_bracketed_expression(function_info *owner, char *code, int *i, ui
     MCcall(transcribe_past(code, i, transcription_alloc, transcription, ")"));
   } break;
   default: {
-    MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ":"));
-    MCerror(1764, "Unsupported-token:%i:%s", token0.type, token0.text);
+    MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ""));
+    MCerror(1942, "MC_TOKEN_SUBTRACT_OPERATOR:%s:%s", get_mc_token_type_name(token0.type), token0.text);
   }
   }
 
@@ -2253,125 +2404,6 @@ int transcribe_for_statement(function_info *owner, char *code, int *i, uint *tra
   return 0;
 }
 
-int parse_expression_lacking_midge_function_call(function_info *owner, char *code, int *i, char **expression)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  *expression = NULL;
-
-  for (int j = *i;; ++j) {
-    switch (code[j]) {
-    case '\0': {
-      MCerror(2043, "TODO:was:'%c'", code[j]);
-    } break;
-    case ')':
-    case ']':
-    case ',':
-    case ';': {
-      // Expression is free of function call - transcribe directly
-      *expression = (char *)malloc(sizeof(char) * (j - *i + 1));
-      strncpy(*expression, code + *i, j - *i);
-      (*expression)[j - *i] = '\0';
-      *i = j;
-      return 0;
-    }
-    case '[': {
-      ++j;
-      char *innerExpression;
-      MCcall(parse_expression_lacking_midge_function_call(owner, code, &j, &innerExpression));
-      if (!innerExpression) {
-        free(innerExpression);
-        return 0;
-      }
-      free(innerExpression);
-      MCcall(parse_past(code, &j, "]"));
-      --j;
-      // Just continue
-    } break;
-    case '(': {
-      int p = j - 1;
-      while (p >= *i && code[p] == ' ') {
-        --p;
-      }
-      if (p <= *i || (!isalnum(code[p]) && code[p] != '_')) {
-        // Treat it as a cast
-        MCcall(parse_past(code, &j, "("));
-        char *innerExpression;
-        MCcall(parse_expression_lacking_midge_function_call(owner, code, &j, &innerExpression));
-        if (!innerExpression) {
-          free(innerExpression);
-          return 0;
-        }
-        free(innerExpression);
-        MCcall(parse_past(code, &j, ")"));
-        --j;
-
-        // free(declared_type);
-        break;
-      }
-
-      // Function call
-      // -- but the get the name
-      while (isalnum(code[p]) || code[p] == '_') {
-        --p;
-      }
-      ++p;
-      char *function_name = (char *)malloc(sizeof(char) * (j - p + 1));
-      strncpy(function_name, code + p, j - p);
-      function_name[j - p] = '\0';
-
-      function_info *func_info;
-      {
-        void *mc_vargs[3];
-        mc_vargs[0] = (void *)&func_info;
-        mc_vargs[1] = (void *)&command_hub->nodespace;
-        mc_vargs[2] = (void *)&function_name;
-        find_function_info(3, mc_vargs);
-      }
-      free(function_name);
-
-      if (func_info) {
-        return 0;
-      }
-
-      // Non-midge function -- continue
-      MCcall(parse_past(code, &j, "("));
-      MCcall(parse_past_empty_text(code, &j));
-      while (1) {
-        if (code[j] == '\0') {
-          MCerror(2247, "EOF");
-        }
-
-        char *argExpression;
-        MCcall(parse_expression_lacking_midge_function_call(owner, code, &j, &argExpression));
-        // printf("argExpression:'%s'\n", argExpression);
-        if (!argExpression) {
-          free(argExpression);
-          return 0;
-        }
-        free(argExpression);
-        MCcall(parse_past_empty_text(code, &j));
-        if (code[j] == ',') {
-          ++j;
-          MCcall(parse_past_empty_text(code, &j));
-          continue;
-        }
-        break;
-      }
-      MCcall(parse_past(code, &j, ")"));
-      --j;
-      break;
-    }
-    default:
-      break;
-    }
-  }
-
-  return 0;
-}
-
 int transcribe_comment(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)
 {
   MCcall(transcribe_past(code, i, transcription_alloc, transcription, "/"));
@@ -2446,25 +2478,15 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
     }
 
     // printf("if_statement:Direct_parse_expression:'%s'\n", expression);
-    MCcall(parse_past_empty_text(code, i));
-    MCcall(parse_past(code, i, ")"));
-    MCcall(parse_past_empty_text(code, i));
-
-    MCcall(append_to_cstr(transcription_alloc, transcription, "if ("));
-    MCcall(append_to_cstr(transcription_alloc, transcription, expression));
-    MCcall(append_to_cstr(transcription_alloc, transcription, ") {\n"));
   }
-  else {
-    // printf("ifs:expression lacking function call:'%s'\n", expression);
 
-    MCcall(parse_past_empty_text(code, i));
-    MCcall(parse_past(code, i, ")"));
-    MCcall(parse_past_empty_text(code, i));
+  MCcall(parse_past_empty_text(code, i));
+  MCcall(parse_past(code, i, ")"));
+  MCcall(parse_past_empty_text(code, i));
 
-    MCcall(append_to_cstr(transcription_alloc, transcription, "if ("));
-    MCcall(append_to_cstr(transcription_alloc, transcription, expression));
-    MCcall(append_to_cstr(transcription_alloc, transcription, ") {\n"));
-  }
+  MCcall(append_to_cstr(transcription_alloc, transcription, "if ("));
+  MCcall(append_to_cstr(transcription_alloc, transcription, expression));
+  MCcall(append_to_cstr(transcription_alloc, transcription, ") {\n"));
 
   if (code[*i] != '{') {
     MCcall(print_parse_error(code, *i, "transcribe_if_statement", "expecting curly"));
@@ -2516,7 +2538,66 @@ int transcribe_if_statement(function_info *owner, char *code, int *i, uint *tran
 int transcribe_while_statement(function_info *owner, char *code, int *i, uint *transcription_alloc,
                                char **transcription)
 {
-  MCerror(1546, "TODO");
+  // Header
+  MCcall(parse_past(code, i, "while"));
+  MCcall(parse_past_empty_text(code, i));
+  MCcall(parse_past(code, i, "("));
+  MCcall(parse_past_empty_text(code, i));
+
+  char *expression;
+  MCcall(parse_expression_lacking_midge_function_call(owner, code, i, &expression));
+  if (!expression) {
+
+    // TODO TODO TODO
+    // ASSUMING THAT none of the code will contain a midge function in them, so transcribing directly
+    int bracketCount = 1;
+    for (int j = *i; bracketCount; ++j) {
+      // printf("bracketCount:%i\n", bracketCount);
+      switch (code[j]) {
+      case '\0':
+      case '{': {
+        // printf("bracketCount-f:%i\n", bracketCount);
+        MCcall(print_parse_error(code, j, "--transcribe_while_statement", "direct-transcribe"));
+        MCerror(2127, "FORMAT PROBLEM");
+      } break;
+      case ')': {
+        --bracketCount;
+        if (!bracketCount) {
+          expression = (char *)malloc(sizeof(char) * (j - *i + 1));
+          strncpy(expression, code + *i, j - *i);
+          expression[j - *i] = '\0';
+          *i = j;
+        }
+      } break;
+      case '(': {
+        ++bracketCount;
+      } break;
+      default:
+        break;
+      }
+    }
+  }
+
+  MCcall(parse_past_empty_text(code, i));
+  MCcall(parse_past(code, i, ")"));
+  MCcall(parse_past_empty_text(code, i));
+
+  MCcall(append_to_cstr(transcription_alloc, transcription, "while ("));
+  MCcall(append_to_cstr(transcription_alloc, transcription, expression));
+  MCcall(append_to_cstr(transcription_alloc, transcription, ") {\n"));
+
+  if (code[*i] != '{') {
+    MCcall(print_parse_error(code, *i, "transcribe_while_statement", "expecting curly"));
+    MCerror(1948, "NOT supporting unbracketed while statements yet");
+  }
+
+  MCcall(parse_past(code, i, "{"));
+  MCcall(parse_past_empty_text(code, i));
+
+  MCcall(transcribe_c_block_to_mc(owner, code, i, transcription_alloc, transcription));
+  // printf("returned from cblock: while\n");
+  MCcall(parse_past(code, i, "}"));
+  MCcall(append_to_cstr(transcription_alloc, transcription, "}\n"));
 
   return 0;
 }

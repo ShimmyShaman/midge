@@ -369,7 +369,12 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         free(text);
       } break;
       case KEY_CODE_V: {
-        insert_text_into_editor(state, &command_hub->clipboard_text, state->cursorLine, state->cursorCol);
+        printf("paste args:\n");
+        printf("-- state:%p\n", state);
+        printf("-- command_hub->clipboard_text:'%s'\n", command_hub->clipboard_text);
+        printf("-- state->cursorLine:%i\n", state->cursorLine);
+        printf("-- state->cursorCol:%i\n", state->cursorCol);
+        insert_text_into_editor(state, command_hub->clipboard_text, state->cursorLine, state->cursorCol);
       } break;
       case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
         // Increment
@@ -514,7 +519,6 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
     else {
       // printf("fehi-3\n");
       char c[2];
-      c[1] = '\0';
       int res = get_key_input_code_char(event->shiftDown, event->detail.keyboard.key, &c[0]);
       if (res) {
         break;
@@ -523,7 +527,12 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       event->handled = true;
 
       // Update the text
-      insert_text_into_editor(state, c, state->cursorLine, state->cursorCol);
+      printf("-- state:%p\n", state);
+      printf("-- command_hub->clipboard_text:'%s'\n", c);
+      printf("-- state->cursorLine:%i\n", state->cursorLine);
+      printf("-- state->cursorCol:%i\n", state->cursorCol);
+      c[1] = '\0';
+      insert_text_into_editor(state, &c[0], state->cursorLine, state->cursorCol);
     }
   } break;
   }
