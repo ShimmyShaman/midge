@@ -372,6 +372,7 @@ int parse_struct_definition_v0(char *code_definition, mc_struct_info_v1 **struct
     result->fields[f]->type_name = fields[f].type;
     result->fields[f]->name = fields[f].name;
     result->fields[f]->type_deref_count = fields[f].deref_count;
+    result->fields[f]->mc_declared_type = NULL; // TODO
   }
 
   *structure_info = result;
@@ -2472,9 +2473,11 @@ int mc_main(int argc, const char *const *argv)
 
       // Update Timers
       for (int i = 0; i < command_hub->update_timers.count; ++i) {
-        update_callback_timer *timer = &command_hub->update_timers.callbacks[i];
+        update_callback_timer *timer = command_hub->update_timers.callbacks[i];
 
-        // printf("::%u<>%u\n", timer->next_update.tv_sec, current_frametime.tv_sec);
+        // if (logic_update_due) {
+        //   printf("%p::%ld<>%ld\n", timer->update_delegate, timer->next_update.tv_sec, current_frametime.tv_sec);
+        // }
         if (current_frametime.tv_sec > timer->next_update.tv_sec ||
             (current_frametime.tv_sec == timer->next_update.tv_sec &&
              current_frametime.tv_nsec >= timer->next_update.tv_nsec)) {

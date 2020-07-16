@@ -344,7 +344,7 @@ typedef struct mc_command_hub_v1 {
   } renderer;
   struct {
     uint count, allocated;
-    update_callback_timer *callbacks;
+    update_callback_timer **callbacks;
   } update_timers;
   mc_process_unit_v1 *process_matrix;
   mc_workflow_process_v1 *focused_workflow;
@@ -519,6 +519,8 @@ struct mc_special_state_v1 {
 int load_existing_function_into_code_editor(mc_function_info_v1 *function);
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
+int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
+                          void *state);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);

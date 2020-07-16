@@ -191,6 +191,7 @@ int declare_function_pointer_v1(int argc, void **argv)
     }
     if (p_struct_info) {
       struct_info *sinfo = (struct_info *)p_struct_info;
+      allocate_and_copy_cstr(parameter_info->mc_declared_type, sinfo->declared_mc_name);
       parameter_info->type_version = sinfo->version;
 
       int already_added = 0;
@@ -208,8 +209,10 @@ int declare_function_pointer_v1(int argc, void **argv)
       }
       // printf("dfp-6\n");
     }
-    else
+    else {
+      parameter_info->mc_declared_type = NULL;
       parameter_info->type_version = 0;
+    }
 
     char *param_name;
     allocate_and_copy_cstr(param_name, *(char **)argv[2 + i * 2 + 1]);
@@ -262,26 +265,6 @@ int cling_process(int argc, void **argv)
 }
 
 int init_void_collection(mc_void_collection_v1 **collection);
-
-int obtain_item_from_collection(void **items, uint *allocated, uint *count, uint size_of_type, void **item)
-{
-
-  if (*allocated < *count + 1) {
-    uint new_allocated = (*count + 1) + 4 + (*count + 1) / 4;
-    void *new_ary = (void *)malloc(size_of_type * new_allocated);
-
-    if (*allocated) {
-      memcpy(new_ary, *items, size_of_type * (*count));
-      free(*items);
-    }
-    *items = new_ary;
-    *allocated = new_allocated;
-  }
-
-  *item = items[*count];
-  ++(*count);
-  return 0;
-}
 
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command)
 {
@@ -4685,14 +4668,12 @@ int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs
                           void *state)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-                                  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
 
-  update_callback_timer *callback_timer;
-  MCcall(obtain_item_from_collection((void **)&command_hub->update_timers.callbacks,
-                                     &command_hub->update_timers.allocated, &command_hub->update_timers.count,
-                                     sizeof(update_callback_timer), (void **)&callback_timer));
+  update_callback_timer *callback_timer = (update_callback_timer *)malloc(sizeof(update_callback_timer));
+  MCcall(append_to_collection((void ***)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
+                              &command_hub->update_timers.count, callback_timer));
 
   clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
   callback_timer->period = (struct timespec){usecs_period / 1000000, (usecs_period % 1000000) * 1000};
@@ -4700,6 +4681,9 @@ int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs
   callback_timer->reset_timer_on_update = true;
   callback_timer->update_delegate = fnptr_update_callback;
   callback_timer->state = state;
+
+  printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
+  printf("callback_timer ic=%p\n", command_hub->update_timers.callbacks[0]);
 
   return 0;
 }
@@ -5185,6 +5169,21 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     parameter->type_deref_count = parameters[p].type_deref_count;
     parameter->name = parameters[p].name;
 
+    struct_info *sinfo;
+    {
+      void *mc_vargs[3];
+      mc_vargs[0] = &command_hub->nodespace;
+      mc_vargs[1] = &parameter->type_name;
+      mc_vargs[2] = &sinfo;
+      find_struct_info(3, mc_vargs);
+    }
+    if (sinfo) {
+      allocate_and_copy_cstr(parameter->mc_declared_type, sinfo->declared_mc_name);
+    }
+    else {
+      parameter->mc_declared_type = NULL;
+    }
+
     func_info->parameters[p] = parameter;
   }
 
@@ -5481,8 +5480,7 @@ int debug_automation(int argc, void **argv)
 int build_code_editor_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
+  mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
   // printf("bfe-a\n");
 
