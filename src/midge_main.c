@@ -2252,6 +2252,102 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
   }
 }
 
+int read_file_text_v1(int argc, void **argv)
+{
+  char *filepath = *(char **)argv[0];
+  char **output = *(char ***)argv[1];
+
+  // Parse
+  FILE *f = fopen(filepath, "rb");
+  if (f == NULL) {
+    MCerror(2263, "File '%s' not found!", filepath);
+  }
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+  char *input = (char *)malloc(fsize + 1);
+  fread(input, sizeof(char), fsize, f);
+  fclose(f);
+
+  *output = input;
+  return 0;
+}
+
+int load_module(char *module)
+{
+  // Read the list of modules to load
+  char *module_file_text;
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    mc_vargs[0] = &MODULE_FILEPATH;
+    void *p_mc_vargs_1 = &module_list_text;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  // Load each function
+}
+
+const char *MODULE_FILEPATH = "/home/jason/midge/src/modules/module_list";
+int load_modules()
+{
+  // Read the list of modules to load
+  char *module_list_text;
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    mc_vargs[0] = &MODULE_FILEPATH;
+    void *p_mc_vargs_1 = &module_list_text;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  // Module
+  int i = 0;
+  int s = i;
+  bool in_comment = false;
+  while (1) {
+    bool eos = false;
+    if (!is_alpha_num(module_list_text[i]) && module_list_text[i] != '_' && module_list_text[i] != '.') {
+      // Invalid char -- so a seperator
+      if (module_list_text[i] == '\0') {
+        eos = true;
+      }
+      if (module_list_text[i] == '\n') {
+        if (in_comment) {
+          in_comment = false;
+        }
+        if (i - s == 0) {
+          ++s;
+          ++i;
+          continue;
+        }
+      }
+      if (module_list_text[i] == '#') {
+        in_comment = true;
+      }
+
+      if (i - s > 0) {
+        char *module_id;
+        allocate_and_copy_cstrn(module_id, module_list_text + s, i - s);
+
+        MCcall(load_module(module_id));
+      }
+
+      if (eos) {
+        break;
+      }
+
+      s = i + 1;
+    }
+    ++i;
+  }
+
+  return 0;
+}
+
 int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime)
 {
   outTime->tv_sec = time->tv_sec + amount->tv_sec;
@@ -2275,6 +2371,7 @@ void *midge_render_thread(void *vargp);
 
 int init_core_structures(mc_command_hub_v1 *command_hub);
 int init_core_functions(mc_command_hub_v1 *command_hub);
+int load_modules(mc_command_hub_v1 *mc_command_hub_v1);
 int init_process_matrix(mc_command_hub_v1 *command_hub);
 int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);

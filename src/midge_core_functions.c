@@ -5556,7 +5556,6 @@ int build_code_editor_v1(int argc, void **argv)
   command->data.create_texture.use_as_render_target = true;
   command->data.create_texture.width = fedit->data.visual.bounds.width;
   command->data.create_texture.height = fedit->data.visual.bounds.height;
-  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
 
   // MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   // command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
@@ -5564,7 +5563,6 @@ int build_code_editor_v1(int argc, void **argv)
   // command->data.create_texture.use_as_render_target = true;
   // command->data.create_texture.width = console->input_line.width;
   // command->data.create_texture.height = console->input_line.height;
-  // pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
 
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_FONT;
