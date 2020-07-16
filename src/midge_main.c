@@ -3,6 +3,29 @@
 
 #include "midge_main.h"
 
+int read_file_text_v1(int argc, void **argv)
+{
+  char *filepath = *(char **)argv[0];
+  char **output = *(char ***)argv[1];
+
+  // Parse
+  FILE *f = fopen(filepath, "rb");
+  if (f == NULL) {
+    MCerror(2263, "File '%s' not found!", filepath);
+  }
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+  char *input = (char *)malloc(fsize + 1);
+  fread(input, sizeof(char), fsize, f);
+  input[fsize] = '\0';
+  fclose(f);
+
+  *output = input;
+  return 0;
+}
+
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
 {
   const int LEN = 84;
@@ -2252,102 +2275,6 @@ int print_process_unit(mc_process_unit_v1 *process_unit, int detail_level, int p
   }
 }
 
-int read_file_text_v1(int argc, void **argv)
-{
-  char *filepath = *(char **)argv[0];
-  char **output = *(char ***)argv[1];
-
-  // Parse
-  FILE *f = fopen(filepath, "rb");
-  if (f == NULL) {
-    MCerror(2263, "File '%s' not found!", filepath);
-  }
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
-
-  char *input = (char *)malloc(fsize + 1);
-  fread(input, sizeof(char), fsize, f);
-  fclose(f);
-
-  *output = input;
-  return 0;
-}
-
-int load_module(char *module)
-{
-  // Read the list of modules to load
-  char *module_file_text;
-  {
-    // read_file_text(MODULE_FILEPATH, &module_list_text);
-    void *mc_vargs[2];
-    mc_vargs[0] = &MODULE_FILEPATH;
-    void *p_mc_vargs_1 = &module_list_text;
-    mc_vargs[1] = &p_mc_vargs_1;
-    MCcall(read_file_text(2, mc_vargs));
-  }
-
-  // Load each function
-}
-
-const char *MODULE_FILEPATH = "/home/jason/midge/src/modules/module_list";
-int load_modules()
-{
-  // Read the list of modules to load
-  char *module_list_text;
-  {
-    // read_file_text(MODULE_FILEPATH, &module_list_text);
-    void *mc_vargs[2];
-    mc_vargs[0] = &MODULE_FILEPATH;
-    void *p_mc_vargs_1 = &module_list_text;
-    mc_vargs[1] = &p_mc_vargs_1;
-    MCcall(read_file_text(2, mc_vargs));
-  }
-
-  // Module
-  int i = 0;
-  int s = i;
-  bool in_comment = false;
-  while (1) {
-    bool eos = false;
-    if (!is_alpha_num(module_list_text[i]) && module_list_text[i] != '_' && module_list_text[i] != '.') {
-      // Invalid char -- so a seperator
-      if (module_list_text[i] == '\0') {
-        eos = true;
-      }
-      if (module_list_text[i] == '\n') {
-        if (in_comment) {
-          in_comment = false;
-        }
-        if (i - s == 0) {
-          ++s;
-          ++i;
-          continue;
-        }
-      }
-      if (module_list_text[i] == '#') {
-        in_comment = true;
-      }
-
-      if (i - s > 0) {
-        char *module_id;
-        allocate_and_copy_cstrn(module_id, module_list_text + s, i - s);
-
-        MCcall(load_module(module_id));
-      }
-
-      if (eos) {
-        break;
-      }
-
-      s = i + 1;
-    }
-    ++i;
-  }
-
-  return 0;
-}
-
 int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime)
 {
   outTime->tv_sec = time->tv_sec + amount->tv_sec;
@@ -2371,7 +2298,6 @@ void *midge_render_thread(void *vargp);
 
 int init_core_structures(mc_command_hub_v1 *command_hub);
 int init_core_functions(mc_command_hub_v1 *command_hub);
-int load_modules(mc_command_hub_v1 *mc_command_hub_v1);
 int init_process_matrix(mc_command_hub_v1 *command_hub);
 int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
@@ -2473,11 +2399,12 @@ int mc_main(int argc, const char *const *argv)
   printf("mm-3\n");
   // MCcall(build_interactive_console(0, NULL));
   MCcall(build_code_editor(0, NULL));
-  printf("mm-4\n");
+  printf("mm-4a\n");
   MCcall(build_core_display(0, NULL));
-  printf("mm-5\n");
+  printf("mm-4b\n");
+  MCcall(build_function_live_debugger(0, NULL));
+  printf("mm-4c\n");
   // return 0;
-  printf("mm-6\n");
 
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
                 " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
@@ -2716,7 +2643,7 @@ int mc_main(int argc, const char *const *argv)
         void *vargs[2];
         vargs[0] = &elapsed;
         vargs[1] = &child;
-        child->data.visual.render_delegate(2, vargs);
+        MCcall((*child->data.visual.render_delegate)(2, vargs));
 
         rerender_required = true;
       }
@@ -5503,9 +5430,9 @@ int attach_process_unit_to_matrix_branch(mc_process_unit_v1 *branch_unit, mc_pro
 //   return 0;
 // }
 
-int replace_init_file_with_v1_labels(mc_command_hub_v1 *command_hub, char *input, int input_len, char **output)
+int replace_init_file_with_v1_labels(mc_command_hub_v1 *command_hub, char *input, char **output)
 {
-  int fsize = input_len;
+  int fsize = strlen(input);
   char *out = (char *)malloc(sizeof(char) * ((fsize * 12) / 10));
 
   char *command_hub_replace = (char *)malloc(sizeof(char) * (26 - 2 + 14 + 1));
@@ -5653,17 +5580,19 @@ int replace_init_file_with_v1_labels(mc_command_hub_v1 *command_hub, char *input
 int init_process_matrix(mc_command_hub_v1 *command_hub)
 {
   // Parse
-  FILE *f = fopen("/home/jason/midge/src/process_matrix.c", "rb");
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
-
-  char *input = (char *)malloc(fsize + 1);
-  fread(input, sizeof(char), fsize, f);
-  fclose(f);
+  char *input;
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/process_matrix.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
 
   char *output;
-  MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
 
   // clint_process("int (*create_default_mc_struct)(int, void **);");
 
@@ -6583,43 +6512,49 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   clint_process("int (*conform_type_identity)(int, void **);");
   clint_process("int (*create_default_mc_struct)(int, void **);");
 
+  MCcall(clint_process("read_file_text = &read_file_text_v1;"));
+
   //  printf("processed_core_function:\n%s\n", output);
 
+  printf("icf-0\n");
   // Parse
-  FILE *f = fopen("/home/jason/midge/src/midge_core_functions.c", "rb");
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+  char *input;
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/midge_core_functions.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
 
-  char *input = (char *)malloc(fsize + 1);
-  fread(input, sizeof(char), fsize, f);
-  input[fsize] = '\0';
-  fclose(f);
-
+  printf("icf-1\n");
   char *output;
-  MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
-  clint_declare(output);
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  MCcall(clint_declare(output));
 
   free(input);
   free(output);
 
+  printf("icf-2\n");
   // Attach declared function pointers with declared functions
-  clint_process("find_function_info = &find_function_info_v1;");
-  clint_process("declare_function_pointer = &declare_function_pointer_v1;");
-  clint_process("instantiate_function = &instantiate_function_v1;");
-  clint_process("parse_script_to_mc = &parse_script_to_mc_v1;");
-  clint_process("conform_type_identity = &conform_type_identity_v1;");
-  clint_process("create_default_mc_struct = &create_default_mc_struct_v1;");
-  // clint_process("build_interactive_console = &build_interactive_console_v1;");
-  clint_process("build_code_editor = &build_code_editor_v1;");
-  clint_process("code_editor_update = &code_editor_update_v1;");
-  clint_process("code_editor_render = &code_editor_render_v1;");
-  clint_process("render_global_node = &render_global_node_v1;");
-  clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;");
-  clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;");
+  MCcall(clint_process("find_function_info = &find_function_info_v1;"));
+  MCcall(clint_process("declare_function_pointer = &declare_function_pointer_v1;"));
+  MCcall(clint_process("instantiate_function = &instantiate_function_v1;"));
+  MCcall(clint_process("parse_script_to_mc = &parse_script_to_mc_v1;"));
+  MCcall(clint_process("conform_type_identity = &conform_type_identity_v1;"));
+  MCcall(clint_process("create_default_mc_struct = &create_default_mc_struct_v1;"));
+  // MCcall(clint_process("build_interactive_console = &build_interactive_console_v1;");
+  MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
+  MCcall(clint_process("code_editor_update = &code_editor_update_v1;"));
+  MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
+  MCcall(clint_process("render_global_node = &render_global_node_v1;"));
+  MCcall(clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;"));
+  MCcall(clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;"));
 
   printf("Setting Dummy Methods\n");
-  clint_process("find_struct_info = &find_struct_info_v0;");
+  MCcall(clint_process("find_struct_info = &find_struct_info_v0;"));
   printf("Loading Core Methods\n");
   MCcall(parse_and_process_core_function(command_hub, "find_struct_info"));
   MCcall(parse_and_process_core_function(command_hub, "special_modification"));
@@ -6635,24 +6570,46 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));
   printf("hopee\n");
 
-  f = fopen("/home/jason/midge/src/midge_core_ui.c", "rb");
-  fseek(f, 0, SEEK_END);
-  fsize = ftell(f);
-  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+  // midge_core_ui.c
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/midge_core_ui.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
 
-  input = (char *)malloc(fsize + 1);
-  fread(input, sizeof(char), fsize, f);
-  input[fsize] = '\0';
-  fclose(f);
-
-  MCcall(replace_init_file_with_v1_labels(command_hub, input, fsize, &output));
-  clint_declare(output);
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  MCcall(clint_declare(output));
   free(input);
   free(output);
 
-  clint_process("build_core_display = &build_core_display_v1;");
-  clint_process("core_display_handle_input = &core_display_handle_input_v1;");
-  clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;");
+  MCcall(clint_process("build_core_display = &build_core_display_v1;"));
+  MCcall(clint_process("core_display_handle_input = &core_display_handle_input_v1;"));
+  MCcall(clint_process("core_display_render = &core_display_render_v1;"));
+  MCcall(clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;"));
+
+  // function_live_debugger.c
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/function_live_debugger.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  MCcall(clint_declare(output));
+  free(input);
+  free(output);
+
+  MCcall(clint_process("build_function_live_debugger = &build_function_live_debugger_v1;"));
+  MCcall(clint_process("function_live_debugger_handle_input = &function_live_debugger_handle_input_v1;"));
+  MCcall(clint_process("function_live_debugger_render = &function_live_debugger_render_v1;"));
 
   printf("end:init_core_functions()\n");
   return 0;

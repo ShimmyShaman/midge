@@ -371,7 +371,7 @@ int build_core_display_v1(int argc, void **argv)
   core_objects_display->data.visual.bounds.height = 900;
   core_objects_display->data.visual.image_resource_uid = 0;
   core_objects_display->data.visual.requires_render_update = true;
-  core_objects_display->data.visual.render_delegate = &core_display_render_v1;
+  core_objects_display->data.visual.render_delegate = &core_display_render;
   core_objects_display->data.visual.hidden = false;
   core_objects_display->data.visual.input_handler = &core_display_handle_input;
 

@@ -381,7 +381,7 @@ typedef struct node_visual_info {
     int x, y;
     uint width, height;
   } bounds;
-  int (*render_delegate)(int, void **);
+  int (**render_delegate)(int, void **);
   int (**input_handler)(int, void **);
 
 } node_visual_info;
@@ -543,6 +543,7 @@ int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,
                                 char **transcription);
 
+int (*read_file_text)(int, void **);
 int (*declare_function_pointer)(int, void **);
 int (*instantiate_function)(int, void **);
 // function_info **result (may be NULL); node **nodespace, char **function_name
@@ -553,9 +554,15 @@ int (*build_code_editor)(int, void **);
 int (*code_editor_update)(int, void **);
 int (*code_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
+
 int (*build_core_display)(int, void **);
 int (*core_display_handle_input)(int, void **);
 int (*core_display_entry_handle_input)(int, void **);
+int (*core_display_render)(int, void **);
+
+int (*build_function_live_debugger)(int, void **);
+int (*function_live_debugger_handle_input)(int, void **);
+int (*function_live_debugger_render)(int, void **);
 
 // mc_struct_info_v1 *find_struct_info(mc_node_v1 *nodespace, char *struct_name) -- result is last
 int (*find_struct_info)(int, void **);

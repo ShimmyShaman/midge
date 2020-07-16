@@ -112,8 +112,7 @@ int convert_return_type_string(char *return_type, char **return_type_name, unsig
 int declare_function_pointer_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
+  mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
   // TODO -- not meant for usage with struct versions other than function_info_v1 && node_v1
@@ -5504,7 +5503,7 @@ int build_code_editor_v1(int argc, void **argv)
   fedit->data.visual.bounds.height = 830;
   fedit->data.visual.image_resource_uid = 0;
   fedit->data.visual.requires_render_update = true;
-  fedit->data.visual.render_delegate = &code_editor_render_v1;
+  fedit->data.visual.render_delegate = &code_editor_render;
   fedit->data.visual.hidden = true;
   fedit->data.visual.input_handler = &code_editor_handle_input;
 
