@@ -495,6 +495,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
     case RENDER_COMMAND_PRINT_TEXT: {
 
+      if (!cmd->data.print_text.text) {
+        break;
+      }
       // Get the font image
       loaded_font_info *font = NULL;
       for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
@@ -507,20 +510,20 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         printf("Could not find requested font\n");
         return VK_ERROR_UNKNOWN;
       }
+
       sampled_image *font_image = &p_vkrs->textures.samples[font->resource_uid - RESOURCE_UID_BEGIN];
 
       float align_x = cmd->x;
       float align_y = cmd->y;
 
-      int text_length = *cmd->data.print_text.text ? strlen(*cmd->data.print_text.text)
-                                                   : 0; // TODO using this field is not thread -safe
+      int text_length = strlen(cmd->data.print_text.text);
       for (int c = 0; c < text_length; ++c) {
 
         // if (align_x > font_image->width) {
         //   break;
         // }
 
-        char letter = (*cmd->data.print_text.text)[c];
+        char letter = cmd->data.print_text.text[c];
         if (letter < 32 || letter > 127) {
           printf("TODO character not supported.\n");
           continue;
@@ -664,6 +667,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
         vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
       }
+
+      free(cmd->data.print_text.text);
     } break;
 
     default:

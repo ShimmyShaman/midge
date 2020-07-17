@@ -12,14 +12,14 @@
       return mc_res;                          \
     }                                         \
   }
-  
-#define MCvacall(function)                          \
-  {                                                 \
-    int mc_res = function;                          \
-    if (mc_res) {                                   \
-      printf("-- varg-function-call:%i\n", mc_res); \
-      return mc_res;                                \
-    }                                               \
+
+#define MCvacall(function)                                            \
+  {                                                                   \
+    int mc_res = function;                                            \
+    if (mc_res) {                                                     \
+      printf("-- line:%d varg-function-call:%i\n", __LINE__, mc_res); \
+      return mc_res;                                                  \
+    }                                                                 \
   }
 
 #define MCerror(error_code, error_message, ...)                          \
@@ -126,7 +126,7 @@ typedef struct element_render_command {
       render_color color;
     } colored_rect_info;
     struct {
-      const char **text;
+      char *text;
       uint font_resource_uid;
       render_color color;
     } print_text;

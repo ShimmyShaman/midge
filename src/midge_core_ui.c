@@ -199,7 +199,7 @@ int core_display_render_v1(int argc, void **argv)
     element_cmd->x = 6;
     element_cmd->y = 18;
     element_cmd->data.print_text.font_resource_uid = cdd->font_resource_uid;
-    element_cmd->data.print_text.text = &child->name;
+    allocate_and_copy_cstr(element_cmd->data.print_text.text, child->name);
     element_cmd->data.print_text.color = COLOR_GHOST_WHITE;
   }
 

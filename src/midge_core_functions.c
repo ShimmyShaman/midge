@@ -4726,7 +4726,7 @@ int code_editor_render_v1(int argc, void **argv)
         element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
         element_cmd->x = 4;
         element_cmd->y = 2 + 12;
-        element_cmd->data.print_text.text = (const char **)&state->render_lines[i]->text;
+        allocate_and_copy_cstr(element_cmd->data.print_text.text, state->render_lines[i]->text);
         element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
         element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
       }
