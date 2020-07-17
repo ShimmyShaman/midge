@@ -6,14 +6,25 @@
 #define node mc_node_v1
 /*mcfuncreplace*/
 
-typedef struct function_live_debug_field {
+typedef struct function_live_debug_field_snapshot {
+  int line_index;
   char *type;
   char *mc_declared_type;
   unsigned int type_deref_count;
   char *name;
-  void *ptr_value;
   char *value_text;
-} function_live_debug_field;
+} function_live_debug_field_snapshot;
+
+typedef enum fld_code_type {
+  FLD_CODE_NONE,
+  FLD_CODE_CSTRING,
+  FLD_CODE_SNAPSHOT,
+} fld_code_type;
+
+typedef struct fld_code {
+  fld_code_type type;
+  void *data;
+} fld_code;
 
 typedef struct function_live_debug_state {
   node *visual_node;
@@ -24,19 +35,37 @@ typedef struct function_live_debug_state {
   struct {
     uint alloc;
     uint count;
-    function_live_debug_field **list;
+    function_live_debug_field_snapshot **list;
   } arguments;
 
-  
+  struct {
+    uint alloc;
+    uint count;
+    fld_code **elements;
+  } visual_code;
 
 } function_live_debug_state;
 
-int report_function_live_debug_value(function_live_debug_state *fld_state, const char *field_name, void *p_value)
+int report_function_live_debug_value(function_live_debug_state *fld_state, function_live_debug_field_snapshot *field,
+                                     void *p_value)
 {
-  printf("reported! '%s':%p\n", field_name, p_value);
+  if (field->value_text) {
+    free(field->value_text);
+  }
+
+  if (!field->mc_declared_type && !strcmp(field->type, "frame_time") && field->type_deref_count == 1) {
+    frame_time *ft = (frame_time *)(*(void **)p_value);
+    cprintf(field->value_text, "%s:[%lds %ldus]", field->name, ft->app_secs, ft->frame_nsecs / 1000);
+  }
+  else {
+    cprintf(field->value_text, "%s:%p", field->name, p_value);
+  }
+  fld_state->visual_node->data.visual.requires_render_update = true;
 
   return 0;
 }
+
+int function_live_debugger_append_visual_code() { return 0; }
 
 int load_function_into_live_debugger(function_live_debug_state *fld_state, const char *function_name)
 {
@@ -60,11 +89,21 @@ int load_function_into_live_debugger(function_live_debug_state *fld_state, const
   printf("function '%s' code:\n%s\n", fld_state->function->name, fld_state->function->mc_code);
 
   // Replace the function with the debug version
+  // Function Name
   char debug_function_name[128];
   sprintf(debug_function_name, "fld_%u_%s_v%u", fld_state->declare_uid++, fld_state->function->name,
           fld_state->function->latest_iteration);
 
   char buf[1024];
+  fld_code *visual_code = (fld_code *)malloc(sizeof(fld_code));
+  visual_code->type = FLD_CODE_CSTRING;
+  sprintf(buf, "%s ", fld_state->function->return_type.name);
+  for (int i = 0; i < fld_state->function->return_type.deref_count; ++i) {
+    strcat(buf, "*");
+  }
+  function_live_debugger_append_visual_code(fld_state, "%s%s(", buf, fld_state->function->name);
+
+  // Arguments
   unsigned int arguments_alloc = 4;
   char *arguments = (char *)malloc(sizeof(char) * arguments_alloc);
   arguments[0] = '\0';
@@ -104,18 +143,21 @@ int load_function_into_live_debugger(function_live_debug_state *fld_state, const
       printf("op03\n");
 
       // Pointer reference
-      function_live_debug_field *field = (function_live_debug_field *)malloc(sizeof(function_live_debug_field));
+      function_live_debug_field_snapshot *field =
+          (function_live_debug_field_snapshot *)malloc(sizeof(function_live_debug_field_snapshot));
       allocate_and_copy_cstr(field->mc_declared_type, fld_state->function->parameters[a]->mc_declared_type);
       allocate_and_copy_cstr(field->type, fld_state->function->parameters[a]->type_name);
       field->type_deref_count = fld_state->function->parameters[a]->type_deref_count;
       allocate_and_copy_cstr(field->name, fld_state->function->parameters[a]->name);
-      field->ptr_value = NULL;
       allocate_and_copy_cstr(field->value_text, "(unset)");
+      field->line_index = 0;
 
       // printf("op05\n");
       // sprintf(buf, "  *((void **)%p) = %s;\n", &field->ptr_value, fld_state->function->parameters[a]->name);
-      sprintf(buf, "  MCcall(report_function_live_debug_value(fld_state, \"%s\", &%s));\n",
-              fld_state->function->parameters[a]->name, fld_state->function->parameters[a]->name);
+      // Line number is 0 for arguments
+      sprintf(buf,
+              "  MCcall(report_function_live_debug_value(fld_state, (function_live_debug_field_snapshot *)%p, &%s));\n",
+              field, fld_state->function->parameters[a]->name);
       MCcall(append_to_cstr(&arguments_alloc, &arguments, buf));
 
       printf("op06\n");
@@ -236,28 +278,28 @@ int function_live_debugger_render_v1(int argc, void **argv)
   return 0;
 }
 
-int update_function_live_debugger_v1(int argc, void **argv)
-{
-  // printf("update_function_live_debugger_v1\n");
-  frame_time const *elapsed = *(frame_time const **)argv[0];
-  function_live_debug_state *state = (function_live_debug_state *)argv[1];
+// int update_function_live_debugger_v1(int argc, void **argv)
+// {
+//   // printf("update_function_live_debugger_v1\n");
+//   frame_time const *elapsed = *(frame_time const **)argv[0];
+//   function_live_debug_state *state = (function_live_debug_state *)argv[1];
 
-  // Set the text
-  if (state->arguments.list[0]->value_text) {
-    free(state->arguments.list[0]->value_text);
-  }
-  if (!state->arguments.list[0]->ptr_value) {
-    allocate_and_copy_cstr(state->arguments.list[0]->value_text, "(NULL)");
-  }
-  else {
-    frame_time *arg_value = (frame_time *)(state->arguments.list[0]->ptr_value);
-    cprintf(state->arguments.list[0]->value_text, "(frame_time app_secs=%ld)", arg_value->app_secs);
-  }
+//   // Set the text
+//   if (state->arguments.list[0]->value_text) {
+//     free(state->arguments.list[0]->value_text);
+//   }
+//   if (!state->arguments.list[0]->ptr_value) {
+//     allocate_and_copy_cstr(state->arguments.list[0]->value_text, "(NULL)");
+//   }
+//   else {
+//     frame_time *arg_value = (frame_time *)(state->arguments.list[0]->ptr_value);
+//     cprintf(state->arguments.list[0]->value_text, "(frame_time app_secs=%ld)", arg_value->app_secs);
+//   }
 
-  state->visual_node->data.visual.requires_render_update = true;
+//   state->visual_node->data.visual.requires_render_update = true;
 
-  return 0;
-}
+//   return 0;
+// }
 
 int build_function_live_debugger_v1(int argc, void **argv)
 {
