@@ -698,6 +698,10 @@ int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra)
 {
   int n = strlen(extra);
+  if (n == 0) {
+    return 0;
+  }
+
   if (strlen(*cstr) + n + 1 >= *allocated_size) {
     unsigned int new_allocated_size = n + *allocated_size + 16 + (n + *allocated_size) / 10;
     // printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);

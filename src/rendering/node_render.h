@@ -12,6 +12,15 @@
       return mc_res;                          \
     }                                         \
   }
+  
+#define MCvacall(function)                          \
+  {                                                 \
+    int mc_res = function;                          \
+    if (mc_res) {                                   \
+      printf("-- varg-function-call:%i\n", mc_res); \
+      return mc_res;                                \
+    }                                               \
+  }
 
 #define MCerror(error_code, error_message, ...)                          \
   printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
