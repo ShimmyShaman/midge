@@ -3795,6 +3795,110 @@ int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *
   }
 }
 
+int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
+                          void *state)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  update_callback_timer *callback_timer = (update_callback_timer *)malloc(sizeof(update_callback_timer));
+  MCcall(append_to_collection((void ***)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
+                              &command_hub->update_timers.count, callback_timer));
+
+  clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
+  callback_timer->period = (struct timespec){usecs_period / 1000000, (usecs_period % 1000000) * 1000};
+  increment_time_spec(&callback_timer->next_update, &callback_timer->period, &callback_timer->next_update);
+  callback_timer->reset_timer_on_update = true;
+  callback_timer->update_delegate = fnptr_update_callback;
+  callback_timer->state = state;
+
+  printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
+  printf("callback_timer ic=%p\n", command_hub->update_timers.callbacks[0]);
+
+  return 0;
+}
+
+typedef struct debug_data_state {
+  int sequenceStep;
+} debug_data_state;
+
+int debug_automation(int argc, void **argv)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  // printf("code_editor_update_v1-a\n");
+  frame_time const *elapsed = *(frame_time const **)argv[0];
+  debug_data_state *debugState = (debug_data_state *)argv[1];
+
+  // mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
+
+  switch (debugState->sequenceStep) {
+  case 0: {
+    // Select
+    ++debugState->sequenceStep;
+
+    mc_node_v1 *core_display = (mc_node_v1 *)command_hub->global_node->children[1];
+    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    sim->type = INPUT_EVENT_MOUSE_PRESS;
+    sim->handled = false;
+    sim->shiftDown = false;
+    sim->altDown = false;
+    sim->ctrlDown = false;
+    sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
+    sim->detail.mouse.x = 95;
+    sim->detail.mouse.y = 97;
+    {
+      void *vargs[3];
+      vargs[0] = argv[0];
+      vargs[1] = &core_display;
+      vargs[2] = &sim;
+      core_display_handle_input(3, vargs);
+    }
+
+    free(sim);
+  } break;
+  case 1: {
+    // Select
+    ++debugState->sequenceStep;
+
+    // node *code_editor = (node *)command_hub->global_node->children[0];
+    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    // sim->type = INPUT_EVENT_KEY_PRESS;
+    // sim->handled = false;
+    // sim->shiftDown = false;
+    // sim->altDown = false;
+    // sim->ctrlDown = true;
+    // sim->detail.keyboard.key = KEY_CODE_ENTER;
+    // {
+    //   void *vargs[3];
+    //   vargs[0] = argv[0];
+    //   vargs[1] = &command_hub->global_node->children[0];
+    //   vargs[2] = &sim;
+    //   MCcall(code_editor_handle_input(3, vargs));
+    // }
+
+    // free(sim);
+  } break;
+
+  default:
+    break;
+  }
+
+  return 0;
+}
+
+int begin_debug_automation_v1(int argc, void **argv)
+{
+  debug_data_state *debugState = (debug_data_state *)malloc(sizeof(debug_data_state));
+  debugState->sequenceStep = 0;
+  register_update_timer(&debug_automation, 340 * 1000, true, (void *)debugState);
+
+  return 0;
+}
+
 int read_file(char *filepath, char **contents)
 {
   // Load the text from the core functions directory
@@ -4633,8 +4737,8 @@ int render_global_node_v1(int argc, void **argv)
   // For the global node (and whole screen)
   image_render_queue *sequence;
   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-  sequence->image_width = 1440;
-  sequence->image_height = 900;
+  sequence->image_width = APPLICATION_SET_WIDTH;
+  sequence->image_height = APPLICATION_SET_HEIGHT;
   sequence->clear_color = COLOR_DARK_SLATE_GRAY;
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
 
@@ -4660,30 +4764,6 @@ int render_global_node_v1(int argc, void **argv)
   // element_cmd->data.textured_rect_info.width = command_hub->interactive_console->bounds.width;
   // element_cmd->data.textured_rect_info.height = command_hub->interactive_console->bounds.height;
   // element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->visual.image_resource_uid;
-
-  return 0;
-}
-
-int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
-                          void *state)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  update_callback_timer *callback_timer = (update_callback_timer *)malloc(sizeof(update_callback_timer));
-  MCcall(append_to_collection((void ***)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
-                              &command_hub->update_timers.count, callback_timer));
-
-  clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
-  callback_timer->period = (struct timespec){usecs_period / 1000000, (usecs_period % 1000000) * 1000};
-  increment_time_spec(&callback_timer->next_update, &callback_timer->period, &callback_timer->next_update);
-  callback_timer->reset_timer_on_update = true;
-  callback_timer->update_delegate = fnptr_update_callback;
-  callback_timer->state = state;
-
-  printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
-  printf("callback_timer ic=%p\n", command_hub->update_timers.callbacks[0]);
 
   return 0;
 }
@@ -4873,7 +4953,7 @@ int code_editor_update_v1(int argc, void **argv)
                                   // find_struct_info/find_function_info and do the same there.
                                   /*mcfuncreplace*/
 
-  // printf("code_editor_update_v1-a\n");
+  printf("code_editor_update_v1-a\n");
   frame_time const *elapsed = *(frame_time const **)argv[0];
   mc_node_v1 *fedit = (mc_node_v1 *)argv[1];
 
@@ -5403,169 +5483,5 @@ int read_and_declare_function_from_editor(mc_code_editor_state_v1 *state, functi
 
   // printf("radffe-3\n");
 
-  return 0;
-}
-
-typedef struct debug_data_state {
-  int sequenceStep;
-} debug_data_state;
-
-int debug_automation(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  // printf("code_editor_update_v1-a\n");
-  frame_time const *elapsed = *(frame_time const **)argv[0];
-  debug_data_state *debugState = (debug_data_state *)argv[1];
-
-  // mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
-
-  switch (debugState->sequenceStep) {
-  case 0: {
-    // Select
-    ++debugState->sequenceStep;
-
-    node *core_display = (node *)command_hub->global_node->children[1];
-    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    sim->type = INPUT_EVENT_MOUSE_PRESS;
-    sim->handled = false;
-    sim->shiftDown = false;
-    sim->altDown = false;
-    sim->ctrlDown = false;
-    sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    sim->detail.mouse.x = 51;
-    sim->detail.mouse.y = 197;
-    {
-      void *vargs[3];
-      vargs[0] = argv[0];
-      vargs[1] = &core_display;
-      vargs[2] = &sim;
-      core_display_handle_input(3, vargs);
-    }
-
-    free(sim);
-  } break;
-  case 1: {
-    // Select
-    ++debugState->sequenceStep;
-
-    // node *code_editor = (node *)command_hub->global_node->children[0];
-    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    // sim->type = INPUT_EVENT_KEY_PRESS;
-    // sim->handled = false;
-    // sim->shiftDown = false;
-    // sim->altDown = false;
-    // sim->ctrlDown = true;
-    // sim->detail.keyboard.key = KEY_CODE_ENTER;
-    // {
-    //   void *vargs[3];
-    //   vargs[0] = argv[0];
-    //   vargs[1] = &command_hub->global_node->children[0];
-    //   vargs[2] = &sim;
-    //   MCcall(code_editor_handle_input(3, vargs));
-    // }
-
-    // free(sim);
-  } break;
-
-  default:
-    break;
-  }
-
-  return 0;
-}
-
-int build_code_editor_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-  // printf("bfe-a\n");
-
-  debug_data_state *debugState = (debug_data_state *)malloc(sizeof(debug_data_state));
-  debugState->sequenceStep = 0;
-  register_update_timer(&debug_automation, 340 * 1000, true, (void *)debugState);
-
-  // Build the function editor window
-  // Instantiate: node global;
-  mc_node_v1 *fedit = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
-  fedit->name = "code_editor";
-  fedit->parent = command_hub->global_node;
-  fedit->type = NODE_TYPE_VISUAL;
-
-  fedit->data.visual.bounds.x = 298;
-  fedit->data.visual.bounds.y = 40;
-  fedit->data.visual.bounds.width = 1140;
-  fedit->data.visual.bounds.height = 830;
-  fedit->data.visual.image_resource_uid = 0;
-  fedit->data.visual.requires_render_update = true;
-  fedit->data.visual.render_delegate = &code_editor_render;
-  fedit->data.visual.hidden = true;
-  fedit->data.visual.input_handler = &code_editor_handle_input;
-
-  MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
-                              &command_hub->global_node->child_count, fedit));
-
-  // Obtain visual resources
-  pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
-  resource_command *command;
-
-  // Code Lines
-  mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)malloc(sizeof(mc_code_editor_state_v1));
-  // printf("state:'%p'\n", state);
-  state->source_data_type = CODE_EDITOR_SOURCE_DATA_NONE;
-  state->source_data = NULL;
-  state->font_resource_uid = 0;
-  state->cursorLine = 0;
-  state->cursorCol = 0;
-  state->line_display_offset = 0;
-  state->text = (mc_cstring_list_v1 *)malloc(sizeof(mc_cstring_list_v1));
-  state->text->lines_alloc = 8;
-  state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_alloc);
-  state->text->lines_count = 0;
-  state->render_lines = (rendered_code_line **)malloc(sizeof(rendered_code_line *) * CODE_EDITOR_RENDERED_CODE_LINES);
-
-  for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
-    state->render_lines[i] = (rendered_code_line *)malloc(sizeof(rendered_code_line));
-
-    state->render_lines[i]->index = i;
-    state->render_lines[i]->requires_render_update = true;
-    state->render_lines[i]->text = NULL;
-    //  "!this is twenty nine letters! "
-    //  "!this is twenty nine letters! "
-    //  "!this is twenty nine letters! ";
-
-    MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-    command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-    command->p_uid = &state->render_lines[i]->image_resource_uid;
-    command->data.create_texture.use_as_render_target = true;
-    command->data.create_texture.width = state->render_lines[i]->width = fedit->data.visual.bounds.width - 4;
-    command->data.create_texture.height = state->render_lines[i]->height = 28;
-  }
-  fedit->extra = (void *)state;
-
-  // Function Editor Image
-  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-  command->p_uid = &fedit->data.visual.image_resource_uid;
-  command->data.create_texture.use_as_render_target = true;
-  command->data.create_texture.width = fedit->data.visual.bounds.width;
-  command->data.create_texture.height = fedit->data.visual.bounds.height;
-
-  // MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  // command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-  // command->p_uid = &console->input_line.image_resource_uid;
-  // command->data.create_texture.use_as_render_target = true;
-  // command->data.create_texture.width = console->input_line.width;
-  // command->data.create_texture.height = console->input_line.height;
-
-  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &state->font_resource_uid;
-  command->data.font.height = 20;
-  command->data.font.path = "res/font/DroidSansMono.ttf";
-  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   return 0;
 }

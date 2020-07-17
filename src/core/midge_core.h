@@ -545,6 +545,9 @@ int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,
                                 char **transcription);
 
+int (*begin_debug_automation)(int, void **);
+
+// char *filepath, [out]char **output
 int (*read_file_text)(int, void **);
 int (*declare_function_pointer)(int, void **);
 int (*instantiate_function)(int, void **);

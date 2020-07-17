@@ -2409,6 +2409,8 @@ int mc_main(int argc, const char *const *argv)
   printf("mm-4b\n");
   MCcall(build_function_live_debugger(0, NULL));
   printf("mm-4c\n");
+  MCcall(begin_debug_automation(0, NULL));
+  printf("mm-4d\n");
   // return 0;
 
   clint_declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 12000 &&"
@@ -6553,12 +6555,12 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("conform_type_identity = &conform_type_identity_v1;"));
   MCcall(clint_process("create_default_mc_struct = &create_default_mc_struct_v1;"));
   // MCcall(clint_process("build_interactive_console = &build_interactive_console_v1;");
-  MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
   MCcall(clint_process("code_editor_update = &code_editor_update_v1;"));
   MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
   MCcall(clint_process("render_global_node = &render_global_node_v1;"));
   MCcall(clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;"));
   MCcall(clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;"));
+  MCcall(clint_process("begin_debug_automation = &begin_debug_automation_v1;"));
 
   printf("Setting Dummy Methods\n");
   MCcall(clint_process("find_struct_info = &find_struct_info_v0;"));
@@ -6576,6 +6578,23 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_keyboard_input"));
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));
   printf("hopee\n");
+
+  // code_editor.c
+  {
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/code_editor.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  MCcall(clint_declare(output));
+  free(input);
+  free(output);
+
+  MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
 
   // midge_core_ui.c
   {

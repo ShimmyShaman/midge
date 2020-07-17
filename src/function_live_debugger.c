@@ -378,6 +378,10 @@ int load_function_into_live_debugger(fld_module_state *fld_state, const char *fu
     MCcall(append_to_c_str(debug_declaration, "\n"));
   }
 
+  // TODO
+  // c_syntax_tree *code_block_ast;
+  // MCcall(parse_syntax_from_mc_code(fld_state->function->mc_code));
+
   MCvacall(append_to_c_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
                                               "\n"
                                               "  return 0;\n"
@@ -555,7 +559,7 @@ int build_function_live_debugger_v1(int argc, void **argv)
   fld->data.visual.image_resource_uid = 0;
   fld->data.visual.requires_render_update = true;
   fld->data.visual.render_delegate = &function_live_debugger_render;
-  fld->data.visual.hidden = false;
+  fld->data.visual.hidden = true;
   fld->data.visual.input_handler = &function_live_debugger_handle_input;
 
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,

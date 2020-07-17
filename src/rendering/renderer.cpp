@@ -78,8 +78,8 @@ extern "C" void *midge_render_thread(void *vargp)
       .shouldExit = 0,
   };
   vk_render_state vkrs;
-  vkrs.window_width = 1440;
-  vkrs.window_height = 900;
+  vkrs.window_width = APPLICATION_SET_WIDTH;
+  vkrs.window_height = APPLICATION_SET_HEIGHT;
   vkrs.maximal_image_width = 2048;
   vkrs.maximal_image_height = 2048;
   // vkrs.depth.format = VK_FORMAT_UNDEFINED;
