@@ -306,7 +306,7 @@
 //   element_cmd->y = 62;
 //   element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 124;
 //   element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 124;
-//   element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+//   element_cmd->data.colored_rect_info.color = COLOR_NEARLY_BLACK;
 
 //   {
 //     const int EDITOR_LINE_STRIDE = 22;

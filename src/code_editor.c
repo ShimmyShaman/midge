@@ -30,8 +30,8 @@ int build_code_editor_v1(int argc, void **argv)
 
   fedit->data.visual.bounds.x = 298;
   fedit->data.visual.bounds.y = 40;
-  fedit->data.visual.bounds.width = APPLICATION_SET_WIDTH - 300;
-  fedit->data.visual.bounds.height = APPLICATION_SET_HEIGHT - 70;
+  fedit->data.visual.bounds.width = APPLICATION_SET_WIDTH - 298;
+  fedit->data.visual.bounds.height = APPLICATION_SET_HEIGHT - fedit->data.visual.bounds.y;
   fedit->data.visual.image_resource_uid = 0;
   fedit->data.visual.requires_render_update = true;
   fedit->data.visual.render_delegate = &code_editor_render;
@@ -61,6 +61,7 @@ int build_code_editor_v1(int argc, void **argv)
   state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_alloc);
   state->text->lines_count = 0;
   state->render_lines = (rendered_code_line **)malloc(sizeof(rendered_code_line *) * CODE_EDITOR_RENDERED_CODE_LINES);
+  // state->rendered_line_count = CODE_EDITOR_RENDERED_CODE_LINES;
 
   {
     // FunctionLiveDebug
@@ -90,6 +91,24 @@ int build_code_editor_v1(int argc, void **argv)
     command->data.create_texture.height = state->render_lines[i]->height = 28;
   }
   fedit->extra = (void *)state;
+
+  {
+    // Status Bar
+    state->status_bar.bounds.x = 2;
+    state->status_bar.bounds.y = fedit->data.visual.bounds.height - 64;
+    state->status_bar.bounds.width = fedit->data.visual.bounds.width - 4;
+    state->status_bar.bounds.height = 62;
+    state->status_bar.image_resource_uid = 0;
+    state->status_bar.message = NULL;
+    state->status_bar.requires_render_update = true;
+
+    MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+    command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+    command->p_uid = &state->status_bar.image_resource_uid;
+    command->data.create_texture.use_as_render_target = true;
+    command->data.create_texture.width = state->status_bar.bounds.width;
+    command->data.create_texture.height = state->status_bar.bounds.height;
+  }
 
   // state->editor_button_panel.alloc = 0;
   // state->editor_button_panel.count = 0;
@@ -150,7 +169,7 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
     int line_index = 0;
     int col_index = 0;
 
-    printf("fldr-0 fld_view->visual_code.count:%i\n", fld_view->visual_code.count);
+    // printf("fldr-0 fld_view->visual_code.count:%i\n", fld_view->visual_code.count);
     int previous_line_index = -1;
     int ce_offset_line_index;
     bool line_is_visible;
@@ -225,7 +244,7 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
             allocate_and_copy_cstrn(element_cmd->data.print_text.text, text + s, c - s);
             element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
 
-            printf("printing to :%i:'%s'\n", ce_offset_line_index, element_cmd->data.print_text.text);
+            // printf("printing to :%i:'%s'\n", ce_offset_line_index, element_cmd->data.print_text.text);
 
             col_index += c - s;
           }
@@ -315,10 +334,33 @@ int code_editor_render_v1(int argc, void **argv)
     }
   }
 
-  // Render
-  // printf("fer-g\n");
-  // printf("OIRS: w:%u h:%u uid:%u\n", visual_node->data.visual.bounds.width, visual_node->data.visual.bounds.height,
-  //        visual_node->data.visual.image_resource_uid);
+  {
+    // Status Bar
+    MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+    sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+    sequence->image_width = state->status_bar.bounds.width;
+    sequence->image_height = state->status_bar.bounds.height;
+    sequence->clear_color = COLOR_NEARLY_BLACK;
+    sequence->data.target_image.image_uid = state->status_bar.image_resource_uid;
+
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+    element_cmd->x = 0;
+    element_cmd->y = 0;
+    element_cmd->data.colored_rect_info.width = state->status_bar.bounds.width;
+    element_cmd->data.colored_rect_info.height = 2;
+    element_cmd->data.colored_rect_info.color = COLOR_GHOST_WHITE;
+
+    // MCcall(obtain_element_render_command(sequence, &element_cmd));
+    // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+    // element_cmd->x = 0;
+    // element_cmd->y = state->status_bar.bounds.height - 2;
+    // element_cmd->data.colored_rect_info.width = state->status_bar.bounds.width;
+    // element_cmd->data.colored_rect_info.height = 2;
+    // element_cmd->data.colored_rect_info.color = COLOR_GHOST_WHITE;
+  }
+
+  // Render Main Image
   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = visual_node->data.visual.bounds.width;
@@ -332,7 +374,7 @@ int code_editor_render_v1(int argc, void **argv)
   element_cmd->y = 2;
   element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
   element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
-  element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+  element_cmd->data.colored_rect_info.color = COLOR_NEARLY_BLACK;
 
   const int EDITOR_LINE_STRIDE = 22;
   const float EDITOR_FONT_HORIZONTAL_STRIDE = 10.31f;
@@ -432,10 +474,18 @@ int code_editor_render_v1(int argc, void **argv)
     element_cmd->data.textured_rect_info.texture_uid = state->render_lines[i]->image_resource_uid;
   }
 
+  // Status bar
+  MCcall(obtain_element_render_command(sequence, &element_cmd));
+  element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+  element_cmd->x = state->status_bar.bounds.x;
+  element_cmd->y = state->status_bar.bounds.y;
+  element_cmd->data.textured_rect_info.width = state->status_bar.bounds.width;
+  element_cmd->data.textured_rect_info.height = state->status_bar.bounds.height;
+  element_cmd->data.textured_rect_info.texture_uid = state->status_bar.image_resource_uid;
+
   // printf("fer-q\n");
   // Cursor
   state->cursor_requires_render_update = false;
-
   if (!state->in_view_function_live_debugger) {
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
@@ -457,9 +507,29 @@ int free_fld_visual_code_element(fld_visual_code_element **item)
     char *cstr = (char *)(*item)->data;
     free(cstr);
   } break;
-  // case FLD_CODE_SNAPSHOT: {
+  case FLD_CODE_SNAPSHOT: {
+    fld_variable_snapshot *field = (fld_variable_snapshot *)(*item)->data;
 
-  // } break;
+    if (field->type) {
+      free(field->type);
+      field->type = NULL;
+    }
+    if (field->mc_declared_type) {
+      free(field->mc_declared_type);
+      field->mc_declared_type = NULL;
+    }
+    if (field->name) {
+      free(field->name);
+      field->name = NULL;
+    }
+    if (field->value_text) {
+      free(field->value_text);
+      field->value_text = NULL;
+    }
+
+    field->line_index = 0;
+    field->type_deref_count = 0U;
+  } break;
   default: {
     MCerror(54, "TODO:%i", (*item)->type);
   }

@@ -560,6 +560,16 @@ typedef struct mc_code_editor_state_v1 {
 
   bool in_view_function_live_debugger;
   fld_view_state *fld_view;
+
+  struct {
+    struct {
+      uint x, y, width, height;
+    } bounds;
+    uint image_resource_uid;
+    char *message;
+    bool requires_render_update;
+  } status_bar;
+
 } mc_code_editor_state_v1;
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state);

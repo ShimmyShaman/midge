@@ -216,7 +216,7 @@ int core_display_render_v1(int argc, void **argv)
   element_cmd->y = 2;
   element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
   element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
-  element_cmd->data.colored_rect_info.color = (render_color){0.13f, 0.13f, 0.13f, 1.f};
+  element_cmd->data.colored_rect_info.color = COLOR_NEARLY_BLACK;
 
   for (int i = 0; i < visual_node->child_count; ++i) {
     node *child = (node *)visual_node->children[i];
