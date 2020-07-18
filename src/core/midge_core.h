@@ -485,6 +485,47 @@ typedef struct mc_procedure_template_v1 {
 
 } mc_procedure_template_v1;
 
+// FunctionLiveDebugger Structs
+typedef struct fld_variable_snapshot {
+  int line_index;
+  char *type;
+  char *mc_declared_type;
+  unsigned int type_deref_count;
+  char *name;
+  char *value_text;
+} fld_variable_snapshot;
+
+typedef enum fld_code_type {
+  FLD_CODE_NONE,
+  FLD_CODE_CSTRING, // TODO -- type/function-name/field-name/literal/number/newline/etc
+  FLD_CODE_SNAPSHOT,
+} fld_code_type;
+
+typedef struct fld_visual_code_element {
+  fld_code_type type;
+  void *data;
+} fld_visual_code_element;
+
+typedef struct fld_view_state {
+  unsigned int declare_incremental_uid;
+
+  int (**ptr_function_ptr)(int, void **);
+  int (*previous_function_address)(int, void **);
+
+  struct {
+    uint alloc;
+    uint count;
+    fld_variable_snapshot **items;
+  } arguments;
+
+  struct {
+    uint alloc;
+    uint count;
+    fld_visual_code_element **items;
+  } visual_code;
+
+} fld_view_state;
+
 #define CODE_EDITOR_RENDERED_CODE_LINES 37
 typedef struct rendered_code_line {
   uint index;
@@ -499,9 +540,11 @@ typedef enum code_editor_data_source {
   CODE_EDITOR_SOURCE_DATA_STRUCT,
 } code_editor_data_source;
 typedef struct mc_code_editor_state_v1 {
+  mc_node_v1 *visual_node;
+
   rendered_code_line **render_lines;
-  mc_cstring_list_v1 *text;
   uint font_resource_uid;
+
   int line_display_offset;
   uint cursorLine;
   uint cursorCol;
@@ -512,10 +555,12 @@ typedef struct mc_code_editor_state_v1 {
 
   code_editor_data_source source_data_type;
   void *source_data;
+
+  mc_cstring_list_v1 *text;
+
+  bool in_view_function_live_debugger;
+  fld_view_state *fld_view;
 } mc_code_editor_state_v1;
-struct mc_special_state_v1 {
-  int num;
-} mc_special_state_v1;
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
 int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
@@ -543,6 +588,7 @@ int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
 
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,
                                 char **transcription);
+int (*code_editor_toggle_view)(mc_code_editor_state_v1 *state);
 
 int (*begin_debug_automation)(int, void **);
 int (*load_existing_function_into_code_editor)(int, void **);
@@ -558,7 +604,6 @@ int (*build_interactive_console)(int, void **);
 int (*build_code_editor)(int, void **);
 int (*code_editor_update)(int, void **);
 int (*code_editor_render)(int, void **);
-int (*code_editor_toggle_view)(int, void **);
 int (*render_global_node)(int, void **);
 
 int (*build_core_display)(int, void **);

@@ -2407,7 +2407,7 @@ int mc_main(int argc, const char *const *argv)
   printf("mm-4a\n");
   MCcall(build_core_display(0, NULL));
   printf("mm-4b\n");
-  MCcall(build_function_live_debugger(0, NULL));
+  // MCcall(build_function_live_debugger(0, NULL));
   printf("mm-4c\n");
   MCcall(begin_debug_automation(0, NULL));
   printf("mm-4d\n");
@@ -6620,24 +6620,24 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;"));
 
   // function_live_debugger.c
-  {
-    // read_file_text(MODULE_FILEPATH, &module_list_text);
-    void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/function_live_debugger.c";
-    mc_vargs[0] = &filepath;
-    void *p_mc_vargs_1 = &input;
-    mc_vargs[1] = &p_mc_vargs_1;
-    MCcall(read_file_text(2, mc_vargs));
-  }
+  // {
+  //   // read_file_text(MODULE_FILEPATH, &module_list_text);
+  //   void *mc_vargs[2];
+  //   const char *filepath = "/home/jason/midge/src/function_live_debugger.c";
+  //   mc_vargs[0] = &filepath;
+  //   void *p_mc_vargs_1 = &input;
+  //   mc_vargs[1] = &p_mc_vargs_1;
+  //   MCcall(read_file_text(2, mc_vargs));
+  // }
 
-  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
-  MCcall(clint_declare(output));
-  free(input);
-  free(output);
+  // MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  // MCcall(clint_declare(output));
+  // free(input);
+  // free(output);
 
-  MCcall(clint_process("build_function_live_debugger = &build_function_live_debugger_v1;"));
-  MCcall(clint_process("function_live_debugger_handle_input = &function_live_debugger_handle_input_v1;"));
-  MCcall(clint_process("function_live_debugger_render = &function_live_debugger_render_v1;"));
+  // MCcall(clint_process("build_function_live_debugger = &build_function_live_debugger_v1;"));
+  // MCcall(clint_process("function_live_debugger_handle_input = &function_live_debugger_handle_input_v1;"));
+  // MCcall(clint_process("function_live_debugger_render = &function_live_debugger_render_v1;"));
 
   printf("end:init_core_functions()\n");
   return 0;

@@ -3,6 +3,9 @@
 #ifndef MIDGE_COMMON_H
 #define MIDGE_COMMON_H
 
+#include <stdarg.h>
+#include <stdio.h>
+
 #include "m_threads.h"
 
 #define APPLICATION_SET_WIDTH 1540
@@ -14,6 +17,28 @@
 #ifndef min
 #define min(x, y) x > y ? y : x
 #endif
+
+#define MCcall(function)                      \
+  {                                           \
+    int mc_res = function;                    \
+    if (mc_res) {                             \
+      printf("--" #function ":%i\n", mc_res); \
+      return mc_res;                          \
+    }                                         \
+  }
+
+#define MCvacall(function)                                            \
+  {                                                                   \
+    int mc_res = function;                                            \
+    if (mc_res) {                                                     \
+      printf("-- line:%d varg-function-call:%i\n", __LINE__, mc_res); \
+      return mc_res;                                                  \
+    }                                                                 \
+  }
+
+#define MCerror(error_code, error_message, ...)                          \
+  printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
+  return error_code;
 
 #define COLOR_TRANSPARENT (render_color){0.0f, 0.0f, 0.0f, 0.0f};
 #define COLOR_CORNFLOWER_BLUE (render_color){0.19f, 0.34f, 0.83f, 1.f};
@@ -174,6 +199,18 @@ typedef struct frame_time {
   long frame_secs, frame_nsecs;
   long app_secs, app_nsecs;
 } frame_time;
+
+int get_key_input_code_char(bool shift, key_event_code code, char *c);
+
+typedef struct c_str {
+  uint alloc;
+  uint len;
+  char *text;
+} c_str;
+int init_c_str(c_str **ptr);
+int free_c_str(c_str *ptr);
+int append_char_to_c_str(c_str *cstr, char c);
+int append_to_c_str(c_str *cstr, const char *format, ...);
 
 int get_key_input_code_char(bool shift, key_event_code code, char *c)
 {
@@ -379,4 +416,127 @@ int get_key_input_code_char(bool shift, key_event_code code, char *c)
   }
 }
 
+int init_c_str(c_str **ptr)
+{
+  (*ptr) = (c_str *)malloc(sizeof(c_str));
+  (*ptr)->alloc = 2;
+  (*ptr)->len = 0;
+  (*ptr)->text = (char *)malloc(sizeof(char) * (*ptr)->alloc);
+
+  return 0;
+}
+
+int free_c_str(c_str *ptr)
+{
+  if (ptr->alloc > 0 && ptr->text) {
+    free(ptr->text);
+  }
+
+  free(ptr);
+
+  return 0;
+}
+
+int append_char_to_c_str(c_str *cstr, char c)
+{
+  char buf[2];
+  buf[0] = c;
+  buf[1] = '\0';
+  MCcall(append_to_c_str(cstr, buf));
+  return 0;
+}
+
+int append_to_c_str(c_str *cstr, const char *format, ...)
+{
+  // printf("atcs-0\n");
+  int chunk_size = 4;
+  int i = 0;
+
+  va_list valist;
+  va_start(valist, format);
+
+  // printf("atcs-1\n");
+  while (1) {
+    if (cstr->len + chunk_size + 1 >= cstr->alloc) {
+      unsigned int new_allocated_size = chunk_size + cstr->alloc + 16 + (chunk_size + cstr->alloc) / 10;
+      // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
+      char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+      // printf("atc-4\n");
+      memcpy(newptr, cstr->text, sizeof(char) * cstr->alloc);
+      // printf("atc-5\n");
+      free(cstr->text);
+      // printf("atc-6\n");
+      cstr->text = newptr;
+      // printf("atc-7\n");
+      cstr->alloc = new_allocated_size;
+      // printf("atc-8\n");
+    }
+    // printf("atcs-2\n");
+    // sleep(1);
+
+    // printf("'%c' chunk_size=%i cstr->len=%u\n", format[i], chunk_size, cstr->len);
+    for (int a = 0; a < chunk_size; ++a) {
+      cstr->text[cstr->len++] = format[i];
+      cstr->text[cstr->len] = '\0';
+      // printf("cstr:'%s'\n", cstr->text);
+
+      if (format[i] == '\0') {
+        // printf("atcs-3\n");
+        --cstr->len;
+        va_end(valist);
+        return 0;
+      }
+
+      if (format[i] == '%') {
+        if (format[i + 1] == '%') {
+          // printf("atcs-4\n");
+          // Use as an escape character
+          ++i;
+        }
+        else {
+          // printf("atcs-5 i:%i i:'%c'\n", i, format[i]);
+          --cstr->len;
+          // Search to replace the format
+          ++i;
+          switch (format[i]) {
+          case 'i': {
+            int value = va_arg(valist, int);
+
+            char buf[18];
+            sprintf(buf, "%i", value);
+            append_to_c_str(cstr, buf);
+          } break;
+          case 'p': {
+            void *value = va_arg(valist, void *);
+
+            char buf[18];
+            sprintf(buf, "%p", value);
+            append_to_c_str(cstr, buf);
+          } break;
+          case 's': {
+            char *value = va_arg(valist, char *);
+            append_to_c_str(cstr, value);
+          } break;
+          case 'u': {
+            unsigned int value = va_arg(valist, unsigned int);
+
+            char buf[18];
+            sprintf(buf, "%u", value);
+            append_to_c_str(cstr, buf);
+          } break;
+          default: {
+            MCerror(99, "TODO:%c", format[i]);
+          }
+          }
+        }
+      }
+
+      ++i;
+      // printf("atcs-8 i:%i i:'%c'\n", i, format[i]);
+    }
+
+    // printf("atcs-6\n");
+    chunk_size = (chunk_size * 5) / 3;
+  }
+}
 #endif // MIDGE_COMMON_H

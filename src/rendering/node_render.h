@@ -4,28 +4,6 @@
 
 #include "midge_common.h"
 
-#define MCcall(function)                      \
-  {                                           \
-    int mc_res = function;                    \
-    if (mc_res) {                             \
-      printf("--" #function ":%i\n", mc_res); \
-      return mc_res;                          \
-    }                                         \
-  }
-
-#define MCvacall(function)                                            \
-  {                                                                   \
-    int mc_res = function;                                            \
-    if (mc_res) {                                                     \
-      printf("-- line:%d varg-function-call:%i\n", __LINE__, mc_res); \
-      return mc_res;                                                  \
-    }                                                                 \
-  }
-
-#define MCerror(error_code, error_message, ...)                          \
-  printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
-  return error_code;
-
 typedef struct mc_struct_id_v1 {
   const char *identifier;
   unsigned short version;
