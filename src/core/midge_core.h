@@ -516,7 +516,6 @@ typedef struct mc_code_editor_state_v1 {
 struct mc_special_state_v1 {
   int num;
 } mc_special_state_v1;
-int load_existing_function_into_code_editor(mc_function_info_v1 *function);
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
 int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
@@ -546,6 +545,7 @@ int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, 
                                 char **transcription);
 
 int (*begin_debug_automation)(int, void **);
+int (*load_existing_function_into_code_editor)(int, void **);
 
 // char *filepath, [out]char **output
 int (*read_file_text)(int, void **);
@@ -558,6 +558,7 @@ int (*build_interactive_console)(int, void **);
 int (*build_code_editor)(int, void **);
 int (*code_editor_update)(int, void **);
 int (*code_editor_render)(int, void **);
+int (*code_editor_toggle_view)(int, void **);
 int (*render_global_node)(int, void **);
 
 int (*build_core_display)(int, void **);

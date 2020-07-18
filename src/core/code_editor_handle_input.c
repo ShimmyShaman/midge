@@ -65,8 +65,8 @@ void code_editor_handle_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_e
         continue;
       }
 
-      // printf("was:'%s' now:'%s'\n", state->render_lines[i]->text, state->text->lines[i + state->line_display_offset]);
-      // Update
+      // printf("was:'%s' now:'%s'\n", state->render_lines[i]->text, state->text->lines[i +
+      // state->line_display_offset]); Update
       if (state->render_lines[i]->text) {
         free(state->render_lines[i]->text);
       }

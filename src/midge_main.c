@@ -6556,7 +6556,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("create_default_mc_struct = &create_default_mc_struct_v1;"));
   // MCcall(clint_process("build_interactive_console = &build_interactive_console_v1;");
   MCcall(clint_process("code_editor_update = &code_editor_update_v1;"));
-  MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
   MCcall(clint_process("render_global_node = &render_global_node_v1;"));
   MCcall(clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;"));
   MCcall(clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;"));
@@ -6595,6 +6594,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(output);
 
   MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
+  MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
+  MCcall(clint_process("code_editor_toggle_view = &code_editor_toggle_view_v1;"));
+  MCcall(clint_process("load_existing_function_into_code_editor = &load_existing_function_into_code_editor_v1;"));
 
   // midge_core_ui.c
   {

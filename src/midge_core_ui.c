@@ -307,20 +307,21 @@ int core_display_handle_input_v1(int argc, void **argv)
       event->handled = true;
 
       // Find the core object the name represents
+      function_info *function;
       {
-        function_info *function;
         void *vargs[3];
         vargs[0] = (void **)&function;
         vargs[1] = (void **)&command_hub->global_node;
         vargs[2] = (void **)&child->name;
         find_function_info(3, vargs);
-
-        if (function) {
-          MCcall(load_existing_function_into_code_editor(function));
-          break;
-        }
+      }
+      if (function) {
+        void *vargs[1];
+        vargs[0] = (void **)&function;
+        load_existing_function_into_code_editor(1, vargs);
       }
 
+      // Else- Search for a struct with the name
       mc_struct_info_v1 *p_struct_info;
       {
         void *mc_vargs[3];

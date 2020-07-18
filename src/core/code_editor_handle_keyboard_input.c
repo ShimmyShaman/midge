@@ -294,6 +294,10 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
     state->cursor_requires_render_update = true;
     fedit->data.visual.requires_render_update = true;
   } break;
+  case KEY_CODE_F4: {
+    code_editor_toggle_view(state);
+
+  } break;
   case KEY_CODE_HOME: {
     printf("past\n");
     state->cursorCol = 0;
