@@ -18,13 +18,13 @@
 #define min(x, y) x > y ? y : x
 #endif
 
-#define MCcall(function)                      \
-  {                                           \
-    int mc_res = function;                    \
-    if (mc_res) {                             \
-      printf("--" #function ":%i\n", mc_res); \
-      return mc_res;                          \
-    }                                         \
+#define MCcall(function)                                           \
+  {                                                                \
+    int mc_res = function;                                         \
+    if (mc_res) {                                                  \
+      printf("--" #function "line:%i:ERR:%i\n", __LINE__, mc_res); \
+      return mc_res;                                               \
+    }                                                              \
   }
 
 #define MCvacall(function)                                            \

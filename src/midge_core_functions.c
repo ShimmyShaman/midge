@@ -1729,8 +1729,12 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_IDENTIFIER";
   case MC_TOKEN_SQUARE_OPEN_BRACKET:
     return "MC_TOKEN_SQUARE_OPEN_BRACKET";
+  case MC_TOKEN_SQUARE_CLOSE_BRACKET:
+    return "MC_TOKEN_SQUARE_CLOSE_BRACKET";
   case MC_TOKEN_OPEN_BRACKET:
     return "MC_TOKEN_OPEN_BRACKET";
+  case MC_TOKEN_CLOSE_BRACKET:
+    return "MC_TOKEN_CLOSE_BRACKET";
   case MC_TOKEN_SEMI_COLON:
     return "MC_TOKEN_SEMI_COLON";
   case MC_TOKEN_EQUALITY_OPERATOR:
@@ -1767,6 +1771,10 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_TAB_SEQUENCE";
   case MC_TOKEN_LINE_COMMENT:
     return "MC_TOKEN_LINE_COMMENT";
+  case MC_TOKEN_DECIMAL_POINT:
+    return "MC_TOKEN_DECIMAL_POINT";
+  case MC_TOKEN_NUMERIC_LITERAL:
+    return "MC_TOKEN_NUMERIC_LITERAL";
   default:
     return "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED";
   }
@@ -3528,8 +3536,8 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       } break;
       default: {
         print_parse_error(code, token2.start_index, "see-below", "");
-        MCerror(3118, "MC_TOKEN_IDENTIFIER:DEREFERENCE_SEQUENCE:ERR-token:%s:%s",
-                get_mc_token_type_name(token2.type), token2.text);
+        MCerror(3118, "MC_TOKEN_IDENTIFIER:DEREFERENCE_SEQUENCE:ERR-token:%s:%s", get_mc_token_type_name(token2.type),
+                token2.text);
       }
       }
       free(token2.text);
@@ -3553,8 +3561,8 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       } break;
       default: {
         print_parse_error(code, token2.start_index, "see-below", "");
-        MCerror(3151, "MC_TOKEN_IDENTIFIER:MC_TOKEN_IDENTIFIER:ERR-token:%s:%s",
-                get_mc_token_type_name(token2.type), token2.text);
+        MCerror(3151, "MC_TOKEN_IDENTIFIER:MC_TOKEN_IDENTIFIER:ERR-token:%s:%s", get_mc_token_type_name(token2.type),
+                token2.text);
       }
       }
       free(token2.text);
