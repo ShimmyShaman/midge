@@ -313,12 +313,12 @@ int core_display_handle_input_v1(int argc, void **argv)
         vargs[0] = (void **)&function;
         vargs[1] = (void **)&command_hub->global_node;
         vargs[2] = (void **)&child->name;
-        find_function_info(3, vargs);
+        MCcall(find_function_info(3, vargs));
       }
       if (function) {
         void *vargs[1];
         vargs[0] = (void **)&function;
-        load_existing_function_into_code_editor(1, vargs);
+        MCcall(load_existing_function_into_code_editor(1, vargs));
       }
 
       // Else- Search for a struct with the name

@@ -599,6 +599,7 @@ int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,
                                 char **transcription);
 int (*code_editor_toggle_view)(mc_code_editor_state_v1 *state);
+int (*parse_mc_to_syntax_tree)(char *mcode);
 
 int (*begin_debug_automation)(int, void **);
 int (*load_existing_function_into_code_editor)(int, void **);
@@ -745,4 +746,40 @@ int get_process_originator_type(process_action_type action_type, process_origina
     break;
   }
 }
+
+typedef enum mc_token_type {
+  MC_TOKEN_NULL = 0,
+  // One or more '*'
+  MC_TOKEN_STAR_OPERATOR,
+  MC_TOKEN_IDENTIFIER,
+  MC_TOKEN_SQUARE_OPEN_BRACKET,
+  MC_TOKEN_OPEN_BRACKET,
+  MC_TOKEN_SEMI_COLON,
+  MC_TOKEN_EQUALITY_OPERATOR,
+  MC_TOKEN_DECREMENT_OPERATOR,
+  MC_TOKEN_POINTER_OPERATOR,
+  MC_TOKEN_ASSIGNMENT_OPERATOR,
+  MC_TOKEN_SUBTRACT_OPERATOR,
+  MC_TOKEN_IF_KEYWORD,
+  MC_TOKEN_ELSE_KEYWORD,
+  MC_TOKEN_WHILE_KEYWORD,
+  MC_TOKEN_SWITCH_KEYWORD,
+  MC_TOKEN_RETURN_KEYWORD,
+  MC_TOKEN_CONST_KEYWORD,
+  MC_TOKEN_CURLY_OPEN_BRACKET,
+  MC_TOKEN_CURLY_CLOSING_BRACKET,
+  MC_TOKEN_NEW_LINE,
+  MC_TOKEN_TAB_SEQUENCE,
+  MC_TOKEN_SPACE_SEQUENCE,
+  MC_TOKEN_LINE_COMMENT,
+} mc_token_type;
+
+typedef struct mc_token {
+  mc_token_type type;
+  char *text;
+  unsigned int start_index;
+} mc_token;
+
+const char *get_mc_token_type_name(mc_token_type type);
+
 #endif // MIDGE_CORE_H

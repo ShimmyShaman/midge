@@ -1717,26 +1717,7 @@ int transcribe_past(char const *const code, int *index, uint *transcription_allo
   }
 }
 
-typedef enum mc_token_type {
-  MC_TOKEN_NULL = 0,
-  // One or more '*'
-  MC_TOKEN_STAR_OPERATOR,
-  MC_TOKEN_KEYWORD_OR_NAME,
-  MC_TOKEN_SQUARE_OPEN_BRACKET,
-  MC_TOKEN_OPEN_BRACKET,
-  MC_TOKEN_SEMI_COLON,
-  MC_TOKEN_EQUALITY_OPERATOR,
-  MC_TOKEN_DECREMENT_OPERATOR,
-  MC_TOKEN_POINTER_OPERATOR,
-  MC_TOKEN_ASSIGNMENT_OPERATOR,
-  MC_TOKEN_SUBTRACT_OPERATOR,
-  MC_TOKEN_IF_KEYWORD,
-  MC_TOKEN_ELSE_KEYWORD,
-  MC_TOKEN_WHILE_KEYWORD,
-  MC_TOKEN_SWITCH_KEYWORD,
-  MC_TOKEN_RETURN_KEYWORD,
-  MC_TOKEN_CONST_KEYWORD,
-} mc_token_type;
+int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output);
 const char *get_mc_token_type_name(mc_token_type type)
 {
   switch (type) {
@@ -1744,8 +1725,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_NULL";
   case MC_TOKEN_STAR_OPERATOR:
     return "MC_TOKEN_STAR_OPERATOR";
-  case MC_TOKEN_KEYWORD_OR_NAME:
-    return "MC_TOKEN_KEYWORD_OR_NAME";
+  case MC_TOKEN_IDENTIFIER:
+    return "MC_TOKEN_IDENTIFIER";
   case MC_TOKEN_SQUARE_OPEN_BRACKET:
     return "MC_TOKEN_SQUARE_OPEN_BRACKET";
   case MC_TOKEN_OPEN_BRACKET:
@@ -1774,16 +1755,22 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_RETURN_KEYWORD";
   case MC_TOKEN_CONST_KEYWORD:
     return "MC_TOKEN_CONST_KEYWORD";
+  case MC_TOKEN_CURLY_OPEN_BRACKET:
+    return "MC_TOKEN_CURLY_OPEN_BRACKET";
+  case MC_TOKEN_CURLY_CLOSING_BRACKET:
+    return "MC_TOKEN_CURLY_CLOSING_BRACKET";
+  case MC_TOKEN_NEW_LINE:
+    return "MC_TOKEN_NEW_LINE";
+  case MC_TOKEN_SPACE_SEQUENCE:
+    return "MC_TOKEN_SPACE_SEQUENCE";
+  case MC_TOKEN_TAB_SEQUENCE:
+    return "MC_TOKEN_TAB_SEQUENCE";
+  case MC_TOKEN_LINE_COMMENT:
+    return "MC_TOKEN_LINE_COMMENT";
   default:
     return "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED";
   }
 }
-typedef struct mc_token {
-  mc_token_type type;
-  char *text;
-  unsigned int start_index;
-} mc_token;
-int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output);
 
 int parse_expression_lacking_midge_function_call(function_info *owner, char *code, int *i, char **expression)
 {
@@ -1922,7 +1909,7 @@ int transcribe_bracketed_expression(function_info *owner, char *code, int *i, ui
   mc_token token0;
   MCcall(peek_mc_token(code, *i, 0, &token0));
   switch (token0.type) {
-  case MC_TOKEN_KEYWORD_OR_NAME: {
+  case MC_TOKEN_IDENTIFIER: {
     mc_token token1;
     MCcall(peek_mc_token(code, *i, 1, &token1));
     switch (token1.type) {
@@ -1935,14 +1922,14 @@ int transcribe_bracketed_expression(function_info *owner, char *code, int *i, ui
       } break;
       default: {
         MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ""));
-        MCerror(1881, "MC_TOKEN_KEYWORD_OR_NAME:STAR:%s:%s", get_mc_token_type_name(token2.type), token2.text);
+        MCerror(1881, "MC_TOKEN_IDENTIFIER:STAR:%s:%s", get_mc_token_type_name(token2.type), token2.text);
       }
       }
       free(token2.text);
     } break;
     default: {
       MCcall(print_parse_error(code, *i, "transcribe_bracketed_expression", ""));
-      MCerror(1881, "MC_TOKEN_KEYWORD_OR_NAME:%s:%s", get_mc_token_type_name(token1.type), token1.text);
+      MCerror(1881, "MC_TOKEN_IDENTIFIER:%s:%s", get_mc_token_type_name(token1.type), token1.text);
     }
     }
     free(token1.text);
@@ -1957,7 +1944,7 @@ int transcribe_bracketed_expression(function_info *owner, char *code, int *i, ui
     mc_token token1;
     MCcall(peek_mc_token(code, *i, 1, &token1));
     switch (token1.type) {
-    case MC_TOKEN_KEYWORD_OR_NAME: {
+    case MC_TOKEN_IDENTIFIER: {
       mc_token token2;
       MCcall(peek_mc_token(code, *i, 2, &token2));
       switch (token2.type) {
@@ -3090,7 +3077,7 @@ int transcribe_array_access(function_info *owner, char *code, int *i, uint *tran
     // -- from what ?
     mc_token token;
     // MCcall(peek_mc_token(code, *i, 0, &token));
-    // if(token.type != MC_TOKEN_KEYWORD_OR_NAME){
+    // if(token.type != MC_TOKEN_IDENTIFIER){
     //   MCerror(2238);
     // }
     // free(token.text);
@@ -3309,7 +3296,7 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
       }
 
       if (!tokens_ahead) {
-        output->type = MC_TOKEN_KEYWORD_OR_NAME;
+        output->type = MC_TOKEN_IDENTIFIER;
         allocate_and_copy_cstrn(output->text, code + s, slen);
         output->start_index = s;
         return 0;
@@ -3430,7 +3417,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
   mc_token token0;
   MCcall(peek_mc_token(code, *i, 0, &token0));
   switch (token0.type) {
-  case MC_TOKEN_KEYWORD_OR_NAME: {
+  case MC_TOKEN_IDENTIFIER: {
     mc_token token1;
     MCcall(peek_mc_token(code, *i, 1, &token1));
     switch (token1.type) {
@@ -3459,7 +3446,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
           mc_token token4;
           MCcall(peek_mc_token(code, *i, 4, &token4));
           switch (token4.type) {
-          case MC_TOKEN_KEYWORD_OR_NAME: {
+          case MC_TOKEN_IDENTIFIER: {
             // Some sort of declarative statement
             mc_token token5;
             MCcall(peek_mc_token(code, *i, 5, &token5));
@@ -3474,7 +3461,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
             } break;
             default: {
               print_parse_error(code, token5.start_index, "see-below", "");
-              MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:KEYWORD_OR_NAME:ERR-token:%s:%s",
+              MCerror(2469, "MC_TOKEN_IDENTIFIER:CONST:DEREFERENCE:CONST:KEYWORD_OR_NAME:ERR-token:%s:%s",
                       get_mc_token_type_name(token5.type), token5.text);
             }
             }
@@ -3482,7 +3469,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
           } break;
           default: {
             print_parse_error(code, token4.start_index, "see-below", "");
-            MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:CONST:ERR-token:%s:%s",
+            MCerror(2469, "MC_TOKEN_IDENTIFIER:CONST:DEREFERENCE:CONST:ERR-token:%s:%s",
                     get_mc_token_type_name(token4.type), token4.text);
           }
           }
@@ -3490,16 +3477,15 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
         } break;
         default: {
           print_parse_error(code, token2.start_index, "see-below", "");
-          MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:DEREFERENCE:ERR-token:%s:%s",
-                  get_mc_token_type_name(token3.type), token3.text);
+          MCerror(2469, "MC_TOKEN_IDENTIFIER:CONST:DEREFERENCE:ERR-token:%s:%s", get_mc_token_type_name(token3.type),
+                  token3.text);
         }
         }
         free(token3.text);
       } break;
       default: {
         print_parse_error(code, token2.start_index, "see-below", "");
-        MCerror(2469, "MC_TOKEN_KEYWORD_OR_NAME:CONST:ERR-token:%s:%s", get_mc_token_type_name(token2.type),
-                token2.text);
+        MCerror(2469, "MC_TOKEN_IDENTIFIER:CONST:ERR-token:%s:%s", get_mc_token_type_name(token2.type), token2.text);
       }
       }
       free(token2.text);
@@ -3519,7 +3505,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
         break;
       }
       switch (token2.type) {
-      case MC_TOKEN_KEYWORD_OR_NAME: {
+      case MC_TOKEN_IDENTIFIER: {
         // Some sort of declarative statement
         mc_token token3;
         MCcall(peek_mc_token(code, *i, 3, &token3));
@@ -3534,7 +3520,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
         } break;
         default: {
           print_parse_error(code, token3.start_index, "see-below", "");
-          MCerror(3110, "MC_TOKEN_KEYWORD_OR_NAME:DEREFERENCE_SEQUENCE:MC_TOKEN_KEYWORD_OR_NAME:ERR-token:%s:%s",
+          MCerror(3110, "MC_TOKEN_IDENTIFIER:DEREFERENCE_SEQUENCE:MC_TOKEN_IDENTIFIER:ERR-token:%s:%s",
                   get_mc_token_type_name(token3.type), token3.text);
         }
         }
@@ -3542,13 +3528,13 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       } break;
       default: {
         print_parse_error(code, token2.start_index, "see-below", "");
-        MCerror(3118, "MC_TOKEN_KEYWORD_OR_NAME:DEREFERENCE_SEQUENCE:ERR-token:%s:%s",
+        MCerror(3118, "MC_TOKEN_IDENTIFIER:DEREFERENCE_SEQUENCE:ERR-token:%s:%s",
                 get_mc_token_type_name(token2.type), token2.text);
       }
       }
       free(token2.text);
     } break;
-    case MC_TOKEN_KEYWORD_OR_NAME: {
+    case MC_TOKEN_IDENTIFIER: {
       // Some sort of declarative statement
       mc_token token2;
       MCcall(peek_mc_token(code, *i, 2, &token2));
@@ -3567,7 +3553,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       } break;
       default: {
         print_parse_error(code, token2.start_index, "see-below", "");
-        MCerror(3151, "MC_TOKEN_KEYWORD_OR_NAME:MC_TOKEN_KEYWORD_OR_NAME:ERR-token:%s:%s",
+        MCerror(3151, "MC_TOKEN_IDENTIFIER:MC_TOKEN_IDENTIFIER:ERR-token:%s:%s",
                 get_mc_token_type_name(token2.type), token2.text);
       }
       }
@@ -3579,7 +3565,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
     } break;
     default: {
       print_parse_error(code, token1.start_index, "see-below", "");
-      MCerror(3248, "MC_TOKEN_KEYWORD_OR_NAME:ERR-token:%s:%s", get_mc_token_type_name(token1.type), token1.text);
+      MCerror(3248, "MC_TOKEN_IDENTIFIER:ERR-token:%s:%s", get_mc_token_type_name(token1.type), token1.text);
     }
     }
     free(token1.text);
@@ -3796,7 +3782,7 @@ int debug_automation(int argc, void **argv)
       vargs[0] = argv[0];
       vargs[1] = &core_display;
       vargs[2] = &sim;
-      core_display_handle_input(3, vargs);
+      MCcall(core_display_handle_input(3, vargs));
     }
 
     free(sim);

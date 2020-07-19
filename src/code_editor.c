@@ -95,9 +95,9 @@ int build_code_editor_v1(int argc, void **argv)
   {
     // Status Bar
     state->status_bar.bounds.x = 2;
-    state->status_bar.bounds.y = fedit->data.visual.bounds.height - 64;
+    state->status_bar.bounds.y = fedit->data.visual.bounds.height - 50;
     state->status_bar.bounds.width = fedit->data.visual.bounds.width - 4;
-    state->status_bar.bounds.height = 62;
+    state->status_bar.bounds.height = 48;
     state->status_bar.image_resource_uid = 0;
     state->status_bar.message = NULL;
     state->status_bar.requires_render_update = true;
@@ -938,6 +938,34 @@ int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
   return 0;
 }
 
+int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
+{
+  char *cstr;
+  MCcall(read_editor_text_into_cstr(cestate, &cstr));
+
+  if (cestate->source_data_type != CODE_EDITOR_SOURCE_DATA_FUNCTION) {
+    return 0;
+  }
+
+  // Free the current syntax tree
+  // cestate->syntax_tree
+
+  // Move to the code block
+  int i;
+  for (i = 0;; ++i) {
+    if (cstr[i] == '\0') {
+      MCerror(957, "TODO");
+    }
+    if (cstr[i] == '{') {
+      break;
+    }
+  }
+
+  MCcall(parse_mc_to_syntax_tree(cstr + i));
+
+  return 0;
+}
+
 int load_existing_function_into_code_editor_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
@@ -956,6 +984,8 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
 
   feState->line_display_offset = 0;
   MCcall(code_editor_set_function_code_to_text(feState));
+
+  MCcall(code_editor_evaluate_syntax(feState));
 
   // printf("life-7\n");
   feState->cursorLine = min(feState->text->lines_count - 1, feState->cursorLine);

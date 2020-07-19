@@ -2478,7 +2478,8 @@ int mc_main(int argc, const char *const *argv)
       }
 
       // Update Timers
-      for (int i = 0; i < command_hub->update_timers.count; ++i) {
+      bool exit_gracefully = false;
+      for (int i = 0; i < !exit_gracefully && command_hub->update_timers.count; ++i) {
         update_callback_timer *timer = command_hub->update_timers.callbacks[i];
 
         // if (logic_update_due) {
@@ -2492,7 +2493,13 @@ int mc_main(int argc, const char *const *argv)
             void *vargs[2];
             vargs[0] = (void *)&elapsed;
             vargs[1] = (void *)timer->state;
-            MCcall(timer->update_delegate(2, vargs));
+            int mc_res = timer->update_delegate(2, vargs);
+            if (mc_res) {
+              printf("--timer->update_delegate(2, vargs):%i\n", mc_res);
+              printf("Ending execution...\n");
+              exit_gracefully = true;
+              break;
+            }
           }
 
           if (timer->reset_timer_on_update)
@@ -2500,6 +2507,9 @@ int mc_main(int argc, const char *const *argv)
           else
             increment_time_spec(&timer->next_update, &timer->period, &timer->next_update);
         }
+      }
+      if (exit_gracefully) {
+        break;
       }
 
       // Special update
@@ -6578,6 +6588,26 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "code_editor_handle_input"));
   printf("hopee\n");
 
+  // mc_parser_lexer.c
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/mc_parser_lexer.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  MCcall(clint_declare(output));
+  free(input);
+  free(output);
+
+  MCcall(clint_process("parse_mc_to_syntax_tree = &parse_mc_to_syntax_tree_v1;"));
+  // MCcall(clint_process("function_live_debugger_handle_input = &function_live_debugger_handle_input_v1;"));
+  // MCcall(clint_process("function_live_debugger_render = &function_live_debugger_render_v1;"));
+
   // code_editor.c
   {
     void *mc_vargs[2];
@@ -6618,26 +6648,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("core_display_handle_input = &core_display_handle_input_v1;"));
   MCcall(clint_process("core_display_render = &core_display_render_v1;"));
   MCcall(clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;"));
-
-  // function_live_debugger.c
-  // {
-  //   // read_file_text(MODULE_FILEPATH, &module_list_text);
-  //   void *mc_vargs[2];
-  //   const char *filepath = "/home/jason/midge/src/function_live_debugger.c";
-  //   mc_vargs[0] = &filepath;
-  //   void *p_mc_vargs_1 = &input;
-  //   mc_vargs[1] = &p_mc_vargs_1;
-  //   MCcall(read_file_text(2, mc_vargs));
-  // }
-
-  // MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
-  // MCcall(clint_declare(output));
-  // free(input);
-  // free(output);
-
-  // MCcall(clint_process("build_function_live_debugger = &build_function_live_debugger_v1;"));
-  // MCcall(clint_process("function_live_debugger_handle_input = &function_live_debugger_handle_input_v1;"));
-  // MCcall(clint_process("function_live_debugger_render = &function_live_debugger_render_v1;"));
 
   printf("end:init_core_functions()\n");
   return 0;
