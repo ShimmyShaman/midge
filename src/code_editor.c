@@ -634,6 +634,24 @@ int fld_append_variable_snapshot(fld_view_state *fld_view, fld_variable_snapshot
   return 0;
 }
 
+int obtain_syntax_node_parsed_code(mc_syntax_node *syntax_node, c_str *cstr)
+{
+  for (int a = 0; a < syntax_node->children->count; ++a) {
+    mc_syntax_node *child = syntax_node->children->items[a];
+
+    if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+
+      MCcall(obtain_syntax_node_parsed_code(child, cstr));
+    }
+    else {
+
+      MCcall(append_to_c_str(cstr, child->text));
+    }
+  }
+
+  return 0;
+}
+
 typedef struct fld_transcription_state {
   int scope_depth;
 } fld_transcription_state;
@@ -641,6 +659,10 @@ typedef struct fld_transcription_state {
 int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaration,
                                fld_transcription_state *transcription_state, mc_syntax_node *syntax_node)
 {
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
   switch (syntax_node->type) {
   case MC_SYNTAX_NODE_BLOCK: {
     if (transcription_state->scope_depth > 0) {
@@ -648,7 +670,7 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
         MCerror(641, "AST Format Error");
       }
 
-      MCvacall(append_to_c_str(debug_declaration, "{\n"));
+      MCcall(append_to_c_str(debug_declaration, "{\n"));
       MCcall(fld_append_visual_code(fld_view, "{\n"));
     }
 
@@ -663,17 +685,17 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
           MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
         }
         else {
-          printf("ptr-text:%p\n", child->text);
-          printf("-text:'%s'\n", child->text);
+          // printf("ptr-text:%p\n", child->text);
+          // printf("-text:'%s'\n", child->text);
 
-          MCvacall(append_to_c_str(debug_declaration, child->text));
+          MCcall(append_to_c_str(debug_declaration, child->text));
           MCcall(fld_append_visual_code(fld_view, child->text));
         }
       }
       --transcription_state->scope_depth;
     }
 
-    // MCvacall(append_to_c_str(debug_declaration, "  printf(\"NO! no. this. <()>\\n\");\n  return 0;\n"));
+    // MCcall(append_to_c_str(debug_declaration, "  printf(\"NO! no. this. <()>\\n\");\n  return 0;\n"));
     // MCcall(fld_append_visual_code(fld_view, "  printf(\"NO! no. this. <()>\\n\");\n  return 0;\n"));
     if (transcription_state->scope_depth > 0) {
       if ((int)syntax_node->children->items[syntax_node->children->count - 1]->type !=
@@ -681,13 +703,92 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
         MCerror(671, "AST Format Error");
       }
 
-      MCvacall(append_to_c_str(debug_declaration, "}"));
+      MCcall(append_to_c_str(debug_declaration, "}"));
       MCcall(fld_append_visual_code(fld_view, "}"));
     }
   } break;
   case MC_SYNTAX_NODE_LOCAL_DECLARATION: {
-    MCerror(689, "TODAY\n");
-  }
+    // Type
+    if (syntax_node->local_declaration.mc_type) {
+      MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.mc_type->declared_mc_name));
+    }
+    else {
+      MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.type_identifier->text));
+    }
+    MCcall(fld_append_visual_code(fld_view, syntax_node->local_declaration.type_identifier->text));
+
+    // Rest
+    for (int a = 1; a < syntax_node->children->count; ++a) {
+      mc_syntax_node *child = syntax_node->children->items[a];
+
+      if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+
+        MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+      }
+      else {
+        // printf("ptr-text:%p\n", child->text);
+        // printf("-text:'%s'\n", child->text);
+
+        MCcall(append_to_c_str(debug_declaration, child->text));
+        MCcall(fld_append_visual_code(fld_view, child->text));
+      }
+    }
+  } break;
+  case MC_SYNTAX_NODE_ASSIGNMENT_STATEMENT: {
+
+    fld_variable_snapshot *variable_snapshot;
+
+    c_str *cstr;
+    MCcall(init_c_str(&cstr));
+    MCcall(obtain_syntax_node_parsed_code(syntax_node->assignment.variable, cstr));
+    MCcall(fld_construct_variable_snapshot("??", "??", "??", cstr->text, syntax_node->begin.line, variable_snapshot));
+    MCcall(release_c_str(cstr));
+
+    MCcall(fld_append_variable_snapshot(cestate->fld_view, variable_snapshot));
+
+    // MCvacall(append_to_c_strf(debug_declaration,
+    //                           "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
+    //                           "(fld_variable_snapshot *)%p, &%s));\n ",
+    //                           cestate, argument_snapshot, function->parameters[a]->name));
+
+    // // Rest
+    // for (int a = 1; a < syntax_node->children->count; ++a) {
+    //   mc_syntax_node *child = syntax_node->children->items[a];
+
+    //   if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+
+    //     MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+    //   }
+    //   else {
+    //     // printf("ptr-text:%p\n", child->text);
+    //     // printf("-text:'%s'\n", child->text);
+
+    //     MCcall(append_to_c_str(debug_declaration, child->text));
+    //     MCcall(fld_append_visual_code(fld_view, child->text));
+    //   }
+    // }
+  } break;
+  case MC_SYNTAX_NODE_INVOKE_STATEMENT:
+  case MC_SYNTAX_NODE_SUPERNUMERARY:
+  case MC_SYNTAX_NODE_EXPRESSION:
+  case MC_SYNTAX_NODE_DEREFERENCE_SEQUENCE:
+  case MC_SYNTAX_NODE_MEMBER_ACCESS: {
+    for (int a = 0; a < syntax_node->children->count; ++a) {
+      mc_syntax_node *child = syntax_node->children->items[a];
+
+      if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+
+        MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+      }
+      else {
+        // printf("ptr-text:%p\n", child->text);
+        // printf("-text:'%s'\n", child->text);
+
+        MCcall(append_to_c_str(debug_declaration, child->text));
+        MCcall(fld_append_visual_code(fld_view, child->text));
+      }
+    }
+  } break;
   default: {
     MCerror(636, "Unsupported syntax_node.type:%i", syntax_node->type);
   }
@@ -715,6 +816,9 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   // Replace the function with the debug version && form the displayed code for the debug view
   c_str *debug_declaration;
   MCcall(init_c_str(&debug_declaration));
+  // MCcall(append_to_c_strf(debug_declaration, "a %p %p %s c", debug_declaration, debug_declaration, "b"));
+  // printf("cstr:'%s'\n", debug_declaration->text);
+  // return 0;
   printf("op03\n");
 
   // -- Clear previous values
@@ -730,7 +834,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
 
   //
   printf("op04\n");
-  MCvacall(append_to_c_str(debug_declaration, "int %s(int argc, void **argv) {\n", debug_function_name));
+  MCvacall(append_to_c_strf(debug_declaration, "int %s(int argc, void **argv) {\n", debug_function_name));
 
   printf("op05\n");
   // printf("cstr: alloc=%u len=%u str=||%s||\n", debug_declaration->alloc, debug_declaration->len,
@@ -763,8 +867,8 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
       }
       deref_buf[function->parameters[a]->type_deref_count] = '\0';
 
-      MCvacall(append_to_c_str(debug_declaration, "  %s %s%s = *(%s %s*)argv[%i];\n", *p_utilized_type_name, deref_buf,
-                               function->parameters[a]->name, *p_utilized_type_name, deref_buf, a));
+      MCvacall(append_to_c_strf(debug_declaration, "  %s %s%s = *(%s %s*)argv[%i];\n", *p_utilized_type_name, deref_buf,
+                                function->parameters[a]->name, *p_utilized_type_name, deref_buf, a));
       printf("op03\n");
 
       // Parameter Type
@@ -784,10 +888,10 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
 
       printf("op06\n");
       // Report the value at call
-      MCvacall(append_to_c_str(debug_declaration,
-                               "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
-                               "(fld_variable_snapshot *)%p, &%s));\n ",
-                               cestate, argument_snapshot, function->parameters[a]->name));
+      MCvacall(append_to_c_strf(debug_declaration,
+                                "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
+                                "(fld_variable_snapshot *)%p, &%s));\n ",
+                                cestate, argument_snapshot, function->parameters[a]->name));
 
       MCcall(append_to_collection((void ***)&cestate->fld_view->arguments.items, &cestate->fld_view->arguments.alloc,
                                   &cestate->fld_view->arguments.count, argument_snapshot));
@@ -804,15 +908,15 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   MCcall(fld_transcribe_syntax_node(cestate->fld_view, debug_declaration, &transcription_state,
                                     cestate->source_interpretation.function_ast));
 
-  // MCvacall(append_to_c_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
+  // MCcall(append_to_c_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
   //                                             "\n"
   //                                             "  return 0;\n"
   //                                             "}"));
-  MCvacall(append_to_c_str(debug_declaration, "  return 0;\n}"));
+  MCcall(append_to_c_str(debug_declaration, "  return 0;\n}"));
   MCcall(fld_append_visual_code(cestate->fld_view, "}"));
   printf("lfild-func-decl:\n%s\n##########\n", debug_declaration->text);
   MCcall(clint_declare(debug_declaration->text));
-  free_c_str(debug_declaration);
+  release_c_str(debug_declaration);
 
   char decl_buf[256];
   sprintf(decl_buf,

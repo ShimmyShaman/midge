@@ -34,6 +34,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->local_declaration.type_identifier = NULL;
     syntax_node->local_declaration.type_dereference = NULL;
     syntax_node->local_declaration.variable_name = NULL;
+    syntax_node->local_declaration.mc_type = NULL;
   } break;
   case MC_SYNTAX_NODE_ASSIGNMENT_STATEMENT: {
     syntax_node->assignment.variable = NULL;
@@ -618,11 +619,23 @@ int mcs_parse_dereference_sequence(parsing_state *ps, mc_syntax_node *parent, mc
 
 int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent)
 {
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
   // printf("mcs_parse_local_declaration()\n");
   mc_syntax_node *statement;
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_NODE_LOCAL_DECLARATION, parent, &statement));
 
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_IDENTIFIER, &statement->local_declaration.type_identifier));
+  // Convert to the appropriate type
+  {
+    void *vargs[3];
+    vargs[0] = &command_hub->nodespace;
+    vargs[1] = &statement->local_declaration.type_identifier->text;
+    vargs[2] = &statement->local_declaration.mc_type;
+    find_struct_info(3, vargs);
+  }
   MCcall(mcs_parse_through_supernumerary_tokens(ps, statement));
 
   mc_token_type token0;
@@ -638,6 +651,12 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent)
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_IDENTIFIER, &statement->local_declaration.variable_name));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, statement));
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_SEMI_COLON, NULL));
+
+  // Local-declaration children:
+  printf("localdec CHILDREN:%u\n", statement->children->count);
+  for (int a = 0; a < statement->children->count; ++a) {
+    printf("--%i\n", statement->children->items[a]->type);
+  }
 
   return 0;
 }

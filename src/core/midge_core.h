@@ -670,6 +670,7 @@ typedef struct mc_syntax_node {
           mc_syntax_node *type_identifier;
           mc_syntax_node *type_dereference;
           mc_syntax_node *variable_name;
+          mc_struct_info_v1 *mc_type;
         } local_declaration;
         struct {
           mc_syntax_node *function_identity;

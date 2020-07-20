@@ -220,9 +220,10 @@ typedef struct c_str {
   char *text;
 } c_str;
 int init_c_str(c_str **ptr);
-int free_c_str(c_str *ptr);
-int append_char_to_c_str(c_str *cstr, char c);
-int append_to_c_str(c_str *cstr, const char *format, ...);
+int release_c_str(c_str *ptr);
+int append_to_c_str(c_str *cstr, const char *text);
+int append_to_c_strn(c_str *cstr, const char *text, int n);
+int append_to_c_strf(c_str *cstr, const char *format, ...);
 
 int get_key_input_code_char(bool shift, key_event_code code, char *c)
 {
@@ -438,7 +439,7 @@ int init_c_str(c_str **ptr)
   return 0;
 }
 
-int free_c_str(c_str *ptr)
+int release_c_str(c_str *ptr)
 {
   if (ptr->alloc > 0 && ptr->text) {
     free(ptr->text);
@@ -458,7 +459,60 @@ int append_char_to_c_str(c_str *cstr, char c)
   return 0;
 }
 
-int append_to_c_str(c_str *cstr, const char *format, ...)
+int append_to_c_str(c_str *cstr, const char *text)
+{
+  int len = strlen(text);
+  if (cstr->len + len + 1 >= cstr->alloc) {
+    unsigned int new_allocated_size = cstr->alloc + len + 16 + (cstr->alloc) / 10;
+    // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    // printf("atc-4\n");
+    memcpy(newptr, cstr->text, sizeof(char) * cstr->alloc);
+    // printf("atc-5\n");
+    free(cstr->text);
+    // printf("atc-6\n");
+    cstr->text = newptr;
+    // printf("atc-7\n");
+    cstr->alloc = new_allocated_size;
+    // printf("atc-8\n");
+  }
+
+  // printf("atcs-a cstrtext:'%s' len:%u end:'%c'\n", cstr->text, cstr->len, cstr->text[cstr->len]);
+  // printf("atcs-b text:'%s'\n", text);
+  // memcpy(cstr->text + cstr->len, text, sizeof(char) * len);
+  strcpy(cstr->text + cstr->len, text);
+  // printf("atcs-c cstrtext:'%s' len:%u end:'%c'\n", cstr->text + cstr->len - 2, cstr->len, cstr->text[cstr->len]);
+  cstr->len += len;
+  cstr->text[cstr->len] = '\0';
+
+  return 0;
+}
+
+int append_to_c_strn(c_str *cstr, const char *text, int n)
+{
+  if (cstr->len + n + 1 >= cstr->alloc) {
+    unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 10;
+    // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    // printf("atc-4\n");
+    memcpy(newptr, cstr->text, sizeof(char) * cstr->alloc);
+    // printf("atc-5\n");
+    free(cstr->text);
+    // printf("atc-6\n");
+    cstr->text = newptr;
+    // printf("atc-7\n");
+    cstr->alloc = new_allocated_size;
+    // printf("atc-8\n");
+  }
+
+  strncpy(cstr->text + cstr->len, text, n);
+  cstr->len += n;
+  cstr->text[cstr->len] = '\0';
+
+  return 0;
+}
+
+int append_to_c_strf(c_str *cstr, const char *format, ...)
 {
   // printf("atcs-0\n");
   int chunk_size = 4;
@@ -489,7 +543,7 @@ int append_to_c_str(c_str *cstr, const char *format, ...)
     // printf("'%c' chunk_size=%i cstr->len=%u\n", format[i], chunk_size, cstr->len);
     for (int a = 0; a < chunk_size; ++a) {
       cstr->text[cstr->len++] = format[i];
-      cstr->text[cstr->len] = '\0';
+      // cstr->text[cstr->len] = '\0';
       // printf("cstr:'%s'\n", cstr->text);
 
       if (format[i] == '\0') {
@@ -541,7 +595,12 @@ int append_to_c_str(c_str *cstr, const char *format, ...)
           } break;
           case 's': {
             char *value = va_arg(valist, char *);
+            // printf("atcs-7a cstrtext:'%s' len:%u end:'%c'\n", cstr->text, cstr->len, cstr->text[cstr->len]);
+            // printf("atcs-7a value:'%s'\n", value);
+            // cstr->text[i] = '\0';
+            // --cstr->len;
             append_to_c_str(cstr, value);
+            // printf("atcs-7b cstrtext:'%s'\n", cstr->text);
           } break;
           case 'u': {
             unsigned int value = va_arg(valist, unsigned int);
@@ -555,6 +614,10 @@ int append_to_c_str(c_str *cstr, const char *format, ...)
           }
           }
         }
+        ++i;
+
+        // Chunk size is unreliable -- reset
+        break;
       }
 
       ++i;
