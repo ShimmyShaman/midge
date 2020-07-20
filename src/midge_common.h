@@ -518,6 +518,20 @@ int append_to_c_str(c_str *cstr, const char *format, ...)
             sprintf(buf, "%i", value);
             append_to_c_str(cstr, buf);
           } break;
+          case 'l': {
+            switch (format[i + 1]) {
+            case 'i': {
+              ++i;
+              long int value = va_arg(valist, long int);
+
+              char buf[24];
+              sprintf(buf, "%li", value);
+              append_to_c_str(cstr, buf);
+            } break;
+            default:
+              MCerror(99, "TODO:l'%c'", format[i + 1]);
+            }
+          } break;
           case 'p': {
             void *value = va_arg(valist, void *);
 

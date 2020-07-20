@@ -1733,8 +1733,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_SQUARE_CLOSE_BRACKET";
   case MC_TOKEN_OPEN_BRACKET:
     return "MC_TOKEN_OPEN_BRACKET";
-  case MC_TOKEN_CLOSE_BRACKET:
-    return "MC_TOKEN_CLOSE_BRACKET";
+  case MC_TOKEN_CLOSING_BRACKET:
+    return "MC_TOKEN_CLOSING_BRACKET";
   case MC_TOKEN_SEMI_COLON:
     return "MC_TOKEN_SEMI_COLON";
   case MC_TOKEN_EQUALITY_OPERATOR:

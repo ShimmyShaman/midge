@@ -50,8 +50,6 @@ int build_code_editor_v1(int argc, void **argv)
   // printf("state:'%p'\n", state);
   state->visual_node = fedit;
   state->in_view_function_live_debugger = false;
-  state->source_data_type = CODE_EDITOR_SOURCE_DATA_NONE;
-  state->source_data = NULL;
   state->font_resource_uid = 0;
   state->cursorLine = 0;
   state->cursorCol = 0;
@@ -62,6 +60,13 @@ int build_code_editor_v1(int argc, void **argv)
   state->text->lines_count = 0;
   state->render_lines = (rendered_code_line **)malloc(sizeof(rendered_code_line *) * CODE_EDITOR_RENDERED_CODE_LINES);
   // state->rendered_line_count = CODE_EDITOR_RENDERED_CODE_LINES;
+
+  {
+    // Source
+    state->source_data_type = CODE_EDITOR_SOURCE_DATA_NONE;
+    state->source_data = NULL;
+    state->source_interpretation.function_ast = NULL;
+  }
 
   {
     // FunctionLiveDebug
@@ -163,6 +168,7 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
   image_render_queue *sequence;
   element_render_command *element_cmd;
 
+  // printf ("######################\n");
   {
     const int EDITOR_LINE_STRIDE = 22;
     const float EDITOR_FONT_HORIZONTAL_STRIDE = 10.31f;
@@ -182,6 +188,7 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
 
         // Render Line
         if (line_is_visible) {
+          // printf("obtain_render_queue: ce_offset_line_index:%i\n", ce_offset_line_index);
           MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
           sequence->render_target = NODE_RENDER_TARGET_IMAGE;
           sequence->clear_color = COLOR_TRANSPARENT;
@@ -220,6 +227,7 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
 
             // Render Line
             if (line_is_visible) {
+              // printf("obtain_render_queue: ce_offset_line_index:%i\n", ce_offset_line_index);
               MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
               sequence->render_target = NODE_RENDER_TARGET_IMAGE;
               sequence->clear_color = COLOR_TRANSPARENT;
@@ -243,6 +251,8 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
             element_cmd->data.print_text.font_resource_uid = cestate->font_resource_uid;
             allocate_and_copy_cstrn(element_cmd->data.print_text.text, text + s, c - s);
             element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
+            // printf("print_text_command: ce_offset_line_index:%i:'%s'[len:%i]\n", ce_offset_line_index,
+            //        element_cmd->data.print_text.text, strlen(element_cmd->data.print_text.text));
 
             // printf("printing to :%i:'%s'\n", ce_offset_line_index, element_cmd->data.print_text.text);
 
@@ -272,6 +282,8 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
         element_cmd->data.print_text.font_resource_uid = cestate->font_resource_uid;
         allocate_and_copy_cstr(element_cmd->data.print_text.text, snapshot->value_text);
         element_cmd->data.print_text.color = COLOR_YELLOW;
+        // printf("print_text_command: ce_offset_line_index:%i:'%s'[len:%i]\n", ce_offset_line_index,
+        //        element_cmd->data.print_text.text, strlen(element_cmd->data.print_text.text));
 
         col_index += strlen(snapshot->value_text);
       } break;
@@ -622,6 +634,68 @@ int fld_append_variable_snapshot(fld_view_state *fld_view, fld_variable_snapshot
   return 0;
 }
 
+typedef struct fld_transcription_state {
+  int scope_depth;
+} fld_transcription_state;
+
+int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaration,
+                               fld_transcription_state *transcription_state, mc_syntax_node *syntax_node)
+{
+  switch (syntax_node->type) {
+  case MC_SYNTAX_NODE_BLOCK: {
+    if (transcription_state->scope_depth > 0) {
+      if ((int)syntax_node->children->items[0]->type != (int)MC_TOKEN_CURLY_OPEN_BRACKET) {
+        MCerror(641, "AST Format Error");
+      }
+
+      MCvacall(append_to_c_str(debug_declaration, "{\n"));
+      MCcall(fld_append_visual_code(fld_view, "{\n"));
+    }
+
+    // Children
+    {
+      ++transcription_state->scope_depth;
+      for (int a = 1; a < syntax_node->children->count - 1; ++a) {
+        mc_syntax_node *child = syntax_node->children->items[a];
+
+        if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+
+          MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+        }
+        else {
+          printf("ptr-text:%p\n", child->text);
+          printf("-text:'%s'\n", child->text);
+
+          MCvacall(append_to_c_str(debug_declaration, child->text));
+          MCcall(fld_append_visual_code(fld_view, child->text));
+        }
+      }
+      --transcription_state->scope_depth;
+    }
+
+    // MCvacall(append_to_c_str(debug_declaration, "  printf(\"NO! no. this. <()>\\n\");\n  return 0;\n"));
+    // MCcall(fld_append_visual_code(fld_view, "  printf(\"NO! no. this. <()>\\n\");\n  return 0;\n"));
+    if (transcription_state->scope_depth > 0) {
+      if ((int)syntax_node->children->items[syntax_node->children->count - 1]->type !=
+          (int)MC_TOKEN_CURLY_CLOSING_BRACKET) {
+        MCerror(671, "AST Format Error");
+      }
+
+      MCvacall(append_to_c_str(debug_declaration, "}"));
+      MCcall(fld_append_visual_code(fld_view, "}"));
+    }
+  } break;
+  case MC_SYNTAX_NODE_LOCAL_DECLARATION: {
+    MCerror(689, "TODAY\n");
+  }
+  default: {
+    MCerror(636, "Unsupported syntax_node.type:%i", syntax_node->type);
+  }
+  }
+
+  return 0;
+}
+
 int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
 {
   /*mcfuncreplace*/
@@ -720,18 +794,22 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
       printf("op07\n");
     }
 
-    MCcall(fld_append_visual_code(cestate->fld_view, ")"));
+    MCcall(fld_append_visual_code(cestate->fld_view, ") {\n"));
     MCcall(append_to_c_str(debug_declaration, "\n"));
   }
 
-  // TODO
-  // c_syntax_tree *code_block_ast;
-  // MCcall(parse_syntax_from_mc_code(function->mc_code));
+  //
+  fld_transcription_state transcription_state;
+  transcription_state.scope_depth = 0;
+  MCcall(fld_transcribe_syntax_node(cestate->fld_view, debug_declaration, &transcription_state,
+                                    cestate->source_interpretation.function_ast));
 
-  MCvacall(append_to_c_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
-                                              "\n"
-                                              "  return 0;\n"
-                                              "}"));
+  // MCvacall(append_to_c_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
+  //                                             "\n"
+  //                                             "  return 0;\n"
+  //                                             "}"));
+  MCvacall(append_to_c_str(debug_declaration, "  return 0;\n}"));
+  MCcall(fld_append_visual_code(cestate->fld_view, "}"));
   printf("lfild-func-decl:\n%s\n##########\n", debug_declaration->text);
   MCcall(clint_declare(debug_declaration->text));
   free_c_str(debug_declaration);
@@ -961,7 +1039,12 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
     }
   }
 
-  MCcall(parse_mc_to_syntax_tree(cstr + i));
+  if (cestate->source_interpretation.function_ast) {
+    release_syntax_node(cestate->source_interpretation.function_ast);
+    cestate->source_interpretation.function_ast = NULL;
+  }
+
+  MCcall(parse_mc_to_syntax_tree(cstr + i, &cestate->source_interpretation.function_ast));
 
   return 0;
 }

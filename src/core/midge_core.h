@@ -539,6 +539,7 @@ typedef enum code_editor_data_source {
   CODE_EDITOR_SOURCE_DATA_FUNCTION,
   CODE_EDITOR_SOURCE_DATA_STRUCT,
 } code_editor_data_source;
+struct mc_syntax_node;
 typedef struct mc_code_editor_state_v1 {
   mc_node_v1 *visual_node;
 
@@ -555,6 +556,11 @@ typedef struct mc_code_editor_state_v1 {
 
   code_editor_data_source source_data_type;
   void *source_data;
+  struct {
+    union {
+      mc_syntax_node *function_ast;
+    };
+  } source_interpretation;
 
   mc_cstring_list_v1 *text;
 
@@ -591,6 +597,94 @@ int parse_past_type_identifier(const char *text, int *index, char **identifier);
 int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra);
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
 int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime);
+
+// MC_PARSER_LEXER
+struct mc_syntax_node;
+
+typedef enum mc_token_type {
+  MC_TOKEN_NULL = 0,
+  // One or more '*'
+  MC_TOKEN_STAR_OPERATOR,
+  MC_TOKEN_IDENTIFIER,
+  MC_TOKEN_SQUARE_OPEN_BRACKET,
+  MC_TOKEN_SQUARE_CLOSE_BRACKET,
+  MC_TOKEN_OPEN_BRACKET,
+  MC_TOKEN_CLOSING_BRACKET,
+  MC_TOKEN_SEMI_COLON,
+  MC_TOKEN_EQUALITY_OPERATOR,
+  MC_TOKEN_DECREMENT_OPERATOR,
+  MC_TOKEN_POINTER_OPERATOR,
+  MC_TOKEN_ASSIGNMENT_OPERATOR,
+  MC_TOKEN_SUBTRACT_OPERATOR,
+  MC_TOKEN_IF_KEYWORD,
+  MC_TOKEN_ELSE_KEYWORD,
+  MC_TOKEN_WHILE_KEYWORD,
+  MC_TOKEN_SWITCH_KEYWORD,
+  MC_TOKEN_RETURN_KEYWORD,
+  MC_TOKEN_CONST_KEYWORD,
+  MC_TOKEN_CURLY_OPEN_BRACKET,
+  MC_TOKEN_CURLY_CLOSING_BRACKET,
+  MC_TOKEN_NEW_LINE,
+  MC_TOKEN_TAB_SEQUENCE,
+  MC_TOKEN_SPACE_SEQUENCE,
+  MC_TOKEN_LINE_COMMENT,
+  MC_TOKEN_DECIMAL_POINT,
+  MC_TOKEN_NUMERIC_LITERAL,
+  MC_TOKEN_STRING_LITERAL,
+  MC_TOKEN_COMMA,
+  MC_TOKEN_STANDARD_MAX_VALUE = 200,
+} mc_token_type;
+
+typedef enum mc_syntax_node_type {
+  MC_SYNTAX_NODE_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
+  MC_SYNTAX_NODE_BLOCK,
+  MC_SYNTAX_NODE_LOCAL_DECLARATION,
+  MC_SYNTAX_NODE_ASSIGNMENT_STATEMENT,
+  MC_SYNTAX_NODE_INVOKE_STATEMENT,
+
+  MC_SYNTAX_NODE_SUPERNUMERARY,
+  MC_SYNTAX_NODE_EXPRESSION,
+  MC_SYNTAX_NODE_DEREFERENCE_SEQUENCE,
+  MC_SYNTAX_NODE_MEMBER_ACCESS,
+} mc_syntax_node_type;
+
+typedef struct mc_syntax_node_list {
+  uint alloc;
+  uint count;
+  mc_syntax_node **items;
+} mc_syntax_node_list;
+
+typedef struct mc_syntax_node {
+  mc_syntax_node_type type;
+  struct {
+    int line;
+    int col;
+  } begin;
+  union {
+    // Text -- only used by MC_TOKENS -- All syntax tokens use below fields (as appropriate)
+    char *text;
+    struct {
+      mc_syntax_node_list *children;
+      union {
+        struct {
+          mc_syntax_node *type_identifier;
+          mc_syntax_node *type_dereference;
+          mc_syntax_node *variable_name;
+        } local_declaration;
+        struct {
+          mc_syntax_node *function_identity;
+          mc_syntax_node_list *arguments;
+        } invocation;
+        struct {
+          mc_syntax_node *variable;
+          mc_syntax_node *value_expression;
+        } assignment;
+      };
+    };
+  };
+} mc_syntax_node;
+int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast);
+
 int (*parse_and_process_function_definition)(char *function_definition_text, mc_function_info_v1 **function_definition,
                                              bool skip_clint_declaration);
 int (*parse_struct_definition)(char *code_definition, mc_struct_info_v1 **structure_info);
@@ -599,8 +693,8 @@ int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,
                                 char **transcription);
 int (*code_editor_toggle_view)(mc_code_editor_state_v1 *state);
-int (*parse_mc_to_syntax_tree)(char *mcode);
 
+// OTHER
 int (*begin_debug_automation)(int, void **);
 int (*load_existing_function_into_code_editor)(int, void **);
 
@@ -746,40 +840,6 @@ int get_process_originator_type(process_action_type action_type, process_origina
     break;
   }
 }
-
-typedef enum mc_token_type {
-  MC_TOKEN_NULL = 0,
-  // One or more '*'
-  MC_TOKEN_STAR_OPERATOR,
-  MC_TOKEN_IDENTIFIER,
-  MC_TOKEN_SQUARE_OPEN_BRACKET,
-  MC_TOKEN_SQUARE_CLOSE_BRACKET,
-  MC_TOKEN_OPEN_BRACKET,
-  MC_TOKEN_CLOSE_BRACKET,
-  MC_TOKEN_SEMI_COLON,
-  MC_TOKEN_EQUALITY_OPERATOR,
-  MC_TOKEN_DECREMENT_OPERATOR,
-  MC_TOKEN_POINTER_OPERATOR,
-  MC_TOKEN_ASSIGNMENT_OPERATOR,
-  MC_TOKEN_SUBTRACT_OPERATOR,
-  MC_TOKEN_IF_KEYWORD,
-  MC_TOKEN_ELSE_KEYWORD,
-  MC_TOKEN_WHILE_KEYWORD,
-  MC_TOKEN_SWITCH_KEYWORD,
-  MC_TOKEN_RETURN_KEYWORD,
-  MC_TOKEN_CONST_KEYWORD,
-  MC_TOKEN_CURLY_OPEN_BRACKET,
-  MC_TOKEN_CURLY_CLOSING_BRACKET,
-  MC_TOKEN_NEW_LINE,
-  MC_TOKEN_TAB_SEQUENCE,
-  MC_TOKEN_SPACE_SEQUENCE,
-  MC_TOKEN_LINE_COMMENT,
-  MC_TOKEN_DECIMAL_POINT,
-  MC_TOKEN_NUMERIC_LITERAL,
-  MC_TOKEN_STRING_LITERAL,
-  MC_TOKEN_COMMA,
-  MC_TOKEN_STANDARD_MAX_VALUE = 200,
-} mc_token_type;
 
 typedef struct mc_token {
   mc_token_type type;
