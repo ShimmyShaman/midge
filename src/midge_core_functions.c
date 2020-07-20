@@ -1775,6 +1775,10 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_DECIMAL_POINT";
   case MC_TOKEN_NUMERIC_LITERAL:
     return "MC_TOKEN_NUMERIC_LITERAL";
+  case MC_TOKEN_STRING_LITERAL:
+    return "MC_TOKEN_STRING_LITERAL";
+  case MC_TOKEN_COMMA:
+    return "MC_TOKEN_COMMA";
   default:
     return "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED";
   }
