@@ -16,7 +16,7 @@ typedef struct parsing_state {
 int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, mc_syntax_node *parent,
                               mc_syntax_node **result)
 {
-  mc_syntax_node *syntax_node = (mc_syntax_node *)malloc(sizeof(mc_syntax_node));
+  mc_syntax_node *syntax_node = (mc_syntax_node *)calloc(sizeof(mc_syntax_node), 1);
   syntax_node->type = node_type;
   syntax_node->begin.line = ps->line;
   syntax_node->begin.col = ps->col;
@@ -70,11 +70,15 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   return 0;
 }
 
-int release_syntax_node(mc_syntax_node *syntax_node)
+void release_syntax_node(mc_syntax_node *syntax_node)
 {
+  if (!syntax_node) {
+    return;
+  }
+
   if ((int)syntax_node->type >= (int)MC_TOKEN_STANDARD_MAX_VALUE) {
     if (syntax_node->children) {
-      if (syntax_node->children->items) {
+      if (syntax_node->children->alloc) {
         for (int i = 0; i < syntax_node->children->count; ++i) {
 
           release_syntax_node(syntax_node->children->items[i]);
@@ -95,7 +99,7 @@ int release_syntax_node(mc_syntax_node *syntax_node)
   switch (syntax_node->type) {
   case MC_SYNTAX_NODE_INVOKE_STATEMENT: {
     if (syntax_node->invocation.arguments) {
-      if (syntax_node->invocation.arguments->items) {
+      if (syntax_node->invocation.arguments->alloc) {
         free(syntax_node->invocation.arguments->items);
       }
 
@@ -791,6 +795,8 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_block_ast)
   parent.children = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
   parent.children->alloc = 0;
   parent.children->count = 0;
+
+  // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never cleared
   MCcall(mcs_parse_code_block(ps, &parent));
   *function_block_ast = (mc_syntax_node *)parent.children->items[0];
 

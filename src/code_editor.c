@@ -346,8 +346,10 @@ int code_editor_render_v1(int argc, void **argv)
     }
   }
 
-  {
+  if (state->status_bar.requires_render_update) {
     // Status Bar
+    state->status_bar.requires_render_update = false;
+
     MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
     sequence->render_target = NODE_RENDER_TARGET_IMAGE;
     sequence->image_width = state->status_bar.bounds.width;
@@ -363,13 +365,13 @@ int code_editor_render_v1(int argc, void **argv)
     element_cmd->data.colored_rect_info.height = 2;
     element_cmd->data.colored_rect_info.color = COLOR_GHOST_WHITE;
 
-    // MCcall(obtain_element_render_command(sequence, &element_cmd));
-    // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-    // element_cmd->x = 0;
-    // element_cmd->y = state->status_bar.bounds.height - 2;
-    // element_cmd->data.colored_rect_info.width = state->status_bar.bounds.width;
-    // element_cmd->data.colored_rect_info.height = 2;
-    // element_cmd->data.colored_rect_info.color = COLOR_GHOST_WHITE;
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+    element_cmd->x = 4;
+    element_cmd->y = 2 + 12 + 4;
+    allocate_and_copy_cstr(element_cmd->data.print_text.text, state->status_bar.message);
+    element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
+    element_cmd->data.print_text.color = (render_color){0.95f, 0.72f, 0.49f, 1.f};
   }
 
   // Render Main Image
@@ -1191,7 +1193,20 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
     cestate->source_interpretation.function_ast = NULL;
   }
 
-  MCcall(parse_mc_to_syntax_tree(cstr + i, &cestate->source_interpretation.function_ast));
+  // printf("cees-0\n");
+  int result = parse_mc_to_syntax_tree(cstr + i, &cestate->source_interpretation.function_ast);
+  // printf("cees-2\n");
+  if (result) {
+    // printf("cees-3\n");
+    release_syntax_node(cestate->source_interpretation.function_ast);
+    cestate->source_interpretation.function_ast = NULL;
+
+    // printf("cees-4\n");
+    cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
+    cestate->status_bar.requires_render_update = true;
+    // printf("cees-5\n");
+  }
+  // printf("cees-7\n");
 
   return 0;
 }
