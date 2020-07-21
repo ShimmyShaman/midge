@@ -565,10 +565,14 @@ int fld_report_variable_snapshot(mc_code_editor_state_v1 *cestate, fld_variable_
 
   if (!field->mc_declared_type && !strcmp(field->type, "frame_time") && field->type_deref_count == 1) {
     frame_time *ft = (frame_time *)(*(void **)p_value);
-    cprintf(field->value_text, "%s:[%lds %ldus]", field->name, ft->app_secs, ft->frame_nsecs / 1000);
+    cprintf(field->value_text, "[%s:%lds %ldus]", field->name, ft->app_secs, ft->frame_nsecs / 1000);
+  }
+  else if (!field->mc_declared_type && !strcmp(field->type, "int") && field->type_deref_count == 0) {
+    int val = (*(int *)p_value);
+    cprintf(field->value_text, "[%s:%i]", field->name, val);
   }
   else {
-    cprintf(field->value_text, "%s:%p", field->name, p_value);
+    cprintf(field->value_text, "[%s:%s]", field->name, p_value ? field->type : "null");
   }
 
   // Notify of render update
@@ -740,12 +744,73 @@ int fld_count_dereference_in_syntax_node(mc_syntax_node *syntax_node, uint *dere
   return 0;
 }
 
-int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaration,
+typedef struct fld_type_info {
+  bool is_mc_struct;
+  union {
+    struct_info *mc_struct_info;
+    char *type_name;
+  };
+} fld_type_info;
+
+int fld_obtain_member_variable_type(struct_info *root_type, fld_member_access_sequence *variable_sequence,
+                                    fld_type_info **variable_type)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  if (!variable_sequence->next) {
+    *variable_type = (fld_type_info *)malloc(sizeof(fld_type_info));
+    (*variable_type)->is_mc_struct = true;
+    (*variable_type)->mc_struct_info = root_type;
+    return 0;
+  }
+
+  // Find the member in the struct info
+  mc_parameter_info_v1 *field;
+  for (int a = 0; a < root_type->field_count; ++a) {
+    if (!strcmp(variable_sequence->next->identity, root_type->fields[a]->name)) {
+      // Attempt to obtain the type
+      char *member_primitive_type_name = NULL;
+      if (!strcmp(root_type->fields[a]->type_name, "int")) {
+        allocate_and_copy_cstr(member_primitive_type_name, "int");
+      }
+      if (member_primitive_type_name) {
+        // Found
+        *variable_type = (fld_type_info *)malloc(sizeof(fld_type_info));
+        (*variable_type)->is_mc_struct = false;
+        (*variable_type)->type_name = member_primitive_type_name;
+        return 0;
+      }
+
+      mc_struct_info_v1 *member_type_info = NULL;
+      {
+        void *vargs[3];
+        vargs[0] = &command_hub->nodespace;
+        vargs[1] = &member_primitive_type_name;
+        vargs[2] = &member_type_info;
+        MCcall(find_struct_info(3, vargs));
+      }
+      if (member_type_info) {
+        MCcall(fld_obtain_member_variable_type(member_type_info, variable_sequence->next, variable_type));
+        return 0;
+      }
+
+      MCerror(795, "Unhandled:'%s'", root_type->fields[a]->type_name);
+    }
+  }
+
+  MCerror(799, "couldn't find field for member:'%s'", variable_sequence->next->identity);
+}
+
+int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_declaration,
                                fld_transcription_state *transcription_state, mc_syntax_node *syntax_node)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
+
+  fld_view_state *fld_view = cestate->fld_view;
 
   switch (syntax_node->type) {
   case MC_SYNTAX_NODE_BLOCK: {
@@ -766,7 +831,7 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
 
         if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
 
-          MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+          MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
         }
         else {
           // printf("ptr-text:%p\n", child->text);
@@ -807,7 +872,7 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
 
       if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
 
-        MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+        MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
       }
       else {
         // printf("ptr-text:%p\n", child->text);
@@ -849,6 +914,7 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
           }
         }
 
+        // printf("here-99\n");
         if (declarator) {
           // Found type of variable root
           uint deref_count = 0;
@@ -861,39 +927,46 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
           }
           else {
             // Determine a type info actually exists
-            struct_info *type_info = declarator->local_declaration.mc_type;
-            if (type_info) {
-              // Travel through the variable member-access parts with the type info to determine child type
-              fld_member_access_sequence *part_with_type = variable_sequence;
-              while (part_with_type->next) {
-                // Find the field member in the type
-                for (int a = 0; a < type_info->field_count; ++a) {
-                  if (!strcmp(part_with_type->next->identity, type_info->fields[a]->name)) {
-                    type_info->fields[a].
-                    break;
-                  }
-                }
-                break;
+            fld_type_info *variable_type;
+            MCcall(fld_obtain_member_variable_type(declarator->local_declaration.mc_type, variable_sequence,
+                                                   &variable_type));
+
+            // printf("here-bvt\n");
+            if (variable_type) {
+              if (variable_type->is_mc_struct) {
+                MCcall(fld_construct_variable_snapshot(
+                    variable_type->mc_struct_info->name, variable_type->mc_struct_info->declared_mc_name, deref_count,
+                    variable_full_identity->text, syntax_node->begin.line, &variable_snapshot));
               }
+              else {
+                MCcall(fld_construct_variable_snapshot(variable_type->type_name, NULL, deref_count,
+                                                       variable_full_identity->text, syntax_node->begin.line,
+                                                       &variable_snapshot));
+              }
+
+              // printf("vt: ismcstruct:%i\n", variable_type->is_mc_struct);
+              // printf("here-vt\n");
             }
           }
-
-          // while (type_info) {
-          //   // if (part_with_type->next) {
-          //   //   // Find the type info for the next part
-          //   //   continue;
-          //   // }
-
-          //   printf("here-99\n");
-
-          //   // Win!
-          //   // MCcall(fld_construct_variable_snapshot(type_info->name, type_info->declared_mc_name, type_info->
-
-          //   //                                        ,
-          //   //                                        variable_full_identity->text, syntax_node->begin.line,
-          //   //                                        &variable_snapshot));
-          // }
         }
+        // printf("here-q9\n");
+
+        // while (type_info) {
+        //   // if (part_with_type->next) {
+        //   //   // Find the type info for the next part
+        //   //   continue;
+        //   // }
+
+        //   printf("here-99\n");
+
+        //   // Win!
+        //   // MCcall(fld_construct_variable_snapshot(type_info->name, type_info->declared_mc_name, type_info->
+
+        //   //                                        ,
+        //   //                                        variable_full_identity->text, syntax_node->begin.line,
+        //   //                                        &variable_snapshot));
+        //   // }
+        // }
 
         release_fld_member_access_sequence(variable_sequence);
       }
@@ -901,6 +974,11 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
       // Set Variable
       if (variable_snapshot) {
         MCcall(fld_append_variable_snapshot(fld_view, variable_snapshot));
+
+        MCvacall(append_to_c_strf(debug_declaration,
+                                  "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
+                                  "(fld_variable_snapshot *)%p, &%s));\n ",
+                                  cestate, variable_snapshot, variable_full_identity->text));
       }
       else {
         // Just print text
@@ -911,18 +989,13 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
       MCcall(release_c_str(variable_full_identity));
     }
 
-    // MCvacall(append_to_c_strf(debug_declaration,
-    //                           "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
-    //                           "(fld_variable_snapshot *)%p, &%s));\n ",
-    //                           cestate, argument_snapshot, function->parameters[a]->name));
-
     // Rest
     for (int a = 1; a < syntax_node->children->count; ++a) {
       mc_syntax_node *child = syntax_node->children->items[a];
 
       if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
 
-        MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+        MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
       }
       else {
         // printf("ptr-text:%p\n", child->text);
@@ -942,8 +1015,7 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
       mc_syntax_node *child = syntax_node->children->items[a];
 
       if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
-
-        MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+        MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
       }
       else {
         // printf("ptr-text:%p\n", child->text);
@@ -1072,7 +1144,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   transcription_state.scope_depth = 0;
   transcription_state.locals.alloc = 0;
   transcription_state.locals.count = 0;
-  MCcall(fld_transcribe_syntax_node(cestate->fld_view, debug_declaration, &transcription_state,
+  MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, &transcription_state,
                                     cestate->source_interpretation.function_ast));
 
   // MCcall(append_to_c_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
