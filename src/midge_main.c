@@ -5627,6 +5627,244 @@ int init_process_matrix(mc_command_hub_v1 *command_hub)
   return 0;
 }
 
+int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepath)
+{
+  char *file_text;
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    // const char *filepath = "/home/jason/midge/src/midge_core_functions.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &file_text;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  // Split the file into function and struct definitions
+  struct {
+    int type;
+    char *declaration;
+    char *text;
+  } definitions[128];
+  int definition_count = 0;
+
+  int i = 0;
+  while (1) {
+    MCcall(parse_past_empty_text(file_text, &i));
+
+    bool eof = false;
+    switch (file_text[i]) {
+    case '\0': {
+      eof = true;
+    } break;
+    case '/': {
+      if (file_text[i + 1] == '*') {
+        while (file_text[i] != '*' || file_text[i + 1] != '/') {
+          if (file_text[i] == '\0') {
+            eof = true;
+            break;
+          }
+          ++i;
+        }
+        i += 2;
+      }
+      else if (file_text[i + 1] == '/') {
+        // Ignore line
+        while (file_text[i] != '\n') {
+          if (file_text[i] == '\0') {
+            eof = true;
+            break;
+          }
+          ++i;
+        }
+        ++i;
+      }
+      else {
+        MCerror(5677, "mishandled char '/'");
+      }
+    } break;
+    case '#': {
+      // Ignore the line
+      while (file_text[i] != '\n') {
+        if (file_text[i] == '\0') {
+          eof = true;
+          break;
+        }
+        ++i;
+      }
+      ++i;
+    } break;
+    default: {
+      if (isalpha(file_text[i]) || file_text[i] == '_') {
+        int s = i;
+        int open_bracket_index = -1;
+
+        // -- Find the opening bracket
+        while (file_text[i] != '{') {
+          if (file_text[i] == '\0') {
+            eof = true;
+            break;
+          }
+          ++i;
+        }
+        open_bracket_index = i;
+        ++i;
+
+        int bracket_count = 1;
+        while (bracket_count) {
+          if (file_text[i] == '\0') {
+            eof = true;
+            break;
+          }
+          else if (file_text[i] == '{') {
+            ++bracket_count;
+          }
+          else if (file_text[i] == '}') {
+            --bracket_count;
+          }
+          ++i;
+        }
+
+        if (!strncmp(file_text + s, "struct", 6)) {
+          // Struct
+
+          // Find the trailing semi-colon
+          // print_parse_error(file_text, i, "before ;", "n");
+          while (file_text[i] != ';') {
+            if (file_text[i] == '\0') {
+              eof = true;
+              break;
+            }
+            ++i;
+          }
+          // print_parse_error(file_text, i, "before", "n");
+          ++i;
+          // print_parse_error(file_text, i, "after", "n");
+
+          // Copy
+          definitions[definition_count].type = 1;
+          definitions[definition_count].declaration = NULL;
+          definitions[definition_count].text = (char *)malloc(sizeof(char) * (i - s + 1));
+          strncpy(definitions[definition_count].text, file_text + s, i - s);
+          definitions[definition_count].text[i - s] = '\0';
+          ++definition_count;
+          break;
+        }
+
+        // Function
+        --open_bracket_index;
+        while (file_text[open_bracket_index] == ' ' || file_text[open_bracket_index] == '\n' ||
+               file_text[open_bracket_index] == '\t') {
+
+          --open_bracket_index;
+        }
+        ++open_bracket_index;
+
+        printf("here\n");
+        // Copy
+        definitions[definition_count].type = 2;
+        definitions[definition_count].declaration = (char *)malloc(sizeof(char) * (open_bracket_index - s + 1 + 1));
+        strncpy(definitions[definition_count].declaration, file_text + s, open_bracket_index - s);
+        definitions[definition_count].declaration[open_bracket_index - s] = ';';
+        definitions[definition_count].declaration[open_bracket_index - s + 1] = '\0';
+        printf("loading '%s'\n", definitions[definition_count].declaration);
+        definitions[definition_count].text = (char *)malloc(sizeof(char) * (i - s + 1));
+        strncpy(definitions[definition_count].text, file_text + s, i - s);
+        definitions[definition_count].text[i - s] = '\0';
+        ++definition_count;
+        break;
+      }
+
+      print_parse_error(file_text, i, "parse_and_process_mc_file", "file_root");
+      MCerror(5657, "unsupported char");
+    }
+    }
+
+    if (eof) {
+      break;
+    }
+  }
+  free(file_text);
+
+  // Parse all definitions
+  for (int a = 0; a < definition_count; ++a) {
+    if (definitions[a].type == 1) {
+      mc_struct_info_v1 *structure;
+      MCcall(parse_struct_definition(definitions[a].text, &structure));
+
+      // Set Provided Source Path
+      allocate_and_copy_cstr(structure->source_filepath, filepath);
+      int struct_version = 1;
+      if (struct_version) {
+        structure->version = struct_version;
+      }
+
+      free(definitions[a].text);
+      printf("papcs-StructInfo:\n");
+      printf(" -- source_filepath:%s:\n", structure->source_filepath);
+      printf(" -- name:%s:\n", structure->name);
+      printf(" -- declared_mc_name:%s:\n", structure->declared_mc_name);
+      printf(" -- version:%u:\n", structure->version);
+      printf(" -- field_count:%u:\n", structure->field_count);
+      printf("#######################\n");
+
+      MCcall(append_to_collection((void ***)&command_hub->global_node->structs,
+                                  &command_hub->global_node->structs_alloc, &command_hub->global_node->struct_count,
+                                  (void *)structure));
+
+      printf("papcs-declare_struct_from_info:\n");
+      MCcall(declare_struct_from_info(structure));
+      printf("papcs-after declare_struct_from_info:\n");
+    }
+    else if (definitions[a].type == 2) {
+      mc_function_info_v1 *func_info;
+      MCcall(parse_and_process_function_definition(definitions[a].text, &func_info, true));
+
+      // Set Provided Source Path
+      allocate_and_copy_cstr(func_info->source_filepath, filepath);
+
+      int function_iteration = 1;
+      if (function_iteration) {
+        func_info->latest_iteration = function_iteration;
+      }
+
+      free(definitions[a].text);
+
+      printf("papcf-FunctionInfo:\n");
+      printf(" -- source_filepath:%s:\n", func_info->source_filepath);
+      printf(" -- name:%s:\n", func_info->name);
+      printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
+      printf(" -- return_type.name:%s:\n", func_info->return_type.name);
+      printf(" -- return_type.deref_count:%u:\n", func_info->return_type.deref_count);
+      printf(" -- parameter_count:%u:\n", func_info->parameter_count);
+      printf(" -- struct_usage_count:%u:\n", func_info->struct_usage_count);
+      printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
+      // printf(" -- mc_code:\n%s\n", func_info->mc_code);
+      printf("#######################\n");
+
+      // Compile the function definition
+      uint transcription_alloc = 4;
+      char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
+      transcription[0] = '\0';
+      int code_index = 0;
+      MCcall(
+          transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
+
+      // printf("final transcription:\n%s\n", transcription);
+
+      // Define the new function
+      {
+        void *mc_vargs[3];
+        mc_vargs[0] = (void *)&func_info->name;
+        mc_vargs[1] = (void *)&transcription;
+        MCcall(instantiate_function(2, mc_vargs));
+      }
+    }
+  }
+
+  return 0;
+}
+
 // function should be appended with a version number in the form of "_v?", where '?' is any unsigned integer.
 int parse_and_process_core_function(mc_command_hub_v1 *command_hub, const char *core_function_name)
 {
@@ -5898,29 +6136,12 @@ int load_and_process_core_structure(mc_command_hub_v1 *command_hub, const char *
   MCcall(declare_struct_from_info(structure));
   printf("papcs-after declare_struct_from_info:\n");
 
-  // // Compile the function definition
-  // uint transcription_alloc = 4;
-  // char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
-  // transcription[0] = '\0';
-  // int code_index = 0;
-  // MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc,
-  // &transcription));
-
-  // // printf("final transcription:\n%s\n", transcription);
-
-  // // Define the new function
-  // {
-  //   void *mc_vargs[3];
-  //   mc_vargs[0] = (void *)&func_info->name;
-  //   mc_vargs[1] = (void *)&transcription;
-  //   MCcall(instantiate_function(2, mc_vargs));
-  // }
   return 0;
 }
 
 int init_core_structures(mc_command_hub_v1 *command_hub)
 {
-  MCcall(load_and_process_core_structure(command_hub, "special_data"));
+  // MCcall(load_and_process_core_structure(command_hub, "special_data"));
 
   // {
   //   clint_declare("typedef struct mc_special_data_v1 { int num; } mc_special_data_v1;");
@@ -6580,8 +6801,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("find_struct_info = &find_struct_info_v0;"));
   printf("Loading Core Methods\n");
   MCcall(parse_and_process_core_function(command_hub, "find_struct_info"));
-  MCcall(parse_and_process_core_function(command_hub, "special_modification"));
-  MCcall(parse_and_process_core_function(command_hub, "special_update"));
+  MCcall(parse_and_process_mc_file(command_hub, "src/core/special_debug.c"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
   MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));
   MCcall(parse_and_process_core_function(command_hub, "save_struct_to_file"));

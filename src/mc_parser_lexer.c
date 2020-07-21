@@ -186,6 +186,30 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     }
     ++*index;
   } break;
+  case '-': {
+    if (code[*index + 1] == '>') {
+      *token_type = MC_TOKEN_POINTER_OPERATOR;
+      if (text) {
+        allocate_and_copy_cstr(*text, "->");
+      }
+      *index += 2;
+      break;
+    }
+    else if (code[*index + 1] == '-') {
+      *token_type = MC_TOKEN_DECREMENT_OPERATOR;
+      if (text) {
+        allocate_and_copy_cstr(*text, "--");
+      }
+      *index += 2;
+      break;
+    }
+
+    *token_type = MC_TOKEN_SUBTRACT_OPERATOR;
+    if (text) {
+      allocate_and_copy_cstr(*text, "-");
+    }
+    ++*index;
+  } break;
   case ',': {
     *token_type = MC_TOKEN_COMMA;
     if (text) {
