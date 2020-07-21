@@ -752,6 +752,19 @@ typedef struct fld_type_info {
   };
 } fld_type_info;
 
+void release_fld_type_info(fld_type_info *ptr)
+{
+  if (ptr) {
+    if (!ptr->is_mc_struct) {
+      if (ptr->type_name) {
+        free(ptr->type_name);
+      }
+    }
+
+    free(ptr);
+  }
+}
+
 int fld_obtain_member_variable_type(struct_info *root_type, fld_member_access_sequence *variable_sequence,
                                     fld_type_info **variable_type)
 {
@@ -944,29 +957,10 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
                                                        &variable_snapshot));
               }
 
-              // printf("vt: ismcstruct:%i\n", variable_type->is_mc_struct);
-              // printf("here-vt\n");
+              release_fld_type_info(variable_type);
             }
           }
         }
-        // printf("here-q9\n");
-
-        // while (type_info) {
-        //   // if (part_with_type->next) {
-        //   //   // Find the type info for the next part
-        //   //   continue;
-        //   // }
-
-        //   printf("here-99\n");
-
-        //   // Win!
-        //   // MCcall(fld_construct_variable_snapshot(type_info->name, type_info->declared_mc_name, type_info->
-
-        //   //                                        ,
-        //   //                                        variable_full_identity->text, syntax_node->begin.line,
-        //   //                                        &variable_snapshot));
-        //   // }
-        // }
 
         release_fld_member_access_sequence(variable_sequence);
       }
@@ -998,8 +992,6 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
         MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
       }
       else {
-        // printf("ptr-text:%p\n", child->text);
-        // printf("-text:'%s'\n", child->text);
 
         MCcall(append_to_c_str(debug_declaration, child->text));
         MCcall(fld_append_visual_code(fld_view, child->text));
@@ -1172,6 +1164,39 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   return 0;
 }
 
+int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
+{
+  char *cstr;
+  MCcall(read_editor_text_into_cstr(cestate, &cstr));
+
+  if (cestate->source_data_type != CODE_EDITOR_SOURCE_DATA_FUNCTION) {
+    return 0;
+  }
+
+  // Free the current syntax tree
+  // cestate->syntax_tree
+
+  // Move to the code block
+  int i;
+  for (i = 0;; ++i) {
+    if (cstr[i] == '\0') {
+      MCerror(957, "TODO");
+    }
+    if (cstr[i] == '{') {
+      break;
+    }
+  }
+
+  if (cestate->source_interpretation.function_ast) {
+    release_syntax_node(cestate->source_interpretation.function_ast);
+    cestate->source_interpretation.function_ast = NULL;
+  }
+
+  MCcall(parse_mc_to_syntax_tree(cstr + i, &cestate->source_interpretation.function_ast));
+
+  return 0;
+}
+
 int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
 {
   /*mcfuncreplace*/
@@ -1195,6 +1220,7 @@ int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
   else {
     state->in_view_function_live_debugger = true;
 
+    MCcall(code_editor_evaluate_syntax(state));
     MCcall(code_editor_begin_function_live_debug(state));
     state->visual_node->data.visual.requires_render_update = true;
   }
@@ -1355,39 +1381,6 @@ int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
     }
     // printf("life-6k\n");
   }
-
-  return 0;
-}
-
-int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
-{
-  char *cstr;
-  MCcall(read_editor_text_into_cstr(cestate, &cstr));
-
-  if (cestate->source_data_type != CODE_EDITOR_SOURCE_DATA_FUNCTION) {
-    return 0;
-  }
-
-  // Free the current syntax tree
-  // cestate->syntax_tree
-
-  // Move to the code block
-  int i;
-  for (i = 0;; ++i) {
-    if (cstr[i] == '\0') {
-      MCerror(957, "TODO");
-    }
-    if (cstr[i] == '{') {
-      break;
-    }
-  }
-
-  if (cestate->source_interpretation.function_ast) {
-    release_syntax_node(cestate->source_interpretation.function_ast);
-    cestate->source_interpretation.function_ast = NULL;
-  }
-
-  MCcall(parse_mc_to_syntax_tree(cstr + i, &cestate->source_interpretation.function_ast));
 
   return 0;
 }

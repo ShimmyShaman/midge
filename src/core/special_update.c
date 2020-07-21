@@ -2,14 +2,14 @@
 
 #include "core/midge_core.h"
 
-// [_mc_iteration=9]
+// [_mc_iteration=11]
 void special_update(frame_time *elapsed) {
 // printf("special_update! @ %li appsecs\n", elapsed->app_secs);
   special_data s;
   s.num = 8;
   s.add = 14;
   s.num = 3;
-  s.num = 7;
+  s.num = 1;
   // special_modification(&s);
   printf("special_update! s.num:%i\n", s.num);
 
