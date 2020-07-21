@@ -2438,10 +2438,10 @@ int mc_main(int argc, const char *const *argv)
   int DEBUG_secs_of_last_5sec_update = 0;
 
   bool rerender_required = true;
+  frame_time *elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
   int ui = 0;
   while (1) {
-    // Time
-    frame_time *elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
+    // // Time
     bool logic_update_due = false;
     {
       long ms;  // Milliseconds
@@ -3624,7 +3624,8 @@ int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_actio
   //     break;
 
   //   // printf("aupi-2: sequence previous:%s:%s\n", get_action_type_string(focused_issue->previous_issue->type),
-  //   //        focused_issue->previous_issue->dialogue == NULL ? "(null)" : focused_issue->previous_issue->dialogue);
+  //   //        focused_issue->previous_issue->dialogue == NULL ? "(null)" :
+  //   focused_issue->previous_issue->dialogue);
   //   // printf("aupi-2: sequence contextual:%s:%s\n", get_action_type_string(focused_issue->contextual_issue->type),
   //   //        focused_issue->contextual_issue->dialogue == NULL ? "(null)" :
   //   focused_issue->contextual_issue->dialogue);
@@ -3632,7 +3633,8 @@ int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_actio
   //   mc_process_unit_v1 *process_unit;
   //   MCcall(construct_process_unit_from_action(command_hub, focused_issue, &process_unit));
 
-  //   // printf("aupi-2: sequence contextual:%s : %s\n", get_action_type_string(process_unit->contextual_issue->type),
+  //   // printf("aupi-2: sequence contextual:%s : %s\n",
+  //   get_action_type_string(process_unit->contextual_issue->type),
   //   //        process_unit->contextual_issue->dialogue);
   //   // printf("aupi-2: sequence root:%s : %s\n", get_action_type_string(process_unit->sequence_root_issue->type),
   //   //        process_unit->sequence_root_issue->dialogue);
@@ -3653,7 +3655,8 @@ int suggest_user_process_action(mc_command_hub_v1 *command_hub, mc_process_actio
   //   };
   //   mc_process_unit_v1 *best_match = NULL;
   //   int best_field_match_count = 0;
-  //   MCcall(search_process_matrix_for_best_match(process_unit, matrix, sequence_resolved_field_priority, &best_match,
+  //   MCcall(search_process_matrix_for_best_match(process_unit, matrix, sequence_resolved_field_priority,
+  //   &best_match,
   //                                               &best_field_match_count));
 
   //   if (best_field_match_count < 3)
@@ -4104,7 +4107,8 @@ int construct_process_unit_from_action(mc_command_hub_v1 *command_hub, mc_proces
   MCcall(construct_process_action_detail(action->next_issue, &(*output)->continuance));
   // (*output)->continuance_action_type = action->next_issue->type;
   // (*output)->continuance_dialogue = action->next_issue->dialogue;
-  // MCcall(does_dialogue_have_pattern((*output)->continuance_dialogue, &(*output)->continuance_dialogue_has_pattern));
+  // MCcall(does_dialogue_have_pattern((*output)->continuance_dialogue,
+  // &(*output)->continuance_dialogue_has_pattern));
 
   (*output)->children = NULL;
 
@@ -5899,7 +5903,8 @@ int load_and_process_core_structure(mc_command_hub_v1 *command_hub, const char *
   // char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
   // transcription[0] = '\0';
   // int code_index = 0;
-  // MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
+  // MCcall(transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc,
+  // &transcription));
 
   // // printf("final transcription:\n%s\n", transcription);
 

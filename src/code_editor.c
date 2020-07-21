@@ -903,7 +903,6 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
                                 &transcription_state->locals.count, syntax_node));
   } break;
   case MC_SYNTAX_NODE_ASSIGNMENT_STATEMENT: {
-
     // Variable
     {
       c_str *variable_full_identity;
