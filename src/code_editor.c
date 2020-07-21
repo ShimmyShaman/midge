@@ -652,9 +652,93 @@ int obtain_syntax_node_parsed_code(mc_syntax_node *syntax_node, c_str *cstr)
   return 0;
 }
 
+typedef struct fld_member_access_sequence {
+  char *identity;
+  fld_member_access_sequence *next;
+  bool is_pointer_access;
+} fld_member_access_sequence;
+
+void release_fld_member_access_sequence(fld_member_access_sequence *mas)
+{
+  if (mas) {
+    if (mas->next) {
+      release_fld_member_access_sequence(mas->next);
+    }
+
+    if (mas->identity) {
+      free(mas->identity);
+    }
+
+    free(mas);
+  }
+}
+
+int fld_translate_identity_to_member_access_sequence(char *member_access_str,
+                                                     fld_member_access_sequence **member_identity_sequence)
+{
+  fld_member_access_sequence *part = (fld_member_access_sequence *)malloc(sizeof(fld_member_access_sequence));
+
+  int i = 0;
+  while (isalnum(member_access_str[i]) || member_access_str[i] == '_') {
+    ++i;
+  }
+  allocate_and_copy_cstrn(part->identity, member_access_str, i);
+
+  if (i < 1) {
+    MCerror(688, "str format error");
+  }
+
+  if (member_access_str[i] != '\0') {
+    int offset = 0;
+    if (member_access_str[i] == '.') {
+      part->is_pointer_access = false;
+      offset = 1;
+    }
+    else if (member_access_str[i] == '-' && member_access_str[i + 1] == '>') {
+      part->is_pointer_access = true;
+      offset = 2;
+    }
+    else {
+      MCerror(683, "Incorrectly formatted string:'%s'", member_access_str);
+    }
+
+    MCcall(fld_translate_identity_to_member_access_sequence(member_access_str + i + offset, &part->next));
+  }
+  else {
+    part->next = NULL;
+    part->is_pointer_access = false;
+  }
+
+  *member_identity_sequence = part;
+
+  return 0;
+}
+
 typedef struct fld_transcription_state {
   int scope_depth;
+  mc_syntax_node_list locals;
 } fld_transcription_state;
+
+int fld_count_dereference_in_syntax_node(mc_syntax_node *syntax_node, uint *deref_count)
+{
+  *deref_count = 0;
+  printf("here-42 %p\n", syntax_node);
+  printf("here-43 %p\n", syntax_node->children);
+  for (int a = 0; a < syntax_node->children->count; ++a) {
+    printf("here-44\n");
+    mc_syntax_node *child = syntax_node->children->items[a];
+    printf("here-46\n");
+
+    if ((mc_token_type)child->type == MC_TOKEN_STAR_OPERATOR) {
+      printf("here-47\n");
+      ++*deref_count;
+    }
+    printf("here-48\n");
+  }
+
+  printf("here-49\n");
+  return 0;
+}
 
 int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaration,
                                fld_transcription_state *transcription_state, mc_syntax_node *syntax_node)
@@ -733,40 +817,121 @@ int fld_transcribe_syntax_node(fld_view_state *fld_view, c_str *debug_declaratio
         MCcall(fld_append_visual_code(fld_view, child->text));
       }
     }
+
+    // fld_local_variable *local_variable = (fld_local_variable *)malloc(sizeof(fld_local_variable));
+    // local_variable->type_deref_count =
+    // allocate_and_copy_cstr(local_variable->name, syntax_node->local_declaration.variable_name);
+    MCcall(append_to_collection((void ***)&transcription_state->locals.items, &transcription_state->locals.alloc,
+                                &transcription_state->locals.count, syntax_node));
   } break;
   case MC_SYNTAX_NODE_ASSIGNMENT_STATEMENT: {
 
-    fld_variable_snapshot *variable_snapshot;
+    // Variable
+    {
+      c_str *variable_full_identity;
+      MCcall(init_c_str(&variable_full_identity));
+      MCcall(obtain_syntax_node_parsed_code(syntax_node->assignment.variable, variable_full_identity));
 
-    c_str *cstr;
-    MCcall(init_c_str(&cstr));
-    MCcall(obtain_syntax_node_parsed_code(syntax_node->assignment.variable, cstr));
-    MCcall(fld_construct_variable_snapshot("??", "??", "??", cstr->text, syntax_node->begin.line, variable_snapshot));
-    MCcall(release_c_str(cstr));
+      fld_variable_snapshot *variable_snapshot = NULL;
+      {
+        // Attempt to take variable snapshot
+        fld_member_access_sequence *variable_sequence;
+        MCcall(fld_translate_identity_to_member_access_sequence(variable_full_identity->text, &variable_sequence));
 
-    MCcall(fld_append_variable_snapshot(cestate->fld_view, variable_snapshot));
+        mc_syntax_node *declarator;
+        for (int a = 0; a < transcription_state->locals.count; ++a) {
+          if (!strcmp(variable_sequence->identity,
+                      transcription_state->locals.items[a]->local_declaration.variable_name->text)) {
+
+            // Found local declaration
+            declarator = transcription_state->locals.items[a];
+            break;
+          }
+        }
+
+        if (declarator) {
+          // Found type of variable root
+          uint deref_count = 0;
+          if (declarator->local_declaration.type_dereference) {
+            MCcall(fld_count_dereference_in_syntax_node(declarator->local_declaration.type_dereference, &deref_count));
+          }
+
+          if (deref_count) {
+            MCerror(859, "TODO");
+          }
+          else {
+            // Determine a type info actually exists
+            struct_info *type_info = declarator->local_declaration.mc_type;
+            if (type_info) {
+              // Travel through the variable member-access parts with the type info to determine child type
+              fld_member_access_sequence *part_with_type = variable_sequence;
+              while (part_with_type->next) {
+                // Find the field member in the type
+                for (int a = 0; a < type_info->field_count; ++a) {
+                  if (!strcmp(part_with_type->next->identity, type_info->fields[a]->name)) {
+                    type_info->fields[a].
+                    break;
+                  }
+                }
+                break;
+              }
+            }
+          }
+
+          // while (type_info) {
+          //   // if (part_with_type->next) {
+          //   //   // Find the type info for the next part
+          //   //   continue;
+          //   // }
+
+          //   printf("here-99\n");
+
+          //   // Win!
+          //   // MCcall(fld_construct_variable_snapshot(type_info->name, type_info->declared_mc_name, type_info->
+
+          //   //                                        ,
+          //   //                                        variable_full_identity->text, syntax_node->begin.line,
+          //   //                                        &variable_snapshot));
+          // }
+        }
+
+        release_fld_member_access_sequence(variable_sequence);
+      }
+
+      // Set Variable
+      if (variable_snapshot) {
+        MCcall(fld_append_variable_snapshot(fld_view, variable_snapshot));
+      }
+      else {
+        // Just print text
+        MCcall(fld_append_visual_code(fld_view, variable_full_identity->text));
+      }
+
+      MCcall(append_to_c_str(debug_declaration, variable_full_identity->text));
+      MCcall(release_c_str(variable_full_identity));
+    }
 
     // MCvacall(append_to_c_strf(debug_declaration,
     //                           "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
     //                           "(fld_variable_snapshot *)%p, &%s));\n ",
     //                           cestate, argument_snapshot, function->parameters[a]->name));
 
-    // // Rest
-    // for (int a = 1; a < syntax_node->children->count; ++a) {
-    //   mc_syntax_node *child = syntax_node->children->items[a];
+    // Rest
+    for (int a = 1; a < syntax_node->children->count; ++a) {
+      mc_syntax_node *child = syntax_node->children->items[a];
 
-    //   if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+      if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
 
-    //     MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
-    //   }
-    //   else {
-    //     // printf("ptr-text:%p\n", child->text);
-    //     // printf("-text:'%s'\n", child->text);
+        MCcall(fld_transcribe_syntax_node(fld_view, debug_declaration, transcription_state, child));
+      }
+      else {
+        // printf("ptr-text:%p\n", child->text);
+        // printf("-text:'%s'\n", child->text);
 
-    //     MCcall(append_to_c_str(debug_declaration, child->text));
-    //     MCcall(fld_append_visual_code(fld_view, child->text));
-    //   }
-    // }
+        MCcall(append_to_c_str(debug_declaration, child->text));
+        MCcall(fld_append_visual_code(fld_view, child->text));
+      }
+    }
   } break;
   case MC_SYNTAX_NODE_INVOKE_STATEMENT:
   case MC_SYNTAX_NODE_SUPERNUMERARY:
@@ -905,6 +1070,8 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   //
   fld_transcription_state transcription_state;
   transcription_state.scope_depth = 0;
+  transcription_state.locals.alloc = 0;
+  transcription_state.locals.count = 0;
   MCcall(fld_transcribe_syntax_node(cestate->fld_view, debug_declaration, &transcription_state,
                                     cestate->source_interpretation.function_ast));
 
