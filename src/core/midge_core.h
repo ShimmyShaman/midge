@@ -724,16 +724,16 @@ int (*function_live_debugger_render)(int, void **);
 
 // mc_struct_info_v1 *find_struct_info(mc_node_v1 *nodespace, char *struct_name) -- result is last
 int (*find_struct_info)(int, void **);
-int (*special_modification)(int, void **);
+// int (*special_modification)(int, void **);
 int (*special_update)(int, void **);
-int (*move_cursor_up)(int, void **);
-int (*save_function_to_file)(int, void **);
-int (*save_struct_to_file)(int, void **);
-int (*insert_text_into_editor)(int, void **);
-int (*delete_selection)(int, void **);
-int (*read_selected_editor_text)(int, void **);
+// int (*move_cursor_up)(int, void **);
+// int (*save_function_to_file)(int, void **);
+// int (*save_struct_to_file)(int, void **);
+// int (*insert_text_into_editor)(int, void **);
+// int (*delete_selection)(int, void **);
+// int (*read_selected_editor_text)(int, void **);
 int (*load_existing_struct_into_code_editor)(int, void **);
-int (*code_editor_handle_keyboard_input)(int, void **);
+// int (*code_editor_handle_keyboard_input)(int, void **);
 int (*code_editor_handle_input)(int, void **);
 
 #define allocate_anon_struct(ptr_to_struct, size) \

@@ -6601,6 +6601,32 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_dummy_function_definition_v1->struct_usage = NULL;
   }
 
+  mc_function_info_v1 *read_file_text_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+  MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                              &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                              (void *)read_file_text_definition_v1));
+  {
+    read_file_text_definition_v1->struct_id = NULL;
+    read_file_text_definition_v1->name = "read_file_text";
+    read_file_text_definition_v1->latest_iteration = 1U;
+    allocate_and_copy_cstr(read_file_text_definition_v1->return_type.name, "char");
+    read_file_text_definition_v1->return_type.deref_count = 1;
+    read_file_text_definition_v1->parameter_count = 1;
+    read_file_text_definition_v1->parameters =
+        (mc_parameter_info_v1 **)malloc(sizeof(void *) * read_file_text_definition_v1->parameter_count);
+    read_file_text_definition_v1->variable_parameter_begin_index = -1;
+    read_file_text_definition_v1->struct_usage_count = 0;
+    read_file_text_definition_v1->struct_usage = NULL;
+
+    mc_parameter_info_v1 *field;
+    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    read_file_text_definition_v1->parameters[0] = field;
+    field->type_name = "char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "filepath";
+  }
+
   mc_function_info_v1 *force_render_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
   MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                               &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
@@ -6753,6 +6779,33 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     field->name = "script";
   }
 
+  {
+    // Partial Declarations
+    mc_function_info_v1 *partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
+    allocate_and_copy_cstr(partial_definition_v1->name, "find_struct_info");
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                (void *)partial_definition_v1));
+
+    partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
+    allocate_and_copy_cstr(partial_definition_v1->name, "special_update");
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                (void *)partial_definition_v1));
+
+    partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
+    allocate_and_copy_cstr(partial_definition_v1->name, "load_existing_struct_into_code_editor");
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                (void *)partial_definition_v1));
+
+    partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
+    allocate_and_copy_cstr(partial_definition_v1->name, "code_editor_handle_input");
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                (void *)partial_definition_v1));
+  }
+
   clint_process("int (*parse_script_to_mc)(int, void **);");
   clint_process("int (*conform_type_identity)(int, void **);");
   clint_process("int (*create_default_mc_struct)(int, void **);");
@@ -6803,8 +6856,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_core_function(command_hub, "find_struct_info"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/special_debug.c"));
   MCcall(parse_and_process_core_function(command_hub, "move_cursor_up"));
-  MCcall(parse_and_process_core_function(command_hub, "save_function_to_file"));
-  MCcall(parse_and_process_core_function(command_hub, "save_struct_to_file"));
+  MCcall(parse_and_process_mc_file(command_hub, "src/core/file_persistence.c"));
   MCcall(parse_and_process_core_function(command_hub, "insert_text_into_editor"));
   MCcall(parse_and_process_core_function(command_hub, "delete_selection"));
   MCcall(parse_and_process_core_function(command_hub, "read_selected_editor_text"));

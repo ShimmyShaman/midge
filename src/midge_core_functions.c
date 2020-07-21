@@ -4144,11 +4144,11 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
                                 func_info));
 
     // Declare with cling
-    if (!skip_clint_declaration) {
+    // if (!skip_clint_declaration) {
       char buf[1024];
       sprintf(buf, "int (*%s)(int, void **);", func_info->name);
       clint_process(buf);
-    }
+    // }
   }
 
   // printf("papfd-0\n");
