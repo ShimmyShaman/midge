@@ -278,6 +278,22 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     }
     ++*index;
   } break;
+  case '<': {
+    if (code[*index + 1] == '=') {
+      *token_type = MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR;
+      if (text) {
+        allocate_and_copy_cstr(*text, "<=");
+      }
+      *index += 2;
+      break;
+    }
+
+    *token_type = MC_TOKEN_LESS_THAN_OPERATOR;
+    if (text) {
+      allocate_and_copy_cstr(*text, "<");
+    }
+    ++*index;
+  } break;
   default: {
     // Identifier
     if (isalpha(code[*index]) || code[*index] == '_') {
@@ -458,6 +474,18 @@ int mcs_parse_through_supernumerary_tokens(parsing_state *ps, mc_syntax_node *pa
   return 0;
 }
 
+int mcs_parse_through_conditional_expression(parsing_state *ps, mc_syntax_node *parent,
+                                             mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *member_access;
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_NODE_MEMBER_ACCESS, parent, &member_access));
+  if (additional_destination) {
+    *additional_destination = member_access;
+  }
+
+  MCerror(486, "TODO--implement");
+}
+
 int mcs_parse_through_member_access_expression(parsing_state *ps, mc_syntax_node *parent,
                                                mc_syntax_node **additional_destination)
 {
@@ -529,6 +557,13 @@ int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
     switch (token1) {
     case MC_TOKEN_DECIMAL_POINT: {
       MCcall(mcs_parse_through_member_access_expression(ps, expression, NULL));
+    } break;
+    case MC_TOKEN_LESS_THAN_OPERATOR:
+    case MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR:
+    case MC_TOKEN_MORE_THAN_OPERATOR:
+    case MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR:
+    case MC_TOKEN_EQUALITY_OPERATOR: {
+      MCcall(mcs_parse_through_conditional_expression(ps, expression, NULL));
     } break;
     default: {
       print_parse_error(ps->code, ps->index, "see-below", "");

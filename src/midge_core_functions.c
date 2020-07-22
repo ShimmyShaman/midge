@@ -1779,6 +1779,14 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_STRING_LITERAL";
   case MC_TOKEN_COMMA:
     return "MC_TOKEN_COMMA";
+  case MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR:
+    return "MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR";
+  case MC_TOKEN_LESS_THAN_OPERATOR:
+    return "MC_TOKEN_LESS_THAN_OPERATOR";
+  case MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR:
+    return "MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR";
+  case MC_TOKEN_MORE_THAN_OPERATOR:
+    return "MC_TOKEN_MORE_THAN_OPERATOR";
   default:
     return "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED";
   }
@@ -3787,8 +3795,8 @@ int debug_automation(int argc, void **argv)
     sim->altDown = false;
     sim->ctrlDown = false;
     sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    sim->detail.mouse.x = 95;
-    sim->detail.mouse.y = 97;
+    sim->detail.mouse.x = 85;
+    sim->detail.mouse.y = 121;
     {
       void *vargs[3];
       vargs[0] = argv[0];

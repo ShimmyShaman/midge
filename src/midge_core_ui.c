@@ -214,7 +214,7 @@ int update_core_entries(node *core_display)
       entry->data = (void *)source_file;
       entry->children.alloc = 0;
       entry->children.count = 0;
-      entry->collapsed = false;
+      entry->collapsed = true;
 
       MCcall(append_to_collection((void ***)&cdstate->entries.items, &cdstate->entries.alloc, &cdstate->entries.count,
                                   entry));
