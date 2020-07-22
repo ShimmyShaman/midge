@@ -2374,6 +2374,8 @@ int mc_main(int argc, const char *const *argv)
   MCcall(init_command_hub_process_matrix(command_hub));
   command_hub->focused_workflow = NULL;
   MCcall(init_void_collection_v1(&command_hub->template_collection));
+  command_hub->source_files.alloc = 0;
+  command_hub->source_files.count = 0;
   command_hub->renderer.render_queue = &render_thread.render_queue;
   command_hub->renderer.resource_queue = &render_thread.resource_queue;
   command_hub->ui_elements = (mc_ui_element_v1 *)malloc(sizeof(mc_ui_element_v1) * 32);
@@ -5919,6 +5921,8 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
 
   // Parse all definitions
   mc_source_file_info_v1 *source_file = (mc_source_file_info_v1 *)malloc(sizeof(mc_source_file_info_v1));
+  MCcall(append_to_collection((void ***)&command_hub->source_files.items, &command_hub->source_files.alloc,
+                              &command_hub->source_files.count, source_file));
   allocate_and_copy_cstr(source_file->filepath, filepath);
   source_file->definitions.alloc = 0;
   source_file->definitions.count = 0;

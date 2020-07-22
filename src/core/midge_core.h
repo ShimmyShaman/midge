@@ -169,8 +169,15 @@ typedef enum {
   // PROCESS_MATRIX_CONSENSUS_CONTAINER,
 } process_matrix_unit_type;
 
+typedef enum source_file_type {
+  SOURCE_FILE_NULL = 0,
+  SOURCE_FILE_MC_DEFINITIONS,
+  SOURCE_FILE_TEXT,
+  SOURCE_FILE_EXCLUSIVE_MAX = 100,
+} source_file_type;
+
 typedef enum source_definition_type {
-  SOURCE_DEFINITION_NULL = 0,
+  SOURCE_DEFINITION_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
   SOURCE_DEFINITION_FUNCTION,
   SOURCE_DEFINITION_STRUCT,
 } source_definition_type;
@@ -231,6 +238,7 @@ typedef struct mc_script_local_v1 {
 typedef struct mc_source_definition_v1 {
   source_definition_type type;
   union {
+    void *data;
     mc_struct_info_v1 *structure_info;
     mc_function_info_v1 *func_info;
   };
@@ -369,6 +377,10 @@ typedef struct mc_command_hub_v1 {
     uint count, allocated;
     update_callback_timer **callbacks;
   } update_timers;
+  struct {
+    uint count, alloc;
+    mc_source_file_info_v1 **items;
+  } source_files;
   mc_process_unit_v1 *process_matrix;
   mc_workflow_process_v1 *focused_workflow;
   unsigned int scripts_alloc;

@@ -44,8 +44,16 @@
   (render_color) { 0.0f, 0.0f, 0.0f, 0.0f }
 #define COLOR_CORNFLOWER_BLUE \
   (render_color) { 0.19f, 0.34f, 0.83f, 1.f }
-#define COLOR_GREENISH \
-  (render_color) { 0.11f, 0.55f, 0.32f, 1.f }
+#define COLOR_GREEN \
+  (render_color) { 0.0f, 0.5f, 0.0f, 1.f }
+#define COLOR_LIME \
+  (render_color) { 0.0f, 1.f, 0.0f, 1.f }
+#define COLOR_FUNCTION_GREEN \
+  (render_color) { 40.f / 255.f, 235.f / 255.f, 40.f / 255.f, 1.f }
+#define COLOR_POWDER_BLUE \
+  (render_color) { 176.f / 255.f, 224.f / 255.f, 230.f / 255.f, 1.f }
+#define COLOR_LIGHT_SKY_BLUE \
+  (render_color) { 135.f / 255.f, 206.f / 255.f, 255.f / 250.f, 1.f }
 #define COLOR_TEAL \
   (render_color) { 0.0f, 0.52f, 0.52f, 1.f }
 #define COLOR_PURPLE \
@@ -62,6 +70,8 @@
   (render_color) { 0.f, 0.f, 0.f, 1.f }
 #define COLOR_YELLOW \
   (render_color) { 1.f, 1.f, 0.f, 1.f }
+#define COLOR_LIGHT_YELLOW \
+  (render_color) { 1.f, 1.f, 102.f / 255.f, 1.f }
 
 #define MAX_QUEUED_KEY_EVENTS 128
 typedef enum window_input_event_type {
