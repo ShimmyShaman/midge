@@ -3795,8 +3795,8 @@ int debug_automation(int argc, void **argv)
     sim->altDown = false;
     sim->ctrlDown = false;
     sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    sim->detail.mouse.x = 85;
-    sim->detail.mouse.y = 121;
+    sim->detail.mouse.x = 96;
+    sim->detail.mouse.y = 40;
     {
       void *vargs[3];
       vargs[0] = argv[0];
@@ -3811,23 +3811,25 @@ int debug_automation(int argc, void **argv)
     // Select
     ++debugState->sequenceStep;
 
-    // node *code_editor = (node *)command_hub->global_node->children[0];
-    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    // sim->type = INPUT_EVENT_KEY_PRESS;
-    // sim->handled = false;
-    // sim->shiftDown = false;
-    // sim->altDown = false;
-    // sim->ctrlDown = true;
-    // sim->detail.keyboard.key = KEY_CODE_ENTER;
-    // {
-    //   void *vargs[3];
-    //   vargs[0] = argv[0];
-    //   vargs[1] = &command_hub->global_node->children[0];
-    //   vargs[2] = &sim;
-    //   MCcall(code_editor_handle_input(3, vargs));
-    // }
+    mc_node_v1 *core_display = (mc_node_v1 *)command_hub->global_node->children[1];
+    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    sim->type = INPUT_EVENT_MOUSE_PRESS;
+    sim->handled = false;
+    sim->shiftDown = false;
+    sim->altDown = false;
+    sim->ctrlDown = false;
+    sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
+    sim->detail.mouse.x = 96;
+    sim->detail.mouse.y = 120;
+    {
+      void *vargs[3];
+      vargs[0] = argv[0];
+      vargs[1] = &core_display;
+      vargs[2] = &sim;
+      MCcall(core_display_handle_input(3, vargs));
+    }
 
-    // free(sim);
+    free(sim);
   } break;
 
   default:

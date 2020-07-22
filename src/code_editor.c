@@ -1206,6 +1206,11 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
     cestate->status_bar.requires_render_update = true;
     // printf("cees-5\n");
   }
+  else {
+
+    cprintf(cestate->status_bar.message, "", result);
+    cestate->status_bar.requires_render_update = true;
+  }
   // printf("cees-7\n");
 
   return 0;
