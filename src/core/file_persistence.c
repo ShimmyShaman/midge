@@ -49,7 +49,11 @@ size_t save_text_to_file(char *filepath, char *text)
 // [_mc_iteration=4]
 void save_function_to_file(mc_function_info_v1 *function, char *function_definition)
 {
-  char *file_text = read_file_text(function->source_filepath);
+  if (!function->source_file) {
+    ERR(ERROR_ARGUMENT, "function has no source file to save to.");
+  }
+
+  char *file_text = read_file_text(function->source_file->filepath);
 
   c_str *save_text;
   init_c_str(&save_text);
@@ -118,15 +122,15 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
   // buf_len = strlen(buf);
   // written += fwrite(buf, sizeof(char), buf_len, f);
 
-  size_t written = save_text_to_file(function->source_filepath, save_text->text);
+  size_t written = save_text_to_file(function->source_file->filepath, save_text->text);
 
   release_c_str(save_text);
 
   if (written) {
-    printf("saved function to file '%s' (%zu bytes)\n", function->source_filepath, written);
+    printf("saved function to file '%s' (%zu bytes)\n", function->source_file->filepath, written);
   }
   else {
-    printf("could not save function to file '%s'\n", function->source_filepath);
+    printf("could not save function to file '%s'\n", function->source_file->filepath);
   }
   // printf("here-4\n");
 }
@@ -134,10 +138,14 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
 // [_mc_iteration=2]
 void save_struct_to_file(struct_info *structure, char *structure_definition)
 {
+  if (!structure->source_file) {
+    ERR(ERROR_ARGUMENT, "structure has no source file to save to.");
+  }
+
   // save_structure_to_source_file()
-  FILE *f = fopen(structure->source_filepath, "w");
+  FILE *f = fopen(structure->source_file->filepath, "w");
   if (f == NULL) {
-    printf("problem opening file '%s'\n", structure->source_filepath);
+    printf("problem opening file '%s'\n", structure->source_file->filepath);
     return;
   }
   fseek(f, 0, SEEK_SET);
@@ -168,6 +176,6 @@ void save_struct_to_file(struct_info *structure, char *structure_definition)
   // fwrite(&eof, sizeof(char), 1, f);
   fclose(f);
 
-  printf("saved structure to file '%s' (%zu bytes)\n", structure->source_filepath, written);
+  printf("saved structure to file '%s' (%zu bytes)\n", structure->source_file->filepath, written);
   // printf("here-4\n");
 }

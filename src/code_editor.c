@@ -63,7 +63,7 @@ int build_code_editor_v1(int argc, void **argv)
 
   {
     // Source
-    state->source_data_type = CODE_EDITOR_SOURCE_DATA_NONE;
+    state->source_data_type = SOURCE_DEFINITION_NULL;
     state->source_data = NULL;
     state->source_interpretation.function_ast = NULL;
   }
@@ -1033,7 +1033,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  if (cestate->source_data_type != CODE_EDITOR_SOURCE_DATA_FUNCTION) {
+  if (cestate->source_data_type != SOURCE_DEFINITION_FUNCTION) {
     return 0;
   }
 
@@ -1170,7 +1170,7 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   char *cstr;
   MCcall(read_editor_text_into_cstr(cestate, &cstr));
 
-  if (cestate->source_data_type != CODE_EDITOR_SOURCE_DATA_FUNCTION) {
+  if (cestate->source_data_type != SOURCE_DEFINITION_FUNCTION) {
     return 0;
   }
 
@@ -1217,7 +1217,7 @@ int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  if (state->source_data_type != CODE_EDITOR_SOURCE_DATA_FUNCTION) {
+  if (state->source_data_type != SOURCE_DEFINITION_FUNCTION) {
     return 0;
   }
 
@@ -1244,7 +1244,7 @@ int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
 
 int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
 {
-  if (cestate->source_data_type != CODE_EDITOR_SOURCE_DATA_FUNCTION) {
+  if (cestate->source_data_type != SOURCE_DEFINITION_FUNCTION) {
     MCerror(704, "TODO?");
   }
   function_info *function = (function_info *)cestate->source_data;
@@ -1412,7 +1412,7 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   // Begin Writing into the Function Editor textbox
   node *code_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
   mc_code_editor_state_v1 *feState = (mc_code_editor_state_v1 *)code_editor->extra;
-  feState->source_data_type = CODE_EDITOR_SOURCE_DATA_FUNCTION;
+  feState->source_data_type = SOURCE_DEFINITION_FUNCTION;
   feState->source_data = function;
 
   feState->line_display_offset = 0;

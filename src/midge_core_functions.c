@@ -3973,7 +3973,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
   free(struct_definition);
 
   printf("dsfce-0\n");
-  if (state->source_data_type != CODE_EDITOR_SOURCE_DATA_STRUCT || !state->source_data) {
+  if (state->source_data_type != SOURCE_DEFINITION_STRUCT || !state->source_data) {
     // New Definition
     MCerror(4851, "TODO");
   }
@@ -4132,7 +4132,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     // Create
     func_info = (function_info *)malloc(sizeof(function_info));
     func_info->struct_id = NULL; // TODO
-    func_info->source_filepath = NULL;
+    func_info->source_file = NULL;
     func_info->latest_iteration = 1;
     func_info->name = function_name;
     func_info->struct_usage_count = 0;
@@ -4145,9 +4145,9 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
 
     // Declare with cling
     // if (!skip_clint_declaration) {
-      char buf[1024];
-      sprintf(buf, "int (*%s)(int, void **);", func_info->name);
-      clint_process(buf);
+    char buf[1024];
+    sprintf(buf, "int (*%s)(int, void **);", func_info->name);
+    clint_process(buf);
     // }
   }
 
@@ -4357,7 +4357,7 @@ int read_and_declare_function_from_editor(mc_code_editor_state_v1 *state, functi
     // Create
     func_info = (function_info *)malloc(sizeof(function_info));
     func_info->struct_id = NULL; // TODO
-    func_info->source_filepath = NULL;
+    func_info->source_file = NULL;
     func_info->name = function_name;
     func_info->latest_iteration = 0;
     func_info->struct_usage_count = 0;

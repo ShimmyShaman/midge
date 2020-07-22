@@ -98,7 +98,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
     if (event->ctrlDown) {
 
       switch (state->source_data_type) {
-      case CODE_EDITOR_SOURCE_DATA_FUNCTION: {
+      case SOURCE_DEFINITION_FUNCTION: {
         // Read the code from the editor
         char *function_definition;
         read_editor_text_into_cstr(state, &function_definition);
@@ -121,7 +121,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         event->handled = true;
         break;
       }
-      case CODE_EDITOR_SOURCE_DATA_STRUCT: {
+      case SOURCE_DEFINITION_STRUCT: {
         // Read the code from the editor
         define_struct_from_code_editor(state);
         event->handled = true;
@@ -484,10 +484,10 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         // Save the file
         char *filepath;
         switch (state->source_data_type) {
-        case CODE_EDITOR_SOURCE_DATA_FUNCTION: {
+        case SOURCE_DEFINITION_FUNCTION: {
           mc_function_info_v1 *function = (mc_function_info_v1 *)state->source_data;
-          if (!function->source_filepath) {
-            printf("function has no source filepath\n");
+          if (!function->source_file) {
+            printf("function has no source file\n");
             break;
           }
 
@@ -499,10 +499,10 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
           free(function_definition);
         } break;
-        case CODE_EDITOR_SOURCE_DATA_STRUCT: {
+        case SOURCE_DEFINITION_STRUCT: {
           mc_struct_info_v1 *structure = (mc_struct_info_v1 *)state->source_data;
-          if (!structure->source_filepath) {
-            printf("structure has no source filepath\n");
+          if (!structure->source_file) {
+            printf("function has no source file\n");
             break;
           }
 

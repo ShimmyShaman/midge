@@ -169,6 +169,12 @@ typedef enum {
   // PROCESS_MATRIX_CONSENSUS_CONTAINER,
 } process_matrix_unit_type;
 
+typedef enum source_definition_type {
+  SOURCE_DEFINITION_NULL = 0,
+  SOURCE_DEFINITION_FUNCTION,
+  SOURCE_DEFINITION_STRUCT,
+} source_definition_type;
+
 #define PROCESS_UNIT_FIELD_COUNT 8
 typedef enum {
   PROCESS_UNIT_FIELD_ACTION_TYPE = 1,
@@ -222,9 +228,26 @@ typedef struct mc_script_local_v1 {
   int scope_depth;
 } mc_script_local_v1;
 
+typedef struct mc_source_definition_v1 {
+  source_definition_type type;
+  union {
+    mc_struct_info_v1 *structure_info;
+    mc_function_info_v1 *func_info;
+  };
+} mc_source_definition_v1;
+
+typedef struct mc_source_file_info_v1 {
+  char *filepath;
+  struct {
+    uint alloc;
+    uint count;
+    mc_source_definition_v1 **items;
+  } definitions;
+} mc_source_file_info_v1;
+
 typedef struct mc_struct_info_v1 {
   mc_struct_id_v1 *struct_id;
-  char *source_filepath;
+  mc_source_file_info_v1 *source_file;
   char *name;
   unsigned int version;
   char *declared_mc_name;
@@ -244,7 +267,7 @@ typedef struct mc_parameter_info_v1 {
 
 typedef struct mc_function_info_v1 {
   mc_struct_id_v1 *struct_id;
-  char *source_filepath;
+  mc_source_file_info_v1 *source_file;
   const char *name;
   unsigned int latest_iteration;
   struct {
@@ -534,11 +557,6 @@ typedef struct rendered_code_line {
   char *text;
   uint width, height;
 } rendered_code_line;
-typedef enum code_editor_data_source {
-  CODE_EDITOR_SOURCE_DATA_NONE = 0,
-  CODE_EDITOR_SOURCE_DATA_FUNCTION,
-  CODE_EDITOR_SOURCE_DATA_STRUCT,
-} code_editor_data_source;
 struct mc_syntax_node;
 typedef struct mc_code_editor_state_v1 {
   mc_node_v1 *visual_node;
@@ -554,7 +572,7 @@ typedef struct mc_code_editor_state_v1 {
   uint selection_begin_col;
   bool cursor_requires_render_update;
 
-  code_editor_data_source source_data_type;
+  source_definition_type source_data_type;
   void *source_data;
   struct {
     union {

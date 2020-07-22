@@ -9,7 +9,7 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
 
   // Set
   mc_code_editor_state_v1 *feState = (mc_code_editor_state_v1 *)code_editor->extra;
-  feState->source_data_type = CODE_EDITOR_SOURCE_DATA_STRUCT;
+  feState->source_data_type = SOURCE_DEFINITION_STRUCT;
   feState->source_data = (void *)p_struct_info;
 
   // Begin Writing into the Code Editor textbox
