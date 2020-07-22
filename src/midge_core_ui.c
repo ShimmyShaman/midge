@@ -238,7 +238,7 @@ int update_core_entries(node *core_display)
   return 0;
 }
 
-int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry)
+int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int indent)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
@@ -247,7 +247,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry)
   image_render_queue *sequence;
   element_render_command *element_cmd;
 
-  printf("mrce-0\n");
+  // printf("mrce-0\n");
 
   node *child = (node *)cdstate->entry_visual_nodes.items[cdstate->entry_visual_nodes.utilized_count++];
   child->data.visual.hidden = false;
@@ -265,21 +265,33 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry)
   element_cmd->y = 18;
   element_cmd->data.print_text.font_resource_uid = cdstate->font_resource_uid;
 
-  printf("mrce-2\n");
+  int indent_len = indent * 2 + indent ? 1 : 0;
+  char indent_str[indent_len + 1];
+  for (int a = 0; a < indent_len; ++a) {
+    indent_str[a] = ' ';
+  }
+  indent_str[indent_len] = '\0';
+
+  // printf("mrce-2\n");
   switch (entry->type) {
   case SOURCE_DEFINITION_FUNCTION: {
     function_info *func_info = (function_info *)entry->data;
-    allocate_and_copy_cstr(element_cmd->data.print_text.text, func_info->name);
+    cprintf(element_cmd->data.print_text.text, "%s%s", indent_str, func_info->name);
     element_cmd->data.print_text.color = COLOR_FUNCTION_GREEN;
   } break;
   case SOURCE_DEFINITION_STRUCT: {
     struct_info *str_info = (struct_info *)entry->data;
-    allocate_and_copy_cstr(element_cmd->data.print_text.text, str_info->name);
+    cprintf(element_cmd->data.print_text.text, "%s%s", indent_str, str_info->name);
     element_cmd->data.print_text.color = COLOR_LIGHT_YELLOW;
   } break;
-  case (source_definition_type)SOURCE_FILE_MC_DEFINITIONS: {
+  case SOURCE_FILE_MC_DEFINITIONS: {
     mc_source_file_info_v1 *source_file = (mc_source_file_info_v1 *)entry->data;
-    allocate_and_copy_cstr(element_cmd->data.print_text.text, source_file->filepath);
+    if (entry->collapsed) {
+      cprintf(element_cmd->data.print_text.text, "%s+%s", indent_str, source_file->filepath);
+    }
+    else {
+      cprintf(element_cmd->data.print_text.text, "%s-%s", indent_str, source_file->filepath);
+    }
     element_cmd->data.print_text.color = COLOR_LIGHT_SKY_BLUE;
   } break;
   default: {
@@ -287,17 +299,17 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry)
   }
   }
 
-  printf("mrce-6\n");
+  // printf("mrce-6\n");
   if (!entry->collapsed) {
     for (int b = 0;
          b < entry->children.count && cdstate->entry_visual_nodes.utilized_count < cdstate->entry_visual_nodes.count;
          ++b) {
       core_entry *subentry = entry->children.items[b];
-      MCcall(mcu_render_core_entry(cdstate, subentry));
+      MCcall(mcu_render_core_entry(cdstate, subentry, 1));
     }
   }
 
-  printf("mrce-8\n");
+  // printf("mrce-8\n");
   return 0;
 }
 
@@ -325,7 +337,7 @@ int core_display_render_v1(int argc, void **argv)
 
       core_entry *core_entry = cdd->entries.items[a];
 
-      MCcall(mcu_render_core_entry(cdd, core_entry));
+      MCcall(mcu_render_core_entry(cdd, core_entry, 0));
     }
 
     // Hide the rest
@@ -425,61 +437,79 @@ int core_display_handle_input_v1(int argc, void **argv)
   //   return 0;
   // }
 
-  for (int i = 0; !event->handled && i < core_display->child_count; ++i) {
-    node *child = (node *)core_display->children[i];
+  // Find the core entry being clicked on
+
+  for (int i = 0; !event->handled && i < cdd->entry_visual_nodes.count; ++i) {
+    node *entry_node = cdd->entry_visual_nodes.items[i];
+
+    if (entry_node->data.visual.hidden) {
+      continue;
+    }
 
     // Check is visual and has input handler and mouse event is within bounds
-    if (child->type != NODE_TYPE_VISUAL)
-      continue;
     // if (!*child->data.visual.input_handler)
     //   continue;
-    if (event->detail.mouse.x < child->data.visual.bounds.x || event->detail.mouse.y < child->data.visual.bounds.y ||
-        event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
-        event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
+    if (event->detail.mouse.x < entry_node->data.visual.bounds.x ||
+        event->detail.mouse.y < entry_node->data.visual.bounds.y ||
+        event->detail.mouse.x >= entry_node->data.visual.bounds.x + entry_node->data.visual.bounds.width ||
+        event->detail.mouse.y >= entry_node->data.visual.bounds.y + entry_node->data.visual.bounds.height)
       continue;
     printf("x:%u y:%u button:%u\n", event->detail.mouse.x, event->detail.mouse.y, event->detail.mouse.button);
 
     switch (event->type) {
     case INPUT_EVENT_MOUSE_PRESS: {
+      // Find the entry this node represents
+      int ei = 0;
+      core_entry *entry = NULL;
+      for (int a = 0; a < cdd->entries.count && entry == NULL; ++a) {
+        core_entry *iter = cdd->entries.items[a];
+        if (ei == i) {
+          entry = iter;
+          break;
+        }
+        ++ei;
+
+        if (!iter->collapsed && iter->children.count) {
+          for (int b = 0; b < iter->children.count && entry == NULL; ++b) {
+            if (ei == i) {
+              entry = iter->children.items[b];
+              break;
+            }
+            ++ei;
+            if (iter->children.items[b]->children.count) {
+              MCerror(482, "Not doing nested yet");
+            }
+          }
+        }
+      }
+
+      if (!entry) {
+        continue;
+      }
       event->handled = true;
 
-      // Find the core object the name represents
-      function_info *function;
-      {
-        void *vargs[3];
-        vargs[0] = (void **)&function;
-        vargs[1] = (void **)&command_hub->global_node;
-        vargs[2] = (void **)&child->name;
-        MCcall(find_function_info(3, vargs));
-      }
-      if (function) {
+      switch (entry->type) {
+      case SOURCE_DEFINITION_FUNCTION: {
         void *vargs[1];
-        vargs[0] = (void **)&function;
+        vargs[0] = (void **)&entry->data;
         MCcall(load_existing_function_into_code_editor(1, vargs));
+      } break;
+      case SOURCE_DEFINITION_STRUCT: {
+        void *mc_vargs[2];
+        mc_vargs[0] = (void *)&command_hub->global_node->children[0];
+        mc_vargs[1] = (void *)&entry->data;
+        MCcall(load_existing_struct_into_code_editor(2, mc_vargs));
+      } break;
+      case SOURCE_FILE_MC_DEFINITIONS: {
+        entry->collapsed = !entry->collapsed;
+        cdd->entries.requires_render_update = true;
+        core_display->data.visual.requires_render_update = true;
+      } break;
+      default: {
+        MCerror(513, "Unsupported type:%i", entry->type);
       }
-
-      // Else- Search for a struct with the name
-      mc_struct_info_v1 *p_struct_info;
-      {
-        void *mc_vargs[3];
-        mc_vargs[0] = (void *)&command_hub->global_node;
-        mc_vargs[1] = (void *)&child->name;
-        mc_vargs[2] = (void *)&p_struct_info;
-        MCcall(find_struct_info(3, mc_vargs));
       }
-      if (p_struct_info) {
-        {
-          void *mc_vargs[2];
-          mc_vargs[0] = (void *)&command_hub->global_node->children[0];
-          mc_vargs[1] = (void *)&p_struct_info;
-          MCcall(load_existing_struct_into_code_editor(2, mc_vargs));
-        }
-        break;
-      }
-    } break;
-
-    default:
-      break;
+    }
     }
   }
 
