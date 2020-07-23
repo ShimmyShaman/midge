@@ -7021,6 +7021,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   printf("Loading Core Methods\n");
   MCcall(parse_and_process_mc_file(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/special_debug.c"));
+  // MCerror(100000, "----------MEASURED STOP----------");
+
   MCcall(parse_and_process_mc_file(command_hub, "src/core/move_cursor_up.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/file_persistence.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/insert_text_into_editor.c"));

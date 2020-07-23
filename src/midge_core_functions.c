@@ -1753,6 +1753,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_ELSE_KEYWORD";
   case MC_TOKEN_WHILE_KEYWORD:
     return "MC_TOKEN_WHILE_KEYWORD";
+  case MC_TOKEN_FOR_KEYWORD:
+    return "MC_TOKEN_FOR_KEYWORD";
   case MC_TOKEN_SWITCH_KEYWORD:
     return "MC_TOKEN_SWITCH_KEYWORD";
   case MC_TOKEN_RETURN_KEYWORD:
@@ -1787,6 +1789,24 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR";
   case MC_TOKEN_MORE_THAN_OPERATOR:
     return "MC_TOKEN_MORE_THAN_OPERATOR";
+  case MC_TOKEN_CASE_KEYWORD:
+    return "MC_TOKEN_CASE_KEYWORD";
+  case MC_TOKEN_DEFAULT_KEYWORD:
+    return "MC_TOKEN_DEFAULT_KEYWORD";
+  case MC_TOKEN_STRUCT_KEYWORD:
+    return "MC_TOKEN_STRUCT_KEYWORD";
+  case MC_TOKEN_VOID_KEYWORD:
+    return "MC_TOKEN_VOID_KEYWORD";
+  case MC_TOKEN_INT_KEYWORD:
+    return "MC_TOKEN_INT_KEYWORD";
+  case MC_TOKEN_UNSIGNED_KEYWORD:
+    return "MC_TOKEN_UNSIGNED_KEYWORD";
+  case MC_TOKEN_BOOL_KEYWORD:
+    return "MC_TOKEN_BOOL_KEYWORD";
+  case MC_TOKEN_FLOAT_KEYWORD:
+    return "MC_TOKEN_FLOAT_KEYWORD";
+  case MC_TOKEN_LONG_KEYWORD:
+    return "MC_TOKEN_LONG_KEYWORD";
   default:
     return "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED";
   }
@@ -3796,7 +3816,7 @@ int debug_automation(int argc, void **argv)
     sim->ctrlDown = false;
     sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
     sim->detail.mouse.x = 96;
-    sim->detail.mouse.y = 40;
+    sim->detail.mouse.y = 13;
     {
       void *vargs[3];
       vargs[0] = argv[0];
@@ -3811,25 +3831,25 @@ int debug_automation(int argc, void **argv)
     // Select
     ++debugState->sequenceStep;
 
-    mc_node_v1 *core_display = (mc_node_v1 *)command_hub->global_node->children[1];
-    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    sim->type = INPUT_EVENT_MOUSE_PRESS;
-    sim->handled = false;
-    sim->shiftDown = false;
-    sim->altDown = false;
-    sim->ctrlDown = false;
-    sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    sim->detail.mouse.x = 96;
-    sim->detail.mouse.y = 120;
-    {
-      void *vargs[3];
-      vargs[0] = argv[0];
-      vargs[1] = &core_display;
-      vargs[2] = &sim;
-      MCcall(core_display_handle_input(3, vargs));
-    }
+    // mc_node_v1 *core_display = (mc_node_v1 *)command_hub->global_node->children[1];
+    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    // sim->type = INPUT_EVENT_MOUSE_PRESS;
+    // sim->handled = false;
+    // sim->shiftDown = false;
+    // sim->altDown = false;
+    // sim->ctrlDown = false;
+    // sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
+    // sim->detail.mouse.x = 94;
+    // sim->detail.mouse.y = 13;
+    // {
+    //   void *vargs[3];
+    //   vargs[0] = argv[0];
+    //   vargs[1] = &core_display;
+    //   vargs[2] = &sim;
+    //   MCcall(core_display_handle_input(3, vargs));
+    // }
 
-    free(sim);
+    // free(sim);
   } break;
 
   default:

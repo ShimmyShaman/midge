@@ -828,7 +828,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   fld_view_state *fld_view = cestate->fld_view;
 
   switch (syntax_node->type) {
-  case MC_SYNTAX_NODE_BLOCK: {
+  case MC_SYNTAX_BLOCK: {
     if (transcription_state->scope_depth > 0) {
       if ((int)syntax_node->children->items[0]->type != (int)MC_TOKEN_CURLY_OPEN_BRACKET) {
         MCerror(641, "AST Format Error");
@@ -871,7 +871,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
       MCcall(fld_append_visual_code(fld_view, "}"));
     }
   } break;
-  case MC_SYNTAX_NODE_LOCAL_DECLARATION: {
+  case MC_SYNTAX_LOCAL_DECLARATION_STATEMENT: {
     // Type
     if (syntax_node->local_declaration.mc_type) {
       MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.mc_type->declared_mc_name));
@@ -904,7 +904,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
     MCcall(append_to_collection((void ***)&transcription_state->locals.items, &transcription_state->locals.alloc,
                                 &transcription_state->locals.count, syntax_node));
   } break;
-  case MC_SYNTAX_NODE_ASSIGNMENT_STATEMENT: {
+  case MC_SYNTAX_ASSIGNMENT_STATEMENT: {
     // Variable
     {
       c_str *variable_full_identity;
@@ -999,11 +999,11 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
       }
     }
   } break;
-  case MC_SYNTAX_NODE_INVOKE_STATEMENT:
-  case MC_SYNTAX_NODE_SUPERNUMERARY:
-  case MC_SYNTAX_NODE_EXPRESSION:
-  case MC_SYNTAX_NODE_DEREFERENCE_SEQUENCE:
-  case MC_SYNTAX_NODE_MEMBER_ACCESS: {
+  case MC_SYNTAX_INVOKE_STATEMENT:
+  case MC_SYNTAX_SUPERNUMERARY:
+  case MC_SYNTAX_EXPRESSION:
+  case MC_SYNTAX_DEREFERENCE_SEQUENCE:
+  case MC_SYNTAX_MEMBER_ACCESS: {
     for (int a = 0; a < syntax_node->children->count; ++a) {
       mc_syntax_node *child = syntax_node->children->items[a];
 

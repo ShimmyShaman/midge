@@ -649,6 +649,7 @@ typedef enum mc_token_type {
   MC_TOKEN_IF_KEYWORD,
   MC_TOKEN_ELSE_KEYWORD,
   MC_TOKEN_WHILE_KEYWORD,
+  MC_TOKEN_FOR_KEYWORD,
   MC_TOKEN_SWITCH_KEYWORD,
   MC_TOKEN_RETURN_KEYWORD,
   MC_TOKEN_CONST_KEYWORD,
@@ -666,20 +667,30 @@ typedef enum mc_token_type {
   MC_TOKEN_LESS_THAN_OPERATOR,
   MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR,
   MC_TOKEN_MORE_THAN_OPERATOR,
+  MC_TOKEN_CASE_KEYWORD,
+  MC_TOKEN_DEFAULT_KEYWORD,
+  MC_TOKEN_STRUCT_KEYWORD,
+  MC_TOKEN_VOID_KEYWORD,
+  MC_TOKEN_INT_KEYWORD,
+  MC_TOKEN_UNSIGNED_KEYWORD,
+  MC_TOKEN_BOOL_KEYWORD,
+  MC_TOKEN_FLOAT_KEYWORD,
+  MC_TOKEN_LONG_KEYWORD,
   MC_TOKEN_STANDARD_MAX_VALUE = 200,
 } mc_token_type;
 
 typedef enum mc_syntax_node_type {
-  MC_SYNTAX_NODE_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
-  MC_SYNTAX_NODE_BLOCK,
-  MC_SYNTAX_NODE_LOCAL_DECLARATION,
-  MC_SYNTAX_NODE_ASSIGNMENT_STATEMENT,
-  MC_SYNTAX_NODE_INVOKE_STATEMENT,
+  MC_SYNTAX_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
+  MC_SYNTAX_BLOCK,
+  MC_SYNTAX_LOCAL_DECLARATION_STATEMENT,
+  MC_SYNTAX_LOCAL_DECLARATION_ASSIGN_STATEMENT,
+  MC_SYNTAX_ASSIGNMENT_STATEMENT,
+  MC_SYNTAX_INVOKE_STATEMENT,
 
-  MC_SYNTAX_NODE_SUPERNUMERARY,
-  MC_SYNTAX_NODE_EXPRESSION,
-  MC_SYNTAX_NODE_DEREFERENCE_SEQUENCE,
-  MC_SYNTAX_NODE_MEMBER_ACCESS,
+  MC_SYNTAX_SUPERNUMERARY,
+  MC_SYNTAX_EXPRESSION,
+  MC_SYNTAX_DEREFERENCE_SEQUENCE,
+  MC_SYNTAX_MEMBER_ACCESS,
 } mc_syntax_node_type;
 
 typedef struct mc_syntax_node_list {
@@ -708,6 +719,14 @@ typedef struct mc_syntax_node {
           mc_struct_info_v1 *mc_type;
         } local_declaration;
         struct {
+          mc_syntax_node *type_identifier;
+          // May be null indicating no dereference operators
+          mc_syntax_node *type_dereference;
+          mc_syntax_node *variable_name;
+          mc_struct_info_v1 *mc_type;
+          mc_syntax_node *assignment_expression;
+        } local_declaration_assignment;
+        struct {
           mc_syntax_node *function_identity;
           mc_syntax_node_list *arguments;
         } invocation;
@@ -715,6 +734,11 @@ typedef struct mc_syntax_node {
           mc_syntax_node *variable;
           mc_syntax_node *value_expression;
         } assignment;
+        struct {
+          mc_syntax_node *initialization;
+          mc_syntax_node *conditional;
+          mc_syntax_node *update_expression;
+        } for_loop;
       };
     };
   };

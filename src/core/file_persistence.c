@@ -3,13 +3,20 @@
 
 int find_in_str(char *str, char *seq)
 {
+  printf("fis-0\n");
+  printf("str:'%s'\n", str);
+  printf("seq:'%s'\n", seq);
   int len = strlen(seq);
   if (len < 1) {
     ERR(ERROR_ARGUMENT, "seq length must be greater than 0");
   }
 
+  printf("fis-1\n");
   for (int a = 0;; ++a) {
     if (str[a] != seq[0]) {
+      if (str[a] == '\0') {
+        break;
+      }
       continue;
     }
 
@@ -22,9 +29,12 @@ int find_in_str(char *str, char *seq)
     }
     if (found) {
       // Sequence matches
+      printf("fis- return:%i\n", a);
+      print_parse_error(str, a, "find_in_str", "successful_return");
       return a;
     }
   }
+  printf("fis- return:-1\n");
 
   return -1;
 }
@@ -49,6 +59,7 @@ size_t save_text_to_file(char *filepath, char *text)
 // [_mc_iteration=4]
 void save_function_to_file(mc_function_info_v1 *function, char *function_definition)
 {
+  printf("sftf-0\n");
   if (!function->source_file) {
     ERR(ERROR_ARGUMENT, "function has no source file to save to.");
   }
@@ -59,8 +70,10 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
   init_c_str(&save_text);
 
   int s = find_in_str(file_text, function->name);
+    printf("sftf-5 s:%i\n", s);
   if (s >= 0) {
     // Move to before the return type
+    --s;
     while (file_text[s] == '*' || file_text[s] == ' ' || file_text[s] == '\n' || file_text[s] == '\t') {
       --s;
     }
@@ -69,11 +82,13 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
     }
     ++s;
 
+    printf("sftf-6 s:%i\n", s);
     char *tempfs = file_text + s;
     int i = find_in_str(tempfs, "{");
     if (i < 0) {
       ERR(ERROR_FILE_FORMAT_ERROR1, "can't replace the function that was found. TODO safely deal with this");
     }
+    printf("sftf-7\n");
     {
       bool eof = false;
       int bracket_count = 1;
@@ -95,9 +110,11 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
       }
     }
 
+    printf("sftf-0\n");
     append_to_c_strn(save_text, file_text, s);
     append_to_c_str(save_text, function_definition);
 
+    printf("sftf-0\n");
     char *tempfi = file_text + i;
     append_to_c_str(save_text, tempfi);
   }
@@ -122,6 +139,7 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
   // buf_len = strlen(buf);
   // written += fwrite(buf, sizeof(char), buf_len, f);
 
+  printf("sftf-0\n");
   size_t written = save_text_to_file(function->source_file->filepath, save_text->text);
 
   release_c_str(save_text);
