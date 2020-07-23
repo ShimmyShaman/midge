@@ -681,6 +681,7 @@ typedef enum mc_token_type {
 
 typedef enum mc_syntax_node_type {
   MC_SYNTAX_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
+  MC_SYNTAX_FUNCTION,
   MC_SYNTAX_BLOCK,
   MC_SYNTAX_LOCAL_DECLARATION_STATEMENT,
   MC_SYNTAX_LOCAL_DECLARATION_ASSIGN_STATEMENT,
@@ -689,8 +690,10 @@ typedef enum mc_syntax_node_type {
 
   MC_SYNTAX_SUPERNUMERARY,
   MC_SYNTAX_EXPRESSION,
+  MC_SYNTAX_CONDITIONAL_EXPRESSION,
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
   MC_SYNTAX_MEMBER_ACCESS,
+  MC_SYNTAX_PARAMETER_DECLARATION,
 } mc_syntax_node_type;
 
 typedef struct mc_syntax_node_list {
@@ -712,18 +715,34 @@ typedef struct mc_syntax_node {
       mc_syntax_node_list *children;
       union {
         struct {
+          mc_syntax_node *return_type_identifier;
+          mc_struct_info_v1 *return_mc_type;
+          // May be null indicating no dereference operators
+          mc_syntax_node *return_type_dereference;
+          mc_syntax_node *name;
+          mc_syntax_node_list *parameters;
+          mc_syntax_node *code_block;
+        } function;
+        struct {
           mc_syntax_node *type_identifier;
+          mc_struct_info_v1 *mc_type;
+          // May be null indicating no dereference operators
+          mc_syntax_node *type_dereference;
+          mc_syntax_node *name;
+        } parameter;
+        struct {
+          mc_syntax_node *type_identifier;
+          mc_struct_info_v1 *mc_type;
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *variable_name;
-          mc_struct_info_v1 *mc_type;
         } local_declaration;
         struct {
           mc_syntax_node *type_identifier;
+          mc_struct_info_v1 *mc_type;
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *variable_name;
-          mc_struct_info_v1 *mc_type;
           mc_syntax_node *assignment_expression;
         } local_declaration_assignment;
         struct {
@@ -734,6 +753,11 @@ typedef struct mc_syntax_node {
           mc_syntax_node *variable;
           mc_syntax_node *value_expression;
         } assignment;
+        struct {
+          mc_syntax_node *left;
+          mc_syntax_node *conditional_operator;
+          mc_syntax_node *right;
+        } conditional;
         struct {
           mc_syntax_node *initialization;
           mc_syntax_node *conditional;

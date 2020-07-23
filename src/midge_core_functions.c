@@ -1718,98 +1718,209 @@ int transcribe_past(char const *const code, int *index, uint *transcription_allo
 }
 
 int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output);
-const char *get_mc_token_type_name(mc_token_type type)
+int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
 {
-  switch (type) {
-  case MC_TOKEN_NULL:
-    return "MC_TOKEN_NULL";
-  case MC_TOKEN_STAR_OPERATOR:
-    return "MC_TOKEN_STAR_OPERATOR";
-  case MC_TOKEN_IDENTIFIER:
-    return "MC_TOKEN_IDENTIFIER";
-  case MC_TOKEN_SQUARE_OPEN_BRACKET:
-    return "MC_TOKEN_SQUARE_OPEN_BRACKET";
-  case MC_TOKEN_SQUARE_CLOSE_BRACKET:
-    return "MC_TOKEN_SQUARE_CLOSE_BRACKET";
-  case MC_TOKEN_OPEN_BRACKET:
-    return "MC_TOKEN_OPEN_BRACKET";
-  case MC_TOKEN_CLOSING_BRACKET:
-    return "MC_TOKEN_CLOSING_BRACKET";
-  case MC_TOKEN_SEMI_COLON:
-    return "MC_TOKEN_SEMI_COLON";
-  case MC_TOKEN_EQUALITY_OPERATOR:
-    return "MC_TOKEN_EQUALITY_OPERATOR";
-  case MC_TOKEN_DECREMENT_OPERATOR:
-    return "MC_TOKEN_DECREMENT_OPERATOR";
-  case MC_TOKEN_POINTER_OPERATOR:
-    return "MC_TOKEN_POINTER_OPERATOR";
-  case MC_TOKEN_ASSIGNMENT_OPERATOR:
-    return "MC_TOKEN_ASSIGNMENT_OPERATOR";
-  case MC_TOKEN_SUBTRACT_OPERATOR:
-    return "MC_TOKEN_SUBTRACT_OPERATOR";
-  case MC_TOKEN_IF_KEYWORD:
-    return "MC_TOKEN_IF_KEYWORD";
-  case MC_TOKEN_ELSE_KEYWORD:
-    return "MC_TOKEN_ELSE_KEYWORD";
-  case MC_TOKEN_WHILE_KEYWORD:
-    return "MC_TOKEN_WHILE_KEYWORD";
-  case MC_TOKEN_FOR_KEYWORD:
-    return "MC_TOKEN_FOR_KEYWORD";
-  case MC_TOKEN_SWITCH_KEYWORD:
-    return "MC_TOKEN_SWITCH_KEYWORD";
-  case MC_TOKEN_RETURN_KEYWORD:
-    return "MC_TOKEN_RETURN_KEYWORD";
-  case MC_TOKEN_CONST_KEYWORD:
-    return "MC_TOKEN_CONST_KEYWORD";
-  case MC_TOKEN_CURLY_OPEN_BRACKET:
-    return "MC_TOKEN_CURLY_OPEN_BRACKET";
-  case MC_TOKEN_CURLY_CLOSING_BRACKET:
-    return "MC_TOKEN_CURLY_CLOSING_BRACKET";
-  case MC_TOKEN_NEW_LINE:
-    return "MC_TOKEN_NEW_LINE";
-  case MC_TOKEN_SPACE_SEQUENCE:
-    return "MC_TOKEN_SPACE_SEQUENCE";
-  case MC_TOKEN_TAB_SEQUENCE:
-    return "MC_TOKEN_TAB_SEQUENCE";
-  case MC_TOKEN_LINE_COMMENT:
-    return "MC_TOKEN_LINE_COMMENT";
-  case MC_TOKEN_DECIMAL_POINT:
-    return "MC_TOKEN_DECIMAL_POINT";
-  case MC_TOKEN_NUMERIC_LITERAL:
-    return "MC_TOKEN_NUMERIC_LITERAL";
-  case MC_TOKEN_STRING_LITERAL:
-    return "MC_TOKEN_STRING_LITERAL";
-  case MC_TOKEN_COMMA:
-    return "MC_TOKEN_COMMA";
-  case MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR:
-    return "MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR";
-  case MC_TOKEN_LESS_THAN_OPERATOR:
-    return "MC_TOKEN_LESS_THAN_OPERATOR";
-  case MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR:
-    return "MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR";
-  case MC_TOKEN_MORE_THAN_OPERATOR:
-    return "MC_TOKEN_MORE_THAN_OPERATOR";
-  case MC_TOKEN_CASE_KEYWORD:
-    return "MC_TOKEN_CASE_KEYWORD";
-  case MC_TOKEN_DEFAULT_KEYWORD:
-    return "MC_TOKEN_DEFAULT_KEYWORD";
-  case MC_TOKEN_STRUCT_KEYWORD:
-    return "MC_TOKEN_STRUCT_KEYWORD";
-  case MC_TOKEN_VOID_KEYWORD:
-    return "MC_TOKEN_VOID_KEYWORD";
-  case MC_TOKEN_INT_KEYWORD:
-    return "MC_TOKEN_INT_KEYWORD";
-  case MC_TOKEN_UNSIGNED_KEYWORD:
-    return "MC_TOKEN_UNSIGNED_KEYWORD";
-  case MC_TOKEN_BOOL_KEYWORD:
-    return "MC_TOKEN_BOOL_KEYWORD";
-  case MC_TOKEN_FLOAT_KEYWORD:
-    return "MC_TOKEN_FLOAT_KEYWORD";
-  case MC_TOKEN_LONG_KEYWORD:
-    return "MC_TOKEN_LONG_KEYWORD";
-  default:
-    return "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED";
+  MCcall(parse_past_empty_text(code, &i));
+  // printf("peek_mc_token(): %u:'%c'\n", tokens_ahead, code[i]);
+  switch (code[i]) {
+  case '-': {
+    if (code[i + 1] == '>') {
+      if (!tokens_ahead) {
+        output->type = MC_TOKEN_POINTER_OPERATOR;
+        allocate_and_copy_cstr(output->text, "->");
+        output->start_index = i;
+        return 0;
+      }
+
+      MCcall(peek_mc_token(code, i + 2, tokens_ahead - 1, output));
+      return 0;
+    }
+    else if (code[i + 1] == '-') {
+      if (!tokens_ahead) {
+        output->type = MC_TOKEN_DECREMENT_OPERATOR;
+        allocate_and_copy_cstr(output->text, "--");
+        output->start_index = i;
+        return 0;
+      }
+
+      MCcall(peek_mc_token(code, i + 2, tokens_ahead - 1, output));
+      return 0;
+    }
+
+    if (!tokens_ahead) {
+      output->type = MC_TOKEN_SUBTRACT_OPERATOR;
+      allocate_and_copy_cstr(output->text, "-");
+      output->start_index = i;
+      return 0;
+    }
+
+    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
+    return 0;
   }
+  case '*': {
+    if (!tokens_ahead) {
+      output->type = MC_TOKEN_STAR_OPERATOR;
+      allocate_and_copy_cstr(output->text, "*");
+      output->start_index = i;
+      return 0;
+    }
+    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
+    return 0;
+  }
+  case '(': {
+    if (!tokens_ahead) {
+      output->type = MC_TOKEN_OPEN_BRACKET;
+      allocate_and_copy_cstr(output->text, "(");
+      output->start_index = i;
+      return 0;
+    }
+    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
+    return 0;
+  }
+  case ';': {
+    if (!tokens_ahead) {
+      output->type = MC_TOKEN_SEMI_COLON;
+      allocate_and_copy_cstr(output->text, ";");
+      output->start_index = i;
+      return 0;
+    }
+    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
+    return 0;
+  }
+  case '[': {
+    if (!tokens_ahead) {
+      output->type = MC_TOKEN_SQUARE_OPEN_BRACKET;
+      allocate_and_copy_cstr(output->text, "[");
+      output->start_index = i;
+      return 0;
+    }
+    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
+    return 0;
+  }
+  case '=': {
+    if (code[i + 1] == '=') {
+      if (!tokens_ahead) {
+        output->type = MC_TOKEN_EQUALITY_OPERATOR;
+        allocate_and_copy_cstr(output->text, "==");
+        output->start_index = i;
+        return 0;
+      }
+
+      MCcall(peek_mc_token(code, i + 2, tokens_ahead - 1, output));
+      return 0;
+    }
+
+    if (!tokens_ahead) {
+      output->type = MC_TOKEN_ASSIGNMENT_OPERATOR;
+      allocate_and_copy_cstr(output->text, "=");
+      output->start_index = i;
+      return 0;
+    }
+
+    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
+    return 0;
+  }
+  default: {
+    if (isalpha(code[i])) {
+      int s = i;
+      while (isalnum(code[i]) || code[i] == '_')
+        ++i;
+
+      int slen = i - s;
+      {
+        // Keywords
+        if (slen == 2 && !strncmp(code + s, "if", slen)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_IF_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, slen);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
+        }
+        if (slen == 4 && !strncmp(code + s, "else", slen)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_ELSE_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, slen);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
+        }
+        if (slen == 5 && !strncmp(code + s, "while", slen)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_WHILE_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, slen);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
+        }
+        if (slen == 6 && !strncmp(code + s, "switch", slen)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_SWITCH_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, slen);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
+        }
+        if (slen == 6 && !strncmp(code + s, "return", slen)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_RETURN_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, slen);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
+        }
+        if (slen == 5 && !strncmp(code + s, "const", slen)) {
+          if (!tokens_ahead) {
+            output->type = MC_TOKEN_CONST_KEYWORD;
+            allocate_and_copy_cstrn(output->text, code + s, slen);
+            output->start_index = s;
+            return 0;
+          }
+          else {
+            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+            return 0;
+          }
+        }
+      }
+
+      if (!tokens_ahead) {
+        output->type = MC_TOKEN_IDENTIFIER;
+        allocate_and_copy_cstrn(output->text, code + s, slen);
+        output->start_index = s;
+        return 0;
+      }
+
+      MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
+      return 0;
+    }
+
+    // Unhandled
+    MCcall(print_parse_error(code, i, "peek_mc_token", "default"));
+    MCerror(2837, "TODO:'%c'", code[i]);
+  }
+  }
+
+  MCerror(2996, "Flow error -- all cases end in return");
 }
 
 int parse_expression_lacking_midge_function_call(function_info *owner, char *code, int *i, char **expression)
@@ -3148,211 +3259,6 @@ int transcribe_array_access(function_info *owner, char *code, int *i, uint *tran
   free(identifier);
   // printf("after transcribe_array_access:\n'%s'\n", *transcription);
   return 0;
-}
-
-int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
-{
-  MCcall(parse_past_empty_text(code, &i));
-  // printf("peek_mc_token(): %u:'%c'\n", tokens_ahead, code[i]);
-  switch (code[i]) {
-  case '-': {
-    if (code[i + 1] == '>') {
-      if (!tokens_ahead) {
-        output->type = MC_TOKEN_POINTER_OPERATOR;
-        allocate_and_copy_cstr(output->text, "->");
-        output->start_index = i;
-        return 0;
-      }
-
-      MCcall(peek_mc_token(code, i + 2, tokens_ahead - 1, output));
-      return 0;
-    }
-    else if (code[i + 1] == '-') {
-      if (!tokens_ahead) {
-        output->type = MC_TOKEN_DECREMENT_OPERATOR;
-        allocate_and_copy_cstr(output->text, "--");
-        output->start_index = i;
-        return 0;
-      }
-
-      MCcall(peek_mc_token(code, i + 2, tokens_ahead - 1, output));
-      return 0;
-    }
-
-    if (!tokens_ahead) {
-      output->type = MC_TOKEN_SUBTRACT_OPERATOR;
-      allocate_and_copy_cstr(output->text, "-");
-      output->start_index = i;
-      return 0;
-    }
-
-    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
-    return 0;
-  }
-  case '*': {
-    if (!tokens_ahead) {
-      output->type = MC_TOKEN_STAR_OPERATOR;
-      allocate_and_copy_cstr(output->text, "*");
-      output->start_index = i;
-      return 0;
-    }
-    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
-    return 0;
-  }
-  case '(': {
-    if (!tokens_ahead) {
-      output->type = MC_TOKEN_OPEN_BRACKET;
-      allocate_and_copy_cstr(output->text, "(");
-      output->start_index = i;
-      return 0;
-    }
-    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
-    return 0;
-  }
-  case ';': {
-    if (!tokens_ahead) {
-      output->type = MC_TOKEN_SEMI_COLON;
-      allocate_and_copy_cstr(output->text, ";");
-      output->start_index = i;
-      return 0;
-    }
-    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
-    return 0;
-  }
-  case '[': {
-    if (!tokens_ahead) {
-      output->type = MC_TOKEN_SQUARE_OPEN_BRACKET;
-      allocate_and_copy_cstr(output->text, "[");
-      output->start_index = i;
-      return 0;
-    }
-    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
-    return 0;
-  }
-  case '=': {
-    if (code[i + 1] == '=') {
-      if (!tokens_ahead) {
-        output->type = MC_TOKEN_EQUALITY_OPERATOR;
-        allocate_and_copy_cstr(output->text, "==");
-        output->start_index = i;
-        return 0;
-      }
-
-      MCcall(peek_mc_token(code, i + 2, tokens_ahead - 1, output));
-      return 0;
-    }
-
-    if (!tokens_ahead) {
-      output->type = MC_TOKEN_ASSIGNMENT_OPERATOR;
-      allocate_and_copy_cstr(output->text, "=");
-      output->start_index = i;
-      return 0;
-    }
-
-    MCcall(peek_mc_token(code, i + 1, tokens_ahead - 1, output));
-    return 0;
-  }
-  default: {
-    if (isalpha(code[i])) {
-      int s = i;
-      while (isalnum(code[i]) || code[i] == '_')
-        ++i;
-
-      int slen = i - s;
-      {
-        // Keywords
-        if (slen == 2 && !strncmp(code + s, "if", slen)) {
-          if (!tokens_ahead) {
-            output->type = MC_TOKEN_IF_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, slen);
-            output->start_index = s;
-            return 0;
-          }
-          else {
-            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
-            return 0;
-          }
-        }
-        if (slen == 4 && !strncmp(code + s, "else", slen)) {
-          if (!tokens_ahead) {
-            output->type = MC_TOKEN_ELSE_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, slen);
-            output->start_index = s;
-            return 0;
-          }
-          else {
-            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
-            return 0;
-          }
-        }
-        if (slen == 5 && !strncmp(code + s, "while", slen)) {
-          if (!tokens_ahead) {
-            output->type = MC_TOKEN_WHILE_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, slen);
-            output->start_index = s;
-            return 0;
-          }
-          else {
-            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
-            return 0;
-          }
-        }
-        if (slen == 6 && !strncmp(code + s, "switch", slen)) {
-          if (!tokens_ahead) {
-            output->type = MC_TOKEN_SWITCH_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, slen);
-            output->start_index = s;
-            return 0;
-          }
-          else {
-            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
-            return 0;
-          }
-        }
-        if (slen == 6 && !strncmp(code + s, "return", slen)) {
-          if (!tokens_ahead) {
-            output->type = MC_TOKEN_RETURN_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, slen);
-            output->start_index = s;
-            return 0;
-          }
-          else {
-            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
-            return 0;
-          }
-        }
-        if (slen == 5 && !strncmp(code + s, "const", slen)) {
-          if (!tokens_ahead) {
-            output->type = MC_TOKEN_CONST_KEYWORD;
-            allocate_and_copy_cstrn(output->text, code + s, slen);
-            output->start_index = s;
-            return 0;
-          }
-          else {
-            MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
-            return 0;
-          }
-        }
-      }
-
-      if (!tokens_ahead) {
-        output->type = MC_TOKEN_IDENTIFIER;
-        allocate_and_copy_cstrn(output->text, code + s, slen);
-        output->start_index = s;
-        return 0;
-      }
-
-      MCcall(peek_mc_token(code, i, tokens_ahead - 1, output));
-      return 0;
-    }
-
-    // Unhandled
-    MCcall(print_parse_error(code, i, "peek_mc_token", "default"));
-    MCerror(2837, "TODO:'%c'", code[i]);
-  }
-  }
-
-  MCerror(2996, "Flow error -- all cases end in return");
 }
 
 int transcribe_statement(function_info *owner, char *code, int *i, uint *transcription_alloc, char **transcription)

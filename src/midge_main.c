@@ -5966,6 +5966,18 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
       mc_function_info_v1 *func_info;
 
       printf("parsing/processing '%s'||\n", definitions[a].declaration); //:\n%s, definitions[a].text);
+
+      // Lexer/Parse into AST
+      mc_syntax_node *function_ast;
+      MCcall(parse_mc_to_syntax_tree(definitions[a].text, &function_ast));
+
+      // Declare Function signature (if it is not already)
+      MCerror(5974, "TODO");
+
+      // Transcribe to MC code
+
+      // Instantiate the function with cling
+
       MCcall(parse_and_process_function_definition(definitions[a].text, &func_info, true));
 
       // Set Provided Source Path
@@ -6978,11 +6990,32 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   MCcall(clint_process("read_file_text = &read_file_text_v1;"));
 
+  char *input;
+  char *output;
   //  printf("processed_core_function:\n%s\n", output);
 
+  // mc_parser_lexer.c
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/mc_parser_lexer.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  MCcall(clint_declare(output));
+  free(input);
+  free(output);
+
+  MCcall(clint_process("parse_mc_to_syntax_tree = &parse_mc_to_syntax_tree_v1;"));
+  // MCcall(clint_process("function_live_debugger_handle_input = &function_live_debugger_handle_input_v1;"));
+  // MCcall(clint_process("function_live_debugger_render = &function_live_debugger_render_v1;"));
+
+  // midge_core_functions
   printf("icf-0\n");
-  // Parse
-  char *input;
   {
     // read_file_text(MODULE_FILEPATH, &module_list_text);
     void *mc_vargs[2];
@@ -6994,7 +7027,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   }
 
   printf("icf-1\n");
-  char *output;
   MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
   MCcall(clint_declare(output));
 
@@ -7021,7 +7053,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   printf("Loading Core Methods\n");
   MCcall(parse_and_process_mc_file(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/special_debug.c"));
-  // MCerror(100000, "----------MEASURED STOP----------");
+  MCerror(100000, "----------MEASURED STOP----------");
 
   MCcall(parse_and_process_mc_file(command_hub, "src/core/move_cursor_up.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/file_persistence.c"));
@@ -7033,26 +7065,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_input.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/mc_code_parser.c"));
   printf("hopee\n");
-
-  // mc_parser_lexer.c
-  {
-    // read_file_text(MODULE_FILEPATH, &module_list_text);
-    void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/mc_parser_lexer.c";
-    mc_vargs[0] = &filepath;
-    void *p_mc_vargs_1 = &input;
-    mc_vargs[1] = &p_mc_vargs_1;
-    MCcall(read_file_text(2, mc_vargs));
-  }
-
-  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
-  MCcall(clint_declare(output));
-  free(input);
-  free(output);
-
-  MCcall(clint_process("parse_mc_to_syntax_tree = &parse_mc_to_syntax_tree_v1;"));
-  // MCcall(clint_process("function_live_debugger_handle_input = &function_live_debugger_handle_input_v1;"));
-  // MCcall(clint_process("function_live_debugger_render = &function_live_debugger_render_v1;"));
 
   // code_editor.c
   {
