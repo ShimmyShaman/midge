@@ -654,6 +654,7 @@ typedef enum mc_token_type {
   MC_TOKEN_WHILE_KEYWORD,
   MC_TOKEN_FOR_KEYWORD,
   MC_TOKEN_SWITCH_KEYWORD,
+  MC_TOKEN_CONTINUE_KEYWORD,
   MC_TOKEN_RETURN_KEYWORD,
   MC_TOKEN_CONST_KEYWORD,
   MC_TOKEN_CURLY_OPEN_BRACKET,
@@ -692,6 +693,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_IF_STATEMENT,
   MC_SYNTAX_LOCAL_DECLARATION_STATEMENT,
   MC_SYNTAX_ASSIGNMENT_STATEMENT,
+  MC_SYNTAX_RETURN_STATEMENT,
   MC_SYNTAX_INVOKE_STATEMENT,
 
   MC_SYNTAX_SUPERNUMERARY,
@@ -770,6 +772,9 @@ typedef struct mc_syntax_node {
           mc_syntax_node *function_identity;
           mc_syntax_node_list *arguments;
         } invocation;
+        struct {
+          mc_syntax_node *expression;
+        } return_expression;
         struct {
           mc_syntax_node *variable;
           mc_syntax_node *value_expression;
