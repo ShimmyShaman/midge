@@ -688,8 +688,9 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_BLOCK,
+  MC_SYNTAX_FOR_STATEMENT,
+  MC_SYNTAX_IF_STATEMENT,
   MC_SYNTAX_LOCAL_DECLARATION_STATEMENT,
-  MC_SYNTAX_LOCAL_DECLARATION_ASSIGN_STATEMENT,
   MC_SYNTAX_ASSIGNMENT_STATEMENT,
   MC_SYNTAX_INVOKE_STATEMENT,
 
@@ -699,6 +700,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
   MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
+  MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION,
   MC_SYNTAX_FIXREMENT_EXPRESSION,
 } mc_syntax_node_type;
 
@@ -744,14 +746,18 @@ typedef struct mc_syntax_node {
           mc_syntax_node *conditional;
           mc_syntax_node *fix_expression;
           mc_syntax_node *code_block;
-        } for_loop;
+        } for_statement;
         struct {
-          mc_syntax_node *type_identifier;
-          mc_struct_info_v1 *mc_type;
-          // May be null indicating no dereference operators
-          mc_syntax_node *type_dereference;
-          mc_syntax_node *variable_name;
-        } local_declaration;
+          mc_syntax_node *conditional;
+          mc_syntax_node *code_block;
+          mc_syntax_node *else_continuance;
+        } if_statement;
+        struct {
+          mc_syntax_node *initialization;
+          mc_syntax_node *conditional;
+          mc_syntax_node *fix_expression;
+          mc_syntax_node *code_block;
+        } conditional;
         struct {
           mc_syntax_node *type_identifier;
           mc_struct_info_v1 *mc_type;
@@ -759,7 +765,7 @@ typedef struct mc_syntax_node {
           mc_syntax_node *type_dereference;
           mc_syntax_node *variable_name;
           mc_syntax_node *assignment_expression;
-        } local_declaration_assignment;
+        } local_declaration;
         struct {
           mc_syntax_node *function_identity;
           mc_syntax_node_list *arguments;
@@ -778,6 +784,10 @@ typedef struct mc_syntax_node {
           mc_syntax_node *access_operator;
           mc_syntax_node *identifier;
         } member_access_expression;
+        struct {
+          mc_syntax_node *primary;
+          mc_syntax_node *access_expression;
+        } element_access_expression;
         struct {
           mc_syntax_node *primary;
           mc_syntax_node *fix_operator;
