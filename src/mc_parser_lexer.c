@@ -107,6 +107,15 @@ const char *get_mc_token_type_name(mc_token_type type)
   }
 }
 
+int mcs_add_syntax_node_to_parent(mc_syntax_node *parent, mc_syntax_node *child)
+{
+  if (parent) {
+    MCcall(append_to_collection((void ***)&parent->children->items, &parent->children->alloc, &parent->children->count,
+                                child));
+  }
+  return 0;
+}
+
 int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, mc_syntax_node *parent,
                               mc_syntax_node **result)
 {
@@ -162,14 +171,14 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->invocation.arguments->count = 0;
   } break;
   case MC_SYNTAX_CONDITIONAL_EXPRESSION: {
-    syntax_node->conditional.left = NULL;
-    syntax_node->conditional.conditional_operator = NULL;
-    syntax_node->conditional.right = NULL;
+    syntax_node->conditional_expression.left = NULL;
+    syntax_node->conditional_expression.conditional_operator = NULL;
+    syntax_node->conditional_expression.right = NULL;
   } break;
-  case MC_SYNTAX_MEMBER_ACCESS:
+  case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
+  case MC_SYNTAX_STRING_LITERAL_EXPRESSION:
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:
-  case MC_SYNTAX_SUPERNUMERARY:
-  case MC_SYNTAX_EXPRESSION: {
+  case MC_SYNTAX_SUPERNUMERARY: {
     // TODO ?
   } break;
   default: {
@@ -183,8 +192,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   }
 
   if (parent) {
-    MCcall(append_to_collection((void ***)&parent->children->items, &parent->children->alloc, &parent->children->count,
-                                syntax_node));
+    MCcall(mcs_add_syntax_node_to_parent(parent, syntax_node));
   }
 
   *result = syntax_node;
@@ -730,42 +738,49 @@ int mcs_parse_through_supernumerary_tokens(parsing_state *ps, mc_syntax_node *pa
   return 0;
 }
 
-int mcs_parse_conditional_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **type_identifier,
+                              struct_info **mc_type)
 {
-  mc_syntax_node *conditional;
-  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_CONDITIONAL_EXPRESSION, parent, &conditional));
-  if (additional_destination) {
-    *additional_destination = conditional;
-  }
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
 
-  // Determine expression type
-  mc_token_type token0;
-  MCcall(mcs_peek_token_type(ps, false, 0, &token0));
-  switch (token0) {
-  case MC_TOKEN_IDENTIFIER: {
-    mc_token_type token1;
-    MCcall(mcs_peek_token_type(ps, false, 1, &token1));
-    switch (token1) {
-    default: {
-      print_parse_error(ps->code, ps->index, "see-below", "");
-      MCerror(742, "MCS:MC_TOKEN_IDENTIFIER>Unsupported-token:%s", get_mc_token_type_name(token1));
-    }
-    }
-  } break;
+  mc_token_type token_type;
+  MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+  switch (token_type) {
+  case MC_TOKEN_IDENTIFIER:
+  case MC_TOKEN_LONG_KEYWORD:
+  case MC_TOKEN_FLOAT_KEYWORD:
+  case MC_TOKEN_BOOL_KEYWORD:
+  case MC_TOKEN_INT_KEYWORD: {
+    // Valid
+    break;
+  }
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
-    MCerror(742, "MCS:Unsupported-token:%s", get_mc_token_type_name(token0));
+    MCerror(808, "MCS:>:ERR-token:%s", get_mc_token_type_name(token_type));
   }
   }
 
-  MCerror(746, "TODO--implement");
+  MCcall(mcs_parse_through_token(ps, parent, token_type, type_identifier));
+
+  // Convert to the appropriate type
+  {
+    void *vargs[3];
+    vargs[0] = &command_hub->nodespace;
+    vargs[1] = &(*type_identifier)->text;
+    vargs[2] = &(*mc_type);
+    find_struct_info(3, vargs);
+  }
+
+  return 0;
 }
 
-int mcs_parse_through_member_access_expression(parsing_state *ps, mc_syntax_node *parent,
-                                               mc_syntax_node **additional_destination)
+int mcs_parse_expression_member_access(parsing_state *ps, mc_syntax_node *parent,
+                                       mc_syntax_node **additional_destination)
 {
   mc_syntax_node *member_access;
-  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_MEMBER_ACCESS, parent, &member_access));
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_MEMBER_ACCESS_EXPRESSION, parent, &member_access));
   if (additional_destination) {
     *additional_destination = member_access;
   }
@@ -799,20 +814,28 @@ int mcs_parse_through_member_access_expression(parsing_state *ps, mc_syntax_node
   return 0;
 }
 
-int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+int mcs_parse_expression_unary(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
-  mc_syntax_node *expression;
-  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_EXPRESSION, parent, &expression));
-  if (additional_destination) {
-    *additional_destination = expression;
-  }
+  // mc_syntax_node *unary;
+  // MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_CONDITIONAL_EXPRESSION, parent, &unary));
+  // if (additional_destination) {
+  //   *additional_destination = unary;
+  // }
+
+  // MCcall(mcs_parse_expression_unary(ps, parent, additional_destination));
 
   // Determine expression type
   mc_token_type token0;
   MCcall(mcs_peek_token_type(ps, false, 0, &token0));
   switch (token0) {
   case MC_TOKEN_STRING_LITERAL: {
-    MCcall(mcs_parse_through_token(ps, expression, MC_TOKEN_STRING_LITERAL, NULL));
+    mc_syntax_node *string_literal;
+    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_STRING_LITERAL_EXPRESSION, parent, additional_destination));
+    // if (additional_destination) {
+    //   *additional_destination = expression;
+    // }
+
+    MCcall(mcs_parse_through_token(ps, string_literal, MC_TOKEN_STRING_LITERAL, NULL));
 
     while (1) {
       MCcall(mcs_peek_token_type(ps, false, 0, &token0));
@@ -820,25 +843,26 @@ int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
         break;
       }
 
-      MCcall(mcs_parse_through_supernumerary_tokens(ps, expression));
-      MCcall(mcs_parse_through_token(ps, expression, MC_TOKEN_STRING_LITERAL, NULL));
+      MCcall(mcs_parse_through_supernumerary_tokens(ps, string_literal));
+      MCcall(mcs_parse_through_token(ps, string_literal, MC_TOKEN_STRING_LITERAL, NULL));
     }
-
-    return 0;
-  }
+  } break;
   case MC_TOKEN_IDENTIFIER: {
     mc_token_type token1;
     MCcall(mcs_peek_token_type(ps, false, 1, &token1));
     switch (token1) {
     case MC_TOKEN_DECIMAL_POINT: {
-      MCcall(mcs_parse_through_member_access_expression(ps, expression, NULL));
+      MCerror(878, "TODO");
+      // MCcall(mcs_parse_expression_member_access(ps, expression, NULL));
     } break;
-    case MC_TOKEN_LESS_THAN_OPERATOR:
     case MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR:
-    case MC_TOKEN_MORE_THAN_OPERATOR:
+    case MC_TOKEN_LESS_THAN_OPERATOR:
     case MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR:
-    case MC_TOKEN_EQUALITY_OPERATOR: {
-      MCcall(mcs_parse_conditional_expression(ps, expression, NULL));
+    case MC_TOKEN_MORE_THAN_OPERATOR:
+    case MC_TOKEN_EQUALITY_OPERATOR:
+    case MC_TOKEN_INEQUALITY_OPERATOR: {
+      MCcall(mcs_parse_through_token(ps, parent, MC_TOKEN_IDENTIFIER, additional_destination));
+      return 0;
     } break;
     default: {
       print_parse_error(ps->code, ps->index, "see-below", "");
@@ -847,7 +871,7 @@ int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
     }
   } break;
   case MC_TOKEN_NUMERIC_LITERAL: {
-    MCcall(mcs_parse_through_token(ps, expression, MC_TOKEN_NUMERIC_LITERAL, NULL));
+    MCcall(mcs_parse_through_token(ps, parent, MC_TOKEN_NUMERIC_LITERAL, additional_destination));
   } break;
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
@@ -855,17 +879,145 @@ int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
   }
   }
 
-  // The after
+  return 0;
+}
+
+int mcs_parse_expression_operational(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *operational;
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_CONDITIONAL_EXPRESSION, parent, &operational));
+  if (additional_destination) {
+    *additional_destination = operational;
+  }
+
+  MCcall(mcs_parse_expression_unary(ps, parent, additional_destination));
+
+  // Determine expression type
+  mc_token_type token0;
   MCcall(mcs_peek_token_type(ps, false, 0, &token0));
   switch (token0) {
-  case MC_TOKEN_SEMI_COLON:
-  case MC_TOKEN_COMMA:
-  case MC_TOKEN_CLOSING_BRACKET: {
-    // Do Nothing
+  case MC_TOKEN_IDENTIFIER: {
+    mc_token_type token1;
+    MCcall(mcs_peek_token_type(ps, false, 1, &token1));
+    switch (token1) {
+    default: {
+      print_parse_error(ps->code, ps->index, "see-below", "");
+      MCerror(742, "MCS:MC_TOKEN_IDENTIFIER>Unsupported-token:%s", get_mc_token_type_name(token1));
+    }
+    }
   } break;
+  case MC_TOKEN_SEMI_COLON:
+  case MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR:
+  case MC_TOKEN_LESS_THAN_OPERATOR:
+  case MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR:
+  case MC_TOKEN_MORE_THAN_OPERATOR:
+  case MC_TOKEN_EQUALITY_OPERATOR:
+  case MC_TOKEN_INEQUALITY_OPERATOR: {
+    // Return
+    return 0;
+  }
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
-    MCerror(357, "MCS:After-initial-expression:Unsupported-token:%s", get_mc_token_type_name(token0));
+    MCerror(757, "MCS:Unsupported-token:%s", get_mc_token_type_name(token0));
+  }
+  }
+
+  MCerror(746, "TODO--implement");
+}
+
+int mcs_parse_expression_conditional(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *conditional;
+
+  mc_syntax_node *left;
+  MCcall(mcs_parse_expression_operational(ps, NULL, &left));
+
+  // Determine expression type
+  mc_token_type token0;
+  MCcall(mcs_peek_token_type(ps, false, 0, &token0));
+  switch (token0) {
+  case MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR:
+  case MC_TOKEN_LESS_THAN_OPERATOR:
+  case MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR:
+  case MC_TOKEN_MORE_THAN_OPERATOR:
+  case MC_TOKEN_EQUALITY_OPERATOR:
+  case MC_TOKEN_INEQUALITY_OPERATOR: {
+    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_CONDITIONAL_EXPRESSION, parent, &conditional));
+    if (additional_destination) {
+      *additional_destination = conditional;
+    }
+
+    conditional->conditional_expression.left = left;
+
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, conditional));
+    MCcall(mcs_parse_through_token(ps, conditional, token0, &conditional->conditional_expression.conditional_operator));
+  } break;
+  case MC_TOKEN_SEMI_COLON: {
+    // Expression ends here
+    if (parent) {
+      MCcall(mcs_add_syntax_node_to_parent(parent, left));
+    }
+    *additional_destination = left;
+    return 0;
+  }
+  default: {
+    print_parse_error(ps->code, ps->index, "see-below", "");
+    MCerror(867, "MCS:Unsupported-token:%s", get_mc_token_type_name(token0));
+  }
+  }
+
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, conditional));
+
+  MCerror(871, "TODO--implement");
+}
+
+/*unary-expression:
+  literal
+  numeric
+  member-access
+  increment
+  decrement
+  invoke
+  bracket-expression
+  not-expression
+
+operation-expression:
+  left: unary-expression
+  operator: NULL, *+/-||, &&, |, ^
+  right: NULL, operation-expression
+
+:evaluates to bool
+conditional-expression:
+  left: operation-expression
+  operator: NULL, ||, &&, |, ^, relational-operator, ==<> !=
+  right: NULL, conditional-expression
+
+inline-conditional-expression
+  conditional-expression
+  operation-expression ? conditional-expression : conditional-expression
+
+expression:
+  inline-conditional-expression*/
+int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  // mc_syntax_node *expression;
+  // MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_EXPRESSION, parent, &expression));
+  // if (additional_destination) {
+  //   *additional_destination = expression;
+  // }
+
+  MCcall(mcs_parse_expression_conditional(ps, parent, additional_destination));
+
+  // Determine next type
+  mc_token_type token0;
+  MCcall(mcs_peek_token_type(ps, false, 0, &token0));
+  switch (token0) {
+  case MC_TOKEN_SEMI_COLON: {
+    return 0;
+  }
+  default: {
+    print_parse_error(ps->code, ps->index, "see-below", "");
+    MCerror(287, "MCS:Unsupported-token:%s", get_mc_token_type_name(token0));
   }
   }
 
@@ -878,7 +1030,7 @@ int mcs_parse_assignment(parsing_state *ps, mc_syntax_node *parent)
   mc_syntax_node *statement;
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_ASSIGNMENT_STATEMENT, parent, &statement));
 
-  MCcall(mcs_parse_through_member_access_expression(ps, statement, &statement->assignment.variable));
+  MCcall(mcs_parse_expression_member_access(ps, statement, &statement->assignment.variable));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, statement));
 
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_ASSIGNMENT_OPERATOR, NULL));
@@ -897,7 +1049,7 @@ int mcs_parse_function_call_statement(parsing_state *ps, mc_syntax_node *parent)
   mc_syntax_node *statement;
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_INVOKE_STATEMENT, parent, &statement));
 
-  MCcall(mcs_parse_through_member_access_expression(ps, statement, &statement->invocation.function_identity));
+  MCcall(mcs_parse_expression_member_access(ps, statement, &statement->invocation.function_identity));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, statement));
 
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_OPEN_BRACKET, NULL));
@@ -950,44 +1102,6 @@ int mcs_parse_dereference_sequence(parsing_state *ps, mc_syntax_node *parent, mc
     }
 
     MCcall(mcs_parse_through_supernumerary_tokens(ps, sequence));
-  }
-
-  return 0;
-}
-
-int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **type_identifier,
-                              struct_info **mc_type)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  mc_token_type token_type;
-  MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
-  switch (token_type) {
-  case MC_TOKEN_IDENTIFIER:
-  case MC_TOKEN_LONG_KEYWORD:
-  case MC_TOKEN_FLOAT_KEYWORD:
-  case MC_TOKEN_BOOL_KEYWORD:
-  case MC_TOKEN_INT_KEYWORD: {
-    // Valid
-    break;
-  }
-  default: {
-    print_parse_error(ps->code, ps->index, "see-below", "");
-    MCerror(808, "MCS:>:ERR-token:%s", get_mc_token_type_name(token_type));
-  }
-  }
-
-  MCcall(mcs_parse_through_token(ps, parent, token_type, type_identifier));
-
-  // Convert to the appropriate type
-  {
-    void *vargs[3];
-    vargs[0] = &command_hub->nodespace;
-    vargs[1] = &(*type_identifier)->text;
-    vargs[2] = &(*mc_type);
-    find_struct_info(3, vargs);
   }
 
   return 0;
@@ -1111,7 +1225,7 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent)
     MCcall(mcs_parse_through_supernumerary_tokens(ps, statement));
   } break;
   case MC_TOKEN_IDENTIFIER: {
-    MCcall(mcs_parse_conditional_expression(ps, statement, &statement->for_loop.conditional));
+    MCcall(mcs_parse_expression_conditional(ps, statement, &statement->for_loop.conditional));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, statement));
   } break;
   default: {

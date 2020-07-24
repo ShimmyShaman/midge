@@ -1001,9 +1001,8 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   } break;
   case MC_SYNTAX_INVOKE_STATEMENT:
   case MC_SYNTAX_SUPERNUMERARY:
-  case MC_SYNTAX_EXPRESSION:
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:
-  case MC_SYNTAX_MEMBER_ACCESS: {
+  case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
     for (int a = 0; a < syntax_node->children->count; ++a) {
       mc_syntax_node *child = syntax_node->children->items[a];
 

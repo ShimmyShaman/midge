@@ -15,15 +15,15 @@ struct only_int_struct {
 // [_mc_iteration=3]
 void special_modification(only_int_struct *ais, only_int_struct *bis, int dint, int lint, int *pint)
 {
-  // // This stuff
-  // printf("SM: ais.a:%i bis.a:%i dint:%i lint:%i pint:%i\n", ais.a, bis->a, dint, lint, *pint);
+  // This stuff
+  printf("SM: ais.a:%i bis.a:%i dint:%i lint:%i pint:%i\n", ais.a, bis->a, dint, lint, *pint);
 
-  // ais.a += 2;
-  // bis->a += 2;
-  // dint += 2;
-  // lint += 2;
-  // *pint += 2;
-  // printf("SM: ais.a:%i bis.a:%i dint:%i lint:%i pint:%i\n", ais.a, bis->a, dint, lint, *pint);
+  ais.a += 2;
+  bis->a += 2;
+  dint += 2;
+  lint += 2;
+  *pint += 2;
+  printf("SM: ais.a:%i bis.a:%i dint:%i lint:%i pint:%i\n", ais.a, bis->a, dint, lint, *pint);
 }
 
 // [_mc_iteration=12]
@@ -34,21 +34,26 @@ void special_update(frame_time *elapsed)
   // s.num = 8;
   // s.add = 14;
 
-  // only_int_struct ais;
-  // ais.a = 7;
+  int e = 4 * 7 + 3 * 4;
+  if (e != 40) {
+    ERR(ERROR_COMPILER_OPERATOR_ORDER, "Fix it up");
+  }
 
-  // only_int_struct bis;
-  // bis.a = 7;
-  // only_int_struct *pbis = &bis;
+  only_int_struct ais;
+  ais.a = 7;
 
-  // int lint = 7;
+  only_int_struct bis;
+  bis.a = 7;
+  only_int_struct *pbis = &bis;
 
-  // int b = 7;
-  // int *pb = &b;
+  int lint = 7;
 
-  // special_modification(ais, pbis, 7, lint, pb);
+  int b = 7;
+  int *pb = &b;
 
-  // printf("SU-after: ais.a:%i bis.a:%i lint:%i pint:%i\n", ais.a, bis->a, lint, *pb);
+  special_modification(ais, pbis, 7, lint, pb);
+
+  printf("SU-after: ais.a:%i bis.a:%i lint:%i pint:%i\n", ais.a, bis->a, lint, *pb);
   // printf("special_update! s.num:%i\n", s.num);
 
   // printf("global_node_name:%s\n", command_hub->global_node->name);

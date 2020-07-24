@@ -641,7 +641,6 @@ typedef enum mc_token_type {
   MC_TOKEN_OPEN_BRACKET,
   MC_TOKEN_CLOSING_BRACKET,
   MC_TOKEN_SEMI_COLON,
-  MC_TOKEN_EQUALITY_OPERATOR,
   MC_TOKEN_DECREMENT_OPERATOR,
   MC_TOKEN_POINTER_OPERATOR,
   MC_TOKEN_ASSIGNMENT_OPERATOR,
@@ -667,6 +666,8 @@ typedef enum mc_token_type {
   MC_TOKEN_LESS_THAN_OPERATOR,
   MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR,
   MC_TOKEN_MORE_THAN_OPERATOR,
+  MC_TOKEN_EQUALITY_OPERATOR,
+  MC_TOKEN_INEQUALITY_OPERATOR,
   MC_TOKEN_CASE_KEYWORD,
   MC_TOKEN_DEFAULT_KEYWORD,
   MC_TOKEN_STRUCT_KEYWORD,
@@ -689,10 +690,10 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_INVOKE_STATEMENT,
 
   MC_SYNTAX_SUPERNUMERARY,
-  MC_SYNTAX_EXPRESSION,
+  MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
-  MC_SYNTAX_MEMBER_ACCESS,
+  MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
   MC_SYNTAX_PARAMETER_DECLARATION,
 } mc_syntax_node_type;
 
@@ -757,7 +758,7 @@ typedef struct mc_syntax_node {
           mc_syntax_node *left;
           mc_syntax_node *conditional_operator;
           mc_syntax_node *right;
-        } conditional;
+        } conditional_expression;
         struct {
           mc_syntax_node *initialization;
           mc_syntax_node *conditional;
