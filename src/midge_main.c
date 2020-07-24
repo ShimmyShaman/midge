@@ -5968,11 +5968,11 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
       printf("parsing/processing '%s'||\n", definitions[a].declaration); //:\n%s, definitions[a].text);
 
       // Lexer/Parse into AST
-      mc_syntax_node *function_ast;
-      MCcall(parse_mc_to_syntax_tree(definitions[a].text, &function_ast));
+      // mc_syntax_node *function_ast;
+      // MCcall(parse_mc_to_syntax_tree(definitions[a].text, &function_ast));
 
       // Declare Function signature (if it is not already)
-      MCerror(5974, "TODO");
+      // MCerror(5974, "TODO");
 
       // Transcribe to MC code
 
@@ -7053,7 +7053,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   printf("Loading Core Methods\n");
   MCcall(parse_and_process_mc_file(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/special_debug.c"));
-  MCerror(100000, "----------MEASURED STOP----------");
+  // MCerror(100000, "----------MEASURED STOP----------");
 
   MCcall(parse_and_process_mc_file(command_hub, "src/core/move_cursor_up.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/file_persistence.c"));

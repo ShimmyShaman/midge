@@ -713,9 +713,9 @@ int instantiate_function_v1(int argc, void **argv)
 
       if (type_struct_info) {
         allocate_and_copy_cstr(parameter_type, type_struct_info->declared_mc_name);
-        if (!func_info->parameters[i]->type_deref_count) {
-          MCerror(734, "TODO some deref acrobatics to deal with mc_types");
-        }
+        // if (!func_info->parameters[i]->type_deref_count) {
+        //   MCerror(734, "TODO some deref acrobatics to deal with mc_types");
+        // }
       }
       else {
         allocate_and_copy_cstr(parameter_type, func_info->parameters[i]->type_name);

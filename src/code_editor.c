@@ -1176,16 +1176,16 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   // Free the current syntax tree
   // cestate->syntax_tree
 
-  // Move to the code block
-  int i;
-  for (i = 0;; ++i) {
-    if (cstr[i] == '\0') {
-      MCerror(957, "TODO");
-    }
-    if (cstr[i] == '{') {
-      break;
-    }
-  }
+  // // Move to the code block
+  // int i;
+  // for (i = 0;; ++i) {
+  //   if (cstr[i] == '\0') {
+  //     MCerror(957, "TODO");
+  //   }
+  //   if (cstr[i] == '{') {
+  //     break;
+  //   }
+  // }
 
   if (cestate->source_interpretation.function_ast) {
     release_syntax_node(cestate->source_interpretation.function_ast);
@@ -1193,7 +1193,7 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   }
 
   // printf("cees-0\n");
-  int result = parse_mc_to_syntax_tree(cstr + i, &cestate->source_interpretation.function_ast);
+  int result = parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast);
   // printf("cees-2\n");
   if (result) {
     // printf("cees-3\n");

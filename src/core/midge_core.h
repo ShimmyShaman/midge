@@ -642,9 +642,13 @@ typedef enum mc_token_type {
   MC_TOKEN_CLOSING_BRACKET,
   MC_TOKEN_SEMI_COLON,
   MC_TOKEN_DECREMENT_OPERATOR,
+  MC_TOKEN_INCREMENT_OPERATOR,
   MC_TOKEN_POINTER_OPERATOR,
   MC_TOKEN_ASSIGNMENT_OPERATOR,
   MC_TOKEN_SUBTRACT_OPERATOR,
+  MC_TOKEN_PLUS_OPERATOR,
+  MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR,
+  MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR,
   MC_TOKEN_IF_KEYWORD,
   MC_TOKEN_ELSE_KEYWORD,
   MC_TOKEN_WHILE_KEYWORD,
@@ -690,11 +694,12 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_INVOKE_STATEMENT,
 
   MC_SYNTAX_SUPERNUMERARY,
+  MC_SYNTAX_DEREFERENCE_SEQUENCE,
+  MC_SYNTAX_PARAMETER_DECLARATION,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
-  MC_SYNTAX_DEREFERENCE_SEQUENCE,
   MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
-  MC_SYNTAX_PARAMETER_DECLARATION,
+  MC_SYNTAX_FIXREMENT_EXPRESSION,
 } mc_syntax_node_type;
 
 typedef struct mc_syntax_node_list {
@@ -725,12 +730,21 @@ typedef struct mc_syntax_node {
           mc_syntax_node *code_block;
         } function;
         struct {
+          uint count;
+        } dereference_sequence;
+        struct {
           mc_syntax_node *type_identifier;
           mc_struct_info_v1 *mc_type;
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *name;
         } parameter;
+        struct {
+          mc_syntax_node *initialization;
+          mc_syntax_node *conditional;
+          mc_syntax_node *fix_expression;
+          mc_syntax_node *code_block;
+        } for_loop;
         struct {
           mc_syntax_node *type_identifier;
           mc_struct_info_v1 *mc_type;
@@ -760,10 +774,15 @@ typedef struct mc_syntax_node {
           mc_syntax_node *right;
         } conditional_expression;
         struct {
-          mc_syntax_node *initialization;
-          mc_syntax_node *conditional;
-          mc_syntax_node *update_expression;
-        } for_loop;
+          mc_syntax_node *primary;
+          mc_syntax_node *access_operator;
+          mc_syntax_node *identifier;
+        } member_access_expression;
+        struct {
+          mc_syntax_node *primary;
+          mc_syntax_node *fix_operator;
+          bool postfix;
+        } fixrement_expression;
       };
     };
   };
