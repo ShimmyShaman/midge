@@ -871,7 +871,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
       MCcall(fld_append_visual_code(fld_view, "}"));
     }
   } break;
-  case MC_SYNTAX_LOCAL_DECLARATION_STATEMENT: {
+  case MC_SYNTAX_LOCAL_DECLARATION: {
     // Type
     if (syntax_node->local_declaration.mc_type) {
       MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.mc_type->declared_mc_name));

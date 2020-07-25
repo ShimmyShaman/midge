@@ -8,7 +8,8 @@ int find_in_str(char *str, char *seq)
   printf("seq:'%s'\n", seq);
   int len = strlen(seq);
   if (len < 1) {
-    ERR(ERROR_ARGUMENT, "seq length must be greater than 0");
+    // ERR(ERROR_ARGUMENT, "seq length must be greater than 0");
+    printf("TODO ERROR HANDLING\n");
   }
 
   printf("fis-1\n");
@@ -61,7 +62,8 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
 {
   printf("sftf-0\n");
   if (!function->source_file) {
-    ERR(ERROR_ARGUMENT, "function has no source file to save to.");
+    // ERR(ERROR_ARGUMENT, "function has no source file to save to.");
+    printf("TODO ERROR HANDLING\n");
   }
 
   char *file_text = read_file_text(function->source_file->filepath);
@@ -70,7 +72,7 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
   init_c_str(&save_text);
 
   int s = find_in_str(file_text, function->name);
-    printf("sftf-5 s:%i\n", s);
+  printf("sftf-5 s:%i\n", s);
   if (s >= 0) {
     // Move to before the return type
     --s;
@@ -86,7 +88,8 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
     char *tempfs = file_text + s;
     int i = find_in_str(tempfs, "{");
     if (i < 0) {
-      ERR(ERROR_FILE_FORMAT_ERROR1, "can't replace the function that was found. TODO safely deal with this");
+      // ERR(ERROR_FILE_FORMAT_ERROR1, "can't replace the function that was found. TODO safely deal with this");
+      printf("TODO ERROR HANDLING\n");
     }
     printf("sftf-7\n");
     {
@@ -106,7 +109,8 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
         ++i;
       }
       if (eof) {
-        ERR(ERROR_FILE_FORMAT_ERROR2, "can't replace the function that was found. TODO safely deal with this");
+        // ERR(ERROR_FILE_FORMAT_ERROR2, "can't replace the function that was found. TODO safely deal with this");
+        printf("TODO ERROR HANDLING\n");
       }
     }
 
@@ -157,7 +161,8 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
 void save_struct_to_file(struct_info *structure, char *structure_definition)
 {
   if (!structure->source_file) {
-    ERR(ERROR_ARGUMENT, "structure has no source file to save to.");
+    // ERR(ERROR_ARGUMENT, "structure has no source file to save to.");
+    printf("TODO ERROR HANDLING\n");
   }
 
   // save_structure_to_source_file()

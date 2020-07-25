@@ -131,19 +131,19 @@ int build_core_entry(node *core_display, int index)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  printf("bce-0\n");
+  // printf("bce-0\n");
   core_display_state *cdstate = (core_display_state *)core_display->extra;
 
-  printf("bce-1\n");
+  // printf("bce-1\n");
   mc_node_v1 *core_entry = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
   MCcall(append_to_collection((void ***)&cdstate->entry_visual_nodes.items, &cdstate->entry_visual_nodes.alloc,
                               &cdstate->entry_visual_nodes.count, core_entry));
-  printf("bce-2\n");
+  // printf("bce-2\n");
   core_entry->parent = core_display;
   cprintf(core_entry->name, "core_entry%i", index);
   core_entry->type = NODE_TYPE_VISUAL;
 
-  printf("bce-3\n");
+  // printf("bce-3\n");
   core_entry->data.visual.bounds.x = 0;
   core_entry->data.visual.bounds.y = 0;
   core_entry->data.visual.bounds.x = core_display->data.visual.bounds.x + 2;
@@ -159,7 +159,7 @@ int build_core_entry(node *core_display, int index)
   MCcall(append_to_collection((void ***)&core_display->children, &core_display->children_alloc,
                               &core_display->child_count, core_entry));
 
-  printf("bce-5\n");
+  // printf("bce-5\n");
   // Obtain visual resources
   pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
   resource_command *command;
@@ -172,7 +172,7 @@ int build_core_entry(node *core_display, int index)
   command->data.create_texture.width = core_entry->data.visual.bounds.width;
   command->data.create_texture.height = core_entry->data.visual.bounds.height;
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
-  printf("bce-8\n");
+  // printf("bce-8\n");
   return 0;
 }
 

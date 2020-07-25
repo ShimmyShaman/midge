@@ -655,9 +655,11 @@ typedef enum mc_token_type {
   MC_TOKEN_IF_KEYWORD,
   MC_TOKEN_ELSE_KEYWORD,
   MC_TOKEN_WHILE_KEYWORD,
+  MC_TOKEN_DO_KEYWORD,
   MC_TOKEN_FOR_KEYWORD,
   MC_TOKEN_SWITCH_KEYWORD,
   MC_TOKEN_CONTINUE_KEYWORD,
+  MC_TOKEN_BREAK_KEYWORD,
   MC_TOKEN_RETURN_KEYWORD,
   MC_TOKEN_CONST_KEYWORD,
   MC_TOKEN_CURLY_OPEN_BRACKET,
@@ -669,17 +671,25 @@ typedef enum mc_token_type {
   MC_TOKEN_DECIMAL_POINT,
   MC_TOKEN_NUMERIC_LITERAL,
   MC_TOKEN_STRING_LITERAL,
+  MC_TOKEN_CHAR_LITERAL,
   MC_TOKEN_COMMA,
   MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR,
   MC_TOKEN_LESS_THAN_OPERATOR,
   MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR,
   MC_TOKEN_MORE_THAN_OPERATOR,
+  MC_TOKEN_LOGICAL_AND_OPERATOR,
+  MC_TOKEN_BINARY_AND_ASSIGNMENT_OPERATOR,
+  MC_TOKEN_BINARY_AND_OPERATOR,
+  MC_TOKEN_LOGICAL_OR_OPERATOR,
+  MC_TOKEN_BINARY_OR_ASSIGNMENT_OPERATOR,
+  MC_TOKEN_BINARY_OR_OPERATOR,
   MC_TOKEN_EQUALITY_OPERATOR,
   MC_TOKEN_INEQUALITY_OPERATOR,
   MC_TOKEN_CASE_KEYWORD,
   MC_TOKEN_DEFAULT_KEYWORD,
   MC_TOKEN_STRUCT_KEYWORD,
   MC_TOKEN_VOID_KEYWORD,
+  MC_TOKEN_CHAR_KEYWORD,
   MC_TOKEN_INT_KEYWORD,
   MC_TOKEN_UNSIGNED_KEYWORD,
   MC_TOKEN_BOOL_KEYWORD,
@@ -693,8 +703,11 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_BLOCK,
   MC_SYNTAX_FOR_STATEMENT,
+  MC_SYNTAX_WHILE_STATEMENT,
   MC_SYNTAX_IF_STATEMENT,
-  MC_SYNTAX_LOCAL_DECLARATION_STATEMENT,
+  MC_SYNTAX_LOCAL_DECLARATION,
+  MC_SYNTAX_LOCAL_ARRAY_DECLARATION,
+  MC_SYNTAX_LOCAL_DECLARATION_AND_ASSIGN,
   MC_SYNTAX_ASSIGNMENT_STATEMENT,
   MC_SYNTAX_ARITHMETIC_ASSIGNMENT_STATEMENT,
   MC_SYNTAX_RETURN_STATEMENT,
@@ -703,7 +716,9 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_SUPERNUMERARY,
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
   MC_SYNTAX_PARAMETER_DECLARATION,
+  MC_SYNTAX_MODIFIED_TYPE,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
+  MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
   MC_SYNTAX_OPERATIONAL_EXPRESSION,
   MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
@@ -749,11 +764,20 @@ typedef struct mc_syntax_node {
           mc_syntax_node *name;
         } parameter;
         struct {
+          mc_syntax_node *type_modifier;
+          mc_syntax_node *type_identifier;
+        } modified_type;
+        struct {
           mc_syntax_node *initialization;
           mc_syntax_node *conditional;
           mc_syntax_node *fix_expression;
           mc_syntax_node *code_block;
         } for_statement;
+        struct {
+          bool do_first;
+          mc_syntax_node *conditional;
+          mc_syntax_node *code_block;
+        } while_statement;
         struct {
           mc_syntax_node *conditional;
           mc_syntax_node *code_block;
@@ -765,8 +789,17 @@ typedef struct mc_syntax_node {
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *variable_name;
+          mc_syntax_node *local_array_size_expression;
           mc_syntax_node *assignment_expression;
         } local_declaration;
+        struct {
+          mc_syntax_node *local_declaration;
+          mc_syntax_node *array_size_expression;
+        } local_array_declaration;
+        struct {
+          mc_syntax_node *local_declaration;
+          mc_syntax_node *assignment_expression;
+        } local_declaration_and_assign;
         struct {
           mc_syntax_node *function_identity;
           mc_syntax_node_list *arguments;
@@ -807,6 +840,10 @@ typedef struct mc_syntax_node {
           mc_syntax_node *fix_operator;
           bool postfix;
         } fixrement_expression;
+        struct {
+          mc_syntax_node *prepend_operator;
+          mc_syntax_node *unary_expression;
+        } prepended_unary;
       };
     };
   };
