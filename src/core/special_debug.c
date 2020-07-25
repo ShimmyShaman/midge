@@ -38,7 +38,9 @@ void special_update(frame_time *elapsed)
 
   int e = 4 * 7 + 3 * 4;
   if (e != 40) {
-    ERR(ERROR_COMPILER_OPERATOR_ORDER, "Fix it up");
+    // ERR(ERROR_COMPILER_OPERATOR_ORDER, "Fix it up");
+    printf("ERROR_ERROR_SPECIAL_UPDATE\n");
+    return;
   }
 
   // only_int_struct ais;

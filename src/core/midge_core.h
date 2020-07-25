@@ -645,8 +645,11 @@ typedef enum mc_token_type {
   MC_TOKEN_INCREMENT_OPERATOR,
   MC_TOKEN_POINTER_OPERATOR,
   MC_TOKEN_ASSIGNMENT_OPERATOR,
+  MC_TOKEN_NOT_OPERATOR,
   MC_TOKEN_SUBTRACT_OPERATOR,
   MC_TOKEN_PLUS_OPERATOR,
+  MC_TOKEN_DIVIDE_OPERATOR,
+  MC_TOKEN_MODULO_OPERATOR,
   MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR,
   MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR,
   MC_TOKEN_IF_KEYWORD,
@@ -693,6 +696,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_IF_STATEMENT,
   MC_SYNTAX_LOCAL_DECLARATION_STATEMENT,
   MC_SYNTAX_ASSIGNMENT_STATEMENT,
+  MC_SYNTAX_ARITHMETIC_ASSIGNMENT_STATEMENT,
   MC_SYNTAX_RETURN_STATEMENT,
   MC_SYNTAX_INVOKE_STATEMENT,
 
@@ -701,6 +705,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_PARAMETER_DECLARATION,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
+  MC_SYNTAX_OPERATIONAL_EXPRESSION,
   MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
   MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION,
   MC_SYNTAX_FIXREMENT_EXPRESSION,
@@ -755,12 +760,6 @@ typedef struct mc_syntax_node {
           mc_syntax_node *else_continuance;
         } if_statement;
         struct {
-          mc_syntax_node *initialization;
-          mc_syntax_node *conditional;
-          mc_syntax_node *fix_expression;
-          mc_syntax_node *code_block;
-        } conditional;
-        struct {
           mc_syntax_node *type_identifier;
           mc_struct_info_v1 *mc_type;
           // May be null indicating no dereference operators
@@ -780,10 +779,20 @@ typedef struct mc_syntax_node {
           mc_syntax_node *value_expression;
         } assignment;
         struct {
+          mc_syntax_node *variable;
+          mc_syntax_node *assignment_operator;
+          mc_syntax_node *value_expression;
+        } arithmetic_assignment;
+        struct {
           mc_syntax_node *left;
           mc_syntax_node *conditional_operator;
           mc_syntax_node *right;
         } conditional_expression;
+        struct {
+          mc_syntax_node *left;
+          mc_syntax_node *operational_operator;
+          mc_syntax_node *right;
+        } operational_expression;
         struct {
           mc_syntax_node *primary;
           mc_syntax_node *access_operator;
