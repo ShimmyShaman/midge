@@ -8,16 +8,63 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-typedef struct {
+typedef struct mthread_info {
   pthread_t threadId;
   void *(*start_routine)(void *);
-  bool should_exit, has_concluded;
-  bool should_pause, has_paused;
+  int should_exit, has_concluded;
+  int should_pause, has_paused;
 } mthread_info;
+
+// void *mthread_wrapper_delegate(void *ws)
+// {
+//   void **args = (void **)ws;
+//   printf("boop\n");
+//   printf("bap %p\n", args[0]);
+//   void *(*start_routine)(void *) = (void *(*)(void *))args[0];
+//   printf("bop\n");
+//   mthread_info *thread_info = (mthread_info *)args[1];
+//   printf("boom\n");
+//   void *state = args[2];
+
+//   printf("bum\n");
+//   void *result;
+//   if (!thread_info->should_exit) {
+//   printf("bim %p\n", start_routine);
+//     result = start_routine(state);
+//   }
+
+//   printf("bam\n");
+//   thread_info->has_concluded = 1;
+
+//   return result;
+// }
+
+// int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void *state)
+// {
+//   printf("bim %p\n", start_routine);
+//   *p_thread_info = (mthread_info *)malloc(sizeof *p_thread_info);
+//   (*p_thread_info)->start_routine = start_routine;
+
+//   (*p_thread_info)->should_exit = 0;
+//   (*p_thread_info)->has_concluded = 0;
+//   (*p_thread_info)->should_pause = 0;
+//   (*p_thread_info)->has_paused = 0;
+
+//   void *vargs[3];
+//   vargs[0] = (void *)start_routine;
+//   printf("bap %p\n", vargs[0]);
+//   vargs[1] = (void *)(*p_thread_info);
+//   vargs[2] = (void *)state;
+
+//   if (pthread_create(&(*p_thread_info)->threadId, NULL, mthread_wrapper_delegate, (void *)vargs)) {
+//     return 0;
+//   }
+//   return -1;
+// }
 
 int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void *state)
 {
-  *p_thread_info = (mthread_info *)malloc(sizeof *p_thread_info);
+  *p_thread_info = (mthread_info *)malloc(sizeof (mthread_info));
   (*p_thread_info)->start_routine = start_routine;
 
   (*p_thread_info)->should_exit = 0;

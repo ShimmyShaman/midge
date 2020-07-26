@@ -2309,6 +2309,40 @@ int mc_dummy_function_v1(int argc, void **argv)
   return 0;
 }
 
+// void (*pslp)(mthread_info *);
+// void sleepit(mthread_info *doti)
+// {
+//   int count = 0;
+//   while (!doti->should_exit && count < 1000) {
+//     usleep(1000);
+//     ++count;
+//   }
+//   printf("an second %i\n", count);
+// }
+// void sleepahalf(mthread_info *doti)
+// {
+//   int count = 0;
+//   while (!doti->should_exit && count < 500) {
+//     usleep(1000);
+//     ++count;
+//   }
+//   printf("an half second %i\n", count);
+// }
+
+// void *do_thread(void *vargp)
+// {
+//   mthread_info *doti = *(mthread_info **)vargp;
+//   printf("se:%p\n", &doti->should_exit);
+//   while (!doti->should_exit) {
+//     pslp(doti);
+//   }
+
+//   printf("an exit\n");
+//   doti->has_concluded = true;
+
+//   return NULL;
+// }
+
 void *midge_render_thread(void *vargp);
 
 int init_core_structures(mc_command_hub_v1 *command_hub);
@@ -2316,8 +2350,35 @@ int init_core_functions(mc_command_hub_v1 *command_hub);
 int init_process_matrix(mc_command_hub_v1 *command_hub);
 int init_command_hub_process_matrix(mc_command_hub_v1 *command_hub);
 int submit_user_command(int argc, void **argsv);
+
+#include "m_threads.h"
 int mc_main(int argc, const char *const *argv)
 {
+  // pslp = sleepit;
+  // // -- Start Thread
+  // mthread_info *doti;
+  // begin_mthread(&do_thread, &doti, &doti);
+
+  // // printf("se:%p\n", &doti->should_exit);
+  // usleep(3200000);
+  // // pslp = sleepahalf;
+
+  // clint_declare("void sleepit(mthread_info *doti)"
+  //               "{"
+  //               "  int count = 0;"
+  //               "  while (!doti->should_exit && count < 1000) {"
+  //               "    usleep(1000);"
+  //               "    ++count;"
+  //               "  }"
+  //               "  printf(\"an second %i\\n\", count);"
+  //               "}");
+
+  // usleep(3200000);
+  // end_mthread(doti);
+
+  // return 0;
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
   struct timespec mc_main_begin_time;
   clock_gettime(CLOCK_REALTIME, &mc_main_begin_time);
 
@@ -7011,10 +7072,8 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(output);
 
   MCcall(clint_process("parse_mc_to_syntax_tree = &parse_mc_to_syntax_tree_v1;"));
-  // MCcall(clint_process("function_live_debugger_handle_input = &function_live_debugger_handle_input_v1;"));
-  // MCcall(clint_process("function_live_debugger_render = &function_live_debugger_render_v1;"));
 
-  // midge_core_functions
+  // midge_core_functions.c
   printf("icf-0\n");
   {
     // read_file_text(MODULE_FILEPATH, &module_list_text);

@@ -28,20 +28,21 @@ void special_modification(special_data *s)
   // printf("SM: ais.a:%i bis.a:%i dint:%i lint:%i pint:%i\n", ais.a, bis->a, dint, lint, *pint);
 }
 
+void special_syntax()
+{
+  int e = 4 * 7 + 3 * 4;
+
+  char b = (char)e + 'a';
+  return;
+}
+
 // [_mc_iteration=12]
 void special_update(frame_time *elapsed)
 {
   // printf("special_update! @ %li appsecs\n", elapsed->app_secs);
-  special_data s;
-  s.num = 8;
-  s.add = 14;
-
-  int e = 4 * 7 + 3 * 4;
-  if (e != 40) {
-    // ERR(ERROR_COMPILER_OPERATOR_ORDER, "Fix it up");
-    printf("ERROR_ERROR_SPECIAL_UPDATE\n");
-    return;
-  }
+  // special_data s;
+  // s.num = 8;
+  // s.add = 14;
 
   // only_int_struct ais;
   // ais.a = 7;

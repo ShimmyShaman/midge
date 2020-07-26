@@ -718,6 +718,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_PARAMETER_DECLARATION,
   MC_SYNTAX_MODIFIED_TYPE,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
+  MC_SYNTAX_CAST_EXPRESSION,
   MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
   MC_SYNTAX_OPERATIONAL_EXPRESSION,
@@ -844,6 +845,12 @@ typedef struct mc_syntax_node {
           mc_syntax_node *prepend_operator;
           mc_syntax_node *unary_expression;
         } prepended_unary;
+        struct {
+          mc_syntax_node *type_identifier;
+          mc_struct_info_v1 *mc_type;
+          // May be null indicating no dereference operators
+          mc_syntax_node *type_dereference;
+        } cast_expression;
       };
     };
   };

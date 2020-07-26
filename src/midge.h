@@ -83,13 +83,15 @@ int clint_declare(const char *str) { return clint->declare(str); }
 
 void *clint_compile_function(const char *name, const char *str) { return clint->compileFunction(name, str); }
 
-int clint_loadfile(const char *path) { return clint->loadFile(path); }
+int clint_loadfile(const char *path) {
+   return clint->loadFile(path); }
 
 int clint_loadheader(const char *path) { return clint->loadHeader(path); }
 }
 
 void run()
 {
+  // clint->allowRedefinition();
   try {
     // Include Paths
     // clint->AddIncludePath("/usr/include");

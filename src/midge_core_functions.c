@@ -3721,8 +3721,8 @@ int debug_automation(int argc, void **argv)
     sim->altDown = false;
     sim->ctrlDown = false;
     sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    sim->detail.mouse.x = 94;
-    sim->detail.mouse.y = 89;
+    sim->detail.mouse.x = 135;
+    sim->detail.mouse.y = 45;
     {
       void *vargs[3];
       vargs[0] = argv[0];
@@ -3746,7 +3746,7 @@ int debug_automation(int argc, void **argv)
     sim->ctrlDown = false;
     sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
     sim->detail.mouse.x = 89;
-    sim->detail.mouse.y = 220;
+    sim->detail.mouse.y = 146;
     {
       void *vargs[3];
       vargs[0] = argv[0];

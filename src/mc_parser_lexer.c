@@ -11,6 +11,7 @@ typedef struct parsing_state {
   int index;
   int line;
   int col;
+
 } parsing_state;
 
 int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
@@ -1073,6 +1074,31 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   return 0;
 }
 
+int mcs_parse_dereference_sequence(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  // printf("mcs_parse_dereference_sequence()\n");
+  mc_syntax_node *sequence;
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_DEREFERENCE_SEQUENCE, parent, &sequence));
+  if (additional_destination) {
+    *additional_destination = sequence;
+  }
+
+  while (1) {
+    MCcall(mcs_parse_through_token(ps, sequence, MC_TOKEN_STAR_OPERATOR, NULL));
+    ++sequence->dereference_sequence.count;
+
+    mc_token_type token0;
+    MCcall(mcs_peek_token_type(ps, false, 0, &token0));
+    if (token0 != MC_TOKEN_STAR_OPERATOR) {
+      break;
+    }
+
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, sequence));
+  }
+
+  return 0;
+}
+
 int mcs_parse_expression_variable_access(parsing_state *ps, mc_syntax_node *parent,
                                          mc_syntax_node **additional_destination)
 {
@@ -1250,6 +1276,8 @@ int mcs_parse_fixrement_operation(parsing_state *ps, mc_syntax_node *parent, mc_
 
 int mcs_parse_bracketed_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
+  MCerror(1279, "TODO mcs_parse_bracketed_expression");
+
   // Determine expression type
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
@@ -1291,12 +1319,12 @@ int mcs_parse_bracketed_expression(parsing_state *ps, mc_syntax_node *parent, mc
     MCcall(mcs_parse_through_token(ps, cast_expression, MC_TOKEN_CLOSING_BRACKET, NULL));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, cast_expression));
 
-    MCcall(mcs_parse_expression()
+    // MCcall(mcs_parse_expression()
 
   } break;
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
-    MCerror(1249, "MCS:Unsupported-token:%s", get_mc_token_type_name(token1));
+    MCerror(1249, "MCS:Unsupported-token:%s", get_mc_token_type_name(token_type));
   }
   }
 
@@ -1660,31 +1688,6 @@ int mcs_parse_arithmetic_assignment(parsing_state *ps, mc_syntax_node *parent, m
   MCcall(mcs_parse_through_supernumerary_tokens(ps, statement));
 
   MCcall(mcs_parse_expression(ps, statement, &statement->arithmetic_assignment.value_expression));
-
-  return 0;
-}
-
-int mcs_parse_dereference_sequence(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
-{
-  // printf("mcs_parse_dereference_sequence()\n");
-  mc_syntax_node *sequence;
-  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_DEREFERENCE_SEQUENCE, parent, &sequence));
-  if (additional_destination) {
-    *additional_destination = sequence;
-  }
-
-  while (1) {
-    MCcall(mcs_parse_through_token(ps, sequence, MC_TOKEN_STAR_OPERATOR, NULL));
-    ++sequence->dereference_sequence.count;
-
-    mc_token_type token0;
-    MCcall(mcs_peek_token_type(ps, false, 0, &token0));
-    if (token0 != MC_TOKEN_STAR_OPERATOR) {
-      break;
-    }
-
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, sequence));
-  }
 
   return 0;
 }
