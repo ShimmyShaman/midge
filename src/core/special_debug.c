@@ -30,15 +30,15 @@ void special_modification(special_data *s)
 
 void special_syntax()
 {
-  int e = 4 * 7 + 3 * 4;
-
-  char b = (char)e + 'a';
-  return;
+  int e = 1 * 2 + 3 * 4 - 5;
 }
 
 // [_mc_iteration=12]
 void special_update(frame_time *elapsed)
 {
+
+  // char b = (char)e + 'a';
+  return;
   // printf("special_update! @ %li appsecs\n", elapsed->app_secs);
   // special_data s;
   // s.num = 8;
