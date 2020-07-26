@@ -14,6 +14,7 @@ typedef struct parsing_state {
 
 } parsing_state;
 
+int mcs_parse_expression_unary(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 
@@ -265,6 +266,12 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION: {
     syntax_node->fixrement_expression.primary = NULL;
     syntax_node->fixrement_expression.fix_operator = NULL;
+  } break;
+  case MC_SYNTAX_CAST_EXPRESSION: {
+    syntax_node->cast_expression.type_identifier = NULL;
+    syntax_node->cast_expression.type_dereference = NULL;
+    syntax_node->cast_expression.mc_type = NULL;
+    syntax_node->cast_expression.expression = NULL;
   } break;
   case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
     // Nothing for the moment
@@ -1276,8 +1283,6 @@ int mcs_parse_fixrement_operation(parsing_state *ps, mc_syntax_node *parent, mc_
 
 int mcs_parse_bracketed_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
-  MCerror(1279, "TODO mcs_parse_bracketed_expression");
-
   // Determine expression type
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
@@ -1319,12 +1324,11 @@ int mcs_parse_bracketed_expression(parsing_state *ps, mc_syntax_node *parent, mc
     MCcall(mcs_parse_through_token(ps, cast_expression, MC_TOKEN_CLOSING_BRACKET, NULL));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, cast_expression));
 
-    // MCcall(mcs_parse_expression()
-
+    MCcall(mcs_parse_expression_unary(ps, cast_expression, &cast_expression->cast_expression.expression));
   } break;
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
-    MCerror(1249, "MCS:Unsupported-token:%s", get_mc_token_type_name(token_type));
+    MCerror(1325, "MCS:Unsupported-token:%s", get_mc_token_type_name(token_type));
   }
   }
 
@@ -2106,6 +2110,20 @@ int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
   return 0;
 }
 
+int mcs_print_syntax_tree(mc_syntax_node *syntax_node, int depth)
+{
+  for (int i = 0; i < depth; ++i) {
+    printf("  ");
+  }
+  printf("|-%s\n", get_mc_token_type_name((mc_token_type)syntax_node->type));
+
+  for (int i = 0; i < syntax_node->children->count; ++i) {
+    MCcall(mcs_print_syntax_tree(syntax_node->children->items[i], depth + 1));
+  }
+
+  return 0;
+}
+
 int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_block_ast)
 {
   // printf("mc_syntax_node:%zu\n", sizeof(mc_syntax_node));
@@ -2179,5 +2197,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_block_ast)
 
   // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never cleared
   MCcall(mcs_parse_code_block(ps, function, &function->function.code_block));
+
+  MCcall(mcs_print_syntax_tree(function, 0));
   return 0;
 }
