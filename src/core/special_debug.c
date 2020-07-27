@@ -46,11 +46,10 @@ void special_update(frame_time *elapsed)
 {
 
   // char b = (char)e + 'a';
-  return;
   // printf("special_update! @ %li appsecs\n", elapsed->app_secs);
-  // special_data s;
-  // s.num = 8;
-  // s.add = 14;
+  special_data s;
+  s.num = 8;
+  s.add = 14;
 
   // only_int_struct ais;
   // ais.a = 7;

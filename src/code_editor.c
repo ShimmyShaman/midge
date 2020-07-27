@@ -830,7 +830,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   switch (syntax_node->type) {
   case MC_SYNTAX_BLOCK: {
     if (transcription_state->scope_depth > 0) {
-      if ((int)syntax_node->children->items[0]->type != (int)MC_TOKEN_CURLY_OPEN_BRACKET) {
+      if ((int)syntax_node->children->items[0]->type != (int)MC_TOKEN_CURLY_OPENING_BRACKET) {
         MCerror(641, "AST Format Error");
       }
 
@@ -999,7 +999,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
       }
     }
   } break;
-  case MC_SYNTAX_INVOKE_STATEMENT:
+  case MC_SYNTAX_INVOCATION:
   case MC_SYNTAX_SUPERNUMERARY:
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
@@ -1193,23 +1193,24 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   }
 
   // printf("cees-0\n");
-  int result = parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast);
+  // int result = parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast);
+  MCcall(parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast));
   // printf("cees-2\n");
-  if (result) {
-    // printf("cees-3\n");
-    release_syntax_node(cestate->source_interpretation.function_ast);
-    cestate->source_interpretation.function_ast = NULL;
+  // if (result) {
+  //   // printf("cees-3\n");
+  //   release_syntax_node(cestate->source_interpretation.function_ast);
+  //   cestate->source_interpretation.function_ast = NULL;
 
-    // printf("cees-4\n");
-    cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
-    cestate->status_bar.requires_render_update = true;
-    // printf("cees-5\n");
-  }
-  else {
+  //   // printf("cees-4\n");
+  //   cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
+  //   cestate->status_bar.requires_render_update = true;
+  //   // printf("cees-5\n");
+  // }
+  // else {
 
-    cprintf(cestate->status_bar.message, "", result);
-    cestate->status_bar.requires_render_update = true;
-  }
+  //   cprintf(cestate->status_bar.message, "", result);
+  //   cestate->status_bar.requires_render_update = true;
+  // }
   // printf("cees-7\n");
 
   return 0;
