@@ -643,6 +643,7 @@ typedef enum mc_token_type {
   MC_TOKEN_OPEN_BRACKET,
   MC_TOKEN_CLOSING_BRACKET,
   MC_TOKEN_SEMI_COLON,
+  MC_TOKEN_COLON,
   MC_TOKEN_DECREMENT_OPERATOR,
   MC_TOKEN_INCREMENT_OPERATOR,
   MC_TOKEN_POINTER_OPERATOR,
@@ -665,6 +666,7 @@ typedef enum mc_token_type {
   MC_TOKEN_BREAK_KEYWORD,
   MC_TOKEN_RETURN_KEYWORD,
   MC_TOKEN_CONST_KEYWORD,
+  MC_TOKEN_SIZEOF_KEYWORD,
   MC_TOKEN_CURLY_OPENING_BRACKET,
   MC_TOKEN_CURLY_CLOSING_BRACKET,
   MC_TOKEN_NEW_LINE,
@@ -705,9 +707,17 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_BLOCK,
+  MC_SYNTAX_STATEMENT_LIST,
   MC_SYNTAX_FOR_STATEMENT,
   MC_SYNTAX_WHILE_STATEMENT,
   MC_SYNTAX_IF_STATEMENT,
+  MC_SYNTAX_SWITCH_STATEMENT,
+  MC_SYNTAX_SWITCH_SECTION,
+  MC_SYNTAX_SWITCH_CASE_LABEL,
+  MC_SYNTAX_SWITCH_DEFAULT_LABEL,
+  MC_SYNTAX_CONTINUE_STATEMENT,
+  MC_SYNTAX_BREAK_STATEMENT,
+  MC_SYNTAX_EXPRESSION_STATEMENT,
   MC_SYNTAX_LOCAL_DECLARATION,
   MC_SYNTAX_LOCAL_ARRAY_DECLARATION,
   MC_SYNTAX_LOCAL_DECLARATION_AND_ASSIGN,
@@ -722,6 +732,8 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_MODIFIED_TYPE,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CAST_EXPRESSION,
+  MC_SYNTAX_PARENTHESIZED_EXPRESSION,
+  MC_SYNTAX_SIZEOF_EXPRESSION,
   MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
   MC_SYNTAX_RELATIONAL_EXPRESSION,
@@ -773,6 +785,12 @@ typedef struct mc_syntax_node {
           mc_syntax_node *type_identifier;
         } modified_type;
         struct {
+          mc_syntax_node_list *statements;
+        } statement_list;
+        struct {
+          mc_syntax_node *statement_list;
+        } block_node;
+        struct {
           mc_syntax_node *initialization;
           mc_syntax_node *conditional;
           mc_syntax_node *fix_expression;
@@ -788,6 +806,20 @@ typedef struct mc_syntax_node {
           mc_syntax_node *code_block;
           mc_syntax_node *else_continuance;
         } if_statement;
+        struct {
+          mc_syntax_node *conditional;
+          mc_syntax_node_list *sections;
+        } switch_statement;
+        struct {
+          mc_syntax_node *expression;
+        } expression_statement;
+        struct {
+          mc_syntax_node_list *labels;
+          mc_syntax_node *statement_list;
+        } switch_section;
+        struct {
+          mc_syntax_node *constant;
+        } switch_case_label;
         struct {
           mc_syntax_node *type_identifier;
           mc_struct_info_v1 *mc_type;
@@ -811,7 +843,7 @@ typedef struct mc_syntax_node {
         } invocation;
         struct {
           mc_syntax_node *expression;
-        } return_expression;
+        } return_statement;
         struct {
           mc_syntax_node *variable;
           mc_syntax_node *value_expression;
@@ -861,6 +893,15 @@ typedef struct mc_syntax_node {
           mc_syntax_node *type_dereference;
           mc_syntax_node *expression;
         } cast_expression;
+        struct {
+          mc_syntax_node *expression;
+        } parenthesized_expression;
+        struct {
+          mc_syntax_node *type_identifier;
+          mc_struct_info_v1 *mc_type;
+          // May be null indicating no dereference operators
+          mc_syntax_node *type_dereference;
+        } sizeof_expression;
       };
     };
   };
