@@ -735,7 +735,7 @@ int fld_count_dereference_in_syntax_node(mc_syntax_node *syntax_node, uint *dere
     mc_syntax_node *child = syntax_node->children->items[a];
     printf("here-46\n");
 
-    if ((mc_token_type)child->type == MC_TOKEN_STAR_OPERATOR) {
+    if ((mc_token_type)child->type == MC_TOKEN_STAR_CHARACTER) {
       printf("here-47\n");
       ++*deref_count;
     }

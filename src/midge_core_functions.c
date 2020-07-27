@@ -1759,7 +1759,7 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
   }
   case '*': {
     if (!tokens_ahead) {
-      output->type = MC_TOKEN_STAR_OPERATOR;
+      output->type = MC_TOKEN_STAR_CHARACTER;
       allocate_and_copy_cstr(output->text, "*");
       output->start_index = i;
       return 0;
@@ -2064,11 +2064,11 @@ int transcribe_bracketed_expression(function_info *owner, char *code, int *i, ui
     mc_token token1;
     MCcall(peek_mc_token(code, *i, 1, &token1));
     switch (token1.type) {
-    case MC_TOKEN_STAR_OPERATOR: {
+    case MC_TOKEN_STAR_CHARACTER: {
       mc_token token2;
       MCcall(peek_mc_token(code, *i, 1, &token2));
       switch (token2.type) {
-      case MC_TOKEN_STAR_OPERATOR: {
+      case MC_TOKEN_STAR_CHARACTER: {
         MCerror(1884, "type cast TODO");
       } break;
       default: {
@@ -3372,14 +3372,14 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       mc_token token2;
       MCcall(peek_mc_token(code, *i, 2, &token2));
       switch (token2.type) {
-      case MC_TOKEN_STAR_OPERATOR: {
+      case MC_TOKEN_STAR_CHARACTER: {
         // Some sort of declarative statement
         // -- move past further dereference operators
         mc_token token3;
         int peek = 3;
         while (1) {
           MCcall(peek_mc_token(code, *i, peek, &token3));
-          if (token3.type == MC_TOKEN_STAR_OPERATOR) {
+          if (token3.type == MC_TOKEN_STAR_CHARACTER) {
             ++peek;
             free(token3.text);
             continue;
@@ -3436,14 +3436,14 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       }
       free(token2.text);
     } break;
-    case MC_TOKEN_STAR_OPERATOR: {
+    case MC_TOKEN_STAR_CHARACTER: {
       // Some sort of declarative statement
       // -- move past further dereference operators
       mc_token token2;
       int peek = 2;
       while (1) {
         MCcall(peek_mc_token(code, *i, peek, &token2));
-        if (token2.type == MC_TOKEN_STAR_OPERATOR) {
+        if (token2.type == MC_TOKEN_STAR_CHARACTER) {
           ++peek;
           free(token2.text);
           continue;

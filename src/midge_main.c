@@ -5783,7 +5783,7 @@ int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
       // printf("exit:%i\n", i);
     } break;
     case '/': {
-      if (file_text[i] == '*') {
+      if (file_text[i + 1] == '*') {
         ++i;
         while (file_text[i] != '*' || file_text[i + 1] != '/') {
           if (file_text[i] == '\0') {
@@ -5799,7 +5799,7 @@ int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
         }
         i += 2;
       }
-      else if (file_text[i] == '/') {
+      else if (file_text[i + 1] == '/') {
 
         // printf("start-line-comment:%i\n", i);
         while (file_text[i] != '\n') {
@@ -5827,7 +5827,7 @@ int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
 
   *exclusive_end = i;
 
-  printf("returns;\n");
+  // printf("returns;\n");
   return 0;
 }
 
@@ -5907,6 +5907,9 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
         open_bracket_index += s;
         i += s;
 
+        // print_parse_error(file_text, s, "text-begin", "");
+        // print_parse_error(file_text, i, "text-end", "");
+
         if (!strncmp(file_text + s, "struct ", 7)) {
           // Struct
 
@@ -5956,10 +5959,11 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
         definitions[definition_count].declaration[open_bracket_index - s] = ';';
         definitions[definition_count].declaration[open_bracket_index - s + 1] = '\0';
         // printf("papmf-2b\n");
-        // printf("loading '%s'\n", definitions[definition_count].declaration);
         definitions[definition_count].text = (char *)malloc(sizeof(char) * (i - s + 1));
         strncpy(definitions[definition_count].text, file_text + s, i - s);
         definitions[definition_count].text[i - s] = '\0';
+        printf("extracted '%s':\n%s||\n", definitions[definition_count].declaration,
+               definitions[definition_count].text);
         ++definition_count;
         // printf("papmf-3\n");
         --i;
@@ -5967,7 +5971,7 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
       }
 
       print_parse_error(file_text, i, "parse_and_process_mc_file", "file_root");
-      MCerror(5657, "unsupported char:'%c' %i %s", file_text[i], file_text[i],
+      MCerror(5657, "unsupported char:'%c' %i %i %s", file_text[i], file_text[i], i,
               file_text[i] == '\0' ? "is eof" : "not eof");
     }
     }

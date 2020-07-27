@@ -634,7 +634,7 @@ struct mc_syntax_node;
 typedef enum mc_token_type {
   MC_TOKEN_NULL = 0,
   // One or more '*'
-  MC_TOKEN_STAR_OPERATOR,
+  MC_TOKEN_STAR_CHARACTER,
   MC_TOKEN_MULTIPLY_OPERATOR,
   MC_TOKEN_DEREFERENCE_OPERATOR,
   MC_TOKEN_IDENTIFIER,
@@ -654,6 +654,7 @@ typedef enum mc_token_type {
   MC_TOKEN_MODULO_OPERATOR,
   MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR,
   MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR,
+  MC_TOKEN_MODULO_AND_ASSIGN_OPERATOR,
   MC_TOKEN_IF_KEYWORD,
   MC_TOKEN_ELSE_KEYWORD,
   MC_TOKEN_WHILE_KEYWORD,
@@ -681,7 +682,7 @@ typedef enum mc_token_type {
   MC_TOKEN_MORE_THAN_OPERATOR,
   MC_TOKEN_LOGICAL_AND_OPERATOR,
   MC_TOKEN_BINARY_AND_ASSIGNMENT_OPERATOR,
-  MC_TOKEN_BINARY_AND_OPERATOR,
+  MC_TOKEN_AMPERSAND_CHARACTER,
   MC_TOKEN_LOGICAL_OR_OPERATOR,
   MC_TOKEN_BINARY_OR_ASSIGNMENT_OPERATOR,
   MC_TOKEN_BINARY_OR_OPERATOR,
@@ -723,6 +724,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_CAST_EXPRESSION,
   MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
+  MC_SYNTAX_RELATIONAL_EXPRESSION,
   MC_SYNTAX_OPERATIONAL_EXPRESSION,
   MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
   MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION,
@@ -824,6 +826,11 @@ typedef struct mc_syntax_node {
           mc_syntax_node *conditional_operator;
           mc_syntax_node *right;
         } conditional_expression;
+        struct {
+          mc_syntax_node *left;
+          mc_syntax_node *relational_operator;
+          mc_syntax_node *right;
+        } relational_expression;
         struct {
           mc_syntax_node *left;
           mc_syntax_node *operational_operator;

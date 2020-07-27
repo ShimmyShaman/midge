@@ -30,7 +30,15 @@ void special_modification(special_data *s)
 
 void special_syntax()
 {
-  int e = 1 * 2 + 3 * 4 - 5;
+  int a = 4 + 3 + 7;
+  int *b = &a;
+  bool c;
+  if (a == *b && 3 * 4 + 5 < *b || 6 - 7 / 1 < a % 8) {
+    return;
+  }
+  // operational: 1 * 2 + 3 * 4 - 5;
+  // 5
+  // - 4
 }
 
 // [_mc_iteration=12]
