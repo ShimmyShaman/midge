@@ -881,7 +881,7 @@ typedef struct mc_syntax_node {
         struct {
           mc_syntax_node *primary;
           mc_syntax_node *fix_operator;
-          bool postfix;
+          bool is_postfix;
         } fixrement_expression;
         struct {
           mc_syntax_node *prepend_operator;

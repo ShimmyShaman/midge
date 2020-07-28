@@ -2517,6 +2517,9 @@ int mc_main(int argc, const char *const *argv)
     // // Time
     bool logic_update_due = false;
     {
+      // TODO DEBUG
+      usleep(1);
+
       long ms;  // Milliseconds
       time_t s; // Seconds
       memcpy(&prev_frametime, &current_frametime, sizeof(struct timespec));

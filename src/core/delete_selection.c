@@ -1,5 +1,7 @@
 void delete_selection(code_editor_state *state)
 {
+  state->selection_begin_line++;
+
   printf("delete_selection-0\n");
   if (!state->selection_exists) {
     return;
