@@ -4064,6 +4064,20 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
   return 0;
 }
 
+/* Obtains the function info from the given definition, or updates it if @command_hub_function_info is NOT NULL */
+int obtain_function_info_from_definition_v1(char *function_definition_text, function_info **registered_function_info)
+{
+  // Parse function definition
+  mc_syntax_node *fsyntax;
+  MCcall(parse_mc_to_syntax_tree(function_definition_text, &fsyntax));
+
+  MCcall(print_syntax_node(fsyntax, 0));
+
+  release_syntax_node(fsyntax);
+
+  return 0;
+}
+
 int parse_and_process_function_definition_v1(char *function_definition_text, function_info **function_definition,
                                              bool skip_clint_declaration)
 {

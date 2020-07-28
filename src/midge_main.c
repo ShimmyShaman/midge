@@ -5834,6 +5834,337 @@ int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
   return 0;
 }
 
+int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char *filepath)
+{
+  // Load the file
+  char *file_text;
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    // const char *filepath = "/home/jason/midge/src/midge_core_functions.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &file_text;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  // Split the file into function and struct definitions
+  struct {
+    source_definition_type type;
+    char *declaration;
+    char *text;
+  } definitions[128];
+  int definition_count = 0;
+  {
+    int i = 0;
+    while (1) {
+      MCcall(parse_past_empty_text(file_text, &i));
+
+      bool eof = false;
+      switch (file_text[i]) {
+      case '\0': {
+        eof = true;
+      } break;
+      case '/': {
+        if (file_text[i + 1] == '*') {
+          while (file_text[i] != '*' || file_text[i + 1] != '/') {
+            if (file_text[i] == '\0') {
+              eof = true;
+              break;
+            }
+            ++i;
+          }
+          i += 1;
+        }
+        else if (file_text[i + 1] == '/') {
+          // Ignore line
+          while (file_text[i] != '\n') {
+            if (file_text[i] == '\0') {
+              eof = true;
+              break;
+            }
+            ++i;
+          }
+        }
+        else {
+          MCerror(5677, "mishandled char '/'");
+        }
+      } break;
+      case '#': {
+        // Ignore the line
+        while (file_text[i] != '\n') {
+          if (file_text[i] == '\0') {
+            eof = true;
+            break;
+          }
+          ++i;
+        }
+      } break;
+      default: {
+        if (isalpha(file_text[i]) || file_text[i] == '_') {
+          int s = i;
+
+          // -- Find the bracketed code
+          // printf("papmf-0\n");
+          int open_bracket_index = -1;
+          MCcall(find_bracketed_code_in_str(file_text + s, &open_bracket_index, &i));
+          open_bracket_index += s;
+          i += s;
+
+          // print_parse_error(file_text, s, "text-begin", "");
+          // print_parse_error(file_text, i, "text-end", "");
+
+          if (!strncmp(file_text + s, "struct ", 7)) {
+            // Struct
+
+            // printf("papmf-1\n");
+            // Find the trailing semi-colon
+            // print_parse_error(file_text, i, "before ;", "n");
+            while (file_text[i] != ';') {
+              if (file_text[i] == '\0') {
+                MCerror(5828, "format: expected ';'");
+                break;
+              }
+              ++i;
+            }
+            // print_parse_error(file_text, i, "before", "n");
+            ++i;
+
+            // print_parse_error(file_text, i, "after", "n");
+
+            // Copy
+            definitions[definition_count].type = SOURCE_DEFINITION_STRUCT;
+            definitions[definition_count].declaration = NULL;
+            definitions[definition_count].text = (char *)malloc(sizeof(char) * (i - s + 1));
+            strncpy(definitions[definition_count].text, file_text + s, i - s);
+            definitions[definition_count].text[i - s] = '\0';
+            ++definition_count;
+            --i;
+            break;
+          }
+          // printf("papmf-2\n");
+
+          // Find the end of the function declaration (closing ')' bracket)
+          --open_bracket_index;
+          while (file_text[open_bracket_index] == ' ' || file_text[open_bracket_index] == '\n' ||
+                 file_text[open_bracket_index] == '\t') {
+
+            --open_bracket_index;
+          }
+          ++open_bracket_index;
+
+          // Function
+          // Copy
+          definitions[definition_count].type = SOURCE_DEFINITION_FUNCTION;
+          definitions[definition_count].declaration = (char *)malloc(sizeof(char) * (open_bracket_index - s + 1 + 1));
+          // printf("papmf-2a\n");
+          // printf("s:%i obi:%i i:%i\n", s, open_bracket_index, i);
+          strncpy(definitions[definition_count].declaration, file_text + s, open_bracket_index - s);
+          definitions[definition_count].declaration[open_bracket_index - s] = ';';
+          definitions[definition_count].declaration[open_bracket_index - s + 1] = '\0';
+          // printf("papmf-2b\n");
+          definitions[definition_count].text = (char *)malloc(sizeof(char) * (i - s + 1));
+          strncpy(definitions[definition_count].text, file_text + s, i - s);
+          definitions[definition_count].text[i - s] = '\0';
+          printf("extracted '%s':\n%s||\n", definitions[definition_count].declaration,
+                 definitions[definition_count].text);
+          ++definition_count;
+          // printf("papmf-3\n");
+          --i;
+          break;
+        }
+
+        print_parse_error(file_text, i, "parse_and_process_mc_file", "file_root");
+        MCerror(5657, "unsupported char:'%c' %i %i %s", file_text[i], file_text[i], i,
+                file_text[i] == '\0' ? "is eof" : "not eof");
+      }
+      }
+
+      if (eof) {
+        break;
+      }
+
+      ++i;
+    }
+  }
+  free(file_text);
+
+  // Parse all definitions
+  mc_source_file_info_v1 *source_file = (mc_source_file_info_v1 *)malloc(sizeof(mc_source_file_info_v1));
+  MCcall(append_to_collection((void ***)&command_hub->source_files.items, &command_hub->source_files.alloc,
+                              &command_hub->source_files.count, source_file));
+  allocate_and_copy_cstr(source_file->filepath, filepath);
+  source_file->definitions.alloc = 0;
+  source_file->definitions.count = 0;
+
+  for (int a = 0; a < definition_count; ++a) {
+    if (definitions[a].type == SOURCE_DEFINITION_STRUCT) {
+      mc_struct_info_v1 *structure;
+      MCcall(parse_struct_definition(definitions[a].text, &structure));
+
+      // Set Provided Source Path
+      structure->source_file = source_file;
+      mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
+      definition->type = SOURCE_DEFINITION_STRUCT;
+      definition->structure_info = structure;
+      MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
+                                  &source_file->definitions.count, definition));
+
+      int struct_version = 1;
+      if (struct_version) {
+        structure->version = struct_version;
+      }
+
+      free(definitions[a].text);
+      printf("papcs-StructInfo:\n");
+      printf(" -- source_filepath:%s:\n", structure->source_file->filepath);
+      printf(" -- name:%s:\n", structure->name);
+      printf(" -- declared_mc_name:%s:\n", structure->declared_mc_name);
+      printf(" -- version:%u:\n", structure->version);
+      printf(" -- field_count:%u:\n", structure->field_count);
+      printf("#######################\n");
+
+      MCcall(append_to_collection((void ***)&command_hub->global_node->structs,
+                                  &command_hub->global_node->structs_alloc, &command_hub->global_node->struct_count,
+                                  (void *)structure));
+
+      // printf("papcs-declare_struct_from_info:\n");
+      MCcall(declare_struct_from_info(structure));
+      // printf("papcs-after declare_struct_from_info:\n");
+    }
+    else if (definitions[a].type == SOURCE_DEFINITION_FUNCTION) {
+      mc_function_info_v1 *func_info;
+
+      printf("parsing/processing '%s'||\n", definitions[a].declaration); //:\n%s, definitions[a].text);
+
+      // - Parse Definition into function information
+
+      // Lexer/Parse into AST
+      mc_syntax_node *function_ast;
+      MCcall(parse_mc_to_syntax_tree(definitions[a].text, &function_ast));
+
+      // Generate the function information
+      mc_function_info_v1 *func_info = NULL;
+      {
+        // Search for pre-existing
+        void *mc_vargs[3];
+        mc_vargs[0] = (void *)&func_info;
+        mc_vargs[1] = (void *)&command_hub->nodespace;
+        mc_vargs[2] = (void *)&function_ast->function.name->text;
+        find_function_info(3, mc_vargs);
+      }
+      if (func_info) {
+        // Pre-existing function information
+        MCerror(6058, "TODO");
+      }
+      else {
+        // Construct it
+        mc_function_info_v1 *func_info = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+        MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                    &command_hub->global_node->functions_alloc,
+                                    &command_hub->global_node->function_count, (void *)func_info));
+
+        func_info->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+        allocate_and_copy_cstr(func_info->struct_id->identifier, "function_info");
+        func_info->struct_id->version = 1U;
+
+        allocate_and_copy_cstr(func_info->name, function_ast->function.name->text);
+        func_info->latest_iteration = 1U;
+        func_info->source_file = source_file;
+
+        allocate_and_copy_cstr(func_info->return_type.name, function_ast->function.name);
+        func_info->return_type.deref_count = function_ast->function.return_type_dereference->dereference_sequence.count;
+
+        func_info->parameter_count = function_ast->function.parameters->count;
+        func_info->parameters =
+            (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * func_info->parameter_count);
+        for (int p = 0; p < func_info->parameter_count; ++p) {
+          mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+          parameter->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+          allocate_and_copy_cstr(parameter->struct_id->identifier, "parameter_info");
+          parameter->struct_id->version = 1U;
+
+          MCcall(copy_syntax_node_to_text(&parameter->type_name,
+                                          function_ast->function.parameters->items[p]->parameter.type_identifier));
+          allocate_and_copy_cstr(
+              parameter->type_deref_count,
+              function_ast->function.parameters->items[p]->parameter.type_dereference->dereference_sequence.count);
+
+          MCcall(copy_syntax_node_to_text(&parameter->type_name,
+                                          function_ast->function.parameters->items[p]->parameter.type_identifier));
+        }
+
+        mc_dummy_function_definition_v1->source_file = NULL;
+        mc_dummy_function_definition_v1->name = "mc_dummy_function";
+        mc_dummy_function_definition_v1->latest_iteration = 1U;
+        allocate_and_copy_cstr(mc_dummy_function_definition_v1->return_type.name, "void");
+        mc_dummy_function_definition_v1->return_type.deref_count = 0;
+        mc_dummy_function_definition_v1->parameter_count = 0;
+        mc_dummy_function_definition_v1->parameters = NULL;
+        mc_dummy_function_definition_v1->variable_parameter_begin_index = -1;
+        mc_dummy_function_definition_v1->struct_usage_count = 0;
+        mc_dummy_function_definition_v1->struct_usage = NULL;
+      }
+
+      // Declare Function signature (if it is not already)
+      // MCerror(5974, "TODO");
+
+      // Transcribe to MC code
+
+      // Instantiate the function with cling
+
+      MCcall(parse_and_process_function_definition(definitions[a].text, &func_info, true));
+
+      // Set Provided Source Path
+      func_info->source_file = source_file;
+      mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
+      definition->type = SOURCE_DEFINITION_FUNCTION;
+      definition->func_info = func_info;
+      MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
+                                  &source_file->definitions.count, definition));
+
+      int function_iteration = 1;
+      if (function_iteration) {
+        func_info->latest_iteration = function_iteration;
+      }
+
+      free(definitions[a].text);
+
+      // Compile the function definition
+      uint transcription_alloc = 4;
+      char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
+      transcription[0] = '\0';
+      int code_index = 0;
+      MCcall(
+          transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription));
+
+      // printf("final transcription:\n%s\n", transcription);
+
+      // Define the new function
+      {
+        void *mc_vargs[3];
+        mc_vargs[0] = (void *)&func_info->name;
+        mc_vargs[1] = (void *)&transcription;
+        MCcall(instantiate_function(2, mc_vargs));
+      }
+
+      printf("papcf-FunctionInfo Loaded:\n");
+      printf(" -- source_filepath:%s:\n", func_info->source_file->filepath);
+      printf(" -- name:%s:\n", func_info->name);
+      printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
+      printf(" -- return_type.name:%s:\n", func_info->return_type.name);
+      printf(" -- return_type.deref_count:%u:\n", func_info->return_type.deref_count);
+      printf(" -- parameter_count:%u:\n", func_info->parameter_count);
+      printf(" -- struct_usage_count:%u:\n", func_info->struct_usage_count);
+      printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
+      // printf(" -- mc_code:\n%s\n", func_info->mc_code);
+      printf("#######################\n");
+    }
+  }
+
+  return 0;
+}
+
 int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepath)
 {
   char *file_text;
@@ -7112,12 +7443,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("render_global_node = &render_global_node_v1;"));
   MCcall(clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;"));
   MCcall(clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;"));
+  MCcall(clint_process("obtain_function_info_from_definition = &obtain_function_info_from_definition_v1;"));
   MCcall(clint_process("begin_debug_automation = &begin_debug_automation_v1;"));
 
   printf("Setting Dummy Methods\n");
   MCcall(clint_process("find_struct_info = &find_struct_info_v0;"));
   printf("Loading Core Methods\n");
-  MCcall(parse_and_process_mc_file(command_hub, "src/core/find_struct_info.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/special_debug.c"));
   // MCerror(100000, "----------MEASURED STOP----------");
 
@@ -7129,7 +7461,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_mc_file(command_hub, "src/core/load_existing_struct_into_code_editor.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_keyboard_input.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_input.c"));
-  MCcall(parse_and_process_mc_file(command_hub, "src/core/mc_code_parser.c"));
+  MCcall(parse_and_process_mc_file(command_hub, "src/core/mc_code_transcriber.c"));
   printf("hopee\n");
 
   // code_editor.c

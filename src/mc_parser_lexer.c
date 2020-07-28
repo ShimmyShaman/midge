@@ -237,7 +237,7 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
   }
 }
 
-int mcs_print_syntax_tree(mc_syntax_node *syntax_node, int depth)
+int print_syntax_node(mc_syntax_node *syntax_node, int depth)
 {
   // printf("mpsyn-tree-0 %p >%i\n", syntax_node, depth);
   for (int i = 0; i < depth; ++i) {
@@ -265,7 +265,7 @@ int mcs_print_syntax_tree(mc_syntax_node *syntax_node, int depth)
         continue;
       }
       // printf("mpst-4\n");
-      MCcall(mcs_print_syntax_tree(syntax_node->children->items[i], depth + 1));
+      MCcall(print_syntax_node(syntax_node->children->items[i], depth + 1));
     }
     // printf("mpst-5\n");
   }
@@ -1569,8 +1569,8 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
       case MC_TOKEN_CLOSING_BRACKET: {
         // Cast
         MCcall(mcs_parse_cast_expression(ps, parent, additional_destination));
-        printf("cast-expression:\n");
-        MCcall(mcs_print_syntax_tree(*additional_destination, 0));
+        // printf("cast-expression:\n");
+        MCcall(print_syntax_node(*additional_destination, 0));
       } break;
       default: {
         print_parse_error(ps->code, ps->index, "see-below", "");
@@ -1724,7 +1724,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     MCcall(mcs_parse_through_token(ps, NULL, token0, &left));
   } break;
   case MC_TOKEN_OPEN_BRACKET: {
-    printf("mpe-open[2]\n");
+    // printf("mpe-open[2]\n");
     MCcall(mcs_parse_expression_beginning_with_bracket(ps, NULL, &left));
   } break;
   case MC_TOKEN_STRING_LITERAL: {
@@ -1893,7 +1893,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       left = expression;
     } break;
     case MC_TOKEN_OPEN_BRACKET: {
-      printf("mpe-open[2]\n");
+      // printf("mpe-open[2]\n");
       const int CASE_PRECEDENCE = 2;
       if (allowable_precedence <= CASE_PRECEDENCE) {
         // Left is it
@@ -2151,7 +2151,7 @@ int mcs_parse_expression_conditional(parsing_state *ps, mc_syntax_node *parent, 
   MCcall(_mcs_parse_expression(ps, 16, parent, additional_destination));
 
   // printf("Conditional-Expression!:\n");
-  // MCcall(mcs_print_syntax_tree(*additional_destination, 1));
+  // MCcall(print_syntax_node(*additional_destination, 1));
   return 0;
 }
 
@@ -2170,7 +2170,7 @@ int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
   if (!*additional_destination) {
     MCerror(2258, "expression was null");
   }
-  // MCcall(mcs_print_syntax_tree(*additional_destination, 1));
+  // MCcall(print_syntax_node(*additional_destination, 1));
   // MCcall(_mcs_obtain_precedence_information(ps, 0, -1, &lpo_token_type, &lpo_peek_loc, &lpo_peek_loc2));
 
   // mc_syntax_node *expression;
@@ -2318,7 +2318,7 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
   }
 
   // printf("local_declaration:\n");
-  // mcs_print_syntax_tree(local_declaration, 1);
+  // print_syntax_node(local_declaration, 1);
 
   return 0;
 }
@@ -2866,19 +2866,19 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_block_ast)
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION, NULL, NULL, &function));
 
   // printf("pmtst-0\n");
-  // MCcall(mcs_print_syntax_tree(function, 0));
+  // MCcall(print_syntax_node(function, 0));
 
   mc_token_type token0;
   MCcall(mcs_parse_type_identifier(ps, function, &function->function.return_type_identifier,
                                    &function->function.return_mc_type));
 
   // printf("pmtst-1\n");
-  // MCcall(mcs_print_syntax_tree(function, 0));
+  // MCcall(print_syntax_node(function, 0));
   // printf("pmtst-1b\n");
   MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
 
   // printf("pmtst-2\n");
-  // MCcall(mcs_print_syntax_tree(function, 0));
+  // MCcall(print_syntax_node(function, 0));
 
   MCcall(mcs_peek_token_type(ps, false, 0, &token0));
   if (token0 == MC_TOKEN_STAR_CHARACTER) {
@@ -2890,7 +2890,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_block_ast)
   }
 
   // printf("pmtst-3\n");
-  // MCcall(mcs_print_syntax_tree(function, 0));
+  // MCcall(print_syntax_node(function, 0));
 
   MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_IDENTIFIER, &function->function.name));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
@@ -2940,6 +2940,6 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_block_ast)
   // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never cleared
   MCcall(mcs_parse_code_block(ps, function, &function->function.code_block));
 
-  MCcall(mcs_print_syntax_tree(function, 0));
+  // MCcall(print_syntax_node(function, 0));
   return 0;
 }

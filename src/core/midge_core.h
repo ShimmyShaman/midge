@@ -212,6 +212,8 @@ struct mc_process_unit_v1;
 struct mc_template_v1;
 struct mc_procedure_template_v1;
 
+struct mc_syntax_node;
+
 typedef struct mc_cstring_list_v1 {
   mc_struct_id_v1 *struct_id;
   unsigned int lines_alloc;
@@ -628,9 +630,10 @@ int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
 int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime);
 
-// MC_PARSER_LEXER
-struct mc_syntax_node;
+void release_syntax_node(mc_syntax_node *syntax_node);
+int print_syntax_node(mc_syntax_node *syntax_node, int depth);
 
+// MC_PARSER_LEXER
 typedef enum mc_token_type {
   MC_TOKEN_NULL = 0,
   // One or more '*'
@@ -911,6 +914,8 @@ int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast)
 
 int (*parse_and_process_function_definition)(char *function_definition_text, mc_function_info_v1 **function_definition,
                                              bool skip_clint_declaration);
+int (*obtain_function_info_from_definition)(char *function_definition_text,
+                                            mc_function_info_v1 **command_hub_function_info);
 int (*parse_struct_definition)(char *code_definition, mc_struct_info_v1 **structure_info);
 int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
 
