@@ -721,8 +721,8 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_LOCAL_DECLARATION,
   MC_SYNTAX_LOCAL_ARRAY_DECLARATION,
   MC_SYNTAX_LOCAL_DECLARATION_AND_ASSIGN,
-  MC_SYNTAX_ASSIGNMENT_STATEMENT,
-  MC_SYNTAX_ARITHMETIC_ASSIGNMENT_STATEMENT,
+  MC_SYNTAX_ASSIGNMENT_EXPRESSION,
+  // MC_SYNTAX_ARITHMETIC_ASSIGNMENT_STATEMENT,
   MC_SYNTAX_RETURN_STATEMENT,
   MC_SYNTAX_INVOCATION,
 
@@ -846,8 +846,9 @@ typedef struct mc_syntax_node {
         } return_statement;
         struct {
           mc_syntax_node *variable;
+          mc_syntax_node *assignment_operator;
           mc_syntax_node *value_expression;
-        } assignment;
+        } assignment_expression;
         struct {
           mc_syntax_node *variable;
           mc_syntax_node *assignment_operator;

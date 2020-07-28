@@ -904,101 +904,101 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
     MCcall(append_to_collection((void ***)&transcription_state->locals.items, &transcription_state->locals.alloc,
                                 &transcription_state->locals.count, syntax_node));
   } break;
-  case MC_SYNTAX_ASSIGNMENT_STATEMENT: {
-    // Variable
-    {
-      c_str *variable_full_identity;
-      MCcall(init_c_str(&variable_full_identity));
-      MCcall(obtain_syntax_node_parsed_code(syntax_node->assignment.variable, variable_full_identity));
+  // case MC_SYNTAX_ASSIGNMENT_STATEMENT: {
+  //   // Variable
+  //   {
+  //     c_str *variable_full_identity;
+  //     MCcall(init_c_str(&variable_full_identity));
+  //     MCcall(obtain_syntax_node_parsed_code(syntax_node->assignment.variable, variable_full_identity));
 
-      fld_variable_snapshot *variable_snapshot = NULL;
-      {
-        // Attempt to take variable snapshot
-        fld_member_access_sequence *variable_sequence;
-        MCcall(fld_translate_identity_to_member_access_sequence(variable_full_identity->text, &variable_sequence));
+  //     fld_variable_snapshot *variable_snapshot = NULL;
+  //     {
+  //       // Attempt to take variable snapshot
+  //       fld_member_access_sequence *variable_sequence;
+  //       MCcall(fld_translate_identity_to_member_access_sequence(variable_full_identity->text, &variable_sequence));
 
-        mc_syntax_node *declarator;
-        for (int a = 0; a < transcription_state->locals.count; ++a) {
-          if (!strcmp(variable_sequence->identity,
-                      transcription_state->locals.items[a]->local_declaration.variable_name->text)) {
+  //       mc_syntax_node *declarator;
+  //       for (int a = 0; a < transcription_state->locals.count; ++a) {
+  //         if (!strcmp(variable_sequence->identity,
+  //                     transcription_state->locals.items[a]->local_declaration.variable_name->text)) {
 
-            // Found local declaration
-            declarator = transcription_state->locals.items[a];
-            break;
-          }
-        }
+  //           // Found local declaration
+  //           declarator = transcription_state->locals.items[a];
+  //           break;
+  //         }
+  //       }
 
-        // printf("here-99\n");
-        if (declarator) {
-          // Found type of variable root
-          uint deref_count = 0;
-          if (declarator->local_declaration.type_dereference) {
-            MCcall(fld_count_dereference_in_syntax_node(declarator->local_declaration.type_dereference, &deref_count));
-          }
+  //       // printf("here-99\n");
+  //       if (declarator) {
+  //         // Found type of variable root
+  //         uint deref_count = 0;
+  //         if (declarator->local_declaration.type_dereference) {
+  //           MCcall(fld_count_dereference_in_syntax_node(declarator->local_declaration.type_dereference, &deref_count));
+  //         }
 
-          if (deref_count) {
-            MCerror(859, "TODO");
-          }
-          else {
-            // Determine a type info actually exists
-            fld_type_info *variable_type;
-            MCcall(fld_obtain_member_variable_type(declarator->local_declaration.mc_type, variable_sequence,
-                                                   &variable_type));
+  //         if (deref_count) {
+  //           MCerror(859, "TODO");
+  //         }
+  //         else {
+  //           // Determine a type info actually exists
+  //           fld_type_info *variable_type;
+  //           MCcall(fld_obtain_member_variable_type(declarator->local_declaration.mc_type, variable_sequence,
+  //                                                  &variable_type));
 
-            // printf("here-bvt\n");
-            if (variable_type) {
-              if (variable_type->is_mc_struct) {
-                MCcall(fld_construct_variable_snapshot(
-                    variable_type->mc_struct_info->name, variable_type->mc_struct_info->declared_mc_name, deref_count,
-                    variable_full_identity->text, syntax_node->begin.line, &variable_snapshot));
-              }
-              else {
-                MCcall(fld_construct_variable_snapshot(variable_type->type_name, NULL, deref_count,
-                                                       variable_full_identity->text, syntax_node->begin.line,
-                                                       &variable_snapshot));
-              }
+  //           // printf("here-bvt\n");
+  //           if (variable_type) {
+  //             if (variable_type->is_mc_struct) {
+  //               MCcall(fld_construct_variable_snapshot(
+  //                   variable_type->mc_struct_info->name, variable_type->mc_struct_info->declared_mc_name, deref_count,
+  //                   variable_full_identity->text, syntax_node->begin.line, &variable_snapshot));
+  //             }
+  //             else {
+  //               MCcall(fld_construct_variable_snapshot(variable_type->type_name, NULL, deref_count,
+  //                                                      variable_full_identity->text, syntax_node->begin.line,
+  //                                                      &variable_snapshot));
+  //             }
 
-              release_fld_type_info(variable_type);
-            }
-          }
-        }
+  //             release_fld_type_info(variable_type);
+  //           }
+  //         }
+  //       }
 
-        release_fld_member_access_sequence(variable_sequence);
-      }
+  //       release_fld_member_access_sequence(variable_sequence);
+  //     }
 
-      // Set Variable
-      if (variable_snapshot) {
-        MCcall(fld_append_variable_snapshot(fld_view, variable_snapshot));
+  //     // Set Variable
+  //     if (variable_snapshot) {
+  //       MCcall(fld_append_variable_snapshot(fld_view, variable_snapshot));
 
-        MCvacall(append_to_c_strf(debug_declaration,
-                                  "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
-                                  "(fld_variable_snapshot *)%p, &%s));\n ",
-                                  cestate, variable_snapshot, variable_full_identity->text));
-      }
-      else {
-        // Just print text
-        MCcall(fld_append_visual_code(fld_view, variable_full_identity->text));
-      }
+  //       MCvacall(append_to_c_strf(debug_declaration,
+  //                                 "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
+  //                                 "(fld_variable_snapshot *)%p, &%s));\n ",
+  //                                 cestate, variable_snapshot, variable_full_identity->text));
+  //     }
+  //     else {
+  //       // Just print text
+  //       MCcall(fld_append_visual_code(fld_view, variable_full_identity->text));
+  //     }
 
-      MCcall(append_to_c_str(debug_declaration, variable_full_identity->text));
-      MCcall(release_c_str(variable_full_identity));
-    }
+  //     MCcall(append_to_c_str(debug_declaration, variable_full_identity->text));
+  //     MCcall(release_c_str(variable_full_identity));
+  //   }
 
-    // Rest
-    for (int a = 1; a < syntax_node->children->count; ++a) {
-      mc_syntax_node *child = syntax_node->children->items[a];
+  //   // Rest
+  //   for (int a = 1; a < syntax_node->children->count; ++a) {
+  //     mc_syntax_node *child = syntax_node->children->items[a];
 
-      if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+  //     if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
 
-        MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
-      }
-      else {
+  //       MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
+  //     }
+  //     else {
 
-        MCcall(append_to_c_str(debug_declaration, child->text));
-        MCcall(fld_append_visual_code(fld_view, child->text));
-      }
-    }
-  } break;
+  //       MCcall(append_to_c_str(debug_declaration, child->text));
+  //       MCcall(fld_append_visual_code(fld_view, child->text));
+  //     }
+  //   }
+  // } break;
   case MC_SYNTAX_INVOCATION:
   case MC_SYNTAX_SUPERNUMERARY:
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:

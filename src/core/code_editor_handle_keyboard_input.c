@@ -5,9 +5,10 @@
 // [_mc_iteration=3]
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
-  int x = (2 + 3);
-  int y;
-  char *z = (char *)malloc(sizeof(char) * (x + y + 1));
+  char c = 'u';
+  if (c == '\0') {
+    // break;
+  }
 
   mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
   // printf("keyboard key = (%i%i%i)+%i\n", event->altDown, event->ctrlDown, event->shiftDown,
