@@ -146,7 +146,7 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
   printf("sftf-0\n");
   size_t written = save_text_to_file(function->source_file->filepath, save_text->text);
 
-  release_c_str(save_text);
+  release_c_str(save_text, true);
 
   if (written) {
     printf("saved function to file '%s' (%zu bytes)\n", function->source_file->filepath, written);

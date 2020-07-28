@@ -3905,44 +3905,58 @@ int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  uint code_allocation = 64;
-  char *code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
-  code_from_code_editor[0] = '\0';
-  uint bracket_count = 0;
-  bool hit_code_block = false;
+  // uint code_allocation = 64;
+  // char *code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
+  // code_from_code_editor[0] = '\0';
+  // uint bracket_count = 0;
+  // bool hit_code_block = false;
+
+  c_str *code_from_code_editor;
+  MCcall(init_c_str(&code_from_code_editor));
   for (int i = 0; i < state->text->lines_count; ++i) {
-    for (int j = 0;; ++j) {
-      if (state->text->lines[i][j] == '\0') {
-        append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i]);
-        append_to_cstr(&code_allocation, &code_from_code_editor, "\n");
-        break;
+    if (state->text->lines[i]) {
+      if (code_from_code_editor->len) {
+        // Attach new-line to end of previous lines text
+        MCcall(append_to_c_str(code_from_code_editor, "\n"));
       }
-      if (state->text->lines[i][j] == '{') {
-        ++bracket_count;
-        if (!hit_code_block) {
-          hit_code_block = true;
-        }
-      }
-      else if (state->text->lines[i][j] == '}') {
-        --bracket_count;
-        if (!bracket_count && hit_code_block) {
-          // End
-          if (state->text->lines[i][j + 1] == ';') {
-            ++j;
-          }
-
-          // -- Copy up to now
-          append_to_cstrn(&code_allocation, &code_from_code_editor, state->text->lines[i], j + 1);
-
-          // -- Break from upper loop
-          i = state->text->lines_count;
-          break;
-        }
-      }
+      MCcall(append_to_c_str(code_from_code_editor, state->text->lines[i]));
     }
   }
+  // for (int j = 0;; ++j) {
+  //   if (state->text->lines[i][j] == '\0') {
+  //     append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i]);
+  //     append_to_cstr(&code_allocation, &code_from_code_editor, "\n");
+  //     break;
+  //   }
+  //   if (state->text->lines[i][j] == '{') {
+  //     ++bracket_count;
+  //     if (!hit_code_block) {
+  //       hit_code_block = true;
+  //     }
+  //   }
+  //   else if (state->text->lines[i][j] == '}') {
+  //     --bracket_count;
+  //     if (!bracket_count && hit_code_block) {
+  //       // End
+  //       if (state->text->lines[i][j + 1] == ';') {
+  //         ++j;
+  //       }
 
-  *output = code_from_code_editor;
+  //       // -- Copy up to now
+  //       append_to_cstrn(&code_allocation, &code_from_code_editor, state->text->lines[i], j + 1);
+
+  //       // -- Break from upper loop
+  //       i = state->text->lines_count;
+  //       break;
+  //     }
+  //   }
+  // }
+  // }
+
+  // printf("read_editor_text_into_cstr:\n%s||\n", code_from_code_editor->text);
+  *output = code_from_code_editor->text;
+
+  release_c_str(code_from_code_editor, false);
 
   return 0;
 }

@@ -871,40 +871,40 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
       MCcall(fld_append_visual_code(fld_view, "}"));
     }
   } break;
-  case MC_SYNTAX_LOCAL_DECLARATION: {
-    // Type
-    if (syntax_node->local_declaration.mc_type) {
-      MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.mc_type->declared_mc_name));
-    }
-    else {
-      MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.type_identifier->text));
-    }
-    MCcall(fld_append_visual_code(fld_view, syntax_node->local_declaration.type_identifier->text));
+  // case MC_SYNTAX_LOCAL_VA: {
+  //   // Type
+  //   if (syntax_node->local_declaration.mc_type) {
+  //     MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.mc_type->declared_mc_name));
+  //   }
+  //   else {
+  //     MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.type_identifier->text));
+  //   }
+  //   MCcall(fld_append_visual_code(fld_view, syntax_node->local_declaration.type_identifier->text));
 
-    // Rest
-    for (int a = 1; a < syntax_node->children->count; ++a) {
-      mc_syntax_node *child = syntax_node->children->items[a];
+  //   // Rest
+  //   for (int a = 1; a < syntax_node->children->count; ++a) {
+  //     mc_syntax_node *child = syntax_node->children->items[a];
 
-      if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+  //     if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
 
-        MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
-      }
-      else {
-        // printf("ptr-text:%p\n", child->text);
-        // printf("-text:'%s'\n", child->text);
+  //       MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
+  //     }
+  //     else {
+  //       // printf("ptr-text:%p\n", child->text);
+  //       // printf("-text:'%s'\n", child->text);
 
-        MCcall(append_to_c_str(debug_declaration, child->text));
-        MCcall(fld_append_visual_code(fld_view, child->text));
-      }
-    }
+  //       MCcall(append_to_c_str(debug_declaration, child->text));
+  //       MCcall(fld_append_visual_code(fld_view, child->text));
+  //     }
+  //   }
 
-    // fld_local_variable *local_variable = (fld_local_variable *)malloc(sizeof(fld_local_variable));
-    // local_variable->type_deref_count =
-    // allocate_and_copy_cstr(local_variable->name, syntax_node->local_declaration.variable_name);
-    MCcall(append_to_collection((void ***)&transcription_state->locals.items, &transcription_state->locals.alloc,
-                                &transcription_state->locals.count, syntax_node));
-  } break;
-  // case MC_SYNTAX_ASSIGNMENT_STATEMENT: {
+  //   // fld_local_variable *local_variable = (fld_local_variable *)malloc(sizeof(fld_local_variable));
+  //   // local_variable->type_deref_count =
+  //   // allocate_and_copy_cstr(local_variable->name, syntax_node->local_declaration.variable_name);
+  //   MCcall(append_to_collection((void ***)&transcription_state->locals.items, &transcription_state->locals.alloc,
+  //                               &transcription_state->locals.count, syntax_node));
+  // } break;
+  // // case MC_SYNTAX_ASSIGNMENT_STATEMENT: {
   //   // Variable
   //   {
   //     c_str *variable_full_identity;
@@ -933,7 +933,8 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   //         // Found type of variable root
   //         uint deref_count = 0;
   //         if (declarator->local_declaration.type_dereference) {
-  //           MCcall(fld_count_dereference_in_syntax_node(declarator->local_declaration.type_dereference, &deref_count));
+  //           MCcall(fld_count_dereference_in_syntax_node(declarator->local_declaration.type_dereference,
+  //           &deref_count));
   //         }
 
   //         if (deref_count) {
@@ -949,8 +950,8 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   //           if (variable_type) {
   //             if (variable_type->is_mc_struct) {
   //               MCcall(fld_construct_variable_snapshot(
-  //                   variable_type->mc_struct_info->name, variable_type->mc_struct_info->declared_mc_name, deref_count,
-  //                   variable_full_identity->text, syntax_node->begin.line, &variable_snapshot));
+  //                   variable_type->mc_struct_info->name, variable_type->mc_struct_info->declared_mc_name,
+  //                   deref_count, variable_full_identity->text, syntax_node->begin.line, &variable_snapshot));
   //             }
   //             else {
   //               MCcall(fld_construct_variable_snapshot(variable_type->type_name, NULL, deref_count,
@@ -1147,7 +1148,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   MCcall(fld_append_visual_code(cestate->fld_view, "}"));
   printf("lfild-func-decl:\n%s\n##########\n", debug_declaration->text);
   MCcall(clint_declare(debug_declaration->text));
-  release_c_str(debug_declaration);
+  release_c_str(debug_declaration, true);
 
   char decl_buf[256];
   sprintf(decl_buf,

@@ -230,7 +230,7 @@ typedef struct c_str {
   char *text;
 } c_str;
 int init_c_str(c_str **ptr);
-int release_c_str(c_str *ptr);
+int release_c_str(c_str *ptr, bool free_char_string_also);
 int append_to_c_str(c_str *cstr, const char *text);
 int append_to_c_strn(c_str *cstr, const char *text, int n);
 int append_to_c_strf(c_str *cstr, const char *format, ...);
@@ -449,9 +449,9 @@ int init_c_str(c_str **ptr)
   return 0;
 }
 
-int release_c_str(c_str *ptr)
+int release_c_str(c_str *ptr, bool free_char_string_also)
 {
-  if (ptr->alloc > 0 && ptr->text) {
+  if (ptr->alloc > 0 && free_char_string_also && ptr->text) {
     free(ptr->text);
   }
 
