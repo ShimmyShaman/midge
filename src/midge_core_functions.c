@@ -647,8 +647,7 @@ int conform_type_identity_v1(int argc, void **argv)
 int instantiate_function_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
+  mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
   printf("~instantiate()\n");
 

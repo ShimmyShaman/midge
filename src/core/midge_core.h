@@ -244,6 +244,7 @@ typedef struct mc_source_definition_v1 {
     mc_struct_info_v1 *structure_info;
     mc_function_info_v1 *func_info;
   };
+  char *code;
 } mc_source_definition_v1;
 
 typedef struct mc_source_file_info_v1 {
@@ -911,6 +912,8 @@ typedef struct mc_syntax_node {
   };
 } mc_syntax_node;
 int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast);
+int (*copy_syntax_node_to_text)(mc_syntax_node *syntax_node, char **output);
+int (*transcribe_code_block_ast_to_mc_definition)(mc_syntax_node *function_syntax, char **output);
 
 int (*parse_and_process_function_definition)(char *function_definition_text, mc_function_info_v1 **function_definition,
                                              bool skip_clint_declaration);
@@ -1077,5 +1080,6 @@ typedef struct mc_token {
 } mc_token;
 
 const char *get_mc_token_type_name(mc_token_type type);
+const char *get_mc_syntax_token_type_name(mc_syntax_node_type type);
 
 #endif // MIDGE_CORE_H

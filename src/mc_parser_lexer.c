@@ -274,6 +274,25 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
   return 0;
 }
 
+int copy_syntax_node_to_text_v1(mc_syntax_node *syntax_node, char **output)
+{
+  c_str *cstr;
+  MCcall(init_c_str(&cstr));
+
+  if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
+    MCcall(append_to_c_str(cstr, syntax_node->text));
+  }
+
+  switch (syntax_node->type) {
+  default: {
+    MCerror(290, "MCS_copy_syntax_node_to_text:>Unsupported-token:%s",
+            get_mc_syntax_token_type_name(syntax_node->type));
+  }
+  }
+
+  return 0;
+}
+
 int mcs_add_syntax_node_to_parent(mc_syntax_node *parent, mc_syntax_node *child)
 {
   if (parent) {
