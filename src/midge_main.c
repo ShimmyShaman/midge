@@ -7481,6 +7481,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("find_struct_info = &find_struct_info_v0;"));
   printf("Loading Core Methods\n");
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
+  // MCcall(parse_and_process_mc_file(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/special_debug.c"));
   // MCerror(100000, "----------MEASURED STOP----------");
 
@@ -7492,7 +7493,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_mc_file(command_hub, "src/core/load_existing_struct_into_code_editor.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_keyboard_input.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_input.c"));
-  MCcall(parse_and_process_mc_file(command_hub, "src/core/mc_code_transcriber.c"));
   printf("hopee\n");
 
   // code_editor.c
