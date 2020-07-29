@@ -847,6 +847,7 @@ typedef struct mc_syntax_node {
         } local_variable_assignment_initializer;
         struct {
           mc_syntax_node *function_identity;
+          mc_function_info_v1 *mc_function_info;
           mc_syntax_node_list *arguments;
         } invocation;
         struct {

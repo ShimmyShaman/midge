@@ -666,7 +666,7 @@ int instantiate_function_v1(int argc, void **argv)
       MCerror(184, "cannot find function info for function_name=%s", function_name);
     }
   }
-  // printf("@ifv-0\n");
+  printf("@ifv-0\n");
 
   // Translate the code-block from script into workable midge-cling C
   // char *midge_c;
@@ -694,7 +694,7 @@ int instantiate_function_v1(int argc, void **argv)
   func_identity_buf[0] = '\0';
   sprintf(func_identity_buf, function_identifier_format, func_info->name, func_info->latest_iteration);
 
-  // printf("@ifv-2\n");
+  printf("@ifv-2\n");
   // Construct the function parameters
   char param_buf[4096];
   param_buf[0] = '\0';
@@ -742,6 +742,7 @@ int instantiate_function_v1(int argc, void **argv)
 
     free(parameter_type);
   }
+  printf("@ifv-2b\n");
 
   // Append return-value
   if (func_info->return_type.deref_count || strcmp(func_info->return_type.name, "void")) {
@@ -791,7 +792,7 @@ int instantiate_function_v1(int argc, void **argv)
     free(return_type);
   }
 
-  // printf("@ifv-3\n");
+  printf("@ifv-3\n");
   // Declare the function
   const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
                                             "\n"
