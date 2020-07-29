@@ -722,6 +722,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_CONTINUE_STATEMENT,
   MC_SYNTAX_BREAK_STATEMENT,
   MC_SYNTAX_EXPRESSION_STATEMENT,
+  MC_SYNTAX_DECLARATION_STATEMENT,
   MC_SYNTAX_LOCAL_VARIABLE_DECLARATION,
   MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR,
   MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER,
@@ -817,6 +818,9 @@ typedef struct mc_syntax_node {
         struct {
           mc_syntax_node *expression;
         } expression_statement;
+        struct {
+          mc_syntax_node *declaration;
+        } declaration_statement;
         struct {
           mc_syntax_node_list *labels;
           mc_syntax_node *statement_list;

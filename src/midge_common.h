@@ -445,6 +445,7 @@ int init_c_str(c_str **ptr)
   (*ptr)->alloc = 2;
   (*ptr)->len = 0;
   (*ptr)->text = (char *)malloc(sizeof(char) * (*ptr)->alloc);
+  (*ptr)->text[0] = '\0';
 
   return 0;
 }
