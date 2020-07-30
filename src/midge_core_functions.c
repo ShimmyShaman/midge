@@ -4228,7 +4228,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   }
 
   MCcall(parse_past(function_definition_text, &index, "{"));
-  MCcall(parse_past_empty_text(function_definition_text, &index));
+  // MCcall(parse_past_empty_text(function_definition_text, &index));
 
   // printf("papfd-3\n");
   // Find the index of the last closing curly bracket
