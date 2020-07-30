@@ -1,5 +1,50 @@
 GOAL:
 
+    Analyze syntax for patterns: 
+        special_data s;
+        s.num = 8;
+        s.add = 3;
+
+    local_declaration 
+
+
+
+    best way forward is to start implementing in midge, then find ways to improve that process by watching what I do?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       // const char *commands =
       //     // Create invoke function script
       //     ".createScript\n"

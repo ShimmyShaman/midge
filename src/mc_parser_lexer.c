@@ -243,6 +243,21 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
   }
 }
 
+int _mcs_print_syntax_node_ancestry(mc_syntax_node *syntax_node, int depth, int ancestry_count)
+{
+
+  if (syntax_node->parent) {
+    MCcall(_mcs_print_syntax_node_ancestry(syntax_node->parent, depth, ancestry_count + 1));
+    printf(" |  | \n");
+  }
+
+  if (ancestry_count) {
+    printf("|^ %s ^|", syntax_node->type);
+  }
+
+  return 0;
+}
+
 int print_syntax_node(mc_syntax_node *syntax_node, int depth)
 {
   // printf("mpsyn-tree-0 %p >%i\n", syntax_node, depth);
@@ -333,6 +348,9 @@ int mcs_add_syntax_node_to_parent(mc_syntax_node *parent, mc_syntax_node *child)
     MCcall(append_to_collection((void ***)&parent->children->items, &parent->children->alloc, &parent->children->count,
                                 child));
   }
+
+  child->parent = parent;
+
   return 0;
 }
 
@@ -528,6 +546,9 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
 
   if (parent) {
     MCcall(mcs_add_syntax_node_to_parent(parent, syntax_node));
+  }
+  else {
+    syntax_node->parent = NULL;
   }
 
   *result = syntax_node;

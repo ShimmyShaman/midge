@@ -756,6 +756,7 @@ typedef struct mc_syntax_node_list {
 
 typedef struct mc_syntax_node {
   mc_syntax_node_type type;
+  mc_syntax_node *parent;
   struct {
     int line;
     int col;
