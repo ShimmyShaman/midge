@@ -89,86 +89,64 @@ void insert_text_into_editor(code_editor_state *state, char *text, int line_inde
   if (eof) {
     // In-line cursor adjustment
     state->cursorCol += insert_len;
-    return;
   }
-  ++line_index;
-
-  // Batch the remaining line updates
-  // printf("itie-5\n");
-  while (1) {
-    // New line
-    line_alloc = 1;
-    line = (char *)malloc(sizeof(char) * line_alloc);
-    line[0] = '\0';
-
-    // Find the end of the next line
-    int s = i;
-    bool eof = false;
-    while (1) {
-      if (text[i] == '\0') {
-        eof = true;
-        break;
-      }
-      else if (text[i] == '\n') {
-        break;
-      }
-      ++i;
-    }
-
-    // printf("itie-6\n");
-    if (i - s > 0) {
-      append_to_cstrn(&line_alloc, &line, text + s, i - s);
-    }
-    else {
-      // Nothing
-    }
-
-    // printf("itie-7\n");
-    if (eof) {
-      state->cursorLine = line_index;
-      state->cursorCol = strlen(line);
-
-      append_to_cstr(&line_alloc, &line, after_section);
-      free(after_section);
-    }
-
-    // printf("itie-8\n");
-    insert_in_collection((void ***)&state->text->lines, &state->text->lines_alloc, &state->text->lines_count,
-                         line_index, line);
+  else {
     ++line_index;
 
-    if (eof) {
-      break;
+    // Batch the remaining line updates
+    // printf("itie-5\n");
+    while (1) {
+      // New line
+      line_alloc = 1;
+      line = (char *)malloc(sizeof(char) * line_alloc);
+      line[0] = '\0';
+
+      // Find the end of the next line
+      int s = i;
+      eof = false;
+      while (1) {
+        if (text[i] == '\0') {
+          eof = true;
+          break;
+        }
+        else if (text[i] == '\n') {
+          break;
+        }
+        ++i;
+      }
+
+      // printf("itie-6\n");
+      if (i - s > 0) {
+        append_to_cstrn(&line_alloc, &line, text + s, i - s);
+      }
+      else {
+        // Nothing
+      }
+
+      // printf("itie-7\n");
+      if (eof) {
+        state->cursorLine = line_index;
+        state->cursorCol = strlen(line);
+
+        append_to_cstr(&line_alloc, &line, after_section);
+        free(after_section);
+      }
+
+      // printf("itie-8\n");
+      insert_in_collection((void ***)&state->text->lines, &state->text->lines_alloc, &state->text->lines_count,
+                           line_index, line);
+      ++line_index;
+
+      if (eof) {
+        break;
+      }
+
+      // Increment
+      ++i;
+
+      // printf("itie-9\n");
     }
-
-    // Increment
-    ++i;
-
-    // printf("itie-9\n");
   }
 
-  // Insert into editor
-
-  // int current_line_len = strlen(state->text->lines[line]);
-
-  //   // unsigned int line_alloc = current_line_len + 6;
-  //   // char *line = (char *)malloc(sizeof(char) * line_alloc);
-
-  //   // if (state->cursorCol) {
-  //   //   strncpy(new_line, state->text->lines[line], state->cursorCol);
-  //   // }
-  //   // new_line[state->cursorCol] = c;
-  //   // new_line[state->cursorCol + 1] = '\0';
-  //   // if (current_line_len - state->cursorCol) {
-  //   //   strcat(new_line, state->text->lines[line] + state->cursorCol);
-  //   // }
-  //   // new_line[current_line_len + 1] = '\0';
-
-  //   // // printf("new_line:'%s'\n", new_line);
-
-  //   // free(state->text->lines[line]);
-  //   // state->text->lines[line] = new_line;
-
-  //   // ++state->cursorCol;
-  // }
+  process_editor_insertion(state, text);
 }

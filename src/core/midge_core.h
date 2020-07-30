@@ -994,6 +994,9 @@ int clint_declare(const char *str);
 int clint_loadfile(const char *path);
 int clint_loadheader(const char *path);
 
+int process_editor_insertion(mc_code_editor_state_v1 *cestate, char *text);
+int process_editor_load(mc_code_editor_state_v1 *cestate);
+
 const char *get_action_type_string(process_action_type action_type)
 {
   switch (action_type) {

@@ -7461,6 +7461,24 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(input);
   free(output);
 
+  // process_monitor.c
+  // MCcall(parse_and_process_mc_file(command_hub, "src/process_monitor.c"));
+  {
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/process_monitor.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  MCcall(clint_declare(output));
+  free(input);
+  free(output);
+
+  // MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
+
   printf("icf-2\n");
   // Attach declared function pointers with declared functions
   MCcall(clint_process("find_function_info = &find_function_info_v1;"));

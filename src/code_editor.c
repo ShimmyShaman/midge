@@ -1167,12 +1167,14 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
 
 int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
 {
+  // printf("cees-0\n");
   char *cstr;
   MCcall(read_editor_text_into_cstr(cestate, &cstr));
 
   if (cestate->source_data_type != SOURCE_DEFINITION_FUNCTION) {
     return 0;
   }
+  // printf("cees-1\n");
 
   // Free the current syntax tree
   // cestate->syntax_tree
@@ -1189,11 +1191,11 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   // }
 
   if (cestate->source_interpretation.function_ast) {
+    // print_syntax_node(cestate->source_interpretation.function_ast, 0);
     release_syntax_node(cestate->source_interpretation.function_ast);
     cestate->source_interpretation.function_ast = NULL;
   }
 
-  // printf("cees-0\n");
   // int result = parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast);
   MCcall(parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast));
   // printf("cees-2\n");
@@ -1413,7 +1415,7 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
 
   function_info *function = *(function_info **)argv[0];
 
-  printf("life-begin\n");
+  // printf("life-begin\n");
 
   // Begin Writing into the Function Editor textbox
   node *code_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
@@ -1436,7 +1438,9 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   code_editor->data.visual.hidden = false;
   code_editor->data.visual.requires_render_update = true;
 
-  printf("ohfohe\n");
+  process_editor_load(feState);
+
+  // printf("ohfohe\n");
 
   return 0;
 }

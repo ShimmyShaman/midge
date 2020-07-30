@@ -28,17 +28,18 @@ void special_modification(special_data *s)
   // printf("SM: ais.a:%i bis.a:%i dint:%i lint:%i pint:%i\n", ais.a, bis->a, dint, lint, *pint);
 }
 
-void special_syntax()
+void special_suggester()
 {
-  int a = 4 + 3 + 7;
-  int *b = &a;
-  bool c;
-  if (a == *b && 3 * 4 + 5 < *b || 6 - 7 / 1 < a % 8) {
-    return;
-  }
-  // operational: 1 * 2 + 3 * 4 - 5;
-  // 5
-  // - 4
+  special_data s;
+  s.num = 8;
+  s.add = 14;
+
+  // TODO Enter another special data 't' with 4 & 14
+
+
+  // TODO Enter another special data 'm' with any value
+
+  
 }
 
 // [_mc_iteration=12]
@@ -47,10 +48,6 @@ void special_update(frame_time *elapsed)
 
   // char b = (char)e + 'a';
   // printf("special_update! @ %li appsecs\n", elapsed->app_secs);
-  special_data s;
-  s.num = 8;
-  s.add = 14;
-
   // only_int_struct ais;
   // ais.a = 7;
 

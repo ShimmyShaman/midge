@@ -540,9 +540,11 @@ void release_syntax_node(mc_syntax_node *syntax_node)
     return;
   }
 
+  // printf("release-%s\n", get_mc_syntax_token_type_name(syntax_node->type));
   if ((int)syntax_node->type >= (int)MC_TOKEN_STANDARD_MAX_VALUE) {
     if (syntax_node->children) {
       if (syntax_node->children->alloc) {
+        // printf("child_count-%i\n", syntax_node->children->count);
         for (int i = 0; i < syntax_node->children->count; ++i) {
 
           release_syntax_node(syntax_node->children->items[i]);
@@ -1965,7 +1967,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
   case MC_TOKEN_SIZEOF_KEYWORD: {
     // Cast
     const int CASE_PRECEDENCE = 3;
-    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_SIZEOF_EXPRESSION, NULL, parent, &left));
+    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_SIZEOF_EXPRESSION, NULL, NULL, &left));
     if (additional_destination) {
       *additional_destination = left;
     }
@@ -1990,6 +1992,9 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     }
 
     MCcall(mcs_parse_through_token(ps, left, MC_TOKEN_CLOSING_BRACKET, NULL));
+
+    // printf("sizeof: %i\n", left->children->count);
+    // print_syntax_node(left, 2);
   } break;
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
@@ -2914,6 +2919,7 @@ int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
 
 int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast)
 {
+  printf("pmtst-0\n");
   // printf("mc_syntax_node:%zu\n", sizeof(mc_syntax_node));
   parsing_state *ps = (parsing_state *)malloc(sizeof(parsing_state));
   ps->code = mcode;
@@ -2924,20 +2930,19 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast)
   mc_syntax_node *function;
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION, NULL, NULL, &function));
 
-  // printf("pmtst-0\n");
   // MCcall(print_syntax_node(function, 0));
 
+  printf("pmtst-1\n");
   mc_token_type token0;
   MCcall(mcs_parse_type_identifier(ps, function, &function->function.return_type_identifier,
                                    &function->function.return_mc_type));
 
-  // printf("pmtst-1\n");
   // MCcall(print_syntax_node(function, 0));
-  // printf("pmtst-1b\n");
+  printf("pmtst-1b\n");
   MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
 
-  // printf("pmtst-2\n");
-  // MCcall(print_syntax_node(function, 0));
+  printf("pmtst-2\n");
+  MCcall(print_syntax_node(function, 0));
 
   MCcall(mcs_peek_token_type(ps, false, 0, &token0));
   if (token0 == MC_TOKEN_STAR_CHARACTER) {
@@ -2948,7 +2953,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast)
     function->function.return_type_dereference = NULL;
   }
 
-  // printf("pmtst-3\n");
+  printf("pmtst-3\n");
   // MCcall(print_syntax_node(function, 0));
 
   MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_IDENTIFIER, &function->function.name));
