@@ -34,7 +34,7 @@ int mct_append_to_c_str(c_str *str, int indent, const char *text)
 int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
 {
   *result = false;
-  if (syntax_node->type <= MC_TOKEN_STANDARD_MAX_VALUE) {
+  if ((mc_token_type)syntax_node->type <= MC_TOKEN_STANDARD_MAX_VALUE) {
     return 0;
   }
 
@@ -187,10 +187,10 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
     mc_syntax_node *child = syntax_node->children->items[i];
 
     switch (child->type) {
-    case MC_TOKEN_NEW_LINE:
-    case MC_TOKEN_SPACE_SEQUENCE:
-    case MC_TOKEN_TAB_SEQUENCE:
-    case MC_TOKEN_LINE_COMMENT:
+    case (mc_syntax_node_type)MC_TOKEN_NEW_LINE:
+    case (mc_syntax_node_type)MC_TOKEN_SPACE_SEQUENCE:
+    case (mc_syntax_node_type)MC_TOKEN_TAB_SEQUENCE:
+    case (mc_syntax_node_type)MC_TOKEN_LINE_COMMENT:
     case MC_SYNTAX_CONTINUE_STATEMENT:
     case MC_SYNTAX_BREAK_STATEMENT: {
       MCcall(mct_append_node_text_to_c_str(str, child));

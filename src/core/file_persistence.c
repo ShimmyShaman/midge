@@ -61,114 +61,63 @@ size_t save_text_to_file(char *filepath, char *text)
 void save_function_to_file(mc_function_info_v1 *function, char *function_definition)
 {
   printf("sftf-0\n");
-  if (!function->source_file) {
+  if (!function->source->source_file) {
     // ERR(ERROR_ARGUMENT, "function has no source file to save to.");
     printf("TODO ERROR HANDLING\n");
   }
 
-  char *file_text = read_file_text(function->source_file->filepath);
+  // TODO -- this somewhere else
+  free(function->source->code);
+  function->source->code = function_definition;
 
   c_str *save_text;
   init_c_str(&save_text);
 
-  int s = find_in_str(file_text, function->name);
-  printf("sftf-5 s:%i\n", s);
-  if (s >= 0) {
-    // Move to before the return type
-    --s;
-    while (file_text[s] == '*' || file_text[s] == ' ' || file_text[s] == '\n' || file_text[s] == '\t') {
-      --s;
-    }
-    while (isalnum(file_text[s]) || file_text[s] == '_') {
-      --s;
-    }
-    ++s;
+  append_to_c_strf(save_text, "/* %s */\n\n#include \"core/midge_core.h\"\n\n\n", function->source->source_file->filepath);
 
-    printf("sftf-6 s:%i\n", s);
-    char *tempfs = file_text + s;
-    int i = find_in_str(tempfs, "{");
-    if (i < 0) {
-      // ERR(ERROR_FILE_FORMAT_ERROR1, "can't replace the function that was found. TODO safely deal with this");
-      printf("TODO ERROR HANDLING\n");
+  for (int i = 0; i < function->source->source_file->definitions.count; ++i) {
+    mc_source_definition_v1 *definition = function->source->source_file->definitions.items[i];
+    switch (definition->type) {
+    case SOURCE_DEFINITION_FUNCTION: {
+      append_to_c_str(save_text, definition->func_info->source->code);
+    } break;
+    case SOURCE_DEFINITION_STRUCT: {
+      append_to_c_str(save_text, definition->structure_info->source->code);
+    } break;
+    default: {
+      printf("ERROR 85\n");
     }
-    printf("sftf-7\n");
-    {
-      bool eof = false;
-      int bracket_count = 1;
-      while (bracket_count) {
-        if (file_text[i] == '\0') {
-          eof = true;
-          break;
-        }
-        else if (file_text[i] == '{') {
-          ++bracket_count;
-        }
-        else if (file_text[i] == '}') {
-          --bracket_count;
-        }
-        ++i;
-      }
-      if (eof) {
-        // ERR(ERROR_FILE_FORMAT_ERROR2, "can't replace the function that was found. TODO safely deal with this");
-        printf("TODO ERROR HANDLING\n");
-      }
     }
 
-    printf("sftf-0\n");
-    append_to_c_strn(save_text, file_text, s);
-    append_to_c_str(save_text, function_definition);
-
-    printf("sftf-0\n");
-    char *tempfi = file_text + i;
-    append_to_c_str(save_text, tempfi);
+    append_to_c_str(save_text, "\n\n");
   }
-  else {
-    // Place it according to its position or dependencies?? donno TODO
-    // Place it at the end
-    MCerror(50, "TODO");
-  }
-
-  free(file_text);
-
-  // // printf("here-2\n");
-  // char buf[128];
-  // sprintf(buf, "/* %s.c */\n\n#include \"core/midge_core.h\"\n\n", function->name);
-  // // printf("buf:'%s'\n", buf);
-  // // printf("here-3a\n");
-  // int buf_len = strlen(buf);
-  // size_t written = fwrite(buf, sizeof(char), buf_len, f);
-  // // printf("here-3b\n");
-
-  // sprintf(buf, "// [_mc_iteration=%u]\n", function->latest_iteration);
-  // buf_len = strlen(buf);
-  // written += fwrite(buf, sizeof(char), buf_len, f);
 
   printf("sftf-0\n");
-  size_t written = save_text_to_file(function->source_file->filepath, save_text->text);
+  size_t written = save_text_to_file(function->source->source_file->filepath, save_text->text);
 
   release_c_str(save_text, true);
 
   if (written) {
-    printf("saved function to file '%s' (%zu bytes)\n", function->source_file->filepath, written);
+    printf("saved function to file '%s' (%zu bytes)\n", function->source->source_file->filepath, written);
   }
   else {
-    printf("could not save function to file '%s'\n", function->source_file->filepath);
+    printf("could not save function to file '%s'\n", function->source->source_file->filepath);
   }
-  // printf("here-4\n");
+  // simpincel
 }
 
 // [_mc_iteration=2]
 void save_struct_to_file(struct_info *structure, char *structure_definition)
 {
-  if (!structure->source_file) {
+  if (!structure->source->source_file) {
     // ERR(ERROR_ARGUMENT, "structure has no source file to save to.");
     printf("TODO ERROR HANDLING\n");
   }
 
   // save_structure_to_source_file()
-  FILE *f = fopen(structure->source_file->filepath, "w");
+  FILE *f = fopen(structure->source->source_file->filepath, "w");
   if (f == NULL) {
-    printf("problem opening file '%s'\n", structure->source_file->filepath);
+    printf("problem opening file '%s'\n", structure->source->source_file->filepath);
     return;
   }
   fseek(f, 0, SEEK_SET);
@@ -199,6 +148,6 @@ void save_struct_to_file(struct_info *structure, char *structure_definition)
   // fwrite(&eof, sizeof(char), 1, f);
   fclose(f);
 
-  printf("saved structure to file '%s' (%zu bytes)\n", structure->source_file->filepath, written);
+  printf("saved structure to file '%s' (%zu bytes)\n", structure->source->source_file->filepath, written);
   // printf("here-4\n");
 }

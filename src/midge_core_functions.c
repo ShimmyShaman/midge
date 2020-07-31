@@ -649,7 +649,7 @@ int instantiate_function_v1(int argc, void **argv)
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
-  printf("~instantiate()\n");
+  // printf("~instantiate()\n");
 
   char *function_name = *(char **)argv[0];
   char *midge_c = *(char **)argv[1];
@@ -666,7 +666,7 @@ int instantiate_function_v1(int argc, void **argv)
       MCerror(184, "cannot find function info for function_name=%s", function_name);
     }
   }
-  printf("@ifv-0\n");
+  // printf("@ifv-0\n");
 
   // Translate the code-block from script into workable midge-cling C
   // char *midge_c;
@@ -694,7 +694,7 @@ int instantiate_function_v1(int argc, void **argv)
   func_identity_buf[0] = '\0';
   sprintf(func_identity_buf, function_identifier_format, func_info->name, func_info->latest_iteration);
 
-  printf("@ifv-2\n");
+  // printf("@ifv-2\n");
   // Construct the function parameters
   char param_buf[4096];
   param_buf[0] = '\0';
@@ -742,7 +742,7 @@ int instantiate_function_v1(int argc, void **argv)
 
     free(parameter_type);
   }
-  printf("@ifv-2b\n");
+  // printf("@ifv-2b\n");
 
   // Append return-value
   if (func_info->return_type.deref_count || strcmp(func_info->return_type.name, "void")) {
@@ -767,8 +767,8 @@ int instantiate_function_v1(int argc, void **argv)
         allocate_and_copy_cstr(return_type, func_info->return_type.name);
       }
     }
-    printf("ifv-return_type:'%s' func_info->return_type.deref_count:'%u'\n", return_type,
-           func_info->return_type.deref_count);
+    // printf("ifv-return_type:'%s' func_info->return_type.deref_count:'%u'\n", return_type,
+    //        func_info->return_type.deref_count);
 
     // Deref
     char derefbuf[24];
@@ -792,7 +792,7 @@ int instantiate_function_v1(int argc, void **argv)
     free(return_type);
   }
 
-  printf("@ifv-3\n");
+  // printf("@ifv-3\n");
   // Declare the function
   const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
                                             "\n"
@@ -815,8 +815,8 @@ int instantiate_function_v1(int argc, void **argv)
   sprintf(function_declaration, function_declaration_format, func_identity_buf, param_buf, midge_c);
 
   // Declare the function
-  printf("ifv>cling_declare:\n%s\n", function_declaration);
-  printf("declaring function '%s'\n", func_identity_buf);
+  // printf("ifv>cling_declare:\n%s\n", function_declaration);
+  printf("ifv>cling_declare:'%s'\n", func_identity_buf);
   MCcall(clint_declare(function_declaration));
 
   // Set the method to the function pointer
@@ -3963,15 +3963,15 @@ int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
 
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
 {
-  char *struct_definition;
-  read_editor_text_into_cstr(state, &struct_definition);
+  // Change the source data
+  free(state->source_data->code);
+  read_editor_text_into_cstr(state, &state->source_data->code);
 
   mc_struct_info_v1 *defined_struct;
-  parse_struct_definition(struct_definition, &defined_struct);
-  free(struct_definition);
+  parse_struct_definition(state->source_data, &defined_struct);
 
   printf("dsfce-0\n");
-  if (state->source_data_type != SOURCE_DEFINITION_STRUCT || !state->source_data) {
+  if (!state->source_data || state->source_data->type != SOURCE_DEFINITION_STRUCT) {
     // New Definition
     MCerror(4851, "TODO");
   }
@@ -4078,21 +4078,21 @@ int obtain_function_info_from_definition_v1(char *function_definition_text, func
   return 0;
 }
 
-int parse_and_process_function_definition_v1(char *function_definition_text, function_info **function_definition,
-                                             bool skip_clint_declaration)
+int parse_and_process_function_definition_v1(mc_source_definition_v1 *source_definition,
+                                             function_info **function_definition, bool skip_clint_declaration)
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  // printf("function_definition_text:\n%s\n", function_definition_text);
+  // printf("source_definition->code:\n%s\n", source_definition->code);
 
   // Parse the function return type & name
   int index = 0;
 
-  MCcall(parse_past_empty_text(function_definition_text, &index));
-  if (function_definition_text[index] == '*') {
-    print_parse_error(function_definition_text, index, "read_function_definition_from_editor",
+  MCcall(parse_past_empty_text(source_definition->code, &index));
+  if (source_definition->code[index] == '*') {
+    print_parse_error(source_definition->code, index, "read_function_definition_from_editor",
                       "return-type that uses deref handle not implemented");
   }
 
@@ -4100,15 +4100,15 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     char *name;
     uint deref_count;
   } return_type;
-  MCcall(parse_past_type_declaration_text(function_definition_text, &index, &return_type.name));
-  MCcall(parse_past_empty_text(function_definition_text, &index));
-  MCcall(parse_past_dereference_sequence(function_definition_text, &index, &return_type.deref_count));
+  MCcall(parse_past_type_declaration_text(source_definition->code, &index, &return_type.name));
+  MCcall(parse_past_empty_text(source_definition->code, &index));
+  MCcall(parse_past_dereference_sequence(source_definition->code, &index, &return_type.deref_count));
 
   char *function_name;
-  MCcall(parse_past_mc_identifier(function_definition_text, &index, &function_name, false, false));
-  MCcall(parse_past_empty_text(function_definition_text, &index));
-  MCcall(parse_past(function_definition_text, &index, "("));
-  MCcall(parse_past_empty_text(function_definition_text, &index));
+  MCcall(parse_past_mc_identifier(source_definition->code, &index, &function_name, false, false));
+  MCcall(parse_past_empty_text(source_definition->code, &index));
+  MCcall(parse_past(source_definition->code, &index, "("));
+  MCcall(parse_past_empty_text(source_definition->code, &index));
 
   // Obtain the information for the function
   function_info *func_info;
@@ -4134,9 +4134,10 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     }
     // parameters
 
-    if (func_info->mc_code)
-      free(func_info->mc_code); // OR can it also be script code??
-    func_info->mc_code = NULL;
+    func_info->source = source_definition;
+    // if (func_info->mc_code)
+    //   free(func_info->mc_code); // OR can it also be script code??
+    // func_info->mc_code = NULL;
 
     free(function_name);
   }
@@ -4144,7 +4145,7 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     // Create
     func_info = (function_info *)malloc(sizeof(function_info));
     func_info->struct_id = NULL; // TODO
-    func_info->source_file = NULL;
+    func_info->source = source_definition;
     func_info->latest_iteration = 1;
     func_info->name = function_name;
     func_info->struct_usage_count = 0;
@@ -4169,8 +4170,8 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   func_info->variable_parameter_begin_index = -1;
   func_info->return_type.name = return_type.name;
   func_info->return_type.deref_count = return_type.deref_count;
-  printf("papfd-1 func_info->return_type.name='%s', func_info->return_type.deref_count='%u'\n",
-         func_info->return_type.name, func_info->return_type.deref_count);
+  // printf("papfd-1 func_info->return_type.name='%s', func_info->return_type.deref_count='%u'\n",
+  //        func_info->return_type.name, func_info->return_type.deref_count);
 
   // Parse the parameters
   struct {
@@ -4180,23 +4181,23 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
   } parameters[32];
   uint parameter_count = 0;
 
-  while (function_definition_text[index] != ')') {
+  while (source_definition->code[index] != ')') {
     if (parameter_count) {
-      MCcall(parse_past(function_definition_text, &index, ","));
-      MCcall(parse_past_empty_text(function_definition_text, &index));
+      MCcall(parse_past(source_definition->code, &index, ","));
+      MCcall(parse_past_empty_text(source_definition->code, &index));
     }
-    MCcall(parse_past_type_declaration_text(function_definition_text, &index, &parameters[parameter_count].type_name));
-    MCcall(parse_past_empty_text(function_definition_text, &index));
-    MCcall(parse_past_dereference_sequence(function_definition_text, &index,
+    MCcall(parse_past_type_declaration_text(source_definition->code, &index, &parameters[parameter_count].type_name));
+    MCcall(parse_past_empty_text(source_definition->code, &index));
+    MCcall(parse_past_dereference_sequence(source_definition->code, &index,
                                            &parameters[parameter_count].type_deref_count));
-    MCcall(parse_past_empty_text(function_definition_text, &index));
+    MCcall(parse_past_empty_text(source_definition->code, &index));
 
-    MCcall(parse_past_mc_identifier(function_definition_text, &index, &parameters[parameter_count].name, false, false));
-    MCcall(parse_past_empty_text(function_definition_text, &index));
+    MCcall(parse_past_mc_identifier(source_definition->code, &index, &parameters[parameter_count].name, false, false));
+    MCcall(parse_past_empty_text(source_definition->code, &index));
     ++parameter_count;
   }
-  MCcall(parse_past(function_definition_text, &index, ")"));
-  MCcall(parse_past_empty_text(function_definition_text, &index));
+  MCcall(parse_past(source_definition->code, &index, ")"));
+  MCcall(parse_past_empty_text(source_definition->code, &index));
 
   // printf("papfd-2\n");
   func_info->parameter_count = parameter_count;
@@ -4227,21 +4228,20 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
     func_info->parameters[p] = parameter;
   }
 
-  MCcall(parse_past(function_definition_text, &index, "{"));
-  // MCcall(parse_past_empty_text(function_definition_text, &index));
+  MCcall(parse_past(source_definition->code, &index, "{"));
+  // MCcall(parse_past_empty_text(source_definition->code, &index));
 
   // printf("papfd-3\n");
   // Find the index of the last closing curly bracket
-  int last_curly_index = strlen(function_definition_text) - 1;
+  int last_curly_index = strlen(source_definition->code) - 1;
   {
     bool found_curly = false;
     while (1) {
-      // printf(":%c:\n", function_definition_text[last_curly_index]);
-      if (function_definition_text[last_curly_index] == '}') {
+      // printf(":%c:\n", source_definition->code[last_curly_index]);
+      if (source_definition->code[last_curly_index] == '}') {
         --last_curly_index;
-        while (function_definition_text[last_curly_index] == ' ' &&
-               function_definition_text[last_curly_index] == '\n' &&
-               function_definition_text[last_curly_index] == '\t') {
+        while (source_definition->code[last_curly_index] == ' ' && source_definition->code[last_curly_index] == '\n' &&
+               source_definition->code[last_curly_index] == '\t') {
           --last_curly_index;
         }
         break;
@@ -4257,191 +4257,192 @@ int parse_and_process_function_definition_v1(char *function_definition_text, fun
 
   // printf("papfd-4\n");
   char *code_block = (char *)malloc(sizeof(char) * (last_curly_index - index + 1));
-  strncpy(code_block, function_definition_text + index, last_curly_index - index);
+  strncpy(code_block, source_definition->code + index, last_curly_index - index);
   code_block[last_curly_index - index] = '\0';
-  func_info->mc_code = code_block;
+  // func_info-> = code_block;
 
   // printf("papfd-5\n");
   *function_definition = func_info;
   return 0;
 }
 
-int read_and_declare_function_from_editor(mc_code_editor_state_v1 *state, function_info **defined_function_info)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
+// int read_and_declare_function_from_editor(mc_code_editor_state_v1 *state, function_info **defined_function_info)
+// {
+//   /*mcfuncreplace*/
+//   mc_command_hub_v1 *command_hub;
+//   /*mcfuncreplace*/
 
-  uint code_allocation = 64;
-  char *function_header;
-  char *code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
-  code_from_code_editor[0] = '\0';
-  uint bracket_count = 0;
-  bool hit_code_block = false;
-  for (int i = 0; i < state->text->lines_count; ++i) {
-    int line_start_index = 0;
-    for (int j = 0;; ++j) {
-      if (state->text->lines[i][j] == '\0') {
-        if (j - line_start_index > 0) {
-          append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i] + line_start_index);
-        }
-        append_to_cstr(&code_allocation, &code_from_code_editor, "\n");
-        break;
-      }
-      if (state->text->lines[i][j] == '{') {
-        ++bracket_count;
-        if (!hit_code_block) {
-          hit_code_block = true;
-          if (j - line_start_index > 0) {
-            append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i] + line_start_index);
-          }
-          function_header = code_from_code_editor;
-          code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
-          code_from_code_editor[0] = '\0';
-          line_start_index = j + 1;
-        }
-      }
-      else if (state->text->lines[i][j] == '}') {
-        --bracket_count;
-        if (!bracket_count && hit_code_block) {
-          // End
-          // -- Copy up to now
-          if (j - line_start_index > 0) {
-            char line_to_now[j - line_start_index + 1];
-            strncpy(line_to_now, state->text->lines[i] + line_start_index, j - line_start_index);
-            line_to_now[j] = '\0';
-            append_to_cstr(&code_allocation, &code_from_code_editor, line_to_now);
-          }
+//   uint code_allocation = 64;
+//   char *function_header;
+//   char *code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
+//   code_from_code_editor[0] = '\0';
+//   uint bracket_count = 0;
+//   bool hit_code_block = false;
+//   for (int i = 0; i < state->text->lines_count; ++i) {
+//     int line_start_index = 0;
+//     for (int j = 0;; ++j) {
+//       if (state->text->lines[i][j] == '\0') {
+//         if (j - line_start_index > 0) {
+//           append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i] + line_start_index);
+//         }
+//         append_to_cstr(&code_allocation, &code_from_code_editor, "\n");
+//         break;
+//       }
+//       if (state->text->lines[i][j] == '{') {
+//         ++bracket_count;
+//         if (!hit_code_block) {
+//           hit_code_block = true;
+//           if (j - line_start_index > 0) {
+//             append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i] + line_start_index);
+//           }
+//           function_header = code_from_code_editor;
+//           code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
+//           code_from_code_editor[0] = '\0';
+//           line_start_index = j + 1;
+//         }
+//       }
+//       else if (state->text->lines[i][j] == '}') {
+//         --bracket_count;
+//         if (!bracket_count && hit_code_block) {
+//           // End
+//           // -- Copy up to now
+//           if (j - line_start_index > 0) {
+//             char line_to_now[j - line_start_index + 1];
+//             strncpy(line_to_now, state->text->lines[i] + line_start_index, j - line_start_index);
+//             line_to_now[j] = '\0';
+//             append_to_cstr(&code_allocation, &code_from_code_editor, line_to_now);
+//           }
 
-          // -- Break from upper loop
-          i = state->text->lines_count;
-          break;
-        }
-      }
-    }
-  }
+//           // -- Break from upper loop
+//           i = state->text->lines_count;
+//           break;
+//         }
+//       }
+//     }
+//   }
 
-  // Parse the function return type & name
-  char *return_type;
-  int index = 0;
-  MCcall(parse_past_conformed_type_declaration(NULL, function_header, &index, &return_type));
+//   // Parse the function return type & name
+//   char *return_type;
+//   int index = 0;
+//   MCcall(parse_past_conformed_type_declaration(NULL, function_header, &index, &return_type));
 
-  MCcall(parse_past_empty_text(function_header, &index));
-  if (function_header[index] == '*') {
-    print_parse_error(function_header, index, "read_function_definition_from_editor",
-                      "return-type that uses deref handle not implemented");
-  }
+//   MCcall(parse_past_empty_text(function_header, &index));
+//   if (function_header[index] == '*') {
+//     print_parse_error(function_header, index, "read_function_definition_from_editor",
+//                       "return-type that uses deref handle not implemented");
+//   }
 
-  char *function_name;
-  MCcall(parse_past_mc_identifier(function_header, &index, &function_name, false, false));
-  MCcall(parse_past_empty_text(function_header, &index));
-  MCcall(parse_past(function_header, &index, "("));
-  MCcall(parse_past_empty_text(function_header, &index));
+//   char *function_name;
+//   MCcall(parse_past_mc_identifier(function_header, &index, &function_name, false, false));
+//   MCcall(parse_past_empty_text(function_header, &index));
+//   MCcall(parse_past(function_header, &index, "("));
+//   MCcall(parse_past_empty_text(function_header, &index));
 
-  // Obtain the information for the function
-  function_info *func_info;
-  {
-    // Check if the function info already exists in the namespace
-    void *mc_vargs[3];
-    mc_vargs[0] = (void *)&func_info;
-    mc_vargs[1] = (void *)&command_hub->global_node; // TODO -- from state?
-    mc_vargs[2] = (void *)&function_name;
-    MCcall(find_function_info(3, mc_vargs));
-  }
+//   // Obtain the information for the function
+//   function_info *func_info;
+//   {
+//     // Check if the function info already exists in the namespace
+//     void *mc_vargs[3];
+//     mc_vargs[0] = (void *)&func_info;
+//     mc_vargs[1] = (void *)&command_hub->global_node; // TODO -- from state?
+//     mc_vargs[2] = (void *)&function_name;
+//     MCcall(find_function_info(3, mc_vargs));
+//   }
 
-  if (func_info) {
-    // Free previous resources
-    for (int i = 0; i < func_info->struct_usage_count; ++i) {
-      mc_struct_info_v1 *str = (mc_struct_info_v1 *)func_info->struct_usage[i];
-      if (str->struct_id) {
-      } // TODO
-      // TODO free_struct(str);
-    }
-    // parameters
+//   if (func_info) {
+//     // Free previous resources
+//     for (int i = 0; i < func_info->struct_usage_count; ++i) {
+//       mc_struct_info_v1 *str = (mc_struct_info_v1 *)func_info->struct_usage[i];
+//       if (str->struct_id) {
+//       } // TODO
+//       // TODO free_struct(str);
+//     }
+//     // parameters
 
-    if (func_info->mc_code)
-      free(func_info->mc_code); // OR can it also be script code??
-    func_info->mc_code = NULL;
+//     // if (func_info->mc_code)
+//     //   free(func_info->mc_code); // OR can it also be script code??
+//     // func_info->mc_code = NULL;
 
-    free(function_name);
-  }
-  else {
-    // Create
-    func_info = (function_info *)malloc(sizeof(function_info));
-    func_info->struct_id = NULL; // TODO
-    func_info->source_file = NULL;
-    func_info->name = function_name;
-    func_info->latest_iteration = 0;
-    func_info->struct_usage_count = 0;
-    func_info->struct_usage = NULL;
+//     free(function_name);
+//   }
+//   else {
+//     // Create
+//     func_info = (function_info *)malloc(sizeof(function_info));
+//     func_info->struct_id = NULL; // TODO
+//     func_info->source_file = NULL;
+//     func_info->name = function_name;
+//     func_info->latest_iteration = 0;
+//     func_info->struct_usage_count = 0;
+//     func_info->struct_usage = NULL;
 
-    // Attach to global -- TODO
-    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
-                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
-                                func_info));
+//     // Attach to global -- TODO
+//     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+//                                 &command_hub->global_node->functions_alloc,
+//                                 &command_hub->global_node->function_count, func_info));
 
-    // Declare with cling
-    char buf[1024];
-    sprintf(buf, "int (*%s)(int, void **);", func_info->name);
-    clint_process(buf);
-  }
+//     // Declare with cling
+//     char buf[1024];
+//     sprintf(buf, "int (*%s)(int, void **);", func_info->name);
+//     clint_process(buf);
+//   }
 
-  printf("radffe-0\n");
-  func_info->struct_usage_count = 0;
-  func_info->parameter_count = 0;
-  func_info->variable_parameter_begin_index = -1;
-  func_info->mc_code = code_from_code_editor;
+//   printf("radffe-0\n");
+//   func_info->struct_usage_count = 0;
+//   func_info->parameter_count = 0;
+//   func_info->variable_parameter_begin_index = -1;
+//   func_info->mc_code = code_from_code_editor;
 
-  MCcall(convert_return_type_string(return_type, &func_info->return_type.name, &func_info->return_type.deref_count));
-  free(return_type);
+//   MCcall(convert_return_type_string(return_type, &func_info->return_type.name, &func_info->return_type.deref_count));
+//   free(return_type);
 
-  // printf("radffe-1\n");
-  // Parse the parameters
-  struct {
-    char *type;
-    uint type_deref_count;
-    char *name;
-  } parameters[32];
-  uint parameter_count = 0;
+//   // printf("radffe-1\n");
+//   // Parse the parameters
+//   struct {
+//     char *type;
+//     uint type_deref_count;
+//     char *name;
+//   } parameters[32];
+//   uint parameter_count = 0;
 
-  while (function_header[index] != ')') {
-    if (parameter_count) {
-      MCcall(parse_past(function_header, &index, ","));
-      MCcall(parse_past_empty_text(function_header, &index));
-    }
-    MCcall(
-        parse_past_conformed_type_declaration(func_info, function_header, &index, &parameters[parameter_count].type));
-    MCcall(parse_past_empty_text(function_header, &index));
-    parameters[parameter_count].type_deref_count = 0;
-    while (function_header[index] == '*') {
-      ++parameters[parameter_count].type_deref_count;
-      ++index;
-      MCcall(parse_past_empty_text(function_header, &index));
-    }
+//   while (function_header[index] != ')') {
+//     if (parameter_count) {
+//       MCcall(parse_past(function_header, &index, ","));
+//       MCcall(parse_past_empty_text(function_header, &index));
+//     }
+//     MCcall(
+//         parse_past_conformed_type_declaration(func_info, function_header, &index,
+//         &parameters[parameter_count].type));
+//     MCcall(parse_past_empty_text(function_header, &index));
+//     parameters[parameter_count].type_deref_count = 0;
+//     while (function_header[index] == '*') {
+//       ++parameters[parameter_count].type_deref_count;
+//       ++index;
+//       MCcall(parse_past_empty_text(function_header, &index));
+//     }
 
-    MCcall(parse_past_mc_identifier(function_header, &index, &parameters[parameter_count].name, false, false));
-    MCcall(parse_past_empty_text(function_header, &index));
-    ++parameter_count;
-  }
+//     MCcall(parse_past_mc_identifier(function_header, &index, &parameters[parameter_count].name, false, false));
+//     MCcall(parse_past_empty_text(function_header, &index));
+//     ++parameter_count;
+//   }
 
-  printf("radffe-2\n");
-  func_info->parameter_count = parameter_count;
-  func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * parameter_count);
-  for (int p = 0; p < parameter_count; ++p) {
-    mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    parameter->struct_id = NULL;  // TODO
-    parameter->type_version = 0U; // TODO
-    parameter->type_name = parameters[p].type;
-    parameter->type_deref_count = parameters[p].type_deref_count;
-    parameter->name = parameters[p].name;
+//   printf("radffe-2\n");
+//   func_info->parameter_count = parameter_count;
+//   func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * parameter_count);
+//   for (int p = 0; p < parameter_count; ++p) {
+//     mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+//     parameter->struct_id = NULL;  // TODO
+//     parameter->type_version = 0U; // TODO
+//     parameter->type_name = parameters[p].type;
+//     parameter->type_deref_count = parameters[p].type_deref_count;
+//     parameter->name = parameters[p].name;
 
-    func_info->parameters[p] = parameter;
-  }
-  free(function_header);
+//     func_info->parameters[p] = parameter;
+//   }
+//   free(function_header);
 
-  *defined_function_info = func_info;
+//   *defined_function_info = func_info;
 
-  // printf("radffe-3\n");
+//   // printf("radffe-3\n");
 
-  return 0;
-}
+//   return 0;
+// }

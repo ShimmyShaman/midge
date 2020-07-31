@@ -213,6 +213,7 @@ struct mc_template_v1;
 struct mc_procedure_template_v1;
 
 struct mc_syntax_node;
+struct mc_source_file_info_v1;
 
 typedef struct mc_cstring_list_v1 {
   mc_struct_id_v1 *struct_id;
@@ -239,6 +240,7 @@ typedef struct mc_script_local_v1 {
 
 typedef struct mc_source_definition_v1 {
   source_definition_type type;
+  mc_source_file_info_v1 *source_file;
   union {
     void *data;
     mc_struct_info_v1 *structure_info;
@@ -258,7 +260,7 @@ typedef struct mc_source_file_info_v1 {
 
 typedef struct mc_struct_info_v1 {
   mc_struct_id_v1 *struct_id;
-  mc_source_file_info_v1 *source_file;
+  mc_source_definition_v1 *source;
   char *name;
   unsigned int version;
   char *declared_mc_name;
@@ -278,14 +280,14 @@ typedef struct mc_parameter_info_v1 {
 
 typedef struct mc_function_info_v1 {
   mc_struct_id_v1 *struct_id;
-  mc_source_file_info_v1 *source_file;
+  mc_source_definition_v1 *source;
   const char *name;
   unsigned int latest_iteration;
   struct {
     char *name;
     unsigned int deref_count;
   } return_type;
-  char *mc_code;
+  // char *mc_code;
   unsigned int parameter_count;
   mc_parameter_info_v1 **parameters;
   int variable_parameter_begin_index;
@@ -587,8 +589,7 @@ typedef struct mc_code_editor_state_v1 {
   uint selection_begin_col;
   bool cursor_requires_render_update;
 
-  source_definition_type source_data_type;
-  void *source_data;
+  mc_source_definition_v1 *source_data;
   struct {
     union {
       mc_syntax_node *function_ast;
@@ -921,11 +922,11 @@ int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast)
 int (*copy_syntax_node_to_text)(mc_syntax_node *syntax_node, char **output);
 int (*transcribe_code_block_ast_to_mc_definition)(mc_syntax_node *function_syntax, char **output);
 
-int (*parse_and_process_function_definition)(char *function_definition_text, mc_function_info_v1 **function_definition,
+int (*parse_and_process_function_definition)(mc_source_definition_v1 *source_definition, mc_function_info_v1 **function_definition,
                                              bool skip_clint_declaration);
 int (*obtain_function_info_from_definition)(char *function_definition_text,
                                             mc_function_info_v1 **command_hub_function_info);
-int (*parse_struct_definition)(char *code_definition, mc_struct_info_v1 **structure_info);
+int (*parse_struct_definition)(mc_source_definition_v1 *code_definition, mc_struct_info_v1 **structure_info);
 int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
 
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,

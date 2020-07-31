@@ -510,6 +510,9 @@ int core_display_handle_input_v1(int argc, void **argv)
       }
       }
     }
+    default: {
+      break;
+    }
     }
   }
 

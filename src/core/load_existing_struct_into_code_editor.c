@@ -3,14 +3,13 @@
 #include "core/midge_core.h"
 
 // [_mc_iteration=1]
-void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_info_v1 *p_struct_info)
+void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_source_definition_v1 *struct_definition)
 {
   printf("load_existing_struct_into_code_editor()\n");
 
   // Set
   mc_code_editor_state_v1 *feState = (mc_code_editor_state_v1 *)code_editor->extra;
-  feState->source_data_type = SOURCE_DEFINITION_STRUCT;
-  feState->source_data = (void *)p_struct_info;
+  feState->source_data = struct_definition;
 
   // Begin Writing into the Code Editor textbox
   for (int j = 0; j < feState->text->lines_count; ++j) {
@@ -43,16 +42,16 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_struct_in
   line[0] = '\0';
 
   char buf[256];
-  sprintf(buf, "struct %s {", p_struct_info->name);
+  sprintf(buf, "struct %s {", struct_definition->structure_info->name);
   append_to_cstr(&line_alloc, &line, buf);
   feState->text->lines[feState->text->lines_count++] = line;
 
-  for (int i = 0; i < p_struct_info->field_count; ++i) {
+  for (int i = 0; i < struct_definition->structure_info->field_count; ++i) {
     line_alloc = 2;
     char *line = (char *)malloc(sizeof(char) * line_alloc);
     line[0] = '\0';
 
-    mc_parameter_info_v1 *field = (mc_parameter_info_v1 *)p_struct_info->fields[i];
+    mc_parameter_info_v1 *field = (mc_parameter_info_v1 *)struct_definition->structure_info->fields[i];
     append_to_cstr(&line_alloc, &line, "  ");
     append_to_cstr(&line_alloc, &line, field->type_name);
     append_to_cstr(&line_alloc, &line, " ");

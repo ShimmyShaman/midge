@@ -30,14 +30,20 @@ void special_modification(special_data *s)
 
 void special_suggester()
 {
-  special_data s;
-  s.num = 8;
-  s.add = 14;
+  // special_data s;
+  // s.num = 8;
+  // s.add = 14;
 
   // TODO Enter another special data 't' with 4 & 14
+  // special_data t;
+  // t.num = 4;
+  // t.add = 14;
 
 
-  // TODO Enter another special data 'm' with any value
+  // // TODO Enter another special data 'm' with any value
+  // special_data m;
+  // m.num = 7;
+  // m.add = 14;
 
   
 }

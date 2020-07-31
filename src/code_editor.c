@@ -63,7 +63,6 @@ int build_code_editor_v1(int argc, void **argv)
 
   {
     // Source
-    state->source_data_type = SOURCE_DEFINITION_NULL;
     state->source_data = NULL;
     state->source_interpretation.function_ast = NULL;
   }
@@ -1033,15 +1032,15 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  if (cestate->source_data_type != SOURCE_DEFINITION_FUNCTION) {
+  if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
     return 0;
   }
 
-  function_info *function = (function_info *)cestate->source_data;
+  function_info *function = cestate->source_data->func_info;
 
   // Begin
   printf("op01\n");
-  printf("function '%s' code:\n%s\n", function->name, function->mc_code);
+  printf("function '%s' code:\n%s\n", function->name, function->source->code);
 
   // Replace the function with the debug version && form the displayed code for the debug view
   c_str *debug_declaration;
@@ -1171,7 +1170,7 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   char *cstr;
   MCcall(read_editor_text_into_cstr(cestate, &cstr));
 
-  if (cestate->source_data_type != SOURCE_DEFINITION_FUNCTION) {
+  if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
     return 0;
   }
   // printf("cees-1\n");
@@ -1225,7 +1224,7 @@ int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  if (state->source_data_type != SOURCE_DEFINITION_FUNCTION) {
+  if (state->source_data->type != SOURCE_DEFINITION_FUNCTION) {
     return 0;
   }
 
@@ -1252,10 +1251,10 @@ int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
 
 int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
 {
-  if (cestate->source_data_type != SOURCE_DEFINITION_FUNCTION) {
+  if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
     MCerror(704, "TODO?");
   }
-  function_info *function = (function_info *)cestate->source_data;
+  // function_info *function =cestate->source_data->func_info;
 
   for (int j = 0; j < cestate->text->lines_count; ++j) {
     free(cestate->text->lines[j]);
@@ -1263,38 +1262,39 @@ int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
   }
   cestate->text->lines_count = 0;
 
-  // Line Alloc
-  uint line_alloc = 32;
-  char *line = (char *)malloc(sizeof(char) * line_alloc);
-  line[0] = '\0';
+  // // Line Alloc
+  // uint line_alloc = 32;
+  // char *line = (char *)malloc(sizeof(char) * line_alloc);
+  // line[0] = '\0';
 
-  // Write the current signature
-  append_to_cstr(&line_alloc, &line, function->return_type.name);
-  append_to_cstr(&line_alloc, &line, " ");
-  for (int i = 0; i < function->return_type.deref_count; ++i) {
-    append_to_cstr(&line_alloc, &line, "*");
-  }
+  // // Write the current signature
+  // append_to_cstr(&line_alloc, &line, function->return_type.name);
+  // append_to_cstr(&line_alloc, &line, " ");
+  // for (int i = 0; i < function->return_type.deref_count; ++i) {
+  //   append_to_cstr(&line_alloc, &line, "*");
+  // }
 
-  append_to_cstr(&line_alloc, &line, function->name);
-  append_to_cstr(&line_alloc, &line, "(");
+  // append_to_cstr(&line_alloc, &line, function->name);
+  // append_to_cstr(&line_alloc, &line, "(");
 
-  for (int i = 0; i < function->parameter_count; ++i) {
-    if (i > 0) {
-      append_to_cstr(&line_alloc, &line, ", ");
-    }
-    append_to_cstr(&line_alloc, &line, function->parameters[i]->type_name);
-    append_to_cstr(&line_alloc, &line, " ");
-    for (int j = 0; j < function->parameters[i]->type_deref_count; ++j)
-      append_to_cstr(&line_alloc, &line, "*");
-    append_to_cstr(&line_alloc, &line, function->parameters[i]->name);
-  }
-  append_to_cstr(&line_alloc, &line, ") {");
-  cestate->text->lines[cestate->text->lines_count++] = line;
+  // for (int i = 0; i < function->parameter_count; ++i) {
+  //   if (i > 0) {
+  //     append_to_cstr(&line_alloc, &line, ", ");
+  //   }
+  //   append_to_cstr(&line_alloc, &line, function->parameters[i]->type_name);
+  //   append_to_cstr(&line_alloc, &line, " ");
+  //   for (int j = 0; j < function->parameters[i]->type_deref_count; ++j)
+  //     append_to_cstr(&line_alloc, &line, "*");
+  //   append_to_cstr(&line_alloc, &line, function->parameters[i]->name);
+  // }
+  // append_to_cstr(&line_alloc, &line, ") {");
+  // cestate->text->lines[cestate->text->lines_count++] = line;
 
   // Code Block
+  char *source_code = cestate->source_data->code;
   {
-    line_alloc = 1;
-    line = (char *)malloc(sizeof(char) * line_alloc);
+    uint line_alloc = 1;
+    char *line = (char *)malloc(sizeof(char) * line_alloc);
     line[0] = '\0';
 
     // Write the code in
@@ -1306,7 +1306,7 @@ int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
     for (; loop || !wrapped_block; ++i) {
 
       bool copy_line = false;
-      switch (function->mc_code[i]) {
+      switch (source_code[i]) {
       case '\0': {
         copy_line = true;
         loop = false;
@@ -1322,11 +1322,11 @@ int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
       if (copy_line || !loop) {
         // Transfer text to the buffer line
         if (i - s > 0) {
-          append_to_cstrn(&line_alloc, &line, function->mc_code + s, i - s);
+          append_to_cstrn(&line_alloc, &line, source_code + s, i - s);
         }
         else if (!loop && !strlen(line)) {
           wrapped_block = true;
-          append_to_cstr(&line_alloc, &line, "}");
+          // append_to_cstr(&line_alloc, &line, "}");
         }
 
         // Add to the collection
@@ -1414,14 +1414,14 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   function_info *function = *(function_info **)argv[0];
+  printf("lefice:\n%s||\n", function->source->code);
 
   // printf("life-begin\n");
 
   // Begin Writing into the Function Editor textbox
   node *code_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
   mc_code_editor_state_v1 *feState = (mc_code_editor_state_v1 *)code_editor->extra;
-  feState->source_data_type = SOURCE_DEFINITION_FUNCTION;
-  feState->source_data = function;
+  feState->source_data = function->source;
 
   feState->line_display_offset = 0;
   MCcall(code_editor_set_function_code_to_text(feState));

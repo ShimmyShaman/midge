@@ -102,29 +102,32 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
     event->handled = true;
     if (event->ctrlDown) {
 
-      switch (state->source_data_type) {
+      switch (state->source_data->type) {
       case SOURCE_DEFINITION_FUNCTION: {
         // Read the code from the editor
-        char *function_definition;
-        read_editor_text_into_cstr(state, &function_definition);
+        free(state->source_data->code);
+        read_editor_text_into_cstr(state, &state->source_data->code);
 
         mc_function_info_v1 *func_info;
-        parse_and_process_function_definition(function_definition, &func_info, false);
-        free(function_definition);
+        parse_and_process_function_definition(state->source_data, &func_info, false);
 
-        // Compile the function definition
-        uint transcription_alloc = 4;
-        char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
-        transcription[0] = '\0';
-        int code_index = 0;
-        transcribe_c_block_to_mc(func_info, func_info->mc_code, &code_index, &transcription_alloc, &transcription);
-
-        // Define the new function
-        instantiate_function(func_info->name, transcription);
-
-        printf("redefined function '%s' to iteration %i\n", func_info->name, func_info->latest_iteration);
+        printf("ERROR TODO\n");
         event->handled = true;
-        break;
+        return;
+
+        // // Compile the function definition
+        // uint transcription_alloc = 4;
+        // char *transcription = (char *)malloc(sizeof(char) * transcription_alloc);
+        // transcription[0] = '\0';
+        // int code_index = 0;
+        // transcribe_c_block_to_mc(func_info, func_info->, &code_index, &transcription_alloc, &transcription);
+
+        // // Define the new function
+        // instantiate_function(func_info->name, transcription);
+
+        // printf("redefined function '%s' to iteration %i\n", func_info->name, func_info->latest_iteration);
+        // event->handled = true;
+        // break;
       }
       case SOURCE_DEFINITION_STRUCT: {
         // Read the code from the editor
@@ -134,7 +137,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       }
       default: {
         // Do Nothing? TODO
-        printf("instantiating data_source:%i is not supported\n", state->source_data_type);
+        printf("instantiating data_source:%i is not supported\n", state->source_data->type);
       } break;
       }
     }
@@ -487,14 +490,15 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       } break;
       case KEY_CODE_S: {
         // Save the file
+        if (!state->source_data || !state->source_data->source_file) {
+          printf("code has no source file\n");
+          break;
+        }
+
         char *filepath;
-        switch (state->source_data_type) {
+        switch (state->source_data->type) {
         case SOURCE_DEFINITION_FUNCTION: {
           mc_function_info_v1 *function = (mc_function_info_v1 *)state->source_data;
-          if (!function->source_file) {
-            printf("function has no source file\n");
-            break;
-          }
 
           // Read the code from the editor
           char *function_definition;
@@ -506,10 +510,6 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         } break;
         case SOURCE_DEFINITION_STRUCT: {
           mc_struct_info_v1 *structure = (mc_struct_info_v1 *)state->source_data;
-          if (!structure->source_file) {
-            printf("function has no source file\n");
-            break;
-          }
 
           // // Read the code from the editor
           char *structure_definition;
@@ -521,7 +521,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
           free(structure_definition);
         } break;
         default: {
-          printf("saving source_data_type=%i is not supported\n", state->source_data_type);
+          printf("saving source_data_type=%i is not supported\n", state->source_data->type);
         } break;
         }
       } break;

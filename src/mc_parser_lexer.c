@@ -252,7 +252,7 @@ int _mcs_print_syntax_node_ancestry(mc_syntax_node *syntax_node, int depth, int 
   }
 
   if (ancestry_count) {
-    printf("|^ %s ^|", syntax_node->type);
+    printf("|^ %s ^|", get_mc_syntax_token_type_name(syntax_node->type));
   }
 
   return 0;
@@ -2126,7 +2126,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       MCcall(mcs_parse_through_supernumerary_tokens(ps, expression));
 
       {
-        if (expression->invocation.function_identity->type != MC_TOKEN_IDENTIFIER) {
+        if ((mc_token_type)expression->invocation.function_identity->type != MC_TOKEN_IDENTIFIER) {
           MCerror(2100, "TODO");
         }
 
