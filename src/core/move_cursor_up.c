@@ -5,6 +5,7 @@
 // [_mc_iteration=2]
 void move_cursor_up(node *code_editor_node, code_editor_state *state)
 {
+    return;
   if (state->cursorLine == 0) {
     // Do Nothing
     return;
@@ -15,12 +16,12 @@ void move_cursor_up(node *code_editor_node, code_editor_state *state)
   // Increment
   --state->cursorLine;
   int line_len;
-  if (state->text->lines[state->cursorLine]) {
-    line_len = strlen(state->text->lines[state->cursorLine]);
-  }
-  else {
-    line_len = 0;
-  }
+  // if (state->text->lines[state->cursorLine]) {
+  //   line_len = strlen(state->text->lines[state->cursorLine]);
+  // }
+  // else {
+  //   line_len = 0;
+  // }
   if (state->cursorCol > line_len) {
     state->cursorCol = line_len;
 

@@ -187,10 +187,6 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
     mc_syntax_node *child = syntax_node->children->items[i];
 
     switch (child->type) {
-    case (mc_syntax_node_type)MC_TOKEN_NEW_LINE:
-    case (mc_syntax_node_type)MC_TOKEN_SPACE_SEQUENCE:
-    case (mc_syntax_node_type)MC_TOKEN_TAB_SEQUENCE:
-    case (mc_syntax_node_type)MC_TOKEN_LINE_COMMENT:
     case MC_SYNTAX_CONTINUE_STATEMENT:
     case MC_SYNTAX_BREAK_STATEMENT: {
       MCcall(mct_append_node_text_to_c_str(str, child));
@@ -221,6 +217,16 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
       MCcall(append_to_c_str(str, ";\n"));
     } break;
     default:
+      switch ((mc_token_type)child->type) {
+      case MC_TOKEN_NEW_LINE:
+      case MC_TOKEN_SPACE_SEQUENCE:
+      case MC_TOKEN_TAB_SEQUENCE:
+      case MC_TOKEN_LINE_COMMENT: {
+        MCcall(mct_append_node_text_to_c_str(str, child));
+      } break;
+      default:
+        break;
+      }
       MCerror(168, "MCT:Statement-Unsupported:%s", get_mc_syntax_token_type_name(child->type));
     }
     // printf("transcription:\n%s||\n", str->text);

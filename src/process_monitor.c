@@ -39,7 +39,7 @@ int process_editor_insertion(mc_code_editor_state_v1 *cestate, char *text)
 
   // Find the context
   mc_syntax_node *context_node;
-  MCcall(mpm_obtain_context_node_for_cursor(cestate->source_interpretation.function_ast, cestate, &context_node));
+  MCcall(mpm_obtain_context_node_for_cursor(cestate->edit_ast, cestate, &context_node));
 
   if (!context_node) {
     MCerror(46, "TODO");
@@ -55,7 +55,7 @@ int process_editor_insertion(mc_code_editor_state_v1 *cestate, char *text)
 
 int process_editor_load(mc_code_editor_state_v1 *cestate)
 {
-  printf("process_editor_load:%s\n", cestate->source_interpretation.function_ast->function.name->text);
+  printf("process_editor_load:%s\n", cestate->edit_ast->function.name->text);
 
   return 0;
 }

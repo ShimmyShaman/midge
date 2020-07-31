@@ -3913,15 +3913,16 @@ int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
 
   c_str *code_from_code_editor;
   MCcall(init_c_str(&code_from_code_editor));
-  for (int i = 0; i < state->text->lines_count; ++i) {
-    if (state->text->lines[i]) {
-      if (code_from_code_editor->len) {
-        // Attach new-line to end of previous lines text
-        MCcall(append_to_c_str(code_from_code_editor, "\n"));
-      }
-      MCcall(append_to_c_str(code_from_code_editor, state->text->lines[i]));
-    }
-  }
+  append_to_c_str(code_from_code_editor, "BANANAS");
+  // for (int i = 0; i < state->text->lines_count; ++i) {
+  //   if (state->text->lines[i]) {
+  //     if (code_from_code_editor->len) {
+  //       // Attach new-line to end of previous lines text
+  //       MCcall(append_to_c_str(code_from_code_editor, "\n"));
+  //     }
+  //     MCcall(append_to_c_str(code_from_code_editor, state->text->lines[i]));
+  //   }
+  // }
   // for (int j = 0;; ++j) {
   //   if (state->text->lines[i][j] == '\0') {
   //     append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i]);

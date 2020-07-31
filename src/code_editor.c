@@ -54,17 +54,18 @@ int build_code_editor_v1(int argc, void **argv)
   state->cursorLine = 0;
   state->cursorCol = 0;
   state->line_display_offset = 0;
-  state->text = (mc_cstring_list_v1 *)malloc(sizeof(mc_cstring_list_v1));
-  state->text->lines_alloc = 8;
-  state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_alloc);
-  state->text->lines_count = 0;
+  // state->text = (mc_cstring_list_v1 *)malloc(sizeof(mc_cstring_list_v1));
+  // state->text->lines_alloc = 8;
+  // state->text->lines = (char **)calloc(sizeof(char *), state->text->lines_alloc);
+  // state->text->lines_count = 0;
   state->render_lines = (rendered_code_line **)malloc(sizeof(rendered_code_line *) * CODE_EDITOR_RENDERED_CODE_LINES);
   // state->rendered_line_count = CODE_EDITOR_RENDERED_CODE_LINES;
 
   {
     // Source
     state->source_data = NULL;
-    state->source_interpretation.function_ast = NULL;
+    state->edit_ast = NULL;
+    init_c_str(&state->edit_text);
   }
 
   {
@@ -1136,8 +1137,10 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   transcription_state.scope_depth = 0;
   transcription_state.locals.alloc = 0;
   transcription_state.locals.count = 0;
-  MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, &transcription_state,
-                                    cestate->source_interpretation.function_ast));
+
+  MCerror(1141, "Redo once finished");
+  // MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, &transcription_state,
+  //                                   cestate->source_interpretation.function_ast));
 
   // MCcall(append_to_c_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
   //                                             "\n"
@@ -1189,30 +1192,36 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   //   }
   // }
 
-  if (cestate->source_interpretation.function_ast) {
-    // print_syntax_node(cestate->source_interpretation.function_ast, 0);
-    release_syntax_node(cestate->source_interpretation.function_ast);
-    cestate->source_interpretation.function_ast = NULL;
-  }
-
-  // int result = parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast);
-  MCcall(parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast));
-  // printf("cees-2\n");
-  // if (result) {
-  //   // printf("cees-3\n");
+  // if (cestate->edit_ast) {
+  //   // print_syntax_node(cestate->source_interpretation.function_ast, 0);
   //   release_syntax_node(cestate->source_interpretation.function_ast);
   //   cestate->source_interpretation.function_ast = NULL;
-
-  //   // printf("cees-4\n");
-  //   cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
-  //   cestate->status_bar.requires_render_update = true;
-  //   // printf("cees-5\n");
   // }
-  // else {
 
-  //   cprintf(cestate->status_bar.message, "", result);
-  //   cestate->status_bar.requires_render_update = true;
-  // }
+  mc_syntax_node *code_syntax;
+  int result = parse_mc_to_syntax_tree(cstr, &code_syntax);
+  // MCcall(parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast));
+  // printf("cees-2\n");
+  if (result) {
+    //   // printf("cees-3\n");
+    //   release_syntax_node(cestate->source_interpretation.function_ast);
+    //   cestate->source_interpretation.function_ast = NULL;
+
+    //   // printf("cees-4\n");
+    cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
+    cestate->status_bar.requires_render_update = true;
+    //   // printf("cees-5\n");
+  }
+  else {
+
+    if (cestate->edit_ast) {
+      release_syntax_node(cestate->edit_ast);
+    }
+    cestate->edit_ast = code_syntax;
+
+    allocate_and_copy_cstr(cestate->status_bar.message, "");
+    cestate->status_bar.requires_render_update = true;
+  }
   // printf("cees-7\n");
 
   return 0;
@@ -1249,6 +1258,86 @@ int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
   return 0;
 }
 
+int ce_update_syntax_rendered_lines(mc_code_editor_state_v1 *cestate)
+{
+
+  MCerror(1254, "Get here");
+  // cestate->edit_ast
+
+  return 0;
+}
+
+int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
+{
+  int i = 0;
+  c_str *line_text;
+  MCcall(init_c_str(&line_text));
+
+  // const char *code = cestate->editor_text->text;
+  // while (1) {
+  //   // Move through the text to identify the end of any line (or the text)
+  //   int s = i;
+  //   bool eof = false;
+  //   while (1) {
+  //     if (code[i] == '\0') {
+  //       eof = true;
+  //       break;
+  //     }
+  //     else if (code[i] == '\n') {
+  //       break;
+  //     }
+  //     ++i;
+  //   }
+
+  //   if (i - s) {
+  //   }
+  // }
+
+  // for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
+  //   if (cestate->line_display_offset + i < cestate->text->lines_count) {
+  //     // printf("life-6a\n");
+  //     if (cestate->render_lines[i]->text) {
+  //       // printf("life-6b\n");
+  //       cestate->render_lines[i]->requires_render_update =
+  //           cestate->render_lines[i]->requires_render_update ||
+  //           strcmp(cestate->render_lines[i]->text, cestate->text->lines[cestate->line_display_offset + i]);
+  //       // printf("life-6c\n");
+  //       free(cestate->render_lines[i]->text);
+  //       // printf("life-6d\n");
+  //     }
+  //     else {
+  //       // printf("life-6e\n");
+  //       // printf("dawn:%i %i\n", cestate->line_display_offset + i, cestate->text->lines_count);
+  //       // printf("dawn:%i\n", cestate->text->lines_alloc);
+  //       // printf("dawn:%c\n", cestate->text->lines[1][4]);
+  //       // printf("dawn:%zu\n", strlen(cestate->text->lines[cestate->line_display_offset + i]));
+  //       cestate->render_lines[i]->requires_render_update =
+  //           cestate->render_lines[i]->requires_render_update ||
+  //           !cestate->text->lines[cestate->line_display_offset + i] ||
+  //           strlen(cestate->text->lines[cestate->line_display_offset + i]);
+  //     }
+
+  //     // printf("life-6f\n");
+  //     // Assign
+  //     allocate_and_copy_cstr(cestate->render_lines[i]->text, cestate->text->lines[cestate->line_display_offset + i]);
+  //     // printf("life-6g\n");
+  //   }
+  //   else {
+  //     // printf("life-6h\n");
+  //     if (cestate->render_lines[i]->text) {
+  //       // printf("life-6i\n");
+  //       cestate->render_lines[i]->requires_render_update = true;
+  //       free(cestate->render_lines[i]->text);
+  //       // printf("life-6j\n");
+  //       cestate->render_lines[i]->text = NULL;
+  //     }
+  //   }
+  //   // printf("life-6k\n");
+  // }
+
+  return 0;
+}
+
 int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
 {
   if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
@@ -1256,11 +1345,11 @@ int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
   }
   // function_info *function =cestate->source_data->func_info;
 
-  for (int j = 0; j < cestate->text->lines_count; ++j) {
-    free(cestate->text->lines[j]);
-    allocate_and_copy_cstr(cestate->text->lines[j], "");
-  }
-  cestate->text->lines_count = 0;
+  // for (int j = 0; j < cestate->text->lines_count; ++j) {
+  //   free(cestate->text->lines[j]);
+  //   allocate_and_copy_cstr(cestate->text->lines[j], "");
+  // }
+  // cestate->text->lines_count = 0;
 
   // // Line Alloc
   // uint line_alloc = 32;
@@ -1291,118 +1380,79 @@ int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
   // cestate->text->lines[cestate->text->lines_count++] = line;
 
   // Code Block
-  char *source_code = cestate->source_data->code;
-  {
-    uint line_alloc = 1;
-    char *line = (char *)malloc(sizeof(char) * line_alloc);
-    line[0] = '\0';
+  // set_c_str(cestate->editor_text, cestate->source_data->code);
+  // char *source_code = cestate->source_data->code;
+  // {
+  //   uint line_alloc = 1;
+  //   char *line = (char *)malloc(sizeof(char) * line_alloc);
+  //   line[0] = '\0';
 
-    // Write the code in
-    // Search for each line
-    int i = 0;
-    bool loop = true;
-    bool wrapped_block = false;
-    int s = i;
-    for (; loop || !wrapped_block; ++i) {
+  //   // Write the code in
+  //   // Search for each line
+  //   int i = 0;
+  //   bool loop = true;
+  //   bool wrapped_block = false;
+  //   int s = i;
+  //   for (; loop || !wrapped_block; ++i) {
 
-      bool copy_line = false;
-      switch (source_code[i]) {
-      case '\0': {
-        copy_line = true;
-        loop = false;
-      } break;
-      case '\n': {
-        copy_line = true;
-      } break;
-      default:
-        break;
-      }
+  //     bool copy_line = false;
+  //     switch (source_code[i]) {
+  //     case '\0': {
+  //       copy_line = true;
+  //       loop = false;
+  //     } break;
+  //     case '\n': {
+  //       copy_line = true;
+  //     } break;
+  //     default:
+  //       break;
+  //     }
 
-      // printf("i-s=%i\n", i - s);
-      if (copy_line || !loop) {
-        // Transfer text to the buffer line
-        if (i - s > 0) {
-          append_to_cstrn(&line_alloc, &line, source_code + s, i - s);
-        }
-        else if (!loop && !strlen(line)) {
-          wrapped_block = true;
-          // append_to_cstr(&line_alloc, &line, "}");
-        }
+  //     // printf("i-s=%i\n", i - s);
+  //     if (copy_line || !loop) {
+  //       // Transfer text to the buffer line
+  //       if (i - s > 0) {
+  //         append_to_cstrn(&line_alloc, &line, source_code + s, i - s);
+  //       }
+  //       else if (!loop && !strlen(line)) {
+  //         wrapped_block = true;
+  //         // append_to_cstr(&line_alloc, &line, "}");
+  //       }
 
-        // Add to the collection
-        if (cestate->text->lines_count + 1 >= cestate->text->lines_alloc) {
-          uint new_alloc = cestate->text->lines_alloc + 4 + cestate->text->lines_alloc / 4;
-          char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
-          if (cestate->text->lines_alloc) {
-            memcpy(new_ary, cestate->text->lines, cestate->text->lines_alloc * sizeof(char *));
-            free(cestate->text->lines);
-          }
-          for (int i = cestate->text->lines_alloc; i < new_alloc; ++i) {
-            new_ary[i] = NULL;
-          }
+  //       // Add to the collection
+  //       if (cestate->text->lines_count + 1 >= cestate->text->lines_alloc) {
+  //         uint new_alloc = cestate->text->lines_alloc + 4 + cestate->text->lines_alloc / 4;
+  //         char **new_ary = (char **)malloc(sizeof(char *) * new_alloc);
+  //         if (cestate->text->lines_alloc) {
+  //           memcpy(new_ary, cestate->text->lines, cestate->text->lines_alloc * sizeof(char *));
+  //           free(cestate->text->lines);
+  //         }
+  //         for (int i = cestate->text->lines_alloc; i < new_alloc; ++i) {
+  //           new_ary[i] = NULL;
+  //         }
 
-          cestate->text->lines_alloc = new_alloc;
-          cestate->text->lines = new_ary;
-        }
+  //         cestate->text->lines_alloc = new_alloc;
+  //         cestate->text->lines = new_ary;
+  //       }
 
-        cestate->text->lines[cestate->text->lines_count++] = line;
-        // printf("Line:(%i:%i)>'%s'\n", cestate->text->lines_count - 1, i - s,
-        // cestate->text->lines[cestate->text->lines_count - 1]); printf("strlen:%zu\n",
-        // strlen(cestate->text->lines[cestate->text->lines_count - 1])); if (cestate->text->lines_count > 1)
-        //   printf("dawn:%c\n", cestate->text->lines[1][4]);
+  //       cestate->text->lines[cestate->text->lines_count++] = line;
+  //       // printf("Line:(%i:%i)>'%s'\n", cestate->text->lines_count - 1, i - s,
+  //       // cestate->text->lines[cestate->text->lines_count - 1]); printf("strlen:%zu\n",
+  //       // strlen(cestate->text->lines[cestate->text->lines_count - 1])); if (cestate->text->lines_count > 1)
+  //       //   printf("dawn:%c\n", cestate->text->lines[1][4]);
 
-        // Reset
-        s = i + 1;
-        line_alloc = 1;
-        line = (char *)malloc(sizeof(char) * line_alloc);
-        line[0] = '\0';
-      }
-    }
-  }
+  //       // Reset
+  //       s = i + 1;
+  //       line_alloc = 1;
+  //       line = (char *)malloc(sizeof(char) * line_alloc);
+  //       line[0] = '\0';
+  //     }
+  //   }
+  // }
   // printf("life-6\n");
 
   // Set for render update
-  for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
-    if (cestate->line_display_offset + i < cestate->text->lines_count) {
-      // printf("life-6a\n");
-      if (cestate->render_lines[i]->text) {
-        // printf("life-6b\n");
-        cestate->render_lines[i]->requires_render_update =
-            cestate->render_lines[i]->requires_render_update ||
-            strcmp(cestate->render_lines[i]->text, cestate->text->lines[cestate->line_display_offset + i]);
-        // printf("life-6c\n");
-        free(cestate->render_lines[i]->text);
-        // printf("life-6d\n");
-      }
-      else {
-        // printf("life-6e\n");
-        // printf("dawn:%i %i\n", cestate->line_display_offset + i, cestate->text->lines_count);
-        // printf("dawn:%i\n", cestate->text->lines_alloc);
-        // printf("dawn:%c\n", cestate->text->lines[1][4]);
-        // printf("dawn:%zu\n", strlen(cestate->text->lines[cestate->line_display_offset + i]));
-        cestate->render_lines[i]->requires_render_update =
-            cestate->render_lines[i]->requires_render_update ||
-            !cestate->text->lines[cestate->line_display_offset + i] ||
-            strlen(cestate->text->lines[cestate->line_display_offset + i]);
-      }
-
-      // printf("life-6f\n");
-      // Assign
-      allocate_and_copy_cstr(cestate->render_lines[i]->text, cestate->text->lines[cestate->line_display_offset + i]);
-      // printf("life-6g\n");
-    }
-    else {
-      // printf("life-6h\n");
-      if (cestate->render_lines[i]->text) {
-        // printf("life-6i\n");
-        cestate->render_lines[i]->requires_render_update = true;
-        free(cestate->render_lines[i]->text);
-        // printf("life-6j\n");
-        cestate->render_lines[i]->text = NULL;
-      }
-    }
-    // printf("life-6k\n");
-  }
+  // MCcall(update_rendered_code_lines(cestate));
 
   return 0;
 }
@@ -1424,13 +1474,13 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   feState->source_data = function->source;
 
   feState->line_display_offset = 0;
-  MCcall(code_editor_set_function_code_to_text(feState));
+  // MCcall(code_editor_set_function_code_to_text(feState));
 
-  MCcall(code_editor_evaluate_syntax(feState));
+  // MCcall(code_editor_evaluate_syntax(feState));
 
   // printf("life-7\n");
-  feState->cursorLine = min(feState->text->lines_count - 1, feState->cursorLine);
-  feState->cursorCol = min(feState->cursorCol, strlen(feState->text->lines[feState->cursorLine]));
+  feState->cursorLine = 0; // min(feState->text->lines_count - 1, feState->cursorLine);
+  feState->cursorCol = 0;  // min(feState->cursorCol, strlen(feState->text->lines[feState->cursorLine]));
 
   feState->selection_exists = false;
 
@@ -1438,7 +1488,7 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   code_editor->data.visual.hidden = false;
   code_editor->data.visual.requires_render_update = true;
 
-  process_editor_load(feState);
+  // process_editor_load(feState);
 
   // printf("ohfohe\n");
 

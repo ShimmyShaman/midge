@@ -450,6 +450,15 @@ int init_c_str(c_str **ptr)
   return 0;
 }
 
+int set_c_str(c_str *cstr, const char *src)
+{
+  cstr->len = 0;
+  cstr->text[0] = '\0';
+  append_to_c_str(cstr, src);
+
+  return 0;
+}
+
 int release_c_str(c_str *ptr, bool free_char_string_also)
 {
   if (ptr->alloc > 0 && free_char_string_also && ptr->text) {

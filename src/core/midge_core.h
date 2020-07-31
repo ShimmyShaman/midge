@@ -578,7 +578,6 @@ struct mc_syntax_node;
 typedef struct mc_code_editor_state_v1 {
   mc_node_v1 *visual_node;
 
-  rendered_code_line **render_lines;
   uint font_resource_uid;
 
   int line_display_offset;
@@ -590,13 +589,22 @@ typedef struct mc_code_editor_state_v1 {
   bool cursor_requires_render_update;
 
   mc_source_definition_v1 *source_data;
-  struct {
-    union {
-      mc_syntax_node *function_ast;
-    };
-  } source_interpretation;
 
-  mc_cstring_list_v1 *text;
+  // mc_cstring_list_v1 *text;
+
+  // struct {
+
+  // } editor_render_state;
+  rendered_code_line **render_lines;
+
+  struct {
+    char *changed_text;
+    bool was_deleted;
+    int edit_index;
+  } edit_history;
+
+  c_str *edit_text;
+  mc_syntax_node *edit_ast;
 
   bool in_view_function_live_debugger;
   fld_view_state *fld_view;
@@ -922,8 +930,8 @@ int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast)
 int (*copy_syntax_node_to_text)(mc_syntax_node *syntax_node, char **output);
 int (*transcribe_code_block_ast_to_mc_definition)(mc_syntax_node *function_syntax, char **output);
 
-int (*parse_and_process_function_definition)(mc_source_definition_v1 *source_definition, mc_function_info_v1 **function_definition,
-                                             bool skip_clint_declaration);
+int (*parse_and_process_function_definition)(mc_source_definition_v1 *source_definition,
+                                             mc_function_info_v1 **function_definition, bool skip_clint_declaration);
 int (*obtain_function_info_from_definition)(char *function_definition_text,
                                             mc_function_info_v1 **command_hub_function_info);
 int (*parse_struct_definition)(mc_source_definition_v1 *code_definition, mc_struct_info_v1 **structure_info);
@@ -998,6 +1006,7 @@ int clint_loadheader(const char *path);
 
 int process_editor_insertion(mc_code_editor_state_v1 *cestate, char *text);
 int process_editor_load(mc_code_editor_state_v1 *cestate);
+int code_editor_update_suggestion_box(mc_code_editor_state_v1 *cestate);
 
 const char *get_action_type_string(process_action_type action_type)
 {

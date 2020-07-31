@@ -6435,7 +6435,7 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
         allocate_and_copy_cstrn(block, func_info->source->code + i, n - i);
         // free(func_info->source->code);
 
-        printf("code:\n%s||\n", block);
+        // printf("code:\n%s||\n", block);
       }
 
       MCcall(transcribe_c_block_to_mc(func_info, block, &code_index, &transcription_alloc, &transcription));
