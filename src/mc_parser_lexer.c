@@ -2938,37 +2938,38 @@ int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
   return 0;
 }
 
-int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast)
+int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool allow_imperfect_parse)
 {
   printf("pmtst-0\n");
   // printf("mc_syntax_node:%zu\n", sizeof(mc_syntax_node));
-  parsing_state *ps = (parsing_state *)malloc(sizeof(parsing_state));
-  ps->code = mcode;
-  ps->index = 0;
-  ps->line = 0;
-  ps->col = 0;
+  parsing_state ps;
+  ps.code = mcode;
+  ps.allow_imperfect_parse = allow_imperfect_parse;
+  ps.index = 0;
+  ps.line = 0;
+  ps.col = 0;
 
   mc_syntax_node *function;
-  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION, NULL, NULL, &function));
+  MCcall(mcs_construct_syntax_node(&ps, MC_SYNTAX_FUNCTION, NULL, NULL, &function));
 
   // MCcall(print_syntax_node(function, 0));
 
   printf("pmtst-1\n");
   mc_token_type token0;
-  MCcall(mcs_parse_type_identifier(ps, function, &function->function.return_type_identifier,
+  MCcall(mcs_parse_type_identifier(&ps, function, &function->function.return_type_identifier,
                                    &function->function.return_mc_type));
 
   // MCcall(print_syntax_node(function, 0));
   printf("pmtst-1b\n");
-  MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+  MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
   printf("pmtst-2\n");
   MCcall(print_syntax_node(function, 0));
 
-  MCcall(mcs_peek_token_type(ps, false, 0, &token0));
+  MCcall(mcs_peek_token_type(&ps, false, 0, &token0));
   if (token0 == MC_TOKEN_STAR_CHARACTER) {
-    MCcall(mcs_parse_dereference_sequence(ps, function, &function->function.return_type_dereference));
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+    MCcall(mcs_parse_dereference_sequence(&ps, function, &function->function.return_type_dereference));
+    MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
   }
   else {
     function->function.return_type_dereference = NULL;
@@ -2977,53 +2978,53 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast)
   printf("pmtst-3\n");
   // MCcall(print_syntax_node(function, 0));
 
-  MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_IDENTIFIER, &function->function.name));
-  MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+  MCcall(mcs_parse_through_token(&ps, function, MC_TOKEN_IDENTIFIER, &function->function.name));
+  MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
-  MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_OPEN_BRACKET, NULL));
-  MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+  MCcall(mcs_parse_through_token(&ps, function, MC_TOKEN_OPEN_BRACKET, NULL));
+  MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
   while (1) {
-    MCcall(mcs_peek_token_type(ps, false, 0, &token0));
+    MCcall(mcs_peek_token_type(&ps, false, 0, &token0));
     if (token0 == MC_TOKEN_CLOSING_BRACKET) {
       break;
     }
 
     // Comma
     if (function->function.parameters->count) {
-      MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_COMMA, NULL));
-      MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+      MCcall(mcs_parse_through_token(&ps, function, MC_TOKEN_COMMA, NULL));
+      MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
     }
 
     // Parse the parameter
     mc_syntax_node *parameter;
-    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_PARAMETER_DECLARATION, NULL, function, &parameter));
+    MCcall(mcs_construct_syntax_node(&ps, MC_SYNTAX_PARAMETER_DECLARATION, NULL, function, &parameter));
 
     MCcall(
-        mcs_parse_type_identifier(ps, function, &parameter->parameter.type_identifier, &parameter->parameter.mc_type));
+        mcs_parse_type_identifier(&ps, function, &parameter->parameter.type_identifier, &parameter->parameter.mc_type));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
 
-    MCcall(mcs_peek_token_type(ps, false, 0, &token0));
+    MCcall(mcs_peek_token_type(&ps, false, 0, &token0));
     if (token0 == MC_TOKEN_STAR_CHARACTER) {
-      MCcall(mcs_parse_dereference_sequence(ps, function, &parameter->parameter.type_dereference));
-      MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+      MCcall(mcs_parse_dereference_sequence(&ps, function, &parameter->parameter.type_dereference));
+      MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
     }
     else {
       parameter->parameter.type_dereference = NULL;
     }
 
-    MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_IDENTIFIER, &parameter->parameter.name));
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+    MCcall(mcs_parse_through_token(&ps, function, MC_TOKEN_IDENTIFIER, &parameter->parameter.name));
+    MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
     MCcall(append_to_collection((void ***)&function->function.parameters->items, &function->function.parameters->alloc,
                                 &function->function.parameters->count, parameter));
   }
 
-  MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_CLOSING_BRACKET, NULL));
-  MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+  MCcall(mcs_parse_through_token(&ps, function, MC_TOKEN_CLOSING_BRACKET, NULL));
+  MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
   // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never cleared
-  MCcall(mcs_parse_code_block(ps, function, &function->function.code_block));
+  MCcall(mcs_parse_code_block(&ps, function, &function->function.code_block));
 
   *function_ast = function;
   // MCcall(print_syntax_node(function, 0));

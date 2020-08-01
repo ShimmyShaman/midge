@@ -1338,11 +1338,35 @@ int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
   return 0;
 }
 
-int code_editor_set_function_code_to_text(mc_code_editor_state_v1 *cestate)
+int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *function)
 {
   if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
     MCerror(704, "TODO?");
   }
+
+  mc_syntax_node *code_syntax;
+  int result = parse_mc_to_syntax_tree(function->source->code, &code_syntax, true);
+  if (result) {
+    //   // printf("cees-3\n");
+    //   release_syntax_node(cestate->source_interpretation.function_ast);
+    //   cestate->source_interpretation.function_ast = NULL;
+
+    //   // printf("cees-4\n");
+    cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
+    cestate->status_bar.requires_render_update = true;
+    //   // printf("cees-5\n");
+  }
+  else {
+
+    if (cestate->edit_ast) {
+      release_syntax_node(cestate->edit_ast);
+    }
+    cestate->edit_ast = code_syntax;
+
+    allocate_and_copy_cstr(cestate->status_bar.message, "");
+    cestate->status_bar.requires_render_update = true;
+  }
+
   // function_info *function =cestate->source_data->func_info;
 
   // for (int j = 0; j < cestate->text->lines_count; ++j) {
@@ -1474,7 +1498,7 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   feState->source_data = function->source;
 
   feState->line_display_offset = 0;
-  // MCcall(code_editor_set_function_code_to_text(feState));
+  MCcall(code_editor_load_function(feState, function));
 
   // MCcall(code_editor_evaluate_syntax(feState));
 

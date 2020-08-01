@@ -6313,12 +6313,6 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
         ++definition_count;
         // printf("papmf-3\n");
         --i;
-
-        if (!strncmp(definitions[definition_count - 1].declaration, "void save_function_", 19)) {
-          char *rest;
-          allocate_and_copy_cstr(rest, file_text + i);
-          printf("rest:\n%s||\n", definitions[definition_count - 1].text);
-        }
         break;
       }
 
