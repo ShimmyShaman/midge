@@ -2445,7 +2445,7 @@ int mcs_parse_local_declaration_statement(parsing_state *ps, mc_syntax_node *par
                                           mc_syntax_node **additional_destination)
 {
   mc_syntax_node *statement;
-  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_DECLARATION_STATEMENT, NULL, NULL, &statement));
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_DECLARATION_STATEMENT, NULL, parent, &statement));
   if (additional_destination) {
     *additional_destination = statement;
   }

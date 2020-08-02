@@ -30,6 +30,9 @@ void special_modification(special_data *s)
 
 void special_suggester()
 {
+  int a = 5; // this number
+  // and here
+
   // special_data s;
   // s.num = 8;
   // s.add = 14;
