@@ -19,7 +19,7 @@ int build_code_editor_v1(int argc, void **argv)
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
-  // printf("bfe-a\n");
+  // printf("bce-a\n");
 
   // Build the function editor window
   // Instantiate: node global;
@@ -44,6 +44,7 @@ int build_code_editor_v1(int argc, void **argv)
   // Obtain visual resources
   pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
   resource_command *command;
+  // printf("bce-d\n");
 
   // Code Lines
   mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)malloc(sizeof(mc_code_editor_state_v1));
@@ -68,6 +69,7 @@ int build_code_editor_v1(int argc, void **argv)
     init_c_str(&state->code.rtf);
     state->code.syntax_updated = false;
   }
+  // printf("bce-j\n");
 
   {
     // FunctionLiveDebug
@@ -79,12 +81,14 @@ int build_code_editor_v1(int argc, void **argv)
     state->fld_view->visual_code.count = 0;
   }
 
+  // printf("bce-s\n");
   for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
     state->render_lines[i] = (rendered_code_line *)malloc(sizeof(rendered_code_line));
 
     state->render_lines[i]->index = i;
     state->render_lines[i]->requires_render_update = true;
-    state->render_lines[i]->text = NULL;
+    MCcall(init_c_str(&state->render_lines[i]->text_to_render));
+    // MCcall(set_c_str(state->render_lines[i]->text_to_render, ""));
     //  "!this is twenty nine letters! "
     //  "!this is twenty nine letters! "
     //  "!this is twenty nine letters! ";
@@ -97,6 +101,7 @@ int build_code_editor_v1(int argc, void **argv)
     command->data.create_texture.height = state->render_lines[i]->height = 28;
   }
   fedit->extra = (void *)state;
+  // printf("bce-w\n");
 
   {
     // Status Bar
@@ -153,6 +158,7 @@ int build_code_editor_v1(int argc, void **argv)
   command->data.font.height = 20;
   command->data.font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
+  // printf("bce-z\n");
   return 0;
 }
 
@@ -197,10 +203,7 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
           sequence->image_height = cestate->render_lines[ce_offset_line_index]->height;
           sequence->data.target_image.image_uid = cestate->render_lines[ce_offset_line_index]->image_resource_uid;
 
-          if (cestate->render_lines[ce_offset_line_index]->text) {
-            free(cestate->render_lines[ce_offset_line_index]->text);
-            cestate->render_lines[ce_offset_line_index]->text = NULL;
-          }
+          MCcall(set_c_str(cestate->render_lines[ce_offset_line_index]->text_to_render, ""));
         }
       }
 
@@ -236,10 +239,7 @@ int code_editor_render_fld_view_code(frame_time const *elapsed, mc_node_v1 *visu
               sequence->image_height = cestate->render_lines[ce_offset_line_index]->height;
               sequence->data.target_image.image_uid = cestate->render_lines[ce_offset_line_index]->image_resource_uid;
 
-              if (cestate->render_lines[ce_offset_line_index]->text) {
-                free(cestate->render_lines[ce_offset_line_index]->text);
-                cestate->render_lines[ce_offset_line_index]->text = NULL;
-              }
+              MCcall(set_c_str(cestate->render_lines[ce_offset_line_index]->text_to_render, ""));
             }
           }
 
@@ -332,13 +332,13 @@ int code_editor_render_v1(int argc, void **argv)
         sequence->data.target_image.image_uid = state->render_lines[i]->image_resource_uid;
 
         // printf("fer-d\n");
-        if (state->render_lines[i]->text && strlen(state->render_lines[i]->text)) {
+        if (state->render_lines[i]->text_to_render->len) {
           // printf("fer-e\n");
           MCcall(obtain_element_render_command(sequence, &element_cmd));
           element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
           element_cmd->x = 4;
           element_cmd->y = 2 + 12;
-          allocate_and_copy_cstr(element_cmd->data.print_text.text, state->render_lines[i]->text);
+          allocate_and_copy_cstr(element_cmd->data.print_text.text, state->render_lines[i]->text_to_render->text);
           element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
           element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
         }
@@ -419,8 +419,8 @@ int code_editor_render_v1(int argc, void **argv)
       if (state->cursorLine == state->selection_begin_line) {
         selected_columns = selection_end_col - selection_start_col;
       }
-      else if (state->render_lines[selection_start_line]->text) {
-        selected_columns = strlen(state->render_lines[selection_start_line]->text) - selection_start_col + 1;
+      else if (state->render_lines[selection_start_line]->text_to_render->len) {
+        selected_columns = state->render_lines[selection_start_line]->text_to_render->len - selection_start_col + 1;
       }
       else
         selected_columns = 1;
@@ -442,8 +442,8 @@ int code_editor_render_v1(int argc, void **argv)
         min(selection_end_line - state->line_display_offset, CODE_EDITOR_RENDERED_CODE_LINES);
     for (int i = between_offset_start; i < between_offset_exclusive_end; ++i) {
 
-      if (state->render_lines[i + state->line_display_offset]->text) {
-        int selected_columns = strlen(state->render_lines[i + state->line_display_offset]->text) + 1;
+      if (state->render_lines[i + state->line_display_offset]->text_to_render->len) {
+        int selected_columns = state->render_lines[i + state->line_display_offset]->text_to_render->len + 1;
 
         if (selected_columns > 0) {
           MCcall(obtain_element_render_command(sequence, &element_cmd));
@@ -461,9 +461,10 @@ int code_editor_render_v1(int argc, void **argv)
     if (selection_end_line > selection_start_line && selection_end_line - state->line_display_offset >= 0 &&
         selection_end_line - state->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES) {
 
-      if (state->render_lines[selection_end_line - state->line_display_offset]->text) {
+      if (state->render_lines[selection_end_line - state->line_display_offset]->text_to_render->len) {
         int selected_columns =
-            min(selection_end_col, strlen(state->render_lines[selection_end_line - state->line_display_offset]->text));
+            min(selection_end_col,
+                state->render_lines[selection_end_line - state->line_display_offset]->text_to_render->len);
 
         if (selected_columns > 0) {
           MCcall(obtain_element_render_command(sequence, &element_cmd));
@@ -1261,16 +1262,28 @@ int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
 
 int ce_update_syntax_rendered_lines(mc_code_editor_state_v1 *cestate)
 {
+  char *code = cestate->code.rtf->text;
+  for (int i = 0;; ++i) {
+    // Next char
+    bool eof = false;
+    switch (code[i]) {
+    case '\0': {
+      eof = true;
+    } break;
+    default:
+      continue;
+    }
 
-  MCerror(1254, "Get here");
-  // cestate->edit_ast
+    if (eof) {
+      break;
+    }
+  }
 
   return 0;
 }
 
 int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
 {
-  int i = 0;
   c_str *line_text;
   MCcall(init_c_str(&line_text));
 
@@ -1339,14 +1352,130 @@ int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
   return 0;
 }
 
-int mce_update_rendered_text() { return 0; }
-
-int mce_convert_syntax_to_rtf(mc_syntax_node *syntax_node, c_str *code_rtf)
+int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
 {
-  char *code;
-  MCcall(copy_syntax_node_to_text(syntax_node, &code));
+  // Copies the rtf text to the rendered lines
+  char *code = cestate->code.rtf->text;
+  int i = 0;
+  int s = i;
+  int line_index = 0;
+  int max_line_index = cestate->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES;
+  for (; i < cestate->code.rtf->len && line_index < max_line_index;) {
+    // Obtain the line rtf
+    bool eof = false;
+    for (;; ++i) {
+      if (code[i] == '\0') {
+        eof = true;
+        break;
+      }
+      else if (code[i] == '\n') {
+        break;
+      }
+    }
 
-  MCcall(set_c_str(code_rtf, code));
+    rendered_code_line *rendered_code_line = cestate->render_lines[line_index - cestate->line_display_offset];
+    if (line_index >= cestate->line_display_offset) {
+      // Set the line text
+      MCcall(set_c_strn(rendered_code_line->text_to_render, code + s, i - s));
+      rendered_code_line->requires_render_update = true;
+      // cestate->render_lines[line_index - cestate->line_display_offset]->raw_txt_len = i - s;
+
+      printf("set line:'%s'\n", rendered_code_line->text_to_render->text);
+    }
+
+    if (eof) {
+      break;
+    }
+    ++i; // Past the new-line
+    s = i;
+    ++line_index;
+  }
+
+  return 0;
+}
+
+int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
+{
+  if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
+
+    switch ((mc_token_type)syntax_node->type) {
+    case:
+      /* code */
+      break;
+
+    default:
+      break;
+    }
+
+    int s = 0;
+    for (int i = 0;; ++i) {
+      if (syntax_node->text[i] == '\0') {
+        if (i - s) {
+          MCcall(append_to_c_strn(rtf, syntax_node->text + s, i - s));
+        }
+        break;
+      }
+      else if (syntax_node->text[i] == '[') {
+        // Copy to this point
+        MCcall(append_to_c_strn(rtf, syntax_node->text + s, i - s));
+        // MCcall(append_to_c_str(rtf, "["));
+        MCcall(append_to_c_str(rtf, "[["));
+        s = i + 1;
+      }
+    }
+    return 0;
+  }
+
+  for (int a = 0; a < syntax_node->children->count; ++a) {
+    mc_syntax_node *child = syntax_node->children->items[a];
+
+    MCcall(_mce_convert_syntax_node_to_rtf(rtf, child));
+  }
+  // switch (syntax_node->type) {
+  // case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
+  //   for (int a = 0; a < syntax_node->children->count; ++a) {
+  //     mc_syntax_node *child = syntax_node->children->items[a];
+
+  //     MCcall(copy_syntax_node_to_text_v1(cstr, child));
+  //   }
+  // } break;
+  // default: {
+  //   MCerror(290, "MCS_copy_syntax_node_to_text:>Unsupported-token:%s",
+  //           get_mc_syntax_token_type_name(syntax_node->type));
+  // }
+  // }
+
+  return 0;
+}
+
+int mce_convert_syntax_to_rtf(c_str *code_rtf, mc_syntax_node *syntax_node)
+{
+  // char *code;
+  // MCcall(copy_syntax_node_to_text(syntax_node, &code));
+
+  // MCcall(set_c_str(code_rtf, code));
+  const char *DEFAULT_CODE_COLOR = "[color=156,219,253]";
+
+  MCcall(set_c_str(code_rtf, DEFAULT_CODE_COLOR));
+  MCcall(_mce_convert_syntax_node_to_rtf(code_rtf, syntax_node));
+
+  // // Escape all '[' brackets and add code to the c-string
+  // int s = 0;
+  // for (int i = 0;; ++i) {
+  //   if (code[i] == '\0') {
+  //     if (i - s) {
+  //       MCcall(append_to_c_strn(code_rtf, code + s, i - s));
+  //     }
+  //     break;
+  //   }
+  //   else if (code[i] == '[') {
+  //     // Copy to this point
+  //     MCcall(append_to_c_strn(code_rtf, code + s, i - s));
+  //     MCcall(append_to_c_str(code_rtf, "["));
+  //     // MCcall(append_to_c_str(code_rtf, "[["));
+  //     s = i + 1;
+  //   }
+  // }
 
   return 0;
 }
@@ -1382,10 +1511,10 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
   }
 
   // Set to cestate
-  MCcall(mce_convert_syntax_to_rtf(cestate->code.syntax, cestate->code.rtf));
+  MCcall(mce_convert_syntax_to_rtf(cestate->code.rtf, cestate->code.syntax));
   cestate->code.syntax_updated = true;
 
-  MCcall(mce_update_rendered_text());
+  MCcall(mce_update_rendered_text(cestate));
 
   // function_info *function =cestate->source_data->func_info;
 
@@ -1508,7 +1637,7 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   function_info *function = *(function_info **)argv[0];
-  printf("lefice:\n%s||\n", function->source->code);
+  // printf("lefice:\n%s||\n", function->source->code);
 
   // printf("life-begin\n");
 

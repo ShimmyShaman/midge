@@ -571,7 +571,7 @@ typedef struct rendered_code_line {
   uint index;
   bool requires_render_update;
   uint image_resource_uid;
-  char *text;
+  c_str *text_to_render;
   uint width, height;
 } rendered_code_line;
 struct mc_syntax_node;

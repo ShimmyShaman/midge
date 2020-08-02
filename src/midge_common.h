@@ -231,6 +231,8 @@ typedef struct c_str {
 } c_str;
 int init_c_str(c_str **ptr);
 int release_c_str(c_str *ptr, bool free_char_string_also);
+int set_c_str(c_str *cstr, const char *text);
+int set_c_strn(c_str *cstr, const char *text, int len);
 int append_to_c_str(c_str *cstr, const char *text);
 int append_to_c_strn(c_str *cstr, const char *text, int n);
 int append_to_c_strf(c_str *cstr, const char *format, ...);
@@ -455,6 +457,15 @@ int set_c_str(c_str *cstr, const char *src)
   cstr->len = 0;
   cstr->text[0] = '\0';
   append_to_c_str(cstr, src);
+
+  return 0;
+}
+
+int set_c_strn(c_str *cstr, const char *src, int len)
+{
+  cstr->len = 0;
+  cstr->text[0] = '\0';
+  append_to_c_strn(cstr, src, len);
 
   return 0;
 }
