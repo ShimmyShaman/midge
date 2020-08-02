@@ -64,8 +64,9 @@ int build_code_editor_v1(int argc, void **argv)
   {
     // Source
     state->source_data = NULL;
-    state->edit_ast = NULL;
-    init_c_str(&state->edit_text);
+    state->code.syntax = NULL;
+    init_c_str(&state->code.rtf);
+    state->code.syntax_updated = false;
   }
 
   {
@@ -1199,7 +1200,7 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   // }
 
   mc_syntax_node *code_syntax;
-  int result = parse_mc_to_syntax_tree(cstr, &code_syntax);
+  int result = parse_mc_to_syntax_tree(cstr, &code_syntax, false);
   // MCcall(parse_mc_to_syntax_tree(cstr, &cestate->source_interpretation.function_ast));
   // printf("cees-2\n");
   if (result) {
@@ -1214,10 +1215,10 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   }
   else {
 
-    if (cestate->edit_ast) {
-      release_syntax_node(cestate->edit_ast);
+    if (cestate->code.syntax) {
+      release_syntax_node(cestate->code.syntax);
     }
-    cestate->edit_ast = code_syntax;
+    cestate->code.syntax = code_syntax;
 
     allocate_and_copy_cstr(cestate->status_bar.message, "");
     cestate->status_bar.requires_render_update = true;
@@ -1338,6 +1339,18 @@ int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
   return 0;
 }
 
+int mce_update_rendered_text() { return 0; }
+
+int mce_convert_syntax_to_rtf(mc_syntax_node *syntax_node, c_str *code_rtf)
+{
+  char *code;
+  MCcall(copy_syntax_node_to_text(syntax_node, &code));
+
+  MCcall(set_c_str(code_rtf, code));
+
+  return 0;
+}
+
 int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *function)
 {
   if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
@@ -1355,17 +1368,24 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
     cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
     cestate->status_bar.requires_render_update = true;
     //   // printf("cees-5\n");
+    return 0;
   }
   else {
 
-    if (cestate->edit_ast) {
-      release_syntax_node(cestate->edit_ast);
+    if (cestate->code.syntax) {
+      release_syntax_node(cestate->code.syntax);
     }
-    cestate->edit_ast = code_syntax;
+    cestate->code.syntax = code_syntax;
 
-    allocate_and_copy_cstr(cestate->status_bar.message, "");
+    cprintf(cestate->status_bar.message, "loaded %s(...)", function->name);
     cestate->status_bar.requires_render_update = true;
   }
+
+  // Set to cestate
+  MCcall(mce_convert_syntax_to_rtf(cestate->code.syntax, cestate->code.rtf));
+  cestate->code.syntax_updated = true;
+
+  MCcall(mce_update_rendered_text());
 
   // function_info *function =cestate->source_data->func_info;
 

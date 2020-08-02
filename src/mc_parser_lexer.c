@@ -12,6 +12,8 @@ typedef struct parsing_state {
   int line;
   int col;
 
+  bool allow_imperfect_parse;
+
 } parsing_state;
 
 int mcs_parse_expression_unary(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
@@ -359,6 +361,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
 {
   mc_syntax_node *syntax_node = (mc_syntax_node *)calloc(sizeof(mc_syntax_node), 1);
   syntax_node->type = node_type;
+  syntax_node->begin.index = ps->index;
   syntax_node->begin.line = ps->line;
   syntax_node->begin.col = ps->col;
 
@@ -3002,7 +3005,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
 
     MCcall(
         mcs_parse_type_identifier(&ps, function, &parameter->parameter.type_identifier, &parameter->parameter.mc_type));
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
+    MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
     MCcall(mcs_peek_token_type(&ps, false, 0, &token0));
     if (token0 == MC_TOKEN_STAR_CHARACTER) {

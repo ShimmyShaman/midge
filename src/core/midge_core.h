@@ -603,8 +603,11 @@ typedef struct mc_code_editor_state_v1 {
     int edit_index;
   } edit_history;
 
-  c_str *edit_text;
-  mc_syntax_node *edit_ast;
+  struct {
+    mc_syntax_node *syntax;
+    c_str *rtf;
+    bool syntax_updated;
+  } code;
 
   bool in_view_function_live_debugger;
   fld_view_state *fld_view;
@@ -767,8 +770,8 @@ typedef struct mc_syntax_node {
   mc_syntax_node_type type;
   mc_syntax_node *parent;
   struct {
-    int line;
-    int col;
+    int line, col;
+    int index;
   } begin;
   union {
     // Text -- only used by MC_TOKENS -- All syntax tokens use below fields (as appropriate)
@@ -926,7 +929,7 @@ typedef struct mc_syntax_node {
     };
   };
 } mc_syntax_node;
-int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast);
+int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast, bool allow_imperfect_parse);
 int (*copy_syntax_node_to_text)(mc_syntax_node *syntax_node, char **output);
 int (*transcribe_code_block_ast_to_mc_definition)(mc_syntax_node *function_syntax, char **output);
 

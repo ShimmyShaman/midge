@@ -37,25 +37,25 @@ int process_editor_insertion(mc_code_editor_state_v1 *cestate, char *text)
 {
   printf("process_editor_insertion:%s now %u,%u\n", text, cestate->cursorLine, cestate->cursorCol);
 
-  // Find the context
-  mc_syntax_node *context_node;
-  MCcall(mpm_obtain_context_node_for_cursor(cestate->edit_ast, cestate, &context_node));
+  // // Find the context
+  // mc_syntax_node *context_node;
+  // MCcall(mpm_obtain_context_node_for_cursor(cestate->code.syntax, cestate, &context_node));
 
-  if (!context_node) {
-    MCerror(46, "TODO");
-  }
-
-  printf("context-Node:%s\n", get_mc_syntax_token_type_name(context_node->type));
-  // if(context_node->type == MC_SYNTAX_BLOCK) {
+  // if (!context_node) {
+  //   MCerror(46, "TODO");
   // }
-  MCcall(print_syntax_node(context_node, 0));
+
+  // printf("context-Node:%s\n", get_mc_syntax_token_type_name(context_node->type));
+  // // if(context_node->type == MC_SYNTAX_BLOCK) {
+  // // }
+  // MCcall(print_syntax_node(context_node, 0));
 
   return 0;
 }
 
 int process_editor_load(mc_code_editor_state_v1 *cestate)
 {
-  printf("process_editor_load:%s\n", cestate->edit_ast->function.name->text);
+  // printf("process_editor_load:%s\n", cestate->edit_ast->function.name->text);
 
   return 0;
 }

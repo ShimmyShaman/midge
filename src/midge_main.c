@@ -6044,7 +6044,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
 
       // Lexer/Parse into AST
       mc_syntax_node *function_ast;
-      MCcall(parse_mc_to_syntax_tree(definitions[a].text, &function_ast));
+      MCcall(parse_mc_to_syntax_tree(definitions[a].text, &function_ast, false));
 
       // Generate the function information from the syntax tree
       mc_function_info_v1 *func_info;
