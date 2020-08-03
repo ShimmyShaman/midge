@@ -323,7 +323,7 @@ int code_editor_render_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  printf("code_editor_render_v1-a\n");
+  // printf("code_editor_render_v1-a\n");
   frame_time const *elapsed = *(frame_time const **)argv[0];
   mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 

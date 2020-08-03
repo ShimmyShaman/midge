@@ -2034,6 +2034,14 @@ int parse_expression_lacking_midge_function_call(function_info *owner, char *cod
       --j;
       break;
     }
+    case '\'': {
+      ++j;
+      if (code[j] == '\\') {
+        ++j;
+      }
+      ++j;
+      MCcall(parse_past(code, &j, "'"));
+    } break;
     default:
       break;
     }

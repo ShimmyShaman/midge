@@ -584,6 +584,7 @@ typedef struct mc_code_editor_state_v1 {
   struct {
     int line;
     int col;
+    int zen_col;
     int rtf_index;
     bool requires_render_update;
   } cursor;

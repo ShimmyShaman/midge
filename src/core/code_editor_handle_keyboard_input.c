@@ -2,6 +2,73 @@
 
 #include "core/midge_core.h"
 
+void move_cursor_down(mc_code_editor_state_v1 *state)
+{
+  // Adjust the cursor index & col
+  char *code = state->code.rtf->text;
+  int i = state->cursor.rtf_index;
+
+  if (!state->cursor.zen_col) {
+    state->cursor.zen_col = state->cursor.zen_col;
+  }
+
+  // Find the new line
+  for (;; ++i) {
+    if (code[i] == '\0') {
+      // Do nothing
+      return;
+    }
+    if (code[i] == '\n') {
+      ++i;
+      break;
+    }
+  }
+
+  // Move along the line (as close to the zen col as possible)
+  int traversed = 0;
+  for (; traversed < state->cursor.zen_col; ++i) {
+    if (code[i] == '\0') {
+      break;
+    }
+    else if (code[i] == '\n') {
+      break;
+    }
+    else if (code[i] == '[') {
+      if (code[i] == '[') {
+        // Escaped
+        ++i;
+      }
+      else {
+        for (;; ++i) {
+          if (code[i] == '\0') {
+            // MCerror(42, "RTF Format Error");
+            printf("42 format error\n");
+          }
+          else if (code[i] == ']') {
+            --traversed;
+            break;
+          }
+        }
+      }
+    }
+    ++traversed;
+  }
+
+  ++state->cursor.line;
+  state->cursor.col = traversed;
+  state->cursor.rtf_index = i;
+
+  // Update the cursor visual
+  state->cursor.requires_render_update = true;
+  state->visual_node->data.visual.requires_render_update = true;
+
+  // Adjust display offset
+  if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+    // Move display offset down
+    state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+  }
+}
+
 // [_mc_iteration=3]
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
@@ -226,35 +293,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   case KEY_CODE_ARROW_DOWN: {
     event->handled = true;
 
-    // Adjust the cursor index & col
-    char *code = state->code.rtf->text;
-    int i = state->cursor.rtf_index;
-
-    // Find the new line
-    for (;; ++i) {
-      if (code[i] == '\0') {
-        // Do nothing
-        return;
-      }
-      if (code[i] == '\n') {
-        ++i;
-        break;
-      }
-    }
-
-    ++state->cursor.line;
-    state->cursor.col = 0;
-    state->cursor.rtf_index = i;
-
-    // Update the cursor visual
-    state->cursor.requires_render_update = true;
-    fedit->data.visual.requires_render_update = true;
-
-    // Adjust display offset
-    if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
-      // Move display offset down
-      state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
-    }
+    move_cursor_down(state);
   } break;
   // case KEY_CODE_ARROW_LEFT: {
   //   // Increment
@@ -396,7 +435,8 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       //         delete_selection(state);
       //       }
 
-      //       insert_text_into_editor_at_cursor(state, command_hub->clipboard_text, state->cursor.line, state->cursor.col);
+      //       insert_text_into_editor_at_cursor(state, command_hub->clipboard_text, state->cursor.line,
+      //       state->cursor.col);
       //     } break;
       //     case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
       //       // Increment
