@@ -694,7 +694,7 @@ int instantiate_function_v1(int argc, void **argv)
   func_identity_buf[0] = '\0';
   sprintf(func_identity_buf, function_identifier_format, func_info->name, func_info->latest_iteration);
 
-  // printf("@ifv-2\n");
+  printf("@ifv-2\n");
   // Construct the function parameters
   char param_buf[4096];
   param_buf[0] = '\0';
@@ -720,12 +720,15 @@ int instantiate_function_v1(int argc, void **argv)
         allocate_and_copy_cstr(parameter_type, func_info->parameters[i]->type_name);
       }
     }
+  printf("@ifv-2a\n");
+  printf("func_info->parameter_count:%i\n", func_info->parameters[0]->type_deref_count);
 
     // Deref
     char derefbuf[24];
     for (int j = 0; j < func_info->parameters[i]->type_deref_count; ++j)
       derefbuf[j] = '*';
     derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
+  printf("@ifv-2b\n");
 
     // Decl
     sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", parameter_type, derefbuf, func_info->parameters[i]->name);
@@ -737,12 +740,13 @@ int instantiate_function_v1(int argc, void **argv)
     derefbuf[1 + func_info->parameters[i]->type_deref_count] = '*';
     derefbuf[1 + func_info->parameters[i]->type_deref_count + 1] = '\0';
 
+  printf("@ifv-2c\n");
     // Assignment
     sprintf(param_buf + strlen(param_buf), "*(%s%s)argv[%i];\n", parameter_type, derefbuf, i);
 
     free(parameter_type);
   }
-  // printf("@ifv-2b\n");
+  printf("@ifv-5\n");
 
   // Append return-value
   if (func_info->return_type.deref_count || strcmp(func_info->return_type.name, "void")) {
@@ -792,7 +796,7 @@ int instantiate_function_v1(int argc, void **argv)
     free(return_type);
   }
 
-  // printf("@ifv-3\n");
+  printf("@ifv-8\n");
   // Declare the function
   const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
                                             "\n"
@@ -2034,14 +2038,14 @@ int parse_expression_lacking_midge_function_call(function_info *owner, char *cod
       --j;
       break;
     }
-    case '\'': {
-      ++j;
-      if (code[j] == '\\') {
-        ++j;
-      }
-      ++j;
-      MCcall(parse_past(code, &j, "'"));
-    } break;
+    // case '\'': {
+    //   ++j;
+    //   if (code[j] == '\\') {
+    //     ++j;
+    //   }
+    //   ++j;
+    //   MCcall(parse_past(code, &j, "'"));
+    // } break;
     default:
       break;
     }

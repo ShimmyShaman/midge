@@ -6139,11 +6139,15 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
                                           (char **)&parameter->type_name));
           parameter->type_deref_count =
               function_ast->function.parameters->items[p]->parameter.type_dereference->dereference_sequence.count;
+          printf("parameter->type_deref_count:%i\n", parameter->type_deref_count);
+
           // -- TODO -- mc-type?
 
           // Name
           MCcall(copy_syntax_node_to_text(function_ast->function.parameters->items[p]->parameter.name,
                                           (char **)&parameter->name));
+
+          func_info->parameters[p] = parameter;
         }
 
         // TODO
@@ -6157,7 +6161,9 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
       char *mc_format_definition;
       MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
 
-      printf("papsyntax-5 %s \n", mc_format_definition);
+      printf("papsyntax-5\n");
+      printf("mc_format_definition:\n%s||\n", mc_format_definition);
+      
       // Define the new function
       {
         void *vargs[2];
@@ -7563,7 +7569,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_mc_file(command_hub, "src/core/delete_selection.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/read_selected_editor_text.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/load_existing_struct_into_code_editor.c"));
-  MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_keyboard_input.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/code_editor_handle_keyboard_input.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_input.c"));
   printf("hopee\n");
 

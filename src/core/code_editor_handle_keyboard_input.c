@@ -130,7 +130,8 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   //       // Combine previous line & second line into one
   //       int previous_line_len = strlen(state->text->lines[state->cursor.line - 1]);
   //       char *combined =
-  //           (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text->lines[state->cursor.line]) + 1));
+  //           (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text->lines[state->cursor.line]) +
+  //           1));
   //       strcpy(combined, state->text->lines[state->cursor.line - 1]);
   //       strcat(combined, state->text->lines[state->cursor.line]);
 

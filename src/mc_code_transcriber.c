@@ -3,6 +3,7 @@
 #include "core/midge_core.h"
 
 int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_node);
+int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax_node);
 
 int mct_append_node_text_to_c_str(c_str *str, mc_syntax_node *syntax_node)
 {
@@ -39,8 +40,11 @@ int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
   }
 
   if (syntax_node->type == MC_SYNTAX_INVOCATION && syntax_node->invocation.mc_function_info) {
-    MCcall(print_syntax_node(syntax_node, 0));
-    MCerror(35, "TODO : %s", syntax_node->invocation.function_identity->text);
+    // MCcall(print_syntax_node(syntax_node, 0));
+    // MCerror(35, "TODO : %s", syntax_node->invocation.function_identity->text);
+
+    *result = true;
+    return 0;
   }
 
   for (int i = 0; i < syntax_node->children->count; ++i) {
@@ -55,6 +59,9 @@ int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
 
 int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
 {
+  printf("mct_transcribe_expression(%s)\n", get_mc_syntax_token_type_name(syntax_node->type));
+  // print_syntax_node(syntax_node, 0);
+
   switch (syntax_node->type) {
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION: {
     if (syntax_node->local_variable_declaration.mc_type) {
@@ -73,16 +80,16 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
     }
   } break;
   // WILL have to redo in future
+  case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
+  case MC_SYNTAX_CONDITIONAL_EXPRESSION:
   case MC_SYNTAX_RELATIONAL_EXPRESSION: {
-
     MCcall(mct_append_node_text_to_c_str(str, syntax_node));
   } break;
   // PROBABLY won't have to redo
   case MC_SYNTAX_INVOCATION:
   case MC_SYNTAX_DECLARATION_STATEMENT:
   case MC_SYNTAX_FIXREMENT_EXPRESSION: {
-
     MCcall(mct_append_node_text_to_c_str(str, syntax_node));
   } break;
   default:
@@ -90,6 +97,7 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
     break;
   }
 
+  // printf("~mct_transcribe_expression()\n");
   return 0;
 }
 
@@ -111,7 +119,7 @@ int mct_transcribe_if_statement(c_str *str, int indent, mc_syntax_node *syntax_n
   // Initialization
   MCcall(mct_append_to_c_str(str, indent, "if ("));
   MCcall(mct_transcribe_expression(str, syntax_node->if_statement.conditional));
-  MCcall(mct_append_to_c_str(str, indent, ") "));
+  MCcall(append_to_c_str(str, ") "));
 
   if (syntax_node->if_statement.code_block->type != MC_SYNTAX_BLOCK) {
     MCerror(97, "TODO");
@@ -119,10 +127,54 @@ int mct_transcribe_if_statement(c_str *str, int indent, mc_syntax_node *syntax_n
   MCcall(mct_transcribe_code_block(str, indent, syntax_node->if_statement.code_block));
 
   if (syntax_node->if_statement.else_continuance) {
-    MCerror(119, "TODO: %s",
-            get_mc_syntax_token_type_name((mc_syntax_node_type)syntax_node->if_statement.else_continuance->type));
+    MCcall(mct_append_to_c_str(str, indent, "else "));
+
+    if (syntax_node->if_statement.else_continuance->type == MC_SYNTAX_IF_STATEMENT) {
+
+      MCcall(mct_transcribe_if_statement(str, indent + 1, syntax_node->if_statement.else_continuance));
+    }
+    else if (syntax_node->if_statement.else_continuance->type == MC_SYNTAX_BLOCK) {
+      MCcall(mct_transcribe_code_block(str, indent, syntax_node->if_statement.else_continuance));
+    }
+    else {
+      MCerror(119, "TODO: %s",
+              get_mc_syntax_token_type_name((mc_syntax_node_type)syntax_node->if_statement.else_continuance->type));
+    }
   }
 
+  return 0;
+}
+
+int mct_transcribe_switch_statement(c_str *str, int indent, mc_syntax_node *syntax_node)
+{
+  printf("mct_transcribe_switch_statement()\n");
+  // Do MC_invokes
+  bool contains_mc_function_call;
+  if (syntax_node->switch_statement.conditional) {
+    MCcall(mct_contains_mc_invoke(syntax_node->switch_statement.conditional, &contains_mc_function_call));
+    if (contains_mc_function_call) {
+      MCerror(104, "TODO");
+    }
+  }
+
+  MCcall(mct_append_to_c_str(str, indent, "switch ("));
+  MCcall(mct_transcribe_expression(str, syntax_node->switch_statement.conditional));
+  MCcall(append_to_c_str(str, ") {\n"));
+
+  for (int i = 0; i < syntax_node->switch_statement.sections->count; ++i) {
+    mc_syntax_node *switch_section = syntax_node->switch_statement.sections->items[i];
+
+    for (int j = 0; j < switch_section->switch_section.labels->count; ++j) {
+      MCcall(mct_append_indent_to_c_str(str, indent + 1));
+
+      MCcall(mct_append_node_text_to_c_str(str, switch_section->switch_section.labels->items[j]));
+      MCcall(append_to_c_str(str, "\n"));
+    }
+
+    MCcall(mct_transcribe_statement_list(str, indent, switch_section->switch_section.statement_list));
+  }
+
+  MCcall(mct_append_to_c_str(str, indent, "}\n"));
   return 0;
 }
 
@@ -184,12 +236,17 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
   }
 
   for (int i = 0; i < syntax_node->children->count; ++i) {
+    // printf ("h343\n");
+    // printf("%p\n", syntax_node->children->items[i]);
     mc_syntax_node *child = syntax_node->children->items[i];
+    // printf("@%i/%i@%s\n", i, syntax_node->children->count, get_mc_syntax_token_type_name(child->type));
 
     switch (child->type) {
     case MC_SYNTAX_CONTINUE_STATEMENT:
     case MC_SYNTAX_BREAK_STATEMENT: {
+      MCcall(mct_append_indent_to_c_str(str, indent));
       MCcall(mct_append_node_text_to_c_str(str, child));
+      MCcall(append_to_c_str(str, "\n"));
     } break;
     case MC_SYNTAX_RETURN_STATEMENT: {
       bool contains_mc_function_call;
@@ -198,8 +255,11 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
         if (contains_mc_function_call) {
           MCerror(200, "TODO");
         }
+
+        MCerror(215, "mc_return_value etc");
       }
-      MCcall(mct_append_node_text_to_c_str(str, child));
+      // MCcall(mct_append_node_text_to_c_str(str, child));
+      MCcall(append_to_c_str(str, "return 0;\n"));
     } break;
     case MC_SYNTAX_BLOCK: {
       MCcall(mct_transcribe_code_block(str, indent, child));
@@ -207,13 +267,37 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
     case MC_SYNTAX_FOR_STATEMENT: {
       MCcall(mct_transcribe_for_statement(str, indent, child))
     } break;
+    case MC_SYNTAX_SWITCH_STATEMENT: {
+      MCcall(mct_transcribe_switch_statement(str, indent, child))
+    } break;
     case MC_SYNTAX_IF_STATEMENT: {
       MCcall(mct_transcribe_if_statement(str, indent, child))
     } break;
     case MC_SYNTAX_DECLARATION_STATEMENT: {
+      // Do MC_invokes
+      bool contains_mc_function_call;
+      MCcall(mct_contains_mc_invoke(child->declaration_statement.declaration, &contains_mc_function_call));
+      if (contains_mc_function_call) {
+        MCerror(218, "TODO");
+      }
+
       MCcall(mct_append_indent_to_c_str(str, indent));
 
       MCcall(mct_transcribe_expression(str, child->declaration_statement.declaration));
+      MCcall(append_to_c_str(str, ";\n"));
+    } break;
+    case MC_SYNTAX_EXPRESSION_STATEMENT: {
+      // Do MC_invokes
+      bool contains_mc_function_call;
+      MCcall(mct_contains_mc_invoke(child->expression_statement.expression, &contains_mc_function_call));
+      if (contains_mc_function_call) {
+        printf("%s\n", child->expression_statement.expression->type);
+        MCerror(231, "TODO");
+      }
+
+      MCcall(mct_append_indent_to_c_str(str, indent));
+
+      MCcall(mct_transcribe_expression(str, child->expression_statement.expression));
       MCcall(append_to_c_str(str, ";\n"));
     } break;
     default:
@@ -225,13 +309,14 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
         MCcall(mct_append_node_text_to_c_str(str, child));
       } break;
       default:
-        break;
+        MCcall(print_syntax_node(child, 0));
+        MCerror(168, "MCT:Statement-Unsupported:%s", get_mc_syntax_token_type_name(child->type));
       }
-      MCerror(168, "MCT:Statement-Unsupported:%s", get_mc_syntax_token_type_name(child->type));
     }
     // printf("transcription:\n%s||\n", str->text);
   }
 
+  printf("~mct_transcribe_statement_list()\n");
   return 0;
 }
 
@@ -266,9 +351,21 @@ int transcribe_code_block_ast_to_mc_definition_v1(mc_syntax_node *syntax_node, c
   if (syntax_node->block_node.statement_list) {
     MCcall(mct_transcribe_statement_list(str, 1, syntax_node->block_node.statement_list));
   }
+  MCcall(append_to_c_str(str, "\n  return 0;\n"));
 
   *output = str->text;
   MCcall(release_c_str(str, false));
+
+  // // Do MC_invokes
+  // bool contains_mc_function_call;
+  // MCcall(mct_contains_mc_invoke(syntax_node, &contains_mc_function_call));
+  // if (contains_mc_function_call) {
+  //   MCerror(231, "TODO");
+  // }
+
+  // Transcribe directly (TODO -- for now)
+  // MCcall(copy_syntax_node_to_text(syntax_node, output));
+  // printf("transcribe:\n%s||\n", *output);
 
   return 0;
 }
