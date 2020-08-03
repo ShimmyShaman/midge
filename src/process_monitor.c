@@ -17,8 +17,8 @@ int mpm_obtain_context_node_for_cursor(mc_syntax_node *syntax_node, mc_code_edit
   mc_syntax_node *child_floor = NULL;
   for (int i = 0; i < syntax_node->children->count; ++i) {
     mc_syntax_node *child = syntax_node->children->items[i];
-    if (child->begin.line > cestate->cursorLine ||
-        (child->begin.line == cestate->cursorLine && child->begin.col > cestate->cursorLine)) {
+    if (child->begin.line > cestate->cursor.line ||
+        (child->begin.line == cestate->cursor.line && child->begin.col > cestate->cursor.line)) {
       break;
     }
     child_floor = child;
@@ -35,7 +35,7 @@ int mpm_obtain_context_node_for_cursor(mc_syntax_node *syntax_node, mc_code_edit
 
 int process_editor_insertion(mc_code_editor_state_v1 *cestate, char *text)
 {
-  printf("process_editor_insertion:%s now %u,%u\n", text, cestate->cursorLine, cestate->cursorCol);
+  printf("process_editor_insertion:%s now %u,%u\n", text, cestate->cursor.line, cestate->cursor.col);
 
   // // Find the context
   // mc_syntax_node *context_node;

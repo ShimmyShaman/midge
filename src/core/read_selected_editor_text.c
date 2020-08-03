@@ -12,12 +12,12 @@ void read_selected_editor_text(code_editor_state *editor_state, char **result)
   // // printf("rset-0\n");
   // // Obtain selection bounds
   // int selection_start_line, selection_start_col, selection_end_line, selection_end_col;
-  // if (editor_state->selection_begin_line > editor_state->cursorLine ||
-  //     (editor_state->selection_begin_line == editor_state->cursorLine &&
-  //      editor_state->selection_begin_col > editor_state->cursorCol)) {
+  // if (editor_state->selection_begin_line > editor_state->cursor.line ||
+  //     (editor_state->selection_begin_line == editor_state->cursor.line &&
+  //      editor_state->selection_begin_col > editor_state->cursor.col)) {
   //   // The selection begin comes after the cursor
-  //   selection_start_line = (int)editor_state->cursorLine - editor_state->line_display_offset;
-  //   selection_start_col = editor_state->cursorCol;
+  //   selection_start_line = (int)editor_state->cursor.line - editor_state->line_display_offset;
+  //   selection_start_col = editor_state->cursor.col;
   //   selection_end_line = (int)editor_state->selection_begin_line - editor_state->line_display_offset;
   //   selection_end_col = editor_state->selection_begin_col;
   // }
@@ -25,8 +25,8 @@ void read_selected_editor_text(code_editor_state *editor_state, char **result)
   //   // The selection begin comes before the cursor
   //   selection_start_line = (int)editor_state->selection_begin_line - editor_state->line_display_offset;
   //   selection_start_col = editor_state->selection_begin_col;
-  //   selection_end_line = (int)editor_state->cursorLine - editor_state->line_display_offset;
-  //   selection_end_col = editor_state->cursorCol;
+  //   selection_end_line = (int)editor_state->cursor.line - editor_state->line_display_offset;
+  //   selection_end_col = editor_state->cursor.col;
   // }
 
   // // printf("rset-1\n");

@@ -52,8 +52,10 @@ int build_code_editor_v1(int argc, void **argv)
   state->visual_node = fedit;
   state->in_view_function_live_debugger = false;
   state->font_resource_uid = 0;
-  state->cursorLine = 0;
-  state->cursorCol = 0;
+  state->cursor.line = 0;
+  state->cursor.col = 0;
+  state->cursor.rtf_index = 0;
+  state->cursor.requires_render_update = false;
   state->line_display_offset = 0;
   // state->text = (mc_cstring_list_v1 *)malloc(sizeof(mc_cstring_list_v1));
   // state->text->lines_alloc = 8;
@@ -321,7 +323,7 @@ int code_editor_render_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  // printf("code_editor_render_v1-a\n");
+  printf("code_editor_render_v1-a\n");
   frame_time const *elapsed = *(frame_time const **)argv[0];
   mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 
@@ -340,9 +342,7 @@ int code_editor_render_v1(int argc, void **argv)
     MCcall(code_editor_render_fld_view_code(elapsed, visual_node));
   }
   else {
-    render_color font_color[32];
-    font_color[0] = COLOR_GHOST_WHITE;
-    int font_color_nest_index = 0;
+    render_color font_color = COLOR_GHOST_WHITE;
 
     for (int a = 0; a < CODE_EDITOR_RENDERED_CODE_LINES; ++a) {
       rendered_code_line *rendered_line = state->render_lines[a];
@@ -361,7 +361,7 @@ int code_editor_render_v1(int argc, void **argv)
         int i = 0;
         int s = i;
         int t = 0;
-        printf("rltext:'%s'\n", rendered_line->rtf->text);
+        // printf("rltext:'%s'\n", rendered_line->rtf->text);
         while (1) {
           if (rendered_line->rtf->text[i] == ' ') {
             while (rendered_line->rtf->text[i] == ' ') {
@@ -387,21 +387,15 @@ int code_editor_render_v1(int argc, void **argv)
               MCcall(mce_parse_past_integer(rendered_line->rtf->text, &j, &b));
               MCcall(parse_past(rendered_line->rtf->text, &j, "]"));
 
-              font_color[++font_color_nest_index].a = 1.f;
-              font_color[font_color_nest_index].r = (float)r / 255.f;
-              font_color[font_color_nest_index].g = (float)g / 255.f;
-              font_color[font_color_nest_index].b = (float)b / 255.f;
+              font_color.r = (float)r / 255.f;
+              font_color.g = (float)g / 255.f;
+              font_color.b = (float)b / 255.f;
 
               s = i = j;
               continue;
             }
-            else if (!strncmp(rendered_line->rtf->text + i, "[/color]", 8)) {
-              --font_color_nest_index;
-              s = i = i + 8;
-              continue;
-            }
             else {
-              MCerror(359, "Unsupported:'%s'", rendered_line->rtf->text);
+              MCerror(359, "Unsupported:'%s'", rendered_line->rtf->text + i);
             }
           }
 
@@ -424,7 +418,7 @@ int code_editor_render_v1(int argc, void **argv)
             allocate_and_copy_cstrn(element_cmd->data.print_text.text, rendered_line->rtf->text + s, i - s);
             printf("line:%i text:'%s' @ %i\n", a, element_cmd->data.print_text.text, t);
             element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
-            element_cmd->data.print_text.color = font_color[font_color_nest_index];
+            element_cmd->data.print_text.color = font_color;
             // (render_color){0.61f, 0.86f, 0.99f, 1.f};;
             t += i - s;
           }
@@ -483,11 +477,11 @@ int code_editor_render_v1(int argc, void **argv)
   if (state->selection_exists) {
     // Obtain selection bounds
     int selection_start_line, selection_start_col, selection_end_line, selection_end_col;
-    if (state->selection_begin_line > state->cursorLine ||
-        (state->selection_begin_line == state->cursorLine && state->selection_begin_col > state->cursorCol)) {
+    if (state->selection_begin_line > state->cursor.line ||
+        (state->selection_begin_line == state->cursor.line && state->selection_begin_col > state->cursor.col)) {
       // The selection begin comes after the cursor
-      selection_start_line = (int)state->cursorLine - state->line_display_offset;
-      selection_start_col = state->cursorCol;
+      selection_start_line = (int)state->cursor.line - state->line_display_offset;
+      selection_start_col = state->cursor.col;
       selection_end_line = (int)state->selection_begin_line - state->line_display_offset;
       selection_end_col = state->selection_begin_col;
     }
@@ -495,15 +489,15 @@ int code_editor_render_v1(int argc, void **argv)
       // The selection begin comes before the cursor
       selection_start_line = (int)state->selection_begin_line - state->line_display_offset;
       selection_start_col = state->selection_begin_col;
-      selection_end_line = (int)state->cursorLine - state->line_display_offset;
-      selection_end_col = state->cursorCol;
+      selection_end_line = (int)state->cursor.line - state->line_display_offset;
+      selection_end_col = state->cursor.col;
     }
 
     // First line (partial)
     if (selection_start_line - state->line_display_offset >= 0 &&
         selection_start_line - state->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES) {
       int selected_columns;
-      if (state->cursorLine == state->selection_begin_line) {
+      if (state->cursor.line == state->selection_begin_line) {
         selected_columns = selection_end_col - selection_start_col;
       }
       else if (state->render_lines[selection_start_line]->rtf->len) {
@@ -587,12 +581,12 @@ int code_editor_render_v1(int argc, void **argv)
 
   // printf("fer-q\n");
   // Cursor
-  state->cursor_requires_render_update = false;
+  state->cursor.requires_render_update = false;
   if (!state->in_view_function_live_debugger) {
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
-    element_cmd->x = 6 + (uint)(state->cursorCol * EDITOR_FONT_HORIZONTAL_STRIDE);
-    element_cmd->y = 7 + (state->cursorLine - state->line_display_offset) * EDITOR_LINE_STRIDE;
+    element_cmd->x = 6 + (uint)(state->cursor.col * EDITOR_FONT_HORIZONTAL_STRIDE);
+    element_cmd->y = 7 + (state->cursor.line - state->line_display_offset) * EDITOR_LINE_STRIDE;
     element_cmd->data.colored_rect_info.width = 2;
     element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
     element_cmd->data.colored_rect_info.color = (render_color){0.83f, 0.83f, 0.83f, 1.f};
@@ -1447,6 +1441,8 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
   int s = i;
   int line_index = 0;
   int max_line_index = cestate->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES;
+  char *color_from_previous_line = NULL;
+  char *color_at_end_of_current_line = NULL;
   for (; i < cestate->code.rtf->len && line_index < max_line_index;) {
     // Obtain the line rtf
     bool eof = false;
@@ -1458,16 +1454,49 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
       else if (code[i] == '\n') {
         break;
       }
+      else if (code[i] == '[' && code[i + 1] != '[') {
+        if (!strncmp(code + i, "[color=", 7)) {
+          int j = i + 7;
+          for (;; ++j) {
+            if (code[j] == ']') {
+              ++j;
+              break;
+            }
+          }
+          if (color_at_end_of_current_line) {
+            free(color_at_end_of_current_line);
+          }
+          allocate_and_copy_cstrn(color_at_end_of_current_line, code + i, j - i);
+          i = j - 1;
+          continue;
+        }
+        MCerror(1465, "Unhandled");
+      }
     }
 
     rendered_code_line *rendered_code_line = cestate->render_lines[line_index - cestate->line_display_offset];
     if (line_index >= cestate->line_display_offset) {
-      // Set the line text
-      MCcall(set_c_strn(rendered_code_line->rtf, code + s, i - s));
-      rendered_code_line->requires_render_update = true;
-      // cestate->render_lines[line_index - cestate->line_display_offset]->raw_txt_len = i - s;
+      int potential_line_len = (color_from_previous_line ? strlen(color_from_previous_line) : 0) + i - s;
 
-      // printf("set line:'%s'\n", rendered_code_line->rtf->text);
+      if (rendered_code_line->rtf->len != potential_line_len ||
+          (color_from_previous_line &&
+           strncmp(rendered_code_line->rtf->text, color_from_previous_line, strlen(color_from_previous_line))) ||
+          strncmp(rendered_code_line->rtf->text + strlen(color_from_previous_line), code + s, s - i)) {
+        printf("line-%i was:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
+
+        // Set previous rtf settings
+        MCcall(set_c_str(rendered_code_line->rtf, ""));
+        if (color_from_previous_line) {
+          MCcall(append_to_c_str(rendered_code_line->rtf, color_from_previous_line));
+        }
+
+        // Set the line text
+        MCcall(append_to_c_strn(rendered_code_line->rtf, code + s, i - s));
+        rendered_code_line->requires_render_update = true;
+        cestate->visual_node->data.visual.requires_render_update = true;
+
+        printf("line-%i now:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
+      }
     }
 
     if (eof) {
@@ -1476,6 +1505,14 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
     ++i; // Past the new-line
     s = i;
     ++line_index;
+
+    if (color_at_end_of_current_line) {
+      if (color_from_previous_line) {
+        free(color_from_previous_line);
+      }
+      color_from_previous_line = color_at_end_of_current_line;
+      color_at_end_of_current_line = NULL;
+    }
   }
 
   return 0;
@@ -1488,7 +1525,7 @@ int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
     // RTF - prepend
     switch ((mc_token_type)syntax_node->type) {
     case MC_TOKEN_LINE_COMMENT:
-      MCcall(append_to_c_str(rtf, "[color=12,169,7]"));
+      MCcall(append_to_c_str(rtf, "[color=22,162,18]"));
       break;
     default:
       break;
@@ -1515,7 +1552,7 @@ int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
     // RTF - append
     switch ((mc_token_type)syntax_node->type) {
     case MC_TOKEN_LINE_COMMENT:
-      MCcall(append_to_c_str(rtf, "[/color]"));
+      MCcall(append_to_c_str(rtf, "[color=156,219,253]"));
       break;
     default:
       break;
@@ -1536,32 +1573,10 @@ int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
 
 int mce_convert_syntax_to_rtf(c_str *code_rtf, mc_syntax_node *syntax_node)
 {
-  // char *code;
-  // MCcall(copy_syntax_node_to_text(syntax_node, &code));
-
-  // MCcall(set_c_str(code_rtf, code));
   const char *DEFAULT_CODE_COLOR = "[color=156,219,253]";
 
   MCcall(set_c_str(code_rtf, DEFAULT_CODE_COLOR));
   MCcall(_mce_convert_syntax_node_to_rtf(code_rtf, syntax_node));
-
-  // // Escape all '[' brackets and add code to the c-string
-  // int s = 0;
-  // for (int i = 0;; ++i) {
-  //   if (code[i] == '\0') {
-  //     if (i - s) {
-  //       MCcall(append_to_c_strn(code_rtf, code + s, i - s));
-  //     }
-  //     break;
-  //   }
-  //   else if (code[i] == '[') {
-  //     // Copy to this point
-  //     MCcall(append_to_c_strn(code_rtf, code + s, i - s));
-  //     MCcall(append_to_c_str(code_rtf, "["));
-  //     // MCcall(append_to_c_str(code_rtf, "[["));
-  //     s = i + 1;
-  //   }
-  // }
 
   return 0;
 }
@@ -1599,8 +1614,12 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
   // Set to cestate
   MCcall(mce_convert_syntax_to_rtf(cestate->code.rtf, cestate->code.syntax));
   cestate->code.syntax_updated = true;
+  // printf("code.rtf:\n%s||\n", cestate->code.rtf->text);
 
   MCcall(mce_update_rendered_text(cestate));
+
+  // printf("%p\n", cestate);
+  // printf("code.rtf:\n%s||\n", cestate->code.rtf);
 
   // function_info *function =cestate->source_data->func_info;
 
@@ -1738,8 +1757,8 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   // MCcall(code_editor_evaluate_syntax(feState));
 
   // printf("life-7\n");
-  feState->cursorLine = 0; // min(feState->text->lines_count - 1, feState->cursorLine);
-  feState->cursorCol = 0;  // min(feState->cursorCol, strlen(feState->text->lines[feState->cursorLine]));
+  feState->cursor.line = 0; // min(feState->text->lines_count - 1, feState->cursor.line);
+  feState->cursor.col = 0;  // min(feState->cursor.col, strlen(feState->text->lines[feState->cursor.line]));
 
   feState->selection_exists = false;
 

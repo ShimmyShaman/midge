@@ -150,8 +150,8 @@ void load_existing_struct_into_code_editor(mc_node_v1 *code_editor, mc_source_de
   //   }
 
   //   // printf("life-7\n");
-  //   feState->cursorLine = 1;
-  //   feState->cursorCol = strlen(feState->text->lines[feState->cursorLine]);
+  //   feState->cursor.line = 1;
+  //   feState->cursor.col = strlen(feState->text->lines[feState->cursor.line]);
 
   //   // printf("life-7a\n");
   //   code_editor->data.visual.hidden = false;

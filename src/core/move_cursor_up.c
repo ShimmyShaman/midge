@@ -6,7 +6,7 @@
 void move_cursor_up(node *code_editor_node, code_editor_state *state)
 {
     return;
-  if (state->cursorLine == 0) {
+  if (state->cursor.line == 0) {
     // Do Nothing
     return;
   }
@@ -14,34 +14,34 @@ void move_cursor_up(node *code_editor_node, code_editor_state *state)
   // ERR(ERROR_CHECK, "This is the way things go around");
 
   // Increment
-  --state->cursorLine;
+  --state->cursor.line;
   int line_len;
-  // if (state->text->lines[state->cursorLine]) {
-  //   line_len = strlen(state->text->lines[state->cursorLine]);
+  // if (state->text->lines[state->cursor.line]) {
+  //   line_len = strlen(state->text->lines[state->cursor.line]);
   // }
   // else {
   //   line_len = 0;
   // }
-  if (state->cursorCol > line_len) {
-    state->cursorCol = line_len;
+  if (state->cursor.col > line_len) {
+    state->cursor.col = line_len;
 
     // if(state->cursor_zen_col == 0) {
-    //   state->cursor_zen_col = state->cursorCol;
+    //   state->cursor_zen_col = state->cursor.col;
     // }
   }
   // if (state->cursorZenCol > line_len) {
-  //   state->cursorCol = line_len;
+  //   state->cursor.col = line_len;
   // } else {
-  //   state->cursorCol = state->cursorZenCol;
+  //   state->cursor.col = state->cursorZenCol;
   // }
 
   // Update the cursor visual
-  state->cursor_requires_render_update = true;
+  state->cursor.requires_render_update = true;
   code_editor_node->data.visual.requires_render_update = true;
 
   // Adjust display offset
-  if (state->cursorLine < state->line_display_offset) {
+  if (state->cursor.line < state->line_display_offset) {
     // Move display offset up
-    state->line_display_offset = state->cursorLine;
+    state->line_display_offset = state->cursor.line;
   }
 }

@@ -94,31 +94,31 @@ int core_display_entry_handle_input_v1(int argc, void **argv)
 
   //   // Update the text
   //   {
-  //     int current_line_len = strlen(state->text.lines[state->cursorLine]);
+  //     int current_line_len = strlen(state->text.lines[state->cursor.line]);
   //     char *new_line = (char *)malloc(sizeof(char) * (current_line_len + 1 + 1));
-  //     if (state->cursorCol) {
-  //       strncpy(new_line, state->text.lines[state->cursorLine], state->cursorCol);
+  //     if (state->cursor.col) {
+  //       strncpy(new_line, state->text.lines[state->cursor.line], state->cursor.col);
   //     }
-  //     new_line[state->cursorCol] = c;
-  //     if (current_line_len - state->cursorCol) {
-  //       strcat(new_line + state->cursorCol + 1, state->text.lines[state->cursorLine]);
+  //     new_line[state->cursor.col] = c;
+  //     if (current_line_len - state->cursor.col) {
+  //       strcat(new_line + state->cursor.col + 1, state->text.lines[state->cursor.line]);
   //     }
   //     new_line[current_line_len + 1] = '\0';
 
-  //     free(state->text.lines[state->cursorLine]);
-  //     state->text.lines[state->cursorLine] = new_line;
+  //     free(state->text.lines[state->cursor.line]);
+  //     state->text.lines[state->cursor.line] = new_line;
   //   }
 
   //   // Update the rendered line for the text
-  //   if (state->cursorLine > state->line_display_offset &&
-  //       state->cursorLine - state->line_display_offset < +CODE_EDITOR_RENDERED_CODE_LINES) {
+  //   if (state->cursor.line > state->line_display_offset &&
+  //       state->cursor.line - state->line_display_offset < +CODE_EDITOR_RENDERED_CODE_LINES) {
 
-  //     if (state->render_lines[state->cursorLine - state->line_display_offset].text) {
-  //       free(state->render_lines[state->cursorLine - state->line_display_offset].text);
+  //     if (state->render_lines[state->cursor.line - state->line_display_offset].text) {
+  //       free(state->render_lines[state->cursor.line - state->line_display_offset].text);
   //     }
-  //     allocate_and_copy_cstr(state->render_lines[state->cursorLine - state->line_display_offset].text,
-  //                            state->text.lines[state->cursorLine]);
-  //     state->render_lines[state->cursorLine - state->line_display_offset].requires_render_update = true;
+  //     allocate_and_copy_cstr(state->render_lines[state->cursor.line - state->line_display_offset].text,
+  //                            state->text.lines[state->cursor.line]);
+  //     state->render_lines[state->cursor.line - state->line_display_offset].requires_render_update = true;
   //     fedit->data.visual.requires_render_update = true;
   //   }
 
@@ -571,7 +571,7 @@ int build_core_display_v1(int argc, void **argv)
   // MCcall(build_core_entry(core_objects_display, "move_cursor_up"));
   // MCcall(build_core_entry(core_objects_display, "save_function_to_file"));
   // MCcall(build_core_entry(core_objects_display, "save_struct_to_file"));
-  // MCcall(build_core_entry(core_objects_display, "insert_text_into_editor"));
+  // MCcall(build_core_entry(core_objects_display, "insert_text_into_editor_at_cursor"));
   // MCcall(build_core_entry(core_objects_display, "delete_selection"));
   // MCcall(build_core_entry(core_objects_display, "read_selected_editor_text"));
   // MCcall(build_core_entry(core_objects_display, "load_existing_struct_into_code_editor"));

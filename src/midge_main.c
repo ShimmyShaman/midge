@@ -2354,6 +2354,16 @@ int submit_user_command(int argc, void **argsv);
 #include "m_threads.h"
 int mc_main(int argc, const char *const *argv)
 {
+  // c_str *str;
+  // init_c_str(&str);
+  // set_c_str(str, "holo");
+  // printf("strbef:'%s'\n", str->text);
+  // insert_into_c_str(str, "bo", 2);
+  // printf("straft:'%s'\n", str->text);
+  // insert_into_c_str(str, "mo", 4);
+  // printf("strlat:'%s'\n", str->text);
+  // return 0;
+
   // pslp = sleepit;
   // // -- Start Thread
   // mthread_info *doti;
@@ -7155,21 +7165,21 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
-    field->name = "cursorLine";
+    field->name = "cursor.line";
 
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
-    field->name = "cursorCol";
+    field->name = "cursor.col";
 
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "bool";
     field->type_version = 0U;
     field->type_deref_count = 0;
-    field->name = "cursor_requires_render_update";
+    field->name = "cursor.requires_render_update";
 
     field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     code_editor_state_strdef->fields[f++] = field;
@@ -7501,6 +7511,26 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(input);
   free(output);
 
+  // code_editor.c
+  {
+    void *mc_vargs[2];
+    const char *filepath = "/home/jason/midge/src/code_editor.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &input;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
+  MCcall(clint_declare(output));
+  free(input);
+  free(output);
+
+  MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
+  MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
+  MCcall(clint_process("code_editor_toggle_view = &code_editor_toggle_view_v1;"));
+  MCcall(clint_process("load_existing_function_into_code_editor = &load_existing_function_into_code_editor_v1;"));
+
   // MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
 
   printf("icf-2\n");
@@ -7529,33 +7559,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   MCcall(parse_and_process_mc_file(command_hub, "src/core/move_cursor_up.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/file_persistence.c"));
-  MCcall(parse_and_process_mc_file(command_hub, "src/core/insert_text_into_editor.c"));
+  MCcall(parse_and_process_mc_file(command_hub, "src/core/insert_text_into_editor_at_cursor.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/delete_selection.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/read_selected_editor_text.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/load_existing_struct_into_code_editor.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_keyboard_input.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_input.c"));
   printf("hopee\n");
-
-  // code_editor.c
-  {
-    void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/code_editor.c";
-    mc_vargs[0] = &filepath;
-    void *p_mc_vargs_1 = &input;
-    mc_vargs[1] = &p_mc_vargs_1;
-    MCcall(read_file_text(2, mc_vargs));
-  }
-
-  MCcall(replace_init_file_with_v1_labels(command_hub, input, &output));
-  MCcall(clint_declare(output));
-  free(input);
-  free(output);
-
-  MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
-  MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
-  MCcall(clint_process("code_editor_toggle_view = &code_editor_toggle_view_v1;"));
-  MCcall(clint_process("load_existing_function_into_code_editor = &load_existing_function_into_code_editor_v1;"));
 
   // midge_core_ui.c
   {

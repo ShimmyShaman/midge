@@ -10,11 +10,11 @@ void delete_selection(code_editor_state *state)
 
   // // Obtain selection bounds
   // int selection_start_line, selection_start_col, selection_end_line, selection_end_col;
-  // if (state->selection_begin_line > state->cursorLine ||
-  //     (state->selection_begin_line == state->cursorLine && state->selection_begin_col > state->cursorCol)) {
+  // if (state->selection_begin_line > state->cursor.line ||
+  //     (state->selection_begin_line == state->cursor.line && state->selection_begin_col > state->cursor.col)) {
   //   // The selection begin comes after the cursor
-  //   selection_start_line = (int)state->cursorLine;
-  //   selection_start_col = state->cursorCol;
+  //   selection_start_line = (int)state->cursor.line;
+  //   selection_start_col = state->cursor.col;
   //   selection_end_line = (int)state->selection_begin_line;
   //   selection_end_col = state->selection_begin_col;
   // }
@@ -22,16 +22,16 @@ void delete_selection(code_editor_state *state)
   //   // The selection begin comes before the cursor
   //   selection_start_line = (int)state->selection_begin_line;
   //   selection_start_col = state->selection_begin_col;
-  //   selection_end_line = (int)state->cursorLine;
-  //   selection_end_col = state->cursorCol;
+  //   selection_end_line = (int)state->cursor.line;
+  //   selection_end_col = state->cursor.col;
   // }
 
   // // Clear the selection
   // state->selection_exists = false;
 
   // // Adjust cursor
-  // state->cursorLine = selection_start_line;
-  // state->cursorCol = selection_start_col;
+  // state->cursor.line = selection_start_line;
+  // state->cursor.col = selection_start_col;
 
   // // Single line selection
   // char *new_line;

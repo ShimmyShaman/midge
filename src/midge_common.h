@@ -236,6 +236,7 @@ int set_c_strn(c_str *cstr, const char *text, int len);
 int append_to_c_str(c_str *cstr, const char *text);
 int append_to_c_strn(c_str *cstr, const char *text, int n);
 int append_to_c_strf(c_str *cstr, const char *format, ...);
+int insert_into_c_str(c_str *cstr, const char *text, int index);
 
 int get_key_input_code_char(bool shift, key_event_code code, char *c)
 {
@@ -658,5 +659,44 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
     // printf("atcs-6\n");
     chunk_size = (chunk_size * 5) / 3;
   }
+}
+
+int insert_into_c_str(c_str *cstr, const char *text, int index)
+{
+  if (index > cstr->len) {
+    MCerror(667, "TODO");
+  }
+
+  int n = strlen(text);
+  if (cstr->len + n + 1 >= cstr->alloc) {
+    unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 10;
+    // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    // printf("atc-4\n");
+    if (index) {
+      memcpy(newptr, cstr->text, sizeof(char) * index);
+    }
+    memcpy(newptr + index, text, sizeof(char) * n);
+    if (cstr->len - index) {
+      memcpy(newptr + index + n, cstr->text + index, sizeof(char) * (cstr->len - index));
+    }
+    // printf("atc-5\n");
+    free(cstr->text);
+    // printf("atc-6\n");
+    cstr->text = newptr;
+    // printf("atc-7\n");
+    cstr->alloc = new_allocated_size;
+    cstr->len += n;
+    cstr->text[cstr->len] = '\0';
+    // printf("atc-8\n");
+    return 0;
+  }
+
+  memmove(cstr->text + index + n, cstr->text + index, sizeof(char) * (cstr->len - index));
+  memcpy(cstr->text + index, text, sizeof(char) * n);
+  cstr->len += n;
+  cstr->text[cstr->len] = '\0';
+
+  return 0;
 }
 #endif // MIDGE_COMMON_H

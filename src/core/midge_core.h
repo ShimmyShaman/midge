@@ -581,12 +581,15 @@ typedef struct mc_code_editor_state_v1 {
   uint font_resource_uid;
 
   int line_display_offset;
-  uint cursorLine;
-  uint cursorCol;
+  struct {
+    int line;
+    int col;
+    int rtf_index;
+    bool requires_render_update;
+  } cursor;
   bool selection_exists;
   uint selection_begin_line;
   uint selection_begin_col;
-  bool cursor_requires_render_update;
 
   mc_source_definition_v1 *source_data;
 
@@ -623,6 +626,7 @@ typedef struct mc_code_editor_state_v1 {
 
 } mc_code_editor_state_v1;
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
+int mce_update_rendered_text(mc_code_editor_state_v1 *state);
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
 int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
                           void *state);
@@ -977,7 +981,7 @@ int (*special_update)(int, void **);
 // int (*move_cursor_up)(int, void **);
 // int (*save_function_to_file)(int, void **);
 // int (*save_struct_to_file)(int, void **);
-// int (*insert_text_into_editor)(int, void **);
+// int (*insert_text_into_editor_at_cursor)(int, void **);
 // int (*delete_selection)(int, void **);
 // int (*read_selected_editor_text)(int, void **);
 int (*load_existing_struct_into_code_editor)(int, void **);

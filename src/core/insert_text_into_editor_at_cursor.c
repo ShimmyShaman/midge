@@ -1,8 +1,7 @@
 
-void insert_text_into_editor(code_editor_state *state, char *text, int line_index, int col)
+void insert_text_into_editor_at_cursor(code_editor_state *state, char *text)
 {
-  return;
-  // // printf("insert_text_into_editor()\n");
+  printf("insert_text_into_editor_at_cursor()\n");
 
   // // TODO errors
   // if (line_index < 0 || line_index >= state->text->lines_count) {
@@ -16,13 +15,20 @@ void insert_text_into_editor(code_editor_state *state, char *text, int line_inde
   //   return;
   // }
 
-  // int insert_len = strlen(text);
-  // if (insert_len < 1) {
-  //   // printf("itie-r2\n");
-  //   return;
-  // }
+  int insert_len = strlen(text);
+  if (insert_len < 1) {
+    printf("itie-r2\n");
+    return;
+  }
+  // printf("itie-p:%p\n", state);
+  // printf("itie-0:\n%s||\n", state->code.rtf->text);
+  // printf("itie-1:\n%s||\n", text);
+  // printf("itie-2:\n%i||\n", state->cursor.rtf_index);
 
-  // // printf("itie-0\n");
+  insert_into_c_str(state->code.rtf, text, state->cursor.rtf_index);
+  mce_update_rendered_text(state);
+
+  // printf("itie-3:\n%s||\n", state->code.rtf->text);
 
   // // The line
   // int i = 0;
@@ -82,14 +88,14 @@ void insert_text_into_editor(code_editor_state *state, char *text, int line_inde
   // // if ((int)line_index - state->line_display_offset > 0 &&
   // //     line_index - state->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES) {
   // //   state->render_lines[line_index - state->line_display_offset]->requires_render_update = true;
-  // //   state->cursor_requires_render_update = true; // TODO this field should be a
+  // //   state->cursor.requires_render_update = true; // TODO this field should be a
   // //                                                // code-editor_lines_requires_render_update one ie.
   // // }
 
   // // printf("itie-4\n");
   // if (eof) {
   //   // In-line cursor adjustment
-  //   state->cursorCol += insert_len;
+  //   state->cursor.col += insert_len;
   // }
   // else {
   //   ++line_index;
@@ -126,8 +132,8 @@ void insert_text_into_editor(code_editor_state *state, char *text, int line_inde
 
   //     // printf("itie-7\n");
   //     if (eof) {
-  //       state->cursorLine = line_index;
-  //       state->cursorCol = strlen(line);
+  //       state->cursor.line = line_index;
+  //       state->cursor.col = strlen(line);
 
   //       append_to_cstr(&line_alloc, &line, after_section);
   //       free(after_section);
