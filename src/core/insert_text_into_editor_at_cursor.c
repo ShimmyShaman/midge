@@ -1,4 +1,6 @@
 
+#include "core/midge_core.h"
+
 void insert_text_into_editor_at_cursor(code_editor_state *state, char *text)
 {
   printf("insert_text_into_editor_at_cursor()\n");
@@ -26,7 +28,13 @@ void insert_text_into_editor_at_cursor(code_editor_state *state, char *text)
   // printf("itie-2:\n%i||\n", state->cursor.rtf_index);
 
   insert_into_c_str(state->code.rtf, text, state->cursor.rtf_index);
+  // printf("itie-3\n");
+  state->cursor.rtf_index += strlen(text);
+  update_code_editor_cursor_line_and_column(state);
+  // printf("itie-3\n");
   mce_update_rendered_text(state);
+  // printf("itie-4\n");
+  update_code_editor_suggestion(state);
 
   // printf("itie-3:\n%s||\n", state->code.rtf->text);
 

@@ -416,7 +416,7 @@ int code_editor_render_v1(int argc, void **argv)
             element_cmd->x = 4 + t * EDITOR_FONT_HORIZONTAL_STRIDE;
             element_cmd->y = 2 + 12;
             allocate_and_copy_cstrn(element_cmd->data.print_text.text, rendered_line->rtf->text + s, i - s);
-            printf("line:%i text:'%s' @ %i\n", a, element_cmd->data.print_text.text, t);
+            // printf("line:%i text:'%s' @ %i\n", a, element_cmd->data.print_text.text, t);
             element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
             element_cmd->data.print_text.color = font_color;
             // (render_color){0.61f, 0.86f, 0.99f, 1.f};;
@@ -1433,9 +1433,109 @@ int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
   return 0;
 }
 
+int update_code_editor_suggestion(mc_code_editor_state_v1 *cestate)
+{
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  // Get the complete word surrounding the cursor
+  char *code = cestate->code.rtf->text;
+  int s = cestate->cursor.rtf_index;
+  while (s > 0) {
+    --s;
+    bool brk = false;
+    switch (code[s]) {
+    case ' ':
+    case '\n':
+    case ';':
+    case '[':
+    case ')':
+    case ',': {
+      brk = true;
+      ++s;
+    } break;
+    case ']': {
+      // Discover whether it is a rtf attribute or code access operator close
+      bool rtf_attribute = false;
+      // for(int r = s - 1; r >= 0; --r) {
+      //   if(code[r] == '[') {
+      //     rtf_attribute = code[r - 1] != '[';
+      //   }
+      // }
+      // if(rtf_attribute) {
+
+      // }
+      brk = true;
+      ++s;
+    } break;
+    default:
+      break;
+    }
+    if (brk) {
+      break;
+    }
+  }
+
+  char *whole_word;
+  allocate_and_copy_cstrn(whole_word, code + s, cestate->cursor.rtf_index - s);
+  printf("whole_word:'%s'\n", whole_word);
+
+  // Search for it in midge structs
+  for (int a = 0; a < command_hub->global_node->struct_count; ++a) {
+    bool match = false;
+    printf("struct:'%s':%s\n", command_hub->global_node->structs[a]->name, match ? "match" : "n0-match");
+  }
+
+  return 0;
+}
+
+int update_code_editor_cursor_line_and_column(mc_code_editor_state_v1 *cestate)
+{
+  cestate->cursor.line = 0;
+  cestate->cursor.col = 0;
+
+  char *code = cestate->code.rtf->text;
+  for (int i = 0; code[i] != '\0' && i < cestate->cursor.rtf_index; ++i) {
+    if (code[i] == '\n') {
+      ++cestate->cursor.line;
+      cestate->cursor.col = 0;
+      // print_parse_error(cestate->code.rtf->text, cestate->cursor.rtf_index, "uceclac", "beets");
+      // printf("line:%i col:%i i:%i\n", cestate->cursor.line, cestate->cursor.col, i);
+    }
+    else if (code[i] == '[') {
+      if (code[i + 1] == '[') {
+        ++i;
+        ++cestate->cursor.col;
+      }
+      else {
+        for (;; ++i) {
+          if (code[i] == '\0') {
+            MCerror(1452, "TODO");
+          }
+          else if (code[i] == ']') {
+            --i;
+            break;
+          }
+        }
+      }
+    }
+    else {
+      // Any char
+      ++cestate->cursor.col;
+    }
+  }
+
+  // print_parse_error(cestate->code.rtf->text, cestate->cursor.rtf_index, "uceclac", "");
+  // printf("line:%i col:%i index:%i\n", cestate->cursor.line, cestate->cursor.col, cestate->cursor.rtf_index);
+
+  return 0;
+}
+
 int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
 {
   // Copies the rtf text to the rendered lines
+  // printf("urt-0\n");
   char *code = cestate->code.rtf->text;
   int i = 0;
   int s = i;
@@ -1446,6 +1546,7 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
   for (; i < cestate->code.rtf->len && line_index < max_line_index;) {
     // Obtain the line rtf
     bool eof = false;
+    // printf("urt-1\n");
     for (;; ++i) {
       if (code[i] == '\0') {
         eof = true;
@@ -1473,16 +1574,27 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
         MCerror(1465, "Unhandled");
       }
     }
+    // printf("urt-4\n");
 
     rendered_code_line *rendered_code_line = cestate->render_lines[line_index - cestate->line_display_offset];
     if (line_index >= cestate->line_display_offset) {
-      int potential_line_len = (color_from_previous_line ? strlen(color_from_previous_line) : 0) + i - s;
 
-      if (rendered_code_line->rtf->len != potential_line_len ||
-          (color_from_previous_line &&
-           strncmp(rendered_code_line->rtf->text, color_from_previous_line, strlen(color_from_previous_line))) ||
-          strncmp(rendered_code_line->rtf->text + strlen(color_from_previous_line), code + s, s - i)) {
-        printf("line-%i was:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
+      bool text_differs;
+      if (color_from_previous_line) {
+        int potential_line_len = (color_from_previous_line ? strlen(color_from_previous_line) : 0) + i - s;
+        text_differs =
+            rendered_code_line->rtf->len != potential_line_len ||
+            strncmp(rendered_code_line->rtf->text, color_from_previous_line, strlen(color_from_previous_line)) ||
+            strncmp(rendered_code_line->rtf->text + strlen(color_from_previous_line), code + s, s - i);
+      }
+      else {
+        text_differs =
+            rendered_code_line->rtf->len != (i - s) || strncmp(rendered_code_line->rtf->text, code + s, s - i);
+      }
+
+      if (text_differs) {
+        // printf("urt-5a\n");
+        // printf("line-%i was:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
 
         // Set previous rtf settings
         MCcall(set_c_str(rendered_code_line->rtf, ""));
@@ -1490,14 +1602,16 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
           MCcall(append_to_c_str(rendered_code_line->rtf, color_from_previous_line));
         }
 
+        // printf("urt-6\n");
         // Set the line text
         MCcall(append_to_c_strn(rendered_code_line->rtf, code + s, i - s));
         rendered_code_line->requires_render_update = true;
         cestate->visual_node->data.visual.requires_render_update = true;
 
-        printf("line-%i now:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
+        // printf("line-%i now:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
       }
     }
+    // printf("urt-8\n");
 
     if (eof) {
       break;
@@ -1513,6 +1627,7 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
       color_from_previous_line = color_at_end_of_current_line;
       color_at_end_of_current_line = NULL;
     }
+    // printf("urt-9\n");
   }
 
   return 0;
