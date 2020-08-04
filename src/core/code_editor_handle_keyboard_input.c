@@ -2,6 +2,97 @@
 
 #include "core/midge_core.h"
 
+void move_cursor_up(mc_code_editor_state_v1 *state)
+{
+  printf("state->cursor.rtf_index:%i\n", state->cursor.rtf_index);
+  // Adjust the cursor index & col
+  char *code = state->code.rtf->text;
+  int i = state->cursor.rtf_index;
+
+  if (!state->cursor.zen_col) {
+    state->cursor.zen_col = state->cursor.col;
+  }
+
+  if (state->cursor.line < 1) {
+    return;
+  }
+  print_parse_error(code, i, "mcu-initial", "");
+
+  // Find the new line
+  --i;
+  for (;; --i) {
+    if (code[i] == '\n') {
+      break;
+    }
+  }
+  --state->cursor.line;
+  print_parse_error(code, i, "mcu-lineup_end", "");
+
+  // Go to the start of the line
+  if (state->cursor.line > 0) {
+    --i;
+    for (;; --i) {
+      if (code[i] == '\n') {
+        ++i;
+        break;
+      }
+    }
+  }
+  else {
+    i = 0;
+  }
+  print_parse_error(code, i, "mcu-line_start", "");
+
+  // Move along the line (as close to the zen col as possible)
+  int traversed = 0;
+  // printf("state->cursor.zen_col:%i\n", state->cursor.zen_col);
+  for (; traversed < state->cursor.zen_col; ++i) {
+    // printf("trac:'%c'\n", code[i]);
+    // print_parse_error(code, i, "trac", "");
+    if (code[i] == '\0') {
+      --i;
+      break;
+    }
+    else if (code[i] == '\n') {
+      break;
+    }
+    else if (code[i] == '[') {
+      if (code[i] == '[') {
+        // Escaped
+        ++i;
+      }
+      else {
+        for (;; ++i) {
+          if (code[i] == '\0') {
+            // MCerror(42, "RTF Format Error");
+            printf("42 format error\n");
+          }
+          else if (code[i] == ']') {
+            --traversed;
+            break;
+          }
+        }
+      }
+    }
+    ++traversed;
+    // printf("++traversed:%i\n", traversed);
+  }
+  // printf("traverse-OVER\n");
+
+  state->cursor.col = traversed;
+  state->cursor.rtf_index = i;
+
+  // Update the cursor visual
+  state->cursor.requires_render_update = true;
+  state->visual_node->data.visual.requires_render_update = true;
+
+  // Adjust display offset
+  if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+    // Move display offset down
+    state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+  }
+}
+
 void move_cursor_down(mc_code_editor_state_v1 *state)
 {
   // printf("state->cursor.rtf_index:%i\n", state->cursor.rtf_index);
@@ -295,9 +386,11 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   //     state->cursor.col = automaticIndent;
   //   }
   // } break;
-  // case KEY_CODE_ARROW_UP: {
-  //   move_cursor_up(fedit, state);
-  // } break;
+  case KEY_CODE_ARROW_UP: {
+    event->handled = true;
+
+    move_cursor_up(state);
+  } break;
   case KEY_CODE_ARROW_DOWN: {
     event->handled = true;
 
