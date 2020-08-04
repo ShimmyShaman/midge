@@ -4,12 +4,13 @@
 
 void move_cursor_down(mc_code_editor_state_v1 *state)
 {
+  // printf("state->cursor.rtf_index:%i\n", state->cursor.rtf_index);
   // Adjust the cursor index & col
   char *code = state->code.rtf->text;
   int i = state->cursor.rtf_index;
 
   if (!state->cursor.zen_col) {
-    state->cursor.zen_col = state->cursor.zen_col;
+    state->cursor.zen_col = state->cursor.col;
   }
 
   // Find the new line
@@ -23,11 +24,16 @@ void move_cursor_down(mc_code_editor_state_v1 *state)
       break;
     }
   }
+  ++state->cursor.line;
 
   // Move along the line (as close to the zen col as possible)
   int traversed = 0;
+  // printf("state->cursor.zen_col:%i\n", state->cursor.zen_col);
   for (; traversed < state->cursor.zen_col; ++i) {
+    // printf("trac:'%c'\n", code[i]);
+    print_parse_error(code, i, "trac", "");
     if (code[i] == '\0') {
+      --i;
       break;
     }
     else if (code[i] == '\n') {
@@ -52,9 +58,10 @@ void move_cursor_down(mc_code_editor_state_v1 *state)
       }
     }
     ++traversed;
+    // printf("++traversed:%i\n", traversed);
   }
+  // printf("traverse-OVER\n");
 
-  ++state->cursor.line;
   state->cursor.col = traversed;
   state->cursor.rtf_index = i;
 

@@ -54,6 +54,7 @@ int build_code_editor_v1(int argc, void **argv)
   state->font_resource_uid = 0;
   state->cursor.line = 0;
   state->cursor.col = 0;
+  state->cursor.zen_col = 0;
   state->cursor.rtf_index = 0;
   state->cursor.requires_render_update = false;
   state->line_display_offset = 0;
