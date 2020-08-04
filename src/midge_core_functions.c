@@ -646,6 +646,8 @@ int conform_type_identity_v1(int argc, void **argv)
 
 int instantiate_function_v1(int argc, void **argv)
 {
+  register_midge_error_tag("instantiate_function_v1()");
+
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
@@ -709,6 +711,7 @@ int instantiate_function_v1(int argc, void **argv)
       mc_vargs[1] = (void *)&func_info->parameters[i]->type_name;
       mc_vargs[2] = (void *)&type_struct_info;
       MCcall(find_struct_info(3, mc_vargs));
+      // printf("@ifv-2 func_info->parameters[i]->type_name:%s\n", func_info->parameters[i]->type_name);
 
       if (type_struct_info) {
         allocate_and_copy_cstr(parameter_type, type_struct_info->declared_mc_name);
@@ -728,7 +731,7 @@ int instantiate_function_v1(int argc, void **argv)
     for (int j = 0; j < func_info->parameters[i]->type_deref_count; ++j)
       derefbuf[j] = '*';
     derefbuf[func_info->parameters[i]->type_deref_count] = '\0';
-    printf("@ifv-2b\n");
+    // printf("@ifv-2b\n");
 
     // Decl
     sprintf(param_buf + strlen(param_buf), "  %s %s%s = ", parameter_type, derefbuf, func_info->parameters[i]->name);
@@ -795,10 +798,13 @@ int instantiate_function_v1(int argc, void **argv)
 
     free(return_type);
   }
+  register_midge_error_tag("instantiate_function_v1()-8");
 
   // printf("@ifv-8\n");
   // Declare the function
   const char *function_declaration_format = "int %s(int argc, void **argv) {\n"
+                                            "\n"
+                                            "  register_midge_error_tag(\"%s()\");\n"
                                             "\n"
                                             "  // midge Command Hub\n"
                                             "  mc_command_hub_v1 *comman"
@@ -811,15 +817,18 @@ int instantiate_function_v1(int argc, void **argv)
                                             "  // Function Code\n"
                                             "%s"
                                             "\n"
+                                            "  register_midge_error_tag(\"%s(~)\");\n"
+                                            "\n"
                                             "  return 0;\n"
                                             "}";
-  int function_declaration_length =
-      snprintf(NULL, 0, function_declaration_format, func_identity_buf, param_buf, midge_c);
+  int function_declaration_length = snprintf(NULL, 0, function_declaration_format, func_identity_buf, func_identity_buf,
+                                             param_buf, midge_c, func_identity_buf);
   char *function_declaration = (char *)malloc(sizeof(char) * (function_declaration_length + 1));
-  sprintf(function_declaration, function_declaration_format, func_identity_buf, param_buf, midge_c);
+  sprintf(function_declaration, function_declaration_format, func_identity_buf, func_identity_buf, param_buf, midge_c,
+          func_identity_buf);
 
   // Declare the function
-  // printf("ifv>cling_declare:\n%s\n", function_declaration);
+  printf("ifv>cling_declare:\n%s\n", function_declaration);
   // printf("ifv>cling_declare:'%s'\n", func_identity_buf);
   MCcall(clint_declare(function_declaration));
 
@@ -830,8 +839,9 @@ int instantiate_function_v1(int argc, void **argv)
   MCcall(clint_process(decl_buf));
 
   free(function_declaration);
-  free(midge_c);
+  // free(midge_c);
   // printf("ifv-concludes\n");
+  register_midge_error_tag("instantiate_function_v1(~)");
   return 0;
 }
 

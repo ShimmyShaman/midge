@@ -5849,6 +5849,7 @@ int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
 
 int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char *filepath)
 {
+  register_midge_error_tag("parse_and_process_mc_file_syntax(%s)", filepath);
   // Load the file
   char *file_text;
   {
@@ -6049,6 +6050,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
     else if (definitions[a].type == SOURCE_DEFINITION_FUNCTION) {
 
       printf("parsing/processing '%s'||\n", definitions[a].declaration); //:\n%s, definitions[a].text);
+      register_midge_error_tag("parse_and_process_mc_file_syntax-processing '%s'", definitions[a].declaration);
 
       // - Parse Definition into function information
 
@@ -6102,7 +6104,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
           free(cling_declaration);
         }
 
-        printf("papsyntax-1\n");
+        register_midge_error_tag("parse_and_process_mc_file_syntax-2");
 
         // Source-references
         func_info->source = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
@@ -6124,7 +6126,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
           func_info->return_type.deref_count = 0;
         }
 
-        printf("papsyntax-3\n");
+        register_midge_error_tag("parse_and_process_mc_file_syntax-3");
         func_info->parameter_count = function_ast->function.parameters->count;
         func_info->parameters =
             (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * func_info->parameter_count);
@@ -6139,7 +6141,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
                                           (char **)&parameter->type_name));
           parameter->type_deref_count =
               function_ast->function.parameters->items[p]->parameter.type_dereference->dereference_sequence.count;
-          printf("parameter->type_deref_count:%i\n", parameter->type_deref_count);
+          // printf("parameter->type_deref_count:%i\n", parameter->type_deref_count);
 
           // -- TODO -- mc-type?
 
@@ -6156,13 +6158,13 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
         func_info->struct_usage = NULL;
       }
       // printf("papsyntax-b4 transcribe\n");
-      register_midge_error_tag("parse_and_process_mc_file_syntax - 4");
+      register_midge_error_tag("parse_and_process_mc_file_syntax-4");
 
       // Transcribe to MC function format
       char *mc_format_definition;
       MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
 
-      register_midge_error_tag("parse_and_process_mc_file_syntax - 5");
+      register_midge_error_tag("parse_and_process_mc_file_syntax-5");
       // printf("papsyntax-5\n");
       printf("mc_format_definition:\n%s||\n", mc_format_definition);
 

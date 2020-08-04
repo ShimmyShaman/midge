@@ -19,31 +19,39 @@
 using namespace std;
 
 cling::Interpreter *clint;
-const int MIDGE_ERROR_STACK_MAX_SIZE = 10;
+const int MIDGE_ERROR_STACK_MAX_SIZE = 20;
 char *MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_MAX_SIZE];
 unsigned int MIDGE_ERROR_STACK_STR_LEN[MIDGE_ERROR_STACK_MAX_SIZE];
 int MIDGE_ERROR_STACK_INDEX;
+bool IGNORE_MIDGE_ERROR_REPORT = false;
 
 void handler(int sig)
 {
-  // size_t nStackTraces = 20; //number of backtraces you want at most
-  // void *array[nStackTraces];
-  // size_t size;
-  // fills array and returns actual number of backtraces at the moment
-  // size = backtrace(array, nStackTraces);
+  if (IGNORE_MIDGE_ERROR_REPORT) {
+    return;
+  }
+
+#define ME_RECENT_LAST
   printf("\n===========================================\n"
          "\n===========================================\n"
          "              CATASTROPHIC ERROR\n"
-         "-------------------------------------------\n\n"
-         "---------------Most Recent Last------------\n\n");
-
-  for (int i = 0; i < MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
-    int t = (MIDGE_ERROR_STACK_INDEX + i) % MIDGE_ERROR_STACK_MAX_SIZE;
+         "-------------------------------------------\n\n");
+#ifdef ME_RECENT_LAST
+  printf("---------------Most Recent Last------------\n\n");
+  for (int i = MIDGE_ERROR_STACK_MAX_SIZE; i > 0; --i) {
+#else
+  printf("---------------Most Recent First------------\n\n");
+  for (int i = 1; i <= MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
+#endif
+    if (MIDGE_ERROR_STACK_INDEX - i < 0) {
+      continue;
+    }
+    int t = (MIDGE_ERROR_STACK_INDEX - i) % MIDGE_ERROR_STACK_MAX_SIZE;
     if (!strlen(MIDGE_ERROR_STACK[t])) {
       continue;
     }
 
-    printf("-%u-'%s'\n", MIDGE_ERROR_STACK_STR_LEN[t], MIDGE_ERROR_STACK[t]);
+    printf("-[%i]-'%s'\n", MIDGE_ERROR_STACK_INDEX - i, MIDGE_ERROR_STACK[t]);
   }
 
   // prints array to std error after converting array to
@@ -77,9 +85,10 @@ void register_midge_error_tag(const char *fmt, ...)
   va_list valist;
   va_start(valist, fmt);
 
-  char *str = MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX];
-  uint *str_alloc = &MIDGE_ERROR_STACK_STR_LEN[MIDGE_ERROR_STACK_INDEX];
-  MIDGE_ERROR_STACK_INDEX = (MIDGE_ERROR_STACK_INDEX + 1) % MIDGE_ERROR_STACK_MAX_SIZE;
+  int index = MIDGE_ERROR_STACK_INDEX % MIDGE_ERROR_STACK_MAX_SIZE;
+  char *str = MIDGE_ERROR_STACK[index];
+  uint *str_alloc = &MIDGE_ERROR_STACK_STR_LEN[index];
+  ++MIDGE_ERROR_STACK_INDEX; // = (MIDGE_ERROR_STACK_INDEX + 1) % MIDGE_ERROR_STACK_MAX_SIZE;
 
   int si = 0;
   for (int i = 0;; ++i) {
@@ -202,6 +211,8 @@ int main(int argc, const char *const *argv)
   clint->process("run()");
 
   delete (clint);
+
+  IGNORE_MIDGE_ERROR_REPORT = true;
 
   usleep(100000);
 }

@@ -2637,7 +2637,7 @@ int mcs_parse_switch_statement(parsing_state *ps, mc_syntax_node *parent, mc_syn
       mc_syntax_node *case_label;
       MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_SWITCH_CASE_LABEL, NULL, switch_section, &case_label));
       MCcall(mcs_parse_through_token(ps, case_label, MC_TOKEN_CASE_KEYWORD, NULL));
-      MCcall(mcs_parse_through_supernumerary_tokens(ps, switch_section));
+      MCcall(mcs_parse_through_supernumerary_tokens(ps, case_label));
 
       // printf("mpss-3a\n");
       MCcall(mcs_peek_token_type(ps, false, 0, &token0));
@@ -2943,7 +2943,7 @@ int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
 
 int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool allow_imperfect_parse)
 {
-  printf("pmtst-0\n");
+  register_midge_error_tag("parse_mc_to_syntax_tree_v1()");
   // printf("mc_syntax_node:%zu\n", sizeof(mc_syntax_node));
   parsing_state ps;
   ps.code = mcode;
@@ -2957,16 +2957,13 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
 
   // MCcall(print_syntax_node(function, 0));
 
-  printf("pmtst-1\n");
   mc_token_type token0;
   MCcall(mcs_parse_type_identifier(&ps, function, &function->function.return_type_identifier,
                                    &function->function.return_mc_type));
 
   // MCcall(print_syntax_node(function, 0));
-  printf("pmtst-1b\n");
   MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
-  printf("pmtst-2\n");
   MCcall(print_syntax_node(function, 0));
 
   MCcall(mcs_peek_token_type(&ps, false, 0, &token0));
@@ -2978,7 +2975,6 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
     function->function.return_type_dereference = NULL;
   }
 
-  printf("pmtst-3\n");
   // MCcall(print_syntax_node(function, 0));
 
   MCcall(mcs_parse_through_token(&ps, function, MC_TOKEN_IDENTIFIER, &function->function.name));
@@ -3031,5 +3027,6 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
 
   *function_ast = function;
   // MCcall(print_syntax_node(function, 0));
+  register_midge_error_tag("parse_mc_to_syntax_tree_v1(~)");
   return 0;
 }
