@@ -59,7 +59,8 @@ int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
 
 int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
 {
-  printf("mct_transcribe_expression(%s)\n", get_mc_syntax_token_type_name(syntax_node->type));
+  register_midge_error_tag("mct_transcribe_expression-0(%s)", get_mc_syntax_token_type_name(syntax_node->type));
+  // printf("mct_transcribe_expression(%s)\n", get_mc_syntax_token_type_name(syntax_node->type));
   // print_syntax_node(syntax_node, 0);
 
   switch (syntax_node->type) {
@@ -230,7 +231,8 @@ int mct_transcribe_for_statement(c_str *str, int indent, mc_syntax_node *syntax_
 
 int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax_node)
 {
-  printf("mct_transcribe_statement_list()\n");
+  register_midge_error_tag("transcribe_code_block_ast_to_mc_definition_v1 - 0");
+  // printf("mct_transcribe_statement_list()\n");
   if (syntax_node->type != MC_SYNTAX_STATEMENT_LIST) {
     MCerror(149, "INVALID ARGUMENT: %s '%s'", get_mc_syntax_token_type_name(syntax_node->type), syntax_node->text);
   }
@@ -316,7 +318,8 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
     // printf("transcription:\n%s||\n", str->text);
   }
 
-  printf("~mct_transcribe_statement_list()\n");
+  // printf("~mct_transcribe_statement_list()\n");
+  register_midge_error_tag("transcribe_code_block_ast_to_mc_definition_v1 - 9");
   return 0;
 }
 
@@ -339,6 +342,7 @@ int transcribe_code_block_ast_to_mc_definition_v1(mc_syntax_node *syntax_node, c
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
+  register_midge_error_tag("transcribe_code_block_ast_to_mc_definition_v1 - 0");
   // MCcall(print_syntax_node(syntax_node, 0));
 
   if (syntax_node->type != MC_SYNTAX_BLOCK) {

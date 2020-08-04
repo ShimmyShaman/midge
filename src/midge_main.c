@@ -6155,15 +6155,17 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
         func_info->struct_usage_count = 0;
         func_info->struct_usage = NULL;
       }
-      printf("papsyntax-b4 transcribe\n");
+      // printf("papsyntax-b4 transcribe\n");
+      register_midge_error_tag("parse_and_process_mc_file_syntax - 4");
 
       // Transcribe to MC function format
       char *mc_format_definition;
       MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
 
-      printf("papsyntax-5\n");
+      register_midge_error_tag("parse_and_process_mc_file_syntax - 5");
+      // printf("papsyntax-5\n");
       printf("mc_format_definition:\n%s||\n", mc_format_definition);
-      
+
       // Define the new function
       {
         void *vargs[2];
