@@ -19,7 +19,7 @@
 using namespace std;
 
 cling::Interpreter *clint;
-const int MIDGE_ERROR_STACK_MAX_SIZE = 20;
+const int MIDGE_ERROR_STACK_MAX_SIZE = 10;
 char *MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_MAX_SIZE];
 unsigned int MIDGE_ERROR_STACK_STR_LEN[MIDGE_ERROR_STACK_MAX_SIZE];
 int MIDGE_ERROR_STACK_INDEX;
@@ -35,18 +35,15 @@ void handler(int sig)
          "\n===========================================\n"
          "CATASTROPHIC ERROR"
          "-------------------------------------------\n\n"
-         "---------------Most Recent First-----------\n\n");
+         "---------------Most Recent Last-----------\n\n");
 
-  for (int i = 0; i < 20; ++i) {
-    int t = MIDGE_ERROR_STACK_INDEX - i - 1;
-    if (t < 0) {
-      t += 20;
-    }
-    if (!MIDGE_ERROR_STACK[t]) {
+  for (int i = 0; i < MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
+    int t = (MIDGE_ERROR_STACK_INDEX + i) % MIDGE_ERROR_STACK_MAX_SIZE;
+    if (!strlen(MIDGE_ERROR_STACK[t])) {
       continue;
     }
 
-    printf("--%s\n", MIDGE_ERROR_STACK[t]);
+    printf("-%u-'%s'\n", MIDGE_ERROR_STACK_STR_LEN[t], MIDGE_ERROR_STACK[t]);
   }
 
   // prints array to std error after converting array to
@@ -59,7 +56,7 @@ int ensure_cstr_alloc(unsigned int *allocated_size, char **cstr, unsigned int mi
 {
   if (min_alloc >= *allocated_size) {
     unsigned int new_allocated_size = min_alloc + 16 + *allocated_size / 10;
-    // printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);
+    printf("atc-3 : new_allocated_size:%u\n", new_allocated_size);
     char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
     // printf("atc-4\n");
     memcpy(newptr, *cstr, sizeof(char) * *allocated_size);
@@ -89,6 +86,7 @@ void register_midge_error_tag(const char *fmt, ...)
     ensure_cstr_alloc(str_alloc, &str, si + 2);
 
     str[si++] = fmt[i];
+    // printf("'c:'%c'\n", fmt[i]);
 
     if (fmt[i] == '\0') {
       // printf("atcs-3\n");
@@ -99,10 +97,12 @@ void register_midge_error_tag(const char *fmt, ...)
     if (fmt[i] != '%') {
       continue;
     }
+    // printf("pass%%\n");
 
     ++i;
-    if (fmt[i + 1] == '%') {
+    if (fmt[i] == '%') {
       // Use as an escape character
+      // printf("escaped\n");
       continue;
     }
 
@@ -131,7 +131,7 @@ void register_midge_error_tag(const char *fmt, ...)
         si += strlen(buf);
       } break;
       default:
-        printf("register_midge_error_tag::l'%c'", fmt[i + 1]);
+        printf("ERROR register_midge_error_tag::l'%c'", fmt[i + 1]);
         return;
       }
     } break;
@@ -151,9 +151,9 @@ void register_midge_error_tag(const char *fmt, ...)
       // cstr->text[i] = '\0';
       // --cstr->len;
       int value_len = strlen(value);
-      ensure_cstr_alloc(str_alloc, &str, si + value_len);
+      ensure_cstr_alloc(str_alloc, &str, si + value_len + 1);
       strcpy(str + si, value);
-      si += value_len;
+      si += value_len + 0;
       // printf("atcs-7b cstrtext:'%s'\n", cstr->text);
     } break;
     case 'u': {
@@ -166,11 +166,10 @@ void register_midge_error_tag(const char *fmt, ...)
       si += strlen(buf);
     } break;
     default: {
-      printf("register_midge_error_tag::l'%c'", fmt[i + 1]);
+      printf("ERROR register_midge_error_tag::l'%c'", fmt[i + 1]);
       return;
     }
     }
-    ++i;
   }
 }
 
