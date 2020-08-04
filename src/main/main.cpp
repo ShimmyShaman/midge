@@ -33,9 +33,9 @@ void handler(int sig)
   // size = backtrace(array, nStackTraces);
   printf("\n===========================================\n"
          "\n===========================================\n"
-         "CATASTROPHIC ERROR"
+         "              CATASTROPHIC ERROR\n"
          "-------------------------------------------\n\n"
-         "---------------Most Recent Last-----------\n\n");
+         "---------------Most Recent Last------------\n\n");
 
   for (int i = 0; i < MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
     int t = (MIDGE_ERROR_STACK_INDEX + i) % MIDGE_ERROR_STACK_MAX_SIZE;
@@ -178,7 +178,7 @@ int main(int argc, const char *const *argv)
   signal(SIGSEGV, handler); // register our handler
   MIDGE_ERROR_STACK_INDEX = 0;
   for (int i = 0; i < MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
-    MIDGE_ERROR_STACK_STR_LEN[i] = 64U;
+    MIDGE_ERROR_STACK_STR_LEN[i] = 512U;
     MIDGE_ERROR_STACK[i] = (char *)malloc(sizeof(char) * MIDGE_ERROR_STACK_STR_LEN[i]);
     MIDGE_ERROR_STACK[i][0] = '\0';
   }
