@@ -16,7 +16,7 @@ void move_cursor_up(mc_code_editor_state_v1 *state)
   if (state->cursor.line < 1) {
     return;
   }
-  print_parse_error(code, i, "mcu-initial", "");
+  // print_parse_error(code, i, "mcu-initial", "");
 
   // Find the new line
   --i;
@@ -26,7 +26,7 @@ void move_cursor_up(mc_code_editor_state_v1 *state)
     }
   }
   --state->cursor.line;
-  print_parse_error(code, i, "mcu-lineup_end", "");
+  // print_parse_error(code, i, "mcu-lineup_end", "");
 
   // Go to the start of the line
   if (state->cursor.line > 0) {
@@ -485,8 +485,14 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
   //   --state->cursor.col;
   // } break;
-  // case KEY_CODE_ENTER:
-  // case KEY_CODE_RETURN: {
+  case KEY_CODE_ENTER:
+  case KEY_CODE_RETURN: {
+
+    char c[2];
+    c[0] = '\n';
+    c[1] = '\0';
+    insert_text_into_editor_at_cursor(state, &c[0]);
+  } break;
   //   event->handled = true;
   //   if (event->ctrlDown) {
 
