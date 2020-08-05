@@ -167,6 +167,113 @@ void move_cursor_down(mc_code_editor_state_v1 *state)
   }
 }
 
+void move_cursor_left(mc_code_editor_state_v1 *state)
+{
+  if (state->cursor.rtf_index == 0) {
+    return;
+  }
+
+  // Adjust the cursor index & col
+  char *code = state->code.rtf->text;
+  int i = state->cursor.rtf_index;
+
+  state->cursor.zen_col = 0;
+
+  // print_parse_error(code, i, "mcu-initial", "");
+  // Move
+  --i;
+  while (code[i] == ']') {
+    // Identify if it is a rtf element
+    bool is_rtf_element = false;
+    int j = i - 1;
+    for (;; --j) {
+      if (code[j] == '[') {
+        is_rtf_element = (code[j - 1] != '[');
+        break;
+      }
+    }
+    if (!is_rtf_element) {
+      break;
+    }
+
+    i = j - 1;
+  }
+  // print_parse_error(code, i, "mcu-end", "");
+
+  state->cursor.rtf_index = i;
+  update_code_editor_cursor_line_and_column(state);
+
+  // Update the cursor visual
+  state->cursor.requires_render_update = true;
+  state->visual_node->data.visual.requires_render_update = true;
+
+  // Adjust display offset
+  if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+    // Move display offset down
+    state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+  }
+}
+
+void move_cursor_right(mc_code_editor_state_v1 *state)
+{
+  // Adjust the cursor index & col
+  char *code = state->code.rtf->text;
+  int i = state->cursor.rtf_index;
+
+  if (code[i] == '\0') {
+    return;
+  }
+
+  state->cursor.zen_col = 0;
+
+  print_parse_error(code, i, "mcu-initial", "");
+  // Move
+  while (code[i] == '[') {
+    if (code[i + 1] == '[') {
+      ++i;
+      break;
+    }
+
+    while (code[i] != ']') {
+      ++i;
+    }
+    ++i;
+  }
+  if (code[i] == '\0') {
+    --i;
+  }
+  ++i;
+  // Move
+  while (code[i] == '[') {
+    if (code[i + 1] == '[') {
+      ++i;
+      break;
+    }
+
+    while (code[i] != ']') {
+      ++i;
+    }
+    ++i;
+  }
+  if (code[i] == '\0') {
+    --i;
+  }
+  print_parse_error(code, i, "mcu-end", "");
+
+  state->cursor.rtf_index = i;
+  update_code_editor_cursor_line_and_column(state);
+
+  // Update the cursor visual
+  state->cursor.requires_render_update = true;
+  state->visual_node->data.visual.requires_render_update = true;
+
+  // Adjust display offset
+  if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+    // Move display offset down
+    state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+  }
+}
+
 // [_mc_iteration=3]
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
@@ -396,31 +503,16 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
     move_cursor_down(state);
   } break;
-  // case KEY_CODE_ARROW_LEFT: {
-  //   // Increment
-  //   if (state->cursor.col == 0) {
-  //     if (state->cursor.line == 0) {
-  //       // Nothing can be done
-  //       break;
-  //     }
+  case KEY_CODE_ARROW_LEFT: {
+    event->handled = true;
 
-  //     --state->cursor.line;
-  //     state->cursor.col = strlen(state->text->lines[state->cursor.line]);
+    move_cursor_left(state);
+  } break;
+  case KEY_CODE_ARROW_RIGHT: {
+    event->handled = true;
 
-  //     // Adjust display offset
-  //     if (state->cursor.line < state->line_display_offset) {
-  //       // Move display offset up
-  //       state->line_display_offset = state->cursor.line;
-  //     }
-  //   }
-  //   else {
-  //     --state->cursor.col;
-  //   }
-
-  //   // Update the cursor visual
-  //   state->cursor.requires_render_update = true;
-  //   fedit->data.visual.requires_render_update = true;
-  // } break;
+    move_cursor_right(state);
+  } break;
   // case KEY_CODE_ARROW_RIGHT: {
   //   int line_len = strlen(state->text->lines[state->cursor.line]);
 

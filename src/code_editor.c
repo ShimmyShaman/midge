@@ -1515,7 +1515,6 @@ int update_code_editor_cursor_line_and_column(mc_code_editor_state_v1 *cestate)
             MCerror(1452, "TODO");
           }
           else if (code[i] == ']') {
-            --i;
             break;
           }
         }

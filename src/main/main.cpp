@@ -212,7 +212,7 @@ int main(int argc, const char *const *argv)
 
   delete (clint);
 
-  IGNORE_MIDGE_ERROR_REPORT = true;
+  // IGNORE_MIDGE_ERROR_REPORT = true;
 
   usleep(100000);
 }

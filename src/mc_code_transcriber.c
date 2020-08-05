@@ -293,6 +293,38 @@ int mct_transcribe_for_statement(c_str *str, int indent, mc_syntax_node *syntax_
   return 0;
 }
 
+int mct_transcribe_while_statement(c_str *str, int indent, mc_syntax_node *syntax_node)
+{
+  register_midge_error_tag("mct_transcribe_while_statement()");
+
+  bool contains_mc_function_call;
+
+  // Do MC_invokes
+  if (syntax_node->while_statement.conditional) {
+    MCcall(mct_contains_mc_invoke(syntax_node->while_statement.conditional, &contains_mc_function_call));
+    if (contains_mc_function_call) {
+      MCerror(65, "TODO");
+    }
+  }
+
+  if (syntax_node->while_statement.do_first) {
+    MCerror(311, "TODO");
+  }
+
+  // Initialization
+  MCcall(mct_append_to_c_str(str, indent, "while ("));
+  MCcall(mct_transcribe_expression(str, syntax_node->while_statement.conditional));
+  MCcall(mct_append_to_c_str(str, indent, ") "));
+
+  if (syntax_node->while_statement.code_block->type != MC_SYNTAX_BLOCK) {
+    MCerror(320, "TODO");
+  }
+  MCcall(mct_transcribe_code_block(str, indent, syntax_node->while_statement.code_block));
+
+  register_midge_error_tag("mct_transcribe_while_statement(~)");
+  return 0;
+}
+
 int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax_node)
 {
   register_midge_error_tag("mct_transcribe_statement_list()");
@@ -332,13 +364,16 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
       MCcall(mct_transcribe_code_block(str, indent, child));
     } break;
     case MC_SYNTAX_FOR_STATEMENT: {
-      MCcall(mct_transcribe_for_statement(str, indent, child))
+      MCcall(mct_transcribe_for_statement(str, indent, child));
+    } break;
+    case MC_SYNTAX_WHILE_STATEMENT: {
+      MCcall(mct_transcribe_while_statement(str, indent, child));
     } break;
     case MC_SYNTAX_SWITCH_STATEMENT: {
-      MCcall(mct_transcribe_switch_statement(str, indent, child))
+      MCcall(mct_transcribe_switch_statement(str, indent, child));
     } break;
     case MC_SYNTAX_IF_STATEMENT: {
-      MCcall(mct_transcribe_if_statement(str, indent, child))
+      MCcall(mct_transcribe_if_statement(str, indent, child));
     } break;
     case MC_SYNTAX_DECLARATION_STATEMENT: {
       // Do MC_invokes
@@ -412,7 +447,7 @@ int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_nod
 int transcribe_code_block_ast_to_mc_definition_v1(mc_syntax_node *syntax_node, char **output)
 {
   register_midge_error_tag("transcribe_code_block_ast_to_mc_definition_v1()");
-  
+
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/

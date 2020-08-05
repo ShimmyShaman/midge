@@ -1640,6 +1640,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     MCcall(mcs_peek_token_type(ps, false, 2, &token_type));
     switch (token_type) {
     case MC_TOKEN_OPEN_BRACKET:
+    case MC_TOKEN_SQUARE_OPEN_BRACKET:
     case MC_TOKEN_POINTER_OPERATOR:
     case MC_TOKEN_DECIMAL_POINT:
     case MC_TOKEN_PLUS_OPERATOR:
@@ -1658,7 +1659,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
         // Cast
         MCcall(mcs_parse_cast_expression(ps, parent, additional_destination));
         // printf("cast-expression:\n");
-        MCcall(print_syntax_node(*additional_destination, 0));
+        // MCcall(print_syntax_node(*additional_destination, 0));
       } break;
       default: {
         print_parse_error(ps->code, ps->index, "see-below", "");
@@ -2964,7 +2965,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
   // MCcall(print_syntax_node(function, 0));
   MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
-  MCcall(print_syntax_node(function, 0));
+  // MCcall(print_syntax_node(function, 0));
 
   MCcall(mcs_peek_token_type(&ps, false, 0, &token0));
   if (token0 == MC_TOKEN_STAR_CHARACTER) {

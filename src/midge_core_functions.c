@@ -4094,7 +4094,7 @@ int obtain_function_info_from_definition_v1(char *function_definition_text, func
   mc_syntax_node *fsyntax;
   MCcall(parse_mc_to_syntax_tree(function_definition_text, &fsyntax, false));
 
-  MCcall(print_syntax_node(fsyntax, 0));
+  // MCcall(print_syntax_node(fsyntax, 0));
 
   release_syntax_node(fsyntax);
 
