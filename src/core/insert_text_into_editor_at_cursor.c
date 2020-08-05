@@ -3,7 +3,8 @@
 
 void insert_text_into_editor_at_cursor(code_editor_state *state, char *text)
 {
-  printf("insert_text_into_editor_at_cursor()\n");
+  register_midge_error_tag("insert_text_into_editor_at_cursor()");
+  // printf("insert_text_into_editor_at_cursor()\n");
 
   // // TODO errors
   // if (line_index < 0 || line_index >= state->text->lines_count) {

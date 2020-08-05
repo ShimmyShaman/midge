@@ -592,6 +592,22 @@ typedef struct mc_code_editor_state_v1 {
   uint selection_begin_line;
   uint selection_begin_col;
 
+  struct {
+    bool visible;
+    bool requires_render_update;
+    struct {
+      uint x, y, width, height;
+    } bounds;
+    uint image_resource_uid;
+
+    int selected_index;
+    struct {
+      uint count;
+      uint max_count;
+      char **items;
+    } entries;
+  } suggestion_box;
+
   mc_source_definition_v1 *source_data;
 
   // mc_cstring_list_v1 *text;

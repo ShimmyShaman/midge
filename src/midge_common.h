@@ -68,6 +68,12 @@
   (render_color) { 0.97f, 0.97f, 1.f, 1.f }
 #define COLOR_BLACK \
   (render_color) { 0.f, 0.f, 0.f, 1.f }
+#define COLOR_GRAY \
+  (render_color) { 0.5f, 0.5f, 0.5f, 1.f }
+#define COLOR_DIM_GRAY \
+  (render_color) { 0.3f, 0.3f, 0.3f, 1.f }
+#define COLOR_DARK_GRAY \
+  (render_color) { 0.2f, 0.2f, 0.2f, 1.f }
 #define COLOR_YELLOW \
   (render_color) { 1.f, 1.f, 0.f, 1.f }
 #define COLOR_LIGHT_YELLOW \

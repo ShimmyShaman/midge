@@ -72,7 +72,6 @@ int build_code_editor_v1(int argc, void **argv)
     init_c_str(&state->code.rtf);
     state->code.syntax_updated = false;
   }
-  // printf("bce-j\n");
 
   {
     // FunctionLiveDebug
@@ -122,6 +121,32 @@ int build_code_editor_v1(int argc, void **argv)
     command->data.create_texture.use_as_render_target = true;
     command->data.create_texture.width = state->status_bar.bounds.width;
     command->data.create_texture.height = state->status_bar.bounds.height;
+  }
+
+  {
+    // Suggestion Box
+    state->suggestion_box.visible = false;
+    state->suggestion_box.requires_render_update = false;
+
+    state->suggestion_box.selected_index = 0;
+    state->suggestion_box.entries.count = 0;
+    state->suggestion_box.entries.max_count = 8;
+    state->suggestion_box.entries.items = (char **)malloc(sizeof(char *) * state->suggestion_box.entries.max_count);
+    for (int a = 0; a < state->suggestion_box.entries.max_count; ++a) {
+      state->suggestion_box.entries.items[a] = NULL;
+    }
+    state->suggestion_box.bounds.x = 2;
+    state->suggestion_box.bounds.y = 2;
+    state->suggestion_box.bounds.width = 280;
+    state->suggestion_box.bounds.height = 12 + 8 * 24;
+    state->suggestion_box.image_resource_uid = 0;
+
+    MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
+    command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
+    command->p_uid = &state->suggestion_box.image_resource_uid;
+    command->data.create_texture.use_as_render_target = true;
+    command->data.create_texture.width = state->suggestion_box.bounds.width;
+    command->data.create_texture.height = state->suggestion_box.bounds.height;
   }
 
   // state->editor_button_panel.alloc = 0;
@@ -431,8 +456,8 @@ int code_editor_render_v1(int argc, void **argv)
     }
   }
 
+  // Status Bar
   if (state->status_bar.requires_render_update) {
-    // Status Bar
     state->status_bar.requires_render_update = false;
 
     MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
@@ -457,6 +482,44 @@ int code_editor_render_v1(int argc, void **argv)
     allocate_and_copy_cstr(element_cmd->data.print_text.text, state->status_bar.message);
     element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
     element_cmd->data.print_text.color = (render_color){0.95f, 0.72f, 0.49f, 1.f};
+  }
+
+  // Suggestion Box
+  if (state->suggestion_box.visible && state->suggestion_box.requires_render_update) {
+    state->suggestion_box.requires_render_update = false;
+
+    MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+    sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+    sequence->image_width = state->suggestion_box.bounds.width;
+    sequence->image_height = state->suggestion_box.bounds.height;
+    sequence->clear_color = COLOR_GHOST_WHITE;
+    sequence->data.target_image.image_uid = state->suggestion_box.image_resource_uid;
+
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+    element_cmd->x = 1;
+    element_cmd->y = 1;
+    element_cmd->data.colored_rect_info.width = state->suggestion_box.bounds.width - 2;
+    element_cmd->data.colored_rect_info.height = state->suggestion_box.bounds.height - 2;
+    element_cmd->data.colored_rect_info.color = COLOR_NEARLY_BLACK;
+
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
+    element_cmd->x = 1;
+    element_cmd->y = 2 + state->suggestion_box.selected_index * EDITOR_LINE_STRIDE;
+    element_cmd->data.colored_rect_info.width = state->suggestion_box.bounds.width - 2;
+    element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
+    element_cmd->data.colored_rect_info.color = COLOR_DIM_GRAY;
+
+    for (int a = 0; a < state->suggestion_box.entries.count; ++a) {
+      MCcall(obtain_element_render_command(sequence, &element_cmd));
+      element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+      element_cmd->x = 4;
+      element_cmd->y = 2 + a * EDITOR_LINE_STRIDE + 12 + 4;
+      allocate_and_copy_cstr(element_cmd->data.print_text.text, state->suggestion_box.entries.items[a]);
+      element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
+      element_cmd->data.print_text.color = COLOR_LIGHT_YELLOW;
+    }
   }
 
   // Render Main Image
@@ -579,6 +642,19 @@ int code_editor_render_v1(int argc, void **argv)
   element_cmd->data.textured_rect_info.width = state->status_bar.bounds.width;
   element_cmd->data.textured_rect_info.height = state->status_bar.bounds.height;
   element_cmd->data.textured_rect_info.texture_uid = state->status_bar.image_resource_uid;
+
+  // Suggestion box
+  if (state->suggestion_box.visible) {
+    MCcall(obtain_element_render_command(sequence, &element_cmd));
+    element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
+    // element_cmd->x = state->suggestion_box.bounds.x;
+    // element_cmd->y = state->suggestion_box.bounds.y;
+    element_cmd->x = 6 + (uint)((state->cursor.col + 1) * EDITOR_FONT_HORIZONTAL_STRIDE);
+    element_cmd->y = 7 + (state->cursor.line - state->line_display_offset + 1) * EDITOR_LINE_STRIDE;
+    element_cmd->data.textured_rect_info.width = state->suggestion_box.bounds.width;
+    element_cmd->data.textured_rect_info.height = state->suggestion_box.bounds.height;
+    element_cmd->data.textured_rect_info.texture_uid = state->suggestion_box.image_resource_uid;
+  }
 
   // printf("fer-q\n");
   // Cursor
@@ -1480,12 +1556,47 @@ int update_code_editor_suggestion(mc_code_editor_state_v1 *cestate)
 
   char *whole_word;
   allocate_and_copy_cstrn(whole_word, code + s, cestate->cursor.rtf_index - s);
+  int whole_word_len = strlen(whole_word);
+
+  cestate->suggestion_box.visible = false;
+  for (int i = 0; i < cestate->suggestion_box.entries.count; ++i) {
+    if (cestate->suggestion_box.entries.items[i]) {
+      free(cestate->suggestion_box.entries.items[i]);
+    }
+  }
+  cestate->suggestion_box.entries.count = 0;
+
+  if (whole_word_len < 1) {
+    return 0;
+  }
   printf("whole_word:'%s'\n", whole_word);
 
   // Search for it in midge structs
   for (int a = 0; a < command_hub->global_node->struct_count; ++a) {
-    bool match = false;
-    printf("struct:'%s':%s\n", command_hub->global_node->structs[a]->name, match ? "match" : "n0-match");
+    if (cestate->suggestion_box.entries.count > 6) {
+      break;
+    }
+
+    bool match = true;
+
+    int w = 0;
+    char *struct_name = command_hub->global_node->structs[a]->name;
+    int struct_name_len = strlen(struct_name);
+    for (int s = 0; s < struct_name_len && w < whole_word_len; ++s) {
+      if (whole_word[w] == struct_name[s]) {
+        ++w;
+      }
+    }
+    if (w < whole_word_len) {
+      continue;
+    }
+
+    cestate->suggestion_box.visible = true;
+    cestate->suggestion_box.requires_render_update = true;
+    allocate_and_copy_cstr(cestate->suggestion_box.entries.items[cestate->suggestion_box.entries.count], struct_name);
+    ++cestate->suggestion_box.entries.count;
+
+    printf("struct:'%s':%s\n", command_hub->global_node->structs[a]->name, "match");
   }
 
   return 0;
