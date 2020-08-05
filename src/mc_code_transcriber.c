@@ -84,7 +84,32 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
     mc_syntax_node *argument = syntax_node->invocation.arguments->items[i];
     switch (argument->type) {
     case MC_TOKEN_IDENTIFIER: {
+      MCcall(mct_append_indent_to_c_str(str, indent + 1));
       MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, argument->text));
+    } break;
+    case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION: {
+      // Do MC_invokes
+      bool contains_mc_function_call;
+      if (argument->element_access_expression.primary) {
+        MCcall(mct_contains_mc_invoke(argument->element_access_expression.primary, &contains_mc_function_call));
+        if (contains_mc_function_call) {
+          MCerror(104, "TODO");
+        }
+      }
+      if (argument->element_access_expression.access_expression) {
+        MCcall(
+            mct_contains_mc_invoke(argument->element_access_expression.access_expression, &contains_mc_function_call));
+        if (contains_mc_function_call) {
+          MCerror(104, "TODO");
+        }
+      }
+
+      char *text;
+      MCcall(copy_syntax_node_to_text(argument, &text));
+      MCcall(mct_append_indent_to_c_str(str, indent + 1));
+      MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, text));
+      free(text);
+
     } break;
     case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION: {
       char *text;
@@ -141,6 +166,7 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
   case MC_SYNTAX_CONDITIONAL_EXPRESSION:
+  case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION:
   case MC_SYNTAX_RELATIONAL_EXPRESSION: {
     MCcall(mct_append_node_text_to_c_str(str, syntax_node));
   } break;
@@ -169,9 +195,8 @@ int mct_transcribe_if_statement(c_str *str, int indent, mc_syntax_node *syntax_n
   register_midge_error_tag("mct_transcribe_if_statement()");
   // printf("cb: %p\n", syntax_node);
 
-  bool contains_mc_function_call;
-
   // Do MC_invokes
+  bool contains_mc_function_call;
   if (syntax_node->if_statement.conditional) {
     MCcall(mct_contains_mc_invoke(syntax_node->if_statement.conditional, &contains_mc_function_call));
     if (contains_mc_function_call) {

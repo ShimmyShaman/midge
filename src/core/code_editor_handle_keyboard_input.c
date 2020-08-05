@@ -450,6 +450,67 @@ void backspace_from_cursor(mc_code_editor_state_v1 *state)
   return;
 }
 
+void auto_fill_code_editor_suggestion(mc_code_editor_state_v1 *state)
+{
+
+  if (state->suggestion_box.selected_index >= state->suggestion_box.entries.count) {
+    return;
+  }
+
+  // Get the complete word surrounding the cursor
+  char *code = state->code.rtf->text;
+  int s = state->cursor.rtf_index;
+  while (s > 0) {
+    --s;
+    bool brk = false;
+    switch (code[s]) {
+    case ' ':
+    case '\n':
+    case ';':
+    case '[':
+    case ')':
+    case ',': {
+      brk = true;
+      ++s;
+    } break;
+    case ']': {
+      // Discover whether it is a rtf attribute or code access operator close
+      bool rtf_attribute = false;
+      // for(int r = s - 1; r >= 0; --r) {
+      //   if(code[r] == '[') {
+      //     rtf_attribute = code[r - 1] != '[';
+      //   }
+      // }
+      // if(rtf_attribute) {
+
+      // }
+      brk = true;
+      ++s;
+    } break;
+    default:
+      break;
+    }
+    if (brk) {
+      break;
+    }
+  }
+
+  // Copy over it
+  int gap = state->cursor.rtf_index - s;
+  for (int a = s;; ++a) {
+    code[a] = code[a + gap];
+    if (code[a] == '\0') {
+      break;
+    }
+  }
+  state->cursor.rtf_index = s;
+
+  insert_text_into_editor_at_cursor(state, state->suggestion_box.entries.items[state->suggestion_box.selected_index]);
+
+  state->suggestion_box.visible = false;
+
+}
+
 // [_mc_iteration=3]
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
@@ -516,6 +577,20 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
     c[0] = '\n';
     c[1] = '\0';
     insert_text_into_editor_at_cursor(state, &c[0]);
+  } break;
+  case KEY_CODE_TAB: {
+    if (state->suggestion_box.visible) {
+
+      auto_fill_code_editor_suggestion(state);
+    }
+    else {
+
+      char c[3];
+      c[0] = ' ';
+      c[1] = ' ';
+      c[2] = '\0';
+      insert_text_into_editor_at_cursor(state, &c[0]);
+    }
   } break;
   //   event->handled = true;
   //   if (event->ctrlDown) {
