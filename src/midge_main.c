@@ -2659,9 +2659,6 @@ int mc_main(int argc, const char *const *argv)
         case INPUT_EVENT_KEY_RELEASE:
         case INPUT_EVENT_KEY_PRESS: {
           switch (render_thread.input_buffer.events[i].detail.keyboard.key) {
-          case KEY_CODE_ESCAPE:
-            exit_loop = true;
-            continue;
           case KEY_CODE_LEFT_ALT:
           case KEY_CODE_RIGHT_ALT:
             input_event->altDown = render_thread.input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
@@ -2680,6 +2677,11 @@ int mc_main(int argc, const char *const *argv)
             // Set input event for controls to handle
             input_event->type = render_thread.input_buffer.events[i].type;
             input_event->detail = render_thread.input_buffer.events[i].detail;
+
+            if (input_event->detail.keyboard.key == KEY_CODE_W && input_event->ctrlDown && input_event->shiftDown) {
+              exit_loop = true;
+              continue;
+            }
 
             // Global Node Hierarchy
             for (int i = 0; !input_event->handled && i < command_hub->global_node->child_count; ++i) {

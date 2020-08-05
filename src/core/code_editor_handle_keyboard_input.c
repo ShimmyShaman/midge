@@ -508,7 +508,6 @@ void auto_fill_code_editor_suggestion(mc_code_editor_state_v1 *state)
   insert_text_into_editor_at_cursor(state, state->suggestion_box.entries.items[state->suggestion_box.selected_index]);
 
   state->suggestion_box.visible = false;
-
 }
 
 // [_mc_iteration=3]
@@ -565,6 +564,14 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   //   }
 
   // } break;
+  case KEY_CODE_ESCAPE: {
+    if (state->suggestion_box.visible) {
+      event->handled = true;
+
+      state->suggestion_box.visible = false;
+      state->visual_node->data.visual.requires_render_update = true;
+    }
+  } break;
   case KEY_CODE_BACKSPACE: {
     event->handled = true;
 

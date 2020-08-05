@@ -3,11 +3,15 @@ TODO
 Today:
   >> Increase my productivity
     >> Create midge to be more productive tool for me to use than vs-code
-      >> I need to use the editor to create / prototype the init process
-        >> Implement suggestion box
-          >> type in s... { suggest special_data struct}
-          >> tab selects and places rest of word in editor
-        >> create process...
+      >> Use the editor to create / prototype the init process
+        >> data recording?
+        >> suggestion box
+          >> press escape hide
+          >> down/up moves index
+        >> create process:
+          >> recognises code-block/statement-list context
+          >> sees struct-name suggested
+          >> init struct-name process
 
 
 
