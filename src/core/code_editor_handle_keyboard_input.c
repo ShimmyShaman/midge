@@ -394,6 +394,62 @@ void move_cursor_end(mc_code_editor_state_v1 *state)
   }
 }
 
+void backspace_from_cursor(mc_code_editor_state_v1 *state)
+{
+  if (state->cursor.rtf_index == 0) {
+    return;
+  }
+
+  // Adjust the cursor index & col
+  char *code = state->code.rtf->text;
+  int si = state->cursor.rtf_index - 1;
+
+  while (code[si] == ']') {
+    // Identify if it is a rtf element
+    bool is_rtf_element = false;
+    int j = si - 1;
+    for (;; --j) {
+      if (code[j] == '[') {
+        is_rtf_element = (code[j - 1] != '[');
+        break;
+      }
+    }
+    if (!is_rtf_element) {
+      break;
+    }
+
+    si = j - 1;
+  }
+
+  // Copy over it
+  int gap = state->cursor.rtf_index - si;
+  for (int a = si;; ++a) {
+    code[a] = code[a + gap];
+    if (code[a] == '\0') {
+      break;
+    }
+  }
+
+  printf("code:\n%s||\n", code);
+
+  state->cursor.rtf_index = si;
+  update_code_editor_cursor_line_and_column(state);
+  mce_update_rendered_text(state);
+
+  // Update the cursor visual
+  state->cursor.requires_render_update = true;
+  state->visual_node->data.visual.requires_render_update = true;
+  state->suggestion_box.visible = false;
+
+  // Adjust display offset
+  if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+    // Move display offset down
+    state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+  }
+
+  return;
+}
+
 // [_mc_iteration=3]
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
@@ -448,43 +504,11 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   //   }
 
   // } break;
-  // case KEY_CODE_BACKSPACE: {
-  //   event->handled = true;
-  //   if (!state->cursor.col) {
-  //     if (state->cursor.line) {
-  //       // Combine previous line & second line into one
-  //       int previous_line_len = strlen(state->text->lines[state->cursor.line - 1]);
-  //       char *combined =
-  //           (char *)malloc(sizeof(char) * (previous_line_len + strlen(state->text->lines[state->cursor.line]) +
-  //           1));
-  //       strcpy(combined, state->text->lines[state->cursor.line - 1]);
-  //       strcat(combined, state->text->lines[state->cursor.line]);
+  case KEY_CODE_BACKSPACE: {
+    event->handled = true;
 
-  //       free(state->text->lines[state->cursor.line - 1]);
-  //       free(state->text->lines[state->cursor.line]);
-  //       state->text->lines[state->cursor.line - 1] = combined;
-
-  //       // Bring all lines up one position
-  //       for (int i = state->cursor.line + 1; i < state->text->lines_count; ++i) {
-  //         state->text->lines[i - 1] = state->text->lines[i];
-  //       }
-  //       state->text->lines[state->text->lines_count - 1] = NULL;
-  //       --state->text->lines_count;
-
-  //       --state->cursor.line;
-  //       state->cursor.col = previous_line_len;
-  //     }
-  //     break;
-  //   }
-
-  //   // Bring all forward characters back one
-  //   int line_len = strlen(state->text->lines[state->cursor.line]);
-  //   for (int i = state->cursor.col - 1; i < line_len; ++i) {
-  //     state->text->lines[state->cursor.line][i] = state->text->lines[state->cursor.line][i + 1];
-  //   }
-
-  //   --state->cursor.col;
-  // } break;
+    backspace_from_cursor(state);
+  } break;
   case KEY_CODE_ENTER:
   case KEY_CODE_RETURN: {
 
