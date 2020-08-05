@@ -5,9 +5,6 @@ Today:
     >> Create midge to be more productive tool for me to use than vs-code
       >> Use the editor to create / prototype the init process
         >> data recording?
-        >> suggestion box
-          >> press escape hide
-          >> down/up moves index
         >> create process:
           >> recognises code-block/statement-list context
           >> sees struct-name suggested

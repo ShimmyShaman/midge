@@ -4,6 +4,18 @@
 
 void move_cursor_up(mc_code_editor_state_v1 *state)
 {
+  if (state->suggestion_box.visible) {
+    // Takes priority
+    --state->suggestion_box.selected_index;
+    while (state->suggestion_box.selected_index < 0) {
+      state->suggestion_box.selected_index += state->suggestion_box.entries.count;
+    }
+
+    state->suggestion_box.requires_render_update = true;
+    state->visual_node->data.visual.requires_render_update = true;
+    return;
+  }
+
   printf("state->cursor.rtf_index:%i\n", state->cursor.rtf_index);
   // Adjust the cursor index & col
   char *code = state->code.rtf->text;
@@ -95,6 +107,15 @@ void move_cursor_up(mc_code_editor_state_v1 *state)
 
 void move_cursor_down(mc_code_editor_state_v1 *state)
 {
+  if (state->suggestion_box.visible) {
+    // Takes priority
+    state->suggestion_box.selected_index =
+        (state->suggestion_box.selected_index + 1) % state->suggestion_box.entries.count;
+
+    state->suggestion_box.requires_render_update = true;
+    state->visual_node->data.visual.requires_render_update = true;
+    return;
+  }
   // printf("state->cursor.rtf_index:%i\n", state->cursor.rtf_index);
   // Adjust the cursor index & col
   char *code = state->code.rtf->text;
