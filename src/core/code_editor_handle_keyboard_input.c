@@ -274,6 +274,126 @@ void move_cursor_right(mc_code_editor_state_v1 *state)
   }
 }
 
+void move_cursor_home(mc_code_editor_state_v1 *state)
+{
+  if (state->cursor.rtf_index == 0) {
+    return;
+  }
+
+  // Adjust the cursor index & col
+  char *code = state->code.rtf->text;
+  int i = state->cursor.rtf_index;
+
+  state->cursor.zen_col = 0;
+
+  // print_parse_error(code, i, "mcu-initial", "");
+  // Move
+  --i;
+  for (; i > 0; --i) {
+    if (code[i] == '\n') {
+      ++i;
+      break;
+    }
+    else if (code[i] == ']') {
+      // Identify if it is a rtf element
+      bool is_rtf_element = false;
+      int j = i - 1;
+      for (;; --j) {
+        if (code[j] == '[') {
+          is_rtf_element = (code[j - 1] != '[');
+          break;
+        }
+      }
+      if (!is_rtf_element) {
+        break;
+      }
+
+      i = j;
+      continue;
+    }
+    else if (code[i] == ' ') {
+      bool only_white_space = true;
+      int j = i - 1;
+      for (; j > 0; --j) {
+        if (code[j] == '\n') {
+          break;
+        }
+        else if (code[j] == ']') {
+          // Identify if it is a rtf element
+          bool is_rtf_element = false;
+          int k = j - 1;
+          for (;; --k) {
+            if (code[k] == '[') {
+              is_rtf_element = (code[k - 1] != '[');
+              break;
+            }
+          }
+          if (!is_rtf_element) {
+            only_white_space = false;
+            break;
+          }
+        }
+        else if (code[j] != ' ') {
+          only_white_space = false;
+          break;
+        }
+      }
+      if (only_white_space) {
+        ++i;
+        break;
+      }
+    }
+  }
+  // print_parse_error(code, i, "mcu-end", "");
+
+  state->cursor.rtf_index = i;
+  update_code_editor_cursor_line_and_column(state);
+
+  // Update the cursor visual
+  state->cursor.requires_render_update = true;
+  state->visual_node->data.visual.requires_render_update = true;
+
+  // Adjust display offset
+  if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+    // Move display offset down
+    state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+  }
+}
+
+void move_cursor_end(mc_code_editor_state_v1 *state)
+{
+  // Adjust the cursor index & col
+  char *code = state->code.rtf->text;
+  int i = state->cursor.rtf_index;
+
+  state->cursor.zen_col = 0;
+
+  // Find the new line
+  for (;; ++i) {
+    if (code[i] == '\0') {
+      --i;
+      break;
+    }
+    if (code[i] == '\n') {
+      break;
+    }
+  }
+  // print_parse_error(code, i, "mcu-end", "");
+
+  state->cursor.rtf_index = i;
+  update_code_editor_cursor_line_and_column(state);
+
+  // Update the cursor visual
+  state->cursor.requires_render_update = true;
+  state->visual_node->data.visual.requires_render_update = true;
+
+  // Adjust display offset
+  if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+    // Move display offset down
+    state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+  }
+}
+
 // [_mc_iteration=3]
 void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_event_v1 *event)
 {
@@ -513,6 +633,16 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
     move_cursor_right(state);
   } break;
+  case KEY_CODE_HOME: {
+    event->handled = true;
+
+    move_cursor_home(state);
+  } break;
+  case KEY_CODE_END: {
+    event->handled = true;
+
+    move_cursor_end(state);
+  } break;
   // case KEY_CODE_ARROW_RIGHT: {
   //   int line_len = strlen(state->text->lines[state->cursor.line]);
 
@@ -543,231 +673,163 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   //   code_editor_toggle_view(state);
 
   // } break;
-  // case KEY_CODE_HOME: {
-  //   printf("past\n");
-  //   state->cursor.col = 0;
-
-  //   // Update the cursor visual
-  //   state->cursor.requires_render_update = true;
-  //   fedit->data.visual.requires_render_update = true;
-  // } break;
-  // case KEY_CODE_END: {
-  //   state->cursor.col = strlen(state->text->lines[state->cursor.line]);
-
-  //   // Update the cursor visual
-  //   state->cursor.requires_render_update = true;
-  //   fedit->data.visual.requires_render_update = true;
-  // } break;
   default: {
     if (event->altDown) {
-      //     switch (event->detail.keyboard.key) {
-      //     case KEY_CODE_K: {
-      //       for (int i = 0; i < 6; ++i) { // FROM KEY_CODE_ARROW_DOWN above (TODO refactor into function)
-      //         if (state->cursor.line + 1 >= state->text->lines_count) {
-      //           // Do Nothing
-      //           break;
-      //         }
+      switch (event->detail.keyboard.key) {
+      case KEY_CODE_A: {
+        move_cursor_home(state);
+      } break;
+        //     case KEY_CODE_K: {
+        //       for (int i = 0; i < 6; ++i) { // FROM KEY_CODE_ARROW_DOWN above (TODO refactor into function)
+        //         if (state->cursor.line + 1 >= state->text->lines_count) {
+        //           // Do Nothing
+        //           break;
+        //         }
 
-      //         // Increment
-      //         ++state->cursor.line;
-      //         int line_len = strlen(state->text->lines[state->cursor.line]);
-      //         if (state->cursor.col > line_len) {
-      //           state->cursor.col = line_len;
-      //         }
+        //         // Increment
+        //         ++state->cursor.line;
+        //         int line_len = strlen(state->text->lines[state->cursor.line]);
+        //         if (state->cursor.col > line_len) {
+        //           state->cursor.col = line_len;
+        //         }
 
-      //         // Update the cursor visual
-      //         state->cursor.requires_render_update = true;
-      //         fedit->data.visual.requires_render_update = true;
+        //         // Update the cursor visual
+        //         state->cursor.requires_render_update = true;
+        //         fedit->data.visual.requires_render_update = true;
 
-      //         // Adjust display offset
-      //         if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
-      //           // Move display offset down
-      //           state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
-      //         }
-      //       }
-      //     } break;
-      //     case KEY_CODE_I: {
-      //       for (int i = 0; i < 6; ++i) { // FROM KEY_CODE_ARROW_UP above (TODO refactor into function)
-      //         move_cursor_up(fedit, state);
-      //       }
-      //     } break;
-      //     default: {
-      //       break;
-      //     }
-      //     }
-      //   }
-      //   else if (event->ctrlDown) {
-      //     switch (event->detail.keyboard.key) {
-      //     case KEY_CODE_C: {
-      //       char *text;
-      //       if (state->selection_exists) {
-      //         // Copy selection into buffer
-      //         text = read_selected_editor_text(state);
-      //       }
-      //       else {
-      //         // Copy the current line into the buffer
-      //         if (state->text->lines[state->cursor.line] && strlen(state->text->lines[state->cursor.line])) {
-      //           cprintf(text, "%s\n", state->text->lines[state->cursor.line]);
-      //         }
-      //         else {
-      //           // Copy empty text
-      //           allocate_and_copy_cstr(text, "\n");
-      //         }
-      //       }
+        //         // Adjust display offset
+        //         if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+        //           // Move display offset down
+        //           state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+        //         }
+        //       }
+        //     } break;
+      case KEY_CODE_I: {
+        for (int i = 0; i < 6; ++i) {
+          move_cursor_up(state);
+        }
+      } break;
+      default: {
+        break;
+      }
+      }
+    }
+    else if (event->ctrlDown) {
+      switch (event->detail.keyboard.key) {
+        //     case KEY_CODE_C: {
+        //       char *text;
+        //       if (state->selection_exists) {
+        //         // Copy selection into buffer
+        //         text = read_selected_editor_text(state);
+        //       }
+        //       else {
+        //         // Copy the current line into the buffer
+        //         if (state->text->lines[state->cursor.line] && strlen(state->text->lines[state->cursor.line])) {
+        //           cprintf(text, "%s\n", state->text->lines[state->cursor.line]);
+        //         }
+        //         else {
+        //           // Copy empty text
+        //           allocate_and_copy_cstr(text, "\n");
+        //         }
+        //       }
 
-      //       if (command_hub->clipboard_text) {
-      //         free(command_hub->clipboard_text);
-      //       }
+        //       if (command_hub->clipboard_text) {
+        //         free(command_hub->clipboard_text);
+        //       }
 
-      //       allocate_and_copy_cstr(command_hub->clipboard_text, text);
-      //       free(text);
-      //     } break;
-      //     case KEY_CODE_V: {
-      //       if (state->selection_exists) {
-      //         // Delete selection
-      //         delete_selection(state);
-      //       }
+        //       allocate_and_copy_cstr(command_hub->clipboard_text, text);
+        //       free(text);
+        //     } break;
+        //     case KEY_CODE_V: {
+        //       if (state->selection_exists) {
+        //         // Delete selection
+        //         delete_selection(state);
+        //       }
 
-      //       insert_text_into_editor_at_cursor(state, command_hub->clipboard_text, state->cursor.line,
-      //       state->cursor.col);
-      //     } break;
-      //     case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
-      //       // Increment
-      //       if (state->cursor.col == 0) {
-      //         if (state->cursor.line == 0) {
-      //           // Nothing can be done
-      //           break;
-      //         }
+        //       insert_text_into_editor_at_cursor(state, command_hub->clipboard_text, state->cursor.line,
+        //       state->cursor.col);
+        //     } break;
+        //     case KEY_CODE_J: { // FROM KEY_CODE_ARROW_LEFT above (TODO refactor into function)
+        //       // Increment
+        //       if (state->cursor.col == 0) {
+        //         if (state->cursor.line == 0) {
+        //           // Nothing can be done
+        //           break;
+        //         }
 
-      //         --state->cursor.line;
-      //         state->cursor.col = strlen(state->text->lines[state->cursor.line]);
+        //         --state->cursor.line;
+        //         state->cursor.col = strlen(state->text->lines[state->cursor.line]);
 
-      //         // Adjust display offset
-      //         if (state->cursor.line < state->line_display_offset) {
-      //           // Move display offset up
-      //           state->line_display_offset = state->cursor.line;
-      //         }
-      //       }
-      //       else {
-      //         --state->cursor.col;
-      //       }
+        //         // Adjust display offset
+        //         if (state->cursor.line < state->line_display_offset) {
+        //           // Move display offset up
+        //           state->line_display_offset = state->cursor.line;
+        //         }
+        //       }
+        //       else {
+        //         --state->cursor.col;
+        //       }
 
-      //       // Update the cursor visual
-      //       state->cursor.requires_render_update = true;
-      //       fedit->data.visual.requires_render_update = true;
-      //     } break;
-      //     case KEY_CODE_L: { // FROM KEY_CODE_ARROW_RIGHT above (TODO refactor into function) (this one has
-      //     selection)
+        //       // Update the cursor visual
+        //       state->cursor.requires_render_update = true;
+        //       fedit->data.visual.requires_render_update = true;
+        //     } break;
+      case KEY_CODE_L: {
+        move_cursor_right(state);
+      } break;
+      case KEY_CODE_K: {
+        move_cursor_down(state);
+      } break;
+      case KEY_CODE_J: {
+        move_cursor_left(state);
+      } break;
+      case KEY_CODE_I: {
+        move_cursor_up(state);
+      } break;
+      case KEY_CODE_SEMI_COLON: {
+        move_cursor_end(state);
+      } break;
+        //     case KEY_CODE_S: {
+        //       // Save the file
+        //       if (!state->source_data || !state->source_data->source_file) {
+        //         printf("code has no source file\n");
+        //         break;
+        //       }
 
-      //       if (event->shiftDown) {
-      //         if (!state->selection_exists) {
-      //           state->selection_exists = true;
-      //           state->selection_begin_line = state->cursor.line;
-      //           state->selection_begin_col = state->cursor.col;
-      //         }
-      //       }
-      //       else {
-      //         if (state->selection_exists) {
-      //           state->selection_exists = false;
-      //         }
-      //       }
+        //       char *filepath;
+        //       switch (state->source_data->type) {
+        //       case SOURCE_DEFINITION_FUNCTION: {
+        //         mc_function_info_v1 *function = (mc_function_info_v1 *)state->source_data;
 
-      //       int line_len = strlen(state->text->lines[state->cursor.line]);
-      //       if (state->cursor.col == line_len) {
-      //         if (state->cursor.line + 1 < state->text->lines_count) {
+        //         // Read the code from the editor
+        //         char *function_definition;
+        //         read_editor_text_into_cstr(state, &function_definition);
 
-      //           ++state->cursor.line;
-      //           state->cursor.col = 0;
+        //         save_function_to_file(function, function_definition);
 
-      //           // Adjust display offset
-      //           if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
-      //             // Move display offset down
-      //             state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
-      //           }
-      //         }
-      //       }
-      //       else {
-      //         ++state->cursor.col;
-      //       }
+        //         free(function_definition);
+        //       } break;
+        //       case SOURCE_DEFINITION_STRUCT: {
+        //         mc_struct_info_v1 *structure = (mc_struct_info_v1 *)state->source_data;
 
-      //       // Update the cursor visual
-      //       state->cursor.requires_render_update = true;
-      //       fedit->data.visual.requires_render_update = true;
-      //     } break;
-      //     case KEY_CODE_K: { // FROM KEY_CODE_ARROW_DOWN above (TODO refactor into function)
-      //       if (state->cursor.line + 1 >= state->text->lines_count) {
-      //         // Do Nothing
-      //         break;
-      //       }
+        //         // // Read the code from the editor
+        //         char *structure_definition;
+        //         read_editor_text_into_cstr(state, &structure_definition);
 
-      //       // Increment
-      //       ++state->cursor.line;
-      //       int line_len = strlen(state->text->lines[state->cursor.line]);
-      //       if (state->cursor.col > line_len) {
-      //         state->cursor.col = line_len;
-      //       }
+        //         // printf("structure_definition:\n%s||\n", structure_definition);
 
-      //       // Update the cursor visual
-      //       state->cursor.requires_render_update = true;
-      //       fedit->data.visual.requires_render_update = true;
-
-      //       // Adjust display offset
-      //       if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
-      //         // Move display offset down
-      //         state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
-      //       }
-      //     } break;
-      //     case KEY_CODE_I: { // FROM KEY_CODE_ARROW_UP above (TODO refactor into function)
-      //       move_cursor_up(fedit, state);
-      //     } break;
-      //     case KEY_CODE_SEMI_COLON: {
-      //       state->cursor.col = strlen(state->text->lines[state->cursor.line]);
-
-      //       // Update the cursor visual
-      //       state->cursor.requires_render_update = true;
-      //       fedit->data.visual.requires_render_update = true;
-      //     } break;
-      //     case KEY_CODE_S: {
-      //       // Save the file
-      //       if (!state->source_data || !state->source_data->source_file) {
-      //         printf("code has no source file\n");
-      //         break;
-      //       }
-
-      //       char *filepath;
-      //       switch (state->source_data->type) {
-      //       case SOURCE_DEFINITION_FUNCTION: {
-      //         mc_function_info_v1 *function = (mc_function_info_v1 *)state->source_data;
-
-      //         // Read the code from the editor
-      //         char *function_definition;
-      //         read_editor_text_into_cstr(state, &function_definition);
-
-      //         save_function_to_file(function, function_definition);
-
-      //         free(function_definition);
-      //       } break;
-      //       case SOURCE_DEFINITION_STRUCT: {
-      //         mc_struct_info_v1 *structure = (mc_struct_info_v1 *)state->source_data;
-
-      //         // // Read the code from the editor
-      //         char *structure_definition;
-      //         read_editor_text_into_cstr(state, &structure_definition);
-
-      //         // printf("structure_definition:\n%s||\n", structure_definition);
-
-      //         save_struct_to_file(structure, structure_definition);
-      //         free(structure_definition);
-      //       } break;
-      //       default: {
-      //         printf("saving source_data_type=%i is not supported\n", state->source_data->type);
-      //       } break;
-      //       }
-      //     } break;
-      //     default: {
-      //       break;
-      //     }
-      //     }
+        //         save_struct_to_file(structure, structure_definition);
+        //         free(structure_definition);
+        //       } break;
+        //       default: {
+        //         printf("saving source_data_type=%i is not supported\n", state->source_data->type);
+        //       } break;
+        //       }
+        //     } break;
+      default: {
+        break;
+      }
+      }
     }
     else {
       // printf("fehi-3\n");
