@@ -2633,7 +2633,7 @@ int mc_main(int argc, const char *const *argv)
           // Global Node Hierarchy
           for (int i = 0; !input_event->handled && i < command_hub->global_node->child_count; ++i) {
             mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
-printf("biu\n");
+
             // Check is visual and has input handler and mouse event is within bounds
             if (child->type != NODE_TYPE_VISUAL || child->data.visual.visible || !child->data.visual.input_handler ||
                 !(*child->data.visual.input_handler))
@@ -2643,7 +2643,6 @@ printf("biu\n");
                 input_event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
                 input_event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
               continue;
-printf("aiu\n");
 
             void *vargs[3];
             vargs[0] = &elapsed;
@@ -2697,7 +2696,7 @@ printf("aiu\n");
               if (child->type != NODE_TYPE_VISUAL)
                 continue;
               // printf("checking input delegate exists\n");
-              if (!*child->data.visual.input_handler)
+              if (!child->data.visual.input_handler || !*child->data.visual.input_handler)
                 continue;
 
               void *vargs[3];
