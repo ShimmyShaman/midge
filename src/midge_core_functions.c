@@ -3878,7 +3878,7 @@ int render_global_node_v1(int argc, void **argv)
 
   for (int i = 0; i < command_hub->global_node->child_count; ++i) {
     mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
-    if (child->type == NODE_TYPE_VISUAL && !child->data.visual.hidden && child->data.visual.image_resource_uid) {
+    if (child->type == NODE_TYPE_VISUAL && child->data.visual.visible && child->data.visual.image_resource_uid) {
       MCcall(obtain_element_render_command(sequence, &element_cmd));
       element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
       element_cmd->x = child->data.visual.bounds.x;

@@ -7,7 +7,7 @@
 const char *code_editor_handle_input_v1_code =
     "printf(\"fehi-0\\n\");\n"
     "\n"
-    "if (fedit->data.visual.hidden) {\n"
+    "if (!fedit->data.visual.visible) {\n"
     "  return;\n"
     "}\n"
     "\n"

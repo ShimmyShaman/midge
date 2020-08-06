@@ -412,15 +412,17 @@ typedef struct mc_input_event_v1 {
   bool handled;
 } mc_input_event_v1;
 
+typedef struct mc_rect {
+  int x, y;
+  uint width, height;
+} mc_rect;
+
 typedef struct node_visual_info {
 
   bool requires_render_update;
-  bool hidden;
+  bool visible;
   uint image_resource_uid;
-  struct {
-    int x, y;
-    uint width, height;
-  } bounds;
+  mc_rect bounds;
   int (**render_delegate)(int, void **);
   int (**input_handler)(int, void **);
 
@@ -779,6 +781,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
   MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION,
   MC_SYNTAX_FIXREMENT_EXPRESSION,
+  MC_SYNTAX_DEREFERENCE_EXPRESSION,
 } mc_syntax_node_type;
 
 typedef struct mc_syntax_node_list {
@@ -930,6 +933,10 @@ typedef struct mc_syntax_node {
           mc_syntax_node *prepend_operator;
           mc_syntax_node *unary_expression;
         } prepended_unary;
+        struct {
+          mc_syntax_node *deref_sequence;
+          mc_syntax_node *unary_expression;
+        } dereference_expression;
         struct {
           mc_syntax_node *type_identifier;
           mc_struct_info_v1 *mc_type;

@@ -2633,15 +2633,17 @@ int mc_main(int argc, const char *const *argv)
           // Global Node Hierarchy
           for (int i = 0; !input_event->handled && i < command_hub->global_node->child_count; ++i) {
             mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
-
+printf("biu\n");
             // Check is visual and has input handler and mouse event is within bounds
-            if (child->type != NODE_TYPE_VISUAL || child->data.visual.hidden || !*child->data.visual.input_handler)
+            if (child->type != NODE_TYPE_VISUAL || child->data.visual.visible || !child->data.visual.input_handler ||
+                !(*child->data.visual.input_handler))
               continue;
             if (input_event->detail.mouse.x < child->data.visual.bounds.x ||
                 input_event->detail.mouse.y < child->data.visual.bounds.y ||
                 input_event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
                 input_event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
               continue;
+printf("aiu\n");
 
             void *vargs[3];
             vargs[0] = &elapsed;
@@ -6147,9 +6149,15 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
           // Type
           MCcall(copy_syntax_node_to_text(function_ast->function.parameters->items[p]->parameter.type_identifier,
                                           (char **)&parameter->type_name));
-          parameter->type_deref_count =
-              function_ast->function.parameters->items[p]->parameter.type_dereference->dereference_sequence.count;
+          if (function_ast->function.parameters->items[p]->parameter.type_dereference) {
+            parameter->type_deref_count =
+                function_ast->function.parameters->items[p]->parameter.type_dereference->dereference_sequence.count;
+          }
+          else {
+            parameter->type_deref_count = 0;
+          }
           // printf("parameter->type_deref_count:%i\n", parameter->type_deref_count);
+          register_midge_error_tag("parse_and_process_mc_file_syntax-3b");
 
           // -- TODO -- mc-type?
 

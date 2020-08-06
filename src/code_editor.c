@@ -35,7 +35,7 @@ int build_code_editor_v1(int argc, void **argv)
   fedit->data.visual.image_resource_uid = 0;
   fedit->data.visual.requires_render_update = true;
   fedit->data.visual.render_delegate = &code_editor_render;
-  fedit->data.visual.hidden = true;
+  fedit->data.visual.visible = false;
   fedit->data.visual.input_handler = &code_editor_handle_input;
 
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
@@ -2036,7 +2036,7 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   feState->selection_exists = false;
 
   // printf("life-7a\n");
-  code_editor->data.visual.hidden = false;
+  code_editor->data.visual.visible = true;
   code_editor->data.visual.requires_render_update = true;
 
   // process_editor_load(feState);

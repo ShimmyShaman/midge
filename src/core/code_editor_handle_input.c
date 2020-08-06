@@ -7,7 +7,7 @@ void code_editor_handle_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_e
 {
   //  printf("code_editor_handle_input-begin\n");
 
-  if (fedit->data.visual.hidden) {
+  if (!fedit->data.visual.visible) {
     return;
   }
 

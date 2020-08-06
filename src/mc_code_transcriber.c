@@ -213,12 +213,12 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
       }
       MCcall(mct_transcribe_declarator(str, syntax_node->local_variable_declaration.declarators->items[a]));
     }
-    MCcall(append_to_c_str(str, ";\n"));
   } break;
   // WILL have to redo in future
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
   case MC_SYNTAX_CONDITIONAL_EXPRESSION:
+  case MC_SYNTAX_OPERATIONAL_EXPRESSION:
   case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION:
   case MC_SYNTAX_RELATIONAL_EXPRESSION: {
     MCcall(mct_append_node_text_to_c_str(str, syntax_node));
@@ -277,6 +277,7 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   // PROBABLY won't have to redo
   case MC_SYNTAX_DECLARATION_STATEMENT:
   case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION:
+  case MC_SYNTAX_STRING_LITERAL_EXPRESSION:
   case MC_SYNTAX_FIXREMENT_EXPRESSION: {
     MCcall(mct_append_node_text_to_c_str(str, syntax_node));
   } break;
@@ -287,7 +288,7 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
       MCcall(mct_append_node_text_to_c_str(str, syntax_node));
     } break;
     default:
-      MCerror(56, "MCT:Unsupported:%s", get_mc_syntax_token_type_name(syntax_node->type));
+      MCerror(291, "MCT:Unsupported:%s", get_mc_syntax_token_type_name(syntax_node->type));
     }
   }
 

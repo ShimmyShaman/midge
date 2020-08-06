@@ -47,7 +47,7 @@ int core_display_entry_handle_input_v1(int argc, void **argv)
   //   mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
   //   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
-  //   if (fedit->data.visual.hidden)
+  //   if (!fedit->data.visual.visible)
   //     return 0;
 
   //   if (event->type != INPUT_EVENT_KEY_PRESS)
@@ -153,7 +153,7 @@ int build_core_entry(node *core_display, int index)
   core_entry->data.visual.image_resource_uid = 0;
   core_entry->data.visual.requires_render_update = true;
   core_entry->data.visual.render_delegate = NULL;
-  core_entry->data.visual.hidden = false;
+  core_entry->data.visual.visible = true;
   core_entry->data.visual.input_handler = &core_display_entry_handle_input;
 
   MCcall(append_to_collection((void ***)&core_display->children, &core_display->children_alloc,
@@ -250,7 +250,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   // printf("mrce-0\n");
 
   node *child = (node *)cdstate->entry_visual_nodes.items[cdstate->entry_visual_nodes.utilized_count++];
-  child->data.visual.hidden = false;
+  child->data.visual.visible = true;
 
   MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
@@ -323,7 +323,7 @@ int core_display_render_v1(int argc, void **argv)
   frame_time const *elapsed = *(frame_time const **)argv[0];
   mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 
-  if (visual_node->data.visual.hidden)
+  if (!visual_node->data.visual.visible)
     return 0;
   core_display_state *cdd = (core_display_state *)visual_node->extra;
 
@@ -342,7 +342,7 @@ int core_display_render_v1(int argc, void **argv)
 
     // Hide the rest
     for (int a = cdd->entry_visual_nodes.utilized_count; a < cdd->entry_visual_nodes.count; ++a) {
-      cdd->entry_visual_nodes.items[a]->data.visual.hidden = true;
+      cdd->entry_visual_nodes.items[a]->data.visual.visible = false;
     }
 
     cdd->entries.requires_render_update = false;
@@ -366,7 +366,7 @@ int core_display_render_v1(int argc, void **argv)
   for (int i = 0; i < visual_node->child_count; ++i) {
     node *child = (node *)visual_node->children[i];
 
-    if (child->data.visual.hidden) {
+    if (!child->data.visual.visible) {
       continue;
     }
 
@@ -420,7 +420,7 @@ int core_display_handle_input_v1(int argc, void **argv)
   mc_node_v1 *core_display = *(mc_node_v1 **)argv[1];
   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
-  if (core_display->data.visual.hidden)
+  if (!core_display->data.visual.visible)
     return 0;
 
   core_display_state *cdd = (core_display_state *)core_display->extra;
@@ -442,7 +442,7 @@ int core_display_handle_input_v1(int argc, void **argv)
   for (int i = 0; !event->handled && i < cdd->entry_visual_nodes.count; ++i) {
     node *entry_node = cdd->entry_visual_nodes.items[i];
 
-    if (entry_node->data.visual.hidden) {
+    if (!entry_node->data.visual.visible) {
       continue;
     }
 
@@ -544,7 +544,7 @@ int build_core_display_v1(int argc, void **argv)
   core_objects_display->data.visual.image_resource_uid = 0;
   core_objects_display->data.visual.requires_render_update = true;
   core_objects_display->data.visual.render_delegate = &core_display_render;
-  core_objects_display->data.visual.hidden = false;
+  core_objects_display->data.visual.visible = true;
   core_objects_display->data.visual.input_handler = &core_display_handle_input;
 
   core_display_state *cdd = (core_display_state *)malloc(sizeof(core_display_state));

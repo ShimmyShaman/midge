@@ -16,7 +16,7 @@ void move_cursor_up(mc_code_editor_state_v1 *state)
     return;
   }
 
-  printf("state->cursor.rtf_index:%i\n", state->cursor.rtf_index);
+  // printf("state->cursor.rtf_index:%i\n", state->cursor.rtf_index);
   // Adjust the cursor index & col
   char *code = state->code.rtf->text;
   int i = state->cursor.rtf_index;
@@ -53,7 +53,7 @@ void move_cursor_up(mc_code_editor_state_v1 *state)
   else {
     i = 0;
   }
-  print_parse_error(code, i, "mcu-line_start", "");
+  // print_parse_error(code, i, "mcu-line_start", "");
 
   // Move along the line (as close to the zen col as possible)
   int traversed = 0;
@@ -69,26 +69,29 @@ void move_cursor_up(mc_code_editor_state_v1 *state)
       break;
     }
     else if (code[i] == '[') {
+      ++i;
       if (code[i] == '[') {
         // Escaped
-        ++i;
       }
       else {
         for (;; ++i) {
+          // printf("42:'%c'\n", code[i]);
           if (code[i] == '\0') {
             // MCerror(42, "RTF Format Error");
             printf("42 format error\n");
+            return;
           }
           else if (code[i] == ']') {
-            --traversed;
             break;
           }
         }
+        continue;
       }
     }
     ++traversed;
     // printf("++traversed:%i\n", traversed);
   }
+  // print_parse_error(code, i, "mcu-zen_col", "");
   // printf("traverse-OVER\n");
 
   state->cursor.col = traversed;
@@ -143,7 +146,7 @@ void move_cursor_down(mc_code_editor_state_v1 *state)
   // printf("state->cursor.zen_col:%i\n", state->cursor.zen_col);
   for (; traversed < state->cursor.zen_col; ++i) {
     // printf("trac:'%c'\n", code[i]);
-    print_parse_error(code, i, "trac", "");
+    // print_parse_error(code, i, "trac", "");
     if (code[i] == '\0') {
       --i;
       break;
@@ -152,9 +155,9 @@ void move_cursor_down(mc_code_editor_state_v1 *state)
       break;
     }
     else if (code[i] == '[') {
+      ++i;
       if (code[i] == '[') {
         // Escaped
-        ++i;
       }
       else {
         for (;; ++i) {
@@ -163,10 +166,10 @@ void move_cursor_down(mc_code_editor_state_v1 *state)
             printf("42 format error\n");
           }
           else if (code[i] == ']') {
-            --traversed;
             break;
           }
         }
+        continue;
       }
     }
     ++traversed;
