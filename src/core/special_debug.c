@@ -3,14 +3,14 @@
 #include "core/midge_core.h"
 
 // [_mc_version=3]
-struct special_data {
+typedef struct special_data {
   int num;
   int add;
-};
+} special_data;
 
-struct only_int_struct {
+typedef struct only_int_struct {
   int a;
-};
+} only_int_struct;
 
 // [_mc_iteration=3]
 // void special_modification(only_int_struct ais, only_int_struct *bis, int dint, int lint, int *pint)
@@ -42,13 +42,10 @@ void special_suggester()
   // t.num = 4;
   // t.add = 14;
 
-
   // // TODO Enter another special data 'm' with any value
   // special_data m;
   // m.num = 7;
   // m.add = 14;
-
-  
 }
 
 // [_mc_iteration=12]

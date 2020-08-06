@@ -983,6 +983,7 @@ int (*code_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
 
 int (*build_core_display)(int, void **);
+int (*build_usage_data_interface)(int, void **);
 int (*core_display_handle_input)(int, void **);
 int (*core_display_entry_handle_input)(int, void **);
 int (*core_display_render)(int, void **);

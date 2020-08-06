@@ -323,7 +323,7 @@ int parse_struct_definition_v0(mc_source_definition_v1 *source_definition, mc_st
   /*mcfuncreplace*/
 
   int i = 0;
-  MCcall(parse_past(source_definition->code, &i, "struct"));
+  MCcall(parse_past(source_definition->code, &i, "typedef struct"));
   MCcall(parse_past_empty_text(source_definition->code, &i));
 
   int s = i;
@@ -358,7 +358,11 @@ int parse_struct_definition_v0(mc_source_definition_v1 *source_definition, mc_st
 
     MCcall(parse_past_empty_text(source_definition->code, &i));
   }
-  MCcall(parse_past(source_definition->code, &i, "};"));
+  MCcall(parse_past(source_definition->code, &i, "}"));
+  MCcall(parse_past_empty_text(source_definition->code, &i));
+  MCcall(parse_past(source_definition->code, &i, struct_name));
+  MCcall(parse_past_empty_text(source_definition->code, &i));
+  MCcall(parse_past(source_definition->code, &i, ";"));
 
   mc_struct_info_v1 *result = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
   result->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
@@ -2489,6 +2493,8 @@ int mc_main(int argc, const char *const *argv)
   MCcall(build_code_editor(0, NULL));
   printf("mm-4a\n");
   MCcall(build_core_display(0, NULL));
+  printf("mm-4b\n");
+  MCcall(build_usage_data_interface(0, NULL));
   printf("mm-4b\n");
   // MCcall(build_function_live_debugger(0, NULL));
   printf("mm-4c\n");
@@ -5930,7 +5936,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
           // print_parse_error(file_text, s, "text-begin", "");
           // print_parse_error(file_text, i, "text-end", "");
 
-          if (!strncmp(file_text + s, "struct ", 7)) {
+          if (!strncmp(file_text + s, "typedef struct ", 15)) {
             // Struct
 
             // printf("papmf-1\n");
@@ -7439,6 +7445,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
                                 (void *)partial_definition_v1));
+
+    partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
+    allocate_and_copy_cstr(partial_definition_v1->name, "build_usage_data_interface");
+    partial_definition_v1->latest_iteration = 0;
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                (void *)partial_definition_v1));
   }
 
   clint_process("int (*parse_script_to_mc)(int, void **);");
@@ -7566,10 +7579,11 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   printf("Loading Core Methods\n");
   // MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/find_struct_info.c"));
-  MCcall(parse_and_process_mc_file(command_hub, "src/core/special_debug.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/special_debug.c"));
   // MCerror(100000, "----------MEASURED STOP----------");
 
   // MCcall(parse_and_process_mc_file(command_hub, "src/core/move_cursor_up.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/action_data_management.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/file_persistence.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/insert_text_into_editor_at_cursor.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/delete_selection.c"));

@@ -974,6 +974,11 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       }
       event->handled = true;
 
+      uint action_uid;
+      {
+        register_user_action(2424, (uint)event->detail.keyboard.key, 1, &state, &action_uid);
+      }
+
       // Update the text
       {
         // if (state->selection_exists) {
@@ -983,6 +988,13 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
         c[1] = '\0';
         insert_text_into_editor_at_cursor(state, &c[0]);
+        {
+          void *mc_vargs[2];
+          uint type_char = 288;
+          mc_vargs[0] = &type_char;
+          mc_vargs[1] = &c[0];
+          report_user_action_effect(action_uid, 2, mc_vargs);
+        }
       }
     }
   } break;

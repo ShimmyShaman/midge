@@ -1510,6 +1510,37 @@ int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
   return 0;
 }
 
+int obtain_context_node_for_cursor(mc_syntax_node *syntax_node, mc_code_editor_state_v1 *cestate,
+                                   mc_syntax_node **context_node)
+{
+  if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
+    *context_node = syntax_node->parent;
+    return 0;
+  }
+
+  if (!syntax_node->children || !syntax_node->children->alloc) {
+    MCerror(13, "what now?");
+  }
+  mc_syntax_node *child_floor = NULL;
+  for (int i = 0; i < syntax_node->children->count; ++i) {
+    mc_syntax_node *child = syntax_node->children->items[i];
+    if (child->begin.line > cestate->cursor.line ||
+        (child->begin.line == cestate->cursor.line && child->begin.col > cestate->cursor.line)) {
+      break;
+    }
+    child_floor = child;
+  }
+
+  if (child_floor == NULL) {
+    *context_node = NULL;
+    return 0;
+  }
+
+  MCcall(obtain_context_node_for_cursor(child_floor, cestate, context_node));
+
+  return 0;
+}
+
 int update_code_editor_suggestion(mc_code_editor_state_v1 *cestate)
 {
   /*mcfuncreplace*/
@@ -1595,6 +1626,22 @@ int update_code_editor_suggestion(mc_code_editor_state_v1 *cestate)
     cestate->suggestion_box.requires_render_update = true;
     allocate_and_copy_cstr(cestate->suggestion_box.entries.items[cestate->suggestion_box.entries.count], struct_name);
     ++cestate->suggestion_box.entries.count;
+
+    if (!strcmp(struct_name, "special_data")) {
+      // Context
+      mc_syntax_node *context_node;
+      MCcall(obtain_context_node_for_cursor(cestate->code.syntax, cestate, &context_node));
+
+      printf("context:%s\n", get_mc_syntax_token_type_name(context_node->type));
+
+      if (context_node && (context_node->type == MC_SYNTAX_STATEMENT_LIST || context_node->type == MC_SYNTAX_BLOCK)) {
+
+        cestate->suggestion_box.visible = true;
+        cestate->suggestion_box.requires_render_update = true;
+        cprintf(cestate->suggestion_box.entries.items[cestate->suggestion_box.entries.count], "~init %s", struct_name);
+        ++cestate->suggestion_box.entries.count;
+      }
+    }
 
     printf("struct:'%s':%s\n", command_hub->global_node->structs[a]->name, "match");
   }

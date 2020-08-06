@@ -4,6 +4,7 @@
 
 int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_node);
 int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax_node);
+int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node);
 
 int mct_append_node_text_to_c_str(c_str *str, mc_syntax_node *syntax_node)
 {
@@ -83,9 +84,20 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
     MCcall(mct_append_indent_to_c_str(str, indent + 1));
     mc_syntax_node *argument = syntax_node->invocation.arguments->items[i];
     switch (argument->type) {
-    case MC_TOKEN_IDENTIFIER: {
+    case MC_SYNTAX_CAST_EXPRESSION: {
+      bool contains_mc_function_call;
+      if (argument->cast_expression.expression) {
+        MCcall(mct_contains_mc_invoke(argument->cast_expression.expression, &contains_mc_function_call));
+        if (contains_mc_function_call) {
+          MCerror(104, "TODO");
+        }
+      }
+
+      char *text;
+      MCcall(copy_syntax_node_to_text(argument->cast_expression.expression, &text));
       MCcall(mct_append_indent_to_c_str(str, indent + 1));
-      MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, argument->text));
+      MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, text));
+      free(text);
     } break;
     case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION: {
       // Do MC_invokes
@@ -113,7 +125,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
     } break;
     case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION: {
       char *text;
-      if (argument->prepended_unary.prepend_operator->type == MC_TOKEN_AMPERSAND_CHARACTER) {
+      if ((mc_token_type)argument->prepended_unary.prepend_operator->type == MC_TOKEN_AMPERSAND_CHARACTER) {
         MCcall(copy_syntax_node_to_text(argument, &text));
         MCcall(mct_append_indent_to_c_str(str, indent + 1));
         MCvacall(append_to_c_strf(str, "void *mc_varg_%i = %s;\n", i, text));
@@ -125,8 +137,21 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       }
       free(text);
     } break;
-    default:
-      MCerror(92, "Unsupported:%s", get_mc_syntax_token_type_name(argument->type));
+    default: {
+      switch ((mc_token_type)argument->type) {
+      case MC_TOKEN_NUMERIC_LITERAL: {
+        MCcall(mct_append_indent_to_c_str(str, indent + 1));
+        MCvacall(append_to_c_strf(str, "int mc_vargs_%i = %s;\n", i, argument->text));
+        MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
+      } break;
+      case MC_TOKEN_IDENTIFIER: {
+        MCcall(mct_append_indent_to_c_str(str, indent + 1));
+        MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, argument->text));
+      } break;
+      default:
+        MCerror(92, "Unsupported:%s", get_mc_syntax_token_type_name(argument->type));
+      }
+    }
     }
   }
 
@@ -136,6 +161,32 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
   MCcall(mct_append_to_c_str(str, indent, "}\n"));
 
   register_midge_error_tag("mct_transcribe_mc_invocation(~)");
+  return 0;
+}
+
+int mct_transcribe_declarator(c_str *str, mc_syntax_node *syntax_node)
+{
+  if (syntax_node->local_variable_declarator.type_dereference) {
+    MCcall(mct_append_node_text_to_c_str(str, syntax_node->local_variable_declarator.type_dereference));
+  }
+  MCcall(append_to_c_str(str, " "));
+  MCcall(mct_append_node_text_to_c_str(str, syntax_node->local_variable_declarator.variable_name));
+
+  if (syntax_node->local_variable_declarator.initializer) {
+    if (syntax_node->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER) {
+      MCcall(append_to_c_str(str, " = "));
+      MCcall(mct_transcribe_expression(
+          str,
+          syntax_node->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression));
+    }
+    else {
+      MCcall(append_to_c_str(str, "["));
+      MCcall(mct_transcribe_expression(
+          str, syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression));
+      MCcall(append_to_c_str(str, "]"));
+    }
+  }
+
   return 0;
 }
 
@@ -156,11 +207,13 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
 
     MCcall(append_to_c_str(str, " "));
 
-    for (int a = 2; a < syntax_node->children->count; ++a) {
-      mc_syntax_node *child = syntax_node->children->items[a];
-
-      MCcall(mct_append_node_text_to_c_str(str, child));
+    for (int a = 0; a < syntax_node->local_variable_declaration.declarators->count; ++a) {
+      if (a > 0) {
+        MCcall(append_to_c_str(str, ", "));
+      }
+      MCcall(mct_transcribe_declarator(str, syntax_node->local_variable_declaration.declarators->items[a]));
     }
+    MCcall(append_to_c_str(str, ";\n"));
   } break;
   // WILL have to redo in future
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
@@ -170,14 +223,66 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   case MC_SYNTAX_RELATIONAL_EXPRESSION: {
     MCcall(mct_append_node_text_to_c_str(str, syntax_node));
   } break;
+  case MC_SYNTAX_CAST_EXPRESSION: {
+    MCcall(append_to_c_str(str, "("));
+
+    if (syntax_node->cast_expression.mc_type) {
+      MCcall(append_to_c_str(str, syntax_node->cast_expression.mc_type->declared_mc_name));
+    }
+    else {
+      MCcall(mct_append_node_text_to_c_str(str, syntax_node->cast_expression.type_identifier));
+    }
+
+    if (syntax_node->cast_expression.type_dereference) {
+      MCcall(append_to_c_str(str, " "));
+      MCcall(mct_append_node_text_to_c_str(str, syntax_node->cast_expression.type_dereference));
+    }
+    MCcall(append_to_c_str(str, ")"));
+
+    MCcall(mct_transcribe_expression(str, syntax_node->cast_expression.expression));
+  } break;
+  case MC_SYNTAX_SIZEOF_EXPRESSION: {
+    MCcall(append_to_c_str(str, "sizeof("));
+
+    if (syntax_node->sizeof_expression.mc_type) {
+      MCcall(append_to_c_str(str, syntax_node->sizeof_expression.mc_type->declared_mc_name));
+    }
+    else {
+      MCcall(mct_append_node_text_to_c_str(str, syntax_node->sizeof_expression.type_identifier));
+    }
+
+    if (syntax_node->sizeof_expression.type_dereference) {
+      MCcall(append_to_c_str(str, " "));
+      MCcall(mct_append_node_text_to_c_str(str, syntax_node->sizeof_expression.type_dereference));
+    }
+    MCcall(append_to_c_str(str, ")"));
+  } break;
+  case MC_SYNTAX_INVOCATION: {
+    if (syntax_node->invocation.mc_function_info) {
+      MCerror(247, "Not supported from here, have to deal with it earlier");
+    }
+
+    MCcall(mct_append_node_text_to_c_str(str, syntax_node->invocation.function_identity));
+    MCcall(append_to_c_str(str, "("));
+    for (int a = 0; a < syntax_node->invocation.arguments->count; ++a) {
+      if (a > 0) {
+        MCcall(append_to_c_str(str, ", "));
+      }
+
+      MCcall(mct_transcribe_expression(str, syntax_node->invocation.arguments->items[a]));
+    }
+    MCcall(append_to_c_str(str, ")"));
+  } break;
+
   // PROBABLY won't have to redo
-  case MC_SYNTAX_INVOCATION:
   case MC_SYNTAX_DECLARATION_STATEMENT:
+  case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION:
   case MC_SYNTAX_FIXREMENT_EXPRESSION: {
     MCcall(mct_append_node_text_to_c_str(str, syntax_node));
   } break;
   default:
     switch ((mc_token_type)syntax_node->type) {
+    case MC_TOKEN_NUMERIC_LITERAL:
     case MC_TOKEN_IDENTIFIER: {
       MCcall(mct_append_node_text_to_c_str(str, syntax_node));
     } break;
