@@ -361,6 +361,8 @@ int mcs_add_syntax_node_to_parent(mc_syntax_node *parent, mc_syntax_node *child)
 int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, char *mc_token_primitive_text,
                               mc_syntax_node *parent, mc_syntax_node **result)
 {
+  register_midge_error_tag("mcs_construct_syntax_node()");
+
   mc_syntax_node *syntax_node = (mc_syntax_node *)calloc(sizeof(mc_syntax_node), 1);
   syntax_node->type = node_type;
   syntax_node->begin.index = ps->index;
@@ -1339,11 +1341,13 @@ int mcs_parse_through_supernumerary_tokens(parsing_state *ps, mc_syntax_node *pa
 int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **type_identifier,
                               struct_info **mc_type)
 {
+  register_midge_error_tag("mcs_parse_type_identifier()");
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
   mc_token_type modifier_type = MC_TOKEN_NULL;
+  bool const_applied = false;
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
   if (token_type == MC_TOKEN_UNSIGNED_KEYWORD) {
@@ -1393,6 +1397,7 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
 
   MCcall(mcs_parse_through_token(ps, parent, token_type, type_identifier));
 
+  register_midge_error_tag("mcs_parse_type_identifier()-4");
   // Convert to the appropriate type
   if (token_type == MC_TOKEN_IDENTIFIER) {
     void *vargs[3];
@@ -1405,12 +1410,13 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
     *mc_type = NULL;
   }
 
+  register_midge_error_tag("mcs_parse_type_identifier(~)");
   return 0;
 }
 
 int mcs_parse_dereference_sequence(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
-  // printf("mcs_parse_dereference_sequence()\n");
+  register_midge_error_tag("mcs_parse_dereference_sequence()");
   mc_syntax_node *sequence;
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_DEREFERENCE_SEQUENCE, NULL, parent, &sequence));
   if (additional_destination) {
@@ -2961,7 +2967,7 @@ int mcs_parse_statement_list(parsing_state *ps, mc_syntax_node *parent, mc_synta
 
 int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
-  // printf("mcs_parse_code_block()\n");
+  register_midge_error_tag("mcs_parse_code_block()");
   mc_syntax_node *block_node;
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_BLOCK, NULL, parent, &block_node));
   if (additional_destination) {
@@ -3003,6 +3009,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
   MCcall(mcs_parse_type_identifier(&ps, function, &function->function.return_type_identifier,
                                    &function->function.return_mc_type));
 
+  register_midge_error_tag("parse_mc_to_syntax_tree_v1()-2");
   // MCcall(print_syntax_node(function, 0));
   MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 

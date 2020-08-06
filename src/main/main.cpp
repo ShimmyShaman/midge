@@ -34,7 +34,7 @@ void handler(int sig)
 #define ME_RECENT_LAST
   printf("\n===========================================\n"
          "\n===========================================\n"
-         "              CATASTROPHIC ERROR\n"
+         "              Illegal Memory Access\n"
          "-------------------------------------------\n\n");
 #ifdef ME_RECENT_LAST
   printf("---------------Most Recent Last------------\n\n");

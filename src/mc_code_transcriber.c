@@ -77,7 +77,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
   MCvacall(append_to_c_strf(str, "%i];\n", finfo->parameter_count + 1));
 
   if (finfo->parameter_count != syntax_node->invocation.arguments->count) {
-    MCerror(79, "argument count not equal to required parameters");
+    MCerror(79, "argument count not equal to required parameters, invoke:%s", finfo->name);
   }
 
   for (int i = 0; i < finfo->parameter_count; ++i) {
@@ -98,6 +98,23 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       MCcall(mct_append_indent_to_c_str(str, indent + 1));
       MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, text));
       free(text);
+    } break;
+    case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
+      // Do MC_invokes
+      bool contains_mc_function_call;
+      if (argument) {
+        MCcall(mct_contains_mc_invoke(argument, &contains_mc_function_call));
+        if (contains_mc_function_call) {
+          MCerror(104, "TODO");
+        }
+      }
+
+      char *text;
+      MCcall(copy_syntax_node_to_text(argument, &text));
+      MCcall(mct_append_indent_to_c_str(str, indent + 1));
+      MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, text));
+      free(text);
+
     } break;
     case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION: {
       // Do MC_invokes
@@ -142,6 +159,16 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       case MC_TOKEN_NUMERIC_LITERAL: {
         MCcall(mct_append_indent_to_c_str(str, indent + 1));
         MCvacall(append_to_c_strf(str, "int mc_vargs_%i = %s;\n", i, argument->text));
+        MCcall(mct_append_indent_to_c_str(str, indent + 1));
+        MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
+      } break;
+      case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
+        MCcall(mct_append_indent_to_c_str(str, indent + 1));
+        char *text;
+        MCcall(copy_syntax_node_to_text(argument, &text));
+        MCvacall(append_to_c_strf(str, "const char *mc_vargs_%i = %s;\n", i, text));
+        free(text);
+        MCcall(mct_append_indent_to_c_str(str, indent + 1));
         MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
       } break;
       case MC_TOKEN_IDENTIFIER: {

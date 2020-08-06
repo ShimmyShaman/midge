@@ -979,7 +979,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
       uint action_uid;
       {
-        register_user_action(2424, (uint)event->detail.keyboard.key, 1, &state, &action_uid);
+        register_user_action(state->entry_pad, (uint)event->detail.keyboard.key, 1, &state, &action_uid);
       }
 
       // Update the text
@@ -992,11 +992,9 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         c[1] = '\0';
         insert_text_into_editor_at_cursor(state, &c[0]);
         {
-          void *mc_vargs[2];
-          uint type_char = 288;
-          mc_vargs[0] = &type_char;
-          mc_vargs[1] = &c[0];
-          report_user_action_effect(action_uid, 2, mc_vargs);
+          void *mc_vargs[1];
+          mc_vargs[0] = &c[0];
+          report_user_action_effect(state->entry_pad, action_uid, mc_vargs);
         }
       }
     }

@@ -44,6 +44,8 @@
   (render_color) { 0.0f, 0.0f, 0.0f, 0.0f }
 #define COLOR_CORNFLOWER_BLUE \
   (render_color) { 0.19f, 0.34f, 0.83f, 1.f }
+#define COLOR_DARK_GREEN \
+  (render_color) { 0.0f, 0.25f, 0.0f, 1.f }
 #define COLOR_GREEN \
   (render_color) { 0.0f, 0.5f, 0.0f, 1.f }
 #define COLOR_LIME \

@@ -347,14 +347,23 @@ int parse_struct_definition_v0(mc_source_definition_v1 *source_definition, mc_st
   MCcall(parse_past_empty_text(source_definition->code, &i));
   while (source_definition->code[i] != '}') {
 
-    MCcall(parse_past_type_declaration_text(source_definition->code, &i, &fields[field_count].type));
-    MCcall(parse_past_empty_text(source_definition->code, &i));
-    MCcall(parse_past_dereference_sequence(source_definition->code, &i, &fields[field_count].deref_count));
-    MCcall(parse_past_empty_text(source_definition->code, &i));
-    MCcall(parse_past_variable_name(source_definition->code, &i, &fields[field_count].name));
-    MCcall(parse_past_empty_text(source_definition->code, &i));
-    MCcall(parse_past(source_definition->code, &i, ";"));
-    ++field_count;
+    int t = i;
+    char *text;
+    MCcall(parse_past_variable_name(source_definition->code, &t, &text));
+    if (!strcmp(text, "struct")) {
+      MCerror(354, "TODO - anonymous structs...");
+    }
+    else {
+      free(text);
+      MCcall(parse_past_type_declaration_text(source_definition->code, &i, &fields[field_count].type));
+      MCcall(parse_past_empty_text(source_definition->code, &i));
+      MCcall(parse_past_dereference_sequence(source_definition->code, &i, &fields[field_count].deref_count));
+      MCcall(parse_past_empty_text(source_definition->code, &i));
+      MCcall(parse_past_variable_name(source_definition->code, &i, &fields[field_count].name));
+      MCcall(parse_past_empty_text(source_definition->code, &i));
+      MCcall(parse_past(source_definition->code, &i, ";"));
+      ++field_count;
+    }
 
     MCcall(parse_past_empty_text(source_definition->code, &i));
   }
@@ -7454,6 +7463,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
                                 (void *)partial_definition_v1));
 
     partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
+    allocate_and_copy_cstr(partial_definition_v1->name, "build_code_editor");
+    partial_definition_v1->latest_iteration = 0;
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                (void *)partial_definition_v1));
+
+    partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
     allocate_and_copy_cstr(partial_definition_v1->name, "build_usage_data_interface");
     partial_definition_v1->latest_iteration = 0;
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
@@ -7546,7 +7562,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // code_editor.c
   {
     void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/code_editor.c";
+    const char *filepath = "/home/jason/midge/src/code_editort.c";
     mc_vargs[0] = &filepath;
     void *p_mc_vargs_1 = &input;
     mc_vargs[1] = &p_mc_vargs_1;
@@ -7558,7 +7574,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(input);
   free(output);
 
-  MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
+  // MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
   MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
   MCcall(clint_process("code_editor_toggle_view = &code_editor_toggle_view_v1;"));
   MCcall(clint_process("load_existing_function_into_code_editor = &load_existing_function_into_code_editor_v1;"));
@@ -7587,10 +7603,11 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/special_debug.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/action_data_management.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/code_editor.c"));
   // MCerror(100000, "----------MEASURED STOP----------");
 
   // MCcall(parse_and_process_mc_file(command_hub, "src/core/move_cursor_up.c"));
-  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/action_data_management.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/file_persistence.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/insert_text_into_editor_at_cursor.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/delete_selection.c"));

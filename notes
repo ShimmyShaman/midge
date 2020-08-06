@@ -1,5 +1,54 @@
 GOAL:
 
+
+MAKE A SHITTY FIRST VERSION
+
+exhibit the user configuration
+
+
+
+make the whole init shebang - just through printf
+ with the data inputs
+
+
+looks for a sequence of characters
+
+
+
+type 		s-p-e-c-i-a-l-_-d-a-t-a- -
+
+label that	type-unit 'special_data'
+
+pattern		[CODE_BLOCK/CLEAN]%{alpha}-%-%-%...
+		&& matches_struct_name
+		<DO>: init suggestion		
+		
+
+PROCESS WHEN ITS ALL SPIFFY
+  origin obtains a action-database
+  submits that with the action and context, obtains uid/TODO
+  reports uid with abstracted effect {insert char 'c' etc}
+
+  USER looks at the data collection
+  LABELS data -- sees sequence 'special_data ' and labels it end result of that sequence
+  LABELS data -- sees sequence '[special_data] %var ;' and labels as a PATTERN the end result of that sequence
+
+
+Not only things to do, but things to keep track of
+
+
+WHEN RECEIVE REPORT FROM 2424
+IF 2424-state0->source_data->type == FUNCTION
+AND
+USE 2424 state0 as parameter to another method to
+
+
+		
+
+
+
+
+
     Analyze syntax for patterns: 
         special_data s;
         s.num = 8;

@@ -527,6 +527,36 @@ typedef struct mc_procedure_template_v1 {
 
 } mc_procedure_template_v1;
 
+typedef struct mc_process_action_arg_info_v1 {
+  const char *name;
+  const char *type_name;
+} mc_process_action_arg_info_v1;
+
+typedef struct mc_process_action_data_v1 {
+  uint action_uid;
+  uint action_type;
+  void **context_data;
+  void **result_data;
+} mc_process_action_data_v1;
+
+typedef struct mc_process_action_database_v1 {
+  uint owner_uid;
+  uint action_uid_counter;
+  char *name;
+  struct {
+    int count;
+    mc_process_action_arg_info_v1 **items;
+  } context_args;
+  struct {
+    int count;
+    mc_process_action_arg_info_v1 **items;
+  } result_args;
+  struct {
+    uint alloc, count;
+    mc_process_action_data_v1 **items;
+  } data;
+} mc_process_action_database_v1;
+
 // FunctionLiveDebugger Structs
 typedef struct fld_variable_snapshot {
   int line_index;
@@ -618,6 +648,8 @@ typedef struct mc_code_editor_state_v1 {
 
   // } editor_render_state;
   rendered_code_line **render_lines;
+
+  mc_process_action_database_v1 *entry_pad;
 
   struct {
     char *changed_text;

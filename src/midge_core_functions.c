@@ -8,6 +8,7 @@
 
 int find_struct_info_v0(int argc, void **argv)
 {
+  register_midge_error_tag("find_struct_info_v0()");
   node *nodespace = *(node **)argv[0];
   char *struct_name = *(char **)argv[1];
   struct_info **result = (struct_info **)argv[2];
@@ -21,6 +22,7 @@ int find_struct_info_v0(int argc, void **argv)
 
     // Matches
     *result = sinfo;
+    register_midge_error_tag("find_struct_info_v0(~found)");
     return 0;
   }
 
@@ -35,10 +37,12 @@ int find_struct_info_v0(int argc, void **argv)
       find_struct_info(3, mc_vargs);
     }
     *result = sinfo;
+    register_midge_error_tag("find_struct_info_v0(~parent)");
     return 0;
   }
 
   *result = NULL;
+  register_midge_error_tag("find_struct_info_v0(~null)");
   return 0;
 }
 
