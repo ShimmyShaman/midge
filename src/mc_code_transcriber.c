@@ -224,7 +224,13 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   // print_syntax_node(syntax_node, 0);
 
   switch (syntax_node->type) {
+  // {
+  //   print_syntax_node(syntax_node, 1);
+  //   MCerror(254, "TODO");
+  // } break;
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION: {
+    // printf("Local_declaration:\n");
+    // print_syntax_node(syntax_node, 1);
     if (syntax_node->local_variable_declaration.mc_type) {
       MCcall(mct_append_to_c_str(str, 0, syntax_node->local_variable_declaration.mc_type->declared_mc_name));
     }
@@ -241,8 +247,21 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
       MCcall(mct_transcribe_declarator(str, syntax_node->local_variable_declaration.declarators->items[a]));
     }
   } break;
-  // WILL have to redo in future
-  case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
+  case MC_SYNTAX_ASSIGNMENT_EXPRESSION: {
+    MCcall(mct_append_node_text_to_c_str(str, syntax_node->assignment_expression.variable));
+    MCcall(append_to_c_str(str, " "));
+    MCcall(mct_append_node_text_to_c_str(str, syntax_node->assignment_expression.assignment_operator));
+    MCcall(append_to_c_str(str, " "));
+    MCcall(mct_transcribe_expression(str, syntax_node->assignment_expression.value_expression));
+  } break;
+  case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
+    MCcall(append_to_c_str(str, "("));
+    MCcall(mct_transcribe_expression(str, syntax_node->parenthesized_expression.expression));
+    MCcall(append_to_c_str(str, ")"));
+  } break;
+  
+    // WILL have to redo in future
+  case MC_SYNTAX_DEREFERENCE_EXPRESSION:
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
   case MC_SYNTAX_CONDITIONAL_EXPRESSION:
   case MC_SYNTAX_OPERATIONAL_EXPRESSION:
@@ -254,9 +273,12 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
     MCcall(append_to_c_str(str, "("));
 
     if (syntax_node->cast_expression.mc_type) {
+      // printf("cast expression had mc type:'%s'\n", syntax_node->cast_expression.mc_type->declared_mc_name);
       MCcall(append_to_c_str(str, syntax_node->cast_expression.mc_type->declared_mc_name));
     }
     else {
+      // printf("cast expression had type:\n");
+      // print_syntax_node(syntax_node->cast_expression.type_identifier, 1);
       MCcall(mct_append_node_text_to_c_str(str, syntax_node->cast_expression.type_identifier));
     }
 
@@ -311,6 +333,7 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   default:
     switch ((mc_token_type)syntax_node->type) {
     case MC_TOKEN_NUMERIC_LITERAL:
+    case MC_TOKEN_CHAR_LITERAL:
     case MC_TOKEN_IDENTIFIER: {
       MCcall(mct_append_node_text_to_c_str(str, syntax_node));
     } break;

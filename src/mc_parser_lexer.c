@@ -1405,6 +1405,8 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
     vargs[1] = &(*type_identifier)->text;
     vargs[2] = &(*mc_type);
     find_struct_info(3, vargs);
+    // printf("mcs: find_struct_info(%s)=='%s'\n", (*type_identifier)->text,
+    //        (*mc_type) == NULL ? "(null)" : (*mc_type)->declared_mc_name);
   }
   else {
     *mc_type = NULL;
