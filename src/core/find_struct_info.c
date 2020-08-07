@@ -5,6 +5,7 @@
 // [_mc_iteration=3]
 struct_info *find_struct_info(node *nodespace, char *struct_name)
 {
+    // printf("fsi-1\n");
   for (int i = 0; i < nodespace->struct_count; ++i) {
 
     // printf("fsi-3\n");

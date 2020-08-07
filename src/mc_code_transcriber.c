@@ -140,6 +140,15 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       free(text);
 
     } break;
+    case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
+      MCcall(mct_append_indent_to_c_str(str, indent + 1));
+      char *text;
+      MCcall(copy_syntax_node_to_text(argument, &text));
+      MCvacall(append_to_c_strf(str, "const char *mc_vargs_%i = %s;\n", i, text));
+      free(text);
+      MCcall(mct_append_indent_to_c_str(str, indent + 1));
+      MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
+    } break;
     case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION: {
       char *text;
       if ((mc_token_type)argument->prepended_unary.prepend_operator->type == MC_TOKEN_AMPERSAND_CHARACTER) {
@@ -159,15 +168,6 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       case MC_TOKEN_NUMERIC_LITERAL: {
         MCcall(mct_append_indent_to_c_str(str, indent + 1));
         MCvacall(append_to_c_strf(str, "int mc_vargs_%i = %s;\n", i, argument->text));
-        MCcall(mct_append_indent_to_c_str(str, indent + 1));
-        MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
-      } break;
-      case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
-        MCcall(mct_append_indent_to_c_str(str, indent + 1));
-        char *text;
-        MCcall(copy_syntax_node_to_text(argument, &text));
-        MCvacall(append_to_c_strf(str, "const char *mc_vargs_%i = %s;\n", i, text));
-        free(text);
         MCcall(mct_append_indent_to_c_str(str, indent + 1));
         MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
       } break;

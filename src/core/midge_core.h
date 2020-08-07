@@ -201,6 +201,7 @@ struct mc_key_value_pair_v1;
 struct mc_script_local_v1;
 struct mc_struct_info_v1;
 struct mc_parameter_info_v1;
+struct mc_field_info_v1;
 struct mc_function_info_v1;
 struct mc_script_v1;
 struct mc_script_instance_v1;
@@ -265,9 +266,18 @@ typedef struct mc_struct_info_v1 {
   unsigned int version;
   char *declared_mc_name;
   unsigned int field_count;
-  mc_parameter_info_v1 **fields;
+  mc_field_info_v1 **fields;
   const char *sizeof_cstr;
 } mc_struct_info_v1;
+
+typedef struct mc_field_info_v1 {
+  mc_struct_id_v1 *struct_id;
+  const char *type_name;
+  mc_struct_info_v1 *mc_type;
+  unsigned int type_version;
+  unsigned int type_deref_count;
+  const char *name;
+} mc_field_info_v1;
 
 typedef struct mc_parameter_info_v1 {
   mc_struct_id_v1 *struct_id;
@@ -997,8 +1007,8 @@ int (*parse_and_process_function_definition)(mc_source_definition_v1 *source_def
                                              mc_function_info_v1 **function_definition, bool skip_clint_declaration);
 int (*obtain_function_info_from_definition)(char *function_definition_text,
                                             mc_function_info_v1 **command_hub_function_info);
-int (*parse_struct_definition)(mc_source_definition_v1 *code_definition, mc_struct_info_v1 **structure_info);
-int (*declare_struct_from_info)(mc_struct_info_v1 *structure_info);
+int (*parse_struct_definition)(mc_command_hub_v1 *command_hub, mc_source_definition_v1 *code_definition, mc_struct_info_v1 **structure_info);
+int (*declare_struct_from_info)(mc_command_hub_v1 *command_hub, mc_struct_info_v1 *structure_info);
 
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,
                                 char **transcription);
@@ -1022,7 +1032,7 @@ int (*code_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
 
 int (*build_core_display)(int, void **);
-int (*build_usage_data_interface)(int, void **);
+int (*init_usage_data_interface)(int, void **);
 int (*core_display_handle_input)(int, void **);
 int (*core_display_entry_handle_input)(int, void **);
 int (*core_display_render)(int, void **);

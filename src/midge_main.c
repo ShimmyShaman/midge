@@ -96,7 +96,8 @@ int parse_past_empty_text(char const *const code, int *i)
 int parse_past_variable_name(const char *text, int *index, char **output)
 {
   if (!isalpha(text[*index]) && text[*index] != '_') {
-    MCerror(58, "Expected first char to be an alphabetical char or underscore.");
+    print_parse_error(text, *index, "parse_past_variable_name", "");
+    MCerror(99, "Expected first char to be an alphabetical char or underscore.");
   }
 
   for (int i = *index;; ++i) {
@@ -316,11 +317,144 @@ int parse_past_type_declaration_text(const char *code, int *i, char **type_decla
   return 0;
 }
 
-int parse_struct_definition_v0(mc_source_definition_v1 *source_definition, mc_struct_info_v1 **structure_info)
+// Finds the bracketed code in str. If start is initialized to -1, then the first bracket will be found
+// otherwise it will be mandatory that file_text[start] == '{' Both start and exclusive_end are guranteed to be set
+// exclusive_end will be set to the index after the final closing bracket
+int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
 {
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
+  // printf("find_bracketed_code_in_str(), text:\n%s||\n", file_text);
+  if (strlen(file_text) < 1) {
+    MCerror(5636, "no text len");
+  }
+
+  // Initialize search begin index
+  int i;
+  bool eof = false;
+  if (*start != -1) {
+    if (*start < 0 || file_text[*start] != '{') {
+      MCerror(5643, "Argument Error");
+    }
+    i = *start;
+    // printf("*start = %i\n", i);
+  }
+  else {
+    i = 0;
+    while (file_text[i] != '{') {
+      if (file_text[i] == '\0') {
+        eof = true;
+        break;
+      }
+      ++i;
+    }
+    if (eof) {
+      print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
+      MCerror(5670, "FORMAT ERROR");
+    }
+
+    *start = i;
+    // printf("*start = %i\n", i);
+    ++i;
+  }
+  ++i;
+
+  int bracket_count = 1;
+  while (bracket_count) {
+    // printf("'%c':%i\n", file_text[i], bracket_count);
+    // if (!strncmp(file_text + i, "simpincel", 9)) {
+    //   printf("bracket_count was:%i\n", bracket_count);
+    // }
+
+    // }
+
+    switch (file_text[i]) {
+    case '\0':
+      eof = true;
+      // printf("brakcou:%i\n", bracket_count);
+      print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
+      MCerror(5676, "FORMAT ERROR");
+      break;
+    case '{': {
+      ++bracket_count;
+    } break;
+    case '}': {
+      --bracket_count;
+    } break;
+    case '"': {
+      // printf("start-str-literal:%i\n", i);
+      // print_parse_error(file_text, i, "find_bracketed_code_in_str", "start-str-literal");
+      ++i;
+      while (file_text[i] != '"') {
+        if (file_text[i] == '\0') {
+          // eof = true;
+          print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
+          MCerror(5708, "FORMAT ERROR");
+          break;
+        }
+        else if (file_text[i] == '\\') {
+          // Skip the next escaped character too
+          ++i;
+        }
+        ++i;
+      }
+      // printf("exit-str-literal:%i\n", i);
+      // print_parse_error(file_text, i, "find_bracketed_code_in_str", "exit-str-literal");
+
+      // Past
+      ++i;
+    } break;
+    case '/': {
+      if (file_text[i + 1] == '*') {
+        ++i;
+        while (file_text[i] != '*' || file_text[i + 1] != '/') {
+          if (file_text[i] == '\0') {
+            // eof = true;
+            print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
+            MCerror(5708, "FORMAT ERROR");
+            break;
+          }
+          ++i;
+        }
+        if (eof) {
+          break;
+        }
+        i += 2;
+      }
+      else if (file_text[i + 1] == '/') {
+
+        // printf("start-line-comment:%i\n", i);
+        while (file_text[i] != '\n') {
+          if (file_text[i] == '\0') {
+            // eof = true;
+            print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
+            MCerror(5723, "FORMAT ERROR");
+            break;
+          }
+          ++i;
+        }
+        // printf("exit:%i\n", i);
+      }
+    } break;
+    default: {
+      break;
+    }
+    }
+
+    // if (eof) {
+    //   MCerror(5651, "FORMAT ERROR");
+    // }
+    ++i;
+  }
+
+  *exclusive_end = i;
+
+  // printf("returns;\n");
+  return 0;
+}
+
+int parse_struct_definition_v0(mc_command_hub_v1 *command_hub, mc_source_definition_v1 *source_definition,
+                               mc_struct_info_v1 **structure_info)
+{
+  register_midge_error_tag("parse_struct_definition_v0()");
 
   int i = 0;
   MCcall(parse_past(source_definition->code, &i, "typedef struct"));
@@ -345,17 +479,27 @@ int parse_struct_definition_v0(mc_source_definition_v1 *source_definition, mc_st
   MCcall(parse_past_empty_text(source_definition->code, &i));
   MCcall(parse_past(source_definition->code, &i, "{"));
   MCcall(parse_past_empty_text(source_definition->code, &i));
+  printf("parse_struct_definition_v0-3  code:\n%s||\n", source_definition->code);
   while (source_definition->code[i] != '}') {
 
     int t = i;
     char *text;
     MCcall(parse_past_variable_name(source_definition->code, &t, &text));
     if (!strcmp(text, "struct")) {
-      MCerror(354, "TODO - anonymous structs...");
+
+      // Obtain the struct definition
+      int si = -1, end_bracket_index;
+      MCcall(find_bracketed_code_in_str(source_definition->code, &si, &end_bracket_index));
+
+      free(text);
+      allocate_and_copy_cstrn(text, source_definition->code + i, end_bracket_index - i);
+      printf("anon_decl:\n%s||\n", text);
+      MCerror(498, "TODO -- support anon structs");
     }
     else {
       free(text);
       MCcall(parse_past_type_declaration_text(source_definition->code, &i, &fields[field_count].type));
+      printf("fields[%i].type = '%s'\n", field_count, fields[field_count].type);
       MCcall(parse_past_empty_text(source_definition->code, &i));
       MCcall(parse_past_dereference_sequence(source_definition->code, &i, &fields[field_count].deref_count));
       MCcall(parse_past_empty_text(source_definition->code, &i));
@@ -372,6 +516,7 @@ int parse_struct_definition_v0(mc_source_definition_v1 *source_definition, mc_st
   MCcall(parse_past(source_definition->code, &i, struct_name));
   MCcall(parse_past_empty_text(source_definition->code, &i));
   MCcall(parse_past(source_definition->code, &i, ";"));
+  register_midge_error_tag("parse_struct_definition_v0-5");
 
   mc_struct_info_v1 *result = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
   result->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
@@ -383,28 +528,43 @@ int parse_struct_definition_v0(mc_source_definition_v1 *source_definition, mc_st
   result->declared_mc_name = NULL;
   result->sizeof_cstr = 0; // Get rid of? TODO
   result->field_count = field_count;
-  result->fields = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * result->field_count);
+  result->fields = (mc_field_info_v1 **)malloc(sizeof(mc_field_info_v1 *) * result->field_count);
   for (int f = 0; f < result->field_count; ++f) {
-    result->fields[f] = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    result->fields[f] = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
 
     result->fields[f]->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
-    allocate_and_copy_cstr(result->fields[f]->struct_id->identifier, "parameter_info");
+    allocate_and_copy_cstr(result->fields[f]->struct_id->identifier, "field_info");
     result->fields[f]->struct_id->version = 1;
 
     result->fields[f]->type_version = 0;
     result->fields[f]->type_name = fields[f].type;
+    printf("fields[%i].type = '%s'\n", f, fields[f].type);
     result->fields[f]->name = fields[f].name;
     result->fields[f]->type_deref_count = fields[f].deref_count;
-    result->fields[f]->mc_declared_type = NULL; // TODO
+
+    {
+      register_midge_error_tag("parse_struct_definition_v0-7 type_name:'%s'", result->fields[f]->type_name);
+      printf("command_hub->nodespace= %p\n", command_hub->nodespace);
+      void *mc_vargs[3];
+      mc_vargs[0] = &command_hub->nodespace;
+      mc_vargs[1] = &result->fields[f]->type_name;
+      mc_vargs[2] = &result->fields[f]->mc_type;
+      find_struct_info(3, mc_vargs);
+    }
+    printf("result->fields[%i]->mc_type = '%p'\n", f, result->fields[f]->mc_type);
   }
+
+  MCcall(append_to_collection((void ***)&command_hub->nodespace->structs, &command_hub->nodespace->structs_alloc,
+                              &command_hub->nodespace->struct_count, result));
 
   *structure_info = result;
   return 0;
 }
 
-int declare_struct_from_info_v0(mc_struct_info_v1 *str)
+int declare_struct_from_info_v0(mc_command_hub_v1 *command_hub, mc_struct_info_v1 *str)
 {
-  printf("declare_struct_from_info()\n");
+  register_midge_error_tag("declare_struct_from_info(%s)", str->name);
+  // printf("declare_struct_from_info()\n");
   uint cstr_alloc = 256;
   char *cstr = (char *)malloc(sizeof(char) * cstr_alloc);
   cstr[0] = '\0';
@@ -414,18 +574,25 @@ int declare_struct_from_info_v0(mc_struct_info_v1 *str)
   }
   cprintf(str->declared_mc_name, "mc_%s_v%i", str->name, str->version);
 
-  printf("dsfi-0\n");
+  // printf("dsfi-0\n");
   MCcall(append_to_cstr(&cstr_alloc, &cstr, "typedef struct "));
   MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
   MCcall(append_to_cstr(&cstr_alloc, &cstr, " {\n"));
-  printf("dsfi-1\n");
+  // printf("dsfi-1\n");
   for (int i = 0; i < str->field_count; ++i) {
     // printf("dsfi-1: str->fields[i]:%p\n", str->fields[i]);
     // printf("dsfi-2: str->fields[i]->type_name:%p\n", str->fields[i]->type_name);
     // printf("dsfi-2: str->fields[i]->type_name:%s\n", str->fields[i]->type_name);
 
     MCcall(append_to_cstr(&cstr_alloc, &cstr, "  "));
-    MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->type_name));
+    if (str->fields[i]->mc_type) {
+      // printf("mc_declared_type:%s\n", str->fields[i]->mc_type->name);
+      MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->mc_type->declared_mc_name));
+    }
+    else {
+      // printf("standard_type_name:%s\n", str->fields[i]->type_name);
+      MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->type_name));
+    }
     MCcall(append_to_cstr(&cstr_alloc, &cstr, " "));
     for (int j = 0; j < str->fields[i]->type_deref_count; ++j) {
       MCcall(append_to_cstr(&cstr_alloc, &cstr, "*"));
@@ -435,15 +602,16 @@ int declare_struct_from_info_v0(mc_struct_info_v1 *str)
     MCcall(append_to_cstr(&cstr_alloc, &cstr, str->fields[i]->name));
     MCcall(append_to_cstr(&cstr_alloc, &cstr, ";\n"));
   }
-  printf("dsfi-4\n");
+  // printf("dsfi-4\n");
   MCcall(append_to_cstr(&cstr_alloc, &cstr, "} "));
   MCcall(append_to_cstr(&cstr_alloc, &cstr, str->declared_mc_name));
   MCcall(append_to_cstr(&cstr_alloc, &cstr, ";"));
 
   printf("~declare_struct_from_info:\n%s\n", cstr);
-  clint_declare(cstr);
+  MCcall(clint_declare(cstr));
   free(cstr);
 
+  register_midge_error_tag("declare_struct_from_info(~)");
   return 0;
 }
 
@@ -2503,7 +2671,7 @@ int mc_main(int argc, const char *const *argv)
   printf("mm-4a\n");
   MCcall(build_core_display(0, NULL));
   printf("mm-4b\n");
-  MCcall(build_usage_data_interface(0, NULL));
+  MCcall(init_usage_data_interface(0, NULL));
   printf("mm-4b\n");
   // MCcall(build_function_live_debugger(0, NULL));
   printf("mm-4c\n");
@@ -3451,7 +3619,7 @@ int process_unprovoked_command_with_system(mc_command_hub_v1 *command_hub, mc_wo
       }
     }
     if (!script) {
-      MCerror(7583, "TODO case where no script was found with that name");
+      MCerror(3454, "TODO case where no script was found with that name");
     }
 
     // Invoke it
@@ -5731,140 +5899,6 @@ int init_process_matrix(mc_command_hub_v1 *command_hub)
   return 0;
 }
 
-// Finds the bracketed code in str. If start is initialized to -1, then the first bracket will be found
-// otherwise it will be mandatory that file_text[start] == '{' Both start and exclusive_end are guranteed to be set
-// exclusive_end will be set to the index after the final closing bracket
-int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
-{
-  // printf("find_bracketed_code_in_str(), text:\n%s||\n", file_text);
-  if (strlen(file_text) < 1) {
-    MCerror(5636, "no text len");
-  }
-
-  // Initialize search begin index
-  int i;
-  bool eof = false;
-  if (*start != -1) {
-    if (*start < 0 || file_text[*start] != '{') {
-      MCerror(5643, "Argument Error");
-    }
-    i = *start;
-    // printf("*start = %i\n", i);
-  }
-  else {
-    i = 0;
-    while (file_text[i] != '{') {
-      if (file_text[i] == '\0') {
-        eof = true;
-        break;
-      }
-      ++i;
-    }
-    if (eof) {
-      print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
-      MCerror(5670, "FORMAT ERROR");
-    }
-
-    *start = i;
-    // printf("*start = %i\n", i);
-    ++i;
-  }
-  ++i;
-
-  int bracket_count = 1;
-  while (bracket_count) {
-    // printf("'%c':%i\n", file_text[i], bracket_count);
-    // if (!strncmp(file_text + i, "simpincel", 9)) {
-    //   printf("bracket_count was:%i\n", bracket_count);
-    // }
-
-    // }
-
-    switch (file_text[i]) {
-    case '\0':
-      eof = true;
-      // printf("brakcou:%i\n", bracket_count);
-      print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
-      MCerror(5676, "FORMAT ERROR");
-      break;
-    case '{': {
-      ++bracket_count;
-    } break;
-    case '}': {
-      --bracket_count;
-    } break;
-    case '"': {
-      // printf("start-str-literal:%i\n", i);
-      // print_parse_error(file_text, i, "find_bracketed_code_in_str", "start-str-literal");
-      ++i;
-      while (file_text[i] != '"') {
-        if (file_text[i] == '\0') {
-          // eof = true;
-          print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
-          MCerror(5708, "FORMAT ERROR");
-          break;
-        }
-        else if (file_text[i] == '\\') {
-          // Skip the next escaped character too
-          ++i;
-        }
-        ++i;
-      }
-      // printf("exit-str-literal:%i\n", i);
-      // print_parse_error(file_text, i, "find_bracketed_code_in_str", "exit-str-literal");
-
-      // Past
-      ++i;
-    } break;
-    case '/': {
-      if (file_text[i + 1] == '*') {
-        ++i;
-        while (file_text[i] != '*' || file_text[i + 1] != '/') {
-          if (file_text[i] == '\0') {
-            // eof = true;
-            print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
-            MCerror(5708, "FORMAT ERROR");
-            break;
-          }
-          ++i;
-        }
-        if (eof) {
-          break;
-        }
-        i += 2;
-      }
-      else if (file_text[i + 1] == '/') {
-
-        // printf("start-line-comment:%i\n", i);
-        while (file_text[i] != '\n') {
-          if (file_text[i] == '\0') {
-            // eof = true;
-            print_parse_error(file_text, i, "find_bracketed_code_in_str", "unexpected-eof");
-            MCerror(5723, "FORMAT ERROR");
-            break;
-          }
-          ++i;
-        }
-        // printf("exit:%i\n", i);
-      }
-    } break;
-    default: {
-      break;
-    }
-    }
-
-    // if (eof) {
-    //   MCerror(5651, "FORMAT ERROR");
-    // }
-    ++i;
-  }
-
-  *exclusive_end = i;
-
-  // printf("returns;\n");
-  return 0;
-}
-
 int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char *filepath)
 {
   register_midge_error_tag("parse_and_process_mc_file_syntax(%s)", filepath);
@@ -5967,6 +6001,9 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
             // Copy
             definitions[definition_count].type = SOURCE_DEFINITION_STRUCT;
             definitions[definition_count].declaration = NULL;
+            allocate_and_copy_cstrn(definitions[definition_count].declaration, file_text + s + 8,
+                                    open_bracket_index - s - 9);
+            printf("extracted '%s':\n", definitions[definition_count].declaration);
             definitions[definition_count].text = (char *)malloc(sizeof(char) * (i - s + 1));
             strncpy(definitions[definition_count].text, file_text + s, i - s);
             definitions[definition_count].text[i - s] = '\0';
@@ -6029,8 +6066,10 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
   source_file->definitions.alloc = 0;
   source_file->definitions.count = 0;
 
+  register_midge_error_tag("parse_and_process_mc_file_syntax-4 %i definitions", definition_count);
   for (int a = 0; a < definition_count; ++a) {
     if (definitions[a].type == SOURCE_DEFINITION_STRUCT) {
+      register_midge_error_tag("parse_and_process_mc_file_syntax-processing '%s'", definitions[a].declaration);
       // Set Provided Source Path
       mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
       definition->type = SOURCE_DEFINITION_STRUCT;
@@ -6040,7 +6079,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
                                   &source_file->definitions.count, definition));
 
       mc_struct_info_v1 *structure;
-      MCcall(parse_struct_definition(definition, &structure));
+      MCcall(parse_struct_definition(command_hub, definition, &structure));
       definition->structure_info = structure;
 
       int struct_version = 1;
@@ -6061,8 +6100,8 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
                                   &command_hub->global_node->structs_alloc, &command_hub->global_node->struct_count,
                                   (void *)structure));
 
-      // printf("papcs-declare_struct_from_info:\n");
-      MCcall(declare_struct_from_info(structure));
+      // printf("papcs-declare_struct_from_info:%p\n", declare_struct_from_info);
+      MCcall(declare_struct_from_info(command_hub, structure));
       // printf("papcs-after declare_struct_from_info:\n");
     }
     else if (definitions[a].type == SOURCE_DEFINITION_FUNCTION) {
@@ -6309,7 +6348,7 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
           // print_parse_error(file_text, i, "before ;", "n");
           while (file_text[i] != ';') {
             if (file_text[i] == '\0') {
-              MCerror(5828, "format: expected ';'");
+              MCerror(6312, "format: expected ';'");
               break;
             }
             ++i;
@@ -6392,7 +6431,7 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
                                   &source_file->definitions.count, definition));
 
       mc_struct_info_v1 *structure;
-      MCcall(parse_struct_definition(definition, &structure));
+      MCcall(parse_struct_definition(command_hub, definition, &structure));
       definition->structure_info = structure;
 
       // Set Provided Source Path
@@ -6414,7 +6453,8 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
                                   (void *)structure));
 
       // printf("papcs-declare_struct_from_info:\n");
-      MCcall(declare_struct_from_info(structure));
+      MCcall(declare_struct_from_info(command_hub, structure));
+
       // printf("papcs-after declare_struct_from_info:\n");
     }
     else if (definitions[a].type == SOURCE_DEFINITION_FUNCTION) {
@@ -6786,7 +6826,7 @@ int load_and_process_core_structure(mc_command_hub_v1 *command_hub, const char *
                               &command_hub->global_node->struct_count, (void *)structure));
 
   printf("papcs-declare_struct_from_info:\n");
-  MCcall(declare_struct_from_info(structure));
+  MCcall(declare_struct_from_info(command_hub, structure));
   printf("papcs-after declare_struct_from_info:\n");
 
   return 0;
@@ -6810,25 +6850,85 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
   //   "special_data"); special_struct_strdef->version = 1U;
   //   allocate_and_copy_cstr(special_struct_strdef->declared_mc_name, "mc_special_data_v1");
   //   special_struct_strdef->field_count = 1;
-  //   special_struct_strdef->fields = (mc_parameter_info_v1 **)calloc(sizeof(void *),
+  //   special_struct_strdef->fields = (mc_field_info_v1 **)calloc(sizeof(void *),
   //   special_struct_strdef->field_count); special_struct_strdef->sizeof_cstr = NULL;
 
-  //   mc_parameter_info_v1 *field;
+  //   mc_field_info_v1 *field;
   //   int f = 0;
-  //   field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  //   field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
   //   special_struct_strdef->fields[f++] = field;
   //   field->type_name = "int";
   //   field->type_version = 0U;
   //   field->type_deref_count = 0;
   //   field->name = "num";
 
-  //   // field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  //   // field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
   //   // special_struct_strdef->fields[f++] = field;
   //   // field->type_name = "text_line_list";
   //   // field->type_version = 1U;
   //   // field->type_deref_count = 1;
   //   // field->name = "text";
   // }
+
+  mc_struct_info_v1 *field_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
+  {
+    MCcall(append_to_collection((void ***)&command_hub->global_node->structs, &command_hub->global_node->structs_alloc,
+                                &command_hub->global_node->struct_count, (void *)field_info_definition_v1));
+
+    field_info_definition_v1->struct_id = NULL;
+    field_info_definition_v1->source = NULL;
+    allocate_and_copy_cstr(field_info_definition_v1->name, "field_info");
+    field_info_definition_v1->version = 1U;
+    allocate_and_copy_cstr(field_info_definition_v1->declared_mc_name, "mc_field_info_v1");
+    field_info_definition_v1->field_count = 6;
+    field_info_definition_v1->fields =
+        (mc_field_info_v1 **)calloc(sizeof(void *), field_info_definition_v1->field_count);
+    field_info_definition_v1->sizeof_cstr = "sizeof_field_info_v1";
+
+    mc_field_info_v1 *field;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
+    field_info_definition_v1->fields[0] = field;
+    field->type_name = "struct_info";
+    field->type_version = 1U;
+    field->type_deref_count = 1;
+    field->name = "struct_id";
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
+    field_info_definition_v1->fields[1] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "type_name";
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
+    field_info_definition_v1->fields[2] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "type_version";
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
+    field_info_definition_v1->fields[3] = field;
+    field->type_name = "unsigned int";
+    field->type_version = 0U;
+    field->type_deref_count = 0;
+    field->name = "type_deref_count";
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
+    field_info_definition_v1->fields[4] = field;
+    field->type_name = "const char";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "name";
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
+    field_info_definition_v1->fields[5] = field;
+    field->type_name = "struct_info";
+    field->type_version = 0U;
+    field->type_deref_count = 1;
+    field->name = "mc_type";
+    field->mc_type = NULL;
+  }
 
   {
     mc_struct_info_v1 *parameter_info_definition_v1 = (mc_struct_info_v1 *)malloc(sizeof(mc_struct_info_v1));
@@ -6842,35 +6942,35 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     allocate_and_copy_cstr(parameter_info_definition_v1->declared_mc_name, "mc_parameter_info_v1");
     parameter_info_definition_v1->field_count = 5;
     parameter_info_definition_v1->fields =
-        (mc_parameter_info_v1 **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
+        (mc_field_info_v1 **)calloc(sizeof(void *), parameter_info_definition_v1->field_count);
     parameter_info_definition_v1->sizeof_cstr = "sizeof_parameter_info_v1";
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    mc_field_info_v1 *field;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     parameter_info_definition_v1->fields[0] = field;
     field->type_name = "struct_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "struct_id";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     parameter_info_definition_v1->fields[1] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "type_name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     parameter_info_definition_v1->fields[2] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "type_version";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     parameter_info_definition_v1->fields[3] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "type_deref_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     parameter_info_definition_v1->fields[4] = field;
     field->type_name = "const char";
     field->type_version = 0U;
@@ -6890,7 +6990,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     allocate_and_copy_cstr(struct_info_definition_v1->declared_mc_name, "mc_struct_info_v1");
     struct_info_definition_v1->field_count = 7;
     struct_info_definition_v1->fields =
-        (mc_parameter_info_v1 **)calloc(sizeof(void *), struct_info_definition_v1->field_count);
+        (mc_field_info_v1 **)calloc(sizeof(void *), struct_info_definition_v1->field_count);
     struct_info_definition_v1->sizeof_cstr = "sizeof_struct_info_v1";
 
     // FUNCTION_INFO STRUCT INFO
@@ -6906,49 +7006,58 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
 //         const char *sizeof_cstr;    \
 //     }
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    mc_field_info_v1 *field;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     struct_info_definition_v1->fields[0] = field;
     field->type_name = "struct_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "struct_id";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     struct_info_definition_v1->fields[1] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "type_name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     struct_info_definition_v1->fields[2] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "version";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     struct_info_definition_v1->fields[3] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "declared_mc_name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     struct_info_definition_v1->fields[4] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "field_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field->mc_type = NULL;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     struct_info_definition_v1->fields[5] = field;
-    field->type_name = "parameter_info";
+    field->type_name = "field_info";
     field->type_version = 0U;
     field->type_deref_count = 2;
     field->name = "fields";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field->mc_type = field_info_definition_v1;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     struct_info_definition_v1->fields[6] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "sizeof_cstr";
+    field->mc_type = NULL;
+
+    field_info_definition_v1->fields[5]->mc_type = struct_info_definition_v1;
   }
 
   {
@@ -6963,7 +7072,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     allocate_and_copy_cstr(function_info_definition_v1->declared_mc_name, "mc_function_info_v1");
     function_info_definition_v1->field_count = 10;
     function_info_definition_v1->fields =
-        (mc_parameter_info_v1 **)calloc(sizeof(void *), function_info_definition_v1->field_count);
+        (mc_field_info_v1 **)calloc(sizeof(void *), function_info_definition_v1->field_count);
     function_info_definition_v1->sizeof_cstr = "sizeof_function_info_v1";
 
     // FUNCTION_INFO STRUCT INFO
@@ -6980,62 +7089,62 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
 //         unsigned int struct_usage_count;             \
 //         void **struct_usage;                         \
 //     }
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    mc_field_info_v1 *field;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[0] = field;
     field->type_name = "struct_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "struct_id";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[1] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "source_filepath";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[2] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[3] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "latest_iteration";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[4] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "return_type";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[5] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "parameter_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[6] = field;
     field->type_name = "parameter_info";
     field->type_version = 0U;
     field->type_deref_count = 2;
     field->name = "parameters";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[7] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "variable_parameter_begin_index";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[8] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "struct_usage_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     function_info_definition_v1->fields[9] = field;
     field->type_name = "struct_id";
     field->type_version = 0U;
@@ -7054,7 +7163,7 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     node_definition_v1->version = 1U;
     allocate_and_copy_cstr(node_definition_v1->declared_mc_name, "mc_node_v1");
     node_definition_v1->field_count = 12;
-    node_definition_v1->fields = (mc_parameter_info_v1 **)calloc(sizeof(void *), node_definition_v1->field_count);
+    node_definition_v1->fields = (mc_field_info_v1 **)calloc(sizeof(void *), node_definition_v1->field_count);
     node_definition_v1->sizeof_cstr = "sizeof_node_v1"; // TODO -- remove this
 
     // #define node_v1                          \
@@ -7074,74 +7183,74 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
         // mc_node_v1 **children;           \
 //     }
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    mc_field_info_v1 *field;
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[0] = field;
     field->type_name = "struct_id";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "struct_id";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[1] = field;
     field->type_name = "const char";
     field->type_version = 0U;
     field->type_deref_count = 1;
     field->name = "name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[2] = field;
     field->type_name = "node";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "parent";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[3] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "functions_alloc";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[4] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "function_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[5] = field;
     field->type_name = "function_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "functions";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[6] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "structs_alloc";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[7] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "struct_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[8] = field;
     field->type_name = "struct_info";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "structs";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[9] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "children_alloc";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[10] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "child_count";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     node_definition_v1->fields[11] = field;
     field->type_name = "node";
     field->type_version = 1U;
@@ -7161,68 +7270,68 @@ int init_core_structures(mc_command_hub_v1 *command_hub)
     allocate_and_copy_cstr(code_editor_state_strdef->declared_mc_name, "mc_code_editor_state_v1");
     code_editor_state_strdef->field_count = 9;
     code_editor_state_strdef->fields =
-        (mc_parameter_info_v1 **)calloc(sizeof(void *), code_editor_state_strdef->field_count);
+        (mc_field_info_v1 **)calloc(sizeof(void *), code_editor_state_strdef->field_count);
     code_editor_state_strdef->sizeof_cstr = NULL;
 
-    mc_parameter_info_v1 *field;
+    mc_field_info_v1 *field;
     int f = 0;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "rendered_code_line";
     field->type_version = 1U;
     field->type_deref_count = 2;
     field->name = "render_lines";
 
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "mc_cstring_list_v1";
     field->type_version = 1U;
     field->type_deref_count = 1;
     field->name = "text";
 
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "font_resource_uid";
 
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "line_display_offset";
 
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "cursor.line";
 
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "unsigned int";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "cursor.col";
 
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "bool";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "cursor.requires_render_update";
 
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "source_definition_type";
     field->type_version = 0U;
     field->type_deref_count = 0;
     field->name = "source_data_type";
 
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    field = (mc_field_info_v1 *)malloc(sizeof(mc_field_info_v1));
     code_editor_state_strdef->fields[f++] = field;
     field->type_name = "void";
     field->type_version = 0U;
@@ -7271,13 +7380,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     read_file_text_definition_v1->struct_usage_count = 0;
     read_file_text_definition_v1->struct_usage = NULL;
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    read_file_text_definition_v1->parameters[0] = field;
-    field->type_name = "char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "filepath";
+    mc_parameter_info_v1 *parameter;
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    read_file_text_definition_v1->parameters[0] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 0U;
+    parameter->type_deref_count = 1;
+    parameter->name = "filepath";
   }
 
   mc_function_info_v1 *force_render_update_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
@@ -7314,13 +7423,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     cling_process_definition_v1->struct_usage_count = 0;
     cling_process_definition_v1->struct_usage = NULL;
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    cling_process_definition_v1->parameters[0] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "str";
+    mc_parameter_info_v1 *parameter;
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    cling_process_definition_v1->parameters[0] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 1;
+    parameter->name = "str";
   }
 
   mc_function_info_v1 *find_function_info_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
@@ -7340,19 +7449,19 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     find_function_info_definition_v1->struct_usage_count = 0;
     find_function_info_definition_v1->struct_usage = NULL;
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    find_function_info_definition_v1->parameters[0] = field;
-    field->type_name = "node";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "nodespace";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    find_function_info_definition_v1->parameters[1] = field;
-    field->type_name = "char";
-    field->type_version = 0U;
-    field->type_deref_count = 1;
-    field->name = "function_name";
+    mc_parameter_info_v1 *parameter;
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    find_function_info_definition_v1->parameters[0] = parameter;
+    parameter->type_name = "node";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 1;
+    parameter->name = "nodespace";
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    find_function_info_definition_v1->parameters[1] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 0U;
+    parameter->type_deref_count = 1;
+    parameter->name = "function_name";
   }
 
   mc_function_info_v1 *declare_function_pointer_definition_v1 =
@@ -7373,31 +7482,31 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     declare_function_pointer_definition_v1->struct_usage_count = 0;
     declare_function_pointer_definition_v1->struct_usage = NULL;
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    declare_function_pointer_definition_v1->parameters[0] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "function_name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    declare_function_pointer_definition_v1->parameters[1] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "return_type";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    declare_function_pointer_definition_v1->parameters[2] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "parameter_type";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    declare_function_pointer_definition_v1->parameters[3] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "parameter_name";
+    mc_parameter_info_v1 *parameter;
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    declare_function_pointer_definition_v1->parameters[0] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 1;
+    parameter->name = "function_name";
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    declare_function_pointer_definition_v1->parameters[1] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 1;
+    parameter->name = "return_type";
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    declare_function_pointer_definition_v1->parameters[2] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 1;
+    parameter->name = "parameter_type";
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    declare_function_pointer_definition_v1->parameters[3] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 1;
+    parameter->name = "parameter_name";
   }
 
   mc_function_info_v1 *instantiate_function_definition_v1 = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
@@ -7417,19 +7526,19 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     instantiate_function_definition_v1->struct_usage_count = 0;
     instantiate_function_definition_v1->struct_usage = NULL;
 
-    mc_parameter_info_v1 *field;
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    instantiate_function_definition_v1->parameters[0] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "function_name";
-    field = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    instantiate_function_definition_v1->parameters[1] = field;
-    field->type_name = "char";
-    field->type_version = 1U;
-    field->type_deref_count = 1;
-    field->name = "script";
+    mc_parameter_info_v1 *parameter;
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    instantiate_function_definition_v1->parameters[0] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 1;
+    parameter->name = "function_name";
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    instantiate_function_definition_v1->parameters[1] = parameter;
+    parameter->type_name = "char";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 1;
+    parameter->name = "script";
   }
 
   {
@@ -7470,7 +7579,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
                                 (void *)partial_definition_v1));
 
     partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
-    allocate_and_copy_cstr(partial_definition_v1->name, "build_usage_data_interface");
+    allocate_and_copy_cstr(partial_definition_v1->name, "init_usage_data_interface");
     partial_definition_v1->latest_iteration = 0;
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,

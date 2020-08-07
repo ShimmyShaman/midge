@@ -1,15 +1,19 @@
 #include "core/midge_core.h"
 
+typedef struct action_database_collection {
+  uint count;
+  uint alloc;
+  mc_process_action_database_v1 **items;
+} action_database_collection;
+
 typedef struct usage_data_interface_state {
+  mc_node_v1 *visual_node;
   bool minimized;
 
   uint alternate_image_resource_uid;
   mc_rect alternate_image_bounds;
 
-  // struct {
-  //   uint count, alloc;
-  //   mc_process_action_database_v1 **items;
-  // } databases;
+  action_database_collection *databases;
 
   unsigned int font_resource_uid;
 } usage_data_interface_state;
@@ -39,7 +43,7 @@ void usage_data_interface_render(frame_time *elapsed, mc_node_v1 *visual_node)
   }
 }
 
-void build_usage_data_interface()
+void init_usage_data_interface()
 {
   mc_node_v1 *usage_data_interface = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
   usage_data_interface->name = "usage_data_interface";
@@ -62,6 +66,7 @@ void build_usage_data_interface()
 
   usage_data_interface_state *state = (usage_data_interface_state *)malloc(sizeof(usage_data_interface_state));
   usage_data_interface->extra = state;
+  state->visual_node = usage_data_interface;
 
   state->minimized = true;
   state->alternate_image_resource_uid = 0;
@@ -69,6 +74,10 @@ void build_usage_data_interface()
   state->alternate_image_bounds.y = 40;
   state->alternate_image_bounds.width = APPLICATION_SET_WIDTH - 298;
   state->alternate_image_bounds.height = APPLICATION_SET_HEIGHT - usage_data_interface->data.visual.bounds.y;
+  state->databases = (action_database_collection *)malloc(sizeof(action_database_collection));
+  state->databases->count = 0;
+  state->databases->alloc = 0;
+  state->databases->items = NULL;
   state->font_resource_uid = 0;
 
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
@@ -107,6 +116,19 @@ void construct_process_action_database(uint owner_uid, mc_process_action_databas
                                        int context_argsc, mc_process_action_arg_info_v1 **context_args_details,
                                        int resultc, mc_process_action_arg_info_v1 **result_details)
 {
+  // Obtain the usage data interface state
+  usage_data_interface_state *state = NULL;
+  for (int i = 0; i < command_hub->global_node->child_count; ++i) {
+    if (!strcmp(command_hub->global_node->children[i]->name, "usage_data_interface")) {
+      state = (usage_data_interface_state *)command_hub->global_node->children[i]->extra;
+      break;
+    }
+  }
+  if (state == NULL) {
+    printf("WARNING: Cannot find usage_data_interface");
+    return;
+  }
+
   *ptr_database = (mc_process_action_database_v1 *)malloc(sizeof(mc_process_action_database_v1));
   (*ptr_database)->owner_uid = owner_uid;
   (*ptr_database)->action_uid_counter = 100;
@@ -119,7 +141,7 @@ void construct_process_action_database(uint owner_uid, mc_process_action_databas
   (*ptr_database)->result_args.count = resultc;
   (*ptr_database)->result_args.items = result_details;
 
-  MCcall(append_to_collection((void ***)&state->databases.items, &state->databases.alloc, &state->databases.count,
+  MCcall(append_to_collection((void ***)&state->databases->items, &state->databases->alloc, &state->databases->count,
                               *ptr_database));
 }
 

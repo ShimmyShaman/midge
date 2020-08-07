@@ -3990,12 +3990,16 @@ int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
 
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
 {
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
   // Change the source data
   free(state->source_data->code);
   read_editor_text_into_cstr(state, &state->source_data->code);
 
   mc_struct_info_v1 *defined_struct;
-  parse_struct_definition(state->source_data, &defined_struct);
+  parse_struct_definition(command_hub, state->source_data, &defined_struct);
 
   printf("dsfce-0\n");
   if (!state->source_data || state->source_data->type != SOURCE_DEFINITION_STRUCT) {
@@ -4085,7 +4089,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
     printf("dsfce-8\n");
     // Redefinition
     ++editor_struct->version;
-    declare_struct_from_info(editor_struct);
+    declare_struct_from_info(command_hub, editor_struct);
   }
 
   return 0;
