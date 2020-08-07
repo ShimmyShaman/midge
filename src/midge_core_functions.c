@@ -3720,6 +3720,7 @@ int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs
 
 typedef struct debug_data_state {
   int sequenceStep;
+  mc_node_v1 *core_display;
 } debug_data_state;
 
 int debug_automation(int argc, void **argv)
@@ -3739,7 +3740,6 @@ int debug_automation(int argc, void **argv)
     // Select
     ++debugState->sequenceStep;
 
-    mc_node_v1 *core_display = (mc_node_v1 *)command_hub->global_node->children[1];
     mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
     sim->type = INPUT_EVENT_MOUSE_PRESS;
     sim->handled = false;
@@ -3752,7 +3752,7 @@ int debug_automation(int argc, void **argv)
     {
       void *vargs[3];
       vargs[0] = argv[0];
-      vargs[1] = &core_display;
+      vargs[1] = &debugState->core_display;
       vargs[2] = &sim;
       MCcall(core_display_handle_input(3, vargs));
     }
@@ -3763,7 +3763,6 @@ int debug_automation(int argc, void **argv)
     // // Select
     ++debugState->sequenceStep;
 
-    mc_node_v1 *core_display = (mc_node_v1 *)command_hub->global_node->children[1];
     mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
     sim->type = INPUT_EVENT_MOUSE_PRESS;
     sim->handled = false;
@@ -3776,7 +3775,7 @@ int debug_automation(int argc, void **argv)
     {
       void *vargs[3];
       vargs[0] = argv[0];
-      vargs[1] = &core_display;
+      vargs[1] = &debugState->core_display;
       vargs[2] = &sim;
       MCcall(core_display_handle_input(3, vargs));
     }
@@ -3787,7 +3786,6 @@ int debug_automation(int argc, void **argv)
     // // Select
     ++debugState->sequenceStep;
 
-    // mc_node_v1 *core_display = (mc_node_v1 *)command_hub->global_node->children[1];
     // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
     // sim->type = INPUT_EVENT_MOUSE_PRESS;
     // sim->handled = false;
@@ -3811,7 +3809,6 @@ int debug_automation(int argc, void **argv)
     // // Select
     ++debugState->sequenceStep;
 
-    // mc_node_v1 *core_display = (mc_node_v1 *)command_hub->global_node->children[1];
     // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
     // sim->type = INPUT_EVENT_MOUSE_PRESS;
     // sim->handled = false;
@@ -3839,10 +3836,36 @@ int debug_automation(int argc, void **argv)
   return 0;
 }
 
+int obtain_subnode_with_name(node *parent, const char *name, node **subnode)
+{
+  for (int i = 0; i < parent->child_count; ++i) {
+    // printf("global_node->child='%s'\n", parent->children[i]->name);
+    if (!strcmp(parent->children[i]->name, name)) {
+      *subnode = parent->children[i];
+      return 0;
+    }
+  }
+
+  return -5;
+}
+
 int begin_debug_automation_v1(int argc, void **argv)
 {
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
   debug_data_state *debugState = (debug_data_state *)malloc(sizeof(debug_data_state));
   debugState->sequenceStep = 0;
+
+  debugState->core_display = NULL;
+  MCcall(obtain_subnode_with_name(command_hub->global_node, CORE_OBJECTS_DISPLAY_NAME, &debugState->core_display));
+
+  if (!debugState->core_display) {
+    printf("ERROR  DEBUG AUTO\n");
+    return 4;
+  }
+
   register_update_timer(&debug_automation, 340 * 1000, true, (void *)debugState);
 
   return 0;
@@ -3866,8 +3889,7 @@ int read_file(char *filepath, char **contents)
 int render_global_node_v1(int argc, void **argv)
 {
   /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
+  mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
   // For the global node (and whole screen)

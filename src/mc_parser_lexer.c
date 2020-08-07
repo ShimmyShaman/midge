@@ -361,7 +361,7 @@ int mcs_add_syntax_node_to_parent(mc_syntax_node *parent, mc_syntax_node *child)
 int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, char *mc_token_primitive_text,
                               mc_syntax_node *parent, mc_syntax_node **result)
 {
-  register_midge_error_tag("mcs_construct_syntax_node()");
+  register_midge_error_tag("mcs_construct_syntax_node(%s)", get_mc_syntax_token_type_name(node_type));
 
   mc_syntax_node *syntax_node = (mc_syntax_node *)calloc(sizeof(mc_syntax_node), 1);
   syntax_node->type = node_type;
@@ -572,11 +572,11 @@ void release_syntax_node(mc_syntax_node *syntax_node)
     return;
   }
 
-  // printf("release-%s\n", get_mc_syntax_token_type_name(syntax_node->type));
+  printf("release-%s\n", get_mc_syntax_token_type_name(syntax_node->type));
   if ((int)syntax_node->type >= (int)MC_TOKEN_STANDARD_MAX_VALUE) {
     if (syntax_node->children) {
       if (syntax_node->children->alloc) {
-        // printf("child_count-%i\n", syntax_node->children->count);
+        printf("child_count-%i\n", syntax_node->children->count);
         for (int i = 0; i < syntax_node->children->count; ++i) {
 
           release_syntax_node(syntax_node->children->items[i]);

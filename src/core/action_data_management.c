@@ -45,10 +45,14 @@ void usage_data_interface_render(frame_time *elapsed, mc_node_v1 *visual_node)
 
 void init_usage_data_interface()
 {
+  printf("init_usage_data_interface\n");
   mc_node_v1 *usage_data_interface = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
   usage_data_interface->name = "usage_data_interface";
   usage_data_interface->parent = command_hub->global_node;
   usage_data_interface->type = NODE_TYPE_VISUAL;
+
+  MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
+                              &command_hub->global_node->child_count, usage_data_interface));
 
   usage_data_interface->child_count = 0;
   usage_data_interface->children_alloc = 4;
@@ -79,9 +83,6 @@ void init_usage_data_interface()
   state->databases->alloc = 0;
   state->databases->items = NULL;
   state->font_resource_uid = 0;
-
-  MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
-                              &command_hub->global_node->child_count, usage_data_interface));
 
   // Obtain visual resources
   pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
@@ -117,17 +118,13 @@ void construct_process_action_database(uint owner_uid, mc_process_action_databas
                                        int resultc, mc_process_action_arg_info_v1 **result_details)
 {
   // Obtain the usage data interface state
-  usage_data_interface_state *state = NULL;
-  for (int i = 0; i < command_hub->global_node->child_count; ++i) {
-    if (!strcmp(command_hub->global_node->children[i]->name, "usage_data_interface")) {
-      state = (usage_data_interface_state *)command_hub->global_node->children[i]->extra;
-      break;
-    }
-  }
-  if (state == NULL) {
-    printf("WARNING: Cannot find usage_data_interface");
+  node *usage_data_interface;
+  MCcall(obtain_subnode_with_name(command_hub->global_node, "usage_data_interface", &usage_data_interface));
+  if (usage_data_interface == NULL) {
+    printf("WARNING: Cannot find usage_data_interface\n");
     return;
   }
+  usage_data_interface_state *state = (usage_data_interface_state *)usage_data_interface->extra;
 
   *ptr_database = (mc_process_action_database_v1 *)malloc(sizeof(mc_process_action_database_v1));
   (*ptr_database)->owner_uid = owner_uid;
@@ -148,6 +145,7 @@ void construct_process_action_database(uint owner_uid, mc_process_action_databas
 void register_user_action(mc_process_action_database_v1 *pad, uint source_action, int context_argsc,
                           void **context_data, uint *register_uid)
 {
+  printf("[%p\n", pad);
   printf("action from source-%s>%u\n", pad->name, source_action);
   mc_process_action_data_v1 *data_unit = (mc_process_action_data_v1 *)malloc(sizeof(mc_process_action_data_v1));
   data_unit->action_uid = pad->action_uid_counter++;

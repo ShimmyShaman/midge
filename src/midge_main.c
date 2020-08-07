@@ -2667,11 +2667,11 @@ int mc_main(int argc, const char *const *argv)
   MCcall(init_process_matrix(command_hub));
   printf("mm-3\n");
   // MCcall(build_interactive_console(0, NULL));
-  MCcall(build_code_editor(0, NULL));
-  printf("mm-4a\n");
-  MCcall(build_core_display(0, NULL));
-  printf("mm-4b\n");
   MCcall(init_usage_data_interface(0, NULL));
+  printf("mm-4a\n");
+  MCcall(build_code_editor(0, NULL));
+  printf("mm-4b\n");
+  MCcall(build_core_display(0, NULL));
   printf("mm-4b\n");
   // MCcall(build_function_live_debugger(0, NULL));
   printf("mm-4c\n");

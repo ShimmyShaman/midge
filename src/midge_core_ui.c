@@ -495,10 +495,11 @@ int core_display_handle_input_v1(int argc, void **argv)
         MCcall(load_existing_function_into_code_editor(1, vargs));
       } break;
       case SOURCE_DEFINITION_STRUCT: {
-        void *mc_vargs[2];
-        mc_vargs[0] = (void *)&command_hub->global_node->children[0];
-        mc_vargs[1] = (void *)&entry->data;
-        MCcall(load_existing_struct_into_code_editor(2, mc_vargs));
+        MCerror(498, "TODO");
+        // void *mc_vargs[2];
+        // mc_vargs[0] = (void *)&command_hub->global_node->children[0];
+        // mc_vargs[1] = (void *)&entry->data;
+        // MCcall(load_existing_struct_into_code_editor(2, mc_vargs));
       } break;
       case SOURCE_FILE_MC_DEFINITIONS: {
         entry->collapsed = !entry->collapsed;
@@ -529,7 +530,7 @@ int build_core_display_v1(int argc, void **argv)
   // Build the function editor window
   // Instantiate: node global;
   mc_node_v1 *core_objects_display = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
-  core_objects_display->name = "core_objects_display";
+  core_objects_display->name = CORE_OBJECTS_DISPLAY_NAME;
   core_objects_display->parent = command_hub->global_node;
   core_objects_display->type = NODE_TYPE_VISUAL;
 

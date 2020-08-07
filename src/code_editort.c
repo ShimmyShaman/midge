@@ -1670,43 +1670,52 @@ int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
 
 int mce_convert_syntax_to_rtf(c_str *code_rtf, mc_syntax_node *syntax_node)
 {
+  register_midge_error_tag("mce_convert_syntax_to_rtf()");
   const char *DEFAULT_CODE_COLOR = "[color=156,219,253]";
 
   MCcall(set_c_str(code_rtf, DEFAULT_CODE_COLOR));
   MCcall(_mce_convert_syntax_node_to_rtf(code_rtf, syntax_node));
 
+  register_midge_error_tag("mce_convert_syntax_to_rtf(~)");
   return 0;
 }
 
 int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *function)
 {
+  register_midge_error_tag("code_editor_load_function()");
   if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
     MCerror(704, "TODO?");
   }
+      printf("22cestate->code.syntax=%p\n", cestate->code.syntax);
 
   mc_syntax_node *code_syntax;
   int result = parse_mc_to_syntax_tree(function->source->code, &code_syntax, true);
   if (result) {
-    //   // printf("cees-3\n");
+    // printf("cees-3  %i\n", result);
     //   release_syntax_node(cestate->source_interpretation.function_ast);
     //   cestate->source_interpretation.function_ast = NULL;
 
-    //   // printf("cees-4\n");
+    // printf("cees-4\n");
     cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
     cestate->status_bar.requires_render_update = true;
-    //   // printf("cees-5\n");
+    // printf("cees-5\n");
     return 0;
   }
   else {
+    // printf("cees-6\n");
 
     if (cestate->code.syntax) {
+      printf("cees-6a\n");
+      printf("cestate->code.syntax=%p\n", cestate->code.syntax);
       release_syntax_node(cestate->code.syntax);
     }
     cestate->code.syntax = code_syntax;
+    // printf("cees-6b\n");
 
     cprintf(cestate->status_bar.message, "loaded %s(...)", function->name);
     cestate->status_bar.requires_render_update = true;
   }
+  // printf("cees-7\n");
 
   // Set to cestate
   MCcall(mce_convert_syntax_to_rtf(cestate->code.rtf, cestate->code.syntax));
@@ -1829,6 +1838,7 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
   // Set for render update
   // MCcall(update_rendered_code_lines(cestate));
 
+  register_midge_error_tag("code_editor_load_function(~)");
   return 0;
 }
 
@@ -1843,8 +1853,10 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
 
   // printf("life-begin\n");
 
+  mc_node_v1* code_editor;
+  MCcall(obtain_subnode_with_name(command_hub->global_node, "code_editor", &code_editor));
+
   // Begin Writing into the Function Editor textbox
-  node *code_editor = (mc_node_v1 *)command_hub->global_node->children[0]; // TODO -- better way?
   mc_code_editor_state_v1 *feState = (mc_code_editor_state_v1 *)code_editor->extra;
   feState->source_data = function->source;
 

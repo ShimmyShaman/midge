@@ -25,6 +25,7 @@ static const bool true = 1;
 typedef unsigned int uint;
 
 #define SCRIPT_NAME_PREFIX "mc_script_"
+#define CORE_OBJECTS_DISPLAY_NAME "core_objects_display"
 
 /*
  * @field a (void **) variable to store the created value in.
@@ -1007,7 +1008,8 @@ int (*parse_and_process_function_definition)(mc_source_definition_v1 *source_def
                                              mc_function_info_v1 **function_definition, bool skip_clint_declaration);
 int (*obtain_function_info_from_definition)(char *function_definition_text,
                                             mc_function_info_v1 **command_hub_function_info);
-int (*parse_struct_definition)(mc_command_hub_v1 *command_hub, mc_source_definition_v1 *code_definition, mc_struct_info_v1 **structure_info);
+int (*parse_struct_definition)(mc_command_hub_v1 *command_hub, mc_source_definition_v1 *code_definition,
+                               mc_struct_info_v1 **structure_info);
 int (*declare_struct_from_info)(mc_command_hub_v1 *command_hub, mc_struct_info_v1 *structure_info);
 
 int (*transcribe_c_block_to_mc)(mc_function_info_v1 *owner, char *code, int *i, uint *transcription_alloc,

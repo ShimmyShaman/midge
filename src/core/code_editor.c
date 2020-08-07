@@ -2,7 +2,7 @@
 
 void build_code_editor()
 {
-  // printf("bce-a\n");
+  printf("build_code_editor()\n");
 
   // Build the function editor window
   // Instantiate: node global;
@@ -183,4 +183,5 @@ void build_code_editor()
   command->data.font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   // printf("bce-z\n");
+      printf("41cestate->code.syntax=%p\n", state->code.syntax);
 }
