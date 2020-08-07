@@ -454,7 +454,7 @@ void backspace_from_cursor(mc_code_editor_state_v1 *state)
     }
   }
 
-  printf("code:\n%s||\n", code);
+  // printf("code:\n%s||\n", code);
 
   state->cursor.rtf_index = si;
   update_code_editor_cursor_line_and_column(state);
@@ -990,11 +990,11 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         // }
 
         c[1] = '\0';
-        insert_text_into_editor_at_cursor(state, &c[0]);
+        insert_text_into_editor_at_cursor(state, &c);
         {
-          void *mc_vargs[1];
-          mc_vargs[0] = &c[0];
-          report_user_action_effect(state->entry_pad, action_uid, mc_vargs);
+          void *res_args[3];
+          res_args[0] = &c;
+          report_user_action_effect(state->entry_pad, action_uid, &res_args);
         }
       }
     }

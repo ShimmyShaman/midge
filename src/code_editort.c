@@ -1451,23 +1451,25 @@ int update_code_editor_suggestion(mc_code_editor_state_v1 *cestate)
     allocate_and_copy_cstr(cestate->suggestion_box.entries.items[cestate->suggestion_box.entries.count], struct_name);
     ++cestate->suggestion_box.entries.count;
 
-    if (!strcmp(struct_name, "special_data")) {
-      // Context
-      mc_syntax_node *context_node;
-      MCcall(obtain_context_node_for_cursor(cestate->code.syntax, cestate, &context_node));
+    // if (!strcmp(struct_name, "special_data")) {
+    //   // Context
+    //   mc_syntax_node *context_node;
+    //   MCcall(obtain_context_node_for_cursor(cestate->code.syntax, cestate, &context_node));
 
-      printf("context:%s\n", get_mc_syntax_token_type_name(context_node->type));
+    //   printf("context:%s\n", get_mc_syntax_token_type_name(context_node->type));
 
-      if (context_node && (context_node->type == MC_SYNTAX_STATEMENT_LIST || context_node->type == MC_SYNTAX_BLOCK)) {
+    //   if (context_node && (context_node->type == MC_SYNTAX_STATEMENT_LIST || context_node->type == MC_SYNTAX_BLOCK))
+    //   {
 
-        cestate->suggestion_box.visible = true;
-        cestate->suggestion_box.requires_render_update = true;
-        cprintf(cestate->suggestion_box.entries.items[cestate->suggestion_box.entries.count], "~init %s", struct_name);
-        ++cestate->suggestion_box.entries.count;
-      }
-    }
+    //     cestate->suggestion_box.visible = true;
+    //     cestate->suggestion_box.requires_render_update = true;
+    //     cprintf(cestate->suggestion_box.entries.items[cestate->suggestion_box.entries.count], "~init %s",
+    //     struct_name);
+    //     ++cestate->suggestion_box.entries.count;
+    //   }
+    // }
 
-    printf("struct:'%s':%s\n", command_hub->global_node->structs[a]->name, "match");
+    // printf("struct:'%s':%s\n", command_hub->global_node->structs[a]->name, "match");
   }
 
   return 0;
@@ -1686,7 +1688,6 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
   if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
     MCerror(704, "TODO?");
   }
-      printf("22cestate->code.syntax=%p\n", cestate->code.syntax);
 
   mc_syntax_node *code_syntax;
   int result = parse_mc_to_syntax_tree(function->source->code, &code_syntax, true);
@@ -1853,7 +1854,7 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
 
   // printf("life-begin\n");
 
-  mc_node_v1* code_editor;
+  mc_node_v1 *code_editor;
   MCcall(obtain_subnode_with_name(command_hub->global_node, "code_editor", &code_editor));
 
   // Begin Writing into the Function Editor textbox

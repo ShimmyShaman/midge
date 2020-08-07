@@ -132,18 +132,20 @@ void build_code_editor()
     command->data.create_texture.height = state->suggestion_box.bounds.height;
   }
 
-  mc_process_action_arg_info_v1 *context_arg0 =
-      (mc_process_action_arg_info_v1 *)malloc(sizeof(mc_process_action_arg_info_v1));
-  context_arg0->name = "context_syntax_node";
-  context_arg0->type_name = "int";
+  mc_process_action_arg_info_v1 **context_args =
+      (mc_process_action_arg_info_v1 **)malloc(sizeof(mc_process_action_arg_info_v1 *) * 1);
+  context_args[0] = (mc_process_action_arg_info_v1 *)malloc(sizeof(mc_process_action_arg_info_v1));
+  context_args[0]->name = "context_syntax_node";
+  context_args[0]->type_name = "int";
 
-  mc_process_action_arg_info_v1 *result_arg0 =
-      (mc_process_action_arg_info_v1 *)malloc(sizeof(mc_process_action_arg_info_v1));
-  context_arg0->name = "output";
-  context_arg0->type_name = "char";
+  mc_process_action_arg_info_v1 **result_args =
+      (mc_process_action_arg_info_v1 **)malloc(sizeof(mc_process_action_arg_info_v1 *) * 1);
+  result_args[0] = (mc_process_action_arg_info_v1 *)malloc(sizeof(mc_process_action_arg_info_v1));
+  result_args[0]->name = "output";
+  result_args[0]->type_name = "char *";
 
-  construct_process_action_database(2424, &state->entry_pad, "Code-Editor:User-Key-Type", 1, &context_arg0, 1,
-                                    &result_arg0);
+  construct_process_action_database(2424, &state->entry_pad, "Code-Editor:User-Key-Type", 1, context_args, 1,
+                                    result_args);
 
   // state->editor_button_panel.alloc = 0;
   // state->editor_button_panel.count = 0;
@@ -183,5 +185,5 @@ void build_code_editor()
   command->data.font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   // printf("bce-z\n");
-      printf("41cestate->code.syntax=%p\n", state->code.syntax);
+  // printf("41cestate->code.syntax=%p\n", state->code.syntax);
 }

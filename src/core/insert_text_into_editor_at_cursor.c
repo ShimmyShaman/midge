@@ -35,7 +35,7 @@ void insert_text_into_editor_at_cursor(code_editor_state *state, char *text)
   // printf("itie-3\n");
   mce_update_rendered_text(state);
   // printf("itie-4\n");
-  update_code_editor_suggestion(state);
+  // update_code_editor_suggestion(state);
 
   // printf("itie-3:\n%s||\n", state->code.rtf->text);
 

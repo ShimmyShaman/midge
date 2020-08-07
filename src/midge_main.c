@@ -6252,7 +6252,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
       printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
       // printf(" -- code:\n%s\n",
       //        func_info->source_file->definitions.items[func_info->source_file->definitions.count - 1]->code);
-      printf(" -- mc_code:\n%s\n", mc_format_definition);
+      // printf(" -- mc_code:\n%s\n", mc_format_definition);
       printf("#######################\n");
     }
   }

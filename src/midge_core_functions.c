@@ -3845,7 +3845,7 @@ int obtain_subnode_with_name(node *parent, const char *name, node **subnode)
       return 0;
     }
   }
-
+  *subnode = NULL;
   return -5;
 }
 

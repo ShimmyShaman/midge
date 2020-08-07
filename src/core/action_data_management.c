@@ -137,6 +137,7 @@ void construct_process_action_database(uint owner_uid, mc_process_action_databas
   (*ptr_database)->context_args.items = context_args_details;
   (*ptr_database)->result_args.count = resultc;
   (*ptr_database)->result_args.items = result_details;
+  // printf("_result_type:%s\n", result_details[0]->type_name);
 
   MCcall(append_to_collection((void ***)&state->databases->items, &state->databases->alloc, &state->databases->count,
                               *ptr_database));
@@ -145,8 +146,8 @@ void construct_process_action_database(uint owner_uid, mc_process_action_databas
 void register_user_action(mc_process_action_database_v1 *pad, uint source_action, int context_argsc,
                           void **context_data, uint *register_uid)
 {
-  printf("[%p\n", pad);
-  printf("action from source-%s>%u\n", pad->name, source_action);
+  // printf("[%p\n", pad);
+  // printf("action from source-%s>%u\n", pad->name, source_action);
   mc_process_action_data_v1 *data_unit = (mc_process_action_data_v1 *)malloc(sizeof(mc_process_action_data_v1));
   data_unit->action_uid = pad->action_uid_counter++;
   data_unit->action_type = source_action;
@@ -160,7 +161,14 @@ void register_user_action(mc_process_action_database_v1 *pad, uint source_action
 
 void report_user_action_effect(mc_process_action_database_v1 *pad, uint register_uid, void **result_data)
 {
-  printf("action_reported:%u\n", register_uid);
+  printf("action_reported:%u result:{", register_uid);
+  if (!strcmp(pad->result_args.items[0]->type_name, "char *")) {
+    printf("'%s'", (char *)result_data[0]);
+  }
+  else {
+    printf("{unknown_result_type:%s", pad->result_args.items[0]->type_name);
+  }
+  printf("}\n");
 
   mc_process_action_data_v1 *data_unit = NULL;
   for (int i = pad->data.count - 1; i >= 0; --i) {
@@ -178,4 +186,11 @@ void report_user_action_effect(mc_process_action_database_v1 *pad, uint register
   }
 
   data_unit->result_data = result_data;
+
+  // Add to the recent actions list for this action
+
+  // also to the recent globally tracked actions...TODO
+
+  // Run any after-effect processes
+  // If FUNCTION and result_data[0] == 'c' etc..
 }

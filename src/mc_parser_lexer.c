@@ -1991,9 +1991,9 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
     mc_token_type token1;
     MCcall(mcs_peek_token_type(ps, false, 1, &token1));
-    if (token1 != MC_TOKEN_IDENTIFIER) {
-      MCerror(1979, "TODO ? %s", get_mc_syntax_token_type_name((mc_syntax_node_type)token1));
-    }
+    // if (token1 != MC_TOKEN_IDENTIFIER) {
+    //   MCerror(1979, "TODO ? %s", get_mc_syntax_token_type_name((mc_syntax_node_type)token1));
+    // }
 
     MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_DEREFERENCE_EXPRESSION, NULL, NULL, &left));
     if (additional_destination) {
