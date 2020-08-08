@@ -1,6 +1,42 @@
 /* code_editor_handle_keyboard_input.c */
 
 #include "core/midge_core.h"
+void insert_text_into_editor_at_cursor(code_editor_state *state, char *text)
+{
+  register_midge_error_tag("insert_text_into_editor_at_cursor()");
+  // printf("insert_text_into_editor_at_cursor()\n");
+
+  // // TODO errors
+  // if (line_index < 0 || line_index >= state->text->lines_count) {
+  //   // printf("itie-r0 line_index:%i\n", line_index);
+  //   return;
+  // }
+
+  // int current_line_len = strlen(state->text->lines[line_index]);
+  // if (col < 0 || col > current_line_len) {
+  //   // printf("itie-r1 col:%i\n", col);
+  //   return;
+  // }
+
+  int insert_len = strlen(text);
+  if (insert_len < 1) {
+    printf("itie-r2\n");
+    return;
+  }
+  // printf("itie-p:%p\n", state);
+  // printf("itie-0:\n%s||\n", state->code.rtf->text);
+  // printf("itie-1:\n%s||\n", text);
+  // printf("itie-2:\n%i||\n", state->cursor.rtf_index);
+
+  insert_into_c_str(state->code.rtf, text, state->cursor.rtf_index);
+  // printf("itie-3\n");
+  state->cursor.rtf_index += strlen(text);
+  update_code_editor_cursor_line_and_column(state);
+  // printf("itie-3\n");
+  mce_update_rendered_text(state);
+  // printf("itie-4\n");
+  // update_code_editor_suggestion(state);
+}
 
 void move_cursor_up(mc_code_editor_state_v1 *state)
 {

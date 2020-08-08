@@ -7725,7 +7725,6 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   // MCcall(parse_and_process_mc_file(command_hub, "src/core/move_cursor_up.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/file_persistence.c"));
-  MCcall(parse_and_process_mc_file(command_hub, "src/core/insert_text_into_editor_at_cursor.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/delete_selection.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/read_selected_editor_text.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/load_existing_struct_into_code_editor.c"));

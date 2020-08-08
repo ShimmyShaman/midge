@@ -103,7 +103,10 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
             element_cmd->y = 2 + 12;
             element_cmd->data.print_text.font_resource_uid = cestate->font_resource_uid;
             allocate_and_copy_cstrn(element_cmd->data.print_text.text, text + s, c - s);
-            element_cmd->data.print_text.color = (render_color){0.61f, 0.86f, 0.99f, 1.f};
+            element_cmd->data.print_text.color.a = 1.f;
+            element_cmd->data.print_text.color.r = 0.61f;
+            element_cmd->data.print_text.color.g = 0.86f;
+            element_cmd->data.print_text.color.b = 0.99f;
             // printf("print_text_command: ce_offset_line_index:%i:'%s'[len:%i]\n", ce_offset_line_index,
             //        element_cmd->data.print_text.text, strlen(element_cmd->data.print_text.text));
 

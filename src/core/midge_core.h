@@ -1035,7 +1035,7 @@ int (*build_initial_workspace)(int, void **);
 int (*build_interactive_console)(int, void **);
 int (*build_code_editor)(int, void **);
 int (*code_editor_update)(int, void **);
-int (*code_editor_render)(int, void **);
+// int (*code_editor_render)(int, void **);
 int (*render_global_node)(int, void **);
 
 int (*build_core_display)(int, void **);

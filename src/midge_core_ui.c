@@ -256,7 +256,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = child->data.visual.bounds.width;
   sequence->image_height = child->data.visual.bounds.height;
-  sequence->clear_color = (render_color){0.16f, 0.16f, 0.16f, 0.2f};
+  sequence->clear_color = COLOR_NEARLY_BLACK;
   sequence->data.target_image.image_uid = child->data.visual.image_resource_uid;
 
   MCcall(obtain_element_render_command(sequence, &element_cmd));

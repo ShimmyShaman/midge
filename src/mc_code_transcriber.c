@@ -597,7 +597,8 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
       case MC_TOKEN_NEW_LINE:
       case MC_TOKEN_SPACE_SEQUENCE:
       case MC_TOKEN_TAB_SEQUENCE:
-      case MC_TOKEN_LINE_COMMENT: {
+      case MC_TOKEN_LINE_COMMENT:
+      case MC_TOKEN_MULTI_LINE_COMMENT: {
         MCcall(mct_append_node_text_to_c_str(str, child));
       } break;
       default:

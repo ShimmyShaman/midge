@@ -106,6 +106,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_TAB_SEQUENCE";
   case MC_TOKEN_LINE_COMMENT:
     return "MC_TOKEN_LINE_COMMENT";
+  case MC_TOKEN_MULTI_LINE_COMMENT:
+    return "MC_TOKEN_MULTI_LINE_COMMENT";
   case MC_TOKEN_DECIMAL_POINT:
     return "MC_TOKEN_DECIMAL_POINT";
   case MC_TOKEN_NUMERIC_LITERAL:
@@ -1680,6 +1682,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
 
   MCcall(mcs_peek_token_type(ps, false, 1, &token_type));
   switch (token_type) {
+  case MC_TOKEN_OPEN_BRACKET:
   case MC_TOKEN_STAR_CHARACTER:
   case MC_TOKEN_NUMERIC_LITERAL:
   case MC_TOKEN_CHAR_LITERAL: {
@@ -1703,6 +1706,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
       // See whats after
       MCcall(mcs_peek_token_type(ps, false, 3, &token_type));
       switch (token_type) {
+      case MC_TOKEN_OPEN_BRACKET:
       case MC_TOKEN_IDENTIFIER: {
         // Cast
         MCcall(mcs_parse_cast_expression(ps, parent, additional_destination));
@@ -1735,6 +1739,9 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
         MCcall(mcs_parse_cast_expression(ps, parent, additional_destination));
         // printf("cast-expression:\n");
         // MCcall(print_syntax_node(*additional_destination, 0));
+      } break;
+      case MC_TOKEN_IDENTIFIER: {
+        MCcall(mcs_parse_parenthesized_expression(ps, parent, additional_destination));
       } break;
       default: {
         print_parse_error(ps->code, ps->index, "see-below", "");
@@ -2834,7 +2841,8 @@ int mcs_parse_if_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_
       MCcall(mcs_parse_code_block(ps, statement, &statement->if_statement.else_continuance));
     }
     else {
-      MCerror(1618, "TODO");
+      print_parse_error(ps->code, ps->index, "parse_if_statement", "");
+      MCerror(1618, "non-bracketed else statements not supported");
     }
   }
   else {
