@@ -19,14 +19,21 @@ void code_editor_handle_input(frame_time *elapsed, mc_node_v1 *fedit, mc_input_e
   if (event->type == INPUT_EVENT_MOUSE_PRESS) {
     if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_DOWN) {
       state->line_display_offset += 3;
+      state->visual_node->data.visual.requires_render_update = true;
+      mce_update_rendered_text(state);
     }
     else if (event->detail.mouse.button == MOUSE_BUTTON_SCROLL_UP) {
       if (state->line_display_offset < 3) {
+        // if (state->line_display_offset != 0) {
+        //   state->visual_node->data.visual.requires_render_update = true;
+        // }
         state->line_display_offset = 0;
       }
       else {
         state->line_display_offset -= 3;
       }
+      state->visual_node->data.visual.requires_render_update = true;
+      mce_update_rendered_text(state);
     }
   }
   else if (event->type == INPUT_EVENT_KEY_PRESS) {

@@ -1192,6 +1192,7 @@ int update_code_editor_cursor_line_and_column(mc_code_editor_state_v1 *cestate)
 
 int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
 {
+  register_midge_error_tag("mce_update_rendered_text()");
   // Copies the rtf text to the rendered lines
   // printf("urt-0\n");
   char *code = cestate->code.rtf->text;
@@ -1237,10 +1238,12 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
         MCerror(1465, "Unhandled");
       }
     }
+    register_midge_error_tag("mce_update_rendered_text-4");
     // printf("urt-4\n");
 
-    rendered_code_line *rendered_code_line = cestate->render_lines[line_index - cestate->line_display_offset];
     if (line_index >= cestate->line_display_offset) {
+      rendered_code_line *rendered_code_line = cestate->render_lines[line_index - cestate->line_display_offset];
+      rendered_code_line->visible = true;
 
       bool text_differs;
       if (color_from_previous_line) {
@@ -1274,14 +1277,15 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
         // printf("line-%i now:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
       }
     }
+    register_midge_error_tag("mce_update_rendered_text-7");
     // printf("urt-8\n");
 
+    ++line_index;
     if (eof) {
       break;
     }
     ++i; // Past the new-line
     s = i;
-    ++line_index;
 
     if (color_at_end_of_current_line) {
       if (color_from_previous_line) {
@@ -1293,6 +1297,16 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
     // printf("urt-9\n");
   }
 
+  // Turn off visibility of the rest of the lines
+  if (line_index - cestate->line_display_offset < 0) {
+    line_index -= line_index - cestate->line_display_offset;
+  }
+  for (; line_index - cestate->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES; ++line_index) {
+    rendered_code_line *rendered_code_line = cestate->render_lines[line_index - cestate->line_display_offset];
+    rendered_code_line->visible = false;
+  }
+
+  register_midge_error_tag("mce_update_rendered_text(~)");
   return 0;
 }
 

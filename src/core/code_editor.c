@@ -1,5 +1,98 @@
 #include "core/midge_core.h"
 
+void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *state)
+{
+  image_render_queue *sequence;
+  element_render_command *element_cmd;
+
+  render_color font_color = COLOR_GHOST_WHITE;
+  const float EDITOR_FONT_HORIZONTAL_STRIDE = 10.31f;
+
+  for (int a = 0; a < CODE_EDITOR_RENDERED_CODE_LINES; ++a) {
+    rendered_code_line *rendered_line = state->render_lines[a];
+    if (rendered_line->visible && rendered_line->requires_render_update) {
+      rendered_line->requires_render_update = false;
+
+      // printf("fer-c\n");
+      MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+      sequence->render_target = NODE_RENDER_TARGET_IMAGE;
+      sequence->clear_color = COLOR_TRANSPARENT;
+      sequence->image_width = rendered_line->width;
+      sequence->image_height = rendered_line->height;
+      sequence->data.target_image.image_uid = rendered_line->image_resource_uid;
+
+      // Move through the rtf
+      int i = 0;
+      int s = i;
+      int t = 0;
+      // printf("rltext:'%s'\n", rendered_line->rtf->text);
+      while (1) {
+        if (rendered_line->rtf->text[i] == ' ') {
+          while (rendered_line->rtf->text[i] == ' ') {
+            ++i;
+          }
+          t += i - s;
+          s = i;
+          continue;
+        }
+        if (rendered_line->rtf->text[i] == '[') {
+          if (rendered_line->rtf->text[i + 1] == '[') {
+            // Escaped. Rearrange start
+            s = i + 1;
+            i += 2;
+          }
+          else if (!strncmp(rendered_line->rtf->text + i, "[color=", 7)) {
+            int j = i + 7;
+            int r, g, b;
+            MCcall(mce_parse_past_integer(rendered_line->rtf->text, &j, &r));
+            MCcall(parse_past(rendered_line->rtf->text, &j, ","));
+            MCcall(mce_parse_past_integer(rendered_line->rtf->text, &j, &g));
+            MCcall(parse_past(rendered_line->rtf->text, &j, ","));
+            MCcall(mce_parse_past_integer(rendered_line->rtf->text, &j, &b));
+            MCcall(parse_past(rendered_line->rtf->text, &j, "]"));
+
+            font_color.r = (float)r / 255.f;
+            font_color.g = (float)g / 255.f;
+            font_color.b = (float)b / 255.f;
+
+            s = i = j;
+            continue;
+          }
+          else {
+            MCerror(359, "Unsupported:'%s'", rendered_line->rtf->text + i);
+          }
+        }
+
+        bool eof = false;
+        for (;; ++i) {
+          if (rendered_line->rtf->text[i] == '\0') {
+            eof = true;
+            break;
+          }
+          else if (rendered_line->rtf->text[i] == '[') {
+            break;
+          }
+        }
+
+        if (i - s > 0) {
+          MCcall(obtain_element_render_command(sequence, &element_cmd));
+          element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
+          element_cmd->x = 4 + t * EDITOR_FONT_HORIZONTAL_STRIDE;
+          element_cmd->y = 2 + 12;
+          allocate_and_copy_cstrn(element_cmd->data.print_text.text, rendered_line->rtf->text + s, i - s);
+          // printf("line:%i text:'%s' @ %i\n", a, element_cmd->data.print_text.text, t);
+          element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
+          element_cmd->data.print_text.color = font_color;
+          t += i - s;
+        }
+        if (eof) {
+          break;
+        }
+      }
+    }
+  }
+}
+
 void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
 {
   const int EDITOR_LINE_STRIDE = 22;
@@ -17,91 +110,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     MCcall(code_editor_render_fld_view_code(elapsed, visual_node));
   }
   else {
-    render_color font_color = COLOR_GHOST_WHITE;
-
-    for (int a = 0; a < CODE_EDITOR_RENDERED_CODE_LINES; ++a) {
-      rendered_code_line *rendered_line = state->render_lines[a];
-      if (rendered_line->requires_render_update) {
-        rendered_line->requires_render_update = false;
-
-        // printf("fer-c\n");
-        MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
-        sequence->render_target = NODE_RENDER_TARGET_IMAGE;
-        sequence->clear_color = COLOR_TRANSPARENT;
-        sequence->image_width = rendered_line->width;
-        sequence->image_height = rendered_line->height;
-        sequence->data.target_image.image_uid = rendered_line->image_resource_uid;
-
-        // Move through the rtf
-        int i = 0;
-        int s = i;
-        int t = 0;
-        // printf("rltext:'%s'\n", rendered_line->rtf->text);
-        while (1) {
-          if (rendered_line->rtf->text[i] == ' ') {
-            while (rendered_line->rtf->text[i] == ' ') {
-              ++i;
-            }
-            t += i - s;
-            s = i;
-            continue;
-          }
-          if (rendered_line->rtf->text[i] == '[') {
-            if (rendered_line->rtf->text[i + 1] == '[') {
-              // Escaped. Rearrange start
-              s = i + 1;
-              i += 2;
-            }
-            else if (!strncmp(rendered_line->rtf->text + i, "[color=", 7)) {
-              int j = i + 7;
-              int r, g, b;
-              MCcall(mce_parse_past_integer(rendered_line->rtf->text, &j, &r));
-              MCcall(parse_past(rendered_line->rtf->text, &j, ","));
-              MCcall(mce_parse_past_integer(rendered_line->rtf->text, &j, &g));
-              MCcall(parse_past(rendered_line->rtf->text, &j, ","));
-              MCcall(mce_parse_past_integer(rendered_line->rtf->text, &j, &b));
-              MCcall(parse_past(rendered_line->rtf->text, &j, "]"));
-
-              font_color.r = (float)r / 255.f;
-              font_color.g = (float)g / 255.f;
-              font_color.b = (float)b / 255.f;
-
-              s = i = j;
-              continue;
-            }
-            else {
-              MCerror(359, "Unsupported:'%s'", rendered_line->rtf->text + i);
-            }
-          }
-
-          bool eof = false;
-          for (;; ++i) {
-            if (rendered_line->rtf->text[i] == '\0') {
-              eof = true;
-              break;
-            }
-            else if (rendered_line->rtf->text[i] == '[') {
-              break;
-            }
-          }
-
-          if (i - s > 0) {
-            MCcall(obtain_element_render_command(sequence, &element_cmd));
-            element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
-            element_cmd->x = 4 + t * EDITOR_FONT_HORIZONTAL_STRIDE;
-            element_cmd->y = 2 + 12;
-            allocate_and_copy_cstrn(element_cmd->data.print_text.text, rendered_line->rtf->text + s, i - s);
-            // printf("line:%i text:'%s' @ %i\n", a, element_cmd->data.print_text.text, t);
-            element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
-            element_cmd->data.print_text.color = font_color;
-            t += i - s;
-          }
-          if (eof) {
-            break;
-          }
-        }
-      }
-    }
+    code_editor_render_lines(elapsed, state);
   }
 
   // Status Bar
@@ -286,6 +295,9 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
 
   // printf("fer-n\n");
   for (int i = 0; i < CODE_EDITOR_RENDERED_CODE_LINES; ++i) {
+    if (!state->render_lines[i]->visible) {
+      continue;
+    }
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
     element_cmd->x = 2;
