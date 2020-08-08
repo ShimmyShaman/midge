@@ -192,5 +192,12 @@ void report_user_action_effect(mc_process_action_database_v1 *pad, uint register
   // also to the recent globally tracked actions...TODO
 
   // Run any after-effect processes
-  // If FUNCTION and result_data[0] == 'c' etc..
+  // AFTER CODE_ENTRY
+  // IF CODE_ENTRY CONTEXT0 IS FUNCTION
+  //   AND RESULT0 IS IDENTIFIER-CHAR
+  //   THEN
+  //     char *word = whole_word();
+  //     do_suggest_struct_names();
+  
+  //  and result_data[0] == 'c' etc..
 }
