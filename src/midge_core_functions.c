@@ -3730,7 +3730,7 @@ int debug_automation(int argc, void **argv)
   /*mcfuncreplace*/
 
   // printf("code_editor_update_v1-a\n");
-  frame_time const *elapsed = *(frame_time const **)argv[0];
+  frame_time *elapsed = *(frame_time **)argv[0];
   debug_data_state *debugState = (debug_data_state *)argv[1];
 
   // mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
@@ -3934,7 +3934,7 @@ int code_editor_update_v1(int argc, void **argv)
                                   /*mcfuncreplace*/
 
   printf("code_editor_update_v1-a\n");
-  frame_time const *elapsed = *(frame_time const **)argv[0];
+  frame_time *elapsed = *(frame_time **)argv[0];
   mc_node_v1 *fedit = (mc_node_v1 *)argv[1];
 
   mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;

@@ -150,6 +150,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_CHAR_KEYWORD";
   case MC_TOKEN_UNSIGNED_KEYWORD:
     return "MC_TOKEN_UNSIGNED_KEYWORD";
+  case MC_TOKEN_SIGNED_KEYWORD:
+    return "MC_TOKEN_SIGNED_KEYWORD";
   case MC_TOKEN_BOOL_KEYWORD:
     return "MC_TOKEN_BOOL_KEYWORD";
   case MC_TOKEN_FLOAT_KEYWORD:
@@ -216,12 +218,12 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_INVOCATION";
   case MC_SYNTAX_SUPERNUMERARY:
     return "MC_SYNTAX_SUPERNUMERARY";
+  case MC_SYNTAX_TYPE_IDENTIFIER:
+    return "MC_SYNTAX_TYPE_IDENTIFIER";
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:
     return "MC_SYNTAX_DEREFERENCE_SEQUENCE";
   case MC_SYNTAX_PARAMETER_DECLARATION:
     return "MC_SYNTAX_PARAMETER_DECLARATION";
-  case MC_SYNTAX_MODIFIED_TYPE:
-    return "MC_SYNTAX_MODIFIED_TYPE";
   case MC_SYNTAX_STRING_LITERAL_EXPRESSION:
     return "MC_SYNTAX_STRING_LITERAL_EXPRESSION";
   case MC_SYNTAX_CAST_EXPRESSION:
@@ -382,7 +384,6 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_FUNCTION: {
     syntax_node->function.return_type_identifier = NULL;
     syntax_node->function.return_type_dereference = NULL;
-    syntax_node->function.return_mc_type = NULL;
     syntax_node->function.name = NULL;
     syntax_node->function.parameters = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
     syntax_node->function.parameters->alloc = 0;
@@ -443,17 +444,11 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   } break;
   case MC_SYNTAX_PARAMETER_DECLARATION: {
     syntax_node->parameter.type_identifier = NULL;
-    syntax_node->parameter.mc_type = NULL;
     syntax_node->parameter.type_dereference = NULL;
     syntax_node->parameter.name = NULL;
   } break;
-  case MC_SYNTAX_MODIFIED_TYPE: {
-    syntax_node->modified_type.type_modifier = NULL;
-    syntax_node->modified_type.type_identifier = NULL;
-  } break;
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION: {
     syntax_node->local_variable_declaration.type_identifier = NULL;
-    syntax_node->local_variable_declaration.mc_type = NULL;
     syntax_node->local_variable_declaration.declarators = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
     syntax_node->local_variable_declaration.declarators->alloc = 0;
     syntax_node->local_variable_declaration.declarators->count = 0;
@@ -525,7 +520,6 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_CAST_EXPRESSION: {
     syntax_node->cast_expression.type_identifier = NULL;
     syntax_node->cast_expression.type_dereference = NULL;
-    syntax_node->cast_expression.mc_type = NULL;
     syntax_node->cast_expression.expression = NULL;
   } break;
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
@@ -534,10 +528,15 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     syntax_node->sizeof_expression.type_identifier = NULL;
     syntax_node->sizeof_expression.type_dereference = NULL;
-    syntax_node->sizeof_expression.mc_type = NULL;
   } break;
   case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
     // Nothing for the moment
+  } break;
+  case MC_SYNTAX_TYPE_IDENTIFIER: {
+    syntax_node->type_identifier.identifier = NULL;
+    syntax_node->type_identifier.is_const = false;
+    syntax_node->type_identifier.is_signed = -1;
+    syntax_node->type_identifier.size_modifiers = NULL;
   } break;
   case MC_SYNTAX_DEREFERENCE_SEQUENCE: {
     syntax_node->dereference_sequence.count = 0;
@@ -923,8 +922,25 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     } break;
     case '*': {
-      MCerror(729, "TODO");
-    }
+      *token_type = MC_TOKEN_MULTI_LINE_COMMENT;
+      while (1) {
+        ++*index;
+        if (code[*index] == '\0') {
+          // print_parse_error(code, *index, "_mcs_parse_token", "eof");
+          MCerror(72, "Unexpected end-of-file\n");
+        }
+        if (code[*index] == '*' && code[*index + 1] == '/') {
+          *index += 2;
+          break;
+        }
+      }
+
+      if (text) {
+        allocate_and_copy_cstrn(*text, code + s, *index - s);
+      }
+      // printf("after the line:'%c'\n", code[*index]);
+
+    } break;
     case '\0': {
       MCerror(732, "TODO");
     }
@@ -1123,6 +1139,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
           }
           break;
         }
+        if (slen == 6 && !strncmp(code + s, "signed", slen)) {
+          *token_type = MC_TOKEN_SIGNED_KEYWORD;
+          if (text) {
+            allocate_and_copy_cstrn(*text, code + s, slen);
+          }
+          break;
+        }
         if (slen == 4 && !strncmp(code + s, "bool", slen)) {
           *token_type = MC_TOKEN_BOOL_KEYWORD;
           if (text) {
@@ -1170,12 +1193,18 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         // Other characters
         switch (code[*index]) {
         case '.': {
-          if (!prev_digit) {
+          if (prev_digit) {
             prev_digit = false;
             continue;
           }
+          MCcall(print_parse_error(code, *index, "_mcs_parse_token", ""));
           MCerror(173, "Invalid Numeric Literal Format");
-        }
+        } break;
+        case 'f':
+        case 'U': {
+          loop = false;
+          ++*index;
+        } break;
         case '\n':
         case ']':
         case ' ':
@@ -1185,7 +1214,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
           loop = false;
         } break;
         default:
-          MCerror(173, "Invalid Numeric Literal character:'%c'", code[*index]);
+          MCerror(191, "Invalid Numeric Literal character:'%c'", code[*index]);
         }
       }
 
@@ -1206,6 +1235,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 int mcs_is_supernumerary_token(mc_token_type token_type, bool *is_supernumerary_token)
 {
   switch (token_type) {
+  case MC_TOKEN_MULTI_LINE_COMMENT:
   case MC_TOKEN_LINE_COMMENT:
   case MC_TOKEN_SPACE_SEQUENCE:
   case MC_TOKEN_TAB_SEQUENCE:
@@ -1338,31 +1368,53 @@ int mcs_parse_through_supernumerary_tokens(parsing_state *ps, mc_syntax_node *pa
   return 0;
 }
 
-int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **type_identifier,
-                              struct_info **mc_type)
+int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   register_midge_error_tag("mcs_parse_type_identifier()");
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  mc_token_type modifier_type = MC_TOKEN_NULL;
-  bool const_applied = false;
+  mc_syntax_node *type_root;
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_TYPE_IDENTIFIER, NULL, parent, &type_root));
+  if (additional_destination) {
+    *additional_destination = type_root;
+  }
+  type_root->type_identifier.is_const = false;
+  type_root->type_identifier.is_signed = -1;
+
+  // Initial const
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+  if (token_type == MC_TOKEN_CONST_KEYWORD) {
+    type_root->type_identifier.is_const = true;
+    MCcall(mcs_parse_through_token(ps, type_root, MC_TOKEN_CONST_KEYWORD, NULL));
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, type_root));
+    MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+  }
+
+  // Signing
   if (token_type == MC_TOKEN_UNSIGNED_KEYWORD) {
-    modifier_type = MC_TOKEN_UNSIGNED_KEYWORD;
-    MCcall(mcs_peek_token_type(ps, false, 1, &token_type));
+    type_root->type_identifier.is_signed = 0;
+    MCcall(mcs_parse_through_token(ps, type_root, MC_TOKEN_UNSIGNED_KEYWORD, NULL));
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, type_root));
+    MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+  }
+  else if (token_type == MC_TOKEN_SIGNED_KEYWORD) {
+    type_root->type_identifier.is_signed = 1;
+    MCcall(mcs_parse_through_token(ps, type_root, MC_TOKEN_SIGNED_KEYWORD, NULL));
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, type_root));
+    MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
   }
 
   switch (token_type) {
   case MC_TOKEN_IDENTIFIER: {
-    if (modifier_type != MC_TOKEN_NULL) {
-      MCerror(1009, "modifier cannot be pre-applied to identifier");
+    if (type_root->type_identifier.is_signed != -1) {
+      MCerror(1009, "modifier cannot be pre-applied to custom struct");
     }
   } break;
   case MC_TOKEN_VOID_KEYWORD: {
-    if (modifier_type != MC_TOKEN_NULL) {
+    if (type_root->type_identifier.is_signed != -1) {
       MCerror(1014, "modifier cannot be pre-applied to void");
     }
   } break;
@@ -1380,36 +1432,30 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   }
   }
 
-  if (modifier_type != MC_TOKEN_NULL) {
-    mc_syntax_node *modified_type;
-    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_MODIFIED_TYPE, NULL, parent, &modified_type));
-    if (type_identifier) {
-      *type_identifier = modified_type;
-    }
-
-    MCcall(mcs_parse_through_token(ps, modified_type, modifier_type, &modified_type->modified_type.type_modifier));
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, modified_type));
-    MCcall(mcs_parse_through_token(ps, modified_type, token_type, &modified_type->modified_type.type_identifier));
-    *mc_type = NULL;
-
-    return 0;
-  }
-
-  MCcall(mcs_parse_through_token(ps, parent, token_type, type_identifier));
+  MCcall(mcs_parse_through_token(ps, type_root, token_type, &type_root->type_identifier.identifier));
 
   register_midge_error_tag("mcs_parse_type_identifier()-4");
   // Convert to the appropriate type
   if (token_type == MC_TOKEN_IDENTIFIER) {
     void *vargs[3];
     vargs[0] = &command_hub->nodespace;
-    vargs[1] = &(*type_identifier)->text;
-    vargs[2] = &(*mc_type);
+    vargs[1] = &type_root->type_identifier.identifier->text;
+    vargs[2] = &type_root->type_identifier.mc_type;
     find_struct_info(3, vargs);
     // printf("mcs: find_struct_info(%s)=='%s'\n", (*type_identifier)->text,
     //        (*mc_type) == NULL ? "(null)" : (*mc_type)->declared_mc_name);
   }
   else {
-    *mc_type = NULL;
+    type_root->type_identifier.mc_type = NULL;
+  }
+
+  // Trailing const
+  MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+  if (token_type == MC_TOKEN_CONST_KEYWORD) {
+    type_root->type_identifier.is_const = true;
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, type_root));
+    MCcall(mcs_parse_through_token(ps, type_root, MC_TOKEN_CONST_KEYWORD, NULL));
+    MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
   }
 
   register_midge_error_tag("mcs_parse_type_identifier(~)");
@@ -1580,8 +1626,7 @@ int mcs_parse_cast_expression(parsing_state *ps, mc_syntax_node *parent, mc_synt
   MCcall(mcs_parse_through_token(ps, cast_expression, MC_TOKEN_OPEN_BRACKET, NULL));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, cast_expression));
 
-  MCcall(mcs_parse_type_identifier(ps, cast_expression, &cast_expression->cast_expression.type_identifier,
-                                   &cast_expression->cast_expression.mc_type));
+  MCcall(mcs_parse_type_identifier(ps, cast_expression, &cast_expression->cast_expression.type_identifier));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, cast_expression));
 
   mc_token_type token0;
@@ -1646,6 +1691,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
   case MC_TOKEN_LONG_KEYWORD:
   case MC_TOKEN_FLOAT_KEYWORD:
   case MC_TOKEN_VOID_KEYWORD:
+  case MC_TOKEN_SIGNED_KEYWORD:
   case MC_TOKEN_UNSIGNED_KEYWORD: {
     // Cast
     MCcall(mcs_parse_cast_expression(ps, parent, additional_destination));
@@ -1721,9 +1767,8 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
   }
 
   // Type
-  MCcall(mcs_parse_type_identifier(ps, local_declaration,
-                                   &local_declaration->local_variable_declaration.type_identifier,
-                                   &local_declaration->local_variable_declaration.mc_type));
+  MCcall(
+      mcs_parse_type_identifier(ps, local_declaration, &local_declaration->local_variable_declaration.type_identifier));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, local_declaration));
 
   // Declarators
@@ -2050,8 +2095,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     MCcall(mcs_parse_through_token(ps, left, MC_TOKEN_OPEN_BRACKET, NULL));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, left));
 
-    MCcall(mcs_parse_type_identifier(ps, left, &left->sizeof_expression.type_identifier,
-                                     &left->sizeof_expression.mc_type));
+    MCcall(mcs_parse_type_identifier(ps, left, &left->sizeof_expression.type_identifier));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, left));
 
     MCcall(mcs_peek_token_type(ps, false, 0, &token0));
@@ -2907,12 +2951,14 @@ int mcs_parse_statement_list(parsing_state *ps, mc_syntax_node *parent, mc_synta
     case MC_TOKEN_DECREMENT_OPERATOR: {
       MCcall(mcs_parse_expression_statement(ps, statement_list_node, &statement));
     } break;
+    case MC_TOKEN_CONST_KEYWORD:
     case MC_TOKEN_INT_KEYWORD:
     case MC_TOKEN_CHAR_KEYWORD:
     case MC_TOKEN_BOOL_KEYWORD:
     case MC_TOKEN_LONG_KEYWORD:
     case MC_TOKEN_FLOAT_KEYWORD:
     case MC_TOKEN_VOID_KEYWORD:
+    case MC_TOKEN_SIGNED_KEYWORD:
     case MC_TOKEN_UNSIGNED_KEYWORD: {
       // Some Sort of Declarative Statement
       MCcall(mcs_parse_local_declaration_statement(ps, statement_list_node, &statement));
@@ -3008,8 +3054,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
   // MCcall(print_syntax_node(function, 0));
 
   mc_token_type token0;
-  MCcall(mcs_parse_type_identifier(&ps, function, &function->function.return_type_identifier,
-                                   &function->function.return_mc_type));
+  MCcall(mcs_parse_type_identifier(&ps, function, &function->function.return_type_identifier));
 
   register_midge_error_tag("parse_mc_to_syntax_tree_v1()-2");
   // MCcall(print_syntax_node(function, 0));
@@ -3050,8 +3095,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
     mc_syntax_node *parameter;
     MCcall(mcs_construct_syntax_node(&ps, MC_SYNTAX_PARAMETER_DECLARATION, NULL, function, &parameter));
 
-    MCcall(
-        mcs_parse_type_identifier(&ps, function, &parameter->parameter.type_identifier, &parameter->parameter.mc_type));
+    MCcall(mcs_parse_type_identifier(&ps, function, &parameter->parameter.type_identifier));
     MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
 
     MCcall(mcs_peek_token_type(&ps, false, 0, &token0));

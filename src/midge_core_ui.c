@@ -43,7 +43,7 @@ int core_display_entry_handle_input_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   //   // printf("code_editor_handle_input_v1-a\n");
-  // frame_time const *elapsed = *(frame_time const **)argv[0];
+  // frame_time  *elapsed = *(frame_time **)argv[0];
   //   mc_node_v1 *fedit = *(mc_node_v1 **)argv[1];
   //   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
@@ -320,7 +320,7 @@ int core_display_render_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   // printf("core_display_render_v1()\n");
-  frame_time const *elapsed = *(frame_time const **)argv[0];
+  frame_time *elapsed = *(frame_time **)argv[0];
   mc_node_v1 *visual_node = *(mc_node_v1 **)argv[1];
 
   if (!visual_node->data.visual.visible)
@@ -416,7 +416,7 @@ int core_display_handle_input_v1(int argc, void **argv)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  frame_time const *elapsed = *(frame_time const **)argv[0];
+  frame_time *elapsed = *(frame_time **)argv[0];
   mc_node_v1 *core_display = *(mc_node_v1 **)argv[1];
   mc_input_event_v1 *event = *(mc_input_event_v1 **)argv[2];
 
@@ -490,9 +490,11 @@ int core_display_handle_input_v1(int argc, void **argv)
 
       switch (entry->type) {
       case SOURCE_DEFINITION_FUNCTION: {
+        printf("babel\n");
         void *vargs[1];
         vargs[0] = (void **)&entry->data;
         MCcall(load_existing_function_into_code_editor(1, vargs));
+        printf("fish\n");
       } break;
       case SOURCE_DEFINITION_STRUCT: {
         MCerror(498, "TODO");

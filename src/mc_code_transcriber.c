@@ -231,8 +231,8 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION: {
     // printf("Local_declaration:\n");
     // print_syntax_node(syntax_node, 1);
-    if (syntax_node->local_variable_declaration.mc_type) {
-      MCcall(mct_append_to_c_str(str, 0, syntax_node->local_variable_declaration.mc_type->declared_mc_name));
+    if (syntax_node->local_variable_declaration.type_identifier->type_identifier.mc_type) {
+      MCcall(mct_append_to_c_str(str, 0, syntax_node->local_variable_declaration.type_identifier->type_identifier.mc_type->declared_mc_name));
     }
     else {
       MCcall(mct_append_node_text_to_c_str(str, syntax_node->local_variable_declaration.type_identifier));
@@ -259,7 +259,7 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
     MCcall(mct_transcribe_expression(str, syntax_node->parenthesized_expression.expression));
     MCcall(append_to_c_str(str, ")"));
   } break;
-  
+
     // WILL have to redo in future
   case MC_SYNTAX_DEREFERENCE_EXPRESSION:
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
@@ -272,13 +272,13 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   case MC_SYNTAX_CAST_EXPRESSION: {
     MCcall(append_to_c_str(str, "("));
 
-    if (syntax_node->cast_expression.mc_type) {
-      // printf("cast expression had mc type:'%s'\n", syntax_node->cast_expression.mc_type->declared_mc_name);
-      MCcall(append_to_c_str(str, syntax_node->cast_expression.mc_type->declared_mc_name));
+    if (syntax_node->cast_expression.type_identifier->type_identifier.mc_type) {
+      printf("cast expression had mc type:'%s'\n", syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name);
+      MCcall(append_to_c_str(str, syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
     }
     else {
-      // printf("cast expression had type:\n");
-      // print_syntax_node(syntax_node->cast_expression.type_identifier, 1);
+      printf("cast expression had type:\n");
+      print_syntax_node(syntax_node->cast_expression.type_identifier, 1);
       MCcall(mct_append_node_text_to_c_str(str, syntax_node->cast_expression.type_identifier));
     }
 
@@ -293,8 +293,8 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     MCcall(append_to_c_str(str, "sizeof("));
 
-    if (syntax_node->sizeof_expression.mc_type) {
-      MCcall(append_to_c_str(str, syntax_node->sizeof_expression.mc_type->declared_mc_name));
+    if (syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type) {
+      MCcall(append_to_c_str(str, syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
     }
     else {
       MCcall(mct_append_node_text_to_c_str(str, syntax_node->sizeof_expression.type_identifier));
@@ -324,7 +324,9 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   } break;
 
   // PROBABLY won't have to redo
-  case MC_SYNTAX_DECLARATION_STATEMENT:
+  // case MC_SYNTAX_DECLARATION_STATEMENT: {
+
+  // }break;
   case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION:
   case MC_SYNTAX_STRING_LITERAL_EXPRESSION:
   case MC_SYNTAX_FIXREMENT_EXPRESSION: {

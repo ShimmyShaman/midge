@@ -755,6 +755,7 @@ typedef enum mc_token_type {
   MC_TOKEN_TAB_SEQUENCE,
   MC_TOKEN_SPACE_SEQUENCE,
   MC_TOKEN_LINE_COMMENT,
+  MC_TOKEN_MULTI_LINE_COMMENT,
   MC_TOKEN_DECIMAL_POINT,
   MC_TOKEN_NUMERIC_LITERAL,
   MC_TOKEN_STRING_LITERAL,
@@ -778,6 +779,7 @@ typedef enum mc_token_type {
   MC_TOKEN_VOID_KEYWORD,
   MC_TOKEN_CHAR_KEYWORD,
   MC_TOKEN_INT_KEYWORD,
+  MC_TOKEN_SIGNED_KEYWORD,
   MC_TOKEN_UNSIGNED_KEYWORD,
   MC_TOKEN_BOOL_KEYWORD,
   MC_TOKEN_FLOAT_KEYWORD,
@@ -810,9 +812,9 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_INVOCATION,
 
   MC_SYNTAX_SUPERNUMERARY,
+  MC_SYNTAX_TYPE_IDENTIFIER,
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
   MC_SYNTAX_PARAMETER_DECLARATION,
-  MC_SYNTAX_MODIFIED_TYPE,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CAST_EXPRESSION,
   MC_SYNTAX_PARENTHESIZED_EXPRESSION,
@@ -848,7 +850,6 @@ typedef struct mc_syntax_node {
       union {
         struct {
           mc_syntax_node *return_type_identifier;
-          mc_struct_info_v1 *return_mc_type;
           // May be null indicating no dereference operators
           mc_syntax_node *return_type_dereference;
           mc_syntax_node *name;
@@ -860,7 +861,6 @@ typedef struct mc_syntax_node {
         } dereference_sequence;
         struct {
           mc_syntax_node *type_identifier;
-          mc_struct_info_v1 *mc_type;
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *name;
@@ -910,7 +910,6 @@ typedef struct mc_syntax_node {
         } switch_case_label;
         struct {
           mc_syntax_node *type_identifier;
-          mc_struct_info_v1 *mc_type;
           mc_syntax_node_list *declarators;
         } local_variable_declaration;
         struct {
@@ -981,8 +980,15 @@ typedef struct mc_syntax_node {
           mc_syntax_node *unary_expression;
         } dereference_expression;
         struct {
-          mc_syntax_node *type_identifier;
+          mc_syntax_node *identifier;
           mc_struct_info_v1 *mc_type;
+          bool is_const;
+          // -1 for unspecified (implicit signed), 0 for unsigned, 1 for explicit signed
+          int is_signed;
+          mc_syntax_node *size_modifiers;
+        } type_identifier;
+        struct {
+          mc_syntax_node *type_identifier;
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *expression;
@@ -992,7 +998,6 @@ typedef struct mc_syntax_node {
         } parenthesized_expression;
         struct {
           mc_syntax_node *type_identifier;
-          mc_struct_info_v1 *mc_type;
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
         } sizeof_expression;

@@ -2811,21 +2811,28 @@ int mc_main(int argc, const char *const *argv)
           for (int i = 0; !input_event->handled && i < command_hub->global_node->child_count; ++i) {
             mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
 
+            // printf("INPUT_EVENT_MOUSE_PRESS>%s\n", child->name);
+            // printf("%p\n", child->data.visual.input_handler);
+            // if (child->data.visual.input_handler) {
+            //   printf("%p\n", (*child->data.visual.input_handler));
+            // }
             // Check is visual and has input handler and mouse event is within bounds
-            if (child->type != NODE_TYPE_VISUAL || child->data.visual.visible || !child->data.visual.input_handler ||
+            if (child->type != NODE_TYPE_VISUAL || !child->data.visual.visible || !child->data.visual.input_handler ||
                 !(*child->data.visual.input_handler))
               continue;
+            // printf("A >%s\n", child->name);
             if (input_event->detail.mouse.x < child->data.visual.bounds.x ||
                 input_event->detail.mouse.y < child->data.visual.bounds.y ||
                 input_event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
                 input_event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
               continue;
+            // printf("B >%s\n", child->name);
 
             void *vargs[3];
             vargs[0] = &elapsed;
             vargs[1] = &child;
             vargs[2] = &input_event;
-            // printf("calling input delegate\n");
+            printf("calling input delegate for %s\n", child->name);
             // printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
             MCcall((*child->data.visual.input_handler)(3, vargs));
           }
@@ -7684,7 +7691,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(output);
 
   // MCcall(clint_process("build_code_editor = &build_code_editor_v1;"));
-  MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
+  // MCcall(clint_process("code_editor_render = &code_editor_render_v1;"));
   MCcall(clint_process("code_editor_toggle_view = &code_editor_toggle_view_v1;"));
   MCcall(clint_process("load_existing_function_into_code_editor = &load_existing_function_into_code_editor_v1;"));
 
