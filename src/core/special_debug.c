@@ -1,8 +1,10 @@
-/* special_debug.c */
+/* src/core/special_debug.c
+   Copyright 2020, Adam Rasburn, All Rights Reserved.
+*/
 
 #include "core/midge_core.h"
 
-// [_mc_version=3]
+
 typedef struct special_data {
   int num;
   int add;
@@ -12,8 +14,6 @@ typedef struct only_int_struct {
   int a;
 } only_int_struct;
 
-// [_mc_iteration=3]
-// void special_modification(only_int_struct ais, only_int_struct *bis, int dint, int lint, int *pint)
 void special_modification(special_data *s)
 {
   s->num += 11;
@@ -48,7 +48,6 @@ void special_suggester()
   // m.add = 14;
 }
 
-// [_mc_iteration=12]
 void special_update(frame_time *elapsed)
 {
 
@@ -73,3 +72,4 @@ void special_update(frame_time *elapsed)
 
   // printf("global_node_name:%s\n", command_hub->global_node->name);
 }
+

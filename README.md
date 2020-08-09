@@ -1,6 +1,6 @@
 # __midge__
 
-A development environment intended for use with machine intelligent systems.
+A graphical development environment intended for use with machine intelligent systems.
 
 #### Automation of process and workflow generation
 
