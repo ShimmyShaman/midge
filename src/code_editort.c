@@ -1238,7 +1238,7 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
         MCerror(1465, "Unhandled");
       }
     }
-    register_midge_error_tag("mce_update_rendered_text-4");
+    // register_midge_error_tag("mce_update_rendered_text-4");
     // printf("urt-4\n");
 
     if (line_index >= cestate->line_display_offset) {
@@ -1277,7 +1277,7 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
         // printf("line-%i now:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
       }
     }
-    register_midge_error_tag("mce_update_rendered_text-7");
+    // register_midge_error_tag("mce_update_rendered_text-7");
     // printf("urt-8\n");
 
     ++line_index;
@@ -1379,7 +1379,7 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
 {
   register_midge_error_tag("code_editor_load_function()");
   if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
-    MCerror(704, "TODO?");
+    MCerror(704, "TODO? :%i", cestate->source_data->type);
   }
 
   mc_syntax_node *code_syntax;
@@ -1544,7 +1544,6 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   function_info *function = *(function_info **)argv[0];
-  printf("lefice:\n%s||\n", function->source->code);
 
   // printf("life-begin\n");
 
@@ -1557,6 +1556,7 @@ int load_existing_function_into_code_editor_v1(int argc, void **argv)
   // Begin Writing into the Function Editor textbox
   mc_code_editor_state_v1 *feState = (mc_code_editor_state_v1 *)code_editor->extra;
   feState->source_data = function->source;
+  // printf("lefice:\n%s||\n", feState->source_data->code);
 
   feState->line_display_offset = 0;
   MCcall(code_editor_load_function(feState, function));

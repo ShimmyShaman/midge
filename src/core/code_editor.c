@@ -8,6 +8,7 @@ void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *stat
   render_color font_color = COLOR_GHOST_WHITE;
   const float EDITOR_FONT_HORIZONTAL_STRIDE = 10.31f;
 
+  // register_midge_error_tag("code_editor_render_lines-1");
   for (int a = 0; a < CODE_EDITOR_RENDERED_CODE_LINES; ++a) {
     rendered_code_line *rendered_line = state->render_lines[a];
     if (rendered_line->visible && rendered_line->requires_render_update) {
@@ -532,4 +533,25 @@ void build_code_editor()
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   // printf("bce-z\n");
   // printf("41cestate->code.syntax=%p\n", state->code.syntax);
+}
+
+void load_existing_struct_into_code_editor(mc_struct_info_v1 *structure)
+{
+  mc_node_v1 *code_editor;
+  obtain_subnode_with_name(command_hub->global_node, "code_editor", &code_editor);
+  if (!code_editor) {
+    MCerror(1860, "Could not find code editor");
+  }
+
+  // printf("load_existing_struct_into_code_editor()\n");
+  // printf("struct_definition->code:\n%s||\n", structure->name);
+  // return;
+
+  // Set
+  mc_code_editor_state_v1 *cestate = (mc_code_editor_state_v1 *)code_editor->extra;
+  cestate->source_data = structure->source;
+
+  set_c_str(cestate->code.rtf, structure->source->code);
+
+  mce_update_rendered_text(cestate);
 }

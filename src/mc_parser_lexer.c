@@ -2048,9 +2048,6 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     // }
 
     MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_DEREFERENCE_EXPRESSION, NULL, NULL, &left));
-    if (additional_destination) {
-      *additional_destination = left;
-    }
 
     MCcall(mcs_parse_dereference_sequence(ps, left, &left->dereference_expression.deref_sequence));
 
@@ -2076,18 +2073,14 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
   case MC_TOKEN_SUBTRACT_OPERATOR:
   case MC_TOKEN_PLUS_OPERATOR:
   case MC_TOKEN_AMPERSAND_CHARACTER: {
-    mc_syntax_node *expression;
-    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_PREPENDED_UNARY_EXPRESSION, NULL, parent, &expression));
-    if (additional_destination) {
-      *additional_destination = expression;
-    }
+    const int CASE_PRECEDENCE = 3;
+    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_PREPENDED_UNARY_EXPRESSION, NULL, NULL, &left));
 
-    MCcall(mcs_parse_through_token(ps, expression, token0, &expression->prepended_unary.prepend_operator));
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, expression));
-    MCcall(_mcs_parse_expression(ps, 3, expression, &expression->prepended_unary.unary_expression));
+    MCcall(mcs_parse_through_token(ps, left, token0, &left->prepended_unary.prepend_operator));
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, left));
+    MCcall(_mcs_parse_expression(ps, CASE_PRECEDENCE, left, &left->prepended_unary.unary_expression));
 
-    return 0;
-  }
+  } break;
   case MC_TOKEN_SIZEOF_KEYWORD: {
     // Cast
     const int CASE_PRECEDENCE = 3;

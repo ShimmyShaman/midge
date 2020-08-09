@@ -2255,6 +2255,7 @@ int transcribe_expression(function_info *owner, char *code, int *i, uint *transc
             MCcall(transcribe_past(code, i, transcription_alloc, transcription, ")"));
             break;
           }
+          print_parse_error(code, s, "transcribe_expression", "");
           MCerror(1836, "TODO");
         } break;
         default:
@@ -3949,58 +3950,41 @@ int code_editor_update_v1(int argc, void **argv)
 
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
 {
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  // uint code_allocation = 64;
-  // char *code_from_code_editor = (char *)malloc(sizeof(char) * code_allocation);
-  // code_from_code_editor[0] = '\0';
-  // uint bracket_count = 0;
-  // bool hit_code_block = false;
-
   c_str *code_from_code_editor;
   MCcall(init_c_str(&code_from_code_editor));
-  append_to_c_str(code_from_code_editor, "BANANAS");
-  // for (int i = 0; i < state->text->lines_count; ++i) {
-  //   if (state->text->lines[i]) {
-  //     if (code_from_code_editor->len) {
-  //       // Attach new-line to end of previous lines text
-  //       MCcall(append_to_c_str(code_from_code_editor, "\n"));
-  //     }
-  //     MCcall(append_to_c_str(code_from_code_editor, state->text->lines[i]));
-  //   }
-  // }
-  // for (int j = 0;; ++j) {
-  //   if (state->text->lines[i][j] == '\0') {
-  //     append_to_cstr(&code_allocation, &code_from_code_editor, state->text->lines[i]);
-  //     append_to_cstr(&code_allocation, &code_from_code_editor, "\n");
-  //     break;
-  //   }
-  //   if (state->text->lines[i][j] == '{') {
-  //     ++bracket_count;
-  //     if (!hit_code_block) {
-  //       hit_code_block = true;
-  //     }
-  //   }
-  //   else if (state->text->lines[i][j] == '}') {
-  //     --bracket_count;
-  //     if (!bracket_count && hit_code_block) {
-  //       // End
-  //       if (state->text->lines[i][j + 1] == ';') {
-  //         ++j;
-  //       }
 
-  //       // -- Copy up to now
-  //       append_to_cstrn(&code_allocation, &code_from_code_editor, state->text->lines[i], j + 1);
+  int s = 0;
+  char *code = state->code.rtf->text;
+  for (int i = 0;; ++i) {
+    if (code[i] == '\0') {
+      if (i - s > 0) {
+        append_to_c_strn(code_from_code_editor, code + s, i - s);
+      }
+      break;
+    }
+    else if (code[i] == '[') {
+      if (code[i + 1] == '[') {
+        ++i;
+        continue;
+      }
+      if (i - s > 0) {
+        append_to_c_strn(code_from_code_editor, code + s, i - s);
+      }
 
-  //       // -- Break from upper loop
-  //       i = state->text->lines_count;
-  //       break;
-  //     }
-  //   }
-  // }
-  // }
+      // Find the close bracket
+      for (;; ++i) {
+        if (code[i] == '\0') {
+          *output = NULL;
+          printf("ERROR");
+          return 88;
+        }
+        else if (code[i] == ']') {
+          s = i + 1;
+          break;
+        }
+      }
+    }
+  }
 
   // printf("read_editor_text_into_cstr:\n%s||\n", code_from_code_editor->text);
   *output = code_from_code_editor->text;

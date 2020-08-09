@@ -224,6 +224,10 @@ int update_core_entries(node *core_display)
         core_entry *child = (core_entry *)malloc(sizeof(core_entry));
         child->type = source_file->definitions.items[a]->type;
         child->data = source_file->definitions.items[a]->data;
+        if (source_file->definitions.items[a]->type == SOURCE_DEFINITION_STRUCT) {
+          mc_struct_info_v1 *strinfo = (mc_struct_info_v1 *)source_file->definitions.items[a]->data;
+          printf("strinfo:%s added to %s\n", strinfo->name, source_file->filepath);
+        }
         child->children.alloc = 0;
         child->children.count = 0;
         child->collapsed = false;
@@ -240,6 +244,7 @@ int update_core_entries(node *core_display)
 
 int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int indent)
 {
+  register_midge_error_tag("mcu_render_core_entry()");
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
@@ -272,19 +277,25 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   }
   indent_str[indent_len] = '\0';
 
-  // printf("mrce-2\n");
+  printf("mrce-2\n");
   switch (entry->type) {
   case SOURCE_DEFINITION_FUNCTION: {
+    printf("mrce-3\n");
     function_info *func_info = (function_info *)entry->data;
+    printf("mrce-3a\n");
     cprintf(element_cmd->data.print_text.text, "%s%s", indent_str, func_info->name);
+    printf("mrce-3b\n");
     element_cmd->data.print_text.color = COLOR_FUNCTION_GREEN;
+    printf("mrce-3c\n");
   } break;
   case SOURCE_DEFINITION_STRUCT: {
+    printf("mrce-4\n");
     struct_info *str_info = (struct_info *)entry->data;
     cprintf(element_cmd->data.print_text.text, "%s%s", indent_str, str_info->name);
     element_cmd->data.print_text.color = COLOR_LIGHT_YELLOW;
   } break;
   case SOURCE_FILE_MC_DEFINITIONS: {
+    printf("mrce-5\n");
     mc_source_file_info_v1 *source_file = (mc_source_file_info_v1 *)entry->data;
     if (entry->collapsed) {
       cprintf(element_cmd->data.print_text.text, "%s+%s", indent_str, source_file->filepath);
@@ -299,7 +310,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   }
   }
 
-  // printf("mrce-6\n");
+  printf("mrce-6\n");
   if (!entry->collapsed) {
     for (int b = 0;
          b < entry->children.count && cdstate->entry_visual_nodes.utilized_count < cdstate->entry_visual_nodes.count;
@@ -310,11 +321,13 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   }
 
   // printf("mrce-8\n");
+  register_midge_error_tag("mcu_render_core_entry()");
   return 0;
 }
 
 int core_display_render_v1(int argc, void **argv)
 {
+  register_midge_error_tag("core_display_render_v1()");
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
@@ -407,6 +420,7 @@ int core_display_render_v1(int argc, void **argv)
     // element_cmd->data.print_text.color = COLOR_GHOST_WHITE;
   }
 
+  register_midge_error_tag("core_display_render_v1(~)");
   return 0;
 }
 
@@ -491,17 +505,20 @@ int core_display_handle_input_v1(int argc, void **argv)
       switch (entry->type) {
       case SOURCE_DEFINITION_FUNCTION: {
         printf("babel\n");
+        // printf("entry->data:%i\n", ((mc_source_definition_v1 *)entry->data)->type);
         void *vargs[1];
         vargs[0] = (void **)&entry->data;
         MCcall(load_existing_function_into_code_editor(1, vargs));
         printf("fish\n");
       } break;
       case SOURCE_DEFINITION_STRUCT: {
-        MCerror(498, "TODO");
-        // void *mc_vargs[2];
-        // mc_vargs[0] = (void *)&command_hub->global_node->children[0];
-        // mc_vargs[1] = (void *)&entry->data;
-        // MCcall(load_existing_struct_into_code_editor(2, mc_vargs));
+        printf("cdhi-struct_info->name:%s\n", ((struct_info *)entry->data)->name);
+        printf("cdhi-struct_info->source->code:%p\n%s||\n", ((struct_info *)entry->data)->source->code,
+               ((struct_info *)entry->data)->source->code);
+
+        void *mc_vargs[1];
+        mc_vargs[0] = &entry->data;
+        MCcall(load_existing_struct_into_code_editor(1, mc_vargs));
       } break;
       case SOURCE_FILE_MC_DEFINITIONS: {
         entry->collapsed = !entry->collapsed;

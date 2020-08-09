@@ -961,43 +961,48 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
       case KEY_CODE_SEMI_COLON: {
         move_cursor_end(state);
       } break;
-        //     case KEY_CODE_S: {
-        //       // Save the file
-        //       if (!state->source_data || !state->source_data->source_file) {
-        //         printf("code has no source file\n");
-        //         break;
-        //       }
+      case KEY_CODE_S: {
+        // Save the file
+        if (!state->source_data || !state->source_data->source_file) {
+          printf("code has no source file\n");
+          break;
+        }
 
-        //       char *filepath;
-        //       switch (state->source_data->type) {
-        //       case SOURCE_DEFINITION_FUNCTION: {
-        //         mc_function_info_v1 *function = (mc_function_info_v1 *)state->source_data;
+        char *filepath;
+        switch (state->source_data->type) {
+        case SOURCE_DEFINITION_FUNCTION: {
+          // mc_function_info_v1 *function = (mc_source_definition_v1 *)state->source_data;
 
-        //         // Read the code from the editor
-        //         char *function_definition;
-        //         read_editor_text_into_cstr(state, &function_definition);
+          // Read the code from the editor into the function source
+          char *function_definition;
+          read_editor_text_into_cstr(state, &function_definition);
 
-        //         save_function_to_file(function, function_definition);
+          if (state->source_data->code) {
+            free(state->source_data->code);
+          }
+          state->source_data->code = function_definition;
 
-        //         free(function_definition);
-        //       } break;
-        //       case SOURCE_DEFINITION_STRUCT: {
-        //         mc_struct_info_v1 *structure = (mc_struct_info_v1 *)state->source_data;
+          save_function_to_file(state->source_data->func_info);
 
-        //         // // Read the code from the editor
-        //         char *structure_definition;
-        //         read_editor_text_into_cstr(state, &structure_definition);
+          free(function_definition);
+        } break;
+        // case SOURCE_DEFINITION_STRUCT: {
+        //   mc_struct_info_v1 *structure = (mc_struct_info_v1 *)state->source_data;
 
-        //         // printf("structure_definition:\n%s||\n", structure_definition);
+        //   // // Read the code from the editor
+        //   char *structure_definition;
+        //   read_editor_text_into_cstr(state, &structure_definition);
 
-        //         save_struct_to_file(structure, structure_definition);
-        //         free(structure_definition);
-        //       } break;
-        //       default: {
-        //         printf("saving source_data_type=%i is not supported\n", state->source_data->type);
-        //       } break;
-        //       }
-        //     } break;
+        //   // printf("structure_definition:\n%s||\n", structure_definition);
+
+        //   save_struct_to_file(structure, structure_definition);
+        //   free(structure_definition);
+        // } break;
+        default: {
+          printf("saving source_data_type=%i is not supported\n", state->source_data->type);
+        } break;
+        }
+      } break;
       default: {
         break;
       }

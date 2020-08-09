@@ -52,37 +52,42 @@ size_t save_text_to_file(char *filepath, char *text)
   int len = strlen(text);
 
   size_t written = fwrite(text, sizeof(char), len, f);
+  printf("written:%zu\n", written);
   fclose(f);
 
   return written;
 }
 
 // [_mc_iteration=4]
-void save_function_to_file(mc_function_info_v1 *function, char *function_definition)
+void save_function_to_file(mc_function_info_v1 *function)
 {
-  printf("sftf-0\n");
+  // printf("sftf-0\n");
   if (!function->source->source_file) {
     // ERR(ERROR_ARGUMENT, "function has no source file to save to.");
     printf("TODO ERROR HANDLING\n");
+    return;
   }
+  register_midge_error_tag("save_function_to_file-2");
 
   // TODO -- this somewhere else
-  free(function->source->code);
-  function->source->code = function_definition;
+  // printf("function->source->code:\n%s||\n", function->source->code);
 
   c_str *save_text;
   init_c_str(&save_text);
 
-  append_to_c_strf(save_text, "/* %s */\n\n#include \"core/midge_core.h\"\n\n\n", function->source->source_file->filepath);
+  append_to_c_strf(save_text, "/* %s */\n\n#include \"core/midge_core.h\"\n\n\n",
+                   function->source->source_file->filepath);
 
+  register_midge_error_tag("save_function_to_file-4");
   for (int i = 0; i < function->source->source_file->definitions.count; ++i) {
     mc_source_definition_v1 *definition = function->source->source_file->definitions.items[i];
     switch (definition->type) {
     case SOURCE_DEFINITION_FUNCTION: {
-      append_to_c_str(save_text, definition->func_info->source->code);
+      append_to_c_str(save_text, definition->code);
     } break;
     case SOURCE_DEFINITION_STRUCT: {
-      append_to_c_str(save_text, definition->structure_info->source->code);
+      printf("sftf-struct:\n%s||\n", definition->code);
+      append_to_c_str(save_text, definition->code);
     } break;
     default: {
       printf("ERROR 85\n");
@@ -92,6 +97,9 @@ void save_function_to_file(mc_function_info_v1 *function, char *function_definit
     append_to_c_str(save_text, "\n\n");
   }
 
+  printf("sftf-0\n");
+  printf("filepath:'%s'\n", function->source->source_file->filepath);
+  printf("save_text:\n%s||\n", save_text->text);
   printf("sftf-0\n");
   size_t written = save_text_to_file(function->source->source_file->filepath, save_text->text);
 
