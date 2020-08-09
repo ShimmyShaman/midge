@@ -6094,7 +6094,6 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
         structure->version = struct_version;
       }
 
-      free(definitions[a].text);
       printf("papcs-StructInfo:\n");
       printf(" -- source_filepath:%s:\n", structure->source->source_file->filepath);
       printf(" -- name:%s:\n", structure->name);
