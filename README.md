@@ -1,6 +1,19 @@
 # __midge__
 
-A productivity oriented development environment.
+A development environment intended for use with machine intelligent systems.
+
+#### Automation of process and workflow generation
+
+Using historical tracking of utilized actions and processes for statistical
+suggestion for collaboration with the user to construct workflow processes. These
+processes can be used for guidance and prediction of future user behaviour through
+repeatable tasks and workflows. This reduces mechanical and cognitive expense to the
+developer to increase productivity.
+
+#### Interface for AI collaboration
+
+Providing the interactive means to develop in collaboration with increasingly useful
+AI ('2.0') functions to produce software faster.
 
 #### Dynamic recompilation
   
@@ -14,13 +27,10 @@ dynamic recompilation which allows reconfiguration by the developer however
 it may serve best. This can be done by accessing the code that runs the
 development environment _by using the development environment_.
 
-#### Automation of process and workflow generation
+## Progress
 
-Using historical tracking of utilized actions and processes for statistical
-suggestion for collaboration with the user to construct workflow processes. These
-processes can be used for guidance of future user behaviour through repeatable
-tasks and workflows. This reduces mechanical and cognitive expense to the developer
-to increase productivity.
+_This project is still very much in the discovery process and no useful releases are
+in any immediate future._
 
 ## Installation
 

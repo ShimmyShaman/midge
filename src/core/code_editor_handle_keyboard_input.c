@@ -1020,7 +1020,21 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
       uint action_uid;
       {
-        register_user_action(state->entry_pad, (uint)event->detail.keyboard.key, 1, &state, &action_uid);
+        // Register User Entry
+        void **context = (void **)malloc(sizeof(void *) * 2);
+        int *source_type = (int *)malloc(sizeof(int));
+        *source_type = (int)state->source_data->type;
+        context[0] = (void *)source_type;
+        if (state->source_data->type == SOURCE_DEFINITION_FUNCTION) {
+          int *context_syntax_node_type = (int *)malloc(sizeof(int));
+          *context_syntax_node_type = state->source_data->type;
+          context[1] = (void *)context_syntax_node_type;
+        }
+        else {
+          context[1] = NULL;
+        }
+
+        register_user_action(state->entry_pad, (uint)event->detail.keyboard.key, context, &action_uid);
       }
 
       // Update the text
@@ -1033,9 +1047,9 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         c[1] = '\0';
         insert_text_into_editor_at_cursor(state, &c);
         {
-          void *res_args[3];
-          res_args[0] = &c;
-          report_user_action_effect(state->entry_pad, action_uid, &res_args);
+          void **result = (void **)malloc(sizeof(void *) * 1);
+          allocate_and_copy_cstr(result[0], c);
+          report_user_action_effect(state->entry_pad, action_uid, result);
         }
       }
     }

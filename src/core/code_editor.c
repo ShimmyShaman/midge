@@ -480,10 +480,13 @@ void build_code_editor()
   }
 
   mc_process_action_arg_info_v1 **context_args =
-      (mc_process_action_arg_info_v1 **)malloc(sizeof(mc_process_action_arg_info_v1 *) * 1);
+      (mc_process_action_arg_info_v1 **)malloc(sizeof(mc_process_action_arg_info_v1 *) * 2);
   context_args[0] = (mc_process_action_arg_info_v1 *)malloc(sizeof(mc_process_action_arg_info_v1));
-  context_args[0]->name = "context_syntax_node";
+  context_args[0]->name = "source-type";
   context_args[0]->type_name = "int";
+  context_args[1] = (mc_process_action_arg_info_v1 *)malloc(sizeof(mc_process_action_arg_info_v1));
+  context_args[1]->name = "context-syntax-node-type";
+  context_args[1]->type_name = "int";
 
   mc_process_action_arg_info_v1 **result_args =
       (mc_process_action_arg_info_v1 **)malloc(sizeof(mc_process_action_arg_info_v1 *) * 1);
@@ -491,8 +494,8 @@ void build_code_editor()
   result_args[0]->name = "output";
   result_args[0]->type_name = "char *";
 
-  construct_process_action_database(2424, &state->entry_pad, "Code-Editor:User-Key-Type", 1, context_args, 1,
-                                    result_args);
+  construct_process_action_database(2424, "Code-Editor:User-Key-Type", 2, context_args, 1, result_args,
+                                    &state->entry_pad);
 
   // state->editor_button_panel.alloc = 0;
   // state->editor_button_panel.count = 0;
