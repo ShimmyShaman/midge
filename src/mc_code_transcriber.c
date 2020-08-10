@@ -217,6 +217,31 @@ int mct_transcribe_declarator(c_str *str, mc_syntax_node *syntax_node)
   return 0;
 }
 
+int mct_transcribe_declaration_statement(c_str *str, int indent, mc_syntax_node *syntax_node)
+{
+
+  mc_syntax_node *declaration = syntax_node->declaration_statement.declaration;
+
+  MCcall(mct_append_indent_to_c_str(str, indent));
+  MCcall(mct_append_node_text_to_c_str(declaration->local_variable_declaration.type_identifier));
+  MCcall(append_to_c_str(str, " "));
+
+  for (int i = 0; i < declaration->local_variable_declaration.declarators->count; ++i) {
+  }
+
+  // Do MC_invokes
+  bool contains_mc_function_call;
+  MCcall(mct_contains_mc_invoke(child->declaration_statement.declaration, &contains_mc_function_call));
+  if (contains_mc_function_call) {
+    break;
+  }
+
+  MCcall(mct_append_indent_to_c_str(str, indent));
+
+  MCcall(mct_transcribe_expression(str, child->declaration_statement.declaration));
+  MCcall(append_to_c_str(str, ";\n"));
+}
+
 int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
 {
   register_midge_error_tag("mct_transcribe_expression(%s)", get_mc_syntax_token_type_name(syntax_node->type));
@@ -232,7 +257,8 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
     // printf("Local_declaration:\n");
     // print_syntax_node(syntax_node, 1);
     if (syntax_node->local_variable_declaration.type_identifier->type_identifier.mc_type) {
-      MCcall(mct_append_to_c_str(str, 0, syntax_node->local_variable_declaration.type_identifier->type_identifier.mc_type->declared_mc_name));
+      MCcall(mct_append_to_c_str(
+          str, 0, syntax_node->local_variable_declaration.type_identifier->type_identifier.mc_type->declared_mc_name));
     }
     else {
       MCcall(mct_append_node_text_to_c_str(str, syntax_node->local_variable_declaration.type_identifier));
@@ -273,8 +299,10 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
     MCcall(append_to_c_str(str, "("));
 
     if (syntax_node->cast_expression.type_identifier->type_identifier.mc_type) {
-      printf("cast expression had mc type:'%s'\n", syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name);
-      MCcall(append_to_c_str(str, syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
+      printf("cast expression had mc type:'%s'\n",
+             syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name);
+      MCcall(append_to_c_str(str,
+                             syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
     }
     else {
       printf("cast expression had type:\n");
@@ -294,7 +322,8 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
     MCcall(append_to_c_str(str, "sizeof("));
 
     if (syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type) {
-      MCcall(append_to_c_str(str, syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
+      MCcall(append_to_c_str(
+          str, syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
     }
     else {
       MCcall(mct_append_node_text_to_c_str(str, syntax_node->sizeof_expression.type_identifier));
@@ -538,9 +567,10 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
           MCerror(200, "TODO");
         }
 
-        MCerror(215, "mc_return_value etc");
+        MCcall(append_to_c_str(str, "*mc_return_value = "));
+        MCcall(mct_transcribe_expression(str, child->return_statement.expression));
+        MCcall(append_to_c_str(str, ";"));
       }
-      // MCcall(mct_append_node_text_to_c_str(str, child));
       MCcall(append_to_c_str(str, "return 0;\n"));
     } break;
     case MC_SYNTAX_BLOCK: {
@@ -559,17 +589,7 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
       MCcall(mct_transcribe_if_statement(str, indent, child));
     } break;
     case MC_SYNTAX_DECLARATION_STATEMENT: {
-      // Do MC_invokes
-      bool contains_mc_function_call;
-      MCcall(mct_contains_mc_invoke(child->declaration_statement.declaration, &contains_mc_function_call));
-      if (contains_mc_function_call) {
-        MCerror(218, "TODO");
-      }
-
-      MCcall(mct_append_indent_to_c_str(str, indent));
-
-      MCcall(mct_transcribe_expression(str, child->declaration_statement.declaration));
-      MCcall(append_to_c_str(str, ";\n"));
+      MCcall(mct_transcribe_declaration_statement(str, indent, child));
     } break;
     case MC_SYNTAX_EXPRESSION_STATEMENT: {
       register_midge_error_tag("mct_transcribe_statement_list-ES0");
