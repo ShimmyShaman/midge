@@ -1,25 +1,34 @@
 GOAL:
-Midges development goals should be to
-  provide as much interface for user actions as possible
-    Beginning with key-input, script-commands, orderly commands and
-       eventually to spoken language and hand gestures
-  
-  provide sufficient context for the execution of those commands successfully
-  
-  provide an intuitive interface for the development of increasingly complex
-    user-machine interactions.
-
-  provide mechanisms to simplify code complexity (by the user and LM-generated) and it's
-    debugging in order to maintain it's computational performance and not to
-    spend more time debugging the increased amount of code created.
-
-  find ways to reduce the dimensionality of the available outcome of AI executed
-    processes in order to increase accuracy and certainty
+=======
+Midges development goals:
+-----------
+  * Provide the capability to develop creative graphical applications via user input and commands.
+    * To foster creation through quick reiterative processes.
+  * Develop tools and interfaces that cultivate automation of user actions where beneficial.
+    * Keep mind on collating sufficient context for the successful execution of automated commands.
+    * To reduce dimensionality of the context and allowable outcomes in order to increase accuracy
+        and reduce recovery from error.
+    * Develop tools and allowances for as rich a user-input as possible. Starting with key-strokes
+      and mouse-clicks with an eye on gestures and AV input.
     
 ###################################################################
 
 
 MAKE A SHITTY FIRST VERSION
+
+
+work on interface a bit more so that I can develop the automation stuff more productively/usefully
+
+make code-editor a moveable/resizeable window
+make core-objects-display a moveable/resizeable window
+do focus and Z-indexing
+
+...data collection/analysis? interface?
+
+
+
+
+
 
 exhibit the user configuration
 
