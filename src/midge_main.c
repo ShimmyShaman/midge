@@ -6094,14 +6094,6 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
         structure->version = struct_version;
       }
 
-      printf("papcs-StructInfo:\n");
-      printf(" -- source_filepath:%s:\n", structure->source->source_file->filepath);
-      printf(" -- name:%s:\n", structure->name);
-      printf(" -- declared_mc_name:%s:\n", structure->declared_mc_name);
-      printf(" -- version:%u:\n", structure->version);
-      printf(" -- field_count:%u:\n", structure->field_count);
-      printf("#######################\n");
-
       MCcall(append_to_collection((void ***)&command_hub->global_node->structs,
                                   &command_hub->global_node->structs_alloc, &command_hub->global_node->struct_count,
                                   (void *)structure));
@@ -6109,6 +6101,14 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
       // printf("papcs-declare_struct_from_info:%p\n", declare_struct_from_info);
       MCcall(declare_struct_from_info(command_hub, structure));
       // printf("papcs-after declare_struct_from_info:\n");
+
+      printf("papcs-StructInfo:\n");
+      printf(" -- source_filepath:%s:\n", structure->source->source_file->filepath);
+      printf(" -- name:%s:\n", structure->name);
+      printf(" -- declared_mc_name:%s:\n", structure->declared_mc_name);
+      printf(" -- version:%u:\n", structure->version);
+      printf(" -- field_count:%u:\n", structure->field_count);
+      printf("#######################\n");
     }
     else if (definitions[a].type == SOURCE_DEFINITION_FUNCTION) {
 
@@ -6235,7 +6235,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
 
       register_midge_error_tag("parse_and_process_mc_file_syntax-5");
       // printf("papsyntax-5\n");
-      printf("mc_format_definition:\n%s||\n", mc_format_definition);
+      // printf("mc_format_definition:\n%s||\n", mc_format_definition);
 
       // Define the new function
       {
