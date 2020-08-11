@@ -699,6 +699,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
     vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
   }
+
   return VK_SUCCESS;
 }
 

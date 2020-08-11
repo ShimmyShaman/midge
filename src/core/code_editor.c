@@ -353,7 +353,7 @@ void build_code_editor()
 
   // Build the function editor window
   // Instantiate: node global;
-  mc_node_v1 *fedit = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
+  mc_node_v1 *fedit = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
   fedit->name = "code_editor";
   fedit->parent = command_hub->global_node;
   fedit->type = NODE_TYPE_VISUAL;

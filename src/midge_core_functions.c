@@ -1188,7 +1188,7 @@ int create_default_mc_struct_v1(int argc, void **argv)
 
   if (!strcmp(type_name, "mc_node_v1 *")) {
     // printf("@cdms-2\n");
-    mc_node_v1 *data = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
+    mc_node_v1 *data = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
     data->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
     data->struct_id->identifier = "mc_node_v1";
     data->struct_id->version = 1U;
@@ -3733,6 +3733,7 @@ int debug_automation(int argc, void **argv)
   // printf("code_editor_update_v1-a\n");
   frame_time *elapsed = *(frame_time **)argv[0];
   debug_data_state *debugState = (debug_data_state *)argv[1];
+  
 
   // mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
 
@@ -3741,47 +3742,47 @@ int debug_automation(int argc, void **argv)
     // Select
     ++debugState->sequenceStep;
 
-    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    sim->type = INPUT_EVENT_MOUSE_PRESS;
-    sim->handled = false;
-    sim->shiftDown = false;
-    sim->altDown = false;
-    sim->ctrlDown = false;
-    sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    sim->detail.mouse.x = 135;
-    sim->detail.mouse.y = 41;
-    {
-      void *vargs[3];
-      vargs[0] = argv[0];
-      vargs[1] = &debugState->core_display;
-      vargs[2] = &sim;
-      MCcall(core_display_handle_input(3, vargs));
-    }
+    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    // sim->type = INPUT_EVENT_MOUSE_PRESS;
+    // sim->handled = false;
+    // sim->shiftDown = false;
+    // sim->altDown = false;
+    // sim->ctrlDown = false;
+    // sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
+    // sim->detail.mouse.x = 135;
+    // sim->detail.mouse.y = 41;
+    // {
+    //   void *vargs[3];
+    //   vargs[0] = argv[0];
+    //   vargs[1] = &debugState->core_display;
+    //   vargs[2] = &sim;
+    //   MCcall(core_display_handle_input(3, vargs));
+    // }
 
-    free(sim);
+    // free(sim);
   } break;
   case 1: {
     // // Select
     ++debugState->sequenceStep;
 
-    mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    sim->type = INPUT_EVENT_MOUSE_PRESS;
-    sim->handled = false;
-    sim->shiftDown = false;
-    sim->altDown = false;
-    sim->ctrlDown = false;
-    sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    sim->detail.mouse.x = 89;
-    sim->detail.mouse.y = 151;
-    {
-      void *vargs[3];
-      vargs[0] = argv[0];
-      vargs[1] = &debugState->core_display;
-      vargs[2] = &sim;
-      MCcall(core_display_handle_input(3, vargs));
-    }
+    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
+    // sim->type = INPUT_EVENT_MOUSE_PRESS;
+    // sim->handled = false;
+    // sim->shiftDown = false;
+    // sim->altDown = false;
+    // sim->ctrlDown = false;
+    // sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
+    // sim->detail.mouse.x = 89;
+    // sim->detail.mouse.y = 151;
+    // {
+    //   void *vargs[3];
+    //   vargs[0] = argv[0];
+    //   vargs[1] = &debugState->core_display;
+    //   vargs[2] = &sim;
+    //   MCcall(core_display_handle_input(3, vargs));
+    // }
 
-    free(sim);
+    // free(sim);
   } break;
   case 3: {
     // // Select

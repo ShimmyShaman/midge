@@ -2605,7 +2605,7 @@ int mc_main(int argc, const char *const *argv)
   begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
 
   // Instantiate: node global;
-  mc_node_v1 *global = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
+  mc_node_v1 *global = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
   global->name = "global";
   global->parent = NULL;
   global->functions_alloc = 40;
@@ -2795,6 +2795,7 @@ int mc_main(int argc, const char *const *argv)
     // Handle Input
     pthread_mutex_lock(&render_thread.input_buffer.mutex);
 
+    // printf("main_input\n");
     if (render_thread.input_buffer.event_count > 0) {
       // New Input Event
       input_event->handled = false;
@@ -2910,6 +2911,7 @@ int mc_main(int argc, const char *const *argv)
         break;
     }
 
+    // printf("~main_input\n");
     pthread_mutex_unlock(&render_thread.input_buffer.mutex);
 
     // Update State
@@ -2932,6 +2934,7 @@ int mc_main(int argc, const char *const *argv)
     // Clear the render queue?
     // render_thread.render_queue.count = 0;
 
+    // printf("main_render\n");
     // -- Render all node descendants first
     for (int i = 0; i < command_hub->global_node->child_count; ++i) {
       mc_node_v1 *child = (mc_node_v1 *)command_hub->global_node->children[i];
@@ -2947,6 +2950,7 @@ int mc_main(int argc, const char *const *argv)
       }
     }
 
+    // printf("~main_render\n");
     // // -- Render all sub-images first
     // if (command_hub->interactive_console->visual.requires_render_update) {
     //   command_hub->interactive_console->visual.requires_render_update = false;
@@ -7750,7 +7754,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("build_core_display = &build_core_display_v1;"));
   MCcall(clint_process("core_display_handle_input = &core_display_handle_input_v1;"));
   MCcall(clint_process("core_display_render = &core_display_render_v1;"));
-  MCcall(clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;"));
+  // MCcall(clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;"));
 
   printf("end:init_core_functions()\n");
   return 0;

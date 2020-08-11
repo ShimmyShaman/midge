@@ -75,7 +75,7 @@ void usage_data_interface_handle_input(frame_time *elapsed, mc_node_v1 *visual_n
 void init_usage_data_interface()
 {
   printf("init_usage_data_interface\n");
-  mc_node_v1 *usage_data_interface = (mc_node_v1 *)malloc(sizeof(mc_node_v1));
+  mc_node_v1 *usage_data_interface = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
   usage_data_interface->name = "usage_data_interface";
   usage_data_interface->parent = command_hub->global_node;
   usage_data_interface->type = NODE_TYPE_VISUAL;
