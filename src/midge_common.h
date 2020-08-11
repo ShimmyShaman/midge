@@ -56,6 +56,8 @@
   (render_color) { 176.f / 255.f, 224.f / 255.f, 230.f / 255.f, 1.f }
 #define COLOR_LIGHT_SKY_BLUE \
   (render_color) { 135.f / 255.f, 206.f / 255.f, 255.f / 250.f, 1.f }
+#define COLOR_NODE_ORANGE \
+  (render_color) { 216.f / 255.f, 134.f / 255.f, 51.f / 250.f, 1.f }
 #define COLOR_TEAL \
   (render_color) { 0.0f, 0.52f, 0.52f, 1.f }
 #define COLOR_PURPLE \

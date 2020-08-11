@@ -172,6 +172,7 @@ typedef enum {
 
 typedef enum source_file_type {
   SOURCE_FILE_NULL = 0,
+  SOURCE_FILE_NODE,
   SOURCE_FILE_MC_DEFINITIONS,
   SOURCE_FILE_TEXT,
   SOURCE_FILE_EXCLUSIVE_MAX = 100,

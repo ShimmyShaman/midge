@@ -16,7 +16,6 @@ Midges development goals:
 
 MAKE A SHITTY FIRST VERSION
 
-
 work on interface a bit more so that I can develop the automation stuff more productively/usefully
 
 make code-editor a moveable/resizeable window
