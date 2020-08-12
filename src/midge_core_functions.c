@@ -3695,145 +3695,30 @@ int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *
   }
 }
 
-int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
-                          void *state)
+int create_button_print_app()
 {
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  update_callback_timer *callback_timer = (update_callback_timer *)malloc(sizeof(update_callback_timer));
-  MCcall(append_to_collection((void ***)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
-                              &command_hub->update_timers.count, callback_timer));
+  // Create a node & add it to global
+  mc_node_v1 *app_node = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
+  MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
+                              &command_hub->global_node->child_count, app_node));
 
-  clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
-  callback_timer->period = (struct timespec){usecs_period / 1000000, (usecs_period % 1000000) * 1000};
-  increment_time_spec(&callback_timer->next_update, &callback_timer->period, &callback_timer->next_update);
-  callback_timer->reset_timer_on_update = true;
-  callback_timer->update_delegate = fnptr_update_callback;
-  callback_timer->state = state;
+  allocate_and_copy_cstr(app_node->name, "click-it");
+  app_node->parent = command_hub->global_node;
+  app_node->type = NODE_TYPE_PROJECT;
 
-  printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
-  printf("callback_timer ic=%p\n", command_hub->update_timers.callbacks[0]);
+  // mc_node_v1 *button_node;
+  // mgui_button_data *button_data;
+  // mgui_create_button(app_node, &button, &button_data);
+  // allocate_and_copy_cstr(button_data->text, "print it!");
+  // button_data->margin...
+  // button_data->size...
+  // button_data->handler = &print_it_handler
 
-  return 0;
-}
 
-typedef struct debug_data_state {
-  int sequenceStep;
-  mc_node_v1 *core_display;
-} debug_data_state;
-
-int debug_automation(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  // printf("code_editor_update_v1-a\n");
-  frame_time *elapsed = *(frame_time **)argv[0];
-  debug_data_state *debugState = (debug_data_state *)argv[1];
-  
-
-  // mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
-
-  switch (debugState->sequenceStep) {
-  case 0: {
-    // Select
-    ++debugState->sequenceStep;
-
-    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    // sim->type = INPUT_EVENT_MOUSE_PRESS;
-    // sim->handled = false;
-    // sim->shiftDown = false;
-    // sim->altDown = false;
-    // sim->ctrlDown = false;
-    // sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    // sim->detail.mouse.x = 135;
-    // sim->detail.mouse.y = 41;
-    // {
-    //   void *vargs[3];
-    //   vargs[0] = argv[0];
-    //   vargs[1] = &debugState->core_display;
-    //   vargs[2] = &sim;
-    //   MCcall(core_display_handle_input(3, vargs));
-    // }
-
-    // free(sim);
-  } break;
-  case 1: {
-    // // Select
-    ++debugState->sequenceStep;
-
-    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    // sim->type = INPUT_EVENT_MOUSE_PRESS;
-    // sim->handled = false;
-    // sim->shiftDown = false;
-    // sim->altDown = false;
-    // sim->ctrlDown = false;
-    // sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    // sim->detail.mouse.x = 89;
-    // sim->detail.mouse.y = 151;
-    // {
-    //   void *vargs[3];
-    //   vargs[0] = argv[0];
-    //   vargs[1] = &debugState->core_display;
-    //   vargs[2] = &sim;
-    //   MCcall(core_display_handle_input(3, vargs));
-    // }
-
-    // free(sim);
-  } break;
-  case 3: {
-    // // Select
-    ++debugState->sequenceStep;
-
-    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    // sim->type = INPUT_EVENT_MOUSE_PRESS;
-    // sim->handled = false;
-    // sim->shiftDown = false;
-    // sim->altDown = false;
-    // sim->ctrlDown = false;
-    // sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    // sim->detail.mouse.x = 89;
-    // sim->detail.mouse.y = 253;
-    // {
-    //   void *vargs[3];
-    //   vargs[0] = argv[0];
-    //   vargs[1] = &core_display;
-    //   vargs[2] = &sim;
-    //   MCcall(core_display_handle_input(3, vargs));
-    // }
-
-    // free(sim);
-  } break;
-  case 4: {
-    // // Select
-    ++debugState->sequenceStep;
-
-    // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
-    // sim->type = INPUT_EVENT_MOUSE_PRESS;
-    // sim->handled = false;
-    // sim->shiftDown = false;
-    // sim->altDown = false;
-    // sim->ctrlDown = false;
-    // sim->detail.mouse.button = MOUSE_BUTTON_LEFT;
-    // sim->detail.mouse.x = 89;
-    // sim->detail.mouse.y = 118;
-    // {
-    //   void *vargs[3];
-    //   vargs[0] = argv[0];
-    //   vargs[1] = &core_display;
-    //   vargs[2] = &sim;
-    //   MCcall(core_display_handle_input(3, vargs));
-    // }
-
-    // free(sim);
-  } break;
-
-  default:
-    break;
-  }
 
   return 0;
 }
@@ -3849,28 +3734,6 @@ int obtain_subnode_with_name(node *parent, const char *name, node **subnode)
   }
   *subnode = NULL;
   return -5;
-}
-
-int begin_debug_automation_v1(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  debug_data_state *debugState = (debug_data_state *)malloc(sizeof(debug_data_state));
-  debugState->sequenceStep = 0;
-
-  debugState->core_display = NULL;
-  MCcall(obtain_subnode_with_name(command_hub->global_node, CORE_OBJECTS_DISPLAY_NAME, &debugState->core_display));
-
-  if (!debugState->core_display) {
-    printf("ERROR  DEBUG AUTO\n");
-    return 4;
-  }
-
-  register_update_timer(&debug_automation, 340 * 1000, true, (void *)debugState);
-
-  return 0;
 }
 
 int read_file(char *filepath, char **contents)

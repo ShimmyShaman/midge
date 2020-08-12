@@ -371,7 +371,7 @@ typedef struct update_callback_timer {
   struct timespec next_update;
   struct timespec period;
   bool reset_timer_on_update;
-  int (*update_delegate)(int, void **);
+  int (**update_delegate)(int, void **);
   void *state;
 } update_callback_timer;
 
@@ -415,6 +415,7 @@ typedef enum node_type {
   NODE_TYPE_GLOBAL_ROOT,
   NODE_TYPE_VISUAL,
   NODE_TYPE_ABSTRACT,
+  NODE_TYPE_PROJECT,
 } node_type;
 
 typedef struct mc_input_event_v1 {
@@ -692,8 +693,8 @@ typedef struct mc_code_editor_state_v1 {
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
 int mce_update_rendered_text(mc_code_editor_state_v1 *state);
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
-int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
-                          void *state);
+// int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
+//                           void *state);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);
@@ -710,6 +711,8 @@ int parse_past_type_identifier(const char *text, int *index, char **identifier);
 int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra);
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
 int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime);
+int register_update_timer(int (**fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
+                          void *state);
 
 void release_syntax_node(mc_syntax_node *syntax_node);
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
@@ -815,6 +818,7 @@ typedef enum mc_syntax_node_type {
 
   MC_SYNTAX_SUPERNUMERARY,
   MC_SYNTAX_TYPE_IDENTIFIER,
+  MC_SYNTAX_FUNCTION_POINTER_DECLARATION,
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
   MC_SYNTAX_PARAMETER_DECLARATION,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
@@ -862,7 +866,9 @@ typedef struct mc_syntax_node {
           uint count;
         } dereference_sequence;
         struct {
+          bool is_function_pointer_declaration;
           mc_syntax_node *type_identifier;
+          mc_syntax_node *function_pointer_declaration;
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *name;
@@ -989,6 +995,12 @@ typedef struct mc_syntax_node {
           int is_signed;
           mc_syntax_node *size_modifiers;
         } type_identifier;
+        struct {
+          mc_syntax_node *return_type;
+          mc_syntax_node *type_dereference;
+          mc_syntax_node *identifier;
+          mc_syntax_node_list *parameters;
+        } function_pointer_declaration;
         struct {
           mc_syntax_node *type_identifier;
           // May be null indicating no dereference operators

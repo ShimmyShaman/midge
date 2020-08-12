@@ -2751,6 +2751,10 @@ int mc_main(int argc, const char *const *argv)
       for (int i = 0; i < !exit_gracefully && command_hub->update_timers.count; ++i) {
         update_callback_timer *timer = command_hub->update_timers.callbacks[i];
 
+        if (!timer->update_delegate || !(*timer->update_delegate)) {
+          continue;
+        }
+
         // if (logic_update_due) {
         //   printf("%p::%ld<>%ld\n", timer->update_delegate, timer->next_update.tv_sec, current_frametime.tv_sec);
         // }
@@ -2762,7 +2766,7 @@ int mc_main(int argc, const char *const *argv)
             void *vargs[2];
             vargs[0] = (void *)&elapsed;
             vargs[1] = (void *)timer->state;
-            int mc_res = timer->update_delegate(2, vargs);
+            int mc_res = (*timer->update_delegate)(2, vargs);
             if (mc_res) {
               printf("--timer->update_delegate(2, vargs):%i\n", mc_res);
               printf("Ending execution...\n");
@@ -7606,6 +7610,14 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
                                 (void *)partial_definition_v1));
+
+    partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
+    allocate_and_copy_cstr(partial_definition_v1->name, "begin_debug_automation");
+    partial_definition_v1->source = NULL;
+    partial_definition_v1->latest_iteration = 0;
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                (void *)partial_definition_v1));
   }
 
   clint_process("int (*parse_script_to_mc)(int, void **);");
@@ -7726,13 +7738,14 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("transcribe_c_block_to_mc = &transcribe_c_block_to_mc_v1;"));
   MCcall(clint_process("parse_and_process_function_definition = &parse_and_process_function_definition_v1;"));
   MCcall(clint_process("obtain_function_info_from_definition = &obtain_function_info_from_definition_v1;"));
-  MCcall(clint_process("begin_debug_automation = &begin_debug_automation_v1;"));
+  // MCcall(clint_process("begin_debug_automation = &begin_debug_automation_v1;"));
 
   printf("Setting Dummy Methods\n");
   MCcall(clint_process("find_struct_info = &find_struct_info_v0;"));
   printf("Loading Core Methods\n");
   // MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/index_functions.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/special_debug.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/gui.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/action_data_management.c"));
@@ -7746,6 +7759,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // MCcall(parse_and_process_mc_file(command_hub, "src/core/load_existing_struct_into_code_editor.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/code_editor_handle_keyboard_input.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_input.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/debug_automation.c"));
   printf("hopee\n");
 
   // midge_core_ui.c

@@ -202,7 +202,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       MCvacall(append_to_c_strf(str, "%i] = &mc_vargs_dummy_rv;\n", finfo->parameter_count));
     }
     else {
-      if (return_variable_name->type != MC_TOKEN_IDENTIFIER) {
+      if ((mc_token_type) return_variable_name->type != MC_TOKEN_IDENTIFIER) {
         MCerror(208, "Argument Error, only variable-name allowed");
       }
 

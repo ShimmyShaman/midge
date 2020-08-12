@@ -21,7 +21,6 @@ Goal: Initiate and complete a project that can export an application that has a 
     produces main() initialize_app() adds functionality
 
 
-
 MAKE A SHITTY FIRST VERSION
 
 work on interface a bit more so that I can develop the automation stuff more productively/usefully
