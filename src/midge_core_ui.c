@@ -235,7 +235,7 @@ int update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
 
 int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int indent)
 {
-  printf("mcu_rce-0\n");
+  // printf("mcu_rce-0\n");
   register_midge_error_tag("mcu_render_core_entry()");
   /*mcfuncreplace*/
   mc_command_hub_v1 *command_hub;
@@ -276,7 +276,12 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   case CORE_ENTRY_FUNCTION: {
     function_info *func_info = (function_info *)entry->data;
     cprintf(element_cmd->data.print_text.text, "%s%s", indent_str, func_info->name);
-    element_cmd->data.print_text.color = COLOR_FUNCTION_GREEN;
+    if (func_info->source) {
+      element_cmd->data.print_text.color = COLOR_FUNCTION_GREEN;
+    }
+    else {
+      element_cmd->data.print_text.color = COLOR_FUNCTION_RED;
+    }
   } break;
   case CORE_ENTRY_STRUCT: {
     // printf("mrce-4\n");
@@ -294,7 +299,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
     else {
       cprintf(element_cmd->data.print_text.text, "%s-%s", indent_str, "structs");
     }
-    element_cmd->data.print_text.color = COLOR_GRAY;
+    element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
   } break;
   case CORE_ENTRY_CATEGORY_FUNCTION: {
     if (entry->collapsed) {
@@ -303,7 +308,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
     else {
       cprintf(element_cmd->data.print_text.text, "%s-%s", indent_str, "functions");
     }
-    element_cmd->data.print_text.color = COLOR_GRAY;
+    element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
   } break;
   case CORE_ENTRY_CATEGORY_CHILDREN: {
     if (entry->collapsed) {
@@ -312,7 +317,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
     else {
       cprintf(element_cmd->data.print_text.text, "%s-%s", indent_str, "nodes");
     }
-    element_cmd->data.print_text.color = COLOR_GRAY;
+    element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
   } break;
   case CORE_ENTRY_NODE: {
     mc_node_v1 *node_data = (mc_node_v1 *)entry->data;
@@ -347,7 +352,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
     }
   }
 
-  printf("mcu_rce-9\n");
+  // printf("mcu_rce-9\n");
   register_midge_error_tag("mcu_render_core_entry()");
   return 0;
 }

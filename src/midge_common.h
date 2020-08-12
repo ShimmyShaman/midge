@@ -52,6 +52,8 @@
   (render_color) { 0.0f, 1.f, 0.0f, 1.f }
 #define COLOR_FUNCTION_GREEN \
   (render_color) { 40.f / 255.f, 235.f / 255.f, 40.f / 255.f, 1.f }
+#define COLOR_FUNCTION_RED \
+  (render_color) { 215.f / 255.f, 195.f / 255.f, 40.f / 255.f, 1.f }
 #define COLOR_POWDER_BLUE \
   (render_color) { 176.f / 255.f, 224.f / 255.f, 230.f / 255.f, 1.f }
 #define COLOR_LIGHT_SKY_BLUE \
@@ -80,6 +82,8 @@
   (render_color) { 0.2f, 0.2f, 0.2f, 1.f }
 #define COLOR_YELLOW \
   (render_color) { 1.f, 1.f, 0.f, 1.f }
+#define COLOR_RED \
+  (render_color) { 1.f, 0.f, 0.f, 1.f }
 #define COLOR_LIGHT_YELLOW \
   (render_color) { 1.f, 1.f, 102.f / 255.f, 1.f }
 

@@ -6098,9 +6098,9 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
         structure->version = struct_version;
       }
 
-      MCcall(append_to_collection((void ***)&command_hub->global_node->structs,
-                                  &command_hub->global_node->structs_alloc, &command_hub->global_node->struct_count,
-                                  (void *)structure));
+      // MCcall(append_to_collection((void ***)&command_hub->global_node->structs,
+      //                             &command_hub->global_node->structs_alloc, &command_hub->global_node->struct_count,
+      //                             (void *)structure));
 
       // printf("papcs-declare_struct_from_info:%p\n", declare_struct_from_info);
       MCcall(declare_struct_from_info(command_hub, structure));
@@ -7379,6 +7379,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
                               (void *)read_file_text_definition_v1));
   {
     read_file_text_definition_v1->struct_id = NULL;
+    read_file_text_definition_v1->source = NULL;
     read_file_text_definition_v1->name = "read_file_text";
     read_file_text_definition_v1->latest_iteration = 1U;
     allocate_and_copy_cstr(read_file_text_definition_v1->return_type.name, "char");
@@ -7406,6 +7407,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     force_render_update_definition_v1->struct_id = NULL;
     force_render_update_definition_v1->name = "force_render_update";
+    force_render_update_definition_v1->source = NULL;
     force_render_update_definition_v1->latest_iteration = 1U;
     allocate_and_copy_cstr(force_render_update_definition_v1->return_type.name, "void");
     force_render_update_definition_v1->return_type.deref_count = 0;
@@ -7423,6 +7425,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     cling_process_definition_v1->struct_id = NULL;
     cling_process_definition_v1->name = "cling_process";
+    cling_process_definition_v1->source = NULL;
     cling_process_definition_v1->latest_iteration = 1U;
     allocate_and_copy_cstr(cling_process_definition_v1->return_type.name, "void");
     cling_process_definition_v1->return_type.deref_count = 0;
@@ -7449,6 +7452,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     find_function_info_definition_v1->struct_id = NULL;
     find_function_info_definition_v1->name = "find_function_info";
+    find_function_info_definition_v1->source = NULL;
     find_function_info_definition_v1->latest_iteration = 1U;
     allocate_and_copy_cstr(find_function_info_definition_v1->return_type.name, "function_info");
     find_function_info_definition_v1->return_type.deref_count = 1;
@@ -7482,6 +7486,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     declare_function_pointer_definition_v1->struct_id = NULL;
     declare_function_pointer_definition_v1->name = "declare_function_pointer";
+    declare_function_pointer_definition_v1->source = NULL;
     declare_function_pointer_definition_v1->latest_iteration = 1U;
     allocate_and_copy_cstr(declare_function_pointer_definition_v1->return_type.name, "void");
     declare_function_pointer_definition_v1->return_type.deref_count = 0;
@@ -7526,6 +7531,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     instantiate_function_definition_v1->struct_id = NULL;
     instantiate_function_definition_v1->name = "instantiate_function";
+    instantiate_function_definition_v1->source = NULL;
     instantiate_function_definition_v1->latest_iteration = 1U;
     allocate_and_copy_cstr(instantiate_function_definition_v1->return_type.name, "void");
     instantiate_function_definition_v1->return_type.deref_count = 0;
@@ -7555,6 +7561,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     // Partial Declarations
     mc_function_info_v1 *partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
     allocate_and_copy_cstr(partial_definition_v1->name, "find_struct_info");
+    partial_definition_v1->source = NULL;
     partial_definition_v1->latest_iteration = 0;
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
@@ -7562,6 +7569,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
     partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
     allocate_and_copy_cstr(partial_definition_v1->name, "special_update");
+    partial_definition_v1->source = NULL;
     partial_definition_v1->latest_iteration = 0;
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
@@ -7569,6 +7577,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
     partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
     allocate_and_copy_cstr(partial_definition_v1->name, "load_existing_struct_into_code_editor");
+    partial_definition_v1->source = NULL;
     partial_definition_v1->latest_iteration = 0;
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
@@ -7576,6 +7585,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
     partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
     allocate_and_copy_cstr(partial_definition_v1->name, "code_editor_handle_input");
+    partial_definition_v1->source = NULL;
     partial_definition_v1->latest_iteration = 0;
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
@@ -7583,6 +7593,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
     partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
     allocate_and_copy_cstr(partial_definition_v1->name, "build_code_editor");
+    partial_definition_v1->source = NULL;
     partial_definition_v1->latest_iteration = 0;
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
@@ -7590,6 +7601,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
     partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
     allocate_and_copy_cstr(partial_definition_v1->name, "init_usage_data_interface");
+    partial_definition_v1->source = NULL;
     partial_definition_v1->latest_iteration = 0;
     MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
                                 &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
@@ -7722,6 +7734,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/special_debug.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/gui.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/action_data_management.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/code_editor.c"));
   // MCerror(100000, "----------MEASURED STOP----------");

@@ -13,6 +13,14 @@ Midges development goals:
     
 ###################################################################
 
+Goal: Initiate and complete a project that can export an application that has a button that prints 'hello world' when pressed to console
+
+    give it a window to start with
+    function issues add button command to add the button
+    issues handler attachment
+    produces main() initialize_app() adds functionality
+
+
 
 MAKE A SHITTY FIRST VERSION
 
