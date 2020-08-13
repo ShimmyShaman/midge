@@ -72,20 +72,26 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
     MCerror(70, "TODO %s", get_mc_syntax_token_type_name(syntax_node->type));
   }
   mc_function_info_v1 *finfo = syntax_node->invocation.mc_function_info;
+  print_syntax_node(syntax_node, 0);
+  printf("mtmi-2 %p\n", finfo);
 
   MCcall(mct_append_to_c_str(str, indent, "{\n"));
   MCcall(mct_append_to_c_str(str, indent + 1, "void *mc_vargs["));
   MCvacall(append_to_c_strf(str, "%i];\n", finfo->parameter_count + 1));
 
+  register_midge_error_tag("mct_transcribe_mc_invocation-parameters");
   if (finfo->parameter_count != syntax_node->invocation.arguments->count) {
-    MCerror(79, "argument count not equal to required parameters, invoke:%s", finfo->name);
+    MCerror(79, "argument count not equal to required parameters, invoke:%s, expected:%i, passed:%i", finfo->name,
+            finfo->parameter_count, syntax_node->invocation.arguments->count);
   }
 
   for (int i = 0; i < finfo->parameter_count; ++i) {
+    printf("mtmi-3\n");
     MCcall(mct_append_indent_to_c_str(str, indent + 1));
     mc_syntax_node *argument = syntax_node->invocation.arguments->items[i];
     switch (argument->type) {
     case MC_SYNTAX_CAST_EXPRESSION: {
+      printf("mtmi-4\n");
       bool contains_mc_function_call;
       if (argument->cast_expression.expression) {
         MCcall(mct_contains_mc_invoke(argument->cast_expression.expression, &contains_mc_function_call));
@@ -100,6 +106,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       free(text);
     } break;
     case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
+      printf("mtmi-5\n");
       // Do MC_invokes
       bool contains_mc_function_call;
       if (argument) {
@@ -116,6 +123,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
 
     } break;
     case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION: {
+      printf("mtmi-6\n");
       // Do MC_invokes
       bool contains_mc_function_call;
       if (argument->element_access_expression.primary) {
@@ -140,6 +148,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
 
     } break;
     case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
+      printf("mtmi-7\n");
       MCcall(mct_append_indent_to_c_str(str, indent + 1));
       char *text;
       MCcall(copy_syntax_node_to_text(argument, &text));
@@ -149,11 +158,12 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
     } break;
     case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION: {
+      printf("mtmi-8\n");
       char *text;
       if ((mc_token_type)argument->prepended_unary.prepend_operator->type == MC_TOKEN_AMPERSAND_CHARACTER) {
         MCcall(copy_syntax_node_to_text(argument, &text));
         MCcall(mct_append_indent_to_c_str(str, indent + 1));
-        MCvacall(append_to_c_strf(str, "void *mc_varg_%i = %s;\n", i, text));
+        MCvacall(append_to_c_strf(str, "void *mc_varg_%i = (void *)%s;\n", i, text));
         MCcall(mct_append_indent_to_c_str(str, indent + 1));
         MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_varg_%i;\n", i, i));
       }
@@ -163,6 +173,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       free(text);
     } break;
     default: {
+      printf("mtmi-9\n");
       switch ((mc_token_type)argument->type) {
       case MC_TOKEN_NUMERIC_LITERAL: {
         MCcall(mct_append_indent_to_c_str(str, indent + 1));
@@ -189,6 +200,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
     }
   }
 
+  register_midge_error_tag("mct_transcribe_mc_invocation-return");
   if (strcmp(finfo->return_type.name, "void") || finfo->return_type.deref_count) {
     if (!return_variable_name) {
       // Use a dummy value

@@ -27,6 +27,16 @@ typedef unsigned int uint;
 #define SCRIPT_NAME_PREFIX "mc_script_"
 #define CORE_OBJECTS_DISPLAY_NAME "core_objects_display"
 
+#define CORE_ENTRY_NODE 10
+#define CORE_ENTRY_CATEGORY_STRUCT 11
+#define CORE_ENTRY_CATEGORY_FUNCTION 12
+#define CORE_ENTRY_CATEGORY_CHILDREN 13
+#define CORE_ENTRY_FILE 14
+#define CORE_ENTRY_STRUCT 15
+#define CORE_ENTRY_FUNCTION 16
+
+#define RENDERED_CORE_ENTRIES 35
+
 /*
  * @field a (void **) variable to store the created value in.
  */
@@ -1079,7 +1089,7 @@ int (*render_global_node)(int, void **);
 
 int (*build_core_display)(int, void **);
 int (*init_usage_data_interface)(int, void **);
-int (*core_display_handle_input)(int, void **);
+// int (*core_display_handle_input)(int, void **);
 int (*core_display_entry_handle_input)(int, void **);
 int (*core_display_render)(int, void **);
 

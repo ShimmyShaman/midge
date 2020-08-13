@@ -322,7 +322,7 @@ int parse_past_type_declaration_text(const char *code, int *i, char **type_decla
 // exclusive_end will be set to the index after the final closing bracket
 int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
 {
-  printf("find_bracketed_code_in_str(), text:\n%s||\n", file_text);
+  // printf("find_bracketed_code_in_str(), text:\n%s||\n", file_text);
   if (strlen(file_text) < 1) {
     MCerror(5636, "no text len");
   }
@@ -2511,6 +2511,11 @@ int mc_dummy_function_v1(int argc, void **argv)
   printf("\n\n**dummy**\n\n");
   return 0;
 }
+int mc_dummy_function_v2(int argc, void **argv)
+{
+  printf("\n\n**!dummy v.2!**\n\n");
+  return 0;
+}
 
 // void (*pslp)(mthread_info *);
 // void sleepit(mthread_info *doti)
@@ -2557,6 +2562,7 @@ int submit_user_command(int argc, void **argsv);
 #include "m_threads.h"
 int mc_main(int argc, const char *const *argv)
 {
+
   // c_str *str;
   // init_c_str(&str);
   // set_c_str(str, "holo");
@@ -2861,7 +2867,7 @@ int mc_main(int argc, const char *const *argv)
             vargs[0] = &elapsed;
             vargs[1] = &child;
             vargs[2] = &input_event;
-            printf("calling input delegate for %s\n", child->name);
+            // printf("calling input delegate for %s\n", child->name);
             // printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
             MCcall((*child->data.visual.input_handler)(3, vargs));
           }
@@ -7669,6 +7675,14 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
                                 (void *)partial_definition_v1));
 
     partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
+    allocate_and_copy_cstr(partial_definition_v1->name, "build_core_display");
+    partial_definition_v1->source = NULL;
+    partial_definition_v1->latest_iteration = 0;
+    MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                (void *)partial_definition_v1));
+
+    partial_definition_v1 = (mc_function_info_v1 *)calloc(sizeof(mc_function_info_v1), 1);
     allocate_and_copy_cstr(partial_definition_v1->name, "init_usage_data_interface");
     partial_definition_v1->source = NULL;
     partial_definition_v1->latest_iteration = 0;
@@ -7843,10 +7857,11 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(input);
   free(output);
 
-  MCcall(clint_process("build_core_display = &build_core_display_v1;"));
-  MCcall(clint_process("core_display_handle_input = &core_display_handle_input_v1;"));
+  // MCcall(clint_process("build_core_display = &build_core_display_v1;"));
+  // MCcall(clint_process("core_display_handle_input = &core_display_handle_input_v1;"));
   MCcall(clint_process("core_display_render = &core_display_render_v1;"));
   // MCcall(clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/heirarchy_display.c"));
 
   printf("end:init_core_functions()\n");
   return 0;

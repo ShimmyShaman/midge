@@ -2729,6 +2729,7 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   // Conditional
   MCcall(mcs_peek_token_type(ps, false, 0, &token0));
   switch (token0) {
+  case MC_TOKEN_NOT_OPERATOR:
   case MC_TOKEN_IDENTIFIER: {
     MCcall(mcs_parse_expression_conditional(ps, statement, &statement->for_statement.conditional));
   } break;
@@ -3237,7 +3238,7 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
     mc_syntax_node *parameter_decl;
     MCcall(mcs_parse_parameter_declaration(&ps, false, function, &parameter_decl));
     // printf("parameter_decl:%p\n", parameter_decl);
-    print_syntax_node(parameter_decl, 0);
+    // print_syntax_node(parameter_decl, 0);
     MCcall(append_to_collection((void ***)&function->function.parameters->items, &function->function.parameters->alloc,
                                 &function->function.parameters->count, parameter_decl));
   }

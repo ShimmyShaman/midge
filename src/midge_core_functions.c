@@ -707,7 +707,23 @@ int instantiate_function_v1(int argc, void **argv)
   param_buf[0] = '\0';
   for (int i = 0; i < func_info->parameter_count; ++i) {
     if (func_info->parameters[i]->is_function_pointer) {
-      MCerror(711, "TODO function parameter transcribing");
+
+      // TODO -- include mc_structs in these parameters
+
+      if (strncmp("int (**", func_info->parameters[i]->full_function_pointer_declaration, 7)) {
+        MCerror(715, "TODO");
+      }
+      if (strncmp(")(int, void **)",
+                  func_info->parameters[i]->full_function_pointer_declaration +
+                      (strlen(func_info->parameters[i]->full_function_pointer_declaration) - 15),
+                  16)) {
+        printf("ffpd:'%s'\n", func_info->parameters[i]->full_function_pointer_declaration);
+        printf("ffpd:'%s'\n", func_info->parameters[i]->full_function_pointer_declaration +
+                                  (strlen(func_info->parameters[i]->full_function_pointer_declaration) - 15));
+        MCerror(721, "TODO");
+      }
+      sprintf(param_buf + strlen(param_buf), "  %s = *(int (***)(int, void **))argv[%i];\n",
+              func_info->parameters[i]->full_function_pointer_declaration, i);
 
       // struct_info *find_struct_info(node *nodespace);
 
