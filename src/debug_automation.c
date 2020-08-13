@@ -5,8 +5,34 @@ typedef struct debug_data_state {
   mc_node_v1 *core_display;
 } debug_data_state;
 
+void create_button_print_app()
+{
+  printf("create_button_print_app\n");
+
+  // Create a node & add it to global
+  mc_node_v1 *app_node = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
+  add_node_as_child(command_hub->global_node, app_node);
+
+  allocate_and_copy_cstr(app_node->name, "click-it");
+  app_node->parent = command_hub->global_node;
+  app_node->type = NODE_TYPE_PROJECT;
+
+  
+
+  // mc_node_v1 *button_node;
+  // mgui_button_data *button_data;
+  // mgui_create_button(app_node, &button, &button_data);
+  // allocate_and_copy_cstr(button_data->text, "print it!");
+  // button_data->margin...
+  // button_data->size...
+  // button_data->handler = &print_it_handler
+
+  return;
+}
+
 void debug_automation(frame_time *elapsed, debug_data_state *debugState)
 {
+  // printf("debugState:%p\n", debugState);
   // mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)fedit->extra;
 
   switch (debugState->sequenceStep) {
@@ -14,7 +40,7 @@ void debug_automation(frame_time *elapsed, debug_data_state *debugState)
     // Select
     ++debugState->sequenceStep;
 
-    MCcall(create_button_print_app());
+    create_button_print_app();
   } break;
   case 1: {
     // // Select
@@ -95,11 +121,10 @@ void debug_automation(frame_time *elapsed, debug_data_state *debugState)
 
 void begin_debug_automation()
 {
-  printf("feee\n");
   debug_data_state *debugState = (debug_data_state *)malloc(sizeof(debug_data_state));
   debugState->sequenceStep = 0;
 
-  printf("ffwefw\n");
+  // printf("debugState:%p\n", debugState);
   debugState->core_display = NULL;
   MCcall(obtain_subnode_with_name(command_hub->global_node, CORE_OBJECTS_DISPLAY_NAME, &debugState->core_display));
 
@@ -108,11 +133,11 @@ void begin_debug_automation()
     return;
   }
 
-  printf("bouts\n");
-//   debug_automation(0, 0);
-  printf("bboo %p\n", &debug_automation);
-  register_update_timer(&debug_automation, 340 * 1000, true, (void *)debugState);
-  printf("bun\n");
+  // printf("bouts\n");
+  //   debug_automation(0, 0);
+  // printf("bboo %p\n", &debug_automation);
+  register_update_timer(command_hub, &debug_automation, 340 * 1000, true, (void *)debugState);
+  // printf("bun\n");
 
   return;
 }

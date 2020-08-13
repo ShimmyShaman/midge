@@ -171,8 +171,16 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
         MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
       } break;
       case MC_TOKEN_IDENTIFIER: {
-        MCcall(mct_append_indent_to_c_str(str, indent + 1));
-        MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, argument->text));
+        if (!strcmp(argument->text, "NULL")) {
+          MCcall(mct_append_indent_to_c_str(str, indent + 1));
+          MCvacall(append_to_c_strf(str, "void *mc_vargs_%i = NULL;\n", i, argument->text));
+          MCcall(mct_append_indent_to_c_str(str, indent + 1));
+          MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
+        }
+        else {
+          MCcall(mct_append_indent_to_c_str(str, indent + 1));
+          MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &%s;\n", i, argument->text));
+        }
       } break;
       default:
         MCerror(92, "Unsupported:%s", get_mc_syntax_token_type_name(argument->type));
@@ -202,7 +210,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       MCvacall(append_to_c_strf(str, "%i] = &mc_vargs_dummy_rv;\n", finfo->parameter_count));
     }
     else {
-      if ((mc_token_type) return_variable_name->type != MC_TOKEN_IDENTIFIER) {
+      if ((mc_token_type)return_variable_name->type != MC_TOKEN_IDENTIFIER) {
         MCerror(208, "Argument Error, only variable-name allowed");
       }
 
@@ -248,10 +256,12 @@ int mct_transcribe_declarator(c_str *str, mc_syntax_node *syntax_node)
 
 int mct_transcribe_type(c_str *str, mc_syntax_node *syntax_node)
 {
+  // Const
   if (syntax_node->type_identifier.is_const) {
     MCcall(append_to_c_str(str, "const "));
   }
 
+  // Signing
   if (syntax_node->type_identifier.is_signed != -1) {
     if (syntax_node->type_identifier.is_signed == 0) {
       MCcall(append_to_c_str(str, "unsigned "));
@@ -267,6 +277,12 @@ int mct_transcribe_type(c_str *str, mc_syntax_node *syntax_node)
     MCerror(270, "TODO");
   }
 
+  // struct prepend
+  if (syntax_node->type_identifier.has_struct_prepend) {
+    MCcall(append_to_c_str(str, "struct "));
+  }
+
+  // mc_type
   if (syntax_node->type_identifier.mc_type) {
     MCcall(append_to_c_str(str, syntax_node->type_identifier.mc_type->declared_mc_name));
   }

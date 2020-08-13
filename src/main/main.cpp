@@ -19,7 +19,7 @@
 using namespace std;
 
 cling::Interpreter *clint;
-const int MIDGE_ERROR_STACK_MAX_SIZE = 20;
+const int MIDGE_ERROR_STACK_MAX_SIZE = 50;
 char *MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_MAX_SIZE];
 unsigned int MIDGE_ERROR_STACK_STR_LEN[MIDGE_ERROR_STACK_MAX_SIZE];
 int MIDGE_ERROR_STACK_INDEX;

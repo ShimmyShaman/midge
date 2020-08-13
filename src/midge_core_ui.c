@@ -556,6 +556,13 @@ int core_display_handle_input_v1(int argc, void **argv)
   return 0;
 }
 
+int mcd_on_heirarchy_update(void *handler_data)
+{
+  printf("heirarchy_update!\n");
+
+  return 0;
+}
+
 int build_core_display_v1(int argc, void **argv)
 {
   register_midge_error_tag("build_core_display_v1()");
@@ -599,6 +606,8 @@ int build_core_display_v1(int argc, void **argv)
 
   MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
                               &command_hub->global_node->child_count, core_objects_display));
+
+  add_event_handler(command_hub->global_node, &mcd_on_heirarchy_update, (void *)cdstate);
 
   printf("bcd-0\n");
   MCcall(initialize_entry_visual_nodes(core_objects_display, cdstate));

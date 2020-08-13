@@ -149,6 +149,7 @@ int declare_function_pointer_v1(int argc, void **argv)
   for (int i = 0; i < func_info->parameter_count; ++i) {
     // printf("dfp-2\n");
     mc_parameter_info_v1 *parameter_info = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    parameter_info->is_function_pointer = false;
     // printf("dfp>%p=%s\n", i, (void *)parameters[2 + i * 2 + 0], (char *)parameters[2 + i * 2 + 0]);
     char *type_name;
     allocate_and_copy_cstr(type_name, *(char **)argv[2 + i * 2 + 0]);
@@ -705,6 +706,16 @@ int instantiate_function_v1(int argc, void **argv)
   char param_buf[4096];
   param_buf[0] = '\0';
   for (int i = 0; i < func_info->parameter_count; ++i) {
+    if (func_info->parameters[i]->is_function_pointer) {
+      MCerror(711, "TODO function parameter transcribing");
+
+      // struct_info *find_struct_info(node *nodespace);
+
+      // mc_struct_info *(*fsi)(node *) = *(mc_struct_info *(**)(node *))args[0];???
+
+      continue;
+    }
+
     // MC conformed type name
     char *parameter_type;
     {
@@ -3695,34 +3706,6 @@ int transcribe_c_block_to_mc_v1(function_info *owner, char *code, int *i, uint *
   }
 }
 
-int create_button_print_app()
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  // Create a node & add it to global
-  mc_node_v1 *app_node = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
-  MCcall(append_to_collection((void ***)&command_hub->global_node->children, &command_hub->global_node->children_alloc,
-                              &command_hub->global_node->child_count, app_node));
-
-  allocate_and_copy_cstr(app_node->name, "click-it");
-  app_node->parent = command_hub->global_node;
-  app_node->type = NODE_TYPE_PROJECT;
-
-  // mc_node_v1 *button_node;
-  // mgui_button_data *button_data;
-  // mgui_create_button(app_node, &button, &button_data);
-  // allocate_and_copy_cstr(button_data->text, "print it!");
-  // button_data->margin...
-  // button_data->size...
-  // button_data->handler = &print_it_handler
-
-
-
-  return 0;
-}
-
 int obtain_subnode_with_name(node *parent, const char *name, node **subnode)
 {
   for (int i = 0; i < parent->child_count; ++i) {
@@ -4105,7 +4088,8 @@ int parse_and_process_function_definition_v1(mc_source_definition_v1 *source_def
   func_info->parameters = (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * parameter_count);
   for (int p = 0; p < parameter_count; ++p) {
     mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-    parameter->struct_id = NULL;  // TODO
+    parameter->struct_id = NULL; // TODO
+    parameter->is_function_pointer = false;
     parameter->type_version = 0U; // TODO
     parameter->type_name = parameters[p].type_name;
     parameter->type_deref_count = parameters[p].type_deref_count;

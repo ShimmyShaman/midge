@@ -90,6 +90,11 @@ typedef unsigned int uint;
   }
 
 typedef enum {
+  ME_NONE = 0,
+  ME_NODE_HIERARCHY_UPDATED,
+} midge_event_type;
+
+typedef enum {
 
   PROCESS_ACTION_NULL = 1,
   PROCESS_ACTION_NONE,
@@ -283,9 +288,16 @@ typedef struct mc_field_info_v1 {
 
 typedef struct mc_parameter_info_v1 {
   mc_struct_id_v1 *struct_id;
-  const char *type_name;
-  const char *mc_declared_type;
-  unsigned int type_version;
+  bool is_function_pointer;
+  struct {
+    const char *type_name;
+    const char *mc_declared_type;
+    unsigned int type_version;
+  };
+  struct {
+    char *function_type;
+    char *full_function_pointer_declaration;
+  };
   unsigned int type_deref_count;
   const char *name;
 } mc_parameter_info_v1;
@@ -441,6 +453,13 @@ typedef struct node_visual_info {
 
 } node_visual_info;
 
+typedef struct event_handler_array {
+  uint event_type;
+  uint count;
+  uint alloc;
+  int (***handlers)(int, void **);
+} event_handler_array;
+
 typedef struct mc_node_v1 {
   mc_struct_id_v1 *struct_id;
   const char *name;
@@ -463,6 +482,11 @@ typedef struct mc_node_v1 {
       int (*render_delegate)(int, void **);
     } global_root;
   } data;
+
+  struct {
+    uint alloc, count;
+    event_handler_array **items;
+  } event_handlers;
 
   void *extra;
 } mc_node_v1;
@@ -693,8 +717,8 @@ typedef struct mc_code_editor_state_v1 {
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output);
 int mce_update_rendered_text(mc_code_editor_state_v1 *state);
 int define_struct_from_code_editor(mc_code_editor_state_v1 *state);
-// int register_update_timer(int (*fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
-//                           void *state);
+int register_update_timer(mc_command_hub_v1 *command_hub, int (**fnptr_update_callback)(int, void **),
+                          uint usecs_period, bool reset_timer_on_update, void *state);
 
 int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int parse_past(const char *text, int *index, const char *sequence);
@@ -711,8 +735,8 @@ int parse_past_type_identifier(const char *text, int *index, char **identifier);
 int append_to_cstrn(unsigned int *allocated_size, char **cstr, const char *extra, int chars_of_extra);
 int append_to_cstr(unsigned int *allocated_size, char **cstr, const char *extra);
 int increment_time_spec(struct timespec *time, struct timespec *amount, struct timespec *outTime);
-int register_update_timer(int (**fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
-                          void *state);
+// int register_update_timer(int (**fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
+//                           void *state);
 
 void release_syntax_node(mc_syntax_node *syntax_node);
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
@@ -991,6 +1015,7 @@ typedef struct mc_syntax_node {
           mc_syntax_node *identifier;
           mc_struct_info_v1 *mc_type;
           bool is_const;
+          bool has_struct_prepend;
           // -1 for unspecified (implicit signed), 0 for unsigned, 1 for explicit signed
           int is_signed;
           mc_syntax_node *size_modifiers;

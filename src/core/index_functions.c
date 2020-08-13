@@ -1,28 +1,56 @@
 
 #include "core/midge_core.h"
 
-int register_update_timer(int (**fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
-                          void *state)
+void add_notification_handler(uint event_type, int (**handler)(int, void **))
 {
-  //   register_midge_error_tag("register_update_timer()");
-  // printf("register_update_timer0\n");
 
-  update_callback_timer *callback_timer = (update_callback_timer *)malloc(sizeof(update_callback_timer));
-  MCcall(append_to_collection((void ***)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
-                              &command_hub->update_timers.count, callback_timer));
+  event_handler_array *handler_array = NULL;
+  for (int i = 0; i < command_hub->global_node->event_handlers.count; ++i) {
+    if (command_hub->global_node->event_handlers.items[i]->event_type == event_type) {
+      handler_array = command_hub->global_node->event_handlers.items[i];
+      break;
+    }
+  }
 
-  clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
-  callback_timer->period = (struct timespec){usecs_period / 1000000, (usecs_period % 1000000) * 1000};
-  increment_time_spec(&callback_timer->next_update, &callback_timer->period, &callback_timer->next_update);
-  // printf("register_update_timer2\n");
-  callback_timer->reset_timer_on_update = true;
-  callback_timer->update_delegate = fnptr_update_callback;
-  callback_timer->state = state;
-  // printf("register_update_timer3\n");
+  if (handler_array == NULL) {
+    // Make a new one
+    handler_array = (event_handler_array *)malloc(sizeof(event_handler_array));
+    handler_array->alloc = 0;
+    handler_array->count = 0;
+    handler_array->event_type = event_type;
+  }
 
-  printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
-  printf("callback_timer ic=%p\n", command_hub->update_timers.callbacks[0]);
+  MCerror("TODO -- also handler/event data");
+}
 
-  //   register_midge_error_tag("register_update_timer(~)");
-  return 0;
+void notify_handlers_of_event(uint event_type, void *event_data)
+{
+  event_handler_array *handler_array = NULL;
+  for (int i = 0; i < command_hub->global_node->event_handlers.count; ++i) {
+    if (command_hub->global_node->event_handlers.items[i]->event_type == event_type) {
+      handler_array = command_hub->global_node->event_handlers.items[i];
+      break;
+    }
+  }
+
+  if (handler_array == NULL) {
+    return;
+  }
+
+  for (int i = 0; i < handler_array->count; ++i) {
+    if (!(*handler_array->handlers[i])) {
+      void *vargs[1];
+      vargs[0] = &event_data;
+      (*handler_array->handlers[i])(1, vargs);
+    }
+  }
+}
+
+void add_node_as_child(node *parent, node *child)
+{
+  append_to_collection((void ***)&parent->children, &parent->children_alloc, &parent->child_count, child);
+
+  // Fire an event...
+  uint event_type = ME_NODE_HIERARCHY_UPDATED;
+  notify_handlers_of_event(event_type, NULL);
 }

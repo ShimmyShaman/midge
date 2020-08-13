@@ -322,7 +322,7 @@ int parse_past_type_declaration_text(const char *code, int *i, char **type_decla
 // exclusive_end will be set to the index after the final closing bracket
 int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
 {
-  // printf("find_bracketed_code_in_str(), text:\n%s||\n", file_text);
+  printf("find_bracketed_code_in_str(), text:\n%s||\n", file_text);
   if (strlen(file_text) < 1) {
     MCerror(5636, "no text len");
   }
@@ -353,16 +353,12 @@ int find_bracketed_code_in_str(char *file_text, int *start, int *exclusive_end)
 
     *start = i;
     // printf("*start = %i\n", i);
-    ++i;
   }
   ++i;
 
   int bracket_count = 1;
   while (bracket_count) {
     // printf("'%c':%i\n", file_text[i], bracket_count);
-    // if (!strncmp(file_text + i, "simpincel", 9)) {
-    //   printf("bracket_count was:%i\n", bracket_count);
-    // }
 
     // }
 
@@ -2483,6 +2479,32 @@ int increment_time_spec(struct timespec *time, struct timespec *amount, struct t
   return 0;
 }
 
+int register_update_timer(mc_command_hub_v1 *command_hub, int (**fnptr_update_callback)(int, void **),
+                          uint usecs_period, bool reset_timer_on_update, void *state)
+{
+  //   register_midge_error_tag("register_update_timer()");
+  // printf("register_update_timer0\n");
+
+  update_callback_timer *callback_timer = (update_callback_timer *)malloc(sizeof(update_callback_timer));
+  MCcall(append_to_collection((void ***)&command_hub->update_timers.callbacks, &command_hub->update_timers.allocated,
+                              &command_hub->update_timers.count, callback_timer));
+
+  clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
+  callback_timer->period.tv_sec = usecs_period / 1000000;
+  callback_timer->period.tv_nsec = (usecs_period % 1000000) * 1000;
+  increment_time_spec(&callback_timer->next_update, &callback_timer->period, &callback_timer->next_update);
+  // printf("register_update_timer2\n");
+  callback_timer->reset_timer_on_update = true;
+  callback_timer->update_delegate = fnptr_update_callback;
+  callback_timer->state = state;
+
+  printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
+  printf("callback_timer ic=%p\n", command_hub->update_timers.callbacks[0]);
+
+  //   register_midge_error_tag("register_update_timer(~)");
+  return 0;
+}
+
 int (*mc_dummy_function)(int, void **);
 int mc_dummy_function_v1(int argc, void **argv)
 {
@@ -2618,6 +2640,8 @@ int mc_main(int argc, const char *const *argv)
   global->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), global->children_alloc);
   global->child_count = 0;
   global->data.global_root.image_resource_uid = 0;
+  global->event_handlers.alloc = 0;
+  global->event_handlers.count = 0;
 
   // Execute commands
   mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)calloc(sizeof(mc_command_hub_v1), 1);
@@ -2765,7 +2789,7 @@ int mc_main(int argc, const char *const *argv)
           {
             void *vargs[2];
             vargs[0] = (void *)&elapsed;
-            vargs[1] = (void *)timer->state;
+            vargs[1] = (void *)&timer->state;
             int mc_res = (*timer->update_delegate)(2, vargs);
             if (mc_res) {
               printf("--timer->update_delegate(2, vargs):%i\n", mc_res);
@@ -5914,6 +5938,59 @@ int init_process_matrix(mc_command_hub_v1 *command_hub)
   return 0;
 }
 
+int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_node,
+                                               mc_parameter_info_v1 **initialized_parameter)
+{
+  register_midge_error_tag("initialize_parameter_info_from_syntax_node()");
+
+  mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+  parameter->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+  allocate_and_copy_cstr(parameter->struct_id->identifier, "parameter_info");
+  parameter->struct_id->version = 1U;
+
+  if (parameter_syntax_node->parameter.is_function_pointer_declaration) {
+    parameter->is_function_pointer = true;
+
+    MCcall(copy_syntax_node_to_text(parameter_syntax_node, &parameter->full_function_pointer_declaration));
+
+    mc_syntax_node *fpsn = parameter_syntax_node->parameter.function_pointer_declaration;
+    MCcall(copy_syntax_node_to_text(fpsn->function_pointer_declaration.identifier, (char **)&parameter->name));
+
+    if (fpsn->function_pointer_declaration.type_dereference) {
+      parameter->type_deref_count = fpsn->function_pointer_declaration.type_dereference->dereference_sequence.count;
+    }
+    else {
+      parameter->type_deref_count = 0;
+    }
+
+    // void *ptr = 0;
+    // int (*fptr)(int, void **) = (int (*)(int, void **))ptr;
+    parameter->function_type = NULL;
+  }
+  else {
+    parameter->is_function_pointer = false;
+
+    // Type
+    MCcall(copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name));
+    if (parameter_syntax_node->parameter.type_dereference) {
+      parameter->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
+    }
+    else {
+      parameter->type_deref_count = 0;
+    }
+    // printf("parameter->type_deref_count:%i\n", parameter->type_deref_count);
+    register_midge_error_tag("parse_and_process_mc_file_syntax-3b");
+
+    // -- TODO -- mc-type?
+
+    // Name
+    MCcall(copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name));
+  }
+
+  *initialized_parameter = parameter;
+  return 0;
+}
+
 int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char *filepath)
 {
   register_midge_error_tag("parse_and_process_mc_file_syntax(%s)", filepath);
@@ -6202,30 +6279,8 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
         func_info->parameters =
             (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * func_info->parameter_count);
         for (int p = 0; p < func_info->parameter_count; ++p) {
-          mc_parameter_info_v1 *parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
-          parameter->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
-          allocate_and_copy_cstr(parameter->struct_id->identifier, "parameter_info");
-          parameter->struct_id->version = 1U;
-
-          // Type
-          MCcall(copy_syntax_node_to_text(function_ast->function.parameters->items[p]->parameter.type_identifier,
-                                          (char **)&parameter->type_name));
-          if (function_ast->function.parameters->items[p]->parameter.type_dereference) {
-            parameter->type_deref_count =
-                function_ast->function.parameters->items[p]->parameter.type_dereference->dereference_sequence.count;
-          }
-          else {
-            parameter->type_deref_count = 0;
-          }
-          // printf("parameter->type_deref_count:%i\n", parameter->type_deref_count);
-          register_midge_error_tag("parse_and_process_mc_file_syntax-3b");
-
-          // -- TODO -- mc-type?
-
-          // Name
-          MCcall(copy_syntax_node_to_text(function_ast->function.parameters->items[p]->parameter.name,
-                                          (char **)&parameter->name));
-
+          mc_parameter_info_v1 *parameter;
+          MCcall(initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &parameter));
           func_info->parameters[p] = parameter;
         }
 
@@ -7398,6 +7453,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_parameter_info_v1 *parameter;
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     read_file_text_definition_v1->parameters[0] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 0U;
     parameter->type_deref_count = 1;
@@ -7443,6 +7499,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_parameter_info_v1 *parameter;
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     cling_process_definition_v1->parameters[0] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 1U;
     parameter->type_deref_count = 1;
@@ -7470,12 +7527,14 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_parameter_info_v1 *parameter;
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     find_function_info_definition_v1->parameters[0] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "node";
     parameter->type_version = 1U;
     parameter->type_deref_count = 1;
     parameter->name = "nodespace";
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     find_function_info_definition_v1->parameters[1] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 0U;
     parameter->type_deref_count = 1;
@@ -7504,24 +7563,28 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_parameter_info_v1 *parameter;
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     declare_function_pointer_definition_v1->parameters[0] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 1U;
     parameter->type_deref_count = 1;
     parameter->name = "function_name";
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     declare_function_pointer_definition_v1->parameters[1] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 1U;
     parameter->type_deref_count = 1;
     parameter->name = "return_type";
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     declare_function_pointer_definition_v1->parameters[2] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 1U;
     parameter->type_deref_count = 1;
     parameter->name = "parameter_type";
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     declare_function_pointer_definition_v1->parameters[3] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 1U;
     parameter->type_deref_count = 1;
@@ -7549,12 +7612,14 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     mc_parameter_info_v1 *parameter;
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     instantiate_function_definition_v1->parameters[0] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 1U;
     parameter->type_deref_count = 1;
     parameter->name = "function_name";
     parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
     instantiate_function_definition_v1->parameters[1] = parameter;
+    parameter->is_function_pointer = false;
     parameter->type_name = "char";
     parameter->type_version = 1U;
     parameter->type_deref_count = 1;

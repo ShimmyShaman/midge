@@ -542,6 +542,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_TYPE_IDENTIFIER: {
     syntax_node->type_identifier.identifier = NULL;
     syntax_node->type_identifier.is_const = false;
+    syntax_node->type_identifier.has_struct_prepend = false;
     syntax_node->type_identifier.is_signed = -1;
     syntax_node->type_identifier.size_modifiers = NULL;
   } break;
@@ -1409,10 +1410,15 @@ int mcs_parse_dereference_sequence(parsing_state *ps, mc_syntax_node *parent, mc
   return 0;
 }
 
-int mcs_parse_parameter_declaration(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+int mcs_parse_parameter_declaration(parsing_state *ps, bool allow_name_skip, mc_syntax_node *parent,
+                                    mc_syntax_node **additional_destination)
 {
+  register_midge_error_tag("mcs_parse_parameter_declaration()");
   mc_syntax_node *parameter_decl;
-  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_PARAMETER_DECLARATION, NULL, parent, additional_destination));
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_PARAMETER_DECLARATION, NULL, parent, &parameter_decl));
+  if (additional_destination) {
+    *additional_destination = parameter_decl;
+  }
 
   mc_syntax_node *type_identity;
   MCcall(mcs_parse_type_identifier(ps, parameter_decl, &type_identity));
@@ -1438,9 +1444,20 @@ int mcs_parse_parameter_declaration(parsing_state *ps, mc_syntax_node *parent, m
       parameter_decl->parameter.type_dereference = NULL;
     }
 
-    MCcall(mcs_parse_through_token(ps, parameter_decl, MC_TOKEN_IDENTIFIER, &parameter_decl->parameter.name));
+    bool skip_name = false;
+    if (allow_name_skip) {
+      mc_token_type token_type;
+      MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+      if (token_type != MC_TOKEN_IDENTIFIER) {
+        skip_name = true;
+      }
+    }
+    if (!skip_name) {
+      MCcall(mcs_parse_through_token(ps, parameter_decl, MC_TOKEN_IDENTIFIER, &parameter_decl->parameter.name));
+    }
   }
 
+  register_midge_error_tag("mcs_parse_parameter_declaration(~)");
   return 0;
 }
 
@@ -1454,6 +1471,7 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   mc_syntax_node *type_root;
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_TYPE_IDENTIFIER, NULL, NULL, &type_root));
   type_root->type_identifier.is_const = false;
+  type_root->type_identifier.has_struct_prepend = false;
   type_root->type_identifier.is_signed = -1;
 
   // Initial const
@@ -1478,6 +1496,17 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
     MCcall(mcs_parse_through_token(ps, type_root, MC_TOKEN_SIGNED_KEYWORD, NULL));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, type_root));
     MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+  }
+
+  // Struct
+  if (token_type == MC_TOKEN_STRUCT_KEYWORD) {
+    type_root->type_identifier.has_struct_prepend = true;
+    MCcall(mcs_parse_through_token(ps, type_root, MC_TOKEN_STRUCT_KEYWORD, NULL));
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, type_root));
+    MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+    if (token_type != MC_TOKEN_IDENTIFIER) {
+      MCerror(1507, "FORMAT ERROR: expected struct identifier");
+    }
   }
 
   switch (token_type) {
@@ -1532,12 +1561,13 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   }
 
   if (token_type == MC_TOKEN_OPEN_BRACKET) {
+    // It's a function pointer!
+    register_midge_error_tag("mcs_parse_type_identifier()-6");
     MCcall(mcs_peek_token_type(ps, false, 1, &token_type));
     if (token_type != MC_TOKEN_STAR_CHARACTER) {
       MCerror(1463, "Format Exception?");
     }
 
-    // It's a function pointer!
     mc_syntax_node *fptr;
     MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION_POINTER_DECLARATION, NULL, parent, &fptr));
     if (additional_destination) {
@@ -1573,20 +1603,23 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
       }
 
       mc_syntax_node *parameter_decl;
-      MCcall(mcs_parse_parameter_declaration(ps, fptr, &parameter_decl));
+      MCcall(mcs_parse_parameter_declaration(ps, true, fptr, &parameter_decl));
       MCcall(append_to_collection((void ***)&fptr->function_pointer_declaration.parameters->items,
                                   &fptr->function_pointer_declaration.parameters->alloc,
                                   &fptr->function_pointer_declaration.parameters->count, parameter_decl));
     }
     MCcall(mcs_parse_through_token(ps, fptr, MC_TOKEN_CLOSING_BRACKET, NULL));
+    register_midge_error_tag("mcs_parse_type_identifier()-7");
   }
   else {
+    // register_midge_error_tag("mcs_parse_type_identifier()-7a parent:%p", parent);
     // Not a function pointer
     // Add to parent & return
     MCcall(mcs_add_syntax_node_to_parent(parent, type_root));
     if (additional_destination) {
       *additional_destination = type_root;
     }
+    // register_midge_error_tag("mcs_parse_type_identifier()-7b");
   }
 
   register_midge_error_tag("mcs_parse_type_identifier(~)");
@@ -1792,6 +1825,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
   case MC_TOKEN_CHAR_LITERAL: {
     MCcall(mcs_parse_parenthesized_expression(ps, parent, additional_destination));
   } break;
+  case MC_TOKEN_STRUCT_KEYWORD:
   case MC_TOKEN_INT_KEYWORD:
   case MC_TOKEN_CHAR_KEYWORD:
   case MC_TOKEN_BOOL_KEYWORD:
@@ -2326,15 +2360,17 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
       {
         if ((mc_token_type)expression->invocation.function_identity->type != MC_TOKEN_IDENTIFIER) {
-          MCerror(2100, "TODO");
+          // print_parse_error(ps->code, ps->index, "_mcs_parse_expression", "invocation identity isn't IDENTIFIER");
+          // MCerror(2100, "TODO :%s", get_mc_syntax_token_type_name(expression->invocation.function_identity->type));
         }
-
-        // Check if the function info exists in midge
-        void *mc_vargs[3];
-        mc_vargs[0] = (void *)&expression->invocation.mc_function_info;
-        mc_vargs[1] = (void *)&command_hub->global_node; // TODO -- from state?
-        mc_vargs[2] = (void *)&expression->invocation.function_identity->text;
-        MCcall(find_function_info(3, mc_vargs));
+        else {
+          // Check if the function info exists in midge
+          void *mc_vargs[3];
+          mc_vargs[0] = (void *)&expression->invocation.mc_function_info;
+          mc_vargs[1] = (void *)&command_hub->global_node; // TODO -- from state?
+          mc_vargs[2] = (void *)&expression->invocation.function_identity->text;
+          MCcall(find_function_info(3, mc_vargs));
+        }
       }
 
       MCcall(mcs_parse_through_token(ps, expression, MC_TOKEN_OPEN_BRACKET, NULL));
@@ -3199,7 +3235,9 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
 
     // Parse the parameter
     mc_syntax_node *parameter_decl;
-    MCcall(mcs_parse_parameter_declaration(&ps, function, &parameter_decl));
+    MCcall(mcs_parse_parameter_declaration(&ps, false, function, &parameter_decl));
+    // printf("parameter_decl:%p\n", parameter_decl);
+    print_syntax_node(parameter_decl, 0);
     MCcall(append_to_collection((void ***)&function->function.parameters->items, &function->function.parameters->alloc,
                                 &function->function.parameters->count, parameter_decl));
   }
