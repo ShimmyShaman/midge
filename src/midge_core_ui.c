@@ -93,37 +93,6 @@ int initialize_entry_visual_nodes(node *core_display, core_display_state *cdstat
   return 0;
 }
 
-int ensure_core_entry_has_child_alloc(core_entry *entry, int size)
-{
-  register_midge_error_tag("ensure_core_entry_has_child_alloc()");
-  if (entry->children.size >= size) {
-    return 0;
-  }
-
-  core_entry **new_ary = (core_entry **)malloc(sizeof(core_entry *) * size);
-
-  if (entry->children.size) {
-    memcpy(new_ary, entry->children.items, sizeof(core_entry *) * entry->children.size);
-    free(entry->children.items);
-  }
-  for (int i = entry->children.size; i < size; ++i) {
-    core_entry *child = (core_entry *)malloc(sizeof(core_entry));
-    child->type = 0;
-    child->data = NULL;
-    child->collapsed = false;
-    child->children.size = 0;
-    child->children.utilized_count = 0;
-
-    new_ary[i] = child;
-  }
-
-  entry->children.items = new_ary;
-  entry->children.size = size;
-
-  register_midge_error_tag("ensure_core_entry_has_child_alloc(~)");
-  return 0;
-}
-
 int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int indent)
 {
   // printf("mcu_rce-0\n");

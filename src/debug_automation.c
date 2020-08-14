@@ -5,19 +5,29 @@ typedef struct debug_data_state {
   mc_node_v1 *core_display;
 } debug_data_state;
 
-void create_button_print_app()
+void initialize_button_print_app(mc_node_v1 *p_node)
+{
+  printf("Hello World! from button_print_app!\n");
+  exit_app(p_node, 0);
+}
+
+void create_hello_world_app()
 {
   printf("create_button_print_app\n");
 
   // Create a node & add it to global
   mc_node_v1 *app_node = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
-  add_node_as_child(command_hub->global_node, app_node);
 
   allocate_and_copy_cstr(app_node->name, "click-it");
   app_node->parent = command_hub->global_node;
-  app_node->type = NODE_TYPE_PROJECT;
+  app_node->type = NODE_TYPE_CONSOLE_APP;
 
-  
+  console_app_info *app_info = (console_app_info *)malloc(sizeof(console_app_info));
+  app_node->extra = app_info;
+
+  app_info->initialize = &initialize_button_print_app;
+
+  add_node_to_heirarchy(command_hub->global_node, app_node);
 
   // mc_node_v1 *button_node;
   // mgui_button_data *button_data;
@@ -30,6 +40,17 @@ void create_button_print_app()
   return;
 }
 
+void export_hello_world_app()
+{
+  mc_node_v1 *app_node;
+  MCcall(obtain_subnode_with_name(command_hub->global_node, "click-it", &app_node));
+  if (!app_node) {
+    MCerror(47, "Could not it!");
+  }
+
+  export_node_to_application(app_node, "exports/hello_world");
+}
+
 void debug_automation(frame_time *elapsed, debug_data_state *debugState)
 {
   // printf("debugState:%p\n", debugState);
@@ -40,11 +61,13 @@ void debug_automation(frame_time *elapsed, debug_data_state *debugState)
     // Select
     ++debugState->sequenceStep;
 
-    create_button_print_app();
+    create_hello_world_app();
   } break;
   case 1: {
     // // Select
     ++debugState->sequenceStep;
+
+    export_hello_world_app();
 
     // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
     // sim->type = INPUT_EVENT_MOUSE_PRESS;

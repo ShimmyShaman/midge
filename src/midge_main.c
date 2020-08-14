@@ -5999,7 +5999,37 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
 
 int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char *filepath)
 {
-  register_midge_error_tag("parse_and_process_mc_file_syntax(%s)", filepath);
+  register_midge_error_tag("parse_and_process_mc_file_syntaxt(%s)", filepath);
+  // Load the file
+  char *file_text;
+  {
+    // read_file_text(MODULE_FILEPATH, &module_list_text);
+    void *mc_vargs[2];
+    // const char *filepath = "/home/jason/midge/src/midge_core_functions.c";
+    mc_vargs[0] = &filepath;
+    void *p_mc_vargs_1 = &file_text;
+    mc_vargs[1] = &p_mc_vargs_1;
+    MCcall(read_file_text(2, mc_vargs));
+  }
+
+  mc_syntax_node *syntax_node;
+  MCcall(parse_mc_file_to_syntax_tree(file_text, &syntax_node));
+
+  // Parse all definitions
+  mc_source_file_info_v1 *source_file = (mc_source_file_info_v1 *)malloc(sizeof(mc_source_file_info_v1));
+  MCcall(append_to_collection((void ***)&command_hub->source_files.items, &command_hub->source_files.alloc,
+                              &command_hub->source_files.count, source_file));
+  allocate_and_copy_cstr(source_file->filepath, filepath);
+  source_file->definitions.alloc = 0;
+  source_file->definitions.count = 0;
+
+  free(file_text);
+  return 0;
+}
+
+int parse_and_process_mc_file_syntaxt(mc_command_hub_v1 *command_hub, const char *filepath)
+{
+  register_midge_error_tag("parse_and_process_mc_file_syntaxt(%s)", filepath);
   // Load the file
   char *file_text;
   {
@@ -6211,6 +6241,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
       // Lexer/Parse into AST
       mc_syntax_node *function_ast;
       MCcall(parse_mc_to_syntax_tree(definitions[a].text, &function_ast, false));
+      bool is_declaration_only = (mc_token_type)function_ast->function.code_block->type == MC_TOKEN_SEMI_COLON;
 
       // Generate the function information from the syntax tree
       mc_function_info_v1 *func_info;
@@ -6234,7 +6265,9 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
           }
 
           // Update iteration
-          ++func_info->latest_iteration;
+          if (!is_declaration_only) {
+            ++func_info->latest_iteration;
+          }
         }
         else {
           // Construct it
@@ -6260,14 +6293,19 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
 
         register_midge_error_tag("parse_and_process_mc_file_syntax-2");
 
-        // Source-references
-        func_info->source = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
-        func_info->source->type = SOURCE_DEFINITION_FUNCTION;
-        func_info->source->source_file = source_file;
-        func_info->source->func_info = func_info;
-        func_info->source->code = definitions[a].text;
-        MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
-                                    &source_file->definitions.count, func_info->source));
+        if (!is_declaration_only) {
+          // Definition
+          // Source-references
+          func_info->source = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
+          func_info->source->type = SOURCE_DEFINITION_FUNCTION;
+          func_info->source->source_file = source_file;
+          func_info->source->func_info = func_info;
+          func_info->source->code = definitions[a].text;
+          MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
+                                      &source_file->definitions.count, func_info->source));
+        }
+        else {
+        }
 
         // printf("papsyntax-2\n");
         // Return-type & Parameters
@@ -6298,20 +6336,24 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
       // printf("papsyntax-b4 transcribe\n");
       register_midge_error_tag("parse_and_process_mc_file_syntax-4");
 
-      // Transcribe to MC function format
-      char *mc_format_definition;
-      MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
+      if (!is_declaration_only) {
+        // Transcribe to MC function format
+        char *mc_format_definition;
+        MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
 
-      register_midge_error_tag("parse_and_process_mc_file_syntax-5");
-      // printf("papsyntax-5\n");
-      // printf("mc_format_definition:\n%s||\n", mc_format_definition);
+        register_midge_error_tag("parse_and_process_mc_file_syntax-5");
+        // printf("papsyntax-5\n");
+        // printf("mc_format_definition:\n%s||\n", mc_format_definition);
 
-      // Define the new function
-      {
-        void *vargs[2];
-        vargs[0] = &func_info->name;
-        vargs[1] = &mc_format_definition;
-        MCcall(instantiate_function(2, vargs));
+        // Define the new function
+        {
+          void *vargs[2];
+          vargs[0] = &func_info->name;
+          vargs[1] = &mc_format_definition;
+          MCcall(instantiate_function(2, vargs));
+        }
+      }
+      else {
       }
       // MCcall(clint_declare(mc_format_definition));
       printf("papsyntax-6\n");
@@ -7726,6 +7768,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(output);
 
   MCcall(clint_process("parse_mc_to_syntax_tree = &parse_mc_to_syntax_tree_v1;"));
+  MCcall(clint_process("parse_mc_file_to_syntax_tree = &parse_mc_file_to_syntax_tree_v1;"));
   MCcall(clint_process("copy_syntax_node_to_text = &copy_syntax_node_to_text_v1;"));
 
   // mc_code_transcriber.c

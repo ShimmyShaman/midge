@@ -437,8 +437,12 @@ typedef enum node_type {
   NODE_TYPE_GLOBAL_ROOT,
   NODE_TYPE_VISUAL,
   NODE_TYPE_ABSTRACT,
-  NODE_TYPE_PROJECT,
+  NODE_TYPE_CONSOLE_APP,
 } node_type;
+
+typedef struct console_app_info {
+  int (**initialize)(int, void **);
+} console_app_info;
 
 typedef struct mc_input_event_v1 {
   bool shiftDown, ctrlDown, altDown;
@@ -473,6 +477,7 @@ typedef struct event_handler_array {
 typedef struct mc_node_v1 {
   mc_struct_id_v1 *struct_id;
   const char *name;
+
   mc_node_v1 *parent;
   unsigned int functions_alloc;
   unsigned int function_count;
@@ -754,7 +759,9 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth);
 // MC_PARSER_LEXER
 typedef enum mc_token_type {
   MC_TOKEN_NULL = 0,
+  MC_TOKEN_NULL_CHARACTER,
   // One or more '*'
+  MC_TOKEN_PREPROCESSOR_OPERATOR,
   MC_TOKEN_STAR_CHARACTER,
   MC_TOKEN_MULTIPLY_OPERATOR,
   MC_TOKEN_DEREFERENCE_OPERATOR,
@@ -777,6 +784,7 @@ typedef enum mc_token_type {
   MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR,
   MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR,
   MC_TOKEN_MODULO_AND_ASSIGN_OPERATOR,
+  MC_TOKEN_TYPEDEF_KEYWORD,
   MC_TOKEN_IF_KEYWORD,
   MC_TOKEN_ELSE_KEYWORD,
   MC_TOKEN_WHILE_KEYWORD,
@@ -828,7 +836,10 @@ typedef enum mc_token_type {
 
 typedef enum mc_syntax_node_type {
   MC_SYNTAX_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
+  MC_SYNTAX_FILE_ROOT,
+  MC_SYNTAX_PREPROCESSOR_DIRECTIVE,
   MC_SYNTAX_FUNCTION,
+  MC_SYNTAX_STRUCTURE,
   MC_SYNTAX_BLOCK,
   MC_SYNTAX_STATEMENT_LIST,
   MC_SYNTAX_FOR_STATEMENT,
@@ -896,6 +907,14 @@ typedef struct mc_syntax_node {
           mc_syntax_node_list *parameters;
           mc_syntax_node *code_block;
         } function;
+        struct {
+          mc_syntax_node *name;
+          mc_syntax_node *type_identity;
+          mc_syntax_node_list *fields;
+        } structure;
+        struct {
+          mc_syntax_node *identifier;
+        } preprocessor_directive;
         struct {
           uint count;
         } dereference_sequence;
@@ -1055,6 +1074,7 @@ typedef struct mc_syntax_node {
   };
 } mc_syntax_node;
 int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast, bool allow_imperfect_parse);
+int (*parse_mc_file_to_syntax_tree)(char *code, mc_syntax_node **file_ast);
 int (*copy_syntax_node_to_text)(mc_syntax_node *syntax_node, char **output);
 int (*transcribe_code_block_ast_to_mc_definition)(mc_syntax_node *function_syntax, char **output);
 

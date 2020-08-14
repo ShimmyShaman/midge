@@ -1,6 +1,37 @@
 
 #include "core/midge_core.h"
 
+void ensure_core_entry_has_child_alloc(core_entry *entry, int size)
+{
+  register_midge_error_tag("ensure_core_entry_has_child_alloc()");
+  if (entry->children.size >= size) {
+    return;
+  }
+
+  core_entry **new_ary = (core_entry **)malloc(sizeof(core_entry *) * size);
+
+  if (entry->children.size) {
+    memcpy(new_ary, entry->children.items, sizeof(core_entry *) * entry->children.size);
+    free(entry->children.items);
+  }
+  for (int i = entry->children.size; i < size; ++i) {
+    core_entry *child = (core_entry *)malloc(sizeof(core_entry));
+    child->type = 0;
+    child->data = NULL;
+    child->collapsed = true;
+    child->children.size = 0;
+    child->children.utilized_count = 0;
+
+    new_ary[i] = child;
+  }
+
+  entry->children.items = new_ary;
+  entry->children.size = size;
+
+  register_midge_error_tag("ensure_core_entry_has_child_alloc(~)");
+  return;
+}
+
 void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
 {
   if (entry->type != CORE_ENTRY_NODE) {
@@ -22,8 +53,8 @@ void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
 
     ensure_core_entry_has_child_alloc(category_entry, node_data->struct_count);
     category_entry->children.utilized_count = node_data->struct_count;
-    // printf("category_entry:%p size:%i util%i\n", category_entry, category_entry->children.size,
-    //        category_entry->children.utilized_count);
+    printf("category_entry:%p size:%i util%i\n", category_entry, category_entry->children.size,
+           category_entry->children.utilized_count);
 
     // Set directly
     for (int i = 0; i < node_data->struct_count; ++i) {
@@ -68,7 +99,10 @@ void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
   // -- Nodes
   if (node_data->child_count) {
     core_entry *category_entry = entry->children.items[entry->children.utilized_count++];
-    category_entry->type = CORE_ENTRY_CATEGORY_CHILDREN;
+    if (category_entry->type != CORE_ENTRY_CATEGORY_CHILDREN) {
+      category_entry->type = CORE_ENTRY_CATEGORY_CHILDREN;
+      category_entry->collapsed = false;
+    }
 
     ensure_core_entry_has_child_alloc(category_entry, node_data->child_count);
     category_entry->children.utilized_count = node_data->child_count;
@@ -83,7 +117,6 @@ void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
 
         category_entry->children.items[i]->type = CORE_ENTRY_NODE;
         category_entry->children.items[i]->data = node_data->children[i];
-        category_entry->collapsed = false;
       }
 
       // Update its children
@@ -96,6 +129,15 @@ void mcd_on_heirarchy_update(void *event_data)
 {
   printf("heirarchy_update!\n");
 
+  mc_node_v1 *heirarchy_display;
+  MCcall(obtain_subnode_with_name(command_hub->global_node, CORE_OBJECTS_DISPLAY_NAME, &heirarchy_display));
+  if (!heirarchy_display) {
+    MCerror(1860, "Could not find heirarchy_display");
+  }
+
+  core_display_state *cdstate = (core_display_state *)heirarchy_display->extra;
+
+  update_nodes_core_entry(cdstate, cdstate->global_core_entry);
   return;
 }
 

@@ -1,6 +1,7 @@
 bin/**
 !dep/glm
 dep/**
+test/**
 res/**
 daily_clarity.md
 mcmd.txt

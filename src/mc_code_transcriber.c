@@ -36,19 +36,37 @@ int mct_append_to_c_str(c_str *str, int indent, const char *text)
 int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
 {
   register_midge_error_tag("mct_contains_mc_invoke(%s)", get_mc_syntax_token_type_name(syntax_node->type));
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
   *result = false;
   if ((mc_token_type)syntax_node->type <= MC_TOKEN_STANDARD_MAX_VALUE) {
     return 0;
   }
 
   register_midge_error_tag("mct_contains_mc_invoke()-1");
-  if (syntax_node->type == MC_SYNTAX_INVOCATION && syntax_node->invocation.mc_function_info) {
-    // MCcall(print_syntax_node(syntax_node, 0));
-    // MCerror(35, "TODO : %s", syntax_node->invocation.function_identity->text);
-    register_midge_error_tag("mct_contains_mc_invoke()-2");
+  if (syntax_node->type == MC_SYNTAX_INVOCATION) {
+    if (!syntax_node->invocation.mc_function_info &&
+        syntax_node->invocation.function_identity->type == MC_TOKEN_IDENTIFIER) {
+      {
+        // Double -check (it is necessary, at least for recursive functions)
+        void *vvargs[3];
+        vvargs[0] = &syntax_node->invocation.mc_function_info;
+        vvargs[1] = &command_hub->global_node;
+        vvargs[2] = &syntax_node->invocation.function_identity->text;
+        find_function_info(3, vvargs);
+      }
+    }
 
-    *result = true;
-    return 0;
+    if (syntax_node->invocation.mc_function_info) {
+      // MCcall(print_syntax_node(syntax_node, 0));
+      // MCerror(35, "TODO : %s", syntax_node->invocation.function_identity->text);
+      register_midge_error_tag("mct_contains_mc_invoke()-2");
+
+      *result = true;
+      return 0;
+    }
   }
 
   register_midge_error_tag("mct_contains_mc_invoke()-3 child_count:%i", syntax_node->children->count);
