@@ -859,7 +859,7 @@ int instantiate_function_v1(int argc, void **argv)
           func_identity_buf);
 
   // Declare the function
-  printf("ifv>cling_declare:\n%s\n", function_declaration);
+  // printf("ifv>cling_declare:\n%s\n", function_declaration);
   // printf("ifv>cling_declare:'%s'\n", func_identity_buf);
   MCcall(clint_declare(function_declaration));
 

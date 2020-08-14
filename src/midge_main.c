@@ -5997,6 +5997,188 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
   return 0;
 }
 
+int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_source_file_info_v1 *source_file,
+                                             mc_syntax_node *struct_ast)
+{
+  register_midge_error_tag("register_and_transcribe_syntax_structure()");
+
+  // Set Provided Source Path
+  mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
+  definition->type = SOURCE_DEFINITION_STRUCT;
+  definition->source_file = source_file;
+  MCcall(copy_syntax_node_to_text(struct_ast, &definition->code));
+  MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
+                              &source_file->definitions.count, definition));
+
+  mc_struct_info_v1 *structure;
+  MCcall(parse_struct_definition(command_hub, definition, &structure));
+  definition->structure_info = structure;
+
+  int struct_version = 1;
+  if (struct_version) {
+    structure->version = struct_version;
+  }
+
+  // MCcall(append_to_collection((void ***)&command_hub->global_node->structs,
+  //                             &command_hub->global_node->structs_alloc, &command_hub->global_node->struct_count,
+  //                             (void *)structure));
+
+  // printf("papcs-declare_struct_from_info:%p\n", declare_struct_from_info);
+  MCcall(declare_struct_from_info(command_hub, structure));
+  // printf("papcs-after declare_struct_from_info:\n");
+
+  printf("papcs-StructInfo:\n");
+  printf(" -- source_filepath:%s:\n", structure->source->source_file->filepath);
+  printf(" -- name:%s:\n", structure->name);
+  printf(" -- declared_mc_name:%s:\n", structure->declared_mc_name);
+  printf(" -- version:%u:\n", structure->version);
+  printf(" -- field_count:%u:\n", structure->field_count);
+  printf("#######################\n");
+
+  register_midge_error_tag("register_and_transcribe_syntax_structure(~)");
+  return 0;
+}
+
+int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_source_file_info_v1 *source_file,
+                                            mc_syntax_node *function_ast)
+{
+  register_midge_error_tag("register_and_transcribe_syntax_function()");
+  bool is_declaration_only = (mc_token_type)function_ast->function.code_block->type == MC_TOKEN_SEMI_COLON;
+
+  // Generate the function information from the syntax tree
+  mc_function_info_v1 *func_info;
+  {
+    // printf("papsyntax-0 %p\n", function_ast);
+    {
+      // Search for pre-existing
+      void *mc_vargs[3];
+      mc_vargs[0] = (void *)&func_info;
+      mc_vargs[1] = (void *)&command_hub->nodespace;
+      mc_vargs[2] = (void *)&function_ast->function.name->text;
+      find_function_info(3, mc_vargs);
+    }
+    if (func_info) {
+      // Pre-existing function information
+      // ~~temp
+      if (func_info->latest_iteration == 0) {
+        func_info->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+        allocate_and_copy_cstr(func_info->struct_id->identifier, "function_info");
+        func_info->struct_id->version = 1U;
+      }
+
+      // Update iteration
+      if (!is_declaration_only) {
+        ++func_info->latest_iteration;
+      }
+    }
+    else {
+      // Construct it
+      func_info = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
+      MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
+                                  &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
+                                  (void *)func_info));
+
+      func_info->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
+      allocate_and_copy_cstr(func_info->struct_id->identifier, "function_info");
+      func_info->struct_id->version = 1U;
+
+      // Name & Version
+      allocate_and_copy_cstr(func_info->name, function_ast->function.name->text);
+      func_info->latest_iteration = 1U;
+
+      // Declare the functions pointer with cling
+      char *cling_declaration;
+      cprintf(cling_declaration, "int (*%s)(int, void **);", func_info->name);
+      MCcall(clint_declare(cling_declaration));
+      free(cling_declaration);
+    }
+
+    register_midge_error_tag("parse_and_process_mc_file_syntax-2");
+
+    if (!is_declaration_only) {
+      // Definition
+      // Source-references
+      func_info->source = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
+      func_info->source->type = SOURCE_DEFINITION_FUNCTION;
+      func_info->source->source_file = source_file;
+      func_info->source->func_info = func_info;
+      MCcall(copy_syntax_node_to_text(function_ast, &func_info->source->code));
+      // func_info->source->code = definitions[a].text;
+      MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
+                                  &source_file->definitions.count, func_info->source));
+    }
+    else {
+      // Nothing?
+    }
+
+    // printf("papsyntax-2\n");
+    // Return-type & Parameters
+    MCcall(copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name));
+    if (function_ast->function.return_type_dereference) {
+      func_info->return_type.deref_count = function_ast->function.return_type_dereference->dereference_sequence.count;
+    }
+    else {
+      func_info->return_type.deref_count = 0;
+    }
+
+    register_midge_error_tag("parse_and_process_mc_file_syntax-3");
+    func_info->parameter_count = function_ast->function.parameters->count;
+    func_info->parameters =
+        (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * func_info->parameter_count);
+    for (int p = 0; p < func_info->parameter_count; ++p) {
+      mc_parameter_info_v1 *parameter;
+      MCcall(initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &parameter));
+      func_info->parameters[p] = parameter;
+    }
+
+    // TODO
+    func_info->variable_parameter_begin_index = -1;
+    func_info->struct_usage_count = 0;
+    func_info->struct_usage = NULL;
+  }
+  // printf("papsyntax-b4 transcribe\n");
+  register_midge_error_tag("parse_and_process_mc_file_syntax-4");
+
+  if (!is_declaration_only) {
+    // Transcribe to MC function format
+    char *mc_format_definition;
+    MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
+
+    register_midge_error_tag("parse_and_process_mc_file_syntax-5");
+    // printf("papsyntax-5\n");
+    // printf("mc_format_definition:\n%s||\n", mc_format_definition);
+
+    // Define the new function
+    {
+      void *vargs[2];
+      vargs[0] = &func_info->name;
+      vargs[1] = &mc_format_definition;
+      MCcall(instantiate_function(2, vargs));
+    }
+  }
+  else {
+  }
+  // MCcall(clint_declare(mc_format_definition));
+  printf("papsyntax-6\n");
+
+  printf("papcf-FunctionInfo Loaded:\n");
+  printf(" -- source_filepath:%s:\n", func_info->source->source_file->filepath);
+  printf(" -- name:%s:\n", func_info->name);
+  printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
+  printf(" -- return_type.name:%s:\n", func_info->return_type.name);
+  printf(" -- return_type.deref_count:%u:\n", func_info->return_type.deref_count);
+  printf(" -- parameter_count:%u:\n", func_info->parameter_count);
+  printf(" -- struct_usage_count:%u:\n", func_info->struct_usage_count);
+  printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
+  // printf(" -- code:\n%s\n",
+  //        func_info->source_file->definitions.items[func_info->source_file->definitions.count - 1]->code);
+  // printf(" -- mc_code:\n%s\n", mc_format_definition);
+  printf("#######################\n");
+
+  register_midge_error_tag("register_and_transcribe_syntax_function(~)");
+  return 0;
+}
+
 int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char *filepath)
 {
   register_midge_error_tag("parse_and_process_mc_file_syntaxt(%s)", filepath);
@@ -6023,10 +6205,39 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
   source_file->definitions.alloc = 0;
   source_file->definitions.count = 0;
 
+  for (int a = 0; a < syntax_node->children->count; ++a) {
+    mc_syntax_node *child = syntax_node->children->items[a];
+    switch (child->type) {
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE: {
+      break;
+    }
+    case MC_SYNTAX_FUNCTION: {
+      MCcall(register_and_transcribe_syntax_function(command_hub, source_file, child));
+    } break;
+    case MC_SYNTAX_STRUCTURE: {
+      MCcall(register_and_transcribe_syntax_structure(command_hub, source_file, child));
+    } break;
+    default: {
+      switch ((mc_token_type)child->type) {
+      case MC_TOKEN_SPACE_SEQUENCE:
+      case MC_TOKEN_NEW_LINE:
+      case MC_TOKEN_LINE_COMMENT:
+      case MC_TOKEN_MULTI_LINE_COMMENT: {
+        break;
+      }
+      default: {
+        MCerror(6030, "Unhandled root-syntax-type:%i", child->type);
+      }
+      }
+    }
+    }
+  }
+
   free(file_text);
   return 0;
 }
 
+/* CLEANUP
 int parse_and_process_mc_file_syntaxt(mc_command_hub_v1 *command_hub, const char *filepath)
 {
   register_midge_error_tag("parse_and_process_mc_file_syntaxt(%s)", filepath);
@@ -6376,6 +6587,7 @@ int parse_and_process_mc_file_syntaxt(mc_command_hub_v1 *command_hub, const char
 
   return 0;
 }
+*/
 
 int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepath)
 {
@@ -7868,6 +8080,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/index_functions.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/mc_source.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/special_debug.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/gui.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/action_data_management.c"));

@@ -56,10 +56,36 @@ void notify_handlers_of_event(uint event_type, void *event_data)
   }
 }
 
-void add_node_to_heirarchy(node *parent_attachment, node *node_to_add)
+void attach_node_to_heirarchy(node *parent_attachment, node *node_to_add)
 {
   append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
                        &parent_attachment->child_count, node_to_add);
+
+  // Fire an event...
+  uint event_type = ME_NODE_HIERARCHY_UPDATED;
+  notify_handlers_of_event(event_type, NULL);
+
+  // TODO -- maybe find a better place to do this
+  switch (node_to_add->type) {
+  case NODE_TYPE_CONSOLE_APP: {
+    console_app_info *app_info = (console_app_info *)node_to_add->extra;
+    if (app_info->initialize && (*app_info->initialize)) {
+      void *vargs[1];
+      vargs[0] = &node_to_add;
+      (*app_info->initialize)(1, vargs);
+    }
+  } break;
+  default:
+    break;
+  }
+}
+
+void attach_definition_to_heirarchy(node *parent_attachment, char *definition)
+{
+  // append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
+  //                      &parent_attachment->child_count, node_to_add);
+
+  
 
   // Fire an event...
   uint event_type = ME_NODE_HIERARCHY_UPDATED;
@@ -108,19 +134,47 @@ void export_node_to_application(mc_node_v1 *node, char *path)
                        "\n"
                        "int main()\n"
                        "{\n"
-                       "printf(\"Hello World! TorchSaltCar\");\n"
+                       "  printf(\"Hello World! TorchSaltCar\\n\");\n"
                        "\n"
-                       "return 0;\n"
+                       "  return 0;\n"
                        "}\n";
 
-  save_text_to_file("home/jason/midge/test/main.c", main_c);
+  save_text_to_file("/home/jason/midge/test/main.c", main_c);
 
   // Compile
+  char *clargs[5];
+  const char *command = "/home/jason/cling/inst/bin/clang";
+  allocate_and_copy_cstr(clargs[0], "clang");
+  allocate_and_copy_cstr(clargs[1], "/home/jason/midge/test/main.c");
+  allocate_and_copy_cstr(clargs[2], "-o");
+  clargs[3] = path;
+  clargs[4] = NULL;
 
-  //
+  pid_t child_pid;
+  int child_status;
 
-  // char* args[] = {"2", "1"};
-  // if(execvp("/home/jason/cling/inst/bin/clang", args) == -1) {
-  //     printf("\nfailed connection\n");
-  // }
+  child_pid = fork();
+  if (child_pid == 0) {
+
+    // This is done by the child process
+    int result = execvp(command, clargs);
+
+    // If execvp returns, it must have failed.
+    printf("clang failure:%i\n", result);
+
+    exit(0);
+  }
+  else {
+    // Run by main thread
+    pid_t tpid = -999;
+    while (tpid != child_pid) {
+      tpid = wait(&child_status);
+      if (tpid != child_pid) {
+        // process_terminated(tpid);
+      }
+    }
+  }
+
+  printf("%s compiled!\n", path);
+  // return child_status;
 }

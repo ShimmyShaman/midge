@@ -48,7 +48,7 @@ int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
   register_midge_error_tag("mct_contains_mc_invoke()-1");
   if (syntax_node->type == MC_SYNTAX_INVOCATION) {
     if (!syntax_node->invocation.mc_function_info &&
-        syntax_node->invocation.function_identity->type == MC_TOKEN_IDENTIFIER) {
+        (mc_token_type)syntax_node->invocation.function_identity->type == MC_TOKEN_IDENTIFIER) {
       {
         // Double -check (it is necessary, at least for recursive functions)
         void *vvargs[3];
@@ -284,8 +284,12 @@ int mct_transcribe_declarator(c_str *str, mc_syntax_node *syntax_node)
   return 0;
 }
 
-int mct_transcribe_type(c_str *str, mc_syntax_node *syntax_node)
+int mct_transcribe_type_identifier(c_str *str, mc_syntax_node *syntax_node)
 {
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
   // Const
   if (syntax_node->type_identifier.is_const) {
     MCcall(append_to_c_str(str, "const "));
@@ -313,6 +317,16 @@ int mct_transcribe_type(c_str *str, mc_syntax_node *syntax_node)
   }
 
   // mc_type
+  {
+    void *vargs[3];
+    vargs[0] = &command_hub->nodespace;
+    vargs[1] = &syntax_node->type_identifier.identifier->text;
+    vargs[2] = &syntax_node->type_identifier.mc_type;
+    find_struct_info(3, vargs);
+    // printf("mcs: find_struct_info(%s)=='%s'\n", (*type_identifier)->text,
+    //        (*mc_type) == NULL ? "(null)" : (*mc_type)->declared_mc_name);
+  }
+
   if (syntax_node->type_identifier.mc_type) {
     MCcall(append_to_c_str(str, syntax_node->type_identifier.mc_type->declared_mc_name));
   }
@@ -332,7 +346,7 @@ int mct_transcribe_declaration_statement(c_str *str, int indent, mc_syntax_node 
   // Do MC_invokes
   // if (contains_mc_function_call) {
   MCcall(mct_append_indent_to_c_str(str, indent));
-  MCcall(mct_transcribe_type(str, declaration->local_variable_declaration.type_identifier));
+  MCcall(mct_transcribe_type_identifier(str, declaration->local_variable_declaration.type_identifier));
   MCcall(append_to_c_str(str, " "));
 
   for (int i = 0; i < declaration->local_variable_declaration.declarators->count; ++i) {
@@ -406,7 +420,7 @@ int mct_transcribe_declaration_statement(c_str *str, int indent, mc_syntax_node 
   // // Else: Just write it out normally
   // MCcall(mct_append_indent_to_c_str(str, indent));
 
-  // MCcall(mct_transcribe_type(str, declaration->local_variable_declaration.type_identifier));
+  // MCcall(mct_transcribe_type_identifier(str, declaration->local_variable_declaration.type_identifier));
   // MCcall(append_to_c_str(str, " "));
 
   // for (int i = 0; i < declaration->local_variable_declaration.declarators->count; ++i) {
@@ -447,7 +461,7 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION: {
     // printf("Local_declaration:\n");
     // print_syntax_node(syntax_node, 1);
-    MCcall(mct_transcribe_type(str, syntax_node->local_variable_declaration.type_identifier));
+    MCcall(mct_transcribe_type_identifier(str, syntax_node->local_variable_declaration.type_identifier));
 
     MCcall(append_to_c_str(str, " "));
 
@@ -483,17 +497,18 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   case MC_SYNTAX_CAST_EXPRESSION: {
     MCcall(append_to_c_str(str, "("));
 
-    if (syntax_node->cast_expression.type_identifier->type_identifier.mc_type) {
-      printf("cast expression had mc type:'%s'\n",
-             syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name);
-      MCcall(append_to_c_str(str,
-                             syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
-    }
-    else {
-      printf("cast expression had type:\n");
-      print_syntax_node(syntax_node->cast_expression.type_identifier, 1);
-      MCcall(mct_append_node_text_to_c_str(str, syntax_node->cast_expression.type_identifier));
-    }
+    MCcall(mct_transcribe_type_identifier(str, syntax_node->cast_expression.type_identifier));
+    // if (syntax_node->cast_expression.type_identifier->type_identifier.mc_type) {
+    //   printf("cast expression had mc type:'%s'\n",
+    //          syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name);
+    //   MCcall(append_to_c_str(str,
+    //                          syntax_node->cast_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
+    // }
+    // else {
+    //   printf("cast expression had type:\n");
+    //   print_syntax_node(syntax_node->cast_expression.type_identifier, 1);
+    //   MCcall(mct_append_node_text_to_c_str(str, syntax_node->cast_expression.type_identifier));
+    // }
 
     if (syntax_node->cast_expression.type_dereference) {
       MCcall(append_to_c_str(str, " "));
@@ -506,13 +521,14 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     MCcall(append_to_c_str(str, "sizeof("));
 
-    if (syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type) {
-      MCcall(append_to_c_str(
-          str, syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
-    }
-    else {
-      MCcall(mct_append_node_text_to_c_str(str, syntax_node->sizeof_expression.type_identifier));
-    }
+    MCcall(mct_transcribe_type_identifier(str, syntax_node->cast_expression.type_identifier));
+    // if (syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type) {
+    //   MCcall(append_to_c_str(
+    //       str, syntax_node->sizeof_expression.type_identifier->type_identifier.mc_type->declared_mc_name));
+    // }
+    // else {
+    //   MCcall(mct_append_node_text_to_c_str(str, syntax_node->sizeof_expression.type_identifier));
+    // }
 
     if (syntax_node->sizeof_expression.type_dereference) {
       MCcall(append_to_c_str(str, " "));
