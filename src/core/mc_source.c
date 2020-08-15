@@ -28,15 +28,13 @@ void update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *f
     func_info->latest_iteration = 1U;
 
     // Declare the functions pointer with cling
-    char *cling_declaration;
-    cprintf(cling_declaration, "int (*%s)(int, void **);", func_info->name);
-    clint_declare(cling_declaration);
-    free(cling_declaration);
+    char buf[512];
+    sprintf(buf, "int (*%s)(int, void **);", func_info->name);
+    clint_declare(buf);
 
-    char *addr_cmd;
-    cprintf(addr_cmd, "*((void **)%p) = *(void **)&%s;", &func_info->ptr_declaration, func_info->name);
-    clint_process(addr_cmd);
-    free(addr_cmd);
+    sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
+    clint_process(buf);
+    // printf("func_info->ptr_declaration:%p\n", func_info->ptr_declaration);
   }
   else {
     // Empty
@@ -99,8 +97,21 @@ void instantiate_definition_from_code(node *definition_owner, char *code, void *
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
   clint_declare(mc_transcription);
+  // printf("idfc-5\n");
+  char buf[512];
+  sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
+  // printf("idfc-6\n");
+  clint_process(buf);
 
-  if (*definition_info) {
+  // printf("idfc-7 %s_v%u\n", func_info->name, func_info->latest_iteration);
+  // sprintf(buf,
+  //         "{void *vargs[1];void *vargs0 = NULL;vargs[0] = &vargs0;%s(1, vargs);"
+  //         "printf(\"addr of fptr:%%p\\n\", &%s);}",
+  //         func_info->name, func_info->name);
+  // clint_process(buf);
+  // printf("idfc-8\n");
+
+  if (definition_info) {
     *definition_info = func_info;
   }
 }

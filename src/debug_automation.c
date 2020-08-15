@@ -20,20 +20,17 @@ void create_hello_world_app()
   app_node->extra = app_info;
 
   // Create the initialize function
-  const char *ibpa_code = "void initialize_button_print_app(mc_node_v1 *p_node)\n"
+  const char *ibpa_code = "void initialize_button_print_app(node *p_node)\n"
                           "{\n"
                           "  printf(\"Hello World! from button_print_app!\\n\");\n"
-                          "  exit_app(p_node, 0);\n"
                           "}";
+                          // "  exit_app(p_node, 0);\n"
 
   mc_function_info_v1 *func_info;
   instantiate_definition_from_code(app_node, ibpa_code, &func_info); //(void **)
-
   app_info->initialize_app = func_info;
 
   attach_node_to_heirarchy(command_hub->global_node, app_node);
-
-  return;
 }
 
 void export_hello_world_app()

@@ -29,14 +29,14 @@ void _export_app_write_main_c(mc_node_v1 *node, c_str *src, c_str *path)
                        "{\n");
 
   // -- Node
-  append_to_c_strf(src, "  node %s;\n", node->name);
-  append_to_c_strf(src, "  node->name = \"%s\";\n", node->name);
+  append_to_c_strf(src, "  node app_root;\n", node->name);
+  append_to_c_strf(src, "  app_root.name = \"%s\";\n", node->name);
   append_to_c_str(src, "\n");
 
   // -- Initialize
   if (app_info) {
     if (app_info->initialize_app) {
-      append_to_c_strf(src, "  %s(%s);\n", app_info->initialize_app->name, node->name);
+      append_to_c_strf(src, "  %s(&app_root);\n", app_info->initialize_app->name);
       append_to_c_str(src, "\n");
     }
   }

@@ -5,7 +5,7 @@ void ensure_core_entry_has_child_alloc(core_entry *entry, int size)
 {
   // register_midge_error_tag("ensure_core_entry_has_child_alloc()");
   if (entry->children.size >= size) {
-    // register_midge_error_tag("ensure_core_entry_has_child_alloc(~enough)");
+    register_midge_error_tag("ensure_core_entry_has_child_alloc(~enough)");
     return;
   }
 
@@ -29,7 +29,7 @@ void ensure_core_entry_has_child_alloc(core_entry *entry, int size)
   entry->children.items = new_ary;
   entry->children.size = size;
 
-  // register_midge_error_tag("ensure_core_entry_has_child_alloc(~)");
+  register_midge_error_tag("ensure_core_entry_has_child_alloc(~)");
 }
 
 void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
@@ -123,6 +123,7 @@ void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
       update_nodes_core_entry(cdstate, category_entry->children.items[i]);
     }
   }
+  register_midge_error_tag("update_nodes_core_entry(~)");
 }
 
 void mcd_on_heirarchy_update(void *event_data)
@@ -138,7 +139,7 @@ void mcd_on_heirarchy_update(void *event_data)
   core_display_state *cdstate = (core_display_state *)heirarchy_display->extra;
 
   update_nodes_core_entry(cdstate, cdstate->global_core_entry);
-  return;
+  // register_midge_error_tag("mcd_on_heirarchy_update(~)");
 }
 
 void core_display_handle_input(frame_time *elapsed, mc_node_v1 *core_display, mc_input_event_v1 *event)

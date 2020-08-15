@@ -54,30 +54,43 @@ void notify_handlers_of_event(uint event_type, void *event_data)
       (*handler_array->handlers[i])(1, vargs);
     }
   }
+  // register_midge_error_tag("mcd_on_heirarchy_update(~)");
 }
 
 void attach_node_to_heirarchy(node *parent_attachment, node *node_to_add)
 {
+  // printf("attach_node_to_heirarchy\n");
   append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
                        &parent_attachment->child_count, node_to_add);
 
   // Fire an event...
   uint event_type = ME_NODE_HIERARCHY_UPDATED;
+  // printf("attach_node_to_heirarchy-2\n");
   notify_handlers_of_event(event_type, NULL);
+  // printf("attach_node_to_heirarchy-3\n");
 
   // TODO -- maybe find a better place to do this
   switch (node_to_add->type) {
   case NODE_TYPE_CONSOLE_APP: {
+    // printf("attach_node_to_heirarchy-4\n");
     console_app_info *app_info = (console_app_info *)node_to_add->extra;
     if (app_info->initialize_app) {
       void *vargs[1];
       vargs[0] = &node_to_add;
-      app_info->initialize_app->ptr_declaration(1, vargs);
+      // printf("attach_node_to_heirarchy-5\n");
+      // printf("app_info:%p\n", app_info);
+      // printf("app_info->initialize_app:%p\n", app_info->initialize_app);
+      // printf("app_info->initialize_app->ptr_declaration:%p\n", app_info->initialize_app->ptr_declaration);
+      // printf("*app_info->initialize_app->ptr_declaration:%p\n", *(app_info->initialize_app->ptr_declaration));
+      // printf("**app_info->initialize_app->ptr_declaration:%p\n", **(app_info->initialize_app->ptr_declaration));
+      (*app_info->initialize_app->ptr_declaration)(1, vargs);
+      // printf("attach_node_to_heirarchy-6\n");
     }
   } break;
   default:
     break;
   }
+  // printf("attach_node_to_heirarchy-9\n");
 }
 
 // void attach_definition_to_heirarchy(node *parent_attachment, char *definition)

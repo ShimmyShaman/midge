@@ -317,7 +317,7 @@ typedef struct mc_function_info_v1 {
   mc_source_definition_v1 *source;
   const char *name;
   unsigned int latest_iteration;
-  int (*ptr_declaration)(int, void **);
+  int (**ptr_declaration)(int, void **);
   struct {
     char *name;
     unsigned int deref_count;

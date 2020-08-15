@@ -3531,7 +3531,7 @@ int parse_definition_to_syntax_tree_v1(char *code, mc_syntax_node **ast)
   }
 
   printf("parse_definition_to_syntax_tree_v1\n");
-  print_syntax_node(*ast, 0);
+  // print_syntax_node(*ast, 0);
 
   return 0;
 }
