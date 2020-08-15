@@ -434,7 +434,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->function.parameters->count = 0;
   } break;
   case MC_SYNTAX_BLOCK: {
-    syntax_node->block_node.statement_list = NULL;
+    syntax_node->code_block.statement_list = NULL;
   } break;
   case MC_SYNTAX_BREAK_STATEMENT:
   case MC_SYNTAX_CONTINUE_STATEMENT:
@@ -3226,21 +3226,21 @@ int mcs_parse_statement_list(parsing_state *ps, mc_syntax_node *parent, mc_synta
 int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   register_midge_error_tag("mcs_parse_code_block()");
-  mc_syntax_node *block_node;
-  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_BLOCK, NULL, parent, &block_node));
+  mc_syntax_node *code_block;
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_BLOCK, NULL, parent, &code_block));
   if (additional_destination) {
-    *additional_destination = block_node;
+    *additional_destination = code_block;
   }
 
   // printf("ps->index:%i\n", ps->index);
-  MCcall(mcs_parse_through_token(ps, block_node, MC_TOKEN_CURLY_OPENING_BRACKET, NULL));
+  MCcall(mcs_parse_through_token(ps, code_block, MC_TOKEN_CURLY_OPENING_BRACKET, NULL));
   // MCcall(print_parse_error(ps->code, ps->index - 1, "parse-code-block", "opening"));
-  MCcall(mcs_parse_through_supernumerary_tokens(ps, block_node));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, code_block));
 
-  MCcall(mcs_parse_statement_list(ps, block_node, &block_node->block_node.statement_list));
-  MCcall(mcs_parse_through_supernumerary_tokens(ps, block_node));
+  MCcall(mcs_parse_statement_list(ps, code_block, &code_block->code_block.statement_list));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, code_block));
 
-  MCcall(mcs_parse_through_token(ps, block_node, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL));
+  MCcall(mcs_parse_through_token(ps, code_block, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL));
   // MCcall(print_parse_error(ps->code, ps->index - 1, "parse-code-block", "closing"));
 
   // printf("~mcs_parse_code_block()\n");

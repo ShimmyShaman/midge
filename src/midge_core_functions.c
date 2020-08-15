@@ -1739,7 +1739,7 @@ int parse_past_mc_identifier(const char *text, int *index, char **identifier, bo
       return 0;
     ++*index;
   }
-  return -149;
+  return -1742;
 }
 
 int transcribe_past(char const *const code, int *index, uint *transcription_alloc, char **transcription,

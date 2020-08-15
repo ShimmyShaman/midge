@@ -52,7 +52,7 @@ size_t save_text_to_file(char *filepath, char *text)
   int len = strlen(text);
 
   size_t written = fwrite(text, sizeof(char), len, f);
-  printf("written:%zu\n", written);
+  printf("written %zu bytes to %s\n", written, filepath);
   fclose(f);
 
   return written;

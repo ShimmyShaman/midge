@@ -253,7 +253,7 @@ int parse_past_identifier(const char *text, int *index, char **identifier, bool 
       return 0;
     ++*index;
   }
-  return -149;
+  return -256;
 }
 
 int parse_past_type_identifier(const char *text, int *index, char **identifier)
@@ -5780,7 +5780,7 @@ int replace_init_file_with_v1_labels(mc_command_hub_v1 *command_hub, char *input
 
   int n = 0;
   int s = 0;
-  const char *func_marker = "/*mcfuncreplace*/\n";
+  const char *func_marker = "/*mcfuncreplace*/";
   for (int i = 0; i < fsize; ++i) {
     if (input[i] == '/') {
       bool marker = true;

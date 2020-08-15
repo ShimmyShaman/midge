@@ -39,6 +39,7 @@ void update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *f
     free(cling_declaration);
   }
   else {
+    // Empty
   }
   register_midge_error_tag("update_or_register_function_info_from_syntax-2");
 
@@ -64,6 +65,9 @@ void update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *f
   func_info->variable_parameter_begin_index = -1;
   func_info->struct_usage_count = 0;
   func_info->struct_usage = NULL;
+
+  // Set
+  *p_func_info = func_info;
 }
 
 /*

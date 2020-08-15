@@ -53,8 +53,8 @@ void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
 
     ensure_core_entry_has_child_alloc(category_entry, node_data->struct_count);
     category_entry->children.utilized_count = node_data->struct_count;
-    printf("category_entry:%p size:%i util%i\n", category_entry, category_entry->children.size,
-           category_entry->children.utilized_count);
+    // printf("category_entry:%p size:%i util%i\n", category_entry, category_entry->children.size,
+    //        category_entry->children.utilized_count);
 
     // Set directly
     for (int i = 0; i < node_data->struct_count; ++i) {

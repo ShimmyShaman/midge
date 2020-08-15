@@ -743,6 +743,8 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
   register_midge_error_tag("mct_transcribe_statement_list()");
   // printf("mct_transcribe_statement_list()\n");
   if (syntax_node->type != MC_SYNTAX_STATEMENT_LIST) {
+    printf("INVALID! tsl");
+    print_syntax_node(syntax_node, 0);
     MCerror(149, "INVALID ARGUMENT: %s '%s'", get_mc_syntax_token_type_name(syntax_node->type), syntax_node->text);
   }
 
@@ -839,8 +841,8 @@ int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_nod
   register_midge_error_tag("mct_transcribe_code_block()");
   MCcall(mct_append_to_c_str(str, indent, "{\n"));
 
-  if (syntax_node->block_node.statement_list) {
-    MCcall(mct_transcribe_statement_list(str, indent + 1, syntax_node->block_node.statement_list));
+  if (syntax_node->code_block.statement_list) {
+    MCcall(mct_transcribe_statement_list(str, indent + 1, syntax_node->code_block.statement_list));
   }
 
   MCcall(mct_append_to_c_str(str, indent, "}\n"));
@@ -858,14 +860,14 @@ int transcribe_code_block_ast_to_mc_definition_v1(mc_syntax_node *syntax_node, c
   /*mcfuncreplace*/
 
   if (syntax_node->type != MC_SYNTAX_BLOCK) {
-    MCerror(147, "MCT:Not Supported");
+    MCerror(861, "MCT:Not Supported");
   }
 
   c_str *str;
   MCcall(init_c_str(&str));
 
-  if (syntax_node->block_node.statement_list) {
-    MCcall(mct_transcribe_statement_list(str, 1, syntax_node->block_node.statement_list));
+  if (syntax_node->code_block.statement_list) {
+    MCcall(mct_transcribe_statement_list(str, 1, syntax_node->code_block.statement_list));
   }
   MCcall(append_to_c_str(str, "\n  return 0;\n"));
 
@@ -885,17 +887,26 @@ int transcribe_function_to_mc_v1(mc_function_info_v1 *func_info, mc_syntax_node 
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  if (function_ast->type != MC_SYNTAX_BLOCK) {
-    MCerror(147, "MCT:Not Supported");
+  if (function_ast->type != MC_SYNTAX_FUNCTION) {
+    MCerror(889, "MCT:Not Supported");
+  }
+  if (!function_ast->function.code_block || function_ast->function.code_block->type != MC_SYNTAX_BLOCK ||
+      !function_ast->function.code_block->code_block.statement_list) {
+    MCerror(893, "TODO");
+  }
+  if (function_ast->function.name->type != MC_TOKEN_IDENTIFIER) {
+    MCerror(898, "TODO");
   }
 
   c_str *str;
   MCcall(init_c_str(&str));
 
-  MCvacall(append_to_c_strf(str, "int %s_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name,
+  // Header
+  MCvacall(append_to_c_strf(str, "int %s_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
                             func_info->latest_iteration));
 
-  MCvacall(append_to_c_strf(str, "  register_midge_error_tag(\"%s()\");\n\n", function_ast->function.name));
+// Initial
+  MCvacall(append_to_c_strf(str, "  register_midge_error_tag(\"%s()\");\n\n", function_ast->function.name->text));
   MCcall(append_to_c_str(str, "  "));
   MCcall(append_to_c_str(str, "  // midge Command Hub\n"
                               "  mc_command_hub_v1 *comman"
@@ -907,27 +918,48 @@ int transcribe_function_to_mc_v1(mc_function_info_v1 *func_info, mc_syntax_node 
   MCcall(append_to_c_str(str, "  // Function Parameters\n"));
   for (int p = 0; p < function_ast->function.parameters->count; ++p) {
     mc_syntax_node *parameter_syntax = function_ast->function.parameters->items[p];
-    parameter_syntax->parameter.
+
+    if (parameter_syntax->parameter.is_function_pointer_declaration) {
+      printf("918 TODO\n");
+      print_syntax_node(parameter_syntax, 0);
+      MCerror(912, "TODO");
+      continue;
+    }
+
+    MCcall(mct_append_indent_to_c_str(str, 1));
+    MCcall(mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier));
+    MCcall(append_to_c_str(str, " "));
+    if (parameter_syntax->parameter.type_dereference) {
+      for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
+        MCcall(append_to_c_str(str, "*"));
+      }
+    }
+    MCcall(mct_append_node_text_to_c_str(str, parameter_syntax->parameter.name));
+    MCcall(append_to_c_str(str, " = *("));
+    MCcall(mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier));
+    MCcall(append_to_c_str(str, " "));
+    if (parameter_syntax->parameter.type_dereference) {
+      for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
+        MCcall(append_to_c_str(str, "*"));
+      }
+    }
+    MCvacall(append_to_c_strf(str, "*)mc_argsv[%i];\n", p));
   }
 
-                                            "%s"
-                                            "\n"
-                                            "  // Function Code\n"
-                                            "%s"
-                                            "\n"
-                                            "  register_midge_error_tag(\"%s(~)\");\n"
-                                            "\n")
+  // Code Block
+  MCcall(append_to_c_str(str, "  // Function Code\n"));
+  MCcall(mct_transcribe_statement_list(str, 0, function_ast->function.code_block->code_block.statement_list));
+  MCvacall(append_to_c_strf(str,
+                            "\n"
+                            "  register_midge_error_tag(\"%s(~)\");\n"
+                            "  return 0;\n}",
+                            function_ast->function.name->text));
 
-  if (function_ast->block_node.statement_list)
-                                            {
-                                              MCcall(mct_transcribe_statement_list(
-                                                  str, 1, syntax_node->block_node.statement_list));
-                                            }
-                                            MCcall(append_to_c_str(str, "\n  return 0;\n"));
+  *mc_transcription = str->text;
+  MCcall(release_c_str(str, false));
 
-                                            *mc_transcription = str->text;
-                                            MCcall(release_c_str(str, false));
+  printf("mc_transcription:\n%s||\n", *mc_transcription);
 
-                                            register_midge_error_tag("transcribe_function_to_mc_v1(~)");
-                                            return 0;
+  register_midge_error_tag("transcribe_function_to_mc_v1(~)");
+  return 0;
 }

@@ -935,7 +935,7 @@ typedef struct mc_syntax_node {
         } statement_list;
         struct {
           mc_syntax_node *statement_list;
-        } block_node;
+        } code_block;
         struct {
           mc_syntax_node *initialization;
           mc_syntax_node *conditional;
