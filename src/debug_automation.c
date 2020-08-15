@@ -29,9 +29,7 @@ void create_hello_world_app()
   mc_function_info_v1 *func_info;
   instantiate_definition_from_code(app_node, ibpa_code, &func_info); //(void **)
 
-  char buf[256];
-  sprintf(buf, "*((void **)%p) = (void *)&initialize_button_print_app;", &app_info->initialize);
-  clint_process(buf);
+  app_info->initialize_app = func_info;
 
   attach_node_to_heirarchy(command_hub->global_node, app_node);
 
@@ -46,7 +44,7 @@ void export_hello_world_app()
     MCerror(47, "Could not it!");
   }
 
-  export_node_to_application(app_node, "test/hello_world");
+  export_node_to_application(app_node, "test");
 }
 
 void debug_automation(frame_time *elapsed, debug_data_state *debugState)

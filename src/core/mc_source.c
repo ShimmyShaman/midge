@@ -15,11 +15,6 @@ void update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *f
 
   register_midge_error_tag("update_or_register_function_info_from_syntax-1");
   if (!func_info) {
-    // // Create new
-    // source_definition *src_def = (source_definition *)malloc(sizeof(source_definition));
-    // src_def->type = SOURCE_DEFINITION_FUNCTION;
-    // src_def->code = code;
-    // src_def->source_file = NULL;
     func_info = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
     append_to_collection((void ***)&owner->functions, &owner->functions_alloc, &owner->function_count,
                          (void *)func_info);
@@ -37,6 +32,11 @@ void update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *f
     cprintf(cling_declaration, "int (*%s)(int, void **);", func_info->name);
     clint_declare(cling_declaration);
     free(cling_declaration);
+
+    char *addr_cmd;
+    cprintf(addr_cmd, "*((void **)%p) = *(void **)&%s;", &func_info->ptr_declaration, func_info->name);
+    clint_process(addr_cmd);
+    free(addr_cmd);
   }
   else {
     // Empty
@@ -87,6 +87,12 @@ void instantiate_definition_from_code(node *definition_owner, char *code, void *
   // Register Function
   mc_function_info_v1 *func_info;
   update_or_register_function_info_from_syntax(definition_owner, ast, &func_info);
+
+  func_info->source = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
+  func_info->source->type = SOURCE_DEFINITION_FUNCTION;
+  func_info->source->source_file = NULL;
+  func_info->source->code = code;
+  func_info->source->func_info = func_info;
 
   // Instantiate Function
   char *mc_transcription;

@@ -317,6 +317,7 @@ typedef struct mc_function_info_v1 {
   mc_source_definition_v1 *source;
   const char *name;
   unsigned int latest_iteration;
+  int (*ptr_declaration)(int, void **);
   struct {
     char *name;
     unsigned int deref_count;
@@ -441,7 +442,7 @@ typedef enum node_type {
 } node_type;
 
 typedef struct console_app_info {
-  int (**initialize)(int, void **);
+  mc_function_info_v1 *initialize_app;
 } console_app_info;
 
 typedef struct mc_input_event_v1 {

@@ -3,8 +3,9 @@
 
 void ensure_core_entry_has_child_alloc(core_entry *entry, int size)
 {
-  register_midge_error_tag("ensure_core_entry_has_child_alloc()");
+  // register_midge_error_tag("ensure_core_entry_has_child_alloc()");
   if (entry->children.size >= size) {
+    // register_midge_error_tag("ensure_core_entry_has_child_alloc(~enough)");
     return;
   }
 
@@ -28,8 +29,7 @@ void ensure_core_entry_has_child_alloc(core_entry *entry, int size)
   entry->children.items = new_ary;
   entry->children.size = size;
 
-  register_midge_error_tag("ensure_core_entry_has_child_alloc(~)");
-  return;
+  // register_midge_error_tag("ensure_core_entry_has_child_alloc(~)");
 }
 
 void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)

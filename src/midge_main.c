@@ -6026,7 +6026,13 @@ int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_
   MCcall(declare_struct_from_info(command_hub, structure));
   // printf("papcs-after declare_struct_from_info:\n");
   if (!structure->source) {
+    MCerror(6031, "How?");
+  }
+  if (!structure->source->source_file) {
     MCerror(6033, "How?");
+  }
+  if (!structure->source->source_file->filepath) {
+    MCerror(6035, "How?");
   }
 
   printf("papcs-StructInfo:\n");
@@ -6095,7 +6101,7 @@ int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_s
       free(cling_declaration);
     }
 
-    register_midge_error_tag("parse_and_process_mc_file_syntax-2");
+    register_midge_error_tag("register_and_transcribe_syntax_function-2");
 
     if (!is_declaration_only) {
       // Definition
@@ -6111,6 +6117,7 @@ int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_s
     }
     else {
       // Nothing?
+      func_info->source = NULL;
     }
 
     // printf("papsyntax-2\n");
@@ -6123,7 +6130,7 @@ int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_s
       func_info->return_type.deref_count = 0;
     }
 
-    register_midge_error_tag("parse_and_process_mc_file_syntax-3");
+    register_midge_error_tag("register_and_transcribe_syntax_function-3");
     func_info->parameter_count = function_ast->function.parameters->count;
     func_info->parameters =
         (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * func_info->parameter_count);
@@ -6138,38 +6145,40 @@ int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_s
     func_info->struct_usage_count = 0;
     func_info->struct_usage = NULL;
   }
-  // printf("papsyntax-b4 transcribe\n");
-  register_midge_error_tag("parse_and_process_mc_file_syntax-4");
+  register_midge_error_tag("register_and_transcribe_syntax_function-4");
 
-  if (!is_declaration_only) {
-    // Transcribe to MC function format
-    char *mc_format_definition;
-    MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
-
-    register_midge_error_tag("parse_and_process_mc_file_syntax-5");
-    // printf("papsyntax-5\n");
-    // printf("mc_format_definition:\n%s||\n", mc_format_definition);
-
-    // Define the new function
-    {
-      void *vargs[2];
-      vargs[0] = &func_info->name;
-      vargs[1] = &mc_format_definition;
-      MCcall(instantiate_function(2, vargs));
-    }
+  if (is_declaration_only) {
+    return 0;
   }
-  else {
+  // Transcribe to MC function format
+  char *mc_format_definition;
+  MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
+
+  register_midge_error_tag("parse_and_process_mc_file_syntax-5");
+  // printf("papsyntax-5\n");
+  // printf("mc_format_definition:\n%s||\n", mc_format_definition);
+
+  // Define the new function
+  {
+    void *vargs[2];
+    vargs[0] = &func_info->name;
+    vargs[1] = &mc_format_definition;
+    MCcall(instantiate_function(2, vargs));
   }
+
   // MCcall(clint_declare(mc_format_definition));
-  printf("papsyntax-6\n");
+  printf("register_and_transcribe_syntax_function-6\n");
 
-  if (!func_info->source) {
-    MCerror(6165, "How?");
+  if (!func_info->source->source_file) {
+    MCerror(6133, "How?");
   }
+  if (!func_info->source->source_file->filepath) {
+    MCerror(6135, "How?");
+  }
+  printf("func_info->name:%p\n", func_info->source->source_file->filepath);
 
   printf("papcf-FunctionInfo Loaded:\n");
-  printf(" -- source_filepath:%s:\n",
-         func_info->source && func_info->source->source_file ? func_info->source->source_file->filepath : "(null)");
+  printf(" -- source_filepath:%s:\n", func_info->source ? func_info->source->source_file->filepath : "(null)");
   printf(" -- name:%s:\n", func_info->name);
   printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
   printf(" -- return_type.name:%s:\n", func_info->return_type.name);
@@ -8102,6 +8111,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/core_definitions.h"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/index_functions.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/exports.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/mc_source.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/special_debug.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/gui.c"));
