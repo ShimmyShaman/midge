@@ -316,8 +316,10 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
 
 int _copy_syntax_node_to_text_v1(c_str *cstr, mc_syntax_node *syntax_node)
 {
+  // register_midge_error_tag("_copy_syntax_node_to_text_v1(%s)", get_mc_syntax_token_type_name(syntax_node->type));
   if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
     MCcall(append_to_c_str(cstr, syntax_node->text));
+    // register_midge_error_tag("_copy_syntax_node_to_text_v1(~t)");
     return 0;
   }
 
@@ -340,13 +342,16 @@ int _copy_syntax_node_to_text_v1(c_str *cstr, mc_syntax_node *syntax_node)
   // }
   // }
 
+  // register_midge_error_tag("_copy_syntax_node_to_text_v1(~*)");
   return 0;
 }
 
 int copy_syntax_node_to_text_v1(mc_syntax_node *syntax_node, char **output)
 {
+  register_midge_error_tag("copy_syntax_node_to_text_v1(%s)", get_mc_syntax_token_type_name(syntax_node->type));
   if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
     allocate_and_copy_cstr(*output, syntax_node->text);
+    register_midge_error_tag("copy_syntax_node_to_text_v1(~)");
     return 0;
   }
 
@@ -355,9 +360,22 @@ int copy_syntax_node_to_text_v1(mc_syntax_node *syntax_node, char **output)
 
   MCcall(_copy_syntax_node_to_text_v1(cstr, syntax_node));
 
+  if (!output) {
+    MCerror(364, "Arg Error");
+  }
+  register_midge_error_tag("copy_syntax_node_to_text-2");
+
+  // printf("52:%p\n", output);
+  // printf("53:%p\n", *output);
+  // printf("54:%p\n", cstr);
+  // printf("55:%p\n", cstr->text);
+  // printf("56:%s\n", cstr->text);
+
   *output = cstr->text;
+  register_midge_error_tag("copy_syntax_node_to_text-3");
   release_c_str(cstr, false);
 
+  register_midge_error_tag("copy_syntax_node_to_text_v1(~*)");
   return 0;
 }
 
@@ -967,8 +985,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       while (1) {
         ++*index;
         if (code[*index] == '\0') {
-          // print_parse_error(code, *index, "_mcs_parse_token", "eof");
-          MCerror(72, "Unexpected end-of-file\n");
+          break;
         }
         if (code[*index] == '\n') {
           break;
@@ -3305,11 +3322,13 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
 
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
-  while (token_type != MC_TOKEN_NEW_LINE) {
+  while (token_type != MC_TOKEN_NEW_LINE && token_type != MC_TOKEN_NULL_CHARACTER) {
     switch (token_type) {
-    case MC_TOKEN_SPACE_SEQUENCE: {
+    case MC_TOKEN_SPACE_SEQUENCE:
+    case MC_TOKEN_LINE_COMMENT: {
       MCcall(mcs_parse_through_token(ps, preprocessor_directive, token_type, NULL));
     } break;
+    case MC_TOKEN_IDENTIFIER:
     case MC_TOKEN_STRING_LITERAL: {
       MCcall(mcs_parse_through_token(ps, preprocessor_directive, token_type, NULL));
     } break;
@@ -3473,6 +3492,46 @@ int parse_mc_file_to_syntax_tree_v1(char *code, mc_syntax_node **file_ast)
     }
     MCcall(mcs_parse_through_supernumerary_tokens(&ps, *file_ast));
   }
+
+  return 0;
+}
+
+int parse_definition_to_syntax_tree_v1(char *code, mc_syntax_node **ast)
+{
+  parsing_state ps;
+  ps.code = code;
+  ps.allow_imperfect_parse = false;
+  ps.index = 0;
+  ps.line = 0;
+  ps.col = 0;
+
+  // mc_syntax_node *element_documentation = NULL;
+  // case MC_TOKEN_MULTI_LINE_COMMENT: { // TODO
+  //   MCcall(mcs_parse_through_token(ps, function, token_type, &element_documentation));
+
+  // } break;
+  // case MC_TOKEN_PREPROCESSOR_OPERATOR: {
+  //   MCcall(mcs_parse_preprocessor_directive(&ps, NULL, ast));
+  // } break;
+
+  mc_token_type token_type;
+  MCcall(mcs_peek_token_type(&ps, true, 0, &token_type));
+  switch (token_type) {
+  case MC_TOKEN_TYPEDEF_KEYWORD: {
+    MCcall(mcs_parse_type_definition(&ps, NULL, ast));
+  } break;
+  case MC_TOKEN_VOID_KEYWORD:
+  case MC_TOKEN_IDENTIFIER: {
+    MCcall(mcs_parse_function(&ps, NULL, ast));
+  } break;
+  default: {
+    print_parse_error(ps.code, ps.index, "see-below", "");
+    MCerror(3259, "parse_file_root:Unsupported-Token:%s", get_mc_token_type_name(token_type));
+  }
+  }
+
+  printf("parse_definition_to_syntax_tree_v1\n");
+  print_syntax_node(*ast, 0);
 
   return 0;
 }

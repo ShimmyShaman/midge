@@ -2562,7 +2562,6 @@ int submit_user_command(int argc, void **argsv);
 #include "m_threads.h"
 int mc_main(int argc, const char *const *argv)
 {
-
   // c_str *str;
   // init_c_str(&str);
   // set_c_str(str, "holo");
@@ -6026,6 +6025,9 @@ int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_
   // printf("papcs-declare_struct_from_info:%p\n", declare_struct_from_info);
   MCcall(declare_struct_from_info(command_hub, structure));
   // printf("papcs-after declare_struct_from_info:\n");
+  if (!structure->source) {
+    MCerror(6033, "How?");
+  }
 
   printf("papcs-StructInfo:\n");
   printf(" -- source_filepath:%s:\n", structure->source->source_file->filepath);
@@ -6161,8 +6163,13 @@ int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_s
   // MCcall(clint_declare(mc_format_definition));
   printf("papsyntax-6\n");
 
+  if (!func_info->source) {
+    MCerror(6165, "How?");
+  }
+
   printf("papcf-FunctionInfo Loaded:\n");
-  printf(" -- source_filepath:%s:\n", func_info->source->source_file->filepath);
+  printf(" -- source_filepath:%s:\n",
+         func_info->source && func_info->source->source_file ? func_info->source->source_file->filepath : "(null)");
   printf(" -- name:%s:\n", func_info->name);
   printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
   printf(" -- return_type.name:%s:\n", func_info->return_type.name);
@@ -6181,7 +6188,9 @@ int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_s
 
 int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char *filepath)
 {
-  register_midge_error_tag("parse_and_process_mc_file_syntaxt(%s)", filepath);
+  register_midge_error_tag("parse_and_process_mc_file_syntax(%s)", filepath);
+  printf("parsing file:%s\n", filepath);
+
   // Load the file
   char *file_text;
   {
@@ -6856,9 +6865,12 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
         mc_vargs[1] = (void *)&transcription;
         MCcall(instantiate_function(2, mc_vargs));
       }
+      if (!func_info->source) {
+        MCerror(6872, "How?");
+      }
 
       printf("papcf-FunctionInfo Loaded:\n");
-      printf(" -- source_filepath:%s:\n", func_info->source->source_file->filepath);
+      printf(" -- source_filepath:%s:\n", func_info->source ? func_info->source->source_file->filepath : "(null)");
       printf(" -- name:%s:\n", func_info->name);
       printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
       printf(" -- return_type.name:%s:\n", func_info->return_type.name);
@@ -7775,9 +7787,9 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     find_function_info_definition_v1->name = "find_function_info";
     find_function_info_definition_v1->source = NULL;
     find_function_info_definition_v1->latest_iteration = 1U;
-    allocate_and_copy_cstr(find_function_info_definition_v1->return_type.name, "function_info");
-    find_function_info_definition_v1->return_type.deref_count = 1;
-    find_function_info_definition_v1->parameter_count = 2;
+    allocate_and_copy_cstr(find_function_info_definition_v1->return_type.name, "void");
+    find_function_info_definition_v1->return_type.deref_count = 0;
+    find_function_info_definition_v1->parameter_count = 3;
     find_function_info_definition_v1->parameters =
         (mc_parameter_info_v1 **)malloc(sizeof(void *) * find_function_info_definition_v1->parameter_count);
     find_function_info_definition_v1->variable_parameter_begin_index = -1;
@@ -7799,6 +7811,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
     parameter->type_version = 0U;
     parameter->type_deref_count = 1;
     parameter->name = "function_name";
+    parameter = (mc_parameter_info_v1 *)malloc(sizeof(mc_parameter_info_v1));
+    find_function_info_definition_v1->parameters[2] = parameter;
+    parameter->is_function_pointer = false;
+    parameter->type_name = "function_info";
+    parameter->type_version = 1U;
+    parameter->type_deref_count = 2;
+    parameter->name = "func_info";
   }
 
   mc_function_info_v1 *declare_function_pointer_definition_v1 =
@@ -7981,6 +8000,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   MCcall(clint_process("parse_mc_to_syntax_tree = &parse_mc_to_syntax_tree_v1;"));
   MCcall(clint_process("parse_mc_file_to_syntax_tree = &parse_mc_file_to_syntax_tree_v1;"));
+  MCcall(clint_process("parse_definition_to_syntax_tree = &parse_definition_to_syntax_tree_v1;"));
   MCcall(clint_process("copy_syntax_node_to_text = &copy_syntax_node_to_text_v1;"));
 
   // mc_code_transcriber.c
@@ -8000,6 +8020,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   free(output);
 
   MCcall(clint_process("transcribe_code_block_ast_to_mc_definition = &transcribe_code_block_ast_to_mc_definition_v1;"));
+  MCcall(clint_process("transcribe_function_to_mc = &transcribe_function_to_mc_v1;"));
 
   // midge_core_functions.c
   printf("icf-0\n");
@@ -8079,6 +8100,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   printf("Loading Core Methods\n");
   // MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/core_definitions.h"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/index_functions.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/mc_source.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/special_debug.c"));

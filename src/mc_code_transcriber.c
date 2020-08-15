@@ -90,8 +90,8 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
     MCerror(70, "TODO %s", get_mc_syntax_token_type_name(syntax_node->type));
   }
   mc_function_info_v1 *finfo = syntax_node->invocation.mc_function_info;
-  print_syntax_node(syntax_node, 0);
-  printf("mtmi-2 %p\n", finfo);
+  // print_syntax_node(syntax_node, 0);
+  // printf("mtmi-2 %p\n", finfo);
 
   MCcall(mct_append_to_c_str(str, indent, "{\n"));
   MCcall(mct_append_to_c_str(str, indent + 1, "void *mc_vargs["));
@@ -104,12 +104,12 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
   }
 
   for (int i = 0; i < finfo->parameter_count; ++i) {
-    printf("mtmi-3\n");
+    // printf("mtmi-3\n");
     MCcall(mct_append_indent_to_c_str(str, indent + 1));
     mc_syntax_node *argument = syntax_node->invocation.arguments->items[i];
     switch (argument->type) {
     case MC_SYNTAX_CAST_EXPRESSION: {
-      printf("mtmi-4\n");
+      // printf("mtmi-4\n");
       bool contains_mc_function_call;
       if (argument->cast_expression.expression) {
         MCcall(mct_contains_mc_invoke(argument->cast_expression.expression, &contains_mc_function_call));
@@ -124,7 +124,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       free(text);
     } break;
     case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
-      printf("mtmi-5\n");
+      // printf("mtmi-5\n");
       // Do MC_invokes
       bool contains_mc_function_call;
       if (argument) {
@@ -141,7 +141,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
 
     } break;
     case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION: {
-      printf("mtmi-6\n");
+      // printf("mtmi-6\n");
       // Do MC_invokes
       bool contains_mc_function_call;
       if (argument->element_access_expression.primary) {
@@ -166,7 +166,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
 
     } break;
     case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
-      printf("mtmi-7\n");
+      // printf("mtmi-7\n");
       MCcall(mct_append_indent_to_c_str(str, indent + 1));
       char *text;
       MCcall(copy_syntax_node_to_text(argument, &text));
@@ -176,7 +176,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       MCvacall(append_to_c_strf(str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i));
     } break;
     case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION: {
-      printf("mtmi-8\n");
+      // printf("mtmi-8\n");
       char *text;
       if ((mc_token_type)argument->prepended_unary.prepend_operator->type == MC_TOKEN_AMPERSAND_CHARACTER) {
         MCcall(copy_syntax_node_to_text(argument, &text));
@@ -191,7 +191,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
       free(text);
     } break;
     default: {
-      printf("mtmi-9\n");
+      // printf("mtmi-9\n");
       switch ((mc_token_type)argument->type) {
       case MC_TOKEN_NUMERIC_LITERAL: {
         MCcall(mct_append_indent_to_c_str(str, indent + 1));
@@ -857,8 +857,6 @@ int transcribe_code_block_ast_to_mc_definition_v1(mc_syntax_node *syntax_node, c
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  // MCcall(print_syntax_node(syntax_node, 0));
-
   if (syntax_node->type != MC_SYNTAX_BLOCK) {
     MCerror(147, "MCT:Not Supported");
   }
@@ -874,17 +872,62 @@ int transcribe_code_block_ast_to_mc_definition_v1(mc_syntax_node *syntax_node, c
   *output = str->text;
   MCcall(release_c_str(str, false));
 
-  // // Do MC_invokes
-  // bool contains_mc_function_call;
-  // MCcall(mct_contains_mc_invoke(syntax_node, &contains_mc_function_call));
-  // if (contains_mc_function_call) {
-  //   MCerror(231, "TODO");
-  // }
-
-  // Transcribe directly (TODO -- for now)
-  // MCcall(copy_syntax_node_to_text(syntax_node, output));
-  // printf("transcribe:\n%s||\n", *output);
-
   register_midge_error_tag("transcribe_code_block_ast_to_mc_definition_v1(~)");
   return 0;
+}
+
+// void transcribe_function_to_mc(mc_function_info_v1 *func_info, mc_syntax_node *function_ast, char **mc_transcription)
+int transcribe_function_to_mc_v1(mc_function_info_v1 *func_info, mc_syntax_node *function_ast, char **mc_transcription)
+{
+  register_midge_error_tag("transcribe_function_to_mc_v1()");
+
+  /*mcfuncreplace*/
+  mc_command_hub_v1 *command_hub;
+  /*mcfuncreplace*/
+
+  if (function_ast->type != MC_SYNTAX_BLOCK) {
+    MCerror(147, "MCT:Not Supported");
+  }
+
+  c_str *str;
+  MCcall(init_c_str(&str));
+
+  MCvacall(append_to_c_strf(str, "int %s_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name,
+                            func_info->latest_iteration));
+
+  MCvacall(append_to_c_strf(str, "  register_midge_error_tag(\"%s()\");\n\n", function_ast->function.name));
+  MCcall(append_to_c_str(str, "  "));
+  MCcall(append_to_c_str(str, "  // midge Command Hub\n"
+                              "  mc_command_hub_v1 *comman"
+                              "d_hub = command_hub;\n" // TODO -- maybe, just directly replace all
+                                                       // command hub references with the casted pointer)
+                              "\n"));
+
+  // Function Parameters
+  MCcall(append_to_c_str(str, "  // Function Parameters\n"));
+  for (int p = 0; p < function_ast->function.parameters->count; ++p) {
+    mc_syntax_node *parameter_syntax = function_ast->function.parameters->items[p];
+    parameter_syntax->parameter.
+  }
+
+                                            "%s"
+                                            "\n"
+                                            "  // Function Code\n"
+                                            "%s"
+                                            "\n"
+                                            "  register_midge_error_tag(\"%s(~)\");\n"
+                                            "\n")
+
+  if (function_ast->block_node.statement_list)
+                                            {
+                                              MCcall(mct_transcribe_statement_list(
+                                                  str, 1, syntax_node->block_node.statement_list));
+                                            }
+                                            MCcall(append_to_c_str(str, "\n  return 0;\n"));
+
+                                            *mc_transcription = str->text;
+                                            MCcall(release_c_str(str, false));
+
+                                            register_midge_error_tag("transcribe_function_to_mc_v1(~)");
+                                            return 0;
 }

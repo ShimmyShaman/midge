@@ -48,9 +48,9 @@ int find_struct_info_v0(int argc, void **argv)
 
 int find_function_info_v1(int argc, void **argv)
 {
-  if (argc != 3) {
-    MCerror(-848, "Incorrect argument count");
-  }
+  // if (argc != 3 + 1) {
+  //   MCerror(-848, "Incorrect argument count expected:4 was:%i", argc);
+  // }
 
   function_info **func_info = (function_info **)argv[0];
   node *nodespace = *(node **)argv[1];
@@ -859,7 +859,7 @@ int instantiate_function_v1(int argc, void **argv)
           func_identity_buf);
 
   // Declare the function
-  // printf("ifv>cling_declare:\n%s\n", function_declaration);
+  printf("ifv>cling_declare:\n%s\n", function_declaration);
   // printf("ifv>cling_declare:'%s'\n", func_identity_buf);
   MCcall(clint_declare(function_declaration));
 

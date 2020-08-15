@@ -5,12 +5,6 @@ typedef struct debug_data_state {
   mc_node_v1 *core_display;
 } debug_data_state;
 
-void initialize_button_print_app(mc_node_v1 *p_node);
-{
-  printf("Hello World! from button_print_app!\n");
-  exit_app(p_node, 0);
-}
-
 void create_hello_world_app()
 {
   printf("create_button_print_app\n");
@@ -25,30 +19,21 @@ void create_hello_world_app()
   console_app_info *app_info = (console_app_info *)malloc(sizeof(console_app_info));
   app_node->extra = app_info;
 
-  app_info->initialize = &initialize_button_print_app;
-  mc_source_definition_v1 *ibpa_definition;
-  ibpa_definition->type = SOURCE_DEFINITION_FUNCTION;
-  ibpa_definition->source_file = NULL;
-  ibpa_definition->data = NULL;
-  ibpa_definition->code = "void initialize_button_print_app(mc_node_v1 *p_node)\n"
+  // Create the initialize function
+  const char *ibpa_code = "void initialize_button_print_app(mc_node_v1 *p_node)\n"
                           "{\n"
                           "  printf(\"Hello World! from button_print_app!\\n\");\n"
                           "  exit_app(p_node, 0);\n"
                           "}";
 
-  ? ? ? ? ? ?
+  mc_function_info_v1 *func_info;
+  instantiate_definition_from_code(app_node, ibpa_code, &func_info);//(void **)
 
-            attach_definition_to_heirarchy(app_node, ibpa_definition->func_info);
+  char buf[256];
+  sprintf(buf, "*((void **)%p) = (void *)&initialize_button_print_app;", &app_info->initialize);
+  clint_process(buf);
 
   attach_node_to_heirarchy(command_hub->global_node, app_node);
-
-  // mc_node_v1 *button_node;
-  // mgui_button_data *button_data;
-  // mgui_create_button(app_node, &button, &button_data);
-  // allocate_and_copy_cstr(button_data->text, "print it!");
-  // button_data->margin...
-  // button_data->size...
-  // button_data->handler = &print_it_handler
 
   return;
 }

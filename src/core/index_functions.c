@@ -80,31 +80,29 @@ void attach_node_to_heirarchy(node *parent_attachment, node *node_to_add)
   }
 }
 
-void attach_definition_to_heirarchy(node *parent_attachment, char *definition)
-{
-  // append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
-  //                      &parent_attachment->child_count, node_to_add);
+// void attach_definition_to_heirarchy(node *parent_attachment, char *definition)
+// {
+//   // append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
+//   //                      &parent_attachment->child_count, node_to_add);
 
-  
+//   // Fire an event...
+//   uint event_type = ME_NODE_HIERARCHY_UPDATED;
+//   notify_handlers_of_event(event_type, NULL);
 
-  // Fire an event...
-  uint event_type = ME_NODE_HIERARCHY_UPDATED;
-  notify_handlers_of_event(event_type, NULL);
-
-  // TODO -- maybe find a better place to do this
-  switch (node_to_add->type) {
-  case NODE_TYPE_CONSOLE_APP: {
-    console_app_info *app_info = (console_app_info *)node_to_add->extra;
-    if (app_info->initialize && (*app_info->initialize)) {
-      void *vargs[1];
-      vargs[0] = &node_to_add;
-      (*app_info->initialize)(1, vargs);
-    }
-  } break;
-  default:
-    break;
-  }
-}
+//   // TODO -- maybe find a better place to do this
+//   switch (node_to_add->type) {
+//   case NODE_TYPE_CONSOLE_APP: {
+//     console_app_info *app_info = (console_app_info *)node_to_add->extra;
+//     if (app_info->initialize && (*app_info->initialize)) {
+//       void *vargs[1];
+//       vargs[0] = &node_to_add;
+//       (*app_info->initialize)(1, vargs);
+//     }
+//   } break;
+//   default:
+//     break;
+//   }
+// }
 
 void exit_app(mc_node_v1 *node_scope, int result)
 {
