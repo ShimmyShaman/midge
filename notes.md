@@ -12,6 +12,33 @@ Midges development goals:
       and mouse-clicks with an eye on gestures and AV input.
     
 ###################################################################
+refactoring mc_main
+
+IMC load_app_source  >> loads all source needed for midge app
+MC initialize_app   >> invokes all initialize methods in nodes
+MC loop_app >> does timekeeping/input/invoke-timers/invoke-update/rendering
+MC clean_up/close >> etc.
+
+
+
+load_app_source
+ list of structs/enums/functions that are core
+ these need to be created with normal parameters (not int/void**)
+ and their function names (both declared and invoked) prepended with something
+IMC  load_core_source >> loads everything needed to describe/parse/transcribe any further code
+MC reloads above code as mc code
+MC loads all other source needed for the midge application to continue to init
+MC *integrate vulkan relevant source with everything else
+
+
+
+refactoring and cleaning up the behemoths that got me here
+rewriting the system with what I have learned up to now as...
+   It is too difficult to accomplish the next task with the fragile jitterings
+     of the current system
+INTEGRATE PROPER ERROR HANDLING AS WELL
+###################################################################
+
 
 Goal: Initiate and complete a project that can export an application that has a button that prints 'hello world' when pressed to console
 
