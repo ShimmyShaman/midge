@@ -197,6 +197,7 @@ typedef enum source_definition_type {
   SOURCE_DEFINITION_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
   SOURCE_DEFINITION_FUNCTION,
   SOURCE_DEFINITION_STRUCT,
+  SOURCE_DEFINITION_ENUMERATION,
 } source_definition_type;
 
 #define PROCESS_UNIT_FIELD_COUNT 8
@@ -260,10 +261,11 @@ typedef struct mc_source_definition_v1 {
   source_definition_type type;
   mc_source_file_info_v1 *source_file;
   union {
-    void *data;
+    void *p_data;
     mc_struct_info_v1 *structure_info;
     mc_function_info_v1 *func_info;
-  };
+    mc_enumeration_info_v1 *enum_info;
+  } data;
   char *code;
 } mc_source_definition_v1;
 
@@ -329,6 +331,22 @@ typedef struct mc_function_info_v1 {
   unsigned int struct_usage_count;
   mc_struct_info_v1 **struct_usage;
 } mc_function_info_v1;
+
+typedef struct mc_enum_member_v1 {
+  const char *identity;
+  int value;
+} mc_enum_member_v1;
+
+typedef struct mc_enumeration_info_v1 {
+  mc_struct_id_v1 *struct_id;
+  mc_source_definition_v1 *source;
+  const char *name;
+  unsigned int latest_iteration;
+  struct {
+    uint count, alloc;
+    mc_enum_member_v1 **items;
+  } members;
+} mc_enumeration_info_v1;
 
 typedef struct mc_script_v1 {
   mc_struct_id_v1 *struct_id;
@@ -849,6 +867,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_STRUCTURE,
   MC_SYNTAX_ENUM,
+  MC_SYNTAX_ENUM_MEMBER,
   MC_SYNTAX_BLOCK,
   MC_SYNTAX_STATEMENT_LIST,
   MC_SYNTAX_FOR_STATEMENT,
@@ -924,8 +943,12 @@ typedef struct mc_syntax_node {
         struct {
           mc_syntax_node *name;
           mc_syntax_node *type_identity;
-          mc_syntax_node_list *fields;
+          mc_syntax_node_list *members;
         } enumeration;
+        struct {
+          mc_syntax_node *identifier;
+          mc_syntax_node *value;
+        } enum_member;
         struct {
           mc_syntax_node *identifier;
         } preprocessor_directive;

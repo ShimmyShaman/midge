@@ -6235,6 +6235,9 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
     case MC_SYNTAX_STRUCTURE: {
       MCcall(register_and_transcribe_syntax_structure(command_hub, source_file, child));
     } break;
+    case MC_SYNTAX_ENUM: {
+      MCcall(instantiate_definition(command_hub->nodespace, NULL, child, source_file, NULL));
+    } break;
     default: {
       switch ((mc_token_type)child->type) {
       case MC_TOKEN_SPACE_SEQUENCE:

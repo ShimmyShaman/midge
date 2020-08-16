@@ -187,6 +187,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_STRUCTURE";
   case MC_SYNTAX_ENUM:
     return "MC_SYNTAX_ENUM";
+  case MC_SYNTAX_ENUM_MEMBER:
+    return "MC_SYNTAX_ENUM_MEMBER";
   case MC_SYNTAX_BLOCK:
     return "MC_SYNTAX_BLOCK";
   case MC_SYNTAX_STATEMENT_LIST:
@@ -425,9 +427,13 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_ENUM: {
     syntax_node->enumeration.name = NULL;
     syntax_node->enumeration.type_identity = NULL;
-    syntax_node->enumeration.fields = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
-    syntax_node->enumeration.fields->alloc = 0;
-    syntax_node->enumeration.fields->count = 0;
+    syntax_node->enumeration.members = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+    syntax_node->enumeration.members->alloc = 0;
+    syntax_node->enumeration.members->count = 0;
+  } break;
+  case MC_SYNTAX_ENUM_MEMBER: {
+    syntax_node->enum_member.identifier = NULL;
+    syntax_node->enum_member.value = NULL;
   } break;
   case MC_SYNTAX_STRUCTURE: {
     syntax_node->structure.name = NULL;
@@ -679,12 +685,12 @@ void release_syntax_node(mc_syntax_node *syntax_node)
     }
   } break;
   case MC_SYNTAX_ENUM: {
-    if (syntax_node->enumeration.fields) {
-      if (syntax_node->enumeration.fields->alloc) {
-        free(syntax_node->enumeration.fields->items);
+    if (syntax_node->enumeration.members) {
+      if (syntax_node->enumeration.members->alloc) {
+        free(syntax_node->enumeration.members->items);
       }
 
-      free(syntax_node->enumeration.fields);
+      free(syntax_node->enumeration.members);
     }
   } break;
   case MC_SYNTAX_INVOCATION: {
@@ -3382,29 +3388,54 @@ int mcs_parse_enum_definition(parsing_state *ps, mc_syntax_node *parent, mc_synt
 
   MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_TYPEDEF_KEYWORD, NULL));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
-  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_STRUCT_KEYWORD, NULL));
+  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_ENUM_KEYWORD, NULL));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
 
-  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_IDENTIFIER, &struct_definition->structure.name));
+  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_IDENTIFIER, &enum_definition->enumeration.name));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
 
   MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_CURLY_OPENING_BRACKET, NULL));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
 
   while (1) {
+    mc_token_type token_type;
     MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
     if (token_type == MC_TOKEN_CURLY_CLOSING_BRACKET) {
       break;
     }
+    if (enum_definition->enumeration.members->count > 0) {
+      MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_COMMA, NULL));
+      MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
+      MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
+      if (token_type == MC_TOKEN_CURLY_CLOSING_BRACKET) {
+        break;
+      }
+    }
 
-    MCerror(3400, "TODO");
+    mc_syntax_node *enum_member;
+    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_ENUM_MEMBER, NULL, enum_definition, &enum_member));
+
+    MCcall(mcs_parse_through_token(ps, enum_member, MC_TOKEN_IDENTIFIER, &enum_member->enum_member.identifier));
+
+    MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+    if (token_type == MC_TOKEN_ASSIGNMENT_OPERATOR) {
+      MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_member));
+      MCcall(mcs_parse_through_token(ps, enum_member, MC_TOKEN_ASSIGNMENT_OPERATOR, NULL));
+      MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_member));
+      MCcall(mcs_parse_through_token(ps, enum_member, MC_TOKEN_NUMERIC_LITERAL, &enum_member->enum_member.value));
+    }
+
+    MCcall(append_to_collection((void ***)&enum_definition->enumeration.members->items,
+                                &enum_definition->enumeration.members->alloc,
+                                &enum_definition->enumeration.members->count, enum_member));
+    MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
   }
 
-  MCcall(mcs_parse_through_token(ps, struct_definition, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL));
+  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
 
   MCcall(
-      mcs_parse_through_token(ps, enum_definition, MC_TOKEN_IDENTIFIER, &struct_definition->structure.type_identity));
+      mcs_parse_through_token(ps, enum_definition, MC_TOKEN_IDENTIFIER, &enum_definition->enumeration.type_identity));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
   MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_SEMI_COLON, NULL));
 
