@@ -5,14 +5,15 @@ typedef struct debug_data_state {
   mc_node_v1 *core_display;
 } debug_data_state;
 
-void create_hello_world_app()
+void create_hello_world_console_app()
 {
-  printf("create_button_print_app\n");
+  // Create a console application that just prints to console
+  printf("create_hello_world_console_app\n");
 
   // Create a node & add it to global
   mc_node_v1 *app_node = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
 
-  allocate_and_copy_cstr(app_node->name, "click-it");
+  allocate_and_copy_cstr(app_node->name, "hello-world-console");
   app_node->parent = command_hub->global_node;
   app_node->type = NODE_TYPE_CONSOLE_APP;
 
@@ -22,21 +23,64 @@ void create_hello_world_app()
   // Create the initialize function
   const char *ibpa_code = "void initialize_button_print_app(node *p_node)\n"
                           "{\n"
-                          "  printf(\"Hello World! from button_print_app!\\n\");\n"
+                          "  printf(\"Hello World!\\n\");\n"
                           "}";
-                          // "  exit_app(p_node, 0);\n"
+  // "  exit_app(p_node, 0);\n"
 
   mc_function_info_v1 *func_info;
   instantiate_definition_from_code(app_node, ibpa_code, &func_info); //(void **)
   app_info->initialize_app = func_info;
 
   attach_node_to_heirarchy(command_hub->global_node, app_node);
+
+  // Export it
+  MCcall(obtain_subnode_with_name(command_hub->global_node, "hello-world-console", &app_node));
+  if (!app_node) {
+    MCerror(47, "Could not it!");
+  }
+
+  export_node_to_application(app_node, "test");
 }
 
-void export_hello_world_app()
+void create_hello_world_visual_app()
 {
-  mc_node_v1 *app_node;
-  MCcall(obtain_subnode_with_name(command_hub->global_node, "click-it", &app_node));
+  // Create a visual application that launches from the command-line
+  // - has a textblock with text on it
+  // - has a close button to close it
+  printf("create_hello_world_visual_app\n");
+
+  // Create a node & add it to global
+  mc_node_v1 *app_node = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
+
+  allocate_and_copy_cstr(app_node->name, "hello-world-console");
+  app_node->parent = command_hub->global_node;
+  app_node->type = NODE_TYPE_VISUAL_APP;
+
+  visual_app_info *app_info = (visual_app_info *)malloc(sizeof(visual_app_info));
+  app_info->update_app = NULL;
+  app_node->extra = app_info;
+
+  // Create the initialize function
+  const char *init_code = "void initialize_hello_world_visual_app(node *p_node)\n"
+                          "{\n"
+                          "  mui_text_block *text_block;\n"
+                          "  mui_init_text_block(p_node, &text_block);\n"
+                          "\n"
+                          "  set_c_str(text_block->text, \"Hello Universe\");\n"
+                          "  text_block->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;\n"
+                          "  text_block->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;\n"
+                          "\n"
+                          "  mui_update_ui(p_node);\n"
+                          "}";
+
+  mc_function_info_v1 *func_info;
+  instantiate_definition_from_code(app_node, init_code, &func_info); //(void **)
+  app_info->initialize_app = func_info;
+
+  attach_node_to_heirarchy(command_hub->global_node, app_node);
+
+  // Export it
+  MCcall(obtain_subnode_with_name(command_hub->global_node, "hello-world-visual", &app_node));
   if (!app_node) {
     MCerror(47, "Could not it!");
   }
@@ -54,13 +98,11 @@ void debug_automation(frame_time *elapsed, debug_data_state *debugState)
     // Select
     ++debugState->sequenceStep;
 
-    create_hello_world_app();
+    create_hello_world_visual_app();
   } break;
   case 1: {
     // // Select
     ++debugState->sequenceStep;
-
-    export_hello_world_app();
 
     // mc_input_event_v1 *sim = (mc_input_event_v1 *)malloc(sizeof(mc_input_event_v1));
     // sim->type = INPUT_EVENT_MOUSE_PRESS;

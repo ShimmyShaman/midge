@@ -436,14 +436,20 @@ typedef struct mc_command_hub_v1 {
 typedef enum node_type {
   NODE_TYPE_NONE = 1,
   NODE_TYPE_GLOBAL_ROOT,
+  NODE_TYPE_CONSOLE_APP,
+  NODE_TYPE_VISUAL_APP,
   NODE_TYPE_VISUAL,
   NODE_TYPE_ABSTRACT,
-  NODE_TYPE_CONSOLE_APP,
 } node_type;
 
 typedef struct console_app_info {
   mc_function_info_v1 *initialize_app;
 } console_app_info;
+
+typedef struct visual_app_info {
+  mc_function_info_v1 *initialize_app;
+  mc_function_info_v1 *update_app;
+} visual_app_info;
 
 typedef struct mc_input_event_v1 {
   bool shiftDown, ctrlDown, altDown;
@@ -824,6 +830,7 @@ typedef enum mc_token_type {
   MC_TOKEN_CASE_KEYWORD,
   MC_TOKEN_DEFAULT_KEYWORD,
   MC_TOKEN_STRUCT_KEYWORD,
+  MC_TOKEN_ENUM_KEYWORD,
   MC_TOKEN_VOID_KEYWORD,
   MC_TOKEN_CHAR_KEYWORD,
   MC_TOKEN_INT_KEYWORD,
@@ -841,6 +848,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_PREPROCESSOR_DIRECTIVE,
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_STRUCTURE,
+  MC_SYNTAX_ENUM,
   MC_SYNTAX_BLOCK,
   MC_SYNTAX_STATEMENT_LIST,
   MC_SYNTAX_FOR_STATEMENT,
@@ -913,6 +921,11 @@ typedef struct mc_syntax_node {
           mc_syntax_node *type_identity;
           mc_syntax_node_list *fields;
         } structure;
+        struct {
+          mc_syntax_node *name;
+          mc_syntax_node *type_identity;
+          mc_syntax_node_list *fields;
+        } enumeration;
         struct {
           mc_syntax_node *identifier;
         } preprocessor_directive;

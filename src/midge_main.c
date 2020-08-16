@@ -8111,10 +8111,13 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/find_struct_info.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/core_definitions.h"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/index_functions.c"));
+
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/ui/ui_definitions.h"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/ui/text_block.c"));
+
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/exports.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/mc_source.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/special_debug.c"));
-  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/gui.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/action_data_management.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/code_editor.c"));
   // MCerror(100000, "----------MEASURED STOP----------");
@@ -8126,6 +8129,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // MCcall(parse_and_process_mc_file(command_hub, "src/core/load_existing_struct_into_code_editor.c"));
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/code_editor_handle_keyboard_input.c"));
   MCcall(parse_and_process_mc_file(command_hub, "src/core/code_editor_handle_input.c"));
+
   MCcall(parse_and_process_mc_file_syntax(command_hub, "src/debug_automation.c"));
   printf("hopee\n");
 

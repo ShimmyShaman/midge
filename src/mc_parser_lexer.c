@@ -151,6 +151,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_DEFAULT_KEYWORD";
   case MC_TOKEN_STRUCT_KEYWORD:
     return "MC_TOKEN_STRUCT_KEYWORD";
+  case MC_TOKEN_ENUM_KEYWORD:
+    return "MC_TOKEN_ENUM_KEYWORD";
   case MC_TOKEN_VOID_KEYWORD:
     return "MC_TOKEN_VOID_KEYWORD";
   case MC_TOKEN_INT_KEYWORD:
@@ -183,6 +185,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_FUNCTION";
   case MC_SYNTAX_STRUCTURE:
     return "MC_SYNTAX_STRUCTURE";
+  case MC_SYNTAX_ENUM:
+    return "MC_SYNTAX_ENUM";
   case MC_SYNTAX_BLOCK:
     return "MC_SYNTAX_BLOCK";
   case MC_SYNTAX_STATEMENT_LIST:
@@ -417,6 +421,13 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   } break;
   case MC_SYNTAX_PREPROCESSOR_DIRECTIVE: {
     syntax_node->preprocessor_directive.identifier = NULL;
+  } break;
+  case MC_SYNTAX_ENUM: {
+    syntax_node->enumeration.name = NULL;
+    syntax_node->enumeration.type_identity = NULL;
+    syntax_node->enumeration.fields = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+    syntax_node->enumeration.fields->alloc = 0;
+    syntax_node->enumeration.fields->count = 0;
   } break;
   case MC_SYNTAX_STRUCTURE: {
     syntax_node->structure.name = NULL;
@@ -667,6 +678,15 @@ void release_syntax_node(mc_syntax_node *syntax_node)
       free(syntax_node->structure.fields);
     }
   } break;
+  case MC_SYNTAX_ENUM: {
+    if (syntax_node->enumeration.fields) {
+      if (syntax_node->enumeration.fields->alloc) {
+        free(syntax_node->enumeration.fields->items);
+      }
+
+      free(syntax_node->enumeration.fields);
+    }
+  } break;
   case MC_SYNTAX_INVOCATION: {
     if (syntax_node->invocation.arguments) {
       if (syntax_node->invocation.arguments->alloc) {
@@ -681,7 +701,7 @@ void release_syntax_node(mc_syntax_node *syntax_node)
             get_mc_syntax_token_type_name(syntax_node->type));
   }
   }
-
+  // TODO this -- should be releasing syntax nodes when you parse anything
   return 0;
 }
 
@@ -1183,6 +1203,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         }
         if (slen == 7 && !strncmp(code + s, "default", slen)) {
           *token_type = MC_TOKEN_DEFAULT_KEYWORD;
+          if (text) {
+            allocate_and_copy_cstrn(*text, code + s, slen);
+          }
+          break;
+        }
+        if (slen == 4 && !strncmp(code + s, "enum", slen)) {
+          *token_type = MC_TOKEN_ENUM_KEYWORD;
           if (text) {
             allocate_and_copy_cstrn(*text, code + s, slen);
           }
@@ -3345,6 +3372,45 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
   return 0;
 }
 
+int mcs_parse_enum_definition(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *enum_definition;
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_ENUM, NULL, parent, &enum_definition));
+  if (additional_destination) {
+    *additional_destination = enum_definition;
+  }
+
+  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_TYPEDEF_KEYWORD, NULL));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
+  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_STRUCT_KEYWORD, NULL));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
+
+  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_IDENTIFIER, &struct_definition->structure.name));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
+
+  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_CURLY_OPENING_BRACKET, NULL));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
+
+  while (1) {
+    MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
+    if (token_type == MC_TOKEN_CURLY_CLOSING_BRACKET) {
+      break;
+    }
+
+    MCerror(3400, "TODO");
+  }
+
+  MCcall(mcs_parse_through_token(ps, struct_definition, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
+
+  MCcall(
+      mcs_parse_through_token(ps, enum_definition, MC_TOKEN_IDENTIFIER, &struct_definition->structure.type_identity));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, enum_definition));
+  MCcall(mcs_parse_through_token(ps, enum_definition, MC_TOKEN_SEMI_COLON, NULL));
+
+  return 0;
+}
+
 int mcs_parse_type_definition(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   register_midge_error_tag("mcs_parse_type_definition()");
@@ -3406,16 +3472,16 @@ int mcs_parse_type_definition(parsing_state *ps, mc_syntax_node *parent, mc_synt
 
     MCcall(mcs_parse_through_token(ps, struct_definition, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, struct_definition));
-
-    MCcall(mcs_parse_through_token(ps, struct_definition, MC_TOKEN_IDENTIFIER,
-                                   &struct_definition->structure.type_identity));
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, struct_definition));
-    MCcall(mcs_parse_through_token(ps, struct_definition, MC_TOKEN_SEMI_COLON, NULL));
   }
   else {
     MCerror(3333, "Anything but definition not supported");
     // MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_SEMI_COLON, &function->function.code_block));
   }
+
+  MCcall(
+      mcs_parse_through_token(ps, struct_definition, MC_TOKEN_IDENTIFIER, &struct_definition->structure.type_identity));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, struct_definition));
+  MCcall(mcs_parse_through_token(ps, struct_definition, MC_TOKEN_SEMI_COLON, NULL));
 
   // MCcall(print_syntax_node(function, 0));
 
@@ -3440,7 +3506,8 @@ int mcs_parse_function(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
   if (token_type == MC_TOKEN_CURLY_OPENING_BRACKET) {
-    // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never cleared
+    // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never
+    // cleared
     MCcall(mcs_parse_code_block(ps, function, &function->function.code_block));
   }
   else {
@@ -3479,7 +3546,19 @@ int parse_mc_file_to_syntax_tree_v1(char *code, mc_syntax_node **file_ast)
       MCcall(mcs_parse_preprocessor_directive(&ps, *file_ast, NULL));
     } break;
     case MC_TOKEN_TYPEDEF_KEYWORD: {
-      MCcall(mcs_parse_type_definition(&ps, *file_ast, NULL));
+      MCcall(mcs_peek_token_type(&ps, false, 1, &token_type));
+      switch (token_type) {
+      case MC_TOKEN_STRUCT_KEYWORD: {
+        MCcall(mcs_parse_type_definition(&ps, *file_ast, NULL));
+      } break;
+      case MC_TOKEN_ENUM_KEYWORD: {
+        MCcall(mcs_parse_enum_definition(&ps, *file_ast, NULL));
+      } break;
+      default: {
+        print_parse_error(ps.code, ps.index, "see-below", "");
+        MCerror(3489, "parse_file_root:>TYPEDEF>Unsupported-Token:%s", get_mc_token_type_name(token_type));
+      }
+      }
     } break;
     case MC_TOKEN_VOID_KEYWORD:
     case MC_TOKEN_IDENTIFIER: {
@@ -3557,7 +3636,8 @@ int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool 
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(&ps, true, 0, &token_type));
   if (token_type == MC_TOKEN_CURLY_OPENING_BRACKET) {
-    // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never cleared
+    // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never
+    // cleared
     MCcall(mcs_parse_code_block(&ps, function, &function->function.code_block));
   }
   else {
