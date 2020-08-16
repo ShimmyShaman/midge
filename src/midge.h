@@ -91,7 +91,7 @@ int clint_loadfile(const char *path) { return clint->loadFile(path); }
 int clint_loadheader(const char *path) { return clint->loadHeader(path); }
 }
 
-void run()
+void _midge_run()
 {
   // TODO -- integrate the ERROR STACK/TAG stuff with the rest of the midge code
   // TODO -- put this right at the start of the main app?
@@ -113,9 +113,29 @@ void run()
 
     // Load App source
     printf("<AppSourceLoading>\n");
+    clint->loadFile("/home/jason/midge/src/midge_common.h");
     clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
 
-    clint->process("mcore_load_core_source();");
+    clint->declare("int (*midge_initialize_app)(int, void **);");
+    clint->declare("int (*midge_run_loop)(int, void **);");
+    clint->declare("int (*midge_cleanup)(int, void **);");
+    clint->declare("void _midge_internal_run() {"
+                   "  initialize_midge_error_handling(clint);"
+                   "  void *command_hub;"
+                   "  MCcall(mcl_load_app_source(&command_hub));"
+                   "  printf(\"</AppSourceLoading>\\n\\n\");"
+                   ""
+                   "  void *mc_vargs[1];"
+                   "  mc_vargs[0] = &command_hub;"
+                   "  MCcall(midge_initialize_app(1, mc_vargs));"
+                   ""
+                   "  MCcall(midge_run_loop(1, mc_vargs));"
+                   ""
+                   "  MCcall(midge_cleanup(1, mc_vargs));"
+                   ""
+                   "  free(command_hub);"
+                   "}");
+    clint->process("_midge_internal_run();");
 
     // // loadSourceFiles("/home/jason/midge/src/", 0);
     // clint->loadFile("/home/jason/midge/src/midge_common.h");
@@ -134,8 +154,6 @@ void run()
     // clint->loadFile("/home/jason/midge/src/core/midge_core.h");
     // clint->loadFile("/home/jason/midge/src/midge_main.h");
     // clint->loadFile("/home/jason/midge/src/midge_main.c");
-
-    printf("</AppSourceLoading>\n\n");
 
     // // Run App
     // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"

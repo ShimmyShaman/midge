@@ -1,6 +1,6 @@
 /* midge_error_handling */
 
-#include <cstring>
+// #include <cstring>
 // #include <fstream>
 // #include <iostream>
 // #include <map>
@@ -148,17 +148,20 @@ void register_midge_error_tag(const char *fmt, ...)
 
 struct stack_entry {
   char *function_name;
-  int line, col;
+  char *file_name;
+  int line;
 };
 
 const int MIDGE_ERROR_STACK_MAX_SIZE = 250;
 const int MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE = 150;
+const int MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE = 80;
 struct stack_entry MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_MAX_SIZE];
 unsigned int MIDGE_ERROR_STACK_STR_LEN[MIDGE_ERROR_STACK_MAX_SIZE];
 int MIDGE_ERROR_STACK_INDEX;
 bool IGNORE_MIDGE_ERROR_STACK_TRACE = false;
 
-void register_midge_stack_invocation(const char *function_name, int line, int col, int *midge_error_stack_index)
+void register_midge_stack_invocation(const char *function_name, const char *file_name, int line,
+                                     int *midge_error_stack_index)
 {
   if (MIDGE_ERROR_STACK_INDEX + 1 >= MIDGE_ERROR_STACK_MAX_SIZE) {
     printf("MIDGE_ERROR_STACK: invocation of '%s' exceeded stack index\n", function_name);
@@ -175,8 +178,13 @@ void register_midge_stack_invocation(const char *function_name, int line, int co
       break;
     }
   }
+  for (int i = 0; i < MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE; ++i) {
+    MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].file_name[i] = file_name[i];
+    if (file_name[i] == '\0') {
+      break;
+    }
+  }
   MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].line = line;
-  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].col = col;
 }
 
 void register_midge_stack_return(int midge_error_stack_index) { MIDGE_ERROR_STACK_INDEX = midge_error_stack_index - 1; }
@@ -219,8 +227,8 @@ void handler(int sig)
     printf("---------------Most Recent Last------------\n\n");
     // printf("size:%i\n", MIDGE_ERROR_STACK_INDEX);
     for (int i = 0; i <= MIDGE_ERROR_STACK_INDEX; ++i) {
-      printf("[%i]:>%s :(line=%i,col=%i)\n", i, MIDGE_ERROR_STACK[i].function_name, MIDGE_ERROR_STACK[i].line,
-             MIDGE_ERROR_STACK[i].col);
+      printf("[%i]:>%s :(file='%s'line=%i)\n", i, MIDGE_ERROR_STACK[i].function_name, MIDGE_ERROR_STACK[i].file_name,
+             MIDGE_ERROR_STACK[i].line);
     }
   }
 
@@ -240,26 +248,30 @@ void initialize_midge_error_handling(cling::Interpreter *clint)
     MIDGE_ERROR_TAG[i][0] = '\0';
   }
 
-  char buf[512];
-  sprintf(buf, "void (*register_midge_error_tag)(const char *, ...) = (void (*)(const char *, ...))%p;",
-          &register_midge_error_tag);
-  clint->process(buf);
+  // char buf[512];
+  // sprintf(buf, "void (*register_midge_error_tag)(const char *, ...) = (void (*)(const char *, ...))%p;",
+  //         &register_midge_error_tag);
+  // clint->process(buf);
 
-  sprintf(buf,
-          "void (*register_midge_stack_invocation)(const char *, int, int, int *) = (void (*)(const char *, int, int, "
-          "int*))%p;",
-          &register_midge_stack_invocation);
-  clint->process(buf);
-  sprintf(buf, "void (*register_midge_stack_return)(int) = (void (*)(int))%p;", &register_midge_stack_return);
-  clint->process(buf);
+  // sprintf(buf,
+  //         "void (*register_midge_stack_invocation)(const char *, int, int, int *) = (void (*)(const char *, int, int, "
+  //         "int*))%p;",
+  //         &register_midge_stack_invocation);
+  // clint->process(buf);
+  // sprintf(buf, "void (*register_midge_stack_return)(int) = (void (*)(int))%p;", &register_midge_stack_return);
+  // clint->process(buf);
 
   for (int i = 0; i < MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
     MIDGE_ERROR_STACK[i].function_name = (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE + 1));
+    MIDGE_ERROR_STACK[i].function_name[0] = '\0';
+    MIDGE_ERROR_STACK[i].file_name = (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE + 1));
+    MIDGE_ERROR_STACK[i].file_name[0] = '\0';
   }
 
   MIDGE_ERROR_STACK_INDEX = 0;
-  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name = (char *)malloc(sizeof(char) * (15 + 1));
-  sprintf(MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name, "main.cpp:main()");
+  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name = (char *)malloc(sizeof(char) * (6 + 1));
+  sprintf(MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name, "main()");
+  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].file_name = (char *)malloc(sizeof(char) * (8 + 1));
+  sprintf(MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].file_name, "main.cpp");
   MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].line = 0;
-  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].col = 0;
 }

@@ -12,8 +12,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include "main/midge_error_handling.h"
-
 #include "cling/Interpreter/Interpreter.h"
 
 using namespace std;
@@ -34,9 +32,8 @@ int main(int argc, const char *const *argv)
   char buf[512];
   sprintf(buf, "clint = (cling::Interpreter *)%p;", (void *)clint);
   clint->process(buf);
-  initialize_midge_error_handling(clint);
 
-  clint->process("run()");
+  clint->process("_midge_run()");
 
   delete (clint);
 
