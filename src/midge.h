@@ -1,5 +1,5 @@
 /* midge.h
-   
+
    Copyright 2013, Adam Rasburn, All rights reserved.
 */
 
@@ -93,6 +93,11 @@ int clint_loadheader(const char *path) { return clint->loadHeader(path); }
 
 void run()
 {
+  // TODO -- integrate the ERROR STACK/TAG stuff with the rest of the midge code
+  // TODO -- put this right at the start of the main app?
+  struct timespec app_begin_time;
+  clock_gettime(CLOCK_REALTIME, &app_begin_time);
+
   // clint->allowRedefinition();
   try {
     // Include Paths
@@ -108,23 +113,27 @@ void run()
 
     // Load App source
     printf("<AppSourceLoading>\n");
-    // loadSourceFiles("/home/jason/midge/src/", 0);
-    clint->loadFile("/home/jason/midge/src/midge_common.h");
-    clint->loadFile("/home/jason/midge/src/midge_common.c");
-    clint->loadFile("/home/jason/midge/src/m_threads.h");
-    clint->loadFile("/home/jason/midge/src/rendering/mvk_core.h");
-    clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.h");
-    clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.cpp");
-    clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.c");
-    clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.h");
-    clint->loadFile("/home/jason/midge/src/rendering/renderer.h");
-    clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
-    clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
-    clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
-    // clint->loadFile("/home/jason/midge/src/mcl_type_defs.h");
-    clint->loadFile("/home/jason/midge/src/core/midge_core.h");
-    clint->loadFile("/home/jason/midge/src/midge_main.h");
-    clint->loadFile("/home/jason/midge/src/midge_main.c");
+    clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
+
+    clint->process("mcore_load_core_source();");
+
+    // // loadSourceFiles("/home/jason/midge/src/", 0);
+    // clint->loadFile("/home/jason/midge/src/midge_common.h");
+    // clint->loadFile("/home/jason/midge/src/midge_common.c");
+    // clint->loadFile("/home/jason/midge/src/m_threads.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/mvk_core.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.cpp");
+    // clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.c");
+    // clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/renderer.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
+    // clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
+    // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
+    // // clint->loadFile("/home/jason/midge/src/mcl_type_defs.h");
+    // clint->loadFile("/home/jason/midge/src/core/midge_core.h");
+    // clint->loadFile("/home/jason/midge/src/midge_main.h");
+    // clint->loadFile("/home/jason/midge/src/midge_main.c");
 
     printf("</AppSourceLoading>\n\n");
 
@@ -147,7 +156,7 @@ void run()
      */
 
     // clint->loadFile("/home/jason/midge/src/c_code_lexer.h");
-    clint->process("mc_main(0, NULL);");
+    // clint->process("mc_main(0, NULL);");
 
     // clint->process("#include \"midge.h\"");
     // clint->process("redef();");
