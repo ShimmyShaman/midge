@@ -18,11 +18,51 @@ int attach_function_info_to_owner(node *owner, function_info *func_info)
   return 0;
 }
 
+int attach_enumeration_info_to_owner(node *owner, enumeration_info *enum_info)
+{
+  switch (owner->type) {
+  case NODE_TYPE_GLOBAL_ROOT: {
+    global_root_data *data = (global_root_data *)owner->data;
+    MCcall(append_to_collection((void ***)&data->enumerations.items, &data->enumerations.alloc,
+                                &data->enumerations.count, (void *)enum_info));
+    break;
+  }
+  default:
+    MCerror(9, "TODO:%i", owner->type);
+  }
+
+  return 0;
+}
+
+int initialize_source_file_info(node *owner, char *filepath, source_file_info **source_file)
+{
+  source_file_info *sfi = (source_file_info *)malloc(sizeof(source_file_info));
+  allocate_and_copy_cstr(sfi->filepath, filepath);
+  sfi->definitions.alloc = 0;
+  sfi->definitions.count = 0;
+
+  switch (owner->type) {
+  case NODE_TYPE_GLOBAL_ROOT: {
+    global_root_data *data = (global_root_data *)owner->data;
+    MCcall(append_to_collection((void ***)&data->source_files.items, &data->source_files.alloc,
+                                &data->source_files.count, (void *)*source_file));
+    break;
+  }
+  default:
+    MCerror(52, "TODO:%i", owner->type);
+  }
+
+  if (source_file)
+    *source_file = sfi;
+
+  return 0;
+}
+
 int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_node,
                                                parameter_info **initialized_parameter)
 {
   parameter_info *parameter = (parameter_info *)malloc(sizeof(parameter_info));
-  parameter->type_id = (struct_id *)malloc(sizeof(mc_struct_id));
+  parameter->type_id = (struct_id *)malloc(sizeof(struct_id));
   allocate_and_copy_cstr(parameter->type_id->identifier, "parameter_info");
   parameter->type_id->version = 1U;
 
@@ -72,7 +112,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
 int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *function_ast, function_info **p_func_info)
 {
   function_info *func_info;
-  MCcall(find_function_info(owner, function_ast->function.name->text, &func_info));
+  MCcall(find_function_info(function_ast->function.name->text, &func_info));
 
   register_midge_error_tag("update_or_register_function_info_from_syntax-1");
   if (!func_info) {
@@ -127,12 +167,14 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
 
   // Set
   *p_func_info = func_info;
+
+  return 0;
 }
 
-int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_ast, function_info **p_enum_info)
+int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_ast, enumeration_info **p_enum_info)
 {
   enumeration_info *enum_info;
-  MCcall(find_enum_info(owner, enum_ast->enumeration.name, &enum_info));
+  MCcall(find_enumeration_info(enum_ast->enumeration.name->text, &enum_info));
 
   register_midge_error_tag("update_or_register_enum_info_from_syntax-1");
   if (!enum_info) {
@@ -168,46 +210,38 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   // Set the values parsed
   enum_info->members.count = 0;
   for (int i = 0; i < enum_ast->enumeration.members->count; ++i) {
-    enum_member *enum_member = (enum_member *)malloc(sizeof(enum_member));
+    enum_member *member = (enum_member *)malloc(sizeof(enum_member));
     MCcall(
-        allocate_and_copy_cstr(enum_member->identity, enum_ast->enumeration.members->items[i]->enum_member.identifier));
+        copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier, &member->identity));
     if (enum_ast->enumeration.members->items[i]->enum_member.value) {
-      MCcall(copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value, enum_member->value));
+      MCcall(copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value, &member->value));
     }
     else {
-      enum_member->value = NULL;
+      member->value = NULL;
     }
 
     MCcall(append_to_collection((void ***)&enum_info->members.items, &enum_info->members.alloc,
-                                &enum_info->members.count, enum_member));
+                                &enum_info->members.count, member));
   }
 
   // Set
   *p_enum_info = enum_info;
+
+  return 0;
 }
 
 int instantiate_function_definition_from_parsed_code(node *definition_owner, char *code, mc_syntax_node *enum_ast,
                                                      void **definition_info)
 {
-  // Register Enumeration
-  enumeration_info *enum_info;
-  MCcall(update_or_register_enum_info_from_syntax(definition_owner, enum_ast, &enum_info));
+  MCerror(238, "TODO");
 
-  enum_info->source = (source_definition *)malloc(sizeof(source_definition));
-  enum_info->source->type = SOURCE_DEFINITION_FUNCTION;
-  enum_info->source->source_file = NULL;
-  enum_info->source->code = code;
-  enum_info->source->data.enum_info = enum_info;
+  return 0;
+}
 
-  // Instantiate Function
-  char *mc_transcription;
-  MCcall(transcribe_enumeration_to_mc(enum_info, enum_ast, &mc_transcription));
-
-  MCcall(clint_declare(mc_transcription));
-
-  if (definition_info) {
-    *definition_info = enum_info;
-  }
+int instantiate_struct_definition_from_parsed_code(node *definition_owner, source_definition *source,
+                                                   mc_syntax_node *struct_ast, void **definition_info)
+{
+  MCerror(238, "TODO");
 }
 
 int instantiate_enum_definition_from_parsed_code(node *definition_owner, source_definition *source,
@@ -226,6 +260,8 @@ int instantiate_enum_definition_from_parsed_code(node *definition_owner, source_
   if (definition_info) {
     *definition_info = enum_info;
   }
+
+  return 0;
 }
 
 int instantiate_function_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
@@ -257,6 +293,20 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   if (definition_info) {
     *definition_info = func_info;
   }
+
+  return 0;
+}
+
+int instantiate_struct_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
+                                           void **definition_info)
+{
+  MCerror(291, "TODO");
+}
+
+int instantiate_enum_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
+                                         void **definition_info)
+{
+  MCerror(297, "TODO");
 }
 
 /*
@@ -276,7 +326,7 @@ int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *a
     MCcall(parse_definition_to_syntax_tree(code, &ast));
   }
   else if (!code) {
-    MCcall(copy_syntax_node_to_text(ast, code));
+    MCcall(copy_syntax_node_to_text(ast, &code));
   }
 
   // TODO -- check type hasn't changed with definition
@@ -291,17 +341,22 @@ int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *a
     source->type = SOURCE_DEFINITION_FUNCTION;
     MCcall(instantiate_function_definition_from_ast(definition_owner, source, ast, definition_info));
     break;
+  case MC_SYNTAX_STRUCTURE: {
+    source->type = SOURCE_DEFINITION_STRUCT;
+    MCcall(instantiate_struct_definition_from_ast(definition_owner, source, ast, definition_info));
+  } break;
   case MC_SYNTAX_ENUM: {
     source->type = SOURCE_DEFINITION_ENUMERATION;
     MCcall(instantiate_enum_definition_from_ast(definition_owner, source, ast, definition_info));
   } break;
   default: {
-    printf("only functions supported atm\n");
-    return;
+    MCerror(325, "only functions supported atm\n");
   }
   }
 
   source->data.p_data = *definition_info;
+
+  return 0;
 }
 
 int instantiate_all_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file)
@@ -310,15 +365,10 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
   MCcall(read_file_text(filepath, &file_text));
 
   mc_syntax_node *syntax_node;
-  MCcall(parse_mc_file_to_syntax_tree(file_text, &syntax_node));
+  MCcall(parse_file_to_syntax_tree(file_text, &syntax_node));
 
   // Parse all definitions
-  *source_file = (source_file_info *)malloc(sizeof(source_file_info));
-  MCcall(append_to_collection((void ***)&definitions_owner->source_files.items, &definitions_owner->source_files.alloc,
-                              &definitions_owner->source_files.count, *source_file));
-  allocate_and_copy_cstr((*source_file)->filepath, filepath);
-  (*source_file)->definitions.alloc = 0;
-  (*source_file)->definitions.count = 0;
+  MCcall(initialize_source_file_info(definitions_owner, filepath, source_file));
 
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
@@ -327,19 +377,19 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
       break;
     }
     case MC_SYNTAX_FUNCTION: {
-      function_info *finfo;
-      MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, &finfo));
-      finfo->source->source_file = *source_file;
+      function_info *info;
+      MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info));
+      info->source->source_file = *source_file;
     } break;
     case MC_SYNTAX_STRUCTURE: {
-      struct_info *finfo;
-      MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, &finfo));
-      finfo->source->source_file = *source_file;
+      struct_info *info;
+      MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info));
+      info->source->source_file = *source_file;
     } break;
     case MC_SYNTAX_ENUM: {
-      enumeration_info *finfo;
-      MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, &finfo));
-      finfo->source->source_file = *source_file;
+      enumeration_info *info;
+      MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info));
+      info->source->source_file = *source_file;
     } break;
     default: {
       switch ((mc_token_type)child->type) {

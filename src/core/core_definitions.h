@@ -30,7 +30,7 @@ typedef enum node_type {
 } node_type;
 
 typedef struct struct_id {
-  const char *identifier;
+  char *identifier;
   unsigned short version;
 } struct_id;
 
@@ -63,14 +63,14 @@ typedef struct source_file_info {
 
 typedef struct enum_member {
   struct_id *type_id;
-  const char *identity;
-  int value;
+  char *identity;
+  char *value;
 } enum_member;
 
 typedef struct enumeration_info {
   struct_id *type_id;
   source_definition *source;
-  const char *name;
+  char *name;
   unsigned int latest_iteration;
   struct {
     unsigned int count, alloc;
@@ -80,11 +80,11 @@ typedef struct enumeration_info {
 
 typedef struct field_info {
   struct_id *type_id;
-  const char *type_name;
+  char *type_name;
   struct_info *type;
   unsigned int type_version;
   unsigned int type_deref_count;
-  const char *name;
+  char *name;
 } field_info;
 
 typedef struct struct_info {
@@ -95,7 +95,7 @@ typedef struct struct_info {
   char *declared_name;
   unsigned int field_count;
   field_info **fields;
-  const char *sizeof_cstr;
+  char *sizeof_cstr;
 } struct_info;
 
 typedef struct parameter_info {
@@ -103,8 +103,8 @@ typedef struct parameter_info {
   bool is_function_pointer;
   union {
     struct {
-      const char *type_name;
-      const char *declared_type;
+      char *type_name;
+      char *declared_type;
       unsigned int type_version;
     };
     struct {
@@ -113,13 +113,13 @@ typedef struct parameter_info {
     };
   };
   unsigned int type_deref_count;
-  const char *name;
+  char *name;
 } parameter_info;
 
 typedef struct function_info {
   struct_id *type_id;
   source_definition *source;
-  const char *name;
+  char *name;
   unsigned int latest_iteration;
   int (**ptr_declaration)(int, void **);
   struct {
@@ -144,6 +144,10 @@ typedef struct event_handler_array {
 typedef struct global_root_data {
   struct {
     unsigned int alloc, count;
+    source_file_info **items;
+  } source_files;
+  struct {
+    unsigned int alloc, count;
     function_info **items;
   } functions;
   struct {
@@ -163,7 +167,7 @@ typedef struct global_root_data {
 typedef struct node {
   struct_id *type_id;
   node_type type;
-  const char *name;
+  char *name;
 
   node *parent;
   struct {
@@ -174,11 +178,18 @@ typedef struct node {
   void *data;
 } node;
 
+extern "C" {
+
+int obtain_midge_global_node(node **global_node);
+
+int read_file_text(const char *filepath, char **output);
+
 int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
                          void *item);
 
-int find_function_info(node *nodespace, char *function_name, function_info **funct_info);
-int find_struct_info(node *nodespace, char *function_name, struct_info **structure_info);
-int find_enumeration_info(node *nodespace, char *function_name, enumeration_info **enum_info);
+int find_function_info(char *function_name, function_info **funct_info);
+int find_struct_info(char *function_name, struct_info **structure_info);
+int find_enumeration_info(char *function_name, enumeration_info **enum_info);
+};
 
 #endif // CORE_DEFINITIONS_H

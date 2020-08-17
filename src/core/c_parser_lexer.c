@@ -1,6 +1,8 @@
 
 #include "midge_common.h"
 
+#include "core/c_parser_lexer.h"
+
 typedef struct parsing_state {
   char *code;
   int index;
@@ -11,14 +13,13 @@ typedef struct parsing_state {
 
 } parsing_state;
 
-int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
+int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int mcs_parse_expression_unary(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
-int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
-int mcs_parse_statement_list(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax_node *parent,
                           mc_syntax_node **additional_destination);
-int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
+int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
+int mcs_parse_statement_list(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 
 const char *get_mc_token_type_name(mc_token_type type)
 {
@@ -169,7 +170,7 @@ const char *get_mc_token_type_name(mc_token_type type)
     // TODO -- DEBUG -- this string is never free-d
     char *new_string;
     cprintf(new_string, "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED:%i", type);
-    return (const char *)new_string;
+    return (char *)new_string;
   }
   }
 }
@@ -264,7 +265,7 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
   }
 }
 
-int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
+int print_parse_error(char *const text, int index, const char *const function_name, const char *section_id)
 {
   const int LEN = 84;
   const int FH = LEN / 2 - 2;
@@ -357,26 +358,26 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
   return 0;
 }
 
-int _copy_syntax_node_to_text_v1(c_str *cstr, mc_syntax_node *syntax_node)
+int _copy_syntax_node_to_text(c_str *cstr, mc_syntax_node *syntax_node)
 {
-  // register_midge_error_tag("_copy_syntax_node_to_text_v1(%s)", get_mc_syntax_token_type_name(syntax_node->type));
+  // register_midge_error_tag("_copy_syntax_node_to_text(%s)", get_mc_syntax_token_type_name(syntax_node->type));
   if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
     MCcall(append_to_c_str(cstr, syntax_node->text));
-    // register_midge_error_tag("_copy_syntax_node_to_text_v1(~t)");
+    // register_midge_error_tag("_copy_syntax_node_to_text(~t)");
     return 0;
   }
 
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
 
-    MCcall(_copy_syntax_node_to_text_v1(cstr, child));
+    MCcall(_copy_syntax_node_to_text(cstr, child));
   }
   // switch (syntax_node->type) {
   // case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
   //   for (int a = 0; a < syntax_node->children->count; ++a) {
   //     mc_syntax_node *child = syntax_node->children->items[a];
 
-  //     MCcall(copy_syntax_node_to_text_v1(cstr, child));
+  //     MCcall(copy_syntax_node_to_text(cstr, child));
   //   }
   // } break;
   // default: {
@@ -385,23 +386,23 @@ int _copy_syntax_node_to_text_v1(c_str *cstr, mc_syntax_node *syntax_node)
   // }
   // }
 
-  // register_midge_error_tag("_copy_syntax_node_to_text_v1(~*)");
+  // register_midge_error_tag("_copy_syntax_node_to_text(~*)");
   return 0;
 }
 
-int copy_syntax_node_to_text_v1(mc_syntax_node *syntax_node, char **output)
+int copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output)
 {
-  register_midge_error_tag("copy_syntax_node_to_text_v1(%s)", get_mc_syntax_token_type_name(syntax_node->type));
+  register_midge_error_tag("copy_syntax_node_to_text(%s)", get_mc_syntax_token_type_name(syntax_node->type));
   if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
     allocate_and_copy_cstr(*output, syntax_node->text);
-    register_midge_error_tag("copy_syntax_node_to_text_v1(~)");
+    register_midge_error_tag("copy_syntax_node_to_text(~)");
     return 0;
   }
 
   c_str *cstr;
   MCcall(init_c_str(&cstr));
 
-  MCcall(_copy_syntax_node_to_text_v1(cstr, syntax_node));
+  MCcall(_copy_syntax_node_to_text(cstr, syntax_node));
 
   if (!output) {
     MCerror(364, "Arg Error");
@@ -418,7 +419,7 @@ int copy_syntax_node_to_text_v1(mc_syntax_node *syntax_node, char **output)
   register_midge_error_tag("copy_syntax_node_to_text-3");
   release_c_str(cstr, false);
 
-  register_midge_error_tag("copy_syntax_node_to_text_v1(~*)");
+  register_midge_error_tag("copy_syntax_node_to_text(~*)");
   return 0;
 }
 
@@ -1672,13 +1673,7 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   register_midge_error_tag("mcs_parse_type_identifier()-4");
   // Convert to the appropriate type
   if (token_type == MC_TOKEN_IDENTIFIER) {
-    void *vargs[3];
-    vargs[0] = &command_hub->nodespace;
-    vargs[1] = &type_root->type_identifier.identifier->text;
-    vargs[2] = &type_root->type_identifier.mc_type;
-    find_struct_info(3, vargs);
-    // printf("mcs: find_struct_info(%s)=='%s'\n", (*type_identifier)->text,
-    //        (*mc_type) == NULL ? "(null)" : (*mc_type)->declared_mc_name);
+    MCcall(find_struct_info(type_root->type_identifier.identifier->text, &type_root->type_identifier.mc_type));
   }
   else {
     type_root->type_identifier.mc_type = NULL;
@@ -2495,11 +2490,8 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
         }
         else {
           // Check if the function info exists in midge
-          void *mc_vargs[3];
-          mc_vargs[0] = (void *)&expression->invocation.mc_function_info;
-          mc_vargs[1] = (void *)&command_hub->global_node; // TODO -- from state?
-          mc_vargs[2] = (void *)&expression->invocation.function_identity->text;
-          MCcall(find_function_info(3, mc_vargs));
+          MCcall(find_function_info(expression->invocation.function_identity->text,
+                                    &expression->invocation.mc_function_info));
         }
       }
 
@@ -2749,13 +2741,6 @@ int mcs_parse_expression_conditional(parsing_state *ps, mc_syntax_node *parent, 
 
 int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
-  // Find the end of the expression
-
-  // MCcall(mcs_find_precedent_operator(ps, 0, -1, 18))
-
-  //   mc_token_type lpo_token_type;
-  //   int lpo_peek_loc, lpo_peek_loc2;
-
   MCcall(_mcs_parse_expression(ps, 17, parent, additional_destination));
 
   // printf("Expression!:\n");
@@ -3318,7 +3303,7 @@ int mcs_parse_function_header(parsing_state *ps, mc_syntax_node *function)
   mc_token_type token0;
   MCcall(mcs_parse_type_identifier(ps, function, &function->function.return_type_identifier));
 
-  register_midge_error_tag("parse_mc_to_syntax_tree_v1()-2");
+  register_midge_error_tag("parse_mc_to_syntax_tree()-2");
   // MCcall(print_syntax_node(function, 0));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, function));
 
@@ -3580,7 +3565,47 @@ int mcs_parse_function(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node
   return 0;
 }
 
-int parse_mc_file_to_syntax_tree_v1(char *code, mc_syntax_node **file_ast)
+int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast)
+{
+  parsing_state ps;
+  ps.code = code;
+  ps.allow_imperfect_parse = false;
+  ps.index = 0;
+  ps.line = 0;
+  ps.col = 0;
+
+  // mc_syntax_node *element_documentation = NULL;
+  // case MC_TOKEN_MULTI_LINE_COMMENT: { // TODO
+  //   MCcall(mcs_parse_through_token(ps, function, token_type, &element_documentation));
+
+  // } break;
+  // case MC_TOKEN_PREPROCESSOR_OPERATOR: {
+  //   MCcall(mcs_parse_preprocessor_directive(&ps, NULL, ast));
+  // } break;
+
+  mc_token_type token_type;
+  MCcall(mcs_peek_token_type(&ps, true, 0, &token_type));
+  switch (token_type) {
+  case MC_TOKEN_TYPEDEF_KEYWORD: {
+    MCcall(mcs_parse_type_definition(&ps, NULL, ast));
+  } break;
+  case MC_TOKEN_VOID_KEYWORD:
+  case MC_TOKEN_IDENTIFIER: {
+    MCcall(mcs_parse_function(&ps, NULL, ast));
+  } break;
+  default: {
+    print_parse_error(ps.code, ps.index, "see-below", "");
+    MCerror(3259, "parse_file_root:Unsupported-Token:%s", get_mc_token_type_name(token_type));
+  }
+  }
+
+  printf("parse_definition_to_syntax_tree\n");
+  // print_syntax_node(*ast, 0);
+
+  return 0;
+}
+
+int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast)
 {
   parsing_state ps;
   ps.code = code;
@@ -3632,81 +3657,5 @@ int parse_mc_file_to_syntax_tree_v1(char *code, mc_syntax_node **file_ast)
     MCcall(mcs_parse_through_supernumerary_tokens(&ps, *file_ast));
   }
 
-  return 0;
-}
-
-int parse_definition_to_syntax_tree_v1(char *code, mc_syntax_node **ast)
-{
-  parsing_state ps;
-  ps.code = code;
-  ps.allow_imperfect_parse = false;
-  ps.index = 0;
-  ps.line = 0;
-  ps.col = 0;
-
-  // mc_syntax_node *element_documentation = NULL;
-  // case MC_TOKEN_MULTI_LINE_COMMENT: { // TODO
-  //   MCcall(mcs_parse_through_token(ps, function, token_type, &element_documentation));
-
-  // } break;
-  // case MC_TOKEN_PREPROCESSOR_OPERATOR: {
-  //   MCcall(mcs_parse_preprocessor_directive(&ps, NULL, ast));
-  // } break;
-
-  mc_token_type token_type;
-  MCcall(mcs_peek_token_type(&ps, true, 0, &token_type));
-  switch (token_type) {
-  case MC_TOKEN_TYPEDEF_KEYWORD: {
-    MCcall(mcs_parse_type_definition(&ps, NULL, ast));
-  } break;
-  case MC_TOKEN_VOID_KEYWORD:
-  case MC_TOKEN_IDENTIFIER: {
-    MCcall(mcs_parse_function(&ps, NULL, ast));
-  } break;
-  default: {
-    print_parse_error(ps.code, ps.index, "see-below", "");
-    MCerror(3259, "parse_file_root:Unsupported-Token:%s", get_mc_token_type_name(token_type));
-  }
-  }
-
-  printf("parse_definition_to_syntax_tree_v1\n");
-  // print_syntax_node(*ast, 0);
-
-  return 0;
-}
-
-int parse_mc_to_syntax_tree_v1(char *mcode, mc_syntax_node **function_ast, bool allow_imperfect_parse)
-{
-  register_midge_error_tag("parse_mc_to_syntax_tree_v1()");
-  // printf("mc_syntax_node:%zu\n", sizeof(mc_syntax_node));
-  parsing_state ps;
-  ps.code = mcode;
-  ps.allow_imperfect_parse = allow_imperfect_parse;
-  ps.index = 0;
-  ps.line = 0;
-  ps.col = 0;
-
-  mc_syntax_node *function;
-  MCcall(mcs_construct_syntax_node(&ps, MC_SYNTAX_FUNCTION, NULL, NULL, &function));
-
-  // MCcall(print_syntax_node(function, 0));
-  MCcall(mcs_parse_function_header(&ps, function));
-  MCcall(mcs_parse_through_supernumerary_tokens(&ps, function));
-
-  mc_token_type token_type;
-  MCcall(mcs_peek_token_type(&ps, true, 0, &token_type));
-  if (token_type == MC_TOKEN_CURLY_OPENING_BRACKET) {
-    // TODO -- memory isn't cleared if this fails, and if this fails it is handled higher up. so memory is never
-    // cleared
-    MCcall(mcs_parse_code_block(&ps, function, &function->function.code_block));
-  }
-  else {
-    MCcall(mcs_parse_through_token(&ps, function, MC_TOKEN_SEMI_COLON, &function->function.code_block));
-  }
-
-  *function_ast = function;
-  // MCcall(print_syntax_node(function, 0));
-
-  register_midge_error_tag("parse_mc_to_syntax_tree_v1(~)");
   return 0;
 }
