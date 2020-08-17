@@ -1,6 +1,6 @@
 /* mc_code_parser.c */
 
-#include "core/midge_core.h"
+#include "core/c_parser_lexer.h"
 
 int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_node);
 int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax_node);

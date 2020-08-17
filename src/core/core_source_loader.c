@@ -1,6 +1,113 @@
 /* core_source_loader.c */
 
-#include "midge_common.h"
+#include <stdio.h>
+
+typedef struct _csl_c_str {
+  unsigned int alloc;
+  unsigned int len;
+  char *text;
+} _csl_c_str;
+
+typedef int booelan;
+
+int init__csl_c_str(_csl_c_str **ptr)
+{
+  (*ptr) = (_csl_c_str *)malloc(sizeof(_csl_c_str));
+  (*ptr)->alloc = 2;
+  (*ptr)->len = 0;
+  (*ptr)->text = (char *)malloc(sizeof(char) * (*ptr)->alloc);
+  (*ptr)->text[0] = '\0';
+
+  return 0;
+}
+
+int append_to__csl_c_str(_csl_c_str *cstr, const char *text)
+{
+  int len = strlen(text);
+  if (cstr->len + len + 1 >= cstr->alloc) {
+    unsigned int new_allocated_size = cstr->alloc + len + 16 + (cstr->alloc) / 10;
+    // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    // printf("atc-4\n");
+    memcpy(newptr, cstr->text, sizeof(char) * cstr->alloc);
+    // printf("atc-5\n");
+    free(cstr->text);
+    // printf("atc-6\n");
+    cstr->text = newptr;
+    // printf("atc-7\n");
+    cstr->alloc = new_allocated_size;
+    // printf("atc-8\n");
+  }
+
+  // printf("atcs-a cstrtext:'%s' len:%u end:'%c'\n", cstr->text, cstr->len, cstr->text[cstr->len]);
+  // printf("atcs-b text:'%s'\n", text);
+  // memcpy(cstr->text + cstr->len, text, sizeof(char) * len);
+  strcpy(cstr->text + cstr->len, text);
+  // printf("atcs-c cstrtext:'%s' len:%u end:'%c'\n", cstr->text + cstr->len - 2, cstr->len, cstr->text[cstr->len]);
+  cstr->len += len;
+  cstr->text[cstr->len] = '\0';
+
+  return 0;
+}
+
+int set__csl_c_str(_csl_c_str *cstr, const char *src)
+{
+  cstr->len = 0;
+  cstr->text[0] = '\0';
+  append_to__csl_c_str(cstr, src);
+
+  return 0;
+}
+
+int release__csl_c_str(_csl_c_str *ptr, booelan free_char_string_also)
+{
+  if (ptr->alloc > 0 && free_char_string_also && ptr->text) {
+    free(ptr->text);
+  }
+
+  free(ptr);
+
+  return 0;
+}
+
+int insert_into__csl_c_str(_csl_c_str *cstr, const char *text, int index)
+{
+  if (index > cstr->len) {
+    MCerror(667, "TODO");
+  }
+
+  int n = strlen(text);
+  if (cstr->len + n + 1 >= cstr->alloc) {
+    unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 10;
+    // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    // printf("atc-4\n");
+    if (index) {
+      memcpy(newptr, cstr->text, sizeof(char) * index);
+    }
+    memcpy(newptr + index, text, sizeof(char) * n);
+    if (cstr->len - index) {
+      memcpy(newptr + index + n, cstr->text + index, sizeof(char) * (cstr->len - index));
+    }
+    // printf("atc-5\n");
+    free(cstr->text);
+    // printf("atc-6\n");
+    cstr->text = newptr;
+    // printf("atc-7\n");
+    cstr->alloc = new_allocated_size;
+    cstr->len += n;
+    cstr->text[cstr->len] = '\0';
+    // printf("atc-8\n");
+    return 0;
+  }
+
+  memmove(cstr->text + index + n, cstr->text + index, sizeof(char) * (cstr->len - index));
+  memcpy(cstr->text + index, text, sizeof(char) * n);
+  cstr->len += n;
+  cstr->text[cstr->len] = '\0';
+
+  return 0;
+}
 
 int _mcl_obtain_core_source_information(void **p_core_source_info)
 {
@@ -50,6 +157,8 @@ int _mcl_read_all_file_text(const char *filepath, char **contents)
   *contents = (char *)malloc(fsize + 1);
   fread(*contents, sizeof(char), fsize, f);
   fclose(f);
+
+  (*contents)[fsize] = '\0';
 
   return 0;
 }
@@ -115,111 +224,77 @@ int _mcl_find_sequence_in_text_ignoring_empty_text(const char *text, const char 
   MCerror(60, "Could not find '%s'>'%s'>'%s'", first, second, third);
 }
 
-int _mcl_load_core_temp_struct(void *p_core_source_info, int source_index)
-{
-  const int STRUCT = 11;
-  const int FUNCTION = 12;
-  const int ENUM = 13;
-  struct core_object_info {
-    int type;
-    const char *identity;
-    const char *filepath;
-  };
-  struct core_object_info *core_objects = (struct core_object_info *)p_core_source_info;
-
-  // Find and extract the definition text
-  char *file_text;
-  MCcall(_mcl_read_all_file_text(core_objects[source_index].filepath, &file_text));
-
-  int index;
-  MCcall(_mcl_find_sequence_in_text_ignoring_empty_text(file_text, "typedef struct ",
-                                                        core_objects[source_index].identity, NULL, &index));
-
-  int end_index;
-  MCcall(_mcl_find_sequence_in_text_ignoring_empty_text(file_text, "} ", core_objects[source_index].identity, ";",
-                                                        &end_index));
-  end_index += 2 + strlen(core_objects[source_index].identity) + 1;
-
-  c_str *definition;
-  MCcall(init_c_str(&definition));
-  MCcall(append_to_c_strn(definition, file_text + index, end_index - index));
-
-  // Convert it
-  for (int i = 0; i < definition->len; ++i) {
-    for (int o = 0; o <= source_index; ++o) {
-      int n = strlen(core_objects[o].identity);
-      if (!strncmp(definition->text + i, core_objects[o].identity, n)) {
-        MCcall(insert_into_c_str(definition, "mc_core_v_", i));
-        i += 10 + n - 1;
-      }
-    }
-  }
-
-  // printf("newdef:\n%s||\n", definition->text);
-  // MCerror(159, "next");
-
-  clint_declare(definition->text);
-
-  return 0;
-}
-
 int _mcl_load_core_temp_source(void *p_core_source_info)
 {
-  // const int STRUCT = 11;
-  // const int FUNCTION = 12;
-  // const int ENUM = 13;
-  // struct core_object_info {
-  //   int type;
-  //   const char *identity;
-  //   const char *filepath;
-  // };
-  // struct core_object_info *core_objects = (struct core_object_info *)p_core_source_info;
-
-  // int objects_index = 0;
-  // while (core_objects[objects_index].type) {
-  //   printf("%i:%s:%s\n", core_objects[objects_index].type, core_objects[objects_index].filepath,
-  //          core_objects[objects_index].identity);
-  //   switch (core_objects[objects_index].type) {
-  //   case STRUCT:
-  //     MCcall(_mcl_load_core_temp_struct(p_core_source_info, objects_index));
-  //     break;
-  //   default:
-  //     MCerror(60, "Unsupported:%i", core_objects[objects_index].type);
-  //     break;
-  //   }
-
-  //   ++objects_index;
-  // }
-
   const char *core_objects[] = {
-      "node", "global_root_data", "function_info", "struct_info", "enumeration_info", NULL,
-  };
+      "node",
+      "global_root_data",
+      "function_info",
+      "struct_info",
+      "enumeration_info",
+      "find_function_info",
+      "copy_syntax_to_node",
 
-  const char *source_files[] = {
-      "src/core/core_definitions.h",
+      // And everything here before -------------------------------------------------------------
+      "instantiate_all_definitions_from_file",
       NULL,
   };
 
-  c_str *src;
-  MCcall(init_c_str(&src));
+  const char *source_files[] = {
+      "src/midge_common.h", "src/core/core_definitions.h", "src/core/c_parser_lexer.h", "src/core/c_parser_lexer.c",
+      "src/core/mc_code_transcription.c",
+      // And everything here before -------------------------------------------------------------
+      "src/core/mc_source.c",
+      // NULL,
+  };
+
+  _csl_c_str *src;
+  MCcall(init__csl_c_str(&src));
   for (int a = 0; source_files[a]; ++a) {
 
     char *file_text;
     MCcall(_mcl_read_all_file_text(source_files[a], &file_text));
-    MCcall(set_c_str(src, file_text));
+    MCcall(set__csl_c_str(src, file_text));
     free(file_text);
 
     for (int i = 0; i < src->len; ++i) {
+      // Exceptions
+      switch (src->text[i - 1]) {
+      case '_':
+      case '"':
+        continue;
+      default: {
+        if (isalpha(src->text[i - 1]))
+          continue;
+        break;
+      }
+      }
+
+      // Check against each object identity
       for (int o = 0; core_objects[o]; ++o) {
         int n = strlen(core_objects[o]);
         if (!strncmp(src->text + i, core_objects[o], n)) {
-          MCcall(insert_into_c_str(src, "mc_core_v_", i));
+          // Exceptions
+          switch (src->text[i + n]) {
+          case '_':
+          case '"':
+            continue;
+          default: {
+            if (isalpha(src->text[i + n]))
+              continue;
+            break;
+          }
+          }
+
+          // Insert
+          MCcall(insert_into__csl_c_str(src, "mc_core_v_", i));
           i += 10 + n - 1;
         }
       }
     }
 
-    printf("def:\n%s||\n", src->text);
+    // printf("def:\n%s||\n", src->text);
+    printf("declaring file:'%s'\n", source_files[a]);
     MCcall(clint_declare(src->text));
   }
 

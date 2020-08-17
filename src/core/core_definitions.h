@@ -3,7 +3,7 @@
 #ifndef CORE_DEFINITIONS_H
 #define CORE_DEFINITIONS_H
 
-// #include "core/midge_core.h"
+#include <stddef.h>
 
 typedef enum source_file_type {
   SOURCE_FILE_NULL = 0,
@@ -174,37 +174,11 @@ typedef struct node {
   void *data;
 } node;
 
-// typedef struct command_hub {
-//   struct_id *type_id;
-//   node *global_node;
-//   node *nodespace;
-//   // mc_void_collection_v1 *render_sequence_pool;
+int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
+                         void *item);
 
-//   // char *selected_text; TODO for xcb implicit pasting
-//   char *clipboard_text;
-
-//   // struct {
-//   //   resource_queue *resource_queue;
-//   //   render_queue *render_queue;
-//   // } renderer;
-//   // struct {
-//   //   uint count, allocated;
-//   //   update_callback_timer **callbacks;
-//   // } update_timers;
-//   // struct {
-//   //   uint count, alloc;
-//   //   mc_source_file_info_v1 **items;
-//   // } source_files;
-//   // mc_process_unit_v1 *process_matrix;
-//   // mc_workflow_process_v1 *focused_workflow;
-//   // unsigned int scripts_alloc;
-//   // unsigned int scripts_count;
-//   // void **scripts;
-//   unsigned int uid_counter;
-//   // mc_process_action_v1 *demo_issue;
-//   // mc_interactive_console_v1 *interactive_console;
-
-//   // unsigned int error_definition_index;
-// } mc_command_hub_v1;
+int find_function_info(node *nodespace, char *function_name, function_info **funct_info);
+int find_struct_info(node *nodespace, char *function_name, struct_info **structure_info);
+int find_enumeration_info(node *nodespace, char *function_name, enumeration_info **enum_info);
 
 #endif // CORE_DEFINITIONS_H

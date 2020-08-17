@@ -37,11 +37,47 @@
   printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
   return error_code;
 
+#define allocate_and_copy_cstr(dest, src)                                 \
+  if (src == NULL) {                                                      \
+    dest = NULL;                                                          \
+  }                                                                       \
+  else {                                                                  \
+    char *mc_tmp_cstr = (char *)malloc(sizeof(char) * (strlen(src) + 1)); \
+    strcpy(mc_tmp_cstr, src);                                             \
+    mc_tmp_cstr[strlen(src)] = '\0';                                      \
+    dest = mc_tmp_cstr;                                                   \
+  }
+
+#define allocate_and_copy_cstrn(dest, src, n)                   \
+  if (src == NULL) {                                            \
+    dest = NULL;                                                \
+  }                                                             \
+  else {                                                        \
+    char *mc_tmp_cstr = (char *)malloc(sizeof(char) * (n + 1)); \
+    strncpy(mc_tmp_cstr, src, n);                               \
+    mc_tmp_cstr[n] = '\0';                                      \
+    dest = mc_tmp_cstr;                                         \
+  }
+
+#define cprintf(dest, format, ...)                                       \
+  {                                                                      \
+    int cprintf_n = snprintf(NULL, 0, format, ##__VA_ARGS__);            \
+    char *mc_temp_cstr = (char *)malloc(sizeof(char) * (cprintf_n + 1)); \
+    sprintf(mc_temp_cstr, format, ##__VA_ARGS__);                        \
+    dest = mc_temp_cstr;                                                 \
+  }
+
+#define dprintf(format, ...)       \
+  {                                \
+    printf(format, ##__VA_ARGS__); \
+  }
+
 typedef struct c_str {
   uint alloc;
   uint len;
   char *text;
 } c_str;
+
 int init_c_str(c_str **ptr);
 int release_c_str(c_str *ptr, bool free_char_string_also);
 int set_c_str(c_str *cstr, const char *text);

@@ -1,10 +1,5 @@
-#include "core/midge_core.h"
 
-/*mcfuncreplace*/
-#define function_info mc_function_info_v1
-#define struct_info mc_struct_info_v1
-#define node mc_node_v1
-/*mcfuncreplace*/
+#include "midge_common.h"
 
 typedef struct parsing_state {
   char *code;
@@ -16,6 +11,7 @@ typedef struct parsing_state {
 
 } parsing_state;
 
+int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id);
 int mcs_parse_expression_unary(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int mcs_parse_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
@@ -266,6 +262,47 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
   default:
     return get_mc_token_type_name((mc_token_type)type);
   }
+}
+
+int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
+{
+  const int LEN = 84;
+  const int FH = LEN / 2 - 2;
+  const int SH = LEN - FH - 3 - 1;
+  char buf[LEN];
+  for (int i = 0; i < FH; ++i) {
+    if (index - FH + i < 0)
+      buf[i] = ' ';
+    else
+      buf[i] = text[index - FH + i];
+  }
+  buf[FH] = '|';
+  if (text[index] == '\0') {
+    buf[FH + 1] = '\\';
+    buf[FH + 2] = '0';
+    buf[FH + 3] = '|';
+    for (int i = 1; i < SH; ++i) {
+      buf[FH + 3 + i] = ' ';
+    }
+  }
+  else {
+    buf[FH + 1] = text[index];
+    buf[FH + 2] = '|';
+    char eof = text[index] == '\0';
+    for (int i = 0; i < SH; ++i) {
+      if (eof)
+        buf[FH + 3 + i] = ' ';
+      else {
+        eof = text[index + 1 + i] == '\0';
+        buf[FH + 3 + i] = text[index + 1 + i];
+      }
+    }
+  }
+  buf[LEN - 1] = '\0';
+
+  printf("\n%s>%s#unhandled-char:'%s'\n", function_name, section_id, buf);
+
+  return 0;
 }
 
 int _mcs_print_syntax_node_ancestry(mc_syntax_node *syntax_node, int depth, int ancestry_count)
@@ -1564,11 +1601,6 @@ int mcs_parse_parameter_declaration(parsing_state *ps, bool allow_name_skip, mc_
 
 int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
-  register_midge_error_tag("mcs_parse_type_identifier()");
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
   mc_syntax_node *type_root;
   MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_TYPE_IDENTIFIER, NULL, NULL, &type_root));
   type_root->type_identifier.is_const = false;
@@ -2230,9 +2262,6 @@ int mcs_get_token_precedence(mc_token_type token_type, int *scope_level)
 int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax_node *parent,
                           mc_syntax_node **additional_destination)
 {
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
 
   mc_syntax_node *left;
 

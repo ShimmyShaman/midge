@@ -3747,6 +3747,8 @@ int read_file(char *filepath, char **contents)
   fread(*contents, sizeof(char), fsize, f);
   fclose(f);
 
+  (*contents)[fsize] = '\0';
+
   return 0;
 }
 
