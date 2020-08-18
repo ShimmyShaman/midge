@@ -10,11 +10,12 @@ typedef enum mc_token_type {
   MC_TOKEN_NULL_CHARACTER,
   MC_TOKEN_PREPROCESSOR_OPERATOR,
   MC_TOKEN_STAR_CHARACTER,
+  MC_TOKEN_ESCAPE_CHARACTER,
   MC_TOKEN_MULTIPLY_OPERATOR,
   MC_TOKEN_DEREFERENCE_OPERATOR,
   MC_TOKEN_IDENTIFIER,
-  MC_TOKEN_SQUARE_OPEN_BRACKET,
-  MC_TOKEN_SQUARE_CLOSE_BRACKET,
+  MC_TOKEN_SQUARE_OPENING_BRACKET,
+  MC_TOKEN_SQUARE_CLOSING_BRACKET,
   MC_TOKEN_OPEN_BRACKET,
   MC_TOKEN_CLOSING_BRACKET,
   MC_TOKEN_SEMI_COLON,
@@ -43,6 +44,7 @@ typedef enum mc_token_type {
   MC_TOKEN_RETURN_KEYWORD,
   MC_TOKEN_CONST_KEYWORD,
   MC_TOKEN_SIZEOF_KEYWORD,
+  MC_TOKEN_VA_ARG_WORD,
   MC_TOKEN_CURLY_OPENING_BRACKET,
   MC_TOKEN_CURLY_CLOSING_BRACKET,
   MC_TOKEN_NEW_LINE,
@@ -56,9 +58,9 @@ typedef enum mc_token_type {
   MC_TOKEN_CHAR_LITERAL,
   MC_TOKEN_COMMA,
   MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR,
-  MC_TOKEN_LESS_THAN_OPERATOR,
+  MC_TOKEN_ARROW_OPENING_BRACKET,
   MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR,
-  MC_TOKEN_MORE_THAN_OPERATOR,
+  MC_TOKEN_ARROW_CLOSING_BRACKET,
   MC_TOKEN_LOGICAL_AND_OPERATOR,
   MC_TOKEN_BINARY_AND_ASSIGNMENT_OPERATOR,
   MC_TOKEN_AMPERSAND_CHARACTER,
@@ -112,6 +114,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_INVOCATION,
 
   MC_SYNTAX_SUPERNUMERARY,
+  MC_SYNTAX_INCLUDE_SYSTEM_HEADER_IDENTITY,
   MC_SYNTAX_TYPE_IDENTIFIER,
   MC_SYNTAX_FUNCTION_POINTER_DECLARATION,
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
@@ -120,6 +123,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_CAST_EXPRESSION,
   MC_SYNTAX_PARENTHESIZED_EXPRESSION,
   MC_SYNTAX_SIZEOF_EXPRESSION,
+  MC_SYNTAX_VA_ARG_EXPRESSION,
   MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
   MC_SYNTAX_RELATIONAL_EXPRESSION,
@@ -176,10 +180,15 @@ typedef struct mc_syntax_node {
           mc_syntax_node *identifier;
         } preprocessor_directive;
         struct {
+          bool is_system_header_search;
+          mc_syntax_node *filepath;
+        } include_directive;
+        struct {
           unsigned int count;
         } dereference_sequence;
         struct {
           bool is_function_pointer_declaration;
+          bool is_variable_args_declaration;
           mc_syntax_node *type_identifier;
           mc_syntax_node *function_pointer_declaration;
           // May be null indicating no dereference operators
@@ -329,6 +338,12 @@ typedef struct mc_syntax_node {
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
         } sizeof_expression;
+        struct {
+          mc_syntax_node *list_identity;
+          mc_syntax_node *type_identifier;
+          // May be null indicating no dereference operators
+          mc_syntax_node *type_dereference;
+        } va_arg_expression;
       };
     };
   };

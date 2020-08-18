@@ -141,7 +141,22 @@ typedef struct event_handler_array {
   int (***handlers)(int, void **);
 } event_handler_array;
 
+typedef struct node {
+  struct_id *type_id;
+  node_type type;
+  char *name;
+
+  node *parent;
+  struct {
+    unsigned int alloc, count;
+    node **items;
+  } children;
+
+  void *data;
+} node;
+
 typedef struct global_root_data {
+  node *global_node;
   struct {
     unsigned int alloc, count;
     source_file_info **items;
@@ -164,28 +179,18 @@ typedef struct global_root_data {
   } event_handlers;
 } global_root_data;
 
-typedef struct node {
-  struct_id *type_id;
-  node_type type;
-  char *name;
-
-  node *parent;
-  struct {
-    unsigned int alloc, count;
-    node **items;
-  } children;
-
-  void *data;
-} node;
-
 extern "C" {
 
-int obtain_midge_global_node(node **global_node);
+int obtain_midge_global_root(global_root_data **root_data);
 
 int read_file_text(const char *filepath, char **output);
 
 int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
                          void *item);
+int insert_in_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
+                         int insertion_index, void *item);
+int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
+                           int index);
 
 int find_function_info(char *function_name, function_info **funct_info);
 int find_struct_info(char *function_name, struct_info **structure_info);

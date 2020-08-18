@@ -230,71 +230,38 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   return 0;
 }
 
-int instantiate_function_definition_from_parsed_code(node *definition_owner, char *code, mc_syntax_node *enum_ast,
-                                                     void **definition_info)
-{
-  MCerror(238, "TODO");
-
-  return 0;
-}
-
-int instantiate_struct_definition_from_parsed_code(node *definition_owner, source_definition *source,
-                                                   mc_syntax_node *struct_ast, void **definition_info)
-{
-  MCerror(238, "TODO");
-}
-
-int instantiate_enum_definition_from_parsed_code(node *definition_owner, source_definition *source,
-                                                 mc_syntax_node *enum_ast, void **definition_info)
-{
-  // Register Enumeration
-  enumeration_info *enum_info;
-  MCcall(update_or_register_enum_info_from_syntax(definition_owner, enum_ast, &enum_info));
-
-  // Instantiate Function
-  char *mc_transcription;
-  MCcall(transcribe_enumeration_to_mc(enum_info, enum_ast, &mc_transcription));
-
-  MCcall(clint_declare(mc_transcription));
-
-  if (definition_info) {
-    *definition_info = enum_info;
-  }
-
-  return 0;
-}
-
 int instantiate_function_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
                                              void **definition_info)
 {
-  // Register Function
-  function_info *func_info;
-  MCcall(update_or_register_function_info_from_syntax(definition_owner, ast, &func_info));
+  MCerror(236, "TODO");
+  // // Register Function
+  // function_info *func_info;
+  // MCcall(update_or_register_function_info_from_syntax(definition_owner, ast, &func_info));
 
-  // Instantiate Function
-  char *mc_transcription;
-  MCcall(transcribe_function_to_mc(func_info, ast, &mc_transcription));
+  // // Instantiate Function
+  // char *mc_transcription;
+  // MCcall(transcribe_function_to_mc(func_info, ast, &mc_transcription));
 
-  MCcall(clint_declare(mc_transcription));
-  // printf("idfc-5\n");
-  char buf[512];
-  sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
-  // printf("idfc-6\n");
-  MCcall(clint_process(buf));
+  // MCcall(clint_declare(mc_transcription));
+  // // printf("idfc-5\n");
+  // char buf[512];
+  // sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
+  // // printf("idfc-6\n");
+  // MCcall(clint_process(buf));
 
-  // printf("idfc-7 %s_v%u\n", func_info->name, func_info->latest_iteration);
-  // sprintf(buf,
-  //         "{void *vargs[1];void *vargs0 = NULL;vargs[0] = &vargs0;%s(1, vargs);"
-  //         "printf(\"addr of fptr:%%p\\n\", &%s);}",
-  //         func_info->name, func_info->name);
-  // clint_process(buf);
-  // printf("idfc-8\n");
+  // // printf("idfc-7 %s_v%u\n", func_info->name, func_info->latest_iteration);
+  // // sprintf(buf,
+  // //         "{void *vargs[1];void *vargs0 = NULL;vargs[0] = &vargs0;%s(1, vargs);"
+  // //         "printf(\"addr of fptr:%%p\\n\", &%s);}",
+  // //         func_info->name, func_info->name);
+  // // clint_process(buf);
+  // // printf("idfc-8\n");
 
-  if (definition_info) {
-    *definition_info = func_info;
-  }
+  // if (definition_info) {
+  //   *definition_info = func_info;
+  // }
 
-  return 0;
+  // return 0;
 }
 
 int instantiate_struct_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,

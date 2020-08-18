@@ -529,6 +529,14 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
 
     MCcall(mct_transcribe_expression(str, syntax_node->cast_expression.expression));
   } break;
+  case MC_SYNTAX_VA_ARG_EXPRESSION: {
+    MCcall(append_to_c_str(str, "va_arg("));
+
+    MCcall(mct_transcribe_type_identifier(str, syntax_node->va_arg_expression.list_identity));
+    MCcall(append_to_c_str(str, ", "));
+    MCcall(mct_transcribe_type_identifier(str, syntax_node->va_arg_expression.type_identifier));
+    MCcall(append_to_c_str(str, ")\n"));
+  } break;
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     MCcall(append_to_c_str(str, "sizeof("));
 

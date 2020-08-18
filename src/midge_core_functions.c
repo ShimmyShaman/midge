@@ -1834,7 +1834,7 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
   }
   case '[': {
     if (!tokens_ahead) {
-      output->type = MC_TOKEN_SQUARE_OPEN_BRACKET;
+      output->type = MC_TOKEN_SQUARE_OPENING_BRACKET;
       allocate_and_copy_cstr(output->text, "[");
       output->start_index = i;
       return 0;
@@ -2152,7 +2152,7 @@ int transcribe_bracketed_expression(function_info *owner, char *code, int *i, ui
       mc_token token2;
       MCcall(peek_mc_token(code, *i, 2, &token2));
       switch (token2.type) {
-      // case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+      // case MC_TOKEN_SQUARE_OPENING_BRACKET: {
       //   char *identifier;
       //   MCcall(parse_past_identifier(code, i, &identifier, true, true));
       //   MCcall(parse_past_empty_text(code, i));
@@ -3451,7 +3451,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
             mc_token token5;
             MCcall(peek_mc_token(code, *i, 5, &token5));
             switch (token5.type) {
-            case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+            case MC_TOKEN_SQUARE_OPENING_BRACKET: {
               // Array declarative
               MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
             } break;
@@ -3510,7 +3510,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
         mc_token token3;
         MCcall(peek_mc_token(code, *i, 3, &token3));
         switch (token3.type) {
-        case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+        case MC_TOKEN_SQUARE_OPENING_BRACKET: {
           // Array declarative
           MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
         } break;
@@ -3539,7 +3539,7 @@ int transcribe_statement(function_info *owner, char *code, int *i, uint *transcr
       mc_token token2;
       MCcall(peek_mc_token(code, *i, 2, &token2));
       switch (token2.type) {
-      case MC_TOKEN_SQUARE_OPEN_BRACKET: {
+      case MC_TOKEN_SQUARE_OPENING_BRACKET: {
         // Array declarative
         MCcall(transcribe_declarative_array(owner, code, i, transcription_alloc, transcription));
       } break;
