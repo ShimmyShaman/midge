@@ -142,6 +142,21 @@ typedef struct mc_syntax_node_list {
   mc_syntax_node **items;
 } mc_syntax_node_list;
 
+typedef enum syntax_parameter_kind {
+  SYNTAX_PARAMETER_NULL = 0,
+  SYNTAX_PARAMETER_STANDARD,
+  SYNTAX_PARAMETER_FUNCTION_POINTER,
+  SYNTAX_PARAMETER_VARIABLE_ARGS,
+} syntax_parameter_kind;
+
+typedef enum syntax_field_kind {
+  SYNTAX_FIELD_NULL = 0,
+  SYNTAX_FIELD_STANDARD,
+  SYNTAX_FIELD_FUNCTION_POINTER,
+  SYNTAX_FIELD_NESTED_STRUCT,
+  SYNTAX_FIELD_NESTED_UNION,
+} syntax_field_kind;
+
 typedef struct mc_syntax_node {
   mc_syntax_node_type type;
   mc_syntax_node *parent;
@@ -188,21 +203,27 @@ typedef struct mc_syntax_node {
           unsigned int count;
         } dereference_sequence;
         struct {
-          bool is_function_pointer_declaration;
-          bool is_variable_args_declaration;
-          mc_syntax_node *type_identifier;
-          mc_syntax_node *function_pointer_declaration;
+          syntax_parameter_kind parameter_kind;
+          union {
+            mc_syntax_node *function_pointer;
+            mc_syntax_node *type_identifier;
+          };
+          // May be NULL indicating no dereference operators (will be NULL for variable_args)
           mc_syntax_node *type_dereference;
-          // May be null indicating no dereference operators
+          // Will be NULL if variable_args
           mc_syntax_node *name;
         } parameter;
         struct {
-          bool is_function_pointer_declaration;
-          bool is_anonymous_struct_declaration;
-          mc_syntax_node *type_identifier;
-          mc_syntax_node *function_pointer_declaration;
+          syntax_field_kind field_kind;
+          union {
+            mc_syntax_node *type_identifier;
+            mc_syntax_node *nested_struct;
+            mc_syntax_node *nested_union;
+            mc_syntax_node *function_pointer;
+          };
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
+          // May be null indicating no name (for nested structs/unions only)
           mc_syntax_node *name;
         } field;
         struct {

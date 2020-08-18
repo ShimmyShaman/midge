@@ -859,6 +859,29 @@ int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_nod
   return 0;
 }
 
+int mct_transcribe_field(c_str *str, int indent, mc_syntax_node *syntax_node)
+{
+
+  MCcall(mct_append_indent_to_c_str(str, indent));
+
+  switch (syntax_node->field.field_kind) {
+  case SYNTAX_FIELD_STANDARD: {
+    MCcall(mct_transcribe_type_identifier(str, syntax_node->field.type_identifier));
+    MCcall(append_to_c_str(str, " "));
+    if (syntax_node->field.type_dereference) {
+      for (int d = 0; d < syntax_node->field.type_dereference->dereference_sequence.count; ++d) {
+        MCcall(append_to_c_str(str, "*"));
+      }
+    }
+    MCcall(mct_append_node_text_to_c_str(str, syntax_node->field.name));
+  } break;
+  default:
+    MCerror(873, "NotSupported:%i", syntax_node->field.field_kind);
+  }
+
+  return 0;
+}
+
 // int transcribe_code_block_ast_to_mc_definition(mc_syntax_node *syntax_node, char **output)
 // {
 //   register_midge_error_tag("transcribe_code_block_ast_to_mc_definition()");
@@ -911,31 +934,36 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   for (int p = 0; p < function_ast->function.parameters->count; ++p) {
     mc_syntax_node *parameter_syntax = function_ast->function.parameters->items[p];
 
-    if (parameter_syntax->parameter.is_function_pointer_declaration) {
-      printf("918 TODO\n");
-      print_syntax_node(parameter_syntax, 0);
-      MCerror(912, "TODO");
-      continue;
+    switch (parameter_syntax->parameter.parameter_kind) {
+    case SYNTAX_PARAMETER_STANDARD: {
+      MCcall(mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier));
+      MCcall(append_to_c_str(str, " "));
+      if (parameter_syntax->parameter.type_dereference) {
+        for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
+          MCcall(append_to_c_str(str, "*"));
+        }
+      }
+      MCcall(mct_append_node_text_to_c_str(str, parameter_syntax->parameter.name));
+      MCcall(append_to_c_str(str, " = *("));
+      MCcall(mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier));
+      MCcall(append_to_c_str(str, " "));
+      if (parameter_syntax->parameter.type_dereference) {
+        for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
+          MCcall(append_to_c_str(str, "*"));
+        }
+      }
+      MCvacall(append_to_c_strf(str, "*)mc_argsv[%i];\n", p));
+    } break;
+    default:
+      MCerror(958, "NotSupported:%i", parameter_syntax->parameter.parameter_kind);
     }
 
-    MCcall(mct_append_indent_to_c_str(str, 1));
-    MCcall(mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier));
-    MCcall(append_to_c_str(str, " "));
-    if (parameter_syntax->parameter.type_dereference) {
-      for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
-        MCcall(append_to_c_str(str, "*"));
-      }
-    }
-    MCcall(mct_append_node_text_to_c_str(str, parameter_syntax->parameter.name));
-    MCcall(append_to_c_str(str, " = *("));
-    MCcall(mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier));
-    MCcall(append_to_c_str(str, " "));
-    if (parameter_syntax->parameter.type_dereference) {
-      for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
-        MCcall(append_to_c_str(str, "*"));
-      }
-    }
-    MCvacall(append_to_c_strf(str, "*)mc_argsv[%i];\n", p));
+    // if (parameter_syntax->parameter.is_function_pointer_declaration) {
+    //   printf("918 TODO\n");
+    //   print_syntax_node(parameter_syntax, 0);
+    //   MCerror(912, "TODO");
+    //   continue;
+    // }
   }
 
   // Code Block
@@ -976,16 +1004,19 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
     mc_syntax_node *field_syntax = structure_ast->structure.fields->items[f];
 
     MCcall(mct_append_indent_to_c_str(str, indent));
-    if (field_syntax->field.is_function_pointer_declaration) {
-      MCerror(980, "NotYetImplemented");
-    }
-    else if (field_syntax->field.is_anonymous_struct) {
-      MCerror(983, "NotYetImplemented");
-    }
-    else {
-      MCerror(986, "NotYetImplemented");
-    }
+    MCcall(mct_transcribe_field(str, indent, field_syntax));
+    MCcall(append_to_c_str(str, ";\n"));
   }
 
+  MCvacall(append_to_c_strf(str, "} mc_%s_v%u;", structure_ast->structure.name->text,
+                            structure_info->version)); // TODO -- types not structs
+
+  *mc_transcription = str->text;
+  release_c_str(str, false);
+
+  // print_syntax_node(structure_ast, 0);
+  // printf("def:\n%s||\n", *mc_transcription);
+
+  register_midge_error_tag("transcribe_struct_to_mc(~)");
   return 0;
 }

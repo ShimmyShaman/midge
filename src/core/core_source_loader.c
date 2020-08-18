@@ -232,6 +232,7 @@ const char *_mcl_core_objects[] = {
     "struct_info",
     "enumeration_info",
     "obtain_midge_global_root",
+    "init_c_str",
     // "find_function_info",
     // "copy_syntax_to_node",
 
@@ -267,6 +268,19 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
     for (int i = 0; i < src->len; ++i) {
       // Exceptions
       switch (src->text[i - 1]) {
+      case '#': {
+        if (strncmp(src->text + i, "#include", 8)) {
+          return 5;
+
+          int s = i;
+          while (src->text[i] != '\n') {
+            ++i;
+          }
+
+          // TODO -- delete s->i
+          --i;
+        }
+      }
       case '_':
       case '"':
         continue;
@@ -300,7 +314,8 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
       }
     }
 
-    // printf("def:\n%s||\n", src->text);
+    if (!strcmp(_mcl_source_files[a], "src/midge_common.h"))
+      printf("def:\n%s||\n", src->text);
     printf("declaring file:'%s'\n", _mcl_source_files[a]);
     MCcall(clint_declare(src->text));
   }

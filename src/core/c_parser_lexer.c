@@ -552,18 +552,18 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->return_statement.expression = NULL;
   } break;
   case MC_SYNTAX_PARAMETER_DECLARATION: {
-    syntax_node->parameter.is_function_pointer_declaration = false;
-    syntax_node->parameter.is_variable_args_declaration = false;
-    syntax_node->parameter.function_pointer_declaration = NULL;
+    syntax_node->parameter.parameter_kind = SYNTAX_PARAMETER_NULL;
+    syntax_node->parameter.function_pointer = NULL;
     syntax_node->parameter.type_identifier = NULL;
     syntax_node->parameter.type_dereference = NULL;
     syntax_node->parameter.name = NULL;
   } break;
   case MC_SYNTAX_FIELD_DECLARATION: {
-    syntax_node->field.is_function_pointer_declaration = false;
-    syntax_node->field.is_anonymous_struct_declaration = false;
-    syntax_node->field.function_pointer_declaration = NULL;
-    syntax_node->field.type_identifier = NULL;
+    syntax_node->field.field_kind = SYNTAX_FIELD_NULL;
+    syntax_node->field.function_pointer = NULL;
+    syntax_node->field.name = NULL;
+    syntax_node->field.nested_struct = NULL;
+    syntax_node->field.nested_union = NULL;
     syntax_node->field.type_dereference = NULL;
     syntax_node->field.name = NULL;
   } break;
@@ -1604,28 +1604,27 @@ int mcs_parse_parameter_declaration(parsing_state *ps, bool allow_name_skip, mc_
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
   if (token_type == MC_TOKEN_DECIMAL_POINT) {
-    parameter_decl->parameter.is_function_pointer_declaration = false;
-    parameter_decl->parameter.is_variable_args_declaration = true;
+    parameter_decl->parameter.parameter_kind = SYNTAX_PARAMETER_VARIABLE_ARGS;
 
     MCcall(mcs_parse_through_token(ps, parameter_decl, MC_TOKEN_DECIMAL_POINT, NULL));
     MCcall(mcs_parse_through_token(ps, parameter_decl, MC_TOKEN_DECIMAL_POINT, NULL));
     MCcall(mcs_parse_through_token(ps, parameter_decl, MC_TOKEN_DECIMAL_POINT, NULL));
   }
   else {
-    parameter_decl->parameter.is_variable_args_declaration = false;
 
     mc_syntax_node *type_identity;
     MCcall(mcs_parse_type_identifier(ps, parameter_decl, &type_identity));
     MCcall(mcs_parse_through_supernumerary_tokens(ps, parameter_decl));
 
     if (type_identity->type == MC_SYNTAX_FUNCTION_POINTER_DECLARATION) {
+      parameter_decl->parameter.parameter_kind = SYNTAX_PARAMETER_FUNCTION_POINTER;
+
       // Parameter set
-      parameter_decl->parameter.is_function_pointer_declaration = true;
-      parameter_decl->parameter.function_pointer_declaration = type_identity;
+      parameter_decl->parameter.function_pointer = type_identity;
     }
     else {
+      parameter_decl->parameter.parameter_kind = SYNTAX_PARAMETER_STANDARD;
       // Standard 'Type (*) Name' parameter
-      parameter_decl->parameter.is_function_pointer_declaration = false;
       parameter_decl->parameter.type_identifier = type_identity;
 
       MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
@@ -1670,7 +1669,7 @@ int mcs_parse_field_declaration(parsing_state *ps, bool allow_name_skip, mc_synt
 
   switch (token_type) {
   default:
-    MCerror(1674, "TODO:%s", get_mc_syntax_token_type_name(token_type));
+    MCerror(1674, "TODO:%s", get_mc_token_type_name(token_type));
   }
   // mc_syntax_node *type_identity;
   // MCcall(mcs_parse_type_identifier(ps, field, &type_identity));

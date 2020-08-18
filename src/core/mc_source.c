@@ -82,26 +82,8 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
   allocate_and_copy_cstr(parameter->type_id->identifier, "parameter_info");
   parameter->type_id->version = 1U;
 
-  if (parameter_syntax_node->parameter.is_function_pointer_declaration) {
-    parameter->is_function_pointer = true;
-
-    MCcall(copy_syntax_node_to_text(parameter_syntax_node, &parameter->full_function_pointer_declaration));
-
-    mc_syntax_node *fpsn = parameter_syntax_node->parameter.function_pointer_declaration;
-    MCcall(copy_syntax_node_to_text(fpsn->function_pointer_declaration.identifier, (char **)&parameter->name));
-
-    if (fpsn->function_pointer_declaration.type_dereference) {
-      parameter->type_deref_count = fpsn->function_pointer_declaration.type_dereference->dereference_sequence.count;
-    }
-    else {
-      parameter->type_deref_count = 0;
-    }
-
-    // void *ptr = 0;
-    // int (*fptr)(int, void **) = (int (*)(int, void **))ptr;
-    parameter->function_type = NULL;
-  }
-  else {
+  switch (parameter_syntax_node->parameter.parameter_kind) {
+  case SYNTAX_PARAMETER_STANDARD: {
     parameter->is_function_pointer = false;
 
     // Type
@@ -119,6 +101,28 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
 
     // Name
     MCcall(copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name));
+  } break;
+  case SYNTAX_PARAMETER_FUNCTION_POINTER: {
+    parameter->is_function_pointer = true;
+
+    MCcall(copy_syntax_node_to_text(parameter_syntax_node, &parameter->full_function_pointer_declaration));
+
+    mc_syntax_node *fpsn = parameter_syntax_node->parameter.function_pointer;
+    MCcall(copy_syntax_node_to_text(fpsn->function_pointer_declaration.identifier, (char **)&parameter->name));
+
+    if (fpsn->function_pointer_declaration.type_dereference) {
+      parameter->type_deref_count = fpsn->function_pointer_declaration.type_dereference->dereference_sequence.count;
+    }
+    else {
+      parameter->type_deref_count = 0;
+    }
+
+    // void *ptr = 0;
+    // int (*fptr)(int, void **) = (int (*)(int, void **))ptr;
+    parameter->function_type = NULL;
+  } break;
+  default:
+    MCerror(958, "NotSupported:%i", parameter_syntax_node->parameter.parameter_kind);
   }
 
   *initialized_parameter = parameter;
@@ -320,35 +324,34 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
 int instantiate_function_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
                                              void **definition_info)
 {
-  MCerror(236, "TODO");
-  // // Register Function
-  // function_info *func_info;
-  // MCcall(update_or_register_function_info_from_syntax(definition_owner, ast, &func_info));
+  // Register Function
+  function_info *func_info;
+  MCcall(update_or_register_function_info_from_syntax(definition_owner, ast, &func_info));
 
-  // // Instantiate Function
-  // char *mc_transcription;
-  // MCcall(transcribe_function_to_mc(func_info, ast, &mc_transcription));
+  // Instantiate Function
+  char *mc_transcription;
+  MCcall(transcribe_function_to_mc(func_info, ast, &mc_transcription));
 
-  // MCcall(clint_declare(mc_transcription));
-  // // printf("idfc-5\n");
-  // char buf[512];
-  // sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
-  // // printf("idfc-6\n");
-  // MCcall(clint_process(buf));
+  MCcall(clint_declare(mc_transcription));
+  // printf("idfc-5\n");
+  char buf[512];
+  sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
+  // printf("idfc-6\n");
+  MCcall(clint_process(buf));
 
-  // // printf("idfc-7 %s_v%u\n", func_info->name, func_info->latest_iteration);
-  // // sprintf(buf,
-  // //         "{void *vargs[1];void *vargs0 = NULL;vargs[0] = &vargs0;%s(1, vargs);"
-  // //         "printf(\"addr of fptr:%%p\\n\", &%s);}",
-  // //         func_info->name, func_info->name);
-  // // clint_process(buf);
-  // // printf("idfc-8\n");
+  // printf("idfc-7 %s_v%u\n", func_info->name, func_info->latest_iteration);
+  // sprintf(buf,
+  //         "{void *vargs[1];void *vargs0 = NULL;vargs[0] = &vargs0;%s(1, vargs);"
+  //         "printf(\"addr of fptr:%%p\\n\", &%s);}",
+  //         func_info->name, func_info->name);
+  // clint_process(buf);
+  // printf("idfc-8\n");
 
-  // if (definition_info) {
-  //   *definition_info = func_info;
-  // }
+  if (definition_info) {
+    *definition_info = func_info;
+  }
 
-  // return 0;
+  return 0;
 }
 
 int instantiate_struct_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
@@ -368,6 +371,7 @@ int instantiate_struct_definition_from_ast(node *definition_owner, source_defini
     *definition_info = structure_info;
   }
 
+  register_midge_error_tag("instantiate_struct_definition_from_ast(~)");
   return 0;
 }
 
@@ -384,11 +388,13 @@ int instantiate_enum_definition_from_ast(node *definition_owner, source_definiti
   @code may be NULL only if ast is not, if so it will be generated from the syntax parse.
   @ast may be NULL only if code is not, if so it will be parsed from the code.
   @source may be NULL, if so it will be created.
-  @definition_info is OUT. Will be set with function_info/struct_info/enum_info etc.
+  @definition_info is OUT. May be NULL, if not dereference will be set with p-to-function_info/struct_info/enum_info
+  etc.
 */
 int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
                            void **definition_info)
 {
+  register_midge_error_tag("instantiate_definition()");
   // Compile Code to Syntax
   if (!ast) {
     MCcall(parse_definition_to_syntax_tree(code, &ast));
@@ -404,31 +410,46 @@ int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *a
   }
   source->code = code;
 
+  void *p_definition_info;
+
   switch (ast->type) {
-  case MC_SYNTAX_FUNCTION:
+  case MC_SYNTAX_FUNCTION: {
     source->type = SOURCE_DEFINITION_FUNCTION;
-    MCcall(instantiate_function_definition_from_ast(definition_owner, source, ast, definition_info));
-    break;
+    MCcall(instantiate_function_definition_from_ast(definition_owner, source, ast, &p_definition_info));
+
+    function_info *func_info = (function_info *)p_definition_info;
+    func_info->source = source;
+  } break;
   case MC_SYNTAX_STRUCTURE: {
     source->type = SOURCE_DEFINITION_STRUCT;
-    MCcall(instantiate_struct_definition_from_ast(definition_owner, source, ast, definition_info));
+    MCcall(instantiate_struct_definition_from_ast(definition_owner, source, ast, &p_definition_info));
+
+    struct_info *structure_info = (struct_info *)p_definition_info;
+    structure_info->source = source;
   } break;
   case MC_SYNTAX_ENUM: {
     source->type = SOURCE_DEFINITION_ENUMERATION;
-    MCcall(instantiate_enum_definition_from_ast(definition_owner, source, ast, definition_info));
+    MCcall(instantiate_enum_definition_from_ast(definition_owner, source, ast, &p_definition_info));
+
+    enumeration_info *enum_info = (enumeration_info *)p_definition_info;
+    enum_info->source = source;
   } break;
   default: {
     MCerror(325, "only functions supported atm\n");
   }
   }
 
-  source->data.p_data = *definition_info;
+  source->data.p_data = p_definition_info;
+  if (definition_info)
+    *definition_info = p_definition_info;
 
+  register_midge_error_tag("instantiate_definition(~)");
   return 0;
 }
 
 int instantiate_all_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file)
 {
+  register_midge_error_tag("instantiate_all_definitions_from_file()");
   char *file_text;
   MCcall(read_file_text(filepath, &file_text));
 
@@ -436,7 +457,11 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
   MCcall(parse_file_to_syntax_tree(file_text, &syntax_node));
 
   // Parse all definitions
-  MCcall(initialize_source_file_info(definitions_owner, filepath, source_file));
+  source_file_info *lv_source_file;
+  MCcall(initialize_source_file_info(definitions_owner, filepath, &lv_source_file));
+  if (source_file) {
+    *source_file = lv_source_file;
+  }
 
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
@@ -447,17 +472,17 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
     case MC_SYNTAX_FUNCTION: {
       function_info *info;
       MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info));
-      info->source->source_file = *source_file;
+      info->source->source_file = lv_source_file;
     } break;
     case MC_SYNTAX_STRUCTURE: {
       struct_info *info;
       MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info));
-      info->source->source_file = *source_file;
+      info->source->source_file = lv_source_file;
     } break;
     case MC_SYNTAX_ENUM: {
       enumeration_info *info;
       MCcall(instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info));
-      info->source->source_file = *source_file;
+      info->source->source_file = lv_source_file;
     } break;
     default: {
       switch ((mc_token_type)child->type) {
@@ -474,5 +499,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
     }
     }
   }
+
+  register_midge_error_tag("instantiate_all_definitions_from_file(~)");
   return 0;
 }
