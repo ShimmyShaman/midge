@@ -248,6 +248,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_DEREFERENCE_SEQUENCE";
   case MC_SYNTAX_PARAMETER_DECLARATION:
     return "MC_SYNTAX_PARAMETER_DECLARATION";
+  case MC_SYNTAX_FIELD_DECLARATION:
+    return "MC_SYNTAX_FIELD_DECLARATION";
   case MC_SYNTAX_STRING_LITERAL_EXPRESSION:
     return "MC_SYNTAX_STRING_LITERAL_EXPRESSION";
   case MC_SYNTAX_CAST_EXPRESSION:
@@ -483,7 +485,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   } break;
   case MC_SYNTAX_STRUCTURE: {
     syntax_node->structure.name = NULL;
-    syntax_node->structure.type_identity = NULL;
+    syntax_node->structure.defined_type_name = NULL;
     syntax_node->structure.fields = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
     syntax_node->structure.fields->alloc = 0;
     syntax_node->structure.fields->count = 0;
@@ -556,6 +558,14 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->parameter.type_identifier = NULL;
     syntax_node->parameter.type_dereference = NULL;
     syntax_node->parameter.name = NULL;
+  } break;
+  case MC_SYNTAX_FIELD_DECLARATION: {
+    syntax_node->field.is_function_pointer_declaration = false;
+    syntax_node->field.is_anonymous_struct_declaration = false;
+    syntax_node->field.function_pointer_declaration = NULL;
+    syntax_node->field.type_identifier = NULL;
+    syntax_node->field.type_dereference = NULL;
+    syntax_node->field.name = NULL;
   } break;
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION: {
     syntax_node->local_variable_declaration.type_identifier = NULL;
@@ -1645,6 +1655,63 @@ int mcs_parse_parameter_declaration(parsing_state *ps, bool allow_name_skip, mc_
   return 0;
 }
 
+int mcs_parse_field_declaration(parsing_state *ps, bool allow_name_skip, mc_syntax_node *parent,
+                                mc_syntax_node **additional_destination)
+{
+  register_midge_error_tag("mcs_parse_field_declaration()");
+  mc_syntax_node *field;
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_FIELD_DECLARATION, NULL, parent, &field));
+  if (additional_destination) {
+    *additional_destination = field;
+  }
+
+  mc_token_type token_type;
+  MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+
+  switch (token_type) {
+  default:
+    MCerror(1674, "TODO:%s", get_mc_syntax_token_type_name(token_type));
+  }
+  // mc_syntax_node *type_identity;
+  // MCcall(mcs_parse_type_identifier(ps, field, &type_identity));
+  // MCcall(mcs_parse_through_supernumerary_tokens(ps, field));
+
+  // if (type_identity->type == MC_SYNTAX_FUNCTION_POINTER_DECLARATION) {
+  //   // Parameter set
+  //   field->field.is_function_pointer_declaration = true;
+  //   field->field.function_pointer_declaration = type_identity;
+  // }
+  // else {
+  //   // Standard 'Type (*) Name' parameter
+  //   field->parameter.is_function_pointer_declaration = false;
+  //   field->parameter.type_identifier = type_identity;
+
+  //   MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+  //   if (token_type == MC_TOKEN_STAR_CHARACTER) {
+  //     MCcall(mcs_parse_dereference_sequence(ps, field, &field->parameter.type_dereference));
+  //     MCcall(mcs_parse_through_supernumerary_tokens(ps, field));
+  //   }
+  //   else {
+  //     field->parameter.type_dereference = NULL;
+  //   }
+
+  //   bool skip_name = false;
+  //   if (allow_name_skip) {
+  //     mc_token_type token_type;
+  //     MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
+  //     if (token_type != MC_TOKEN_IDENTIFIER) {
+  //       skip_name = true;
+  //     }
+  //   }
+  //   if (!skip_name) {
+  //     MCcall(mcs_parse_through_token(ps, field, MC_TOKEN_IDENTIFIER, &field->parameter.name));
+  //   }
+  // }
+
+  register_midge_error_tag("mcs_parse_field_declaration(~)");
+  return 0;
+}
+
 int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   mc_syntax_node *type_root;
@@ -2320,7 +2387,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       MCerror(1753, "TODO");
     }
 
-    printf("was %p\n", *additional_destination);
+    // printf("was %p\n", *additional_destination);
 
     return 0;
   }
@@ -3641,8 +3708,8 @@ int mcs_parse_type_definition(parsing_state *ps, mc_syntax_node *parent, mc_synt
     // MCcall(mcs_parse_through_token(ps, function, MC_TOKEN_SEMI_COLON, &function->function.code_block));
   }
 
-  MCcall(
-      mcs_parse_through_token(ps, struct_definition, MC_TOKEN_IDENTIFIER, &struct_definition->structure.type_identity));
+  MCcall(mcs_parse_through_token(ps, struct_definition, MC_TOKEN_IDENTIFIER,
+                                 &struct_definition->structure.defined_type_name));
   MCcall(mcs_parse_through_supernumerary_tokens(ps, struct_definition));
   MCcall(mcs_parse_through_token(ps, struct_definition, MC_TOKEN_SEMI_COLON, NULL));
 

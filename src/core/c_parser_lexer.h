@@ -119,6 +119,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_FUNCTION_POINTER_DECLARATION,
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
   MC_SYNTAX_PARAMETER_DECLARATION,
+  MC_SYNTAX_FIELD_DECLARATION,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CAST_EXPRESSION,
   MC_SYNTAX_PARENTHESIZED_EXPRESSION,
@@ -164,7 +165,7 @@ typedef struct mc_syntax_node {
         } function;
         struct {
           mc_syntax_node *name;
-          mc_syntax_node *type_identity;
+          mc_syntax_node *defined_type_name;
           mc_syntax_node_list *fields;
         } structure;
         struct {
@@ -191,10 +192,19 @@ typedef struct mc_syntax_node {
           bool is_variable_args_declaration;
           mc_syntax_node *type_identifier;
           mc_syntax_node *function_pointer_declaration;
+          mc_syntax_node *type_dereference;
+          // May be null indicating no dereference operators
+          mc_syntax_node *name;
+        } parameter;
+        struct {
+          bool is_function_pointer_declaration;
+          bool is_anonymous_struct_declaration;
+          mc_syntax_node *type_identifier;
+          mc_syntax_node *function_pointer_declaration;
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *name;
-        } parameter;
+        } field;
         struct {
           mc_syntax_node *type_modifier;
           mc_syntax_node *type_identifier;

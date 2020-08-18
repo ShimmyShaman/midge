@@ -82,7 +82,6 @@ typedef struct field_info {
   struct_id *type_id;
   char *type_name;
   struct_info *type;
-  unsigned int type_version;
   unsigned int type_deref_count;
   char *name;
 } field_info;
@@ -93,9 +92,10 @@ typedef struct struct_info {
   char *name;
   unsigned int version;
   char *declared_name;
-  unsigned int field_count;
-  field_info **fields;
-  char *sizeof_cstr;
+  struct {
+    unsigned int count, alloc;
+    field_info **items;
+  } fields;
 } struct_info;
 
 typedef struct parameter_info {
@@ -195,6 +195,8 @@ int remove_from_collection(void ***collection, unsigned int *collection_alloc, u
 int find_function_info(char *function_name, function_info **funct_info);
 int find_struct_info(char *function_name, struct_info **structure_info);
 int find_enumeration_info(char *function_name, enumeration_info **enum_info);
+
+int release_field_info(field_info *ptr);
 };
 
 #endif // CORE_DEFINITIONS_H

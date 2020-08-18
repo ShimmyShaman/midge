@@ -247,7 +247,7 @@ const char *_mcl_source_files[] = {
     "src/core/mc_code_transcription.h",
     "src/core/core_definitions.c",
     "src/core/c_parser_lexer.c",
-    // "src/core/mc_code_transcription.c",
+    "src/core/mc_code_transcription.c",
     // And everything here before -------------------------------------------------------------
     "src/core/mc_source.c",
     NULL,
@@ -365,43 +365,46 @@ int _mcl_init_core_data(void **p_global_root)
   return 0;
 }
 
-extern "C" {
-struct mc_core_v_global_root_data;
-struct mc_core_v_source_file_info;
-int mc_core_v_instantiate_all_definitions_from_file(struct mc_core_v_global_root_data *global_data,
-                                                    const char *file_name,
-                                                    struct mc_core_v_source_file_info *source_file);
-int mc_core_v_obtain_midge_global_root(struct mc_core_v_global_root_data **root_data);
-}
+// extern "C" {
+// struct mc_core_v_global_root_data;
+// struct mc_core_v_source_file_info;
+// int mc_core_v_instantiate_all_definitions_from_file(struct mc_core_v_global_root_data *global_data,
+//                                                     const char *file_name,
+//                                                     struct mc_core_v_source_file_info *source_file);
+// int mc_core_v_obtain_midge_global_root(struct mc_core_v_global_root_data **root_data);
+// }
 int _mcl_load_core_mc_source(void *command_hub, void *p_core_source_info)
 {
-  for (int i = 0; _mcl_source_files[i]; ++i) {
-    printf("instantiate file:'%s'\n", _mcl_source_files[i]);
-    struct mc_core_v_global_root_data *global_data;
-    MCcall(mc_core_v_obtain_midge_global_root(&global_data));
-    MCcall(mc_core_v_instantiate_all_definitions_from_file(global_data, _mcl_source_files[i], NULL));
-  }
-
-  // char buf[512];
   // for (int i = 0; _mcl_source_files[i]; ++i) {
   //   printf("instantiate file:'%s'\n", _mcl_source_files[i]);
-  //   int result;
-  //   sprintf(buf,
-  //           "{\n"
-  //           "  mc_core_v_global_root_data *global_data;\n"
-  //           "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
-  //           "  int result = mc_core_v_instantiate_all_definitions_from_file(global_data->global_node, (char *)\"%s\",
-  //           " "NULL);\n" "  if (result) {\n" "    printf(\"--mc_core_v_instantiate_all_definitions_from_file
-  //           #in-clint_process\\n\");\n" "    *(int *)(%p) = result;\n" "  }\n"
-  //           "}",
-  //           _mcl_source_files[i], &result);
-
-  //   MCcall(clint_process(buf));
-
-  //   if (result != 0) {
-  //     return result;
-  //   }
+  //   struct mc_core_v_global_root_data *global_data;
+  //   MCcall(mc_core_v_obtain_midge_global_root(&global_data));
+  //   MCcall(mc_core_v_instantiate_all_definitions_from_file(global_data, _mcl_source_files[i], NULL));
   // }
+
+  char buf[512];
+  for (int i = 0; _mcl_source_files[i]; ++i) {
+    printf("instantiate file:'%s'\n", _mcl_source_files[i]);
+    int result;
+    sprintf(buf,
+            "{\n"
+            "  mc_core_v_global_root_data *global_data;\n"
+            "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
+            "  int result = mc_core_v_instantiate_all_definitions_from_file(global_data->global_node, (char *)\"%s\","
+            "                 NULL);\n"
+            "  if (result) {\n"
+            "    printf(\"--mc_core_v_instantiate_all_definitions_from_file #in - clint_process\\n\");\n"
+            "    *(int *)(%p) = result;\n"
+            "  }\n"
+            "}",
+            _mcl_source_files[i], &result);
+
+    MCcall(clint_process(buf));
+
+    if (result != 0) {
+      return result;
+    }
+  }
 
   return 0;
 }

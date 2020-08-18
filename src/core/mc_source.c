@@ -18,6 +18,22 @@ int attach_function_info_to_owner(node *owner, function_info *func_info)
   return 0;
 }
 
+int attach_struct_info_to_owner(node *owner, struct_info *structure_info)
+{
+  switch (owner->type) {
+  case NODE_TYPE_GLOBAL_ROOT: {
+    global_root_data *data = (global_root_data *)owner->data;
+    MCcall(append_to_collection((void ***)&data->structs.items, &data->structs.alloc, &data->structs.count,
+                                (void *)structure_info));
+    break;
+  }
+  default:
+    MCerror(9, "TODO:%i", owner->type);
+  }
+
+  return 0;
+}
+
 int attach_enumeration_info_to_owner(node *owner, enumeration_info *enum_info)
 {
   switch (owner->type) {
@@ -45,7 +61,7 @@ int initialize_source_file_info(node *owner, char *filepath, source_file_info **
   case NODE_TYPE_GLOBAL_ROOT: {
     global_root_data *data = (global_root_data *)owner->data;
     MCcall(append_to_collection((void ***)&data->source_files.items, &data->source_files.alloc,
-                                &data->source_files.count, (void *)*source_file));
+                                &data->source_files.count, (void *)sfi));
     break;
   }
   default:
@@ -171,6 +187,77 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
   return 0;
 }
 
+int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *struct_ast, struct_info **p_struct_info)
+{
+  struct_info *structure_info;
+  MCcall(find_struct_info(struct_ast->structure.name->text, &structure_info));
+
+  register_midge_error_tag("update_or_register_struct_info_from_syntax-1");
+  if (!structure_info) {
+    structure_info = (struct_info *)malloc(sizeof(struct_info));
+
+    MCcall(attach_struct_info_to_owner(owner, structure_info));
+
+    structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
+    allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
+    structure_info->type_id->version = 1U;
+
+    // Name & Version
+    allocate_and_copy_cstr(structure_info->name, struct_ast->structure.name->text);
+    structure_info->fields.alloc = 0;
+    structure_info->fields.count = 0;
+    structure_info->version = 1U;
+    structure_info->source = NULL;
+  }
+  else {
+    MCerror(213, "TODO");
+    // // Empty
+    // // Clear the current values
+    // for (int i = 0; i < structure_info->fields.count; ++i)
+    //   if (structure_info->fields.items[i]) {
+    //     MCcall(release_field_info((field_info *)structure_info->fields.items[i]));
+    //   }
+
+    // ++structure_info->version;
+  }
+  register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
+
+  // Set the values parsed
+  structure_info->fields.count = 0;
+  for (int i = 0; i < struct_ast->structure.fields->count; ++i) {
+    field_info *field = (field_info *)malloc(sizeof(field_info));
+
+    field->type_id = (struct_id *)malloc(sizeof(struct_id));
+    allocate_and_copy_cstr(field->type_id->identifier, "field_info");
+    field->type_id->version = 1U;
+
+    register_midge_error_tag("update_or_register_struct_info_from_syntax-2a");
+    MCcall(copy_syntax_node_to_text(struct_ast->structure.fields->items[i]->parameter.name, &field->name));
+    MCcall(
+        copy_syntax_node_to_text(struct_ast->structure.fields->items[i]->parameter.type_identifier, &field->type_name));
+    field->type = struct_ast->structure.fields->items[i]->parameter.type_identifier->type_identifier.mc_type;
+    if (struct_ast->structure.fields->items[i]->parameter.type_dereference) {
+      field->type_deref_count =
+          struct_ast->structure.fields->items[i]->parameter.type_dereference->dereference_sequence.count;
+    }
+    else {
+      field->type_deref_count = 0;
+    }
+
+    register_midge_error_tag("update_or_register_struct_info_from_syntax-2d");
+
+    MCcall(append_to_collection((void ***)&structure_info->fields.items, &structure_info->fields.alloc,
+                                &structure_info->fields.count, field));
+    register_midge_error_tag("update_or_register_struct_info_from_syntax-2e");
+  }
+  register_midge_error_tag("update_or_register_struct_info_from_syntax-4");
+
+  // Set
+  *p_struct_info = structure_info;
+
+  return 0;
+}
+
 int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_ast, enumeration_info **p_enum_info)
 {
   enumeration_info *enum_info;
@@ -267,7 +354,21 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
 int instantiate_struct_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
                                            void **definition_info)
 {
-  MCerror(291, "TODO");
+  // Register Struct
+  struct_info *structure_info;
+  MCcall(update_or_register_struct_info_from_syntax(definition_owner, ast, &structure_info));
+
+  // Instantiate Struct
+  char *mc_transcription;
+  MCcall(transcribe_struct_to_mc(structure_info, ast, &mc_transcription));
+
+  MCcall(clint_declare(mc_transcription));
+
+  if (definition_info) {
+    *definition_info = structure_info;
+  }
+
+  return 0;
 }
 
 int instantiate_enum_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,

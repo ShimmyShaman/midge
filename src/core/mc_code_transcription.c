@@ -1,6 +1,6 @@
 /* mc_code_parser.c */
 
-#include "core/c_parser_lexer.h"
+#include "core/mc_code_transcription.h"
 
 int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_node);
 int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax_node);
@@ -36,9 +36,6 @@ int mct_append_to_c_str(c_str *str, int indent, const char *text)
 int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
 {
   register_midge_error_tag("mct_contains_mc_invoke(%s)", get_mc_syntax_token_type_name(syntax_node->type));
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
 
   *result = false;
   if ((mc_token_type)syntax_node->type <= MC_TOKEN_STANDARD_MAX_VALUE) {
@@ -51,11 +48,7 @@ int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
         (mc_token_type)syntax_node->invocation.function_identity->type == MC_TOKEN_IDENTIFIER) {
       {
         // Double -check (it is necessary, at least for recursive functions)
-        void *vvargs[3];
-        vvargs[0] = &syntax_node->invocation.mc_function_info;
-        vvargs[1] = &command_hub->global_node;
-        vvargs[2] = &syntax_node->invocation.function_identity->text;
-        find_function_info(3, vvargs);
+        find_function_info(syntax_node->invocation.function_identity->text, &syntax_node->invocation.mc_function_info);
       }
     }
 
@@ -89,7 +82,7 @@ int mct_transcribe_mc_invocation(c_str *str, int indent, mc_syntax_node *syntax_
   if (syntax_node->type != MC_SYNTAX_INVOCATION) {
     MCerror(70, "TODO %s", get_mc_syntax_token_type_name(syntax_node->type));
   }
-  mc_function_info_v1 *finfo = syntax_node->invocation.mc_function_info;
+  function_info *finfo = syntax_node->invocation.mc_function_info;
   // print_syntax_node(syntax_node, 0);
   // printf("mtmi-2 %p\n", finfo);
 
@@ -297,10 +290,6 @@ int mct_transcribe_declarator(c_str *str, mc_syntax_node *syntax_node)
 
 int mct_transcribe_type_identifier(c_str *str, mc_syntax_node *syntax_node)
 {
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
   // Const
   if (syntax_node->type_identifier.is_const) {
     MCcall(append_to_c_str(str, "const "));
@@ -328,18 +317,12 @@ int mct_transcribe_type_identifier(c_str *str, mc_syntax_node *syntax_node)
   }
 
   // mc_type
-  {
-    void *vargs[3];
-    vargs[0] = &command_hub->nodespace;
-    vargs[1] = &syntax_node->type_identifier.identifier->text;
-    vargs[2] = &syntax_node->type_identifier.mc_type;
-    find_struct_info(3, vargs);
-    // printf("mcs: find_struct_info(%s)=='%s'\n", (*type_identifier)->text,
-    //        (*mc_type) == NULL ? "(null)" : (*mc_type)->declared_mc_name);
-  }
+  MCcall(find_struct_info(syntax_node->type_identifier.identifier->text, &syntax_node->type_identifier.mc_type));
+  // printf("mcs: find_struct_info(%s)=='%s'\n", (*type_identifier)->text,
+  //        (*mc_type) == NULL ? "(null)" : (*mc_type)->declared_mc_name);
 
   if (syntax_node->type_identifier.mc_type) {
-    MCcall(append_to_c_str(str, syntax_node->type_identifier.mc_type->declared_mc_name));
+    MCcall(append_to_c_str(str, syntax_node->type_identifier.mc_type->declared_name));
   }
   else {
     MCcall(mct_append_node_text_to_c_str(str, syntax_node->type_identifier.identifier));
@@ -421,40 +404,6 @@ int mct_transcribe_declaration_statement(c_str *str, int indent, mc_syntax_node 
     continue;
   }
 
-  // MCcall(mct_append_indent_to_c_str(str, indent));
-  // MCcall(mct_append_node_text_to_c_str(str, declarator->local_variable_declarator.variable_name));
-  // MCcall(append_to_c_str(str, " "));
-  // MCcall(mct_append_node_text_to_c_str(str, declarator->local_variable_declarator.initializer));
-  // MCcall(append_to_c_str(str, ";\n"));
-  // }
-  // else {
-  // // Else: Just write it out normally
-  // MCcall(mct_append_indent_to_c_str(str, indent));
-
-  // MCcall(mct_transcribe_type_identifier(str, declaration->local_variable_declaration.type_identifier));
-  // MCcall(append_to_c_str(str, " "));
-
-  // for (int i = 0; i < declaration->local_variable_declaration.declarators->count; ++i) {
-  //   mc_syntax_node *declarator = declaration->local_variable_declaration.declarators->items[i];
-
-  //   if (i > 0) {
-  //     MCcall(append_to_c_str(str, ", "));
-  //   }
-
-  //   if (declarator->local_variable_declarator.type_dereference) {
-  //     MCcall(mct_append_node_text_to_c_str(str, declarator->local_variable_declarator.type_dereference));
-  //   }
-  //   MCcall(mct_append_node_text_to_c_str(str, declarator->local_variable_declarator.variable_name));
-
-  //   if (declarator->local_variable_declarator.initializer) {
-  // MCcall(append_to_c_str(str, " = "));
-
-  //   }
-  // }
-
-  // MCcall(mct_append_node_text_to_c_str(str, syntax_node));
-  // MCcall(append_to_c_str(str, ";\n"));
-  // }
   return 0;
 }
 
@@ -910,39 +859,31 @@ int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_nod
   return 0;
 }
 
-int transcribe_code_block_ast_to_mc_definition_v1(mc_syntax_node *syntax_node, char **output)
+// int transcribe_code_block_ast_to_mc_definition(mc_syntax_node *syntax_node, char **output)
+// {
+//   register_midge_error_tag("transcribe_code_block_ast_to_mc_definition()");
+
+//   if (syntax_node->type != MC_SYNTAX_BLOCK) {
+//     MCerror(861, "MCT:Not Supported");
+//   }
+
+//   c_str *str;
+//   MCcall(init_c_str(&str));
+
+//   if (syntax_node->code_block.statement_list) {
+//     MCcall(mct_transcribe_statement_list(str, 1, syntax_node->code_block.statement_list));
+//   }
+
+//   *output = str->text;
+//   MCcall(release_c_str(str, false));
+
+//   register_midge_error_tag("transcribe_code_block_ast_to_mc_definition(~)");
+//   return 0;
+// }
+
+int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function_ast, char **mc_transcription)
 {
-  register_midge_error_tag("transcribe_code_block_ast_to_mc_definition_v1()");
-
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
-
-  if (syntax_node->type != MC_SYNTAX_BLOCK) {
-    MCerror(861, "MCT:Not Supported");
-  }
-
-  c_str *str;
-  MCcall(init_c_str(&str));
-
-  if (syntax_node->code_block.statement_list) {
-    MCcall(mct_transcribe_statement_list(str, 1, syntax_node->code_block.statement_list));
-  }
-
-  *output = str->text;
-  MCcall(release_c_str(str, false));
-
-  register_midge_error_tag("transcribe_code_block_ast_to_mc_definition_v1(~)");
-  return 0;
-}
-
-int transcribe_function_to_mc_v1(mc_function_info_v1 *func_info, mc_syntax_node *function_ast, char **mc_transcription)
-{
-  register_midge_error_tag("transcribe_function_to_mc_v1()");
-
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub;
-  /*mcfuncreplace*/
+  register_midge_error_tag("transcribe_function_to_mc()");
 
   if (function_ast->type != MC_SYNTAX_FUNCTION) {
     MCerror(889, "MCT:Not Supported");
@@ -951,7 +892,7 @@ int transcribe_function_to_mc_v1(mc_function_info_v1 *func_info, mc_syntax_node 
       !function_ast->function.code_block->code_block.statement_list) {
     MCerror(893, "TODO");
   }
-  if (function_ast->function.name->type != MC_TOKEN_IDENTIFIER) {
+  if ((mc_token_type)function_ast->function.name->type != MC_TOKEN_IDENTIFIER) {
     MCerror(898, "TODO");
   }
 
@@ -964,12 +905,6 @@ int transcribe_function_to_mc_v1(mc_function_info_v1 *func_info, mc_syntax_node 
 
   // Initial
   MCvacall(append_to_c_strf(str, "  register_midge_error_tag(\"%s()\");\n\n", function_ast->function.name->text));
-  MCcall(append_to_c_str(str, "  "));
-  MCcall(append_to_c_str(str, "  // midge Command Hub\n"
-                              "  mc_command_hub_v1 *comman"
-                              "d_hub = command_hub;\n" // TODO -- maybe, just directly replace all
-                                                       // command hub references with the casted pointer)
-                              "\n"));
 
   // Function Parameters
   MCcall(append_to_c_str(str, "  // Function Parameters\n"));
@@ -1017,6 +952,40 @@ int transcribe_function_to_mc_v1(mc_function_info_v1 *func_info, mc_syntax_node 
 
   // printf("mc_transcription:\n%s||\n", *mc_transcription);
 
-  register_midge_error_tag("transcribe_function_to_mc_v1(~)");
+  register_midge_error_tag("transcribe_function_to_mc(~)");
+  return 0;
+}
+
+int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structure_ast, char **mc_transcription)
+{
+  register_midge_error_tag("transcribe_struct_to_mc()");
+
+  if (structure_ast->type != MC_SYNTAX_STRUCTURE) {
+    MCerror(964, "MCT:Not Supported");
+  }
+
+  c_str *str;
+  MCcall(init_c_str(&str));
+
+  // Header
+  MCvacall(append_to_c_strf(str, "typedef struct mc_%s_v%u {\n", structure_ast->structure.name->text,
+                            structure_info->version));
+
+  int indent = 1;
+  for (int f = 0; f < structure_ast->structure.fields->count; ++f) {
+    mc_syntax_node *field_syntax = structure_ast->structure.fields->items[f];
+
+    MCcall(mct_append_indent_to_c_str(str, indent));
+    if (field_syntax->field.is_function_pointer_declaration) {
+      MCerror(980, "NotYetImplemented");
+    }
+    else if (field_syntax->field.is_anonymous_struct) {
+      MCerror(983, "NotYetImplemented");
+    }
+    else {
+      MCerror(986, "NotYetImplemented");
+    }
+  }
+
   return 0;
 }
