@@ -399,7 +399,7 @@ int _copy_syntax_node_to_text(c_str *cstr, mc_syntax_node *syntax_node)
   // register_midge_error_tag("_copy_syntax_node_to_text(~*)");
   return 0;
 }
-
+extern "C" int init_c_str(c_str **ptr);
 int copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output)
 {
   register_midge_error_tag("copy_syntax_node_to_text(%s)", get_mc_syntax_token_type_name(syntax_node->type));

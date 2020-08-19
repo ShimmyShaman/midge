@@ -109,6 +109,26 @@ int insert_into__csl_c_str(_csl_c_str *cstr, const char *text, int index)
   return 0;
 }
 
+int remove_from__csl_c_str(_csl_c_str *cstr, int start_index, int len)
+{
+  if (start_index > cstr->len || len == 0)
+    return 0;
+
+  if (start_index + len == cstr->len) {
+    cstr->len = start_index;
+    return 0;
+  }
+
+  int a;
+  for (a = 0; start_index + len + a < cstr->len; ++a) {
+    cstr->text[start_index + a] = cstr->text[start_index + len + a];
+  }
+  cstr->len -= len;
+  cstr->text[cstr->len] = '\0';
+
+  return 0;
+}
+
 int _mcl_obtain_core_source_information(void **p_core_source_info)
 {
   const int STRUCT = 11;
@@ -256,8 +276,16 @@ const char *_mcl_source_files[] = {
 
 int _mcl_load_core_temp_source(void *p_core_source_info)
 {
+
   _csl_c_str *src;
   MCcall(init__csl_c_str(&src));
+
+  // set__csl_c_str(src, "abcdefghijklmnopqrstuvwxyz");
+  // printf("%s\n", src->text);
+  // MCcall(remove_from__csl_c_str(src, 3, 13));
+  // printf("%s\n", src->text);
+  // return 0;
+
   for (int a = 0; _mcl_source_files[a]; ++a) {
 
     char *file_text;
@@ -266,21 +294,33 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
     free(file_text);
 
     for (int i = 0; i < src->len; ++i) {
-      // Exceptions
-      switch (src->text[i - 1]) {
-      case '#': {
-        if (strncmp(src->text + i, "#include", 8)) {
-          return 5;
+      // Skip Includes
+      if (src->text[i] == '#') {
+        if (!strncmp(src->text + i, "#include \"", 10)) {
 
-          int s = i;
-          while (src->text[i] != '\n') {
-            ++i;
+          int s = i, e = i;
+          while (src->text[e] != '\n') {
+            ++e;
           }
 
-          // TODO -- delete s->i
+          // printf("removing ...'");
+          // for (int a = 0; a < e - s; ++a)
+          //   printf("%c", src->text[s + a]);
+          // printf("'");
+          // printf("-'%i' chars\n", e - s);
+
+          // Delete all includes
+          MCcall(remove_from__csl_c_str(src, s, e - s));
           --i;
+          // if (!strcmp(_mcl_source_files[a], "src/midge_common.h"))
+          //   printf("def:\n%s||\n", src->text);
+          //   return 0;
+          continue;
         }
       }
+
+      // Exceptions
+      switch (src->text[i - 1]) {
       case '_':
       case '"':
         continue;
@@ -318,6 +358,9 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
       printf("def:\n%s||\n", src->text);
     printf("declaring file:'%s'\n", _mcl_source_files[a]);
     MCcall(clint_declare(src->text));
+
+
+    MCcall(clint_process("{c_str *str; mc_core_v_init_c_str(&str);}"));
   }
 
   return 0;
