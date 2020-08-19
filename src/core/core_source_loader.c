@@ -253,6 +253,14 @@ const char *_mcl_core_objects[] = {
     "enumeration_info",
     "obtain_midge_global_root",
     "init_c_str",
+    "release_c_str",
+    "set_c_str",
+    "set_c_strn",
+    "append_to_c_str",
+    "append_to_c_strn",
+    "append_to_c_strf",
+    "insert_into_c_str",
+    "print_syntax_node",
     // "find_function_info",
     // "copy_syntax_to_node",
 
@@ -354,13 +362,12 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
       }
     }
 
-    if (!strcmp(_mcl_source_files[a], "src/midge_common.h"))
-      printf("def:\n%s||\n", src->text);
+    // if (!strcmp(_mcl_source_files[a], "src/midge_common.h"))
+    //   printf("def:\n%s||\n", src->text);
     printf("declaring file:'%s'\n", _mcl_source_files[a]);
     MCcall(clint_declare(src->text));
 
-
-    MCcall(clint_process("{c_str *str; mc_core_v_init_c_str(&str);}"));
+    // MCcall(clint_process("printf(\"%p\", &mc_core_v_init_c_str);//{c_str *str; mc_core_v_init_c_str(&str);}"));
   }
 
   return 0;

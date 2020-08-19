@@ -300,6 +300,7 @@ typedef struct mc_field_info_v1 {
 
 typedef struct mc_parameter_info_v1 {
   mc_struct_id_v1 *struct_id;
+  bool is_variable_args;
   bool is_function_pointer;
   struct {
     const char *type_name;

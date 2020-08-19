@@ -16,6 +16,34 @@
 
 #include "cling/Interpreter/Interpreter.h"
 
+#define MCcall(function)                                                              \
+  {                                                                                        \
+    int mc_error_stack_index;                                                              \
+    register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
+    int mc_res = function;                                                                 \
+    if (mc_res) {                                                                          \
+      printf("--" #function "line:%i:ERR:%i\n", __LINE__, mc_res);                         \
+      return mc_res;                                                                       \
+    }                                                                                      \
+    register_midge_stack_return(mc_error_stack_index);                                     \
+  }
+
+#define MCvacall(function)                                                            \
+  {                                                                                        \
+    int mc_error_stack_index;                                                              \
+    register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
+    int mc_res = function;                                                                 \
+    if (mc_res) {                                                                          \
+      printf("-- line:%d varg-function-call:%i\n", __LINE__, mc_res);                      \
+      return mc_res;                                                                       \
+    }                                                                                      \
+    register_midge_stack_return(mc_error_stack_index);                                     \
+  }
+
+#define MCerror(error_code, error_message, ...)                       \
+  printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
+  return error_code;
+
 bool IGNORE_MIDGE_ERROR_REPORT = false;
 
 const int MIDGE_ERROR_TAG_MAX_SIZE = 20;

@@ -33,6 +33,7 @@ typedef enum mc_token_type {
   MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR,
   MC_TOKEN_MODULO_AND_ASSIGN_OPERATOR,
   MC_TOKEN_TYPEDEF_KEYWORD,
+  MC_TOKEN_EXTERN_KEYWORD,
   MC_TOKEN_IF_KEYWORD,
   MC_TOKEN_ELSE_KEYWORD,
   MC_TOKEN_WHILE_KEYWORD,
@@ -142,21 +143,6 @@ typedef struct mc_syntax_node_list {
   mc_syntax_node **items;
 } mc_syntax_node_list;
 
-typedef enum syntax_parameter_kind {
-  SYNTAX_PARAMETER_NULL = 0,
-  SYNTAX_PARAMETER_STANDARD,
-  SYNTAX_PARAMETER_FUNCTION_POINTER,
-  SYNTAX_PARAMETER_VARIABLE_ARGS,
-} syntax_parameter_kind;
-
-typedef enum syntax_field_kind {
-  SYNTAX_FIELD_NULL = 0,
-  SYNTAX_FIELD_STANDARD,
-  SYNTAX_FIELD_FUNCTION_POINTER,
-  SYNTAX_FIELD_NESTED_STRUCT,
-  SYNTAX_FIELD_NESTED_UNION,
-} syntax_field_kind;
-
 typedef struct mc_syntax_node {
   mc_syntax_node_type type;
   mc_syntax_node *parent;
@@ -203,7 +189,7 @@ typedef struct mc_syntax_node {
           unsigned int count;
         } dereference_sequence;
         struct {
-          syntax_parameter_kind parameter_kind;
+          parameter_kind parameter_kind;
           union {
             mc_syntax_node *function_pointer;
             mc_syntax_node *type_identifier;
@@ -214,7 +200,7 @@ typedef struct mc_syntax_node {
           mc_syntax_node *name;
         } parameter;
         struct {
-          syntax_field_kind field_kind;
+          field_kind field_kind;
           union {
             mc_syntax_node *type_identifier;
             mc_syntax_node *nested_struct;
@@ -381,6 +367,7 @@ typedef struct mc_syntax_node {
 } mc_syntax_node;
 
 extern "C" {
+int print_syntax_node(mc_syntax_node *syntax_node, int depth);
 int copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);
 int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast);
 int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast);

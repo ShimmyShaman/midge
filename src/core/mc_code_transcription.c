@@ -322,7 +322,14 @@ int mct_transcribe_type_identifier(c_str *str, mc_syntax_node *syntax_node)
   //        (*mc_type) == NULL ? "(null)" : (*mc_type)->declared_mc_name);
 
   if (syntax_node->type_identifier.mc_type) {
-    MCcall(append_to_c_str(str, syntax_node->type_identifier.mc_type->declared_name));
+    // MCcall(print_syntax_node(syntax_node, 0));
+    printf("syntax_node:%p\n", syntax_node);
+    printf("syntax_node->type_identifier.mc_type:%p\n", syntax_node->type_identifier.mc_type);
+    printf("syntax_node->type_identifier.mc_type->mc_declared_name:%p\n",
+           syntax_node->type_identifier.mc_type->mc_declared_name);
+    printf("syntax_node->type_identifier.mc_type->mc_declared_name:%s\n",
+           syntax_node->type_identifier.mc_type->mc_declared_name);
+    MCcall(append_to_c_str(str, syntax_node->type_identifier.mc_type->mc_declared_name));
   }
   else {
     MCcall(mct_append_node_text_to_c_str(str, syntax_node->type_identifier.identifier));
@@ -865,7 +872,7 @@ int mct_transcribe_field(c_str *str, int indent, mc_syntax_node *syntax_node)
   MCcall(mct_append_indent_to_c_str(str, indent));
 
   switch (syntax_node->field.field_kind) {
-  case SYNTAX_FIELD_STANDARD: {
+  case FIELD_KIND_STANDARD: {
     MCcall(mct_transcribe_type_identifier(str, syntax_node->field.type_identifier));
     MCcall(append_to_c_str(str, " "));
     if (syntax_node->field.type_dereference) {
@@ -913,6 +920,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   }
   if (!function_ast->function.code_block || function_ast->function.code_block->type != MC_SYNTAX_BLOCK ||
       !function_ast->function.code_block->code_block.statement_list) {
+    print_syntax_node(function_ast, 0);
     MCerror(893, "TODO");
   }
   if ((mc_token_type)function_ast->function.name->type != MC_TOKEN_IDENTIFIER) {
@@ -935,7 +943,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
     mc_syntax_node *parameter_syntax = function_ast->function.parameters->items[p];
 
     switch (parameter_syntax->parameter.parameter_kind) {
-    case SYNTAX_PARAMETER_STANDARD: {
+    case PARAMETER_KIND_STANDARD: {
       MCcall(mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier));
       MCcall(append_to_c_str(str, " "));
       if (parameter_syntax->parameter.type_dereference) {
@@ -996,8 +1004,9 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
   MCcall(init_c_str(&str));
 
   // Header
-  MCvacall(append_to_c_strf(str, "typedef struct mc_%s_v%u {\n", structure_ast->structure.name->text,
-                            structure_info->version));
+  MCcall(append_to_c_str(str, "typedef struct \n"));
+  MCcall(append_to_c_str(str, structure_info->mc_declared_name));
+  MCcall(append_to_c_str(str, " { \n"));
 
   int indent = 1;
   for (int f = 0; f < structure_ast->structure.fields->count; ++f) {

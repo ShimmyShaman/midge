@@ -113,7 +113,7 @@ void _midge_run()
 
     // Load App source
     printf("<AppSourceLoading>\n");
-    clint->loadFile("/home/jason/midge/src/midge_common.h");
+    clint->loadFile("/home/jason/midge/src/midge_error_handling.h");
     clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
 
     clint->declare("int (*midge_initialize_app)(int, void **);");

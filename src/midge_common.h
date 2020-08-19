@@ -79,6 +79,7 @@ typedef struct c_str {
   char *text;
 } c_str;
 
+extern "C" {
 int init_c_str(c_str **ptr);
 int release_c_str(c_str *ptr, bool free_char_string_also);
 int set_c_str(c_str *cstr, const char *text);
@@ -87,6 +88,7 @@ int append_to_c_str(c_str *cstr, const char *text);
 int append_to_c_strn(c_str *cstr, const char *text, int n);
 int append_to_c_strf(c_str *cstr, const char *format, ...);
 int insert_into_c_str(c_str *cstr, const char *text, int index);
+}
 
 int init_c_str(c_str **ptr)
 {

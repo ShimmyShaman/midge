@@ -29,6 +29,21 @@ typedef enum node_type {
   NODE_TYPE_ABSTRACT,
 } node_type;
 
+typedef enum parameter_kind {
+  PARAMETER_KIND_NULL = 0,
+  PARAMETER_KIND_STANDARD,
+  PARAMETER_KIND_FUNCTION_POINTER,
+  PARAMETER_KIND_VARIABLE_ARGS,
+} parameter_kind;
+
+typedef enum field_kind {
+  FIELD_KIND_NULL = 0,
+  FIELD_KIND_STANDARD,
+  FIELD_KIND_FUNCTION_POINTER,
+  FIELD_KIND_NESTED_STRUCT,
+  FIELD_KIND_NESTED_UNION,
+} field_kind;
+
 typedef struct struct_id {
   char *identifier;
   unsigned short version;
@@ -80,6 +95,7 @@ typedef struct enumeration_info {
 
 typedef struct field_info {
   struct_id *type_id;
+  field_kind field_type;
   char *type_name;
   struct_info *type;
   unsigned int type_deref_count;
@@ -91,7 +107,7 @@ typedef struct struct_info {
   source_definition *source;
   char *name;
   unsigned int version;
-  char *declared_name;
+  char *mc_declared_name;
   struct {
     unsigned int count, alloc;
     field_info **items;
@@ -100,7 +116,7 @@ typedef struct struct_info {
 
 typedef struct parameter_info {
   struct_id *type_id;
-  bool is_function_pointer;
+  parameter_kind parameter_type;
   union {
     struct {
       char *type_name;
