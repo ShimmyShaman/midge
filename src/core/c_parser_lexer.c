@@ -322,7 +322,7 @@ int _mcs_print_syntax_node_ancestry(mc_syntax_node *syntax_node, int depth, int 
 {
 
   if (syntax_node->parent) {
-    MCcall(_mcs_print_syntax_node_ancestry(syntax_node->parent, depth, ancestry_count + 1));
+    _mcs_print_syntax_node_ancestry(syntax_node->parent, depth, ancestry_count + 1);
     printf(" |  | \n");
   }
 
@@ -369,7 +369,7 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
         continue;
       }
       // printf("mpst-4\n");
-      MCcall(print_syntax_node(syntax_node->children->items[i], depth + 1));
+      print_syntax_node(syntax_node->children->items[i], depth + 1);
     }
     // printf("mpst-5\n");
   }

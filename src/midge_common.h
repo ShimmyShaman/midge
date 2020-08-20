@@ -10,30 +10,6 @@
 #include "midge.h"
 #include "midge_error_handling.h"
 
-#define MCcall(function)                                                                   \
-  {                                                                                        \
-    int mc_error_stack_index;                                                              \
-    register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
-    int mc_res = function;                                                                 \
-    if (mc_res) {                                                                          \
-      printf("--" #function "line:%i:ERR:%i\n", __LINE__, mc_res);                         \
-      return mc_res;                                                                       \
-    }                                                                                      \
-    register_midge_stack_return(mc_error_stack_index);                                     \
-  }
-
-#define MCvacall(function)                                                                 \
-  {                                                                                        \
-    int mc_error_stack_index;                                                              \
-    register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
-    int mc_res = function;                                                                 \
-    if (mc_res) {                                                                          \
-      printf("-- line:%d varg-function-call:%i\n", __LINE__, mc_res);                      \
-      return mc_res;                                                                       \
-    }                                                                                      \
-    register_midge_stack_return(mc_error_stack_index);                                     \
-  }
-
 #define MCerror(error_code, error_message, ...)                          \
   printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
   return error_code;
@@ -136,7 +112,7 @@ int append_char_to_c_str(c_str *cstr, char c)
   char buf[2];
   buf[0] = c;
   buf[1] = '\0';
-  MCcall(append_to_c_str(cstr, buf));
+  append_to_c_str(cstr, buf);
   return 0;
 }
 
