@@ -328,6 +328,10 @@ int insert_into_c_str(c_str *cstr, const char *text, int index)
   }
 
   int n = strlen(text);
+  if (n == 0) {
+    return 0;
+  }
+
   if (cstr->len + n + 1 >= cstr->alloc) {
     unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 10;
     // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
@@ -352,7 +356,9 @@ int insert_into_c_str(c_str *cstr, const char *text, int index)
     return 0;
   }
 
-  memmove(cstr->text + index + n, cstr->text + index, sizeof(char) * (cstr->len - index));
+  if (index != cstr->len) {
+    memmove(cstr->text + index + n, cstr->text + index, sizeof(char) * (cstr->len - index));
+  }
   memcpy(cstr->text + index, text, sizeof(char) * n);
   cstr->len += n;
   cstr->text[cstr->len] = '\0';
