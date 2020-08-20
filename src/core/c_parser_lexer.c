@@ -339,7 +339,15 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
   for (int i = 0; i < depth; ++i) {
     printf("|  ");
   }
-  printf("|--%s", get_mc_syntax_token_type_name(syntax_node->type));
+  switch (syntax_node->type) {
+  case MC_SYNTAX_INVOCATION:
+    printf("|--%s : %p", get_mc_syntax_token_type_name(syntax_node->type), syntax_node->invocation.mc_function_info);
+    break;
+
+  default:
+    printf("|--%s", get_mc_syntax_token_type_name(syntax_node->type));
+    break;
+  }
   // printf("mpst-0\n");
 
   // printf("mpsyn-tree-1\n");
@@ -372,10 +380,13 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
 
 int _copy_syntax_node_to_text(c_str *cstr, mc_syntax_node *syntax_node)
 {
-  // register_midge_error_tag("_copy_syntax_node_to_text(%s)", get_mc_syntax_token_type_name(syntax_node->type));
+  register_midge_error_tag("_copy_syntax_node_to_text(%s)", get_mc_syntax_token_type_name(syntax_node->type));
   if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
+    // printf("syntax_node:%p\n", syntax_node);
+    // printf("syntax_node->text:%p\n", syntax_node->text);
+    // printf("syntax_node->text:%s\n", syntax_node->text);
     MCcall(append_to_c_str(cstr, syntax_node->text));
-    // register_midge_error_tag("_copy_syntax_node_to_text(~t)");
+    register_midge_error_tag("_copy_syntax_node_to_text(~t)");
     return 0;
   }
 

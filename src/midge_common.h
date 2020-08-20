@@ -81,9 +81,10 @@ typedef struct c_str {
 
 extern "C" {
 int init_c_str(c_str **ptr);
-int release_c_str(c_str *ptr, bool free_char_string_also);
 int set_c_str(c_str *cstr, const char *text);
 int set_c_strn(c_str *cstr, const char *text, int len);
+int release_c_str(c_str *ptr, bool free_char_string_also);
+int append_char_to_c_str(c_str *cstr, char c);
 int append_to_c_str(c_str *cstr, const char *text);
 int append_to_c_strn(c_str *cstr, const char *text, int n);
 int append_to_c_strf(c_str *cstr, const char *format, ...);
@@ -141,8 +142,16 @@ int append_char_to_c_str(c_str *cstr, char c)
 
 int append_to_c_str(c_str *cstr, const char *text)
 {
+  // printf("cstr:%p\n", cstr);
+  // printf("cstr->len:%u\n", cstr->len);
+  // printf("cstr->alloc:%u\n", cstr->alloc);
+  // printf("text:%p\n", text);
+  // printf("text:'%s'\n", text);
+
   int len = strlen(text);
+  // printf("atc-1\n");
   if (cstr->len + len + 1 >= cstr->alloc) {
+    // printf("atc-2\n");
     unsigned int new_allocated_size = cstr->alloc + len + 16 + (cstr->alloc) / 10;
     // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
     char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
@@ -157,6 +166,7 @@ int append_to_c_str(c_str *cstr, const char *text)
     // printf("atc-8\n");
   }
 
+  // printf("atc-9\n");
   // printf("atcs-a cstrtext:'%s' len:%u end:'%c'\n", cstr->text, cstr->len, cstr->text[cstr->len]);
   // printf("atcs-b text:'%s'\n", text);
   // memcpy(cstr->text + cstr->len, text, sizeof(char) * len);
@@ -194,6 +204,7 @@ int append_to_c_strn(c_str *cstr, const char *text, int n)
 
 int append_to_c_strf(c_str *cstr, const char *format, ...)
 {
+  register_midge_error_tag("append_to_c_strf()");
   // printf("atcs-0\n");
   int chunk_size = 4;
   int i = 0;
@@ -205,7 +216,7 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
   while (1) {
     if (cstr->len + chunk_size + 1 >= cstr->alloc) {
       unsigned int new_allocated_size = chunk_size + cstr->alloc + 16 + (chunk_size + cstr->alloc) / 10;
-      // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
+      // printf("atc-n3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
       char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
       // printf("atc-4\n");
       memcpy(newptr, cstr->text, sizeof(char) * cstr->alloc);
@@ -230,6 +241,7 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
         // printf("atcs-3\n");
         --cstr->len;
         va_end(valist);
+        // printf("atcs-3r\n");
         return 0;
       }
 
@@ -240,10 +252,10 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
           ++i;
         }
         else {
-          // printf("atcs-5 i:%i i:'%c'\n", i, format[i]);
           --cstr->len;
           // Search to replace the format
           ++i;
+          // printf("atcs-5 i:%i i:'%c'\n", i, format[i]);
           switch (format[i]) {
           case 'i': {
             int value = va_arg(valist, int);

@@ -253,9 +253,10 @@ const char *_mcl_core_objects[] = {
     "enumeration_info",
     "obtain_midge_global_root",
     "init_c_str",
-    "release_c_str",
     "set_c_str",
     "set_c_strn",
+    "release_c_str",
+    "append_char_to_c_str",
     "append_to_c_str",
     "append_to_c_strn",
     "append_to_c_strf",
@@ -386,20 +387,25 @@ int _mcl_init_core_data(void **p_global_root)
           "  global->children.count = 0;"
           "  global->children.items = (mc_core_v_node **)calloc(sizeof(mc_core_v_node *), global->children.alloc);"
           ""
-          "  mc_core_v_global_root_data *global_root_data = (mc_core_v_global_root_data "
-          "*)malloc(sizeof(mc_core_v_global_root_data ));"
+          "  mc_core_v_global_root_data *global_root_data = (mc_core_v_global_root_data *)"
+          "                                                 malloc(sizeof(mc_core_v_global_root_data ));"
           "  global->data = global_root_data;"
           "  global_root_data->global_node = global;"
           ""
           "  global_root_data->source_files.alloc = 100;"
           "  global_root_data->source_files.count = 0;"
-          "  global_root_data->source_files.items = (mc_core_v_source_file_info "
-          "**)calloc(sizeof(mc_core_v_source_file_info *), global_root_data->source_files.alloc);"
+          "  global_root_data->source_files.items = (mc_core_v_source_file_info **)"
+          "                       calloc(sizeof(mc_core_v_source_file_info *), global_root_data->source_files.alloc);"
           ""
           "  global_root_data->functions.alloc = 100;"
           "  global_root_data->functions.count = 0;"
           "  global_root_data->functions.items = (mc_core_v_function_info **)calloc(sizeof(mc_core_v_function_info *),"
           "                                         global_root_data->functions.alloc);"
+          ""
+          "  global_root_data->function_declarations.alloc = 100;"
+          "  global_root_data->function_declarations.count = 0;"
+          "  global_root_data->function_declarations.items = (mc_core_v_function_info **)"
+          "                   calloc(sizeof(mc_core_v_function_info *), global_root_data->function_declarations.alloc);"
           ""
           "  global_root_data->structs.alloc = 30;"
           "  global_root_data->structs.count = 0;"
@@ -408,8 +414,8 @@ int _mcl_init_core_data(void **p_global_root)
           ""
           "  global_root_data->enumerations.alloc = 20;"
           "  global_root_data->enumerations.count = 0;"
-          "  global_root_data->enumerations.items = (mc_core_v_enumeration_info "
-          "**)calloc(sizeof(mc_core_v_enumeration_info *), global_root_data->enumerations.alloc);"
+          "  global_root_data->enumerations.items = (mc_core_v_enumeration_info **)"
+          "                       calloc(sizeof(mc_core_v_enumeration_info *), global_root_data->enumerations.alloc);"
           ""
           "  global_root_data->event_handlers.alloc = 0;"
           "  global_root_data->event_handlers.count = 0;"

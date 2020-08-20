@@ -74,16 +74,34 @@ int insert_in_collection(void ***collection, unsigned int *collection_alloc, uns
   return 0;
 }
 
-int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
-                           int index)
+int remove_from_collection(void ***collection, unsigned int *collection_count, int index)
 {
-  *collection[index] = NULL;
+  register_midge_error_tag("remove_from_collection( %p : %u : %i )", *collection, *collection_count, index);
+  (*collection)[index] = NULL;
   for (int i = index + 1; i < *collection_count; ++i)
-    *collection[i - 1] = *collection[i];
+    (*collection)[i - 1] = (*collection)[i];
 
   --*collection_count;
   if (index > 0)
-    *collection[*collection_count] = NULL;
+    (*collection)[*collection_count] = NULL;
+
+  return 0;
+}
+
+int remove_ptr_from_collection(void ***collection, unsigned int *collection_count, bool return_error_on_failure,
+                               void *ptr)
+{
+  bool found = false;
+  for (int a = 0; a < *collection_count; ++a) {
+    if ((*collection)[a] == ptr) {
+      MCcall(remove_from_collection(collection, collection_count, a));
+      found = true;
+      break;
+    }
+  }
+  if (!found && return_error_on_failure) {
+    MCerror(101, "Could not find given ptr(=%p) in collection", ptr);
+  }
 
   return 0;
 }
@@ -96,6 +114,13 @@ int find_function_info(char *name, function_info **result)
   for (int i = 0; i < global_data->functions.count; ++i) {
     if (!strcmp(name, global_data->functions.items[i]->name)) {
       *result = global_data->functions.items[i];
+      return 0;
+    }
+  }
+
+  for (int i = 0; i < global_data->function_declarations.count; ++i) {
+    if (!strcmp(name, global_data->function_declarations.items[i]->name)) {
+      *result = global_data->function_declarations.items[i];
       return 0;
     }
   }
@@ -139,5 +164,45 @@ int find_enumeration_info(char *name, enumeration_info **result)
   *result = NULL;
 
   // TODO -- ?? Search in children
+  return 0;
+}
+
+int release_struct_id(struct_id *ptr)
+{
+  if (!ptr)
+    return 0;
+  if (ptr->identifier) {
+    free(ptr->identifier);
+  }
+  free(ptr);
+
+  return 0;
+}
+
+int release_parameter_info(parameter_info *ptr)
+{
+  if (!ptr)
+    return 0;
+
+  if (ptr->declared_type) {
+    free(ptr->declared_type);
+  }
+  if (ptr->full_function_pointer_declaration) {
+    free(ptr->full_function_pointer_declaration);
+  }
+  if (ptr->function_type) {
+    free(ptr->function_type);
+  }
+  if (ptr->name) {
+    free(ptr->name);
+  }
+  if (ptr->type_name) {
+    free(ptr->type_name);
+  }
+  if (ptr->type_id) {
+    release_struct_id(ptr->type_id);
+  }
+  free(ptr);
+
   return 0;
 }

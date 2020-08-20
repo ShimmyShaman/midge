@@ -5,6 +5,16 @@
 
 #include <stddef.h>
 
+#ifndef bool
+#define bool unsigned char
+#endif
+#ifndef true
+#define true ((unsigned char)1)
+#endif
+#ifndef false
+#define false ((unsigned char)0)
+#endif
+
 typedef enum source_file_type {
   SOURCE_FILE_NULL = 0,
   SOURCE_FILE_NODE,
@@ -183,6 +193,10 @@ typedef struct global_root_data {
   } functions;
   struct {
     unsigned int alloc, count;
+    function_info **items;
+  } function_declarations;
+  struct {
+    unsigned int alloc, count;
     struct_info **items;
   } structs;
   struct {
@@ -207,12 +221,16 @@ int insert_in_collection(void ***collection, unsigned int *collection_alloc, uns
                          int insertion_index, void *item);
 int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
                            int index);
+int remove_ptr_from_collection(void ***collection, unsigned int *collection_count, bool return_error_on_failure,
+                               void *ptr);
 
 int find_function_info(char *function_name, function_info **funct_info);
 int find_struct_info(char *function_name, struct_info **structure_info);
 int find_enumeration_info(char *function_name, enumeration_info **enum_info);
 
+int release_struct_id(struct_id *ptr);
 int release_field_info(field_info *ptr);
+int release_parameter_info(parameter_info *ptr);
 };
 
 #endif // CORE_DEFINITIONS_H

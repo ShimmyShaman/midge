@@ -39,5 +39,5 @@ int main(int argc, const char *const *argv)
 
   // IGNORE_MIDGE_ERROR_REPORT = true;
 
-  usleep(100000);
+  usleep(4000000);
 }

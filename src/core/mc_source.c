@@ -77,16 +77,18 @@ int initialize_source_file_info(node *owner, char *filepath, source_file_info **
 int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_node,
                                                parameter_info **initialized_parameter)
 {
-  parameter_info *parameter = (parameter_info *)malloc(sizeof(parameter_info));
+  parameter_info *parameter = (parameter_info *)calloc(sizeof(parameter_info), 1);
   parameter->type_id = (struct_id *)malloc(sizeof(struct_id));
   allocate_and_copy_cstr(parameter->type_id->identifier, "parameter_info");
   parameter->type_id->version = 1U;
 
   switch (parameter_syntax_node->parameter.parameter_kind) {
   case PARAMETER_KIND_STANDARD: {
+    register_midge_error_tag("initialize_parameter_info_from_syntax_node-STANDARD");
     parameter->parameter_type = PARAMETER_KIND_STANDARD;
 
     // Type
+    // MCcall(print_syntax_node(parameter_syntax_node->parameter.type_identifier, 0));
     MCcall(copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name));
     if (parameter_syntax_node->parameter.type_dereference) {
       parameter->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
@@ -95,7 +97,6 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
       parameter->type_deref_count = 0;
     }
     // printf("parameter->type_deref_count:%i\n", parameter->type_deref_count);
-    register_midge_error_tag("parse_and_process_mc_file_syntax-3b");
 
     // -- TODO -- mc-type?
 
@@ -103,6 +104,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     MCcall(copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name));
   } break;
   case PARAMETER_KIND_FUNCTION_POINTER: {
+    register_midge_error_tag("initialize_parameter_info_from_syntax_node-FUNCTION_POINTER");
     parameter->parameter_type = PARAMETER_KIND_FUNCTION_POINTER;
 
     MCcall(copy_syntax_node_to_text(parameter_syntax_node, &parameter->full_function_pointer_declaration));
@@ -122,6 +124,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     parameter->function_type = NULL;
   } break;
   case PARAMETER_KIND_VARIABLE_ARGS: {
+    register_midge_error_tag("initialize_parameter_info_from_syntax_node-VARIABLE_ARGS");
     parameter->parameter_type = PARAMETER_KIND_VARIABLE_ARGS;
 
     parameter->type_name = NULL;
@@ -146,14 +149,27 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
   function_info *func_info;
   MCcall(find_function_info(function_ast->function.name->text, &func_info));
 
+  bool is_declaration_only = (mc_token_type)function_ast->function.code_block->type == MC_TOKEN_SEMI_COLON;
+
   register_midge_error_tag("update_or_register_function_info_from_syntax-1");
   if (!func_info) {
     func_info = (function_info *)malloc(sizeof(function_info));
 
-    bool is_declaration_only = (mc_token_type)function_ast->function.code_block->type == MC_TOKEN_SEMI_COLON;
+    if (is_declaration_only) {
+      // Attach to loose declarations
+      global_root_data *root_data;
+      MCcall(obtain_midge_global_root(&root_data));
 
-    if (!is_declaration_only) {
+      MCcall(append_to_collection((void ***)&root_data->function_declarations.items,
+                                  &root_data->function_declarations.alloc, &root_data->function_declarations.count,
+                                  func_info));
+    }
+    else {
       // Only attach definitions, not declarations
+      if (!owner) {
+        MCerror(162, "owner can only be NULL for a function declaration");
+      }
+
       MCcall(attach_function_info_to_owner(owner, func_info));
     }
 
@@ -163,24 +179,53 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
 
     // Name & Version
     allocate_and_copy_cstr(func_info->name, function_ast->function.name->text);
-    func_info->latest_iteration = 1U;
+    func_info->latest_iteration = is_declaration_only ? 0U : 1U;
 
-    // TODO free parameters
-    printf("warning - update_or_register_function_info_from_syntax - free parameters : '%s'\n", func_info->name);
+    // Declare the functions pointer with cling
+    // printf("--attempting:'%s'\n", func_info->name);
+    char buf[512];
+    sprintf(buf, "int (*%s)(int, void **);", func_info->name);
+    MCcall(clint_declare(buf));
+    sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
+    MCcall(clint_process(buf));
+    printf("--declared:'%s'\n", func_info->name);
 
-    if (!is_declaration_only) {
-      // Declare the functions pointer with cling
-      char buf[512];
-      sprintf(buf, "int (*%s)(int, void **);", func_info->name);
-      MCcall(clint_declare(buf));
-
-      sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
-      MCcall(clint_process(buf));
-      // printf("func_info->ptr_declaration:%p\n", func_info->ptr_declaration);
-    }
+    // Assign the functions pointer
+    sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
+    MCcall(clint_process(buf));
+    // printf("func_info->ptr_declaration:%p\n", func_info->ptr_declaration);
   }
   else {
-    // Empty
+    if (!is_declaration_only && func_info->latest_iteration < 1) {
+      // Function has only been declared, not defined
+      // Remove from loose declarations
+      global_root_data *root_data;
+      MCcall(obtain_midge_global_root(&root_data));
+      MCcall(remove_ptr_from_collection((void ***)&root_data->function_declarations.items,
+                                        &root_data->function_declarations.count, true, func_info));
+
+      // Attach to owner
+      func_info->latest_iteration = 1U;
+      MCcall(attach_function_info_to_owner(owner, func_info));
+    }
+
+    // TODO -- this was causing a segmentation fault or something - TODO
+    // if (func_info->return_type.name) {
+    //   free(func_info->return_type.name);
+    // }
+
+    // Free parameters -- allow them to be changed
+    // register_midge_error_tag("update_or_register_function_info_from_syntax-1a");
+    // if (func_info->parameter_count) {
+    //   for (int a = 0; a < func_info->parameter_count; ++a) {
+    //     if (func_info->parameters[a]) {
+    //       release_parameter_info(func_info->parameters[a]);
+    //       func_info->parameters[a] = NULL;
+    //     }
+    //   }
+    // }
+    func_info->parameter_count = 0;
+    register_midge_error_tag("update_or_register_function_info_from_syntax-1b");
   }
   register_midge_error_tag("update_or_register_function_info_from_syntax-2");
 
@@ -498,7 +543,6 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
       if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
         // Function Declaration only
         MCcall(update_or_register_function_info_from_syntax(NULL, child, NULL));
-        printf("--declared:'%s'\n", child->function.name->text);
       }
       else {
         // Assume to be function definition
