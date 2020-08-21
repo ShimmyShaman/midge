@@ -779,7 +779,7 @@ int increment_time_spec(struct timespec *time, struct timespec *amount, struct t
 // int register_update_timer(int (**fnptr_update_callback)(int, void **), uint usecs_period, bool reset_timer_on_update,
 //                           void *state);
 
-void release_syntax_node(mc_syntax_node *syntax_node);
+int release_syntax_node(mc_syntax_node *syntax_node);
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
 
 // MC_PARSER_LEXER

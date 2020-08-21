@@ -287,6 +287,35 @@ const char *_mcl_core_structs[] = {
     NULL,
 };
 
+const char *_mcl_ignore_functions[] = {
+    "printf",
+    "strcmp",
+    "strncmp",
+    "free",
+    "strcpy",
+    "strncpy",
+    "sprintf",
+    "memcpy",
+    "memmove",
+    "register_midge_error_tag",
+    "va_start",
+    "va_end",
+    "MCerror",
+    "fseek",
+    "fread",
+    "fclose",
+    "cprintf",
+    "allocate_and_copy_cstr",
+    "allocate_and_copy_cstrn",
+    "clint_declare",
+    "clint_process",
+
+    // And everything here before -------------------------------------------------------------
+    "get_mc_syntax_token_type_name", // TODO
+    "get_mc_token_type_name",
+    NULL,
+};
+
 const char *_mcl_core_functions[] = {
     "obtain_midge_global_root",
     "init_c_str",
@@ -299,8 +328,85 @@ const char *_mcl_core_functions[] = {
     "append_to_c_strf",
     "insert_into_c_str",
     "print_syntax_node",
-    // "find_function_info",
-    // "copy_syntax_to_node",
+    "read_file_text",
+    "parse_file_to_syntax_tree",
+    "initialize_source_file_info",
+    "update_or_register_function_info_from_syntax",
+    "instantiate_definition",
+    "remove_from_collection",
+    "append_to_collection",
+    "release_struct_id",
+    "release_syntax_node",
+    "_mcs_print_syntax_node_ancestry",
+    "mcs_add_syntax_node_to_parent",
+    "_copy_syntax_node_to_text",
+    "print_parse_error",
+    "_mcs_parse_token",
+    "mcs_is_supernumerary_token",
+    "mcs_construct_syntax_node",
+    "mcs_parse_token",
+    "mcs_peek_token_type",
+    "mcs_parse_through_token",
+    "mcs_parse_through_supernumerary_tokens",
+    "mcs_parse_type_identifier",
+    "mcs_parse_dereference_sequence",
+    "find_struct_info",
+    "mcs_parse_parameter_declaration",
+    "mcs_parse_expression",
+    "mcs_parse_expression_variable_access",
+    "mcs_parse_parenthesized_expression",
+    "mcs_parse_cast_expression",
+    "_mcs_parse_expression",
+    "mcs_parse_local_declaration",
+    "mcs_parse_expression_beginning_with_bracket",
+    "find_function_info",
+    "mcs_parse_expression_conditional",
+    "mcs_parse_code_block",
+    "mcs_parse_statement_list",
+    "mcs_parse_if_statement",
+    "mcs_parse_for_statement",
+    "mcs_parse_switch_statement",
+    "mcs_parse_while_statement",
+    "mcs_parse_simple_statement",
+    "mcs_parse_return_statement",
+    "mcs_parse_expression_statement",
+    "mcs_parse_local_declaration_statement",
+    "mcs_parse_function_definition_header",
+    "mcs_parse_type_definition",
+    "mcs_parse_enum_definition",
+    "mcs_parse_function_definition",
+    "mcs_parse_preprocessor_directive",
+    "copy_syntax_node_to_text",
+    "mct_append_indent_to_c_str",
+    "mct_contains_mc_invoke",
+    "mct_append_to_c_str",
+    "mct_append_node_text_to_c_str",
+    "mct_transcribe_expression",
+    "mct_transcribe_type_identifier",
+    "mct_transcribe_mc_invocation",
+    "mct_transcribe_declarator",
+    "mct_transcribe_code_block",
+    "mct_transcribe_if_statement",
+    "mct_transcribe_statement_list",
+    "mct_transcribe_for_statement",
+    "mct_transcribe_while_statement",
+    "mct_transcribe_switch_statement",
+    "mct_transcribe_declaration_statement",
+    "mct_transcribe_field",
+    "attach_function_info_to_owner",
+    "remove_ptr_from_collection",
+    "initialize_parameter_info_from_syntax_node",
+    "attach_struct_info_to_owner",
+    "find_enumeration_info",
+    "attach_enumeration_info_to_owner",
+    "transcribe_function_to_mc",
+    "update_or_register_struct_info_from_syntax",
+    "transcribe_struct_to_mc",
+    "parse_definition_to_syntax_tree",
+    "instantiate_function_definition_from_ast",
+    "instantiate_struct_definition_from_ast",
+    "instantiate_enum_definition_from_ast",
+    // "METHOD_HERE",
 
     // And everything here before -------------------------------------------------------------
     "instantiate_all_definitions_from_file",
@@ -320,7 +426,7 @@ const char *_mcl_source_files[] = {
     NULL,
 };
 
-int print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
+int _mcl_print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
 {
   const int LEN = 84;
   const int FH = LEN / 2 - 2;
@@ -434,6 +540,24 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
             valid = true;
           break;
         }
+        if (!valid) {
+          char fname[128];
+          int f;
+          for (f = 0; f < 128 & func_start_index + f < i; ++f)
+            fname[f] = src->text[func_start_index + f];
+          fname[f] = '\0';
+          bool specified = false;
+          for (int f = 0; _mcl_ignore_functions[f]; ++f) {
+            if (!strcmp(_mcl_ignore_functions[f], fname)) {
+              specified = true;
+              break;
+            }
+          }
+          if (!specified) {
+            printf("\"%s\",\n", fname);
+            // MCerror(465, "core_source_loader: unspecified ignore function:'%s'\n", fname);
+          }
+        }
       }
       if (valid) {
         int function_end_index = i + 1;
@@ -454,9 +578,9 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
               }
               case '"': {
                 if (escaped) {
+                  escaped = false;
                   break;
                 }
-                ++function_end_index;
                 loop = false;
               } break;
               default: {
@@ -466,7 +590,8 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
             }
           } break;
           case '\0': {
-            MCerror(384, "CheckIt");
+            _mcl_print_parse_error(src->text, i, "began here", "");
+            MCerror(469, "CheckIt");
           }
           case '(':
             ++bracket_count;
@@ -481,8 +606,8 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
           function_end_index++;
         }
         if (src->text[function_end_index] != ';') {
-          print_parse_error(src->text, function_end_index, "_mcl_format_core_file", "");
-          MCerror(398, "check-it");
+          _mcl_print_parse_error(src->text, function_end_index, "_mcl_format_core_file", "");
+          MCerror(485, "expected semi-colon");
         }
 
         const char *before_template =
@@ -490,13 +615,14 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
             "register_midge_stack_invocation(\"%s\", \"%s\", __LINE__, &mc_error_stack_index); "
             "int mc_res = ";
 
-        const char *after_template = "; if (mc_res) { "
-                                     "printf(\"--%s line:%%i:ERR:%%i\\n\", __LINE__, mc_res); "
+        const char *after_template = " if (mc_res) { "
+                                     "printf(\"--%s |line:%%i:ERR:%%i\\n\", __LINE__, mc_res); "
                                      "return mc_res; "
                                      "} "
                                      "register_midge_stack_return(mc_error_stack_index);}";
 
-        char fnbuf[164];
+        const int FNBUF_SIZE = 164;
+        char fnbuf[FNBUF_SIZE];
         for (int b = 0; b < 164; ++b) {
           char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
           if (c == '(') {
@@ -509,20 +635,44 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
         sprintf(befbuf, before_template, fnbuf, _mcl_source_files[source_file_index]);
 
         char aftbuf[384];
-        for (int b = 0; b < 256; ++b) {
-          char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
-          if (c == ';') {
-            fnbuf[b] = '\0';
-            break;
-          }
-          fnbuf[b] = c;
-        }
+        // int d = 0;
+        // bool in_literal = false;
+        // for (int b = 0; d < FNBUF_SIZE - 4; ++b) {
+        //   char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
+        //   if (!in_literal && c == ';') {
+        //     fnbuf[d] = '\0';
+        //     break;
+        //   }
+        //   else if (d > FNBUF_SIZE - 4) {
+        //     if (in_literal)
+        //       fnbuf[d++] = '"';
+        //     fnbuf[d] = '\0';
+        //     break;
+        //   }
+        //   if (c == '"') {
+        //     fnbuf[d++] = '\\';
+        //     in_literal = !in_literal;
+        //   }
+        //   else if (c == '%') {
+        //     fnbuf[d++] = '%';
+        //   }
+        //   else if (c == '\\') {
+        //     fnbuf[d++] = '\\';
+        //   }
+        //   fnbuf[d++] = c;
+        // }
         sprintf(aftbuf, after_template, fnbuf);
 
+        int len = strlen(befbuf) + strlen(aftbuf) + function_end_index + 1 - func_start_index;
+
         // Turn it into a temporary MCcall
-        MCcall(insert_into__csl_c_str(src, aftbuf, function_end_index));
+        MCcall(insert_into__csl_c_str(src, aftbuf, function_end_index + 1));
         MCcall(insert_into__csl_c_str(src, befbuf, func_start_index));
         i += strlen(befbuf) + strlen(aftbuf);
+        // if (len > 490) {
+        //   MCcall(insert_into__csl_c_str(src, "\n", function_end_index + 1));
+        //   ++i;
+        // }
 
         // printf("#########################################################\n"
         //        "src:\n%s||\n",
@@ -608,8 +758,8 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
 
     MCcall(_mcl_format_core_file(src, a));
 
-    if (!strcmp(_mcl_source_files[a], "src/core/core_definitions.c"))
-      printf("def:\n%s||\n", src->text);
+    // if (!strcmp(_mcl_source_files[a], "src/core/mc_code_transcription.c"))
+    //   printf("def:\n%s||\n", src->text);
     printf("declaring file:'%s'\n", _mcl_source_files[a]);
     MCcall(clint_declare(src->text));
 
@@ -621,7 +771,7 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
 
 int _mcl_init_core_data(void **p_global_root)
 {
-  char buf[3200];
+  char buf[3072];
   sprintf(buf,
           "{"
           "  mc_core_v_node *global = (mc_core_v_node *)calloc(sizeof(mc_core_v_node), 1);"

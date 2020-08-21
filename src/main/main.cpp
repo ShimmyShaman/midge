@@ -18,12 +18,18 @@ using namespace std;
 
 cling::Interpreter *clint;
 
+
 int main(int argc, const char *const *argv)
 {
+
   // char buffer[200];
   // getcwd(buffer, 200);
   const char *LLVMDIR = "/home/jason/cling/inst";
   clint = new cling::Interpreter(argc, argv, LLVMDIR);
+
+  // clint->loadFile("/home/jason/midge/src/main/remove_mc_mcva_calls.c");
+  // clint->process("remove_all_MCcalls();");
+  // return 0;
 
   clint->AddIncludePath("/home/jason/midge/src");
   clint->AddIncludePath("/home/jason/cling/inst/include");
