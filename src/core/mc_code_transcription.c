@@ -33,6 +33,14 @@ int mct_append_to_c_str(c_str *str, int indent, const char *text)
   return 0;
 }
 
+int mct_transcribe_va_list_statement(c_str *str, int indent, mc_syntax_node *syntax_node)
+{
+  mct_append_indent_to_c_str(str, indent);
+  append_to_c_strf(str, "int %s = -1;\n", syntax_node->va_list_expression.list_identity->text);
+
+  return 0;
+}
+
 int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
 {
   register_midge_error_tag("mct_contains_mc_invoke(%s)", get_mc_syntax_token_type_name(syntax_node->type));
@@ -352,6 +360,53 @@ int mct_transcribe_declaration_statement(c_str *str, int indent, mc_syntax_node 
 
   mc_syntax_node *declaration = syntax_node->declaration_statement.declaration;
 
+  // va-args exception
+  if (declaration->local_variable_declaration.declarators->count == 1) {
+    mc_syntax_node *declarator = declaration->local_variable_declaration.declarators->items[0];
+    if (declarator->local_variable_declarator.initializer &&
+        declarator->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER &&
+        declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
+                ->type == MC_SYNTAX_VA_ARG_EXPRESSION) {
+
+      mc_syntax_node *function_node = syntax_node->parent;
+      while (function_node->type != MC_SYNTAX_FUNCTION) {
+        function_node = function_node->parent;
+        if (function_node == NULL) {
+          MCerror(376, "Couldn't find function ancestor");
+        }
+      }
+      if ((mc_token_type)function_node->function.name->type != MC_TOKEN_IDENTIFIER) {
+        MCerror(380, "expected otherwise");
+      }
+      function_info *housing_finfo;
+      find_function_info(function_node->function.name->text, &housing_finfo);
+      if (!housing_finfo) {
+        MCerror(385, "expected otherwise");
+      }
+      // print_syntax_node(declarator, 0);
+
+      mc_syntax_node *va_arg_expression =
+          declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression;
+
+      mct_append_indent_to_c_str(str, indent);
+      append_to_c_strf(str, "if(%i + %s + 1 >= mc_argsc) { MCerror(%i, \"va_args access exceeded argument count\");}\n",
+                       housing_finfo->parameter_count + 1, va_arg_expression->va_arg_expression.list_identity->text,
+                       392);
+
+      mct_append_indent_to_c_str(str, indent);
+      mct_transcribe_type_identifier(str, declaration->local_variable_declaration.type_identifier);
+      append_to_c_str(str, " ");
+      mct_append_node_text_to_c_str(str, declarator->local_variable_declarator.variable_name);
+
+      append_to_c_str(str, " = *(");
+      mct_transcribe_type_identifier(str, declaration->local_variable_declaration.type_identifier);
+      append_to_c_strf(str, "*)mc_argsv[%i + ++%s];\n", housing_finfo->parameter_count + 1,
+                       va_arg_expression->va_arg_expression.list_identity->text);
+
+      return 0;
+    }
+  }
+
   // Do MC_invokes
   // if (contains_mc_function_call) {
   mct_append_indent_to_c_str(str, indent);
@@ -419,6 +474,17 @@ int mct_transcribe_declaration_statement(c_str *str, int indent, mc_syntax_node 
         declarator->local_variable_declarator.variable_name);
     continue;
   }
+
+  return 0;
+}
+
+int mct_transcribe_mcerror(c_str *str, int indent, mc_syntax_node *syntax_node)
+{
+  mct_append_indent_to_c_str(str, indent);
+  append_to_c_strf(str, "*mc_return_value = %s;\n", syntax_node->invocation.arguments->items[0]->text);
+  mct_append_indent_to_c_str(str, indent);
+  mct_append_node_text_to_c_str(str, syntax_node);
+  append_to_c_str(str, ";\n");
 
   return 0;
 }
@@ -495,12 +561,19 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
     mct_transcribe_expression(str, syntax_node->cast_expression.expression);
   } break;
   case MC_SYNTAX_VA_ARG_EXPRESSION: {
-    append_to_c_str(str, "va_arg(");
+    MCerror(517, "COTTONEYE");
+    // register_midge_error_tag("mct_transcribe_expression:VA_ARG_EXPRESSION-0");
+    // append_to_c_str(str, "va_arg(");
 
-    mct_transcribe_type_identifier(str, syntax_node->va_arg_expression.list_identity);
-    append_to_c_str(str, ", ");
-    mct_transcribe_type_identifier(str, syntax_node->va_arg_expression.type_identifier);
-    append_to_c_str(str, ")\n");
+    // printf("$$ %p\n", syntax_node);
+    // printf("$$ %p %p\n", syntax_node->va_arg_expression.list_identity,
+    // syntax_node->va_arg_expression.type_identifier); print_syntax_node(syntax_node->va_arg_expression.list_identity,
+    // 0); mct_transcribe_expression(str, syntax_node->va_arg_expression.list_identity);
+    // register_midge_error_tag("mct_transcribe_expression:VA_ARG_EXPRESSION-1");
+    // append_to_c_str(str, ", ");
+    // mct_transcribe_type_identifier(str, syntax_node->va_arg_expression.type_identifier);
+    // register_midge_error_tag("mct_transcribe_expression:VA_ARG_EXPRESSION-2");
+    // append_to_c_str(str, ")\n");
   } break;
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     append_to_c_str(str, "sizeof(");
@@ -527,8 +600,10 @@ int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node)
 
     if ((mc_token_type)syntax_node->invocation.function_identity->type == MC_TOKEN_IDENTIFIER &&
         !strcmp(syntax_node->invocation.function_identity->text, "MCerror")) {
-          print_syntax_node(syntax_node, 0);
-          MCerror(530, "TODO");
+      print_syntax_node(syntax_node->parent, 0);
+      MCerror(550, "TODO");
+      // mct_transcribe_mcerror(str, indent, syntax_node);
+      break;
     }
 
     mct_append_node_text_to_c_str(str, syntax_node->invocation.function_identity);
@@ -915,6 +990,13 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
     case MC_SYNTAX_DECLARATION_STATEMENT: {
       mct_transcribe_declaration_statement(str, indent, child);
     } break;
+    case MC_SYNTAX_VA_LIST_STATEMENT: {
+      mct_transcribe_va_list_statement(str, indent, child);
+    } break;
+    case MC_SYNTAX_VA_START_STATEMENT:
+    case MC_SYNTAX_VA_END_STATEMENT: {
+      // Ignore these statement...
+    } break;
     case MC_SYNTAX_EXPRESSION_STATEMENT: {
       register_midge_error_tag("mct_transcribe_statement_list-ES0");
       // Do MC_invokes
@@ -927,6 +1009,14 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
         }
         printf("bb-3\n");
         mct_transcribe_mc_invocation(str, indent, child->expression_statement.expression, NULL);
+        break;
+      }
+      // TODO -- MCerror exception
+      if (child->expression_statement.expression->type == MC_SYNTAX_INVOCATION &&
+          (mc_token_type)child->expression_statement.expression->invocation.function_identity->type ==
+              MC_TOKEN_IDENTIFIER &&
+          !strcmp(child->expression_statement.expression->invocation.function_identity->text, "MCerror")) {
+        mct_transcribe_mcerror(str, indent, child->expression_statement.expression);
         break;
       }
 

@@ -46,6 +46,9 @@ typedef enum mc_token_type {
   MC_TOKEN_CONST_KEYWORD,
   MC_TOKEN_SIZEOF_KEYWORD,
   MC_TOKEN_VA_ARG_WORD,
+  MC_TOKEN_VA_LIST_WORD,
+  MC_TOKEN_VA_START_WORD,
+  MC_TOKEN_VA_END_WORD,
   MC_TOKEN_CURLY_OPENING_BRACKET,
   MC_TOKEN_CURLY_CLOSING_BRACKET,
   MC_TOKEN_NEW_LINE,
@@ -126,6 +129,9 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_PARENTHESIZED_EXPRESSION,
   MC_SYNTAX_SIZEOF_EXPRESSION,
   MC_SYNTAX_VA_ARG_EXPRESSION,
+  MC_SYNTAX_VA_LIST_STATEMENT,
+  MC_SYNTAX_VA_START_STATEMENT,
+  MC_SYNTAX_VA_END_STATEMENT,
   MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
   MC_SYNTAX_RELATIONAL_EXPRESSION,
@@ -361,6 +367,9 @@ typedef struct mc_syntax_node {
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
         } va_arg_expression;
+        struct {
+          mc_syntax_node *list_identity;
+        } va_list_expression;
       };
     };
   };

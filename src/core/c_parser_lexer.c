@@ -104,6 +104,12 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_SIZEOF_KEYWORD";
   case MC_TOKEN_VA_ARG_WORD:
     return "MC_TOKEN_VA_ARG_WORD";
+  case MC_TOKEN_VA_LIST_WORD:
+    return "MC_TOKEN_VA_LIST_WORD";
+  case MC_TOKEN_VA_START_WORD:
+    return "MC_TOKEN_VA_START_WORD";
+  case MC_TOKEN_VA_END_WORD:
+    return "MC_TOKEN_VA_END_WORD";
   case MC_TOKEN_CURLY_OPENING_BRACKET:
     return "MC_TOKEN_CURLY_OPENING_BRACKET";
   case MC_TOKEN_CURLY_CLOSING_BRACKET:
@@ -234,6 +240,12 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_SIZEOF_EXPRESSION";
   case MC_SYNTAX_VA_ARG_EXPRESSION:
     return "MC_SYNTAX_VA_ARG_EXPRESSION";
+  case MC_SYNTAX_VA_LIST_STATEMENT:
+    return "MC_SYNTAX_VA_LIST_STATEMENT";
+  case MC_SYNTAX_VA_START_STATEMENT:
+    return "MC_SYNTAX_VA_START_STATEMENT";
+  case MC_SYNTAX_VA_END_STATEMENT:
+    return "MC_SYNTAX_VA_END_STATEMENT";
   case MC_SYNTAX_RETURN_STATEMENT:
     return "MC_SYNTAX_RETURN_STATEMENT";
   case MC_SYNTAX_INVOCATION:
@@ -666,6 +678,15 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->va_arg_expression.list_identity = NULL;
     syntax_node->va_arg_expression.type_identifier = NULL;
     syntax_node->va_arg_expression.type_dereference = NULL;
+  } break;
+  case MC_SYNTAX_VA_LIST_STATEMENT: {
+    syntax_node->va_list_expression.list_identity = NULL;
+  } break;
+  case MC_SYNTAX_VA_START_STATEMENT: {
+    // Nothing for the moment
+  } break;
+  case MC_SYNTAX_VA_END_STATEMENT: {
+    // Nothing for the moment
   } break;
   case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
     // Nothing for the moment
@@ -1202,6 +1223,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       int slen = *index - s;
       {
         // Keywords
+        if (slen == 2 && !strncmp(code + s, "if", slen)) {
+          *token_type = MC_TOKEN_IF_KEYWORD;
+          if (text) {
+            allocate_and_copy_cstrn(*text, code + s, slen);
+          }
+          break;
+        }
         if (slen == 6 && !strncmp(code + s, "extern", slen)) {
           *token_type = MC_TOKEN_EXTERN_KEYWORD;
 
@@ -1223,13 +1251,6 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
           }
           break;
         }
-        if (slen == 2 && !strncmp(code + s, "if", slen)) {
-          *token_type = MC_TOKEN_IF_KEYWORD;
-          if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
-          }
-          break;
-        }
         if (slen == 4 && !strncmp(code + s, "else", slen)) {
           *token_type = MC_TOKEN_ELSE_KEYWORD;
           if (text) {
@@ -1246,6 +1267,27 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         }
         if (slen == 6 && !strncmp(code + s, "va_arg", slen)) {
           *token_type = MC_TOKEN_VA_ARG_WORD;
+          if (text) {
+            allocate_and_copy_cstrn(*text, code + s, slen);
+          }
+          break;
+        }
+        if (slen == 7 && !strncmp(code + s, "va_list", slen)) {
+          *token_type = MC_TOKEN_VA_LIST_WORD;
+          if (text) {
+            allocate_and_copy_cstrn(*text, code + s, slen);
+          }
+          break;
+        }
+        if (slen == 8 && !strncmp(code + s, "va_start", slen)) {
+          *token_type = MC_TOKEN_VA_START_WORD;
+          if (text) {
+            allocate_and_copy_cstrn(*text, code + s, slen);
+          }
+          break;
+        }
+        if (slen == 6 && !strncmp(code + s, "va_end", slen)) {
+          *token_type = MC_TOKEN_VA_END_WORD;
           if (text) {
             allocate_and_copy_cstrn(*text, code + s, slen);
           }
@@ -2525,7 +2567,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     mcs_parse_through_token(ps, left, MC_TOKEN_OPEN_BRACKET, NULL);
     mcs_parse_through_supernumerary_tokens(ps, left);
 
-    mcs_parse_expression(ps, left, &left->va_arg_expression.list_identity);
+    mcs_parse_through_token(ps, left, MC_TOKEN_IDENTIFIER, &left->va_arg_expression.list_identity);
     mcs_parse_through_supernumerary_tokens(ps, left);
 
     mcs_parse_through_token(ps, left, MC_TOKEN_COMMA, NULL);
@@ -3271,6 +3313,78 @@ int mcs_parse_if_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_
   return 0;
 }
 
+int mcs_parse_va_list_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *statement;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_VA_LIST_STATEMENT, NULL, parent, &statement);
+  if (additional_destination) {
+    *additional_destination = statement;
+  }
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_VA_LIST_WORD, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_IDENTIFIER, &statement->va_list_expression.list_identity);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+  mcs_parse_through_token(ps, statement, MC_TOKEN_SEMI_COLON, NULL);
+
+  return 0;
+}
+
+int mcs_parse_va_start_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *statement;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_VA_START_STATEMENT, NULL, parent, &statement);
+  if (additional_destination) {
+    *additional_destination = statement;
+  }
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_VA_START_WORD, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_OPEN_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_IDENTIFIER, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_COMMA, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_IDENTIFIER, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_CLOSING_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+  mcs_parse_through_token(ps, statement, MC_TOKEN_SEMI_COLON, NULL);
+
+  return 0;
+}
+
+int mcs_parse_va_end_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *statement;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_VA_END_STATEMENT, NULL, parent, &statement);
+  if (additional_destination) {
+    *additional_destination = statement;
+  }
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_VA_END_WORD, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_OPEN_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_IDENTIFIER, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_parse_through_token(ps, statement, MC_TOKEN_CLOSING_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, statement);
+  mcs_parse_through_token(ps, statement, MC_TOKEN_SEMI_COLON, NULL);
+
+  return 0;
+}
+
 int mcs_parse_expression_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   mc_syntax_node *statement;
@@ -3377,6 +3491,15 @@ int mcs_parse_statement_list(parsing_state *ps, mc_syntax_node *parent, mc_synta
     case MC_TOKEN_INCREMENT_OPERATOR:
     case MC_TOKEN_DECREMENT_OPERATOR: {
       mcs_parse_expression_statement(ps, statement_list_node, &statement);
+    } break;
+    case MC_TOKEN_VA_LIST_WORD: {
+      mcs_parse_va_list_statement(ps, statement_list_node, &statement);
+    } break;
+    case MC_TOKEN_VA_START_WORD: {
+      mcs_parse_va_start_statement(ps, statement_list_node, &statement);
+    } break;
+    case MC_TOKEN_VA_END_WORD: {
+      mcs_parse_va_end_statement(ps, statement_list_node, &statement);
     } break;
     case MC_TOKEN_CONST_KEYWORD:
     case MC_TOKEN_INT_KEYWORD:

@@ -133,10 +133,10 @@ int find_function_info(char *name, function_info **result)
 
 int find_struct_info(char *name, struct_info **result)
 {
-  printf("fsi-0\n");
+  // printf("fsi-0\n");
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
-  printf("fsi-1 %s\n", name);
+  // printf("fsi-1 %s\n", name);
 
   for (int i = 0; i < global_data->structs.count; ++i) {
     if (!strcmp(name, global_data->structs.items[i]->name)) {
@@ -144,7 +144,7 @@ int find_struct_info(char *name, struct_info **result)
       return 0;
     }
   }
-  printf("fsi-2\n");
+  // printf("fsi-2\n");
 
   *result = NULL;
 
