@@ -396,10 +396,21 @@ int mct_transcribe_declaration_statement(c_str *str, int indent, mc_syntax_node 
       mct_append_indent_to_c_str(str, indent);
       mct_transcribe_type_identifier(str, declaration->local_variable_declaration.type_identifier);
       append_to_c_str(str, " ");
+      if (declarator->local_variable_declarator.type_dereference) {
+        for (int d = 0; d < declarator->local_variable_declarator.type_dereference->dereference_sequence.count; ++d) {
+          append_to_c_str(str, "*");
+        }
+      }
       mct_append_node_text_to_c_str(str, declarator->local_variable_declarator.variable_name);
 
       append_to_c_str(str, " = *(");
       mct_transcribe_type_identifier(str, declaration->local_variable_declaration.type_identifier);
+      append_to_c_str(str, " ");
+      if (declarator->local_variable_declarator.type_dereference) {
+        for (int d = 0; d < declarator->local_variable_declarator.type_dereference->dereference_sequence.count; ++d) {
+          append_to_c_str(str, "*");
+        }
+      }
       append_to_c_strf(str, "*)mc_argsv[%i + ++%s];\n", housing_finfo->parameter_count + 1,
                        va_arg_expression->va_arg_expression.list_identity->text);
 
@@ -1007,7 +1018,7 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
             !child->expression_statement.expression->invocation.mc_function_info) {
           MCerror(231, "TODO");
         }
-        printf("bb-3\n");
+        // printf("bb-3\n");
         mct_transcribe_mc_invocation(str, indent, child->expression_statement.expression, NULL);
         break;
       }
@@ -1150,7 +1161,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   init_c_str(&str);
 
   // Header
-  append_to_c_strf(str, "int %s_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
+  append_to_c_strf(str, "int %s_mcv%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
                    func_info->latest_iteration);
 
   // Initial
@@ -1228,14 +1239,14 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
   register_midge_error_tag("transcribe_struct_to_mc()");
 
   if (structure_ast->type != MC_SYNTAX_STRUCTURE) {
-    MCerror(964, "MCT:Not Supported");
+    MCerror(1242, "MCT:Invalid Argument");
   }
 
   c_str *str;
   init_c_str(&str);
 
   // Header
-  append_to_c_str(str, "typedef struct \n");
+  append_to_c_str(str, "struct \n");
   append_to_c_str(str, structure_info->mc_declared_name);
   append_to_c_str(str, " { \n");
 
@@ -1248,7 +1259,7 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
     append_to_c_str(str, ";\n");
   }
 
-  append_to_c_strf(str, "} mc_%s_v%u;", structure_ast->structure.name->text,
+  append_to_c_strf(str, "};", structure_ast->structure.type_name->text,
                    structure_info->version); // TODO -- types not structs
 
   *mc_transcription = str->text;

@@ -76,6 +76,7 @@ typedef enum mc_token_type {
   MC_TOKEN_CASE_KEYWORD,
   MC_TOKEN_DEFAULT_KEYWORD,
   MC_TOKEN_STRUCT_KEYWORD,
+  MC_TOKEN_UNION_KEYWORD,
   MC_TOKEN_ENUM_KEYWORD,
   MC_TOKEN_VOID_KEYWORD,
   MC_TOKEN_CHAR_KEYWORD,
@@ -85,6 +86,7 @@ typedef enum mc_token_type {
   MC_TOKEN_BOOL_KEYWORD,
   MC_TOKEN_FLOAT_KEYWORD,
   MC_TOKEN_LONG_KEYWORD,
+  MC_TOKEN_SHORT_KEYWORD,
   MC_TOKEN_STANDARD_MAX_VALUE = 200,
 } mc_token_type;
 
@@ -93,9 +95,12 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_FILE_ROOT,
   MC_SYNTAX_PREPROCESSOR_DIRECTIVE,
   MC_SYNTAX_FUNCTION,
+  MC_SYNTAX_TYPE_ALIAS,
   MC_SYNTAX_STRUCTURE,
+  MC_SYNTAX_UNION,
   MC_SYNTAX_ENUM,
   MC_SYNTAX_ENUM_MEMBER,
+  MC_SYNTAX_NESTED_TYPE_DECLARATION,
   MC_SYNTAX_BLOCK,
   MC_SYNTAX_STATEMENT_LIST,
   MC_SYNTAX_FOR_STATEMENT,
@@ -171,10 +176,17 @@ typedef struct mc_syntax_node {
           mc_syntax_node *code_block;
         } function;
         struct {
-          mc_syntax_node *name;
-          mc_syntax_node *defined_type_name;
+          mc_syntax_node *type_descriptor;
+          mc_syntax_node *alias;
+        } type_alias;
+        struct {
+          mc_syntax_node *type_name;
           mc_syntax_node_list *fields;
         } structure;
+        struct {
+          mc_syntax_node *type_name;
+          mc_syntax_node_list *fields;
+        } union_decl;
         struct {
           mc_syntax_node *name;
           mc_syntax_node *type_identity;
@@ -184,6 +196,10 @@ typedef struct mc_syntax_node {
           mc_syntax_node *identifier;
           mc_syntax_node *value;
         } enum_member;
+        struct {
+          mc_syntax_node *declaration;
+          mc_syntax_node *name;
+        } nested_type;
         struct {
           mc_syntax_node *identifier;
         } preprocessor_directive;

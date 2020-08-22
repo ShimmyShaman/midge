@@ -372,10 +372,12 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_expression_statement",
     "mcs_parse_local_declaration_statement",
     "mcs_parse_function_definition_header",
+    "mcs_parse_type_alias_definition",
     "mcs_parse_type_definition",
     "mcs_parse_enum_definition",
     "mcs_parse_function_definition",
     "mcs_parse_preprocessor_directive",
+    "mcs_parse_struct_declaration_list",
     "copy_syntax_node_to_text",
     "mct_append_indent_to_c_str",
     "mct_contains_mc_invoke",
@@ -856,7 +858,7 @@ int _mcl_load_core_mc_source(void *command_hub, void *p_core_source_info)
   char buf[512];
   for (int i = 0; _mcl_source_files[i]; ++i) {
     printf("instantiate file:'%s'\n", _mcl_source_files[i]);
-    int result;
+    int result = 0;
     sprintf(buf,
             "{\n"
             "  mc_core_v_global_root_data *global_data;\n"

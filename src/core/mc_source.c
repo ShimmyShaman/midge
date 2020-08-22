@@ -8,7 +8,7 @@ int attach_function_info_to_owner(node *owner, function_info *func_info)
   case NODE_TYPE_GLOBAL_ROOT: {
     global_root_data *data = (global_root_data *)owner->data;
     append_to_collection((void ***)&data->functions.items, &data->functions.alloc, &data->functions.count,
-                                (void *)func_info);
+                         (void *)func_info);
     break;
   }
   default:
@@ -24,7 +24,7 @@ int attach_struct_info_to_owner(node *owner, struct_info *structure_info)
   case NODE_TYPE_GLOBAL_ROOT: {
     global_root_data *data = (global_root_data *)owner->data;
     append_to_collection((void ***)&data->structs.items, &data->structs.alloc, &data->structs.count,
-                                (void *)structure_info);
+                         (void *)structure_info);
     break;
   }
   default:
@@ -39,8 +39,8 @@ int attach_enumeration_info_to_owner(node *owner, enumeration_info *enum_info)
   switch (owner->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
     global_root_data *data = (global_root_data *)owner->data;
-    append_to_collection((void ***)&data->enumerations.items, &data->enumerations.alloc,
-                                &data->enumerations.count, (void *)enum_info);
+    append_to_collection((void ***)&data->enumerations.items, &data->enumerations.alloc, &data->enumerations.count,
+                         (void *)enum_info);
     break;
   }
   default:
@@ -60,8 +60,8 @@ int initialize_source_file_info(node *owner, char *filepath, source_file_info **
   switch (owner->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
     global_root_data *data = (global_root_data *)owner->data;
-    append_to_collection((void ***)&data->source_files.items, &data->source_files.alloc,
-                                &data->source_files.count, (void *)sfi);
+    append_to_collection((void ***)&data->source_files.items, &data->source_files.alloc, &data->source_files.count,
+                         (void *)sfi);
     break;
   }
   default:
@@ -160,9 +160,8 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
       global_root_data *root_data;
       obtain_midge_global_root(&root_data);
 
-      append_to_collection((void ***)&root_data->function_declarations.items,
-                                  &root_data->function_declarations.alloc, &root_data->function_declarations.count,
-                                  func_info);
+      append_to_collection((void ***)&root_data->function_declarations.items, &root_data->function_declarations.alloc,
+                           &root_data->function_declarations.count, func_info);
     }
     else {
       // Only attach definitions, not declarations
@@ -202,7 +201,7 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
       global_root_data *root_data;
       obtain_midge_global_root(&root_data);
       remove_ptr_from_collection((void ***)&root_data->function_declarations.items,
-                                        &root_data->function_declarations.count, true, func_info);
+                                 &root_data->function_declarations.count, true, func_info);
 
       // Attach to owner
       func_info->latest_iteration = 1U;
@@ -262,7 +261,7 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
 int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *struct_ast, struct_info **p_struct_info)
 {
   struct_info *structure_info;
-  find_struct_info(struct_ast->structure.name->text, &structure_info);
+  find_struct_info(struct_ast->structure.type_name->text, &structure_info);
 
   register_midge_error_tag("update_or_register_struct_info_from_syntax-1");
   if (!structure_info) {
@@ -275,7 +274,7 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
     structure_info->type_id->version = 1U;
 
     // Name & Version
-    allocate_and_copy_cstr(structure_info->name, struct_ast->structure.name->text);
+    allocate_and_copy_cstr(structure_info->name, struct_ast->structure.type_name->text);
     structure_info->fields.alloc = 0;
     structure_info->fields.count = 0;
     structure_info->version = 1U;
@@ -307,8 +306,8 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
 
     register_midge_error_tag("update_or_register_struct_info_from_syntax-2a");
     copy_syntax_node_to_text(struct_ast->structure.fields->items[i]->parameter.name, &field->name);
-    
-        copy_syntax_node_to_text(struct_ast->structure.fields->items[i]->parameter.type_identifier, &field->type_name);
+
+    copy_syntax_node_to_text(struct_ast->structure.fields->items[i]->parameter.type_identifier, &field->type_name);
     field->type = struct_ast->structure.fields->items[i]->parameter.type_identifier->type_identifier.mc_type;
     if (struct_ast->structure.fields->items[i]->parameter.type_dereference) {
       field->type_deref_count =
@@ -321,7 +320,7 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
     register_midge_error_tag("update_or_register_struct_info_from_syntax-2d");
 
     append_to_collection((void ***)&structure_info->fields.items, &structure_info->fields.alloc,
-                                &structure_info->fields.count, field);
+                         &structure_info->fields.count, field);
     register_midge_error_tag("update_or_register_struct_info_from_syntax-2e");
   }
   register_midge_error_tag("update_or_register_struct_info_from_syntax-4");
@@ -372,8 +371,8 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   enum_info->members.count = 0;
   for (int i = 0; i < enum_ast->enumeration.members->count; ++i) {
     enum_member *member = (enum_member *)malloc(sizeof(enum_member));
-    
-        copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier, &member->identity);
+
+    copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier, &member->identity);
     if (enum_ast->enumeration.members->items[i]->enum_member.value) {
       copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value, &member->value);
     }
@@ -381,8 +380,8 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
       member->value = NULL;
     }
 
-    append_to_collection((void ***)&enum_info->members.items, &enum_info->members.alloc,
-                                &enum_info->members.count, member);
+    append_to_collection((void ***)&enum_info->members.items, &enum_info->members.alloc, &enum_info->members.count,
+                         member);
   }
 
   // Set
@@ -402,10 +401,11 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
+  // printf("mc_transcription:\n%s||\n", mc_transcription);
   clint_declare(mc_transcription);
   // printf("idfc-5\n");
   char buf[512];
-  sprintf(buf, "%s = &%s_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
+  sprintf(buf, "%s = &%s_mcv%u;", func_info->name, func_info->name, func_info->latest_iteration);
   // printf("idfc-6\n");
   clint_process(buf);
 
@@ -552,11 +552,34 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         printf("--defined:'%s'\n", child->function.name->text);
       }
     } break;
+    case MC_SYNTAX_TYPE_ALIAS: {
+      char buf[1024];
+      switch (child->type_alias.type_descriptor->type) {
+      case MC_SYNTAX_STRUCTURE: {
+        struct_info *info;
+        instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
+        info->source->source_file = lv_source_file;
+        printf("--defined:'%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
+        sprintf(buf,
+                "#ifdef %s\n"
+                "#undef %s\n"
+                "#endif\n"
+                "#define %s struct %s\n",
+                info->mc_declared_name, info->mc_declared_name, info->mc_declared_name, info->mc_declared_name);
+        clint_process(buf);
+      } break;
+      default:
+        MCerror(576, "Unhandled type_alias-descriptor-syntax-type:%i", child->type_alias.type_descriptor->type);
+        break;
+      }
+
+      // alias_info *info;
+    } break;
     case MC_SYNTAX_STRUCTURE: {
       struct_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       info->source->source_file = lv_source_file;
-      printf("--defined:'%s'\n", child->structure.name->text);
+      printf("--defined:'%s'\n", child->structure.type_name->text);
     } break;
     case MC_SYNTAX_ENUM: {
       enumeration_info *info;
@@ -573,7 +596,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         break;
       }
       default: {
-        MCerror(6030, "Unhandled root-syntax-type:%i", child->type);
+        MCerror(576, "Unhandled root-syntax-type:%i", child->type);
       }
       }
     }
