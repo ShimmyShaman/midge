@@ -1098,19 +1098,25 @@ int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_nod
 
 int mct_transcribe_field(c_str *str, int indent, mc_syntax_node *syntax_node)
 {
-
   mct_append_indent_to_c_str(str, indent);
 
   switch (syntax_node->field.field_kind) {
   case FIELD_KIND_STANDARD: {
     mct_transcribe_type_identifier(str, syntax_node->field.type_identifier);
-    append_to_c_str(str, " ");
-    if (syntax_node->field.type_dereference) {
-      for (int d = 0; d < syntax_node->field.type_dereference->dereference_sequence.count; ++d) {
-        append_to_c_str(str, "*");
+    for (int a = 0; a < syntax_node->field.declarators->count; ++a) {
+      if (a > 0) {
+        append_to_c_str(str, ",");
       }
+
+      mc_syntax_node *declarator = syntax_node->field.declarators->items[a];
+      append_to_c_str(str, " ");
+      if (declarator->field_declarator.type_dereference) {
+        for (int d = 0; d < declarator->field_declarator.type_dereference->dereference_sequence.count; ++d) {
+          append_to_c_str(str, "*");
+        }
+      }
+      mct_append_node_text_to_c_str(str, declarator->field_declarator.name);
     }
-    mct_append_node_text_to_c_str(str, syntax_node->field.name);
   } break;
   default:
     MCerror(873, "NotSupported:%i", syntax_node->field.field_kind);

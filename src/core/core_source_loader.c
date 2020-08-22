@@ -350,6 +350,8 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_through_supernumerary_tokens",
     "mcs_parse_type_identifier",
     "mcs_parse_dereference_sequence",
+    "mcs_parse_field_declarator",
+    "mcs_parse_field_declaration",
     "find_struct_info",
     "mcs_parse_parameter_declaration",
     "mcs_parse_expression",

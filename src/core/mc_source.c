@@ -305,16 +305,33 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
     field->type_id->version = 1U;
 
     register_midge_error_tag("update_or_register_struct_info_from_syntax-2a");
-    copy_syntax_node_to_text(struct_ast->structure.fields->items[i]->parameter.name, &field->name);
+    mc_syntax_node *field_syntax = struct_ast->structure.fields->items[i];
+    switch (field_syntax->field.field_kind) {
+    case FIELD_KIND_STANDARD: {
+      copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->type);
 
-    copy_syntax_node_to_text(struct_ast->structure.fields->items[i]->parameter.type_identifier, &field->type_name);
-    field->type = struct_ast->structure.fields->items[i]->parameter.type_identifier->type_identifier.mc_type;
-    if (struct_ast->structure.fields->items[i]->parameter.type_dereference) {
-      field->type_deref_count =
-          struct_ast->structure.fields->items[i]->parameter.type_dereference->dereference_sequence.count;
+      field->declarators.alloc = 0;
+      field->declarators.count = 0;
+
+      for (int d = 0; d < field_syntax->field.declarators->count; ++d) {
+        mc_syntax_node *declarator_syntax = field_syntax->field.declarators->items[d];
+
+        field_declarator_info *declarator = (field_declarator_info *)malloc(sizeof(field_declarator_info));
+        copy_syntax_node_to_text(declarator_syntax->field_declarator.name, &declarator->name);
+        if (declarator_syntax->field_declarator.type_dereference) {
+          declarator->deref_count = declarator_syntax->field_declarator.type_dereference->dereference_sequence.count;
+        }
+        else {
+          declarator->deref_count = 0;
+        }
+
+        append_to_collection((void ***)&field->declarators.items, &field->declarators.alloc, &field->declarators.count,
+                             declarator);
+      }
+    } break;
+    default: {
+      MCerror(310, "NotSupported:%i", field_syntax->field.field_kind);
     }
-    else {
-      field->type_deref_count = 0;
     }
 
     register_midge_error_tag("update_or_register_struct_info_from_syntax-2d");
@@ -596,6 +613,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         break;
       }
       default: {
+        print_syntax_node(child, 0);
         MCerror(576, "Unhandled root-syntax-type:%i", child->type);
       }
       }

@@ -103,13 +103,25 @@ typedef struct enumeration_info {
   } members;
 } enumeration_info;
 
+typedef struct field_declarator_info {
+  unsigned int deref_count;
+  char *name;
+} field_declarator_info;
+
 typedef struct field_info {
   struct_id *type_id;
   field_kind field_type;
-  char *type_name;
-  struct_info *type;
-  unsigned int type_deref_count;
-  char *name;
+
+  union {
+    struct {
+      char *type;
+      struct_info *type_info;
+      struct {
+        unsigned int alloc, count;
+        field_declarator_info **items;
+      } declarators;
+    };
+  };
 } field_info;
 
 typedef struct struct_info {

@@ -94,6 +94,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
   MC_SYNTAX_FILE_ROOT,
   MC_SYNTAX_PREPROCESSOR_DIRECTIVE,
+  MC_SYNTAX_EXTERN_C_BLOCK,
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_TYPE_ALIAS,
   MC_SYNTAX_STRUCTURE,
@@ -129,6 +130,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
   MC_SYNTAX_PARAMETER_DECLARATION,
   MC_SYNTAX_FIELD_DECLARATION,
+  MC_SYNTAX_FIELD_DECLARATOR,
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CAST_EXPRESSION,
   MC_SYNTAX_PARENTHESIZED_EXPRESSION,
@@ -175,6 +177,9 @@ typedef struct mc_syntax_node {
           mc_syntax_node_list *parameters;
           mc_syntax_node *code_block;
         } function;
+        struct {
+          mc_syntax_node *declarations;
+        } extern_block;
         struct {
           mc_syntax_node *type_descriptor;
           mc_syntax_node *alias;
@@ -229,11 +234,12 @@ typedef struct mc_syntax_node {
             mc_syntax_node *nested_union;
             mc_syntax_node *function_pointer;
           };
-          // May be null indicating no dereference operators
-          mc_syntax_node *type_dereference;
-          // May be null indicating no name (for nested structs/unions only)
-          mc_syntax_node *name;
+          mc_syntax_node_list *declarators;
         } field;
+        struct {
+          mc_syntax_node *type_dereference;
+          mc_syntax_node *name;
+        } field_declarator;
         struct {
           mc_syntax_node *type_modifier;
           mc_syntax_node *type_identifier;
