@@ -1363,7 +1363,7 @@ int parse_script_to_mc_v1(int argc, void **argv)
         free(type_identifier);
       }
       else if (code[i] == 'l') {
-        MCerror(576, "TODO");
+        MCerror(1366, "TODO");
         // // dcl
         // MCcall(parse_past(code, &i, "l"));
         // MCcall(parse_past(code, &i, " ")); // TODO -- allow tabs too

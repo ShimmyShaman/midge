@@ -97,6 +97,8 @@ typedef struct enumeration_info {
   source_definition *source;
   char *name;
   unsigned int latest_iteration;
+  char *mc_declared_name;
+  bool is_defined;
   struct {
     unsigned int count, alloc;
     enum_member **items;
@@ -120,7 +122,19 @@ typedef struct field_info {
         unsigned int alloc, count;
         field_declarator_info **items;
       } declarators;
-    };
+    } field;
+    struct {
+      bool is_union;
+      char *type_name;
+      struct {
+        unsigned int alloc, count;
+        field_info **items;
+      } fields;
+      struct {
+        unsigned int alloc, count;
+        field_declarator_info **items;
+      } declarators;
+    } sub_type;
   };
 } field_info;
 
@@ -128,8 +142,9 @@ typedef struct struct_info {
   struct_id *type_id;
   source_definition *source;
   char *name;
-  unsigned int version;
+  unsigned int latest_iteration;
   char *mc_declared_name;
+  bool is_defined;
   struct {
     unsigned int count, alloc;
     field_info **items;

@@ -16,7 +16,7 @@
 
 #include "cling/Interpreter/Interpreter.h"
 
-#define MCcall(function)                                                              \
+#define MCcall(function)                                                                   \
   {                                                                                        \
     int mc_error_stack_index;                                                              \
     register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
@@ -28,7 +28,7 @@
     register_midge_stack_return(mc_error_stack_index);                                     \
   }
 
-#define MCvacall(function)                                                            \
+#define MCvacall(function)                                                                 \
   {                                                                                        \
     int mc_error_stack_index;                                                              \
     register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
@@ -40,7 +40,7 @@
     register_midge_stack_return(mc_error_stack_index);                                     \
   }
 
-#define MCerror(error_code, error_message, ...)                       \
+#define MCerror(error_code, error_message, ...)                          \
   printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
   return error_code;
 
@@ -187,10 +187,12 @@ struct stack_entry MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_MAX_SIZE];
 unsigned int MIDGE_ERROR_STACK_STR_LEN[MIDGE_ERROR_STACK_MAX_SIZE];
 int MIDGE_ERROR_STACK_INDEX;
 bool IGNORE_MIDGE_ERROR_STACK_TRACE = false;
+int MIDGE_ERROR_STACK_ACTIVITY_LINE;
 
 void register_midge_stack_invocation(const char *function_name, const char *file_name, int line,
                                      int *midge_error_stack_index)
 {
+  MIDGE_ERROR_STACK_ACTIVITY_LINE = -1;
   if (MIDGE_ERROR_STACK_INDEX + 1 >= MIDGE_ERROR_STACK_MAX_SIZE) {
     printf("MIDGE_ERROR_STACK: invocation of '%s' exceeded stack index\n", function_name);
     return;
@@ -215,7 +217,11 @@ void register_midge_stack_invocation(const char *function_name, const char *file
   MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].line = line;
 }
 
-void register_midge_stack_return(int midge_error_stack_index) { MIDGE_ERROR_STACK_INDEX = midge_error_stack_index - 1; }
+void register_midge_stack_return(int midge_error_stack_index)
+{
+  MIDGE_ERROR_STACK_ACTIVITY_LINE = MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].line;
+  MIDGE_ERROR_STACK_INDEX = midge_error_stack_index - 1;
+}
 
 void handler(int sig)
 {
@@ -255,8 +261,17 @@ void handler(int sig)
     printf("---------------Most Recent Last------------\n\n");
     // printf("size:%i\n", MIDGE_ERROR_STACK_INDEX);
     for (int i = 0; i <= MIDGE_ERROR_STACK_INDEX; ++i) {
-      printf("[%i]:>%s :(file='%s'line=%i)\n", i, MIDGE_ERROR_STACK[i].function_name, MIDGE_ERROR_STACK[i].file_name,
+      printf("[%i]@%s :(file='%s' :%i)\n", i, MIDGE_ERROR_STACK[i].function_name, MIDGE_ERROR_STACK[i].file_name,
              MIDGE_ERROR_STACK[i].line);
+    }
+    // if(MIDGE_ERROR_STACK_ACTIVITY_LINE >= 0)
+    if (MIDGE_ERROR_STACK_ACTIVITY_LINE >= 0 && MIDGE_ERROR_STACK_INDEX + 1 < MIDGE_ERROR_STACK_MAX_SIZE) {
+
+      printf("\nLast Successful Execution (file='%s') :%i\n", MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX + 1].file_name,
+             MIDGE_ERROR_STACK_ACTIVITY_LINE);
+    }
+    else {
+      printf("Last Successful Execution :%i\n", MIDGE_ERROR_STACK_ACTIVITY_LINE);
     }
   }
 
@@ -282,9 +297,8 @@ void initialize_midge_error_handling(cling::Interpreter *clint)
   // clint->process(buf);
 
   // sprintf(buf,
-  //         "void (*register_midge_stack_invocation)(const char *, int, int, int *) = (void (*)(const char *, int, int, "
-  //         "int*))%p;",
-  //         &register_midge_stack_invocation);
+  //         "void (*register_midge_stack_invocation)(const char *, int, int, int *) = (void (*)(const char *, int, int,
+  //         " "int*))%p;", &register_midge_stack_invocation);
   // clint->process(buf);
   // sprintf(buf, "void (*register_midge_stack_return)(int) = (void (*)(int))%p;", &register_midge_stack_return);
   // clint->process(buf);

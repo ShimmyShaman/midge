@@ -178,7 +178,7 @@ typedef struct mc_syntax_node {
           mc_syntax_node *code_block;
         } function;
         struct {
-          mc_syntax_node *declarations;
+          mc_syntax_node_list *declarations;
         } extern_block;
         struct {
           mc_syntax_node *type_descriptor;
@@ -203,7 +203,7 @@ typedef struct mc_syntax_node {
         } enum_member;
         struct {
           mc_syntax_node *declaration;
-          mc_syntax_node *name;
+          mc_syntax_node_list *declarators;
         } nested_type;
         struct {
           mc_syntax_node *identifier;

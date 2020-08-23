@@ -308,7 +308,6 @@ const char *_mcl_ignore_functions[] = {
     "allocate_and_copy_cstr",
     "allocate_and_copy_cstrn",
     "clint_declare",
-    "clint_process",
 
     // And everything here before -------------------------------------------------------------
     "get_mc_syntax_token_type_name", // TODO
@@ -329,6 +328,7 @@ const char *_mcl_core_functions[] = {
     "insert_into_c_str",
     "print_syntax_node",
     "read_file_text",
+    "update_or_register_enum_info_from_syntax",
     "parse_file_to_syntax_tree",
     "initialize_source_file_info",
     "update_or_register_function_info_from_syntax",
@@ -352,6 +352,7 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_dereference_sequence",
     "mcs_parse_field_declarator",
     "mcs_parse_field_declaration",
+    "mcs_parse_extern_c_block",
     "find_struct_info",
     "mcs_parse_parameter_declaration",
     "mcs_parse_expression",
@@ -375,7 +376,7 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_local_declaration_statement",
     "mcs_parse_function_definition_header",
     "mcs_parse_type_alias_definition",
-    "mcs_parse_type_definition",
+    "mcs_parse_type_declaration",
     "mcs_parse_enum_definition",
     "mcs_parse_function_definition",
     "mcs_parse_preprocessor_directive",
@@ -550,21 +551,26 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
           break;
         }
         if (!valid) {
-          char fname[128];
-          int f;
-          for (f = 0; f < 128 & func_start_index + f < i; ++f)
-            fname[f] = src->text[func_start_index + f];
-          fname[f] = '\0';
-          bool specified = false;
-          for (int f = 0; _mcl_ignore_functions[f]; ++f) {
-            if (!strcmp(_mcl_ignore_functions[f], fname)) {
-              specified = true;
-              break;
-            }
+          if (!strncmp(src->text + func_start_index, "clint_process", 13)) {
+            valid = true;
           }
-          if (!specified) {
-            printf("\"%s\",\n", fname);
-            // MCerror(465, "core_source_loader: unspecified ignore function:'%s'\n", fname);
+          else {
+            char fname[128];
+            int f;
+            for (f = 0; f < 128 & func_start_index + f < i; ++f)
+              fname[f] = src->text[func_start_index + f];
+            fname[f] = '\0';
+            bool specified = false;
+            for (int f = 0; _mcl_ignore_functions[f]; ++f) {
+              if (!strcmp(_mcl_ignore_functions[f], fname)) {
+                specified = true;
+                break;
+              }
+            }
+            if (!specified) {
+              printf("\"%s\",\n", fname);
+              // MCerror(465, "core_source_loader: unspecified ignore function:'%s'\n", fname);
+            }
           }
         }
       }

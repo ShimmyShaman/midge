@@ -258,6 +258,27 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
   return 0;
 }
 
+int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field)
+{
+  // struct {
+  //   bool is_union;
+  //   char *type_name;
+  //   struct {
+  //     unsigned int alloc, count;
+  //     field_info **items;
+  //   } fields;
+  //   struct {
+  //     unsigned int alloc, count;
+  //     field_declarator_info **items;
+  //   } declarators;
+  // } sub_type;
+
+  print_syntax_node(subtype_syntax, 0);
+  MCerror(264, "TODO");
+
+  return 0;
+}
+
 int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *struct_ast, struct_info **p_struct_info)
 {
   struct_info *structure_info;
@@ -277,7 +298,7 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
     allocate_and_copy_cstr(structure_info->name, struct_ast->structure.type_name->text);
     structure_info->fields.alloc = 0;
     structure_info->fields.count = 0;
-    structure_info->version = 1U;
+    structure_info->latest_iteration = 1U;
     structure_info->source = NULL;
   }
   else {
@@ -293,52 +314,77 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
   }
   register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
 
-  cprintf(structure_info->mc_declared_name, "mc_%s_v%u", structure_info->name, structure_info->version);
+  cprintf(structure_info->mc_declared_name, "mc_%s_v%u", structure_info->name, structure_info->latest_iteration);
 
   // Set the values parsed
-  structure_info->fields.count = 0;
-  for (int i = 0; i < struct_ast->structure.fields->count; ++i) {
-    field_info *field = (field_info *)malloc(sizeof(field_info));
+  if (struct_ast->structure.fields) {
+    structure_info->is_defined = true;
 
-    field->type_id = (struct_id *)malloc(sizeof(struct_id));
-    allocate_and_copy_cstr(field->type_id->identifier, "field_info");
-    field->type_id->version = 1U;
+    structure_info->fields.count = 0;
+    for (int i = 0; i < struct_ast->structure.fields->count; ++i) {
+      field_info *field = (field_info *)malloc(sizeof(field_info));
 
-    register_midge_error_tag("update_or_register_struct_info_from_syntax-2a");
-    mc_syntax_node *field_syntax = struct_ast->structure.fields->items[i];
-    switch (field_syntax->field.field_kind) {
-    case FIELD_KIND_STANDARD: {
-      copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->type);
+      field->type_id = (struct_id *)malloc(sizeof(struct_id));
+      allocate_and_copy_cstr(field->type_id->identifier, "field_info");
+      field->type_id->version = 1U;
 
-      field->declarators.alloc = 0;
-      field->declarators.count = 0;
+      register_midge_error_tag("update_or_register_struct_info_from_syntax-2a");
+      mc_syntax_node *field_syntax = struct_ast->structure.fields->items[i];
+      switch (field_syntax->type) {
+      case MC_SYNTAX_FIELD_DECLARATION: {
+        switch (field_syntax->field.field_kind) {
+        case FIELD_KIND_STANDARD: {
+          copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->field.type);
 
-      for (int d = 0; d < field_syntax->field.declarators->count; ++d) {
-        mc_syntax_node *declarator_syntax = field_syntax->field.declarators->items[d];
+          field->field.declarators.alloc = 0;
+          field->field.declarators.count = 0;
 
-        field_declarator_info *declarator = (field_declarator_info *)malloc(sizeof(field_declarator_info));
-        copy_syntax_node_to_text(declarator_syntax->field_declarator.name, &declarator->name);
-        if (declarator_syntax->field_declarator.type_dereference) {
-          declarator->deref_count = declarator_syntax->field_declarator.type_dereference->dereference_sequence.count;
+          for (int d = 0; d < field_syntax->field.declarators->count; ++d) {
+            mc_syntax_node *declarator_syntax = field_syntax->field.declarators->items[d];
+
+            field_declarator_info *declarator = (field_declarator_info *)malloc(sizeof(field_declarator_info));
+            copy_syntax_node_to_text(declarator_syntax->field_declarator.name, &declarator->name);
+            if (declarator_syntax->field_declarator.type_dereference) {
+              declarator->deref_count =
+                  declarator_syntax->field_declarator.type_dereference->dereference_sequence.count;
+            }
+            else {
+              declarator->deref_count = 0;
+            }
+
+            append_to_collection((void ***)&field->field.declarators.items, &field->field.declarators.alloc,
+                                 &field->field.declarators.count, declarator);
+          }
+        } break;
+        default: {
+          MCerror(338, "NotSupported:%i", field_syntax->field.field_kind);
+        }
+        }
+      } break;
+      case MC_SYNTAX_NESTED_TYPE_DECLARATION: {
+        if (field_syntax->nested_type.declarators) {
+
+          // allocate_and_copy_cstr(field->name, field_syntax->nested_type.name->text);
+          register_sub_type_syntax_to_field_info(field_syntax->nested_type.declaration, field);
         }
         else {
-          declarator->deref_count = 0;
+          MCerror(348, "TODO");
         }
-
-        append_to_collection((void ***)&field->declarators.items, &field->declarators.alloc, &field->declarators.count,
-                             declarator);
+      } break;
+      default: {
+        MCerror(343, "NotSupported:%s", get_mc_syntax_token_type_name(field_syntax->type));
       }
-    } break;
-    default: {
-      MCerror(310, "NotSupported:%i", field_syntax->field.field_kind);
-    }
-    }
+      }
 
-    register_midge_error_tag("update_or_register_struct_info_from_syntax-2d");
+      register_midge_error_tag("update_or_register_struct_info_from_syntax-2d");
 
-    append_to_collection((void ***)&structure_info->fields.items, &structure_info->fields.alloc,
-                         &structure_info->fields.count, field);
-    register_midge_error_tag("update_or_register_struct_info_from_syntax-2e");
+      append_to_collection((void ***)&structure_info->fields.items, &structure_info->fields.alloc,
+                           &structure_info->fields.count, field);
+      register_midge_error_tag("update_or_register_struct_info_from_syntax-2e");
+    }
+  }
+  else {
+    structure_info->is_defined = false;
   }
   register_midge_error_tag("update_or_register_struct_info_from_syntax-4");
 
@@ -354,6 +400,7 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   find_enumeration_info(enum_ast->enumeration.name->text, &enum_info);
 
   register_midge_error_tag("update_or_register_enum_info_from_syntax-1");
+  char buf[256];
   if (!enum_info) {
     enum_info = (enumeration_info *)malloc(sizeof(enumeration_info));
 
@@ -366,15 +413,28 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
     // Name & Version
     allocate_and_copy_cstr(enum_info->name, enum_ast->enumeration.name->text);
     enum_info->latest_iteration = 1U;
+
+    enum_info->members.alloc = 0;
+    enum_info->members.count = 0;
   }
   else {
     // Empty
 
     // Clear the current values
     for (int i = 0; i < enum_info->members.count; ++i) {
+      sprintf(buf,
+              "#ifdef %s\n"
+              "#undef %s\n"
+              "#endif\n",
+              enum_info->members.items[i]->identity, enum_info->members.items[i]->identity);
+      clint_process(buf);
+
       if (enum_info->members.items[i]) {
         if (enum_info->members.items[i]->identity) {
           free(enum_info->members.items[i]->identity);
+        }
+        if (enum_info->members.items[i]->value) {
+          free(enum_info->members.items[i]->value);
         }
         free(enum_info->members.items[i]);
       }
@@ -384,22 +444,47 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   }
   register_midge_error_tag("update_or_register_enum_info_from_syntax-2");
 
+  cprintf(enum_info->mc_declared_name, "mc_%s_v%u", enum_info->name, enum_info->latest_iteration);
+
   // Set the values parsed
   enum_info->members.count = 0;
+  int latest_value = -1;
   for (int i = 0; i < enum_ast->enumeration.members->count; ++i) {
     enum_member *member = (enum_member *)malloc(sizeof(enum_member));
 
     copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier, &member->identity);
     if (enum_ast->enumeration.members->items[i]->enum_member.value) {
       copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value, &member->value);
+
+      sprintf(buf, "*(int *)(%p) = %s;", &latest_value, member->value); // TODO -- semi-colon
+      clint_process(buf);
+      sprintf(buf, "#define %s %i\n", member->identity, latest_value);
     }
     else {
       member->value = NULL;
+      ++latest_value;
+      sprintf(buf, "#define %s %i\n", member->identity, latest_value);
     }
+
+    // printf("%s", buf);
+    clint_process(buf);
 
     append_to_collection((void ***)&enum_info->members.items, &enum_info->members.alloc, &enum_info->members.count,
                          member);
   }
+
+  // for (int b = 0; b < child->enumeration.members->count; ++b) {
+  //   mc_syntax_node *enum_member = child->enumeration.members->items[b];
+  //   sprintf(buf,
+  //           "#ifdef %s\n"
+  //           "#undef %s\n"
+  //           "#endif\n"
+  //           "#define %s %s\n",
+  //           enum_member->enum_member.identifier->text, enum_member->enum_member.identifier->text,
+  //           enum_member->enum_member.identifier->text, enum_member->enum_member.value->text);
+  //   printf("%s", buf);
+
+  //   return 0;
 
   // Set
   *p_enum_info = enum_info;
@@ -420,6 +505,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
 
   // printf("mc_transcription:\n%s||\n", mc_transcription);
   clint_declare(mc_transcription);
+  free(mc_transcription);
   // printf("idfc-5\n");
   char buf[512];
   sprintf(buf, "%s = &%s_mcv%u;", func_info->name, func_info->name, func_info->latest_iteration);
@@ -453,6 +539,7 @@ int instantiate_struct_definition_from_ast(node *definition_owner, source_defini
   transcribe_struct_to_mc(structure_info, ast, &mc_transcription);
 
   clint_declare(mc_transcription);
+  free(mc_transcription);
 
   if (definition_info) {
     *definition_info = structure_info;
@@ -465,7 +552,20 @@ int instantiate_struct_definition_from_ast(node *definition_owner, source_defini
 int instantiate_enum_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
                                          void **definition_info)
 {
-  MCerror(297, "TODO");
+  // Register enum
+  enumeration_info *enum_info;
+  update_or_register_enum_info_from_syntax(definition_owner, ast, &enum_info);
+
+  char buf[256];
+  sprintf(buf, "enum %s { };", enum_info->mc_declared_name);
+  clint_declare(buf);
+
+  if (definition_info) {
+    *definition_info = enum_info;
+  }
+
+  register_midge_error_tag("instantiate_enum_definition_from_ast(~)");
+  return 0;
 }
 
 /*
@@ -522,7 +622,7 @@ int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *a
     enum_info->source = source;
   } break;
   default: {
-    MCerror(325, "only functions supported atm\n");
+    MCerror(325, "instantiate_definition:%i NotYetSupported", ast->type);
   }
   }
 
@@ -556,6 +656,22 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE: {
       break;
     }
+    case MC_SYNTAX_EXTERN_C_BLOCK: {
+      for (int b = 0; b < child->extern_block.declarations->count; ++b) {
+        mc_syntax_node *declaration = child->extern_block.declarations->items[b];
+        switch (declaration->type) {
+        case MC_SYNTAX_FUNCTION: {
+          if ((mc_token_type)declaration->function.code_block->type != MC_TOKEN_SEMI_COLON) {
+            MCerror(565, "Full Function definition in an extern c block ? ? ?");
+          }
+          // Function Declaration only
+          update_or_register_function_info_from_syntax(NULL, declaration, NULL);
+        } break;
+        default:
+          MCerror(572, "TODO : %s", get_mc_syntax_token_type_name(declaration->type));
+        }
+      }
+    } break;
     case MC_SYNTAX_FUNCTION: {
       if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
         // Function Declaration only
@@ -576,33 +692,51 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         struct_info *info;
         instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
         info->source->source_file = lv_source_file;
-        printf("--defined:'%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
+        printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
         sprintf(buf,
-                "#ifdef %s\n"
-                "#undef %s\n"
-                "#endif\n"
-                "#define %s struct %s\n",
-                info->mc_declared_name, info->mc_declared_name, info->mc_declared_name, info->mc_declared_name);
+                "#ifndef %s\n"
+                // "#undef %s\n"
+                "#define %s struct %s\n"
+                "#endif\n",
+                info->name, info->name, info->mc_declared_name);
         clint_process(buf);
       } break;
+      case MC_SYNTAX_ENUM: {
+        enumeration_info *info;
+        instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
+        register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-0");
+        info->source->source_file = lv_source_file;
+        register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-1");
+        printf("--defined: enum '%s'\n", child->type_alias.type_descriptor->enumeration.name->text);
+        register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-2");
+        sprintf(buf,
+                "#ifndef %s\n"
+                // "#undef %s\n"
+                "#define %s enum %s\n"
+                "#endif\n",
+                info->name, info->name, info->mc_declared_name);
+        register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-3");
+        clint_process(buf);
+        register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-4");
+      } break;
       default:
-        MCerror(576, "Unhandled type_alias-descriptor-syntax-type:%i", child->type_alias.type_descriptor->type);
+        print_syntax_node(child->type_alias.type_descriptor, 0);
+        MCerror(668, "Unhandled type_alias-descriptor-syntax-type:%s",
+                get_mc_syntax_token_type_name(child->type_alias.type_descriptor->type));
         break;
       }
-
-      // alias_info *info;
     } break;
     case MC_SYNTAX_STRUCTURE: {
       struct_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       info->source->source_file = lv_source_file;
-      printf("--defined:'%s'\n", child->structure.type_name->text);
+      printf("--declared: struct '%s'\n", child->structure.type_name->text);
     } break;
     case MC_SYNTAX_ENUM: {
       enumeration_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       info->source->source_file = lv_source_file;
-      printf("--defined:'%s'\n", child->enumeration.name->text);
+      printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
     default: {
       switch ((mc_token_type)child->type) {
@@ -614,7 +748,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
       }
       default: {
         print_syntax_node(child, 0);
-        MCerror(576, "Unhandled root-syntax-type:%i", child->type);
+        MCerror(576, "Unhandled root-syntax-type:%s", get_mc_syntax_token_type_name(child->type));
       }
       }
     }

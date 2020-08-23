@@ -1254,19 +1254,23 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
   // Header
   append_to_c_str(str, "struct \n");
   append_to_c_str(str, structure_info->mc_declared_name);
-  append_to_c_str(str, " { \n");
 
-  int indent = 1;
-  for (int f = 0; f < structure_ast->structure.fields->count; ++f) {
-    mc_syntax_node *field_syntax = structure_ast->structure.fields->items[f];
+  if (structure_ast->structure.fields) {
+    append_to_c_str(str, " { \n");
 
-    mct_append_indent_to_c_str(str, indent);
-    mct_transcribe_field(str, indent, field_syntax);
-    append_to_c_str(str, ";\n");
+    int indent = 1;
+    for (int f = 0; f < structure_ast->structure.fields->count; ++f) {
+      mc_syntax_node *field_syntax = structure_ast->structure.fields->items[f];
+
+      mct_append_indent_to_c_str(str, indent);
+      mct_transcribe_field(str, indent, field_syntax);
+      append_to_c_str(str, ";\n");
+    }
+
+    append_to_c_strf(str, "}", structure_ast->structure.type_name->text,
+                     structure_info->latest_iteration); // TODO -- types not structs
   }
-
-  append_to_c_strf(str, "};", structure_ast->structure.type_name->text,
-                   structure_info->version); // TODO -- types not structs
+  append_to_c_str(str, ";");
 
   *mc_transcription = str->text;
   release_c_str(str, false);
