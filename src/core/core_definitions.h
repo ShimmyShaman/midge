@@ -63,6 +63,8 @@ struct source_file_info;
 struct struct_info;
 struct function_info;
 struct enumeration_info;
+struct field_info_list;
+
 typedef struct source_definition {
   struct_id *type_id;
   source_definition_type type;
@@ -121,21 +123,19 @@ typedef struct field_info {
 
   union {
     struct {
-      char *type;
+      char *type_name;
       struct_info *type_info;
-      struct {
-        unsigned int alloc, count;
-        field_declarator_info **items;
-      } declarators;
+      field_declarator_info_list *declarators;
     } field;
     struct {
-      bool is_union;
+      char *identifier;
+      unsigned int deref_count;
+    } function_pointer;
+    struct {
+      bool is_union, is_anonymous;
       char *type_name;
       field_info_list *fields;
-      struct {
-        unsigned int alloc, count;
-        field_declarator_info **items;
-      } declarators;
+      field_declarator_info_list *declarators;
     } sub_type;
   };
 } field_info;
@@ -260,7 +260,10 @@ int find_struct_info(char *function_name, struct_info **structure_info);
 int find_enumeration_info(char *function_name, enumeration_info **enum_info);
 
 int release_struct_id(struct_id *ptr);
+int release_field_declarator_info(field_declarator_info *declarator);
+int release_field_declarator_info_list(field_declarator_info_list *declarator_list);
 int release_field_info(field_info *ptr);
+int release_field_info_list(field_info_list *ptr);
 int release_parameter_info(parameter_info *ptr);
 };
 

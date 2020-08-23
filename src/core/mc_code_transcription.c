@@ -5,6 +5,7 @@
 int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_node);
 int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax_node);
 int mct_transcribe_expression(c_str *str, mc_syntax_node *syntax_node);
+int mct_transcribe_field(c_str *str, int indent, mc_syntax_node *syntax_node);
 
 int mct_append_node_text_to_c_str(c_str *str, mc_syntax_node *syntax_node)
 {
@@ -491,11 +492,13 @@ int mct_transcribe_declaration_statement(c_str *str, int indent, mc_syntax_node 
 
 int mct_transcribe_mcerror(c_str *str, int indent, mc_syntax_node *syntax_node)
 {
-  mct_append_indent_to_c_str(str, indent);
+  mct_append_to_c_str(str, indent, "{\n");
+  mct_append_indent_to_c_str(str, indent + 1);
   append_to_c_strf(str, "*mc_return_value = %s;\n", syntax_node->invocation.arguments->items[0]->text);
-  mct_append_indent_to_c_str(str, indent);
+  mct_append_indent_to_c_str(str, indent + 1);
   mct_append_node_text_to_c_str(str, syntax_node);
   append_to_c_str(str, ";\n");
+  mct_append_to_c_str(str, indent, "}\n");
 
   return 0;
 }
@@ -954,13 +957,14 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
     } break;
     case MC_SYNTAX_RETURN_STATEMENT: {
       bool contains_mc_function_call;
+      mct_append_to_c_str(str, indent, "{\n");
       if (child->return_statement.expression) {
         mct_contains_mc_invoke(child->return_statement.expression, &contains_mc_function_call);
         if (contains_mc_function_call) {
           MCerror(200, "TODO");
         }
 
-        mct_append_indent_to_c_str(str, indent);
+        mct_append_indent_to_c_str(str, indent + 1);
         append_to_c_str(str, "*mc_return_value = ");
         mct_transcribe_expression(str, child->return_statement.expression);
         append_to_c_str(str, ";\n");
@@ -976,12 +980,12 @@ int mct_transcribe_statement_list(c_str *str, int indent, mc_syntax_node *syntax
             MCerror(786, "Checkit");
           }
 
-          mct_append_indent_to_c_str(str, indent);
+          mct_append_indent_to_c_str(str, indent + 1);
           append_to_c_strf(str, "register_midge_error_tag(\"%s(~)\");\n", root->function.name->text);
         }
       }
-      mct_append_indent_to_c_str(str, indent);
-      append_to_c_str(str, "return 0;\n");
+      mct_append_to_c_str(str, indent + 1, "return 0;\n");
+      mct_append_to_c_str(str, indent, "}\n");
     } break;
     case MC_SYNTAX_BLOCK: {
       mct_transcribe_code_block(str, indent, child);
@@ -1096,30 +1100,99 @@ int mct_transcribe_code_block(c_str *str, int indent, mc_syntax_node *syntax_nod
   return 0;
 }
 
+int mct_transcribe_field_list(c_str *str, int indent, mc_syntax_node_list *field_list)
+{
+  for (int f = 0; f < field_list->count; ++f) {
+    mc_syntax_node *field_syntax = field_list->items[f];
+
+    mct_append_indent_to_c_str(str, indent);
+    mct_transcribe_field(str, indent, field_syntax);
+    append_to_c_str(str, ";\n");
+  }
+
+  return 0;
+}
+
+int mct_transcribe_field_declarators(c_str *str, mc_syntax_node_list *declarators_list)
+{
+  for (int a = 0; a < declarators_list->count; ++a) {
+    if (a > 0) {
+      append_to_c_str(str, ",");
+    }
+
+    mc_syntax_node *declarator = declarators_list->items[a];
+    if (declarator->field_declarator.type_dereference) {
+      for (int d = 0; d < declarator->field_declarator.type_dereference->dereference_sequence.count; ++d) {
+        append_to_c_str(str, "*");
+      }
+    }
+    mct_append_node_text_to_c_str(str, declarator->field_declarator.name);
+  }
+
+  return 0;
+}
+
 int mct_transcribe_field(c_str *str, int indent, mc_syntax_node *syntax_node)
 {
   mct_append_indent_to_c_str(str, indent);
 
-  switch (syntax_node->field.field_kind) {
-  case FIELD_KIND_STANDARD: {
-    mct_transcribe_type_identifier(str, syntax_node->field.type_identifier);
-    for (int a = 0; a < syntax_node->field.declarators->count; ++a) {
-      if (a > 0) {
-        append_to_c_str(str, ",");
+  switch (syntax_node->type) {
+  case MC_SYNTAX_FIELD_DECLARATION: {
+    switch (syntax_node->field.field_kind) {
+    case FIELD_KIND_STANDARD: {
+      mct_transcribe_type_identifier(str, syntax_node->field.type_identifier);
+      append_to_c_str(str, " ");
+      mct_transcribe_field_declarators(str, syntax_node->field.declarators);
+    } break;
+    case FIELD_KIND_FUNCTION_POINTER: {
+      mct_append_node_text_to_c_str(str, syntax_node->field.function_pointer);
+    } break;
+    default:
+      print_syntax_node(syntax_node, 0);
+      MCerror(1122, "NotSupported:%i", syntax_node->field.field_kind);
+    }
+  } break;
+  case MC_SYNTAX_NESTED_TYPE_DECLARATION: {
+    mc_syntax_node *type_decl = syntax_node->nested_type.declaration;
+
+    if (type_decl->type == MC_SYNTAX_STRUCTURE) {
+      append_to_c_str(str, "struct ");
+
+      if (type_decl->structure.type_name) {
+        mct_append_node_text_to_c_str(str, type_decl->structure.type_name);
+        append_to_c_str(str, " ");
       }
 
-      mc_syntax_node *declarator = syntax_node->field.declarators->items[a];
-      append_to_c_str(str, " ");
-      if (declarator->field_declarator.type_dereference) {
-        for (int d = 0; d < declarator->field_declarator.type_dereference->dereference_sequence.count; ++d) {
-          append_to_c_str(str, "*");
-        }
+      append_to_c_str(str, "{\n");
+
+      mct_transcribe_field_list(str, indent + 1, type_decl->structure.fields);
+      mct_append_to_c_str(str, indent, "}");
+    }
+    else if (type_decl->type == MC_SYNTAX_UNION) {
+      append_to_c_str(str, "union ");
+
+      if (type_decl->union_decl.type_name) {
+        mct_append_node_text_to_c_str(str, type_decl->union_decl.type_name);
+        append_to_c_str(str, " ");
       }
-      mct_append_node_text_to_c_str(str, declarator->field_declarator.name);
+
+      append_to_c_str(str, "{\n");
+
+      mct_transcribe_field_list(str, indent + 1, type_decl->union_decl.fields);
+      mct_append_to_c_str(str, indent, "}");
+    }
+    else {
+      MCerror(1136, "TODO");
+    }
+
+    if (syntax_node->nested_type.declarators) {
+      append_to_c_str(str, " ");
+      mct_transcribe_field_declarators(str, syntax_node->nested_type.declarators);
     }
   } break;
   default:
-    MCerror(873, "NotSupported:%i", syntax_node->field.field_kind);
+    print_syntax_node(syntax_node, 0);
+    MCerror(1130, "NotSupported:%s", get_mc_syntax_token_type_name(syntax_node->type));
   }
 
   return 0;
@@ -1258,14 +1331,7 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
   if (structure_ast->structure.fields) {
     append_to_c_str(str, " { \n");
 
-    int indent = 1;
-    for (int f = 0; f < structure_ast->structure.fields->count; ++f) {
-      mc_syntax_node *field_syntax = structure_ast->structure.fields->items[f];
-
-      mct_append_indent_to_c_str(str, indent);
-      mct_transcribe_field(str, indent, field_syntax);
-      append_to_c_str(str, ";\n");
-    }
+    mct_transcribe_field_list(str, 1, structure_ast->structure.fields);
 
     append_to_c_strf(str, "}", structure_ast->structure.type_name->text,
                      structure_info->latest_iteration); // TODO -- types not structs

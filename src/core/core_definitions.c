@@ -182,6 +182,90 @@ int release_struct_id(struct_id *ptr)
   return 0;
 }
 
+// typedef struct field_info {
+//   struct_id *type_id;
+//   field_kind field_type;
+
+//   union {
+//     struct {
+//       char *type_name;
+//       struct_info *type_info;
+//       field_declarator_info_list *declarators;
+//     } field;
+//     struct {
+//       bool is_union;
+//       char *type_name;
+//       field_info_list *fields;
+//       field_declarator_info_list *declarators;
+//     } sub_type;
+//   };
+// } field_info;
+
+int release_field_declarator_info(field_declarator_info *declarator)
+{
+  if (!declarator) {
+    return 0;
+  }
+
+  MCerror(210, "TODO");
+
+  return 0;
+}
+
+int release_field_declarator_info_list(field_declarator_info_list *declarator_list)
+{
+  if (declarator_list) {
+    if (declarator_list->items && declarator_list->alloc) {
+      for (int i = 0; i < declarator_list->count; ++i) {
+        release_field_declarator_info(declarator_list->items[i]);
+      }
+      free(declarator_list->items);
+    }
+    free(declarator_list);
+  }
+
+  return 0;
+}
+
+int release_field_info(field_info *field)
+{
+  if (!field)
+    return 0;
+
+  release_struct_id(field->type_id);
+  switch (field->field_type) {
+  case FIELD_KIND_STANDARD: {
+    if (field->field.type_name)
+      free(field->field.type_name);
+    if (field->field.declarators)
+      release_field_declarator_info_list(field->field.declarators);
+  } break;
+  // case FIELD_KIND_NESTED_UNION: {
+
+  // } break;
+  default: {
+    MCerror(214, "release_field_info:Unsupported:%i", field->field_type);
+  }
+  }
+
+  return 0;
+}
+
+int release_field_info_list(field_info_list *field_list)
+{
+  if (field_list) {
+    if (field_list->items && field_list->alloc) {
+      for (int i = 0; i < field_list->count; ++i) {
+        release_field_info(field_list->items[i]);
+      }
+      free(field_list->items);
+    }
+    free(field_list);
+  }
+
+  return 0;
+}
+
 int release_parameter_info(parameter_info *ptr)
 {
   if (!ptr)

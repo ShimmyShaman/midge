@@ -283,6 +283,8 @@ const char *_mcl_core_structs[] = {
     "function_info",
     "struct_info",
     "enumeration_info",
+    "field_info",
+    "field_info_list",
     // And everything here before -------------------------------------------------------------
     NULL,
 };
@@ -316,7 +318,7 @@ const char *_mcl_ignore_functions[] = {
 };
 
 const char *_mcl_core_functions[] = {
-    "obtain_midge_global_root",
+    // midge_common
     "init_c_str",
     "set_c_str",
     "set_c_strn",
@@ -326,15 +328,36 @@ const char *_mcl_core_functions[] = {
     "append_to_c_strn",
     "append_to_c_strf",
     "insert_into_c_str",
-    "print_syntax_node",
+    // core_definitions
+    "obtain_midge_global_root",
     "read_file_text",
+    "append_to_collection",
+    "insert_in_collection",
+    "remove_from_collection",
+    "remove_ptr_from_collection",
+    "find_function_info",
+    "release_field_declarator_info",
+    "release_field_declarator_info_list",
+    "release_field_info",
+    "release_field_info_list",
+    "release_parameter_info",
+
+    // c_parser_lexer
+    "print_syntax_node",
+
+    // mc_code_transcription
+    "mct_transcribe_field_declarators",
+    "mct_transcribe_field_list",
+
+    // mc_source
+    "summarize_field_declarator_list",
+    "summarize_type_field_list",
+
     "update_or_register_enum_info_from_syntax",
     "parse_file_to_syntax_tree",
     "initialize_source_file_info",
     "update_or_register_function_info_from_syntax",
     "instantiate_definition",
-    "remove_from_collection",
-    "append_to_collection",
     "release_struct_id",
     "release_syntax_node",
     "_mcs_print_syntax_node_ancestry",
@@ -363,7 +386,6 @@ const char *_mcl_core_functions[] = {
     "_mcs_parse_expression",
     "mcs_parse_local_declaration",
     "mcs_parse_expression_beginning_with_bracket",
-    "find_function_info",
     "mcs_parse_expression_conditional",
     "mcs_parse_code_block",
     "mcs_parse_statement_list",

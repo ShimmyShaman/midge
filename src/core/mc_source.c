@@ -2,6 +2,8 @@
 #include "core/core_definitions.h"
 #include "midge_common.h"
 
+int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field);
+
 int attach_function_info_to_owner(node *owner, function_info *func_info)
 {
   switch (owner->type) {
@@ -282,8 +284,8 @@ int summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
       declarator->deref_count = 0;
     }
 
-    append_to_collection((void ***)&(*field_declarators_list)->items, &&(*field_declarators_list)->alloc,
-                         &&(*field_declarators_list)->count, declarator);
+    append_to_collection((void ***)&(*field_declarators_list)->items, &(*field_declarators_list)->alloc,
+                         &(*field_declarators_list)->count, declarator);
   }
 
   return 0;
@@ -295,25 +297,36 @@ int summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_info
   (*field_list)->alloc = 0;
   (*field_list)->count = 0;
 
-  for (int i = 0; i < struct_ast->structure.fields->count; ++i) {
-    field_info *field = (field_info *)malloc(sizeof(field_info));
+  for (int i = 0; i < field_syntax_list->count; ++i) {
+    mc_syntax_node *field_syntax = field_syntax_list->items[i];
 
+    field_info *field = (field_info *)malloc(sizeof(field_info));
     field->type_id = (struct_id *)malloc(sizeof(struct_id));
     allocate_and_copy_cstr(field->type_id->identifier, "field_info");
     field->type_id->version = 1U;
 
     register_midge_error_tag("summarize_type_field_list-2a");
-    mc_syntax_node *field_syntax = struct_ast->structure.fields->items[i];
     switch (field_syntax->type) {
     case MC_SYNTAX_FIELD_DECLARATION: {
       switch (field_syntax->field.field_kind) {
       case FIELD_KIND_STANDARD: {
-        copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->field.type);
-
-        field->field.declarators.alloc = 0;
-        field->field.declarators.count = 0;
+        field->field_type = FIELD_KIND_STANDARD;
+        copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->field.type_name);
 
         summarize_field_declarator_list(field_syntax->field.declarators, &field->field.declarators);
+      } break;
+      case FIELD_KIND_FUNCTION_POINTER: {
+        field->field_type = FIELD_KIND_FUNCTION_POINTER;
+
+        mc_syntax_node *fps = field_syntax->field.function_pointer;
+        copy_syntax_node_to_text(fps->function_pointer_declaration.identifier, &field->function_pointer.identifier);
+        if (!fps->function_pointer_declaration.type_dereference)
+          field->function_pointer.deref_count = 0;
+        else
+          field->function_pointer.deref_count =
+              fps->function_pointer_declaration.type_dereference->dereference_sequence.count;
+
+        // TODO -- more details
       } break;
       default: {
         MCerror(302, "NotSupported:%i", field_syntax->field.field_kind);
@@ -321,13 +334,28 @@ int summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_info
       }
     } break;
     case MC_SYNTAX_NESTED_TYPE_DECLARATION: {
-      if (field_syntax->nested_type.declarators) {
-
-        // allocate_and_copy_cstr(field->name, field_syntax->nested_type.name->text);
-        register_sub_type_syntax_to_field_info(field_syntax->nested_type.declaration, field);
+      if (field_syntax->nested_type.declaration->type == MC_SYNTAX_UNION) {
+        field->field_type = FIELD_KIND_NESTED_UNION;
+      }
+      else if (field_syntax->nested_type.declaration->type == MC_SYNTAX_STRUCTURE) {
+        field->field_type = FIELD_KIND_NESTED_STRUCT;
       }
       else {
-        MCerror(313, "TODO");
+        MCerror(328, "Not Supported");
+      }
+
+      // allocate_and_copy_cstr(field->name, field_syntax->nested_type.name->text);
+      register_sub_type_syntax_to_field_info(field_syntax->nested_type.declaration, field);
+
+      if (field_syntax->nested_type.declarators) {
+        field->sub_type.is_anonymous = false;
+
+        if (field_syntax->nested_type.declarators) {
+          summarize_field_declarator_list(field_syntax->nested_type.declarators, &field->sub_type.declarators);
+        }
+      }
+      else {
+        field->sub_type.is_anonymous = true;
       }
     } break;
     default: {
@@ -363,8 +391,8 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
   if (subtype_syntax->type == MC_SYNTAX_UNION) {
     field->sub_type.is_union = true;
 
-    if (subtype_syntax->union_decl->type_name) {
-      copy_syntax_node_to_text(subtype_syntax->union_decl.type_name, &field->type_name);
+    if (subtype_syntax->union_decl.type_name) {
+      copy_syntax_node_to_text(subtype_syntax->union_decl.type_name, &field->sub_type.type_name);
     }
     else {
       field->sub_type.type_name = NULL;
@@ -375,33 +403,26 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
     }
 
     summarize_type_field_list(subtype_syntax->union_decl.fields, &field->sub_type.fields);
-
-    if (subtype_syntax->union_decl.)
-      summarize_field_declarator_list()
-
-          MCerror(299, "TODO -- declarators");
   }
   else if (subtype_syntax->type == MC_SYNTAX_STRUCTURE) {
-    field->is_union = true;
+    field->sub_type.is_union = false;
 
-    if (subtype_syntax->structure->type_name) {
-      copy_syntax_node_to_text(subtype_syntax->structure.type_name, &field->type_name);
+    if (subtype_syntax->structure.type_name) {
+      copy_syntax_node_to_text(subtype_syntax->structure.type_name, &field->sub_type.type_name);
     }
     else {
       field->sub_type.type_name = NULL;
     }
 
     if (!subtype_syntax->structure.fields) {
-      MCerror(298, "Unexpected?");
+      MCerror(396, "Unexpected?");
     }
 
-    parse_type_field_list(subtype_syntax->structure.fields, &field->sub_type.fields);
+    summarize_type_field_list(subtype_syntax->structure.fields, &field->sub_type.fields);
   }
   else {
     MCerror(283, "NotSupported:%s", get_mc_syntax_token_type_name(subtype_syntax->type));
   }
-
-  MCerror(264, "TODO");
 
   return 0;
 }
@@ -427,15 +448,12 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
     structure_info->source = NULL;
   }
   else {
-    MCerror(213, "TODO");
-    // // Empty
-    // // Clear the current values
-    // for (int i = 0; i < structure_info->fields.count; ++i)
-    //   if (structure_info->fields.items[i]) {
-    //     release_field_info((field_info *)structure_info->fields.items[i]);
-    //   }
+    free(structure_info->mc_declared_name);
 
-    // ++structure_info->version;
+    if (structure_info->is_defined) {
+      // Free the field summaries
+      release_field_info_list(structure_info->fields);
+    }
   }
   register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
 
@@ -603,6 +621,7 @@ int instantiate_struct_definition_from_ast(node *definition_owner, source_defini
   transcribe_struct_to_mc(structure_info, ast, &mc_transcription);
 
   clint_declare(mc_transcription);
+  // printf("struct:\n%s||\n", mc_transcription);
   free(mc_transcription);
 
   if (definition_info) {

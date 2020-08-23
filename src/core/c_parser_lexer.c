@@ -4227,7 +4227,14 @@ int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast)
       }
     } break;
     case MC_TOKEN_EXTERN_KEYWORD: {
-      mcs_parse_extern_c_block(&ps, *file_ast, NULL);
+      mc_syntax_node *declaration;
+      mcs_parse_extern_c_block(&ps, *file_ast, &declaration);
+
+      mcs_peek_token_type(&ps, false, 0, &token_type);
+      if (token_type == MC_TOKEN_SEMI_COLON) {
+        mcs_parse_through_supernumerary_tokens(&ps, declaration);
+        mcs_parse_through_token(&ps, declaration, MC_TOKEN_SEMI_COLON, NULL);
+      }
     } break;
     case MC_TOKEN_VOID_KEYWORD:
     case MC_TOKEN_INT_KEYWORD:
