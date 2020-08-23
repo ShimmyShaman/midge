@@ -110,6 +110,11 @@ typedef struct field_declarator_info {
   char *name;
 } field_declarator_info;
 
+typedef struct field_declarator_info_list {
+  unsigned int alloc, count;
+  field_declarator_info **items;
+} field_declarator_info_list;
+
 typedef struct field_info {
   struct_id *type_id;
   field_kind field_type;
@@ -126,10 +131,7 @@ typedef struct field_info {
     struct {
       bool is_union;
       char *type_name;
-      struct {
-        unsigned int alloc, count;
-        field_info **items;
-      } fields;
+      field_info_list *fields;
       struct {
         unsigned int alloc, count;
         field_declarator_info **items;
@@ -138,6 +140,11 @@ typedef struct field_info {
   };
 } field_info;
 
+typedef struct field_info_list {
+  unsigned int alloc, count;
+  field_info **items;
+} field_info_list;
+
 typedef struct struct_info {
   struct_id *type_id;
   source_definition *source;
@@ -145,10 +152,7 @@ typedef struct struct_info {
   unsigned int latest_iteration;
   char *mc_declared_name;
   bool is_defined;
-  struct {
-    unsigned int count, alloc;
-    field_info **items;
-  } fields;
+  field_info_list *fields;
 } struct_info;
 
 typedef struct parameter_info {
