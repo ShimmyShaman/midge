@@ -11,6 +11,7 @@ int mct_transcribe_field(c_str *str, int indent, mc_syntax_node *syntax_node);
 typedef struct mct_transcription_state {
   // Options
   bool report_invocations_to_error_stack;
+  bool tag_on_function_entry;
 
   // State Values
   mc_syntax_node *transcription_root;
@@ -19,9 +20,13 @@ typedef struct mct_transcription_state {
 
   // Variable scopes
   struct {
-    
-  } scoped_variables[256];
-  int scope_level_index;
+    int variable_count;
+    struct {
+      mc_syntax_node *declaration_node;
+      char *name;
+    } variables[64];
+  } scope[256];
+  int scope_index;
 } mct_transcription_state;
 
 int mct_append_node_text_to_c_str(c_str *str, mc_syntax_node *syntax_node)
@@ -1270,8 +1275,6 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
 {
   register_midge_error_tag("transcribe_function_to_mc()");
 
-  
-
   if (function_ast->type != MC_SYNTAX_FUNCTION) {
     MCerror(889, "MCT:Not Supported");
   }
@@ -1284,40 +1287,59 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
     MCerror(898, "TODO");
   }
 
-  c_str *str;
-  init_c_str(&str);
+  mct_transcription_state ts;
+  // -- options
+  ts.report_invocations_to_error_stack = true;
+  ts.tag_on_function_entry = true;
+  // -- state
+  ts.transcription_root = function_ast;
+  ts.indent = 0;
+  init_c_str(&ts.str);
+  // -- scope
+  ts.scope_level_index = 0;
+  ts.scoped_variables[state.scope_level_index].count = 0;
 
   // Header
-  append_to_c_strf(str, "int %s_mcv%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
+  append_to_c_strf(ts.str, "int %s_mcv%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
                    func_info->latest_iteration);
 
   // Initial
-  append_to_c_strf(str, "  register_midge_error_tag(\"%s()\");\n\n", function_ast->function.name->text);
+  if (ts.tag_on_function_entry) {
+    append_to_c_strf(ts.str, "  register_midge_error_tag(\"%s()\");\n\n", function_ast->function.name->text);
+  }
 
   // Function Parameters
-  append_to_c_str(str, "  // Function Parameters\n");
+  append_to_c_str(ts.str, "  // Function Parameters\n");
+  ts.scope[ts.scope_index].variable_count = 0;
   for (int p = 0; p < function_ast->function.parameters->count; ++p) {
     mc_syntax_node *parameter_syntax = function_ast->function.parameters->items[p];
 
     switch (parameter_syntax->parameter.type) {
     case PARAMETER_KIND_STANDARD: {
-      mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier);
-      mct_append_indent_to_c_str(str, 1);
+
+      // mct_add_scope_variable(&ts, parameter_syntax);
+      ts.scope[ts.scope_index].variables[ts.scope[ts.scope_index]].declaration_node = parameter_syntax;
+      copy_syntax_node_to_text(parameter_syntax->parameter.name,
+                               &ts.scope[ts.scope_index].variables[ts.scope[ts.scope_index]].name);
+      ++ts.scope[ts.scope_index].variable_count;
+
+      mct_transcribe_type_identifier(ts.str, parameter_syntax->parameter.type_identifier);
+      mct_append_indent_to_c_str(ts.str, 1);
       if (parameter_syntax->parameter.type_dereference) {
         for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
-          append_to_c_str(str, "*");
+          append_to_c_str(ts.str, "*");
         }
       }
-      mct_append_node_text_to_c_str(str, parameter_syntax->parameter.name);
-      append_to_c_str(str, " = *(");
-      mct_transcribe_type_identifier(str, parameter_syntax->parameter.type_identifier);
-      append_to_c_str(str, " ");
+      mct_append_node_text_to_c_str(ts.str, parameter_syntax->parameter.name);
+      append_to_c_str(ts.str, " = *(");
+      mct_transcribe_type_identifier(ts.str, parameter_syntax->parameter.type_identifier);
+      append_to_c_str(ts.str, " ");
       if (parameter_syntax->parameter.type_dereference) {
         for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
-          append_to_c_str(str, "*");
+          append_to_c_str(ts.str, "*");
         }
       }
-      append_to_c_strf(str, "*)mc_argsv[%i];\n", p);
+      append_to_c_strf(ts.str, "*)mc_argsv[%i];\n", p);
     } break;
     case PARAMETER_KIND_VARIABLE_ARGS: {
     } break;
@@ -1334,26 +1356,26 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   }
   if (function_ast->function.return_type_dereference ||
       strcmp(function_ast->function.return_type_identifier->type_identifier.identifier->text, "void")) {
-    mct_append_indent_to_c_str(str, 1);
+    mct_append_indent_to_c_str(ts.str, 1);
 
-    mct_append_node_text_to_c_str(str, function_ast->function.return_type_identifier);
-    append_to_c_str(str, " ");
+    mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_identifier);
+    append_to_c_str(ts.str, " ");
     if (function_ast->function.return_type_dereference)
-      mct_append_node_text_to_c_str(str, function_ast->function.return_type_dereference);
-    append_to_c_str(str, "*mc_return_value;\n");
+      mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_dereference);
+    append_to_c_str(ts.str, "*mc_return_value;\n");
   }
 
   // Code Block
-  append_to_c_str(str, "  // Function Code\n");
-  mct_transcribe_statement_list(str, 0, function_ast->function.code_block->code_block.statement_list);
-  append_to_c_strf(str,
+  append_to_c_str(ts.str, "  // Function Code\n");
+  mct_transcribe_statement_list(ts.str, 0, function_ast->function.code_block->code_block.statement_list);
+  append_to_c_strf(ts.str,
                    "\n"
                    "  register_midge_error_tag(\"%s(~)\");\n"
                    "  return 0;\n}",
                    function_ast->function.name->text);
 
-  *mc_transcription = str->text;
-  release_c_str(str, false);
+  *mc_transcription = ts.str->text;
+  release_c_str(ts.str, false);
 
   // printf("mc_transcription:\n%s||\n", *mc_transcription);
 
