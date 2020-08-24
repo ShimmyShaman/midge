@@ -87,11 +87,11 @@ typedef enum mc_token_type {
   MC_TOKEN_FLOAT_KEYWORD,
   MC_TOKEN_LONG_KEYWORD,
   MC_TOKEN_SHORT_KEYWORD,
-  MC_TOKEN_STANDARD_MAX_VALUE = 200,
+  MC_TOKEN_EXCLUSIVE_MAX_VALUE = 200,
 } mc_token_type;
 
 typedef enum mc_syntax_node_type {
-  MC_SYNTAX_ROOT = MC_TOKEN_STANDARD_MAX_VALUE + 1,
+  MC_SYNTAX_ROOT = MC_TOKEN_EXCLUSIVE_MAX_VALUE,
   MC_SYNTAX_FILE_ROOT,
   MC_SYNTAX_PREPROCESSOR_DIRECTIVE,
   MC_SYNTAX_EXTERN_C_BLOCK,
@@ -199,7 +199,7 @@ typedef struct mc_syntax_node {
         } enumeration;
         struct {
           mc_syntax_node *identifier;
-          mc_syntax_node *value;
+          mc_syntax_node *value_expression;
         } enum_member;
         struct {
           mc_syntax_node *declaration;
@@ -216,7 +216,7 @@ typedef struct mc_syntax_node {
           unsigned int count;
         } dereference_sequence;
         struct {
-          parameter_kind parameter_kind;
+          parameter_kind type;
           union {
             mc_syntax_node *function_pointer;
             mc_syntax_node *type_identifier;
@@ -227,7 +227,7 @@ typedef struct mc_syntax_node {
           mc_syntax_node *name;
         } parameter;
         struct {
-          field_kind field_kind;
+          field_kind type;
           union {
             mc_syntax_node *type_identifier;
             mc_syntax_node *nested_struct;
@@ -254,7 +254,7 @@ typedef struct mc_syntax_node {
           mc_syntax_node *initialization;
           mc_syntax_node *conditional;
           mc_syntax_node *fix_expression;
-          mc_syntax_node *code_block;
+          mc_syntax_node *loop_statement;
         } for_statement;
         struct {
           bool do_first;
@@ -263,7 +263,7 @@ typedef struct mc_syntax_node {
         } while_statement;
         struct {
           mc_syntax_node *conditional;
-          mc_syntax_node *code_block;
+          mc_syntax_node *do_statement;
           mc_syntax_node *else_continuance;
         } if_statement;
         struct {

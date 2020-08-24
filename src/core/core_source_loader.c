@@ -309,15 +309,16 @@ const char *_mcl_ignore_functions[] = {
     "cprintf",
     "allocate_and_copy_cstr",
     "allocate_and_copy_cstrn",
-    "clint_declare",
+    // "clint_declare",
 
     // And everything here before -------------------------------------------------------------
-    "get_mc_syntax_token_type_name", // TODO
-    "get_mc_token_type_name",
     NULL,
 };
 
 const char *_mcl_core_functions[] = {
+    "clint_process",
+    "clint_declare",
+
     // midge_common
     "init_c_str",
     "set_c_str",
@@ -344,14 +345,20 @@ const char *_mcl_core_functions[] = {
 
     // c_parser_lexer
     "print_syntax_node",
+    "get_mc_token_type_name",
+    "get_mc_syntax_token_type_name",
+    "mcs_parse_statement",
+    "mcs_parse_expression_unary",
 
     // mc_code_transcription
     "mct_transcribe_field_declarators",
     "mct_transcribe_field_list",
+    "mct_transcribe_statement",
 
     // mc_source
     "summarize_field_declarator_list",
     "summarize_type_field_list",
+    "transcribe_enumeration_to_mc",
 
     "update_or_register_enum_info_from_syntax",
     "parse_file_to_syntax_tree",
@@ -459,6 +466,9 @@ const char *_mcl_source_files[] = {
     "src/core/mc_source.c",
     NULL,
 };
+
+int mc_core_v_clint_declare(char *str) { return clint_declare(str); }
+int mc_core_v_clint_process(char *str) { return clint_process(str); }
 
 int _mcl_print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
 {
@@ -575,10 +585,12 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
           break;
         }
         if (!valid) {
-          if (!strncmp(src->text + func_start_index, "clint_process", 13)) {
-            valid = true;
-          }
-          else {
+          // if (!strncmp(src->text + func_start_index, "clint_process", 13) ||
+          //     !strncmp(src->text + func_start_index, "clint_declare", 13)) {
+          //   valid = true;
+          // }
+          // else
+          {
             char fname[128];
             int f;
             for (f = 0; f < 128 & func_start_index + f < i; ++f)
@@ -644,78 +656,76 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
           }
           function_end_index++;
         }
-        if (src->text[function_end_index] != ';') {
-          _mcl_print_parse_error(src->text, function_end_index, "_mcl_format_core_file", "");
-          MCerror(485, "expected semi-colon");
-        }
+        if (src->text[function_end_index] == ';') {
 
-        const char *before_template =
-            "{int mc_error_stack_index; "
-            "register_midge_stack_invocation(\"%s\", \"%s\", __LINE__, &mc_error_stack_index); "
-            "int mc_res = ";
+          const char *before_template =
+              "{int mc_error_stack_index; "
+              "register_midge_stack_invocation(\"%s\", \"%s\", __LINE__, &mc_error_stack_index); "
+              "int mc_res = ";
 
-        const char *after_template = " if (mc_res) { "
-                                     "printf(\"--%s |line:%%i:ERR:%%i\\n\", __LINE__, mc_res); "
-                                     "return mc_res; "
-                                     "} "
-                                     "register_midge_stack_return(mc_error_stack_index);}";
+          const char *after_template = " if (mc_res) { "
+                                       "printf(\"--%s |line :%%i :ERR:%%i\\n\", __LINE__, mc_res); "
+                                       "return mc_res; "
+                                       "} "
+                                       "register_midge_stack_return(mc_error_stack_index);}";
 
-        const int FNBUF_SIZE = 164;
-        char fnbuf[FNBUF_SIZE];
-        for (int b = 0; b < 164; ++b) {
-          char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
-          if (c == '(') {
-            fnbuf[b] = '\0';
-            break;
+          const int FNBUF_SIZE = 164;
+          char fnbuf[FNBUF_SIZE];
+          for (int b = 0; b < 164; ++b) {
+            char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
+            if (c == '(') {
+              fnbuf[b] = '\0';
+              break;
+            }
+            fnbuf[b] = c;
           }
-          fnbuf[b] = c;
+          char befbuf[384];
+          sprintf(befbuf, before_template, fnbuf, _mcl_source_files[source_file_index]);
+
+          char aftbuf[384];
+          // int d = 0;
+          // bool in_literal = false;
+          // for (int b = 0; d < FNBUF_SIZE - 4; ++b) {
+          //   char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
+          //   if (!in_literal && c == ';') {
+          //     fnbuf[d] = '\0';
+          //     break;
+          //   }
+          //   else if (d > FNBUF_SIZE - 4) {
+          //     if (in_literal)
+          //       fnbuf[d++] = '"';
+          //     fnbuf[d] = '\0';
+          //     break;
+          //   }
+          //   if (c == '"') {
+          //     fnbuf[d++] = '\\';
+          //     in_literal = !in_literal;
+          //   }
+          //   else if (c == '%') {
+          //     fnbuf[d++] = '%';
+          //   }
+          //   else if (c == '\\') {
+          //     fnbuf[d++] = '\\';
+          //   }
+          //   fnbuf[d++] = c;
+          // }
+          sprintf(aftbuf, after_template, fnbuf);
+
+          int len = strlen(befbuf) + strlen(aftbuf) + function_end_index + 1 - func_start_index;
+
+          // Turn it into a temporary MCcall
+          MCcall(insert_into__csl_c_str(src, aftbuf, function_end_index + 1));
+          MCcall(insert_into__csl_c_str(src, befbuf, func_start_index));
+          i += strlen(befbuf) + strlen(aftbuf);
+          // if (len > 490) {
+          //   MCcall(insert_into__csl_c_str(src, "\n", function_end_index + 1));
+          //   ++i;
+          // }
+
+          // printf("#########################################################\n"
+          //        "src:\n%s||\n",
+          //        src->text);
         }
-        char befbuf[384];
-        sprintf(befbuf, before_template, fnbuf, _mcl_source_files[source_file_index]);
-
-        char aftbuf[384];
-        // int d = 0;
-        // bool in_literal = false;
-        // for (int b = 0; d < FNBUF_SIZE - 4; ++b) {
-        //   char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
-        //   if (!in_literal && c == ';') {
-        //     fnbuf[d] = '\0';
-        //     break;
-        //   }
-        //   else if (d > FNBUF_SIZE - 4) {
-        //     if (in_literal)
-        //       fnbuf[d++] = '"';
-        //     fnbuf[d] = '\0';
-        //     break;
-        //   }
-        //   if (c == '"') {
-        //     fnbuf[d++] = '\\';
-        //     in_literal = !in_literal;
-        //   }
-        //   else if (c == '%') {
-        //     fnbuf[d++] = '%';
-        //   }
-        //   else if (c == '\\') {
-        //     fnbuf[d++] = '\\';
-        //   }
-        //   fnbuf[d++] = c;
-        // }
-        sprintf(aftbuf, after_template, fnbuf);
-
-        int len = strlen(befbuf) + strlen(aftbuf) + function_end_index + 1 - func_start_index;
-
-        // Turn it into a temporary MCcall
-        MCcall(insert_into__csl_c_str(src, aftbuf, function_end_index + 1));
-        MCcall(insert_into__csl_c_str(src, befbuf, func_start_index));
-        i += strlen(befbuf) + strlen(aftbuf);
-        // if (len > 490) {
-        //   MCcall(insert_into__csl_c_str(src, "\n", function_end_index + 1));
-        //   ++i;
-        // }
-
-        // printf("#########################################################\n"
-        //        "src:\n%s||\n",
-        //        src->text);
       }
     }
 

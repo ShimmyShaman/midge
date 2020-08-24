@@ -100,6 +100,9 @@ void _midge_run()
 
   // clint->allowRedefinition();
   try {
+    // TODO - temp to deal with how enums are handled
+    clint->process("#pragma clang diagnostic ignored \"-Wswitch\"");
+
     // Include Paths
     // clint->AddIncludePath("/usr/include");
     clint->AddIncludePath("/home/jason/midge/dep/cglm/include");

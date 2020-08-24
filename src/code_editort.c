@@ -302,7 +302,7 @@ int obtain_syntax_node_parsed_code(mc_syntax_node *syntax_node, c_str *cstr)
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
 
-    if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+    if ((int)child->type > (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
 
       MCcall(obtain_syntax_node_parsed_code(child, cstr));
     }
@@ -501,7 +501,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
       for (int a = 1; a < syntax_node->children->count - 1; ++a) {
         mc_syntax_node *child = syntax_node->children->items[a];
 
-        if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+        if ((int)child->type > (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
 
           MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
         }
@@ -542,7 +542,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   //   for (int a = 1; a < syntax_node->children->count; ++a) {
   //     mc_syntax_node *child = syntax_node->children->items[a];
 
-  //     if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+  //     if ((int)child->type > (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
 
   //       MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
   //     }
@@ -646,7 +646,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   //   for (int a = 1; a < syntax_node->children->count; ++a) {
   //     mc_syntax_node *child = syntax_node->children->items[a];
 
-  //     if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+  //     if ((int)child->type > (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
 
   //       MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
   //     }
@@ -664,7 +664,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
     for (int a = 0; a < syntax_node->children->count; ++a) {
       mc_syntax_node *child = syntax_node->children->items[a];
 
-      if ((int)child->type > (int)MC_TOKEN_STANDARD_MAX_VALUE) {
+      if ((int)child->type > (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
         MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, transcription_state, child));
       }
       else {
@@ -1011,7 +1011,7 @@ int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
 int obtain_context_node_for_cursor(mc_syntax_node *syntax_node, mc_code_editor_state_v1 *cestate,
                                    mc_syntax_node **context_node)
 {
-  if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
+  if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     *context_node = syntax_node->parent;
     return 0;
   }
@@ -1312,7 +1312,7 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
 
 int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
 {
-  if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
+  if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
 
     // RTF - prepend
     switch ((mc_token_type)syntax_node->type) {

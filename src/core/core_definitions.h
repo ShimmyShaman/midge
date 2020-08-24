@@ -88,11 +88,11 @@ typedef struct source_file_info {
   } definitions;
 } source_file_info;
 
-typedef struct enum_member {
+typedef struct enum_member_info {
   struct_id *type_id;
   char *identity;
   char *value;
-} enum_member;
+} enum_member_info;
 
 typedef struct enumeration_info {
   struct_id *type_id;
@@ -103,7 +103,7 @@ typedef struct enumeration_info {
   bool is_defined;
   struct {
     unsigned int count, alloc;
-    enum_member **items;
+    enum_member_info **items;
   } members;
 } enumeration_info;
 

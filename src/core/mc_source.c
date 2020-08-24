@@ -84,7 +84,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
   allocate_and_copy_cstr(parameter->type_id->identifier, "parameter_info");
   parameter->type_id->version = 1U;
 
-  switch (parameter_syntax_node->parameter.parameter_kind) {
+  switch (parameter_syntax_node->parameter.type) {
   case PARAMETER_KIND_STANDARD: {
     register_midge_error_tag("initialize_parameter_info_from_syntax_node-STANDARD");
     parameter->parameter_type = PARAMETER_KIND_STANDARD;
@@ -139,7 +139,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
 
   } break;
   default:
-    MCerror(125, "NotSupported:%i", parameter_syntax_node->parameter.parameter_kind);
+    MCerror(125, "NotSupported:%i", parameter_syntax_node->parameter.type);
   }
 
   *initialized_parameter = parameter;
@@ -308,7 +308,7 @@ int summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_info
     register_midge_error_tag("summarize_type_field_list-2a");
     switch (field_syntax->type) {
     case MC_SYNTAX_FIELD_DECLARATION: {
-      switch (field_syntax->field.field_kind) {
+      switch (field_syntax->field.type) {
       case FIELD_KIND_STANDARD: {
         field->field_type = FIELD_KIND_STANDARD;
         copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->field.type_name);
@@ -329,7 +329,7 @@ int summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_info
         // TODO -- more details
       } break;
       default: {
-        MCerror(302, "NotSupported:%i", field_syntax->field.field_kind);
+        MCerror(302, "NotSupported:%i", field_syntax->field.type);
       }
       }
     } break;
@@ -532,11 +532,11 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   enum_info->members.count = 0;
   int latest_value = -1;
   for (int i = 0; i < enum_ast->enumeration.members->count; ++i) {
-    enum_member *member = (enum_member *)malloc(sizeof(enum_member));
+    enum_member_info *member = (enum_member_info *)malloc(sizeof(enum_member_info));
 
     copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier, &member->identity);
-    if (enum_ast->enumeration.members->items[i]->enum_member.value) {
-      copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value, &member->value);
+    if (enum_ast->enumeration.members->items[i]->enum_member.value_expression) {
+      copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value_expression, &member->value);
 
       sprintf(buf, "*(int *)(%p) = %s;", &latest_value, member->value); // TODO -- semi-colon
       clint_process(buf);
@@ -620,8 +620,9 @@ int instantiate_struct_definition_from_ast(node *definition_owner, source_defini
   char *mc_transcription;
   transcribe_struct_to_mc(structure_info, ast, &mc_transcription);
 
+  // if (!strcmp(structure_info->name, "mc_syntax_node"))
+  //   printf("struct:\n%s||\n", mc_transcription);
   clint_declare(mc_transcription);
-  // printf("struct:\n%s||\n", mc_transcription);
   free(mc_transcription);
 
   if (definition_info) {

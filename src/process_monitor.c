@@ -6,7 +6,7 @@ int mpm_obtain_context_node_for_cursor(mc_syntax_node *syntax_node, mc_code_edit
                                        mc_syntax_node **context_node)
 {
 
-  if ((mc_token_type)syntax_node->type < MC_TOKEN_STANDARD_MAX_VALUE) {
+  if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     *context_node = syntax_node;
     return 0;
   }
