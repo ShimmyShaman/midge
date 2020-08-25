@@ -8,7 +8,11 @@
 typedef enum mc_token_type {
   MC_TOKEN_NULL = 0,
   MC_TOKEN_NULL_CHARACTER,
-  MC_TOKEN_PREPROCESSOR_OPERATOR,
+  MC_TOKEN_PREPROCESSOR_KEYWORD_DEFINE,
+  MC_TOKEN_PREPROCESSOR_KEYWORD_INCLUDE,
+  MC_TOKEN_PREPROCESSOR_KEYWORD_IFNDEF,
+  MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF,
+  MC_TOKEN_PREPROCESSOR_KEYWORD_VARIADIC_ARGS,
   MC_TOKEN_STAR_CHARACTER,
   MC_TOKEN_ESCAPE_CHARACTER,
   MC_TOKEN_MULTIPLY_OPERATOR,
@@ -93,7 +97,9 @@ typedef enum mc_token_type {
 typedef enum mc_syntax_node_type {
   MC_SYNTAX_ROOT = MC_TOKEN_EXCLUSIVE_MAX_VALUE,
   MC_SYNTAX_FILE_ROOT,
-  MC_SYNTAX_PREPROCESSOR_DIRECTIVE,
+  MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF,
+  MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE,
+  MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE,
   MC_SYNTAX_EXTERN_C_BLOCK,
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_TYPE_ALIAS,
@@ -148,6 +154,16 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_FIXREMENT_EXPRESSION,
   MC_SYNTAX_DEREFERENCE_EXPRESSION,
 } mc_syntax_node_type;
+
+typedef enum preprocessor_define_type {
+  PREPROCESSOR_DEFINE_NULL = 0,
+  // #define identifier
+  PREPROCESSOR_DEFINE_REMOVAL,
+  // #define identifier token-string
+  PREPROCESSOR_DEFINE_REPLACEMENT,
+  // #define identifier(identifier...opt) token-string-opt
+  PREPROCESSOR_DEFINE_FUNCTION_LIKE,
+} preprocessor_define_type;
 
 struct mc_syntax_node;
 typedef struct mc_syntax_node_list {
@@ -207,7 +223,16 @@ typedef struct mc_syntax_node {
         } nested_type;
         struct {
           mc_syntax_node *identifier;
-        } preprocessor_directive;
+          mc_syntax_node_list *groupopt;
+        } preprocess_ifndef;
+        struct {
+
+        } preprocess_include;
+        struct {
+          preprocessor_define_type statement_type;
+          mc_syntax_node *statement;
+          mc_syntax_node *identifier;
+        } preprocess_define;
         struct {
           bool is_system_header_search;
           mc_syntax_node *filepath;

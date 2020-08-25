@@ -737,9 +737,6 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
     switch (child->type) {
-    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE: {
-      break;
-    }
     case MC_SYNTAX_EXTERN_C_BLOCK: {
       for (int b = 0; b < child->extern_block.declarations->count; ++b) {
         mc_syntax_node *declaration = child->extern_block.declarations->items[b];
