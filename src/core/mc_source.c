@@ -457,7 +457,7 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
   }
   register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
 
-  cprintf(structure_info->mc_declared_name, "mc_%s_v%u", structure_info->name, structure_info->latest_iteration);
+  cprintf(structure_info->mc_declared_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
 
   // Set the values parsed
   if (struct_ast->structure.fields) {
@@ -590,7 +590,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   free(mc_transcription);
   // printf("idfc-5\n");
   char buf[512];
-  sprintf(buf, "%s = &%s_mcv%u;", func_info->name, func_info->name, func_info->latest_iteration);
+  sprintf(buf, "%s = &%s_mc_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
   // printf("idfc-6\n");
   clint_process(buf);
 

@@ -212,8 +212,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_ENUM_MEMBER";
   case MC_SYNTAX_NESTED_TYPE_DECLARATION:
     return "MC_SYNTAX_NESTED_TYPE_DECLARATION";
-  case MC_SYNTAX_BLOCK:
-    return "MC_SYNTAX_BLOCK";
+  case MC_SYNTAX_CODE_BLOCK:
+    return "MC_SYNTAX_CODE_BLOCK";
   case MC_SYNTAX_STATEMENT_LIST:
     return "MC_SYNTAX_STATEMENT_LIST";
   case MC_SYNTAX_FOR_STATEMENT:
@@ -355,7 +355,8 @@ int _mcs_print_syntax_node_ancestry(mc_syntax_node *syntax_node, int depth, int 
   }
 
   if (ancestry_count) {
-    printf("|^ %s ^|", get_mc_syntax_token_type_name(syntax_node->type));
+    const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
+    printf("|^ %s ^|", type_name);
   }
 
   return 0;
@@ -367,13 +368,15 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
   for (int i = 0; i < depth; ++i) {
     printf("|  ");
   }
+
+  const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
   switch (syntax_node->type) {
   case MC_SYNTAX_INVOCATION:
-    printf("|--%s : %p", get_mc_syntax_token_type_name(syntax_node->type), syntax_node->invocation.mc_function_info);
+    printf("|--%s : %p", type_name, syntax_node->invocation.mc_function_info);
     break;
 
   default:
-    printf("|--%s", get_mc_syntax_token_type_name(syntax_node->type));
+    printf("|--%s", type_name);
     break;
   }
   // printf("mpst-0\n");
@@ -408,7 +411,8 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
 
 int _copy_syntax_node_to_text(c_str *cstr, mc_syntax_node *syntax_node)
 {
-  register_midge_error_tag("_copy_syntax_node_to_text(%s)", get_mc_syntax_token_type_name(syntax_node->type));
+  const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
+  register_midge_error_tag("_copy_syntax_node_to_text(%s)", type_name);
   if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     // printf("syntax_node:%p\n", syntax_node);
     // printf("syntax_node->text:%p\n", syntax_node->text);
@@ -444,7 +448,8 @@ int _copy_syntax_node_to_text(c_str *cstr, mc_syntax_node *syntax_node)
 extern "C" int init_c_str(c_str **ptr);
 int copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output)
 {
-  register_midge_error_tag("copy_syntax_node_to_text(%s)", get_mc_syntax_token_type_name(syntax_node->type));
+  const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
+  register_midge_error_tag("copy_syntax_node_to_text(%s)", type_name);
   if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     allocate_and_copy_cstr(*output, syntax_node->text);
     register_midge_error_tag("copy_syntax_node_to_text(~)");
@@ -489,7 +494,8 @@ int mcs_add_syntax_node_to_parent(mc_syntax_node *parent, mc_syntax_node *child)
 int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, char *mc_token_primitive_text,
                               mc_syntax_node *parent, mc_syntax_node **result)
 {
-  register_midge_error_tag("mcs_construct_syntax_node(%s)", get_mc_syntax_token_type_name(node_type));
+  const char *type_name = get_mc_syntax_token_type_name(node_type);
+  register_midge_error_tag("mcs_construct_syntax_node(%s)", type_name);
 
   mc_syntax_node *syntax_node = (mc_syntax_node *)calloc(sizeof(mc_syntax_node), 1);
   syntax_node->type = node_type;
@@ -548,7 +554,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->function.parameters->alloc = 0;
     syntax_node->function.parameters->count = 0;
   } break;
-  case MC_SYNTAX_BLOCK: {
+  case MC_SYNTAX_CODE_BLOCK: {
     syntax_node->code_block.statement_list = NULL;
   } break;
   case MC_SYNTAX_EXTERN_C_BLOCK: {
@@ -3576,7 +3582,7 @@ int mcs_parse_code_block(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
 {
   register_midge_error_tag("mcs_parse_code_block()");
   mc_syntax_node *code_block;
-  mcs_construct_syntax_node(ps, MC_SYNTAX_BLOCK, NULL, parent, &code_block);
+  mcs_construct_syntax_node(ps, MC_SYNTAX_CODE_BLOCK, NULL, parent, &code_block);
   if (additional_destination) {
     *additional_destination = code_block;
   }

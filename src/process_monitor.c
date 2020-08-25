@@ -46,7 +46,7 @@ int process_editor_insertion(mc_code_editor_state_v1 *cestate, char *text)
   // }
 
   // printf("context-Node:%s\n", get_mc_syntax_token_type_name(context_node->type));
-  // // if(context_node->type == MC_SYNTAX_BLOCK) {
+  // // if(context_node->type == MC_SYNTAX_CODE_BLOCK) {
   // // }
   // MCcall(print_syntax_node(context_node, 0));
 

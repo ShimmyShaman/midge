@@ -12,7 +12,7 @@ typedef struct _csl_c_str {
 #define bool unsigned char
 #endif
 #ifndef true
-#define true ((unsigned char)1)
+#define true ((unsigned char)0xff)
 #endif
 #ifndef false
 #define false ((unsigned char)0)
@@ -354,6 +354,10 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_field_declarators",
     "mct_transcribe_field_list",
     "mct_transcribe_statement",
+    "determine_type_of_expression",
+    "mct_increment_scope_depth",
+    "mct_decrement_scope_depth",
+    "mct_add_scope_variable",
 
     // mc_source
     "summarize_field_declarator_list",

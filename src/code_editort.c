@@ -485,7 +485,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   fld_view_state *fld_view = cestate->fld_view;
 
   switch (syntax_node->type) {
-  case MC_SYNTAX_BLOCK: {
+  case MC_SYNTAX_CODE_BLOCK: {
     if (transcription_state->scope_depth > 0) {
       if ((int)syntax_node->children->items[0]->type != (int)MC_TOKEN_CURLY_OPENING_BRACKET) {
         MCerror(641, "AST Format Error");
@@ -1132,7 +1132,7 @@ int update_code_editor_suggestion(mc_code_editor_state_v1 *cestate)
 
     //   printf("context:%s\n", get_mc_syntax_token_type_name(context_node->type));
 
-    //   if (context_node && (context_node->type == MC_SYNTAX_STATEMENT_LIST || context_node->type == MC_SYNTAX_BLOCK))
+    //   if (context_node && (context_node->type == MC_SYNTAX_STATEMENT_LIST || context_node->type == MC_SYNTAX_CODE_BLOCK))
     //   {
 
     //     cestate->suggestion_box.visible = true;

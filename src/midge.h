@@ -102,6 +102,7 @@ void _midge_run()
   try {
     // TODO - temp to deal with how enums are handled
     clint->process("#pragma clang diagnostic ignored \"-Wswitch\"");
+    clint->process("#pragma clang diagnostic ignored \"-Wtautological-constant-out-of-range-compare\"");
 
     // Include Paths
     // clint->AddIncludePath("/usr/include");
