@@ -205,7 +205,7 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
     clint_declare(buf);
     sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
     clint_process(buf);
-    printf("--declared:'%s'\n", func_info->name);
+    printf("--declared:'%s()'\n", func_info->name);
 
     // Assign the functions pointer
     sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
@@ -542,7 +542,7 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   }
   register_midge_error_tag("update_or_register_enum_info_from_syntax-2");
 
-  cprintf(enum_info->mc_declared_name, "mc_%s_v%u", enum_info->name, enum_info->latest_iteration);
+  cprintf(enum_info->mc_declared_name, "%s_mc_v%u", enum_info->name, enum_info->latest_iteration);
 
   // Set the values parsed
   enum_info->members.count = 0;
@@ -556,12 +556,12 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
 
       sprintf(buf, "*(int *)(%p) = %s;", &latest_value, member->value); // TODO -- semi-colon
       clint_process(buf);
-      sprintf(buf, "#define %s %i\n", member->identity, latest_value);
+      sprintf(buf, "#define %s (%s)%i\n", member->identity, enum_info->mc_declared_name, latest_value);
     }
     else {
       member->value = NULL;
       ++latest_value;
-      sprintf(buf, "#define %s %i\n", member->identity, latest_value);
+      sprintf(buf, "#define %s (%s)%i\n", member->identity, enum_info->mc_declared_name, latest_value);
     }
 
     // printf("%s", buf);
@@ -601,7 +601,8 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // printf("mc_transcription:\n%s||\n", mc_transcription);
+  // if (!strcmp(func_info->name, "mcs_construct_syntax_node"))
+  //   printf("mc_transcription:\n%s||\n", mc_transcription);
   clint_declare(mc_transcription);
   free(mc_transcription);
   // printf("idfc-5\n");
@@ -829,13 +830,13 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
         info->source->source_file = lv_source_file;
         printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
-        sprintf(buf,
-                "#ifndef %s\n"
-                // "#undef %s\n"
-                "#define %s struct %s\n"
-                "#endif\n",
-                info->name, info->name, info->mc_declared_name);
-        clint_process(buf);
+        // sprintf(buf,
+        //         "#ifndef %s\n"
+        //         // "#undef %s\n"
+        //         "#define %s struct %s\n"
+        //         "#endif\n",
+        //         info->name, info->name, info->mc_declared_name);
+        // clint_process(buf);
       } break;
       case MC_SYNTAX_ENUM: {
         enumeration_info *info;
@@ -845,14 +846,14 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-1");
         printf("--defined: enum '%s'\n", child->type_alias.type_descriptor->enumeration.name->text);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-2");
-        sprintf(buf,
-                "#ifndef %s\n"
-                // "#undef %s\n"
-                "#define %s enum %s\n"
-                "#endif\n",
-                info->name, info->name, info->mc_declared_name);
-        register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-3");
-        clint_process(buf);
+        // sprintf(buf,
+        //         "#ifndef %s\n"
+        //         // "#undef %s\n"
+        //         "#define %s enum %s\n"
+        //         "#endif\n",
+        //         info->name, info->name, info->mc_declared_name);
+        // register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-3");
+        // clint_process(buf);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-4");
       } break;
       default:

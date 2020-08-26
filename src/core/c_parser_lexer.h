@@ -315,7 +315,6 @@ typedef struct mc_syntax_node {
         } local_variable_assignment_initializer;
         struct {
           mc_syntax_node *function_identity;
-          function_info *mc_function_info;
           mc_syntax_node_list *arguments;
         } invocation;
         struct {
@@ -370,7 +369,6 @@ typedef struct mc_syntax_node {
         } dereference_expression;
         struct {
           mc_syntax_node *identifier;
-          struct_info *mc_type;
           bool is_const;
           bool has_struct_prepend;
           // -1 for unspecified (implicit signed), 0 for unsigned, 1 for explicit signed

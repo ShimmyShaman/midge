@@ -388,9 +388,14 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
 
   const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
   switch (syntax_node->type) {
-  case MC_SYNTAX_INVOCATION:
-    printf("|--%s : %p", type_name, syntax_node->invocation.mc_function_info);
-    break;
+  case MC_SYNTAX_INVOCATION: {
+    function_info *func_info;
+    char *function_name;
+    copy_syntax_node_to_text(syntax_node->invocation.function_identity, &function_name);
+    find_function_info(function_name, &func_info);
+    free(function_name);
+    printf("|--%s : %p", type_name, func_info);
+  } break;
 
   default:
     printf("|--%s", type_name);
@@ -692,7 +697,6 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   // } break;
   case MC_SYNTAX_INVOCATION: {
     syntax_node->invocation.function_identity = NULL;
-    syntax_node->invocation.mc_function_info = NULL;
     syntax_node->invocation.arguments = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
     syntax_node->invocation.arguments->alloc = 0;
     syntax_node->invocation.arguments->count = 0;
@@ -1940,13 +1944,6 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   mcs_parse_through_token(ps, type_root, token_type, &type_root->type_identifier.identifier);
 
   register_midge_error_tag("mcs_parse_type_identifier()-4");
-  // Convert to the appropriate type
-  if (token_type == MC_TOKEN_IDENTIFIER) {
-    find_struct_info(type_root->type_identifier.identifier->text, &type_root->type_identifier.mc_type);
-  }
-  else {
-    type_root->type_identifier.mc_type = NULL;
-  }
 
   // Trailing const
   mcs_peek_token_type(ps, false, 0, &token_type);
@@ -2787,18 +2784,6 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       mcs_add_syntax_node_to_parent(expression, left);
       expression->invocation.function_identity = left;
       mcs_parse_through_supernumerary_tokens(ps, expression);
-
-      {
-        if ((mc_token_type)expression->invocation.function_identity->type != MC_TOKEN_IDENTIFIER) {
-          // print_parse_error(ps->code, ps->index, "_mcs_parse_expression", "invocation identity isn't
-          // IDENTIFIER"); MCerror(2100, "TODO :%s",
-          // get_mc_syntax_token_type_name(expression->invocation.function_identity->type));
-        }
-        else {
-          // Check if the function info exists in midge
-          find_function_info(expression->invocation.function_identity->text, &expression->invocation.mc_function_info);
-        }
-      }
 
       mcs_parse_through_token(ps, expression, MC_TOKEN_OPEN_BRACKET, NULL);
       mcs_parse_through_supernumerary_tokens(ps, expression);

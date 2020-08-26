@@ -286,6 +286,7 @@ const char *_mcl_core_structs[] = {
     "preprocess_define_info",
     "field_info",
     "field_info_list",
+    "mc_syntax_node_type",
     // And everything here before -------------------------------------------------------------
     NULL,
 };
