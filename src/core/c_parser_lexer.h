@@ -87,7 +87,6 @@ typedef enum mc_token_type {
   MC_TOKEN_INT_KEYWORD,
   MC_TOKEN_SIGNED_KEYWORD,
   MC_TOKEN_UNSIGNED_KEYWORD,
-  MC_TOKEN_BOOL_KEYWORD,
   MC_TOKEN_FLOAT_KEYWORD,
   MC_TOKEN_LONG_KEYWORD,
   MC_TOKEN_SHORT_KEYWORD,
@@ -155,16 +154,6 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_DEREFERENCE_EXPRESSION,
 } mc_syntax_node_type;
 
-typedef enum preprocessor_define_type {
-  PREPROCESSOR_DEFINE_NULL = 0,
-  // #define identifier
-  PREPROCESSOR_DEFINE_REMOVAL,
-  // #define identifier token-string
-  PREPROCESSOR_DEFINE_REPLACEMENT,
-  // #define identifier(identifier...opt) token-string-opt
-  PREPROCESSOR_DEFINE_FUNCTION_LIKE,
-} preprocessor_define_type;
-
 struct mc_syntax_node;
 typedef struct mc_syntax_node_list {
   unsigned int alloc;
@@ -230,7 +219,7 @@ typedef struct mc_syntax_node {
         } preprocess_include;
         struct {
           preprocessor_define_type statement_type;
-          mc_syntax_node *statement;
+          mc_syntax_node_list *replacement_list;
           mc_syntax_node *identifier;
         } preprocess_define;
         struct {

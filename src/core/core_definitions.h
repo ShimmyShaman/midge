@@ -54,6 +54,16 @@ typedef enum field_kind {
   FIELD_KIND_NESTED_UNION,
 } field_kind;
 
+typedef enum preprocessor_define_type {
+  PREPROCESSOR_DEFINE_NULL = 0,
+  // #define identifier
+  PREPROCESSOR_DEFINE_REMOVAL,
+  // #define identifier token-string
+  PREPROCESSOR_DEFINE_REPLACEMENT,
+  // #define identifier(identifier...opt) token-string-opt
+  PREPROCESSOR_DEFINE_FUNCTION_LIKE,
+} preprocessor_define_type;
+
 typedef struct struct_id {
   char *identifier;
   unsigned short version;
@@ -106,6 +116,12 @@ typedef struct enumeration_info {
     enum_member_info **items;
   } members;
 } enumeration_info;
+
+typedef struct preprocess_define_info {
+  preprocessor_define_type statement_type;
+  char *identifier;
+  char *replacement;
+} preprocess_define_info;
 
 typedef struct field_declarator_info {
   unsigned int deref_count;
@@ -234,6 +250,10 @@ typedef struct global_root_data {
     unsigned int alloc, count;
     enumeration_info **items;
   } enumerations;
+  struct {
+    unsigned int alloc, count;
+    preprocess_define_info **items;
+  } preprocess_defines;
   struct {
     unsigned int alloc, count;
     event_handler_array **items;

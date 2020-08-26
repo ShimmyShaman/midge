@@ -1,7 +1,7 @@
 /* mc_code_transcription.h */
 
-#ifndef MC_CODE_TRANSCRIPITION_H
-#define MC_CODE_TRANSCRIPITION_H
+#ifndef MC_CODE_TRANSCRIPTION_H
+#define MC_CODE_TRANSCRIPTION_H
 
 #include "midge_common.h"
 
@@ -13,4 +13,4 @@ int transcribe_enumeration_to_mc(enumeration_info *enum_info, mc_syntax_node *en
 int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *struct_ast, char **mc_transcription);
 }
 
-#endif // MC_CODE_TRANSCRIPITION_H
+#endif // MC_CODE_TRANSCRIPTION_H

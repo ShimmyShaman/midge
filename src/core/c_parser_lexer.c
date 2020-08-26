@@ -187,8 +187,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_UNSIGNED_KEYWORD";
   case MC_TOKEN_SIGNED_KEYWORD:
     return "MC_TOKEN_SIGNED_KEYWORD";
-  case MC_TOKEN_BOOL_KEYWORD:
-    return "MC_TOKEN_BOOL_KEYWORD";
+  // case MC_TOKEN_BOOL_KEYWORD:
+  //   return "MC_TOKEN_BOOL_KEYWORD";
   case MC_TOKEN_FLOAT_KEYWORD:
     return "MC_TOKEN_FLOAT_KEYWORD";
   case MC_TOKEN_LONG_KEYWORD:
@@ -207,6 +207,12 @@ const char *get_mc_token_type_name(mc_token_type type)
 const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
 {
   switch ((mc_syntax_node_type)type) {
+  case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF:
+    return "MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF";
+  case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
+    return "MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE";
+  case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE:
+    return "MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE";
   case MC_SYNTAX_FUNCTION:
     return "MC_SYNTAX_FUNCTION";
   case MC_SYNTAX_EXTERN_C_BLOCK:
@@ -538,7 +544,9 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE: {
     syntax_node->preprocess_define.statement_type = PREPROCESSOR_DEFINE_NULL;
     syntax_node->preprocess_define.identifier = NULL;
-    syntax_node->preprocess_define.statement = NULL;
+    syntax_node->preprocess_define.replacement_list = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+    syntax_node->preprocess_define.replacement_list->alloc = 0;
+    syntax_node->preprocess_define.replacement_list->count = 0;
   } break;
   case MC_SYNTAX_ENUM: {
     syntax_node->enumeration.name = NULL;
@@ -1323,8 +1331,11 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (!text) {
       allocate_and_copy_cstrn(error_text, code + s, slen);
     }
+    else {
+      error_text = *text;
+    }
     print_parse_error(code, s, "_mcs_parse_token", "#");
-    MCerror(1273, "Unsupported preprocessor keyword:'%s'", text ? *text : error_text);
+    MCerror(1273, "Unsupported preprocessor keyword:'%s'", error_text);
   } break;
   default: {
     // Identifier
@@ -1534,13 +1545,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
           }
           break;
         }
-        if (slen == 4 && !strncmp(code + s, "bool", slen)) {
-          *token_type = MC_TOKEN_BOOL_KEYWORD;
-          if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
-          }
-          break;
-        }
+        // if (slen == 4 && !strncmp(code + s, "bool", slen)) {
+        //   *token_type = MC_TOKEN_BOOL_KEYWORD;
+        //   if (text) {
+        //     allocate_and_copy_cstrn(*text, code + s, slen);
+        //   }
+        //   break;
+        // }
         if (slen == 5 && !strncmp(code + s, "float", slen)) {
           *token_type = MC_TOKEN_FLOAT_KEYWORD;
           if (text) {
@@ -1914,7 +1925,7 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   case MC_TOKEN_LONG_KEYWORD:
   case MC_TOKEN_SHORT_KEYWORD:
   case MC_TOKEN_FLOAT_KEYWORD:
-  case MC_TOKEN_BOOL_KEYWORD:
+  // case MC_TOKEN_BOOL_KEYWORD:
   case MC_TOKEN_INT_KEYWORD:
   case MC_TOKEN_CHAR_KEYWORD: {
     // Valid
@@ -1951,6 +1962,7 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
     register_midge_error_tag("mcs_parse_type_identifier()-6");
     mcs_peek_token_type(ps, false, 1, &token_type);
     if (token_type != MC_TOKEN_STAR_CHARACTER) {
+      print_parse_error(ps->code, ps->index, "mcs_parse_type_identifier", "");
       MCerror(1463, "Format Exception?");
     }
 
@@ -2213,7 +2225,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
   case MC_TOKEN_STRUCT_KEYWORD:
   case MC_TOKEN_INT_KEYWORD:
   case MC_TOKEN_CHAR_KEYWORD:
-  case MC_TOKEN_BOOL_KEYWORD:
+  // case MC_TOKEN_BOOL_KEYWORD:
   case MC_TOKEN_LONG_KEYWORD:
   case MC_TOKEN_SHORT_KEYWORD:
   case MC_TOKEN_FLOAT_KEYWORD:
@@ -2924,7 +2936,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     case MC_TOKEN_LOGICAL_OR_OPERATOR: {
       const int CASE_PRECEDENCE = 15;
       if (allowable_precedence <= CASE_PRECEDENCE) {
-        printf("||:allowable_precedence:%i\n", allowable_precedence);
+        // printf("||:allowable_precedence:%i\n", allowable_precedence);
         // Left is it
         mcs_add_syntax_node_to_parent(parent, left);
         if (additional_destination) {
@@ -3556,7 +3568,7 @@ int mcs_parse_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
   case MC_TOKEN_CONST_KEYWORD:
   case MC_TOKEN_INT_KEYWORD:
   case MC_TOKEN_CHAR_KEYWORD:
-  case MC_TOKEN_BOOL_KEYWORD:
+  // case MC_TOKEN_BOOL_KEYWORD:
   case MC_TOKEN_LONG_KEYWORD:
   case MC_TOKEN_SHORT_KEYWORD:
   case MC_TOKEN_FLOAT_KEYWORD:
@@ -3741,7 +3753,11 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
 
   mc_token_type token_type;
   mcs_peek_token_type(ps, true, 0, &token_type);
+  // printf("token_read:%s\n", get_mc_token_type_name(token_type));
   switch (token_type) {
+  case MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF: {
+    mcs_parse_through_token(ps, parent, MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF, additional_destination);
+  } break;
   case MC_TOKEN_PREPROCESSOR_KEYWORD_IFNDEF: {
     mc_syntax_node *ifndef_directive;
     mcs_construct_syntax_node(ps, MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF, NULL, parent, &ifndef_directive);
@@ -3818,62 +3834,78 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
     mcs_parse_through_token(ps, define_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
     mcs_parse_through_token(ps, define_directive, MC_TOKEN_IDENTIFIER, &define_directive->preprocess_define.identifier);
     mcs_peek_token_type(ps, true, 0, &token_type);
-    if (token_type == MC_TOKEN_SPACE_SEQUENCE) {
-      mcs_parse_through_token(ps, define_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
-      mcs_peek_token_type(ps, true, 0, &token_type);
-    }
-    switch (token_type) {
-    case MC_TOKEN_NEW_LINE: {
-      mcs_parse_through_token(ps, define_directive, MC_TOKEN_NEW_LINE, NULL);
 
-      define_directive->preprocess_define.statement_type = PREPROCESSOR_DEFINE_REMOVAL;
-      define_directive->preprocess_define.statement = NULL;
-    } break;
-    case MC_TOKEN_OPEN_BRACKET: {
+    if (token_type == MC_TOKEN_OPEN_BRACKET) {
+      define_directive->preprocess_define.statement_type = PREPROCESSOR_DEFINE_FUNCTION_LIKE;
+
       mcs_parse_through_token(ps, define_directive, MC_TOKEN_OPEN_BRACKET, NULL);
 
-      define_directive->preprocess_define.statement_type = PREPROCESSOR_DEFINE_FUNCTION_LIKE;
-      define_directive->preprocess_define.statement = NULL;
-
       // Temporary -- Just parent the rest of the define statement in the children. do no processing TODO
+      bool escape_token_previous = false;
       while (1) {
-        mcs_peek_token_type(ps, true, 0, &token_type);
         bool break_loop = false;
-        bool escape_token_previous = false;
+        mcs_peek_token_type(ps, true, 0, &token_type);
+        // printf("%s\n", get_mc_token_type_name(token_type));
         switch (token_type) {
         case MC_TOKEN_ESCAPE_CHARACTER: {
-          escape_token_previous = true;
+          escape_token_previous = !escape_token_previous;
           mcs_parse_through_token(ps, define_directive, token_type, NULL);
         } break;
         case MC_TOKEN_NEW_LINE: {
-          if (escape_token_previous)
+          if (!escape_token_previous)
             break_loop = true;
           escape_token_previous = false;
 
           mcs_parse_through_token(ps, define_directive, token_type, NULL);
         } break;
-        case MC_TOKEN_COMMA:
-        case MC_TOKEN_SPACE_SEQUENCE:
-        case MC_TOKEN_DECIMAL_POINT:
-        case MC_TOKEN_CLOSING_BRACKET:
-        case MC_TOKEN_OPEN_BRACKET:
-        case MC_TOKEN_STRING_LITERAL:
-        case MC_TOKEN_PREPROCESSOR_KEYWORD_VARIADIC_ARGS:
-        case MC_TOKEN_SEMI_COLON:
-        case MC_TOKEN_IDENTIFIER: {
+        default: {
           mcs_parse_through_token(ps, define_directive, token_type, NULL);
           escape_token_previous = false;
-        } break;
-        default:
-          print_parse_error(ps->code, ps->index, "mcs_parse_preprocessor_directive", "");
-          MCerror(3834, "TEMP TODO--Add:%s", get_mc_token_type_name(token_type));
+        }
         }
         if (break_loop)
           break;
       }
     }
-    default:
-      MCerror(3788, "TODO:%s", get_mc_token_type_name(token_type));
+    else {
+      if (token_type == MC_TOKEN_SPACE_SEQUENCE) {
+        mcs_peek_token_type(ps, true, 1, &token_type);
+      }
+      if (token_type == MC_TOKEN_NEW_LINE) {
+        define_directive->preprocess_define.statement_type = PREPROCESSOR_DEFINE_REMOVAL;
+        break;
+      }
+
+      define_directive->preprocess_define.statement_type = PREPROCESSOR_DEFINE_REPLACEMENT;
+
+      mcs_parse_through_token(ps, define_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
+
+      // Temporary -- Just parent the rest of the define statement in the children. do no processing TODO
+      bool escape_token_previous = false;
+      while (1) {
+        if (!escape_token_previous) {
+          mcs_peek_token_type(ps, true, 0, &token_type);
+          if (token_type == MC_TOKEN_NEW_LINE) {
+            break;
+          }
+        }
+
+        mc_syntax_node *token;
+        mcs_peek_token_type(ps, true, 0, &token_type);
+        mcs_parse_through_token(ps, define_directive, token_type, &token);
+        append_to_collection((void ***)&define_directive->preprocess_define.replacement_list->items,
+                             &define_directive->preprocess_define.replacement_list->alloc,
+                             &define_directive->preprocess_define.replacement_list->count, token);
+
+        if (token_type == MC_TOKEN_ESCAPE_CHARACTER) {
+          escape_token_previous = !escape_token_previous;
+        }
+        else {
+          escape_token_previous = false;
+        }
+
+        // printf("#########\nreplace_count:%i\n######\n", define_directive->preprocess_define.replacement_list->count);
+      }
     }
     // if (token_type == MC_TOKEN_SPACE_SEQUENCE) {
     //   mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
@@ -3883,7 +3915,6 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
     //   }
     // }
     // mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
-
   } break;
   default: {
     // mcs_parse_through_token(ps, preprocessor_directive, token_type, NULL);
@@ -3891,71 +3922,7 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
     MCerror(3713, "parse_file_root:Unsupported-Token:%s", get_mc_token_type_name(token_type));
   } break;
   }
-  // bool in_define = true;
-  // bool line_includes_escape_character = false;
 
-  // mcs_parse_through_token(ps, preprocessor_directive, MC_TOKEN_PREPROCESSOR_OPERATOR, NULL);
-  // mcs_parse_through_supernumerary_tokens(ps, preprocessor_directive);
-  // mcs_parse_through_token(ps, preprocessor_directive, MC_TOKEN_IDENTIFIER,
-  //                         &preprocessor_directive->preprocessor_directive.identifier);
-
-  // mc_token_type token_type;
-  // bool in_define = true;
-  // bool line_includes_escape_character = false;
-  // mcs_peek_token_type(ps, true, 0, &token_type);
-  // while (in_define) {
-  //   switch (token_type) {
-  //   case MC_TOKEN_SPACE_SEQUENCE:
-  //   case MC_TOKEN_LINE_COMMENT: {
-  //     mcs_parse_through_token(ps, preprocessor_directive, token_type, NULL);
-  //   } break;
-  //   case MC_TOKEN_ESCAPE_CHARACTER: {
-  //     mcs_parse_through_token(ps, preprocessor_directive, token_type, NULL);
-  //     line_includes_escape_character = true;
-  //   } break;
-  //   case MC_TOKEN_NEW_LINE: {
-  //     mcs_parse_through_token(ps, preprocessor_directive, token_type, NULL);
-  //     if (line_includes_escape_character) {
-  //       line_includes_escape_character = false;
-  //     }
-  //     else {
-  //       in_define = false;
-  //     }
-  //   } break;
-  //   case MC_TOKEN_NULL_CHARACTER: {
-  //     in_define = false;
-  //   } break;
-  //   case MC_TOKEN_ARROW_OPENING_BRACKET: {
-  //     mc_syntax_node *system_header;
-  //     mcs_construct_syntax_node(ps, MC_SYNTAX_INCLUDE_SYSTEM_HEADER_IDENTITY, NULL, preprocessor_directive,
-  //                               &system_header);
-
-  //     mcs_parse_through_token(ps, system_header, MC_TOKEN_ARROW_OPENING_BRACKET, NULL);
-  //     mcs_parse_through_supernumerary_tokens(ps, preprocessor_directive);
-
-  //     int s = ps->index;
-  //     while (isalpha(ps->code[ps->index]) || ps->code[ps->index] == '_' || ps->code[ps->index] == '.') {
-  //       ++ps->index;
-  //     }
-  //     char *include_path;
-  //     allocate_and_copy_cstrn(include_path, ps->code + s, ps->index - s);
-  //     system_header->include_directive.is_system_header_search = true;
-  //     mcs_construct_syntax_node(ps, (mc_syntax_node_type)MC_TOKEN_IDENTIFIER, include_path, preprocessor_directive,
-  //                               &system_header->include_directive.filepath);
-
-  //     mcs_parse_through_supernumerary_tokens(ps, preprocessor_directive);
-  //     mcs_parse_through_token(ps, system_header, MC_TOKEN_ARROW_CLOSING_BRACKET, NULL);
-  //   } break;
-  //   default: {
-  //     mcs_parse_through_token(ps, preprocessor_directive, token_type, NULL);
-  //     // print_parse_error(ps->code, ps->index, "see-below", "");
-  //     // MCerror(3272, "parse_file_root:Unsupported-Token:%s", get_mc_token_type_name(token_type));
-  //   } break;
-  //   }
-  //   mcs_peek_token_type(ps, true, 0, &token_type);
-  // }
-
-  // printf("~mcs_parse_preprocessor_directive()\n");
   register_midge_error_tag("~mcs_parse_preprocessor_directive()");
   return 0;
 }
@@ -4126,7 +4093,7 @@ int mcs_parse_struct_declaration_list(parsing_state *ps, mc_syntax_node *parent,
     case MC_TOKEN_IDENTIFIER:
     case MC_TOKEN_INT_KEYWORD:
     case MC_TOKEN_CHAR_KEYWORD:
-    case MC_TOKEN_BOOL_KEYWORD:
+    // case MC_TOKEN_BOOL_KEYWORD:
     case MC_TOKEN_LONG_KEYWORD:
     case MC_TOKEN_SHORT_KEYWORD:
     case MC_TOKEN_FLOAT_KEYWORD:
@@ -4380,6 +4347,7 @@ int mcs_parse_root_statement(parsing_state *ps, mc_syntax_node *parent, mc_synta
   //   mcs_parse_through_token(ps, function, token_type, &element_documentation);
 
   // } break;
+  case MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF:
   case MC_TOKEN_PREPROCESSOR_KEYWORD_DEFINE:
   case MC_TOKEN_PREPROCESSOR_KEYWORD_INCLUDE:
   case MC_TOKEN_PREPROCESSOR_KEYWORD_IFNDEF: {
@@ -4418,7 +4386,7 @@ int mcs_parse_root_statement(parsing_state *ps, mc_syntax_node *parent, mc_synta
   case MC_TOKEN_VOID_KEYWORD:
   case MC_TOKEN_INT_KEYWORD:
   case MC_TOKEN_CHAR_KEYWORD:
-  case MC_TOKEN_BOOL_KEYWORD:
+  // case MC_TOKEN_BOOL_KEYWORD:
   case MC_TOKEN_LONG_KEYWORD:
   case MC_TOKEN_SHORT_KEYWORD:
   case MC_TOKEN_FLOAT_KEYWORD:

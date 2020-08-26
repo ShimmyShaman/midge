@@ -221,6 +221,8 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
 {
   register_midge_error_tag("mct_transcribe_mc_invocation()");
 
+  // print_syntax_node(syntax_node, 0);
+
   if (syntax_node->type != MC_SYNTAX_INVOCATION) {
     MCerror(70, "TODO %s", get_mc_syntax_token_type_name(syntax_node->type));
   }
@@ -260,8 +262,18 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
       }
 
       char *text;
-      copy_syntax_node_to_text(argument->cast_expression.expression, &text);
-      append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, text);
+      if (argument->cast_expression.expression->type == MC_SYNTAX_PREPENDED_UNARY_EXPRESSION &&
+          (mc_token_type)argument->cast_expression.expression->prepended_unary.prepend_operator->type ==
+              MC_TOKEN_AMPERSAND_CHARACTER) {
+        copy_syntax_node_to_text(argument->cast_expression.expression, &text);
+        append_to_c_strf(ts->str, "void *mc_varg_%i = (void *)%s;\n", i, text);
+        mct_append_indent_to_c_str(ts);
+        append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_varg_%i;\n", i, i);
+      }
+      else {
+        copy_syntax_node_to_text(argument->cast_expression.expression, &text);
+        append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, text);
+      }
       free(text);
     } break;
     case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
@@ -377,6 +389,16 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
       case MC_TOKEN_IDENTIFIER: {
         if (!strcmp(argument->text, "NULL")) {
           append_to_c_strf(ts->str, "void *mc_vargs_%i = NULL;\n", i, argument->text);
+          mct_append_indent_to_c_str(ts);
+          append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+        }
+        else if (!strcmp(argument->text, "false")) {
+          append_to_c_strf(ts->str, "unsigned char mc_vargs_%i = false;\n", i, argument->text);
+          mct_append_indent_to_c_str(ts);
+          append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+        }
+        else if (!strcmp(argument->text, "true")) {
+          append_to_c_strf(ts->str, "unsigned char mc_vargs_%i = true;\n", i, argument->text);
           mct_append_indent_to_c_str(ts);
           append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
         }
@@ -1214,6 +1236,14 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
   } break;
   case MC_SYNTAX_EXPRESSION_STATEMENT: {
     register_midge_error_tag("mct_transcribe_statement_list-ES0");
+    // TODO -- MCerror exception
+    if (syntax_node->expression_statement.expression->type == MC_SYNTAX_INVOCATION &&
+        (mc_token_type)syntax_node->expression_statement.expression->invocation.function_identity->type ==
+            MC_TOKEN_IDENTIFIER &&
+        !strcmp(syntax_node->expression_statement.expression->invocation.function_identity->text, "MCerror")) {
+      mct_transcribe_mcerror(ts, syntax_node->expression_statement.expression);
+      break;
+    }
     // Do MC_invokes
     bool contains_mc_function_call;
     mct_contains_mc_invoke(syntax_node->expression_statement.expression, &contains_mc_function_call);
@@ -1225,14 +1255,6 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
       }
       // printf("bb-3\n");
       mct_transcribe_mc_invocation(ts, syntax_node->expression_statement.expression, NULL);
-      break;
-    }
-    // TODO -- MCerror exception
-    if (syntax_node->expression_statement.expression->type == MC_SYNTAX_INVOCATION &&
-        (mc_token_type)syntax_node->expression_statement.expression->invocation.function_identity->type ==
-            MC_TOKEN_IDENTIFIER &&
-        !strcmp(syntax_node->expression_statement.expression->invocation.function_identity->text, "MCerror")) {
-      mct_transcribe_mcerror(ts, syntax_node->expression_statement.expression);
       break;
     }
 

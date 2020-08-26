@@ -283,6 +283,7 @@ const char *_mcl_core_structs[] = {
     "function_info",
     "struct_info",
     "enumeration_info",
+    "preprocess_define_info",
     "field_info",
     "field_info_list",
     // And everything here before -------------------------------------------------------------
@@ -381,6 +382,7 @@ const char *_mcl_core_functions[] = {
     "summarize_field_declarator_list",
     "summarize_type_field_list",
     "transcribe_enumeration_to_mc",
+    "instantiate_define_statement",
 
     "update_or_register_enum_info_from_syntax",
     "parse_file_to_syntax_tree",
@@ -865,6 +867,12 @@ int _mcl_init_core_data(void **p_global_root)
           "  global_root_data->enumerations.count = 0;"
           "  global_root_data->enumerations.items = (mc_core_v_enumeration_info **)"
           "                       calloc(sizeof(mc_core_v_enumeration_info *), global_root_data->enumerations.alloc);"
+          ""
+          "  global_root_data->preprocess_defines.alloc = 20;"
+          "  global_root_data->preprocess_defines.count = 0;"
+          "  global_root_data->preprocess_defines.items = (mc_core_v_preprocess_define_info **)"
+          "                       calloc(sizeof(mc_core_v_preprocess_define_info *), "
+          "global_root_data->preprocess_defines.alloc);"
           ""
           "  global_root_data->event_handlers.alloc = 0;"
           "  global_root_data->event_handlers.count = 0;"

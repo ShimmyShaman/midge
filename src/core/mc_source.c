@@ -52,6 +52,22 @@ int attach_enumeration_info_to_owner(node *owner, enumeration_info *enum_info)
   return 0;
 }
 
+int attach_preprocess_define_info_to_owner(node *owner, preprocess_define_info *define_info)
+{
+  switch (owner->type) {
+  case NODE_TYPE_GLOBAL_ROOT: {
+    global_root_data *data = (global_root_data *)owner->data;
+    append_to_collection((void ***)&data->preprocess_defines.items, &data->preprocess_defines.alloc,
+                         &data->preprocess_defines.count, (void *)define_info);
+    break;
+  }
+  default:
+    MCerror(9, "TODO:%i", owner->type);
+  }
+
+  return 0;
+}
+
 int initialize_source_file_info(node *owner, char *filepath, source_file_info **source_file)
 {
   source_file_info *sfi = (source_file_info *)malloc(sizeof(source_file_info));
@@ -652,6 +668,45 @@ int instantiate_enum_definition_from_ast(node *definition_owner, source_definiti
   return 0;
 }
 
+int instantiate_define_statement(node *definition_owner, mc_syntax_node *ast, preprocess_define_info **info)
+{
+  switch (ast->preprocess_define.statement_type) {
+  case PREPROCESSOR_DEFINE_REMOVAL: {
+    *info = (preprocess_define_info *)malloc(sizeof(preprocess_define_info));
+    (*info)->statement_type = ast->preprocess_define.statement_type;
+    copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
+
+    (*info)->replacement = NULL;
+  } break;
+  case PREPROCESSOR_DEFINE_FUNCTION_LIKE: {
+    // Do nothing...
+  } break;
+  case PREPROCESSOR_DEFINE_REPLACEMENT: {
+    *info = (preprocess_define_info *)malloc(sizeof(preprocess_define_info));
+    (*info)->statement_type = ast->preprocess_define.statement_type;
+    copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
+
+    c_str *str;
+    init_c_str(&str);
+    for (int i = 0; i < ast->preprocess_define.replacement_list->count; ++i) {
+      char *node_text;
+      copy_syntax_node_to_text(ast->preprocess_define.replacement_list->items[i], &node_text);
+      append_to_c_str(str, node_text);
+      free(node_text);
+    }
+
+    (*info)->replacement = str->text;
+    release_c_str(str, false);
+
+    printf("define:\n'%s'\n'%s'\n", (*info)->identifier, (*info)->replacement);
+  } break;
+  default:
+    MCerror(830, "TODO :%i", ast->preprocess_define.statement_type);
+  }
+
+  return 0;
+}
+
 /*
   From code definition: constructs source definition & parses to syntax, registers with heirarchy, and declares the
   definition for immediate use.
@@ -819,6 +874,24 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
       info->source->source_file = lv_source_file;
       printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE: {
+      preprocess_define_info *info;
+      instantiate_define_statement(definitions_owner, child, &info);
+
+      // switch (info->statement_type) {
+      // case PREPROCESSOR_DEFINE_REMOVAL: {
+
+      // } break;
+
+      // default:
+      //   MCerror(887, "TODO :%i", info->statement_type);
+      // }
+    } break;
+    // TODO
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF:
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
+    case MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF:
+      break;
     default: {
       switch ((mc_token_type)child->type) {
       case MC_TOKEN_SPACE_SEQUENCE:
