@@ -52,21 +52,21 @@ int attach_enumeration_info_to_owner(node *owner, enumeration_info *enum_info)
   return 0;
 }
 
-int attach_preprocess_define_info_to_owner(node *owner, preprocess_define_info *define_info)
-{
-  switch (owner->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    global_root_data *data = (global_root_data *)owner->data;
-    append_to_collection((void ***)&data->preprocess_defines.items, &data->preprocess_defines.alloc,
-                         &data->preprocess_defines.count, (void *)define_info);
-    break;
-  }
-  default:
-    MCerror(9, "TODO:%i", owner->type);
-  }
+// int attach_preprocess_define_info_to_owner(node *owner, preprocess_define_info *define_info)
+// {
+//   switch (owner->type) {
+//   case NODE_TYPE_GLOBAL_ROOT: {
+//     global_root_data *data = (global_root_data *)owner->data;
+//     append_to_collection((void ***)&data->preprocess_defines.items, &data->preprocess_defines.alloc,
+//                          &data->preprocess_defines.count, (void *)define_info);
+//     break;
+//   }
+//   default:
+//     MCerror(9, "TODO:%i", owner->type);
+//   }
 
-  return 0;
-}
+//   return 0;
+// }
 
 int initialize_source_file_info(node *owner, char *filepath, source_file_info **source_file)
 {
@@ -601,8 +601,10 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "append_to_c_strf"))
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
+  if (!strcmp(func_info->name, "mct_transcribe_while_statement")) {
+    print_syntax_node(ast, 0);
+    printf("mc_transcription:\n%s||\n", mc_transcription);
+  }
 
   clint_declare(mc_transcription);
   free(mc_transcription);

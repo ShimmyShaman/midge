@@ -33,6 +33,7 @@ typedef enum mc_token_type {
   MC_TOKEN_PLUS_OPERATOR,
   MC_TOKEN_DIVIDE_OPERATOR,
   MC_TOKEN_MODULO_OPERATOR,
+  MC_TOKEN_TERNARY_OPERATOR,
   MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR,
   MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR,
   MC_TOKEN_MODULO_AND_ASSIGN_OPERATOR,
@@ -146,6 +147,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_VA_END_STATEMENT,
   MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
   MC_SYNTAX_CONDITIONAL_EXPRESSION,
+  MC_SYNTAX_TERNARY_CONDITIONAL,
   MC_SYNTAX_RELATIONAL_EXPRESSION,
   MC_SYNTAX_OPERATIONAL_EXPRESSION,
   MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
@@ -253,6 +255,7 @@ typedef struct mc_syntax_node {
         struct {
           mc_syntax_node *type_dereference;
           mc_syntax_node *name;
+          mc_syntax_node *array_size;
         } field_declarator;
         struct {
           mc_syntax_node *type_modifier;
@@ -335,6 +338,11 @@ typedef struct mc_syntax_node {
           mc_syntax_node *conditional_operator;
           mc_syntax_node *right;
         } conditional_expression;
+        struct {
+          mc_syntax_node *condition;
+          mc_syntax_node *true_expression;
+          mc_syntax_node *false_expression;
+        } ternary_conditional;
         struct {
           mc_syntax_node *left;
           mc_syntax_node *relational_operator;

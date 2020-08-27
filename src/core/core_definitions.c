@@ -100,7 +100,7 @@ int remove_ptr_from_collection(void ***collection, unsigned int *collection_coun
     }
   }
   if (!found && return_error_on_failure) {
-    MCerror(101, "Could not find given ptr(=%p) in collection", ptr);
+    MCerror(103, "Could not find given ptr(=%p) in collection", ptr);
   }
 
   return 0;
