@@ -807,7 +807,7 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
           const int FNBUF_SIZE = 164;
           char fnbuf[FNBUF_SIZE];
           for (int b = 0; b < 164; ++b) {
-            char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
+            char c = src->text[func_start_index /*+ 10 strlen("mc_core_v_")*/ + b];
             if (c == '(') {
               fnbuf[b] = '\0';
               break;

@@ -36,6 +36,7 @@ int mct_append_node_text_to_c_str(c_str *str, mc_syntax_node *syntax_node)
 {
   char *node_text;
   copy_syntax_node_to_text(syntax_node, &node_text);
+  // printf("copied:'%s' to text\n", node_text);
   append_to_c_str(str, node_text);
   free(node_text);
 
@@ -694,10 +695,66 @@ int mct_transcribe_mcerror(mct_transcription_state *ts, mc_syntax_node *syntax_n
   mct_append_indent_to_c_str(ts);
   append_to_c_strf(ts->str, "*mc_return_value = %s;\n", syntax_node->invocation.arguments->items[0]->text);
   mct_append_indent_to_c_str(ts);
-  mct_append_node_text_to_c_str(ts->str, syntax_node);
-  append_to_c_str(ts->str, ";\n");
+
+  bool has_call_to_get_mc_syntax_token_type_name = false;
+  int ttp = 0;
+  for (int p = 1; p < syntax_node->invocation.arguments->count; ++p) {
+    mc_syntax_node *mce_argument = syntax_node->invocation.arguments->items[p];
+    if (mce_argument->type == MC_SYNTAX_INVOCATION &&
+        (mc_token_type)mce_argument->invocation.function_identity->type == MC_TOKEN_IDENTIFIER &&
+        !strcmp(mce_argument->invocation.function_identity->text, "get_mc_syntax_token_type_name")) {
+      // // Get the return type
+      // function_info *func_info;
+      // find_function_info("get_mc_syntax_token_type_name", &func_info);
+      // if (!func_info) {
+      //   MCerror(709, "Not Expected");
+      // }
+      // printf("%s\n", func_info->return_type.name);
+      // enumeration_info *enum_info;
+      // find_enumeration_info(func_info->return_type.name, &enum_info);
+      // if (!enum_info) {
+      //   MCerror(715, "Not Expected");
+      // }
+
+      char *temp_name;
+      cprintf(temp_name, "mcs_tt_name_%i", ttp++);
+
+      mct_append_to_c_str(ts, "const char *");
+      append_to_c_str(ts->str, temp_name);
+      append_to_c_str(ts->str, ";\n");
+
+      mct_transcribe_mc_invocation(ts, mce_argument, temp_name);
+      free(temp_name);
+    }
+  }
+
+  mct_append_indent_to_c_str(ts);
+  append_to_c_str(ts->str, "MCerror(");
+  mct_append_node_text_to_c_str(ts->str, syntax_node->invocation.arguments->items[0]);
+  ttp = 0;
+  for (int p = 1; p < syntax_node->invocation.arguments->count; ++p) {
+    append_to_c_str(ts->str, ", ");
+    mc_syntax_node *mce_argument = syntax_node->invocation.arguments->items[p];
+    if (mce_argument->type == MC_SYNTAX_INVOCATION &&
+        (mc_token_type)mce_argument->invocation.function_identity->type == MC_TOKEN_IDENTIFIER &&
+        !strcmp(mce_argument->invocation.function_identity->text, "get_mc_syntax_token_type_name")) {
+
+      char *temp_name;
+      cprintf(temp_name, "mcs_tt_name_%i", ttp++);
+
+      append_to_c_str(ts->str, temp_name);
+      free(temp_name);
+    }
+    else {
+      mct_append_node_text_to_c_str(ts->str, mce_argument);
+    }
+  }
+
+  append_to_c_str(ts->str, ");\n");
   --ts->indent;
-  mct_append_to_c_str(ts, "}\n");
+  // mct_append_to_c_str(ts, "}\n");
+  // if (ttp)
+  //   printf("def:\n%s||\n", ts->str->text);
 
   return 0;
 }
@@ -739,23 +796,70 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     mct_transcribe_expression(ts, syntax_node->parenthesized_expression.expression);
     append_to_c_str(ts->str, ")");
   } break;
+  case MC_SYNTAX_OPERATIONAL_EXPRESSION: {
+    if (!syntax_node->operational_expression.right) {
+      MCerror(745, "TODO");
+    }
+
+    mct_transcribe_expression(ts, syntax_node->operational_expression.left);
+    append_to_c_str(ts->str, " ");
+    mct_append_node_text_to_c_str(ts->str, syntax_node->operational_expression.operational_operator);
+    append_to_c_str(ts->str, " ");
+    mct_transcribe_expression(ts, syntax_node->operational_expression.right);
+    // printf("%s\n", ts->str->text);
+  } break;
+  case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
+    mct_transcribe_expression(ts, syntax_node->member_access_expression.primary);
+    mct_append_node_text_to_c_str(ts->str, syntax_node->member_access_expression.access_operator);
+    mct_transcribe_expression(ts, syntax_node->member_access_expression.identifier);
+    // printf("%s\n", ts->str->text);
+  } break;
+  case MC_SYNTAX_DEREFERENCE_EXPRESSION: {
+    mct_append_node_text_to_c_str(ts->str, syntax_node->dereference_expression.deref_sequence);
+    mct_transcribe_expression(ts, syntax_node->dereference_expression.unary_expression);
+    // printf("%s\n", ts->str->text);
+  } break;
+  case MC_SYNTAX_CONDITIONAL_EXPRESSION: {
+    if (!syntax_node->conditional_expression.right) {
+      MCerror(764, "TODO");
+    }
+
+    mct_transcribe_expression(ts, syntax_node->conditional_expression.left);
+    mct_append_node_text_to_c_str(ts->str, syntax_node->conditional_expression.conditional_operator);
+    mct_transcribe_expression(ts, syntax_node->conditional_expression.right);
+  } break;
+  case MC_SYNTAX_RELATIONAL_EXPRESSION: {
+    if (!syntax_node->relational_expression.right) {
+      MCerror(777, "TODO");
+    }
+
+    mct_transcribe_expression(ts, syntax_node->relational_expression.left);
+    mct_append_node_text_to_c_str(ts->str, syntax_node->relational_expression.relational_operator);
+    mct_transcribe_expression(ts, syntax_node->relational_expression.right);
+  } break;
+  case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION: {
+    mct_transcribe_expression(ts, syntax_node->element_access_expression.primary);
+    append_to_c_str(ts->str, "[");
+    mct_transcribe_expression(ts, syntax_node->element_access_expression.access_expression);
+    append_to_c_str(ts->str, "]");
+  } break;
 
     // WILL have to redo in future
-  case MC_SYNTAX_DEREFERENCE_EXPRESSION:
-  case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
-  case MC_SYNTAX_CONDITIONAL_EXPRESSION:
-  case MC_SYNTAX_OPERATIONAL_EXPRESSION:
-  case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION:
-  case MC_SYNTAX_RELATIONAL_EXPRESSION: {
-    mct_append_node_text_to_c_str(ts->str, syntax_node);
-  } break;
+  // case MC_SYNTAX_DEREFERENCE_EXPRESSION:
+  // case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
+  // case MC_SYNTAX_CONDITIONAL_EXPRESSION:
+  // case MC_SYNTAX_OPERATIONAL_EXPRESSION:
+  // case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION:
+  // case MC_SYNTAX_RELATIONAL_EXPRESSION: {
+  //   mct_append_node_text_to_c_str(ts->str, syntax_node);
+  // } break;
   case MC_SYNTAX_CAST_EXPRESSION: {
     append_to_c_str(ts->str, "(");
 
-    if (!strcmp(ts->transcription_root->function.name->text, "print_syntax_node")) {
-      printf("LLL>>>>\n");
-      print_syntax_node(syntax_node, 0);
-    }
+    // if (!strcmp(ts->transcription_root->function.name->text, "print_syntax_node")) {
+    // printf("LLL>>>>\n");
+    // print_syntax_node(syntax_node, 0);
+    // }
     mct_transcribe_type_identifier(ts, syntax_node->cast_expression.type_identifier);
 
     if (syntax_node->cast_expression.type_dereference) {
@@ -773,8 +877,9 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
 
     // printf("$$ %p\n", syntax_node);
     // printf("$$ %p %p\n", syntax_node->va_arg_expression.list_identity,
-    // syntax_node->va_arg_expression.type_identifier); print_syntax_node(syntax_node->va_arg_expression.list_identity,
-    // 0); mct_transcribe_expression(ts,syntax_node->va_arg_expression.list_identity);
+    // syntax_node->va_arg_expression.type_identifier);
+    // print_syntax_node(syntax_node->va_arg_expression.list_identity, 0);
+    // mct_transcribe_expression(ts,syntax_node->va_arg_expression.list_identity);
     // register_midge_error_tag("mct_transcribe_expression:VA_ARG_EXPRESSION-1");
     // append_to_c_str(ts->str, ", ");
     // mct_transcribe_type_identifier(ts, syntax_node->va_arg_expression.type_identifier);
@@ -1233,6 +1338,8 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
             MC_TOKEN_IDENTIFIER &&
         !strcmp(syntax_node->expression_statement.expression->invocation.function_identity->text, "MCerror")) {
       mct_transcribe_mcerror(ts, syntax_node->expression_statement.expression);
+      // print_syntax_node(syntax_node, 0);
+      // MCerror(1300, "progress");
       break;
     }
     // Do MC_invokes
@@ -1573,6 +1680,11 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
 
   mct_decrement_scope_depth(&ts);
   --ts.indent;
+
+  // if (!strcmp(ts.transcription_root->function.name->text, "print_syntax_node")) {
+  //   printf("LLL>>>>\n");
+  //   print_syntax_node(ts.transcription_root, 0);
+  // }
 
   // Return Statement
   append_to_c_strf(ts.str,

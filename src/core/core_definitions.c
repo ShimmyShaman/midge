@@ -157,14 +157,18 @@ int find_enumeration_info(char *name, enumeration_info **result)
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
+  // printf("find_enum(%s)=", name);
   for (int i = 0; i < global_data->enumerations.count; ++i) {
+    // if (strcmp(name, "int") && strcmp(name, "char"))
     if (!strcmp(name, global_data->enumerations.items[i]->name)) {
       *result = global_data->enumerations.items[i];
+      // printf("found\n");
       return 0;
     }
   }
 
   *result = NULL;
+  // printf("(null)\n");
 
   // TODO -- ?? Search in children
   return 0;
