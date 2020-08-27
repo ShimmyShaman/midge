@@ -603,6 +603,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
 
   // if (!strcmp(func_info->name, "mcs_construct_syntax_node"))
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
+
   clint_declare(mc_transcription);
   free(mc_transcription);
   // printf("idfc-5\n");

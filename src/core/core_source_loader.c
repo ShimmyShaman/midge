@@ -277,16 +277,41 @@ int _mcl_find_sequence_in_text_ignoring_empty_text(const char *text, const char 
 }
 
 const char *_mcl_core_structs[] = {
-    "node",
+    // midge_common.h
+    "c_str",
+
+    // core_definitions.h
+    "source_file_type",
+    "source_definition_type",
+    "node_type",
+    "parameter_kind",
+    "field_kind",
+    "preprocessor_define_type",
+    "struct_id",
+    "source_definition",
     "global_root_data",
     "source_file_info",
     "function_info",
+    "parameter_info",
+    "field_declarator_info",
     "struct_info",
+    "enum_member_info",
     "enumeration_info",
+    "event_handler_array",
     "preprocess_define_info",
     "field_info",
     "field_info_list",
+    "node",
+
+    "mc_syntax_node",
     "mc_syntax_node_type",
+    "mc_token_type",
+    "mc_syntax_node_list",
+    "parsing_state",
+
+    // mc_code_transcription.c
+    "mct_transcription_state",
+
     // And everything here before -------------------------------------------------------------
     NULL,
 };
@@ -356,6 +381,7 @@ const char *_mcl_core_functions[] = {
     "_mcs_parse_token",
     "mcs_is_supernumerary_token",
     "mcs_construct_syntax_node",
+    "mcs_peek_token_type_and_index",
     "mcs_parse_token",
     "mcs_peek_token_type",
     "mcs_parse_through_token",
@@ -384,12 +410,16 @@ const char *_mcl_core_functions[] = {
     "summarize_type_field_list",
     "transcribe_enumeration_to_mc",
     "instantiate_define_statement",
+    "instantiate_struct_definition_from_ast",
+    "instantiate_enum_definition_from_ast",
+    "update_or_register_function_info_from_syntax",
+    "attach_function_info_to_owner",
+    "instantiate_function_definition_from_ast",
+    "instantiate_definition",
 
     "update_or_register_enum_info_from_syntax",
     "parse_file_to_syntax_tree",
     "initialize_source_file_info",
-    "update_or_register_function_info_from_syntax",
-    "instantiate_definition",
     "release_struct_id",
     "release_syntax_node",
     "find_struct_info",
@@ -441,7 +471,6 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_va_list_statement",
     "mcs_parse_va_start_statement",
     "mcs_parse_va_end_statement",
-    "attach_function_info_to_owner",
     "remove_ptr_from_collection",
     "initialize_parameter_info_from_syntax_node",
     "attach_struct_info_to_owner",
@@ -452,9 +481,7 @@ const char *_mcl_core_functions[] = {
     "register_sub_type_syntax_to_field_info",
     "transcribe_struct_to_mc",
     "parse_definition_to_syntax_tree",
-    "instantiate_function_definition_from_ast",
-    "instantiate_struct_definition_from_ast",
-    "instantiate_enum_definition_from_ast",
+
     // "METHOD_HERE",
 
     // And everything here before -------------------------------------------------------------
@@ -521,8 +548,72 @@ int _mcl_print_parse_error(const char *const text, int index, const char *const 
 
 int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
 {
+  // Search for more structs/enums
   for (int i = 0; i < src->len; ++i) {
-    // Skip Includes
+    if (!strncmp(src->text + i, "typedef struct ", 15)) {
+      int preamble_offset = i + 15;
+      bool found = false;
+      for (int o = 0; _mcl_core_structs[o]; ++o) {
+        int n = strlen(_mcl_core_structs[o]);
+        if (!strncmp(src->text + preamble_offset, _mcl_core_structs[o], n)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        char *type_name;
+        for (int j = preamble_offset;; ++j) {
+          if (!isalpha(src->text[j]) && src->text[j] != '_') {
+            int len = j - (preamble_offset);
+            type_name = (char *)malloc(sizeof(char) * (len + 1));
+            strncpy(type_name, src->text + preamble_offset, len);
+            type_name[len] = '\0';
+            break;
+          }
+        }
+        printf("core-type-to-add:\n\"%s\",\n\n\n", type_name);
+        free(type_name);
+        return -6;
+      }
+    }
+    if (!strncmp(src->text + i, "typedef enum ", 14)) {
+      int preamble_offset = i + 14;
+      bool found = false;
+      for (int o = 0; _mcl_core_structs[o]; ++o) {
+        int n = strlen(_mcl_core_structs[o]);
+        if (!strncmp(src->text + preamble_offset, _mcl_core_structs[o], n)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        char *type_name;
+        for (int j = preamble_offset;; ++j) {
+          if (!isalpha(src->text[j]) && src->text[j] != '_') {
+            int len = j - (preamble_offset);
+            type_name = (char *)malloc(sizeof(char) * (len + 1));
+            strncpy(type_name, src->text + preamble_offset, len);
+            type_name[len] = '\0';
+            break;
+          }
+        }
+        printf("core-type-to-add:\n\"%s\",\n\n\n", type_name);
+        free(type_name);
+        return -7;
+      }
+    }
+  }
+
+  // No longer accept MCcall / MCvacall
+  for (int i = 0; i < src->len; ++i) {
+    if (!strncmp(src->text + i, "MCcall", 6) || !strncmp(src->text + i, "MCvacall", 8)) {
+      MCerror(332, "'%s' contains a MCcall/MCvacall", _mcl_source_files[source_file_index]);
+    }
+  }
+
+  // Functions
+  for (int i = 0; i < src->len; ++i) {
+    // Remove Includes
     if (src->text[i] == '#') {
       if (!strncmp(src->text + i, "#include \"", 10)) {
 
@@ -546,12 +637,45 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
         continue;
       }
     }
+  }
 
-    // No longer accept MCcall / MCvacall
-    if (!strncmp(src->text + i, "MCcall", 6) || !strncmp(src->text + i, "MCvacall", 8)) {
-      MCerror(332, "'%s' contains a MCcall/MCvacall", _mcl_source_files[source_file_index]);
+  for (int i = 0; i < src->len; ++i) {
+    // Exceptions
+    switch (src->text[i - 1]) {
+    case '_':
+    case '"':
+      continue;
+    default: {
+      if (isalpha(src->text[i - 1]))
+        continue;
+      break;
+    }
     }
 
+    // Check against each object identity
+    for (int o = 0; _mcl_core_structs[o]; ++o) {
+      int n = strlen(_mcl_core_structs[o]);
+      if (!strncmp(src->text + i, _mcl_core_structs[o], n)) {
+        switch (src->text[i + n]) {
+        case '_':
+        case '"':
+          continue;
+        default: {
+          if (isalpha(src->text[i + n]))
+            continue;
+          break;
+        }
+        }
+
+        // Insert
+        MCcall(insert_into__csl_c_str(src, "mc_core_v_", i));
+        i += 10 + n - 1;
+      }
+    }
+  }
+
+  // Error-Handling
+  for (int i = 0; i < src->len; ++i) {
     if (src->text[i] == '(') {
       // Is it a function that can be "MCcalled"
       // It has to be a direct function call (a-z,_, no dereferences)
@@ -582,15 +706,16 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
         }
         break;
       }
+      //
       if (valid) {
         valid = false;
         for (int a = 0;; ++a) {
           if (!_mcl_core_functions[a])
             break;
-          if (!strncmp(src->text + func_start_index, "mc_core_v_", 10))
-            // if(!strncmp(src->text + func_start_index, _mcl_core_functions[a], strlen(_mcl_core_functions[a]))) {
+          if (!strncmp(src->text + func_start_index, _mcl_core_functions[a], strlen(_mcl_core_functions[a]))) {
             valid = true;
-          break;
+            break;
+          }
         }
         if (!valid) {
           // if (!strncmp(src->text + func_start_index, "clint_process", 13) ||
@@ -612,8 +737,10 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
               }
             }
             if (!specified) {
-              printf("\"%s\",\n", fname);
+              printf("i:%i\n", i);
+              printf("core-function-to-add:\n\"%s\",\n\n\n", fname);
               // MCerror(465, "core_source_loader: unspecified ignore function:'%s'\n", fname);
+              return -5;
             }
           }
         }
@@ -669,7 +796,7 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
           const char *before_template =
               "{int mc_error_stack_index; "
               "register_midge_stack_invocation(\"%s\", \"%s\", __LINE__, &mc_error_stack_index); "
-              "int mc_res = ";
+              "int mc_res = mc_core_v_";
 
           const char *after_template = " if (mc_res) { "
                                        "printf(\"--%s |line :%%i :ERR:%%i\\n\", __LINE__, mc_res); "
@@ -736,7 +863,9 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
         }
       }
     }
+  }
 
+  for (int i = 0; i < src->len; ++i) {
     // Exceptions
     switch (src->text[i - 1]) {
     case '_':
@@ -749,27 +878,6 @@ int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
     }
     }
 
-    // Check against each object identity
-    for (int o = 0; _mcl_core_structs[o]; ++o) {
-      int n = strlen(_mcl_core_structs[o]);
-      if (!strncmp(src->text + i, _mcl_core_structs[o], n)) {
-        // Exceptions
-        switch (src->text[i + n]) {
-        case '_':
-        case '"':
-          continue;
-        default: {
-          if (isalpha(src->text[i + n]))
-            continue;
-          break;
-        }
-        }
-
-        // Insert
-        MCcall(insert_into__csl_c_str(src, "mc_core_v_", i));
-        i += 10 + n - 1;
-      }
-    }
     for (int o = 0; _mcl_core_functions[o]; ++o) {
       int n = strlen(_mcl_core_functions[o]);
       if (!strncmp(src->text + i, _mcl_core_functions[o], n)) {
@@ -808,6 +916,7 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
 
   for (int a = 0; _mcl_source_files[a]; ++a) {
 
+    printf("declaring file:'%s'\n", _mcl_source_files[a]);
     char *file_text;
     MCcall(_mcl_read_all_file_text(_mcl_source_files[a], &file_text));
     MCcall(set__csl_c_str(src, file_text));
@@ -815,9 +924,10 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
 
     MCcall(_mcl_format_core_file(src, a));
 
-    // if (!strcmp(_mcl_source_files[a], "src/core/mc_code_transcription.c"))
+    // if (!strcmp(_mcl_source_files[a], "src/midge_common.h")) {
     //   printf("def:\n%s||\n", src->text);
-    printf("declaring file:'%s'\n", _mcl_source_files[a]);
+    //   return 3;
+    // }
     MCcall(clint_declare(src->text));
 
     // MCcall(clint_process("printf(\"%p\", &mc_core_v_init_c_str);//{c_str *str; mc_core_v_init_c_str(&str);}"));

@@ -752,6 +752,10 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
   case MC_SYNTAX_CAST_EXPRESSION: {
     append_to_c_str(ts->str, "(");
 
+    if (!strcmp(ts->transcription_root->function.name->text, "print_syntax_node")) {
+      printf("LLL>>>>\n");
+      print_syntax_node(syntax_node, 0);
+    }
     mct_transcribe_type_identifier(ts, syntax_node->cast_expression.type_identifier);
 
     if (syntax_node->cast_expression.type_dereference) {

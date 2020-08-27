@@ -396,14 +396,11 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
     free(function_name);
     printf("|--%s : %p", type_name, func_info);
   } break;
-
   default:
     printf("|--%s", type_name);
     break;
   }
-  // printf("mpst-0\n");
-
-  // printf("mpsyn-tree-1\n");
+  
   if ((int)syntax_node->type < (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     if (syntax_node->type == (mc_syntax_node_type)MC_TOKEN_NEW_LINE) {
       printf(":'\\n'\n");
