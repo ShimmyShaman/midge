@@ -174,6 +174,32 @@ int find_enumeration_info(char *name, enumeration_info **result)
   return 0;
 }
 
+int find_enum_member_info(char *name, enumeration_info **result_type, enum_member_info **result)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  // printf("find_enum(%s)=", name);
+  for (int i = 0; i < global_data->enumerations.count; ++i) {
+    enumeration_info *enum_info = global_data->enumerations.items[i];
+    for (int m = 0; m < enum_info->members.count; ++m) {
+      // printf("femi- %s<>%s\n", name, enum_info->members.items[m]->identity);
+      if (!strcmp(name, enum_info->members.items[m]->identity)) {
+        *result = enum_info->members.items[m];
+        *result_type = enum_info;
+        return 0;
+      }
+    }
+  }
+
+  *result = NULL;
+  *result_type = NULL;
+  // printf("(null)\n");
+
+  // TODO -- ?? Search in children
+  return 0;
+}
+
 int release_struct_id(struct_id *ptr)
 {
   if (!ptr)

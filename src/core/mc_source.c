@@ -601,7 +601,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "mcs_construct_syntax_node"))
+  // if (!strcmp(func_info->name, "append_to_c_strf"))
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
 
   clint_declare(mc_transcription);

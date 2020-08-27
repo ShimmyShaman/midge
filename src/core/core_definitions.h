@@ -278,6 +278,7 @@ int remove_ptr_from_collection(void ***collection, unsigned int *collection_coun
 int find_function_info(char *function_name, function_info **funct_info);
 int find_struct_info(char *function_name, struct_info **structure_info);
 int find_enumeration_info(char *function_name, enumeration_info **enum_info);
+int find_enum_member_info(char *name, enumeration_info **result_type, enum_member_info **result);
 
 int release_struct_id(struct_id *ptr);
 int release_field_declarator_info(field_declarator_info *declarator);

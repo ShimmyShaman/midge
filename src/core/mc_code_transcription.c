@@ -126,6 +126,40 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     // Determine the type of the left-hand-side
     determine_type_of_expression(ts, expression->operational_expression.left, type_identity, deref_count);
   } break;
+  case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
+    char *type_of_parent;
+    int parent_deref_count;
+    determine_type_of_expression(ts, expression->member_access_expression.primary, &type_of_parent,
+                                 &parent_deref_count);
+
+    struct_info *parent_type_info;
+    find_struct_info(type_of_parent, &parent_type_info);
+    if (!parent_type_info) {
+      MCerror(137, "uh oh, what do we do now...?");
+    }
+
+    char *identifier;
+    copy_syntax_node_to_text(expression->member_access_expression.identifier, &identifier);
+
+    for (int f = 0; f < parent_type_info->fields->count; ++f) {
+      field_info *ptfield = parent_type_info->fields->items[f];
+      switch (ptfield->field_type) {
+      case FIELD_KIND_STANDARD: {
+        for (int g = 0; g < ptfield->field.declarators->count; ++g) {
+          if (!strcmp(identifier, ptfield->field.declarators->items[g]->name)) {
+            // Found!
+            allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
+            *deref_count = ptfield->field.declarators->items[g]->deref_count;
+            return 0;
+          }
+        }
+      } break;
+      default:
+        MCerror(149, "TODO:%i", ptfield->field_type);
+      }
+    }
+    MCerror(159, "TODO : shouldn't reach here :%s", type_of_parent);
+  } break;
   case MC_TOKEN_IDENTIFIER: {
     *type_identity = NULL;
     *deref_count = 0;
@@ -160,6 +194,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     // printf("couldn't find type for:'%s'\n", expression->text);
   } break;
   default:
+    print_syntax_node(expression, 0);
     MCerror(129, "Unsupported:%s", get_mc_syntax_token_type_name(expression->type));
   }
 
@@ -352,10 +387,21 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
 
       char *text;
       copy_syntax_node_to_text(argument, &text);
-      mct_append_indent_to_c_str(ts);
       append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, text);
       free(text);
 
+    } break;
+    case MC_SYNTAX_DEREFERENCE_EXPRESSION: {
+      append_to_c_strf(ts->str, "mc_vargs[%i] = ", i);
+      for (int d = 1; d < argument->dereference_expression.deref_sequence->dereference_sequence.count; ++d)
+        append_to_c_str(ts->str, "*");
+
+      char *text;
+      copy_syntax_node_to_text(argument->dereference_expression.unary_expression, &text);
+      append_to_c_str(ts->str, text);
+      free(text);
+
+      append_to_c_str(ts->str, ";\n");
     } break;
     case MC_SYNTAX_STRING_LITERAL_EXPRESSION: {
       // printf("mtmi-7\n");
@@ -379,6 +425,25 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
         MCerror(96, "TODO");
       }
       free(text);
+    } break;
+    case MC_SYNTAX_FIXREMENT_EXPRESSION: {
+      if (!argument->fixrement_expression.is_postfix) {
+        mct_append_node_text_to_c_str(ts->str, argument);
+        append_to_c_str(ts->str, ";\n");
+      }
+
+      char *primary;
+      copy_syntax_node_to_text(argument->fixrement_expression.primary, &primary);
+
+      mct_append_indent_to_c_str(ts);
+      append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, primary);
+      free(primary);
+
+      if (argument->fixrement_expression.is_postfix) {
+        mct_append_node_text_to_c_str(ts->str, argument);
+        append_to_c_str(ts->str, ";\n");
+      }
+
     } break;
     default: {
       // printf("mtmi-9\n");
@@ -405,7 +470,22 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
           append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
         }
         else {
-          append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, argument->text);
+          // Search enum values...
+          enumeration_info *enum_info;
+          enum_member_info *enum_member;
+          find_enum_member_info(argument->text, &enum_info, &enum_member);
+          if (!strcmp(argument->text, "MC_SYNTAX_DEREFERENCE_SEQUENCE")) {
+            printf("enum was :%p\n", enum_member);
+          }
+          if (enum_member) {
+            append_to_c_strf(ts->str, "%s mc_vargs_%i = %s;\n", enum_info->mc_declared_name, i, argument->text);
+            mct_append_indent_to_c_str(ts);
+            append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+          }
+          else {
+            // TODO -- ?? assigning to 'void *' from incompatible type 'const int *'
+            append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)&%s;\n", i, argument->text);
+          }
         }
       } break;
       default:
@@ -702,7 +782,8 @@ int mct_transcribe_mcerror(mct_transcription_state *ts, mc_syntax_node *syntax_n
     mc_syntax_node *mce_argument = syntax_node->invocation.arguments->items[p];
     if (mce_argument->type == MC_SYNTAX_INVOCATION &&
         (mc_token_type)mce_argument->invocation.function_identity->type == MC_TOKEN_IDENTIFIER &&
-        !strcmp(mce_argument->invocation.function_identity->text, "get_mc_syntax_token_type_name")) {
+        (!strcmp(mce_argument->invocation.function_identity->text, "get_mc_syntax_token_type_name") ||
+         !strcmp(mce_argument->invocation.function_identity->text, "get_mc_token_type_name"))) {
       // // Get the return type
       // function_info *func_info;
       // find_function_info("get_mc_syntax_token_type_name", &func_info);
@@ -737,7 +818,8 @@ int mct_transcribe_mcerror(mct_transcription_state *ts, mc_syntax_node *syntax_n
     mc_syntax_node *mce_argument = syntax_node->invocation.arguments->items[p];
     if (mce_argument->type == MC_SYNTAX_INVOCATION &&
         (mc_token_type)mce_argument->invocation.function_identity->type == MC_TOKEN_IDENTIFIER &&
-        !strcmp(mce_argument->invocation.function_identity->text, "get_mc_syntax_token_type_name")) {
+        (!strcmp(mce_argument->invocation.function_identity->text, "get_mc_syntax_token_type_name") ||
+         !strcmp(mce_argument->invocation.function_identity->text, "get_mc_token_type_name"))) {
 
       char *temp_name;
       cprintf(temp_name, "mcs_tt_name_%i", ttp++);
@@ -752,7 +834,8 @@ int mct_transcribe_mcerror(mct_transcription_state *ts, mc_syntax_node *syntax_n
 
   append_to_c_str(ts->str, ");\n");
   --ts->indent;
-  // mct_append_to_c_str(ts, "}\n");
+  mct_append_to_c_str(ts, "}\n");
+
   // if (ttp)
   //   printf("def:\n%s||\n", ts->str->text);
 
@@ -1128,18 +1211,37 @@ int mct_transcribe_while_statement(mct_transcription_state *ts, mc_syntax_node *
   }
 
   if (syntax_node->while_statement.do_first) {
-    MCerror(311, "TODO");
-  }
+    mct_append_to_c_str(ts, "do ");
+    if (syntax_node->while_statement.do_statement->type != MC_SYNTAX_CODE_BLOCK) {
+      ++ts->indent;
+    }
 
-  // Initialization
-  mct_append_to_c_str(ts, "while (");
-  mct_transcribe_expression(ts, syntax_node->while_statement.conditional);
-  mct_append_to_c_str(ts, ") ");
+    mct_transcribe_statement(ts, syntax_node->while_statement.do_statement);
 
-  if (syntax_node->while_statement.code_block->type != MC_SYNTAX_CODE_BLOCK) {
-    MCerror(320, "TODO");
+    if (syntax_node->while_statement.do_statement->type != MC_SYNTAX_CODE_BLOCK) {
+      --ts->indent;
+    }
+
+    mct_append_to_c_str(ts, "while (");
+    mct_transcribe_expression(ts, syntax_node->while_statement.conditional);
+    append_to_c_str(ts->str, ");");
   }
-  mct_transcribe_code_block(ts, syntax_node->while_statement.code_block);
+  else {
+    // Initialization
+    mct_append_to_c_str(ts, "while (");
+    mct_transcribe_expression(ts, syntax_node->while_statement.conditional);
+    mct_append_to_c_str(ts, ") ");
+    if (syntax_node->while_statement.do_statement->type != MC_SYNTAX_CODE_BLOCK) {
+      ++ts->indent;
+      append_to_c_str(ts->str, "\n");
+    }
+
+    mct_transcribe_statement(ts, syntax_node->while_statement.do_statement);
+
+    if (syntax_node->while_statement.do_statement->type != MC_SYNTAX_CODE_BLOCK) {
+      --ts->indent;
+    }
+  }
 
   register_midge_error_tag("mct_transcribe_while_statement(~)");
   return 0;

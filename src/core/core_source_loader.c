@@ -1,6 +1,8 @@
 /* core_source_loader.c */
 
 #include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 typedef struct _csl_c_str {
   unsigned int alloc;
@@ -215,6 +217,24 @@ int _mcl_read_all_file_text(const char *filepath, char **contents)
   return 0;
 }
 
+size_t _mcl_save_text_to_file(char *filepath, char *text)
+{
+  FILE *f = fopen(filepath, "w");
+  if (f == NULL) {
+    printf("problem opening file '%s'\n", filepath);
+    return 0;
+  }
+  fseek(f, 0, SEEK_SET);
+
+  int len = strlen(text);
+
+  size_t written = fwrite(text, sizeof(char), len, f);
+  printf("written %zu bytes to %s\n", written, filepath);
+  fclose(f);
+
+  return written;
+}
+
 int _mcl_find_sequence_in_text_ignoring_empty_text(const char *text, const char *first, const char *second,
                                                    const char *third, int *index)
 {
@@ -356,6 +376,7 @@ const char *_mcl_core_functions[] = {
     "append_to_c_strn",
     "append_to_c_strf",
     "insert_into_c_str",
+
     // core_definitions
     "obtain_midge_global_root",
     "read_file_text",
@@ -364,6 +385,9 @@ const char *_mcl_core_functions[] = {
     "remove_from_collection",
     "remove_ptr_from_collection",
     "find_function_info",
+    "find_struct_info",
+    "find_enumeration_info",
+    "find_enum_member_info",
     "release_field_declarator_info",
     "release_field_declarator_info_list",
     "release_field_info",
@@ -422,7 +446,6 @@ const char *_mcl_core_functions[] = {
     "initialize_source_file_info",
     "release_struct_id",
     "release_syntax_node",
-    "find_struct_info",
     "mcs_parse_parameter_declaration",
     "mcs_parse_expression",
     "mcs_parse_expression_variable_access",
@@ -474,7 +497,6 @@ const char *_mcl_core_functions[] = {
     "remove_ptr_from_collection",
     "initialize_parameter_info_from_syntax_node",
     "attach_struct_info_to_owner",
-    "find_enumeration_info",
     "attach_enumeration_info_to_owner",
     "transcribe_function_to_mc",
     "update_or_register_struct_info_from_syntax",
@@ -916,13 +938,58 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
 
   for (int a = 0; _mcl_source_files[a]; ++a) {
 
-    printf("declaring file:'%s'\n", _mcl_source_files[a]);
     char *file_text;
-    MCcall(_mcl_read_all_file_text(_mcl_source_files[a], &file_text));
-    MCcall(set__csl_c_str(src, file_text));
-    free(file_text);
 
-    MCcall(_mcl_format_core_file(src, a));
+    char cached_file_name[256];
+    {
+      int fni = 0;
+      strcpy(cached_file_name, "bin/cached/");
+      fni += 11;
+      for (int k = 0; k < 256; ++k) {
+        if (_mcl_source_files[a][k] == '/') {
+          cached_file_name[fni++] = '_';
+        }
+        else {
+          cached_file_name[fni++] = _mcl_source_files[a][k];
+          if (_mcl_source_files[a][k] == '\0') {
+            break;
+          }
+        }
+      }
+    }
+
+    // Compare modified times and process new source or use cache
+    bool use_cached_file = false;
+    if (access(cached_file_name, F_OK) != -1) {
+
+      struct stat src_attrib;
+      stat(_mcl_source_files[a], &src_attrib);
+
+      struct stat cch_attrib;
+      stat(cached_file_name, &cch_attrib);
+
+      use_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
+    }
+
+    if (use_cached_file) {
+      MCcall(_mcl_read_all_file_text(cached_file_name, &file_text));
+      MCcall(set__csl_c_str(src, file_text));
+      free(file_text);
+
+      printf("declaring file[cch]:'%s'\n", _mcl_source_files[a]);
+    }
+    else {
+      // Read & process source
+      MCcall(_mcl_read_all_file_text(_mcl_source_files[a], &file_text));
+      MCcall(set__csl_c_str(src, file_text));
+      free(file_text);
+
+      printf("declaring file[src]:'%s'\n", _mcl_source_files[a]);
+      MCcall(_mcl_format_core_file(src, a));
+
+      // Save the processed version to file
+      _mcl_save_text_to_file(cached_file_name, src->text);
+    }
 
     // if (!strcmp(_mcl_source_files[a], "src/midge_common.h")) {
     //   printf("def:\n%s||\n", src->text);
@@ -932,6 +999,8 @@ int _mcl_load_core_temp_source(void *p_core_source_info)
 
     // MCcall(clint_process("printf(\"%p\", &mc_core_v_init_c_str);//{c_str *str; mc_core_v_init_c_str(&str);}"));
   }
+
+  release__csl_c_str(src, true);
 
   return 0;
 }

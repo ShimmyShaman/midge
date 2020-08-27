@@ -273,7 +273,7 @@ typedef struct mc_syntax_node {
         struct {
           bool do_first;
           mc_syntax_node *conditional;
-          mc_syntax_node *code_block;
+          mc_syntax_node *do_statement;
         } while_statement;
         struct {
           mc_syntax_node *conditional;
