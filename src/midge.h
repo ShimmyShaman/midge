@@ -125,19 +125,14 @@ void _midge_run()
     clint->declare("int (*midge_cleanup_app)(int, void **);");
     clint->declare("void _midge_internal_run() {"
                    "  initialize_midge_error_handling(clint);"
-                   "  void *command_hub;"
-                   "  MCcall(mcl_load_app_source(&command_hub));"
+                   "  MCcall(mcl_load_app_source());"
                    "  printf(\"</AppSourceLoading>\\n\\n\");"
                    ""
-                   "  void *mc_vargs[1];"
-                   "  mc_vargs[0] = &command_hub;"
-                   "  MCcall(midge_initialize_app(1, mc_vargs));"
+                   "  MCcall(midge_initialize_app(0, NULL));"
                    ""
-                   "  MCcall(midge_run_app(1, mc_vargs));"
+                   "  MCcall(midge_run_app(0, NULL));"
                    ""
-                   "  MCcall(midge_cleanup_app(1, mc_vargs));"
-                   ""
-                   "  free(command_hub);"
+                   "  MCcall(midge_cleanup_app(0, NULL));"
                    "}");
     clint->process("_midge_internal_run();");
 
