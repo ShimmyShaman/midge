@@ -205,7 +205,7 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
     clint_declare(buf);
     sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
     clint_process(buf);
-    printf("--declared:'%s()'\n", func_info->name);
+    // printf("--declared:'%s()'\n", func_info->name);
 
     // Assign the functions pointer
     sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
@@ -601,8 +601,8 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  if (!strcmp(func_info->name, "mct_transcribe_while_statement")) {
-    print_syntax_node(ast, 0);
+  if (!strcmp(func_info->name, "read_file_text")) {
+    // print_syntax_node(ast, 0);
     printf("mc_transcription:\n%s||\n", mc_transcription);
   }
 
@@ -702,7 +702,7 @@ int instantiate_define_statement(node *definition_owner, mc_syntax_node *ast, pr
     (*info)->replacement = str->text;
     release_c_str(str, false);
 
-    printf("define:\n'%s'\n'%s'\n", (*info)->identifier, (*info)->replacement);
+    // printf("define:\n'%s'\n'%s'\n", (*info)->identifier, (*info)->replacement);
   } break;
   default:
     MCerror(830, "TODO :%i", ast->preprocess_define.statement_type);
@@ -779,9 +779,9 @@ int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *a
 
 int instantiate_all_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file)
 {
-  register_midge_error_tag("instantiate_all_definitions_from_file()");
   char *file_text;
   read_file_text(filepath, &file_text);
+  // printf("here-0\n");
 
   mc_syntax_node *syntax_node;
   parse_file_to_syntax_tree(file_text, &syntax_node);
@@ -832,7 +832,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         struct_info *info;
         instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
         info->source->source_file = lv_source_file;
-        printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
+        // printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
         // sprintf(buf,
         //         "#ifndef %s\n"
         //         // "#undef %s\n"
@@ -847,7 +847,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-0");
         info->source->source_file = lv_source_file;
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-1");
-        printf("--defined: enum '%s'\n", child->type_alias.type_descriptor->enumeration.name->text);
+        // printf("--defined: enum '%s'\n", child->type_alias.type_descriptor->enumeration.name->text);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-2");
         // sprintf(buf,
         //         "#ifndef %s\n"
@@ -870,13 +870,13 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
       struct_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       info->source->source_file = lv_source_file;
-      printf("--declared: struct '%s'\n", child->structure.type_name->text);
+      // printf("--declared: struct '%s'\n", child->structure.type_name->text);
     } break;
     case MC_SYNTAX_ENUM: {
       enumeration_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       info->source->source_file = lv_source_file;
-      printf("--declared: enum '%s'\n", child->enumeration.name->text);
+      // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE: {
       preprocess_define_info *info;

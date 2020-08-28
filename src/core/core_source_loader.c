@@ -1065,9 +1065,9 @@ int _mcl_init_core_data()
 
   sprintf(buf,
           "int mc_core_v_obtain_midge_global_root(mc_core_v_global_root_data **root_data) {\n"
-          "  *root_data = (mc_core_v_global_root_data  *)(%p);\n"
+          "  *root_data = (mc_core_v_global_root_data *)(%p);\n"
           "  return 0;\n"
-          "}",
+          "}\n",
           p_global_root);
   MCcall(clint_declare(buf));
 
@@ -1116,6 +1116,77 @@ int _mcl_load_core_mc_source()
     }
   }
 
+  // obtain_midge_global_root
+  {
+    void *p_global_data;
+    sprintf(buf,
+            "{\n"
+            "  mc_core_v_global_root_data *global_data;\n"
+            "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
+            "  *(void **)%p = (void *)global_data;\n"
+            "}",
+            &p_global_data);
+    MCcall(clint_process(buf));
+
+    char fbuf[148];
+    sprintf(fbuf,
+            "int obtain_midge_global_root(global_root_data **root_data) {\n"
+            "  *root_data = (global_root_data *)(%p);\n"
+            "  return 0;\n"
+            "}\n",
+            p_global_data);
+
+    int result = 0;
+    sprintf(buf,
+            "{\n"
+            "  mc_core_v_global_root_data *global_data;\n"
+            "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
+
+            "  int result = mc_core_v_instantiate_definition(global_data->global_node, (char *)%p,"
+            "                 NULL, NULL, NULL);\n"
+            "  if (result) {\n"
+            "    printf(\"--mc_core_v_instantiate_definition #in - clint_process\\n\");\n"
+            "    *(int *)(%p) = result;\n"
+            "  }\n"
+            "}",
+            fbuf, &result);
+    MCcall(clint_process(buf));
+
+    if (result != 0) {
+      return result;
+    }
+  }
+
+  // // obtain_midge_global_root
+  // {
+  //   char fbuf[148];
+  //   sprintf(fbuf, "extern \"C\" {\n"
+  //                 "  void midge_initialize_app();\n"
+  //                 "  void midge_run_app();\n"
+  //                 "  void midge_cleanup_app();\n"
+  //                 "}\n");
+
+  //   int result = 0;
+  //   sprintf(buf,
+  //           "{\n"
+  //           "  mc_core_v_global_root_data *global_data;\n"
+  //           "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
+
+  //           "  int result = mc_core_v_instantiate_definition(global_data->global_node, (char *)%p,"
+  //           "                 NULL, NULL, NULL);\n"
+  //           "  if (result) {\n"
+  //           "    printf(\"--mc_core_v_instantiate_definition #in - clint_process\\n\");\n"
+  //           "    *(int *)(%p) = result;\n"
+  //           "  }\n"
+  //           "}",
+  //           fbuf, &result);
+  //   MCcall(clint_process(buf));
+
+  //   if (result != 0) {
+  //     return result;
+  //   }
+  // }
+
   return 0;
 }
 
@@ -1127,10 +1198,11 @@ int _mcl_load_app_mc_source()
       NULL,
   };
 
-  char buf[512];
+  char buf[768];
   for (int i = 0; _mcl_core_source_files[i]; ++i) {
     sprintf(buf,
             "{\n"
+            "  printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
             "  mc_core_v_global_root_data *global_data;\n"
             "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
             ""
@@ -1144,7 +1216,6 @@ int _mcl_load_app_mc_source()
             "  int result = instantiate_all_definitions_from_file(3, mc_vargs);\n"
             "  if (result) {\n"
             "    printf(\"--instantiate_all_definitions_from_file #in - clint_process\\n\");\n"
-            "    *(int *)(%p) = result;\n"
             "  }\n"
             "}",
 

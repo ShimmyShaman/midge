@@ -120,21 +120,22 @@ void _midge_run()
     clint->loadFile("/home/jason/midge/src/midge_error_handling.h");
     clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
 
-    clint->declare("int (*midge_initialize_app)(int, void **);");
-    clint->declare("int (*midge_run_app)(int, void **);");
-    clint->declare("int (*midge_cleanup_app)(int, void **);");
+    // clint->declare("extern \"C\" {\n"
+    //                "int (*midge_initialize_app)(int, void **);\n"
+    //                "int (*midge_run_app)(int, void **);\n"
+    //                "int (*midge_cleanup_app)(int, void **);\n"
+    //                "}");
+    clint->process("initialize_midge_error_handling(clint);");
+    clint->process("MCcall(mcl_load_app_source());");
+    clint->process("printf(\"</AppSourceLoading>\\n\\n\");");
     clint->declare("void _midge_internal_run() {"
-                   "  initialize_midge_error_handling(clint);"
-                   "  MCcall(mcl_load_app_source());"
-                   "  printf(\"</AppSourceLoading>\\n\\n\");"
-                   ""
                    "  MCcall(midge_initialize_app(0, NULL));"
                    ""
                    "  MCcall(midge_run_app(0, NULL));"
                    ""
                    "  MCcall(midge_cleanup_app(0, NULL));"
                    "}");
-    clint->process("_midge_internal_run();");
+    clint->process("MCcall(_midge_internal_run());");
 
     // // loadSourceFiles("/home/jason/midge/src/", 0);
     // clint->loadFile("/home/jason/midge/src/midge_common.h");

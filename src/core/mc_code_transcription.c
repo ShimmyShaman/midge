@@ -1831,7 +1831,14 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
     append_to_c_str(ts.str, " ");
     if (function_ast->function.return_type_dereference)
       mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_dereference);
-    append_to_c_str(ts.str, "*mc_return_value;\n");
+
+    append_to_c_str(ts.str, "*mc_return_value = (");
+    mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_identifier);
+    append_to_c_str(ts.str, " ");
+    if (function_ast->function.return_type_dereference)
+      mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_dereference);
+
+    append_to_c_strf(ts.str, "*)mc_argsv[%i];\n", function_ast->function.parameters->count);
   }
 
   // Code Block

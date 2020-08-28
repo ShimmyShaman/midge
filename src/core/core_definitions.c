@@ -2,23 +2,34 @@
 #include "core/core_definitions.h"
 #include <stdio.h>
 
-int read_file_text(char *filepath, char **output)
+int read_file_text(const char *filepath, char **output)
 {
+  // printf("rft-0\n");
+  // printf("rft-0 '%s' '%p'\n", filepath, output);
   // Parse
   FILE *f = fopen(filepath, "rb");
+  // printf("rft-1\n");
   if (f == NULL) {
+    // printf("rft-2\n");
     MCerror(2263, "File '%s' not found!", filepath);
   }
+  // printf("rft-3\n");
   fseek(f, 0, SEEK_END);
+  // printf("rft-4\n");
   long fsize = ftell(f);
   fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+  // printf("rft-5\n");
 
   char *input = (char *)malloc(fsize + 1);
+  // printf("rft-6\n");
   fread(input, sizeof(char), fsize, f);
+  // printf("rft-7\n");
   input[fsize] = '\0';
   fclose(f);
+  // printf("rft-8\n");
 
   *output = input;
+  // printf("rft-9\n");
   return 0;
 }
 

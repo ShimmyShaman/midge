@@ -1607,9 +1607,40 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       int s = *index;
       bool prev_digit = true;
       bool loop = true;
+      bool is_hex = false, is_binary = false;
+      if (code[*index] == '0') {
+        if (code[*index + 1] == 'x') {
+          is_hex = true;
+          ++*index;
+        }
+        else if (code[*index + 1] == 'b') {
+          is_binary = true;
+          ++*index;
+        }
+      }
+
       while (loop) {
         ++*index;
-        if (isdigit(code[*index])) {
+        if (is_binary) {
+          if (code[*index] == '0' || code[*index] == '1')
+            continue;
+        }
+        else if (is_hex) {
+          if (isdigit(code[*index]))
+            continue;
+          switch (code[*index]) {
+          case 'a':
+          case 'b':
+          case 'c':
+          case 'd':
+          case 'e':
+          case 'f':
+            continue;
+          default:
+            break;
+          }
+        }
+        else if (isdigit(code[*index])) {
           prev_digit = true;
           continue;
         }
@@ -1617,7 +1648,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         // Other characters
         switch (code[*index]) {
         case '.': {
-          if (prev_digit) {
+          if (prev_digit && !is_hex && !is_binary) {
             prev_digit = false;
             continue;
           }
@@ -3811,7 +3842,8 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
           escape_token_previous = false;
         }
 
-        // printf("#########\nreplace_count:%i\n######\n", define_directive->preprocess_define.replacement_list->count);
+        // printf("#########\nreplace_count:%i\n######\n",
+        // define_directive->preprocess_define.replacement_list->count);
       }
     }
     // if (token_type == MC_TOKEN_SPACE_SEQUENCE) {
