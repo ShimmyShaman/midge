@@ -424,6 +424,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_field_declarators",
     "mct_transcribe_field_list",
     "mct_transcribe_statement",
+    "determine_type_of_member_access_identifier",
     "determine_type_of_expression",
     "mct_increment_scope_depth",
     "mct_decrement_scope_depth",
@@ -1192,44 +1193,59 @@ int _mcl_load_core_mc_source()
 
 int _mcl_load_app_mc_source()
 {
-  const char *_mcl_core_source_files[] = {
+  register_midge_error_tag("_mcl_load_app_mc_source()");
+  const char *_mcl_app_source_files[] = {
+      "src/core/midge_app.c",
+
+
+
       // And everything here before -------------------------------------------------------------
       "src/core/midge_app.h",
       NULL,
   };
 
-  char buf[768];
-  for (int i = 0; _mcl_core_source_files[i]; ++i) {
+  char buf[1536];
+  for (int i = 0; _mcl_app_source_files[i]; ++i) {
+    printf("instantiate file:(%p) '%s'\n", _mcl_app_source_files[i], _mcl_app_source_files[i]);
+    int result = 0;
     sprintf(buf,
             "{\n"
             "  printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
             "  mc_core_v_global_root_data *global_data;\n"
             "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
             ""
-            "  void *mc_vargs[3];\n"
+            "  void *mc_vargs[4];\n"
             "  mc_vargs[0] = &global_data->global_node;\n"
             "  const char *filepath = \"%s\";\n"
             "  mc_vargs[1] = &filepath;\n"
             "  void * p_null = NULL;\n"
             "  mc_vargs[2] = &p_null;\n"
+            "  int return_value;\n"
+            "  mc_vargs[3] = &return_value;\n"
             ""
-            "  int result = instantiate_all_definitions_from_file(3, mc_vargs);\n"
-            "  if (result) {\n"
-            "    printf(\"--instantiate_all_definitions_from_file #in - clint_process\\n\");\n"
+            "  {\n"
+            "    int midge_error_stack_index;\n"
+            "    register_midge_stack_invocation(\"instantiate_all_definitions_from_file\", \"core_source_loader.c\", "
+            "          1224, &midge_error_stack_index);\n"
+            "    int result = 0;\n"
+            "    result = instantiate_all_definitions_from_file(4, mc_vargs);\n"
+            "    register_midge_stack_return(midge_error_stack_index);\n"
+            ""
+            "    if (result) {\n"
+            "      printf(\"--instantiate_all_definitions_from_file #in - clint_process\\n\");\n"
+            "      *(int *)(%p) = result;\n"
+            "    }\n"
             "  }\n"
             "}",
-
-            // "  mc_core_v_global_root_data *global_data;\n"
-            // "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
-            // // "  char *file_name;\n"
-            // // "  allocate_and_copy_cstr(file_name, \"%s\");\n"
-            // "  MCcall(instantiate_all_definitions_from_file(global_data->global_node, (char *)\"%s\", NULL));\n"
-            // "  free"
-            _mcl_core_source_files[i]);
+            _mcl_app_source_files[i], &result);
     MCcall(clint_process(buf));
+
+    if (result != 0) {
+      return result;
+    }
   }
 
-  return 0;
+  return 1;
 }
 
 int mcl_load_app_source()
@@ -1248,7 +1264,7 @@ int mcl_load_app_source()
   printf("[_mcl_load_app_mc_source]\n");
   MCcall(_mcl_load_app_mc_source());
 
-  printf("[_mcl_load_source:COMPLETE\n");
+  printf("[_mcl_load_source:COMPLETE]\n");
 
   return 0;
 }

@@ -118,9 +118,119 @@ int mct_add_scope_variable(mct_transcription_state *ts, mc_syntax_node *variable
   return 0;
 }
 
+int determine_type_of_member_access_identifier(struct_info *type_struct_info, mc_syntax_node *expression,
+                                               char **type_identity, int *deref_count)
+{
+  switch (expression->type) {
+  case MC_TOKEN_IDENTIFIER: {
+    for (int f = 0; f < type_struct_info->fields->count; ++f) {
+      field_info *ptfield = type_struct_info->fields->items[f];
+      switch (ptfield->field_type) {
+      case FIELD_KIND_STANDARD: {
+        for (int g = 0; g < ptfield->field.declarators->count; ++g) {
+          if (!strcmp(expression->text, ptfield->field.declarators->items[g]->name)) {
+            // Found!
+            allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
+            *deref_count = ptfield->field.declarators->items[g]->deref_count;
+            return 0;
+          }
+        }
+      } break;
+      case FIELD_KIND_FUNCTION_POINTER: {
+        if (!strcmp(expression->text, ptfield->function_pointer.identifier)) {
+          // Found!
+          MCerror(171, "TODO Fptr?");
+
+          // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
+          // *deref_count = ptfield->field.declarators->items[g]->deref_count;
+          // return 0;
+        }
+      } break;
+      case FIELD_KIND_NESTED_STRUCT:
+      case FIELD_KIND_NESTED_UNION: {
+        // Should not be these
+        // TODO
+        // print_syntax_node(expression, 0);
+        // MCerror(168, "TODO");
+      } break;
+      default:
+        MCerror(185, "TODO:%i", ptfield->field_type);
+      }
+    }
+  } break;
+  case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
+
+    mc_syntax_node *primary_expression = expression->member_access_expression.primary;
+    do {
+      switch (primary_expression->type) {
+      case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
+        primary_expression = expression->member_access_expression.primary;
+        continue;
+      }
+      case MC_TOKEN_IDENTIFIER:
+        break;
+      default:
+        MCerror(172, "TODO -- %s", get_mc_syntax_token_type_name(primary_expression->type));
+      }
+    } while ((mc_token_type)primary_expression->type != MC_TOKEN_IDENTIFIER);
+
+    // Search for the first primary director in the parent types fields
+    for (int f = 0; f < type_struct_info->fields->count; ++f) {
+      field_info *ptfield = type_struct_info->fields->items[f];
+      switch (ptfield->field_type) {
+      case FIELD_KIND_STANDARD: {
+        for (int g = 0; g < ptfield->field.declarators->count; ++g) {
+          if (!strcmp(primary_expression->text, ptfield->field.declarators->items[g]->name)) {
+            // Found!
+
+            allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
+            *deref_count = ptfield->field.declarators->items[g]->deref_count;
+            return 0;
+          }
+        }
+      } break;
+      case FIELD_KIND_FUNCTION_POINTER: {
+        if (!strcmp(primary_expression->text, ptfield->function_pointer.identifier)) {
+          // Found!
+          MCerror(171, "TODO Fptr?");
+
+          // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
+          // *deref_count = ptfield->field.declarators->items[g]->deref_count;
+          // return 0;
+        }
+      } break;
+      case FIELD_KIND_NESTED_STRUCT:
+      case FIELD_KIND_NESTED_UNION: {
+        if (ptfield->sub_type.declarators == NULL) {
+          MCerror(205, "Should never be the case, should always be set.");
+        }
+        for (int g = 0; g < ptfield->sub_type.declarators->count; ++g) {
+          if (!strcmp(primary_expression->text, ptfield->sub_type.declarators->items[g]->name)) {
+            MCerror(208, "TODO");
+          }
+        }
+      } break;
+      default:
+        MCerror(185, "TODO:%i", ptfield->field_type);
+      }
+    }
+
+    MCerror(165, "progress...");
+  } break;
+  default:
+    MCerror(151, "TODO %s", get_mc_syntax_token_type_name(expression->member_access_expression.identifier->type));
+  }
+
+  print_syntax_node(expression, 0);
+  MCerror(189, "TODO : shouldn't reach here :parent:%s", type_struct_info->name);
+}
+
 int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *expression, char **type_identity,
                                  int *deref_count)
 {
+  printf("determine_type_of_expression()\n");
+  print_syntax_node(expression, 0);
+
   switch (expression->type) {
   case MC_SYNTAX_OPERATIONAL_EXPRESSION: {
     // Determine the type of the left-hand-side
@@ -131,6 +241,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     int parent_deref_count;
     determine_type_of_expression(ts, expression->member_access_expression.primary, &type_of_parent,
                                  &parent_deref_count);
+    printf("typeofparent-'%s' %i \n", type_of_parent, parent_deref_count);
 
     struct_info *parent_type_info;
     find_struct_info(type_of_parent, &parent_type_info);
@@ -138,43 +249,8 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
       MCerror(137, "uh oh, what do we do now...?");
     }
 
-    char *identifier;
-    copy_syntax_node_to_text(expression->member_access_expression.identifier, &identifier);
-
-    for (int f = 0; f < parent_type_info->fields->count; ++f) {
-      field_info *ptfield = parent_type_info->fields->items[f];
-      switch (ptfield->field_type) {
-      case FIELD_KIND_STANDARD: {
-        for (int g = 0; g < ptfield->field.declarators->count; ++g) {
-          if (!strcmp(identifier, ptfield->field.declarators->items[g]->name)) {
-            // Found!
-            allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-            *deref_count = ptfield->field.declarators->items[g]->deref_count;
-            return 0;
-          }
-        }
-      } break;
-      case FIELD_KIND_FUNCTION_POINTER: {
-        if (!strcmp(identifier, ptfield->function_pointer.identifier)) {
-          // Found!
-          MCerror(160, "TODO Fptr?");
-
-          // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-          // *deref_count = ptfield->field.declarators->items[g]->deref_count;
-          // return 0;
-        }
-      } break;
-      case FIELD_KIND_NESTED_STRUCT: {
-        // TODO
-        // print_syntax_node(expression, 0);
-        // MCerror(168, "TODO");
-      } break;
-      default:
-        MCerror(149, "TODO:%i", ptfield->field_type);
-      }
-    }
-    print_syntax_node(expression, 0);
-    MCerror(159, "TODO : shouldn't reach here :%s", type_of_parent);
+    determine_type_of_member_access_identifier(parent_type_info, expression->member_access_expression.identifier,
+                                               type_identity, deref_count);
   } break;
   case MC_TOKEN_IDENTIFIER: {
     *type_identity = NULL;
@@ -518,9 +594,9 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
           enumeration_info *enum_info;
           enum_member_info *enum_member;
           find_enum_member_info(argument->text, &enum_info, &enum_member);
-          if (!strcmp(argument->text, "MC_SYNTAX_DEREFERENCE_SEQUENCE")) {
-            printf("enum was :%p\n", enum_member);
-          }
+          // if (!strcmp(argument->text, "MC_SYNTAX_DEREFERENCE_SEQUENCE")) {
+          //   printf("enum was :%p\n", enum_member);
+          // }
           if (enum_member) {
             append_to_c_strf(ts->str, "%s mc_vargs_%i = %s;\n", enum_info->mc_declared_name, i, argument->text);
             mct_append_indent_to_c_str(ts);
@@ -582,7 +658,15 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   }
 
   mct_append_indent_to_c_str(ts);
-  append_to_c_strf(ts->str, "%s(%i, mc_vargs);\n", func_info->name, func_info->parameter_count + 1);
+  append_to_c_strf(ts->str, "int mcfc_result = %s(%i, mc_vargs);\n", func_info->name, func_info->parameter_count + 1);
+  mct_append_to_c_str(ts, "if (mcfc_result) {\n");
+  ++ts->indent;
+  mct_append_to_c_str(ts, "printf(\"--");
+  append_to_c_str(ts->str, func_info->name);
+  append_to_c_strf(ts->str, " line :%i ERR:%%i\\n\", mcfc_result);\n", syntax_node->begin.line + 1);
+  mct_append_to_c_str(ts, "return mcfc_result;\n");
+  --ts->indent;
+  mct_append_to_c_str(ts, "}\n");
 
   if (ts->report_invocations_to_error_stack) {
     mct_append_indent_to_c_str(ts);
@@ -708,9 +792,11 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
           declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression;
 
       mct_append_indent_to_c_str(ts);
-      append_to_c_strf(
-          ts->str, "if(%i + %s + 1 >= mc_argsc) { MCerror(%i, \"va_args access exceeded argument count\");}\n",
-          housing_finfo->parameter_count + 1, va_arg_expression->va_arg_expression.list_identity->text, 392);
+      append_to_c_strf(ts->str,
+                       "if(%i + %s + 1 >= mc_argsc) { printf(\"\\n\\nERR[%i]: va_args access exceeded argument "
+                       "count\\n\"); return %i; }\n",
+                       housing_finfo->parameter_count + 1, va_arg_expression->va_arg_expression.list_identity->text,
+                       722, 722);
 
       mct_append_indent_to_c_str(ts);
       mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
@@ -1842,7 +1928,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   }
 
   // Code Block
-  append_to_c_str(ts.str, "  // Function Code\n");
+  append_to_c_str(ts.str, "\n  // Function Code\n");
   ++ts.indent;
   mct_increment_scope_depth(&ts);
 

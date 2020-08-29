@@ -205,7 +205,7 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
     clint_declare(buf);
     sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
     clint_process(buf);
-    // printf("--declared:'%s()'\n", func_info->name);
+    printf("--declared:'%s()'\n", func_info->name);
 
     // Assign the functions pointer
     sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
@@ -601,7 +601,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  if (!strcmp(func_info->name, "read_file_text")) {
+  if (!strcmp(func_info->name, "transcribe_struct_to_mc")) {
     // print_syntax_node(ast, 0);
     printf("mc_transcription:\n%s||\n", mc_transcription);
   }
@@ -781,7 +781,6 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
 {
   char *file_text;
   read_file_text(filepath, &file_text);
-  // printf("here-0\n");
 
   mc_syntax_node *syntax_node;
   parse_file_to_syntax_tree(file_text, &syntax_node);
@@ -816,6 +815,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
       if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
         // Function Declaration only
         update_or_register_function_info_from_syntax(NULL, child, NULL);
+        printf("--fdecl:'%s'\n", child->function.name->text);
       }
       else {
         // Assume to be function definition
@@ -913,6 +913,10 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
     }
   }
 
+  // int *p = 0;
+  // printf("about\n");
+  // printf("%i\n", *p);
+  printf("end\n");
   register_midge_error_tag("instantiate_all_definitions_from_file(~)");
   return 0;
 }

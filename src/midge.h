@@ -91,8 +91,21 @@ int clint_loadfile(const char *path) { return clint->loadFile(path); }
 int clint_loadheader(const char *path) { return clint->loadHeader(path); }
 }
 
+int (*mc_dummy_function)(int, void **);
+int mc_dummy_function_v1(int argsc, void **argsv) { return 0; }
+
 void _midge_run()
 {
+  // Pointer Size Check
+  int sizeof_void_ptr = sizeof(void *);
+  if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) ||
+      sizeof_void_ptr != sizeof(unsigned int *) || sizeof_void_ptr != sizeof(const char *) ||
+      sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(mc_dummy_function) ||
+      sizeof_void_ptr != sizeof(&mc_dummy_function_v1) || sizeof_void_ptr != sizeof(unsigned long)) {
+    printf("pointer sizes aren't equal!!! This is the basis of midge. Exiting.\n");
+    return;
+  }
+
   // TODO -- integrate the ERROR STACK/TAG stuff with the rest of the midge code
   // TODO -- put this right at the start of the main app?
   struct timespec app_begin_time;
@@ -126,16 +139,34 @@ void _midge_run()
     //                "int (*midge_cleanup_app)(int, void **);\n"
     //                "}");
     clint->process("initialize_midge_error_handling(clint);");
-    clint->process("MCcall(mcl_load_app_source());");
+    int mc_res;
+    char buf[512];
+    sprintf(buf, "(*(int *)%p) = mcl_load_app_source();\n", &mc_res);
+    clint->process(buf);
+    if (mc_res) {
+      printf("--_midge_run() |line~ :147 ERR:%i\n", mc_res);
+      return mc_res;
+    }
     clint->process("printf(\"</AppSourceLoading>\\n\\n\");");
-    clint->declare("void _midge_internal_run() {"
-                   "  MCcall(midge_initialize_app(0, NULL));"
-                   ""
-                   "  MCcall(midge_run_app(0, NULL));"
-                   ""
-                   "  MCcall(midge_cleanup_app(0, NULL));"
-                   "}");
-    clint->process("MCcall(_midge_internal_run());");
+
+    sprintf(buf, "int _midge_internal_run() {\n"
+                 "  "
+                 "  MCcall(midge_initialize_app(0, NULL));\n"
+                 ""
+                 "  MCcall(midge_run_app(0, NULL));\n"
+                 ""
+                 "  MCcall(midge_cleanup_app(0, NULL));\n"
+                 ""
+                 "  return 0;\n"
+                 "}\n");
+    clint->declare(buf);
+
+    sprintf(buf, "(*(int *)%p) = _midge_internal_run();\n", &mc_res);
+    clint->process(buf);
+    if (mc_res) {
+      printf("--_midge_run() |line~ :167 ERR:%i\n", mc_res);
+      return mc_res;
+    }
 
     // // loadSourceFiles("/home/jason/midge/src/", 0);
     // clint->loadFile("/home/jason/midge/src/midge_common.h");

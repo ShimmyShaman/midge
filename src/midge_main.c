@@ -2631,42 +2631,42 @@ int mc_main(int argc, const char *const *argv)
   // -- Start Thread
   begin_mthread(midge_render_thread, &render_thread.thread_info, (void *)&render_thread);
 
-  // Instantiate: node global;
-  mc_node_v1 *global = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
-  global->name = "global";
-  global->parent = NULL;
-  global->functions_alloc = 40;
-  global->functions = (mc_function_info_v1 **)calloc(sizeof(mc_function_info_v1 *), global->functions_alloc);
-  global->function_count = 0;
-  global->structs_alloc = 40;
-  global->structs = (mc_struct_info_v1 **)calloc(sizeof(mc_struct_info_v1 *), global->structs_alloc);
-  global->struct_count = 0;
-  global->children_alloc = 40;
-  global->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), global->children_alloc);
-  global->child_count = 0;
-  global->data.global_root.image_resource_uid = 0;
-  global->event_handlers.alloc = 0;
-  global->event_handlers.count = 0;
+  // // Instantiate: node global;
+  // mc_node_v1 *global = (mc_node_v1 *)calloc(sizeof(mc_node_v1), 1);
+  // global->name = "global";
+  // global->parent = NULL;
+  // global->functions_alloc = 40;
+  // global->functions = (mc_function_info_v1 **)calloc(sizeof(mc_function_info_v1 *), global->functions_alloc);
+  // global->function_count = 0;
+  // global->structs_alloc = 40;
+  // global->structs = (mc_struct_info_v1 **)calloc(sizeof(mc_struct_info_v1 *), global->structs_alloc);
+  // global->struct_count = 0;
+  // global->children_alloc = 40;
+  // global->children = (mc_node_v1 **)calloc(sizeof(mc_node_v1 *), global->children_alloc);
+  // global->child_count = 0;
+  // global->data.global_root.image_resource_uid = 0;
+  // global->event_handlers.alloc = 0;
+  // global->event_handlers.count = 0;
 
-  // Execute commands
-  mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)calloc(sizeof(mc_command_hub_v1), 1);
-  command_hub->global_node = global;
-  command_hub->nodespace = global;
-  MCcall(init_command_hub_process_matrix(command_hub));
-  command_hub->focused_workflow = NULL;
-  MCcall(init_void_collection_v1(&command_hub->template_collection));
-  command_hub->source_files.alloc = 0;
-  command_hub->source_files.count = 0;
-  command_hub->renderer.render_queue = &render_thread.render_queue;
-  command_hub->renderer.resource_queue = &render_thread.resource_queue;
-  command_hub->ui_elements = (mc_ui_element_v1 *)malloc(sizeof(mc_ui_element_v1) * 32);
-  command_hub->uid_counter = 2000;
-  command_hub->scripts_alloc = 32;
-  command_hub->scripts = (void **)malloc(sizeof(void *) * command_hub->scripts_alloc);
-  command_hub->scripts_count = 0;
-  command_hub->update_timers.count = command_hub->update_timers.allocated = 0;
-  command_hub->error_definition_index = 100;
-  allocate_and_copy_cstr(command_hub->clipboard_text, "");
+  // // Execute commands
+  // mc_command_hub_v1 *command_hub = (mc_command_hub_v1 *)calloc(sizeof(mc_command_hub_v1), 1);
+  // command_hub->global_node = global;
+  // command_hub->nodespace = global;
+  // MCcall(init_command_hub_process_matrix(command_hub));
+  // command_hub->focused_workflow = NULL;
+  // MCcall(init_void_collection_v1(&command_hub->template_collection));
+  // command_hub->source_files.alloc = 0;
+  // command_hub->source_files.count = 0;
+  // command_hub->renderer.render_queue = &render_thread.render_queue;
+  // command_hub->renderer.resource_queue = &render_thread.resource_queue;
+  // command_hub->ui_elements = (mc_ui_element_v1 *)malloc(sizeof(mc_ui_element_v1) * 32);
+  // command_hub->uid_counter = 2000;
+  // command_hub->scripts_alloc = 32;
+  // command_hub->scripts = (void **)malloc(sizeof(void *) * command_hub->scripts_alloc);
+  // command_hub->scripts_count = 0;
+  // command_hub->update_timers.count = command_hub->update_timers.allocated = 0;
+  // command_hub->error_definition_index = 100;
+  // allocate_and_copy_cstr(command_hub->clipboard_text, "");
 
   // declare_and_allocate_anon_struct(template_collection_v1, template_collection, sizeof_template_collection_v1);
   // template_collection->templates_alloc = 400;

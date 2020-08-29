@@ -4011,6 +4011,7 @@ int mcs_parse_field_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
     field_decl->field.type = FIELD_KIND_FUNCTION_POINTER;
 
     field_decl->field.function_pointer = type_identity;
+    field_decl->field.declarators = NULL;
   }
   else {
     field_decl->field.type = FIELD_KIND_STANDARD;
