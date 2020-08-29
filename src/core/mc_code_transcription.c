@@ -118,136 +118,184 @@ int mct_add_scope_variable(mct_transcription_state *ts, mc_syntax_node *variable
   return 0;
 }
 
-// int find_field_with_named_declarator_in_field_list(field_info_list *fields, const char *declarator_name, field_info
-// **result) {}
+int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields, mc_syntax_node *expression,
+                                            char **type_identity, int *deref_count)
+{
+  *type_identity = NULL;
+  *deref_count = 0;
 
-// int _determine_type_of_member_access_identifier_within_type(field_info_list *type_fields,
-//                                                             mc_syntax_node *member_access_expression,
-//                                                             mc_syntax_node *nested_primary_expression,
-//                                                             char **type_identity, int *deref_count)
-// {
-//   *type_identity = NULL;
-//   *deref_count = 0;
+  printf("_determine_type_of_expression_subsearch()\n");
+  print_syntax_node(expression, 0);
+  // DEBUG
+  printf("parent fields: (count=%i)\n", parent_type_fields->count);
+  for (int i = 0; i < parent_type_fields->count; ++i) {
+    switch (parent_type_fields->items[i]->field_type) {
+    case FIELD_KIND_STANDARD: {
+      printf("%s ", parent_type_fields->items[i]->field.type_name);
+      for (int j = 0; j < parent_type_fields->items[i]->field.declarators->count; ++j) {
+        if (j > 0)
+          printf(", ");
+        printf("%s", parent_type_fields->items[i]->field.declarators->items[j]->name);
+      }
+      printf(";\n");
+    } break;
+    default:
+      printf("-anotherfield type:%i\n", parent_type_fields->items[i]->field_type);
+      break;
+    }
+  }
+  // DEBUG
 
-//   switch (expression->type) {
-//   case MC_TOKEN_IDENTIFIER: {
-//     for (int f = 0; f < type_fields->count; ++f) {
-//       field_info *ptfield = type_fields->items[f];
-//       switch (ptfield->field_type) {
-//       case FIELD_KIND_STANDARD: {
-//         for (int g = 0; g < ptfield->field.declarators->count; ++g) {
-//           if (!strcmp(expression->text, ptfield->field.declarators->items[g]->name)) {
-//             // Found!
-//             allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-//             *deref_count = ptfield->field.declarators->items[g]->deref_count;
-//             return 0;
-//           }
-//         }
-//       } break;
-//       case FIELD_KIND_FUNCTION_POINTER: {
-//         if (!strcmp(expression->text, ptfield->function_pointer.identifier)) {
-//           // Found!
-//           MCerror(171, "TODO Fptr?");
+  switch (expression->type) {
+  case MC_TOKEN_IDENTIFIER: {
+    for (int f = 0; f < parent_type_fields->count; ++f) {
+      field_info *ptfield = parent_type_fields->items[f];
+      char *identifier_name = expression->text;
 
-//           // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-//           // *deref_count = ptfield->field.declarators->items[g]->deref_count;
-//           // return 0;
-//         }
-//       } break;
-//       case FIELD_KIND_NESTED_STRUCT:
-//       case FIELD_KIND_NESTED_UNION: {
-//         // Should not be these
-//         // TODO
-//         // print_syntax_node(expression, 0);
-//         // MCerror(168, "TODO");
-//       } break;
-//       default:
-//         MCerror(185, "TODO:%i", ptfield->field_type);
-//       }
-//     }
-//   } break;
-//   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
-//     mc_syntax_node *primary_expression = expression->member_access_expression.primary;
-//     do {
-//       switch (primary_expression->type) {
-//       case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
-//         primary_expression = expression->member_access_expression.primary;
-//         continue;
-//       }
-//       case MC_TOKEN_IDENTIFIER:
-//         break;
-//       default:
-//         MCerror(172, "TODO -- %s", get_mc_syntax_token_type_name(primary_expression->type));
-//       }
-//     } while ((mc_token_type)primary_expression->type != MC_TOKEN_IDENTIFIER);
+      switch (ptfield->field_type) {
+      case FIELD_KIND_STANDARD: {
+        for (int g = 0; g < ptfield->field.declarators->count; ++g) {
+          if (!strcmp(identifier_name, ptfield->field.declarators->items[g]->name)) {
+            // Found!
+            allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
+            *deref_count = ptfield->field.declarators->items[g]->deref_count;
+            return 0;
+          }
+        }
+      } break;
+      case FIELD_KIND_FUNCTION_POINTER: {
+        if (!strcmp(expression->text, ptfield->function_pointer.identifier)) {
+          // Found!
+          MCerror(317, "TODO Fptr?");
 
-//     // Search for the first primary director in the parent types fields
-//     // field_info *field;
-//     // find_field_with_named_declarator_in_field_list(type_fields, primary_expression->text, &field);
-//     for (int f = 0; f < type_fields->count; ++f) {
-//       field_info *ptfield = type_fields->items[f];
-//       switch (ptfield->field_type) {
-//       case FIELD_KIND_STANDARD: {
-//         for (int g = 0; g < ptfield->field.declarators->count; ++g) {
-//           if (!strcmp(primary_expression->text, ptfield->field.declarators->items[g]->name)) {
-//             // Found!
+          // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
+          // *deref_count = ptfield->field.declarators->items[g]->deref_count;
+          // return 0;
+        }
+      } break;
+      case FIELD_KIND_NESTED_STRUCT:
+      case FIELD_KIND_NESTED_UNION: {
+        // Should not be these
+        // TODO
+        // print_syntax_node(expression, 0);
+        // MCerror(168, "TODO");
+      } break;
+      default:
+        MCerror(332, "TODO:%i", ptfield->field_type);
+      }
+    }
 
-//             allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-//             *deref_count = ptfield->field.declarators->items[g]->deref_count;
-//             return 0;
-//           }
-//         }
-//       } break;
-//       case FIELD_KIND_FUNCTION_POINTER: {
-//         if (!strcmp(primary_expression->text, ptfield->function_pointer.identifier)) {
-//           // Found!
-//           MCerror(171, "TODO Fptr?");
+    // Could not Find it!
+    MCerror(337, "Could not find identifier in parent container. should be there or identifier is wrong");
+  } break;
+  case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
+    mc_syntax_node *ma_primary = expression->member_access_expression.primary;
+    if ((mc_token_type)ma_primary->type != MC_TOKEN_IDENTIFIER) {
+      MCerror(341, "TODO");
+    }
 
-//           // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-//           // *deref_count = ptfield->field.declarators->items[g]->deref_count;
-//           // return 0;
-//         }
-//       } break;
-//       case FIELD_KIND_NESTED_STRUCT:
-//       case FIELD_KIND_NESTED_UNION: {
-//         if (ptfield->sub_type.is_anonymous) {
-//           // Search all subfields as if they were fields
-//           field_info *field;
-//           _determine_type_of_member_access_with_nested_primary(primary_expression->text, expression,
-//                                                                ptfield->sub_type.fields, &field);
-//         }
-//         else {
-//           if (ptfield->sub_type.declarators == NULL) {
-//             MCerror(205, "Should never be the case, should always be set.");
-//           }
-//           for (int g = 0; g < ptfield->sub_type.declarators->count; ++g) {
-//             if (!strcmp(primary_expression->text, ptfield->sub_type.declarators->items[g]->name)) {
-//               if (primary_expression->parent == expression) {
-//                 // Find and return the identifier
-//                 MCerror(211, "TODO");
-//               }
-//               else {
-//                 // Search deeper
-//                 MCerror(215, "TODO");
-//               }
-//             }
-//           }
-//         }
-//       } break;
-//       default:
-//         MCerror(185, "TODO:%i", ptfield->field_type);
-//       }
-//     }
+    // Find the primary 'type'
+    for (int f = 0; f < parent_type_fields->count; ++f) {
+      field_info *ptfield = parent_type_fields->items[f];
+      char *primary_name = ma_primary->text;
 
-//     MCerror(165, "progress...");
-//   } break;
-//   default:
-//     MCerror(151, "TODO %s", get_mc_syntax_token_type_name(expression->member_access_expression.identifier->type));
-//   }
+      switch (ptfield->field_type) {
+      case FIELD_KIND_STANDARD: {
+        for (int g = 0; g < ptfield->field.declarators->count; ++g) {
+          if (!strcmp(primary_name, ptfield->field.declarators->items[g]->name)) {
+            // Found!
+            switch (expression->member_access_expression.identifier->type) {
+            case MC_TOKEN_IDENTIFIER: {
+              // This is the type
+              struct_info *primary_type_info;
+              find_struct_info(ptfield->field.type_name, &primary_type_info);
+              if (ptfield->field.declarators->items[g]->deref_count == 1 &&
+                  expression->member_access_expression.access_operator->type != MC_TOKEN_POINTER_OPERATOR) {
+                MCerror(214, "TODO");
+              }
+              else if (ptfield->field.declarators->items[g]->deref_count == 0 &&
+                       expression->member_access_expression.access_operator->type != MC_TOKEN_DECIMAL_POINT) {
+                MCerror(218, "TODO");
+              }
+              else if (ptfield->field.declarators->items[g]->deref_count > 1) {
+                MCerror(221, "TODO");
+              }
+              if (!primary_type_info) {
+                MCerror(224, "uh oh, what do we do now...? %s", ptfield->field.type_name);
+              }
 
-//   print_syntax_node(expression, 0);
-//   MCerror(189, "TODO : shouldn't reach here :parent:%s", type_struct_info->name);
-// }
+              _determine_type_of_expression_subsearch(primary_type_info->fields,
+                                                      expression->member_access_expression.identifier, type_identity,
+                                                      deref_count);
+              if (!type_identity) {
+                MCerror(230, "TODO");
+              }
+              return 0;
+            }
+            default:
+              MCerror(214, "TODO - Unsupported:%s",
+                      get_mc_syntax_token_type_name(expression->member_access_expression.identifier->type));
+            }
+            return 0;
+          }
+        }
+      } break;
+      case FIELD_KIND_FUNCTION_POINTER: {
+        if (!strcmp(primary_name, ptfield->function_pointer.identifier)) {
+          // Found!
+          MCerror(363, "TODO Fptr?");
+
+          // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
+          // *deref_count = ptfield->field.declarators->items[g]->deref_count;
+          // return 0;
+        }
+      } break;
+      case FIELD_KIND_NESTED_STRUCT:
+      case FIELD_KIND_NESTED_UNION: {
+        if (ptfield->sub_type.is_anonymous) {
+          // Search within the sub-types fields as if they were the parent types
+          _determine_type_of_expression_subsearch(ptfield->sub_type.fields, expression, type_identity, deref_count);
+          if (type_identity) {
+            return 0;
+          }
+        }
+        if (!ptfield->sub_type.declarators || !ptfield->sub_type.declarators->count) {
+          MCerror(232, "Mislabled subtype");
+        }
+
+        // Search declarators to pin as the sub-type
+        bool found = false;
+        for (int g = 0; g < ptfield->sub_type.declarators->count; ++g) {
+          if (!strcmp(primary_name, ptfield->sub_type.declarators->items[g]->name)) {
+            found = true;
+            break;
+          }
+        }
+
+        if (!found)
+          break;
+
+        // Search for the identifier type within this one
+        _determine_type_of_expression_subsearch(
+            ptfield->sub_type.fields, expression->member_access_expression.identifier, type_identity, deref_count);
+        if (!type_identity) {
+          MCerror(222, "TODO?");
+        }
+        return 0;
+      } break;
+      default:
+        MCerror(378, "TODO:%i", ptfield->field_type);
+      }
+    }
+
+  } break;
+  default:
+    MCerror(343, "TODO %s", get_mc_syntax_token_type_name(expression->type));
+  }
+
+  print_syntax_node(expression, 0);
+  MCerror(189, "TODO : shouldn't reach here %s", *type_identity);
+}
 
 int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *expression, char **type_identity,
                                  int *deref_count)
@@ -261,9 +309,6 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     determine_type_of_expression(ts, expression->operational_expression.left, type_identity, deref_count);
   } break;
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
-    printf("determine_type_of_expression(MC_SYNTAX_MEMBER_ACCESS_EXPRESSION)\n");
-    print_syntax_node(expression, 0);
-
     char *type_of_parent;
     int parent_deref_count;
     determine_type_of_expression(ts, expression->member_access_expression.primary, &type_of_parent,
@@ -271,7 +316,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     if (!type_of_parent) {
       MCerror(272, "WhatDo?");
     }
-    printf("typeofparent-'%s' %i \n", type_of_parent, parent_deref_count);
+    // printf("typeofparent-'%s' %i \n", type_of_parent, parent_deref_count);
 
     if (parent_deref_count == 1 &&
         expression->member_access_expression.access_operator->type != MC_TOKEN_POINTER_OPERATOR) {
@@ -292,144 +337,10 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
       MCerror(292, "uh oh, what do we do now...?");
     }
 
-    field_info_list *container_fields = parent_type_info->fields;
-    switch (expression->member_access_expression.identifier->type) {
-    case MC_TOKEN_IDENTIFIER: {
-      for (int f = 0; f < container_fields->count; ++f) {
-        field_info *ptfield = container_fields->items[f];
-        char *identifier_name = expression->member_access_expression.identifier->text;
-
-        switch (ptfield->field_type) {
-        case FIELD_KIND_STANDARD: {
-          for (int g = 0; g < ptfield->field.declarators->count; ++g) {
-            if (!strcmp(identifier_name, ptfield->field.declarators->items[g]->name)) {
-              // Found!
-              allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-              *deref_count = ptfield->field.declarators->items[g]->deref_count;
-              return 0;
-            }
-          }
-        } break;
-        case FIELD_KIND_FUNCTION_POINTER: {
-          if (!strcmp(expression->text, ptfield->function_pointer.identifier)) {
-            // Found!
-            MCerror(317, "TODO Fptr?");
-
-            // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-            // *deref_count = ptfield->field.declarators->items[g]->deref_count;
-            // return 0;
-          }
-        } break;
-        case FIELD_KIND_NESTED_STRUCT:
-        case FIELD_KIND_NESTED_UNION: {
-          // Should not be these
-          // TODO
-          // print_syntax_node(expression, 0);
-          // MCerror(168, "TODO");
-        } break;
-        default:
-          MCerror(332, "TODO:%i", ptfield->field_type);
-        }
-      }
-
-      // Could not Find it!
-      MCerror(337, "Could not find identifier in parent container. should be there or identifier is wrong");
-    } break;
-    case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
-      mc_syntax_node *ma_primary = expression->member_access_expression.identifier->member_access_expression.primary;
-      if (ma_primary->type != MC_TOKEN_IDENTIFIER) {
-        MCerror(341, "TODO");
-      }
-
-      // Find the primary 'type'
-      for (int f = 0; f < container_fields->count; ++f) {
-        field_info *ptfield = container_fields->items[f];
-        char *primary_name = ma_primary->text;
-
-        switch (ptfield->field_type) {
-        case FIELD_KIND_STANDARD: {
-          for (int g = 0; g < ptfield->field.declarators->count; ++g) {
-            if (!strcmp(primary_name, ptfield->field.declarators->items[g]->name)) {
-              // Found!
-              MCerror(354, "TODO");
-
-              // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-              // *deref_count = ptfield->field.declarators->items[g]->deref_count;
-              return 0;
-            }
-          }
-        } break;
-        case FIELD_KIND_FUNCTION_POINTER: {
-          if (!strcmp(primary_name, ptfield->function_pointer.identifier)) {
-            // Found!
-            MCerror(363, "TODO Fptr?");
-
-            // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-            // *deref_count = ptfield->field.declarators->items[g]->deref_count;
-            // return 0;
-          }
-        } break;
-        case FIELD_KIND_NESTED_STRUCT:
-        case FIELD_KIND_NESTED_UNION: {
-          if (ptfield->sub_type.is_anonymous) {
-            MCerror(375, "TODO");
-          }
-          else {
-            bool found = false;
-            for (int g = 0; g < ptfield->sub_type.declarators->count; ++g) {
-              if (!strcmp(primary_name, ptfield->sub_type.declarators->items[g]->name)) {
-                found = true;
-                break;
-              }
-            }
-            // Search for the identifier type within this one
-            if ((mc_token_type)expression->member_access_expression.identifier->member_access_expression.identifier
-                    ->type != MC_TOKEN_IDENTIFIER) {
-              MCerror(382, "TODO");
-            }
-            char *identifier_name =
-                expression->member_access_expression.identifier->member_access_expression.identifier->text;
-
-            for (int g = 0; g < ptfield->sub_type.fields->count; ++g) {
-              field_info *sfield = ptfield->sub_type.fields->items[g];
-
-              switch (sfield->field_type) {
-              case FIELD_KIND_STANDARD: {
-                for (int h = 0; h < sfield->field.declarators->count; ++h) {
-                  if (!strcmp(identifier_name, sfield->field.declarators->items[h]->name)) {
-                    // Found!
-                    allocate_and_copy_cstr(*type_identity, sfield->field.type_name);
-                    *deref_count = sfield->field.declarators->items[h]->deref_count;
-                    return 0;
-                  }
-                }
-                MCerror(406, "TODO: field should have been found");
-              } break;
-              default:
-                MCerror(398, "TODO:%i", sfield->field_type);
-                break;
-              }
-            }
-          }
-        } break;
-        default:
-          MCerror(378, "TODO:%i", ptfield->field_type);
-        }
-      }
-
-    } break;
-    default:
-      MCerror(343, "TODO %s", get_mc_syntax_token_type_name(expression->member_access_expression.identifier->type));
-    }
-
-    // _determine_type_of_member_access_identifier_within_type(parent_type_info->fields, expression, NULL,
-    // type_identity,
-    //                                                         deref_count);
+    _determine_type_of_expression_subsearch(parent_type_info->fields, expression->member_access_expression.identifier,
+                                            type_identity, deref_count);
   } break;
   case MC_TOKEN_IDENTIFIER: {
-    *type_identity = NULL;
-    *deref_count = 0;
-
     for (int d = ts->scope_index; d >= 0; --d) {
       // printf("scope:%i c-:%i\n", d, ts->scope[d].variable_count);
       for (int b = 0; b < ts->scope[d].variable_count; ++b) {
@@ -536,6 +447,9 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   register_midge_error_tag("mct_transcribe_mc_invocation()");
 
   // print_syntax_node(syntax_node, 0);
+  // DEBUG
+  int was_index = ts->str->len;
+  // DEBUG
 
   if (syntax_node->type != MC_SYNTAX_INVOCATION) {
     MCerror(70, "TODO %s", get_mc_syntax_token_type_name(syntax_node->type));
@@ -558,7 +472,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   mct_append_to_c_str(ts, "{\n");
   ++ts->indent;
   mct_append_to_c_str(ts, "void *mc_vargs[");
-  append_to_c_strf(ts->str, "%i];\n", func_info->parameter_count + 1);
+  append_to_c_strf(ts->str, "%i];\n", syntax_node->invocation.arguments->count + 1);
 
   register_midge_error_tag("mct_transcribe_mc_invocation-parameters");
   if (func_info->parameter_count != syntax_node->invocation.arguments->count) {
@@ -572,7 +486,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
     }
   }
 
-  for (int i = 0; i < func_info->parameter_count; ++i) {
+  for (int i = 0; i < syntax_node->invocation.arguments->count; ++i) {
     // printf("mtmi-3\n");
     mct_append_indent_to_c_str(ts);
     mc_syntax_node *argument = syntax_node->invocation.arguments->items[i];
@@ -752,17 +666,17 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
       } break;
       case MC_TOKEN_IDENTIFIER: {
         if (!strcmp(argument->text, "NULL")) {
-          append_to_c_strf(ts->str, "void *mc_vargs_%i = NULL;\n", i, argument->text);
+          append_to_c_strf(ts->str, "void *mc_vargs_%i = NULL;\n", i);
           mct_append_indent_to_c_str(ts);
           append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
         }
         else if (!strcmp(argument->text, "false")) {
-          append_to_c_strf(ts->str, "unsigned char mc_vargs_%i = false;\n", i, argument->text);
+          append_to_c_strf(ts->str, "unsigned char mc_vargs_%i = false;\n", i);
           mct_append_indent_to_c_str(ts);
           append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
         }
         else if (!strcmp(argument->text, "true")) {
-          append_to_c_strf(ts->str, "unsigned char mc_vargs_%i = true;\n", i, argument->text);
+          append_to_c_strf(ts->str, "unsigned char mc_vargs_%i = true;\n", i);
           mct_append_indent_to_c_str(ts);
           append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
         }
@@ -812,14 +726,14 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
       }
 
       mct_append_to_c_str(ts, "mc_vargs[");
-      append_to_c_strf(ts->str, "%i] = &mc_vargs_dummy_rv;\n", func_info->parameter_count);
+      append_to_c_strf(ts->str, "%i] = &mc_vargs_dummy_rv;\n", syntax_node->invocation.arguments->count);
     }
     else {
       mct_append_to_c_str(ts, "mc_vargs[");
 
       // char *name;
       // copy_syntax_node_to_text(return_variable_name, &name);
-      append_to_c_strf(ts->str, "%i] = &%s;\n", func_info->parameter_count, return_variable_name);
+      append_to_c_strf(ts->str, "%i] = &%s;\n", syntax_node->invocation.arguments->count, return_variable_name);
       // free(name);
     }
   }
@@ -835,7 +749,8 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   }
 
   mct_append_indent_to_c_str(ts);
-  append_to_c_strf(ts->str, "int mcfc_result = %s(%i, mc_vargs);\n", func_info->name, func_info->parameter_count + 1);
+  append_to_c_strf(ts->str, "int mcfc_result = %s(%i, mc_vargs);\n", func_info->name,
+                   syntax_node->invocation.arguments->count + 1);
   mct_append_to_c_str(ts, "if (mcfc_result) {\n");
   ++ts->indent;
   mct_append_to_c_str(ts, "printf(\"--");
@@ -854,6 +769,10 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   }
   --ts->indent;
   mct_append_to_c_str(ts, "}\n");
+
+  // if (!strcmp(func_info->name, "append_to_c_strf")) {
+  //   printf("appendcstf-call:\n%s||\n", ts->str->text + was_index);
+  // }
 
   register_midge_error_tag("mct_transcribe_mc_invocation(~)");
   return 0;
@@ -971,10 +890,10 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       mct_append_indent_to_c_str(ts);
       append_to_c_strf(
           ts->str,
-          "if(%i + %s + 1 > mc_argsc) { printf(\"\\n\\nERR[%i]: va_args access exceeded argument "
+          "if(%i + 1 + (%s + 1) > mc_argsc) { printf(\"\\n\\nERR[%i]: va_args access exceeded argument "
           "count\\n       mc_argsc=%%i  params+return-count:%%i  va_list:%%i\\n\", mc_argsc, %i, %s); return %i; }\n",
-          housing_finfo->parameter_count + 1, va_arg_expression->va_arg_expression.list_identity->text, 722,
-          housing_finfo->parameter_count + 1, va_arg_expression->va_arg_expression.list_identity->text, 722);
+          housing_finfo->parameter_count - 1, va_arg_expression->va_arg_expression.list_identity->text, 722,
+          housing_finfo->parameter_count - 1, va_arg_expression->va_arg_expression.list_identity->text, 722);
 
       mct_append_indent_to_c_str(ts);
       mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
@@ -994,7 +913,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
           append_to_c_str(ts->str, "*");
         }
       }
-      append_to_c_strf(ts->str, "*)mc_argsv[%i + ++%s];\n", housing_finfo->parameter_count + 1,
+      append_to_c_strf(ts->str, "*)mc_argsv[%i + ++%s];\n", housing_finfo->parameter_count - 1,
                        va_arg_expression->va_arg_expression.list_identity->text);
 
       return 0;
@@ -1787,8 +1706,11 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
 
         mct_append_node_text_to_c_str(ts->str,
                                       syntax_node->expression_statement.expression->invocation.function_identity);
-        append_to_c_strf(ts->str, "\", \"%s\", %i, &midge_error_stack_index);\n", "unknown-file",
-                         syntax_node->expression_statement.expression->begin.line);
+        // append_to_c_strf(ts->str, "\", \"%s\", %i, &midge_error_stack_index);\n", "unknown-file",
+        //                  syntax_node->expression_statement.expression->begin.line);
+        append_to_c_str(ts->str, "\", \"unknown-file\", ");
+        append_to_c_strf(ts->str, "%i", syntax_node->expression_statement.expression->begin.line);
+        append_to_c_str(ts->str, ", &midge_error_stack_index);\n");
       }
     }
 
@@ -2033,9 +1955,20 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   ts.scope_index = 0;
   ts.scope[ts.scope_index].variable_count = 0;
 
+  printf("%s - %u\n", function_ast->function.name->text, func_info->latest_iteration);
   // Header
-  append_to_c_strf(ts.str, "int %s_mc_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
-                   func_info->latest_iteration);
+  if (!strcmp(function_ast->function.name->text, "midge_initialize_app")) {
+    append_to_c_str(ts.str, "int ");
+    append_to_c_strf(ts.str, "%s", function_ast->function.name->text);
+    append_to_c_str(ts.str, "_mc_v");
+    append_to_c_strf(ts.str, "%u", func_info->latest_iteration);
+    append_to_c_str(ts.str, "(int mc_argsc, void **mc_argsv) {\n");
+    printf("hit-bounty!\n");
+  }
+  else {
+    append_to_c_strf(ts.str, "int %s_mc_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
+                     func_info->latest_iteration);
+  }
   mct_increment_scope_depth(&ts);
   ++ts.indent;
 
@@ -2102,7 +2035,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
     if (function_ast->function.return_type_dereference)
       mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_dereference);
 
-    append_to_c_strf(ts.str, "*)mc_argsv[%i];\n", function_ast->function.parameters->count);
+    append_to_c_str(ts.str, "*)mc_argsv[mc_argsc - 1];\n");
   }
 
   // Code Block
@@ -2168,8 +2101,9 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
     mct_transcribe_field_list(&ts, structure_ast->structure.fields);
 
     --ts.indent;
-    append_to_c_strf(ts.str, "}", structure_ast->structure.type_name->text,
-                     structure_info->latest_iteration); // TODO -- types not structs
+    append_to_c_str(ts.str, "}");
+    // append_to_c_strf(ts.str, "}", structure_ast->structure.type_name->text,
+    //                  structure_info->latest_iteration); // TODO -- types not structs
   }
   append_to_c_str(ts.str, ";");
 

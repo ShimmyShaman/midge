@@ -180,7 +180,7 @@ int append_to_c_strn(c_str *cstr, const char *text, int n)
 
 int append_to_c_strf(c_str *cstr, const char *format, ...)
 {
-  register_midge_error_tag("append_to_c_strf()");
+  // register_midge_error_tag("append_to_c_strf()");
   // printf("atcs-0\n");
   int chunk_size = 4;
   int i = 0;
@@ -236,9 +236,18 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
           case 'i': {
             int value = va_arg(valist, int);
 
+            // printf("atcs-5b value:'%i'\n", value);
+
             char buf[18];
             sprintf(buf, "%i", value);
+
+            if (!strncmp(cstr->text, "int midge_initial", 17)) {
+              printf("atcs-5c cstr:'%s' :%i\n", cstr->text, cstr->len);
+            }
+            // printf("atcs-5d buf:'%s'\n", buf);
+            // printf("atcs-5e\n");
             append_to_c_str(cstr, buf);
+            // printf("atcs-5f\n");
           } break;
           // case 'l': {
           //   switch (format[i + 1]) {
@@ -264,7 +273,8 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
           case 's': {
             char *value = va_arg(valist, char *);
             // printf("atcs-7a cstrtext:'%s' len:%u end:'%c'\n", cstr->text, cstr->len, cstr->text[cstr->len]);
-            // printf("atcs-7a value:'%s'\n", value);
+            // printf("atcs-7b value:'%p'\n", value);
+            // printf("atcs-7c value:'%s'\n", value);
             // cstr->text[i] = '\0';
             // --cstr->len;
             append_to_c_str(cstr, value);

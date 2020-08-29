@@ -424,7 +424,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_field_declarators",
     "mct_transcribe_field_list",
     "mct_transcribe_statement",
-    "determine_type_of_member_access_identifier",
+    "_determine_type_of_expression_subsearch",
     "determine_type_of_expression",
     "mct_increment_scope_depth",
     "mct_decrement_scope_depth",
