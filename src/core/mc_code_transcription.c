@@ -233,11 +233,11 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
                 MCerror(224, "uh oh, what do we do now...? %s", ptfield->field.type_name);
               }
 
-              mct_expression_type_info expression_info;
-              _determine_type_of_expression_subsearch(
-                  primary_type_info->fields, expression->member_access_expression.identifier, &expression_info);
+              _determine_type_of_expression_subsearch(primary_type_info->fields,
+                                                      expression->member_access_expression.identifier, result);
 
               if (!result->type_name) {
+                print_syntax_node(expression, 0);
                 MCerror(230, "TODO");
               }
               return 0;
@@ -253,7 +253,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
       case FIELD_KIND_FUNCTION_POINTER: {
         if (!strcmp(primary_name, ptfield->function_pointer.identifier)) {
           // Found!
-          MCerror(363, "TODO Fptr?");
+          MCerror(256, "TODO Fptr?");
 
           // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
           // *deref_count = ptfield->field.declarators->items[g]->deref_count;
@@ -305,6 +305,30 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
 
   print_syntax_node(expression, 0);
   MCerror(189, "TODO : shouldn't reach here %s", result->type_name);
+}
+
+int get_keyword_const_text_name(mc_token_type keyword_type, const char **p_text)
+{
+  switch (keyword_type) {
+  case MC_TOKEN_CHAR_KEYWORD: {
+    const char *CHAR_KEYWORD_NAME = "char";
+    *p_text = (char *)CHAR_KEYWORD_NAME;
+  } break;
+  case MC_TOKEN_INT_KEYWORD: {
+    const char *INT_KEYWORD_NAME = "int";
+    *p_text = (char *)INT_KEYWORD_NAME;
+  } break;
+  case MC_TOKEN_VOID_KEYWORD: {
+    const char *VOID_KEYWORD_NAME = "void";
+    *p_text = (char *)VOID_KEYWORD_NAME;
+  } break;
+  default: {
+    // print_syntax_node(keyword_type, 0);
+    MCerror(363, "TODO? %s", get_mc_token_type_name(keyword_type));
+  } break;
+  }
+
+  return 0;
 }
 
 int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *expression,
@@ -360,11 +384,15 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
             result->is_array = false;
 
             // char *type_identity;
-            if ((mc_token_type)param_decl->parameter.type_identifier->type_identifier.identifier->type !=
+            if ((mc_token_type)param_decl->parameter.type_identifier->type_identifier.identifier->type ==
                 MC_TOKEN_IDENTIFIER) {
-              MCerror(363, "TODO?");
+              result->type_name = param_decl->parameter.type_identifier->type_identifier.identifier->text;
             }
-            result->type_name = param_decl->parameter.type_identifier->type_identifier.identifier->text;
+            else {
+              get_keyword_const_text_name(
+                  (mc_token_type)param_decl->parameter.type_identifier->type_identifier.identifier->type,
+                  (const char **)&result->type_name);
+            }
 
             if (param_decl->parameter.type_dereference) {
               result->deref_count = param_decl->parameter.type_dereference->dereference_sequence.count;
@@ -387,12 +415,15 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
                                     MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER);
 
             if ((mc_token_type)declaration->local_variable_declaration.type_identifier->type_identifier.identifier
-                    ->type != MC_TOKEN_IDENTIFIER) {
-              print_syntax_node(declaration->local_variable_declaration.type_identifier->type_identifier.identifier, 0);
-              MCerror(392, "TODO?");
+                    ->type == MC_TOKEN_IDENTIFIER) {
+              result->type_name =
+                  declaration->local_variable_declaration.type_identifier->type_identifier.identifier->text;
             }
-            result->type_name =
-                declaration->local_variable_declaration.type_identifier->type_identifier.identifier->text;
+            else {
+              get_keyword_const_text_name((mc_token_type)declaration->local_variable_declaration.type_identifier
+                                              ->type_identifier.identifier->type,
+                                          (const char **)&result->type_name);
+            }
 
             if (var_declarator->local_variable_declarator.type_dereference)
               result->deref_count =
@@ -718,16 +749,20 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
             break;
           }
 
-          if (!strcmp(argument->text, "buf")) {
-            // Array implicit decay fubberjiggle workaround
-            {
-              mct_expression_type_info arg_type_info;
-              determine_type_of_expression(ts, argument, &arg_type_info);
-              printf("Type:%s:'%s':%i\n", arg_type_info.is_array ? "is_ary" : "not_ary", arg_type_info.type_name,
-                     arg_type_info.deref_count);
-              if (!arg_type_info.type_name) {
-                MCerror(566, "TODO");
-              }
+          // if (!strcmp(argument->text, "buf")) {
+          // Array implicit decay fubberjiggle workaround
+          {
+            mct_expression_type_info arg_type_info;
+            determine_type_of_expression(ts, argument, &arg_type_info);
+            if (arg_type_info.is_array) {
+              // print_syntax_node(argument, 0);
+              // printf("Type:%s:'%s':%i\n", arg_type_info.is_array ? "is_ary" : "not_ary", arg_type_info.type_name,
+              //        arg_type_info.deref_count);
+
+              append_to_c_strf(ts->str, "%s *mc_vargs_%i = %s;\n", arg_type_info.type_name, i, argument->text);
+              mct_append_indent_to_c_str(ts);
+              append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)&mc_vargs_%i;\n", i, i);
+              break;
             }
           }
 
@@ -936,12 +971,12 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       append_to_c_str(ts->str, va_arg_expression->va_arg_expression.list_identity->text);
       append_to_c_str(ts->str, ";\n");
 
-      mct_append_indent_to_c_str(ts);
-      append_to_c_strf(ts->str, "printf(\"%s=%%i mc_argsv[%i + %%i]=%%p\\n\", %s, %s, mc_argsv[%i + %s]);\n",
-                       va_arg_expression->va_arg_expression.list_identity->text, housing_finfo->parameter_count - 1,
-                       va_arg_expression->va_arg_expression.list_identity->text,
-                       va_arg_expression->va_arg_expression.list_identity->text, housing_finfo->parameter_count - 1,
-                       va_arg_expression->va_arg_expression.list_identity->text);
+      // mct_append_indent_to_c_str(ts);
+      // append_to_c_strf(ts->str, "printf(\"%s=%%i mc_argsv[%i + %%i]=%%p\\n\", %s, %s, mc_argsv[%i + %s]);\n",
+      //                  va_arg_expression->va_arg_expression.list_identity->text, housing_finfo->parameter_count - 1,
+      //                  va_arg_expression->va_arg_expression.list_identity->text,
+      //                  va_arg_expression->va_arg_expression.list_identity->text, housing_finfo->parameter_count - 1,
+      //                  va_arg_expression->va_arg_expression.list_identity->text);
 
       mct_append_indent_to_c_str(ts);
       mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
@@ -1047,8 +1082,8 @@ int mct_transcribe_mcerror(mct_transcription_state *ts, mc_syntax_node *syntax_n
 {
   mct_append_to_c_str(ts, "{\n");
   ++ts->indent;
-  mct_append_indent_to_c_str(ts);
-  append_to_c_strf(ts->str, "*mc_return_value = %s;\n", syntax_node->invocation.arguments->items[0]->text);
+  // mct_append_indent_to_c_str(ts);
+  // append_to_c_strf(ts->str, "*mc_return_value = %s;\n", syntax_node->invocation.arguments->items[0]->text);
   mct_append_indent_to_c_str(ts);
 
   bool has_call_to_get_mc_syntax_token_type_name = false;

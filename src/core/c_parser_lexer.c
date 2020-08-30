@@ -2268,6 +2268,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
   case MC_TOKEN_STRUCT_KEYWORD:
   case MC_TOKEN_INT_KEYWORD:
   case MC_TOKEN_CHAR_KEYWORD:
+  case MC_TOKEN_CONST_KEYWORD:
   // case MC_TOKEN_BOOL_KEYWORD:
   case MC_TOKEN_LONG_KEYWORD:
   case MC_TOKEN_SHORT_KEYWORD:

@@ -430,6 +430,7 @@ const char *_mcl_core_functions[] = {
     "mct_increment_scope_depth",
     "mct_decrement_scope_depth",
     "mct_add_scope_variable",
+    "get_keyword_const_text_name",
 
     // mc_source
     "summarize_field_declarator_list",
@@ -1196,10 +1197,10 @@ int _mcl_load_app_mc_source()
 {
   register_midge_error_tag("_mcl_load_app_mc_source()");
   const char *_mcl_app_source_files[] = {
+      "src/core/midge_app.h",
       "src/core/midge_app.c",
 
       // And everything here before -------------------------------------------------------------
-      "src/core/midge_app.h",
       NULL,
   };
 
@@ -1244,7 +1245,7 @@ int _mcl_load_app_mc_source()
     }
   }
 
-  return 1;
+  return 0;
 }
 
 int mcl_load_app_source()
