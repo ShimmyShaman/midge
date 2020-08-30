@@ -283,6 +283,8 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
           case 'u': {
             unsigned int value = va_arg(valist, unsigned int);
 
+            printf("append_to_c_strf-arg=%u\n", value);
+
             char buf[18];
             sprintf(buf, "%u", value);
             append_to_c_str(cstr, buf);

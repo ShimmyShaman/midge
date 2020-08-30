@@ -3,6 +3,7 @@
 #include "core/mc_code_transcription.h"
 
 struct mct_transcription_state;
+struct mct_expression_type_info;
 int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *syntax_node);
 int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node *syntax_node);
 int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node);
@@ -31,6 +32,12 @@ typedef struct mct_transcription_state {
   } scope[256];
   int scope_index;
 } mct_transcription_state;
+
+typedef struct mct_expression_type_info {
+  char *type_name; // TODO -- add const to this
+  unsigned int deref_count;
+  bool is_array;
+} mct_expression_type_info;
 
 int mct_append_node_text_to_c_str(c_str *str, mc_syntax_node *syntax_node)
 {
@@ -119,10 +126,9 @@ int mct_add_scope_variable(mct_transcription_state *ts, mc_syntax_node *variable
 }
 
 int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields, mc_syntax_node *expression,
-                                            char **type_identity, int *deref_count)
+                                            mct_expression_type_info *result)
 {
-  *type_identity = NULL;
-  *deref_count = 0;
+  result->type_name = NULL;
 
   printf("_determine_type_of_expression_subsearch()\n");
   print_syntax_node(expression, 0);
@@ -157,8 +163,9 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
         for (int g = 0; g < ptfield->field.declarators->count; ++g) {
           if (!strcmp(identifier_name, ptfield->field.declarators->items[g]->name)) {
             // Found!
-            allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-            *deref_count = ptfield->field.declarators->items[g]->deref_count;
+            result->is_array = false; // TODO ? this exists? 166 ptfield->field.declarators->items[g]
+            result->type_name = ptfield->field.type_name;
+            result->deref_count = ptfield->field.declarators->items[g]->deref_count;
             return 0;
           }
         }
@@ -210,11 +217,13 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
               struct_info *primary_type_info;
               find_struct_info(ptfield->field.type_name, &primary_type_info);
               if (ptfield->field.declarators->items[g]->deref_count == 1 &&
-                  expression->member_access_expression.access_operator->type != MC_TOKEN_POINTER_OPERATOR) {
+                  (mc_token_type)expression->member_access_expression.access_operator->type !=
+                      MC_TOKEN_POINTER_OPERATOR) {
                 MCerror(214, "TODO");
               }
               else if (ptfield->field.declarators->items[g]->deref_count == 0 &&
-                       expression->member_access_expression.access_operator->type != MC_TOKEN_DECIMAL_POINT) {
+                       (mc_token_type)expression->member_access_expression.access_operator->type !=
+                           MC_TOKEN_DECIMAL_POINT) {
                 MCerror(218, "TODO");
               }
               else if (ptfield->field.declarators->items[g]->deref_count > 1) {
@@ -224,10 +233,11 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
                 MCerror(224, "uh oh, what do we do now...? %s", ptfield->field.type_name);
               }
 
-              _determine_type_of_expression_subsearch(primary_type_info->fields,
-                                                      expression->member_access_expression.identifier, type_identity,
-                                                      deref_count);
-              if (!type_identity) {
+              mct_expression_type_info expression_info;
+              _determine_type_of_expression_subsearch(
+                  primary_type_info->fields, expression->member_access_expression.identifier, &expression_info);
+
+              if (!result->type_name) {
                 MCerror(230, "TODO");
               }
               return 0;
@@ -254,8 +264,8 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
       case FIELD_KIND_NESTED_UNION: {
         if (ptfield->sub_type.is_anonymous) {
           // Search within the sub-types fields as if they were the parent types
-          _determine_type_of_expression_subsearch(ptfield->sub_type.fields, expression, type_identity, deref_count);
-          if (type_identity) {
+          _determine_type_of_expression_subsearch(ptfield->sub_type.fields, expression, result);
+          if (result->type_name) {
             return 0;
           }
         }
@@ -276,9 +286,9 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
           break;
 
         // Search for the identifier type within this one
-        _determine_type_of_expression_subsearch(
-            ptfield->sub_type.fields, expression->member_access_expression.identifier, type_identity, deref_count);
-        if (!type_identity) {
+        _determine_type_of_expression_subsearch(ptfield->sub_type.fields,
+                                                expression->member_access_expression.identifier, result);
+        if (!result->type_name) {
           MCerror(222, "TODO?");
         }
         return 0;
@@ -294,51 +304,47 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
   }
 
   print_syntax_node(expression, 0);
-  MCerror(189, "TODO : shouldn't reach here %s", *type_identity);
+  MCerror(189, "TODO : shouldn't reach here %s", result->type_name);
 }
 
-int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *expression, char **type_identity,
-                                 int *deref_count)
+int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *expression,
+                                 mct_expression_type_info *result)
 {
-  *type_identity = NULL;
-  *deref_count = 0;
+  result->type_name = NULL;
 
   switch (expression->type) {
   case MC_SYNTAX_OPERATIONAL_EXPRESSION: {
     // Determine the type of the left-hand-side
-    determine_type_of_expression(ts, expression->operational_expression.left, type_identity, deref_count);
+    determine_type_of_expression(ts, expression->operational_expression.left, result);
   } break;
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
-    char *type_of_parent;
-    int parent_deref_count;
-    determine_type_of_expression(ts, expression->member_access_expression.primary, &type_of_parent,
-                                 &parent_deref_count);
-    if (!type_of_parent) {
+    mct_expression_type_info parent_type_info;
+    determine_type_of_expression(ts, expression->member_access_expression.primary, &parent_type_info);
+    if (!parent_type_info.type_name) {
       MCerror(272, "WhatDo?");
     }
     // printf("typeofparent-'%s' %i \n", type_of_parent, parent_deref_count);
 
-    if (parent_deref_count == 1 &&
-        expression->member_access_expression.access_operator->type != MC_TOKEN_POINTER_OPERATOR) {
+    if (parent_type_info.deref_count == 1 &&
+        (mc_token_type)expression->member_access_expression.access_operator->type != MC_TOKEN_POINTER_OPERATOR) {
       MCerror(271, "TODO");
     }
-    else if (parent_deref_count == 0 &&
-             expression->member_access_expression.access_operator->type != MC_TOKEN_DECIMAL_POINT) {
+    else if (parent_type_info.deref_count == 0 &&
+             (mc_token_type)expression->member_access_expression.access_operator->type != MC_TOKEN_DECIMAL_POINT) {
       MCerror(275, "TODO");
     }
-    else if (parent_deref_count > 1) {
+    else if (parent_type_info.deref_count > 1) {
       MCerror(279, "TODO");
     }
 
-    struct_info *parent_type_info;
-    find_struct_info(type_of_parent, &parent_type_info);
-    free(type_of_parent);
-    if (!parent_type_info) {
+    struct_info *parent_struct_info;
+    find_struct_info(parent_type_info.type_name, &parent_struct_info);
+    if (!parent_struct_info) {
       MCerror(292, "uh oh, what do we do now...?");
     }
 
-    _determine_type_of_expression_subsearch(parent_type_info->fields, expression->member_access_expression.identifier,
-                                            type_identity, deref_count);
+    _determine_type_of_expression_subsearch(parent_struct_info->fields, expression->member_access_expression.identifier,
+                                            result);
   } break;
   case MC_TOKEN_IDENTIFIER: {
     for (int d = ts->scope_index; d >= 0; --d) {
@@ -350,14 +356,21 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
           case MC_SYNTAX_PARAMETER_DECLARATION: {
             mc_syntax_node *param_decl = ts->scope[d].variables[b].declaration_node;
 
+            // TODO -- array and function pointer types
+            result->is_array = false;
+
             // char *type_identity;
-            copy_syntax_node_to_text(param_decl->parameter.type_identifier, type_identity);
+            if ((mc_token_type)param_decl->parameter.type_identifier->type_identifier.identifier->type !=
+                MC_TOKEN_IDENTIFIER) {
+              MCerror(363, "TODO?");
+            }
+            result->type_name = param_decl->parameter.type_identifier->type_identifier.identifier->text;
 
             if (param_decl->parameter.type_dereference) {
-              *deref_count = param_decl->parameter.type_dereference->dereference_sequence.count;
+              result->deref_count = param_decl->parameter.type_dereference->dereference_sequence.count;
             }
             else {
-              deref_count = 0;
+              result->deref_count = 0;
             }
           } break;
           case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
@@ -369,12 +382,23 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
               MCerror(192, "Why isn't it a declaration?");
             }
 
-            copy_syntax_node_to_text(declaration->local_variable_declaration.type_identifier, type_identity);
+            result->is_array = (var_declarator->local_variable_declarator.initializer &&
+                                var_declarator->local_variable_declarator.initializer->type ==
+                                    MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER);
+
+            if ((mc_token_type)declaration->local_variable_declaration.type_identifier->type_identifier.identifier
+                    ->type != MC_TOKEN_IDENTIFIER) {
+              print_syntax_node(declaration->local_variable_declaration.type_identifier->type_identifier.identifier, 0);
+              MCerror(392, "TODO?");
+            }
+            result->type_name =
+                declaration->local_variable_declaration.type_identifier->type_identifier.identifier->text;
 
             if (var_declarator->local_variable_declarator.type_dereference)
-              *deref_count = var_declarator->local_variable_declarator.type_dereference->dereference_sequence.count;
+              result->deref_count =
+                  var_declarator->local_variable_declarator.type_dereference->dereference_sequence.count;
             else
-              deref_count = 0;
+              result->deref_count = 0;
           } break;
           default:
             MCerror(134, "Unsupported :%s",
@@ -549,22 +573,21 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
       }
 
       // Find the type of the expression
-      char *type_str;
-      int type_deref_count;
-      determine_type_of_expression(ts, argument, &type_str, &type_deref_count);
-      printf("Type:'%s':%i\n", type_str, type_deref_count);
-      if (!type_str) {
+      mct_expression_type_info expr_type_info;
+      determine_type_of_expression(ts, argument, &expr_type_info);
+      printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
+             expr_type_info.deref_count);
+      if (!expr_type_info.type_name) {
         MCerror(566, "TODO");
       }
 
       // Evaluate it to a local field
-      append_to_c_str(ts->str, type_str);
+      append_to_c_str(ts->str, expr_type_info.type_name);
       append_to_c_str(ts->str, " ");
-      for (int d = 0; d < type_deref_count; ++d) {
+      for (int d = 0; d < expr_type_info.deref_count; ++d) {
         append_to_c_str(ts->str, "*");
       }
       append_to_c_strf(ts->str, "mc_vargs_%i = ", i);
-      free(type_str);
 
       char *expression_text;
       copy_syntax_node_to_text(argument, &expression_text);
@@ -692,11 +715,24 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
             append_to_c_strf(ts->str, "%s mc_vargs_%i = %s;\n", enum_info->mc_declared_name, i, argument->text);
             mct_append_indent_to_c_str(ts);
             append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+            break;
           }
-          else {
-            // TODO -- ?? assigning to 'void *' from incompatible type 'const int *'
-            append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)&%s;\n", i, argument->text);
+
+          if (!strcmp(argument->text, "buf")) {
+            // Array implicit decay fubberjiggle workaround
+            {
+              mct_expression_type_info arg_type_info;
+              determine_type_of_expression(ts, argument, &arg_type_info);
+              printf("Type:%s:'%s':%i\n", arg_type_info.is_array ? "is_ary" : "not_ary", arg_type_info.type_name,
+                     arg_type_info.deref_count);
+              if (!arg_type_info.type_name) {
+                MCerror(566, "TODO");
+              }
+            }
           }
+
+          // TODO -- ?? assigning to 'void *' from incompatible type 'const int *'
+          append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)&%s;\n", i, argument->text);
         }
       } break;
       default:
@@ -891,9 +927,21 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       append_to_c_strf(
           ts->str,
           "if(%i + 1 + (%s + 1) > mc_argsc) { printf(\"\\n\\nERR[%i]: va_args access exceeded argument "
-          "count\\n       mc_argsc=%%i  params+return-count:%%i  va_list:%%i\\n\", mc_argsc, %i, %s); return %i; }\n",
+          "count\\n       mc_argsc=%%i  params+return-count:%%i  va_list:%%i\\n\", mc_argsc, %i, %s); return %i; "
+          "}\n",
           housing_finfo->parameter_count - 1, va_arg_expression->va_arg_expression.list_identity->text, 722,
           housing_finfo->parameter_count - 1, va_arg_expression->va_arg_expression.list_identity->text, 722);
+
+      mct_append_to_c_str(ts, "++");
+      append_to_c_str(ts->str, va_arg_expression->va_arg_expression.list_identity->text);
+      append_to_c_str(ts->str, ";\n");
+
+      mct_append_indent_to_c_str(ts);
+      append_to_c_strf(ts->str, "printf(\"%s=%%i mc_argsv[%i + %%i]=%%p\\n\", %s, %s, mc_argsv[%i + %s]);\n",
+                       va_arg_expression->va_arg_expression.list_identity->text, housing_finfo->parameter_count - 1,
+                       va_arg_expression->va_arg_expression.list_identity->text,
+                       va_arg_expression->va_arg_expression.list_identity->text, housing_finfo->parameter_count - 1,
+                       va_arg_expression->va_arg_expression.list_identity->text);
 
       mct_append_indent_to_c_str(ts);
       mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
@@ -913,7 +961,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
           append_to_c_str(ts->str, "*");
         }
       }
-      append_to_c_strf(ts->str, "*)mc_argsv[%i + ++%s];\n", housing_finfo->parameter_count - 1,
+      append_to_c_strf(ts->str, "*)mc_argsv[%i + %s];\n", housing_finfo->parameter_count - 1,
                        va_arg_expression->va_arg_expression.list_identity->text);
 
       return 0;
@@ -1541,7 +1589,8 @@ int mct_transcribe_while_statement(mct_transcription_state *ts, mc_syntax_node *
 //   //   mct_contains_mc_invoke(argument, &contains_nested_mc_function_call);
 //   //   if (*contains_nested_mc_function_call) {
 //   //     if (argument->type != MC_SYNTAX_INVOCATION || !argument->invocation.mc_function_info) {
-//   //       MCerror(742, "Not Yet Supported: mccalls inside normal function calls as an argument to another function
+//   //       MCerror(742, "Not Yet Supported: mccalls inside normal function calls as an argument to another
+//   function
 //   //       call");
 //   //     }
 //   //     _mc_transcribe_invocation(ts, argument, &mc_invoke_result_index);
@@ -1961,7 +2010,9 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
     append_to_c_str(ts.str, "int ");
     append_to_c_strf(ts.str, "%s", function_ast->function.name->text);
     append_to_c_str(ts.str, "_mc_v");
+    printf("mia-beforeu:\n%s||\n", ts.str->text);
     append_to_c_strf(ts.str, "%u", func_info->latest_iteration);
+    printf("mia-afteru:\n%s||\n", ts.str->text);
     append_to_c_str(ts.str, "(int mc_argsc, void **mc_argsv) {\n");
     printf("hit-bounty!\n");
   }

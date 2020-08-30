@@ -331,6 +331,7 @@ const char *_mcl_core_structs[] = {
 
     // mc_code_transcription.c
     "mct_transcription_state",
+    "mct_expression_type_info",
 
     // And everything here before -------------------------------------------------------------
     NULL,
@@ -1196,8 +1197,6 @@ int _mcl_load_app_mc_source()
   register_midge_error_tag("_mcl_load_app_mc_source()");
   const char *_mcl_app_source_files[] = {
       "src/core/midge_app.c",
-
-
 
       // And everything here before -------------------------------------------------------------
       "src/core/midge_app.h",
