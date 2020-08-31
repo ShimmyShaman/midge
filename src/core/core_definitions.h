@@ -124,7 +124,13 @@ typedef struct preprocess_define_info {
 
 typedef struct field_declarator_info {
   unsigned int deref_count;
-  char *name;
+  union {
+    char *name;
+    struct {
+      char *identifier;
+      unsigned int fp_deref_count;
+    } function_pointer;
+  };
 } field_declarator_info;
 
 typedef struct field_declarator_info_list {
@@ -142,10 +148,6 @@ typedef struct field_info {
       struct_info *type_info;
       field_declarator_info_list *declarators;
     } field;
-    struct {
-      char *identifier;
-      unsigned int deref_count;
-    } function_pointer;
     struct {
       bool is_union, is_anonymous;
       char *type_name;
@@ -176,12 +178,13 @@ typedef struct parameter_info {
   union {
     struct {
       char *type_name;
-      char *declared_type;
       unsigned int type_version;
     };
     struct {
-      char *function_type;
-      char *full_function_pointer_declaration;
+      char *return_type;
+      unsigned int return_deref_count;
+      char *fptr_name;
+      // parameter_info_list *parameters;//TODO
     };
   };
   unsigned int type_deref_count;

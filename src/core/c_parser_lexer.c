@@ -267,6 +267,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER";
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR:
     return "MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR";
+  case MC_SYNTAX_FUNCTION_POINTER:
+    return "MC_SYNTAX_FUNCTION_POINTER";
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION:
     return "MC_SYNTAX_PARENTHESIZED_EXPRESSION";
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
@@ -3970,13 +3972,18 @@ int mcs_parse_field_declarator(parsing_state *ps, mc_syntax_node *parent, mc_syn
 
   mcs_peek_token_type(ps, true, 0, &token_type);
   if (token_type == MC_TOKEN_OPEN_BRACKET) {
-    //   // It's a function pointer!
+    declarator->field_declarator.name = NULL;
+    declarator->field_declarator.array_size = NULL;
 
+    //   // It's a function pointer!
     mcs_parse_function_pointer_declaration(ps, declarator, true, &declarator->field_declarator.function_pointer);
   }
   else if (token_type == MC_TOKEN_IDENTIFIER) {
+    declarator->field_declarator.function_pointer = NULL;
+
     mcs_parse_through_token(ps, declarator, MC_TOKEN_IDENTIFIER, &declarator->field_declarator.name);
 
+    mcs_peek_token_type(ps, false, 0, &token_type);
     if (token_type == MC_TOKEN_SQUARE_OPENING_BRACKET) {
       // Is an array declaration
       mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_OPENING_BRACKET, NULL);

@@ -106,8 +106,19 @@ int mct_add_scope_variable(mct_transcription_state *ts, mc_syntax_node *variable
   switch (variable_syntax_node->type) {
   case MC_SYNTAX_PARAMETER_DECLARATION: {
     ts->scope[ts->scope_index].variables[variable_index_in_scope].declaration_node = variable_syntax_node;
-    copy_syntax_node_to_text(variable_syntax_node->parameter.name,
-                             &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
+
+    switch (variable_syntax_node->parameter.type) {
+    case PARAMETER_KIND_STANDARD: {
+      copy_syntax_node_to_text(variable_syntax_node->parameter.name,
+                               &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
+    } break;
+    case PARAMETER_KIND_FUNCTION_POINTER: {
+      copy_syntax_node_to_text(variable_syntax_node->parameter.function_pointer->function_pointer.name,
+                               &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
+    } break;
+    default:
+      MCerror(113, "NotSupported:%i", variable_syntax_node->parameter.type);
+    }
   } break;
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
     ts->scope[ts->scope_index].variables[variable_index_in_scope].declaration_node = variable_syntax_node;
@@ -672,22 +683,26 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
       free(text);
     } break;
     case MC_SYNTAX_FIXREMENT_EXPRESSION: {
-      if (!argument->fixrement_expression.is_postfix) {
-        mct_append_node_text_to_c_str(ts->str, argument);
-        append_to_c_str(ts->str, ";\n");
-      }
 
       char *primary;
       copy_syntax_node_to_text(argument->fixrement_expression.primary, &primary);
 
-      mct_append_indent_to_c_str(ts);
-      append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, primary);
-      free(primary);
+      if (!argument->fixrement_expression.is_postfix) {
+        mct_append_node_text_to_c_str(ts->str, argument);
+        append_to_c_str(ts->str, ";\n");
+        mct_append_indent_to_c_str(ts);
+        append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, primary);
+      }
+      else {
+        append_to_c_strf(ts->str, "int mc_varg_%i = (int)%s;\n", i, primary);
+        mct_append_indent_to_c_str(ts);
+        append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_varg_%i;\n", i, i);
 
-      if (argument->fixrement_expression.is_postfix) {
+        mct_append_indent_to_c_str(ts);
         mct_append_node_text_to_c_str(ts->str, argument);
         append_to_c_str(ts->str, ";\n");
       }
+      free(primary);
 
     } break;
     default: {
@@ -1885,12 +1900,18 @@ int mct_transcribe_field_declarators(mct_transcription_state *ts, mc_syntax_node
         append_to_c_str(ts->str, "*");
       }
     }
-    mct_append_node_text_to_c_str(ts->str, declarator->field_declarator.name);
+    if (!declarator->field_declarator.name) {
+      // Function Pointer
+      mct_append_node_text_to_c_str(ts->str, declarator->field_declarator.function_pointer);
+    }
+    else {
+      mct_append_node_text_to_c_str(ts->str, declarator->field_declarator.name);
 
-    if (declarator->field_declarator.array_size) {
-      append_to_c_str(ts->str, "[");
-      mct_append_node_text_to_c_str(ts->str, declarator->field_declarator.array_size);
-      append_to_c_str(ts->str, "]");
+      if (declarator->field_declarator.array_size) {
+        append_to_c_str(ts->str, "[");
+        mct_append_node_text_to_c_str(ts->str, declarator->field_declarator.array_size);
+        append_to_c_str(ts->str, "]");
+      }
     }
   }
 
@@ -2029,8 +2050,8 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   //   printf("hit-bounty!\n");
   // }
   // else {
-    append_to_c_strf(ts.str, "int %s_mc_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
-                     func_info->latest_iteration);
+  append_to_c_strf(ts.str, "int %s_mc_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
+                   func_info->latest_iteration);
   // }
   mct_increment_scope_depth(&ts);
   ++ts.indent;
@@ -2046,13 +2067,14 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   for (int p = 0; p < function_ast->function.parameters->count; ++p) {
     mc_syntax_node *parameter_syntax = function_ast->function.parameters->items[p];
 
+    mct_append_indent_to_c_str(&ts);
     switch (parameter_syntax->parameter.type) {
     case PARAMETER_KIND_STANDARD: {
 
       mct_add_scope_variable(&ts, parameter_syntax);
 
       mct_transcribe_type_identifier(&ts, parameter_syntax->parameter.type_identifier);
-      mct_append_indent_to_c_str(&ts);
+      append_to_c_str(ts.str, " ");
       if (parameter_syntax->parameter.type_dereference) {
         for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
           append_to_c_str(ts.str, "*");
@@ -2068,6 +2090,62 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
         }
       }
       append_to_c_strf(ts.str, "*)mc_argsv[%i];\n", p);
+    } break;
+    case PARAMETER_KIND_FUNCTION_POINTER: {
+      mct_add_scope_variable(&ts, parameter_syntax);
+      // print_syntax_node(parameter_syntax, 0);
+
+      mct_transcribe_type_identifier(&ts, parameter_syntax->parameter.type_identifier);
+      append_to_c_str(ts.str, " ");
+      if (parameter_syntax->parameter.type_dereference) {
+        for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
+          append_to_c_str(ts.str, "*");
+        }
+      }
+      mct_append_node_text_to_c_str(ts.str, parameter_syntax->parameter.function_pointer);
+
+      append_to_c_str(ts.str, " = *(");
+
+      mct_append_node_text_to_c_str(ts.str, parameter_syntax->parameter.type_identifier);
+      append_to_c_str(ts.str, " ");
+      if (parameter_syntax->parameter.type_dereference) {
+        for (int d = 0; d < parameter_syntax->parameter.type_dereference->dereference_sequence.count; ++d) {
+          append_to_c_str(ts.str, "*");
+        }
+      }
+      append_to_c_str(ts.str, "(");
+      if (parameter_syntax->parameter.function_pointer->function_pointer.fp_dereference) {
+        for (int d = 0;
+             d <
+             parameter_syntax->parameter.function_pointer->function_pointer.fp_dereference->dereference_sequence.count;
+             ++d) {
+          append_to_c_str(ts.str, "*");
+        }
+      }
+      append_to_c_str(ts.str, "*)(");
+
+      for (int p = 0; p < parameter_syntax->parameter.function_pointer->function_pointer.parameters->count; ++p) {
+        if (p > 0) {
+          append_to_c_str(ts.str, ", ");
+        }
+
+        mc_syntax_node *fp_param = parameter_syntax->parameter.function_pointer->function_pointer.parameters->items[p];
+
+        switch (fp_param->parameter.type) {
+        case PARAMETER_KIND_STANDARD: {
+          mct_append_node_text_to_c_str(ts.str, fp_param->parameter.type_identifier);
+          if (fp_param->parameter.type_dereference) {
+            for (int d = 0; d < fp_param->parameter.type_dereference->dereference_sequence.count; ++d) {
+              append_to_c_str(ts.str, "*");
+            }
+          }
+        } break;
+        default:
+          MCerror(2119, "unsupported:%i", fp_param->parameter.type);
+        }
+      }
+      append_to_c_strf(ts.str, "))mc_argsv[%i];\n", p);
+
     } break;
     case PARAMETER_KIND_VARIABLE_ARGS: {
     } break;

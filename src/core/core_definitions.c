@@ -312,20 +312,25 @@ int release_parameter_info(parameter_info *ptr)
   if (!ptr)
     return 0;
 
-  if (ptr->declared_type) {
-    free(ptr->declared_type);
+  switch (ptr->parameter_type) {
+  case PARAMETER_KIND_STANDARD: {
+    if (ptr->type_name) {
+      free(ptr->type_name);
+    }
+  } break;
+  case PARAMETER_KIND_VARIABLE_ARGS:
+    break;
+  case PARAMETER_KIND_FUNCTION_POINTER: {
+    if (ptr->return_type) {
+      free(ptr->return_type);
+    }
+  } break;
+  default:
+    MCerror(341, "Update for type:%i", ptr->parameter_type);
   }
-  if (ptr->full_function_pointer_declaration) {
-    free(ptr->full_function_pointer_declaration);
-  }
-  if (ptr->function_type) {
-    free(ptr->function_type);
-  }
+
   if (ptr->name) {
     free(ptr->name);
-  }
-  if (ptr->type_name) {
-    free(ptr->type_name);
   }
   if (ptr->type_id) {
     release_struct_id(ptr->type_id);

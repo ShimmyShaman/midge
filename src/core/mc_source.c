@@ -105,8 +105,10 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     register_midge_error_tag("initialize_parameter_info_from_syntax_node-STANDARD");
     parameter->parameter_type = PARAMETER_KIND_STANDARD;
 
+    // Name
+    copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name);
+
     // Type
-    // print_syntax_node(parameter_syntax_node->parameter.type_identifier, 0);
     copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name);
     if (parameter_syntax_node->parameter.type_dereference) {
       parameter->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
@@ -114,45 +116,33 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     else {
       parameter->type_deref_count = 0;
     }
-    // printf("parameter->type_deref_count:%i\n", parameter->type_deref_count);
 
-    // -- TODO -- mc-type?
-
-    // Name
-    copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name);
   } break;
   case PARAMETER_KIND_FUNCTION_POINTER: {
     register_midge_error_tag("initialize_parameter_info_from_syntax_node-FUNCTION_POINTER");
     parameter->parameter_type = PARAMETER_KIND_FUNCTION_POINTER;
 
-    print_syntax_node(parameter_syntax_node, 0);
-    MCerror(128, "PROGRESS");
+    // Name
+    copy_syntax_node_to_text(parameter_syntax_node->parameter.function_pointer->function_pointer.name,
+                             &parameter->name);
 
-    // copy_syntax_node_to_text(parameter_syntax_node, &parameter->full_function_pointer_declaration);
+    // Type
+    copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->return_type);
+    if (parameter_syntax_node->parameter.type_dereference) {
+      parameter->return_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
+    }
+    else {
+      parameter->return_deref_count = 0;
+    }
 
-    // mc_syntax_node *fpsn = parameter_syntax_node->parameter.function_pointer;
-    // copy_syntax_node_to_text(fpsn->function_pointer_declaration.identifier, (char **)&parameter->name);
-
-    // if (fpsn->function_pointer_declaration.type_dereference) {
-    //   parameter->type_deref_count = fpsn->function_pointer_declaration.type_dereference->dereference_sequence.count;
-    // }
-    // else {
-    //   parameter->type_deref_count = 0;
-    // }
-
-    // // void *ptr = 0;
-    // // int (*fptr)(int, void **) = (int (*)(int, void **))ptr;
-    // parameter->function_type = NULL;
+    // print_syntax_node(parameter_syntax_node, 0);
   } break;
   case PARAMETER_KIND_VARIABLE_ARGS: {
     register_midge_error_tag("initialize_parameter_info_from_syntax_node-VARIABLE_ARGS");
     parameter->parameter_type = PARAMETER_KIND_VARIABLE_ARGS;
 
     parameter->type_name = NULL;
-    parameter->declared_type = NULL;
     parameter->type_version = 0;
-    parameter->function_type = NULL;
-    parameter->full_function_pointer_declaration = NULL;
     parameter->type_deref_count = 0;
     parameter->name = NULL;
 
@@ -295,7 +285,25 @@ int summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
     mc_syntax_node *declarator_syntax = syntax_declarators->items[d];
 
     field_declarator_info *declarator = (field_declarator_info *)malloc(sizeof(field_declarator_info));
-    copy_syntax_node_to_text(declarator_syntax->field_declarator.name, &declarator->name);
+    if (declarator_syntax->field_declarator.function_pointer) {
+      // Function pointer
+      // print_syntax_node(declarator_syntax->field_declarator.function_pointer, 0);
+      copy_syntax_node_to_text(declarator_syntax->field_declarator.function_pointer->function_pointer.name,
+                               &declarator->function_pointer.identifier);
+      if (declarator_syntax->field_declarator.function_pointer->function_pointer.fp_dereference) {
+        declarator->function_pointer.fp_deref_count = declarator_syntax->field_declarator.function_pointer
+                                                          ->function_pointer.fp_dereference->dereference_sequence.count;
+      }
+      else {
+        declarator->function_pointer.fp_deref_count = 0;
+      }
+
+      // declarator_syntax->field_declarator.function_pointer->function_pointer.parameters
+      // TODO -- parameters
+    }
+    else {
+      copy_syntax_node_to_text(declarator_syntax->field_declarator.name, &declarator->name);
+    }
     if (declarator_syntax->field_declarator.type_dereference) {
       declarator->deref_count = declarator_syntax->field_declarator.type_dereference->dereference_sequence.count;
     }
@@ -604,10 +612,10 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "midge_initialize_app")) {
-  //   // print_syntax_node(ast, 0);
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
-  // }
+  if (!strcmp(func_info->name, "mcs_parse_expression_beginning_with_bracket")) {
+    // print_syntax_node(ast, 0);
+    printf("mc_transcription:\n%s||\n", mc_transcription);
+  }
   // if (!strcmp(func_info->name, "midge_run_app")) {
   //   // print_syntax_node(ast, 0);
   //   printf("mc_transcription:\n%s||\n", mc_transcription);

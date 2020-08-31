@@ -253,10 +253,8 @@ typedef struct mc_syntax_node {
         struct {
           mc_syntax_node *type_dereference;
           mc_syntax_node *name;
-          union {
-            mc_syntax_node *array_size;
-            mc_syntax_node *function_pointer;
-          };
+          mc_syntax_node *array_size;
+          mc_syntax_node *function_pointer;
         } field_declarator;
         struct {
           mc_syntax_node *fp_dereference;
