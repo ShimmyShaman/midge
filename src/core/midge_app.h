@@ -4,7 +4,7 @@
 #define MIDGE_APP_H
 
 extern "C" {
-void midge_initialize_app();
+void midge_initialize_app(struct timespec *app_begin_time);
 void midge_run_app();
 void midge_cleanup_app();
 }

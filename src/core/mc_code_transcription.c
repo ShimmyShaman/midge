@@ -170,16 +170,6 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
           }
         }
       } break;
-      case FIELD_KIND_FUNCTION_POINTER: {
-        if (!strcmp(expression->text, ptfield->function_pointer.identifier)) {
-          // Found!
-          MCerror(317, "TODO Fptr?");
-
-          // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-          // *deref_count = ptfield->field.declarators->items[g]->deref_count;
-          // return 0;
-        }
-      } break;
       case FIELD_KIND_NESTED_STRUCT:
       case FIELD_KIND_NESTED_UNION: {
         // Should not be these
@@ -248,16 +238,6 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
             }
             return 0;
           }
-        }
-      } break;
-      case FIELD_KIND_FUNCTION_POINTER: {
-        if (!strcmp(primary_name, ptfield->function_pointer.identifier)) {
-          // Found!
-          MCerror(256, "TODO Fptr?");
-
-          // allocate_and_copy_cstr(*type_identity, ptfield->field.type_name);
-          // *deref_count = ptfield->field.declarators->items[g]->deref_count;
-          // return 0;
         }
       } break;
       case FIELD_KIND_NESTED_STRUCT:
@@ -1929,9 +1909,6 @@ int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_nod
       append_to_c_str(ts->str, " ");
       mct_transcribe_field_declarators(ts, syntax_node->field.declarators);
     } break;
-    case FIELD_KIND_FUNCTION_POINTER: {
-      mct_append_node_text_to_c_str(ts->str, syntax_node->field.function_pointer);
-    } break;
     default:
       print_syntax_node(syntax_node, 0);
       MCerror(1122, "NotSupported:%i", syntax_node->field.type);
@@ -2039,22 +2016,22 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   ts.scope_index = 0;
   ts.scope[ts.scope_index].variable_count = 0;
 
-  printf("%s - %u\n", function_ast->function.name->text, func_info->latest_iteration);
+  // printf("%s - %u\n", function_ast->function.name->text, func_info->latest_iteration);
   // Header
-  if (!strcmp(function_ast->function.name->text, "midge_initialize_app")) {
-    append_to_c_str(ts.str, "int ");
-    append_to_c_strf(ts.str, "%s", function_ast->function.name->text);
-    append_to_c_str(ts.str, "_mc_v");
-    printf("mia-beforeu:\n%s||\n", ts.str->text);
-    append_to_c_strf(ts.str, "%u", func_info->latest_iteration);
-    printf("mia-afteru:\n%s||\n", ts.str->text);
-    append_to_c_str(ts.str, "(int mc_argsc, void **mc_argsv) {\n");
-    printf("hit-bounty!\n");
-  }
-  else {
+  // if (!strcmp(function_ast->function.name->text, "midge_initialize_app")) {
+  //   append_to_c_str(ts.str, "int ");
+  //   append_to_c_strf(ts.str, "%s", function_ast->function.name->text);
+  //   append_to_c_str(ts.str, "_mc_v");
+  //   printf("mia-beforeu:\n%s||\n", ts.str->text);
+  //   append_to_c_strf(ts.str, "%u", func_info->latest_iteration);
+  //   printf("mia-afteru:\n%s||\n", ts.str->text);
+  //   append_to_c_str(ts.str, "(int mc_argsc, void **mc_argsv) {\n");
+  //   printf("hit-bounty!\n");
+  // }
+  // else {
     append_to_c_strf(ts.str, "int %s_mc_v%u(int mc_argsc, void **mc_argsv) {\n", function_ast->function.name->text,
                      func_info->latest_iteration);
-  }
+  // }
   mct_increment_scope_depth(&ts);
   ++ts.indent;
 

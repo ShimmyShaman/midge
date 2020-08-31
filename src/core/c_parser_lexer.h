@@ -132,7 +132,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_SUPERNUMERARY,
   MC_SYNTAX_INCLUDE_SYSTEM_HEADER_IDENTITY,
   MC_SYNTAX_TYPE_IDENTIFIER,
-  MC_SYNTAX_FUNCTION_POINTER_DECLARATION,
+  MC_SYNTAX_FUNCTION_POINTER,
   MC_SYNTAX_DEREFERENCE_SEQUENCE,
   MC_SYNTAX_PARAMETER_DECLARATION,
   MC_SYNTAX_FIELD_DECLARATION,
@@ -233,14 +233,12 @@ typedef struct mc_syntax_node {
         } dereference_sequence;
         struct {
           parameter_kind type;
-          union {
-            mc_syntax_node *function_pointer;
-            mc_syntax_node *type_identifier;
-          };
+          mc_syntax_node *type_identifier;
           // May be NULL indicating no dereference operators (will be NULL for variable_args)
           mc_syntax_node *type_dereference;
-          // Will be NULL if variable_args
+          // Will be NULL if variable_args or function_pointer
           mc_syntax_node *name;
+          mc_syntax_node *function_pointer;
         } parameter;
         struct {
           field_kind type;
@@ -255,8 +253,16 @@ typedef struct mc_syntax_node {
         struct {
           mc_syntax_node *type_dereference;
           mc_syntax_node *name;
-          mc_syntax_node *array_size;
+          union {
+            mc_syntax_node *array_size;
+            mc_syntax_node *function_pointer;
+          };
         } field_declarator;
+        struct {
+          mc_syntax_node *fp_dereference;
+          mc_syntax_node *name;
+          mc_syntax_node_list *parameters;
+        } function_pointer;
         struct {
           mc_syntax_node *type_modifier;
           mc_syntax_node *type_identifier;
@@ -383,12 +389,11 @@ typedef struct mc_syntax_node {
           int is_signed;
           mc_syntax_node *size_modifiers;
         } type_identifier;
-        struct {
-          mc_syntax_node *return_type;
-          mc_syntax_node *type_dereference;
-          mc_syntax_node *identifier;
-          mc_syntax_node_list *parameters;
-        } function_pointer_declaration;
+        // struct {
+        //   mc_syntax_node *type_dereference;
+        //   mc_syntax_node *identifier;
+        //   mc_syntax_node_list *parameters;
+        // } function_pointer_declarator;
         struct {
           mc_syntax_node *type_identifier;
           // May be null indicating no dereference operators

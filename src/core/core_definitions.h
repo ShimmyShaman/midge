@@ -49,7 +49,6 @@ typedef enum parameter_kind {
 typedef enum field_kind {
   FIELD_KIND_NULL = 0,
   FIELD_KIND_STANDARD,
-  FIELD_KIND_FUNCTION_POINTER,
   FIELD_KIND_NESTED_STRUCT,
   FIELD_KIND_NESTED_UNION,
 } field_kind;

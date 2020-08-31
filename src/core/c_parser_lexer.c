@@ -27,6 +27,8 @@ int mcs_parse_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
 int mcs_parse_statement_list(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int mcs_parse_type_declaration(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
 int mcs_parse_root_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
+int mcs_parse_parameter_declaration(parsing_state *ps, bool allow_name_skip, mc_syntax_node *parent,
+                                    mc_syntax_node **additional_destination);
 
 const char *get_mc_token_type_name(mc_token_type type)
 {
@@ -289,8 +291,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_INCLUDE_SYSTEM_HEADER_IDENTITY";
   case MC_SYNTAX_TYPE_IDENTIFIER:
     return "MC_SYNTAX_TYPE_IDENTIFIER";
-  case MC_SYNTAX_FUNCTION_POINTER_DECLARATION:
-    return "MC_SYNTAX_FUNCTION_POINTER_DECLARATION";
+  // case MC_SYNTAX_FUNCTION_POINTER_DECLARATION:
+  //   return "MC_SYNTAX_FUNCTION_POINTER_DECLARATION";
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:
     return "MC_SYNTAX_DEREFERENCE_SEQUENCE";
   case MC_SYNTAX_PARAMETER_DECLARATION:
@@ -669,6 +671,14 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->field_declarator.type_dereference = NULL;
     syntax_node->field_declarator.name = NULL;
     syntax_node->field_declarator.array_size = NULL;
+    syntax_node->field_declarator.function_pointer = NULL;
+  } break;
+  case MC_SYNTAX_FUNCTION_POINTER: {
+    syntax_node->function_pointer.fp_dereference = NULL;
+    syntax_node->function_pointer.name = NULL;
+    syntax_node->function_pointer.parameters = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+    syntax_node->function_pointer.parameters->alloc = 0;
+    syntax_node->function_pointer.parameters->count = 0;
   } break;
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION: {
     syntax_node->local_variable_declaration.type_identifier = NULL;
@@ -783,14 +793,14 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_DEREFERENCE_SEQUENCE: {
     syntax_node->dereference_sequence.count = 0;
   } break;
-  case MC_SYNTAX_FUNCTION_POINTER_DECLARATION: {
-    syntax_node->function_pointer_declaration.return_type = NULL;
-    syntax_node->function_pointer_declaration.type_dereference = NULL;
-    syntax_node->function_pointer_declaration.identifier = NULL;
-    syntax_node->function_pointer_declaration.parameters = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
-    syntax_node->function_pointer_declaration.parameters->alloc = 0;
-    syntax_node->function_pointer_declaration.parameters->count = 0;
-  } break;
+  // case MC_SYNTAX_FUNCTION_POINTER_DECLARATION: {
+  //   syntax_node->function_pointer_declaration.return_type = NULL;
+  //   syntax_node->function_pointer_declaration.type_dereference = NULL;
+  //   syntax_node->function_pointer_declaration.identifier = NULL;
+  //   syntax_node->function_pointer_declaration.parameters = (mc_syntax_node_list
+  //   *)malloc(sizeof(mc_syntax_node_list)); syntax_node->function_pointer_declaration.parameters->alloc = 0;
+  //   syntax_node->function_pointer_declaration.parameters->count = 0;
+  // } break;
   case MC_SYNTAX_INCLUDE_SYSTEM_HEADER_IDENTITY: {
     syntax_node->include_directive.is_system_header_search = false;
     syntax_node->include_directive.filepath = NULL;
@@ -1607,7 +1617,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       int s = *index;
       bool prev_digit = true;
       bool loop = true;
-      bool is_hex = false, is_binary = false;
+      bool is_hex = false, is_binary = false, is_scientific = false;
       if (code[*index] == '0') {
         if (code[*index + 1] == 'x') {
           is_hex = true;
@@ -1616,6 +1626,19 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         else if (code[*index + 1] == 'b') {
           is_binary = true;
           ++*index;
+        }
+      }
+      else if (code[*index] == '1') {
+        if (code[*index + 1] == 'e') {
+          is_scientific = true;
+          ++*index;
+          if (code[*index + 1] == '-') {
+            ++*index;
+          }
+
+          if (!isdigit(code[*index + 1])) {
+            MCerror(1630, "Expected Numeric Digit");
+          }
         }
       }
 
@@ -1853,6 +1876,59 @@ int mcs_parse_dereference_sequence(parsing_state *ps, mc_syntax_node *parent, mc
   return 0;
 }
 
+int mcs_parse_function_pointer_declaration(parsing_state *ps, mc_syntax_node *parent, bool allow_name_skip,
+                                           mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *fp_decl;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION_POINTER, NULL, parent, &fp_decl);
+  if (additional_destination) {
+    *additional_destination = fp_decl;
+  }
+
+  mcs_parse_through_token(ps, fp_decl, MC_TOKEN_OPEN_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+
+  mc_token_type token_type;
+  mcs_peek_token_type(ps, false, 0, &token_type);
+  if (token_type == MC_TOKEN_STAR_CHARACTER) {
+    mcs_parse_dereference_sequence(ps, fp_decl, &fp_decl->function_pointer.fp_dereference);
+    mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+  }
+  else {
+    fp_decl->function_pointer.fp_dereference = NULL;
+  }
+
+  mcs_parse_through_token(ps, fp_decl, MC_TOKEN_IDENTIFIER, &fp_decl->function_pointer.name);
+  mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+
+  mcs_parse_through_token(ps, fp_decl, MC_TOKEN_CLOSING_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+
+  mcs_parse_through_token(ps, fp_decl, MC_TOKEN_OPEN_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+
+  mc_syntax_node_list *parameter_list = fp_decl->function_pointer.parameters;
+
+  while (1) {
+    mcs_peek_token_type(ps, false, 0, &token_type);
+    if (token_type == MC_TOKEN_CLOSING_BRACKET) {
+      break;
+    }
+    else if (parameter_list->count) {
+      mcs_parse_through_token(ps, fp_decl, MC_TOKEN_COMMA, NULL);
+      mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+    }
+
+    mc_syntax_node *parameter_decl;
+    mcs_parse_parameter_declaration(ps, true, fp_decl, &parameter_decl);
+    append_to_collection((void ***)&parameter_list->items, &parameter_list->alloc, &parameter_list->count,
+                         parameter_decl);
+  }
+  mcs_parse_through_token(ps, fp_decl, MC_TOKEN_CLOSING_BRACKET, NULL);
+
+  return 0;
+}
+
 int mcs_parse_parameter_declaration(parsing_state *ps, bool allow_name_skip, mc_syntax_node *parent,
                                     mc_syntax_node **additional_destination)
 {
@@ -1874,29 +1950,27 @@ int mcs_parse_parameter_declaration(parsing_state *ps, bool allow_name_skip, mc_
   }
   else {
 
-    mc_syntax_node *type_identity;
-    mcs_parse_type_identifier(ps, parameter_decl, &type_identity);
+    mcs_parse_type_identifier(ps, parameter_decl, &parameter_decl->parameter.type_identifier);
     mcs_parse_through_supernumerary_tokens(ps, parameter_decl);
 
-    if (type_identity->type == MC_SYNTAX_FUNCTION_POINTER_DECLARATION) {
+    mcs_peek_token_type(ps, false, 0, &token_type);
+    if (token_type == MC_TOKEN_STAR_CHARACTER) {
+      mcs_parse_dereference_sequence(ps, parameter_decl, &parameter_decl->parameter.type_dereference);
+      mcs_parse_through_supernumerary_tokens(ps, parameter_decl);
+    }
+    else {
+      parameter_decl->parameter.type_dereference = NULL;
+    }
+
+    mcs_peek_token_type(ps, false, 0, &token_type);
+    if (token_type == MC_TOKEN_OPEN_BRACKET) {
       parameter_decl->parameter.type = PARAMETER_KIND_FUNCTION_POINTER;
 
-      // Parameter set
-      parameter_decl->parameter.function_pointer = type_identity;
+      mcs_parse_function_pointer_declaration(ps, parameter_decl, true, &parameter_decl->parameter.function_pointer);
     }
     else {
       parameter_decl->parameter.type = PARAMETER_KIND_STANDARD;
       // Standard 'Type (*) Name' parameter
-      parameter_decl->parameter.type_identifier = type_identity;
-
-      mcs_peek_token_type(ps, false, 0, &token_type);
-      if (token_type == MC_TOKEN_STAR_CHARACTER) {
-        mcs_parse_dereference_sequence(ps, parameter_decl, &parameter_decl->parameter.type_dereference);
-        mcs_parse_through_supernumerary_tokens(ps, parameter_decl);
-      }
-      else {
-        parameter_decl->parameter.type_dereference = NULL;
-      }
 
       bool skip_name = false;
       if (allow_name_skip) {
@@ -1999,67 +2073,9 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
     mcs_peek_token_type(ps, false, 0, &token_type);
   }
 
-  if (token_type == MC_TOKEN_OPEN_BRACKET) {
-    // It's a function pointer!
-    register_midge_error_tag("mcs_parse_type_identifier()-6");
-    mcs_peek_token_type(ps, false, 1, &token_type);
-    if (token_type != MC_TOKEN_STAR_CHARACTER) {
-      print_parse_error(ps->code, ps->index, "mcs_parse_type_identifier", "");
-      MCerror(1463, "Format Exception?");
-    }
-
-    mc_syntax_node *fptr;
-    mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION_POINTER_DECLARATION, NULL, parent, &fptr);
-    if (additional_destination) {
-      *additional_destination = fptr;
-    }
-
-    mcs_add_syntax_node_to_parent(fptr, type_root);
-    fptr->function_pointer_declaration.return_type = type_root;
-
-    mcs_parse_through_supernumerary_tokens(ps, fptr);
-    mcs_parse_through_token(ps, fptr, MC_TOKEN_OPEN_BRACKET, NULL);
-    mcs_parse_through_supernumerary_tokens(ps, fptr);
-    mcs_parse_dereference_sequence(ps, fptr, &fptr->function_pointer_declaration.type_dereference);
-    mcs_parse_through_supernumerary_tokens(ps, fptr);
-    mcs_parse_through_token(ps, fptr, MC_TOKEN_IDENTIFIER, &fptr->function_pointer_declaration.identifier);
-    mcs_parse_through_supernumerary_tokens(ps, fptr);
-    mcs_parse_through_token(ps, fptr, MC_TOKEN_CLOSING_BRACKET, NULL);
-    mcs_parse_through_supernumerary_tokens(ps, fptr);
-    mcs_parse_through_token(ps, fptr, MC_TOKEN_OPEN_BRACKET, NULL);
-    mcs_parse_through_supernumerary_tokens(ps, fptr);
-
-    fptr->function_pointer_declaration.parameters->count = 0;
-    fptr->function_pointer_declaration.parameters->alloc = 0;
-
-    while (1) {
-      mcs_peek_token_type(ps, false, 0, &token_type);
-      if (token_type == MC_TOKEN_CLOSING_BRACKET) {
-        break;
-      }
-      else if (fptr->function_pointer_declaration.parameters->count) {
-        mcs_parse_through_token(ps, fptr, MC_TOKEN_COMMA, NULL);
-        mcs_parse_through_supernumerary_tokens(ps, fptr);
-      }
-
-      mc_syntax_node *parameter_decl;
-      mcs_parse_parameter_declaration(ps, true, fptr, &parameter_decl);
-      append_to_collection((void ***)&fptr->function_pointer_declaration.parameters->items,
-                           &fptr->function_pointer_declaration.parameters->alloc,
-                           &fptr->function_pointer_declaration.parameters->count, parameter_decl);
-    }
-    mcs_parse_through_token(ps, fptr, MC_TOKEN_CLOSING_BRACKET, NULL);
-    register_midge_error_tag("mcs_parse_type_identifier()-7");
-  }
-  else {
-    // register_midge_error_tag("mcs_parse_type_identifier()-7a parent:%p", parent);
-    // Not a function pointer
-    // Add to parent & return
-    mcs_add_syntax_node_to_parent(parent, type_root);
-    if (additional_destination) {
-      *additional_destination = type_root;
-    }
-    // register_midge_error_tag("mcs_parse_type_identifier()-7b");
+  mcs_add_syntax_node_to_parent(parent, type_root);
+  if (additional_destination) {
+    *additional_destination = type_root;
   }
 
   register_midge_error_tag("mcs_parse_type_identifier(~)");
@@ -3504,6 +3520,7 @@ int mcs_parse_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
   case MC_TOKEN_VA_END_WORD: {
     mcs_parse_va_end_statement(ps, parent, additional_destination);
   } break;
+  case MC_TOKEN_STRUCT_KEYWORD:
   case MC_TOKEN_CONST_KEYWORD:
   case MC_TOKEN_INT_KEYWORD:
   case MC_TOKEN_CHAR_KEYWORD:
@@ -3950,20 +3967,28 @@ int mcs_parse_field_declarator(parsing_state *ps, mc_syntax_node *parent, mc_syn
   else {
     declarator->field_declarator.type_dereference = NULL;
   }
-  mcs_parse_through_token(ps, declarator, MC_TOKEN_IDENTIFIER, &declarator->field_declarator.name);
 
-  mcs_peek_token_type(ps, false, 0, &token_type);
-  if (token_type == MC_TOKEN_SQUARE_OPENING_BRACKET) {
-    // Is an array declaration
-    mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_OPENING_BRACKET, NULL);
-    mcs_parse_through_supernumerary_tokens(ps, declarator);
+  mcs_peek_token_type(ps, true, 0, &token_type);
+  if (token_type == MC_TOKEN_OPEN_BRACKET) {
+    //   // It's a function pointer!
 
-    mcs_parse_through_token(ps, declarator, MC_TOKEN_NUMERIC_LITERAL, &declarator->field_declarator.array_size);
-    mcs_parse_through_supernumerary_tokens(ps, declarator);
-    mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_CLOSING_BRACKET, NULL);
+    mcs_parse_function_pointer_declaration(ps, declarator, true, &declarator->field_declarator.function_pointer);
   }
-  else {
-    declarator->field_declarator.array_size = NULL;
+  else if (token_type == MC_TOKEN_IDENTIFIER) {
+    mcs_parse_through_token(ps, declarator, MC_TOKEN_IDENTIFIER, &declarator->field_declarator.name);
+
+    if (token_type == MC_TOKEN_SQUARE_OPENING_BRACKET) {
+      // Is an array declaration
+      mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_OPENING_BRACKET, NULL);
+      mcs_parse_through_supernumerary_tokens(ps, declarator);
+
+      mcs_parse_through_token(ps, declarator, MC_TOKEN_NUMERIC_LITERAL, &declarator->field_declarator.array_size);
+      mcs_parse_through_supernumerary_tokens(ps, declarator);
+      mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_CLOSING_BRACKET, NULL);
+    }
+    else {
+      declarator->field_declarator.array_size = NULL;
+    }
   }
 
   return 0;
@@ -4008,22 +4033,15 @@ int mcs_parse_field_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
   mcs_parse_type_identifier(ps, field_decl, &type_identity);
   mcs_parse_through_supernumerary_tokens(ps, field_decl);
 
-  if (type_identity->type == MC_SYNTAX_FUNCTION_POINTER_DECLARATION) {
-    field_decl->field.type = FIELD_KIND_FUNCTION_POINTER;
+  field_decl->field.type = FIELD_KIND_STANDARD;
+  field_decl->field.type_identifier = type_identity;
 
-    field_decl->field.function_pointer = type_identity;
-    field_decl->field.declarators = NULL;
-  }
-  else {
-    field_decl->field.type = FIELD_KIND_STANDARD;
-    field_decl->field.type_identifier = type_identity;
+  field_decl->field.declarators = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+  field_decl->field.declarators->alloc = 0;
+  field_decl->field.declarators->count = 0;
 
-    field_decl->field.declarators = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
-    field_decl->field.declarators->alloc = 0;
-    field_decl->field.declarators->count = 0;
-
-    mcs_parse_field_declarators(ps, field_decl, field_decl->field.declarators);
-  }
+  mcs_parse_field_declarators(ps, field_decl, field_decl->field.declarators);
+  // }
 
   register_midge_error_tag("mcs_parse_field_declaration(~)");
   return 0;
@@ -4388,7 +4406,7 @@ int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast)
     }
   }
 
-  printf("parse_definition_to_syntax_tree\n");
+  // printf("parse_definition_to_syntax_tree\n");
   // print_syntax_node(*ast, 0);
 
   return 0;

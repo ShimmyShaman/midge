@@ -18,7 +18,6 @@ using namespace std;
 
 cling::Interpreter *clint;
 
-
 int main(int argc, const char *const *argv)
 {
 
@@ -39,11 +38,14 @@ int main(int argc, const char *const *argv)
   sprintf(buf, "clint = (cling::Interpreter *)%p;", (void *)clint);
   clint->process(buf);
 
-  clint->process("_midge_run()");
+  int result;
+  sprintf(buf, "*(int *)(%p) = _midge_run();", &result);
+  clint->process(buf);
 
   delete (clint);
 
   // IGNORE_MIDGE_ERROR_REPORT = true;
 
-  usleep(4000000);
+  usleep(3000000);
+  return result;
 }

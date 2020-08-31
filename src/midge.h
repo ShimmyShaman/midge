@@ -94,7 +94,7 @@ int clint_loadheader(const char *path) { return clint->loadHeader(path); }
 int (*mc_dummy_function)(int, void **);
 int mc_dummy_function_v1(int argsc, void **argsv) { return 0; }
 
-void _midge_run()
+int _midge_run()
 {
   // Pointer Size Check
   int sizeof_void_ptr = sizeof(void *);
@@ -103,7 +103,7 @@ void _midge_run()
       sizeof_void_ptr != sizeof(void **) || sizeof_void_ptr != sizeof(mc_dummy_function) ||
       sizeof_void_ptr != sizeof(&mc_dummy_function_v1) || sizeof_void_ptr != sizeof(unsigned long)) {
     printf("pointer sizes aren't equal!!! This is the basis of midge. Exiting.\n");
-    return;
+    return -777;
   }
 
   // TODO -- integrate the ERROR STACK/TAG stuff with the rest of the midge code
@@ -149,16 +149,20 @@ void _midge_run()
     }
     clint->process("printf(\"</AppSourceLoading>\\n\\n\");");
 
-    sprintf(buf, "int _midge_internal_run() {\n"
-                 "  "
-                 "  MCcall(midge_initialize_app(0, NULL));\n"
-                 ""
-                 "  MCcall(midge_run_app(0, NULL));\n"
-                 ""
-                 "  MCcall(midge_cleanup_app(0, NULL));\n"
-                 ""
-                 "  return 0;\n"
-                 "}\n");
+    sprintf(buf,
+            "int _midge_internal_run() {\n"
+            "  void *mc_vargs[1];\n"
+            "  void *mc_vargs_0 = (void *)%p;\n"
+            "  mc_vargs[0] = &mc_vargs_0;\n"
+            "  MCcall(midge_initialize_app(1, mc_vargs));\n"
+            ""
+            "  MCcall(midge_run_app(0, NULL));\n"
+            ""
+            "  MCcall(midge_cleanup_app(0, NULL));\n"
+            ""
+            "  return 0;\n"
+            "}\n",
+            &app_begin_time);
     clint->declare(buf);
 
     sprintf(buf, "(*(int *)%p) = _midge_internal_run();\n", &mc_res);
@@ -215,5 +219,6 @@ void _midge_run()
     std::cerr << e.what() << '\n';
   }
   clint->process("printf(\"</midge>\\n\");");
+  return 0;
 }
 #endif // MIDGE_H
