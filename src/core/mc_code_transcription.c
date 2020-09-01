@@ -114,7 +114,7 @@ int mct_add_scope_variable(mct_transcription_state *ts, mc_syntax_node *variable
                                &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
     } break;
     case PARAMETER_KIND_FUNCTION_POINTER: {
-      copy_syntax_node_to_text(variable_syntax_node->parameter.function_pointer->function_pointer.name,
+      copy_syntax_node_to_text(variable_syntax_node->parameter.function_pointer->fptr_declarator.name,
                                &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
     } break;
     default:
@@ -123,8 +123,14 @@ int mct_add_scope_variable(mct_transcription_state *ts, mc_syntax_node *variable
   } break;
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
     ts->scope[ts->scope_index].variables[variable_index_in_scope].declaration_node = variable_syntax_node;
-    copy_syntax_node_to_text(variable_syntax_node->local_variable_declarator.variable_name,
-                             &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
+    if (variable_syntax_node->local_variable_declarator.function_pointer) {
+      copy_syntax_node_to_text(variable_syntax_node->local_variable_declarator.function_pointer->fptr_declarator.name,
+                               &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
+    }
+    else {
+      copy_syntax_node_to_text(variable_syntax_node->local_variable_declarator.variable_name,
+                               &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
+    }
   } break;
   default:
     MCerror(105, "Unsupported:%s", get_mc_syntax_token_type_name(variable_syntax_node->type));
@@ -1022,6 +1028,8 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
 
   // Do MC_invokes
   // if (contains_mc_function_call) {
+  // const char *tyin = get_mc_syntax_token_type_name(declaration->local_variable_declaration.type_identifier->type);
+  // register_midge_error_tag("lvd->t:%s", tyin);
   mct_append_indent_to_c_str(ts);
   mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
   append_to_c_str(ts->str, " ");
@@ -1032,13 +1040,25 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
     }
 
     mc_syntax_node *declarator = declaration->local_variable_declaration.declarators->items[i];
-    if (declarator->local_variable_declarator.type_dereference) {
-      mct_append_node_text_to_c_str(ts->str, declarator->local_variable_declarator.type_dereference);
-    }
-    mct_append_node_text_to_c_str(ts->str, declarator->local_variable_declarator.variable_name);
+    if (declarator->local_variable_declarator.function_pointer) {
+      print_syntax_node(declarator, 0);
+      if (declarator->local_variable_declarator.type_dereference) {
+        mct_append_node_text_to_c_str(ts->str, declarator->local_variable_declarator.type_dereference);
+      }
 
+      mct_append_node_text_to_c_str(ts->str, declarator->local_variable_declarator.function_pointer);
+    }
+    else {
+      if (declarator->local_variable_declarator.type_dereference) {
+        mct_append_node_text_to_c_str(ts->str, declarator->local_variable_declarator.type_dereference);
+      }
+      mct_append_node_text_to_c_str(ts->str, declarator->local_variable_declarator.variable_name);
+    }
+
+    // Add to local scope
     mct_add_scope_variable(ts, declarator);
 
+    // Initializer Query
     if (!declarator->local_variable_declarator.initializer) {
       continue;
     }
@@ -1271,7 +1291,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     // printf("LLL>>>>\n");
     // print_syntax_node(syntax_node, 0);
     // }
-    if (syntax_node->cast_expression.type_identifier->type == MC_SYNTAX_FUNCTION_POINTER) {
+    if (syntax_node->cast_expression.type_identifier->type == MC_SYNTAX_FUNCTION_POINTER_DECLARATION) {
       mct_append_node_text_to_c_str(ts->str, syntax_node->cast_expression.type_identifier);
     }
     else {
@@ -2141,22 +2161,22 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
         }
       }
       append_to_c_str(ts.str, "(");
-      if (parameter_syntax->parameter.function_pointer->function_pointer.fp_dereference) {
+      if (parameter_syntax->parameter.function_pointer->fptr_declarator.fp_dereference) {
         for (int d = 0;
              d <
-             parameter_syntax->parameter.function_pointer->function_pointer.fp_dereference->dereference_sequence.count;
+             parameter_syntax->parameter.function_pointer->fptr_declarator.fp_dereference->dereference_sequence.count;
              ++d) {
           append_to_c_str(ts.str, "*");
         }
       }
       append_to_c_str(ts.str, "*)(");
 
-      for (int p = 0; p < parameter_syntax->parameter.function_pointer->function_pointer.parameters->count; ++p) {
+      for (int p = 0; p < parameter_syntax->parameter.function_pointer->fptr_declarator.parameters->count; ++p) {
         if (p > 0) {
           append_to_c_str(ts.str, ", ");
         }
 
-        mc_syntax_node *fp_param = parameter_syntax->parameter.function_pointer->function_pointer.parameters->items[p];
+        mc_syntax_node *fp_param = parameter_syntax->parameter.function_pointer->fptr_declarator.parameters->items[p];
 
         switch (fp_param->parameter.type) {
         case PARAMETER_KIND_STANDARD: {

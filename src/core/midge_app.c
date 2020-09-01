@@ -4,7 +4,7 @@
 #include "render/render_thread.h"
 #include <time.h>
 
-void *callit(void *arg)
+int callit()
 {
   printf("callit\n");
   return NULL;
@@ -13,9 +13,9 @@ void *callit(void *arg)
 int dothecall(void **args)
 {
   printf("dothecall\n");
-  void *(*rout)(void *) = *(void *(**)(void *))mc_argsv[0];
+  int (*rout)() = *(int (**)())mc_argsv[0];
 
-  rout(NULL);
+  rout();
   return 0;
 }
 

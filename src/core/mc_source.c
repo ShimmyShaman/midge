@@ -123,8 +123,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     parameter->parameter_type = PARAMETER_KIND_FUNCTION_POINTER;
 
     // Name
-    copy_syntax_node_to_text(parameter_syntax_node->parameter.function_pointer->function_pointer.name,
-                             &parameter->name);
+    copy_syntax_node_to_text(parameter_syntax_node->parameter.function_pointer->fptr_declarator.name, &parameter->name);
 
     // Type
     copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->return_type);
@@ -288,11 +287,11 @@ int summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
     if (declarator_syntax->field_declarator.function_pointer) {
       // Function pointer
       // print_syntax_node(declarator_syntax->field_declarator.function_pointer, 0);
-      copy_syntax_node_to_text(declarator_syntax->field_declarator.function_pointer->function_pointer.name,
+      copy_syntax_node_to_text(declarator_syntax->field_declarator.function_pointer->fptr_declarator.name,
                                &declarator->function_pointer.identifier);
-      if (declarator_syntax->field_declarator.function_pointer->function_pointer.fp_dereference) {
+      if (declarator_syntax->field_declarator.function_pointer->fptr_declarator.fp_dereference) {
         declarator->function_pointer.fp_deref_count = declarator_syntax->field_declarator.function_pointer
-                                                          ->function_pointer.fp_dereference->dereference_sequence.count;
+                                                          ->fptr_declarator.fp_dereference->dereference_sequence.count;
       }
       else {
         declarator->function_pointer.fp_deref_count = 0;
@@ -617,10 +616,10 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
     // print_syntax_node(ast, 0);
     printf("mc_transcription:\n%s||\n", mc_transcription);
   }
-  // if (!strcmp(func_info->name, "midge_run_app")) {
-  //   // print_syntax_node(ast, 0);
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
-  // }
+  if (!strcmp(func_info->name, "dothecall")) {
+    // print_syntax_node(ast, 0);
+    printf("mc_transcription:\n%s||\n", mc_transcription);
+  }
 
   int result = clint_declare(mc_transcription);
   if (result) {

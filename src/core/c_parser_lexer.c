@@ -267,8 +267,10 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER";
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR:
     return "MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR";
-  case MC_SYNTAX_FUNCTION_POINTER:
-    return "MC_SYNTAX_FUNCTION_POINTER";
+  case MC_SYNTAX_FUNCTION_POINTER_DECLARATOR:
+    return "MC_SYNTAX_FUNCTION_POINTER_DECLARATOR";
+  case MC_SYNTAX_FUNCTION_POINTER_DECLARATION:
+    return "MC_SYNTAX_FUNCTION_POINTER_DECLARATION";
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION:
     return "MC_SYNTAX_PARENTHESIZED_EXPRESSION";
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
@@ -293,8 +295,6 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_INCLUDE_SYSTEM_HEADER_IDENTITY";
   case MC_SYNTAX_TYPE_IDENTIFIER:
     return "MC_SYNTAX_TYPE_IDENTIFIER";
-  // case MC_SYNTAX_FUNCTION_POINTER_DECLARATION:
-  //   return "MC_SYNTAX_FUNCTION_POINTER_DECLARATION";
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:
     return "MC_SYNTAX_DEREFERENCE_SEQUENCE";
   case MC_SYNTAX_PARAMETER_DECLARATION:
@@ -675,12 +675,17 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->field_declarator.array_size = NULL;
     syntax_node->field_declarator.function_pointer = NULL;
   } break;
-  case MC_SYNTAX_FUNCTION_POINTER: {
-    syntax_node->function_pointer.fp_dereference = NULL;
-    syntax_node->function_pointer.name = NULL;
-    syntax_node->function_pointer.parameters = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
-    syntax_node->function_pointer.parameters->alloc = 0;
-    syntax_node->function_pointer.parameters->count = 0;
+  case MC_SYNTAX_FUNCTION_POINTER_DECLARATOR: {
+    syntax_node->fptr_declarator.fp_dereference = NULL;
+    syntax_node->fptr_declarator.name = NULL;
+    syntax_node->fptr_declarator.parameters = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+    syntax_node->fptr_declarator.parameters->alloc = 0;
+    syntax_node->fptr_declarator.parameters->count = 0;
+  } break;
+  case MC_SYNTAX_FUNCTION_POINTER_DECLARATION: {
+    syntax_node->fptr_declaration.declarator = NULL;
+    syntax_node->fptr_declaration.return_type_identifier = NULL;
+    syntax_node->fptr_declaration.return_type_dereference = NULL;
   } break;
   case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION: {
     syntax_node->local_variable_declaration.type_identifier = NULL;
@@ -763,7 +768,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->cast_expression.expression = NULL;
   } break;
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
-    syntax_node->cast_expression.expression = NULL;
+    syntax_node->parenthesized_expression.expression = NULL;
   } break;
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     syntax_node->sizeof_expression.type_identifier = NULL;
@@ -796,14 +801,6 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_DEREFERENCE_SEQUENCE: {
     syntax_node->dereference_sequence.count = 0;
   } break;
-  // case MC_SYNTAX_FUNCTION_POINTER_DECLARATION: {
-  //   syntax_node->function_pointer_declaration.return_type = NULL;
-  //   syntax_node->function_pointer_declaration.type_dereference = NULL;
-  //   syntax_node->function_pointer_declaration.identifier = NULL;
-  //   syntax_node->function_pointer_declaration.parameters = (mc_syntax_node_list
-  //   *)malloc(sizeof(mc_syntax_node_list)); syntax_node->function_pointer_declaration.parameters->alloc = 0;
-  //   syntax_node->function_pointer_declaration.parameters->count = 0;
-  // } break;
   case MC_SYNTAX_INCLUDE_SYSTEM_HEADER_IDENTITY: {
     syntax_node->include_directive.is_system_header_search = false;
     syntax_node->include_directive.filepath = NULL;
@@ -1883,7 +1880,7 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
                                           mc_syntax_node **additional_destination)
 {
   mc_syntax_node *fp_decl;
-  mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION_POINTER, NULL, parent, &fp_decl);
+  mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION_POINTER_DECLARATOR, NULL, parent, &fp_decl);
   if (additional_destination) {
     *additional_destination = fp_decl;
   }
@@ -1894,15 +1891,18 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
   mc_token_type token_type;
   mcs_peek_token_type(ps, false, 0, &token_type);
   if (token_type == MC_TOKEN_STAR_CHARACTER) {
-    mcs_parse_dereference_sequence(ps, fp_decl, &fp_decl->function_pointer.fp_dereference);
+    mcs_parse_dereference_sequence(ps, fp_decl, &fp_decl->fptr_declarator.fp_dereference);
     mcs_parse_through_supernumerary_tokens(ps, fp_decl);
   }
   else {
-    fp_decl->function_pointer.fp_dereference = NULL;
+    fp_decl->fptr_declarator.fp_dereference = NULL;
   }
 
-  mcs_parse_through_token(ps, fp_decl, MC_TOKEN_IDENTIFIER, &fp_decl->function_pointer.name);
-  mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+  mcs_peek_token_type(ps, false, 0, &token_type);
+  if (!allow_name_skip || token_type == MC_TOKEN_IDENTIFIER) {
+    mcs_parse_through_token(ps, fp_decl, MC_TOKEN_IDENTIFIER, &fp_decl->fptr_declarator.name);
+    mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+  }
 
   mcs_parse_through_token(ps, fp_decl, MC_TOKEN_CLOSING_BRACKET, NULL);
   mcs_parse_through_supernumerary_tokens(ps, fp_decl);
@@ -1910,7 +1910,7 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
   mcs_parse_through_token(ps, fp_decl, MC_TOKEN_OPEN_BRACKET, NULL);
   mcs_parse_through_supernumerary_tokens(ps, fp_decl);
 
-  mc_syntax_node_list *parameter_list = fp_decl->function_pointer.parameters;
+  mc_syntax_node_list *parameter_list = fp_decl->fptr_declarator.parameters;
 
   while (1) {
     mcs_peek_token_type(ps, false, 0, &token_type);
@@ -1935,17 +1935,26 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
 int mcs_parse_function_pointer_declaration(parsing_state *ps, mc_syntax_node *parent, bool allow_name_skip,
                                            mc_syntax_node **additional_destination)
 {
-  mcs_parse_type_identifier(ps, cast_expression, &cast_expression->cast_expression.type_identifier);
-  mcs_parse_through_supernumerary_tokens(ps, cast_expression);
+  mc_syntax_node *fp_decl;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_FUNCTION_POINTER_DECLARATION, NULL, parent, &fp_decl);
+  if (additional_destination) {
+    *additional_destination = fp_decl;
+  }
 
+  mcs_parse_type_identifier(ps, fp_decl, &fp_decl->fptr_declaration.return_type_identifier);
+  mcs_parse_through_supernumerary_tokens(ps, fp_decl);
+
+  mc_token_type token0;
   mcs_peek_token_type(ps, false, 0, &token0);
   if (token0 == MC_TOKEN_STAR_CHARACTER) {
-    mcs_parse_dereference_sequence(ps, cast_expression, &cast_expression->cast_expression.type_dereference);
-    mcs_parse_through_supernumerary_tokens(ps, cast_expression);
+    mcs_parse_dereference_sequence(ps, fp_decl, &fp_decl->fptr_declaration.return_type_dereference);
+    mcs_parse_through_supernumerary_tokens(ps, fp_decl);
   }
   else {
-    cast_expression->cast_expression.type_dereference = NULL;
+    fp_decl->fptr_declaration.return_type_dereference = NULL;
   }
+
+  mcs_parse_function_pointer_declarator(ps, fp_decl, allow_name_skip, &fp_decl->fptr_declaration.declarator);
 
   return 0;
 }
@@ -2465,10 +2474,10 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
     }
 
     // Expectation
-    if (token0 != MC_TOKEN_IDENTIFIER && token0 != MC_TOKEN_STAR_CHARACTER) {
-      print_parse_error(ps->code, ps->index, "see-below", "");
-      MCerror(2462, "Expected Local Variable Declarator. was:%s", get_mc_token_type_name(token0));
-    }
+    // if (token0 != MC_TOKEN_IDENTIFIER && token0 != MC_TOKEN_STAR_CHARACTER) {
+    //   print_parse_error(ps->code, ps->index, "see-below", "");
+    //   MCerror(2462, "Expected Local Variable Declarator. was:%s", get_mc_token_type_name(token0));
+    // }
 
     mc_syntax_node *declarator;
     mcs_construct_syntax_node(ps, MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR, NULL, local_declaration, &declarator);
