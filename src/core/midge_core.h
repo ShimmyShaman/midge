@@ -196,7 +196,7 @@ typedef enum source_file_type {
 typedef enum source_definition_type {
   SOURCE_DEFINITION_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
   SOURCE_DEFINITION_FUNCTION,
-  SOURCE_DEFINITION_STRUCT,
+  SOURCE_DEFINITION_STRUCTURE,
   SOURCE_DEFINITION_ENUMERATION,
 } source_definition_type;
 

@@ -1,5 +1,7 @@
 
+#include "m_threads.h"
 #include "midge_common.h"
+#include "platform/mc_xcb.h"
 
 typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,
@@ -100,3 +102,7 @@ typedef struct render_thread_info {
   bool render_thread_initialized;
   window_input_buffer input_buffer;
 } render_thread_info;
+
+extern "C" {
+void *midge_render_thread(void *vargp);
+}

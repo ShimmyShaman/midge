@@ -6003,7 +6003,7 @@ int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_
 
   // Set Provided Source Path
   mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
-  definition->type = SOURCE_DEFINITION_STRUCT;
+  definition->type = SOURCE_DEFINITION_STRUCTURE;
   definition->source_file = source_file;
   MCcall(copy_syntax_node_to_text(struct_ast, &definition->code));
   MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
@@ -6359,7 +6359,7 @@ int parse_and_process_mc_file_syntaxt(mc_command_hub_v1 *command_hub, const char
             // print_parse_error(file_text, i, "after", "n");
 
             // Copy
-            definitions[definition_count].type = SOURCE_DEFINITION_STRUCT;
+            definitions[definition_count].type = SOURCE_DEFINITION_STRUCTURE;
             definitions[definition_count].declaration = NULL;
             allocate_and_copy_cstrn(definitions[definition_count].declaration, file_text + s + 8,
                                     open_bracket_index - s - 9);
@@ -6428,11 +6428,11 @@ int parse_and_process_mc_file_syntaxt(mc_command_hub_v1 *command_hub, const char
 
   register_midge_error_tag("parse_and_process_mc_file_syntax-4 %i definitions", definition_count);
   for (int a = 0; a < definition_count; ++a) {
-    if (definitions[a].type == SOURCE_DEFINITION_STRUCT) {
+    if (definitions[a].type == SOURCE_DEFINITION_STRUCTURE) {
       register_midge_error_tag("parse_and_process_mc_file_syntax-processing '%s'", definitions[a].declaration);
       // Set Provided Source Path
       mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
-      definition->type = SOURCE_DEFINITION_STRUCT;
+      definition->type = SOURCE_DEFINITION_STRUCTURE;
       definition->source_file = source_file;
       definition->code = definitions[a].text;
       MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
@@ -6709,7 +6709,7 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
           // print_parse_error(file_text, i, "after", "n");
 
           // Copy
-          definitions[definition_count].type = SOURCE_DEFINITION_STRUCT;
+          definitions[definition_count].type = SOURCE_DEFINITION_STRUCTURE;
           definitions[definition_count].declaration = NULL;
           definitions[definition_count].text = (char *)malloc(sizeof(char) * (i - s + 1));
           strncpy(definitions[definition_count].text, file_text + s, i - s);
@@ -6772,9 +6772,9 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
   source_file->definitions.count = 0;
 
   for (int a = 0; a < definition_count; ++a) {
-    if (definitions[a].type == SOURCE_DEFINITION_STRUCT) {
+    if (definitions[a].type == SOURCE_DEFINITION_STRUCTURE) {
       mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
-      definition->type = SOURCE_DEFINITION_STRUCT;
+      definition->type = SOURCE_DEFINITION_STRUCTURE;
       definition->source_file = source_file;
       definition->code = definitions[a].text;
       MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
@@ -7157,7 +7157,7 @@ int load_and_process_core_structure(mc_command_hub_v1 *command_hub, const char *
   // Set Provided Source Path
       structure->source_file = source_file;
       mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
-      definition->type = SOURCE_DEFINITION_STRUCT;
+      definition->type = SOURCE_DEFINITION_STRUCTURE;
       definition->structure_info = structure;
       MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
                                   &source_file->definitions.count, definition));

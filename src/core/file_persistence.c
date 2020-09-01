@@ -87,7 +87,7 @@ void save_source_to_file(mc_source_definition_v1 *source_definition)
     case SOURCE_DEFINITION_FUNCTION: {
       append_to_c_str(save_text, definition->code);
     } break;
-    case SOURCE_DEFINITION_STRUCT: {
+    case SOURCE_DEFINITION_STRUCTURE: {
       printf("sftf-struct:\n%s||\n", definition->code);
       append_to_c_str(save_text, definition->code);
     } break;

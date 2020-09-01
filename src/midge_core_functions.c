@@ -3873,7 +3873,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
   parse_struct_definition(command_hub, state->source_data, &defined_struct);
 
   printf("dsfce-0\n");
-  if (!state->source_data || state->source_data->type != SOURCE_DEFINITION_STRUCT) {
+  if (!state->source_data || state->source_data->type != SOURCE_DEFINITION_STRUCTURE) {
     // New Definition
     MCerror(4851, "TODO");
   }

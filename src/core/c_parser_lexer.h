@@ -260,7 +260,13 @@ typedef struct mc_syntax_node {
           mc_syntax_node *fp_dereference;
           mc_syntax_node *name;
           mc_syntax_node_list *parameters;
-        } function_pointer;
+        } fptr_declarator;
+        struct {
+          mc_syntax_node *return_type_identifier;
+          // May be null indicating no dereference operators
+          mc_syntax_node *return_type_dereference;
+          mc_syntax_node *declarator;
+        } fptr_declaration;
         struct {
           mc_syntax_node *type_modifier;
           mc_syntax_node *type_identifier;
@@ -312,6 +318,7 @@ typedef struct mc_syntax_node {
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *variable_name;
+          mc_syntax_node *function_pointer;
           mc_syntax_node *initializer;
         } local_variable_declarator;
         struct {

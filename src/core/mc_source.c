@@ -484,6 +484,7 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
   }
   register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
 
+  structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION;
   cprintf(structure_info->mc_declared_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
 
   // Set the values parsed
@@ -612,7 +613,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  if (!strcmp(func_info->name, "mcs_parse_expression_beginning_with_bracket")) {
+  if (!strcmp(func_info->name, "begin_mthread")) {
     // print_syntax_node(ast, 0);
     printf("mc_transcription:\n%s||\n", mc_transcription);
   }
@@ -661,7 +662,11 @@ int instantiate_struct_definition_from_ast(node *definition_owner, source_defini
 
   // if (!strcmp(structure_info->name, "mc_syntax_node"))
   //   printf("struct:\n%s||\n", mc_transcription);
-  clint_declare(mc_transcription);
+  int result = clint_declare(mc_transcription);
+  if (result) {
+    printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
+    MCerror(667, "Failed to declare structure");
+  }
   free(mc_transcription);
 
   if (definition_info) {
@@ -681,7 +686,11 @@ int instantiate_enum_definition_from_ast(node *definition_owner, source_definiti
 
   char buf[256];
   sprintf(buf, "enum %s { };", enum_info->mc_declared_name);
-  clint_declare(buf);
+  int result = clint_declare(buf);
+  if (result) {
+    printf("\nmc_declaration:\n%s||\n", buf);
+    MCerror(691, "Failed to declare enumeration");
+  }
 
   if (definition_info) {
     *definition_info = enum_info;
@@ -727,6 +736,15 @@ int instantiate_define_statement(node *definition_owner, mc_syntax_node *ast, pr
     MCerror(830, "TODO :%i", ast->preprocess_define.statement_type);
   }
 
+  char *statement_text;
+  copy_syntax_node_to_text(ast, &statement_text);
+  int result = clint_declare(statement_text);
+  if (result) {
+    printf("\ndefine_declaration:\n%s||\n", statement_text);
+    MCerror(691, "Failed to declare define statement");
+  }
+  free(statement_text);
+
   return 0;
 }
 
@@ -769,8 +787,9 @@ int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *a
     function_info *func_info = (function_info *)p_definition_info;
     func_info->source = source;
   } break;
+  case MC_SYNTAX_UNION:
   case MC_SYNTAX_STRUCTURE: {
-    source->type = SOURCE_DEFINITION_STRUCT;
+    source->type = SOURCE_DEFINITION_STRUCTURE;
     instantiate_struct_definition_from_ast(definition_owner, source, ast, &p_definition_info);
 
     struct_info *structure_info = (struct_info *)p_definition_info;
@@ -847,6 +866,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
     case MC_SYNTAX_TYPE_ALIAS: {
       char buf[1024];
       switch (child->type_alias.type_descriptor->type) {
+      case MC_SYNTAX_UNION:
       case MC_SYNTAX_STRUCTURE: {
         struct_info *info;
         instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);

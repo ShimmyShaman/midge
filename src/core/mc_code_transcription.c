@@ -15,6 +15,7 @@ int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_nod
 typedef struct mct_transcription_state {
   // Options
   bool report_invocations_to_error_stack;
+  bool report_simple_args_to_error_stack;
   bool tag_on_function_entry;
 
   // State Values
@@ -141,26 +142,26 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
 {
   result->type_name = NULL;
 
-  printf("_determine_type_of_expression_subsearch()\n");
-  print_syntax_node(expression, 0);
-  // DEBUG
-  printf("parent fields: (count=%i)\n", parent_type_fields->count);
-  for (int i = 0; i < parent_type_fields->count; ++i) {
-    switch (parent_type_fields->items[i]->field_type) {
-    case FIELD_KIND_STANDARD: {
-      printf("%s ", parent_type_fields->items[i]->field.type_name);
-      for (int j = 0; j < parent_type_fields->items[i]->field.declarators->count; ++j) {
-        if (j > 0)
-          printf(", ");
-        printf("%s", parent_type_fields->items[i]->field.declarators->items[j]->name);
-      }
-      printf(";\n");
-    } break;
-    default:
-      printf("-anotherfield type:%i\n", parent_type_fields->items[i]->field_type);
-      break;
-    }
-  }
+  // printf("_determine_type_of_expression_subsearch()\n");
+  // print_syntax_node(expression, 0);
+  // // DEBUG
+  // printf("parent fields: (count=%i)\n", parent_type_fields->count);
+  // for (int i = 0; i < parent_type_fields->count; ++i) {
+  //   switch (parent_type_fields->items[i]->field_type) {
+  //   case FIELD_KIND_STANDARD: {
+  //     printf("%s ", parent_type_fields->items[i]->field.type_name);
+  //     for (int j = 0; j < parent_type_fields->items[i]->field.declarators->count; ++j) {
+  //       if (j > 0)
+  //         printf(", ");
+  //       printf("%s", parent_type_fields->items[i]->field.declarators->items[j]->name);
+  //     }
+  //     printf(";\n");
+  //   } break;
+  //   default:
+  //     printf("-anotherfield type:%i\n", parent_type_fields->items[i]->field_type);
+  //     break;
+  //   }
+  // }
   // DEBUG
 
   switch (expression->type) {
@@ -718,52 +719,68 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
           append_to_c_strf(ts->str, "void *mc_vargs_%i = NULL;\n", i);
           mct_append_indent_to_c_str(ts);
           append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+          break;
         }
-        else if (!strcmp(argument->text, "false")) {
+        if (!strcmp(argument->text, "false")) {
           append_to_c_strf(ts->str, "unsigned char mc_vargs_%i = false;\n", i);
           mct_append_indent_to_c_str(ts);
           append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+          break;
         }
-        else if (!strcmp(argument->text, "true")) {
+        if (!strcmp(argument->text, "true")) {
           append_to_c_strf(ts->str, "unsigned char mc_vargs_%i = true;\n", i);
           mct_append_indent_to_c_str(ts);
           append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+          break;
         }
-        else {
-          // Search enum values...
-          enumeration_info *enum_info;
-          enum_member_info *enum_member;
-          find_enum_member_info(argument->text, &enum_info, &enum_member);
-          // if (!strcmp(argument->text, "MC_SYNTAX_DEREFERENCE_SEQUENCE")) {
-          //   printf("enum was :%p\n", enum_member);
-          // }
-          if (enum_member) {
-            append_to_c_strf(ts->str, "%s mc_vargs_%i = %s;\n", enum_info->mc_declared_name, i, argument->text);
+
+        // Search enum values...
+        enumeration_info *enum_info;
+        enum_member_info *enum_member;
+        find_enum_member_info(argument->text, &enum_info, &enum_member);
+        // if (!strcmp(argument->text, "MC_SYNTAX_DEREFERENCE_SEQUENCE")) {
+        //   printf("enum was :%p\n", enum_member);
+        // }
+        if (enum_member) {
+          append_to_c_strf(ts->str, "%s mc_vargs_%i = %s;\n", enum_info->mc_declared_name, i, argument->text);
+          mct_append_indent_to_c_str(ts);
+          append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+          break;
+        }
+
+        // if (!strcmp(argument->text, "buf")) {
+        // Array implicit decay fubberjiggle workaround
+        {
+          mct_expression_type_info arg_type_info;
+          determine_type_of_expression(ts, argument, &arg_type_info);
+          if (arg_type_info.type_name && arg_type_info.is_array) {
+            // print_syntax_node(argument, 0);
+            // printf("Type:%s:'%s':%i\n", arg_type_info.is_array ? "is_ary" : "not_ary", arg_type_info.type_name,
+            //        arg_type_info.deref_count);
+
+            append_to_c_strf(ts->str, "%s *mc_vargs_%i = %s;\n", arg_type_info.type_name, i, argument->text);
             mct_append_indent_to_c_str(ts);
-            append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_vargs_%i;\n", i, i);
+            append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)&mc_vargs_%i;\n", i, i);
             break;
           }
-
-          // if (!strcmp(argument->text, "buf")) {
-          // Array implicit decay fubberjiggle workaround
-          {
-            mct_expression_type_info arg_type_info;
-            determine_type_of_expression(ts, argument, &arg_type_info);
-            if (arg_type_info.is_array) {
-              // print_syntax_node(argument, 0);
-              // printf("Type:%s:'%s':%i\n", arg_type_info.is_array ? "is_ary" : "not_ary", arg_type_info.type_name,
-              //        arg_type_info.deref_count);
-
-              append_to_c_strf(ts->str, "%s *mc_vargs_%i = %s;\n", arg_type_info.type_name, i, argument->text);
-              mct_append_indent_to_c_str(ts);
-              append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)&mc_vargs_%i;\n", i, i);
-              break;
-            }
-          }
-
-          // TODO -- ?? assigning to 'void *' from incompatible type 'const int *'
-          append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)&%s;\n", i, argument->text);
         }
+
+        // Maybe it's a reference to a function
+        {
+          function_info *func_info;
+          find_function_info(argument->text, &func_info);
+          if (func_info) {
+            void *vv = (void *)mct_transcribe_mc_invocation;
+            // printf("printf(\"mc_vargs[%%i] = %p;\", %i, %s);\n", i, argument->text);
+            append_to_c_strf(ts->str, "printf(\"mc_vargs[%%i] = %%p;\", %i, %s);\n", i, argument->text);
+            append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)%s;\n", i, argument->text);
+
+            break;
+          }
+        }
+
+        // TODO -- ?? assigning to 'void *' from incompatible type 'const int *'
+        append_to_c_strf(ts->str, "mc_vargs[%i] = (void *)&%s;\n", i, argument->text);
       } break;
       default:
         print_syntax_node(argument, 0);
@@ -850,7 +867,12 @@ int mct_transcribe_declarator(mct_transcription_state *ts, mc_syntax_node *synta
     mct_append_node_text_to_c_str(ts->str, syntax_node->local_variable_declarator.type_dereference);
   }
   append_to_c_str(ts->str, " ");
-  mct_append_node_text_to_c_str(ts->str, syntax_node->local_variable_declarator.variable_name);
+  if (syntax_node->local_variable_declarator.function_pointer) {
+    mct_append_node_text_to_c_str(ts->str, syntax_node->local_variable_declarator.function_pointer);
+  }
+  else {
+    mct_append_node_text_to_c_str(ts->str, syntax_node->local_variable_declarator.variable_name);
+  }
 
   if (syntax_node->local_variable_declarator.initializer) {
     if (syntax_node->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER) {
@@ -1249,7 +1271,12 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     // printf("LLL>>>>\n");
     // print_syntax_node(syntax_node, 0);
     // }
-    mct_transcribe_type_identifier(ts, syntax_node->cast_expression.type_identifier);
+    if (syntax_node->cast_expression.type_identifier->type == MC_SYNTAX_FUNCTION_POINTER) {
+      mct_append_node_text_to_c_str(ts->str, syntax_node->cast_expression.type_identifier);
+    }
+    else {
+      mct_transcribe_type_identifier(ts, syntax_node->cast_expression.type_identifier);
+    }
 
     if (syntax_node->cast_expression.type_dereference) {
       append_to_c_str(ts->str, " ");
@@ -2215,13 +2242,14 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
 {
   register_midge_error_tag("transcribe_struct_to_mc()");
 
-  if (structure_ast->type != MC_SYNTAX_STRUCTURE) {
+  if (structure_ast->type != MC_SYNTAX_STRUCTURE && structure_ast->type != MC_SYNTAX_UNION) {
     MCerror(1242, "MCT:Invalid Argument");
   }
 
   mct_transcription_state ts;
   // -- options
   ts.report_invocations_to_error_stack = true;
+  ts.report_simple_args_to_error_stack = true;
   ts.tag_on_function_entry = true;
   // -- state
   ts.transcription_root = structure_ast;
@@ -2232,7 +2260,10 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
   ts.scope[ts.scope_index].variable_count = 0;
 
   // Header
-  append_to_c_str(ts.str, "struct \n");
+  if (structure_ast->type == MC_SYNTAX_STRUCTURE)
+    append_to_c_str(ts.str, "struct \n");
+  else if (structure_ast->type == MC_SYNTAX_UNION)
+    append_to_c_str(ts.str, "union \n");
   append_to_c_str(ts.str, structure_info->mc_declared_name);
 
   if (structure_ast->structure.fields) {
