@@ -919,7 +919,7 @@ int _parse_past_conformed_type_identifier(function_info *func_info, char *code, 
     if (mc_conformed_type) {
       // Require an extra dereference for parameters
       free(type_identity);
-      cprintf(type_identity, "%s *", mc_conformed_type);
+      mc_pprintf(&type_identity, "%s *", mc_conformed_type);
       free(mc_conformed_type);
     }
   }
@@ -3172,7 +3172,7 @@ int transcribe_declarative_assignment(function_info *owner, char *code, int *i, 
     MCcall(append_to_cstr(transcription_alloc, transcription, ";\n"));
 
     char *var;
-    cprintf(var, "&%s", identifier);
+    mc_pprintf(&var, "&%s", identifier);
     MCcall(transcribe_function_call(owner, code, i, transcription_alloc, transcription, var));
     free(var);
   }
@@ -3209,7 +3209,7 @@ int transcribe_assignment(function_info *owner, char *code, int *i, uint *transc
   }
   else {
     char *var;
-    cprintf(var, "&%s", identifier);
+    mc_pprintf(&var, "&%s", identifier);
     MCcall(transcribe_function_call(owner, code, i, transcription_alloc, transcription, var));
     free(var);
   }

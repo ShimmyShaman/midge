@@ -224,14 +224,14 @@ int fld_report_variable_snapshot(mc_code_editor_state_v1 *cestate, fld_variable_
 
   if (!field->mc_declared_type && !strcmp(field->type, "frame_time") && field->type_deref_count == 1) {
     frame_time *ft = (frame_time *)(*(void **)p_value);
-    cprintf(field->value_text, "[%s:%lds %ldus]", field->name, ft->app_secs, ft->frame_nsecs / 1000);
+    mc_pprintf(&field->value_text, "[%s:%lds %ldus]", field->name, ft->app_secs, ft->frame_nsecs / 1000);
   }
   else if (!field->mc_declared_type && !strcmp(field->type, "int") && field->type_deref_count == 0) {
     int val = (*(int *)p_value);
-    cprintf(field->value_text, "[%s:%i]", field->name, val);
+    mc_pprintf(&field->value_text, "[%s:%i]", field->name, val);
   }
   else {
-    cprintf(field->value_text, "[%s:%s]", field->name, p_value ? field->type : "null");
+    mc_pprintf(&field->value_text, "[%s:%s]", field->name, p_value ? field->type : "null");
   }
 
   // Notify of render update
@@ -865,7 +865,7 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
     //   cestate->source_interpretation.function_ast = NULL;
 
     //   // printf("cees-4\n");
-    cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
+    mc_pprintf(&cestate->status_bar.message, "ERR[%i]: read console output", result);
     cestate->status_bar.requires_render_update = true;
     //   // printf("cees-5\n");
   }
@@ -1137,7 +1137,7 @@ int update_code_editor_suggestion(mc_code_editor_state_v1 *cestate)
 
     //     cestate->suggestion_box.visible = true;
     //     cestate->suggestion_box.requires_render_update = true;
-    //     cprintf(cestate->suggestion_box.entries.items[cestate->suggestion_box.entries.count], "~init %s",
+    //     mc_pprintf(&cestate->suggestion_box.entries.items[cestate->suggestion_box.entries.count], "~init %s",
     //     struct_name);
     //     ++cestate->suggestion_box.entries.count;
     //   }
@@ -1390,7 +1390,7 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
     //   cestate->source_interpretation.function_ast = NULL;
 
     // printf("cees-4\n");
-    cprintf(cestate->status_bar.message, "ERR[%i]: read console output", result);
+    mc_pprintf(&cestate->status_bar.message, "ERR[%i]: read console output", result);
     cestate->status_bar.requires_render_update = true;
     // printf("cees-5\n");
     return 0;
@@ -1406,7 +1406,7 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
     cestate->code.syntax = code_syntax;
     // printf("cees-6b\n");
 
-    cprintf(cestate->status_bar.message, "loaded %s(...)", function->name);
+    mc_pprintf(&cestate->status_bar.message, "loaded %s(...)", function->name);
     cestate->status_bar.requires_render_update = true;
   }
   // printf("cees-7\n");

@@ -897,7 +897,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         //       else {
         //         // Copy the current line into the buffer
         //         if (state->text->lines[state->cursor.line] && strlen(state->text->lines[state->cursor.line])) {
-        //           cprintf(text, "%s\n", state->text->lines[state->cursor.line]);
+        //           mc_pprintf(&text, "%s\n", state->text->lines[state->cursor.line]);
         //         }
         //         else {
         //           // Copy empty text

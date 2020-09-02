@@ -59,7 +59,7 @@ int initialize_entry_visual_nodes(node *core_display, core_display_state *cdstat
 
     // printf("bce-2\n");
     core_entry->parent = core_display;
-    cprintf(core_entry->name, "core_entry%i", a);
+    mc_pprintf(&core_entry->name, "core_entry%i", a);
     core_entry->type = NODE_TYPE_VISUAL;
 
     // printf("bce-3\n");
@@ -135,7 +135,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   switch (entry->type) {
   case CORE_ENTRY_FUNCTION: {
     function_info *func_info = (function_info *)entry->data;
-    cprintf(element_cmd->data.print_text.text, "%s%s", indent_str, func_info->name);
+    mc_pprintf(&element_cmd->data.print_text.text, "%s%s", indent_str, func_info->name);
     if (func_info->source) {
       element_cmd->data.print_text.color = COLOR_FUNCTION_GREEN;
     }
@@ -149,33 +149,33 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
     //     printf("mrce-struct_info->source->code:%p\n%s||\n", ((struct_info *)entry->data)->source->code,
     //            ((struct_info *)entry->data)->source->code);
     struct_info *str_info = (struct_info *)entry->data;
-    cprintf(element_cmd->data.print_text.text, "%s%s", indent_str, str_info->name);
+    mc_pprintf(&element_cmd->data.print_text.text, "%s%s", indent_str, str_info->name);
     element_cmd->data.print_text.color = COLOR_LIGHT_YELLOW;
   } break;
   case CORE_ENTRY_CATEGORY_STRUCT: {
     if (entry->collapsed) {
-      cprintf(element_cmd->data.print_text.text, "%s+%s", indent_str, "structs");
+      mc_pprintf(&element_cmd->data.print_text.text, "%s+%s", indent_str, "structs");
     }
     else {
-      cprintf(element_cmd->data.print_text.text, "%s-%s", indent_str, "structs");
+      mc_pprintf(&element_cmd->data.print_text.text, "%s-%s", indent_str, "structs");
     }
     element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
   } break;
   case CORE_ENTRY_CATEGORY_FUNCTION: {
     if (entry->collapsed) {
-      cprintf(element_cmd->data.print_text.text, "%s+%s", indent_str, "functions");
+      mc_pprintf(&element_cmd->data.print_text.text, "%s+%s", indent_str, "functions");
     }
     else {
-      cprintf(element_cmd->data.print_text.text, "%s-%s", indent_str, "functions");
+      mc_pprintf(&element_cmd->data.print_text.text, "%s-%s", indent_str, "functions");
     }
     element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
   } break;
   case CORE_ENTRY_CATEGORY_CHILDREN: {
     if (entry->collapsed) {
-      cprintf(element_cmd->data.print_text.text, "%s+%s", indent_str, "nodes");
+      mc_pprintf(&element_cmd->data.print_text.text, "%s+%s", indent_str, "nodes");
     }
     else {
-      cprintf(element_cmd->data.print_text.text, "%s-%s", indent_str, "nodes");
+      mc_pprintf(&element_cmd->data.print_text.text, "%s-%s", indent_str, "nodes");
     }
     element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
   } break;
@@ -184,14 +184,14 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
     // printf("nodename:%s\n", node_data->name);
     if (entry->children.utilized_count) {
       if (entry->collapsed) {
-        cprintf(element_cmd->data.print_text.text, "%s+%s", indent_str, node_data->name);
+        mc_pprintf(&element_cmd->data.print_text.text, "%s+%s", indent_str, node_data->name);
       }
       else {
-        cprintf(element_cmd->data.print_text.text, "%s-%s", indent_str, node_data->name);
+        mc_pprintf(&element_cmd->data.print_text.text, "%s-%s", indent_str, node_data->name);
       }
     }
     else {
-      cprintf(element_cmd->data.print_text.text, "%s %s", indent_str, node_data->name);
+      mc_pprintf(&element_cmd->data.print_text.text, "%s %s", indent_str, node_data->name);
     }
     element_cmd->data.print_text.color = COLOR_NODE_ORANGE;
   } break;

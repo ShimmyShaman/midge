@@ -570,19 +570,19 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   mct_append_to_c_str(ts, "{\n");
   ++ts->indent;
 
-  mct_append_to_c_str(ts, "int is_mc_invoke = ");
-  if (func_info) {
-    append_to_c_str(ts->str, "1");
-  }
-  else {
-    // Search for the pointer
-    append_to_c_str(ts->str, "0");
-  }
-  append_to_c_str(ts->str, ";\n");
+  // mct_append_to_c_str(ts, "int is_mc_invoke = ");
+  // if (func_info) {
+  //   append_to_c_str(ts->str, "1");
+  // }
+  // else {
+  //   // Search for the pointer
+  //   append_to_c_str(ts->str, "0");
+  // }
+  // append_to_c_str(ts->str, ";\n");
 
-  mct_append_to_c_str(ts, "if (is_mc_invoke) {\n");
-  ++ts->indent;
-  {
+  // mct_append_to_c_str(ts, "if (is_mc_invoke) {\n");
+  // ++ts->indent;
+  if (func_info) {
     mct_append_to_c_str(ts, "void *mc_vargs[");
     append_to_c_strf(ts->str, "%i];\n", syntax_node->invocation.arguments->count + 1);
 
@@ -898,9 +898,9 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
                      function_name, syntax_node->begin.line);
   }
 
-  mct_append_to_c_str(ts, "if (is_mc_invoke) {\n");
-  ++ts->indent;
-  {
+  // mct_append_to_c_str(ts, "if (is_mc_invoke) {\n");
+  // ++ts->indent;
+  if (func_info) {
     // Mc_invocation
     mct_append_indent_to_c_str(ts);
     append_to_c_strf(ts->str, "int mcfc_result = %s(%i, mc_vargs);\n", function_name,
@@ -914,18 +914,18 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
     --ts->indent;
     mct_append_to_c_str(ts, "}\n");
   }
-  {
+  else {
     // Standard Function Call
-    --ts->indent;
-    mct_append_to_c_str(ts, "} else {\n");
-    ++ts->indent;
+    // --ts->indent;
+    // mct_append_to_c_str(ts, "} else {\n");
+    // ++ts->indent;
 
     mct_append_indent_to_c_str(ts);
-    mct_transcribe_expression(ts, syntax_node->expression_statement.expression);
+    mct_transcribe_expression(ts, syntax_node);
     append_to_c_str(ts->str, ";\n");
 
-    --ts->indent;
-    mct_append_to_c_str(ts, "}\n");
+    // --ts->indent;
+    // mct_append_to_c_str(ts, "}\n");
   }
 
   if (ts->report_invocations_to_error_stack) {
@@ -935,8 +935,8 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
     --ts->indent;
     mct_append_to_c_str(ts, "}\n");
   }
-  --ts->indent;
-  mct_append_to_c_str(ts, "}\n");
+  // --ts->indent;
+  // mct_append_to_c_str(ts, "}\n");
 
   --ts->indent;
   mct_append_to_c_str(ts, "}\n");
@@ -1228,15 +1228,16 @@ int mct_transcribe_mcerror(mct_transcription_state *ts, mc_syntax_node *syntax_n
       //   MCerror(715, "Not Expected");
       // }
 
-      char *temp_name;
-      cprintf(temp_name, "mcs_tt_name_%i", ttp++);
+      c_str *temp_name;
+      init_c_str(&temp_name);
+      append_to_c_strf(temp_name, "mcs_tt_name_%i", ttp++);
 
       mct_append_to_c_str(ts, "const char *");
-      append_to_c_str(ts->str, temp_name);
+      append_to_c_str(ts->str, temp_name->text);
       append_to_c_str(ts->str, ";\n");
 
-      mct_transcribe_mc_invocation(ts, mce_argument, temp_name);
-      free(temp_name);
+      mct_transcribe_mc_invocation(ts, mce_argument, temp_name->text);
+      release_c_str(temp_name, true);
     }
   }
 
@@ -1252,11 +1253,9 @@ int mct_transcribe_mcerror(mct_transcription_state *ts, mc_syntax_node *syntax_n
         (!strcmp(mce_argument->invocation.function_identity->text, "get_mc_syntax_token_type_name") ||
          !strcmp(mce_argument->invocation.function_identity->text, "get_mc_token_type_name"))) {
 
-      char *temp_name;
-      cprintf(temp_name, "mcs_tt_name_%i", ttp++);
-
+      char temp_name[32];
+      sprintf(temp_name, "mcs_tt_name_%i", ttp++);
       append_to_c_str(ts->str, temp_name);
-      free(temp_name);
     }
     else {
       mct_append_node_text_to_c_str(ts->str, mce_argument);

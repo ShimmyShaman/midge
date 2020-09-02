@@ -94,14 +94,44 @@ int clint_loadheader(const char *path) { return clint->loadHeader(path); }
 int (*mc_dummy_function)(int, void **);
 int mc_dummy_function_v1(int argsc, void **argsv) { return 0; }
 
-void brilly(int a) { printf("brilly:%i\n", a); }
+// void mc_printf(char *str, void **a) { printf(str, *a); }
 
-void domctest() { mc_invoke_function("brilly", &a); }
+// void mc_invoke_function(const char *fn, void *arg)
+// {
+//   char buf[222];
+//   sprintf(buf, "%s((int *)%p);", fn, arg);
+//   clint_process(buf);
+// }
+
+// void mc_invoke_functionptr(void *fptr, void *arg)
+// {
+//   char buf[222];
+//   sprintf(buf,
+//           "void (*fptr)(int *) = (void (*)(int *))%p;\n"
+//           "fptr((int *)%p);",
+//           fptr, arg);
+//   clint_process(buf);
+// }
+
+// void domctest()
+// {
+//   char buf[1202];
+
+//   sprintf(buf, "")
+//   int v0 = 5;
+//   mc_invoke_function("brilly", &v0);
+
+//   v0 = 77;
+//   mc_invoke_functionptr((void *)&brilly, &v0);
+
+//   int v0 = 5;
+//   mc_invoke_function("printf", &v0);
+// }
 
 int _midge_run()
 {
-  domctest();
-  return 0;
+  // domctest();
+  // return 0;
   // Pointer Size Check
   int sizeof_void_ptr = sizeof(void *);
   if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) ||

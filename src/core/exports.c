@@ -88,15 +88,18 @@ void export_node_to_application(mc_node_v1 *node, char *directory_path)
   _export_app_write_main_c(node, src, path);
 
   // Compile
-  char *output_path;
-  cprintf(output_path, "%s/%s", directory_path, node->name);
+  c_str *output_path;
+  init_c_str(&output_path);
+  append_to_c_str(output_path, directory_path);
+  append_to_c_str(output_path, "/");
+  append_to_c_str(output_path, node->name);
 
   char *clargs[5];
   const char *command = "/home/jason/cling/inst/bin/clang";
   allocate_and_copy_cstr(clargs[0], "clang");
   allocate_and_copy_cstr(clargs[1], "/home/jason/midge/test/main.c");
   allocate_and_copy_cstr(clargs[2], "-o");
-  clargs[3] = output_path;
+  clargs[3] = output_path->text;
   clargs[4] = NULL;
 
   pid_t child_pid;
@@ -124,6 +127,8 @@ void export_node_to_application(mc_node_v1 *node, char *directory_path)
     }
   }
 
-  printf("%s compiled!\n", output_path);
+  printf("%s compiled!\n", output_path->text);
+
+  release_c_str(output_path, true);
   // return child_status;
 }

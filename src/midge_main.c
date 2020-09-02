@@ -291,11 +291,11 @@ int parse_past_type_declaration_text(const char *code, int *i, char **type_decla
 
     char *comb;
     if (complex) {
-      cprintf(comb, "%s %s", *type_declaration_text, parciple);
+      mc_pprintf(&comb, "%s %s", *type_declaration_text, parciple);
     }
     else {
       complex = true;
-      cprintf(comb, "%s", parciple);
+      mc_pprintf(&comb, "%s", parciple);
     }
     free(parciple);
     parciple = NULL;
@@ -307,7 +307,7 @@ int parse_past_type_declaration_text(const char *code, int *i, char **type_decla
   }
   {
     char *comb;
-    cprintf(comb, "%s%s%s", *type_declaration_text, complex ? " " : "", parciple);
+    mc_pprintf(&comb, "%s%s%s", *type_declaration_text, complex ? " " : "", parciple);
     free(parciple);
     parciple = NULL;
     free(*type_declaration_text);
@@ -568,7 +568,7 @@ int declare_struct_from_info_v0(mc_command_hub_v1 *command_hub, mc_struct_info_v
   if (str->declared_mc_name) {
     free(str->declared_mc_name);
   }
-  cprintf(str->declared_mc_name, "mc_%s_v%i", str->name, str->version);
+  mc_pprintf(&str->declared_mc_name, "mc_%s_v%i", str->name, str->version);
 
   // printf("dsfi-0\n");
   MCcall(append_to_cstr(&cstr_alloc, &cstr, "typedef struct "));
@@ -3582,7 +3582,7 @@ int process_workflow_system_issues(mc_command_hub_v1 *command_hub, mc_workflow_p
     // Layer a Idle process action on and return to the loop/user
     mc_process_action_v1 *idle_action;
     char *resolution_message;
-    cprintf(resolution_message, "<> script '%s' created!\n", script->name);
+    mc_pprintf(&resolution_message, "<> script '%s' created!\n", script->name);
     MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_SEQUENCE_RESOLVED,
                                   resolution_message, NULL));
     free(resolution_message);
@@ -3683,7 +3683,7 @@ int process_unprovoked_command_with_system(mc_command_hub_v1 *command_hub, mc_wo
 
     // Set corresponding issue
     char *initiation_msg;
-    cprintf(initiation_msg, "-- initiating script '%s'...", script->name);
+    mc_pprintf(&initiation_msg, "-- initiating script '%s'...", script->name);
     MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_SCRIPT_EXECUTION, initiation_msg,
                                   script_instance));
     free(initiation_msg);
@@ -3777,7 +3777,7 @@ int process_variable_response(mc_command_hub_v1 *command_hub, mc_process_action_
 
       // printf("gvra-4\n");
       char *dialogue;
-      cprintf(dialogue, "Enter value for @%s=", var_name);
+      mc_pprintf(&dialogue, "Enter value for @%s=", var_name);
       MCcall(add_action_to_workflow(command_hub, workflow_context, PROCESS_ACTION_PM_VARIABLE_REQUEST, dialogue,
                                     var_name));
 
@@ -6096,7 +6096,7 @@ int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_s
 
       // Declare the functions pointer with cling
       char *cling_declaration;
-      cprintf(cling_declaration, "int (*%s)(int, void **);", func_info->name);
+      mc_pprintf(&cling_declaration, "int (*%s)(int, void **);", func_info->name);
       MCcall(clint_declare(cling_declaration));
       free(cling_declaration);
     }
@@ -6518,7 +6518,7 @@ int parse_and_process_mc_file_syntaxt(mc_command_hub_v1 *command_hub, const char
 
           // Declare the functions pointer with cling
           char *cling_declaration;
-          cprintf(cling_declaration, "int (*%s)(int, void **);", func_info->name);
+          mc_pprintf(&cling_declaration, "int (*%s)(int, void **);", func_info->name);
           MCcall(clint_declare(cling_declaration));
           free(cling_declaration);
         }

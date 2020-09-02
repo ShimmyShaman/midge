@@ -36,14 +36,6 @@
     dest = mc_tmp_cstr;                                         \
   }
 
-#define cprintf(dest, format, ...)                                       \
-  {                                                                      \
-    int cprintf_n = snprintf(NULL, 0, format, ##__VA_ARGS__);            \
-    char *mc_temp_cstr = (char *)malloc(sizeof(char) * (cprintf_n + 1)); \
-    sprintf(mc_temp_cstr, format, ##__VA_ARGS__);                        \
-    dest = mc_temp_cstr;                                                 \
-  }
-
 #define dprintf(format, ...)       \
   {                                \
     printf(format, ##__VA_ARGS__); \

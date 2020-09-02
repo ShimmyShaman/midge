@@ -201,9 +201,10 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_SHORT_KEYWORD";
   default: {
     // TODO -- DEBUG -- this string is never free-d
-    char *new_string;
-    cprintf(new_string, "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED:%i", type);
-    return (char *)new_string;
+    int cprintf_n = snprintf(NULL, 0, "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED:%i", type);
+    char *mc_temp_cstr = (char *)malloc(sizeof(char) * (cprintf_n + 1));
+    sprintf(mc_temp_cstr, "TODO_ENCODE_THIS_TYPE_OR_UNSUPPORTED:%i", type);
+    return (char *)mc_temp_cstr;
   }
   }
 }
@@ -3815,44 +3816,52 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
       *additional_destination = ifndef_directive;
     }
 
-    // Temporary -- just parse the rest of the line
     mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_PREPROCESSOR_KEYWORD_IFNDEF, NULL);
+
+    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
+    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_IDENTIFIER, &ifndef_directive->preprocess_ifndef.identifier);
+    mcs_peek_token_type(ps, true, 0, &token_type);
+    if (token_type == MC_TOKEN_SPACE_SEQUENCE)
+      mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
+    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
+
     while (1) {
       mcs_peek_token_type(ps, true, 0, &token_type);
-      if (token_type == MC_TOKEN_NEW_LINE) {
-        mcs_parse_through_token(ps, ifndef_directive, token_type, NULL);
+      if (token_type == MC_TOKEN_NULL_CHARACTER) {
+        MCerror(3831, "TODO");
+      }
+      if (token_type == MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF) {
         break;
       }
+      mc_syntax_node *group_option;
+      mcs_parse_root_statement(ps, ifndef_directive, &group_option);
 
-      mcs_parse_through_token(ps, ifndef_directive, token_type, NULL);
+      append_to_collection((void ***)&ifndef_directive->preprocess_ifndef.groupopt->items,
+                           &ifndef_directive->preprocess_ifndef.groupopt->alloc,
+                           &ifndef_directive->preprocess_ifndef.groupopt->count, group_option);
+
+      mcs_parse_through_supernumerary_tokens(ps, ifndef_directive);
     }
-    // mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
-    // mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_IDENTIFIER,
-    // &ifndef_directive->preprocess_ifndef.identifier); mcs_peek_token_type(ps, true, 0, &token_type); if (token_type
-    // == MC_TOKEN_SPACE_SEQUENCE)
-    //   mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
-    // mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
 
-    // TODO --later
-    // while (1) {
-    //   mcs_peek_token_type(ps, true, 0, &token_type);
-    //   if (token_type == MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF) {
-    //     break;
-    //   }
-    //   mc_syntax_node *group_option;
-    //   mcs_parse_root_statement(ps, ifndef_directive, &group_option);
-
-    //   append_to_collection((void ***)&ifndef_directive->preprocess_ifndef.groupopt->items,
-    //                        &ifndef_directive->preprocess_ifndef.groupopt->alloc,
-    //                        &ifndef_directive->preprocess_ifndef.groupopt->count, group_option);
-
-    //   mcs_peek_token_type(ps, true, 0, &token_type);
-    //   if (token_type == MC_TOKEN_SPACE_SEQUENCE)
-    //     mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
-    //   mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
-    // }
-
-    // mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF, NULL);
+    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF, NULL);
+    while (1) {
+      mcs_peek_token_type(ps, true, 0, &token_type);
+      switch (token_type) {
+      case MC_TOKEN_SPACE_SEQUENCE:
+      case MC_TOKEN_LINE_COMMENT:
+      case MC_TOKEN_MULTI_LINE_COMMENT:
+        mcs_parse_through_token(ps, ifndef_directive, token_type, NULL);
+        continue;
+      case MC_TOKEN_NEW_LINE:
+        mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
+        break;
+      case MC_TOKEN_NULL_CHARACTER:
+        break;
+      default:
+        MCerror(3857, "TODO:%s", get_mc_token_type_name(token_type));
+      }
+      break;
+    }
   } break;
   case MC_TOKEN_PREPROCESSOR_KEYWORD_INCLUDE: {
     mc_syntax_node *include_directive;

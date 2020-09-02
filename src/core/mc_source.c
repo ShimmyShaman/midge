@@ -484,7 +484,11 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
   register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
 
   structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION;
-  cprintf(structure_info->mc_declared_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
+  c_str *mc_func_name;
+  init_c_str(&mc_func_name);
+  append_to_c_strf(mc_func_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
+  structure_info->mc_declared_name = mc_func_name->text;
+  release_c_str(mc_func_name, false);
 
   // Set the values parsed
   if (struct_ast->structure.fields) {
@@ -553,7 +557,9 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   }
   register_midge_error_tag("update_or_register_enum_info_from_syntax-2");
 
-  cprintf(enum_info->mc_declared_name, "%s_mc_v%u", enum_info->name, enum_info->latest_iteration);
+  char enum_name[32];
+  sprintf(enum_name, "%s_mc_v%u", enum_info->name, enum_info->latest_iteration);
+  allocate_and_copy_cstr(enum_info->mc_declared_name, enum_name);
 
   // Set the values parsed
   enum_info->members.count = 0;
@@ -715,6 +721,10 @@ int instantiate_define_statement(node *definition_owner, mc_syntax_node *ast, pr
   } break;
   case PREPROCESSOR_DEFINE_FUNCTION_LIKE: {
     // Do nothing...
+    // char *statement_text;
+    // copy_syntax_node_to_text(ast, &statement_text);
+    // printf("\nfunctionlike:\n%s||\n", statement_text);
+    // free(statement_text);
   } break;
   case PREPROCESSOR_DEFINE_REPLACEMENT: {
     *info = (preprocess_define_info *)malloc(sizeof(preprocess_define_info));
@@ -741,6 +751,7 @@ int instantiate_define_statement(node *definition_owner, mc_syntax_node *ast, pr
 
   char *statement_text;
   copy_syntax_node_to_text(ast, &statement_text);
+  // printf("\ndefine_declaration:\n%s||\n", statement_text);
   int result = clint_declare(statement_text);
   if (result) {
     printf("\ndefine_declaration:\n%s||\n", statement_text);
@@ -818,23 +829,13 @@ int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *a
   return 0;
 }
 
-int instantiate_all_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file)
+int instantiate_ast_children(node *definitions_owner, source_file_info *source_file,
+                             mc_syntax_node_list *syntax_node_list)
 {
-  char *file_text;
-  read_file_text(filepath, &file_text);
-
-  mc_syntax_node *syntax_node;
-  parse_file_to_syntax_tree(file_text, &syntax_node);
-
-  // Parse all definitions
-  source_file_info *lv_source_file;
-  initialize_source_file_info(definitions_owner, filepath, &lv_source_file);
-  if (source_file) {
-    *source_file = lv_source_file;
-  }
-
-  for (int a = 0; a < syntax_node->children->count; ++a) {
-    mc_syntax_node *child = syntax_node->children->items[a];
+  for (int a = 0; a < syntax_node_list->count; ++a) {
+    mc_syntax_node *child = syntax_node_list->items[a];
+    const char *type_name = get_mc_syntax_token_type_name(child->type);
+    printf("instantiate_definition[%i]:%s\n", a, type_name);
     switch (child->type) {
     case MC_SYNTAX_EXTERN_C_BLOCK: {
       for (int b = 0; b < child->extern_block.declarations->count; ++b) {
@@ -862,7 +863,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         // Assume to be function definition
         function_info *info;
         instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
-        info->source->source_file = lv_source_file;
+        info->source->source_file = source_file;
         printf("--defined:'%s'\n", child->function.name->text);
       }
     } break;
@@ -873,7 +874,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
       case MC_SYNTAX_STRUCTURE: {
         struct_info *info;
         instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
-        info->source->source_file = lv_source_file;
+        info->source->source_file = source_file;
         // printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
         // sprintf(buf,
         //         "#ifndef %s\n"
@@ -887,7 +888,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
         enumeration_info *info;
         instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-0");
-        info->source->source_file = lv_source_file;
+        info->source->source_file = source_file;
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-1");
         // printf("--defined: enum '%s'\n", child->type_alias.type_descriptor->enumeration.name->text);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-2");
@@ -911,13 +912,13 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
     case MC_SYNTAX_STRUCTURE: {
       struct_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
-      info->source->source_file = lv_source_file;
+      info->source->source_file = source_file;
       // printf("--declared: struct '%s'\n", child->structure.type_name->text);
     } break;
     case MC_SYNTAX_ENUM: {
       enumeration_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
-      info->source->source_file = lv_source_file;
+      info->source->source_file = source_file;
       // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE: {
@@ -934,7 +935,31 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
       // }
     } break;
     // TODO
-    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF:
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF: {
+      char *identifier;
+      copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
+      char buf[1024];
+      int is_defined;
+      sprintf(buf,
+              "#ifndef %s\n"
+              "*((int *)%p) = 222;\n"
+              "#else\n"
+              "*((int *)%p) = 111;\n"
+              "#endif\n",
+              identifier, &is_defined, &is_defined);
+      clint_process(buf);
+      if (is_defined == 222) {
+        instantiate_ast_children(definitions_owner, source_file, child->preprocess_ifndef.groupopt);
+      }
+      else if (is_defined == 111) {
+        // Do Nothing
+        printf("'%s' was already defined\n", identifier);
+      }
+      else {
+        MCerror(950, "All did not go to plan");
+      }
+      free(identifier);
+    } break;
     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
     case MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF:
       break;
@@ -955,6 +980,25 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
     }
   }
 
+  return 0;
+}
+
+int instantiate_all_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file)
+{
+  char *file_text;
+  read_file_text(filepath, &file_text);
+
+  mc_syntax_node *syntax_node;
+  parse_file_to_syntax_tree(file_text, &syntax_node);
+
+  // Parse all definitions
+  source_file_info *lv_source_file;
+  initialize_source_file_info(definitions_owner, filepath, &lv_source_file);
+  if (source_file) {
+    *source_file = lv_source_file;
+  }
+
+  instantiate_ast_children(definitions_owner, lv_source_file, syntax_node->children);
   // int *p = 0;
   // printf("about\n");
   // printf("%i\n", *p);

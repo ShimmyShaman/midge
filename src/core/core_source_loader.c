@@ -443,6 +443,7 @@ const char *_mcl_core_functions[] = {
     "update_or_register_function_info_from_syntax",
     "attach_function_info_to_owner",
     "instantiate_function_definition_from_ast",
+    "instantiate_ast_children",
     "instantiate_definition",
 
     "update_or_register_enum_info_from_syntax",
@@ -573,8 +574,28 @@ const char *_mcl_core_source_files[] = {
     NULL,
 };
 
+const char *_mcl_core_defines[] = {
+    "MIDGE_COMMON_H",
+    "CORE_DEFINITIONS_H",
+    "C_PARSER_LEXER_H",
+    "MC_CODE_TRANSCRIPTION_H",
+    // And everything here before -------------------------------------------------------------
+    NULL,
+};
+
 int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
 {
+  // Replace Core Defines
+  for (int i = 0; i < src->len; ++i) {
+    for (int a = 0; _mcl_core_defines[a]; ++a) {
+      if (!strncmp(src->text + i, _mcl_core_defines[a], strlen(_mcl_core_defines[a]))) {
+        insert_into__csl_c_str(src, "MC_CORE_DEF_", i);
+        i += 13;
+        break;
+      }
+    }
+  }
+
   // Search for more structs/enums
   for (int i = 0; i < src->len; ++i) {
     if (!strncmp(src->text + i, "typedef struct ", 15)) {
@@ -975,7 +996,8 @@ int _mcl_load_core_temp_source()
 
       use_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
     }
-
+    
+    // use_cached_file = false;
     if (use_cached_file) {
       MCcall(_mcl_read_all_file_text(cached_file_name, &file_text));
       MCcall(set__csl_c_str(src, file_text));
