@@ -94,8 +94,14 @@ int clint_loadheader(const char *path) { return clint->loadHeader(path); }
 int (*mc_dummy_function)(int, void **);
 int mc_dummy_function_v1(int argsc, void **argsv) { return 0; }
 
+void brilly(int a) { printf("brilly:%i\n", a); }
+
+void domctest() { mc_invoke_function("brilly", &a); }
+
 int _midge_run()
 {
+  domctest();
+  return 0;
   // Pointer Size Check
   int sizeof_void_ptr = sizeof(void *);
   if (sizeof_void_ptr != sizeof(int *) || sizeof_void_ptr != sizeof(char *) ||

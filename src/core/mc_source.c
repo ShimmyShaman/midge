@@ -612,14 +612,18 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  if (!strcmp(func_info->name, "begin_mthread")) {
+  if (!strcmp(func_info->name, "append_to_c_strf")) {
     // print_syntax_node(ast, 0);
     printf("mc_transcription:\n%s||\n", mc_transcription);
   }
-  if (!strcmp(func_info->name, "dothecall")) {
-    // print_syntax_node(ast, 0);
-    printf("mc_transcription:\n%s||\n", mc_transcription);
-  }
+  // if (!strcmp(func_info->name, "begin_mthread")) {
+  //   // print_syntax_node(ast, 0);
+  //   printf("mc_transcription:\n%s||\n", mc_transcription);
+  // }
+  // if (!strcmp(func_info->name, "dothecall")) {
+  //   // print_syntax_node(ast, 0);
+  //   printf("mc_transcription:\n%s||\n", mc_transcription);
+  // }
 
   int result = clint_declare(mc_transcription);
   if (result) {
