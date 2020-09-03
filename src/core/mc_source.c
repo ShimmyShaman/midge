@@ -618,18 +618,14 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  if (!strcmp(func_info->name, "append_to_c_strf")) {
-    // print_syntax_node(ast, 0);
+  if (!strcmp(func_info->name, "begin_silly_thread")) {
+    print_syntax_node(ast, 0);
     printf("mc_transcription:\n%s||\n", mc_transcription);
   }
-  // if (!strcmp(func_info->name, "begin_mthread")) {
-  //   // print_syntax_node(ast, 0);
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
-  // }
-  // if (!strcmp(func_info->name, "dothecall")) {
-  //   // print_syntax_node(ast, 0);
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
-  // }
+  if (!strcmp(func_info->name, "dothecall")) {
+    print_syntax_node(ast, 0);
+    printf("mc_transcription:\n%s||\n", mc_transcription);
+  }
 
   int result = clint_declare(mc_transcription);
   if (result) {
@@ -835,7 +831,7 @@ int instantiate_ast_children(node *definitions_owner, source_file_info *source_f
   for (int a = 0; a < syntax_node_list->count; ++a) {
     mc_syntax_node *child = syntax_node_list->items[a];
     const char *type_name = get_mc_syntax_token_type_name(child->type);
-    printf("instantiate_definition[%i]:%s\n", a, type_name);
+    // printf("instantiate_definition[%i]:%s\n", a, type_name);
     switch (child->type) {
     case MC_SYNTAX_EXTERN_C_BLOCK: {
       for (int b = 0; b < child->extern_block.declarations->count; ++b) {

@@ -38,6 +38,7 @@ typedef struct mct_expression_type_info {
   char *type_name; // TODO -- add const to this
   unsigned int deref_count;
   bool is_array;
+  bool is_fptr;
 } mct_expression_type_info;
 
 int mct_append_node_text_to_c_str(c_str *str, mc_syntax_node *syntax_node)
@@ -407,6 +408,13 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
             if (declaration->type != MC_SYNTAX_LOCAL_VARIABLE_DECLARATION) {
               MCerror(192, "Why isn't it a declaration?");
             }
+
+  if(var_declarator->local_variable_declarator.function_pointer) {
+
+  result->is_fptr = 
+  }else {
+    
+  }
 
             result->is_array = (var_declarator->local_variable_declarator.initializer &&
                                 var_declarator->local_variable_declarator.initializer->type ==
@@ -1457,7 +1465,18 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
   // case MC_SYNTAX_DECLARATION_STATEMENT: {
 
   // }break;
-  case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION:
+  case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION: {
+    if (syntax_node->prepended_unary.unary_expression->type == MC_SYNTAX_TYPE_IDENTIFIER) {
+      mct_expression_type_info *eti;
+      determine_type_of_expression(ts, syntax_node->prepended_unary.unary_expression, &eti);
+      if (eti.is_fptr) {
+        MCerror(1465, "progress");
+      }
+    }
+
+    // Just straight copy
+    mct_append_node_text_to_c_str(ts->str, syntax_node);
+  } break;
   case MC_SYNTAX_STRING_LITERAL_EXPRESSION:
   case MC_SYNTAX_FIXREMENT_EXPRESSION: {
     mct_append_node_text_to_c_str(ts->str, syntax_node);
@@ -1467,6 +1486,12 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     case MC_TOKEN_NUMERIC_LITERAL:
     case MC_TOKEN_CHAR_LITERAL:
     case MC_TOKEN_IDENTIFIER: {
+      mct_expression_type_info *eti;
+      determine_type_of_expression(ts, syntax_node, &eti);
+      if (eti.is_fptr) {
+        MCerror(1473, "progress");
+      }
+
       mct_append_node_text_to_c_str(ts->str, syntax_node);
     } break;
     default:
