@@ -278,7 +278,8 @@ int remove_from_collection(void ***collection, unsigned int *collection_alloc, u
 int remove_ptr_from_collection(void ***collection, unsigned int *collection_count, bool return_error_on_failure,
                                void *ptr);
 
-int find_function_info(char *function_name, function_info **funct_info);
+int find_function_info(char *function_name, function_info **result);
+int find_function_info_by_ptr(void *function_ptr, function_info **result);
 int find_struct_info(char *function_name, struct_info **structure_info);
 int find_enumeration_info(char *function_name, enumeration_info **enum_info);
 int find_enum_member_info(char *name, enumeration_info **result_type, enum_member_info **result);

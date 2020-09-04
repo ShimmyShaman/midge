@@ -6,56 +6,56 @@
 
 int callit()
 {
-  printf("callit\n");
-  return NULL;
+  printf("!!callit-mc!!\n");
+  return 0;
 }
 
-int dothecall(void **args)
+int dothecall(void *something)
 {
+  int (*rout)() = (int (*)())something;
   printf("dothecall\n");
-  int (*rout)() = *(int (**)())mc_argsv[0];
-
   rout();
+  printf("dothecall-after-rout-call\n");
   return 0;
 }
 
 int begin_silly_thread()
 {
-  void *aa[2];
-  aa[0] = (void *)&callit;
-  dothecall(aa);
+  printf("begin_silly_thread\n");
+  dothecall(&callit);
+  // dothecall(&callit_nonmc);
 
   return 0;
 }
 
-int begin_render_thread()
-{
-  render_thread_info render_thread;
-  render_thread.render_thread_initialized = false;
-  {
-    // Resource Queue
-    pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
-    render_thread.resource_queue.count = 0;
-    render_thread.resource_queue.allocated = 0;
+// int begin_render_thread()
+// {
+//   render_thread_info render_thread;
+//   render_thread.render_thread_initialized = false;
+//   {
+//     // Resource Queue
+//     pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
+//     render_thread.resource_queue.count = 0;
+//     render_thread.resource_queue.allocated = 0;
 
-    // Render Queue
-    pthread_mutex_init(&render_thread.render_queue.mutex, NULL);
-    render_thread.render_queue.count = 0;
-    render_thread.render_queue.allocated = 0;
+//     // Render Queue
+//     pthread_mutex_init(&render_thread.render_queue.mutex, NULL);
+//     render_thread.render_queue.count = 0;
+//     render_thread.render_queue.allocated = 0;
 
-    pthread_mutex_init(&render_thread.input_buffer.mutex, NULL);
-    render_thread.input_buffer.event_count = 0;
-  }
+//     pthread_mutex_init(&render_thread.input_buffer.mutex, NULL);
+//     render_thread.input_buffer.event_count = 0;
+//   }
 
-  // -- Start Thread
-  printf("callit:%p &callit:%p\n", callit, &callit);
+//   // -- Start Thread
+//   printf("callit:%p &callit:%p\n", callit, &callit);
 
-  // begin_mthread(&callit, &render_thread.thread_info, (void *)&render_thread);
+//   // begin_mthread(&callit, &render_thread.thread_info, (void *)&render_thread);
 
-  // usleep(1000000);
+//   // usleep(1000000);
 
-  // end_mthread(render_thread.thread_info);
-}
+//   // end_mthread(render_thread.thread_info);
+// }
 
 void midge_initialize_app(struct timespec *app_begin_time)
 {

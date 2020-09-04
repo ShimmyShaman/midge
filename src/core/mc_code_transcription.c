@@ -321,6 +321,10 @@ int get_keyword_const_text_name(mc_token_type keyword_type, const char **p_text)
     const char *VOID_KEYWORD_NAME = "void";
     *p_text = (char *)VOID_KEYWORD_NAME;
   } break;
+  case MC_TOKEN_LONG_KEYWORD: {
+    const char *LONG_KEYWORD_NAME = "long";
+    *p_text = (char *)LONG_KEYWORD_NAME;
+  } break;
   default: {
     // print_syntax_node(keyword_type, 0);
     MCerror(363, "TODO? %s", get_mc_token_type_name(keyword_type));
@@ -379,25 +383,42 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
           case MC_SYNTAX_PARAMETER_DECLARATION: {
             mc_syntax_node *param_decl = ts->scope[d].variables[b].declaration_node;
 
-            // TODO -- array and function pointer types
-            result->is_array = false;
+            switch (param_decl->parameter.type) {
+            case PARAMETER_KIND_STANDARD: {
+              // TODO -- array and function pointer types
+              result->is_array = false;
+              result->is_fptr = false;
 
-            // char *type_identity;
-            if ((mc_token_type)param_decl->parameter.type_identifier->type_identifier.identifier->type ==
-                MC_TOKEN_IDENTIFIER) {
-              result->type_name = param_decl->parameter.type_identifier->type_identifier.identifier->text;
-            }
-            else {
-              get_keyword_const_text_name(
-                  (mc_token_type)param_decl->parameter.type_identifier->type_identifier.identifier->type,
-                  (const char **)&result->type_name);
-            }
+              // char *type_identity
+              if ((mc_token_type)param_decl->parameter.type_identifier->type_identifier.identifier->type ==
+                  MC_TOKEN_IDENTIFIER) {
+                result->type_name = param_decl->parameter.type_identifier->type_identifier.identifier->text;
+              }
+              else {
+                get_keyword_const_text_name(
+                    (mc_token_type)param_decl->parameter.type_identifier->type_identifier.identifier->type,
+                    (const char **)&result->type_name);
+              }
 
-            if (param_decl->parameter.type_dereference) {
+              if (param_decl->parameter.type_dereference) {
+                result->deref_count = param_decl->parameter.type_dereference->dereference_sequence.count;
+              }
+              else {
+                result->deref_count = 0;
+              }
+            } break;
+            case PARAMETER_KIND_FUNCTION_POINTER: {
+              printf("passed by here pk\n");
+              result->is_array = false;
+              result->is_fptr = true;
+
               result->deref_count = param_decl->parameter.type_dereference->dereference_sequence.count;
-            }
-            else {
-              result->deref_count = 0;
+              const char *const_fptr_string = "const_fptr_string";
+              result->type_name = (char *)const_fptr_string;
+
+            } break;
+            default:
+              MCerror(387, "TODO:%i", param_decl->parameter.type);
             }
           } break;
           case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
@@ -409,33 +430,39 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
               MCerror(192, "Why isn't it a declaration?");
             }
 
-  if(var_declarator->local_variable_declarator.function_pointer) {
+            if (var_declarator->local_variable_declarator.function_pointer) {
 
-  result->is_fptr = 
-  }else {
-    
-  }
+              const char *const_fptr_string = "const_fptr_string";
+              result->type_name = (char *)const_fptr_string;
+              result->deref_count = 0;
 
-            result->is_array = (var_declarator->local_variable_declarator.initializer &&
-                                var_declarator->local_variable_declarator.initializer->type ==
-                                    MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER);
-
-            if ((mc_token_type)declaration->local_variable_declaration.type_identifier->type_identifier.identifier
-                    ->type == MC_TOKEN_IDENTIFIER) {
-              result->type_name =
-                  declaration->local_variable_declaration.type_identifier->type_identifier.identifier->text;
+              result->is_fptr = true;
+              result->is_array = false; // TODO ---- fptr arrays...
             }
             else {
-              get_keyword_const_text_name((mc_token_type)declaration->local_variable_declaration.type_identifier
-                                              ->type_identifier.identifier->type,
-                                          (const char **)&result->type_name);
-            }
+              result->is_fptr = false;
 
-            if (var_declarator->local_variable_declarator.type_dereference)
-              result->deref_count =
-                  var_declarator->local_variable_declarator.type_dereference->dereference_sequence.count;
-            else
-              result->deref_count = 0;
+              result->is_array = (var_declarator->local_variable_declarator.initializer &&
+                                  var_declarator->local_variable_declarator.initializer->type ==
+                                      MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER);
+
+              if ((mc_token_type)declaration->local_variable_declaration.type_identifier->type_identifier.identifier
+                      ->type == MC_TOKEN_IDENTIFIER) {
+                result->type_name =
+                    declaration->local_variable_declaration.type_identifier->type_identifier.identifier->text;
+              }
+              else {
+                get_keyword_const_text_name((mc_token_type)declaration->local_variable_declaration.type_identifier
+                                                ->type_identifier.identifier->type,
+                                            (const char **)&result->type_name);
+              }
+
+              if (var_declarator->local_variable_declarator.type_dereference)
+                result->deref_count =
+                    var_declarator->local_variable_declarator.type_dereference->dereference_sequence.count;
+              else
+                result->deref_count = 0;
+            }
           } break;
           default:
             MCerror(134, "Unsupported :%s",
@@ -446,6 +473,24 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     }
 
     // printf("couldn't find type for:'%s'\n", expression->text);
+  } break;
+  case MC_TOKEN_NUMERIC_LITERAL: {
+    result->deref_count = 0;
+    const char *numeric_type_name = "int"; // TODO
+    for (int i = 0; i < strlen(expression->text); ++i) {
+      if (!isdigit(expression->text[i])) {
+        printf("WARNING: determine_expression_type 473 this number wasn't really an int '%s'\n", expression->text);
+      }
+    }
+    result->type_name = (char *)numeric_type_name;
+    result->is_array = false;
+    result->is_fptr = false;
+  } break;
+  case MC_TOKEN_CHAR_LITERAL: {
+    result->deref_count = 0;
+    get_keyword_const_text_name(MC_TOKEN_CHAR_KEYWORD, (const char **)&result->type_name);
+    result->is_array = false;
+    result->is_fptr = false;
   } break;
   default:
     print_syntax_node(expression, 0);
@@ -1445,10 +1490,82 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
         !strcmp(syntax_node->invocation.function_identity->text, "MCerror")) {
       print_syntax_node(syntax_node->parent, 0);
       MCerror(550, "TODO");
+
       // mct_transcribe_mcerror(ts, syntax_node);
       break;
     }
 
+    if ((mc_token_type)syntax_node->invocation.function_identity->type == MC_TOKEN_IDENTIFIER) {
+      mct_expression_type_info eti;
+      determine_type_of_expression(ts, syntax_node->invocation.function_identity, &eti);
+      if (eti.type_name && eti.is_fptr) {
+        // function_info *fptr_fi;
+        // find_function_info(syntax_node->invocation.function_identity->text, &fptr_fi);
+        // if (fptr_fi) {
+
+        // }
+        if (syntax_node->parent->type != MC_SYNTAX_EXPRESSION_STATEMENT) {
+          const char *parent_type_name = get_mc_syntax_token_type_name(syntax_node->parent->type);
+          printf("fptr parent type: '%s'\n", parent_type_name);
+          MCerror(1510, "CHECK");
+        }
+
+        mct_append_to_c_str(ts, "{\n");
+        ++ts->indent;
+
+        mct_append_to_c_str(ts, "function_info_mc_v1 *ptr_func_info;\n");
+        mct_append_to_c_str(ts, "{\n");
+        ++ts->indent;
+
+        mct_append_to_c_str(ts, "void *mc_vargs[3];\n");
+        mct_append_to_c_str(ts, "mc_vargs[0] = &");
+        mct_append_node_text_to_c_str(ts->str, syntax_node->invocation.function_identity);
+        append_to_c_str(ts->str, ";\n");
+        mct_append_to_c_str(ts, "mc_vargs[1] = &ptr_func_info;\n");
+        mct_append_to_c_str(ts, "int mc_dummy_return_value = 0;\n");
+        mct_append_to_c_str(ts, "mc_vargs[2] = &mc_dummy_return_value;\n");
+        mct_append_to_c_str(ts, "find_function_info_by_ptr(3, mc_vargs);\n");
+        mct_append_to_c_str(ts, "printf(\"returned find_function_info_by_ptr!\\n\");\n");
+        --ts->indent;
+        mct_append_to_c_str(ts, "}\n");
+
+        mct_append_to_c_str(ts, "if (ptr_func_info) {\n");
+        ++ts->indent;
+
+        mct_append_to_c_str(ts, "printf(\"was ptr_func_info!\\n\");\n");
+        mct_append_to_c_str(ts, "void *vvvmcv[1];\n");
+        mct_append_to_c_str(ts, "int vvv0 = 4;\n");
+        mct_append_to_c_str(ts, "vvvmcv[0] = &vvv0;\n");
+        mct_append_indent_to_c_str(ts);
+
+        mct_append_to_c_str(ts, "char buf[256];\n");
+        mct_append_to_c_str(ts, "sprintf(buf, \"printf(\\\"vvv0:%%i\\\", *(int *)((void **)%p)[0]);\", &vvvmcv);\n");
+        mct_append_to_c_str(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
+        mct_append_to_c_str(ts, "clint_process(buf);");
+        mct_append_to_c_str(ts, "\n\n");
+
+        mct_append_to_c_str(ts, "sprintf(buf, \"(*(int (**)(int, void **))%p)(1, (void **)%p);\", ");
+        mct_append_node_text_to_c_str(ts->str, syntax_node->invocation.function_identity);
+        append_to_c_str(ts->str, ", &vvvmcv);\n");
+
+        mct_append_to_c_str(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
+        mct_append_to_c_str(ts, "clint_process(buf);");
+
+        --ts->indent;
+        mct_append_to_c_str(ts, "} else {\n");
+        ++ts->indent;
+
+        mct_append_to_c_str(ts, "printf(\"progress\\n\");\n");
+        mct_append_to_c_str(ts, "return 1559;\n");
+
+        --ts->indent;
+        mct_append_to_c_str(ts, "}\n");
+        --ts->indent;
+        mct_append_to_c_str(ts, "}\n");
+        break;
+        // MCerror(1501, "progress");
+      }
+    }
     mct_append_node_text_to_c_str(ts->str, syntax_node->invocation.function_identity);
     append_to_c_str(ts->str, "(");
     for (int a = 0; a < syntax_node->invocation.arguments->count; ++a) {
@@ -1467,7 +1584,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
   // }break;
   case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION: {
     if (syntax_node->prepended_unary.unary_expression->type == MC_SYNTAX_TYPE_IDENTIFIER) {
-      mct_expression_type_info *eti;
+      mct_expression_type_info eti;
       determine_type_of_expression(ts, syntax_node->prepended_unary.unary_expression, &eti);
       if (eti.is_fptr) {
         MCerror(1465, "progress");
@@ -1486,9 +1603,11 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     case MC_TOKEN_NUMERIC_LITERAL:
     case MC_TOKEN_CHAR_LITERAL:
     case MC_TOKEN_IDENTIFIER: {
-      mct_expression_type_info *eti;
+      mct_expression_type_info eti;
       determine_type_of_expression(ts, syntax_node, &eti);
-      if (eti.is_fptr) {
+      if (eti.type_name && eti.is_fptr) {
+
+        print_syntax_node(syntax_node, 0);
         MCerror(1473, "progress");
       }
 

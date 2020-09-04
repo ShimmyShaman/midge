@@ -20,6 +20,12 @@ typedef struct _csl_c_str {
 #define false ((unsigned char)0)
 #endif
 
+int callit_nonmc()
+{
+  printf("!!callit-NON-mc!!\n");
+  return 0;
+}
+
 #define MCcall(function)                                                                   \
   {                                                                                        \
     int mc_error_stack_index;                                                              \
@@ -386,6 +392,7 @@ const char *_mcl_core_functions[] = {
     "remove_from_collection",
     "remove_ptr_from_collection",
     "find_function_info",
+    "find_function_info_by_ptr",
     "find_struct_info",
     "find_enumeration_info",
     "find_enum_member_info",
@@ -996,7 +1003,7 @@ int _mcl_load_core_temp_source()
 
       use_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
     }
-    
+
     // use_cached_file = false;
     if (use_cached_file) {
       MCcall(_mcl_read_all_file_text(cached_file_name, &file_text));
@@ -1178,9 +1185,9 @@ int _mcl_load_app_mc_source()
 {
   register_midge_error_tag("_mcl_load_app_mc_source()");
   const char *_mcl_app_source_files[] = {
-      "src/m_threads.h",
-      "src/platform/mc_xcb.h",
-      "src/render/render_thread.h",
+      // "src/m_threads.h",
+      // "src/platform/mc_xcb.h",
+      // "src/render/render_thread.h",
       "src/core/midge_app.h",
 
       "src/render/render_thread.c",

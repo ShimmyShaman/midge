@@ -2498,10 +2498,12 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
     if (token0 == MC_TOKEN_OPEN_BRACKET) {
       mcs_parse_function_pointer_declarator(ps, declarator, false,
                                             &declarator->local_variable_declarator.function_pointer);
+      declarator->local_variable_declarator.variable_name = NULL;
     }
     else {
       mcs_parse_through_token(ps, declarator, MC_TOKEN_IDENTIFIER,
                               &declarator->local_variable_declarator.variable_name);
+      declarator->local_variable_declarator.function_pointer = NULL;
     }
 
     mcs_peek_token_type(ps, false, 0, &token0);
