@@ -1163,6 +1163,66 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
     }
   }
 
+  // pthread_create exception
+  if (declaration->local_variable_declaration.declarators->count == 1 &&
+      declaration->local_variable_declaration.declarators->items[0]->local_variable_declarator.initializer) {
+    mc_syntax_node *lvdi =
+        declaration->local_variable_declaration.declarators->items[0]->local_variable_declarator.initializer;
+
+    if (lvdi->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER &&
+        lvdi->local_variable_assignment_initializer.value_expression->type == MC_SYNTAX_INVOCATION &&
+        (mc_token_type)lvdi->local_variable_assignment_initializer.value_expression->invocation.function_identity
+                ->type == MC_TOKEN_IDENTIFIER &&
+        !strcmp(lvdi->local_variable_assignment_initializer.value_expression->invocation.function_identity->text,
+                "pthread_create")) {
+
+      // const char *parent_type_name = get_mc_syntax_token_type_name(syntax_node->parent->type);
+      // printf("fptr parent type: '%s'\n", parent_type_name);
+
+      mc_syntax_node *thr_invocation = lvdi->local_variable_assignment_initializer.value_expression;
+      if (thr_invocation->invocation.arguments->count != 4) {
+        MCerror(1196, "Invalid Argument Count for pthread_create() : requires 4");
+      }
+
+      mct_append_indent_to_c_str(ts);
+      mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
+      append_to_c_str(ts->str, " ");
+      mct_append_node_text_to_c_str(
+          ts->str,
+          declaration->local_variable_declaration.declarators->items[0]->local_variable_declarator.variable_name);
+      append_to_c_str(ts->str, ";\n");
+
+      mct_append_to_c_str(ts, "{\n");
+      ++ts->indent;
+
+      mct_append_indent_to_c_str(ts);
+      append_to_c_str(ts->str, "void **mcti_wrapper_state = (void **)malloc(sizeof(void *) * 2);\n");
+      mct_append_indent_to_c_str(ts);
+      append_to_c_str(ts->str, "mcti_wrapper_state[0] = (void *)");
+      mct_append_node_text_to_c_str(ts->str, thr_invocation->invocation.arguments->items[2]);
+      append_to_c_str(ts->str, ";\n");
+      mct_append_indent_to_c_str(ts);
+      append_to_c_str(ts->str, "mcti_wrapper_state[1] = (void *)");
+      mct_append_node_text_to_c_str(ts->str, thr_invocation->invocation.arguments->items[3]);
+      append_to_c_str(ts->str, ";\n");
+
+      mct_append_indent_to_c_str(ts);
+      mct_append_node_text_to_c_str(
+          ts->str,
+          declaration->local_variable_declaration.declarators->items[0]->local_variable_declarator.variable_name);
+      append_to_c_str(ts->str, " = ");
+      append_to_c_str(ts->str, "pthread_create(");
+
+      mct_append_node_text_to_c_str(ts->str, thr_invocation->invocation.arguments->items[0]);
+      append_to_c_str(ts->str, ", ");
+      mct_append_node_text_to_c_str(ts->str, thr_invocation->invocation.arguments->items[1]);
+      append_to_c_str(ts->str, ", __mch_thread_entry, (void *)mcti_wrapper_state);\n");
+
+      --ts->indent;
+      mct_append_to_c_str(ts, "}\n");
+      return 0;
+    }
+  }
   // Do MC_invokes
   // if (contains_mc_function_call) {
   // const char *tyin = get_mc_syntax_token_type_name(declaration->local_variable_declaration.type_identifier->type);
@@ -1478,22 +1538,27 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
   } break;
   case MC_SYNTAX_INVOCATION: {
     function_info *func_info;
-    char *function_name;
-    copy_syntax_node_to_text(syntax_node->invocation.function_identity, &function_name);
-    find_function_info(function_name, &func_info);
-    free(function_name);
+    char *function_identity;
+    copy_syntax_node_to_text(syntax_node->invocation.function_identity, &function_identity);
+    if (!strcmp(function_identity, "pthread_create")) {
+      MCerror(1484,
+              "Not supposed to reach here, use the int result = midge_redir_pthread_create(...); statement please");
+    }
+
+    find_function_info(function_identity, &func_info);
     if (func_info) {
       MCerror(247, "Not supported from here, have to deal with it earlier");
     }
 
     if ((mc_token_type)syntax_node->invocation.function_identity->type == MC_TOKEN_IDENTIFIER &&
-        !strcmp(syntax_node->invocation.function_identity->text, "MCerror")) {
+        !strcmp(function_identity, "MCerror")) {
       print_syntax_node(syntax_node->parent, 0);
       MCerror(550, "TODO");
 
       // mct_transcribe_mcerror(ts, syntax_node);
       break;
     }
+    free(function_identity);
 
     if ((mc_token_type)syntax_node->invocation.function_identity->type == MC_TOKEN_IDENTIFIER) {
       mct_expression_type_info eti;
@@ -1521,18 +1586,20 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
         mct_append_to_c_str(ts, "mc_vargs[0] = &");
         mct_append_node_text_to_c_str(ts->str, syntax_node->invocation.function_identity);
         append_to_c_str(ts->str, ";\n");
-        mct_append_to_c_str(ts, "mc_vargs[1] = &ptr_func_info;\n");
+        mct_append_to_c_str(ts, "void *mc_vargs_1 = &ptr_func_info;\n");
+        mct_append_to_c_str(ts, "mc_vargs[1] = &mc_vargs_1;\n");
         mct_append_to_c_str(ts, "int mc_dummy_return_value = 0;\n");
         mct_append_to_c_str(ts, "mc_vargs[2] = &mc_dummy_return_value;\n");
+        // mct_append_to_c_str(ts, "printf(\"entering find_function_info_by_ptr!\\n\");\n");
         mct_append_to_c_str(ts, "find_function_info_by_ptr(3, mc_vargs);\n");
-        mct_append_to_c_str(ts, "printf(\"returned find_function_info_by_ptr!\\n\");\n");
+        // mct_append_to_c_str(ts, "printf(\"returned find_function_info_by_ptr!\\n\");\n");
         --ts->indent;
         mct_append_to_c_str(ts, "}\n");
 
         mct_append_to_c_str(ts, "if (ptr_func_info) {\n");
         ++ts->indent;
 
-        mct_append_to_c_str(ts, "printf(\"was ptr_func_info!\\n\");\n");
+        // mct_append_to_c_str(ts, "printf(\"was ptr_func_info!\\n\");\n");
         mct_append_to_c_str(ts, "void *vvvmcv[1];\n");
         mct_append_to_c_str(ts, "int vvv0 = 4;\n");
         mct_append_to_c_str(ts, "vvvmcv[0] = &vvv0;\n");
@@ -1540,7 +1607,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
 
         mct_append_to_c_str(ts, "char buf[256];\n");
         mct_append_to_c_str(ts, "sprintf(buf, \"printf(\\\"vvv0:%%i\\\", *(int *)((void **)%p)[0]);\", &vvvmcv);\n");
-        mct_append_to_c_str(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
+        // mct_append_to_c_str(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
         mct_append_to_c_str(ts, "clint_process(buf);");
         mct_append_to_c_str(ts, "\n\n");
 
@@ -1548,15 +1615,17 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
         mct_append_node_text_to_c_str(ts->str, syntax_node->invocation.function_identity);
         append_to_c_str(ts->str, ", &vvvmcv);\n");
 
-        mct_append_to_c_str(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
+        // mct_append_to_c_str(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
         mct_append_to_c_str(ts, "clint_process(buf);");
 
         --ts->indent;
         mct_append_to_c_str(ts, "} else {\n");
         ++ts->indent;
 
-        mct_append_to_c_str(ts, "printf(\"progress\\n\");\n");
-        mct_append_to_c_str(ts, "return 1559;\n");
+        mct_append_indent_to_c_str(ts);
+        mct_append_node_text_to_c_str(ts->str, syntax_node);
+        append_to_c_str(ts->str, ";");
+        // mct_append_to_c_str(ts, "return 1559;\n");
 
         --ts->indent;
         mct_append_to_c_str(ts, "}\n");
@@ -1603,13 +1672,13 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     case MC_TOKEN_NUMERIC_LITERAL:
     case MC_TOKEN_CHAR_LITERAL:
     case MC_TOKEN_IDENTIFIER: {
-      mct_expression_type_info eti;
-      determine_type_of_expression(ts, syntax_node, &eti);
-      if (eti.type_name && eti.is_fptr) {
+      // mct_expression_type_info eti;
+      // determine_type_of_expression(ts, syntax_node, &eti);
+      // if (eti.type_name && eti.is_fptr) {
 
-        print_syntax_node(syntax_node, 0);
-        MCerror(1473, "progress");
-      }
+      //   print_syntax_node(syntax_node, 0);
+      //   MCerror(1473, "progress");
+      // }
 
       mct_append_node_text_to_c_str(ts->str, syntax_node);
     } break;

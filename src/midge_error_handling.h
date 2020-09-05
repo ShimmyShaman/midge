@@ -174,53 +174,128 @@ void register_midge_error_tag(const char *fmt, ...)
   }
 }
 
-struct stack_entry {
+const int MIDGE_ERROR_MAX_THREAD_COUNT = 50;
+const int MIDGE_ERROR_STACK_MAX_SIZE = 250;
+const int MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE = 150;
+const int MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE = 80;
+const bool IGNORE_MIDGE_ERROR_STACK_TRACE = false;
+
+struct __mce_stack_entry {
   char *function_name;
   char *file_name;
   int line;
 };
 
-const int MIDGE_ERROR_STACK_MAX_SIZE = 250;
-const int MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE = 150;
-const int MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE = 80;
-struct stack_entry MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_MAX_SIZE];
-unsigned int MIDGE_ERROR_STACK_STR_LEN[MIDGE_ERROR_STACK_MAX_SIZE];
-int MIDGE_ERROR_STACK_INDEX;
-bool IGNORE_MIDGE_ERROR_STACK_TRACE = false;
-int MIDGE_ERROR_STACK_ACTIVITY_LINE;
+struct __mce_thread_entry_stack {
+  pthread_t thread_id;
+  struct __mce_stack_entry stack[MIDGE_ERROR_STACK_MAX_SIZE];
+  int stack_index;
+  int stack_activity_line;
+};
+
+struct __mce_thread_entry_stack MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_MAX_THREAD_COUNT];
+unsigned int MIDGE_ERROR_THREAD_INDEX;
 
 void register_midge_stack_invocation(const char *function_name, const char *file_name, int line,
                                      int *midge_error_stack_index)
 {
-  MIDGE_ERROR_STACK_ACTIVITY_LINE = -1;
-  if (MIDGE_ERROR_STACK_INDEX + 1 >= MIDGE_ERROR_STACK_MAX_SIZE) {
+  struct __mce_thread_entry_stack *threades = NULL;
+  pthread_t tid = pthread_self();
+  for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
+    if (tid == MIDGE_ERROR_THREAD_STACKS[t].thread_id) {
+      threades = &MIDGE_ERROR_THREAD_STACKS[t];
+      break;
+    }
+    else if (tid == (pthread_t)0) {
+      break;
+    }
+  }
+  if (!threades) {
+    printf("could not find stack for thread with id %lu\n", tid);
+    return;
+  }
+
+  threades->stack_activity_line = -1;
+  if (threades->stack_index + 1 >= MIDGE_ERROR_STACK_MAX_SIZE) {
     printf("MIDGE_ERROR_STACK: invocation of '%s' exceeded stack index\n", function_name);
     return;
   }
   // printf("MIDGE_ERROR_STACK: function_name:%s added\n", function_name);
 
-  ++MIDGE_ERROR_STACK_INDEX;
-  *midge_error_stack_index = MIDGE_ERROR_STACK_INDEX;
+  ++threades->stack_index;
+  *midge_error_stack_index = threades->stack_index;
 
   for (int i = 0; i < MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE; ++i) {
-    MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name[i] = function_name[i];
+    threades->stack[threades->stack_index].function_name[i] = function_name[i];
     if (function_name[i] == '\0') {
       break;
     }
   }
   for (int i = 0; i < MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE; ++i) {
-    MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].file_name[i] = file_name[i];
+    threades->stack[threades->stack_index].file_name[i] = file_name[i];
     if (file_name[i] == '\0') {
       break;
     }
   }
-  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].line = line;
+  threades->stack[threades->stack_index].line = line;
 }
 
 void register_midge_stack_return(int midge_error_stack_index)
 {
-  MIDGE_ERROR_STACK_ACTIVITY_LINE = MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].line;
-  MIDGE_ERROR_STACK_INDEX = midge_error_stack_index - 1;
+  struct __mce_thread_entry_stack *threades = NULL;
+  pthread_t tid = pthread_self();
+  for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
+    if (tid == MIDGE_ERROR_THREAD_STACKS[t].thread_id) {
+      threades = &MIDGE_ERROR_THREAD_STACKS[t];
+      break;
+    }
+    else if (tid == (pthread_t)0) {
+      break;
+    }
+  }
+  if (!threades) {
+    printf("could not find stack for thread with id %lu\n", tid);
+    return;
+  }
+
+  threades->stack_activity_line = threades->stack[threades->stack_index].line;
+  threades->stack_index = midge_error_stack_index - 1;
+}
+
+void register_midge_thread_creation(unsigned int *midge_error_thread_index, const char *base_function_name,
+                                    const char *file_name, int line, int *midge_error_stack_index)
+{
+  if (MIDGE_ERROR_THREAD_INDEX >= MIDGE_ERROR_MAX_THREAD_COUNT) {
+    printf("ERROR MIDGETHREAD 206\n");
+    return;
+  }
+  if (MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].thread_id != 0) {
+    printf("ERROR MIDGETHREAD 203\n");
+    return;
+  }
+
+  MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].thread_id = pthread_self();
+
+  printf("thread %lu begun\n", MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].thread_id);
+
+  *midge_error_thread_index = MIDGE_ERROR_THREAD_INDEX;
+  ++MIDGE_ERROR_THREAD_INDEX;
+
+  MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].stack_index = -1;
+  register_midge_stack_invocation(base_function_name, file_name, line, midge_error_stack_index);
+}
+
+void register_midge_thread_conclusion(unsigned int midge_error_thread_index)
+{
+  if (MIDGE_ERROR_THREAD_INDEX < 1) {
+    printf("ERROR MIDGETHREAD 219\n");
+    return;
+  }
+
+  printf("thread %lu concluded\n", MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX - 1].thread_id);
+
+  --MIDGE_ERROR_THREAD_INDEX;
+  MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].thread_id = 0;
 }
 
 void handler(int sig)
@@ -260,18 +335,27 @@ void handler(int sig)
     printf("---------------  Stack Trace   ------------\n");
     printf("---------------Most Recent Last------------\n\n");
     // printf("size:%i\n", MIDGE_ERROR_STACK_INDEX);
-    for (int i = 0; i <= MIDGE_ERROR_STACK_INDEX; ++i) {
-      printf("[%i]@%s :(file='%s' :%i)\n", i, MIDGE_ERROR_STACK[i].function_name, MIDGE_ERROR_STACK[i].file_name,
-             MIDGE_ERROR_STACK[i].line);
-    }
-    // if(MIDGE_ERROR_STACK_ACTIVITY_LINE >= 0)
-    if (MIDGE_ERROR_STACK_ACTIVITY_LINE >= 0 && MIDGE_ERROR_STACK_INDEX + 1 < MIDGE_ERROR_STACK_MAX_SIZE) {
 
-      printf("\nLast Successful Execution (file='%s') :%i\n", MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX + 1].file_name,
-             MIDGE_ERROR_STACK_ACTIVITY_LINE);
-    }
-    else {
-      printf("Last Successful Execution :%i\n", MIDGE_ERROR_STACK_ACTIVITY_LINE);
+    for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
+      struct __mce_thread_entry_stack *threades = &MIDGE_ERROR_THREAD_STACKS[t];
+      if (threades->thread_id == (pthread_t)0) {
+        break;
+      }
+      printf("\nThread-Id:%lu\n", threades->thread_id);
+
+      for (int i = 0; i <= threades->stack_index; ++i) {
+        printf("[%i]@%s :(file='%s' :%i)\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
+               threades->stack[i].line);
+      }
+      // if(MIDGE_ERROR_STACK_ACTIVITY_LINE >= 0)
+      if (threades->stack_activity_line >= 0 && threades->stack_index + 1 < MIDGE_ERROR_STACK_MAX_SIZE) {
+
+        printf("\nLast Successful Execution (file='%s') :%i\n", threades->stack[threades->stack_index + 1].file_name,
+               threades->stack_activity_line);
+      }
+      else {
+        printf("Last Successful Execution :%i\n", threades->stack_activity_line);
+      }
     }
   }
 
@@ -291,29 +375,24 @@ void initialize_midge_error_handling(cling::Interpreter *clint)
     MIDGE_ERROR_TAG[i][0] = '\0';
   }
 
-  // char buf[512];
-  // sprintf(buf, "void (*register_midge_error_tag)(const char *, ...) = (void (*)(const char *, ...))%p;",
-  //         &register_midge_error_tag);
-  // clint->process(buf);
+  // Error Stacks
+  for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
+    MIDGE_ERROR_THREAD_STACKS[t].thread_id = (pthread_t)0;
 
-  // sprintf(buf,
-  //         "void (*register_midge_stack_invocation)(const char *, int, int, int *) = (void (*)(const char *, int, int,
-  //         " "int*))%p;", &register_midge_stack_invocation);
-  // clint->process(buf);
-  // sprintf(buf, "void (*register_midge_stack_return)(int) = (void (*)(int))%p;", &register_midge_stack_return);
-  // clint->process(buf);
-
-  for (int i = 0; i < MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
-    MIDGE_ERROR_STACK[i].function_name = (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE + 1));
-    MIDGE_ERROR_STACK[i].function_name[0] = '\0';
-    MIDGE_ERROR_STACK[i].file_name = (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE + 1));
-    MIDGE_ERROR_STACK[i].file_name[0] = '\0';
+    MIDGE_ERROR_THREAD_STACKS[t].stack_index = 0;
+    for (int i = 0; i < MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
+      MIDGE_ERROR_THREAD_STACKS[t].stack[i].function_name =
+          (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE + 1));
+      MIDGE_ERROR_THREAD_STACKS[t].stack[i].function_name[0] = '\0';
+      MIDGE_ERROR_THREAD_STACKS[t].stack[i].file_name =
+          (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE + 1));
+      MIDGE_ERROR_THREAD_STACKS[t].stack[i].file_name[0] = '\0';
+    }
   }
-
-  MIDGE_ERROR_STACK_INDEX = 0;
-  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name = (char *)malloc(sizeof(char) * (6 + 1));
-  sprintf(MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name, "main()");
-  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].file_name = (char *)malloc(sizeof(char) * (8 + 1));
-  sprintf(MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].file_name, "main.cpp");
-  MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].line = 0;
+  // MIDGE_ERROR_STACK_INDEX = 0;
+  // MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name = (char *)malloc(sizeof(char) * (6 + 1));
+  // sprintf(MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].function_name, "main()");
+  // MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].file_name = (char *)malloc(sizeof(char) * (8 + 1));
+  // sprintf(MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].file_name, "main.cpp");
+  // MIDGE_ERROR_STACK[MIDGE_ERROR_STACK_INDEX].line = 0;
 }

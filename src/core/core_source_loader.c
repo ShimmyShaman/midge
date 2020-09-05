@@ -1,5 +1,6 @@
 /* core_source_loader.c */
 
+#include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -20,11 +21,11 @@ typedef struct _csl_c_str {
 #define false ((unsigned char)0)
 #endif
 
-int callit_nonmc()
-{
-  printf("!!callit-NON-mc!!\n");
-  return 0;
-}
+// int callit_nonmc()
+// {
+//   printf("!!callit-NON-mc!!\n");
+//   return 0;
+// }
 
 #define MCcall(function)                                                                   \
   {                                                                                        \
@@ -49,6 +50,35 @@ int callit_nonmc()
     }                                                                                      \
     register_midge_stack_return(mc_error_stack_index);                                     \
   }
+
+void *__mch_thread_entry(void *state)
+{
+  unsigned int mc_error_thread_index;
+  register_midge_thread_creation(&mc_error_thread_index);
+
+  void **state_args = (void **)state;
+  int (*mc_routine)(int, void **) = (int (*)(int, void **))state_args[0];
+  void *wrapped_state = state_args[1];
+
+  void *mcf_vargs[2];
+  mcf_vargs[0] = state;
+  void *routine_result;
+  mcf_vargs[1] = &routine_result;
+
+  {
+    int mc_error_stack_index;
+    register_midge_stack_invocation("unknown-thread-start-function", __FILE__, __LINE__, &mc_error_stack_index);
+    int mc_res = mc_routine(2, mcf_vargs);
+    if (mc_res) {
+      printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__, mc_res);
+      return NULL;
+    }
+    register_midge_stack_return(mc_error_stack_index);
+  }
+
+  register_midge_thread_conclusion(mc_error_thread_index);
+  return routine_result;
+}
 
 int init__csl_c_str(_csl_c_str **ptr)
 {
@@ -1185,9 +1215,9 @@ int _mcl_load_app_mc_source()
 {
   register_midge_error_tag("_mcl_load_app_mc_source()");
   const char *_mcl_app_source_files[] = {
-      // "src/m_threads.h",
-      // "src/platform/mc_xcb.h",
-      // "src/render/render_thread.h",
+      "src/m_threads.h",
+      "src/platform/mc_xcb.h",
+      "src/render/render_thread.h",
       "src/core/midge_app.h",
 
       "src/render/render_thread.c",

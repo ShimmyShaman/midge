@@ -623,7 +623,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
     printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
     printf("mc_transcription:\n%s||\n", mc_transcription);
   }
-  if (!strcmp(func_info->name, "dothecall")) {
+  if (!strcmp(func_info->name, "begin_mthread")) {
     // print_syntax_node(ast, 0);
     printf("mc_transcription:\n%s||\n", mc_transcription);
   }
