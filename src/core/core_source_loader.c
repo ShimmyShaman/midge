@@ -54,7 +54,9 @@ typedef struct _csl_c_str {
 void *__mch_thread_entry(void *state)
 {
   unsigned int mc_error_thread_index;
-  register_midge_thread_creation(&mc_error_thread_index);
+  int base_error_stack_index;
+  register_midge_thread_creation(&mc_error_thread_index, "__mch_thread_entry", "core_source_loader.c", 54,
+                                 &base_error_stack_index);
 
   void **state_args = (void **)state;
   int (*mc_routine)(int, void **) = (int (*)(int, void **))state_args[0];
@@ -460,6 +462,7 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_root_statement",
 
     // mc_code_transcription
+    "mct_release_expression_type_info_fields",
     "mct_transcribe_field_declarators",
     "mct_transcribe_field_list",
     "mct_transcribe_statement",
@@ -468,7 +471,9 @@ const char *_mcl_core_functions[] = {
     "mct_increment_scope_depth",
     "mct_decrement_scope_depth",
     "mct_add_scope_variable",
-    "get_keyword_const_text_name",
+    "mct_transcribe_mc_invocation_argument",
+    // "get_keyword_const_text_name",
+    "mct_transcribe_fptr_invocation",
 
     // mc_source
     "summarize_field_declarator_list",

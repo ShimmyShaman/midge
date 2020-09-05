@@ -4,27 +4,28 @@
 #include "render/render_thread.h"
 #include <time.h>
 
-void *callit(void *state)
+int callit(int a, int b, int c, int *result)
 {
-  printf("!!callit-mc!!\n");
+  *result = a + b * c;
+  printf("!!callit-mc:  a:%i + b:%i * c:%i = %i\n", a, b, c, *result);
   return 0;
 }
 
-// int dothecall(void *something)
-// {
-//   int (*rout)() = (int (*)())something;
-//   printf("dothecall\n");
-//   rout();
-//   printf("dothecall-after-rout-call\n");
-//   return 0;
-// }
+int dothecall(void *something)
+{
+  int (*rout)() = (int (*)())something;
+  printf("dothecall\n");
+  rout();
+  printf("dothecall-after-rout-call\n");
+  return 0;
+}
 
 // int begin_silly_thread()
 // {
 //   printf("begin_silly_thread\n");
 //   dothecall(&callit);
-//   dothecall(callit); // TODO -- C implicity converts the function so its the same as the above line, this doesn't
-//   work atm in midge...
+//   // dothecall(callit); // TODO -- C implicity converts the function so its the same as the above line, this doesn't
+//   // work atm in midge...
 
 //   return 0;
 // }
@@ -49,13 +50,14 @@ int begin_render_thread()
   }
 
   // -- Start Thread
-  printf("callit:%p &callit:%p\n", callit, &callit);
+  dothecall(&callit);
+  // printf("callit:%p &callit:%p\n", callit, &callit);
 
-  begin_mthread(&callit, &render_thread.thread_info, (void *)&render_thread);
+  // begin_mthread(&callit, &render_thread.thread_info, (void *)&render_thread);
 
-  usleep(1000000);
+  // usleep(1000000);
 
-  end_mthread(render_thread.thread_info);
+  // end_mthread(render_thread.thread_info);
 }
 
 void midge_initialize_app(struct timespec *app_begin_time)

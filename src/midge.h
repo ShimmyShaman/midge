@@ -175,8 +175,11 @@ int _midge_run()
     //                "int (*midge_cleanup_app)(int, void **);\n"
     //                "}");
     clint->process("initialize_midge_error_handling(clint);");
-    clint->process("{\n""unsigned int dummy_value;\n"
-    "register_midge_thread_creation(&dummy_value, \"_midge_run\")
+    clint->process("{\n"
+                   "  unsigned int dummy_uint;\n"
+                   "  int dummy_int;\n"
+                   "  register_midge_thread_creation(&dummy_uint, \"_midge_run\", \"midge.h\", 131, &dummy_int);\n"
+                   "}");
     int mc_res;
     char buf[512];
     sprintf(buf, "(*(int *)%p) = mcl_load_app_source();\n", &mc_res);
