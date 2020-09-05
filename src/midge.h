@@ -159,23 +159,21 @@ int _midge_run()
     clint->AddIncludePath("/home/jason/midge/dep/stb");
     // clint->AddIncludePath("/home/jason/midge/dep/glslang");
 
+    clint->process("#include \"xcb/xcb.h\"\n");
+
     // Libraries
     loadLibrary("vulkan");
     loadLibrary("xcb");
     // loadLibrary("dep/glslang/bin/glslangValidator");
 
-    // Load App source
+    // Load non-MC App source
     printf("<AppSourceLoading>\n");
     clint->loadFile("/home/jason/midge/src/midge_error_handling.h");
     clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
 
-    // clint->declare("extern \"C\" {\n"
-    //                "int (*midge_initialize_app)(int, void **);\n"
-    //                "int (*midge_run_app)(int, void **);\n"
-    //                "int (*midge_cleanup_app)(int, void **);\n"
-    //                "}");
-    clint->process("initialize_midge_error_handling(clint);");
+// Error Handling
     clint->process("{\n"
+                   "  initialize_midge_error_handling(clint);\n"
                    "  unsigned int dummy_uint;\n"
                    "  int dummy_int;\n"
                    "  register_midge_thread_creation(&dummy_uint, \"_midge_run\", \"midge.h\", 131, &dummy_int);\n"
@@ -212,48 +210,6 @@ int _midge_run()
       printf("--_midge_run() |line~ :167 ERR:%i\n", mc_res);
       return mc_res;
     }
-
-    // // loadSourceFiles("/home/jason/midge/src/", 0);
-    // clint->loadFile("/home/jason/midge/src/midge_common.h");
-    // clint->loadFile("/home/jason/midge/src/midge_common.c");
-    // clint->loadFile("/home/jason/midge/src/m_threads.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/mvk_core.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/mvk_init_util.cpp");
-    // clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.c");
-    // clint->loadFile("/home/jason/midge/src/rendering/xcbwindow.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/renderer.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.h");
-    // clint->loadFile("/home/jason/midge/src/rendering/renderer.cpp");
-    // clint->loadFile("/home/jason/midge/src/rendering/vulkandebug.c");
-    // // clint->loadFile("/home/jason/midge/src/mcl_type_defs.h");
-    // clint->loadFile("/home/jason/midge/src/core/midge_core.h");
-    // clint->loadFile("/home/jason/midge/src/midge_main.h");
-    // clint->loadFile("/home/jason/midge/src/midge_main.c");
-
-    // // Run App
-    // clint->declare("void updateUI(mthread_info *p_render_thread) { int ms = 0; while(ms < 40000 &&"
-    //                " !p_render_thread->has_concluded) { ++ms; usleep(1000); } }");
-
-    // clint->process("mthread_info *rthr;");
-    // // printf("process(begin)\n");
-    // clint->process("begin_mthread(midge_render_thread, &rthr, (void *)&rthr);");
-    // printf("process(updateUI)\n");
-    // clint->process("updateUI(rthr);");
-    // printf("process(end)\n");
-    // clint->process("end_mthread(rthr);");
-    // printf("\n! MIDGE COMPLETE !\n");
-
-    /* Goal: is the ability to change a structure (which contains a resource which must be destroyed & initialized)
-     * which is used in-a-loop in a seperate thread routine > then change the thread routine to make use of that
-     * structure change
-     */
-
-    // clint->loadFile("/home/jason/midge/src/c_code_lexer.h");
-    // clint->process("mc_main(0, NULL);");
-
-    // clint->process("#include \"midge.h\"");
-    // clint->process("redef();");
   }
   catch (const std::exception &e) {
     std::cerr << "midge.h] Caught Error:" << std::endl;

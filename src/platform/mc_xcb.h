@@ -1,4 +1,4 @@
-
+#include "xcb/xcb.h"
 
 #define COLOR_TRANSPARENT \
   (render_color) { 0.0f, 0.0f, 0.0f, 0.0f }
@@ -208,208 +208,20 @@ typedef struct frame_time {
   long app_secs, app_nsecs;
 } frame_time;
 
+typedef struct mxcb_window_info {
+  xcb_connection_t *connection;
+  xcb_screen_t *screen;
+  xcb_window_t window;
+  xcb_intern_atom_reply_t *atom_window_reply;
+  bool shouldExit;
+} mxcb_window_info;
+
+extern "C" {
 int get_key_input_code_char(bool shift, key_event_code code, char *c);
 
-int get_key_input_code_char(bool shift, key_event_code code, char *c)
-{
-  switch (code) {
-  case KEY_CODE_D1:
-    *c = shift ? '!' : '1';
-    return 0;
-  case KEY_CODE_D2:
-    *c = shift ? '@' : '2';
-    return 0;
-  case KEY_CODE_D3:
-    *c = shift ? '#' : '3';
-    return 0;
-  case KEY_CODE_D4:
-    *c = shift ? '$' : '4';
-    return 0;
-  case KEY_CODE_D5:
-    *c = shift ? '%' : '5';
-    return 0;
-  case KEY_CODE_D6:
-    *c = shift ? '^' : '6';
-    return 0;
-  case KEY_CODE_D7:
-    *c = shift ? '&' : '7';
-    return 0;
-  case KEY_CODE_D8:
-    *c = shift ? '*' : '8';
-    return 0;
-  case KEY_CODE_D9:
-    *c = shift ? '(' : '9';
-    return 0;
-  case KEY_CODE_D0:
-    *c = shift ? ')' : '0';
-    return 0;
-  case KEY_CODE_D_SUBTRACT:
-    *c = shift ? '_' : '-';
-    return 0;
-  case KEY_CODE_D_EQUALS:
-    *c = shift ? '+' : '=';
-    return 0;
-  case KEY_CODE_Q:
-    *c = shift ? 'Q' : 'q';
-    return 0;
-  case KEY_CODE_W:
-    *c = shift ? 'W' : 'w';
-    return 0;
-  case KEY_CODE_E:
-    *c = shift ? 'E' : 'e';
-    return 0;
-  case KEY_CODE_R:
-    *c = shift ? 'R' : 'r';
-    return 0;
-  case KEY_CODE_T:
-    *c = shift ? 'T' : 't';
-    return 0;
-  case KEY_CODE_Y:
-    *c = shift ? 'Y' : 'y';
-    return 0;
-  case KEY_CODE_U:
-    *c = shift ? 'U' : 'u';
-    return 0;
-  case KEY_CODE_I:
-    *c = shift ? 'I' : 'i';
-    return 0;
-  case KEY_CODE_O:
-    *c = shift ? 'O' : 'o';
-    return 0;
-  case KEY_CODE_P:
-    *c = shift ? 'P' : 'p';
-    return 0;
-  case KEY_CODE_SQUARE_OPEN_BRACKET:
-    *c = shift ? '{' : '[';
-    return 0;
-  case KEY_CODE_SQUARE_CLOSE_BRACKET:
-    *c = shift ? '}' : ']';
-    return 0;
-  case KEY_CODE_A:
-    *c = shift ? 'A' : 'a';
-    return 0;
-  case KEY_CODE_S:
-    *c = shift ? 'S' : 's';
-    return 0;
-  case KEY_CODE_D:
-    *c = shift ? 'D' : 'd';
-    return 0;
-  case KEY_CODE_F:
-    *c = shift ? 'F' : 'f';
-    return 0;
-  case KEY_CODE_G:
-    *c = shift ? 'G' : 'g';
-    return 0;
-  case KEY_CODE_H:
-    *c = shift ? 'H' : 'h';
-    return 0;
-  case KEY_CODE_J:
-    *c = shift ? 'J' : 'j';
-    return 0;
-  case KEY_CODE_K:
-    *c = shift ? 'K' : 'k';
-    return 0;
-  case KEY_CODE_L:
-    *c = shift ? 'L' : 'l';
-    return 0;
-  case KEY_CODE_SEMI_COLON:
-    *c = shift ? ':' : ';';
-    return 0;
-  case KEY_CODE_QUOTE:
-    *c = shift ? '"' : '\'';
-    return 0;
-  case KEY_CODE_BACK_SLASH:
-    *c = shift ? '|' : '\\';
-    return 0;
-  case KEY_CODE_Z:
-    *c = shift ? 'Z' : 'z';
-    return 0;
-  case KEY_CODE_X:
-    *c = shift ? 'X' : 'x';
-    return 0;
-  case KEY_CODE_C:
-    *c = shift ? 'C' : 'c';
-    return 0;
-  case KEY_CODE_V:
-    *c = shift ? 'V' : 'v';
-    return 0;
-  case KEY_CODE_B:
-    *c = shift ? 'B' : 'b';
-    return 0;
-  case KEY_CODE_N:
-    *c = shift ? 'N' : 'n';
-    return 0;
-  case KEY_CODE_M:
-    *c = shift ? 'M' : 'm';
-    return 0;
-  case KEY_CODE_COMMA:
-    *c = shift ? '<' : ',';
-    return 0;
-  case KEY_CODE_DECIMAL:
-    *c = shift ? '>' : '.';
-    return 0;
-  case KEY_CODE_FORWARD_SLASH:
-    *c = shift ? '?' : '/';
-    return 0;
-  case KEY_CODE_SPACE:
-    *c = shift ? ' ' : ' ';
-    return 0;
-  case KEY_CODE_NUM_STAR:
-    *c = '*';
-    return 0;
-  case KEY_CODE_NUM_SUBTRACT:
-    *c = '-';
-    return 0;
-  case KEY_CODE_NUM_PLUS:
-    *c = '+';
-    return 0;
-  case KEY_CODE_NUM_FORWARD_SLASH:
-    *c = '/';
-    return 0;
-  case KEY_CODE_NUM0:
-    *c = '0';
-    return 0;
-  case KEY_CODE_NUM1:
-    *c = '1';
-    return 0;
-  case KEY_CODE_NUM2:
-    *c = '2';
-    return 0;
-  case KEY_CODE_NUM3:
-    *c = '3';
-    return 0;
-  case KEY_CODE_NUM4:
-    *c = '4';
-    return 0;
-  case KEY_CODE_NUM5:
-    *c = '5';
-    return 0;
-  case KEY_CODE_NUM6:
-    *c = '6';
-    return 0;
-  case KEY_CODE_NUM7:
-    *c = '7';
-    return 0;
-  case KEY_CODE_NUM8:
-    *c = '8';
-    return 0;
-  case KEY_CODE_NUM9:
-    *c = '9';
-    return 0;
-  case KEY_CODE_NUM_DECIMAL:
-    *c = '.';
-    return 0;
-  case KEY_CODE_NUM_X_EQUALS:
-    *c = '=';
-    return 0;
-  case KEY_CODE_NUM_X_OPEN_BRACKET:
-    *c = '(';
-    return 0;
-  case KEY_CODE_NUM_X_CLOSE_BRACKET:
-    *c = ')';
-    return 0;
+int mxcb_init_window(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
 
-  default:
-    return -1;
-  }
+int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buffer);
+
+void mxcb_destroy_window(mxcb_window_info *mcxbWindowInfo);
 }
