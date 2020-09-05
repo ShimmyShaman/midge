@@ -4,21 +4,23 @@
 #include "render/render_thread.h"
 #include <time.h>
 
-int callit(int a, int b, int c, int *result)
-{
-  *result = a + b * c;
-  printf("!!callit-mc:  a:%i + b:%i * c:%i = %i\n", a, b, c, *result);
-  return 0;
-}
+// void *callit(void *state)
+// {
+//   printf("!!callit-mc %p\n", state);
+//   render_thread_info *render_thread = (render_thread_info *)state;
 
-int dothecall(void *something)
-{
-  int (*rout)() = (int (*)())something;
-  printf("dothecall\n");
-  rout();
-  printf("dothecall-after-rout-call\n");
-  return 0;
-}
+//   render_thread->thread_info->has_concluded = 1;
+//   return NULL;
+// }
+
+// int dothecall(void *something)
+// {
+//   void *(*rout)(void *) = (void *(*)(void *))something;
+//   printf("dothecall\n");
+//   rout(NULL);
+//   printf("dothecall-after-rout-call\n");
+//   return 0;
+// }
 
 // int begin_silly_thread()
 // {
@@ -32,32 +34,32 @@ int dothecall(void *something)
 
 int begin_render_thread()
 {
-  render_thread_info render_thread;
-  render_thread.render_thread_initialized = false;
+  render_thread_info *render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
+  render_thread->render_thread_initialized = false;
   {
     // Resource Queue
-    pthread_mutex_init(&render_thread.resource_queue.mutex, NULL);
-    render_thread.resource_queue.count = 0;
-    render_thread.resource_queue.allocated = 0;
+    pthread_mutex_init(&render_thread->resource_queue.mutex, NULL);
+    render_thread->resource_queue.count = 0;
+    render_thread->resource_queue.allocated = 0;
 
     // Render Queue
-    pthread_mutex_init(&render_thread.render_queue.mutex, NULL);
-    render_thread.render_queue.count = 0;
-    render_thread.render_queue.allocated = 0;
+    pthread_mutex_init(&render_thread->render_queue.mutex, NULL);
+    render_thread->render_queue.count = 0;
+    render_thread->render_queue.allocated = 0;
 
-    pthread_mutex_init(&render_thread.input_buffer.mutex, NULL);
-    render_thread.input_buffer.event_count = 0;
+    pthread_mutex_init(&render_thread->input_buffer.mutex, NULL);
+    render_thread->input_buffer.event_count = 0;
   }
 
   // -- Start Thread
-  dothecall(&callit);
-  // printf("callit:%p &callit:%p\n", callit, &callit);
+  // dothecall(&callit);
+  // printf("render_thread:%p &render_thread:%p\n", render_thread, render_thread);
 
-  // begin_mthread(&callit, &render_thread.thread_info, (void *)&render_thread);
+  begin_mthread(&midge_render_thread, &render_thread->thread_info, (void *)render_thread);
 
-  // usleep(1000000);
+  usleep(1000000);
 
-  // end_mthread(render_thread.thread_info);
+  end_mthread(render_thread->thread_info);
 }
 
 void midge_initialize_app(struct timespec *app_begin_time)

@@ -73,12 +73,12 @@ int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, 
   (*p_thread_info)->should_pause = 0;
   (*p_thread_info)->has_paused = 0;
   int result = pthread_create(&(*p_thread_info)->threadId, NULL, (*p_thread_info)->start_routine, state);
-  if (result) {
+  if (!result) {
     printf("begin_mthread SUCCESS\n");
     return 0;
   }
-  printf("begin_mthread FAILURE TO START THREAD\n");
-  return -1;
+  printf("begin_mthread FAILURE TO START THREAD pthread_create ERR:%i\n", result);
+  return 0;
 }
 
 int pause_mthread(mthread_info *p_thread_info, bool blocking)
