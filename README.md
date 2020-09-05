@@ -1,6 +1,9 @@
 # __midge__
 
-A graphical development environment intended for use with machine intelligent systems.
+A graphical development engine and editor environment intended for use with machine _"intelligent"_ systems.
+
+#### Focus on visualization of data and errors
+Allows quick reiteration and fixing of problems.
 
 #### Automation of process and workflow generation
 
@@ -13,7 +16,7 @@ developer to increase productivity.
 #### Interface for AI collaboration
 
 Providing the interactive means to develop in collaboration with increasingly useful
-AI ('2.0') functions to produce software faster.
+data science ('2.0') functions to produce software faster.
 
 #### Dynamic recompilation
   
@@ -22,10 +25,10 @@ evaluation and quicker readjustments of projects.
 
 #### Maximal configuration of development environment
   
-The development environment itself (as much as possible) is built using the
-dynamic recompilation which allows reconfiguration by the developer however
-it may serve best. This can be done by accessing the code that runs the
-development environment _by using the development environment_.
+The development environment itself (as much as possible) is run inside the same 
+process used to develop projects. Utilizing the dynamic recompilation allows
+reconfiguration by the developer however it may serve best. This allows editing
+of the development environment by using the development environment.
 
 ## Progress
 
