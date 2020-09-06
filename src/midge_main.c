@@ -2208,7 +2208,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
                       "  MCcall(get_process_contextual_data(script_instance->contextual_action, \"%s\", (void "
                       "**)&mc_context_data_%i));\n"
                       "  if(!mc_context_data_%i) {\n"
-                      "    MCerror(1813, \"Missing process context data for '%s'\");"
+                      "    MCerror(2211, \"Missing process context data for '%s'\");"
                       "  }\n"
                       "  mc_vargs[%i] = (void *)&mc_context_data_%i;\n",
                       arg_index + 1, argument + 1, arg_index + 1, arg_index + 1, argument, arg_index + 1,

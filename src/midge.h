@@ -158,12 +158,15 @@ int _midge_run()
     clint->AddIncludePath("/home/jason/midge/dep/cglm/include");
     clint->AddIncludePath("/home/jason/midge/dep/stb");
     // clint->AddIncludePath("/home/jason/midge/dep/glslang");
-
-    clint->process("#include \"xcb/xcb.h\"\n");
+    // clint->process("#include <vulkan/vulkan_xcb.h>\n");
+    // clint->process("#include \"vulkan_core.h\"\n");
 
     // Libraries
     loadLibrary("vulkan");
     loadLibrary("xcb");
+
+    clint->process("#include \"xcb/xcb.h\"\n");
+    clint->process("#include <vulkan/vulkan.h>\n");
     // loadLibrary("dep/glslang/bin/glslangValidator");
 
     // Load non-MC App source
@@ -171,7 +174,7 @@ int _midge_run()
     clint->loadFile("/home/jason/midge/src/midge_error_handling.h");
     clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
 
-// Error Handling
+    // Error Handling
     clint->process("{\n"
                    "  initialize_midge_error_handling(clint);\n"
                    "  unsigned int dummy_uint;\n"

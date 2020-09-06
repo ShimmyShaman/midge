@@ -139,7 +139,7 @@ int end_mthread(mthread_info *p_thread_info)
 {
   p_thread_info->should_exit = 1;
 
-  printf("end_mthread:0\n");
+  // printf("end_mthread:0\n");
   const int MAX_ITERATIONS = 20000;
   int iterations = 0;
   while (!p_thread_info->has_concluded) {
@@ -150,7 +150,7 @@ int end_mthread(mthread_info *p_thread_info)
       return -1;
     }
   }
-  printf("end_mthread:1\n");
+  // printf("end_mthread:1\n");
 
   free(p_thread_info);
 

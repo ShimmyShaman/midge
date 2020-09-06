@@ -280,7 +280,9 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
 
   // Force the x/y coordinates to 100,100 results are identical in consecutive
   // runs
-  const uint32_t coords[] = {100, 100};
+   uint32_t coords[2];
+  coords[0] = 100;
+  coords[1] = 100;
   xcb_configure_window(p_wnfo->connection, p_wnfo->window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
   xcb_flush(p_wnfo->connection);
 

@@ -1,3 +1,7 @@
+/* render_thread.h */
+
+#ifndef MC_RENDER_THREAD_H
+#define MC_RENDER_THREAD_H
 
 #include "m_threads.h"
 #include "midge_common.h"
@@ -106,3 +110,5 @@ typedef struct render_thread_info {
 extern "C" {
 void *midge_render_thread(void *vargp);
 }
+
+#endif // RENDER_THREAD_H

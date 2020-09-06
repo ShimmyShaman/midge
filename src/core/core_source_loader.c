@@ -67,8 +67,8 @@ void *__mch_thread_entry(void *state)
   void *routine_result;
   mcf_vargs[1] = &routine_result;
 
-  printf("mc_routine ptr:%p\n", mc_routine);
-  printf("mc_routine deref ptr:%p\n", *mc_routine);
+  // printf("mc_routine ptr:%p\n", mc_routine);
+  // printf("mc_routine deref ptr:%p\n", *mc_routine);
   {
     int mc_error_stack_index;
     register_midge_stack_invocation("unknown-thread-start-function", __FILE__, __LINE__ + 1, &mc_error_stack_index);
@@ -79,7 +79,7 @@ void *__mch_thread_entry(void *state)
     }
     register_midge_stack_return(mc_error_stack_index);
   }
-  printf("routine called\n");
+  // printf("routine called\n");
 
   register_midge_thread_conclusion(mc_error_thread_index);
   // return routine_result;
@@ -1226,9 +1226,12 @@ int _mcl_load_app_mc_source()
   const char *_mcl_app_source_files[] = {
       "src/m_threads.h",
       "src/platform/mc_xcb.h",
+      "src/render/mc_vulkan.h",
       "src/render/render_thread.h",
       "src/core/midge_app.h",
 
+      "src/platform/mc_xcb.c",
+      "src/render/mc_vulkan.c",
       "src/render/render_thread.c",
       "src/core/midge_app.c",
 

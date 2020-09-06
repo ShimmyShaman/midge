@@ -77,8 +77,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_POINTER_OPERATOR";
   case MC_TOKEN_ASSIGNMENT_OPERATOR:
     return "MC_TOKEN_ASSIGNMENT_OPERATOR";
-  case MC_TOKEN_NOT_OPERATOR:
-    return "MC_TOKEN_NOT_OPERATOR";
+  case MC_TOKEN_LOGICAL_NOT_OPERATOR:
+    return "MC_TOKEN_LOGICAL_NOT_OPERATOR";
   case MC_TOKEN_SUBTRACT_OPERATOR:
     return "MC_TOKEN_SUBTRACT_OPERATOR";
   case MC_TOKEN_DIVIDE_OPERATOR:
@@ -87,6 +87,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_PLUS_OPERATOR";
   case MC_TOKEN_MODULO_OPERATOR:
     return "MC_TOKEN_MODULO_OPERATOR";
+  case MC_TOKEN_BITWISE_NOT_OPERATOR:
+    return "MC_TOKEN_BITWISE_NOT_OPERATOR";
   case MC_TOKEN_TERNARY_OPERATOR:
     return "MC_TOKEN_TERNARY_OPERATOR";
   case MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR:
@@ -169,8 +171,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_LOGICAL_OR_OPERATOR";
   case MC_TOKEN_BINARY_OR_ASSIGNMENT_OPERATOR:
     return "MC_TOKEN_BINARY_OR_ASSIGNMENT_OPERATOR";
-  case MC_TOKEN_BINARY_OR_OPERATOR:
-    return "MC_TOKEN_BINARY_OR_OPERATOR";
+  case MC_TOKEN_BITWISE_OR_OPERATOR:
+    return "MC_TOKEN_BITWISE_OR_OPERATOR";
   case MC_TOKEN_CASE_KEYWORD:
     return "MC_TOKEN_CASE_KEYWORD";
   case MC_TOKEN_DEFAULT_KEYWORD:
@@ -310,8 +312,10 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_CAST_EXPRESSION";
   case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION:
     return "MC_SYNTAX_PREPENDED_UNARY_EXPRESSION";
-  case MC_SYNTAX_CONDITIONAL_EXPRESSION:
-    return "MC_SYNTAX_CONDITIONAL_EXPRESSION";
+  case MC_SYNTAX_LOGICAL_EXPRESSION:
+    return "MC_SYNTAX_LOGICAL_EXPRESSION";
+  case MC_SYNTAX_BITWISE_EXPRESSION:
+    return "MC_SYNTAX_BITWISE_EXPRESSION";
   case MC_SYNTAX_TERNARY_CONDITIONAL:
     return "MC_SYNTAX_TERNARY_CONDITIONAL";
   case MC_SYNTAX_RELATIONAL_EXPRESSION:
@@ -727,10 +731,15 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->ternary_conditional.true_expression = NULL;
     syntax_node->ternary_conditional.false_expression = NULL;
   } break;
-  case MC_SYNTAX_CONDITIONAL_EXPRESSION: {
-    syntax_node->conditional_expression.left = NULL;
-    syntax_node->conditional_expression.conditional_operator = NULL;
-    syntax_node->conditional_expression.right = NULL;
+  case MC_SYNTAX_LOGICAL_EXPRESSION: {
+    syntax_node->logical_expression.left = NULL;
+    syntax_node->logical_expression.logical_operator = NULL;
+    syntax_node->logical_expression.right = NULL;
+  } break;
+  case MC_SYNTAX_BITWISE_EXPRESSION: {
+    syntax_node->bitwise_expression.left = NULL;
+    syntax_node->bitwise_expression.bitwise_operator = NULL;
+    syntax_node->bitwise_expression.right = NULL;
   } break;
   case MC_SYNTAX_RELATIONAL_EXPRESSION: {
     syntax_node->relational_expression.left = NULL;
@@ -1026,7 +1035,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       break;
     }
 
-    *token_type = MC_TOKEN_NOT_OPERATOR;
+    *token_type = MC_TOKEN_LOGICAL_NOT_OPERATOR;
     if (text) {
       allocate_and_copy_cstr(*text, "!");
     }
@@ -1043,6 +1052,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     *token_type = MC_TOKEN_STAR_CHARACTER;
     if (text) {
       allocate_and_copy_cstr(*text, "*");
+    }
+    ++*index;
+  } break;
+  case '~': {
+    *token_type = MC_TOKEN_BITWISE_NOT_OPERATOR;
+    if (text) {
+      allocate_and_copy_cstr(*text, "~");
     }
     ++*index;
   } break;
@@ -1160,7 +1176,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       break;
     }
 
-    *token_type = MC_TOKEN_BINARY_OR_OPERATOR;
+    *token_type = MC_TOKEN_BITWISE_OR_OPERATOR;
     if (text) {
       allocate_and_copy_cstr(*text, "|");
     }
@@ -2362,7 +2378,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
   mcs_peek_token_type(ps, false, 1, &token_type);
   switch (token_type) {
   case MC_TOKEN_OPEN_BRACKET:
-  case MC_TOKEN_NOT_OPERATOR:
+  case MC_TOKEN_LOGICAL_NOT_OPERATOR:
   case MC_TOKEN_STAR_CHARACTER:
   case MC_TOKEN_NUMERIC_LITERAL:
   case MC_TOKEN_CHAR_LITERAL: {
@@ -2389,6 +2405,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
       // See whats after
       mcs_peek_token_type(ps, false, 3, &token_type);
       switch (token_type) {
+      case MC_TOKEN_NUMERIC_LITERAL:
       case MC_TOKEN_OPEN_BRACKET:
       case MC_TOKEN_IDENTIFIER: {
         // Cast
@@ -2643,7 +2660,8 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     _mcs_parse_expression(ps, 3, expression, &expression->fixrement_expression.primary);
     return 0;
   }
-  case MC_TOKEN_NOT_OPERATOR:
+  case MC_TOKEN_BITWISE_NOT_OPERATOR:
+  case MC_TOKEN_LOGICAL_NOT_OPERATOR:
   case MC_TOKEN_SUBTRACT_OPERATOR:
   case MC_TOKEN_PLUS_OPERATOR:
   case MC_TOKEN_AMPERSAND_CHARACTER: {
@@ -2883,6 +2901,45 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
       left = expression;
     } break;
+    case MC_TOKEN_AMPERSAND_CHARACTER:
+    case MC_TOKEN_BITWISE_OR_OPERATOR: {
+      int case_precedence;
+      switch (token0) {
+      case MC_TOKEN_AMPERSAND_CHARACTER: // TODO -- convert this to name appropriate
+        case_precedence = 11;
+        break;
+      case MC_TOKEN_BITWISE_XOR_OPERATOR:
+        case_precedence = 12;
+        break;
+      case MC_TOKEN_BITWISE_OR_OPERATOR:
+        case_precedence = 13;
+        break;
+      default:
+        MCerror(2903, "Unsupported %s", get_mc_token_type_name(token0));
+      }
+      if (allowable_precedence <= case_precedence) {
+        // Left is it
+        mcs_add_syntax_node_to_parent(parent, left);
+        if (additional_destination) {
+          *additional_destination = left;
+        }
+        return 0;
+      }
+
+      mc_syntax_node *expression = NULL;
+      mcs_construct_syntax_node(ps, MC_SYNTAX_BITWISE_EXPRESSION, NULL, NULL, &expression);
+
+      mcs_add_syntax_node_to_parent(expression, left);
+      expression->bitwise_expression.left = left;
+
+      mcs_parse_through_supernumerary_tokens(ps, expression);
+      mcs_parse_through_token(ps, expression, token0, &expression->bitwise_expression.bitwise_operator);
+
+      mcs_parse_through_supernumerary_tokens(ps, expression);
+      _mcs_parse_expression(ps, case_precedence, expression, &expression->bitwise_expression.right);
+
+      left = expression;
+    } break;
     case MC_TOKEN_SUBTRACT_OPERATOR:
     case MC_TOKEN_PLUS_OPERATOR: {
       const int CASE_PRECEDENCE = 6;
@@ -2949,16 +3006,16 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       }
 
       mc_syntax_node *expression = NULL;
-      mcs_construct_syntax_node(ps, MC_SYNTAX_CONDITIONAL_EXPRESSION, NULL, NULL, &expression);
+      mcs_construct_syntax_node(ps, MC_SYNTAX_LOGICAL_EXPRESSION, NULL, NULL, &expression);
 
       mcs_add_syntax_node_to_parent(expression, left);
-      expression->conditional_expression.left = left;
+      expression->logical_expression.left = left;
 
       mcs_parse_through_supernumerary_tokens(ps, expression);
-      mcs_parse_through_token(ps, expression, token0, &expression->conditional_expression.conditional_operator);
+      mcs_parse_through_token(ps, expression, token0, &expression->logical_expression.logical_operator);
 
       mcs_parse_through_supernumerary_tokens(ps, expression);
-      _mcs_parse_expression(ps, CASE_PRECEDENCE, expression, &expression->conditional_expression.right);
+      _mcs_parse_expression(ps, CASE_PRECEDENCE, expression, &expression->logical_expression.right);
 
       left = expression;
     } break;
@@ -2975,16 +3032,16 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       }
 
       mc_syntax_node *expression = NULL;
-      mcs_construct_syntax_node(ps, MC_SYNTAX_CONDITIONAL_EXPRESSION, NULL, NULL, &expression);
+      mcs_construct_syntax_node(ps, MC_SYNTAX_LOGICAL_EXPRESSION, NULL, NULL, &expression);
 
       mcs_add_syntax_node_to_parent(expression, left);
-      expression->conditional_expression.left = left;
+      expression->logical_expression.left = left;
 
       mcs_parse_through_supernumerary_tokens(ps, expression);
-      mcs_parse_through_token(ps, expression, token0, &expression->conditional_expression.conditional_operator);
+      mcs_parse_through_token(ps, expression, token0, &expression->logical_expression.logical_operator);
 
       mcs_parse_through_supernumerary_tokens(ps, expression);
-      _mcs_parse_expression(ps, CASE_PRECEDENCE, expression, &expression->conditional_expression.right);
+      _mcs_parse_expression(ps, CASE_PRECEDENCE, expression, &expression->logical_expression.right);
 
       left = expression;
     } break;
@@ -3001,16 +3058,16 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       }
 
       mc_syntax_node *expression = NULL;
-      mcs_construct_syntax_node(ps, MC_SYNTAX_CONDITIONAL_EXPRESSION, NULL, NULL, &expression);
+      mcs_construct_syntax_node(ps, MC_SYNTAX_LOGICAL_EXPRESSION, NULL, NULL, &expression);
 
       mcs_add_syntax_node_to_parent(expression, left);
-      expression->conditional_expression.left = left;
+      expression->logical_expression.left = left;
 
       mcs_parse_through_supernumerary_tokens(ps, expression);
-      mcs_parse_through_token(ps, expression, token0, &expression->conditional_expression.conditional_operator);
+      mcs_parse_through_token(ps, expression, token0, &expression->logical_expression.logical_operator);
 
       mcs_parse_through_supernumerary_tokens(ps, expression);
-      _mcs_parse_expression(ps, CASE_PRECEDENCE, expression, &expression->conditional_expression.right);
+      _mcs_parse_expression(ps, CASE_PRECEDENCE, expression, &expression->logical_expression.right);
 
       left = expression;
     } break;
@@ -3200,7 +3257,7 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   // Conditional
   mcs_peek_token_type(ps, false, 0, &token0);
   switch (token0) {
-  case MC_TOKEN_NOT_OPERATOR:
+  case MC_TOKEN_LOGICAL_NOT_OPERATOR:
   case MC_TOKEN_IDENTIFIER: {
     mcs_parse_expression_conditional(ps, statement, &statement->for_statement.conditional);
   } break;

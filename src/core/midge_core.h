@@ -802,7 +802,7 @@ typedef enum mc_token_type {
   MC_TOKEN_INCREMENT_OPERATOR,
   MC_TOKEN_POINTER_OPERATOR,
   MC_TOKEN_ASSIGNMENT_OPERATOR,
-  MC_TOKEN_NOT_OPERATOR,
+  MC_TOKEN_LOGICAL_NOT_OPERATOR,
   MC_TOKEN_SUBTRACT_OPERATOR,
   MC_TOKEN_PLUS_OPERATOR,
   MC_TOKEN_DIVIDE_OPERATOR,
@@ -843,7 +843,7 @@ typedef enum mc_token_type {
   MC_TOKEN_AMPERSAND_CHARACTER,
   MC_TOKEN_LOGICAL_OR_OPERATOR,
   MC_TOKEN_BINARY_OR_ASSIGNMENT_OPERATOR,
-  MC_TOKEN_BINARY_OR_OPERATOR,
+  MC_TOKEN_BITWISE_OR_OPERATOR,
   MC_TOKEN_EQUALITY_OPERATOR,
   MC_TOKEN_INEQUALITY_OPERATOR,
   MC_TOKEN_CASE_KEYWORD,
@@ -901,7 +901,8 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_PARENTHESIZED_EXPRESSION,
   MC_SYNTAX_SIZEOF_EXPRESSION,
   MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
-  MC_SYNTAX_CONDITIONAL_EXPRESSION,
+  MC_SYNTAX_LOGICAL_EXPRESSION,
+  MC_SYNTAX_BITWISE_EXPRESSION,
   MC_SYNTAX_RELATIONAL_EXPRESSION,
   MC_SYNTAX_OPERATIONAL_EXPRESSION,
   MC_SYNTAX_MEMBER_ACCESS_EXPRESSION,
@@ -1044,12 +1045,17 @@ typedef struct mc_syntax_node {
         } arithmetic_assignment;
         struct {
           mc_syntax_node *left;
-          mc_syntax_node *conditional_operator;
+          mc_syntax_node *operator;
           mc_syntax_node *right;
-        } conditional_expression;
+        } logical_expression;
         struct {
           mc_syntax_node *left;
-          mc_syntax_node *relational_operator;
+          mc_syntax_node *operator;
+          mc_syntax_node *right;
+        } bitwise_expression;
+        struct {
+          mc_syntax_node *left;
+          mc_syntax_node *operator;
           mc_syntax_node *right;
         } relational_expression;
         struct {

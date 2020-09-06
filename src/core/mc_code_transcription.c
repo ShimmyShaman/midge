@@ -1589,14 +1589,23 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     mct_transcribe_expression(ts, syntax_node->dereference_expression.unary_expression);
     // printf("%s\n", ts->str->text);
   } break;
-  case MC_SYNTAX_CONDITIONAL_EXPRESSION: {
-    if (!syntax_node->conditional_expression.right) {
+  case MC_SYNTAX_LOGICAL_EXPRESSION: {
+    if (!syntax_node->logical_expression.right) {
       MCerror(764, "TODO");
     }
 
-    mct_transcribe_expression(ts, syntax_node->conditional_expression.left);
-    mct_append_node_text_to_c_str(ts->str, syntax_node->conditional_expression.conditional_operator);
-    mct_transcribe_expression(ts, syntax_node->conditional_expression.right);
+    mct_transcribe_expression(ts, syntax_node->logical_expression.left);
+    mct_append_node_text_to_c_str(ts->str, syntax_node->logical_expression.logical_operator);
+    mct_transcribe_expression(ts, syntax_node->logical_expression.right);
+  } break;
+  case MC_SYNTAX_BITWISE_EXPRESSION: {
+    if (!syntax_node->logical_expression.right) {
+      MCerror(764, "TODO");
+    }
+
+    mct_transcribe_expression(ts, syntax_node->bitwise_expression.left);
+    mct_append_node_text_to_c_str(ts->str, syntax_node->bitwise_expression.bitwise_operator);
+    mct_transcribe_expression(ts, syntax_node->bitwise_expression.right);
   } break;
   case MC_SYNTAX_RELATIONAL_EXPRESSION: {
     if (!syntax_node->relational_expression.right) {
@@ -1617,7 +1626,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     // WILL have to redo in future
   // case MC_SYNTAX_DEREFERENCE_EXPRESSION:
   // case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
-  // case MC_SYNTAX_CONDITIONAL_EXPRESSION:
+  // case MC_SYNTAX_LOGICAL_EXPRESSION:
   // case MC_SYNTAX_OPERATIONAL_EXPRESSION:
   // case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION:
   // case MC_SYNTAX_RELATIONAL_EXPRESSION: {
@@ -2075,7 +2084,22 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
     bool contains_mc_function_call;
     mct_contains_mc_invoke(syntax_node->expression_statement.expression, &contains_mc_function_call);
     if (contains_mc_function_call) {
+      if (syntax_node->expression_statement.expression->type == MC_SYNTAX_ASSIGNMENT_EXPRESSION) {
+        mc_syntax_node *ass_expr = syntax_node->expression_statement.expression;
+        if ((mc_token_type)ass_expr->assignment_expression.variable->type != MC_TOKEN_IDENTIFIER) {
+          MCerror(2090, "Unsupported TODO?");
+        }
+        if (ass_expr->assignment_expression.value_expression->type != MC_SYNTAX_INVOCATION) {
+          MCerror(2093, "Unsupported TODO?");
+        }
+
+        mct_transcribe_mc_invocation(ts, ass_expr->assignment_expression.value_expression,
+                                     ass_expr->assignment_expression.variable->text);
+        break;
+      }
+
       if (syntax_node->expression_statement.expression->type != MC_SYNTAX_INVOCATION) {
+
         // Nested MC_invocation .. eek
         print_syntax_node(syntax_node, 0);
         MCerror(231, "TODO");
