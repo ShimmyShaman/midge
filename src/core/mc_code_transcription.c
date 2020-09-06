@@ -53,6 +53,38 @@ int mct_release_expression_type_info_fields(mct_expression_type_info *eti)
   return 0;
 }
 
+// TODO -- this belongs in c_parser_lexer mcs
+int mct_syntax_descendants_contain_node_type(mc_syntax_node *syntax_node, mc_syntax_node_type syntax_node_type,
+                                             bool *result)
+{
+
+  if ((int)syntax_node->type < (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
+    *result = false;
+    return 0;
+  }
+
+  for (int i = 0; i < syntax_node->children->count; ++i) {
+    if (syntax_node->children->items[i] == NULL) {
+      continue;
+    }
+
+    if ((int)syntax_node->children->items[i]->type == (int)syntax_node_type) {
+      *result = true;
+      return 0;
+    }
+
+    if ((int)syntax_node->children->items[i]->type >= (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
+      mct_syntax_descendants_contain_node_type(syntax_node->children->items[i], syntax_node_type, result);
+      if (*result) {
+        return 0;
+      }
+    }
+  }
+  *result = false;
+
+  return 0;
+}
+
 int mct_append_node_text_to_c_str(c_str *str, mc_syntax_node *syntax_node)
 {
   char *node_text;
@@ -1244,6 +1276,16 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       mct_append_node_text_to_c_str(ts->str, thr_invocation->invocation.arguments->items[3]);
       append_to_c_str(ts->str, ";\n");
 
+      if (ts->report_invocations_to_error_stack) {
+        mct_append_to_c_str(ts, "{\n");
+        ++ts->indent;
+        mct_append_to_c_str(ts, "int midge_error_stack_index;\n");
+
+        mct_append_indent_to_c_str(ts);
+        append_to_c_strf(ts->str, "register_midge_stack_invocation(\"%s\", __FILE__, %i, &midge_error_stack_index);\n",
+                         "pthread_create", syntax_node->begin.line);
+      }
+
       mct_append_indent_to_c_str(ts);
       mct_append_node_text_to_c_str(
           ts->str,
@@ -1256,11 +1298,22 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       mct_append_node_text_to_c_str(ts->str, thr_invocation->invocation.arguments->items[1]);
       append_to_c_str(ts->str, ", __mch_thread_entry, (void *)mcti_wrapper_state);\n");
 
+      if (ts->report_invocations_to_error_stack) {
+        mct_append_indent_to_c_str(ts);
+        append_to_c_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
+
+        --ts->indent;
+        mct_append_to_c_str(ts, "}\n");
+      }
+
       --ts->indent;
       mct_append_to_c_str(ts, "}\n");
       return 0;
     }
   }
+
+  // Temporary -- TODO -- until invokes are handled more eloquently
+
   // Do MC_invokes
   // if (contains_mc_function_call) {
   // const char *tyin = get_mc_syntax_token_type_name(declaration->local_variable_declaration.type_identifier->type);
@@ -1298,14 +1351,17 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       continue;
     }
 
-    bool contains_mc_function_call;
-    mct_contains_mc_invoke(declarator->local_variable_declarator.initializer, &contains_mc_function_call);
-    if (contains_mc_function_call) {
-      // Skip - do later
-      continue;
-    }
-
     if (declarator->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER) {
+      // Any invocation, do it later
+      if (declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
+              ->type == MC_SYNTAX_INVOCATION)
+        continue;
+      // mct_syntax_descendants_contain_node_type(declarator->local_variable_declarator.initializer,
+      // MC_SYNTAX_INVOCATION,
+      //                                          &contains_invocation);
+      // if (contains_invocation)
+      //   continue;
+
       append_to_c_str(ts->str, " = ");
       mct_transcribe_expression(
           ts,
@@ -1326,24 +1382,78 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
     if (!declarator->local_variable_declarator.initializer) {
       continue;
     }
+
+    if (declarator->local_variable_declarator.initializer->type != MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER ||
+        declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
+                ->type != MC_SYNTAX_INVOCATION)
+      continue;
+
+    // Any invocation, do it later
+    bool contains_invocation;
+    mct_syntax_descendants_contain_node_type(declarator->local_variable_declarator.initializer, MC_SYNTAX_INVOCATION,
+                                             &contains_invocation);
+    if (!contains_invocation)
+      continue;
+
     bool contains_mc_function_call;
     mct_contains_mc_invoke(declarator->local_variable_declarator.initializer, &contains_mc_function_call);
-    if (!contains_mc_function_call) {
+
+    if (contains_mc_function_call) {
+      if (declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
+              ->type != MC_SYNTAX_INVOCATION) {
+        print_syntax_node(
+            declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression,
+            0);
+        MCerror(250, "Nested mc invokes not yet supported");
+      }
+
+      // MCerror(412, "TODO -- integrate new invocation methods with this");
+      char *return_variable_name;
+      copy_syntax_node_to_text(declarator->local_variable_declarator.variable_name, &return_variable_name);
+      mct_transcribe_mc_invocation(
+          ts, declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression,
+          return_variable_name);
+      free(return_variable_name);
       continue;
     }
 
     if (declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
             ->type != MC_SYNTAX_INVOCATION) {
-      MCerror(250, "Nested mc invokes not yet supported");
+      print_syntax_node(
+          declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression, 0);
+      MCerror(1417, "Nested invokes not yet supported just flat 'res = function()'");
     }
 
-    // MCerror(412, "TODO -- integrate new invocation methods with this");
-    char *return_variable_name;
-    copy_syntax_node_to_text(declarator->local_variable_declarator.variable_name, &return_variable_name);
-    mct_transcribe_mc_invocation(
-        ts, declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression,
-        return_variable_name);
-    free(return_variable_name);
+    if (ts->report_invocations_to_error_stack) {
+      mct_append_to_c_str(ts, "{\n");
+      ++ts->indent;
+      mct_append_to_c_str(ts, "int midge_error_stack_index;\n");
+
+      mct_append_indent_to_c_str(ts);
+      char *function_name;
+      copy_syntax_node_to_text(declarator->local_variable_declarator.initializer->local_variable_assignment_initializer
+                                   .value_expression->invocation.function_identity,
+                               &function_name);
+      append_to_c_strf(ts->str, "register_midge_stack_invocation(\"%s\", __FILE__, %i, &midge_error_stack_index);\n",
+                       function_name, syntax_node->begin.line);
+      free(function_name);
+    }
+    {
+      mct_append_indent_to_c_str(ts);
+      mct_append_node_text_to_c_str(ts->str, declarator->local_variable_declarator.variable_name);
+      append_to_c_str(ts->str, " = ");
+      mct_transcribe_expression(
+          ts,
+          declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
+      append_to_c_str(ts->str, ";\n");
+    }
+    if (ts->report_invocations_to_error_stack) {
+      mct_append_indent_to_c_str(ts);
+      append_to_c_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
+
+      --ts->indent;
+      mct_append_to_c_str(ts, "}\n");
+    }
     continue;
   }
 

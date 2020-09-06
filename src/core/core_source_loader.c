@@ -21,6 +21,17 @@ typedef struct _csl_c_str {
 #define false ((unsigned char)0)
 #endif
 
+// TEMP will have to do function defines sooner or later
+#define VK_CHECK(res, func_name)                                \
+  if (res) {                                                    \
+    printf("VK-ERR[%i] :%i --" func_name "\n", res, __LINE__); \
+    return res;                                                 \
+  }
+#define VK_ASSERT(condition, message)                        \
+  if (!(condition)) {                                        \
+    printf("VK-ASSERT ERR[" #condition "] :" #message "\n"); \
+    return -11111;                                           \
+  }
 // int callit_nonmc()
 // {
 //   printf("!!callit-NON-mc!!\n");
@@ -477,6 +488,7 @@ const char *_mcl_core_functions[] = {
     "mct_decrement_scope_depth",
     "mct_add_scope_variable",
     "mct_transcribe_mc_invocation_argument",
+    "mct_syntax_descendants_contain_node_type",
     // "get_keyword_const_text_name",
     "mct_transcribe_fptr_invocation",
 

@@ -15,7 +15,7 @@ void *midge_render_thread(void *vargp)
   mxcb_window_info winfo;
   winfo.shouldExit = 0;
 
-  vk_render_state vkrs;
+  vk_render_state vkrs = {};
   vkrs.window_width = APPLICATION_SET_WIDTH;
   vkrs.window_height = APPLICATION_SET_HEIGHT;
   vkrs.maximal_image_width = 2048;

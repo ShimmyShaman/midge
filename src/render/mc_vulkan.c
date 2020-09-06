@@ -3,14 +3,19 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
-#define MC_RT_CALL(CALL) \
-  res = CALL;            \
-  assert(res == VK_SUCCESS);
+#define MC_RT_CALL(CALL)                                                \
+  {                                                                     \
+    VkResult mc_rt_vk_result = CALL;                                    \
+    if (mc_rt_vk_result) {                                              \
+      printf("VK-ERR[%i] :%i --" CALL "\n", mc_rt_vk_result, __LINE__); \
+      return mc_rt_vk_result;                                           \
+    }                                                                   \
+  }
 
 /*
  * Initializes a discovered global extension property.
  */
-VkResult mvk_init_global_extension_properties(layer_properties *layer_props)
+VkResult mvk_init_layer_instance_extension_properties(layer_properties *layer_props)
 {
   VkResult res;
   char *layer_name = layer_props->properties.layerName;
@@ -20,9 +25,7 @@ VkResult mvk_init_global_extension_properties(layer_properties *layer_props)
   // for maybe the same reason??? Donno vulkan that well
   do {
     res = vkEnumerateInstanceExtensionProperties(layer_name, &layer_props->instance_extensions.size, NULL);
-    if (res) {
-      return res;
-    }
+    VK_CHECK(res, "vkEnumerateInstanceExtensionProperties");
 
     if (layer_props->instance_extensions.size == 0) {
       return VK_SUCCESS;
@@ -60,8 +63,10 @@ VkResult mvk_init_global_layer_properties(vk_render_state *p_vkrs)
    */
   do {
     res = vkEnumerateInstanceLayerProperties(&p_vkrs->instance_layer_properties.size, NULL);
-    if (res)
+    if (res) {
+      printf("VK-ERR[%i] :%i --vkEnumerateInstanceLayerProperties\n", res, __LINE__);
       return res;
+    }
 
     if (p_vkrs->instance_layer_properties.size == 0) {
       return VK_SUCCESS;
@@ -83,13 +88,19 @@ VkResult mvk_init_global_layer_properties(vk_render_state *p_vkrs)
    * Now gather the extension list for each instance layer.
    */
   for (int i = 0; i < p_vkrs->instance_layer_properties.size; ++i) {
+    // Initialize  new instance
     layer_properties *layer_props = (layer_properties *)malloc(sizeof(layer_properties));
     p_vkrs->instance_layer_properties.items[i] = layer_props;
+
+    layer_props->device_extensions.size = 0;
+    layer_props->instance_extensions.size = 0;
     layer_props->properties = vk_props[i];
     // printf("vk_props[%i]:%s-%s\n", i, vk_props[i].layerName, vk_props[i].description);
-    res = mvk_init_global_extension_properties(layer_props);
-    if (res)
+    res = mvk_init_layer_instance_extension_properties(layer_props);
+    if (res) {
+      printf("VK-ERR[%i] :%i --mvk_init_layer_instance_extension_properties\n", res, __LINE__);
       return res;
+    }
   }
   free(vk_props);
 
@@ -173,15 +184,13 @@ VkResult mvk_init_instance(vk_render_state *p_vkrs, char const *const app_short_
 
   printf("create VkInstance...");
   VkResult res = vkCreateInstance(&inst_info, NULL, &p_vkrs->instance);
-  if (res) {
-    MCerror((VkResult)177, "VkInstance didn't create VkResult:%i", res);
-  }
+  VK_CHECK(res, "vkCreateInstance");
   printf("SUCCESS %p\n", p_vkrs->instance);
 
   return res;
 }
 
-VkResult init_device_extension_properties(vk_render_state *p_vkrs, layer_properties *layer_props)
+VkResult init_layer_device_extension_properties(vk_render_state *p_vkrs, layer_properties *layer_props)
 {
   VkResult res;
   layer_props->device_extensions.items = NULL;
@@ -189,8 +198,7 @@ VkResult init_device_extension_properties(vk_render_state *p_vkrs, layer_propert
 
   do {
     res = vkEnumerateDeviceExtensionProperties(p_vkrs->gpus[0], layer_name, &layer_props->device_extensions.size, NULL);
-    if (res)
-      return res;
+    VK_CHECK(res, "vkEnumerateDeviceExtensionProperties");
 
     if (layer_props->device_extensions.size == 0) {
       return VK_SUCCESS;
@@ -214,40 +222,42 @@ VkResult init_device_extension_properties(vk_render_state *p_vkrs, layer_propert
  */
 VkResult mvk_init_enumerate_device(vk_render_state *p_vkrs)
 {
-  printf("mied-0 %p\n", p_vkrs->instance);
+  // printf("mied-0 %p\n", p_vkrs->instance);
   p_vkrs->device_count = 0;
   VkResult res = vkEnumeratePhysicalDevices(p_vkrs->instance, &p_vkrs->device_count, NULL);
-  printf("mied-1a\n");
-  assert(res == VK_SUCCESS);
+  VK_CHECK(res, "vkEnumeratePhysicalDevices");
+  VK_ASSERT(p_vkrs->device_count > 0, "Must have at least one physical device that supports Vulkan!");
+  // printf("mied-1a\n");
 
-  assert(p_vkrs->device_count > 0 && "Must have at least one physical device that supports Vulkan!");
-  printf("mied-1\n");
-  // VkPhysicalDevice device
+  // printf("mied-1\n");
 
   p_vkrs->gpus = (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * p_vkrs->device_count);
-
   res = vkEnumeratePhysicalDevices(p_vkrs->instance, &p_vkrs->device_count, p_vkrs->gpus);
-  assert(res == VK_SUCCESS);
+  VK_CHECK(res, "vkEnumeratePhysicalDevices");
 
-  printf("mied-2\n");
+  // printf("mied-2\n");
   vkGetPhysicalDeviceQueueFamilyProperties(p_vkrs->gpus[0], &p_vkrs->queue_family_count, NULL);
-  assert(p_vkrs->queue_family_count >= 1);
+  VK_ASSERT(p_vkrs->queue_family_count > 0, "Must have at least one queue family!");
 
-  p_vkrs->queue_family_properties = (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties));
+  // printf("before:%i\n", p_vkrs->queue_family_count);
+  p_vkrs->queue_family_properties =
+      (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * p_vkrs->queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(p_vkrs->gpus[0], &p_vkrs->queue_family_count,
                                            p_vkrs->queue_family_properties);
-  assert(p_vkrs->queue_family_count >= 1);
+  VK_ASSERT(p_vkrs->queue_family_count > 0, "Must have at least one queue family!");
+  // printf("after:%i\n", p_vkrs->queue_family_count);
 
-  printf("mied-3\n");
+  // printf("mied-3\n");
   /* This is as good a place as any to do this */
   vkGetPhysicalDeviceMemoryProperties(p_vkrs->gpus[0], &p_vkrs->memory_properties);
   vkGetPhysicalDeviceProperties(p_vkrs->gpus[0], &p_vkrs->gpu_props);
   /* query device extensions for enabled layers */
   for (int i = 0; i < p_vkrs->instance_layer_properties.size; ++i) {
-    init_device_extension_properties(p_vkrs, p_vkrs->instance_layer_properties.items[i]);
+    res = init_layer_device_extension_properties(p_vkrs, p_vkrs->instance_layer_properties.items[i]);
+    VK_CHECK(res, "init_layer_device_extension_properties");
   }
 
-  printf("mied-4\n");
+  // printf("mied-4\n");
   return res;
 }
 
@@ -259,25 +269,13 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
 {
   VkResult res;
   res = mvk_init_global_layer_properties(vkrs);
-  if (res) {
-    printf("--ERR[%i] mvk_init_global_layer_properties\n", res);
-    return res;
-  }
+  VK_CHECK(res, "mvk_init_global_layer_properties");
   res = mvk_init_device_extension_names(vkrs);
-  if (res) {
-    printf("--ERR[%i] mvk_init_device_extension_names\n", res);
-    return res;
-  }
+  VK_CHECK(res, "mvk_init_device_extension_names");
   res = mvk_init_instance(vkrs, "midge");
-  if (res) {
-    printf("--ERR[%i] mvk_init_instance line:%i\n", res, __LINE__);
-    return res;
-  }
+  VK_CHECK(res, "mvk_init_instance");
   res = mvk_init_enumerate_device(vkrs);
-  if (res) {
-    printf("--ERR[%i] mvk_init_enumerate_device\n", res);
-    return res;
-  }
+  VK_CHECK(res, "mvk_init_enumerate_device");
 
   //   mxcb_init_window(&winfo, vkrs.window_width, vkrs.window_height);
   return VK_SUCCESS;
@@ -304,9 +302,9 @@ void mvk_destroy_instance(vk_render_state *p_vkrs)
     free(p_vkrs->instance_extension_names.items);
   }
 
-printf("instance @b destroy %p\n", p_vkrs->instance);
+  // printf("instance @b destroy %p\n", p_vkrs->instance);
   vkDestroyInstance(p_vkrs->instance, NULL);
-printf("instance @a destroy %p\n", p_vkrs->instance);
+  // printf("instance @a destroy %p\n", p_vkrs->instance);
 }
 
 void mvk_cleanup_device_extension_names(vk_render_state *p_vkrs)
@@ -321,10 +319,15 @@ void mvk_cleanup_global_layer_properties(vk_render_state *p_vkrs)
   if (p_vkrs->instance_layer_properties.size && p_vkrs->instance_layer_properties.items) {
     for (int i = 0; i < p_vkrs->instance_layer_properties.size; ++i) {
       if (p_vkrs->instance_layer_properties.items[i]) {
-        if (p_vkrs->instance_layer_properties.items[i]->instance_extensions.items) {
+        // printf("%i %s : %i %i\n", i, p_vkrs->instance_layer_properties.items[i]->properties.layerName,
+        //        p_vkrs->instance_layer_properties.items[i]->instance_extensions.size,
+        //        p_vkrs->instance_layer_properties.items[i]->device_extensions.size);
+        if (p_vkrs->instance_layer_properties.items[i]->instance_extensions.size &&
+            p_vkrs->instance_layer_properties.items[i]->instance_extensions.items) {
           free(p_vkrs->instance_layer_properties.items[i]->instance_extensions.items);
         }
-        if (p_vkrs->instance_layer_properties.items[i]->device_extensions.items) {
+        if (p_vkrs->instance_layer_properties.items[i]->device_extensions.size &&
+            p_vkrs->instance_layer_properties.items[i]->device_extensions.items) {
           free(p_vkrs->instance_layer_properties.items[i]->device_extensions.items);
         }
 
