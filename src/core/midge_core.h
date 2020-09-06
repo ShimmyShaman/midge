@@ -899,6 +899,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_STRING_LITERAL_EXPRESSION,
   MC_SYNTAX_CAST_EXPRESSION,
   MC_SYNTAX_PARENTHESIZED_EXPRESSION,
+  MC_SYNTAX_INITIALIZER_EXPRESSION,
   MC_SYNTAX_SIZEOF_EXPRESSION,
   MC_SYNTAX_PREPENDED_UNARY_EXPRESSION,
   MC_SYNTAX_LOGICAL_EXPRESSION,
@@ -1109,6 +1110,9 @@ typedef struct mc_syntax_node {
         struct {
           mc_syntax_node *expression;
         } parenthesized_expression;
+        struct {
+          mc_syntax_node *expression;
+        } initializer_expression;
         struct {
           mc_syntax_node *type_identifier;
           // May be null indicating no dereference operators

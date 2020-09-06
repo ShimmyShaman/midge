@@ -167,6 +167,7 @@ int _midge_run()
 
     clint->process("#include \"xcb/xcb.h\"\n");
     clint->process("#include <vulkan/vulkan.h>\n");
+    clint->process("#include <vulkan/vulkan_xcb.h>\n");
     // loadLibrary("dep/glslang/bin/glslangValidator");
 
     // Load non-MC App source

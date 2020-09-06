@@ -22,10 +22,39 @@ void *midge_render_thread(void *vargp)
   vkrs.maximal_image_height = 2048;
   vkrs.xcb_winfo = &winfo;
 
-
   // vkrs.textures.allocated = 0;
-  mvk_init_vulkan(&vkrs);
+  VkResult res = mvk_init_vulkan(&vkrs);
+  if (res) {
+    printf("--ERR[%i] mvk_init_vulkan\n", res);
+    return NULL;
+  }
+  res = mvk_cleanup_vulkan(&vkrs);
+  if (res) {
+    printf("--ERR[%i] mvk_cleanup_vulkan\n", res);
+    return NULL;
+  }
 
+  // VkResult res;
+  // res = mvk_init_global_layer_properties(vkrs);
+  // if (res) {
+  //   printf("--ERR[%i] mvk_init_global_layer_properties\n", res);
+  //   return NULL;
+  // }
+  // res = mvk_init_device_extension_names(vkrs);
+  // if (res) {
+  //   printf("--ERR[%i] mvk_init_device_extension_names\n", res);
+  //   return NULL;
+  // }
+  // res = mvk_init_instance(vkrs, "midge");
+  // if (res) {
+  //   printf("--ERR[%i] mvk_init_instance line:%i\n", res, __LINE__);
+  //   return NULL;
+  // }
+  // res = mvk_init_enumerate_device(vkrs);
+  // if (res) {
+  //   printf("--ERR[%i] mvk_init_enumerate_device\n", res);
+  //   return NULL;
+  // }
 
   render_thread->thread_info->has_concluded = 1;
   return NULL;

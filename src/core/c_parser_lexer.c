@@ -276,6 +276,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_FUNCTION_POINTER_DECLARATION";
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION:
     return "MC_SYNTAX_PARENTHESIZED_EXPRESSION";
+  case MC_SYNTAX_INITIALIZER_EXPRESSION:
+    return "MC_SYNTAX_INITIALIZER_EXPRESSION";
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
     return "MC_SYNTAX_ASSIGNMENT_EXPRESSION";
   case MC_SYNTAX_SIZEOF_EXPRESSION:
@@ -779,6 +781,9 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   } break;
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
     syntax_node->parenthesized_expression.expression = NULL;
+  } break;
+  case MC_SYNTAX_INITIALIZER_EXPRESSION: {
+    // Nothing for the moment
   } break;
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     syntax_node->sizeof_expression.type_identifier = NULL;
@@ -2365,6 +2370,22 @@ int mcs_parse_parenthesized_expression(parsing_state *ps, mc_syntax_node *parent
   return 0;
 }
 
+int mcs_parse_initializer(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *initializer_expression;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_INITIALIZER_EXPRESSION, NULL, parent, &initializer_expression);
+  if (additional_destination) {
+    *additional_destination = initializer_expression;
+  }
+
+  mcs_parse_through_token(ps, initializer_expression, MC_TOKEN_CURLY_OPENING_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, initializer_expression);
+
+  mcs_parse_through_token(ps, initializer_expression, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL);
+
+  return 0;
+}
+
 int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_node *parent,
                                                 mc_syntax_node **additional_destination)
 {
@@ -2645,6 +2666,17 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     mcs_parse_through_supernumerary_tokens(ps, left);
 
     _mcs_parse_expression(ps, CASE_PRECEDENCE, left, &left->dereference_expression.unary_expression);
+  } break;
+  case MC_TOKEN_CURLY_OPENING_BRACKET: {
+    // Initializer
+    mcs_parse_initializer(ps, parent, additional_destination);
+
+    mcs_peek_token_type(ps, false, 0, &token0);
+    if (token0 != MC_TOKEN_SEMI_COLON) {
+      print_parse_error(ps->code, ps->index, "_mcs_parse_expression", "after-parse-initializer");
+      MCerror(2655, "Expected statement end ';' after initializer");
+    }
+    return 0;
   } break;
   case MC_TOKEN_DECREMENT_OPERATOR:
   case MC_TOKEN_INCREMENT_OPERATOR: {

@@ -1566,6 +1566,14 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     mct_transcribe_expression(ts, syntax_node->parenthesized_expression.expression);
     append_to_c_str(ts->str, ")");
   } break;
+  case MC_SYNTAX_INITIALIZER_EXPRESSION: {
+    append_to_c_str(ts->str, "{");
+    // mct_transcribe_expression(ts, syntax_node->initializer_expression);
+    if (syntax_node->children->count > 2) {
+      MCerror(1573, "TODO :%s", get_mc_syntax_token_type_name(syntax_node->children->items[1]->type));
+    }
+    append_to_c_str(ts->str, "}");
+  } break;
   case MC_SYNTAX_OPERATIONAL_EXPRESSION: {
     if (!syntax_node->operational_expression.right) {
       MCerror(745, "TODO");

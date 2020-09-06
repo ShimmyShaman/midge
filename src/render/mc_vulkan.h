@@ -33,11 +33,27 @@ typedef struct vk_render_state {
     uint32_t size;
     layer_properties **items;
   } instance_layer_properties;
-  const char **device_extension_names;
+  struct {
+    uint32_t size;
+    const char **items;
+  } device_extension_names;
   struct {
     uint32_t size;
     const char **items;
   } instance_layer_names;
+  struct {
+    uint32_t size;
+    const char **items;
+  } instance_extension_names;
+
+  VkInstance instance;
+
+  uint32_t device_count;
+  VkPhysicalDevice *gpus;
+  VkPhysicalDeviceProperties gpu_props;
+  uint32_t queue_family_count;
+  VkQueueFamilyProperties *queue_family_properties;
+  VkPhysicalDeviceMemoryProperties memory_properties;
 
 } vk_render_state;
 

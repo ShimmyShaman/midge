@@ -57,7 +57,8 @@ int begin_render_thread()
 
   begin_mthread(&midge_render_thread, &render_thread->thread_info, (void *)render_thread);
 
-  usleep(1000000);
+  while (!render_thread->thread_info->has_concluded)
+    usleep(10);
 
   end_mthread(render_thread->thread_info);
 }
