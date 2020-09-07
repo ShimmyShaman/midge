@@ -17,7 +17,7 @@ typedef struct mxcb_window_info {
 int mxcb_init_window(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
 
 int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buffer);
-
+window_input_buffer
 void mxcb_destroy_window(mxcb_window_info *mcxbWindowInfo);
 
 #endif // XCB_WINDOW_H

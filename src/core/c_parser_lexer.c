@@ -2606,13 +2606,42 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
 int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax_node *parent,
                           mc_syntax_node **additional_destination)
 {
-
-  mc_syntax_node *left;
-
-  // Determine left
   mc_token_type token0;
   mcs_peek_token_type(ps, false, 0, &token0);
   switch (token0) {
+  case MC_TOKEN_IDENTIFIER: {
+    mc_token_type token_after;
+    mcs_peek_token_type(ps, false, 1, &token_after);
+    switch (token_after) {
+    // case MC_TOKEN_CLOSING_BRACKET:
+    // case MC_TOKEN_OPEN_BRACKET:
+    // case MC_TOKEN_ASSIGNMENT_OPERATOR:
+    // case MC_TOKEN_SQUARE_OPENING_BRACKET:
+    // case MC_TOKEN_POINTER_OPERATOR:
+    // case MC_TOKEN_COMMA:
+    // case MC_TOKEN_ARROW_CLOSING_BRACKET:
+    // case MC_TOKEN_LOGICAL_AND_OPERATOR:
+    // case MC_TOKEN_SEMI_COLON:
+    // case MC_TOKEN_PLUS_OPERATOR:
+    //   break;
+    case MC_TOKEN_IDENTIFIER: {
+      // Declaration expression
+      mcs_parse_local_declaration(ps, parent, additional_destination);
+
+      mcs_peek_token_type(ps, false, 0, &token0);
+      if (token0 != MC_TOKEN_SEMI_COLON) {
+        MCerror(2632, "TODO");
+      }
+
+      return 0;
+    }
+    default: {
+      // print_parse_error(ps->code, ps->index, "_mcs_parse_expression", "see-below");
+      // MCerror(2622, "Unknown-Token-Path:IDENTIFIER>%s", get_mc_token_type_name(token_after));
+    } break;
+    }
+  } break;
+  case MC_TOKEN_UNSIGNED_KEYWORD:
   case MC_TOKEN_INT_KEYWORD: {
     // Declaration expression
     mcs_parse_local_declaration(ps, parent, additional_destination);
@@ -2622,10 +2651,16 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       MCerror(1753, "TODO");
     }
 
-    // printf("was %p\n", *additional_destination);
-
     return 0;
   }
+  default:
+    break;
+  }
+
+  mc_syntax_node *left;
+
+  // Determine left
+  switch (token0) {
   case MC_TOKEN_IDENTIFIER:
   case MC_TOKEN_CHAR_LITERAL:
   case MC_TOKEN_NUMERIC_LITERAL: {
@@ -3271,6 +3306,8 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   mc_token_type token0;
   mcs_peek_token_type(ps, false, 0, &token0);
   switch (token0) {
+  case MC_TOKEN_IDENTIFIER:
+  case MC_TOKEN_UNSIGNED_KEYWORD:
   case MC_TOKEN_INT_KEYWORD: {
     mcs_parse_expression(ps, statement, &statement->for_statement.initialization);
   } break;
@@ -3310,6 +3347,7 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   switch (token0) {
   case MC_TOKEN_CLOSING_BRACKET: {
   } break;
+  case MC_TOKEN_IDENTIFIER:
   case MC_TOKEN_INCREMENT_OPERATOR:
   case MC_TOKEN_DECREMENT_OPERATOR: {
     mcs_parse_expression(ps, statement, &statement->for_statement.fix_expression);

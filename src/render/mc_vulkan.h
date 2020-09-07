@@ -55,6 +55,12 @@ typedef struct vk_render_state {
   VkQueueFamilyProperties *queue_family_properties;
   VkPhysicalDeviceMemoryProperties memory_properties;
 
+  VkSurfaceKHR surface;
+  VkFormat format;
+  uint32_t graphics_queue_family_index;
+  uint32_t present_queue_family_index;
+  VkDevice device;
+
 } vk_render_state;
 
 extern "C" {

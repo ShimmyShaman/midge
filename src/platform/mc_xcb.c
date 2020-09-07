@@ -215,7 +215,7 @@ int get_key_input_code_char(bool shift, key_event_code code, char *c)
 
 int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
 {
-  // create connection to X11 server
+  // Create connection to X11 server
   const xcb_setup_t *setup = 0;
 
   xcb_screen_iterator_t iter;
@@ -234,19 +234,19 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
   }
   p_wnfo->screen = iter.data;
 
-  // 	uint32_t							_surface_size_x = 512; 	uint32_t
-  // _surface_size_y					= 512; 	std::string
-  // _window_name;
+  // uint32_t _surface_size_x = 512;
+  // uint32_t _surface_size_y = 512;
+  // std::string _window_name;
 
-  // create window
+  // Create window
   VkRect2D dimensions;
   dimensions.offset.x = 0;
   dimensions.offset.y = 0;
   dimensions.extent.width = surfaceSizeX;
   dimensions.extent.height = surfaceSizeY;
 
-  assert(dimensions.extent.width > 0);
-  assert(dimensions.extent.height > 0);
+  VK_ASSERT(dimensions.extent.width > 0, "");
+  VK_ASSERT(dimensions.extent.height > 0, "");
 
   uint32_t value_mask, value_list[32];
 
@@ -270,17 +270,20 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
   xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(p_wnfo->connection, cookie, 0);
 
   xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(p_wnfo->connection, 0, 16, "WM_DELETE_WINDOW");
-  p_wnfo->atom_window_reply = xcb_intern_atom_reply(p_wnfo->connection, cookie2, 0);
+  // p_wnfo->atom_window_reply = xcb_intern_atom_reply(p_wnfo->connection, cookie2, 0);
+  // if (p_wnfo->atom_window_reply)
+  //   printf("The _NET_WM_NAME atom has ID %u\n", p_wnfo->atom_window_reply->atom);
+  // else
+  //   printf("The _NET_WM_NAME atom has NO ID\n");
 
-  xcb_change_property(p_wnfo->connection, XCB_PROP_MODE_REPLACE, p_wnfo->window, (*reply).atom, 4, 32, 1,
-                      &(*p_wnfo->atom_window_reply).atom);
+  // xcb_change_property(p_wnfo->connection, XCB_PROP_MODE_REPLACE, p_wnfo->window, (*reply).atom, 4, 32, 1,
+  //                     &(*p_wnfo->atom_window_reply).atom);
   free(reply);
 
   xcb_map_window(p_wnfo->connection, p_wnfo->window);
 
-  // Force the x/y coordinates to 100,100 results are identical in consecutive
-  // runs
-   uint32_t coords[2];
+  // Force the x/y coordinates to 100,100 results are identical in consecutive runs
+  uint32_t coords[2];
   coords[0] = 100;
   coords[1] = 100;
   xcb_configure_window(p_wnfo->connection, p_wnfo->window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
@@ -330,9 +333,12 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
 
     switch (event->response_type & ~0x80) {
     case XCB_CLIENT_MESSAGE:
-      if (((xcb_client_message_event_t *)event)->data.data32[0] == p_wnfo->atom_window_reply->atom) {
-        p_wnfo->shouldExit = 1;
-      }
+      for (int i = 0; i < 10; ++i)
+        printf("ERROR XCB_CLIENT_MESSAGE!!!!!\n");
+      // TODO Fix this atom business
+      // if (((xcb_client_message_event_t *)event)->data.data32[0] == p_wnfo->atom_window_reply->atom) {
+      //   p_wnfo->shouldExit = 1;
+      // }
       break;
     case XCB_EXPOSE: {
       // Nothing?
@@ -400,16 +406,10 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
 
 void mxcb_destroy_window(mxcb_window_info *p_wnfo)
 {
+  // free(p_wnfo->atom_window_reply);
+
   xcb_destroy_window(p_wnfo->connection, p_wnfo->window);
   xcb_disconnect(p_wnfo->connection);
   p_wnfo->window = 0;
   p_wnfo->connection = NULL;
 }
-
-// void deInitOSSurface(VkInstance vulkanInstance, VkSurfaceKHR *surface)
-// {
-//   vkDestroySurfaceKHR(vulkanInstance, *surface, NULL);
-//   surface = NULL;
-// }
-
-// #endif
