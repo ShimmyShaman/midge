@@ -328,6 +328,7 @@ typedef struct mc_syntax_node {
         } local_variable_declarator;
         struct {
           mc_syntax_node *size_expression;
+          mc_syntax_node *assignment_expression;
         } local_variable_array_initializer;
         struct {
           mc_syntax_node *value_expression;

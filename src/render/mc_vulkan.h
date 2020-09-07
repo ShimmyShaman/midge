@@ -60,6 +60,19 @@ typedef struct vk_render_state {
   uint32_t graphics_queue_family_index;
   uint32_t present_queue_family_index;
   VkDevice device;
+  VkQueue graphics_queue;
+  VkQueue present_queue;
+
+  VkCommandPool command_pool;
+
+  struct {
+    VkSwapchainKHR instance;
+    uint32_t current_index;
+    uint32_t size;
+    VkCommandBuffer *command_buffers;
+    VkImage *images;
+    VkImageView *image_views;
+  } swap_chain;
 
 } vk_render_state;
 

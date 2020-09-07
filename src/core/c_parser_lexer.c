@@ -708,6 +708,7 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   } break;
   case MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER: {
     syntax_node->local_variable_array_initializer.size_expression = NULL;
+    syntax_node->local_variable_array_initializer.assignment_expression = NULL;
   } break;
   case MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER: {
     syntax_node->local_variable_assignment_initializer.value_expression = NULL;
@@ -1692,6 +1693,18 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
         // Other characters
         switch (code[*index]) {
+        case 'A':
+        case 'B':
+        case 'C':
+        case 'D':
+        case 'E':
+        case 'F':
+          if (is_hex) {
+            prev_digit = true;
+            continue;
+          }
+          loop = false;
+          break;
         case '.': {
           if (prev_digit && !is_hex && !is_binary) {
             prev_digit = false;
@@ -1715,6 +1728,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
           loop = false;
         } break;
         default:
+          print_parse_error(code, *index, "_mcs_parse_token", "");
           MCerror(191, "Invalid Numeric Literal character:'%c'", code[*index]);
         }
       }
@@ -2386,6 +2400,38 @@ int mcs_parse_initializer(parsing_state *ps, mc_syntax_node *parent, mc_syntax_n
   return 0;
 }
 
+int mcs_parse_array_initializer_assignment_expression(parsing_state *ps, mc_syntax_node *parent,
+                                                      mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *array_initializer_expression;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_INITIALIZER_EXPRESSION, NULL, parent, &array_initializer_expression);
+  if (additional_destination) {
+    *additional_destination = array_initializer_expression;
+  }
+
+  mcs_parse_through_token(ps, array_initializer_expression, MC_TOKEN_CURLY_OPENING_BRACKET, NULL);
+  mcs_parse_through_supernumerary_tokens(ps, array_initializer_expression);
+
+  while (1) {
+    mc_token_type token_type;
+    mcs_peek_token_type(ps, false, 1, &token_type);
+    if (token_type == MC_TOKEN_CURLY_CLOSING_BRACKET) {
+      break;
+    }
+
+    if (array_initializer_expression->array_initializer_assignment->values.count > 0) {
+      mcs_parse_through_token(ps, array_initializer_expression, MC_TOKEN_COMMA, NULL);
+      mcs_parse_through_supernumerary_tokens(ps, array_initializer_expression);
+    }
+
+    mcs_parse_expression(ps, ) mcs_parse_through_supernumerary_tokens(ps, array_initializer_expression);
+  }
+
+  mcs_parse_through_token(ps, array_initializer_expression, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL);
+
+  return 0;
+}
+
 int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_node *parent,
                                                 mc_syntax_node **additional_destination)
 {
@@ -2582,6 +2628,23 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
       mcs_parse_through_supernumerary_tokens(ps, array_initializer);
 
       mcs_parse_through_token(ps, array_initializer, MC_TOKEN_SQUARE_CLOSING_BRACKET, NULL);
+
+      mcs_peek_token_type(ps, false, 0, &token0);
+      switch (token0) {
+      case MC_TOKEN_SEMI_COLON:
+      case MC_TOKEN_COMMA:
+        break;
+      case MC_TOKEN_ASSIGNMENT_OPERATOR: {
+        mcs_parse_through_supernumerary_tokens(ps, array_initializer);
+        mcs_parse_through_token(ps, array_initializer, MC_TOKEN_ASSIGNMENT_OPERATOR, NULL);
+        mcs_parse_through_supernumerary_tokens(ps, array_initializer);
+
+        mcs_parse_array_initializer_assignment_expression(
+            ps, array_initializer, &array_initializer->local_variable_array_initializer.assignment_expression);
+      } break;
+      default:
+        MCerror(2603, "Token Unsupported:%s", get_mc_token_type_name(token0));
+      }
     } break;
     default: {
       print_parse_error(ps->code, ps->index, "see-below", "");

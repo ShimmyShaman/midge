@@ -1765,7 +1765,6 @@ VkResult mvk_execute_queue_command_buffer(vk_render_state *p_vkrs)
 void mvk_init_device_queue(vk_render_state *p_vkrs)
 {
   /* DEPENDS on init_swapchain_extension() */
-
   vkGetDeviceQueue(p_vkrs->device, p_vkrs->graphics_queue_family_index, 0, &p_vkrs->graphics_queue);
   if (p_vkrs->graphics_queue_family_index == p_vkrs->present_queue_family_index) {
     p_vkrs->present_queue = p_vkrs->graphics_queue;
