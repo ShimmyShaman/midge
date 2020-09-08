@@ -408,7 +408,7 @@ VkResult mvk_init_command_pool(vk_render_state *p_vkrs)
   cmd_pool_info.queueFamilyIndex = p_vkrs->graphics_queue_family_index;
   cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-  res = vkCreateCommandPool(p_vkrs->device, &cmd_pool_info, NULL, &p_vkrs->cmd_pool);
+  res = vkCreateCommandPool(p_vkrs->device, &cmd_pool_info, NULL, &p_vkrs->command_pool);
   VK_CHECK(res, "vkCreateCommandPool");
   return res;
 }
@@ -418,8 +418,9 @@ VkResult mvk_init_command_pool(vk_render_state *p_vkrs)
  */
 VkResult mvk_init_swapchain_frame_buffers(vk_render_state *p_vkrs)
 {
-  /* DEPENDS on p_vkrs->cmd and p_vkrs->queue initialized */
   VkResult res;
+
+  /* DEPENDS on p_vkrs->cmd and p_vkrs->queue initialized */
   VkSurfaceCapabilitiesKHR surfCapabilities;
 
   res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(p_vkrs->gpus[0], p_vkrs->surface, &surfCapabilities);
@@ -429,7 +430,7 @@ VkResult mvk_init_swapchain_frame_buffers(vk_render_state *p_vkrs)
   res = vkGetPhysicalDeviceSurfacePresentModesKHR(p_vkrs->gpus[0], p_vkrs->surface, &presentModeCount, NULL);
   VK_CHECK(res, "vkGetPhysicalDeviceSurfacePresentModesKHR");
   VkPresentModeKHR *presentModes = (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
-  VK_ASSERT(presentModes);
+  VK_ASSERT(presentModes, "vk present modes");
   res = vkGetPhysicalDeviceSurfacePresentModesKHR(p_vkrs->gpus[0], p_vkrs->surface, &presentModeCount, presentModes);
   VK_CHECK(res, "vkGetPhysicalDeviceSurfacePresentModesKHR");
 
@@ -480,15 +481,17 @@ VkResult mvk_init_swapchain_frame_buffers(vk_render_state *p_vkrs)
 
   // Find a supported composite alpha mode - one of these is guaranteed to be set
   VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
+  const uint32_t compositeAlphaFlagCount = 4;
+  VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[compositeAlphaFlagCount] = {
       VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
       VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
       VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
       VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
   };
-  for (uint32_t i = 0; i < sizeof(compositeAlphaFlags) / sizeof(compositeAlphaFlags[0]); i++) {
+  for (uint32_t i = 0; i < compositeAlphaFlagCount; i++) {
     if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
       compositeAlpha = compositeAlphaFlags[i];
+      // printf("compositeAlpha set with '%u'\n", compositeAlpha);
       break;
     }
   }
@@ -527,17 +530,10 @@ VkResult mvk_init_swapchain_frame_buffers(vk_render_state *p_vkrs)
   // Create the swap chain and its buffers
   // -- Size
   p_vkrs->swap_chain.size = 0;
-  res = vkCreateSwapchainKHR(p_vkrs->device, &swapchain_ci, NULL, &p_vkrs->swap_chain);
+  res = vkCreateSwapchainKHR(p_vkrs->device, &swapchain_ci, NULL, &p_vkrs->swap_chain.instance);
   VK_CHECK(res, "vkCreateSwapchainKHR");
 
   res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain.instance, &p_vkrs->swap_chain.size, NULL);
-  VK_CHECK(res, "vkGetSwapchainImagesKHR");
-
-  // -- Images
-  p_vkrs->swap_chain.images = (VkImage *)malloc(p_vkrs->swap_chain.size * sizeof(VkImage));
-  VK_ASSERT(p_vkrs->swap_chain.images);
-  res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain.instance, &p_vkrs->swap_chain.size,
-                                p_vkrs->swap_chain.images);
   VK_CHECK(res, "vkGetSwapchainImagesKHR");
 
   // -- Command Buffers
@@ -549,10 +545,20 @@ VkResult mvk_init_swapchain_frame_buffers(vk_render_state *p_vkrs)
   cmd.commandBufferCount = p_vkrs->swap_chain.size;
 
   p_vkrs->swap_chain.command_buffers = (VkCommandBuffer *)malloc(sizeof(VkCommandBuffer) * p_vkrs->swap_chain.size);
+  VK_ASSERT(p_vkrs->swap_chain.command_buffers, "failed to allocate swap chain command buffers");
   res = vkAllocateCommandBuffers(p_vkrs->device, &cmd, p_vkrs->swap_chain.command_buffers);
   VK_CHECK(res, "vkAllocateCommandBuffers");
 
+  // -- Images
+  VkImage *images = (VkImage *)malloc(sizeof(VkImage) * p_vkrs->swap_chain.size);
+  p_vkrs->swap_chain.images = images;
+  VK_ASSERT(p_vkrs->swap_chain.images, "failed to allocate swap chain images");
+  res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain.instance, &p_vkrs->swap_chain.size, images);
+  VK_CHECK(res, "vkGetSwapchainImagesKHR");
+
   // -- Image Views
+  p_vkrs->swap_chain.image_views = (VkImageView *)malloc(p_vkrs->swap_chain.size * sizeof(VkImageView));
+  VK_ASSERT(p_vkrs->swap_chain.image_views, "failed to allocate swap chain image views");
   for (uint32_t i = 0; i < p_vkrs->swap_chain.size; i++) {
     VkImageViewCreateInfo color_image_view = {};
     color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -577,13 +583,206 @@ VkResult mvk_init_swapchain_frame_buffers(vk_render_state *p_vkrs)
   }
   p_vkrs->swap_chain.current_index = 0;
 
-  if (NULL != presentModes) {
+  if (presentModes) {
     free(presentModes);
   }
 
   return VK_SUCCESS;
 }
 
+uint32_t mvk_get_memory_type_index(vk_render_state *p_vkrs, uint32_t typeBits, VkMemoryPropertyFlags properties)
+{
+  VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
+  vkGetPhysicalDeviceMemoryProperties(p_vkrs->gpus[0], &deviceMemoryProperties);
+  for (uint32_t i = 0; i < deviceMemoryProperties.memoryTypeCount; i++) {
+    if ((typeBits & 1) == 1) {
+      if ((deviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+        return i;
+      }
+    }
+    typeBits >>= 1;
+  }
+  return 0;
+}
+
+VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
+{
+  /* allow custom depth formats */
+  VkFormat colorFormat = p_vkrs->format;
+
+  // Color attachment
+  VkImageCreateInfo imageCreateInfo = {};
+  imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageCreateInfo.format = colorFormat;
+  imageCreateInfo.extent.width = p_vkrs->maximal_image_width;
+  imageCreateInfo.extent.height = p_vkrs->maximal_image_height;
+  imageCreateInfo.extent.depth = 1;
+  imageCreateInfo.mipLevels = 1;
+  imageCreateInfo.arrayLayers = 1;
+  imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+  // VkFormatProperties props;
+  // vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], p_vkrs->depth.format, &props);
+  // if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+  //   imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
+  // }
+  // else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+  //   imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  // }
+  // else {
+  //   /* Try other depth formats? */
+  //   printf("depth_format:%i is unsupported\n", p_vkrs->depth.format);
+  //   return (VkResult)MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT;
+  // }
+
+  VkResult res = vkCreateImage(p_vkrs->device, &imageCreateInfo, NULL, &p_vkrs->headless.image);
+  VK_CHECK(res, "vkCreateImage");
+
+  VkMemoryRequirements memReqs;
+  vkGetImageMemoryRequirements(p_vkrs->device, p_vkrs->headless.image, &memReqs);
+
+  VkMemoryAllocateInfo memAlloc = {};
+  memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  memAlloc.allocationSize = memReqs.size;
+  memAlloc.memoryTypeIndex =
+      mvk_get_memory_type_index(p_vkrs, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  res = vkAllocateMemory(p_vkrs->device, &memAlloc, NULL, &p_vkrs->headless.memory);
+  VK_CHECK(res, "vkAllocateMemory");
+  res = vkBindImageMemory(p_vkrs->device, p_vkrs->headless.image, p_vkrs->headless.memory, 0);
+  VK_CHECK(res, "vkBindImageMemory");
+
+  VkImageViewCreateInfo colorImageView = {};
+  colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  colorImageView.format = colorFormat;
+  colorImageView.subresourceRange = {};
+  colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  colorImageView.subresourceRange.baseMipLevel = 0;
+  colorImageView.subresourceRange.levelCount = 1;
+  colorImageView.subresourceRange.baseArrayLayer = 0;
+  colorImageView.subresourceRange.layerCount = 1;
+  colorImageView.image = p_vkrs->headless.image;
+  res = vkCreateImageView(p_vkrs->device, &colorImageView, NULL, &p_vkrs->headless.view);
+  VK_CHECK(res, "vkCreateImageView");
+
+  return res;
+}
+
+VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
+{
+  VkResult res;
+
+  float fov = glm_rad(45.0f);
+
+  if (p_vkrs->window_width > p_vkrs->window_height) {
+    fov *= (float)p_vkrs->window_height / (float)p_vkrs->window_width;
+  }
+
+  glm_ortho_default((float)p_vkrs->window_width / p_vkrs->window_height, (vec4 *)&p_vkrs->Projection);
+
+  glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)&p_vkrs->View);
+
+  glm_mat4_copy(GLM_MAT4_IDENTITY, (vec4 *)&p_vkrs->Model);
+
+  // Vulkan clip space has inverted Y and half Z.
+  mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
+  glm_mat4_copy(clip, (vec4 *)&p_vkrs->Clip);
+
+  glm_mat4_mul((vec4 *)&p_vkrs->View, (vec4 *)&p_vkrs->Model, (vec4 *)&p_vkrs->MVP);
+  glm_mat4_mul((vec4 *)&p_vkrs->Projection, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
+  glm_mat4_mul((vec4 *)&p_vkrs->Clip, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
+
+  // /* VULKAN_KEY_START */
+  // VkBufferCreateInfo buf_info = {};
+  // buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  // buf_info.pNext = NULL;
+  // buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+  // buf_info.size = sizeof(p_vkrs->MVP);
+  // buf_info.queueFamilyIndexCount = 0;
+  // buf_info.pQueueFamilyIndices = NULL;
+  // buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  // buf_info.flags = 0;
+  // res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->global_vert_uniform_buffer.buf);
+  // assert(res == VK_SUCCESS);
+
+  // VkMemoryRequirements mem_reqs;
+  // vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, &mem_reqs);
+
+  // VkMemoryAllocateInfo alloc_info = {};
+  // alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  // alloc_info.pNext = NULL;
+  // alloc_info.memoryTypeIndex = 0;
+
+  // alloc_info.allocationSize = mem_reqs.size;
+  // bool pass = get_memory_type_index_from_properties(
+  //     p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+  //     &alloc_info.memoryTypeIndex);
+  // assert(pass && "No mappable, coherent memory");
+
+  // res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->global_vert_uniform_buffer.mem));
+  // assert(res == VK_SUCCESS);
+
+  // uint8_t *pData;
+  // res = vkMapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, 0, mem_reqs.size, 0, (void **)&pData);
+  // assert(res == VK_SUCCESS);
+
+  // memcpy(pData, &p_vkrs->MVP, sizeof(p_vkrs->MVP));
+
+  // vkUnmapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem);
+
+  // res = vkBindBufferMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf,
+  //                          p_vkrs->global_vert_uniform_buffer.mem, 0);
+  // assert(res == VK_SUCCESS);
+
+  // p_vkrs->global_vert_uniform_buffer.buffer_info.buffer = p_vkrs->global_vert_uniform_buffer.buf;
+  // p_vkrs->global_vert_uniform_buffer.buffer_info.offset = 0;
+  // p_vkrs->global_vert_uniform_buffer.buffer_info.range = sizeof(p_vkrs->MVP);
+
+  // /* SHARED BUFFER */
+  // p_vkrs->render_data_buffer.allocated_size = 65536;
+  // buf_info = {};
+  // buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  // buf_info.pNext = NULL;
+  // buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+  // buf_info.size = p_vkrs->render_data_buffer.allocated_size;
+  // buf_info.queueFamilyIndexCount = 0;
+  // buf_info.pQueueFamilyIndices = NULL;
+  // buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  // buf_info.flags = 0;
+  // res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->render_data_buffer.buffer);
+  // assert(res == VK_SUCCESS);
+
+  // vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->render_data_buffer.buffer, &mem_reqs);
+
+  // alloc_info = {};
+  // alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  // alloc_info.pNext = NULL;
+  // alloc_info.memoryTypeIndex = 0;
+
+  // alloc_info.allocationSize = mem_reqs.size;
+  // pass = get_memory_type_index_from_properties(
+  //     p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+  //     &alloc_info.memoryTypeIndex);
+  // assert(pass && "No mappable, coherent memory");
+
+  // res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->render_data_buffer.memory));
+  // assert(res == VK_SUCCESS);
+
+  // res = vkBindBufferMemory(p_vkrs->device, p_vkrs->render_data_buffer.buffer, p_vkrs->render_data_buffer.memory, 0);
+  // assert(res == VK_SUCCESS);
+
+  // p_vkrs->render_data_buffer.frame_utilized_amount = 0;
+
+  // p_vkrs->render_data_buffer.queued_copies_alloc = 256U;
+  // p_vkrs->render_data_buffer.queued_copies_count = 0U;
+  // p_vkrs->render_data_buffer.queued_copies =
+  //     (queued_copy_info *)malloc(sizeof(queued_copy_info) * p_vkrs->render_data_buffer.queued_copies_alloc);
+
+  return res;
+}
 /* ###################################################
    #               Vulkan Entry Point                #
    #               Initializes Vulkan                #
@@ -612,36 +811,49 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
 
   res = mvk_init_command_pool(vkrs);
   VK_CHECK(res, "mvk_init_command_pool");
-  res = mvk_init_command_buffer(vkrs);
-  VK_CHECK(res, "mvk_init_command_buffer");
-  MRT_RUN(mvk_init_swapchain_frame_buffers(vkrs));
+  res = mvk_init_swapchain_frame_buffers(vkrs);
   VK_CHECK(res, "mvk_init_swapchain_frame_buffers");
+  res = mvk_init_headless_image(vkrs);
+  VK_CHECK(res, "mvk_init_headless_image");
 
   return VK_SUCCESS;
 }
 
-// void mvk_destroy_framebuffers(vk_render_state * p_vkrs)
-// {
-//   for (uint32_t i = 0; i < p_vkrs->swap swapchainImageCount; i++) {
-//     vkDestroyFramebuffer(p_vkrs->device, p_vkrs->framebuffers[i], NULL);
-//   }
-//   free(p_vkrs->framebuffers);
-// }
+void mvk_destroy_headless_image(vk_render_state *p_vkrs)
+{
+  vkDestroyImageView(p_vkrs->device, p_vkrs->headless.view, NULL);
+  vkDestroyImage(p_vkrs->device, p_vkrs->headless.image, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->headless.memory, NULL);
+}
 
 void mvk_destroy_swapchain_frame_buffers(vk_render_state *p_vkrs)
 {
+  // Image Views
+  if (p_vkrs->swap_chain.image_views) {
+    for (uint32_t i = 0; i < p_vkrs->swap_chain.size; i++) {
+      vkDestroyImageView(p_vkrs->device, p_vkrs->swap_chain.image_views[i], NULL);
+    }
+    free(p_vkrs->swap_chain.image_views);
+    p_vkrs->swap_chain.image_views = NULL;
+  }
+
+  // Images
+  if (p_vkrs->swap_chain.images) {
+    // Don't destroy vulkan created swapchain images, it will be done in vkDestroySwapchainKHR
+    free(p_vkrs->swap_chain.images);
+    p_vkrs->swap_chain.images = NULL;
+  }
+
+  // Command-Buffers
   if (p_vkrs->swap_chain.command_buffers) {
     vkFreeCommandBuffers(p_vkrs->device, p_vkrs->command_pool, p_vkrs->swap_chain.size,
                          p_vkrs->swap_chain.command_buffers);
     p_vkrs->swap_chain.command_buffers = NULL;
   }
-  for (uint32_t i = 0; i < p_vkrs->swap_chain.size; i++) {
-    vkDestroyImageView(p_vkrs->device, p_vkrs->swap_chain.image_views[i], NULL);
-    vkDestroyImage(p_vkrs->device, p_vkrs->swap_chain.images[i], NULL);
-  }
+
   vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain.instance, NULL);
 
-  return VK_SUCCESS;
+  p_vkrs->swap_chain.size = 0;
 }
 
 void mvk_destroy_command_pool(vk_render_state *p_vkrs)
@@ -721,9 +933,9 @@ void mvk_cleanup_global_layer_properties(vk_render_state *p_vkrs)
    ################################################### */
 VkResult mvk_cleanup_vulkan(vk_render_state *vkrs)
 {
+  mvk_destroy_headless_image(vkrs);
   mvk_destroy_swapchain_frame_buffers(vkrs);
 
-  mvk_destroy_command_buffer(vkrs);
   mvk_destroy_command_pool(vkrs);
   mvk_destroy_xcb_surface(vkrs);
   mvk_destroy_logical_device(vkrs);

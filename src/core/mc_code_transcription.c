@@ -806,8 +806,8 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
       //   printf("enum was :%p\n", enum_member);
       // }
       if (enum_member) {
-        append_to_c_strf(ts->str, "%s %s_%i = %s;\n", enum_info->mc_declared_name, argument_data_name, arg_index,
-                         argument->text);
+        char *enum_name = enum_info->mc_declared_name ? enum_info->mc_declared_name : enum_info->name;
+        append_to_c_strf(ts->str, "%s %s_%i = %s;\n", enum_name, argument_data_name, arg_index, argument->text);
         mct_append_indent_to_c_str(ts);
         append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
         break;
@@ -1368,10 +1368,33 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
           declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
     }
     else {
+      mc_syntax_node *array_initialization = declarator->local_variable_declarator.initializer;
+
       append_to_c_str(ts->str, "[");
-      mct_transcribe_expression(
-          ts, declarator->local_variable_declarator.initializer->local_variable_array_initializer.size_expression);
+      mct_transcribe_expression(ts, array_initialization->local_variable_array_initializer.size_expression);
       append_to_c_str(ts->str, "]");
+
+      if (declarator->local_variable_declarator.initializer->local_variable_array_initializer.assignment_expression) {
+        mc_syntax_node_list *array_values =
+            array_initialization->local_variable_array_initializer.assignment_expression->array_initializer.list;
+
+        append_to_c_str(ts->str, " = {");
+        ++ts->indent;
+
+        if (array_values->count) {
+          append_to_c_str(ts->str, "\n");
+
+          for (int a = 0; a < array_values->count; ++a) {
+            mct_append_indent_to_c_str(ts);
+            mct_transcribe_expression(ts, array_values->items[a]);
+            append_to_c_str(ts->str, ",\n");
+          }
+
+          mct_append_indent_to_c_str(ts);
+        }
+        --ts->indent;
+        append_to_c_str(ts->str, "};\n");
+      }
     }
   }
   append_to_c_str(ts->str, ";\n");
@@ -1676,7 +1699,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     mct_transcribe_expression(ts, syntax_node->parenthesized_expression.expression);
     append_to_c_str(ts->str, ")");
   } break;
-  case MC_SYNTAX_INITIALIZER_EXPRESSION: {
+  case MC_SYNTAX_TYPE_INITIALIZER: {
     append_to_c_str(ts->str, "{");
     // mct_transcribe_expression(ts, syntax_node->initializer_expression);
     if (syntax_node->children->count > 2) {
@@ -1684,6 +1707,9 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     }
     append_to_c_str(ts->str, "}");
   } break;
+  case MC_SYNTAX_INITIALIZER_EXPRESSION: {
+    MCerror(1688, "progress");
+  }
   case MC_SYNTAX_OPERATIONAL_EXPRESSION: {
     if (!syntax_node->operational_expression.right) {
       MCerror(745, "TODO");
@@ -1817,6 +1843,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
 
     find_function_info(function_identity, &func_info);
     if (func_info) {
+      print_syntax_node(syntax_node, 0);
       MCerror(247, "Not supported from here, have to deal with it earlier");
     }
 
@@ -2204,15 +2231,17 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
     if (contains_mc_function_call) {
       if (syntax_node->expression_statement.expression->type == MC_SYNTAX_ASSIGNMENT_EXPRESSION) {
         mc_syntax_node *ass_expr = syntax_node->expression_statement.expression;
-        if ((mc_token_type)ass_expr->assignment_expression.variable->type != MC_TOKEN_IDENTIFIER) {
-          MCerror(2090, "Unsupported TODO?");
-        }
+
         if (ass_expr->assignment_expression.value_expression->type != MC_SYNTAX_INVOCATION) {
+          print_syntax_node(ass_expr, 0);
           MCerror(2093, "Unsupported TODO?");
         }
 
-        mct_transcribe_mc_invocation(ts, ass_expr->assignment_expression.value_expression,
-                                     ass_expr->assignment_expression.variable->text);
+        char *variable_text;
+        copy_syntax_node_to_text(ass_expr->assignment_expression.variable, &variable_text);
+
+        mct_transcribe_mc_invocation(ts, ass_expr->assignment_expression.value_expression, variable_text);
+        free(variable_text);
         break;
       }
 

@@ -87,6 +87,14 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_PLUS_OPERATOR";
   case MC_TOKEN_MODULO_OPERATOR:
     return "MC_TOKEN_MODULO_OPERATOR";
+  case MC_TOKEN_BITWISE_LEFT_SHIFT_OPERATOR:
+    return "MC_TOKEN_BITWISE_LEFT_SHIFT_OPERATOR";
+  case MC_TOKEN_BITWISE_LEFT_SHIFT_AND_ASSIGN_OPERATOR:
+    return "MC_TOKEN_BITWISE_LEFT_SHIFT_AND_ASSIGN_OPERATOR";
+  case MC_TOKEN_BITWISE_RIGHT_SHIFT_OPERATOR:
+    return "MC_TOKEN_BITWISE_RIGHT_SHIFT_OPERATOR";
+  case MC_TOKEN_BITWISE_RIGHT_SHIFT_AND_ASSIGN_OPERATOR:
+    return "MC_TOKEN_BITWISE_RIGHT_SHIFT_AND_ASSIGN_OPERATOR";
   case MC_TOKEN_BITWISE_NOT_OPERATOR:
     return "MC_TOKEN_BITWISE_NOT_OPERATOR";
   case MC_TOKEN_TERNARY_OPERATOR:
@@ -95,6 +103,10 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR";
   case MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR:
     return "MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR";
+  case MC_TOKEN_MULTIPLY_AND_ASSIGN_OPERATOR:
+    return "MC_TOKEN_MULTIPLY_AND_ASSIGN_OPERATOR";
+  case MC_TOKEN_DIVIDE_AND_ASSIGN_OPERATOR:
+    return "MC_TOKEN_DIVIDE_AND_ASSIGN_OPERATOR";
   case MC_TOKEN_EXTERN_KEYWORD:
     return "MC_TOKEN_EXTERN_KEYWORD";
   case MC_TOKEN_TYPEDEF_KEYWORD:
@@ -276,6 +288,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_FUNCTION_POINTER_DECLARATION";
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION:
     return "MC_SYNTAX_PARENTHESIZED_EXPRESSION";
+  case MC_SYNTAX_TYPE_INITIALIZER:
+    return "MC_SYNTAX_TYPE_INITIALIZER";
   case MC_SYNTAX_INITIALIZER_EXPRESSION:
     return "MC_SYNTAX_INITIALIZER_EXPRESSION";
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
@@ -783,8 +797,14 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
     syntax_node->parenthesized_expression.expression = NULL;
   } break;
+  case MC_SYNTAX_TYPE_INITIALIZER: {
+    // Nothing for the moment
+  } break;
   case MC_SYNTAX_INITIALIZER_EXPRESSION: {
     // Nothing for the moment
+    syntax_node->initializer_expression.list = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+    syntax_node->initializer_expression.list->alloc = 0;
+    syntax_node->initializer_expression.list->count = 0;
   } break;
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     syntax_node->sizeof_expression.type_identifier = NULL;
@@ -1055,6 +1075,15 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     ++*index;
   } break;
   case '*': {
+    if (code[*index + 1] == '=') {
+      *token_type = MC_TOKEN_MULTIPLY_AND_ASSIGN_OPERATOR;
+      if (text) {
+        allocate_and_copy_cstr(*text, "*=");
+      }
+      *index += 2;
+      break;
+    }
+
     *token_type = MC_TOKEN_STAR_CHARACTER;
     if (text) {
       allocate_and_copy_cstr(*text, "*");
@@ -1304,6 +1333,23 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       *index += 2;
       break;
     }
+    else if (code[*index + 1] == '<') {
+      if (code[*index + 2] == '=') {
+        *token_type = MC_TOKEN_BITWISE_LEFT_SHIFT_AND_ASSIGN_OPERATOR;
+        if (text) {
+          allocate_and_copy_cstr(*text, "<<=");
+        }
+        *index += 3;
+        break;
+      }
+
+      *token_type = MC_TOKEN_BITWISE_LEFT_SHIFT_OPERATOR;
+      if (text) {
+        allocate_and_copy_cstr(*text, "<<");
+      }
+      *index += 2;
+      break;
+    }
 
     *token_type = MC_TOKEN_ARROW_OPENING_BRACKET;
     if (text) {
@@ -1316,6 +1362,23 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       *token_type = MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR;
       if (text) {
         allocate_and_copy_cstr(*text, ">=");
+      }
+      *index += 2;
+      break;
+    }
+    else if (code[*index + 1] == '>') {
+      if (code[*index + 2] == '=') {
+        *token_type = MC_TOKEN_BITWISE_RIGHT_SHIFT_AND_ASSIGN_OPERATOR;
+        if (text) {
+          allocate_and_copy_cstr(*text, ">>=");
+        }
+        *index += 3;
+        break;
+      }
+
+      *token_type = MC_TOKEN_BITWISE_RIGHT_SHIFT_OPERATOR;
+      if (text) {
+        allocate_and_copy_cstr(*text, ">>");
       }
       *index += 2;
       break;
@@ -2384,7 +2447,7 @@ int mcs_parse_parenthesized_expression(parsing_state *ps, mc_syntax_node *parent
   return 0;
 }
 
-int mcs_parse_initializer(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+int mcs_parse_initializer_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   mc_syntax_node *initializer_expression;
   mcs_construct_syntax_node(ps, MC_SYNTAX_INITIALIZER_EXPRESSION, NULL, parent, &initializer_expression);
@@ -2395,39 +2458,32 @@ int mcs_parse_initializer(parsing_state *ps, mc_syntax_node *parent, mc_syntax_n
   mcs_parse_through_token(ps, initializer_expression, MC_TOKEN_CURLY_OPENING_BRACKET, NULL);
   mcs_parse_through_supernumerary_tokens(ps, initializer_expression);
 
-  mcs_parse_through_token(ps, initializer_expression, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL);
-
-  return 0;
-}
-
-int mcs_parse_array_initializer_assignment_expression(parsing_state *ps, mc_syntax_node *parent,
-                                                      mc_syntax_node **additional_destination)
-{
-  mc_syntax_node *array_initializer_expression;
-  mcs_construct_syntax_node(ps, MC_SYNTAX_INITIALIZER_EXPRESSION, NULL, parent, &array_initializer_expression);
-  if (additional_destination) {
-    *additional_destination = array_initializer_expression;
-  }
-
-  mcs_parse_through_token(ps, array_initializer_expression, MC_TOKEN_CURLY_OPENING_BRACKET, NULL);
-  mcs_parse_through_supernumerary_tokens(ps, array_initializer_expression);
-
   while (1) {
     mc_token_type token_type;
-    mcs_peek_token_type(ps, false, 1, &token_type);
+    mcs_peek_token_type(ps, false, 0, &token_type);
     if (token_type == MC_TOKEN_CURLY_CLOSING_BRACKET) {
       break;
     }
 
-    if (array_initializer_expression->array_initializer_assignment->values.count > 0) {
-      mcs_parse_through_token(ps, array_initializer_expression, MC_TOKEN_COMMA, NULL);
-      mcs_parse_through_supernumerary_tokens(ps, array_initializer_expression);
+    if (initializer_expression->initializer_expression.list->count > 0) {
+      mcs_parse_through_token(ps, initializer_expression, MC_TOKEN_COMMA, NULL);
+      mcs_parse_through_supernumerary_tokens(ps, initializer_expression);
+    }
+    mcs_peek_token_type(ps, false, 0, &token_type);
+    if (token_type == MC_TOKEN_CURLY_CLOSING_BRACKET) {
+      break;
     }
 
-    mcs_parse_expression(ps, ) mcs_parse_through_supernumerary_tokens(ps, array_initializer_expression);
+    mc_syntax_node *item;
+    mcs_parse_expression(ps, initializer_expression, &item);
+    mcs_parse_through_supernumerary_tokens(ps, initializer_expression);
+
+    append_to_collection((void ***)&initializer_expression->initializer_expression.list->items,
+                         &initializer_expression->initializer_expression.list->alloc,
+                         &initializer_expression->initializer_expression.list->count, item);
   }
 
-  mcs_parse_through_token(ps, array_initializer_expression, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL);
+  mcs_parse_through_token(ps, initializer_expression, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL);
 
   return 0;
 }
@@ -2474,6 +2530,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
       switch (token_type) {
       case MC_TOKEN_NUMERIC_LITERAL:
       case MC_TOKEN_OPEN_BRACKET:
+      case MC_TOKEN_CURLY_OPENING_BRACKET:
       case MC_TOKEN_IDENTIFIER: {
         // Cast
         mcs_parse_cast_expression(ps, parent, additional_destination);
@@ -2492,7 +2549,10 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     case MC_TOKEN_PLUS_OPERATOR:
     case MC_TOKEN_SUBTRACT_OPERATOR:
     case MC_TOKEN_MODULO_OPERATOR:
-    case MC_TOKEN_DIVIDE_OPERATOR: {
+    case MC_TOKEN_DIVIDE_OPERATOR:
+    case MC_TOKEN_AMPERSAND_CHARACTER:
+    case MC_TOKEN_BITWISE_OR_OPERATOR:
+    case MC_TOKEN_BITWISE_XOR_OPERATOR: {
       mcs_parse_parenthesized_expression(ps, parent, additional_destination);
     } break;
     case MC_TOKEN_STAR_CHARACTER: {
@@ -2639,8 +2699,8 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
         mcs_parse_through_token(ps, array_initializer, MC_TOKEN_ASSIGNMENT_OPERATOR, NULL);
         mcs_parse_through_supernumerary_tokens(ps, array_initializer);
 
-        mcs_parse_array_initializer_assignment_expression(
-            ps, array_initializer, &array_initializer->local_variable_array_initializer.assignment_expression);
+        mcs_parse_initializer_expression(ps, array_initializer,
+                                         &array_initializer->local_variable_array_initializer.assignment_expression);
       } break;
       default:
         MCerror(2603, "Token Unsupported:%s", get_mc_token_type_name(token0));
@@ -2767,7 +2827,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
   } break;
   case MC_TOKEN_CURLY_OPENING_BRACKET: {
     // Initializer
-    mcs_parse_initializer(ps, parent, additional_destination);
+    mcs_parse_initializer_expression(ps, parent, additional_destination);
 
     mcs_peek_token_type(ps, false, 0, &token0);
     if (token0 != MC_TOKEN_SEMI_COLON) {
@@ -3096,6 +3156,32 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
       left = expression;
     } break;
+    case MC_TOKEN_BITWISE_LEFT_SHIFT_OPERATOR:
+    case MC_TOKEN_BITWISE_RIGHT_SHIFT_OPERATOR: {
+      const int CASE_PRECEDENCE = 7;
+      if (allowable_precedence <= CASE_PRECEDENCE) {
+        // Left is it
+        mcs_add_syntax_node_to_parent(parent, left);
+        if (additional_destination) {
+          *additional_destination = left;
+        }
+        return 0;
+      }
+
+      mc_syntax_node *expression = NULL;
+      mcs_construct_syntax_node(ps, MC_SYNTAX_BITWISE_EXPRESSION, NULL, NULL, &expression);
+
+      mcs_add_syntax_node_to_parent(expression, left);
+      expression->bitwise_expression.left = left;
+
+      mcs_parse_through_supernumerary_tokens(ps, expression);
+      mcs_parse_through_token(ps, expression, token0, &expression->bitwise_expression.bitwise_operator);
+
+      mcs_parse_through_supernumerary_tokens(ps, expression);
+      _mcs_parse_expression(ps, CASE_PRECEDENCE, expression, &expression->bitwise_expression.right);
+
+      left = expression;
+    } break;
     case MC_TOKEN_ARROW_OPENING_BRACKET:
     case MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR:
     case MC_TOKEN_ARROW_CLOSING_BRACKET:
@@ -3201,8 +3287,12 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
       left = expression;
     } break;
+    case MC_TOKEN_BITWISE_LEFT_SHIFT_AND_ASSIGN_OPERATOR:
+    case MC_TOKEN_BITWISE_RIGHT_SHIFT_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR:
+    case MC_TOKEN_MULTIPLY_AND_ASSIGN_OPERATOR:
+    case MC_TOKEN_DIVIDE_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_MODULO_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_ASSIGNMENT_OPERATOR: {
       const int CASE_PRECEDENCE = 16;
@@ -3255,6 +3345,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     case MC_TOKEN_COLON:
     case MC_TOKEN_COMMA:
     case MC_TOKEN_CLOSING_BRACKET:
+    case MC_TOKEN_CURLY_CLOSING_BRACKET:
     case MC_TOKEN_SQUARE_CLOSING_BRACKET: {
       // Left is it
       mcs_add_syntax_node_to_parent(parent, left);
@@ -3839,8 +3930,14 @@ int mcs_parse_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
     case MC_TOKEN_ASSIGNMENT_OPERATOR: {
       mcs_parse_expression_statement(ps, parent, additional_destination);
     } break;
+    case MC_TOKEN_BITWISE_LEFT_SHIFT_OPERATOR:
+    case MC_TOKEN_BITWISE_LEFT_SHIFT_AND_ASSIGN_OPERATOR:
+    case MC_TOKEN_BITWISE_RIGHT_SHIFT_OPERATOR:
+    case MC_TOKEN_BITWISE_RIGHT_SHIFT_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR:
-    case MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR: {
+    case MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR:
+    case MC_TOKEN_MULTIPLY_AND_ASSIGN_OPERATOR:
+    case MC_TOKEN_DIVIDE_AND_ASSIGN_OPERATOR: {
       mcs_parse_expression_statement(ps, parent, additional_destination);
     } break;
     case MC_TOKEN_POINTER_OPERATOR:

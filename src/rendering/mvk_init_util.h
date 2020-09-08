@@ -8,10 +8,6 @@
 #define GLM_FORCE_RADIANS
 #include <cglm/cglm.h>
 #include <cglm/types-struct.h>
-// #include "glm/glm.hpp"
-// #include <glm/gtc/matrix_transform.hpp>
-
-#include "rendering/xcbwindow.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -20,6 +16,10 @@
 #define STBTT_STATIC
 #include "stb_truetype.h"
 
+// #include "glm/glm.hpp"
+// #include <glm/gtc/matrix_transform.hpp>
+
+#include "rendering/xcbwindow.h"
 /* Number of descriptor sets needs to be the same at alloc,       */
 /* pipeline layout creation, and descriptor set layout creation   */
 #define NUM_DESCRIPTOR_SETS 1

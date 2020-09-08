@@ -22,10 +22,10 @@ typedef struct _csl_c_str {
 #endif
 
 // TEMP will have to do function defines sooner or later
-#define VK_CHECK(res, func_name)                                \
-  if (res) {                                                    \
+#define VK_CHECK(res, func_name)                               \
+  if (res) {                                                   \
     printf("VK-ERR[%i] :%i --" func_name "\n", res, __LINE__); \
-    return res;                                                 \
+    return res;                                                \
   }
 #define VK_ASSERT(condition, message)                        \
   if (!(condition)) {                                        \
@@ -448,6 +448,7 @@ const char *_mcl_core_functions[] = {
     "release_field_info",
     "release_field_info_list",
     "release_parameter_info",
+    "mcs_parse_array_initializer_assignment_expression",
 
     // c_parser_lexer
     "_mcs_print_syntax_node_ancestry",
@@ -467,7 +468,7 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_through_supernumerary_tokens",
     "mcs_parse_function_pointer_declarator",
     "mcs_parse_type_identifier",
-    "mcs_parse_initializer",
+    "mcs_parse_initializer_expression",
     "mcs_parse_dereference_sequence",
     "mcs_parse_field_declarator",
     "mcs_parse_field_declarators",
@@ -504,8 +505,11 @@ const char *_mcl_core_functions[] = {
     "instantiate_function_definition_from_ast",
     "instantiate_ast_children",
     "instantiate_definition",
-
     "update_or_register_enum_info_from_syntax",
+    "register_external_definitions_from_file",
+    "register_external_enum_declaration",
+    "register_external_declarations_from_syntax_children",
+
     "parse_file_to_syntax_tree",
     "initialize_source_file_info",
     "release_struct_id",
@@ -1235,6 +1239,54 @@ int _mcl_load_core_mc_source()
 
 int _mcl_load_app_mc_source()
 {
+  const char *_mcl_external_dependency_source_files[] = {
+      "src/temp/external_decl.h",
+
+      // And everything here before -------------------------------------------------------------
+      NULL,
+  };
+
+  char buf[1536];
+  for (int i = 0; _mcl_external_dependency_source_files[i]; ++i) {
+    printf("registering external file:'%s'\n", _mcl_external_dependency_source_files[i]);
+    int result = 0;
+    sprintf(buf,
+            "{\n"
+            "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
+            "  mc_core_v_global_root_data *global_data;\n"
+            "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
+            ""
+            "  void *mc_vargs[4];\n"
+            "  mc_vargs[0] = &global_data->global_node;\n"
+            "  const char *filepath = \"%s\";\n"
+            "  mc_vargs[1] = &filepath;\n"
+            "  void * p_null = NULL;\n"
+            "  mc_vargs[2] = &p_null;\n"
+            "  int return_value;\n"
+            "  mc_vargs[3] = &return_value;\n"
+            ""
+            "  {\n"
+            "    int midge_error_stack_index;\n"
+            "    register_midge_stack_invocation(\"instantiate_all_definitions_from_file\", \"core_source_loader.c\", "
+            "          1224, &midge_error_stack_index);\n"
+            "    int result = 0;\n"
+            "    result = register_external_definitions_from_file(4, mc_vargs);\n"
+            "    register_midge_stack_return(midge_error_stack_index);\n"
+            ""
+            "    if (result) {\n"
+            "      printf(\"--register_external_definitions_from_file #in - clint_process\\n\");\n"
+            "      *(int *)(%p) = result;\n"
+            "    }\n"
+            "  }\n"
+            "}",
+            _mcl_external_dependency_source_files[i], &result);
+    MCcall(clint_process(buf));
+
+    if (result != 0) {
+      return result;
+    }
+  }
+
   register_midge_error_tag("_mcl_load_app_mc_source()");
   const char *_mcl_app_source_files[] = {
       "src/m_threads.h",
@@ -1252,7 +1304,6 @@ int _mcl_load_app_mc_source()
       NULL,
   };
 
-  char buf[1536];
   for (int i = 0; _mcl_app_source_files[i]; ++i) {
     printf("instantiate file:'%s'\n", _mcl_app_source_files[i]);
     int result = 0;

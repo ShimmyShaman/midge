@@ -622,7 +622,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   //   // print_syntax_node(ast, 0);
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
   // }
-  if (!strcmp(func_info->name, "mvk_init_swapchain_extension")) {
+  if (!strcmp(func_info->name, "mvk_init_swapchain_frame_buffers")) {
     // print_syntax_node(ast, 0);
     // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
     printf("mc_transcription:\n%s||\n", mc_transcription);
@@ -996,6 +996,289 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
   }
 
   instantiate_ast_children(definitions_owner, lv_source_file, syntax_node->children);
+  // int *p = 0;
+  // printf("about\n");
+  // printf("%i\n", *p);
+  // printf("end\n");
+  register_midge_error_tag("instantiate_all_definitions_from_file(~)");
+  return 0;
+}
+
+int register_external_enum_declaration(node *owner, mc_syntax_node *enum_ast)
+{
+  enumeration_info *enum_info;
+  find_enumeration_info(enum_ast->enumeration.name->text, &enum_info);
+
+  // printf("reed-0\n");
+  if (enum_info) {
+    MCerror(1013, "TODO?");
+  }
+
+  char buf[256];
+  if (!enum_info) {
+    // printf("reed-1\n");
+    enum_info = (enumeration_info *)malloc(sizeof(enumeration_info));
+
+    // printf("reed-2\n");
+    attach_enumeration_info_to_owner(owner, enum_info);
+    // printf("reed-3\n");
+
+    enum_info->type_id = (struct_id *)malloc(sizeof(struct_id));
+    allocate_and_copy_cstr(enum_info->type_id->identifier, "enum_info");
+    enum_info->type_id->version = 1U;
+    // printf("reed-4\n");
+
+    // Name & Version
+    allocate_and_copy_cstr(enum_info->name, enum_ast->enumeration.name->text);
+    enum_info->latest_iteration = 0U;
+
+    enum_info->members.alloc = 0;
+    enum_info->members.count = 0;
+
+    enum_info->mc_declared_name = NULL;
+    // printf("reed-5\n");
+  }
+  else {
+    // Empty
+    // printf("reed-6\n");
+
+    // Clear the current values
+    for (int i = 0; i < enum_info->members.count; ++i) {
+      sprintf(buf,
+              "#ifdef %s\n"
+              "#undef %s\n"
+              "#endif\n",
+              enum_info->members.items[i]->identity, enum_info->members.items[i]->identity);
+      clint_process(buf);
+
+      if (enum_info->members.items[i]) {
+        if (enum_info->members.items[i]->identity) {
+          free(enum_info->members.items[i]->identity);
+        }
+        if (enum_info->members.items[i]->value) {
+          free(enum_info->members.items[i]->value);
+        }
+        free(enum_info->members.items[i]);
+      }
+    }
+    // printf("reed-7\n");
+
+    ++enum_info->latest_iteration;
+  }
+  // printf("reed-8\n");
+
+  // print_syntax_node(enum_ast, 0);
+  // Set the values parsed
+  enum_info->members.count = 0;
+  int latest_value = -1;
+  // printf("reed-8a\n");
+  for (int i = 0; i < enum_ast->enumeration.members->count; ++i) {
+    // printf("reed-8b\n");
+    enum_member_info *member = (enum_member_info *)malloc(sizeof(enum_member_info));
+    // printf("reed-8c\n");
+
+    copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier, &member->identity);
+    // printf("reed-8d\n");
+    if (enum_ast->enumeration.members->items[i]->enum_member.value_expression) {
+      copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value_expression, &member->value);
+      // printf("reed-8e\n");
+    }
+    else {
+      member->value = NULL;
+      // cprintf(member->value, "%i", ++latest_value);
+    }
+
+    // printf("reed-8f\n");
+    append_to_collection((void ***)&enum_info->members.items, &enum_info->members.alloc, &enum_info->members.count,
+                         member);
+    // printf("reed-8g\n");
+  }
+  // printf("reed-9\n");
+
+  return 0;
+}
+
+int register_external_declarations_from_syntax_children(node *definitions_owner, source_file_info *source_file,
+                                                        mc_syntax_node_list *syntax_node_list)
+{
+  for (int a = 0; a < syntax_node_list->count; ++a) {
+    mc_syntax_node *child = syntax_node_list->items[a];
+    const char *type_name = get_mc_syntax_token_type_name(child->type);
+    // printf("instantiate_definition[%i]:%s\n", a, type_name);
+    switch (child->type) {
+    case MC_SYNTAX_EXTERN_C_BLOCK: {
+      MCerror(1115, "TODO");
+      // for (int b = 0; b < child->extern_block.declarations->count; ++b) {
+      //   mc_syntax_node *declaration = child->extern_block.declarations->items[b];
+      //   switch (declaration->type) {
+      //   case MC_SYNTAX_FUNCTION: {
+      //     if ((mc_token_type)declaration->function.code_block->type != MC_TOKEN_SEMI_COLON) {
+      //       MCerror(565, "Full Function definition in an extern c block ? ? ?");
+      //     }
+      //     // Function Declaration only
+      //     update_or_register_function_info_from_syntax(NULL, declaration, NULL);
+      //   } break;
+      //   default:
+      //     MCerror(572, "TODO : %s", get_mc_syntax_token_type_name(declaration->type));
+      //   }
+      // }
+    } break;
+    case MC_SYNTAX_FUNCTION: {
+      MCerror(1132, "TODO");
+      // if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
+      //   // Function Declaration only
+      //   update_or_register_function_info_from_syntax(NULL, child, NULL);
+      //   printf("--fdecl:'%s'\n", child->function.name->text);
+      // }
+      // else {
+      //   // Assume to be function definition
+      //   function_info *info;
+      //   instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
+      //   info->source->source_file = source_file;
+      //   printf("--defined:'%s'\n", child->function.name->text);
+      // }
+    } break;
+    case MC_SYNTAX_TYPE_ALIAS: {
+      char buf[1024];
+      switch (child->type_alias.type_descriptor->type) {
+      case MC_SYNTAX_UNION:
+      case MC_SYNTAX_STRUCTURE: {
+        MCerror(1151, "TODO");
+        // struct_info *info;
+        // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
+        // info->source->source_file = source_file;
+        // // printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
+        // // sprintf(buf,
+        // //         "#ifndef %s\n"
+        // //         // "#undef %s\n"
+        // //         "#define %s struct %s\n"
+        // //         "#endif\n",
+        // //         info->name, info->name, info->mc_declared_name);
+        // // clint_process(buf);
+      } break;
+      case MC_SYNTAX_ENUM: {
+        register_external_enum_declaration(definitions_owner, child->type_alias.type_descriptor);
+        // enumeration_info *info;
+        // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
+        // register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-0");
+        // info->source->source_file = source_file;
+        // register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-1");
+        // // printf("--defined: enum '%s'\n", child->type_alias.type_descriptor->enumeration.name->text);
+        // register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-2");
+        // // sprintf(buf,
+        // //         "#ifndef %s\n"
+        // //         // "#undef %s\n"
+        // //         "#define %s enum %s\n"
+        // //         "#endif\n",
+        // //         info->name, info->name, info->mc_declared_name);
+        // // register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-3");
+        // // clint_process(buf);
+        // register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-4");
+      } break;
+      default:
+        print_syntax_node(child->type_alias.type_descriptor, 0);
+        MCerror(1185, "Unhandled type_alias-descriptor-syntax-type:%s",
+                get_mc_syntax_token_type_name(child->type_alias.type_descriptor->type));
+        break;
+      }
+    } break;
+    case MC_SYNTAX_STRUCTURE: {
+      MCerror(1191, "TODO");
+      // struct_info *info;
+      // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
+      // info->source->source_file = source_file;
+      // // printf("--declared: struct '%s'\n", child->structure.type_name->text);
+    } break;
+    case MC_SYNTAX_ENUM: {
+      MCerror(1198, "TODO");
+      // enumeration_info *info;
+      // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
+      // info->source->source_file = source_file;
+      // // printf("--declared: enum '%s'\n", child->enumeration.name->text);
+    } break;
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE: {
+      MCerror(1205, "TODO");
+      // preprocess_define_info *info;
+      // instantiate_define_statement(definitions_owner, child, &info);
+
+      // // switch (info->statement_type) {
+      // // case PREPROCESSOR_DEFINE_REMOVAL: {
+
+      // // } break;
+
+      // // default:
+      // //   MCerror(887, "TODO :%i", info->statement_type);
+      // // }
+    } break;
+    // TODO
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF: {
+      MCerror(1220, "TODO");
+      // char *identifier;
+      // copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
+      // char buf[1024];
+      // int is_defined;
+      // sprintf(buf,
+      //         "#ifndef %s\n"
+      //         "*((int *)%p) = 222;\n"
+      //         "#else\n"
+      //         "*((int *)%p) = 111;\n"
+      //         "#endif\n",
+      //         identifier, &is_defined, &is_defined);
+      // clint_process(buf);
+      // if (is_defined == 222) {
+      //   instantiate_ast_children(definitions_owner, source_file, child->preprocess_ifndef.groupopt);
+      // }
+      // else if (is_defined == 111) {
+      //   // Do Nothing
+      //   printf("'%s' was already defined\n", identifier);
+      // }
+      // else {
+      //   MCerror(950, "All did not go to plan");
+      // }
+      // free(identifier);
+    } break;
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
+      MCerror(1256, "TODO");
+    case MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF:
+      MCerror(1259, "TODO");
+      break;
+    default: {
+      switch ((mc_token_type)child->type) {
+      case MC_TOKEN_SPACE_SEQUENCE:
+      case MC_TOKEN_NEW_LINE:
+      case MC_TOKEN_LINE_COMMENT:
+      case MC_TOKEN_MULTI_LINE_COMMENT: {
+        break;
+      }
+      default: {
+        print_syntax_node(child, 0);
+        MCerror(576, "Unhandled root-syntax-type:%s", get_mc_syntax_token_type_name(child->type));
+      }
+      }
+    }
+    }
+  }
+
+  return 0;
+}
+
+int register_external_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file)
+{
+  char *file_text;
+  read_file_text(filepath, &file_text);
+
+  mc_syntax_node *syntax_node;
+  parse_file_to_syntax_tree(file_text, &syntax_node);
+
+  // Parse all definitions
+  source_file_info *lv_source_file;
+  initialize_source_file_info(definitions_owner, filepath, &lv_source_file);
+  if (source_file) {
+    *source_file = lv_source_file;
+  }
+
+  register_external_declarations_from_syntax_children(definitions_owner, lv_source_file, syntax_node->children);
+
   // int *p = 0;
   // printf("about\n");
   // printf("%i\n", *p);

@@ -74,6 +74,21 @@ typedef struct vk_render_state {
     VkImageView *image_views;
   } swap_chain;
 
+  // HEADLESS IMAGE
+  struct {
+    VkFormat format;
+
+    VkImage image;
+    VkDeviceMemory memory;
+    VkImageView view;
+  } headless;
+
+  mat4s Projection;
+  mat4s View;
+  mat4s Model;
+  mat4s Clip;
+  mat4s MVP;
+
 } vk_render_state;
 
 extern "C" {

@@ -165,10 +165,21 @@ int _midge_run()
     loadLibrary("vulkan");
     loadLibrary("xcb");
 
+    // TODO -- use syntax to include these somehow
     clint->process("#include \"xcb/xcb.h\"\n");
     clint->process("#include <vulkan/vulkan.h>\n");
     clint->process("#include <vulkan/vulkan_xcb.h>\n");
-    // loadLibrary("dep/glslang/bin/glslangValidator");
+
+    clint->process("#define GLM_FORCE_RADIANS\n");
+    clint->process("#include <cglm/cglm.h>\n");
+    clint->process("#include <cglm/types-struct.h>\n");
+
+    clint->process("#define STB_IMAGE_IMPLEMENTATION\n");
+    clint->process("#include <stb_image.h>\n");
+
+    clint->process("#define STB_TRUETYPE_IMPLEMENTATION\n");
+    clint->process("#define STBTT_STATIC\n");
+    clint->process("#include \"stb_truetype.h\"\n");
 
     // Load non-MC App source
     printf("<AppSourceLoading>\n");
