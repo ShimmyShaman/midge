@@ -622,11 +622,11 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   //   // print_syntax_node(ast, 0);
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
   // }
-  if (!strcmp(func_info->name, "mvk_init_swapchain_frame_buffers")) {
-    // print_syntax_node(ast, 0);
-    // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
-    printf("mc_transcription:\n%s||\n", mc_transcription);
-  }
+  // if (!strcmp(func_info->name, "mvk_init_swapchain_frame_buffers")) {
+  //   // print_syntax_node(ast, 0);
+  //   // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
+  //   printf("mc_transcription:\n%s||\n", mc_transcription);
+  // }
 
   int result = clint_declare(mc_transcription);
   if (result) {

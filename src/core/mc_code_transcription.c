@@ -747,6 +747,13 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
     }
     free(text);
   } break;
+  case MC_SYNTAX_BITWISE_EXPRESSION: {
+    append_to_c_strf(ts->str, "int %s_%i = ", argument_data_name, arg_index);
+    mct_append_node_text_to_c_str(ts->str, argument);
+    append_to_c_str(ts->str, ";\n");
+    mct_append_indent_to_c_str(ts);
+    append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
+  } break;
   case MC_SYNTAX_FIXREMENT_EXPRESSION: {
 
     char *primary;
@@ -853,7 +860,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
     } break;
     default:
       print_syntax_node(argument, 0);
-      MCerror(225, "Unsupported:%s", get_mc_syntax_token_type_name(argument->type));
+      MCerror(225, "NotYetSupported:%s", get_mc_syntax_token_type_name(argument->type));
     }
   }
   }
@@ -1376,7 +1383,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
 
       if (declarator->local_variable_declarator.initializer->local_variable_array_initializer.assignment_expression) {
         mc_syntax_node_list *array_values =
-            array_initialization->local_variable_array_initializer.assignment_expression->array_initializer.list;
+            array_initialization->local_variable_array_initializer.assignment_expression->initializer_expression.list;
 
         append_to_c_str(ts->str, " = {");
         ++ts->indent;
@@ -1708,8 +1715,22 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
     append_to_c_str(ts->str, "}");
   } break;
   case MC_SYNTAX_INITIALIZER_EXPRESSION: {
-    MCerror(1688, "progress");
-  }
+    append_to_c_str(ts->str, "{");
+
+    if (syntax_node->initializer_expression.list->count) {
+      for (int a = 0; a < syntax_node->initializer_expression.list->count; ++a) {
+        if (a > 0) {
+          append_to_c_str(ts->str, ",");
+        }
+        append_to_c_str(ts->str, " ");
+
+        mct_transcribe_expression(ts, syntax_node->initializer_expression.list->items[a]);
+      }
+      append_to_c_str(ts->str, " ");
+    }
+
+    append_to_c_str(ts->str, "}");
+  } break;
   case MC_SYNTAX_OPERATIONAL_EXPRESSION: {
     if (!syntax_node->operational_expression.right) {
       MCerror(745, "TODO");

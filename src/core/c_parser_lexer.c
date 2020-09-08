@@ -1781,12 +1781,15 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
           loop = false;
           ++*index;
         } break;
+
+        // Indicates valid bread from reading numeric literal
         case '\n':
         case ']':
         case ':':
         case ' ':
         case ',':
         case ')':
+        case '}':
         case ';': {
           loop = false;
         } break;
@@ -2828,14 +2831,8 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
   case MC_TOKEN_CURLY_OPENING_BRACKET: {
     // Initializer
     mcs_parse_initializer_expression(ps, parent, additional_destination);
-
-    mcs_peek_token_type(ps, false, 0, &token0);
-    if (token0 != MC_TOKEN_SEMI_COLON) {
-      print_parse_error(ps->code, ps->index, "_mcs_parse_expression", "after-parse-initializer");
-      MCerror(2655, "Expected statement end ';' after initializer");
-    }
     return 0;
-  } break;
+  }
   case MC_TOKEN_DECREMENT_OPERATOR:
   case MC_TOKEN_INCREMENT_OPERATOR: {
     mc_syntax_node *expression;

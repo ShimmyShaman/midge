@@ -23,6 +23,12 @@ typedef struct layer_properties {
 
 } layer_properties;
 
+typedef struct queued_copy_info {
+  void *p_source;
+  VkDeviceSize dest_offset;
+  size_t size_in_bytes;
+} queued_copy_info;
+
 typedef struct vk_render_state {
 
   mxcb_window_info *xcb_winfo;
@@ -88,6 +94,31 @@ typedef struct vk_render_state {
   mat4s Model;
   mat4s Clip;
   mat4s MVP;
+
+  struct {
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDescriptorBufferInfo buffer_info;
+  } global_vert_uniform_buffer;
+
+  struct {
+    VkDeviceSize allocated_size;
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+    VkDeviceSize frame_utilized_amount;
+
+    unsigned int queued_copies_alloc;
+    unsigned int queued_copies_count;
+    queued_copy_info *queued_copies;
+  } render_data_buffer;
+
+  VkPipelineLayout pipeline_layout;
+  VkDescriptorSetLayout descriptor_layout;
+  VkRenderPass present_render_pass, offscreen_render_pass;
+
+  struct {
+    VkDescriptorSetLayout descriptor_layout;
+  } texture_prog;
 
 } vk_render_state;
 

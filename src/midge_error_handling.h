@@ -188,13 +188,15 @@ struct __mce_stack_entry {
 
 struct __mce_thread_entry_stack {
   pthread_t thread_id;
+  unsigned int historical_index;
   struct __mce_stack_entry stack[MIDGE_ERROR_STACK_MAX_SIZE];
   int stack_index;
   int stack_activity_line;
 };
 
-struct __mce_thread_entry_stack MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_MAX_THREAD_COUNT];
+struct __mce_thread_entry_stack *MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_MAX_THREAD_COUNT];
 unsigned int MIDGE_ERROR_THREAD_INDEX;
+unsigned int MIDGE_ERROR_THREAD_HISTORICAL_COUNT;
 
 void register_midge_stack_invocation(const char *function_name, const char *file_name, int line,
                                      int *midge_error_stack_index)
@@ -202,8 +204,8 @@ void register_midge_stack_invocation(const char *function_name, const char *file
   struct __mce_thread_entry_stack *threades = NULL;
   pthread_t tid = pthread_self();
   for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
-    if (tid == MIDGE_ERROR_THREAD_STACKS[t].thread_id) {
-      threades = &MIDGE_ERROR_THREAD_STACKS[t];
+    if (tid == MIDGE_ERROR_THREAD_STACKS[t]->thread_id) {
+      threades = MIDGE_ERROR_THREAD_STACKS[t];
       break;
     }
     else if (tid == (pthread_t)0) {
@@ -245,8 +247,8 @@ void register_midge_stack_return(int midge_error_stack_index)
   struct __mce_thread_entry_stack *threades = NULL;
   pthread_t tid = pthread_self();
   for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
-    if (tid == MIDGE_ERROR_THREAD_STACKS[t].thread_id) {
-      threades = &MIDGE_ERROR_THREAD_STACKS[t];
+    if (tid == MIDGE_ERROR_THREAD_STACKS[t]->thread_id) {
+      threades = MIDGE_ERROR_THREAD_STACKS[t];
       break;
     }
     else if (tid == (pthread_t)0) {
@@ -269,33 +271,50 @@ void register_midge_thread_creation(unsigned int *midge_error_thread_index, cons
     printf("ERROR MIDGETHREAD 206\n");
     return;
   }
-  if (MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].thread_id != 0) {
+  if (MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX]->thread_id != 0) {
     printf("ERROR MIDGETHREAD 203\n");
     return;
   }
 
-  MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].thread_id = pthread_self();
+  struct __mce_thread_entry_stack *threades = MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX];
 
-  printf("thread %lu begun\n", MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].thread_id);
+  threades->thread_id = pthread_self();
+  threades->historical_index = MIDGE_ERROR_THREAD_HISTORICAL_COUNT++;
 
-  *midge_error_thread_index = MIDGE_ERROR_THREAD_INDEX;
+  printf("thread %u begun [%lu]\n", threades->historical_index, threades->thread_id);
+
+  // TODO -- int / unsigned long ugliness
+  *midge_error_thread_index = (unsigned int)threades->thread_id;
   ++MIDGE_ERROR_THREAD_INDEX;
 
-  MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].stack_index = -1;
+  threades->stack_index = -1;
   register_midge_stack_invocation(base_function_name, file_name, line, midge_error_stack_index);
 }
 
 void register_midge_thread_conclusion(unsigned int midge_error_thread_index)
 {
+  // TODO -- all this ain't thread-safe!
+
   if (MIDGE_ERROR_THREAD_INDEX < 1) {
     printf("ERROR MIDGETHREAD 219\n");
     return;
   }
 
-  printf("thread %lu concluded\n", MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX - 1].thread_id);
+  for (int i = 0; i < MIDGE_ERROR_THREAD_INDEX; ++i) {
+    if ((unsigned int)MIDGE_ERROR_THREAD_STACKS[i]->thread_id == midge_error_thread_index) {
+      // Move the thread at this index to a higher index
+      struct __mce_thread_entry_stack *t = MIDGE_ERROR_THREAD_STACKS[i];
+      printf("thread %u concluded [%lu]\n", t->historical_index, t->thread_id);
+      t->thread_id = 0;
 
-  --MIDGE_ERROR_THREAD_INDEX;
-  MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX].thread_id = 0;
+      MIDGE_ERROR_THREAD_STACKS[i] = MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX - 1];
+      MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX - 1] = t;
+      --MIDGE_ERROR_THREAD_INDEX;
+      return;
+    }
+  }
+
+  printf("ERROR MIDGETHREAD 313\n");
 }
 
 void handler(int sig)
@@ -337,7 +356,7 @@ void handler(int sig)
     // printf("size:%i\n", MIDGE_ERROR_STACK_INDEX);
 
     for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
-      struct __mce_thread_entry_stack *threades = &MIDGE_ERROR_THREAD_STACKS[t];
+      struct __mce_thread_entry_stack *threades = MIDGE_ERROR_THREAD_STACKS[t];
       if (threades->thread_id == (pthread_t)0) {
         break;
       }
@@ -376,17 +395,19 @@ void initialize_midge_error_handling(cling::Interpreter *clint)
   }
 
   // Error Stacks
+  MIDGE_ERROR_THREAD_HISTORICAL_COUNT = 0;
   for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
-    MIDGE_ERROR_THREAD_STACKS[t].thread_id = (pthread_t)0;
+    MIDGE_ERROR_THREAD_STACKS[t] = (struct __mce_thread_entry_stack *)malloc(sizeof(struct __mce_thread_entry_stack));
+    MIDGE_ERROR_THREAD_STACKS[t]->thread_id = (pthread_t)0;
 
-    MIDGE_ERROR_THREAD_STACKS[t].stack_index = 0;
+    MIDGE_ERROR_THREAD_STACKS[t]->stack_index = 0;
     for (int i = 0; i < MIDGE_ERROR_STACK_MAX_SIZE; ++i) {
-      MIDGE_ERROR_THREAD_STACKS[t].stack[i].function_name =
+      MIDGE_ERROR_THREAD_STACKS[t]->stack[i].function_name =
           (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE + 1));
-      MIDGE_ERROR_THREAD_STACKS[t].stack[i].function_name[0] = '\0';
-      MIDGE_ERROR_THREAD_STACKS[t].stack[i].file_name =
+      MIDGE_ERROR_THREAD_STACKS[t]->stack[i].function_name[0] = '\0';
+      MIDGE_ERROR_THREAD_STACKS[t]->stack[i].file_name =
           (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE + 1));
-      MIDGE_ERROR_THREAD_STACKS[t].stack[i].file_name[0] = '\0';
+      MIDGE_ERROR_THREAD_STACKS[t]->stack[i].file_name[0] = '\0';
     }
   }
   // MIDGE_ERROR_STACK_INDEX = 0;
