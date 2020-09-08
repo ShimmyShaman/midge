@@ -6,6 +6,8 @@
 #include "platform/mc_xcb.h"
 #include <vulkan/vulkan_core.h>
 
+#define MAX_DESCRIPTOR_SETS 4096
+
 /*
  * A layer can expose extensions, keep track of those
  * extensions here.
@@ -28,6 +30,17 @@ typedef struct queued_copy_info {
   VkDeviceSize dest_offset;
   size_t size_in_bytes;
 } queued_copy_info;
+
+typedef struct textured_image_vertex {
+  vec2 position;
+  vec2 tex_coord;
+} textured_image_vertex;
+
+typedef struct render_program {
+  VkDescriptorSetLayout descriptor_layout;
+  VkPipelineLayout pipeline_layout;
+  VkPipeline pipeline;
+} render_program;
 
 typedef struct vk_render_state {
 
@@ -112,13 +125,27 @@ typedef struct vk_render_state {
     queued_copy_info *queued_copies;
   } render_data_buffer;
 
-  VkPipelineLayout pipeline_layout;
-  VkDescriptorSetLayout descriptor_layout;
   VkRenderPass present_render_pass, offscreen_render_pass;
+  VkFramebuffer *framebuffers;
+
+  render_program present_prog, texture_prog, font_prog;
+  VkPipelineCache pipelineCache;
+
+  VkDescriptorPool descriptor_pool;
+  unsigned int descriptor_sets_count;
+  VkDescriptorSet descriptor_sets[MAX_DESCRIPTOR_SETS];
 
   struct {
-    VkDescriptorSetLayout descriptor_layout;
-  } texture_prog;
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDescriptorBufferInfo buffer_info;
+  } shape_vertices;
+
+  struct {
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDescriptorBufferInfo buffer_info;
+  } textured_shape_vertices;
 
 } vk_render_state;
 

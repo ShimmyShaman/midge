@@ -1103,8 +1103,10 @@ int mct_transcribe_declarator(mct_transcription_state *ts, mc_syntax_node *synta
     }
     else {
       append_to_c_str(ts->str, "[");
-      mct_transcribe_expression(
-          ts, syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression);
+      if (syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression) {
+        mct_transcribe_expression(
+            ts, syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression);
+      }
       append_to_c_str(ts->str, "]");
     }
   }
@@ -1144,13 +1146,13 @@ int mct_transcribe_type_identifier(mct_transcription_state *ts, mc_syntax_node *
   char *mc_declared_name = NULL;
   struct_info *structure_info;
   find_struct_info(syntax_node->type_identifier.identifier->text, &structure_info);
-  if (structure_info) {
+  if (structure_info && structure_info->mc_declared_name) {
     append_to_c_str(ts->str, structure_info->mc_declared_name);
   }
   else {
     enumeration_info *enum_info;
     find_enumeration_info(syntax_node->type_identifier.identifier->text, &enum_info);
-    if (enum_info) {
+    if (enum_info && enum_info->mc_declared_name) {
       append_to_c_str(ts->str, enum_info->mc_declared_name);
     }
     else {
@@ -1378,7 +1380,9 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       mc_syntax_node *array_initialization = declarator->local_variable_declarator.initializer;
 
       append_to_c_str(ts->str, "[");
-      mct_transcribe_expression(ts, array_initialization->local_variable_array_initializer.size_expression);
+      if (array_initialization->local_variable_array_initializer.size_expression) {
+        mct_transcribe_expression(ts, array_initialization->local_variable_array_initializer.size_expression);
+      }
       append_to_c_str(ts->str, "]");
 
       if (declarator->local_variable_declarator.initializer->local_variable_array_initializer.assignment_expression) {
@@ -1851,6 +1855,22 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
       append_to_c_str(ts->str, " ");
       mct_append_node_text_to_c_str(ts->str, syntax_node->sizeof_expression.type_dereference);
     }
+    append_to_c_str(ts->str, ")");
+  } break;
+  case MC_SYNTAX_OFFSETOF_EXPRESSION: {
+    append_to_c_str(ts->str, "offsetof(");
+
+    mct_transcribe_type_identifier(ts, syntax_node->cast_expression.type_identifier);
+
+    if (syntax_node->offsetof_expression.type_dereference) {
+      append_to_c_str(ts->str, " ");
+      mct_append_node_text_to_c_str(ts->str, syntax_node->offsetof_expression.type_dereference);
+    }
+
+    append_to_c_str(ts->str, ", ");
+
+    append_to_c_str(ts->str, syntax_node->offsetof_expression.field_identity->text);
+
     append_to_c_str(ts->str, ")");
   } break;
   case MC_SYNTAX_INVOCATION: {
@@ -2552,6 +2572,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
 
       mct_add_scope_variable(&ts, parameter_syntax);
 
+      // print_syntax_node(parameter_syntax->parameter.type_identifier, 0);
       mct_transcribe_type_identifier(&ts, parameter_syntax->parameter.type_identifier);
       append_to_c_str(ts.str, " ");
       if (parameter_syntax->parameter.type_dereference) {

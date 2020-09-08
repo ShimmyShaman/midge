@@ -52,6 +52,7 @@ typedef enum mc_token_type {
   MC_TOKEN_RETURN_KEYWORD,
   MC_TOKEN_CONST_KEYWORD,
   MC_TOKEN_SIZEOF_KEYWORD,
+  MC_TOKEN_OFFSETOF_KEYWORD,
   MC_TOKEN_VA_ARG_WORD,
   MC_TOKEN_VA_LIST_WORD,
   MC_TOKEN_VA_START_WORD,
@@ -152,6 +153,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_TYPE_INITIALIZER,
   MC_SYNTAX_INITIALIZER_EXPRESSION,
   MC_SYNTAX_SIZEOF_EXPRESSION,
+  MC_SYNTAX_OFFSETOF_EXPRESSION,
   MC_SYNTAX_VA_ARG_EXPRESSION,
   MC_SYNTAX_VA_LIST_STATEMENT,
   MC_SYNTAX_VA_START_STATEMENT,
@@ -434,6 +436,12 @@ typedef struct mc_syntax_node {
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
         } sizeof_expression;
+        struct {
+          mc_syntax_node *type_identifier;
+          // May be null indicating no dereference operators
+          mc_syntax_node *type_dereference;
+          mc_syntax_node *field_identity;
+        } offsetof_expression;
         struct {
           mc_syntax_node *list_identity;
           mc_syntax_node *type_identifier;
