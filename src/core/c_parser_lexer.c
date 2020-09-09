@@ -4376,15 +4376,16 @@ int mcs_parse_enum_definition(parsing_state *ps, mc_syntax_node *parent, mc_synt
       mcs_parse_through_token(ps, enum_member, MC_TOKEN_ASSIGNMENT_OPERATOR, NULL);
       mcs_parse_through_supernumerary_tokens(ps, enum_member);
 
-      mcs_peek_token_type(ps, false, 0, &token_type);
-      switch (token_type) {
-      case MC_TOKEN_IDENTIFIER:
-      case MC_TOKEN_NUMERIC_LITERAL: {
-        mcs_parse_through_token(ps, enum_member, token_type, &enum_member->enum_member.value_expression);
-      } break;
-      default:
-        MCerror(3777, "TODO :%s", get_mc_token_type_name(token_type));
-      }
+      mcs_parse_expression(ps, enum_member, &enum_member->enum_member.value_expression);
+      // mcs_peek_token_type(ps, false, 0, &token_type);
+      // switch (token_type) {
+      // case MC_TOKEN_IDENTIFIER:
+      // case MC_TOKEN_NUMERIC_LITERAL: {
+      //   mcs_parse_through_token(ps, enum_member, token_type, &enum_member->enum_member.value_expression);
+      // } break;
+      // default:
+      //   MCerror(3777, "TODO :%s", get_mc_token_type_name(token_type));
+      // }
     }
 
     append_to_collection((void ***)&enum_definition->enumeration.members->items,

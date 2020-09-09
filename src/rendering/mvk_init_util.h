@@ -279,7 +279,6 @@ typedef struct vk_render_state {
   unsigned int descriptor_sets_count;
   VkDescriptorSet descriptor_sets[MAX_DESCRIPTOR_SETS];
 
-  uint32_t current_buffer;
   uint32_t queue_family_count;
 
   VkViewport viewport;

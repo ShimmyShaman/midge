@@ -335,7 +335,7 @@ VkResult mvk_init_xcb_surface(vk_render_state *p_vkrs)
   // the surface has no preferred format.  Otherwise, at least one
   // supported format will be returned.
   if (formatCount == 1 && surfFormats[0].format == VK_FORMAT_UNDEFINED) {
-    p_vkrs->format = VK_FORMAT_R8G8B8A8_SRGB;
+    p_vkrs->format = VK_IMAGE_FORMAT;
   }
   else {
     VK_ASSERT(formatCount >= 1, "No supported formats?");
@@ -402,13 +402,13 @@ VkResult mvk_init_command_pool(vk_render_state *p_vkrs)
   /* DEPENDS on init_swapchain_extension() */
   VkResult res;
 
-  VkCommandPoolCreateInfo cmd_pool_info = {};
-  cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  cmd_pool_info.pNext = NULL;
-  cmd_pool_info.queueFamilyIndex = p_vkrs->graphics_queue_family_index;
-  cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+  VkCommandPoolCreateInfo command_pool_info = {};
+  command_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  command_pool_info.pNext = NULL;
+  command_pool_info.queueFamilyIndex = p_vkrs->graphics_queue_family_index;
+  command_pool_info.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-  res = vkCreateCommandPool(p_vkrs->device, &cmd_pool_info, NULL, &p_vkrs->command_pool);
+  res = vkCreateCommandPool(p_vkrs->device, &command_pool_info, NULL, &p_vkrs->command_pool);
   VK_CHECK(res, "vkCreateCommandPool");
   return res;
 }
@@ -1930,125 +1930,6 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs)
   return res;
 }
 
-#define XY(X, Y) X, Y
-#define UV(U, V) U, V
-#define XYZW(X, Y, Z) X, Y, Z, 1.f
-#define RGB(R, G, B) R, G, B
-#define RGBA(R, G, B) R, G, B, 1.f
-#define WHITE_RGBA 1.f, 1.f, 1.f, 1.f
-#define WHITE_RGB 1.f, 1.f, 1.f
-
-VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
-{
-  const float g_vb_shape_data[] = {// Rectangle
-                                   XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
-                                   XYZW(0.5f, -0.5f, 0),  WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
-                                   XYZW(0.5f, 0.5f, 0),   WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA};
-  const float g_vb_textured_shape_2D_data[] = {// Rectangle
-                                               XY(-0.5f, -0.5f), UV(0.f, 0.f), XY(-0.5f, 0.5f), UV(0.f, 1.f),
-                                               XY(0.5f, -0.5f),  UV(1.f, 0.f), XY(-0.5f, 0.5f), UV(0.f, 1.f),
-                                               XY(0.5f, 0.5f),   UV(1.f, 1.f), XY(0.5f, -0.5f), UV(1.f, 0.f)};
-
-  VkResult res;
-  {
-    // Shape Colored Vertices Data
-    const int data_size_in_bytes = sizeof(g_vb_shape_data);
-
-    VkBufferCreateInfo buf_info = {};
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.pNext = NULL;
-    buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    buf_info.size = data_size_in_bytes;
-    buf_info.queueFamilyIndexCount = 0;
-    buf_info.pQueueFamilyIndices = NULL;
-    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    buf_info.flags = 0;
-    res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->shape_vertices.buf);
-    VK_CHECK(res, "vkCreateBuffer");
-
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->shape_vertices.buf, &mem_reqs);
-
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
-
-    alloc_info.allocationSize = mem_reqs.size;
-    bool pass = mvk_get_properties_memory_type_index(
-        p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &alloc_info.memoryTypeIndex);
-    VK_ASSERT(pass, "No mappable, coherent memory");
-
-    res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->shape_vertices.mem));
-    VK_CHECK(res, "vkAllocateMemory");
-    p_vkrs->shape_vertices.buffer_info.range = mem_reqs.size;
-    p_vkrs->shape_vertices.buffer_info.offset = 0;
-
-    uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&pData);
-    VK_CHECK(res, "vkMapMemory");
-
-    memcpy(pData, g_vb_shape_data, data_size_in_bytes);
-
-    vkUnmapMemory(p_vkrs->device, p_vkrs->shape_vertices.mem);
-
-    res = vkBindBufferMemory(p_vkrs->device, p_vkrs->shape_vertices.buf, p_vkrs->shape_vertices.mem, 0);
-    VK_CHECK(res, "vkBindBufferMemory");
-
-    // p_vkrs->shape_vertices.vi_desc = p_vkrs->pos_color_vertex_input_description;
-  }
-  {
-    // Shaped Texture Data
-    const int data_size_in_bytes = sizeof(g_vb_textured_shape_2D_data);
-
-    VkBufferCreateInfo buf_info = {};
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.pNext = NULL;
-    buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    buf_info.size = data_size_in_bytes;
-    buf_info.queueFamilyIndexCount = 0;
-    buf_info.pQueueFamilyIndices = NULL;
-    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    buf_info.flags = 0;
-    res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->textured_shape_vertices.buf);
-    VK_CHECK(res, "vkCreateBuffer");
-
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->textured_shape_vertices.buf, &mem_reqs);
-
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
-
-    alloc_info.allocationSize = mem_reqs.size;
-    bool pass = mvk_get_properties_memory_type_index(
-        p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &alloc_info.memoryTypeIndex);
-    VK_ASSERT(pass, "No mappable, coherent memory");
-
-    res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->textured_shape_vertices.mem));
-    VK_CHECK(res, "vkAllocateMemory");
-    p_vkrs->textured_shape_vertices.buffer_info.range = mem_reqs.size;
-    p_vkrs->textured_shape_vertices.buffer_info.offset = 0;
-
-    uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&pData);
-    VK_CHECK(res, "vkMapMemory");
-
-    memcpy(pData, g_vb_textured_shape_2D_data, data_size_in_bytes);
-
-    vkUnmapMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.mem);
-
-    res =
-        vkBindBufferMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.buf, p_vkrs->textured_shape_vertices.mem, 0);
-    VK_CHECK(res, "vkBindBufferMemory");
-  }
-
-  return res;
-}
-
 /* ###################################################
    #               Vulkan Entry Point                #
    #               Initializes Vulkan                #
@@ -2101,19 +1982,7 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   res = mvk_init_descriptor_pool(vkrs);
   VK_CHECK(res, "mvk_init_descriptor_pool");
 
-  res = mvk_init_shape_vertices(vkrs);
-  VK_CHECK(res, "mvk_init_shape_vertices");
-
   return VK_SUCCESS;
-}
-
-void mvk_destroy_resources(vk_render_state *p_vkrs)
-{
-  vkDestroyBuffer(p_vkrs->device, p_vkrs->shape_vertices.buf, NULL);
-  vkFreeMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, NULL);
-
-  vkDestroyBuffer(p_vkrs->device, p_vkrs->textured_shape_vertices.buf, NULL);
-  vkFreeMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.mem, NULL);
 }
 
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
@@ -2265,7 +2134,6 @@ void mvk_cleanup_global_layer_properties(vk_render_state *p_vkrs)
    ################################################### */
 VkResult mvk_cleanup_vulkan(vk_render_state *vkrs)
 {
-  mvk_destroy_resources(vkrs);
   vkDestroyDescriptorPool(vkrs->device, vkrs->descriptor_pool, NULL);
   mvk_destroy_framebuffers(vkrs);
 

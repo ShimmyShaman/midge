@@ -1292,11 +1292,13 @@ int _mcl_load_app_mc_source()
       "src/m_threads.h",
       "src/platform/mc_xcb.h",
       "src/render/mc_vulkan.h",
+      "src/render/mc_vk_utils.h",
       "src/render/render_thread.h",
       "src/core/midge_app.h",
 
       "src/platform/mc_xcb.c",
       "src/render/mc_vulkan.c",
+      "src/render/mc_vk_utils.c",
       "src/render/render_thread.c",
       "src/core/midge_app.c",
 

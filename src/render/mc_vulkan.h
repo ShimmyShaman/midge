@@ -7,7 +7,9 @@
 #include <vulkan/vulkan_core.h>
 
 #define MAX_DESCRIPTOR_SETS 4096
+#define VK_IMAGE_FORMAT VK_FORMAT_R8G8B8A8_SRGB;
 
+#define RESOURCE_UID_BEGIN 300
 /*
  * A layer can expose extensions, keep track of those
  * extensions here.
@@ -41,6 +43,24 @@ typedef struct render_program {
   VkPipelineLayout pipeline_layout;
   VkPipeline pipeline;
 } render_program;
+
+typedef struct loaded_font_info {
+  const char *name;
+  float height;
+  uint resource_uid;
+  stbtt_bakedchar *char_data;
+} loaded_font_info;
+
+typedef struct sampled_image {
+  VkFormat format;
+  uint32_t width, height;
+  VkDeviceSize size;
+  VkSampler sampler;
+  VkImage image;
+  VkDeviceMemory memory;
+  VkImageView view;
+  VkFramebuffer framebuffer;
+} sampled_image;
 
 typedef struct vk_render_state {
 
@@ -98,6 +118,7 @@ typedef struct vk_render_state {
     VkFormat format;
 
     VkImage image;
+    VkCommandBuffer command_buffer;
     VkDeviceMemory memory;
     VkImageView view;
   } headless;
@@ -135,6 +156,9 @@ typedef struct vk_render_state {
   unsigned int descriptor_sets_count;
   VkDescriptorSet descriptor_sets[MAX_DESCRIPTOR_SETS];
 
+  /*******************
+   *     Resources   *
+   *******************/
   struct {
     VkBuffer buf;
     VkDeviceMemory mem;
@@ -147,10 +171,25 @@ typedef struct vk_render_state {
     VkDescriptorBufferInfo buffer_info;
   } textured_shape_vertices;
 
+  struct {
+    uint32_t count;
+    uint32_t allocated;
+    sampled_image *samples;
+  } textures;
+
+  struct {
+    uint32_t count;
+    uint32_t allocated;
+    loaded_font_info *fonts;
+  } loaded_fonts;
+
 } vk_render_state;
 
 extern "C" {
 VkResult mvk_init_vulkan(vk_render_state *vkrs);
+
+bool mvk_get_properties_memory_type_index(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask,
+                                          uint32_t *typeIndex);
 }
 
 #endif // MC_VULKAN_H
