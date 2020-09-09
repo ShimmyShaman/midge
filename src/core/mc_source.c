@@ -197,7 +197,7 @@ int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *fu
     clint_declare(buf);
     sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
     clint_process(buf);
-    printf("--declared:'%s()'\n", func_info->name);
+    // printf("--declared:'%s()'\n", func_info->name);
 
     // Assign the functions pointer
     sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
@@ -854,14 +854,14 @@ int instantiate_ast_children(node *definitions_owner, source_file_info *source_f
       if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
         // Function Declaration only
         update_or_register_function_info_from_syntax(NULL, child, NULL);
-        printf("--fdecl:'%s'\n", child->function.name->text);
+        // printf("--fdecl:'%s'\n", child->function.name->text);
       }
       else {
         // Assume to be function definition
         function_info *info;
         instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
         info->source->source_file = source_file;
-        printf("--defined:'%s'\n", child->function.name->text);
+        // printf("--defined:'%s'\n", child->function.name->text);
       }
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
@@ -950,7 +950,7 @@ int instantiate_ast_children(node *definitions_owner, source_file_info *source_f
       }
       else if (is_defined == 111) {
         // Do Nothing
-        printf("'%s' was already defined\n", identifier);
+        // printf("'%s' was already defined\n", identifier);
       }
       else {
         MCerror(950, "All did not go to plan");

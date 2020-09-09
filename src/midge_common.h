@@ -49,6 +49,7 @@ typedef struct c_str {
 
 extern "C" {
 int init_c_str(c_str **ptr);
+int init_c_str_with_specific_capacity(c_str **ptr, unsigned int specific_capacity);
 int set_c_str(c_str *cstr, const char *text);
 int set_c_strn(c_str *cstr, const char *text, int len);
 int release_c_str(c_str *ptr, bool free_char_string_also);
@@ -63,6 +64,17 @@ int init_c_str(c_str **ptr)
 {
   (*ptr) = (c_str *)malloc(sizeof(c_str));
   (*ptr)->alloc = 2;
+  (*ptr)->len = 0;
+  (*ptr)->text = (char *)malloc(sizeof(char) * (*ptr)->alloc);
+  (*ptr)->text[0] = '\0';
+
+  return 0;
+}
+
+int init_c_str_with_specific_capacity(c_str **ptr, int specific_capacity)
+{
+  (*ptr) = (c_str *)malloc(sizeof(c_str));
+  (*ptr)->alloc = specific_capacity;
   (*ptr)->len = 0;
   (*ptr)->text = (char *)malloc(sizeof(char) * (*ptr)->alloc);
   (*ptr)->text[0] = '\0';

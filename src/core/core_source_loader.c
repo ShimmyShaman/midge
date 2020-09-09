@@ -422,6 +422,7 @@ const char *_mcl_core_functions[] = {
 
     // midge_common
     "init_c_str",
+    "init_c_str_with_specific_capacity",
     "set_c_str",
     "set_c_strn",
     "release_c_str",
@@ -1060,7 +1061,7 @@ int _mcl_load_core_temp_source()
       use_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
     }
 
-    // use_cached_file = false;
+    //  use_cached_file = false;
     if (use_cached_file) {
       MCcall(_mcl_read_all_file_text(cached_file_name, &file_text));
       MCcall(set__csl_c_str(src, file_text));

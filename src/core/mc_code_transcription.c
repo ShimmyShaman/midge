@@ -710,8 +710,8 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
     // Find the type of the expression
     mct_expression_type_info expr_type_info;
     determine_type_of_expression(ts, argument, &expr_type_info);
-    printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
-           expr_type_info.deref_count);
+    // printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
+    //        expr_type_info.deref_count);
     if (!expr_type_info.type_name) {
       MCerror(566, "TODO");
     }
@@ -817,8 +817,8 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
     // Find the type of the expression
     mct_expression_type_info expr_type_info;
     determine_type_of_expression(ts, argument->ternary_conditional.true_expression, &expr_type_info);
-    printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
-           expr_type_info.deref_count);
+    // printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
+    //        expr_type_info.deref_count);
     if (!expr_type_info.type_name) {
       MCerror(566, "TODO");
     }
@@ -2791,7 +2791,7 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
   append_to_c_str(ts.str, structure_info->mc_declared_name);
 
   if (structure_ast->structure.fields) {
-    append_to_c_str(ts.str, " { \n");
+    append_to_c_str(ts.str, " {\n");
     ++ts.indent;
 
     mct_transcribe_field_list(&ts, structure_ast->structure.fields);

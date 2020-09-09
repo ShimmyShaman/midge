@@ -188,6 +188,12 @@ int _midge_run()
     clint->loadFile("/home/jason/midge/src/midge_error_handling.h");
     clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
 
+    struct timespec library_base_complete_time;
+    clock_gettime(CLOCK_REALTIME, &library_base_complete_time);
+    printf("Library & Base Read Complete took %.2f seconds\n",
+           library_base_complete_time.tv_sec - app_begin_time.tv_sec +
+               1e-9 * (library_base_complete_time.tv_nsec - app_begin_time.tv_nsec));
+
     // Error Handling
     clint->process("{\n"
                    "  initialize_midge_error_handling(clint);\n"
