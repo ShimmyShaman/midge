@@ -10,6 +10,10 @@
 #define VK_IMAGE_FORMAT VK_FORMAT_R8G8B8A8_SRGB;
 
 #define RESOURCE_UID_BEGIN 300
+
+/* Amount of time, in nanoseconds, to wait for a command buffer to complete */
+#define FENCE_TIMEOUT 100000000
+
 /*
  * A layer can expose extensions, keep track of those
  * extensions here.

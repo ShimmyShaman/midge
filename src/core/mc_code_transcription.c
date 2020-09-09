@@ -671,6 +671,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
     append_to_c_str(ts->str, expr_type_info.type_name);
     append_to_c_str(ts->str, " ");
     for (int d = 0; d < expr_type_info.deref_count; ++d) {
+      MCerror(780, "TODO -- pointers...");
       append_to_c_str(ts->str, "*");
     }
     append_to_c_strf(ts->str, "%s_%i = ", argument_data_name, arg_index);
@@ -683,7 +684,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
 
     // Set to parameter reference
     mct_append_indent_to_c_str(ts);
-    append_to_c_strf(ts->str, "%s[%i] = &mc_vargs_%i;\n", argument_data_name, arg_index, arg_index);
+    append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
 
     mct_release_expression_type_info_fields(&expr_type_info);
     // printf("After:\n%s||\n", ts->str->text);
@@ -751,6 +752,54 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
     append_to_c_strf(ts->str, "int %s_%i = ", argument_data_name, arg_index);
     mct_append_node_text_to_c_str(ts->str, argument);
     append_to_c_str(ts->str, ";\n");
+    mct_append_indent_to_c_str(ts);
+    append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
+  } break;
+  case MC_SYNTAX_TERNARY_CONDITIONAL: {
+    // printf("mtmi-4\n");
+    {
+      bool contains_mc_function_call;
+      mct_contains_mc_invoke(argument, &contains_mc_function_call);
+      if (contains_mc_function_call) {
+        MCerror(290, "TODO");
+      }
+    }
+
+    // Find the type of the expression
+    mct_expression_type_info expr_type_info;
+    determine_type_of_expression(ts, argument->ternary_conditional.true_expression, &expr_type_info);
+    printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
+           expr_type_info.deref_count);
+    if (!expr_type_info.type_name) {
+      MCerror(566, "TODO");
+    }
+
+    // Evaluate it to a local field
+    append_to_c_str(ts->str, expr_type_info.type_name);
+    append_to_c_str(ts->str, " ");
+    for (int d = 0; d < expr_type_info.deref_count; ++d) {
+      append_to_c_str(ts->str, "*");
+    }
+    append_to_c_strf(ts->str, "%s_%i = ", argument_data_name, arg_index);
+
+    mct_append_node_text_to_c_str(ts->str, argument);
+    append_to_c_str(ts->str, ";\n");
+
+    // Set to parameter reference
+    mct_append_indent_to_c_str(ts);
+    append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
+
+    mct_release_expression_type_info_fields(&expr_type_info);
+    // printf("After:\n%s||\n", ts->str->text);
+  } break;
+  case MC_SYNTAX_SIZEOF_EXPRESSION: {
+    append_to_c_strf(ts->str, "size_t %s_%i = sizeof(", argument_data_name, arg_index);
+    mct_transcribe_type_identifier(ts, argument->sizeof_expression.type_identifier);
+    append_to_c_str(ts->str, " ");
+    for (int d = 0; d < argument->sizeof_expression.type_dereference->dereference_sequence.count; ++d) {
+      append_to_c_str(ts->str, "*");
+    }
+    append_to_c_str(ts->str, ");\n");
     mct_append_indent_to_c_str(ts);
     append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
   } break;

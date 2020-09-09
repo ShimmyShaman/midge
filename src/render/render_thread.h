@@ -7,6 +7,8 @@
 #include "midge_common.h"
 #include "platform/mc_xcb.h"
 
+#define MRT_SEQUENCE_COPY_BUFFER_SIZE 8192
+
 typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,
   RENDER_COMMAND_BACKGROUND_COLOR,
@@ -106,6 +108,20 @@ typedef struct render_thread_info {
   bool render_thread_initialized;
   window_input_buffer input_buffer;
 } render_thread_info;
+
+typedef struct vert_data_scale_offset {
+  struct {
+    float x, y;
+  } offset;
+  struct {
+    float x, y;
+  } scale;
+} vert_data_scale_offset;
+
+typedef struct mrt_sequence_copy_buffer {
+  u_char data[MRT_SEQUENCE_COPY_BUFFER_SIZE];
+  u_int32_t index;
+} mrt_sequence_copy_buffer;
 
 extern "C" {
 void *midge_render_thread(void *vargp);

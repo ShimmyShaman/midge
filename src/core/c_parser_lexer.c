@@ -1772,16 +1772,29 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
         // Other characters
         switch (code[*index]) {
+        case 'a':
         case 'A':
+        case 'b':
         case 'B':
+        case 'c':
         case 'C':
+        case 'd':
         case 'D':
+        case 'e':
         case 'E':
+          if (is_hex) {
+            prev_digit = true;
+            continue;
+          }
+          loop = false;
+          break;
+        case 'f':
         case 'F':
           if (is_hex) {
             prev_digit = true;
             continue;
           }
+          ++*index;
           loop = false;
           break;
         case '.': {
@@ -1792,8 +1805,33 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
           print_parse_error(code, *index, "_mcs_parse_token", "");
           MCerror(173, "Invalid Numeric Literal Format");
         } break;
-        case 'f':
+        // case 'F':
+        // case 'f': {
+        //   loop = false;
+        //   ++*index;
+        // } break;
+        case 'u':
         case 'U': {
+          switch (code[*index + 1]) {
+          case 'l':
+          case 'L':
+            ++*index;
+            break;
+          case '\n':
+          case ']':
+          case ':':
+          case ' ':
+          case ',':
+          case ')':
+          case '}':
+          case ';':
+            break;
+          default: {
+            print_parse_error(code, *index, "_mcs_parse_token", "");
+            MCerror(1817, "NotYetSupported Numeric Literal unsigned postfix character:'%c'", code[*index]);
+          }
+          }
+
           loop = false;
           ++*index;
         } break;
@@ -3378,6 +3416,15 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
       left = expression;
     } break;
     case MC_TOKEN_TERNARY_OPERATOR: {
+      const int CASE_PRECEDENCE = 16;
+      if (allowable_precedence <= CASE_PRECEDENCE) {
+        // Left is it
+        mcs_add_syntax_node_to_parent(parent, left);
+        if (additional_destination) {
+          *additional_destination = left;
+        }
+        return 0;
+      }
       mc_syntax_node *expression = NULL;
       mcs_construct_syntax_node(ps, MC_SYNTAX_TERNARY_CONDITIONAL, NULL, NULL, &expression);
 
