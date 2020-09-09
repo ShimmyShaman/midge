@@ -4590,28 +4590,68 @@ int mcs_parse_struct_declaration_list(parsing_state *ps, mc_syntax_node *parent,
     } break;
     case MC_TOKEN_UNION_KEYWORD:
     case MC_TOKEN_STRUCT_KEYWORD: {
-      mc_syntax_node *nested_declaration;
-      mcs_construct_syntax_node(ps, MC_SYNTAX_NESTED_TYPE_DECLARATION, NULL, parent, &nested_declaration);
-      append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, nested_declaration);
+      // Determine if a specified field type or nested definition
+      mc_token_type token1;
+      mcs_peek_token_type(ps, false, 1, &token1);
+      bool type_specifier;
+      switch (token1) {
+      case MC_TOKEN_IDENTIFIER: {
+        mc_token_type token2;
+        mcs_peek_token_type(ps, false, 1, &token2);
+        switch (token2) {
+        case MC_TOKEN_CURLY_OPENING_BRACKET: {
+          type_specifier = false;
+        } break;
+        case MC_TOKEN_IDENTIFIER: {
+          type_specifier = true;
+        } break;
+        default:
+          print_parse_error(ps->code, ps->index, "mcs_parse_struct_declaration_list", "");
+          MCerror(4602, "NotYetSupported:IDENTIFIER>%s", get_mc_token_type_name(token2));
+        }
+      } break;
+      case MC_TOKEN_CURLY_OPENING_BRACKET: {
+        type_specifier = false;
+      } break;
+      default:
+        print_parse_error(ps->code, ps->index, "mcs_parse_struct_declaration_list", "");
+        MCerror(4607, "NotYetSupported:%s", get_mc_token_type_name(token1));
+      }
 
-      mcs_parse_type_declaration(ps, nested_declaration, &nested_declaration->nested_type.declaration);
-      mcs_parse_through_supernumerary_tokens(ps, parent);
+      // Parse appropriately
+      if (type_specifier) {
+        mc_syntax_node *field_declaration;
+        mcs_parse_field_declaration(ps, parent, &field_declaration);
 
-      mcs_peek_token_type(ps, false, 0, &token_type);
-      if (token_type == MC_TOKEN_IDENTIFIER || token_type == MC_TOKEN_STAR_CHARACTER) {
+        append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, field_declaration);
 
-        nested_declaration->nested_type.declarators = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
-        nested_declaration->nested_type.declarators->alloc = 0;
-        nested_declaration->nested_type.declarators->count = 0;
-
-        mcs_parse_field_declarators(ps, nested_declaration, nested_declaration->nested_type.declarators);
+        mcs_parse_through_supernumerary_tokens(ps, parent);
+        mcs_parse_through_token(ps, parent, MC_TOKEN_SEMI_COLON, NULL);
       }
       else {
-        nested_declaration->nested_type.declarators = NULL;
-      }
+        mc_syntax_node *nested_declaration;
+        mcs_construct_syntax_node(ps, MC_SYNTAX_NESTED_TYPE_DECLARATION, NULL, parent, &nested_declaration);
+        append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, nested_declaration);
 
-      mcs_parse_through_supernumerary_tokens(ps, parent);
-      mcs_parse_through_token(ps, parent, MC_TOKEN_SEMI_COLON, NULL);
+        mcs_parse_type_declaration(ps, nested_declaration, &nested_declaration->nested_type.declaration);
+        mcs_parse_through_supernumerary_tokens(ps, parent);
+
+        mcs_peek_token_type(ps, false, 0, &token_type);
+        if (token_type == MC_TOKEN_IDENTIFIER || token_type == MC_TOKEN_STAR_CHARACTER) {
+
+          nested_declaration->nested_type.declarators = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+          nested_declaration->nested_type.declarators->alloc = 0;
+          nested_declaration->nested_type.declarators->count = 0;
+
+          mcs_parse_field_declarators(ps, nested_declaration, nested_declaration->nested_type.declarators);
+        }
+        else {
+          nested_declaration->nested_type.declarators = NULL;
+        }
+
+        mcs_parse_through_supernumerary_tokens(ps, parent);
+        mcs_parse_through_token(ps, parent, MC_TOKEN_SEMI_COLON, NULL);
+      }
     } break;
     default: {
       print_parse_error(ps->code, ps->index, "see-below", "");

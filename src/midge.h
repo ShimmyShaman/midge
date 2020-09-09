@@ -182,7 +182,7 @@ int _midge_run()
     clint->process("#include \"stb_truetype.h\"\n");
 
     clint->process("#include <sys/wait.h>\n");
-    
+
     // Load non-MC App source
     printf("<AppSourceLoading>\n");
     clint->loadFile("/home/jason/midge/src/midge_error_handling.h");

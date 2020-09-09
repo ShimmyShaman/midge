@@ -13,8 +13,8 @@ typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,
   RENDER_COMMAND_BACKGROUND_COLOR,
   RENDER_COMMAND_SAMPLE_CUBE,
-  RENDER_COMMAND_COLORED_RECTANGLE,
-  RENDER_COMMAND_TEXTURED_RECTANGLE,
+  RENDER_COMMAND_COLORED_QUAD,
+  RENDER_COMMAND_TEXTURED_QUAD,
   RENDER_COMMAND_PRINT_TEXT,
 } element_render_command_type;
 
@@ -109,6 +109,12 @@ typedef struct render_thread_info {
   window_input_buffer input_buffer;
 } render_thread_info;
 
+typedef struct mrt_sequence_copy_buffer {
+  VkDescriptorBufferInfo vpc_desc_buffer_info;
+  u_char data[MRT_SEQUENCE_COPY_BUFFER_SIZE];
+  u_int32_t index;
+} mrt_sequence_copy_buffer;
+
 typedef struct vert_data_scale_offset {
   struct {
     float x, y;
@@ -118,10 +124,28 @@ typedef struct vert_data_scale_offset {
   } scale;
 } vert_data_scale_offset;
 
-typedef struct mrt_sequence_copy_buffer {
-  u_char data[MRT_SEQUENCE_COPY_BUFFER_SIZE];
-  u_int32_t index;
-} mrt_sequence_copy_buffer;
+typedef struct frag_ubo_tint_texcoordbounds {
+  struct {
+    float r, g, b, a;
+  } tint;
+  struct {
+    float s0, s1, t0, t1;
+  } tex_coord_bounds;
+} frag_ubo_tint_texcoordbounds;
+
+typedef struct coloured_rect_draw_data {
+  struct {
+    // Vertex Fields
+    vec2 offset;
+    vec2 scale;
+  } vert;
+
+  struct {
+    // Fragment Fields
+    vec4 tint_color;
+  } frag;
+
+} coloured_rect_draw_data;
 
 extern "C" {
 void *midge_render_thread(void *vargp);

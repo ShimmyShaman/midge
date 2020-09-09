@@ -416,7 +416,7 @@ VkResult mvk_init_command_pool(vk_render_state *p_vkrs)
 /*
  * Initializes the swap chain and the images it uses.
  */
-VkResult mvk_init_swapchain_frame_buffers(vk_render_state *p_vkrs)
+VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
 {
   VkResult res;
 
@@ -1098,7 +1098,7 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
     layout_create_info.pBindings = layout_bindings;
 
     res =
-        vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &p_vkrs->present_prog.descriptor_layout);
+        vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &p_vkrs->tint_prog.descriptor_layout);
     VK_CHECK(res, "vkCreateDescriptorSetLayout");
   }
 
@@ -1286,9 +1286,9 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &p_vkrs->present_prog.descriptor_layout;
+    pipelineLayoutInfo.pSetLayouts = &p_vkrs->tint_prog.descriptor_layout;
 
-    res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &p_vkrs->present_prog.pipeline_layout);
+    res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &p_vkrs->tint_prog.pipeline_layout);
     VK_CHECK(res, "vkCreatePipelineLayout :: Failed to create pipeline layout!");
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
@@ -1303,13 +1303,13 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = p_vkrs->present_prog.pipeline_layout;
+    pipelineInfo.layout = p_vkrs->tint_prog.pipeline_layout;
     pipelineInfo.renderPass = p_vkrs->present_render_pass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
     res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL,
-                                    &p_vkrs->present_prog.pipeline);
+                                    &p_vkrs->tint_prog.pipeline);
     VK_CHECK(res, "vkCreateGraphicsPipelines :: Failed to create pipeline");
   }
 
@@ -1894,11 +1894,11 @@ VkResult mvk_init_framebuffers(vk_render_state *p_vkrs /*, bool include_depth*/)
 
   uint32_t i;
 
-  p_vkrs->framebuffers = (VkFramebuffer *)malloc(p_vkrs->swap_chain.size * sizeof(VkFramebuffer));
+  p_vkrs->swap_chain.framebuffers = (VkFramebuffer *)malloc(p_vkrs->swap_chain.size * sizeof(VkFramebuffer));
 
   for (i = 0; i < p_vkrs->swap_chain.size; i++) {
     attachments[0] = p_vkrs->swap_chain.image_views[i];
-    res = vkCreateFramebuffer(p_vkrs->device, &fb_info, NULL, &p_vkrs->framebuffers[i]);
+    res = vkCreateFramebuffer(p_vkrs->device, &fb_info, NULL, &p_vkrs->swap_chain.framebuffers[i]);
     VK_CHECK(res, "vkCreateFramebuffer");
   }
   return res;
@@ -1958,8 +1958,8 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   res = mvk_init_command_pool(vkrs);
   VK_CHECK(res, "mvk_init_command_pool");
 
-  res = mvk_init_swapchain_frame_buffers(vkrs);
-  VK_CHECK(res, "mvk_init_swapchain_frame_buffers");
+  res = mvk_init_swapchain_data(vkrs);
+  VK_CHECK(res, "mvk_init_swapchain_data");
   res = mvk_init_headless_image(vkrs);
   VK_CHECK(res, "mvk_init_headless_image");
   res = mvk_init_uniform_buffer(vkrs);
@@ -1988,9 +1988,9 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
 {
   for (uint32_t i = 0; i < p_vkrs->swap_chain.size; i++) {
-    vkDestroyFramebuffer(p_vkrs->device, p_vkrs->framebuffers[i], NULL);
+    vkDestroyFramebuffer(p_vkrs->device, p_vkrs->swap_chain.framebuffers[i], NULL);
   }
-  free(p_vkrs->framebuffers);
+  free(p_vkrs->swap_chain.framebuffers);
 }
 
 void mvk_destroy_render_prog(vk_render_state *p_vkrs, render_program *render_prog)
@@ -2132,7 +2132,7 @@ void mvk_cleanup_global_layer_properties(vk_render_state *p_vkrs)
    #                 Vulkan CLEANUP                  #
    #               Initializes Vulkan                #
    ################################################### */
-VkResult mvk_cleanup_vulkan(vk_render_state *vkrs)
+VkResult mvk_destroy_vulkan(vk_render_state *vkrs)
 {
   vkDestroyDescriptorPool(vkrs->device, vkrs->descriptor_pool, NULL);
   mvk_destroy_framebuffers(vkrs);
@@ -2140,7 +2140,7 @@ VkResult mvk_cleanup_vulkan(vk_render_state *vkrs)
   vkDestroyPipelineCache(vkrs->device, vkrs->pipelineCache, NULL);
   mvk_destroy_render_prog(vkrs, &vkrs->font_prog);
   mvk_destroy_render_prog(vkrs, &vkrs->texture_prog);
-  mvk_destroy_render_prog(vkrs, &vkrs->present_prog);
+  mvk_destroy_render_prog(vkrs, &vkrs->tint_prog);
 
   mvk_destroy_renderpasses(vkrs);
 

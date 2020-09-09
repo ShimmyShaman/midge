@@ -115,6 +115,7 @@ typedef struct vk_render_state {
     VkCommandBuffer *command_buffers;
     VkImage *images;
     VkImageView *image_views;
+    VkFramebuffer *framebuffers;
   } swap_chain;
 
   // HEADLESS IMAGE
@@ -151,9 +152,8 @@ typedef struct vk_render_state {
   } render_data_buffer;
 
   VkRenderPass present_render_pass, offscreen_render_pass;
-  VkFramebuffer *framebuffers;
 
-  render_program present_prog, texture_prog, font_prog;
+  render_program tint_prog, texture_prog, font_prog;
   VkPipelineCache pipelineCache;
 
   VkDescriptorPool descriptor_pool;

@@ -231,7 +231,11 @@ typedef struct node {
   void *data;
 } node;
 
+struct render_thread_info;
 typedef struct global_root_data {
+  struct timespec *app_begin_time;
+  render_thread_info *render_thread;
+
   node *global_node;
   struct {
     unsigned int alloc, count;

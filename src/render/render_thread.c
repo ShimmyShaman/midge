@@ -66,7 +66,7 @@ int set_scissor_cmd(VkCommandBuffer command_buffer, int32_t x, int32_t y, uint32
 }
 
 int mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long size_in_bytes, void *p_src,
-                                     VkDescriptorBufferInfo *descriptor_buffer_info)
+                                         VkDescriptorBufferInfo *descriptor_buffer_info)
 {
   if (p_vkrs->render_data_buffer.frame_utilized_amount + size_in_bytes >= p_vkrs->render_data_buffer.allocated_size) {
     printf("Requested more data then remaining in render_data_buffer\n");
@@ -90,7 +90,7 @@ int mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long 
   return 0;
 }
 
-VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer *command_buffer, image_render_queue *sequence,
+VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
                                  element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
 {
   // Bounds check
@@ -130,7 +130,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer *comma
   setAllocInfo.pNext = NULL;
   setAllocInfo.descriptorPool = p_vkrs->descriptor_pool;
   setAllocInfo.descriptorSetCount = 1;
-  setAllocInfo.pSetLayouts = p_vkrs->present_prog.descriptor_layout;
+  setAllocInfo.pSetLayouts = &p_vkrs->tint_prog.descriptor_layout;
 
   unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
   res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
@@ -159,7 +159,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer *comma
   write->dstSet = desc_set;
   write->descriptorCount = 1;
   write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  write->pBufferInfo = &vpc_desc_buffer_info;
+  write->pBufferInfo = &copy_buffer->vpc_desc_buffer_info;
   write->dstArrayElement = 0;
   write->dstBinding = 0;
 
@@ -187,10 +187,10 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer *comma
 
   vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
-  vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline_layout, 0, 1, &desc_set, 0,
-                          NULL);
+  vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->tint_prog.pipeline_layout, 0, 1,
+                          &desc_set, 0, NULL);
 
-  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->pipeline);
+  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->tint_prog.pipeline);
 
   const VkDeviceSize offsets[1] = {0};
   vkCmdBindVertexBuffers(command_buffer, 0, 1, &p_vkrs->shape_vertices.buf, offsets);
@@ -200,9 +200,8 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer *comma
   return res;
 }
 
-VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer *command_buffer,
-                                  image_render_queue *sequence, element_render_command *cmd,
-                                  mrt_sequence_copy_buffer *copy_buffer)
+VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
+                                  element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
 {
   VkResult res;
 
@@ -239,10 +238,10 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer *comm
   setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
   setAllocInfo.pNext = NULL;
   // Use the pool we created earlier ( the one dedicated to this frame )
-  setAllocInfo.descriptorPool = p_vkrs->desc_pool;
+  setAllocInfo.descriptorPool = p_vkrs->descriptor_pool;
   // We only need to allocate one
   setAllocInfo.descriptorSetCount = 1;
-  setAllocInfo.pSetLayouts = &p_vkrs->texture_prog.desc_layout;
+  setAllocInfo.pSetLayouts = &p_vkrs->texture_prog.descriptor_layout;
 
   unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
   res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
@@ -261,7 +260,7 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer *comm
   write->dstSet = desc_set;
   write->descriptorCount = 1;
   write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  write->pBufferInfo = &vpc_desc_buffer_info;
+  write->pBufferInfo = &copy_buffer->vpc_desc_buffer_info;
   write->dstArrayElement = 0;
   write->dstBinding = 0;
 
@@ -309,20 +308,20 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer *comm
   return res;
 }
 
-VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer *command_buffer, image_render_queue *sequence,
+VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
                          element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
 {
   VkResult res;
 
   if (!cmd->data.print_text.text) {
-    break;
+    return VK_SUCCESS;
   }
   // Get the font image
   loaded_font_info *font = NULL;
   for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
     if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->data.print_text.font_resource_uid) {
       font = &p_vkrs->loaded_fonts.fonts[f];
-      break;
+      return VK_SUCCESS;
     }
   }
   if (!font) {
@@ -403,9 +402,9 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer *command_buffe
     VkDescriptorSetAllocateInfo setAllocInfo = {};
     setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     setAllocInfo.pNext = NULL;
-    setAllocInfo.descriptorPool = p_vkrs->desc_pool;
+    setAllocInfo.descriptorPool = p_vkrs->descriptor_pool;
     setAllocInfo.descriptorSetCount = 1;
-    setAllocInfo.pSetLayouts = &p_vkrs->font_prog.desc_layout;
+    setAllocInfo.pSetLayouts = &p_vkrs->font_prog.descriptor_layout;
 
     unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
     // printf("cmd->text:'%s' descriptor_set_index=%u\n", cmd->data.print_text.text, descriptor_set_index);
@@ -435,7 +434,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer *command_buffe
     write->dstSet = desc_set;
     write->descriptorCount = 1;
     write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    write->pBufferInfo = &vpc_desc_buffer_info;
+    write->pBufferInfo = &copy_buffer->vpc_desc_buffer_info;
     write->dstArrayElement = 0;
     write->dstBinding = 0;
 
@@ -495,7 +494,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer *command_buffe
   return res;
 }
 
-VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer *command_buffer, image_render_queue *sequence)
+VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence)
 {
   // Descriptor Writes
   VkResult res;
@@ -506,13 +505,12 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer *command_buffe
   // TODO -- this still isn't very seamly no size checking on entry into the buffer, and keeps recreating it?
   // Donno...
   mrt_sequence_copy_buffer copy_buffer;
-  copy_buffer->index = 0;
+  copy_buffer.index = 0;
 
   p_vkrs->render_data_buffer.frame_utilized_amount = 0;
   p_vkrs->render_data_buffer.queued_copies_count = 0U;
 
   mat4 vpc;
-  VkDescriptorBufferInfo vpc_desc_buffer_info;
   {
     // Construct the Vulkan View/Projection/Clip for the render target image
     mat4 view;
@@ -524,7 +522,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer *command_buffe
     glm_mat4_mul((vec4 *)&proj, (vec4 *)&view, (vec4 *)&vpc);
     glm_mat4_mul((vec4 *)&clip, (vec4 *)&vpc, (vec4 *)&vpc);
 
-    mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), &vpc, &vpc_desc_buffer_info);
+    mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), &vpc, &copy_buffer.vpc_desc_buffer_info);
   }
 
   for (int j = 0; j < sequence->command_count; ++j) {
@@ -532,17 +530,17 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer *command_buffe
     element_render_command *cmd = &sequence->commands[j];
     switch (cmd->type) {
     case RENDER_COMMAND_COLORED_QUAD: {
-      res = mrt_render_colored_quad(p_vkrs, command_buffer, sequence, cmd, &copy_buffer->data);
+      res = mrt_render_colored_quad(p_vkrs, command_buffer, sequence, cmd, &copy_buffer.data);
       VK_CHECK(res, "mrt_render_colored_rectangle");
     } break;
 
     case RENDER_COMMAND_TEXTURED_QUAD: {
-      res = mrt_render_textured_quad(p_vkrs, command_buffer, sequence, cmd, &copy_buffer->data);
+      res = mrt_render_textured_quad(p_vkrs, command_buffer, sequence, cmd, &copy_buffer.data);
       VK_CHECK(res, "mrt_render_textured_quad");
     } break;
 
     case RENDER_COMMAND_PRINT_TEXT: {
-      res = mrt_render_text(p_vkrs, command_buffer, sequence, cmd, &copy_buffer->data);
+      res = mrt_render_text(p_vkrs, command_buffer, sequence, cmd, &copy_buffer.data);
       VK_CHECK(res, "mrt_render_text");
     } break;
 
@@ -552,7 +550,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer *command_buffe
     }
   }
 
-  if (copy_buffer->index >= COPY_BUFFER_SIZE) {
+  if (copy_buffer.index >= MRT_SEQUENCE_COPY_BUFFER_SIZE) {
     printf("ERROR Copy Buffer Allocation is insufficient!!\n");
     return VK_ERROR_UNKNOWN;
   }
@@ -604,7 +602,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
       VK_CHECK(res, "vkCreateSemaphore");
 
       // Get the index of the next available swapchain image:
-      res = vkAcquireNextImageKHR(p_vkrs->device, p_vkrs->swap_chain, UINT64_MAX, imageAcquiredSemaphore,
+      res = vkAcquireNextImageKHR(p_vkrs->device, p_vkrs->swap_chain.instance, UINT64_MAX, imageAcquiredSemaphore,
                                   VK_NULL_HANDLE, &p_vkrs->swap_chain.current_index);
       // TODO: Deal with the VK_SUBOPTIMAL_KHR and VK_ERROR_OUT_OF_DATE_KHR
       // return codes
@@ -637,7 +635,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
       rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
       rp_begin.pNext = NULL;
       rp_begin.renderPass = p_vkrs->present_render_pass;
-      rp_begin.framebuffer = p_vkrs->framebuffers[p_vkrs->current_buffer];
+      rp_begin.framebuffer = p_vkrs->swap_chain.framebuffers[p_vkrs->swap_chain.current_index];
       rp_begin.renderArea.offset.x = 0;
       rp_begin.renderArea.offset.y = 0;
       rp_begin.renderArea.extent.width = sequence->image_width;
@@ -647,7 +645,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
 
       vkCmdBeginRenderPass(command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
-      render_sequence(p_vkrs, sequence);
+      res = render_sequence(p_vkrs, command_buffer, sequence);
+      VK_CHECK(res, "render_sequence");
 
       vkCmdEndRenderPass(command_buffer);
       res = vkEndCommandBuffer(command_buffer);
@@ -683,8 +682,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
       present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
       present.pNext = NULL;
       present.swapchainCount = 1;
-      present.pSwapchains = &p_vkrs->swap_chain;
-      present.pImageIndices = &p_vkrs->current_buffer;
+      present.pSwapchains = &p_vkrs->swap_chain.instance;
+      present.pImageIndices = &p_vkrs->swap_chain.current_index;
       present.pWaitSemaphores = NULL;
       present.waitSemaphoreCount = 0;
       present.pResults = NULL;
@@ -762,7 +761,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
       vkCmdBeginRenderPass(p_vkrs->headless.command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
       res = render_sequence(p_vkrs, p_vkrs->headless.command_buffer, sequence);
-      VK_CHECK(res, "vkEndCommandBuffer");
+      VK_CHECK(res, "render_sequence");
 
       vkCmdEndRenderPass(p_vkrs->headless.command_buffer);
       res = vkEndCommandBuffer(p_vkrs->headless.command_buffer);
@@ -821,7 +820,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
   uint frame_updates = 0;
-  while (!thr->should_exit && !vkrs->xcb_winfo.shouldExit) {
+  while (!thr->should_exit && !vkrs->xcb_winfo->shouldExit) {
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue.mutex);
     if (render_thread->resource_queue.count) {
@@ -894,34 +893,10 @@ void *midge_render_thread(void *vargp)
   res = mrt_run_update_loop(render_thread, &vkrs);
 
   // Vulkan Cleanup
-  res = mvk_cleanup_resources(&vkrs);
-  res = mvk_cleanup_vulkan(&vkrs);
-  if (res) {
-    printf("--ERR[%i] mvk_cleanup_vulkan\n", res);
-    return NULL;
-  }
-
-  // VkResult res;
-  // res = mvk_init_global_layer_properties(vkrs);
-  // if (res) {
-  //   printf("--ERR[%i] mvk_init_global_layer_properties\n", res);
-  //   return NULL;
-  // }
-  // res = mvk_init_device_extension_names(vkrs);
-  // if (res) {
-  //   printf("--ERR[%i] mvk_init_device_extension_names\n", res);
-  //   return NULL;
-  // }
-  // res = mvk_init_instance(vkrs, "midge");
-  // if (res) {
-  //   printf("--ERR[%i] mvk_init_instance line:%i\n", res, __LINE__);
-  //   return NULL;
-  // }
-  // res = mvk_init_enumerate_device(vkrs);
-  // if (res) {
-  //   printf("--ERR[%i] mvk_init_enumerate_device\n", res);
-  //   return NULL;
-  // }
+  res = mvk_destroy_resources(&vkrs);
+  VK_CHECK(res, "mvk_destroy_resources");
+  res = mvk_destroy_vulkan(&vkrs);
+  VK_CHECK(res, "mvk_destroy_vulkan");
 
   render_thread->thread_info->has_concluded = 1;
   return NULL;

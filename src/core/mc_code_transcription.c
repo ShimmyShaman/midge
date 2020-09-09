@@ -595,6 +595,55 @@ int mct_contains_mc_invoke(mc_syntax_node *syntax_node, bool *result)
   return 0;
 }
 
+int mct_transcribe_type_identifier(mct_transcription_state *ts, mc_syntax_node *syntax_node)
+{
+  // Const
+  if (syntax_node->type_identifier.is_const) {
+    append_to_c_str(ts->str, "const ");
+  }
+
+  // Signing
+  if (syntax_node->type_identifier.is_signed != -1) {
+    if (syntax_node->type_identifier.is_signed == 0) {
+      append_to_c_str(ts->str, "unsigned ");
+    }
+    else if (syntax_node->type_identifier.is_signed == 1) {
+      append_to_c_str(ts->str, "signed ");
+    }
+    else {
+      MCerror(265, "TODO");
+    }
+  }
+  if (syntax_node->type_identifier.size_modifiers) {
+    MCerror(270, "TODO");
+  }
+
+  // struct prepend
+  if (syntax_node->type_identifier.has_struct_prepend) {
+    append_to_c_str(ts->str, "struct ");
+  }
+
+  // type identifier
+  char *mc_declared_name = NULL;
+  struct_info *structure_info;
+  find_struct_info(syntax_node->type_identifier.identifier->text, &structure_info);
+  if (structure_info && structure_info->mc_declared_name) {
+    append_to_c_str(ts->str, structure_info->mc_declared_name);
+  }
+  else {
+    enumeration_info *enum_info;
+    find_enumeration_info(syntax_node->type_identifier.identifier->text, &enum_info);
+    if (enum_info && enum_info->mc_declared_name) {
+      append_to_c_str(ts->str, enum_info->mc_declared_name);
+    }
+    else {
+      mct_append_node_text_to_c_str(ts->str, syntax_node->type_identifier.identifier);
+    }
+  }
+
+  return 0;
+}
+
 int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax_node *argument,
                                           const char *argument_data_name, int arg_index)
 {
@@ -796,8 +845,10 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
     append_to_c_strf(ts->str, "size_t %s_%i = sizeof(", argument_data_name, arg_index);
     mct_transcribe_type_identifier(ts, argument->sizeof_expression.type_identifier);
     append_to_c_str(ts->str, " ");
-    for (int d = 0; d < argument->sizeof_expression.type_dereference->dereference_sequence.count; ++d) {
-      append_to_c_str(ts->str, "*");
+    if (argument->sizeof_expression.type_dereference) {
+      for (int d = 0; d < argument->sizeof_expression.type_dereference->dereference_sequence.count; ++d) {
+        append_to_c_str(ts->str, "*");
+      }
     }
     append_to_c_str(ts->str, ");\n");
     mct_append_indent_to_c_str(ts);
@@ -1157,55 +1208,6 @@ int mct_transcribe_declarator(mct_transcription_state *ts, mc_syntax_node *synta
             ts, syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression);
       }
       append_to_c_str(ts->str, "]");
-    }
-  }
-
-  return 0;
-}
-
-int mct_transcribe_type_identifier(mct_transcription_state *ts, mc_syntax_node *syntax_node)
-{
-  // Const
-  if (syntax_node->type_identifier.is_const) {
-    append_to_c_str(ts->str, "const ");
-  }
-
-  // Signing
-  if (syntax_node->type_identifier.is_signed != -1) {
-    if (syntax_node->type_identifier.is_signed == 0) {
-      append_to_c_str(ts->str, "unsigned ");
-    }
-    else if (syntax_node->type_identifier.is_signed == 1) {
-      append_to_c_str(ts->str, "signed ");
-    }
-    else {
-      MCerror(265, "TODO");
-    }
-  }
-  if (syntax_node->type_identifier.size_modifiers) {
-    MCerror(270, "TODO");
-  }
-
-  // struct prepend
-  if (syntax_node->type_identifier.has_struct_prepend) {
-    append_to_c_str(ts->str, "struct ");
-  }
-
-  // type identifier
-  char *mc_declared_name = NULL;
-  struct_info *structure_info;
-  find_struct_info(syntax_node->type_identifier.identifier->text, &structure_info);
-  if (structure_info && structure_info->mc_declared_name) {
-    append_to_c_str(ts->str, structure_info->mc_declared_name);
-  }
-  else {
-    enumeration_info *enum_info;
-    find_enumeration_info(syntax_node->type_identifier.identifier->text, &enum_info);
-    if (enum_info && enum_info->mc_declared_name) {
-      append_to_c_str(ts->str, enum_info->mc_declared_name);
-    }
-    else {
-      mct_append_node_text_to_c_str(ts->str, syntax_node->type_identifier.identifier);
     }
   }
 
