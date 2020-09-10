@@ -119,7 +119,6 @@ void midge_run_app()
 
   mc_input_event *input_event = (mc_input_event *)malloc(sizeof(mc_input_event));
   input_event->type = INPUT_EVENT_NONE;
-  // input_event.detail = INPUT_EVENT_CODE_NONE;
   input_event->altDown = false;
   input_event->ctrlDown = false;
   input_event->shiftDown = false;
@@ -131,6 +130,11 @@ void midge_run_app()
   frame_time *elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
   int ui = 0;
   while (1) {
+    if (global_data->render_thread->thread_info->has_concluded) {
+      printf("Render Thread Aborted abnormally.\nShutting down...\n");
+      break;
+    }
+
     // // Time
     bool logic_update_due = false;
     {
@@ -171,7 +175,7 @@ void midge_run_app()
       }
 
       // Update Timers
-      bool exit_gracefully = true;
+      bool exit_gracefully = false;
       // for (int i = 0; i < !exit_gracefully && global_data->update_timers.count; ++i) {
       //   update_callback_timer *timer = global_data->update_timers.callbacks[i];
 

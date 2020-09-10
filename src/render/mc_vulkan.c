@@ -1950,6 +1950,12 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   int init_window_res = mxcb_init_window(vkrs->xcb_winfo, vkrs->window_width, vkrs->window_height);
   VK_ASSERT(init_window_res == 0, "mxcb_init_window");
   VK_ASSERT(vkrs->xcb_winfo->connection != 0, "CHECK");
+{
+    int xce = xcb_connection_has_error(vkrs->xcb_winfo->connection);
+    if (xce) {
+      printf("XCB_CONNECTION_ERROR:VA:%i\n", xce);
+    }
+}
 
   res = mvk_init_xcb_surface(vkrs);
   VK_CHECK(res, "mvk_init_xcb_surface");
@@ -1957,6 +1963,12 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   VK_CHECK(res, "mvk_init_logical_device");
   res = mvk_init_command_pool(vkrs);
   VK_CHECK(res, "mvk_init_command_pool");
+{
+    int xce = xcb_connection_has_error(vkrs->xcb_winfo->connection);
+    if (xce) {
+      printf("XCB_CONNECTION_ERROR:VB:%i\n", xce);
+    }
+}
 
   res = mvk_init_swapchain_data(vkrs);
   VK_CHECK(res, "mvk_init_swapchain_data");
@@ -1964,11 +1976,23 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   VK_CHECK(res, "mvk_init_headless_image");
   res = mvk_init_uniform_buffer(vkrs);
   VK_CHECK(res, "mvk_init_uniform_buffer");
+{
+    int xce = xcb_connection_has_error(vkrs->xcb_winfo->connection);
+    if (xce) {
+      printf("XCB_CONNECTION_ERROR:VC:%i\n", xce);
+    }
+}
 
   res = mvk_init_present_renderpass(vkrs);
   VK_CHECK(res, "mvk_init_present_renderpass");
   res = mvk_init_offscreen_renderpass(vkrs);
   VK_CHECK(res, "mvk_init_offscreen_renderpass");
+{
+    int xce = xcb_connection_has_error(vkrs->xcb_winfo->connection);
+    if (xce) {
+      printf("XCB_CONNECTION_ERROR:VD:%i\n", xce);
+    }
+}
 
   res = mvk_init_present_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_textured_render_prog");
@@ -1976,11 +2000,23 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   VK_CHECK(res, "mvk_init_textured_render_prog");
   res = mvk_init_font_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_font_render_prog");
+{
+    int xce = xcb_connection_has_error(vkrs->xcb_winfo->connection);
+    if (xce) {
+      printf("XCB_CONNECTION_ERROR:VE:%i\n", xce);
+    }
+}
 
   res = mvk_init_framebuffers(vkrs);
   VK_CHECK(res, "mvk_init_framebuffers");
   res = mvk_init_descriptor_pool(vkrs);
   VK_CHECK(res, "mvk_init_descriptor_pool");
+{
+    int xce = xcb_connection_has_error(vkrs->xcb_winfo->connection);
+    if (xce) {
+      printf("XCB_CONNECTION_ERROR:VF:%i\n", xce);
+    }
+}
 
   return VK_SUCCESS;
 }

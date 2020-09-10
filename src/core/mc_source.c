@@ -618,9 +618,9 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "init_c_str")) {
-  //   print_syntax_node(ast, 0);
-  //   // printf("mc_transcription:\n%s||\n", mc_transcription);
+  // if (!strcmp(func_info->name, "mxcb_init_window")) {
+  //   // print_syntax_node(ast, 0);
+  //   printf("mc_transcription:\n%s||\n", mc_transcription);
   // }
   // if (!strcmp(func_info->name, "mvk_init_swapchain_frame_buffers")) {
   //   // print_syntax_node(ast, 0);

@@ -1,5 +1,6 @@
 #include "mc_xcb.h"
 
+#include "platform/mc_xcb.h"
 #include <stdio.h>
 #include <vulkan/vulkan_xcb.h>
 
@@ -211,8 +212,6 @@ int get_key_input_code_char(bool shift, key_event_code code, char *c)
   }
 }
 
-#include "rendering/xcbwindow.h"
-
 int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
 {
   // Create connection to X11 server
@@ -265,27 +264,31 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
                     dimensions.offset.y, dimensions.extent.width, dimensions.extent.height, 0,
                     XCB_WINDOW_CLASS_INPUT_OUTPUT, p_wnfo->screen->root_visual, value_mask, value_list);
 
+  int xce = xcb_connection_has_error(p_wnfo->connection);
+  if (xce) {
+    printf("XCB_CONNECTION_ERROR:A:%i\n", xce);
+    return xce;
+  }
+
   /* Magic code that will send notification when window is destroyed */
   xcb_intern_atom_cookie_t cookie = xcb_intern_atom(p_wnfo->connection, 1, 12, "WM_PROTOCOLS");
   xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(p_wnfo->connection, cookie, 0);
 
   xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(p_wnfo->connection, 0, 16, "WM_DELETE_WINDOW");
-  // p_wnfo->atom_window_reply = xcb_intern_atom_reply(p_wnfo->connection, cookie2, 0);
-  // if (p_wnfo->atom_window_reply)
-  //   printf("The _NET_WM_NAME atom has ID %u\n", p_wnfo->atom_window_reply->atom);
-  // else
-  //   printf("The _NET_WM_NAME atom has NO ID\n");
+  p_wnfo->atom_window_reply = xcb_intern_atom_reply(p_wnfo->connection, cookie2, 0);
+  if (p_wnfo->atom_window_reply)
+    printf("The _NET_WM_NAME atom has ID %u\n", p_wnfo->atom_window_reply->atom);
+  else
+    printf("The _NET_WM_NAME atom has NO ID\n");
 
-  // xcb_change_property(p_wnfo->connection, XCB_PROP_MODE_REPLACE, p_wnfo->window, (*reply).atom, 4, 32, 1,
-  //                     &(*p_wnfo->atom_window_reply).atom);
+  xcb_change_property(p_wnfo->connection, XCB_PROP_MODE_REPLACE, p_wnfo->window, (*reply).atom, 4, 32, 1,
+                      &(*p_wnfo->atom_window_reply).atom);
   free(reply);
 
   xcb_map_window(p_wnfo->connection, p_wnfo->window);
 
   // Force the x/y coordinates to 100,100 results are identical in consecutive runs
-  uint32_t coords[2];
-  coords[0] = 100;
-  coords[1] = 100;
+  const uint32_t coords[] = {100, 100};
   xcb_configure_window(p_wnfo->connection, p_wnfo->window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, coords);
   xcb_flush(p_wnfo->connection);
 
@@ -297,27 +300,23 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
     }
     */
 
+  xce = xcb_connection_has_error(p_wnfo->connection);
+  if (xce) {
+    printf("XCB_CONNECTION_ERROR:B:%i\n", xce);
+    return xce;
+  }
+
   return 0;
 }
-
-// int initOSSurface(mxcb_window_info *p_wnfo, VkInstance vulkanInstance, VkSurfaceKHR *surface)
-// {
-//   VkXcbSurfaceCreateInfoKHR create_info;
-//   create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-//   create_info.connection = p_wnfo->xcb_connection;
-//   create_info.window = p_wnfo->xcb_window;
-
-//   if (vkCreateXcbSurfaceKHR(vulkanInstance, &create_info, NULL, surface) != VK_SUCCESS)
-//   {
-//     printf("error54252");
-//     return -1;
-//   }
-//   return 0;
-// }
 
 int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buffer)
 {
   while (true) {
+    int xce = xcb_connection_has_error(p_wnfo->connection);
+    if (xce) {
+      printf("XCB_CONNECTION_ERROR:U:%i\n", xce);
+      return xce;
+    }
     xcb_generic_event_t *event = xcb_poll_for_event(p_wnfo->connection);
 
     // if there is no event, event will be NULL
@@ -325,11 +324,10 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
     if (!event)
       return 0;
 
-    // printf("xcb_full_sequence:%u\n", event->full_sequence);
-    // printf("xcb_pad:%u,%u,%u,%u,%u,%u,%u\n", event->pad[0], event->pad[1], event->pad[2], event->pad[3],
-    // event->pad[4],
-    //        event->pad[5], event->pad[6]);
-    // printf("xcb_sequence:%u\n", event->sequence);
+    printf("xcb_full_sequence:%u\n", event->full_sequence);
+    printf("xcb_pad:%u,%u,%u,%u,%u,%u,%u\n", event->pad[0], event->pad[1], event->pad[2], event->pad[3], event->pad[4],
+           event->pad[5], event->pad[6]);
+    printf("xcb_sequence:%u\n", event->sequence);
 
     switch (event->response_type & ~0x80) {
     case XCB_CLIENT_MESSAGE:
@@ -406,6 +404,13 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
 
 void mxcb_destroy_window(mxcb_window_info *p_wnfo)
 {
+  printf("mxcb_destroy_window\n"
+         "mxcb_destroy_window\n"
+         "mxcb_destroy_window\n"
+         "mxcb_destroy_window\n"
+         "mxcb_destroy_window\n"
+         "mxcb_destroy_window\n"
+         "mxcb_destroy_window\n");
   // free(p_wnfo->atom_window_reply);
 
   xcb_destroy_window(p_wnfo->connection, p_wnfo->window);
