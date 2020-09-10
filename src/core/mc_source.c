@@ -618,11 +618,11 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "mxcb_init_window")) {
+  // if (!strcmp(func_info->name, "mrt_run_update_loop")) {
   //   // print_syntax_node(ast, 0);
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
   // }
-  // if (!strcmp(func_info->name, "mvk_init_swapchain_frame_buffers")) {
+  // if (!strcmp(func_info->name, "midge_render_thread")) {
   //   // print_syntax_node(ast, 0);
   //   // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
@@ -666,7 +666,7 @@ int instantiate_struct_definition_from_ast(node *definition_owner, source_defini
   char *mc_transcription;
   transcribe_struct_to_mc(structure_info, ast, &mc_transcription);
 
-  // if (!strcmp(structure_info->name, "mc_syntax_node"))
+  // if (!strcmp(structure_info->name, "render_color"))
   //   printf("struct:\n%s||\n", mc_transcription);
   int result = clint_declare(mc_transcription);
   if (result) {

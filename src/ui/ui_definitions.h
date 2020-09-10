@@ -4,6 +4,7 @@
 #define UI_DEFINITIONS_H
 
 #include "core/midge_core.h"
+#include "render/render_common.h"
 
 typedef enum horizontal_alignment {
   HORIZONTAL_ALIGNMENT_NULL = 0,
@@ -27,6 +28,6 @@ typedef struct mui_text_block {
 
 void mui_update_ui() { printf("28, TODO\n"); }
 
-void mui_init_text_block(node *parent, mui_text_block **p_text_block);
+void mui_init_text_block(node *visual_node, mui_text_block **p_text_block);
 
 #endif // UI_DEFINITIONS_H

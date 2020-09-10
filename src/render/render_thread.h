@@ -18,10 +18,6 @@ typedef enum element_render_command_type {
   RENDER_COMMAND_PRINT_TEXT,
 } element_render_command_type;
 
-typedef struct render_color {
-  float r, g, b, a;
-} render_color;
-
 typedef struct element_render_command {
   element_render_command_type type;
   unsigned int x, y;

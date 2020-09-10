@@ -35,8 +35,9 @@ typedef enum node_type {
   NODE_TYPE_GLOBAL_ROOT,
   NODE_TYPE_CONSOLE_APP,
   NODE_TYPE_VISUAL_APP,
-  NODE_TYPE_VISUAL,
+  NODE_TYPE_UI,
   NODE_TYPE_ABSTRACT,
+  NODE_TYPE_MIDGE_EXCLUSIVE_MAXIMUM = 1000,
 } node_type;
 
 typedef enum parameter_kind {
@@ -218,7 +219,6 @@ typedef struct event_handler_array {
 } event_handler_array;
 
 typedef struct node {
-  struct_id *type_id;
   node_type type;
   char *name;
 

@@ -39,6 +39,7 @@ rewriting the system with what I have learned up to now as...
 INTEGRATE PROPER ERROR HANDLING AS WELL
 ###################################################################
 
+Goal: reach a development milestone - The means to 
 
 Goal: Initiate and complete a project that can export an application that has a button that prints 'hello world' when pressed to console
 

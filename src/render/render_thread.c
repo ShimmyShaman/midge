@@ -816,13 +816,15 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   mthread_info *thr = render_thread->thread_info;
 
   // -- Update
-  int wures = mxcb_update_window(&vkrs->xcb_winfo, &render_thread->input_buffer);
+  int wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
   VK_CHECK((VkResult)wures, "mxcb_update_window");
+  // printf("mrt-2:good\n");
   render_thread->render_thread_initialized = true;
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
   uint frame_updates = 0;
-  while (!thr->should_exit && !vkrs->xcb_winfo->shouldExit) {
+  while (!thr->should_exit && !vkrs->xcb_winfo->input_requests_exit) {
+
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue.mutex);
     if (render_thread->resource_queue.count) {
@@ -855,7 +857,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     }
     pthread_mutex_unlock(&render_thread->render_queue.mutex);
 
-    wures = mxcb_update_window(&vkrs->xcb_winfo, &render_thread->input_buffer);
+    wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
     VK_CHECK((VkResult)wures, "mxcb_update_window");
   }
   printf("AfterUpdate! frame_updates = %i\n", frame_updates);
@@ -873,7 +875,7 @@ void *midge_render_thread(void *vargp)
 
   // -- States
   mxcb_window_info winfo;
-  winfo.shouldExit = 0;
+  winfo.input_requests_exit = 0;
 
   vk_render_state vkrs = {};
   vkrs.window_width = APPLICATION_SET_WIDTH;
@@ -898,14 +900,6 @@ void *midge_render_thread(void *vargp)
     printf("--ERR[%i] mvk_init_resources\n", res);
     render_thread->thread_info->has_concluded = 1;
     return NULL;
-  }
-  {
-    int xce = xcb_connection_has_error(vkrs.xcb_winfo->connection);
-    if (xce) {
-      printf("XCB_CONNECTION_ERROR:VG:%i\n", xce);
-    }
-    else
-      printf("it good\n");
   }
 
   // Update Loop

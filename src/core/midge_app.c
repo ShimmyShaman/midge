@@ -64,6 +64,16 @@ int begin_render_thread()
   begin_mthread(&midge_render_thread, &global_data->render_thread->thread_info, (void *)global_data->render_thread);
 }
 
+void complete_midge_app_compile()
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_definitions.h", NULL);
+
+  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/text_block.c", NULL);
+}
+
 void midge_initialize_app(struct timespec *app_begin_time)
 {
   global_root_data *global_data;
@@ -81,7 +91,7 @@ void midge_initialize_app(struct timespec *app_begin_time)
   begin_render_thread();
 
   // Compile the remainder of the application
-  // ---- TODO ----
+  complete_midge_app_compile();
 
   // Initialize main thread
   // ---- TODO ----
@@ -230,9 +240,9 @@ void midge_run_app()
     if (global_data->render_thread->input_buffer.event_count > 0) {
       // New Input Event
       input_event->handled = false;
-      printf("input_recorded\n");
+      // printf("input_recorded\n");
 
-      bool exit_loop = true;
+      bool exit_loop = false;
       for (int i = 0; i < global_data->render_thread->input_buffer.event_count && !exit_loop; ++i) {
         switch (global_data->render_thread->input_buffer.events[i].type) {
         case INPUT_EVENT_MOUSE_PRESS: {

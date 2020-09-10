@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "midge.h"
 #include "midge_error_handling.h"
 
 #define MCerror(error_code, error_message, ...)                          \

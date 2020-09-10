@@ -276,10 +276,10 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
 
   xcb_intern_atom_cookie_t cookie2 = xcb_intern_atom(p_wnfo->connection, 0, 16, "WM_DELETE_WINDOW");
   p_wnfo->atom_window_reply = xcb_intern_atom_reply(p_wnfo->connection, cookie2, 0);
-  if (p_wnfo->atom_window_reply)
-    printf("The _NET_WM_NAME atom has ID %u\n", p_wnfo->atom_window_reply->atom);
-  else
-    printf("The _NET_WM_NAME atom has NO ID\n");
+  // if (p_wnfo->atom_window_reply)
+  //   printf("The _NET_WM_NAME atom has ID %u\n", p_wnfo->atom_window_reply->atom);
+  // else
+  //   printf("The _NET_WM_NAME atom has NO ID\n");
 
   xcb_change_property(p_wnfo->connection, XCB_PROP_MODE_REPLACE, p_wnfo->window, (*reply).atom, 4, 32, 1,
                       &(*p_wnfo->atom_window_reply).atom);
@@ -312,11 +312,12 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
 int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buffer)
 {
   while (true) {
-    int xce = xcb_connection_has_error(p_wnfo->connection);
-    if (xce) {
-      printf("XCB_CONNECTION_ERROR:U:%i\n", xce);
-      return xce;
-    }
+    // printf("mxcb_update_window:mxcb_window_info *=%p", p_wnfo);
+    // int xce = xcb_connection_has_error(p_wnfo->connection);
+    // if (xce) {
+    //   printf("XCB_CONNECTION_ERROR:U:%i\n", xce);
+    //   return xce;
+    // }
     xcb_generic_event_t *event = xcb_poll_for_event(p_wnfo->connection);
 
     // if there is no event, event will be NULL
@@ -324,19 +325,18 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
     if (!event)
       return 0;
 
-    printf("xcb_full_sequence:%u\n", event->full_sequence);
-    printf("xcb_pad:%u,%u,%u,%u,%u,%u,%u\n", event->pad[0], event->pad[1], event->pad[2], event->pad[3], event->pad[4],
-           event->pad[5], event->pad[6]);
-    printf("xcb_sequence:%u\n", event->sequence);
+    // printf("xcb_full_sequence:%u\n", event->full_sequence);
+    // printf("xcb_pad:%u,%u,%u,%u,%u,%u,%u\n", event->pad[0], event->pad[1], event->pad[2], event->pad[3], event->pad[4],
+    //        event->pad[5], event->pad[6]);
+    // printf("xcb_sequence:%u\n", event->sequence);
 
     switch (event->response_type & ~0x80) {
     case XCB_CLIENT_MESSAGE:
-      for (int i = 0; i < 10; ++i)
-        printf("ERROR XCB_CLIENT_MESSAGE!!!!!\n");
-      // TODO Fix this atom business
-      // if (((xcb_client_message_event_t *)event)->data.data32[0] == p_wnfo->atom_window_reply->atom) {
-      //   p_wnfo->shouldExit = 1;
-      // }
+      // for (int i = 0; i < 10; ++i)
+      //   printf("ERROR XCB_CLIENT_MESSAGE!!!!!\n");
+      if (((xcb_client_message_event_t *)event)->data.data32[0] == p_wnfo->atom_window_reply->atom) {
+        p_wnfo->input_requests_exit = 1;
+      }
       break;
     case XCB_EXPOSE: {
       // Nothing?
@@ -404,13 +404,6 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
 
 void mxcb_destroy_window(mxcb_window_info *p_wnfo)
 {
-  printf("mxcb_destroy_window\n"
-         "mxcb_destroy_window\n"
-         "mxcb_destroy_window\n"
-         "mxcb_destroy_window\n"
-         "mxcb_destroy_window\n"
-         "mxcb_destroy_window\n"
-         "mxcb_destroy_window\n");
   // free(p_wnfo->atom_window_reply);
 
   xcb_destroy_window(p_wnfo->connection, p_wnfo->window);

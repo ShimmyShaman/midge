@@ -1292,6 +1292,7 @@ int _mcl_load_app_mc_source()
   const char *_mcl_app_source_files[] = {
       "src/m_threads.h",
       "src/platform/mc_xcb.h",
+      "src/render/render_common.h",
       "src/render/mc_vulkan.h",
       "src/render/mc_vk_utils.h",
       "src/render/render_thread.h",
