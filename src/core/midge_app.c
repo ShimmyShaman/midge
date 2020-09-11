@@ -70,10 +70,20 @@ void complete_midge_app_compile()
   obtain_midge_global_root(&global_data);
 
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_definitions.h", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.h", NULL);
 
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/text_block.c", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.c", NULL);
 }
 
+void initialize_midge_components()
+{
+  // clint_process("initialize_");
+}
+
+extern "C" {
+void mcc_handle_xcb_input();
+}
 void midge_initialize_app(struct timespec *app_begin_time)
 {
   global_root_data *global_data;
@@ -94,7 +104,7 @@ void midge_initialize_app(struct timespec *app_begin_time)
   complete_midge_app_compile();
 
   // Initialize main thread
-  // ---- TODO ----
+  initialize_midge_components();
 
   // Wait for render thread initialization and all resources to load before continuing with the next set of commands
   while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue.count) {
@@ -237,122 +247,8 @@ void midge_run_app()
     // Handle Input
     pthread_mutex_lock(&global_data->render_thread->input_buffer.mutex);
 
-    if (global_data->render_thread->input_buffer.event_count > 0) {
-      // New Input Event
-      input_event->handled = false;
-      // printf("input_recorded\n");
-
-      bool exit_loop = false;
-      for (int i = 0; i < global_data->render_thread->input_buffer.event_count && !exit_loop; ++i) {
-        switch (global_data->render_thread->input_buffer.events[i].type) {
-        case INPUT_EVENT_MOUSE_PRESS: {
-          // Set input event for controls to handle
-          input_event->type = global_data->render_thread->input_buffer.events[i].type;
-          input_event->detail = global_data->render_thread->input_buffer.events[i].detail;
-
-          // Send input through the Global Node Hierarchy
-          // for (int i = 0; !input_event->handled && i < global_data->global_node->children.count; ++i) {
-          //   node *child = (node *)global_data->global_node->children.items[i];
-
-          //   // printf("INPUT_EVENT_MOUSE_PRESS>%s\n", child->name);
-          //   // printf("%p\n", child->data.visual.input_handler);
-          //   // if (child->data.visual.input_handler) {
-          //   //   printf("%p\n", (*child->data.visual.input_handler));
-          //   // }
-          //   // Check is visual and has input handler and mouse event is within bounds
-          //   if (child->type != NODE_TYPE_VISUAL || !child->data.visual.visible || !child->data.visual.input_handler
-          //   ||
-          //       !(*child->data.visual.input_handler))
-          //     continue;
-          //   // printf("A >%s\n", child->name);
-          //   if (input_event->detail.mouse.x < child->data.visual.bounds.x ||
-          //       input_event->detail.mouse.y < child->data.visual.bounds.y ||
-          //       input_event->detail.mouse.x >= child->data.visual.bounds.x + child->data.visual.bounds.width ||
-          //       input_event->detail.mouse.y >= child->data.visual.bounds.y + child->data.visual.bounds.height)
-          //     continue;
-          //   // printf("B >%s\n", child->name);
-
-          //   void *vargs[3];
-          //   vargs[0] = &elapsed;
-          //   vargs[1] = &child;
-          //   vargs[2] = &input_event;
-          //   // printf("calling input delegate for %s\n", child->name);
-          //   // printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
-          //   MCcall((*child->data.visual.input_handler)(3, vargs));
-          // }
-
-          // if (!input_event.handled) {
-          //   printf("unhandled_mouse_event:%i::%i\n", global_data->render_thread->input_buffer.events[i].type,
-          //          global_data->render_thread->input_buffer.events[i].detail.mouse.button);
-          // }
-        } break;
-        case INPUT_EVENT_FOCUS_IN:
-        case INPUT_EVENT_FOCUS_OUT: {
-          input_event->altDown = false;
-          // printf("alt is %s\n", input_event->altDown ? "DOWN" : "UP");
-        } break;
-        case INPUT_EVENT_KEY_RELEASE:
-        case INPUT_EVENT_KEY_PRESS: {
-          switch (global_data->render_thread->input_buffer.events[i].detail.keyboard.key) {
-          case KEY_CODE_LEFT_ALT:
-          case KEY_CODE_RIGHT_ALT:
-            input_event->altDown = global_data->render_thread->input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
-            // printf("alt is %s\n", input_event->altDown ? "DOWN" : "UP");
-            break;
-          case KEY_CODE_LEFT_SHIFT:
-          case KEY_CODE_RIGHT_SHIFT:
-            input_event->shiftDown = global_data->render_thread->input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
-            break;
-          case KEY_CODE_LEFT_CTRL:
-          case KEY_CODE_RIGHT_CTRL:
-            input_event->ctrlDown = global_data->render_thread->input_buffer.events[i].type == INPUT_EVENT_KEY_PRESS;
-            break;
-
-          default: {
-            // Set input event for controls to handle
-            input_event->type = global_data->render_thread->input_buffer.events[i].type;
-            input_event->detail = global_data->render_thread->input_buffer.events[i].detail;
-
-            if (input_event->detail.keyboard.key == KEY_CODE_W && input_event->ctrlDown && input_event->shiftDown) {
-              exit_loop = true;
-              continue;
-            }
-
-            // Global Node Hierarchy
-            // for (int i = 0; !input_event->handled && i < global_data->global_node->children.count; ++i) {
-            //   node *child = (node *)global_data->global_node->children.items[i];
-            //   if (child->type != NODE_TYPE_VISUAL)
-            //     continue;
-            //   // printf("checking input delegate exists\n");
-            //   if (!child->data.visual.input_handler || !*child->data.visual.input_handler)
-            //     continue;
-
-            //   void *vargs[3];
-            //   vargs[0] = &elapsed;
-            //   vargs[1] = &child;
-            //   vargs[2] = &input_event;
-            //   // printf("calling input delegate\n");
-            //   // printf("loop](*child->data.visual.input_handler):%p\n", (*child->data.visual.input_handler));
-            //   MCcall((*child->data.visual.input_handler)(3, vargs));
-            // }
-
-            if (!input_event->handled) {
-              printf("unhandled_keyboard_event:%i::%i\n", global_data->render_thread->input_buffer.events[i].type,
-                     global_data->render_thread->input_buffer.events[i].detail.keyboard.key);
-            }
-            break;
-          }
-          }
-        }
-        default:
-          break;
-        }
-      }
-      global_data->render_thread->input_buffer.event_count = 0;
-
-      if (exit_loop)
-        break;
-    }
+    if (global_data->render_thread->input_buffer.event_count > 0)
+      mcc_handle_xcb_input();
 
     // printf("~main_input\n");
     pthread_mutex_unlock(&global_data->render_thread->input_buffer.mutex);

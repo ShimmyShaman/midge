@@ -26,8 +26,12 @@ typedef struct mui_text_block {
   c_str *text;
 } mui_text_block;
 
+extern "C" {
 void mui_update_ui() { printf("28, TODO\n"); }
 
+void mui_get_ui_elements_at_point(int screen_x, int screen_y);
+
 void mui_init_text_block(node *visual_node, mui_text_block **p_text_block);
+}
 
 #endif // UI_DEFINITIONS_H
