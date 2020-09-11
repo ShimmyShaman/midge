@@ -374,6 +374,7 @@ const char *_mcl_core_structs[] = {
     "preprocess_define_info",
     "field_info",
     "field_info_list",
+    "node_list",
     "node",
 
     "mc_syntax_node",
@@ -1108,14 +1109,15 @@ int _mcl_init_core_data()
           "  global->type = NODE_TYPE_GLOBAL_ROOT;"
           "  allocate_and_copy_cstr(global->name, \"global\");"
           "  global->parent = NULL;"
-          "  global->children.alloc = 40;"
-          "  global->children.count = 0;"
-          "  global->children.items = (mc_core_v_node **)calloc(sizeof(mc_core_v_node *), global->children.alloc);"
           ""
           "  mc_core_v_global_root_data *global_root_data = (mc_core_v_global_root_data *)"
           "                                                 malloc(sizeof(mc_core_v_global_root_data ));"
           "  global->data = global_root_data;"
           "  global_root_data->global_node = global;"
+          ""
+          "  global_root_data->children = (mc_core_v_node_list *)malloc(sizeof(mc_core_v_node_list));"
+          "  global_root_data->children->alloc = 0;"
+          "  global_root_data->children->count = 0;"
           ""
           "  global_root_data->source_files.alloc = 100;"
           "  global_root_data->source_files.count = 0;"

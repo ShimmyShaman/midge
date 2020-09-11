@@ -196,7 +196,7 @@ int _midge_run()
 
     // Error Handling
     clint->process("{\n"
-                   "  initialize_midge_error_handling(clint);\n"
+                   "  initialize_midge_error_handling();\n"
                    "  unsigned int dummy_uint;\n"
                    "  int dummy_int;\n"
                    "  register_midge_thread_creation(&dummy_uint, \"_midge_run\", \"midge.h\", 131, &dummy_int);\n"

@@ -1,20 +1,8 @@
 /* midge_error_handling */
 
-// #include <cstring>
-// #include <fstream>
-// #include <iostream>
-// #include <map>
-// #include <stdarg.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-// #include <string>
-// #include <time.h>
-// #include <unistd.h>
-// #include <vector>
-
-#include <signal.h>
-
-#include "cling/Interpreter/Interpreter.h"
 
 #define MCcall(function)                                                                   \
   {                                                                                        \
@@ -384,7 +372,7 @@ void handler(int sig)
   exit(0);
 }
 
-void initialize_midge_error_handling(cling::Interpreter *clint)
+void initialize_midge_error_handling()
 {
   signal(SIGSEGV, handler); // register our handler
   MIDGE_ERROR_TAG_INDEX = 0;

@@ -73,17 +73,17 @@ void complete_midge_app_compile()
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.h", NULL);
 
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/text_block.c", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_functionality.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.c", NULL);
-}
-
-void initialize_midge_components()
-{
-  // clint_process("initialize_");
 }
 
 extern "C" {
 void mcc_handle_xcb_input();
+void mui_initialize_ui_state();
 }
+
+void initialize_midge_components() { mui_initialize_ui_state(); }
+
 void midge_initialize_app(struct timespec *app_begin_time)
 {
   global_root_data *global_data;

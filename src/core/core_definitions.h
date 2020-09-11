@@ -223,20 +223,30 @@ typedef struct node {
   char *name;
 
   node *parent;
-  struct {
-    unsigned int alloc, count;
-    node **items;
-  } children;
 
   void *data;
 } node;
 
+typedef struct node_list {
+  unsigned int alloc, count;
+  node **items;
+} node_list;
+
+// Incomplete Structure declarations
 struct render_thread_info;
+struct mui_ui_state;
+
 typedef struct global_root_data {
   struct timespec *app_begin_time;
   render_thread_info *render_thread;
 
   node *global_node;
+  node_list *children;
+
+  struct {
+    unsigned int width, height;
+  } screen;
+
   struct {
     unsigned int alloc, count;
     source_file_info **items;
@@ -265,6 +275,8 @@ typedef struct global_root_data {
     unsigned int alloc, count;
     event_handler_array **items;
   } event_handlers;
+
+  mui_ui_state *ui_state;
 } global_root_data;
 
 extern "C" {

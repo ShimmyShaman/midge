@@ -1,16 +1,31 @@
+
 #include "control/mc_controller.h"
+#include "core/core_definitions.h"
 
-void mcc_input_mouse_left_click(int screen_x, int screen_y) { printf("left_mouse_click %i, %i\n", screen_x, screen_y); }
-
-void mcc_input_mouse_right_click(int screen_x, int screen_y)
+// Only call this method directly to 'simulate' a mouse left click
+void mcc_input_mouse_left_click(int screen_x, int screen_y)
 {
-  node *node_hit = NULL;
-  mui_get_ui_elements_at_point(screen_x, screen_y);
-  if (!node_hit) {
-    return;
-  }
+  node_list *node_hit_list = NULL;
+  mui_get_ui_elements_at_point(screen_x, screen_y, &node_hit_list);
+
+  bool handled = false;
+  for (int a = 0; a < node_hit_list->count && !handled; ++a)
+    mui_handle_mouse_left_click(node_hit_list->items[a], screen_x, screen_y, &handled);
 }
 
+// Only call this method directly to 'simulate' a mouse right click
+void mcc_input_mouse_right_click(int screen_x, int screen_y)
+{
+  // Get all elements under the mouse cursor
+  node_list *node_hit_list;
+  mui_get_ui_elements_at_point(screen_x, screen_y, &node_hit_list);
+
+  bool handled = false;
+  for (int a = 0; a < node_hit_list->count && !handled; ++a)
+    mui_handle_mouse_right_click(node_hit_list->items[a], screen_x, screen_y, &handled);
+}
+
+// Handles all input from the X11/xcb? platform
 void mcc_handle_xcb_input()
 {
   global_root_data *global_data;

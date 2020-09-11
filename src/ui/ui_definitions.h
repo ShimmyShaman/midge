@@ -3,7 +3,7 @@
 #ifndef UI_DEFINITIONS_H
 #define UI_DEFINITIONS_H
 
-#include "core/midge_core.h"
+#include "core/core_definitions.h"
 #include "render/render_common.h"
 
 typedef enum horizontal_alignment {
@@ -26,10 +26,19 @@ typedef struct mui_text_block {
   c_str *text;
 } mui_text_block;
 
-extern "C" {
-void mui_update_ui() { printf("28, TODO\n"); }
+typedef struct mui_ui_state {
+  node_list *cache_layered_hit_list;
+} mui_ui_state;
 
-void mui_get_ui_elements_at_point(int screen_x, int screen_y);
+extern "C" {
+void mui_initialize_ui_state();
+
+void mui_update_ui();
+
+void mui_get_ui_elements_at_point(int screen_x, int screen_y, node_list **layered_hit_list);
+
+void mui_handle_mouse_left_click(node *ui_node, int screen_x, int screen_y, bool *handled) ;
+void mui_handle_mouse_right_click(node *ui_node, int screen_x, int screen_y, bool *handled) ;
 
 void mui_init_text_block(node *visual_node, mui_text_block **p_text_block);
 }
