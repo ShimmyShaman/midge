@@ -325,7 +325,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     }
   }
   if (!font) {
-    printf("Could not find requested font\n");
+    printf("Could not find requested font uid=%u\n", cmd->data.print_text.font_resource_uid);
     return VK_ERROR_UNKNOWN;
   }
 
@@ -815,8 +815,14 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   VkResult res;
   mthread_info *thr = render_thread->thread_info;
 
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
   // -- Update
   int wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
+  global_data->screen.width = vkrs->window_width;
+  global_data->screen.height = vkrs->window_height;
+  printf("Vulkan Initialized!\n");
   VK_CHECK((VkResult)wures, "mxcb_update_window");
   // printf("mrt-2:good\n");
   render_thread->render_thread_initialized = true;
@@ -893,7 +899,6 @@ void *midge_render_thread(void *vargp)
     render_thread->thread_info->has_concluded = 1;
     return NULL;
   }
-  printf("Vulkan Initialized!\n");
 
   res = mvk_init_resources(&vkrs);
   if (res) {

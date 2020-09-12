@@ -5,7 +5,7 @@
 // Only call this method directly to 'simulate' a mouse left click
 void mcc_input_mouse_left_click(int screen_x, int screen_y)
 {
-  mc_node_list *node_hit_list = NULL;
+  mc_node_list *node_hit_list;
   mui_get_ui_elements_at_point(screen_x, screen_y, &node_hit_list);
 
   bool handled = false;

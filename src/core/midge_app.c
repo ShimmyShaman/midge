@@ -1,7 +1,7 @@
 /* midge_app.c */
 
 #include "core_definitions.h"
-#include "render/global_data->render_thread->h"
+#include "render/render_thread.h"
 #include <time.h>
 
 #include "core/midge_app.h"
@@ -72,8 +72,10 @@ void complete_midge_app_compile()
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_definitions.h", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.h", NULL);
 
+  instantiate_all_definitions_from_file(global_data->global_node, "src/hierarchy/index_functions.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/text_block.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_functionality.c", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_render.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.c", NULL);
 }
 
@@ -120,6 +122,8 @@ void midge_initialize_app(struct timespec *app_begin_time)
     usleep(1);
   }
 
+  // Set properties
+
   // Completed
   struct timespec load_complete_frametime;
   clock_gettime(CLOCK_REALTIME, &load_complete_frametime);
@@ -159,7 +163,7 @@ void mca_render_presentation()
   obtain_midge_global_root(&global_data);
 
   image_render_queue *sequence;
-  obtain_image_render_queue(global_data->render_thread->render_queue, &sequence);
+  obtain_image_render_queue(&global_data->render_thread->render_queue, &sequence);
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
   sequence->clear_color = COLOR_CORNFLOWER_BLUE;
   sequence->image_width = global_data->screen.width;
@@ -183,6 +187,7 @@ void midge_run_app()
 
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
+  printf("defaultfont-0:%u\n", global_data->default_font_resource);
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);

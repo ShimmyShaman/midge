@@ -40,12 +40,12 @@ typedef struct element_render_command {
     } colored_rect_info;
     struct {
       char *text;
-      uint font_resource_uid;
+      unsigned int font_resource_uid;
       render_color color;
     } print_text;
     struct {
       unsigned int width, height;
-      uint texture_uid;
+      unsigned int texture_uid;
     } textured_rect_info;
   } data;
 } element_render_command;
@@ -54,25 +54,25 @@ typedef struct image_render_queue {
   unsigned int image_width, image_height;
   node_render_target render_target;
   render_color clear_color;
-  uint command_count;
-  uint commands_allocated;
+  unsigned int command_count;
+  unsigned int commands_allocated;
   element_render_command *commands;
   union {
     struct {
-      uint image_uid;
+      unsigned int image_uid;
     } target_image;
   } data;
 } image_render_queue;
 
 typedef struct resource_command {
   resource_command_type type;
-  uint *p_uid;
+  unsigned int *p_uid;
   union {
     struct {
       const char *path;
     } load_texture;
     struct {
-      uint width, height;
+      unsigned int width, height;
       bool use_as_render_target;
     } create_texture;
     struct {

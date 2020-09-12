@@ -30,14 +30,18 @@ typedef struct mui_ui_element {
   ui_element_type type;
   bool requires_update, requires_rerender;
   // unsigned int headless_image_resource_uid;
+
+  mc_rectf bounds;
+
   void *data;
 } mui_ui_element;
 
 typedef struct mui_text_block {
   mui_ui_element *element;
-  c_str *text;
+  c_str *str;
 
   unsigned int font_resource_uid;
+  render_color font_color;
 } mui_text_block;
 
 typedef struct mui_ui_state {

@@ -17,6 +17,9 @@ void mui_update_headless_image_node(mc_node *element_node)
   mui_ui_element *ui_element = (mui_ui_element *)element_node->data;
 
   switch (ui_element->type) {
+  case UI_ELEMENT_TEXT_BLOCK:
+    // Elements which do no headless image rendering, nor hold any children
+    break;
   default:
     MCerror(21, "mui_update_headless_image_node:>Unsupported element type:%i", ui_element->type);
   }
@@ -42,6 +45,9 @@ void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node)
   mui_ui_element *ui_element = (mui_ui_element *)element_node->data;
 
   switch (ui_element->type) {
+  case UI_ELEMENT_TEXT_BLOCK: {
+    mui_render_text_block(render_queue, element_node);
+  } break;
   default:
     MCerror(44, "mui_render_ui_node:>Unsupported element type:%i", ui_element->type);
   }

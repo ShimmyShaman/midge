@@ -154,7 +154,8 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
   return 0;
 }
 
-int update_or_register_function_info_from_syntax(mc_node *owner, mc_syntax_node *function_ast, function_info **p_func_info)
+int update_or_register_function_info_from_syntax(mc_node *owner, mc_syntax_node *function_ast,
+                                                 function_info **p_func_info)
 {
   function_info *func_info;
   find_function_info(function_ast->function.name->text, &func_info);
@@ -618,10 +619,10 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  if (!strcmp(func_info->name, "mvk_load_image_sampler")) {
-    // print_syntax_node(ast, 0);
-    printf("mc_transcription:\n%s||\n", mc_transcription);
-  }
+  // if (!strcmp(func_info->name, "mui_render_text_block")) {
+  //   // print_syntax_node(ast, 0);
+  //   printf("mc_transcription:\n%s||\n", mc_transcription);
+  // }
   // if (!strcmp(func_info->name, "midge_render_thread")) {
   //   // print_syntax_node(ast, 0);
   //   // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
@@ -760,9 +761,9 @@ int instantiate_define_statement(mc_node *definition_owner, mc_syntax_node *ast,
 }
 
 /*
-  From code definition: constructs source definition & parses to syntax, registers with heirarchy, and declares the
+  From code definition: constructs source definition & parses to syntax, registers with hierarchy, and declares the
   definition for immediate use.
-  @definition_owner the node in the heirarchy to attach this definition to.
+  @definition_owner the node in the hierarchy to attach this definition to.
   @code may be NULL only if ast is not, if so it will be generated from the syntax parse.
   @ast may be NULL only if code is not, if so it will be parsed from the code.
   @source may be NULL, if so it will be created.

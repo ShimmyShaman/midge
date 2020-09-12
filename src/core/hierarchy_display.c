@@ -126,20 +126,20 @@ void update_nodes_core_entry(core_display_state *cdstate, core_entry *entry)
   register_midge_error_tag("update_nodes_core_entry(~)");
 }
 
-void mcd_on_heirarchy_update(void *event_data)
+void mcd_on_hierarchy_update(void *event_data)
 {
-  printf("heirarchy_update!\n");
+  printf("hierarchy_update!\n");
 
-  mc_node_v1 *heirarchy_display;
-  MCcall(obtain_subnode_with_name(command_hub->global_node, CORE_OBJECTS_DISPLAY_NAME, &heirarchy_display));
-  if (!heirarchy_display) {
-    MCerror(1860, "Could not find heirarchy_display");
+  mc_node_v1 *hierarchy_display;
+  MCcall(obtain_subnode_with_name(command_hub->global_node, CORE_OBJECTS_DISPLAY_NAME, &hierarchy_display));
+  if (!hierarchy_display) {
+    MCerror(1860, "Could not find hierarchy_display");
   }
 
-  core_display_state *cdstate = (core_display_state *)heirarchy_display->extra;
+  core_display_state *cdstate = (core_display_state *)hierarchy_display->extra;
 
   update_nodes_core_entry(cdstate, cdstate->global_core_entry);
-  // register_midge_error_tag("mcd_on_heirarchy_update(~)");
+  // register_midge_error_tag("mcd_on_hierarchy_update(~)");
 }
 
 void core_display_handle_input(frame_time *elapsed, mc_node_v1 *core_display, mc_input_event_v1 *event)
@@ -283,8 +283,8 @@ void build_core_display()
                        &command_hub->global_node->child_count, core_objects_display);
 
   int event_type = ME_NODE_HIERARCHY_UPDATED;
-  // printf("&mcd_on_heirarchy_update=%p\n", &mcd_on_heirarchy_update);
-  add_notification_handler(command_hub->global_node, event_type, &mcd_on_heirarchy_update);
+  // printf("&mcd_on_hierarchy_update=%p\n", &mcd_on_hierarchy_update);
+  add_notification_handler(command_hub->global_node, event_type, &mcd_on_hierarchy_update);
 
   // printf("bcd-0\n");
   initialize_entry_visual_nodes(core_objects_display, cdstate);

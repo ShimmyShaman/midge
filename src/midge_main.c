@@ -8156,7 +8156,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // MCcall(clint_process("core_display_handle_input = &core_display_handle_input_v1;"));
   MCcall(clint_process("core_display_render = &core_display_render_v1;"));
   // MCcall(clint_process("core_display_entry_handle_input = &core_display_entry_handle_input_v1;"));
-  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/heirarchy_display.c"));
+  MCcall(parse_and_process_mc_file_syntax(command_hub, "src/core/hierarchy_display.c"));
 
   printf("end:init_core_functions()\n");
   return 0;

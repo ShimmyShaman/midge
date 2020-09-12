@@ -133,8 +133,24 @@ VkResult mvk_init_resources(vk_render_state *p_vkrs)
   return res;
 }
 
+void mvk_destroy_sampled_image(vk_render_state *p_vkrs, sampled_image *sampled_image)
+{
+  printf("destroying\n");
+  vkDestroySampler(p_vkrs->device, sampled_image->sampler, NULL);
+  vkDestroyImageView(p_vkrs->device, sampled_image->view, NULL);
+  vkDestroyImage(p_vkrs->device, sampled_image->image, NULL);
+  vkFreeMemory(p_vkrs->device, sampled_image->memory, NULL);
+  if (sampled_image->framebuffer)
+    vkDestroyFramebuffer(p_vkrs->device, sampled_image->framebuffer, NULL);
+}
+
 void mvk_destroy_resources(vk_render_state *p_vkrs)
 {
+  for (int i = 0; i < p_vkrs->textures.count; ++i) {
+    mvk_destroy_sampled_image(p_vkrs, &p_vkrs->textures.samples[i]);
+  }
+  free(p_vkrs->textures.samples);
+
   vkDestroyBuffer(p_vkrs->device, p_vkrs->shape_vertices.buf, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, NULL);
 
@@ -500,6 +516,8 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
 {
   VkResult res;
 
+  printf("mvk_load_font:resource_uid=%p\n", resource_uid);
+
   // Font is a common resource -- check font cache for existing
   char *font_name;
   {
@@ -595,6 +613,10 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   }
 
   printf("generated font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height, *resource_uid);
+  // global_root_data *global_data;
+  // obtain_midge_global_root(&global_data);
+  // printf("generated font texture> resource_uid:%u\n", global_data->ui_state->default_font_resource);
+
 
   return res;
 }

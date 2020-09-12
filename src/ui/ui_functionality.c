@@ -18,6 +18,7 @@ void mui_initialize_ui_state()
       (mc_node **)malloc(sizeof(mc_node *) * ui_state->cache_layered_hit_list->alloc);
 
   ui_state->default_font_resource = 0;
+  ui_state->requires_update = true;
 
   // Resource loading
   pthread_mutex_lock(&global_data->render_thread->resource_queue.mutex);
@@ -27,7 +28,8 @@ void mui_initialize_ui_state()
   // printf("oius-0\n %p", global_data->render_thread->resource_queue);
   obtain_resource_command(&global_data->render_thread->resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &ui_state->default_font_resource;
+  command->p_uid = &global_data->default_font_resource;
+  printf("resource_uid set with =%p\n", command->p_uid);
   command->data.font.height = 18;
   command->data.font.path = "res/font/DroidSansMono.ttf";
 
@@ -45,7 +47,7 @@ void mui_initialize_core_ui_components()
   mui_text_block *text_block;
   mui_init_text_block(global_data->global_node, &text_block);
 
-  set_c_str(text_block->text, "Hello You!");
+  set_c_str(text_block->str, "Hello You!");
   mui_set_element_update(text_block->element);
 }
 
@@ -110,6 +112,9 @@ void mui_get_ui_elements_at_point(int screen_x, int screen_y, mc_node_list **lay
   obtain_midge_global_root(&global_data);
 
   // Use the cache list
+  printf("layered_hit_list:%p\n", layered_hit_list);
+  printf("global_data->ui_state:%p\n", global_data->ui_state);
+  printf("global_data->ui_state->cache_layered_hit_list:%p\n", global_data->ui_state->cache_layered_hit_list);
   *layered_hit_list = global_data->ui_state->cache_layered_hit_list;
   (*layered_hit_list)->count = 0;
 
