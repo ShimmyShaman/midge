@@ -64,7 +64,7 @@ typedef struct mthread_info {
 
 int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void *state)
 {
-  printf("begin_mthread()\n");
+  // printf("begin_mthread()\n");
   *p_thread_info = (mthread_info *)malloc(sizeof(mthread_info));
   (*p_thread_info)->start_routine = start_routine;
 
@@ -74,7 +74,7 @@ int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, 
   (*p_thread_info)->has_paused = 0;
   int result = pthread_create(&(*p_thread_info)->threadId, NULL, (*p_thread_info)->start_routine, state);
   if (!result) {
-    printf("begin_mthread SUCCESS\n");
+    // printf("begin_mthread SUCCESS\n");
     return 0;
   }
   printf("begin_mthread FAILURE TO START THREAD pthread_create ERR:%i\n", result);

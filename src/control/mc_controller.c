@@ -5,7 +5,7 @@
 // Only call this method directly to 'simulate' a mouse left click
 void mcc_input_mouse_left_click(int screen_x, int screen_y)
 {
-  node_list *node_hit_list = NULL;
+  mc_node_list *node_hit_list = NULL;
   mui_get_ui_elements_at_point(screen_x, screen_y, &node_hit_list);
 
   bool handled = false;
@@ -17,7 +17,7 @@ void mcc_input_mouse_left_click(int screen_x, int screen_y)
 void mcc_input_mouse_right_click(int screen_x, int screen_y)
 {
   // Get all elements under the mouse cursor
-  node_list *node_hit_list;
+  mc_node_list *node_hit_list;
   mui_get_ui_elements_at_point(screen_x, screen_y, &node_hit_list);
 
   bool handled = false;

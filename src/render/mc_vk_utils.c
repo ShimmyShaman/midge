@@ -316,7 +316,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   void *data;
   res = vkMapMemory(p_vkrs->device, stagingBufferMemory, 0, image_sampler->size, 0, &data);
   VK_CHECK(res, "vkMapMemory");
-  memcpy(data, pixels, static_cast<size_t>(image_sampler->size));
+  memcpy(data, pixels, (size_t)image_sampler->size);
   vkUnmapMemory(p_vkrs->device, stagingBufferMemory);
 
   // Create Image
@@ -354,7 +354,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
   pass = mvk_get_properties_memory_type_index(p_vkrs, memRequirements.memoryTypeBits,
-                                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &allocInfo.memoryTypeIndex);
+                                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &allocInfo.memoryTypeIndex);
   VK_ASSERT(pass, "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &allocInfo, NULL, &image_sampler->memory);

@@ -8,8 +8,8 @@
 #include <stddef.h>
 
 extern "C" {
-int register_external_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file);
-int instantiate_all_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file);
+int register_external_definitions_from_file(mc_node *definitions_owner, char *filepath, source_file_info **source_file);
+int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, source_file_info **source_file);
 
 /*
   From code definition: constructs source definition & parses to syntax, registers with heirarchy, and declares the
@@ -21,7 +21,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
   @definition_info is OUT. May be NULL, if not dereference will be set with p-to-function_info/struct_info/enum_info
   etc.
 */
-int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
+int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
                            void **definition_info);
 };
 

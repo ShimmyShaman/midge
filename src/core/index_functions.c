@@ -57,7 +57,7 @@ void notify_handlers_of_event(uint event_type, void *event_data)
   // register_midge_error_tag("mcd_on_heirarchy_update(~)");
 }
 
-void attach_node_to_heirarchy(node *parent_attachment, node *node_to_add)
+void attach_node_to_heirarchy(mc_node *parent_attachment, mc_node *node_to_add)
 {
   // printf("attach_node_to_heirarchy\n");
   append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
@@ -93,7 +93,7 @@ void attach_node_to_heirarchy(node *parent_attachment, node *node_to_add)
   // printf("attach_node_to_heirarchy-9\n");
 }
 
-// void attach_definition_to_heirarchy(node *parent_attachment, char *definition)
+// void attach_definition_to_heirarchy(mc_node *parent_attachment, char *definition)
 // {
 //   // append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
 //   //                      &parent_attachment->child_count, node_to_add);

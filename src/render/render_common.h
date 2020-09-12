@@ -114,6 +114,7 @@ typedef struct mc_size {
 } mc_size;
 
 extern "C" {
+
 }
 
 #endif // MC_RENDER_COMMON_H

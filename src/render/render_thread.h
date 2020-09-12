@@ -6,17 +6,29 @@
 #include "m_threads.h"
 #include "midge_common.h"
 #include "platform/mc_xcb.h"
+#include "render/render_common.h"
 
 #define MRT_SEQUENCE_COPY_BUFFER_SIZE 8192
 
 typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,
-  RENDER_COMMAND_BACKGROUND_COLOR,
-  RENDER_COMMAND_SAMPLE_CUBE,
   RENDER_COMMAND_COLORED_QUAD,
   RENDER_COMMAND_TEXTURED_QUAD,
   RENDER_COMMAND_PRINT_TEXT,
 } element_render_command_type;
+
+typedef enum resource_command_type {
+  RESOURCE_COMMAND_NONE = 1,
+  RESOURCE_COMMAND_LOAD_TEXTURE,
+  RESOURCE_COMMAND_CREATE_TEXTURE,
+  RESOURCE_COMMAND_LOAD_FONT,
+} resource_command_type;
+
+typedef enum node_render_target {
+  NODE_RENDER_TARGET_NONE = 1,
+  NODE_RENDER_TARGET_PRESENT,
+  NODE_RENDER_TARGET_IMAGE,
+} node_render_target;
 
 typedef struct element_render_command {
   element_render_command_type type;
@@ -37,19 +49,6 @@ typedef struct element_render_command {
     } textured_rect_info;
   } data;
 } element_render_command;
-
-typedef enum resource_command_type {
-  RESOURCE_COMMAND_NONE = 1,
-  RESOURCE_COMMAND_LOAD_TEXTURE,
-  RESOURCE_COMMAND_CREATE_TEXTURE,
-  RESOURCE_COMMAND_LOAD_FONT,
-} resource_command_type;
-
-typedef enum node_render_target {
-  NODE_RENDER_TARGET_NONE = 1,
-  NODE_RENDER_TARGET_PRESENT,
-  NODE_RENDER_TARGET_IMAGE,
-} node_render_target;
 
 typedef struct image_render_queue {
   unsigned int image_width, image_height;
@@ -145,6 +144,10 @@ typedef struct coloured_rect_draw_data {
 
 extern "C" {
 void *midge_render_thread(void *vargp);
+
+int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
+int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p_command);
+int obtain_element_render_command(image_render_queue *image_queue, element_render_command **p_command);
 }
 
 #endif // RENDER_THREAD_H

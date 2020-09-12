@@ -374,8 +374,8 @@ const char *_mcl_core_structs[] = {
     "preprocess_define_info",
     "field_info",
     "field_info_list",
-    "node_list",
-    "node",
+    "mc_node_list",
+    "mc_node",
 
     "mc_syntax_node",
     "mc_syntax_node_type",
@@ -1105,7 +1105,7 @@ int _mcl_init_core_data()
   void *p_global_root;
   sprintf(buf,
           "{"
-          "  mc_core_v_node *global = (mc_core_v_node *)calloc(sizeof(mc_core_v_node), 1);"
+          "  mc_core_v_mc_node *global = (mc_core_v_mc_node *)calloc(sizeof(mc_core_v_mc_node), 1);"
           "  global->type = NODE_TYPE_GLOBAL_ROOT;"
           "  allocate_and_copy_cstr(global->name, \"global\");"
           "  global->parent = NULL;"
@@ -1115,7 +1115,7 @@ int _mcl_init_core_data()
           "  global->data = global_root_data;"
           "  global_root_data->global_node = global;"
           ""
-          "  global_root_data->children = (mc_core_v_node_list *)malloc(sizeof(mc_core_v_node_list));"
+          "  global_root_data->children = (mc_core_v_mc_node_list *)malloc(sizeof(mc_core_v_mc_node_list));"
           "  global_root_data->children->alloc = 0;"
           "  global_root_data->children->count = 0;"
           ""
@@ -1301,6 +1301,7 @@ int _mcl_load_app_mc_source()
       "src/core/midge_app.h",
 
       "src/platform/mc_xcb.c",
+      // "src/render/render_common.c",
       "src/render/mc_vulkan.c",
       "src/render/mc_vk_utils.c",
       "src/render/render_thread.c",

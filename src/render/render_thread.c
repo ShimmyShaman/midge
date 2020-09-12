@@ -829,7 +829,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     pthread_mutex_lock(&render_thread->resource_queue.mutex);
     if (render_thread->resource_queue.count) {
       // printf("Vulkan entered resources!\n");
-      res = handle_resource_commands(&vkrs, &render_thread->resource_queue);
+      res = handle_resource_commands(vkrs, &render_thread->resource_queue);
       VK_CHECK(res, "handle_resource_commands");
       render_thread->resource_queue.count = 0;
       printf("Vulkan loaded resources!\n");
@@ -848,7 +848,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
       //   printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n",
       //   render_thread->render_queue.count, cmd_count);
       // }
-      res = render_through_queue(&vkrs, &render_thread->render_queue);
+      res = render_through_queue(vkrs, &render_thread->render_queue);
       VK_CHECK(res, "render_through_queue");
       render_thread->render_queue.count = 0;
 
@@ -926,4 +926,80 @@ void *midge_render_thread(void *vargp)
 
   render_thread->thread_info->has_concluded = 1;
   return NULL;
+}
+
+int obtain_resource_command(resource_queue *queue, resource_command **p_command)
+{
+  // MCcall(obtain_item_from_collection((void **)resource_queue->commands, &resource_queue->allocated,
+  // &resource_queue->count,
+  //                                    sizeof(resource_command), (void **)p_command));
+  // printf("orc-0\n %p", queue);
+  if (queue->allocated < queue->count + 1) {
+    // printf("orc-1\n");
+    int new_allocated = (queue->count + 1) + 4 + (queue->count + 1) / 4;
+    // printf("orc-2\n");
+    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
+    // printf("orc-3\n");
+
+    if (queue->allocated) {
+      memcpy(new_ary, queue->commands, sizeof(resource_command) * queue->count);
+      free(queue->commands);
+    }
+    // printf("orc-4\n");
+    queue->commands = new_ary;
+    queue->allocated = new_allocated;
+  }
+  // printf("orc-5\n");
+
+  *p_command = &queue->commands[queue->count++];
+
+  return 0;
+}
+
+int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p_command)
+{
+  if (render_queue->allocated < render_queue->count + 1) {
+    int new_allocated = render_queue->allocated + 4 + render_queue->allocated / 4;
+    image_render_queue *new_ary = (image_render_queue *)malloc(sizeof(image_render_queue) * new_allocated);
+
+    if (render_queue->allocated) {
+      memcpy(new_ary, render_queue->image_renders, sizeof(image_render_queue) * render_queue->count);
+      free(render_queue->image_renders);
+    }
+    for (int i = 0; i < new_allocated - render_queue->allocated; ++i) {
+      new_ary[render_queue->allocated + i].commands_allocated = 4;
+      new_ary[render_queue->allocated + i].command_count = 0;
+      new_ary[render_queue->allocated + i].commands = (element_render_command *)malloc(
+          sizeof(element_render_command) * new_ary[render_queue->allocated + i].commands_allocated);
+    }
+
+    render_queue->image_renders = new_ary;
+    render_queue->allocated = new_allocated;
+  }
+
+  *p_command = &render_queue->image_renders[render_queue->count++];
+  (*p_command)->command_count = 0;
+  return 0;
+}
+
+int obtain_element_render_command(image_render_queue *image_queue, element_render_command **p_command)
+{
+  // MCcall(obtain_item_from_collection((void **)image_queue->commands, &image_queue->commands_allocated,
+  //                                    &image_queue->command_count, sizeof(element_render_command), (void
+  //                                    **)p_command));
+  if (image_queue->commands_allocated < image_queue->command_count + 1) {
+    int new_allocated = image_queue->commands_allocated + 4 + image_queue->commands_allocated / 4;
+    element_render_command *new_ary = (element_render_command *)malloc(sizeof(element_render_command) * new_allocated);
+
+    if (image_queue->commands_allocated) {
+      memcpy(new_ary, image_queue->commands, sizeof(element_render_command) * image_queue->command_count);
+      free(image_queue->commands);
+    }
+    image_queue->commands = new_ary;
+    image_queue->commands_allocated = new_allocated;
+  }
+
+  *p_command = &image_queue->commands[image_queue->command_count++];
+
+  return 0;
 }

@@ -218,19 +218,19 @@ typedef struct event_handler_array {
   int (***handlers)(int, void **);
 } event_handler_array;
 
-typedef struct node {
+typedef struct mc_node {
   node_type type;
   char *name;
 
-  node *parent;
+  mc_node *parent;
 
   void *data;
-} node;
+} mc_node;
 
-typedef struct node_list {
+typedef struct mc_node_list {
   unsigned int alloc, count;
-  node **items;
-} node_list;
+  mc_node **items;
+} mc_node_list;
 
 // Incomplete Structure declarations
 struct render_thread_info;
@@ -238,14 +238,23 @@ struct mui_ui_state;
 
 typedef struct global_root_data {
   struct timespec *app_begin_time;
-  render_thread_info *render_thread;
+  struct render_thread_info *render_thread;
 
-  node *global_node;
-  node_list *children;
+  mc_node *global_node;
+  mc_node_list *children;
 
   struct {
     unsigned int width, height;
   } screen;
+
+  struct mui_ui_state *ui_state;
+  bool requires_rerender;
+  unsigned int present_image_resource_uid;
+
+  // struct {
+  //   pthread_mutex_t mutex;
+  //   unsigned int index;
+  // } uid_counter;
 
   struct {
     unsigned int alloc, count;
@@ -275,8 +284,6 @@ typedef struct global_root_data {
     unsigned int alloc, count;
     event_handler_array **items;
   } event_handlers;
-
-  mui_ui_state *ui_state;
 } global_root_data;
 
 extern "C" {

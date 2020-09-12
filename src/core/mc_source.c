@@ -4,7 +4,7 @@
 
 int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field);
 
-int attach_function_info_to_owner(node *owner, function_info *func_info)
+int attach_function_info_to_owner(mc_node *owner, function_info *func_info)
 {
   switch (owner->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
@@ -20,7 +20,7 @@ int attach_function_info_to_owner(node *owner, function_info *func_info)
   return 0;
 }
 
-int attach_struct_info_to_owner(node *owner, struct_info *structure_info)
+int attach_struct_info_to_owner(mc_node *owner, struct_info *structure_info)
 {
   switch (owner->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
@@ -36,7 +36,7 @@ int attach_struct_info_to_owner(node *owner, struct_info *structure_info)
   return 0;
 }
 
-int attach_enumeration_info_to_owner(node *owner, enumeration_info *enum_info)
+int attach_enumeration_info_to_owner(mc_node *owner, enumeration_info *enum_info)
 {
   switch (owner->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
@@ -52,7 +52,7 @@ int attach_enumeration_info_to_owner(node *owner, enumeration_info *enum_info)
   return 0;
 }
 
-// int attach_preprocess_define_info_to_owner(node *owner, preprocess_define_info *define_info)
+// int attach_preprocess_define_info_to_owner(mc_node *owner, preprocess_define_info *define_info)
 // {
 //   switch (owner->type) {
 //   case NODE_TYPE_GLOBAL_ROOT: {
@@ -68,7 +68,7 @@ int attach_enumeration_info_to_owner(node *owner, enumeration_info *enum_info)
 //   return 0;
 // }
 
-int initialize_source_file_info(node *owner, char *filepath, source_file_info **source_file)
+int initialize_source_file_info(mc_node *owner, char *filepath, source_file_info **source_file)
 {
   source_file_info *sfi = (source_file_info *)malloc(sizeof(source_file_info));
   allocate_and_copy_cstr(sfi->filepath, filepath);
@@ -154,7 +154,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
   return 0;
 }
 
-int update_or_register_function_info_from_syntax(node *owner, mc_syntax_node *function_ast, function_info **p_func_info)
+int update_or_register_function_info_from_syntax(mc_node *owner, mc_syntax_node *function_ast, function_info **p_func_info)
 {
   function_info *func_info;
   find_function_info(function_ast->function.name->text, &func_info);
@@ -453,7 +453,7 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
   return 0;
 }
 
-int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *struct_ast, struct_info **p_struct_info)
+int update_or_register_struct_info_from_syntax(mc_node *owner, mc_syntax_node *struct_ast, struct_info **p_struct_info)
 {
   struct_info *structure_info;
   find_struct_info(struct_ast->structure.type_name->text, &structure_info);
@@ -507,7 +507,7 @@ int update_or_register_struct_info_from_syntax(node *owner, mc_syntax_node *stru
   return 0;
 }
 
-int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_ast, enumeration_info **p_enum_info)
+int update_or_register_enum_info_from_syntax(mc_node *owner, mc_syntax_node *enum_ast, enumeration_info **p_enum_info)
 {
   enumeration_info *enum_info;
   find_enumeration_info(enum_ast->enumeration.name->text, &enum_info);
@@ -607,7 +607,7 @@ int update_or_register_enum_info_from_syntax(node *owner, mc_syntax_node *enum_a
   return 0;
 }
 
-int instantiate_function_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
+int instantiate_function_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_syntax_node *ast,
                                              void **definition_info)
 {
   // Register Function
@@ -618,10 +618,10 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "mrt_run_update_loop")) {
-  //   // print_syntax_node(ast, 0);
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
-  // }
+  if (!strcmp(func_info->name, "mvk_load_image_sampler")) {
+    // print_syntax_node(ast, 0);
+    printf("mc_transcription:\n%s||\n", mc_transcription);
+  }
   // if (!strcmp(func_info->name, "midge_render_thread")) {
   //   // print_syntax_node(ast, 0);
   //   // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
@@ -655,7 +655,7 @@ int instantiate_function_definition_from_ast(node *definition_owner, source_defi
   return 0;
 }
 
-int instantiate_struct_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
+int instantiate_struct_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_syntax_node *ast,
                                            void **definition_info)
 {
   // Register Struct
@@ -683,7 +683,7 @@ int instantiate_struct_definition_from_ast(node *definition_owner, source_defini
   return 0;
 }
 
-int instantiate_enum_definition_from_ast(node *definition_owner, source_definition *source, mc_syntax_node *ast,
+int instantiate_enum_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_syntax_node *ast,
                                          void **definition_info)
 {
   // Register enum
@@ -706,7 +706,7 @@ int instantiate_enum_definition_from_ast(node *definition_owner, source_definiti
   return 0;
 }
 
-int instantiate_define_statement(node *definition_owner, mc_syntax_node *ast, preprocess_define_info **info)
+int instantiate_define_statement(mc_node *definition_owner, mc_syntax_node *ast, preprocess_define_info **info)
 {
   switch (ast->preprocess_define.statement_type) {
   case PREPROCESSOR_DEFINE_REMOVAL: {
@@ -769,7 +769,7 @@ int instantiate_define_statement(node *definition_owner, mc_syntax_node *ast, pr
   @definition_info is OUT. May be NULL, if not dereference will be set with p-to-function_info/struct_info/enum_info
   etc.
 */
-int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
+int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
                            void **definition_info)
 {
   register_midge_error_tag("instantiate_definition()");
@@ -826,7 +826,7 @@ int instantiate_definition(node *definition_owner, char *code, mc_syntax_node *a
   return 0;
 }
 
-int instantiate_ast_children(node *definitions_owner, source_file_info *source_file,
+int instantiate_ast_children(mc_node *definitions_owner, source_file_info *source_file,
                              mc_syntax_node_list *syntax_node_list)
 {
   for (int a = 0; a < syntax_node_list->count; ++a) {
@@ -980,7 +980,7 @@ int instantiate_ast_children(node *definitions_owner, source_file_info *source_f
   return 0;
 }
 
-int instantiate_all_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file)
+int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, source_file_info **source_file)
 {
   char *file_text;
   read_file_text(filepath, &file_text);
@@ -1004,7 +1004,7 @@ int instantiate_all_definitions_from_file(node *definitions_owner, char *filepat
   return 0;
 }
 
-int register_external_enum_declaration(node *owner, mc_syntax_node *enum_ast)
+int register_external_enum_declaration(mc_node *owner, mc_syntax_node *enum_ast)
 {
   enumeration_info *enum_info;
   find_enumeration_info(enum_ast->enumeration.name->text, &enum_info);
@@ -1098,7 +1098,7 @@ int register_external_enum_declaration(node *owner, mc_syntax_node *enum_ast)
   return 0;
 }
 
-int register_external_declarations_from_syntax_children(node *definitions_owner, source_file_info *source_file,
+int register_external_declarations_from_syntax_children(mc_node *definitions_owner, source_file_info *source_file,
                                                         mc_syntax_node_list *syntax_node_list)
 {
   for (int a = 0; a < syntax_node_list->count; ++a) {
@@ -1262,7 +1262,7 @@ int register_external_declarations_from_syntax_children(node *definitions_owner,
   return 0;
 }
 
-int register_external_definitions_from_file(node *definitions_owner, char *filepath, source_file_info **source_file)
+int register_external_definitions_from_file(mc_node *definitions_owner, char *filepath, source_file_info **source_file)
 {
   char *file_text;
   read_file_text(filepath, &file_text);

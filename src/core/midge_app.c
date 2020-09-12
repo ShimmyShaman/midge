@@ -80,9 +80,16 @@ void complete_midge_app_compile()
 extern "C" {
 void mcc_handle_xcb_input();
 void mui_initialize_ui_state();
+void mui_initialize_core_ui_components();
+void mui_update_headless_image_node(mc_node *element_node);
+void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node);
 }
 
-void initialize_midge_components() { mui_initialize_ui_state(); }
+void initialize_midge_components()
+{
+  mui_initialize_ui_state();
+  mui_initialize_core_ui_components();
+}
 
 void midge_initialize_app(struct timespec *app_begin_time)
 {
@@ -107,7 +114,9 @@ void midge_initialize_app(struct timespec *app_begin_time)
   initialize_midge_components();
 
   // Wait for render thread initialization and all resources to load before continuing with the next set of commands
+  bool waited = false;
   while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue.count) {
+    waited = true;
     usleep(1);
   }
 
@@ -117,13 +126,55 @@ void midge_initialize_app(struct timespec *app_begin_time)
   printf("##################################\n"
          "         <<<< MIDGE >>>>\n"
          "\n"
-         "Post-Core load took %.2f seconds\n"
+         "Post-Core load took %.2f seconds (*%s)\n"
          "App Begin took %.2f seconds\n"
          "##################################\n",
          load_complete_frametime.tv_sec - source_load_complete_time.tv_sec +
              1e-9 * (load_complete_frametime.tv_nsec - source_load_complete_time.tv_nsec),
+         waited ? "vulkan-initialization limited" : "midge-compile-load limited",
          load_complete_frametime.tv_sec - global_data->app_begin_time->tv_sec +
              1e-9 * (load_complete_frametime.tv_nsec - global_data->app_begin_time->tv_nsec));
+}
+
+void mca_update_headless_render_images()
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  for (int a = 0; a < global_data->children->count; ++a) {
+    switch (global_data->children->items[a]->type) {
+    case NODE_TYPE_UI:
+      mui_update_headless_image_node(global_data->children->items[a]);
+      break;
+    default:
+      MCerror(296, "mca_update_headless_render_images>|Unsupported node type:%i",
+              global_data->children->items[a]->type);
+    }
+  }
+}
+
+void mca_render_presentation()
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  image_render_queue *sequence;
+  obtain_image_render_queue(global_data->render_thread->render_queue, &sequence);
+  sequence->render_target = NODE_RENDER_TARGET_PRESENT;
+  sequence->clear_color = COLOR_CORNFLOWER_BLUE;
+  sequence->image_width = global_data->screen.width;
+  sequence->image_height = global_data->screen.height;
+  sequence->data.target_image.image_uid = global_data->present_image_resource_uid;
+
+  for (int a = 0; a < global_data->children->count; ++a) {
+    switch (global_data->children->items[a]->type) {
+    case NODE_TYPE_UI:
+      mui_render_ui_node(sequence, global_data->children->items[a]);
+      break;
+    default:
+      MCerror(296, "mca_render_presentation>|Unsupported node type:%i", global_data->children->items[a]->type);
+    }
+  }
 }
 
 void midge_run_app()
@@ -146,7 +197,6 @@ void midge_run_app()
 
   int DEBUG_secs_of_last_5sec_update = 0;
 
-  bool rerender_required = true;
   frame_time *elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
   int ui = 0;
   while (1) {
@@ -260,34 +310,24 @@ void midge_run_app()
     }
 
     // Render State Changes
-    pthread_mutex_lock(&global_data->render_thread->render_queue.mutex);
+    if (global_data->requires_rerender) {
+      pthread_mutex_lock(&global_data->render_thread->render_queue.mutex);
 
-    // Clear the render queue?
-    // global_data->render_thread->render_queue.count = 0;
+      // Clear the render queue
+      global_data->render_thread->render_queue.count = 0;
 
-    // printf("main_render\n");
-    // -- Render all node descendants first
-    // for (int i = 0; i < global_data->global_node->children.count; ++i) {
-    //   node *child = global_data->global_node->children.items[i];
-    //   if (child->type == NODE_TYPE_VISUAL && child->data.visual.requires_render_update) {
-    //     child->data.visual.requires_render_update = false;
+      // Rerender all headless images
+      mca_update_headless_render_images();
 
-    //     void *vargs[2];
-    //     vargs[0] = &elapsed;
-    //     vargs[1] = &child;
-    //     MCcall((*child->data.visual.render_delegate)(2, vargs));
+      // Queue the updated render
+      mca_render_presentation();
 
-    //     rerender_required = true;
-    //   }
-    // }
+      // Release lock and allow rendering
+      pthread_mutex_unlock(&global_data->render_thread->render_queue.mutex);
 
-    // Do an Z-based control render of everything
-    // if (rerender_required) {
-    //   MCcall(render_global_node(0, NULL));
-    //   rerender_required = false;
-    // }
-
-    pthread_mutex_unlock(&global_data->render_thread->render_queue.mutex);
+      // Reset States
+      global_data->requires_rerender = false;
+    }
   }
 }
 
