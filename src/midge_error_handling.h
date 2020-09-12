@@ -305,6 +305,37 @@ void register_midge_thread_conclusion(unsigned int midge_error_thread_index)
   printf("ERROR MIDGETHREAD 313\n");
 }
 
+void midge_error_print_thread_stack_trace()
+{
+  struct __mce_thread_entry_stack *threades = NULL;
+  pthread_t tid = pthread_self();
+  for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
+    if (tid == MIDGE_ERROR_THREAD_STACKS[t]->thread_id) {
+      threades = MIDGE_ERROR_THREAD_STACKS[t];
+      break;
+    }
+    else if (tid == (pthread_t)0) {
+      break;
+    }
+  }
+  if (!threades) {
+    printf("could not find stack for thread with id %lu\n", tid);
+    return;
+  }
+
+  printf("\n---------------################------------\n");
+  printf("---------------  Stack Trace   ------------\n");
+  printf("---------------Most Recent Last------------\n\n");
+  // printf("size:%i\n", MIDGE_ERROR_STACK_INDEX);
+
+  printf("\nThread-Id:%lu\n", threades->thread_id);
+
+  for (int i = 0; i <= threades->stack_index; ++i) {
+    printf("[%i]@%s :(file='%s' :%i)\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
+           threades->stack[i].line);
+  }
+}
+
 void handler(int sig)
 {
   if (IGNORE_MIDGE_ERROR_REPORT) {

@@ -166,6 +166,7 @@ void mca_render_presentation()
   obtain_image_render_queue(&global_data->render_thread->render_queue, &sequence);
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
   sequence->clear_color = COLOR_CORNFLOWER_BLUE;
+  // printf("global_data->screen : %u, %u\n", global_data->screen.width, global_data->screen.height);
   sequence->image_width = global_data->screen.width;
   sequence->image_height = global_data->screen.height;
   sequence->data.target_image.image_uid = global_data->present_image_resource_uid;
@@ -187,7 +188,8 @@ void midge_run_app()
 
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
-  printf("defaultfont-0:%u\n", global_data->default_font_resource);
+  // printf("defaultfont-0:%u\n", global_data->default_font_resource);
+  // printf("global_data->ui_state:%p\n", global_data->ui_state);
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);

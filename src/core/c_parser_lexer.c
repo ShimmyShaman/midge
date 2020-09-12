@@ -2557,6 +2557,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
 
   mcs_peek_token_type(ps, false, 1, &token_type);
   switch (token_type) {
+  case MC_TOKEN_AMPERSAND_CHARACTER:
   case MC_TOKEN_OPEN_BRACKET:
   case MC_TOKEN_LOGICAL_NOT_OPERATOR:
   case MC_TOKEN_STAR_CHARACTER:

@@ -1115,6 +1115,8 @@ int _mcl_init_core_data()
           "  global->data = global_root_data;"
           "  global_root_data->global_node = global;"
           ""
+          "  global_root_data->requires_rerender = true;"
+          ""
           "  global_root_data->children = (mc_core_v_mc_node_list *)malloc(sizeof(mc_core_v_mc_node_list));"
           "  global_root_data->children->alloc = 0;"
           "  global_root_data->children->count = 0;"

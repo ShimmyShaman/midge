@@ -250,7 +250,6 @@ typedef struct global_root_data {
   struct mui_ui_state *ui_state;
   bool requires_rerender;
   unsigned int present_image_resource_uid;
-  unsigned int default_font_resource;
 
   // struct {
   //   pthread_mutex_t mutex;

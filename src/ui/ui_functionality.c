@@ -16,6 +16,7 @@ void mui_initialize_ui_state()
   ui_state->cache_layered_hit_list->count = 0;
   ui_state->cache_layered_hit_list->items =
       (mc_node **)malloc(sizeof(mc_node *) * ui_state->cache_layered_hit_list->alloc);
+  // printf("@creation global_data->ui_state:%p\n", global_data->ui_state);
 
   ui_state->default_font_resource = 0;
   ui_state->requires_update = true;
@@ -28,8 +29,8 @@ void mui_initialize_ui_state()
   // printf("oius-0\n %p", global_data->render_thread->resource_queue);
   obtain_resource_command(&global_data->render_thread->resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &global_data->default_font_resource;
-  printf("resource_uid set with =%p\n", command->p_uid);
+  command->p_uid = &global_data->ui_state->default_font_resource;
+  // printf("resource_uid set with =%p\n", command->p_uid);
   command->data.font.height = 18;
   command->data.font.path = "res/font/DroidSansMono.ttf";
 
@@ -40,8 +41,6 @@ void mui_initialize_core_ui_components()
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
-
-  global_data->ui_state = (mui_ui_state *)malloc(sizeof(mui_ui_state));
 
   // SAMPLE TEXTBLOCK
   mui_text_block *text_block;
@@ -96,6 +95,24 @@ void _mui_get_ui_elements_within_node_at_point(mc_node *node, int screen_x, int 
     // Add any children before
     for (int a = 0; a < global_data->children->count; ++a) {
       _mui_get_ui_elements_within_node_at_point(global_data->children->items[a], screen_x, screen_y, layered_hit_list);
+    }
+
+    append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
+  } break;
+  case NODE_TYPE_UI: {
+    mui_ui_element *element = (mui_ui_element *)node->data;
+
+    if (screen_x < (int)element->bounds.x || screen_y < (int)element->bounds.y ||
+        screen_x >= (int)(element->bounds.x + element->bounds.width) ||
+        screen_y >= (int)(element->bounds.y + element->bounds.height))
+      break;
+
+    // Append children
+    switch (element->type) {
+    case UI_ELEMENT_TEXT_BLOCK:
+      break;
+    default:
+      MCerror(115, "_mui_get_ui_elements_within_node_at_point::>NODE_TYPE_UI>unsupported element type:%i", node->type);
     }
 
     append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);

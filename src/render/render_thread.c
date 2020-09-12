@@ -41,6 +41,7 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
 int set_viewport_cmd(VkCommandBuffer command_buffer, float x, float y, float width, float height)
 {
+  // printf("set_viewport_cmd: %f %f %f %f\n", x, y, width, height);
   VkViewport viewport;
   viewport.x = x;
   viewport.y = y;
@@ -78,6 +79,8 @@ int mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long 
   descriptor_buffer_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
   descriptor_buffer_info->range = size_in_bytes;
 
+  // printf("wdqrd- : %lu\n", p_vkrs->render_data_buffer.frame_utilized_amount);
+
   p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = p_src;
   p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
       p_vkrs->render_data_buffer.frame_utilized_amount;
@@ -86,7 +89,7 @@ int mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long 
   p_vkrs->render_data_buffer.frame_utilized_amount +=
       ((size_in_bytes / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
       p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
-
+  // printf("minUniformBufferOffsetAlignment:%lu\n", p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment);
   return 0;
 }
 
@@ -101,8 +104,8 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   VkResult res;
 
   // Setup viewport and clip
-  set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-  set_scissor_cmd(p_vkrs, cmd->x > 0 ? cmd->x : 0, cmd->y > 0 ? cmd->y : 0, cmd->data.colored_rect_info.width,
+  set_viewport_cmd(command_buffer, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
+  set_scissor_cmd(command_buffer, cmd->x > 0 ? cmd->x : 0, cmd->y > 0 ? cmd->y : 0, cmd->data.colored_rect_info.width,
                   cmd->data.colored_rect_info.height);
 
   // Vertex Uniform Buffer Object
@@ -223,8 +226,9 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   //        sequence->image_height);
 
   // Setup viewport and clip
-  set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-  set_scissor_cmd(p_vkrs, cmd->x, cmd->y, cmd->data.textured_rect_info.width, cmd->data.textured_rect_info.height);
+  set_viewport_cmd(command_buffer, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
+  set_scissor_cmd(command_buffer, cmd->x, cmd->y, cmd->data.textured_rect_info.width,
+                  cmd->data.textured_rect_info.height);
 
   // Queue Buffer Write
   const unsigned int MAX_DESC_SET_WRITES = 8;
@@ -312,18 +316,20 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
                          element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
 {
   VkResult res;
-
+  
   if (!cmd->data.print_text.text) {
     return VK_SUCCESS;
   }
+  
   // Get the font image
   loaded_font_info *font = NULL;
   for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
     if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->data.print_text.font_resource_uid) {
       font = &p_vkrs->loaded_fonts.fonts[f];
-      return VK_SUCCESS;
+      break;
     }
   }
+  
   if (!font) {
     printf("Could not find requested font uid=%u\n", cmd->data.print_text.font_resource_uid);
     return VK_ERROR_UNKNOWN;
@@ -365,9 +371,8 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     float width = q.x1 - q.x0;
     float height = q.y1 - q.y0;
 
-    // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n",
-    // q.s0, q.s1,
-    //        q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
+    // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n", q.s0,
+    //        q.s1, q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
     // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
     // Vertex Uniform Buffer Object
@@ -395,8 +400,9 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     frag_ubo_data->tex_coord_bounds.t1 = q.t1;
 
     // Setup viewport and clip
-    set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-    set_scissor_cmd(p_vkrs, q.x0 < 0 ? 0 : q.x0, q.y0 < 0 ? 0 : q.y0, width, height);
+    // printf("sequence : %f, %f\n",  (float)sequence->image_width,  (float)sequence->image_height);
+    set_viewport_cmd(command_buffer, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
+    set_scissor_cmd(command_buffer, q.x0 < 0 ? 0 : q.x0, q.y0 < 0 ? 0 : q.y0, width, height);
 
     // Allocate the descriptor set from the pool.
     VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -523,24 +529,26 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     glm_mat4_mul((vec4 *)&clip, (vec4 *)&vpc, (vec4 *)&vpc);
 
     mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), &vpc, &copy_buffer.vpc_desc_buffer_info);
+    // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
   }
+  // printf("sequence : %u, %u\n", sequence->image_width, sequence->image_height);
 
   for (int j = 0; j < sequence->command_count; ++j) {
 
     element_render_command *cmd = &sequence->commands[j];
     switch (cmd->type) {
     case RENDER_COMMAND_COLORED_QUAD: {
-      res = mrt_render_colored_quad(p_vkrs, command_buffer, sequence, cmd, &copy_buffer.data);
+      res = mrt_render_colored_quad(p_vkrs, command_buffer, sequence, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_colored_rectangle");
     } break;
 
     case RENDER_COMMAND_TEXTURED_QUAD: {
-      res = mrt_render_textured_quad(p_vkrs, command_buffer, sequence, cmd, &copy_buffer.data);
+      res = mrt_render_textured_quad(p_vkrs, command_buffer, sequence, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_textured_quad");
     } break;
 
     case RENDER_COMMAND_PRINT_TEXT: {
-      res = mrt_render_text(p_vkrs, command_buffer, sequence, cmd, &copy_buffer.data);
+      res = mrt_render_text(p_vkrs, command_buffer, sequence, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_text");
     } break;
 
@@ -845,15 +853,15 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     // Render Commands
     pthread_mutex_lock(&render_thread->render_queue.mutex);
     if (render_thread->render_queue.count) {
-      // {
-      //   // DEBUG
-      //   uint cmd_count = 0;
-      //   for (int r = 0; r < render_thread->render_queue.count; ++r) {
-      //     cmd_count += render_thread->render_queue.image_renders[r].command_count;
-      //   }
-      //   printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n",
-      //   render_thread->render_queue.count, cmd_count);
-      // }
+      {
+        // DEBUG
+        uint cmd_count = 0;
+        for (int r = 0; r < render_thread->render_queue.count; ++r) {
+          cmd_count += render_thread->render_queue.image_renders[r].command_count;
+        }
+        printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n", render_thread->render_queue.count,
+               cmd_count);
+      }
       res = render_through_queue(vkrs, &render_thread->render_queue);
       VK_CHECK(res, "render_through_queue");
       render_thread->render_queue.count = 0;

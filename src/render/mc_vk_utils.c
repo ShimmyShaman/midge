@@ -135,7 +135,6 @@ VkResult mvk_init_resources(vk_render_state *p_vkrs)
 
 void mvk_destroy_sampled_image(vk_render_state *p_vkrs, sampled_image *sampled_image)
 {
-  printf("destroying\n");
   vkDestroySampler(p_vkrs->device, sampled_image->sampler, NULL);
   vkDestroyImageView(p_vkrs->device, sampled_image->view, NULL);
   vkDestroyImage(p_vkrs->device, sampled_image->image, NULL);
@@ -516,7 +515,7 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
 {
   VkResult res;
 
-  printf("mvk_load_font:resource_uid=%p\n", resource_uid);
+  // printf("mvk_load_font:resource_uid=%p\n", resource_uid);
 
   // Font is a common resource -- check font cache for existing
   char *font_name;

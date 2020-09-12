@@ -650,36 +650,66 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
   // printf("mtmi-3\n");
   mct_append_indent_to_c_str(ts);
 
-  while (argument->type == MC_SYNTAX_CAST_EXPRESSION) {
-    argument = argument->cast_expression.expression;
-  }
+  // while (argument->type == MC_SYNTAX_CAST_EXPRESSION) {
+  //   argument = argument->cast_expression.expression;
+  // }
 
   switch (argument->type) {
-  // case MC_SYNTAX_CAST_EXPRESSION: {
-  //   // printf("mtmi-4\n");
-  //   bool contains_mc_function_call;
-  //   if (argument->cast_expression.expression) {
-  //     mct_contains_mc_invoke(argument->cast_expression.expression, &contains_mc_function_call);
-  //     if (contains_mc_function_call) {
-  //       MCerror(104, "TODO");
-  //     }
-  //   }
+  case MC_SYNTAX_CAST_EXPRESSION: {
+    int tslen = ts->str->len;
 
-  //   char *text;
-  //   if (argument->cast_expression.expression->type == MC_SYNTAX_PREPENDED_UNARY_EXPRESSION &&
-  //       (mc_token_type)argument->cast_expression.expression->prepended_unary.prepend_operator->type ==
-  //           MC_TOKEN_AMPERSAND_CHARACTER) {
-  //     copy_syntax_node_to_text(argument->cast_expression.expression, &text);
-  //     append_to_c_strf(ts->str, "void *mc_varg_%i = (void *)%s;\n", i, text);
-  //     mct_append_indent_to_c_str(ts);
-  //     append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_varg_%i;\n", i, i);
-  //   }
-  //   else {
-  //     copy_syntax_node_to_text(argument->cast_expression.expression, &text);
-  //     append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, text);
-  //   }
-  //   free(text);
-  // } break;
+    mct_transcribe_type_identifier(ts, argument->cast_expression.type_identifier);
+    append_to_c_str(ts->str, " ");
+    if (argument->cast_expression.type_dereference) {
+      for (int a = 0; a < argument->cast_expression.type_dereference->dereference_sequence.count; ++a) {
+        append_to_c_str(ts->str, "*");
+      }
+    }
+
+    append_to_c_strf(ts->str, "%s_%i = (", argument_data_name, arg_index);
+
+    mct_transcribe_type_identifier(ts, argument->cast_expression.type_identifier);
+    append_to_c_str(ts->str, " ");
+    if (argument->cast_expression.type_dereference) {
+      for (int a = 0; a < argument->cast_expression.type_dereference->dereference_sequence.count; ++a) {
+        append_to_c_str(ts->str, "*");
+      }
+    }
+
+    append_to_c_str(ts->str, ")");
+
+    mct_append_node_text_to_c_str(ts->str, argument->cast_expression.expression);
+    append_to_c_str(ts->str, ";\n");
+
+    mct_append_indent_to_c_str(ts);
+    append_to_c_strf(ts->str, "%s[%i] = (void *)&%s_%i;\n", argument_data_name, arg_index, argument_data_name,
+                     arg_index);
+
+    // printf("cast_expression_transcription:\n%s\n", ts->str->text + tslen);
+    //   // printf("mtmi-4\n");
+    //   bool contains_mc_function_call;
+    //   if (argument->cast_expression.expression) {
+    //     mct_contains_mc_invoke(argument->cast_expression.expression, &contains_mc_function_call);
+    //     if (contains_mc_function_call) {
+    //       MCerror(104, "TODO");
+    //     }
+    //   }
+
+    //   char *text;
+    //   if (argument->cast_expression.expression->type == MC_SYNTAX_PREPENDED_UNARY_EXPRESSION &&
+    //       (mc_token_type)argument->cast_expression.expression->prepended_unary.prepend_operator->type ==
+    //           MC_TOKEN_AMPERSAND_CHARACTER) {
+    //     copy_syntax_node_to_text(argument->cast_expression.expression, &text);
+    //     append_to_c_strf(ts->str, "void *mc_varg_%i = (void *)%s;\n", i, text);
+    //     mct_append_indent_to_c_str(ts);
+    //     append_to_c_strf(ts->str, "mc_vargs[%i] = &mc_varg_%i;\n", i, i);
+    //   }
+    //   else {
+    //     copy_syntax_node_to_text(argument->cast_expression.expression, &text);
+    //     append_to_c_strf(ts->str, "mc_vargs[%i] = &%s;\n", i, text);
+    //   }
+    //   free(text);
+  } break;
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
     // printf("mtmi-5\n");
     // Do MC_invokes

@@ -619,11 +619,11 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "mui_render_text_block")) {
+  // if (!strcmp(func_info->name, "set_viewport_cmd")) {
   //   // print_syntax_node(ast, 0);
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
   // }
-  // if (!strcmp(func_info->name, "midge_render_thread")) {
+  // if (!strcmp(func_info->name, "mcs_parse_through_supernumerary_tokens")) {
   //   // print_syntax_node(ast, 0);
   //   // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
