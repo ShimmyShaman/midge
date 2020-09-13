@@ -102,6 +102,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
     return VK_SUCCESS;
 
   VkResult res;
+  printf("mrt_rcq-0 %u %u\n", cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
 
   // Setup viewport and clip
   set_viewport_cmd(command_buffer, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
@@ -121,6 +122,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
                             1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
 
+  printf("mrt_rcq-1\n");
   // Fragment Data
   render_color *frag_ubo_data = (render_color *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(render_color);
@@ -149,6 +151,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   int buffer_info_index = 0;
   int write_index = 0;
 
+  printf("mrt_rcq-2\n");
   VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
   mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(render_color), frag_ubo_data, frag_ubo_info);
 
@@ -188,6 +191,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   write->dstArrayElement = 0;
   write->dstBinding = 2;
 
+  printf("mrt_rcq-3\n");
   vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->tint_prog.pipeline_layout, 0, 1,
@@ -316,11 +320,11 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
                          element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
 {
   VkResult res;
-  
+
   if (!cmd->data.print_text.text) {
     return VK_SUCCESS;
   }
-  
+
   // Get the font image
   loaded_font_info *font = NULL;
   for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
@@ -329,7 +333,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
       break;
     }
   }
-  
+
   if (!font) {
     printf("Could not find requested font uid=%u\n", cmd->data.print_text.font_resource_uid);
     return VK_ERROR_UNKNOWN;
@@ -371,7 +375,8 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     float width = q.x1 - q.x0;
     float height = q.y1 - q.y0;
 
-    // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n", q.s0,
+    // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n",
+    // q.s0,
     //        q.s1, q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
     // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
@@ -859,8 +864,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
         for (int r = 0; r < render_thread->render_queue.count; ++r) {
           cmd_count += render_thread->render_queue.image_renders[r].command_count;
         }
-        printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n", render_thread->render_queue.count,
-               cmd_count);
+        // printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n", render_thread->render_queue.count,
+        //        cmd_count);
       }
       res = render_through_queue(vkrs, &render_thread->render_queue);
       VK_CHECK(res, "render_through_queue");
@@ -874,7 +879,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
     VK_CHECK((VkResult)wures, "mxcb_update_window");
   }
-  printf("AfterUpdate! frame_updates = %i\n", frame_updates);
+  printf("Leaving Render-Thread loop...\n--total_frame_updates = %i\n", frame_updates);
   return VK_SUCCESS;
 }
 

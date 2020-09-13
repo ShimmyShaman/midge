@@ -73,10 +73,14 @@ void complete_midge_app_compile()
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.h", NULL);
 
   instantiate_all_definitions_from_file(global_data->global_node, "src/hierarchy/index_functions.c", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/text_block.c", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/controls/text_block.c", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/controls/panel.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_functionality.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_render.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.c", NULL);
+
+  // Modules
+  instantiate_all_definitions_from_file(global_data->global_node, "src/modules/modus_operandi/modus_operandi_curator.c", NULL);
 }
 
 extern "C" {
@@ -85,12 +89,18 @@ void mui_initialize_ui_state();
 void mui_initialize_core_ui_components();
 void mui_update_headless_image_node(mc_node *element_node);
 void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node);
+
+// Modules
+void init_modus_operandi_curator();
 }
 
 void initialize_midge_components()
 {
   mui_initialize_ui_state();
   mui_initialize_core_ui_components();
+
+  // Modules
+  init_modus_operandi_curator();
 }
 
 void midge_initialize_app(struct timespec *app_begin_time)
@@ -165,7 +175,7 @@ void mca_render_presentation()
   image_render_queue *sequence;
   obtain_image_render_queue(&global_data->render_thread->render_queue, &sequence);
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
-  sequence->clear_color = COLOR_CORNFLOWER_BLUE;
+  sequence->clear_color = COLOR_NEARLY_BLACK;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width, global_data->screen.height);
   sequence->image_width = global_data->screen.width;
   sequence->image_height = global_data->screen.height;

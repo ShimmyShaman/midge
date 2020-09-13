@@ -41,13 +41,6 @@ void mui_initialize_core_ui_components()
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
-
-  // SAMPLE TEXTBLOCK
-  mui_text_block *text_block;
-  mui_init_text_block(global_data->global_node, &text_block);
-
-  set_c_str(text_block->str, "Hello You!");
-  mui_set_element_update(text_block->element);
 }
 
 void mui_update_ui()
@@ -111,6 +104,9 @@ void _mui_get_ui_elements_within_node_at_point(mc_node *node, int screen_x, int 
     switch (element->type) {
     case UI_ELEMENT_TEXT_BLOCK:
       break;
+    case UI_ELEMENT_PANEL:
+      // TODO
+      break;
     default:
       MCerror(115, "_mui_get_ui_elements_within_node_at_point::>NODE_TYPE_UI>unsupported element type:%i", node->type);
     }
@@ -163,4 +159,34 @@ void mui_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, 
   default:
     MCerror(83, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", ui_node->type);
   }
+}
+
+void mui_init_ui_node(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  // Node
+  mc_node *node = (mc_node *)malloc(sizeof(mc_node));
+
+  node->type = NODE_TYPE_UI;
+  attach_node_to_hierarchy(parent_node, node);
+  // // pthread_mutex_lock(&global_data->uid_counter.mutex);
+  // // node->uid = global_data->uid_counter.uid_index++;
+  // // pthread_mutex_unlock(&global_data->uid_counter.mutex);
+
+  // UI Element
+  mui_ui_element *element = (mui_ui_element *)malloc(sizeof(mui_ui_element));
+  node->data = element;
+
+  element->bounds = {};
+  element->visual_node = node;
+  element->type = element_type;
+  element->requires_update = true;
+  element->requires_rerender = true;
+
+  element->data = NULL;
+
+  if (created_element)
+    *created_element = element;
 }
