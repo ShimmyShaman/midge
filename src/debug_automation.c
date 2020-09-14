@@ -31,7 +31,7 @@ void create_hello_world_console_app()
   instantiate_definition_from_code(app_node, ibpa_code, &func_info); //(void **)
   app_info->initialize_app = func_info;
 
-  attach_node_to_hierarchy(command_hub->global_node, app_node);
+  mca_attach_node_to_hierarchy(command_hub->global_node, app_node);
 
   // Export it
   MCcall(obtain_subnode_with_name(command_hub->global_node, "hello-world-console", &app_node));
@@ -54,7 +54,7 @@ void create_hello_world_visual_app()
 
   allocate_and_copy_cstr(app_node->name, "hello-world-console");
   app_node->parent = command_hub->global_node;
-  app_node->type = NODE_TYPE_VISUAL_APP;
+  app_node->type = NODE_TYPE_VISUAL_PROJECT;
 
   visual_app_info *app_info = (visual_app_info *)malloc(sizeof(visual_app_info));
   app_info->update_app = NULL;
@@ -77,7 +77,7 @@ void create_hello_world_visual_app()
   instantiate_definition_from_code(app_node, init_code, &func_info); //(void **)
   app_info->initialize_app = func_info;
 
-  attach_node_to_hierarchy(command_hub->global_node, app_node);
+  mca_attach_node_to_hierarchy(command_hub->global_node, app_node);
 
   // Export it
   MCcall(obtain_subnode_with_name(command_hub->global_node, "hello-world-visual", &app_node));

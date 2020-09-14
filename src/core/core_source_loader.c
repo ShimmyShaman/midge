@@ -1302,6 +1302,7 @@ int _mcl_load_app_mc_source()
       "src/render/mc_vk_utils.h",
       "src/render/render_thread.h",
       "src/core/midge_app.h",
+      "src/env/state_definitions.h",
 
       "src/platform/mc_xcb.c",
       // "src/render/render_common.c",

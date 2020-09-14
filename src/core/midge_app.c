@@ -69,27 +69,33 @@ void complete_midge_app_compile()
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_definitions.h", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.h", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/hierarchy/project_management.h", NULL);
+  const char *remainder_app_source_files[] = {
+      "src/ui/ui_definitions.h",
+      "src/control/mc_controller.h",
 
-  instantiate_all_definitions_from_file(global_data->global_node, "src/hierarchy/index_functions.c", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/controls/text_block.c", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/controls/panel.c", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_functionality.c", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_render.c", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.c", NULL);
-  instantiate_all_definitions_from_file(global_data->global_node, "src/hierarchy/project_management.c", NULL);
+      "src/render/render_common.c",
+      "src/env/hierarchy.c",
+      "src/env/util.c",
+      "src/env/project_management.c",
+      "src/ui/controls/text_block.c",
+      "src/ui/controls/panel.c",
+      "src/ui/ui_functionality.c",
+      "src/ui/ui_render.c",
+      "src/control/mc_controller.c",
+      "src/modules/modus_operandi/modus_operandi_curator.c",
+      NULL,
+  };
 
-  // Modules
-  instantiate_all_definitions_from_file(global_data->global_node, "src/modules/modus_operandi/modus_operandi_curator.c",
-                                        NULL);
+  for (int f = 0; remainder_app_source_files[f]; ++f) {
+    printf("instantiate file:'%s'\n", remainder_app_source_files[f]);
+    instantiate_all_definitions_from_file(global_data->global_node, remainder_app_source_files[f], NULL);
+  }
 }
 
 extern "C" {
 void mcc_initialize_input_state();
 void mcc_update_xcb_input();
-void mui_initialize_ui_state();
+void mui_initialize_ui_state(mui_ui_state **p_ui_state);
 void mui_initialize_core_ui_components();
 void mui_update_headless_image_node(mc_node *element_node);
 void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node);
@@ -100,9 +106,12 @@ void init_modus_operandi_curator();
 
 void initialize_midge_components()
 {
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
   mcc_initialize_input_state();
 
-  mui_initialize_ui_state();
+  mui_initialize_ui_state(&global_data->ui_state);
   mui_initialize_core_ui_components();
 
   // Modules
@@ -118,7 +127,8 @@ void midge_initialize_app(struct timespec *app_begin_time)
   struct timespec source_load_complete_time;
   clock_gettime(CLOCK_REALTIME, &source_load_complete_time);
 
-  printf("#######################\n  <<<< MIDGE >>>>\n\nCore Compile took %.2f seconds\n",
+  printf("#######################\n  <<<< MIDGE >>>>\n\nCore Compile took %.2f "
+         "seconds\n",
          source_load_complete_time.tv_sec - global_data->app_begin_time->tv_sec +
              1e-9 * (source_load_complete_time.tv_nsec - global_data->app_begin_time->tv_nsec));
 
@@ -127,11 +137,14 @@ void midge_initialize_app(struct timespec *app_begin_time)
 
   // Compile the remainder of the application
   complete_midge_app_compile();
+  printf("midge compilation complete\n");
 
   // Initialize main thread
   initialize_midge_components();
+  printf("midge components initialized\n");
 
-  // Wait for render thread initialization and all resources to load before continuing with the next set of commands
+  // Wait for render thread initialization and all resources to load before
+  // continuing with the next set of commands
   bool waited = false;
   while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue.count) {
     waited = true;
@@ -182,7 +195,8 @@ void mca_render_presentation()
   obtain_image_render_queue(&global_data->render_thread->render_queue, &sequence);
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
   sequence->clear_color = COLOR_NEARLY_BLACK;
-  // printf("global_data->screen : %u, %u\n", global_data->screen.width, global_data->screen.height);
+  // printf("global_data->screen : %u, %u\n", global_data->screen.width,
+  // global_data->screen.height);
   sequence->image_width = global_data->screen.width;
   sequence->image_height = global_data->screen.height;
   sequence->data.target_image.image_uid = global_data->present_image_resource_uid;
@@ -191,6 +205,9 @@ void mca_render_presentation()
     switch (global_data->children->items[a]->type) {
     case NODE_TYPE_UI:
       mui_render_ui_node(sequence, global_data->children->items[a]);
+      break;
+    case NODE_TYPE_VISUAL_PROJECT:
+      mca_render_visual_project(sequence, global_data->children->items[a]);
       break;
     default:
       MCerror(296, "mca_render_presentation>|Unsupported node type:%i", global_data->children->items[a]->type);
@@ -269,15 +286,18 @@ void midge_run_app()
 
       // Update Timers
       bool exit_gracefully = false;
-      // for (int i = 0; i < !exit_gracefully && global_data->update_timers.count; ++i) {
-      //   update_callback_timer *timer = global_data->update_timers.callbacks[i];
+      // for (int i = 0; i < !exit_gracefully &&
+      // global_data->update_timers.count; ++i) {
+      //   update_callback_timer *timer =
+      //   global_data->update_timers.callbacks[i];
 
       //   if (!timer->update_delegate || !(*timer->update_delegate)) {
       //     continue;
       //   }
 
       //   // if (logic_update_due) {
-      //   //   printf("%p::%ld<>%ld\n", timer->update_delegate, timer->next_update.tv_sec, current_frametime.tv_sec);
+      //   //   printf("%p::%ld<>%ld\n", timer->update_delegate,
+      //   timer->next_update.tv_sec, current_frametime.tv_sec);
       //   // }
       //   if (current_frametime.tv_sec > timer->next_update.tv_sec ||
       //       (current_frametime.tv_sec == timer->next_update.tv_sec &&
@@ -297,9 +317,11 @@ void midge_run_app()
       //     }
 
       //     if (timer->reset_timer_on_update)
-      //       increment_time_spec(&current_frametime, &timer->period, &timer->next_update);
+      //       increment_time_spec(&current_frametime, &timer->period,
+      //       &timer->next_update);
       //     else
-      //       increment_time_spec(&timer->next_update, &timer->period, &timer->next_update);
+      //       increment_time_spec(&timer->next_update, &timer->period,
+      //       &timer->next_update);
       //   }
       // }
       if (exit_gracefully) {
@@ -334,6 +356,11 @@ void midge_run_app()
     }
 
     // Update State
+    {
+      // As is global node update despite any requirement
+      mca_update_node_list(global_data->children);
+      global_data->ui_state->requires_update = false;
+    }
     // -- TODO ?
 
     if (global_data->exit_requested)

@@ -52,9 +52,9 @@ void mcc_handle_xcb_input()
   //   input_event->handled = false;
   //   // printf("input_recorded\n");
 
-  for (int i = 0; i < global_data->render_thread->input_buffer.event_count; ++i) {
+  for (int xi_index = 0; xi_index < global_data->render_thread->input_buffer.event_count; ++xi_index) {
     // New Input Event
-    window_input_event *xcb_input = &global_data->render_thread->input_buffer.events[i];
+    window_input_event *xcb_input = &global_data->render_thread->input_buffer.events[xi_index];
 
     switch (xcb_input->type) {
     case INPUT_EVENT_MOUSE_PRESS: {
@@ -153,16 +153,26 @@ void mcc_handle_xcb_input()
         // input_event->type = xcb_input->type;
         // input_event->detail = xcb_input->detail;
 
-        if ((input_state->ctrl_function & KEY_STATE_DOWN) && (input_state->ctrl_function & KEY_STATE_DOWN) &&
+        if ((input_state->ctrl_function & KEY_STATE_DOWN) && (input_state->shift_function & KEY_STATE_DOWN) &&
             xcb_input->detail.keyboard.key == KEY_CODE_W) {
           global_data->exit_requested = true;
           continue;
         }
 
-        if ((input_state->ctrl_function & KEY_STATE_DOWN) && (input_state->ctrl_function & KEY_STATE_DOWN) &&
+        if ((input_state->ctrl_function & KEY_STATE_DOWN) && (input_state->shift_function & KEY_STATE_DOWN) &&
             xcb_input->detail.keyboard.key == KEY_CODE_N) {
 
-          mch_create_new_visual_project("PushTheButton");
+          // Lets only have one project at a time for the time being -- TODO
+          bool visual_app_exists = false;
+          for (int a = 0; a < global_data->children->count; ++a) {
+            if (global_data->children->items[a]->type == NODE_TYPE_VISUAL_PROJECT) {
+              visual_app_exists = true;
+              break;
+            }
+          }
+
+          if (!visual_app_exists)
+            mca_create_new_visual_project("PushTheButton");
           continue;
         }
 

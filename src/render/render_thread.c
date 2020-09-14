@@ -845,8 +845,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   // printf("mrt-2: %p\n", &winfo);
   uint frame_updates = 0;
   while (!thr->should_exit && !vkrs->xcb_winfo->input_requests_exit) {
-      // TODO DEBUG
-      usleep(10);
+    // TODO DEBUG
+    usleep(10);
 
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue.mutex);
@@ -855,7 +855,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
       res = handle_resource_commands(vkrs, &render_thread->resource_queue);
       VK_CHECK(res, "handle_resource_commands");
       render_thread->resource_queue.count = 0;
-      printf("Vulkan loaded resources!\n");
+      // printf("Vulkan loaded resources!\n");
     }
     pthread_mutex_unlock(&render_thread->resource_queue.mutex);
 
@@ -875,7 +875,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
       VK_CHECK(res, "render_through_queue");
       render_thread->render_queue.count = 0;
 
-      // printf("Vulkan rendered render_queue!\n");
+      printf("Vulkan rendered render_queue!\n");
       ++frame_updates;
     }
     pthread_mutex_unlock(&render_thread->render_queue.mutex);

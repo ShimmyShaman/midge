@@ -37,12 +37,6 @@ typedef struct mui_ui_element {
   void *data;
 } mui_ui_element;
 
-typedef struct mui_ui_state {
-  bool requires_update;
-  mc_node_list *cache_layered_hit_list;
-  unsigned int default_font_resource;
-} mui_ui_state;
-
 // Controls
 typedef struct mui_text_block {
   mui_ui_element *element;
@@ -62,11 +56,10 @@ typedef struct mui_panel {
 
 extern "C" {
 // UI Functionality
-void mui_initialize_ui_state();
+void mui_initialize_ui_state(mui_ui_state **p_ui_state);
 void mui_initialize_core_ui_components();
 
 void mui_update_ui();
-void mui_set_element_update(mui_ui_element *element);
 
 void mui_get_ui_elements_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list);
 

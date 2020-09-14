@@ -4,6 +4,8 @@
 #include "render/mc_vulkan.h"
 #include <vulkan/vulkan.h>
 
+#include "stb_truetype.h"
+
 #define XY(X, Y) X, Y
 #define UV(U, V) U, V
 #define XYZW(X, Y, Z) X, Y, Z, 1.f
@@ -15,11 +17,11 @@
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {
   const float g_vb_shape_data[] = {// Rectangle
-                                    XY(-0.5f, -0.5f), XY(-0.5f, 0.5f), XY(0.5f, -0.5f),
-                                    XY(-0.5f, 0.5f),  XY(0.5f, 0.5f),  XY(0.5f, -0.5f)};
-                                  //  XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
-                                  //  XYZW(0.5f, -0.5f, 0),  WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
-                                  //  XYZW(0.5f, 0.5f, 0),   WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA};
+                                   XY(-0.5f, -0.5f), XY(-0.5f, 0.5f), XY(0.5f, -0.5f),
+                                   XY(-0.5f, 0.5f),  XY(0.5f, 0.5f),  XY(0.5f, -0.5f)};
+  //  XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
+  //  XYZW(0.5f, -0.5f, 0),  WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
+  //  XYZW(0.5f, 0.5f, 0),   WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA};
   const float g_vb_textured_shape_2D_data[] = {// Rectangle
                                                XY(-0.5f, -0.5f), UV(0.f, 0.f), XY(-0.5f, 0.5f), UV(0.f, 1.f),
                                                XY(0.5f, -0.5f),  UV(1.f, 0.f), XY(-0.5f, 0.5f), UV(0.f, 1.f),
@@ -475,7 +477,7 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
                                         bool use_as_render_target, uint *resource_uid)
 {
   VkResult res;
-
+  
   int texChannels = 4;
   stbi_uc *pixels = (stbi_uc *)malloc(sizeof(stbi_uc) * width * height * texChannels);
   VkDeviceSize imageSize = width * height * 4;
@@ -503,6 +505,10 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
   res = mvk_load_image_sampler(p_vkrs, width, height, texChannels, use_as_render_target, pixels,
                                &p_vkrs->textures.samples[p_vkrs->textures.count]);
   VK_CHECK(res, "mvk_load_image_sampler");
+
+
+  // printf("p_vkrs->textures:%u  %u\n", p_vkrs->textures.count, p_vkrs->textures.allocated);
+
   *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
   ++p_vkrs->textures.count;
 

@@ -1,14 +1,14 @@
 
+#include "env/state_definitions.h"
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
-void mui_initialize_ui_state()
+void mui_initialize_ui_state(mui_ui_state **p_ui_state)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mui_ui_state *ui_state = (mui_ui_state *)malloc(sizeof(mui_ui_state));
-  global_data->ui_state = ui_state;
 
   // cache_layered_hit_list
   ui_state->cache_layered_hit_list = (mc_node_list *)malloc(sizeof(mc_node_list));
@@ -23,18 +23,15 @@ void mui_initialize_ui_state()
 
   // Resource loading
   pthread_mutex_lock(&global_data->render_thread->resource_queue.mutex);
-  resource_command *command;
 
   // Font
-  // printf("oius-0\n %p", global_data->render_thread->resource_queue);
-  obtain_resource_command(&global_data->render_thread->resource_queue, &command);
-  command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &global_data->ui_state->default_font_resource;
-  // printf("resource_uid set with =%p\n", command->p_uid);
-  command->data.font.height = 18;
-  command->data.font.path = "res/font/DroidSansMono.ttf";
+  mcr_obtain_font_resource(&global_data->render_thread->resource_queue, "res/font/DroidSansMono.ttf", 18,
+                           &global_data->ui_state->default_font_resource);
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue.mutex);
+
+  // Set
+  *p_ui_state = global_data->ui_state;
 }
 
 void mui_initialize_core_ui_components()
@@ -49,36 +46,6 @@ void mui_update_ui()
   obtain_midge_global_root(&global_data);
 
   global_data->requires_rerender = true;
-}
-
-void mui_set_element_update(mui_ui_element *element)
-{
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
-
-  element->requires_update = true;
-
-  // Set update required on all ancestors of the node
-  mc_node *node = element->visual_node->parent;
-  while (node) {
-    switch (node->type) {
-    case NODE_TYPE_GLOBAL_ROOT: {
-      global_root_data *global_data = (global_root_data *)node->data;
-
-      global_data->ui_state->requires_update = true;
-
-      node = NULL;
-    } break;
-    case NODE_TYPE_UI: {
-      mui_ui_element *parent_element = (mui_ui_element *)node->data;
-      parent_element->requires_update = true;
-
-      node = node->parent;
-    } break;
-    default:
-      MCerror(54, "mui_set_element_update::>unsupported node type:%i", node->type);
-    }
-  }
 }
 
 void _mui_get_ui_elements_within_node_at_point(mc_node *node, int screen_x, int screen_y,
@@ -120,8 +87,11 @@ void _mui_get_ui_elements_within_node_at_point(mc_node *node, int screen_x, int 
 
     append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
   } break;
+  case NODE_TYPE_VISUAL_PROJECT: {
+
+  } break;
   default:
-    MCerror(27, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", node->type);
+    MCerror(1227, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", node->type);
   }
 }
 
@@ -193,7 +163,7 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
     }
   }
   else {
-    attach_node_to_hierarchy(parent_node, node);
+    mca_attach_node_to_hierarchy(parent_node, node);
   }
   // // pthread_mutex_lock(&global_data->uid_counter.mutex);
   // // node->uid = global_data->uid_counter.uid_index++;

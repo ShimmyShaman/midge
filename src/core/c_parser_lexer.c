@@ -2395,7 +2395,8 @@ int mcs_parse_expression_variable_access(parsing_state *ps, mc_syntax_node *pare
 //   return 0;
 // }
 
-int mcs_parse_cast_expression(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+int mcs_parse_cast_expression(parsing_state *ps, mc_syntax_node *parent, bool is_function_pointer_declaration,
+                              mc_syntax_node **additional_destination)
 {
   const int CASE_PRECEDENCE = 3;
   mc_syntax_node *cast_expression;
@@ -2407,56 +2408,111 @@ int mcs_parse_cast_expression(parsing_state *ps, mc_syntax_node *parent, mc_synt
   mcs_parse_through_token(ps, cast_expression, MC_TOKEN_OPEN_BRACKET, NULL);
   mcs_parse_through_supernumerary_tokens(ps, cast_expression);
 
-  mc_token_type token0;
-  bool is_function_pointer_declaration = false;
-  {
-    int peek_ahead = 0;
-    int stage = 0;
-    bool unsure = true;
-    while (unsure) {
-      mcs_peek_token_type(ps, false, peek_ahead, &token0);
-      switch (token0) {
-      case MC_TOKEN_UNION_KEYWORD:
-      case MC_TOKEN_STRUCT_KEYWORD: {
-        unsure = false;
-      } break;
-      case MC_TOKEN_CONST_KEYWORD:
-        break;
-      case MC_TOKEN_INT_KEYWORD:
-      case MC_TOKEN_CHAR_KEYWORD:
-      case MC_TOKEN_LONG_KEYWORD:
-      case MC_TOKEN_SHORT_KEYWORD:
-      case MC_TOKEN_FLOAT_KEYWORD:
-      case MC_TOKEN_VOID_KEYWORD:
-      case MC_TOKEN_SIGNED_KEYWORD:
-      case MC_TOKEN_UNSIGNED_KEYWORD:
-      case MC_TOKEN_IDENTIFIER: {
-        if (stage) {
-          // print_syntax_node(cast_expression, 0);
-          print_parse_error(ps->code, ps->index, "mcs_parse_cast_expression", "is_fptr");
-          MCerror(2236, "TODO");
-        }
-        stage = 1;
-      } break;
-      case MC_TOKEN_STAR_CHARACTER: {
-        if (!stage) {
-          MCerror(2247, "unexpected");
-        }
-        stage = 2;
-      } break;
-      case MC_TOKEN_CLOSING_BRACKET: {
-        unsure = false;
-      } break;
-      case MC_TOKEN_OPEN_BRACKET: {
-        unsure = false;
-        is_function_pointer_declaration = true;
-      } break;
-      default:
-        MCerror(2244, "Unsupported:%s", get_mc_token_type_name(token0));
-      }
-      ++peek_ahead;
-    }
-  }
+  // bool is_function_pointer_declaration;
+  mc_token_type token_type;
+  // int debug_index;
+  // mcs_peek_token_type(ps, false, 0, &token_type);
+  // switch (token_type) {
+  // case MC_TOKEN_UNION_KEYWORD:
+  // case MC_TOKEN_STRUCT_KEYWORD: {
+  //   is_function_pointer_declaration = false;
+  // } break;
+  // case MC_TOKEN_CONST_KEYWORD:
+  // case MC_TOKEN_SIGNED_KEYWORD:
+  // case MC_TOKEN_UNSIGNED_KEYWORD:
+  // case MC_TOKEN_LONG_KEYWORD: {
+  //   mcs_peek_token_type_and_index(ps, false, 1, &token_type, &debug_index);
+  //   switch (token_type) {
+  //   default:
+  //     // print_syntax_node(cast_expression, 0);
+  //     print_parse_error(ps->code, debug_index, "mcs_parse_cast_expression", "is_fptr");
+  //     MCerror(2427, "TODO:%s", get_mc_token_type_name(token_type));
+  //     break;
+  //   }
+  // } break;
+  // case MC_TOKEN_CHAR_KEYWORD:
+  // case MC_TOKEN_IDENTIFIER: {
+  //   mcs_peek_token_type_and_index(ps, false, 1, &token_type, &debug_index);
+  //   switch (token_type) {
+  //   case MC_TOKEN_STAR_CHARACTER: {
+  //     int peek_ahead = 1;
+  //     do {
+  //       ++peek_ahead;
+  //       mcs_peek_token_type_and_index(ps, false, peek_ahead, &token_type, &debug_index);
+  //     } while (token_type == MC_TOKEN_STAR_CHARACTER);
+
+  //     switch (token_type) {
+  //     case MC_TOKEN_CLOSING_BRACKET: {
+  //       is_function_pointer_declaration = false;
+  //     } break;
+  //     default:
+  //       // print_syntax_node(cast_expression, 0);
+  //       print_parse_error(ps->code, debug_index, "mcs_parse_cast_expression", "is_fptr");
+  //       MCerror(2446, "TODO:%s", get_mc_token_type_name(token_type));
+  //       break;
+  //     }
+  //   } break;
+  //   default:
+  //     // print_syntax_node(cast_expression, 0);
+  //     print_parse_error(ps->code, debug_index, "mcs_parse_cast_expression", "is_fptr");
+  //     MCerror(2437, "TODO:%s", get_mc_token_type_name(token_type));
+  //     break;
+  //   }
+  // } break;
+  // default:
+  //   // print_syntax_node(cast_expression, 0);
+  //   print_parse_error(ps->code, ps->index, "mcs_parse_cast_expression", "is_fptr");
+  //   MCerror(2236, "TODO:%s", get_mc_token_type_name(token_type));
+  //   break;
+  // }
+  // {
+  //   int peek_ahead = 0;
+  //   int stage = 0;
+  //   bool unsure = true;
+  //   while (unsure) {
+  //     mcs_peek_token_type(ps, false, peek_ahead, &token_type);
+  //     switch (token_type) {
+  //     case MC_TOKEN_UNION_KEYWORD:
+  //     case MC_TOKEN_STRUCT_KEYWORD: {
+  //       unsure = false;
+  //     } break;
+  //     case MC_TOKEN_CONST_KEYWORD:
+  //       break;
+  //     case MC_TOKEN_INT_KEYWORD:
+  //     case MC_TOKEN_CHAR_KEYWORD:
+  //     case MC_TOKEN_LONG_KEYWORD:
+  //     case MC_TOKEN_SHORT_KEYWORD:
+  //     case MC_TOKEN_FLOAT_KEYWORD:
+  //     case MC_TOKEN_VOID_KEYWORD:
+  //     case MC_TOKEN_SIGNED_KEYWORD:
+  //     case MC_TOKEN_UNSIGNED_KEYWORD:
+  //     case MC_TOKEN_IDENTIFIER: {
+  //       if (stage) {
+  //         // print_syntax_node(cast_expression, 0);
+  //         print_parse_error(ps->code, ps->index, "mcs_parse_cast_expression", "is_fptr");
+  //         MCerror(2236, "TODO");
+  //       }
+  //       stage = 1;
+  //     } break;
+  //     case MC_TOKEN_STAR_CHARACTER: {
+  //       if (!stage) {
+  //         MCerror(2247, "unexpected");
+  //       }
+  //       stage = 2;
+  //     } break;
+  //     case MC_TOKEN_CLOSING_BRACKET: {
+  //       unsure = false;
+  //     } break;
+  //     case MC_TOKEN_OPEN_BRACKET: {
+  //       unsure = false;
+  //       is_function_pointer_declaration = true;
+  //     } break;
+  //     default:
+  //       MCerror(2244, "Unsupported:%s", get_mc_token_type_name(token_type));
+  //     }
+  //     ++peek_ahead;
+  //   }
+  // }
 
   if (is_function_pointer_declaration) {
     mcs_parse_function_pointer_declaration(ps, cast_expression, true,
@@ -2466,8 +2522,8 @@ int mcs_parse_cast_expression(parsing_state *ps, mc_syntax_node *parent, mc_synt
     mcs_parse_type_identifier(ps, cast_expression, &cast_expression->cast_expression.type_identifier);
     mcs_parse_through_supernumerary_tokens(ps, cast_expression);
 
-    mcs_peek_token_type(ps, false, 0, &token0);
-    if (token0 == MC_TOKEN_STAR_CHARACTER) {
+    mcs_peek_token_type(ps, false, 0, &token_type);
+    if (token_type == MC_TOKEN_STAR_CHARACTER) {
       mcs_parse_dereference_sequence(ps, cast_expression, &cast_expression->cast_expression.type_dereference);
       mcs_parse_through_supernumerary_tokens(ps, cast_expression);
     }
@@ -2549,6 +2605,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
                                                 mc_syntax_node **additional_destination)
 {
   // Determine expression type
+  // If cast expression, determine if function pointer declaration
   mc_token_type token_type;
   mcs_peek_token_type(ps, false, 0, &token_type);
   if (token_type != MC_TOKEN_OPEN_BRACKET) {
@@ -2565,19 +2622,69 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
   case MC_TOKEN_CHAR_LITERAL: {
     mcs_parse_parenthesized_expression(ps, parent, additional_destination);
   } break;
-  case MC_TOKEN_STRUCT_KEYWORD:
   case MC_TOKEN_INT_KEYWORD:
   case MC_TOKEN_CHAR_KEYWORD:
+  case MC_TOKEN_STRUCT_KEYWORD:
   case MC_TOKEN_CONST_KEYWORD:
-  // case MC_TOKEN_BOOL_KEYWORD:
   case MC_TOKEN_LONG_KEYWORD:
   case MC_TOKEN_SHORT_KEYWORD:
   case MC_TOKEN_FLOAT_KEYWORD:
   case MC_TOKEN_VOID_KEYWORD:
   case MC_TOKEN_SIGNED_KEYWORD:
   case MC_TOKEN_UNSIGNED_KEYWORD: {
-    // Cast
-    mcs_parse_cast_expression(ps, parent, additional_destination);
+    int peek_ahead = 1;
+
+    bool is_modifier = true;
+    while (is_modifier) {
+      switch (token_type) {
+      case MC_TOKEN_UNSIGNED_KEYWORD:
+      case MC_TOKEN_SIGNED_KEYWORD: {
+        ++peek_ahead;
+        mcs_peek_token_type(ps, false, peek_ahead + 1, &token_type);
+      }
+        continue;
+      case MC_TOKEN_INT_KEYWORD:
+      case MC_TOKEN_CHAR_KEYWORD:
+      case MC_TOKEN_FLOAT_KEYWORD:
+      case MC_TOKEN_VOID_KEYWORD:
+        break;
+      default:
+        print_parse_error(ps->code, ps->index, "parse_bracket", "is_fptr");
+        MCerror(2648, "TODO:%s", get_mc_token_type_name(token_type));
+      }
+
+      // While-loop
+      break;
+    }
+
+    mcs_peek_token_type(ps, false, peek_ahead, &token_type);
+    switch (token_type) {
+    case MC_TOKEN_STAR_CHARACTER: {
+      do {
+        ++peek_ahead;
+        mcs_peek_token_type(ps, false, peek_ahead, &token_type);
+      } while (token_type == MC_TOKEN_STAR_CHARACTER);
+
+      switch (token_type) {
+      case MC_TOKEN_CLOSING_BRACKET: {
+        mcs_parse_cast_expression(ps, parent, false, additional_destination);
+      } break;
+      default:
+        // print_syntax_node(cast_expression, 0);
+        print_parse_error(ps->code, ps->index, "mcs_parse_cast_expression", "is_fptr");
+        MCerror(2652, "TODO:%s", get_mc_token_type_name(token_type));
+        break;
+      }
+    } break;
+    case MC_TOKEN_CLOSING_BRACKET:
+      mcs_parse_cast_expression(ps, parent, false, additional_destination);
+      break;
+    default:
+      // print_syntax_node(cast_expression, 0);
+      print_parse_error(ps->code, ps->index, "parse_bracket", "is_fptr");
+      MCerror(2663, "TODO:%s(%i)", get_mc_token_type_name(token_type), peek_ahead);
+      break;
+    }
   } break;
   case MC_TOKEN_IDENTIFIER: {
     mcs_peek_token_type(ps, false, 2, &token_type);
@@ -2591,7 +2698,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
       case MC_TOKEN_CURLY_OPENING_BRACKET:
       case MC_TOKEN_IDENTIFIER: {
         // Cast
-        mcs_parse_cast_expression(ps, parent, additional_destination);
+        mcs_parse_cast_expression(ps, parent, false, additional_destination);
       } break;
       default: {
         print_parse_error(ps->code, ps->index, "see-below", "");
@@ -2617,14 +2724,15 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
       mcs_parse_parenthesized_expression(ps, parent, additional_destination);
     } break;
     case MC_TOKEN_STAR_CHARACTER: {
-      int peek_ahead = 2 + 1;
+      int peek_ahead = 2;
       do {
-        mcs_peek_token_type(ps, false, peek_ahead++, &token_type);
+        ++peek_ahead;
+        mcs_peek_token_type(ps, false, peek_ahead, &token_type);
       } while (token_type == MC_TOKEN_STAR_CHARACTER);
       switch (token_type) {
       case MC_TOKEN_CLOSING_BRACKET: {
         // Cast
-        mcs_parse_cast_expression(ps, parent, additional_destination);
+        mcs_parse_cast_expression(ps, parent, false, additional_destination);
         // printf("cast-expression:\n");
         // print_syntax_node(*additional_destination, 0);
       } break;
@@ -4274,6 +4382,8 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
         mcs_parse_through_token(ps, include_directive, token_type, NULL);
         break;
       }
+      if (token_type == MC_TOKEN_NULL_CHARACTER)
+        break;
 
       mcs_parse_through_token(ps, include_directive, token_type, NULL);
     }

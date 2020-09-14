@@ -1193,7 +1193,7 @@ VkResult mvk_init_tint_render_prog(vk_render_state *p_vkrs)
   {
     bindingDescription.binding = 0;
     bindingDescription.stride = sizeof(vec2);
-    printf("sizeof(vec2)=%zu\n", sizeof(vec2));
+    // printf("sizeof(vec2)=%zu\n", sizeof(vec2));
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     attributeDescriptions[0].binding = 0;
