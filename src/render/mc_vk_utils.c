@@ -15,9 +15,11 @@
 VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 {
   const float g_vb_shape_data[] = {// Rectangle
-                                   XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
-                                   XYZW(0.5f, -0.5f, 0),  WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
-                                   XYZW(0.5f, 0.5f, 0),   WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA};
+                                    XY(-0.5f, -0.5f), XY(-0.5f, 0.5f), XY(0.5f, -0.5f),
+                                    XY(-0.5f, 0.5f),  XY(0.5f, 0.5f),  XY(0.5f, -0.5f)};
+                                  //  XYZW(-0.5f, -0.5f, 0), WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
+                                  //  XYZW(0.5f, -0.5f, 0),  WHITE_RGBA, XYZW(-0.5f, 0.5f, 0), WHITE_RGBA,
+                                  //  XYZW(0.5f, 0.5f, 0),   WHITE_RGBA, XYZW(0.5f, -0.5f, 0), WHITE_RGBA};
   const float g_vb_textured_shape_2D_data[] = {// Rectangle
                                                XY(-0.5f, -0.5f), UV(0.f, 0.f), XY(-0.5f, 0.5f), UV(0.f, 1.f),
                                                XY(0.5f, -0.5f),  UV(1.f, 0.f), XY(-0.5f, 0.5f), UV(0.f, 1.f),
@@ -615,7 +617,6 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   // global_root_data *global_data;
   // obtain_midge_global_root(&global_data);
   // printf("generated font texture> resource_uid:%u\n", global_data->ui_state->default_font_resource);
-
 
   return res;
 }

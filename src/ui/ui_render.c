@@ -45,9 +45,9 @@ void mui_update_headless_image_node(mc_node *element_node)
 
 void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node)
 {
-  mui_ui_element *ui_element = (mui_ui_element *)element_node->data;
+  mui_ui_element *element = (mui_ui_element *)element_node->data;
 
-  switch (ui_element->type) {
+  switch (element->type) {
   case UI_ELEMENT_TEXT_BLOCK: {
     mui_render_text_block(render_queue, element_node);
   } break;
@@ -55,6 +55,6 @@ void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node)
     mui_render_panel(render_queue, element_node);
   } break;
   default:
-    MCerror(44, "mui_render_ui_node:>Unsupported element type:%i", ui_element->type);
+    MCerror(44, "mui_render_ui_node:>Unsupported element type:%i", element->type);
   }
 }

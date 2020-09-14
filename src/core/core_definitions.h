@@ -235,10 +235,12 @@ typedef struct mc_node_list {
 // Incomplete Structure declarations
 struct render_thread_info;
 struct mui_ui_state;
+struct mci_input_state;
 
 typedef struct global_root_data {
   struct timespec *app_begin_time;
   struct render_thread_info *render_thread;
+  bool exit_requested;
 
   mc_node *global_node;
   mc_node_list *children;
@@ -246,6 +248,9 @@ typedef struct global_root_data {
   struct {
     unsigned int width, height;
   } screen;
+
+  struct mci_input_state *input_state;
+  bool input_state_requires_update;
 
   struct mui_ui_state *ui_state;
   bool requires_rerender;

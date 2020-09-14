@@ -56,8 +56,9 @@ void mui_set_element_update(mui_ui_element *element)
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  // Set update required on all ancestors of the node
   element->requires_update = true;
+
+  // Set update required on all ancestors of the node
   mc_node *node = element->visual_node->parent;
   while (node) {
     switch (node->type) {
@@ -67,6 +68,12 @@ void mui_set_element_update(mui_ui_element *element)
       global_data->ui_state->requires_update = true;
 
       node = NULL;
+    } break;
+    case NODE_TYPE_UI: {
+      mui_ui_element *parent_element = (mui_ui_element *)node->data;
+      parent_element->requires_update = true;
+
+      node = node->parent;
     } break;
     default:
       MCerror(54, "mui_set_element_update::>unsupported node type:%i", node->type);
@@ -138,30 +145,30 @@ void mui_get_ui_elements_at_point(int screen_x, int screen_y, mc_node_list **lay
 
 void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)
 {
-  switch (ui_node->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    // global_root_data *global_data = (global_root_data *)node->data;
+  // switch (ui_node->type) {
+  // case NODE_TYPE_GLOBAL_ROOT: {
+  //   // global_root_data *global_data = (global_root_data *)node->data;
 
-    printf("global_node-left_click\n");
-  } break;
-  default:
-    MCerror(69, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", ui_node->type);
-  }
+  //   printf("global_node-left_click\n");
+  // } break;
+  // default:
+  //   MCerror(69, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", ui_node->type);
+  // }
 }
 
 void mui_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)
 {
-  switch (ui_node->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    global_root_data *global_data = (global_root_data *)ui_node->data;
+  // switch (ui_node->type) {
+  // case NODE_TYPE_GLOBAL_ROOT: {
+  //   global_root_data *global_data = (global_root_data *)ui_node->data;
 
-  } break;
-  default:
-    MCerror(83, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", ui_node->type);
-  }
+  // } break;
+  // default:
+  //   MCerror(83, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", ui_node->type);
+  // }
 }
 
-void mui_init_ui_node(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element)
+void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -170,7 +177,24 @@ void mui_init_ui_node(mc_node *parent_node, ui_element_type element_type, mui_ui
   mc_node *node = (mc_node *)malloc(sizeof(mc_node));
 
   node->type = NODE_TYPE_UI;
-  attach_node_to_hierarchy(parent_node, node);
+  if (parent_node->type == NODE_TYPE_UI) {
+    mui_ui_element *parent_element = (mui_ui_element *)parent_node->data;
+    switch (parent_element->type) {
+    case UI_ELEMENT_PANEL: {
+      mui_panel *panel = (mui_panel *)parent_element->data;
+
+      append_to_collection((void ***)&panel->children->items, &panel->children->alloc, &panel->children->count, node);
+      node->parent = parent_node;
+
+    } break;
+    default: {
+      MCerror(180, "add element to parent element : Unsupported type : %i", parent_element->type);
+    }
+    }
+  }
+  else {
+    attach_node_to_hierarchy(parent_node, node);
+  }
   // // pthread_mutex_lock(&global_data->uid_counter.mutex);
   // // node->uid = global_data->uid_counter.uid_index++;
   // // pthread_mutex_unlock(&global_data->uid_counter.mutex);

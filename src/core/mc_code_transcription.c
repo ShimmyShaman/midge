@@ -2223,7 +2223,7 @@ int mct_transcribe_while_statement(mct_transcription_state *ts, mc_syntax_node *
   if (syntax_node->while_statement.conditional) {
     mct_contains_mc_invoke(syntax_node->while_statement.conditional, &contains_mc_function_call);
     if (contains_mc_function_call) {
-      MCerror(65, "TODO");
+      MCerror(2226, "TODO");
     }
   }
 

@@ -1063,13 +1063,14 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   return VK_SUCCESS;
 }
 
-VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
+VkResult mvk_init_tint_render_prog(vk_render_state *p_vkrs)
 {
   VkResult res;
 
   // CreateDescriptorSetLayout
   {
-    VkDescriptorSetLayoutBinding layout_bindings[3];
+    const int binding_count = 3;
+    VkDescriptorSetLayoutBinding layout_bindings[binding_count];
     layout_bindings[0].binding = 0;
     layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     layout_bindings[0].descriptorCount = 1;
@@ -1088,8 +1089,7 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
     layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     layout_bindings[2].pImmutableSamplers = NULL;
 
-    /* Next take layout bindings and use them to create a descriptor set layout
-     */
+    // Next take layout bindings and use them to create a descriptor set layout
     VkDescriptorSetLayoutCreateInfo layout_create_info = {};
     layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layout_create_info.pNext = NULL;
@@ -1097,8 +1097,7 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
     layout_create_info.bindingCount = 3;
     layout_create_info.pBindings = layout_bindings;
 
-    res =
-        vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &p_vkrs->tint_prog.descriptor_layout);
+    res = vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &p_vkrs->tint_prog.descriptor_layout);
     VK_CHECK(res, "vkCreateDescriptorSetLayout");
   }
 
@@ -1107,7 +1106,7 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
   {
     const char *vertex_shader_code = "#version 450\n"
                                      "#extension GL_ARB_separate_shader_objects : enable\n"
-                                     "#extension GL_ARB_shading_language_420pack : enable\n"
+                                     //  "#extension GL_ARB_shading_language_420pack : enable\n"
                                      "layout (std140, binding = 0) uniform UBO0 {\n"
                                      "    mat4 mvp;\n"
                                      "} globalUI;\n"
@@ -1115,26 +1114,24 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
                                      "    vec2 offset;\n"
                                      "    vec2 scale;\n"
                                      "} element;\n"
-                                     "layout (location = 0) in vec4 pos;\n"
-                                     "layout (location = 1) in vec4 inColor;\n"
-                                     "layout (location = 0) out vec4 outColor;\n"
+                                     "\n"
+                                     "layout(location = 0) in vec2 inPosition;\n"
+                                     "\n"
                                      "void main() {\n"
-                                     "   outColor = inColor;\n"
-                                     "   gl_Position = globalUI.mvp * pos;\n"
+                                     "   gl_Position = globalUI.mvp * vec4(inPosition, 0.0, 1.0);\n"
                                      "   gl_Position.xy *= element.scale.xy;\n"
                                      "   gl_Position.xy += element.offset.xy;\n"
                                      "}\n";
 
     const char *fragment_shader_code = "#version 450\n"
                                        "#extension GL_ARB_separate_shader_objects : enable\n"
-                                       "#extension GL_ARB_shading_language_420pack : enable\n"
+                                       //  "#extension GL_ARB_shading_language_420pack : enable\n"
                                        "layout (binding = 2) uniform UBO2 {\n"
                                        "    vec4 tint;\n"
                                        "} element;\n"
-                                       "layout (location = 0) in vec4 color;\n"
                                        "layout (location = 0) out vec4 outColor;\n"
                                        "void main() {\n"
-                                       "   outColor = element.tint * color;\n"
+                                       "   outColor = element.tint;\n"
                                        "}\n";
 
     {
@@ -1191,22 +1188,18 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
 
   // Vertex Bindings
   VkVertexInputBindingDescription bindingDescription = {};
-  const int VERTEX_ATTRIBUTE_COUNT = 2;
+  const int VERTEX_ATTRIBUTE_COUNT = 1;
   VkVertexInputAttributeDescription attributeDescriptions[VERTEX_ATTRIBUTE_COUNT];
   {
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(textured_image_vertex);
+    bindingDescription.stride = sizeof(vec2);
+    printf("sizeof(vec2)=%zu\n", sizeof(vec2));
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[0].offset = 0;                             // offsetof(textured_image_vertex, position);
-
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[1].offset = 16;                            // offsetof(textured_image_vertex, tex_coord);
+    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset = 0;                       // offsetof(textured_image_vertex, position);
   }
 
   {
@@ -1308,8 +1301,8 @@ VkResult mvk_init_present_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL,
-                                    &p_vkrs->tint_prog.pipeline);
+    res =
+        vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &p_vkrs->tint_prog.pipeline);
     VK_CHECK(res, "vkCreateGraphicsPipelines :: Failed to create pipeline");
   }
 
@@ -1970,7 +1963,7 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   res = mvk_init_offscreen_renderpass(vkrs);
   VK_CHECK(res, "mvk_init_offscreen_renderpass");
 
-  res = mvk_init_present_render_prog(vkrs);
+  res = mvk_init_tint_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_textured_render_prog");
   res = mvk_init_textured_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_textured_render_prog");

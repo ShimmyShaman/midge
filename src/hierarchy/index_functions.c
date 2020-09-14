@@ -65,6 +65,9 @@ void attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach)
     append_to_collection((void ***)&global_data->children->items, &global_data->children->alloc,
                          &global_data->children->count, node_to_attach);
   } break;
+  case NODE_TYPE_UI: {
+    MCerror(69, "Dont do this, this way... ?");
+  } break;
   default:
     MCerror(65, "attach_node_to_hierarchy>Unsupported node type:%i", hierarchy_node->type);
   }

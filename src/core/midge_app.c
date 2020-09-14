@@ -80,11 +80,13 @@ void complete_midge_app_compile()
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.c", NULL);
 
   // Modules
-  instantiate_all_definitions_from_file(global_data->global_node, "src/modules/modus_operandi/modus_operandi_curator.c", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/modules/modus_operandi/modus_operandi_curator.c",
+                                        NULL);
 }
 
 extern "C" {
-void mcc_handle_xcb_input();
+void mcc_initialize_input_state();
+void mcc_update_xcb_input();
 void mui_initialize_ui_state();
 void mui_initialize_core_ui_components();
 void mui_update_headless_image_node(mc_node *element_node);
@@ -96,6 +98,8 @@ void init_modus_operandi_curator();
 
 void initialize_midge_components()
 {
+  mcc_initialize_input_state();
+
   mui_initialize_ui_state();
   mui_initialize_core_ui_components();
 
@@ -226,7 +230,7 @@ void midge_run_app()
     bool logic_update_due = false;
     {
       // TODO DEBUG
-      usleep(1);
+      usleep(10);
 
       long ms;  // Milliseconds
       time_t s; // Seconds
@@ -314,17 +318,24 @@ void midge_run_app()
     // Handle Input
     pthread_mutex_lock(&global_data->render_thread->input_buffer.mutex);
 
-    if (global_data->render_thread->input_buffer.event_count > 0)
-      mcc_handle_xcb_input();
+    if (global_data->input_state_requires_update || global_data->render_thread->input_buffer.event_count > 0)
+      mcc_update_xcb_input();
 
     // printf("~main_input\n");
     pthread_mutex_unlock(&global_data->render_thread->input_buffer.mutex);
 
-    // Update State
+    if (global_data->exit_requested)
+      break;
     if (global_data->render_thread->thread_info->has_concluded) {
       printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
       break;
     }
+
+    // Update State
+    // -- TODO ?
+
+    if (global_data->exit_requested)
+      break;
 
     // Render State Changes
     if (global_data->requires_rerender) {

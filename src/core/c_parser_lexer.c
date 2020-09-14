@@ -3383,6 +3383,8 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
       left = expression;
     } break;
+    case MC_TOKEN_BINARY_AND_ASSIGNMENT_OPERATOR:
+    case MC_TOKEN_BINARY_OR_ASSIGNMENT_OPERATOR:
     case MC_TOKEN_BITWISE_LEFT_SHIFT_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_BITWISE_RIGHT_SHIFT_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR:

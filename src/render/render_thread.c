@@ -102,12 +102,14 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
     return VK_SUCCESS;
 
   VkResult res;
-  printf("mrt_rcq-0 %u %u\n", cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
+  // printf("mrt_rcq-0 %u %u\n", cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
 
   // Setup viewport and clip
   set_viewport_cmd(command_buffer, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
   set_scissor_cmd(command_buffer, cmd->x > 0 ? cmd->x : 0, cmd->y > 0 ? cmd->y : 0, cmd->data.colored_rect_info.width,
                   cmd->data.colored_rect_info.height);
+
+  // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
 
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
@@ -122,12 +124,12 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
                             1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
 
-  printf("mrt_rcq-1\n");
+  // printf("mrt_rcq-1\n");
   // Fragment Data
   render_color *frag_ubo_data = (render_color *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(render_color);
 
-  memcpy(frag_ubo_data, &cmd->data.colored_rect_info.color, sizeof(float) * 4);
+  memcpy(frag_ubo_data, &cmd->data.colored_rect_info.color, sizeof(render_color));
 
   // Allocate the descriptor set from the pool.
   VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -145,13 +147,13 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
 
   // Queue Buffer and Descriptor Writes
-  const unsigned int MAX_DESC_SET_WRITES = 8;
+  const unsigned int MAX_DESC_SET_WRITES = 3;
   VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
   VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
   int buffer_info_index = 0;
   int write_index = 0;
 
-  printf("mrt_rcq-2\n");
+  // printf("mrt_rcq-2\n");
   VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
   mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(render_color), frag_ubo_data, frag_ubo_info);
 
@@ -191,7 +193,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   write->dstArrayElement = 0;
   write->dstBinding = 2;
 
-  printf("mrt_rcq-3\n");
+  // printf("mrt_rcq-3\n");
   vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->tint_prog.pipeline_layout, 0, 1,
@@ -843,6 +845,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   // printf("mrt-2: %p\n", &winfo);
   uint frame_updates = 0;
   while (!thr->should_exit && !vkrs->xcb_winfo->input_requests_exit) {
+      // TODO DEBUG
+      usleep(10);
 
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue.mutex);

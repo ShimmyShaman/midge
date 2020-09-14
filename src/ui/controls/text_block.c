@@ -7,25 +7,9 @@ void mui_init_text_block(mc_node *parent, mui_text_block **p_text_block)
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  // Node
-  mc_node *node = (mc_node *)malloc(sizeof(mc_node));
-
-  node->type = NODE_TYPE_UI;
-  attach_node_to_hierarchy(parent, node);
-  // // pthread_mutex_lock(&global_data->uid_counter.mutex);
-  // // node->uid = global_data->uid_counter.uid_index++;
-  // // pthread_mutex_unlock(&global_data->uid_counter.mutex);
-
   // UI Element
-  mui_ui_element *element = (mui_ui_element *)malloc(sizeof(mui_ui_element));
-  node->data = element;
-
-  element->bounds.x = 200;
-  element->bounds.y = 200;
-  element->visual_node = node;
-  element->type = UI_ELEMENT_TEXT_BLOCK;
-  element->requires_update = true;
-  element->requires_rerender = true;
+  mui_ui_element *element;
+  mui_init_ui_element(parent, UI_ELEMENT_TEXT_BLOCK, &element);
 
   // Text Block
   mui_text_block *text_block = (mui_text_block *)malloc(sizeof(mui_text_block));
@@ -42,6 +26,7 @@ void mui_init_text_block(mc_node *parent, mui_text_block **p_text_block)
 
 void mui_render_text_block(image_render_queue *render_queue, mc_node *visual_node)
 {
+  // printf("mui_render_text_block\n");
   mui_ui_element *element = (mui_ui_element *)visual_node->data;
   mui_text_block *text_block = (mui_text_block *)element->data;
 
@@ -55,7 +40,7 @@ void mui_render_text_block(image_render_queue *render_queue, mc_node *visual_nod
 
   if (text_block->font_resource_uid) {
     render_cmd->data.print_text.font_resource_uid = text_block->font_resource_uid;
-    printf("set textblockfont %u\n", render_cmd->data.print_text.font_resource_uid);
+    // printf("set textblockfont %u\n", render_cmd->data.print_text.font_resource_uid);
   }
   else {
     global_root_data *global_data;

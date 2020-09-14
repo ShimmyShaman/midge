@@ -55,6 +55,8 @@ typedef struct mui_text_block {
 typedef struct mui_panel {
   mui_ui_element *element;
 
+  mc_node_list *children;
+
   render_color background_color;
 } mui_panel;
 
@@ -72,7 +74,7 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
 void mui_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);
 
 // Control Initialization
-void mui_init_ui_node(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element);
+void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element);
 void mui_init_text_block(mc_node *parent, mui_text_block **p_text_block);
 void mui_init_panel(mc_node *parent, mui_panel **p_panel);
 
