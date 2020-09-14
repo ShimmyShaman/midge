@@ -159,6 +159,13 @@ void mcc_handle_xcb_input()
           continue;
         }
 
+        if ((input_state->ctrl_function & KEY_STATE_DOWN) && (input_state->ctrl_function & KEY_STATE_DOWN) &&
+            xcb_input->detail.keyboard.key == KEY_CODE_N) {
+
+          mch_create_new_visual_project("PushTheButton");
+          continue;
+        }
+
         // Global Node Hierarchy for (int i = 0; !input_event->handled && i < global_data->global_node->children.count;
         //                            ++i)
         // {

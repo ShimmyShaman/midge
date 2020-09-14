@@ -71,6 +71,7 @@ void complete_midge_app_compile()
 
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_definitions.h", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.h", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/hierarchy/project_management.h", NULL);
 
   instantiate_all_definitions_from_file(global_data->global_node, "src/hierarchy/index_functions.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/controls/text_block.c", NULL);
@@ -78,6 +79,7 @@ void complete_midge_app_compile()
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_functionality.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/ui/ui_render.c", NULL);
   instantiate_all_definitions_from_file(global_data->global_node, "src/control/mc_controller.c", NULL);
+  instantiate_all_definitions_from_file(global_data->global_node, "src/hierarchy/project_management.c", NULL);
 
   // Modules
   instantiate_all_definitions_from_file(global_data->global_node, "src/modules/modus_operandi/modus_operandi_curator.c",
