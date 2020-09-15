@@ -56,6 +56,19 @@ void mca_create_new_visual_project(const char *project_name)
   // Initialize the project visual container (what will be replaced by the OS window)
   mca_init_visual_project_container(project_node);
 
+  {
+    // Text Block
+    mui_text_block *text_block;
+    mui_init_text_block(project_node, &text_block);
+
+    text_block->element->bounds = {200, 500, 0, 0};
+
+    set_c_str(text_block->str, "Hello You!");
+    text_block->font_color = COLOR_NODE_ORANGE;
+
+    mca_set_node_requires_update(text_block->element->visual_node);
+  }
+
   // Ensure initial update is triggered
   mca_set_node_requires_update(project_node);
 

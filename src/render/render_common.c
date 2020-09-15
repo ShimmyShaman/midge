@@ -15,10 +15,12 @@ void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int wi
 void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                               unsigned int *p_resource_uid)
 {
+  // printf("mcr_obtain_font_resource-font_height:%f\n", font_height);
   resource_command *command;
   obtain_resource_command(resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_uid = p_resource_uid;
   command->data.font.height = font_height;
   command->data.font.path = font_path;
+  // printf("hrc-resource_cmd->data.font.height:%f\n", command->data.font.height);
 }

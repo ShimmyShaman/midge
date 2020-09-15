@@ -25,7 +25,7 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
   pthread_mutex_lock(&global_data->render_thread->resource_queue.mutex);
 
   // Font
-  mcr_obtain_font_resource(&global_data->render_thread->resource_queue, "res/font/DroidSansMono.ttf", 18,
+  mcr_obtain_font_resource(&global_data->render_thread->resource_queue, "res/font/DroidSansMono.ttf", 18.f,
                            &ui_state->default_font_resource);
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue.mutex);
@@ -162,8 +162,6 @@ void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, boo
     text_block->font_color = COLOR_GHOST_WHITE;
 
     mca_set_node_requires_update(text_block->element->visual_node);
-
-    // DEBUG THIS
   } break;
   default:
     MCerror(83, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);

@@ -644,8 +644,8 @@ int mct_transcribe_type_identifier(mct_transcription_state *ts, mc_syntax_node *
   return 0;
 }
 
-int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax_node *argument,
-                                          const char *argument_data_name, int arg_index)
+int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter_info *parameter,
+                                          mc_syntax_node *argument, const char *argument_data_name, int arg_index)
 {
   // printf("mtmi-3\n");
   mct_append_indent_to_c_str(ts);
@@ -911,7 +911,23 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, mc_syntax
     // printf("mtmi-9\n");
     switch ((mc_token_type)argument->type) {
     case MC_TOKEN_NUMERIC_LITERAL: {
-      append_to_c_strf(ts->str, "int %s_%i = %s;\n", argument_data_name, arg_index, argument->text);
+      // printf("mtmi-9\n");
+      char *parameter_type_name = (char *)"int";
+      if (parameter) {
+        if (parameter->type_deref_count) {
+          MCerror(915, "Incorrect argument?");
+        }
+        if (parameter->parameter_type != PARAMETER_KIND_STANDARD) {
+          MCerror(918, "Incorrect argument by paramter type");
+        }
+
+        // TODO -- work on this more
+        // won't work on function pointers, more checking is required
+
+        parameter_type_name = (char *)parameter->type_name;
+      }
+
+      append_to_c_strf(ts->str, "%s %s_%i = %s;\n", parameter_type_name, argument_data_name, arg_index, argument->text);
       mct_append_indent_to_c_str(ts);
       append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
     } break;
@@ -1105,8 +1121,20 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
       }
     }
 
+    if (!func_info) {
+      print_syntax_node(syntax_node, 0);
+      MCerror(1110, "func info required for parameter type argument\n");
+    }
+
     for (int i = 0; i < syntax_node->invocation.arguments->count; ++i) {
-      mct_transcribe_mc_invocation_argument(ts, syntax_node->invocation.arguments->items[i], ARGUMENT_DATA_NAME, i);
+
+      parameter_info *parameter = NULL;
+      if (i < func_info->parameter_count) {
+        parameter = func_info->parameters[i];
+      }
+
+      mct_transcribe_mc_invocation_argument(ts, parameter, syntax_node->invocation.arguments->items[i],
+                                            ARGUMENT_DATA_NAME, i);
     }
 
     register_midge_error_tag("mct_transcribe_mc_invocation-return");
@@ -1682,7 +1710,7 @@ int mct_transcribe_fptr_invocation(mct_transcription_state *ts, mc_syntax_node *
   append_to_c_strf(ts->str, "void *%s[%i];\n", ARGUMENT_DATA_NAME, syntax_node->invocation.arguments->count + 1);
 
   for (int a = 0; a < syntax_node->invocation.arguments->count; ++a) {
-    mct_transcribe_mc_invocation_argument(ts, syntax_node->invocation.arguments->items[a], ARGUMENT_DATA_NAME, a);
+    mct_transcribe_mc_invocation_argument(ts, NULL, syntax_node->invocation.arguments->items[a], ARGUMENT_DATA_NAME, a);
   }
 
   if (strcmp(fptr_type_info->type_name, "void") || fptr_type_info->deref_count) {

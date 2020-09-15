@@ -25,6 +25,7 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
     } break;
     case RESOURCE_COMMAND_LOAD_FONT: {
+      // printf("hrc-resource_cmd->data.font.height:%f\n", resource_cmd->data.font.height);
       res = mvk_load_font(p_vkrs, resource_cmd->data.font.path, resource_cmd->data.font.height, resource_cmd->p_uid);
       VK_CHECK(res, "load_font");
 
@@ -56,6 +57,7 @@ int set_viewport_cmd(VkCommandBuffer command_buffer, float x, float y, float wid
 
 int set_scissor_cmd(VkCommandBuffer command_buffer, int32_t x, int32_t y, uint32_t width, uint32_t height)
 {
+  // printf("set_scissor_cmd: %i %i %u %u\n", x, y, width, height);
   VkRect2D scissor;
   scissor.offset.x = x;
   scissor.offset.y = y;
@@ -105,9 +107,9 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   // printf("mrt_rcq-0 %u %u\n", cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
 
   // Setup viewport and clip
-  set_viewport_cmd(command_buffer, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-  set_scissor_cmd(command_buffer, cmd->x > 0 ? cmd->x : 0, cmd->y > 0 ? cmd->y : 0, cmd->data.colored_rect_info.width,
-                  cmd->data.colored_rect_info.height);
+  set_viewport_cmd(command_buffer, 0.f, 0.f, (float)sequence->image_width, (float)sequence->image_height);
+  set_scissor_cmd(command_buffer, (int32_t)(cmd->x > 0 ? cmd->x : 0), (int32_t)(cmd->y > 0 ? cmd->y : 0),
+                  (uint32_t)cmd->data.colored_rect_info.width, (uint32_t)cmd->data.colored_rect_info.height);
 
   // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
 
@@ -232,9 +234,9 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   //        sequence->image_height);
 
   // Setup viewport and clip
-  set_viewport_cmd(command_buffer, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-  set_scissor_cmd(command_buffer, cmd->x, cmd->y, cmd->data.textured_rect_info.width,
-                  cmd->data.textured_rect_info.height);
+  set_viewport_cmd(command_buffer, 0.f, 0.f, (float)sequence->image_width, (float)sequence->image_height);
+  set_scissor_cmd(command_buffer, (int32_t)cmd->x, (int32_t)cmd->y, (uint32_t)cmd->data.textured_rect_info.width,
+                  (uint32_t)cmd->data.textured_rect_info.height);
 
   // Queue Buffer Write
   const unsigned int MAX_DESC_SET_WRITES = 8;
@@ -362,7 +364,11 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     // Source texture bounds
     stbtt_aligned_quad q;
 
-    stbtt_GetBakedQuad(font->char_data, font_image->width, font_image->height, letter - 32, &align_x, &align_y, &q,
+    // printf("garbagein: %i %i %f %f %i\n", (int)font_image->width, (int)font_image->height, align_x, align_y, letter -
+    // 32);
+
+    stbtt_GetBakedQuad(font->char_data, (int)font_image->width, (int)font_image->height, letter - 32, &align_x,
+                       &align_y, &q,
                        1); // 1=opengl & d3d10+,0=d3d9
 
     // stbtt_bakedchar *b = font->char_data + (letter - 32);
@@ -377,8 +383,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     float width = q.x1 - q.x0;
     float height = q.y1 - q.y0;
 
-    // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n",
-    // q.s0,
+    // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n", q.s0,
     //        q.s1, q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
     // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
 
@@ -408,8 +413,9 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
 
     // Setup viewport and clip
     // printf("sequence : %f, %f\n",  (float)sequence->image_width,  (float)sequence->image_height);
-    set_viewport_cmd(command_buffer, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-    set_scissor_cmd(command_buffer, q.x0 < 0 ? 0 : q.x0, q.y0 < 0 ? 0 : q.y0, width, height);
+    set_viewport_cmd(command_buffer, 0.f, 0.f, (float)sequence->image_width, (float)sequence->image_height);
+    set_scissor_cmd(command_buffer, (int32_t)(q.x0 < 0 ? 0 : q.x0), (int32_t)(q.y0 < 0 ? 0 : q.y0), (uint32_t)width,
+                    (uint32_t)height);
 
     // Allocate the descriptor set from the pool.
     VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -868,8 +874,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
         for (int r = 0; r < render_thread->render_queue.count; ++r) {
           cmd_count += render_thread->render_queue.image_renders[r].command_count;
         }
-        // printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n", render_thread->render_queue.count,
-        //        cmd_count);
+        printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n", render_thread->render_queue.count,
+               cmd_count);
       }
       res = render_through_queue(vkrs, &render_thread->render_queue);
       VK_CHECK(res, "render_through_queue");

@@ -356,9 +356,11 @@ void midge_run_app()
       global_data->render_thread->render_queue.count = 0;
 
       // Rerender all headless images
+      printf("headless\n");
       mca_render_node_list_headless(global_data->children);
 
       // Queue the updated render
+      printf("present\n");
       mca_render_presentation();
 
       // Release lock and allow rendering

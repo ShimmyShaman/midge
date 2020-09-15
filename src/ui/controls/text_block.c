@@ -33,8 +33,10 @@ void mui_render_text_block(image_render_queue *render_queue, mc_node *visual_nod
   element_render_command *render_cmd;
   obtain_element_render_command(render_queue, &render_cmd);
   render_cmd->type = RENDER_COMMAND_PRINT_TEXT;
-  render_cmd->x = element->bounds.x;
-  render_cmd->y = element->bounds.y;
+  render_cmd->x = (unsigned int)element->bounds.x;
+  render_cmd->y = (unsigned int)element->bounds.y;
+  // printf("mui_rtb-3 %u %u\n", render_cmd->x, render_cmd->y);
+
   // TODO -- make the render cmd a c_str??
   render_cmd->data.print_text.text = strdup(text_block->str->text);
 

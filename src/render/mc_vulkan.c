@@ -678,6 +678,8 @@ VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
 bool mvk_get_properties_memory_type_index(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask,
                                           uint32_t *typeIndex)
 {
+  // printf("mvk_get_properties_memory_type_index: requirements_mask=%i\n", (int)requirements_mask);
+
   // Search memtypes to find first index with those properties
   for (uint32_t i = 0; i < p_vkrs->memory_properties.memoryTypeCount; i++) {
     if ((typeBits & 1) == 1) {

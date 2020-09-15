@@ -477,7 +477,7 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
                                         bool use_as_render_target, uint *resource_uid)
 {
   VkResult res;
-  
+
   int texChannels = 4;
   stbi_uc *pixels = (stbi_uc *)malloc(sizeof(stbi_uc) * width * height * texChannels);
   VkDeviceSize imageSize = width * height * 4;
@@ -505,7 +505,6 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
   res = mvk_load_image_sampler(p_vkrs, width, height, texChannels, use_as_render_target, pixels,
                                &p_vkrs->textures.samples[p_vkrs->textures.count]);
   VK_CHECK(res, "mvk_load_image_sampler");
-
 
   // printf("p_vkrs->textures:%u  %u\n", p_vkrs->textures.count, p_vkrs->textures.allocated);
 
@@ -569,6 +568,7 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   stbtt_BakeFontBitmap(ttf_buffer, 0, font_height, temp_bitmap, texWidth, texHeight, 32, 96,
                        cdata); // no guarantee this fits!
 
+  // printf("garbagein: font_height:%f\n", font_height);
   stbi_uc pixels[texWidth * texHeight * 4];
   {
     int p = 0;
