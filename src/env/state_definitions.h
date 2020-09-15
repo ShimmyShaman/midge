@@ -20,6 +20,7 @@ typedef struct visual_project_data {
   bool requires_update, requires_rerender;
   unsigned int present_image_resource_uid;
 
+  mc_node *editor_container;
   mc_node_list *children;
 
 } visual_project_data;

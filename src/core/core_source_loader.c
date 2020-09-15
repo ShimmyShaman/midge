@@ -1295,6 +1295,7 @@ int _mcl_load_app_mc_source()
 
   register_midge_error_tag("_mcl_load_app_mc_source()");
   const char *_mcl_app_source_files[] = {
+      // Headers required for app initialization
       "src/m_threads.h",
       "src/platform/mc_xcb.h",
       "src/render/render_common.h",
@@ -1302,10 +1303,14 @@ int _mcl_load_app_mc_source()
       "src/render/mc_vk_utils.h",
       "src/render/render_thread.h",
       "src/core/midge_app.h",
-      "src/env/state_definitions.h",
 
+      // Headers that will be declared just before app initialization
+      "src/env/state_definitions.h",
+      "src/ui/ui_definitions.h",
+      "src/control/mc_controller.h",
+
+      // Source required for app initialization
       "src/platform/mc_xcb.c",
-      // "src/render/render_common.c",
       "src/render/mc_vulkan.c",
       "src/render/mc_vk_utils.c",
       "src/render/render_thread.c",

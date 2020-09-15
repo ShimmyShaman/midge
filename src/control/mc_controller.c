@@ -21,7 +21,7 @@ void mcc_initialize_input_state()
 void mcc_input_mouse_left_click(int screen_x, int screen_y)
 {
   mc_node_list *node_hit_list;
-  mui_get_ui_elements_at_point(screen_x, screen_y, &node_hit_list);
+  mui_get_interactive_nodes_at_point(screen_x, screen_y, &node_hit_list);
 
   bool handled = false;
   for (int a = 0; a < node_hit_list->count && !handled; ++a)
@@ -33,7 +33,7 @@ void mcc_input_mouse_right_click(int screen_x, int screen_y)
 {
   // Get all elements under the mouse cursor
   mc_node_list *node_hit_list;
-  mui_get_ui_elements_at_point(screen_x, screen_y, &node_hit_list);
+  mui_get_interactive_nodes_at_point(screen_x, screen_y, &node_hit_list);
 
   bool handled = false;
   for (int a = 0; a < node_hit_list->count && !handled; ++a)

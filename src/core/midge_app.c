@@ -70,8 +70,8 @@ void complete_midge_app_compile()
   obtain_midge_global_root(&global_data);
 
   const char *remainder_app_source_files[] = {
-      "src/ui/ui_definitions.h",
-      "src/control/mc_controller.h",
+      // "src/ui/ui_definitions.h",
+      // "src/control/mc_controller.h",
 
       "src/render/render_common.c",
       "src/env/hierarchy.c",
@@ -95,7 +95,6 @@ void complete_midge_app_compile()
 extern "C" {
 void mcc_initialize_input_state();
 void mcc_update_xcb_input();
-void mui_initialize_ui_state(mui_ui_state **p_ui_state);
 void mui_initialize_core_ui_components();
 void mui_render_element_headless(mc_node *element_node);
 void mui_render_element_present(image_render_queue *render_queue, mc_node *element_node);

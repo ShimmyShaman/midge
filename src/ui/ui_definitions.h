@@ -61,18 +61,23 @@ void mui_initialize_core_ui_components();
 
 void mui_update_ui();
 
-void mui_get_ui_elements_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list);
+void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list);
 
 void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);
 void mui_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);
 
 // Control Initialization
 void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element);
+
 void mui_init_text_block(mc_node *parent, mui_text_block **p_text_block);
+void mui_render_text_block(image_render_queue *render_queue, mc_node *ui_node);
+
 void mui_init_panel(mc_node *parent, mui_panel **p_panel);
+void mui_render_panel(image_render_queue *render_queue, mc_node *ui_node);
 
 // Render
-void mui_render_ui();
+void mui_render_element_headless(mc_node *element_node);
+void mui_render_element_present(image_render_queue *render_queue, mc_node *element_node);
 }
 
 #endif // UI_DEFINITIONS_H

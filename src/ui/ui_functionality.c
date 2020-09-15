@@ -26,12 +26,12 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
 
   // Font
   mcr_obtain_font_resource(&global_data->render_thread->resource_queue, "res/font/DroidSansMono.ttf", 18,
-                           &global_data->ui_state->default_font_resource);
+                           &ui_state->default_font_resource);
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue.mutex);
 
   // Set
-  *p_ui_state = global_data->ui_state;
+  *p_ui_state = ui_state;
 }
 
 void mui_initialize_core_ui_components()
@@ -48,8 +48,8 @@ void mui_update_ui()
   global_data->requires_rerender = true;
 }
 
-void _mui_get_ui_elements_within_node_at_point(mc_node *node, int screen_x, int screen_y,
-                                               mc_node_list *layered_hit_list)
+void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x, int screen_y,
+                                                     mc_node_list *layered_hit_list)
 {
   // Including the node itself **
   switch (node->type) {
@@ -61,7 +61,8 @@ void _mui_get_ui_elements_within_node_at_point(mc_node *node, int screen_x, int 
 
     // Add any children before
     for (int a = 0; a < global_data->children->count; ++a) {
-      _mui_get_ui_elements_within_node_at_point(global_data->children->items[a], screen_x, screen_y, layered_hit_list);
+      _mui_get_interactive_nodes_within_node_at_point(global_data->children->items[a], screen_x, screen_y,
+                                                      layered_hit_list);
     }
 
     append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
@@ -82,35 +83,51 @@ void _mui_get_ui_elements_within_node_at_point(mc_node *node, int screen_x, int 
       // TODO
       break;
     default:
-      MCerror(115, "_mui_get_ui_elements_within_node_at_point::>NODE_TYPE_UI>unsupported element type:%i", node->type);
+      MCerror(115, "_mui_get_interactive_nodes_within_node_at_point::>NODE_TYPE_UI>unsupported element type:%i",
+              node->type);
     }
 
     append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
   } break;
   case NODE_TYPE_VISUAL_PROJECT: {
+    visual_project_data *project = (visual_project_data *)node->data;
 
+    mui_ui_element *container_element = (mui_ui_element *)project->editor_container->data;
+    if (screen_x < container_element->bounds.x || screen_y < container_element->bounds.y ||
+        screen_x >= container_element->bounds.x + project->screen.width ||
+        screen_y >= container_element->bounds.y + project->screen.height)
+      break;
+
+    // Add any children before
+    for (int a = 0; a < project->children->count; ++a) {
+      _mui_get_interactive_nodes_within_node_at_point(project->children->items[a], screen_x, screen_y,
+                                                      layered_hit_list);
+    }
+
+    append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
   } break;
   default:
-    MCerror(1227, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", node->type);
+    MCerror(1227, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);
   }
 }
 
 // Returns a list of ui-type nodes at the given point of the screen. Nodes at the nearer Z are earlier in the list.
-void mui_get_ui_elements_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list)
+void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // Use the cache list
-  printf("layered_hit_list:%p\n", layered_hit_list);
-  printf("global_data->ui_state:%p\n", global_data->ui_state);
-  printf("global_data->ui_state->cache_layered_hit_list:%p\n", global_data->ui_state->cache_layered_hit_list);
+  // printf("layered_hit_list:%p\n", layered_hit_list);
+  // printf("global_data->ui_state:%p\n", global_data->ui_state);
+  // printf("global_data->ui_state->cache_layered_hit_list:%p\n", global_data->ui_state->cache_layered_hit_list);
   *layered_hit_list = global_data->ui_state->cache_layered_hit_list;
   (*layered_hit_list)->count = 0;
 
-  _mui_get_ui_elements_within_node_at_point(global_data->global_node, screen_x, screen_y, *layered_hit_list);
+  _mui_get_interactive_nodes_within_node_at_point(global_data->global_node, screen_x, screen_y, *layered_hit_list);
 
-  // printf("mui_get_ui_elements_at_point(%i, %i) : list_count:%i\n", screen_x, screen_y, (*layered_hit_list)->count);
+  printf("mui_get_interactive_nodes_at_point(%i, %i) : list_count:%i\n", screen_x, screen_y,
+         (*layered_hit_list)->count);
 }
 
 void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)
@@ -122,20 +139,23 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
   //   printf("global_node-left_click\n");
   // } break;
   // default:
-  //   MCerror(69, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", ui_node->type);
+  //   MCerror(69, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", ui_node->type);
   // }
 }
 
 void mui_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)
 {
-  // switch (ui_node->type) {
-  // case NODE_TYPE_GLOBAL_ROOT: {
-  //   global_root_data *global_data = (global_root_data *)ui_node->data;
+  switch (ui_node->type) {
+  case NODE_TYPE_GLOBAL_ROOT: {
+    // global_root_data *global_data = (global_root_data *)ui_node->data;
+    // TODO
+  } break;
+  case NODE_TYPE_VISUAL_PROJECT: {
 
-  // } break;
-  // default:
-  //   MCerror(83, "_mui_get_ui_elements_within_node_at_point::>unsupported node type:%i", ui_node->type);
-  // }
+  } break;
+  default:
+    MCerror(83, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", ui_node->type);
+  }
 }
 
 void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element)
