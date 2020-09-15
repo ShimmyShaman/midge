@@ -177,7 +177,7 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
   element->visual_node = node;
   element->type = element_type;
   element->requires_update = true;
-  element->requires_rerender = true;
+  element->requires_rerender = false;
 
   element->data = NULL;
 

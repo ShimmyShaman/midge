@@ -38,6 +38,6 @@ void mui_render_panel(image_render_queue *render_queue, mc_node *visual_node)
   // Children
   for (int a = 0; a < panel->children->count; ++a) {
     printf("rendering something child\n");
-    mui_render_ui_node(render_queue, panel->children->items[a]);
+    mui_render_element_present(render_queue, panel->children->items[a]);
   }
 }

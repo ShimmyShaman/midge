@@ -97,8 +97,8 @@ void mcc_initialize_input_state();
 void mcc_update_xcb_input();
 void mui_initialize_ui_state(mui_ui_state **p_ui_state);
 void mui_initialize_core_ui_components();
-void mui_update_headless_image_node(mc_node *element_node);
-void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node);
+void mui_render_element_headless(mc_node *element_node);
+void mui_render_element_present(image_render_queue *render_queue, mc_node *element_node);
 
 // Modules
 void init_modus_operandi_curator();
@@ -169,23 +169,6 @@ void midge_initialize_app(struct timespec *app_begin_time)
              1e-9 * (load_complete_frametime.tv_nsec - global_data->app_begin_time->tv_nsec));
 }
 
-void mca_update_headless_render_images()
-{
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
-
-  for (int a = 0; a < global_data->children->count; ++a) {
-    switch (global_data->children->items[a]->type) {
-    case NODE_TYPE_UI:
-      mui_update_headless_image_node(global_data->children->items[a]);
-      break;
-    default:
-      MCerror(296, "mca_update_headless_render_images>|Unsupported node type:%i",
-              global_data->children->items[a]->type);
-    }
-  }
-}
-
 void mca_render_presentation()
 {
   global_root_data *global_data;
@@ -204,10 +187,10 @@ void mca_render_presentation()
   for (int a = 0; a < global_data->children->count; ++a) {
     switch (global_data->children->items[a]->type) {
     case NODE_TYPE_UI:
-      mui_render_ui_node(sequence, global_data->children->items[a]);
+      mui_render_element_present(sequence, global_data->children->items[a]);
       break;
     case NODE_TYPE_VISUAL_PROJECT:
-      mca_render_visual_project(sequence, global_data->children->items[a]);
+      mca_render_project_present(sequence, global_data->children->items[a]);
       break;
     default:
       MCerror(296, "mca_render_presentation>|Unsupported node type:%i", global_data->children->items[a]->type);
@@ -374,7 +357,7 @@ void midge_run_app()
       global_data->render_thread->render_queue.count = 0;
 
       // Rerender all headless images
-      mca_update_headless_render_images();
+      mca_render_node_list_headless(global_data->children);
 
       // Queue the updated render
       mca_render_presentation();

@@ -95,8 +95,56 @@ void mca_update_node_list(mc_node_list *node_list)
       // Update despite requirements
       mca_update_visual_project(node);
     } break;
+    case NODE_TYPE_UI: {
+      mui_ui_element *element = (mui_ui_element *)node->data;
+      if (!element->requires_update)
+        break;
+
+      // UI Update
+      // TODO
+
+      // TODO -- this should maybe be somewhere else?
+      element->requires_update = false;
+
+      // Trigger rerender
+      mca_set_node_requires_rerender(node);
+    } break;
     default:
       MCerror(9617, "mca_update_node_list::Unsupported node type:%i", node->type);
+    }
+  }
+}
+
+void mca_render_node_list_headless(mc_node_list *node_list)
+{
+  for (int a = 0; a < node_list->count; ++a) {
+    mc_node *node = node_list->items[a];
+    switch (node->type) {
+    case NODE_TYPE_UI: {
+      mui_render_element_headless(node);
+    } break;
+    case NODE_TYPE_VISUAL_PROJECT: {
+      mca_render_project_headless(node);
+    } break;
+    default:
+      MCerror(1837, "mca_update_headless_render_images>|Unsupported node type:%i", node->type);
+    }
+  }
+}
+
+void mca_render_node_list_present(image_render_queue *render_queue, mc_node_list *node_list)
+{
+  for (int a = 0; a < node_list->count; ++a) {
+    mc_node *node = node_list->items[a];
+    switch (node->type) {
+    case NODE_TYPE_UI: {
+      mui_render_element_present(render_queue, node);
+    } break;
+    case NODE_TYPE_VISUAL_PROJECT: {
+      mca_render_project_present(render_queue, node);
+    } break;
+    default:
+      MCerror(1837, "mca_render_node_list_present>|Unsupported node type:%i", node->type);
     }
   }
 }
@@ -119,7 +167,7 @@ void mca_set_node_requires_update(mc_node *node)
       element->requires_update = true;
     } break;
     default:
-      MCerror(122, "mui_set_element_update::>unsupported node type:%i", node->type);
+      MCerror(1252, "mca_set_node_requires_update::>unsupported node type:%i", node->type);
     }
 
     node = node->parent;

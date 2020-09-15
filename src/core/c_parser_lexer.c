@@ -2637,23 +2637,25 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     bool is_modifier = true;
     while (is_modifier) {
       switch (token_type) {
+        case MC_TOKEN_CONST_KEYWORD:
       case MC_TOKEN_UNSIGNED_KEYWORD:
       case MC_TOKEN_SIGNED_KEYWORD: {
         ++peek_ahead;
-        mcs_peek_token_type(ps, false, peek_ahead + 1, &token_type);
-      }
+        mcs_peek_token_type(ps, false, peek_ahead, &token_type);
         continue;
+      }
       case MC_TOKEN_INT_KEYWORD:
       case MC_TOKEN_CHAR_KEYWORD:
       case MC_TOKEN_FLOAT_KEYWORD:
       case MC_TOKEN_VOID_KEYWORD:
+        ++peek_ahead;
         break;
       default:
         print_parse_error(ps->code, ps->index, "parse_bracket", "is_fptr");
         MCerror(2648, "TODO:%s", get_mc_token_type_name(token_type));
       }
 
-      // While-loop
+      // While-is-modifier
       break;
     }
 

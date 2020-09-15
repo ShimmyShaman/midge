@@ -12,7 +12,7 @@
 //   }
 // }
 
-void mui_update_headless_image_node(mc_node *element_node)
+void mui_render_element_headless(mc_node *element_node)
 {
   mui_ui_element *ui_element = (mui_ui_element *)element_node->data;
 
@@ -24,7 +24,7 @@ void mui_update_headless_image_node(mc_node *element_node)
     // TODO
   } break;
   default:
-    MCerror(21, "mui_update_headless_image_node:>Unsupported element type:%i", ui_element->type);
+    MCerror(21, "mui_render_element_headless:>Unsupported element type:%i", ui_element->type);
   }
 
   // if (ui_element->headless_image_resource_uid) {
@@ -43,7 +43,7 @@ void mui_update_headless_image_node(mc_node *element_node)
   // sequence->data.target_image.image_uid = cestate->render_lines[ce_offset_line_index]->image_resource_uid;
 }
 
-void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node)
+void mui_render_element_present(image_render_queue *render_queue, mc_node *element_node)
 {
   mui_ui_element *element = (mui_ui_element *)element_node->data;
 
@@ -55,6 +55,6 @@ void mui_render_ui_node(image_render_queue *render_queue, mc_node *element_node)
     mui_render_panel(render_queue, element_node);
   } break;
   default:
-    MCerror(44, "mui_render_ui_node:>Unsupported element type:%i", element->type);
+    MCerror(44, "mui_render_element_present:>Unsupported element type:%i", element->type);
   }
 }
