@@ -12,6 +12,40 @@ Midges development goals:
       and mouse-clicks with an eye on gestures and AV input.
     
 ###################################################################
+the goal is not to make and export the visual app asap
+
+
+
+
+make the tools that enable the creation of visual apps quickly, easily, and with increasing depth
+
+"goal":
+ create an app with a button in the middle that toggles the background color when pressed
+
+ctrl-shift-n > create new project
+
+right click @ visual project
+ + click add button suboption > button added to project
+
+right click @ button
+ + click add handler suboption > new function with code
+                                 editor
+
+type @ code editor:
+{
+  mc_node *app_node;
+  get_hierarchical_root(button_node->parent, &app_node);
+
+  // TODO -- basically get time and then "randomize" the color according to that
+  app_node->clear_color = COLOR_MIDNIGHT_EXPRESS;
+
+  mca_set_node_requires_rerender(app_node);
+}
+
+ctrl-shift-e: export app
+
+###################################################################
+
 refactoring mc_main
 
 IMC load_app_source  >> loads all source needed for midge app

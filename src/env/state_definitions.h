@@ -7,6 +7,8 @@ typedef struct mui_ui_state {
   bool requires_update;
   mc_node_list *cache_layered_hit_list;
   unsigned int default_font_resource;
+
+  mc_node *global_context_menu;
 } mui_ui_state;
 
 typedef struct visual_project_data {

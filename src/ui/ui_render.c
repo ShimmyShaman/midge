@@ -18,6 +18,8 @@ void mui_render_element_headless(mc_node *element_node)
 
   switch (ui_element->type) {
   case UI_ELEMENT_TEXT_BLOCK:
+  case UI_ELEMENT_BUTTON:
+  case UI_ELEMENT_CONTEXT_MENU:
     // Elements which do no headless image rendering, nor hold any children
     break;
   case UI_ELEMENT_PANEL: {
@@ -47,9 +49,19 @@ void mui_render_element_present(image_render_queue *render_queue, mc_node *eleme
 {
   mui_ui_element *element = (mui_ui_element *)element_node->data;
 
+  if (!element->visible) {
+    return;
+  }
+
   switch (element->type) {
   case UI_ELEMENT_TEXT_BLOCK: {
     mui_render_text_block(render_queue, element_node);
+  } break;
+  case UI_ELEMENT_CONTEXT_MENU: {
+    mui_render_context_menu(render_queue, element_node);
+  } break;
+  case UI_ELEMENT_BUTTON: {
+    mui_render_button(render_queue, element_node);
   } break;
   case UI_ELEMENT_PANEL: {
     mui_render_panel(render_queue, element_node);

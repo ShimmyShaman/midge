@@ -23,7 +23,7 @@ typedef struct mc_input_event {
 
 typedef struct midge_app_info {
   struct timespec *app_begin_time;
-  render_thread_info *render_thread;
+  render_color clear_color;
 } midge_app_info;
 
 extern "C" {

@@ -1,6 +1,6 @@
 /* midge.h
 
-   Copyright 2013, Adam Rasburn, All rights reserved.
+   Copyright 2020, Adam Rasburn, All rights reserved.
 */
 
 #ifndef MIDGE_H

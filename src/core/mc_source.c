@@ -619,7 +619,7 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "set_viewport_cmd")) {
+  // if (!strcmp(func_info->name, "mui_init_button")) {
   //   // print_syntax_node(ast, 0);
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
   // }

@@ -19,6 +19,14 @@ typedef struct render_color {
   /*(render_color)*/ {        \
     0.19f, 0.34f, 0.83f, 1.f  \
   }
+#define COLOR_MIDNIGHT_EXPRESS \
+  /*(render_color)*/ {         \
+    0.10f, 0.10f, 0.17f, 1.f   \
+  }
+#define COLOR_MACARONI_AND_CHEESE \
+  /*(render_color)*/ {            \
+    1.f, 0.72f, 0.50f, 1.f        \
+  }
 #define COLOR_DARK_GREEN   \
   /*(render_color)*/ {     \
     0.0f, 0.25f, 0.0f, 1.f \

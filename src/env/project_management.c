@@ -14,7 +14,7 @@ void mca_init_visual_project_container(mc_node *project_node)
   // Panel
   mui_panel *panel;
   mui_init_panel(project_node, &panel);
-  panel->background_color = COLOR_LIGHT_SKY_BLUE;
+  panel->background_color = COLOR_MIDNIGHT_EXPRESS;
   panel->element->bounds = {400, 200, (float)project->screen.width, (float)project->screen.height};
 
   // Set container to seperate field and clear children
@@ -55,19 +55,6 @@ void mca_create_new_visual_project(const char *project_name)
 
   // Initialize the project visual container (what will be replaced by the OS window)
   mca_init_visual_project_container(project_node);
-
-  {
-    // Text Block
-    mui_text_block *text_block;
-    mui_init_text_block(project_node, &text_block);
-
-    text_block->element->bounds = {200, 500, 0, 0};
-
-    set_c_str(text_block->str, "Hello You!");
-    text_block->font_color = COLOR_NODE_ORANGE;
-
-    mca_set_node_requires_update(text_block->element->visual_node);
-  }
 
   // Ensure initial update is triggered
   mca_set_node_requires_update(project_node);

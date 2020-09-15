@@ -34,11 +34,23 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
   *p_ui_state = ui_state;
 }
 
-void mui_initialize_core_ui_components()
+void mui_initialize_global_context_menu()
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
+
+  mui_context_menu *context_menu;
+  mui_init_context_menu(global_data->global_node, &context_menu);
+
+  // Set to global
+  global_data->ui_state->global_context_menu = context_menu->element->visual_node;
+
+  context_menu->element->bounds = {150, 200, 140, 220};
+  context_menu->background_color = COLOR_DARK_SLATE_GRAY;
+  context_menu->element->visible = false;
 }
+
+void mui_initialize_core_ui_components() { mui_initialize_global_context_menu(); }
 
 void mui_update_ui()
 {
@@ -78,6 +90,8 @@ void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
     // Append children
     switch (element->type) {
     case UI_ELEMENT_TEXT_BLOCK:
+    case UI_ELEMENT_BUTTON:
+    case UI_ELEMENT_CONTEXT_MENU:
       break;
     case UI_ELEMENT_PANEL:
       // TODO
@@ -145,23 +159,34 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
 
 void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, bool *handled)
 {
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  *handled = false;
+
   switch (node->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
-    // global_root_data *global_data = (global_root_data *)ui_node->data;
-    // TODO
+    mui_ui_element *gcm_element = (mui_ui_element *)global_data->ui_state->global_context_menu->data;
+
+    gcm_element->bounds = {(float)screen_x, (float)screen_y, gcm_element->bounds.width, gcm_element->bounds.height};
+    gcm_element->visible = true;
+
+    mca_set_node_requires_update(gcm_element->visual_node);
+    *handled = true;
   } break;
   case NODE_TYPE_VISUAL_PROJECT: {
     // Create a textblock at the location
     // Text Block
-    mui_text_block *text_block;
-    mui_init_text_block(node, &text_block);
+    mui_button *button;
+    mui_init_button(node, &button);
 
-    text_block->element->bounds = {100, 100, 0, 0};
+    button->element->bounds = {100, 100, 140, 30};
 
-    set_c_str(text_block->str, "Hello You!");
-    text_block->font_color = COLOR_GHOST_WHITE;
+    set_c_str(button->str, "Push the button!");
+    // button->font_color = COLOR_MACARONI_AND_CHEESE;
 
-    mca_set_node_requires_update(text_block->element->visual_node);
+    mca_set_node_requires_update(button->element->visual_node);
+    *handled = true;
   } break;
   default:
     MCerror(83, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);
@@ -203,13 +228,15 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
   mui_ui_element *element = (mui_ui_element *)malloc(sizeof(mui_ui_element));
   node->data = element;
 
+  element->visible = true;
   element->bounds = {};
   element->visual_node = node;
   element->type = element_type;
-  element->requires_update = true;
   element->requires_rerender = false;
 
   element->data = NULL;
+
+  mca_set_node_requires_update(node);
 
   if (created_element)
     *created_element = element;

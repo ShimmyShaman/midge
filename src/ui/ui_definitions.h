@@ -8,8 +8,10 @@
 
 typedef enum ui_element_type {
   UI_ELEMENT_NULL = 0,
-  UI_ELEMENT_TEXT_BLOCK,
   UI_ELEMENT_PANEL,
+  UI_ELEMENT_TEXT_BLOCK,
+  UI_ELEMENT_BUTTON,
+  UI_ELEMENT_CONTEXT_MENU,
 } ui_element_type;
 
 typedef enum horizontal_alignment {
@@ -29,6 +31,8 @@ typedef enum vertical_alignment {
 typedef struct mui_ui_element {
   mc_node *visual_node;
   ui_element_type type;
+  bool visible;
+
   bool requires_update, requires_rerender;
   // unsigned int headless_image_resource_uid;
 
@@ -36,6 +40,14 @@ typedef struct mui_ui_element {
 
   void *data;
 } mui_ui_element;
+
+typedef struct mui_panel {
+  mui_ui_element *element;
+
+  mc_node_list *children;
+
+  render_color background_color;
+} mui_panel;
 
 // Controls
 typedef struct mui_text_block {
@@ -46,13 +58,29 @@ typedef struct mui_text_block {
   render_color font_color;
 } mui_text_block;
 
-typedef struct mui_panel {
+// Controls
+typedef struct mui_button {
+  mui_ui_element *element;
+  c_str *str;
+
+  unsigned int font_resource_uid;
+  render_color font_color;
+
+  render_color background_color;
+} mui_button;
+
+typedef struct mui_context_menu {
   mui_ui_element *element;
 
   mc_node_list *children;
 
+  struct {
+    unsigned int alloc, count;
+    char **items;
+  } options;
+
   render_color background_color;
-} mui_panel;
+} mui_context_menu;
 
 extern "C" {
 // UI Functionality
@@ -66,18 +94,24 @@ void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);
 void mui_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);
 
+// Render
+void mui_render_element_headless(mc_node *element_node);
+void mui_render_element_present(image_render_queue *render_queue, mc_node *element_node);
+
 // Control Initialization
 void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element);
-
-void mui_init_text_block(mc_node *parent, mui_text_block **p_text_block);
-void mui_render_text_block(image_render_queue *render_queue, mc_node *ui_node);
 
 void mui_init_panel(mc_node *parent, mui_panel **p_panel);
 void mui_render_panel(image_render_queue *render_queue, mc_node *ui_node);
 
-// Render
-void mui_render_element_headless(mc_node *element_node);
-void mui_render_element_present(image_render_queue *render_queue, mc_node *element_node);
+void mui_init_text_block(mc_node *parent, mui_text_block **p_text_block);
+void mui_render_text_block(image_render_queue *render_queue, mc_node *ui_node);
+
+void mui_init_button(mc_node *parent, mui_button **p_button);
+void mui_render_button(image_render_queue *render_queue, mc_node *ui_node);
+
+void mui_init_context_menu(mc_node *parent, mui_context_menu **p_button);
+void mui_render_context_menu(image_render_queue *render_queue, mc_node *ui_node);
 }
 
 #endif // UI_DEFINITIONS_H
