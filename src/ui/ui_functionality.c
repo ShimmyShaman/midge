@@ -143,18 +143,30 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
   // }
 }
 
-void mui_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)
+void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, bool *handled)
 {
-  switch (ui_node->type) {
+  switch (node->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
     // global_root_data *global_data = (global_root_data *)ui_node->data;
     // TODO
   } break;
   case NODE_TYPE_VISUAL_PROJECT: {
+    // Create a textblock at the location
+    // Text Block
+    mui_text_block *text_block;
+    mui_init_text_block(node, &text_block);
 
+    text_block->element->bounds = {100, 100, 0, 0};
+
+    set_c_str(text_block->str, "Hello You!");
+    text_block->font_color = COLOR_GHOST_WHITE;
+
+    mca_set_node_requires_update(text_block->element->visual_node);
+
+    // DEBUG THIS
   } break;
   default:
-    MCerror(83, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", ui_node->type);
+    MCerror(83, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);
   }
 }
 
