@@ -383,10 +383,14 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     float width = q.x1 - q.x0;
     float height = q.y1 - q.y0;
 
+    q.y0 += font->draw_vertical_offset;
+    q.y1 += font->draw_vertical_offset;
+
     // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n",
     // q.s0,
     //        q.s1, q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
     // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
+    // printf("font->draw_vertical_offset=%.2f\n", font->draw_vertical_offset);
 
     // Vertex Uniform Buffer Object
     vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];

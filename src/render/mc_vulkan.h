@@ -51,6 +51,7 @@ typedef struct render_program {
 typedef struct loaded_font_info {
   const char *name;
   float height;
+  float draw_vertical_offset;
   uint resource_uid;
   stbtt_bakedchar *char_data;
 } loaded_font_info;

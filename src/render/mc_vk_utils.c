@@ -616,9 +616,25 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].name = font_name;
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].height = font_height;
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].resource_uid = *resource_uid;
-    // p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].max_char_height = 0;
-    // for(int ci = 0; ci < 96; ++ci)
-    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count++].char_data = cdata;
+    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].char_data = cdata;
+    {
+      float lowest = 500;
+      for (int ci = 0; ci < 96; ++ci) {
+        stbtt_aligned_quad q;
+
+        // printf("garbagein: %i %i %f %f %i\n", (int)font_image->width, (int)font_image->height, align_x, align_y,
+        // letter
+        // - 32);
+        float ax = 100, ay = 300;
+        stbtt_GetBakedQuad(cdata, (int)texWidth, (int)texHeight, ci, &ax, &ay, &q, 1);
+        if (q.y0 < lowest)
+          lowest = q.y0;
+        printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f lowest=%.3f\n", q.s0, q.s1,
+               q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, lowest);
+      }
+      p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].draw_vertical_offset = 300 - lowest;
+    }
+    ++p_vkrs->loaded_fonts.count;
   }
 
   printf("generated font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height, *resource_uid);
