@@ -38,6 +38,10 @@ void mca_set_node_requires_update(mc_node *node);
 void mca_set_node_requires_rerender(mc_node *node);
 
 // util.c
+// @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
+// @optional_item_allocation_size may be zero indicating no memory shall be assigned to the later allocation sizes.
+int reallocate_collection(void ***collection, unsigned int *current_allocation, unsigned int desired_allocation,
+                          size_t optional_item_allocation_size);
 
 // project_management.c
 void mca_create_new_visual_project(const char *project_name);

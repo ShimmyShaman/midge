@@ -41,8 +41,8 @@
   }
 
 typedef struct c_str {
-  uint alloc;
-  uint len;
+  unsigned int alloc;
+  unsigned int len;
   char *text;
 } c_str;
 

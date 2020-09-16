@@ -27,9 +27,14 @@ ctrl-shift-n > create new project
 right click @ visual project
  + click add button suboption > button added to project
 
+- add 'add button' option and display it
+
 right click @ button
  + click add handler suboption > new function with code
                                  editor
+
+- setup a fptr and callback, fire it when clicked
+- setup ui to trigger element with left click
 
 type @ code editor:
 {

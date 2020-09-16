@@ -616,6 +616,8 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].name = font_name;
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].height = font_height;
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].resource_uid = *resource_uid;
+    // p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].max_char_height = 0;
+    // for(int ci = 0; ci < 96; ++ci)
     p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count++].char_data = cdata;
   }
 

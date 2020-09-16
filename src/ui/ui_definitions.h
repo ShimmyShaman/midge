@@ -63,6 +63,8 @@ typedef struct mui_button {
   mui_ui_element *element;
   c_str *str;
 
+void *tag;
+
   unsigned int font_resource_uid;
   render_color font_color;
 
@@ -76,8 +78,8 @@ typedef struct mui_context_menu {
 
   struct {
     unsigned int alloc, count;
-    char **items;
-  } options;
+    mui_button **items;
+  } _buttons;
 
   render_color background_color;
 } mui_context_menu;
@@ -112,6 +114,8 @@ void mui_render_button(image_render_queue *render_queue, mc_node *ui_node);
 
 void mui_init_context_menu(mc_node *parent, mui_context_menu **p_button);
 void mui_render_context_menu(image_render_queue *render_queue, mc_node *ui_node);
+void mui_context_menu_clear_options(mui_ui_element *menu_element);
+void mui_context_menu_add_option(mui_ui_element *menu_element, const char *option_text);
 }
 
 #endif // UI_DEFINITIONS_H

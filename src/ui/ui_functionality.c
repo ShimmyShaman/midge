@@ -34,23 +34,7 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
   *p_ui_state = ui_state;
 }
 
-void mui_initialize_global_context_menu()
-{
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
-
-  mui_context_menu *context_menu;
-  mui_init_context_menu(global_data->global_node, &context_menu);
-
-  // Set to global
-  global_data->ui_state->global_context_menu = context_menu->element->visual_node;
-
-  context_menu->element->bounds = {150, 200, 140, 220};
-  context_menu->background_color = COLOR_DARK_SLATE_GRAY;
-  context_menu->element->visible = false;
-}
-
-void mui_initialize_core_ui_components() {  }
+void mui_initialize_core_ui_components() {}
 
 void mui_update_ui()
 {
@@ -163,15 +147,18 @@ void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, boo
 
   switch (node->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
-    mca_activate_context_menu(node, screen_x, screen_y);
+    mca_activate_global_context_menu(node, screen_x, screen_y);
     *handled = true;
   } break;
   case NODE_TYPE_VISUAL_PROJECT: {
-    mca_activate_context_menu(node, screen_x, screen_y);
+    mca_activate_global_context_menu(node, screen_x, screen_y);
     *handled = true;
   } break;
+  case NODE_TYPE_UI: {
+    printf("Node_type_interaction skipped\n");
+  } break;
   default:
-    MCerror(83, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);
+    MCerror(8315, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);
   }
 }
 
@@ -194,8 +181,14 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
       node->parent = parent_node;
 
     } break;
+    case UI_ELEMENT_CONTEXT_MENU: {
+      mui_context_menu *menu = (mui_context_menu *)parent_element->data;
+
+      append_to_collection((void ***)&menu->children->items, &menu->children->alloc, &menu->children->count, node);
+      node->parent = parent_node;
+    } break;
     default: {
-      MCerror(180, "add element to parent element : Unsupported type : %i", parent_element->type);
+      MCerror(1805, "mui_init_ui_element::Unsupported type : %i", parent_element->type);
     }
     }
   }

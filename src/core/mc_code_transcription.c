@@ -1183,7 +1183,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
 
     mct_append_indent_to_c_str(ts);
     append_to_c_strf(ts->str, "register_midge_stack_invocation(\"%s\", __FILE__, %i, &midge_error_stack_index);\n",
-                     function_name, syntax_node->begin.line);
+                     function_name, syntax_node->begin.line + 1);
   }
 
   // mct_append_to_c_str(ts, "if (is_mc_invoke) {\n");
@@ -1401,7 +1401,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
 
         mct_append_indent_to_c_str(ts);
         append_to_c_strf(ts->str, "register_midge_stack_invocation(\"%s\", __FILE__, %i, &midge_error_stack_index);\n",
-                         "pthread_create", syntax_node->begin.line);
+                         "pthread_create", syntax_node->begin.line + 1);
       }
 
       mct_append_indent_to_c_str(ts);
@@ -1578,7 +1578,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
                                    .value_expression->invocation.function_identity,
                                &function_name);
       append_to_c_strf(ts->str, "register_midge_stack_invocation(\"%s\", __FILE__, %i, &midge_error_stack_index);\n",
-                       function_name, syntax_node->begin.line);
+                       function_name, syntax_node->begin.line + 1);
       free(function_name);
     }
     {

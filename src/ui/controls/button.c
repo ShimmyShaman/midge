@@ -4,7 +4,7 @@
 
 void mui_init_button(mc_node *parent, mui_button **p_button)
 {
-//   printf("mui-ib-0\n");
+  //   printf("mui-ib-0\n");
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
@@ -17,7 +17,8 @@ void mui_init_button(mc_node *parent, mui_button **p_button)
   button->element = element;
   element->data = button;
 
-//   printf("mui-ib-3\n");
+  //   printf("mui-ib-3\n");
+  button->tag = NULL;
   init_c_str(&button->str);
   button->font_resource_uid = 0;
   button->font_color = COLOR_GHOST_WHITE;
