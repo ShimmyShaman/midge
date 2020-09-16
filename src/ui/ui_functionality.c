@@ -1,5 +1,5 @@
 
-#include "env/state_definitions.h"
+#include "env/environment_definitions.h"
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
@@ -50,7 +50,7 @@ void mui_initialize_global_context_menu()
   context_menu->element->visible = false;
 }
 
-void mui_initialize_core_ui_components() { mui_initialize_global_context_menu(); }
+void mui_initialize_core_ui_components() {  }
 
 void mui_update_ui()
 {
@@ -159,33 +159,15 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
 
 void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, bool *handled)
 {
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
-
   *handled = false;
 
   switch (node->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
-    mui_ui_element *gcm_element = (mui_ui_element *)global_data->ui_state->global_context_menu->data;
-
-    gcm_element->bounds = {(float)screen_x, (float)screen_y, gcm_element->bounds.width, gcm_element->bounds.height};
-    gcm_element->visible = true;
-
-    mca_set_node_requires_update(gcm_element->visual_node);
+    mca_activate_context_menu(node, screen_x, screen_y);
     *handled = true;
   } break;
   case NODE_TYPE_VISUAL_PROJECT: {
-    // Create a textblock at the location
-    // Text Block
-    mui_button *button;
-    mui_init_button(node, &button);
-
-    button->element->bounds = {100, 100, 140, 30};
-
-    set_c_str(button->str, "Push the button!");
-    // button->font_color = COLOR_MACARONI_AND_CHEESE;
-
-    mca_set_node_requires_update(button->element->visual_node);
+    mca_activate_context_menu(node, screen_x, screen_y);
     *handled = true;
   } break;
   default:

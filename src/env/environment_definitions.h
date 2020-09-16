@@ -44,4 +44,10 @@ void mca_create_new_visual_project(const char *project_name);
 void mca_update_visual_project(mc_node *project_node);
 void mca_render_project_headless(mc_node *visual_project);
 void mca_render_project_present(image_render_queue *render_queue, mc_node *visual_project);
+
+// global_context_menu.c
+void mca_init_global_context_menu();
+void mca_render_global_context_menu(image_render_queue *render_queue, mc_node *node);
+void mca_activate_global_context_menu(mc_node *node, int screen_x, int screen_y);
+void mca_hide_global_context_menu();
 #endif // MC_UTIL_H

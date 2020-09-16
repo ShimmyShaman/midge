@@ -72,11 +72,13 @@ void complete_midge_app_compile()
   const char *remainder_app_source_files[] = {
       // "src/ui/ui_definitions.h",
       // "src/control/mc_controller.h",
+      "src/modules/app_modules.h",
 
       "src/render/render_common.c",
       "src/env/hierarchy.c",
       "src/env/util.c",
       "src/env/project_management.c",
+      "src/env/global_context_menu.c",
       "src/ui/controls/panel.c",
       "src/ui/controls/text_block.c",
       "src/ui/controls/button.c",
@@ -84,6 +86,8 @@ void complete_midge_app_compile()
       "src/ui/ui_functionality.c",
       "src/ui/ui_render.c",
       "src/control/mc_controller.c",
+
+      // Modules
       "src/modules/modus_operandi/modus_operandi_curator.c",
       NULL,
   };
@@ -114,6 +118,9 @@ void initialize_midge_components()
 
   mui_initialize_ui_state(&global_data->ui_state);
   mui_initialize_core_ui_components();
+
+  // Environment
+  mca_init_global_context_menu();
 
   // Modules
   init_modus_operandi_curator();

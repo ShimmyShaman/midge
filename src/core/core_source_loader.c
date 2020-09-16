@@ -1305,7 +1305,7 @@ int _mcl_load_app_mc_source()
       "src/core/midge_app.h",
 
       // Headers that will be declared just before app initialization
-      "src/env/state_definitions.h",
+      "src/env/environment_definitions.h",
       "src/ui/ui_definitions.h",
       "src/control/mc_controller.h",
 

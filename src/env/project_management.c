@@ -1,5 +1,5 @@
 #include "core/core_definitions.h"
-#include "env/state_definitions.h"
+#include "env/environment_definitions.h"
 #include "render/render_common.h"
 #include "ui/ui_definitions.h"
 

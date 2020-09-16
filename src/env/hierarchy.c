@@ -1,6 +1,6 @@
 
 #include "core/core_definitions.h"
-#include "env/state_definitions.h"
+#include "env/environment_definitions.h"
 
 void exit_app(mc_node *node_scope, int result)
 {
