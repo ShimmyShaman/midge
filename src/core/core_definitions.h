@@ -222,6 +222,7 @@ typedef struct event_handler_array {
 typedef struct mc_node {
   node_type type;
   char *name;
+  bool visible;
 
   mc_node *parent;
 
@@ -231,6 +232,7 @@ typedef struct mc_node {
 typedef struct mc_node_list {
   unsigned int alloc, count;
   mc_node **items;
+  unsigned int *z_layer_indices;
 } mc_node_list;
 
 // Incomplete Structure declarations
@@ -254,7 +256,7 @@ typedef struct global_root_data {
   bool input_state_requires_update;
 
   struct mui_ui_state *ui_state;
-  bool requires_rerender;
+  bool requires_layout_update, requires_rerender;
   unsigned int present_image_resource_uid;
 
   // struct {

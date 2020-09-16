@@ -15,7 +15,10 @@ void mca_init_visual_project_container(mc_node *project_node)
   mui_panel *panel;
   mui_init_panel(project_node, &panel);
   panel->background_color = COLOR_MIDNIGHT_EXPRESS;
-  panel->element->bounds = {400, 200, (float)project->screen.width, (float)project->screen.height};
+
+  panel->element->layout->padding = {400, 200, 0, 0};
+  panel->element->layout->preferred_width = (float)project->screen.width;
+  panel->element->layout->preferred_height = (float)project->screen.height;
 
   // Set container to seperate field and clear children
   project->editor_container = project->children->items[0];
@@ -57,30 +60,31 @@ void mca_create_new_visual_project(const char *project_name)
   mca_init_visual_project_container(project_node);
 
   // Ensure initial update is triggered
-  mca_set_node_requires_update(project_node);
+  mca_set_node_requires_layout_update(project_node);
 
   printf("visual app created\n");
 }
 
 void mca_update_visual_project(mc_node *project_node)
 {
-  visual_project_data *project = (visual_project_data *)project_node->data;
+  // TODO
+  // visual_project_data *project = (visual_project_data *)project_node->data;
 
-  {
-    // TEMPORARY -- FIX When UI UPDATE is fixed
-    mui_ui_element *element = (mui_ui_element *)project->editor_container->data;
-    if (element->requires_update) {
-      element->requires_update = false;
+  // {
+  //   // TEMPORARY -- FIX When UI UPDATE is fixed
+  //   mui_ui_element *element = (mui_ui_element *)project->editor_container->data;
+  //   if (element->requires_layout_update) {
+  //     element->requires_layout_update = false;
 
-      // Trigger rerender
-      mca_set_node_requires_rerender(element->visual_node);
-    }
-  }
+  //     // Trigger rerender
+  //     mca_set_node_requires_rerender(element->visual_node);
+  //   }
+  // }
 
-  mca_update_node_list(project->children);
+  // mca_update_node_list(project->children);
 
-  // Projects always require updating
-  project->requires_update = true;
+  // // Projects always require updating
+  // project->requires_update = true;
 }
 
 void mca_render_project_headless(mc_node *project_node)

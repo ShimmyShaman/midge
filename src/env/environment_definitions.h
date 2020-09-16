@@ -2,6 +2,43 @@
 #define MC_UTIL_H
 
 #include "core/core_definitions.h"
+#include "render/render_common.h"
+
+typedef enum layout_extent_restraints {
+  LAYOUT_RESTRAINT_NONE = 0,
+  LAYOUT_RESTRAINT_HORIZONTAL = 1 << 0,
+  LAYOUT_RESTRAINT_VERTICAL = 1 << 1,
+} layout_extent_restraints;
+
+typedef enum horizontal_alignment_type {
+  HORIZONTAL_ALIGNMENT_NULL = 0,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_CENTRED,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+} horizontal_alignment_type;
+
+typedef enum vertical_alignment_type {
+  VERTICAL_ALIGNMENT_NULL = 0,
+  VERTICAL_ALIGNMENT_TOP,
+  VERTICAL_ALIGNMENT_CENTRED,
+  VERTICAL_ALIGNMENT_BOTTOM,
+} vertical_alignment_type;
+
+typedef struct mc_paddingf {
+  float left, top, right, bottom;
+} mc_paddingf;
+
+typedef struct node_layout_info {
+  horizontal_alignment_type horizontal_alignment;
+  vertical_alignment_type vertical_alignment;
+  float preferred_width, preferred_height;
+  float min_width, min_height;
+  float max_width, max_height;
+  mc_paddingf padding;
+
+  // Application Set Field
+  mc_rectf __bounds;
+} node_layout_info;
 
 typedef struct mui_ui_state {
   bool requires_update;
@@ -31,10 +68,11 @@ typedef struct visual_project_data {
 void exit_app(mc_node *hierarchical_call_scope, int result);
 void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach);
 void mca_init_mc_node(mc_node *hierarchy_node, node_type type, mc_node **node);
-void mca_update_node_list(mc_node_list *node_list);
+// void mca_update_node_layout_extents(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints);
+void mca_update_node_layout(mc_node *node);
 void mca_render_node_list_headless(mc_node_list *node_list);
 void mca_render_node_list_present(image_render_queue *render_queue, mc_node_list *node_list);
-void mca_set_node_requires_update(mc_node *node);
+void mca_set_node_requires_layout_update(mc_node *node);
 void mca_set_node_requires_rerender(mc_node *node);
 
 // util.c

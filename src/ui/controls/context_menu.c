@@ -30,6 +30,12 @@ void mui_init_context_menu(mc_node *parent, mui_context_menu **p_context_menu)
   *p_context_menu = context_menu;
 }
 
+// void mui_layout_context_menu_extents(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints) {
+
+//   mui_ui_element *element = (mui_ui_element *)node->data;
+//   node_layout_info *layout = node->
+// }
+
 void mui_render_context_menu(image_render_queue *render_queue, mc_node *visual_node)
 {
   // printf("mui_render_context_menu\n");
@@ -37,14 +43,15 @@ void mui_render_context_menu(image_render_queue *render_queue, mc_node *visual_n
   mui_context_menu *context_menu = (mui_context_menu *)element->data;
 
   // Background
-  mcr_issue_render_command_colored_rect(render_queue, (unsigned int)element->bounds.x, (unsigned int)element->bounds.y,
-                                        (unsigned int)element->bounds.width, (unsigned int)element->bounds.height,
-                                        context_menu->background_color);
+  mcr_issue_render_command_colored_rect(
+      render_queue, (unsigned int)element->layout->__bounds.x, (unsigned int)element->layout->__bounds.y,
+      (unsigned int)element->layout->__bounds.width, (unsigned int)element->layout->__bounds.height,
+      context_menu->background_color);
 
   // Children
   for (int a = 0; a < context_menu->children->count; ++a) {
-    printf("rendering something child\n");
-    mui_render_element_present(render_queue, context_menu->children->items[a]);
+    if (context_menu->children->items[a]->visible)
+      mui_render_element_present(render_queue, context_menu->children->items[a]);
   }
 }
 
@@ -54,7 +61,7 @@ void mui_context_menu_clear_options(mui_ui_element *menu_element)
 
   for (int i = 0; i < context_menu->_buttons.count; ++i) {
     set_c_str(context_menu->_buttons.items[i]->str, "");
-    context_menu->_buttons.items[i]->element->visible = false;
+    context_menu->_buttons.items[i]->element->visual_node->visible = false;
   }
   context_menu->_buttons.count = 0;
 }
@@ -70,11 +77,14 @@ void mui_context_menu_add_option(mui_ui_element *menu_element, const char *optio
 
     for (int a = prev_alloc; a < menu->_buttons.alloc; ++a) {
       mui_init_button(menu_element->visual_node, &menu->_buttons.items[a]);
-      menu->_buttons.items[a]->element->visible = false;
-      menu->_buttons.items[a]->element->bounds = {menu_element->bounds.x, menu_element->bounds.y + 32.f * a, 140, 32};
+      menu->_buttons.items[a]->element->visual_node->visible = false;
+
+      menu->_buttons.items[a]->element->layout->padding = {2, 2, 2, 2};
+      // menu->_buttons.items[a]->element->layout->preferred_width = (float)project->screen.width;
+      menu->_buttons.items[a]->element->layout->preferred_height = 28.f;
     }
   }
 
   set_c_str(menu->_buttons.items[menu->_buttons.count]->str, option_text);
-  menu->_buttons.items[menu->_buttons.count]->element->visible = true;
+  menu->_buttons.items[menu->_buttons.count]->element->visual_node->visible = true;
 }

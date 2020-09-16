@@ -14,29 +14,14 @@ typedef enum ui_element_type {
   UI_ELEMENT_CONTEXT_MENU,
 } ui_element_type;
 
-typedef enum horizontal_alignment {
-  HORIZONTAL_ALIGNMENT_NULL = 0,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_CENTRED,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-} horizontal_alignment;
-
-typedef enum vertical_alignment {
-  VERTICAL_ALIGNMENT_NULL = 0,
-  VERTICAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTRED,
-  VERTICAL_ALIGNMENT_RIGHT,
-} vertical_alignment;
-
 typedef struct mui_ui_element {
   mc_node *visual_node;
   ui_element_type type;
-  bool visible;
 
-  bool requires_update, requires_rerender;
+  bool requires_layout_update, requires_rerender;
   // unsigned int headless_image_resource_uid;
 
-  mc_rectf bounds;
+  node_layout_info *layout;
 
   void *data;
 } mui_ui_element;
@@ -63,7 +48,7 @@ typedef struct mui_button {
   mui_ui_element *element;
   c_str *str;
 
-void *tag;
+  void *tag;
 
   unsigned int font_resource_uid;
   render_color font_color;
@@ -89,7 +74,7 @@ extern "C" {
 void mui_initialize_ui_state(mui_ui_state **p_ui_state);
 void mui_initialize_core_ui_components();
 
-void mui_update_ui();
+void mui_update_element_layout(mui_ui_element *element);
 
 void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list);
 

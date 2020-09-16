@@ -1,6 +1,8 @@
 
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
+#include "render/render_common.h"
+#include "ui/ui_definitions.h"
 
 void exit_app(mc_node *node_scope, int result)
 {
@@ -86,33 +88,209 @@ void mca_init_mc_node(mc_node *hierarchy_node, node_type type, mc_node **node)
   (*node)->data = NULL;
 }
 
-void mca_update_node_list(mc_node_list *node_list)
+// void mca_logic_update_node_list(mc_node_list *node_list)
+// {
+//   for (int nl_index = 0; nl_index < node_list->count; ++nl_index) {
+//     mc_node *node = node_list->items[nl_index];
+//     switch (node->type) {
+//     case NODE_TYPE_VISUAL_PROJECT: {
+//       // Update despite requirements
+//       mca_update_visual_project(node);
+//     } break;
+//     case NODE_TYPE_UI: {
+//       mui_ui_element *element = (mui_ui_element *)node->data;
+//       // Nothing for the moment -- TODO?
+//     } break;
+//     default:
+//       MCerror(9617, "mca_update_node_list::Unsupported node type:%i", node->type);
+//     }
+//   }
+// }
+// void mca_update_node_layout_location(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints) {}
+
+void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints)
 {
-  for (int nl_index = 0; nl_index < node_list->count; ++nl_index) {
-    mc_node *node = node_list->items[nl_index];
-    switch (node->type) {
-    case NODE_TYPE_VISUAL_PROJECT: {
-      // Update despite requirements
-      mca_update_visual_project(node);
-    } break;
-    case NODE_TYPE_UI: {
-      mui_ui_element *element = (mui_ui_element *)node->data;
-      if (!element->requires_update)
+  switch (node->type) {
+  case NODE_TYPE_UI: {
+    mui_ui_element *element = (mui_ui_element *)node->data;
+    switch (element->type) {
+    case UI_ELEMENT_TEXT_BLOCK:
+    case UI_ELEMENT_CONTEXT_MENU: {
+      // printf("mca_update_child_node_layout--UI_ELEMENT_CONTEXT_MENU\n");
+      // mui_layout_context_menu_extents(node, available_area, restraints);
+      node_layout_info *layout = element->layout;
+
+      // Preferred value > padding (within min/max if set)
+
+      mc_rectf bounds;
+
+      // Width
+      if (layout->preferred_width) {
+        // Set to preferred width
+        bounds.width = layout->preferred_width;
+      }
+      else {
+        // padding adjusted from available
+        bounds.width = available_area->width - layout->padding.right - layout->padding.left;
+
+        // Specified bounds
+        if (layout->min_width && bounds.width < layout->min_width) {
+          bounds.width = layout->min_width;
+        }
+        if (layout->max_width && bounds.width > layout->max_width) {
+          bounds.width = layout->max_width;
+        }
+
+        if (bounds.width < 0) {
+          bounds.width = 0;
+        }
+      }
+
+      // Height
+      if (layout->preferred_height) {
+        // Set to preferred height
+        bounds.height = layout->preferred_height;
+      }
+      else {
+        // padding adjusted from available
+        bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
+
+        // Specified bounds
+        if (layout->min_height && bounds.height < layout->min_height) {
+          bounds.height = layout->min_height;
+        }
+        if (layout->max_height && bounds.height > layout->max_height) {
+          bounds.height = layout->max_height;
+        }
+
+        if (bounds.height < 0) {
+          bounds.height = 0;
+        }
+      }
+
+      if (!bounds.width || !bounds.height)
         break;
 
-      // UI Update
-      // TODO
+      // X
+      switch (layout->horizontal_alignment) {
+      case HORIZONTAL_ALIGNMENT_LEFT: {
+        bounds.x = available_area->x + layout->padding.left;
+      } break;
+      case HORIZONTAL_ALIGNMENT_RIGHT: {
+        bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
+      } break;
+      case HORIZONTAL_ALIGNMENT_CENTRED: {
+        bounds.x = available_area->x + layout->padding.left +
+                   (available_area->width - layout->padding.right - bounds.width) / 2.f;
+      } break;
+      default:
+        MCerror(7180, "NotSupported:%i", layout->horizontal_alignment);
+      }
 
-      // TODO -- this should maybe be somewhere else?
-      element->requires_update = false;
+      // Y
+      switch (layout->vertical_alignment) {
+      case VERTICAL_ALIGNMENT_TOP: {
+        bounds.y = available_area->y + layout->padding.top;
+      } break;
+      case VERTICAL_ALIGNMENT_BOTTOM: {
+        bounds.y = available_area->y + available_area->height - layout->padding.bottom - bounds.height;
+      } break;
+      case VERTICAL_ALIGNMENT_CENTRED: {
+        bounds.y = available_area->y + layout->padding.top +
+                   (available_area->height - layout->padding.bottom - bounds.height) / 2.f;
+      } break;
+      default:
+        MCerror(7195, "NotSupported:%i", layout->vertical_alignment);
+      }
 
-      // Trigger rerender
-      mca_set_node_requires_rerender(node);
+      printf("bounds = {%.3f, %.3f, %.3f, %.3f}\n", bounds.x, bounds.y, bounds.width, bounds.height);
+
+      if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width ||
+          bounds.height != layout->__bounds.height) {
+        layout->__bounds = bounds;
+        mca_set_node_requires_rerender(node);
+      }
     } break;
     default:
-      MCerror(9617, "mca_update_node_list::Unsupported node type:%i", node->type);
+      MCerror(9117, "mca_update_node_layout_extents::Unsupported element type:%i", element->type);
     }
+  } break;
+  default:
+    MCerror(9121, "mca_update_node_layout_extents::Unsupported node type:%i", node->type);
   }
+}
+
+void mca_update_node_layout(mc_node *node)
+{
+  // printf("mca_update_node_layout--\n");
+  switch (node->type) {
+  case NODE_TYPE_GLOBAL_ROOT: {
+    global_root_data *global_data = (global_root_data *)node->data;
+
+    mc_rectf bounds = {0, 0, (float)global_data->screen.width, (float)global_data->screen.height};
+    for (int a = 0; a < global_data->children->count; ++a) {
+      // printf("mca_update_node_layout--child %p\n", global_data->children->items[a]);
+      if (global_data->children->items[a]->visible) {
+        // printf("mca_update_node_layout--child visible\n");
+        mca_update_child_node_layout(global_data->children->items[a], &bounds, LAYOUT_RESTRAINT_NONE);
+      }
+    }
+
+    // for (int a = 0; a < global_data->children->count; ++a) {
+    //   mca_update_node_layout_location(global_data->children->items[a], &bounds);
+    // }
+
+    // // Set child positions
+    // for (int a = 0; a < global_data->children->count; ++a) {
+    //   switch (global_data->children->items[a]->type) {
+    //   default:
+    //     MCerror(8124, "TODO %i", global_data->children->items[a]->type)
+    //   }
+    // }
+
+    // mc_rectf bounds = {0, 0, (float)global_data->screen.width, (float)global_data->screen.height};
+    // for (int a = 0; a < global_data->children->count; ++a) {
+    //   mca_update_node_layout_positions(global_data->children->items[a], &bounds);
+    // }
+
+  } break;
+  // case NODE_TYPE_VISUAL_PROJECT: {
+  //   // Update despite requirements
+  //   mca_update_visual_project(node);
+  // } break;
+  // case NODE_TYPE_UI: {
+  //   mui_ui_element *element = (mui_ui_element *)node->data;
+  //   // Nothing for the moment -- TODO?
+  // } break;
+  default:
+    MCerror(9617, "mca_update_node_layout::Unsupported node type:%i", node->type);
+  }
+
+  // for (int nl_index = 0; nl_index < node_list->count; ++nl_index) {
+  //   mc_node *node = node_list->items[nl_index];
+  //   switch (node->type) {
+  //   case NODE_TYPE_VISUAL_PROJECT: {
+  //     // Update despite requirements
+  //     mca_update_visual_project(node);
+  //   } break;
+  //   case NODE_TYPE_UI: {
+  //     mui_ui_element *element = (mui_ui_element *)node->data;
+  //     if (!element->requires_layout_update)
+  //       break;
+
+  //     // UI Update
+  //     mui_update_element_layout(element);
+
+  //     // TODO -- this should maybe be somewhere else?
+  //     element->requires_layout_update = false;
+
+  //     // Trigger rerender
+  //     mca_set_node_requires_rerender(node);
+  //   } break;
+  //   default:
+  //     MCerror(9613, "mca_update_node_list::Unsupported node type:%i", node->type);
+  //   }
+  // }
 }
 
 void mca_render_node_list_headless(mc_node_list *node_list)
@@ -136,6 +314,9 @@ void mca_render_node_list_present(image_render_queue *render_queue, mc_node_list
 {
   for (int a = 0; a < node_list->count; ++a) {
     mc_node *node = node_list->items[a];
+    if (!node->visible)
+      continue;
+
     switch (node->type) {
     case NODE_TYPE_UI: {
       mui_render_element_present(render_queue, node);
@@ -149,13 +330,14 @@ void mca_render_node_list_present(image_render_queue *render_queue, mc_node_list
   }
 }
 
-void mca_set_node_requires_update(mc_node *node)
+void mca_set_node_requires_layout_update(mc_node *node)
 {
   // Set update required on all ancestors of the node
   while (node) {
     switch (node->type) {
     case NODE_TYPE_GLOBAL_ROOT: {
-      // No need to set for global root
+      global_root_data *global_data = (global_root_data *)node->data;
+      global_data->requires_layout_update = true;
     } break;
     case NODE_TYPE_VISUAL_PROJECT: {
       visual_project_data *project = (visual_project_data *)node->data;
@@ -164,10 +346,10 @@ void mca_set_node_requires_update(mc_node *node)
     case NODE_TYPE_UI: {
       // printf("mseu-4\n");
       mui_ui_element *element = (mui_ui_element *)node->data;
-      element->requires_update = true;
+      element->requires_layout_update = true;
     } break;
     default:
-      MCerror(1252, "mca_set_node_requires_update::>unsupported node type:%i", node->type);
+      MCerror(1252, "mca_set_node_requires_layout_update::>unsupported node type:%i", node->type);
     }
 
     node = node->parent;

@@ -629,8 +629,8 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
         stbtt_GetBakedQuad(cdata, (int)texWidth, (int)texHeight, ci, &ax, &ay, &q, 1);
         if (q.y0 < lowest)
           lowest = q.y0;
-        printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f lowest=%.3f\n", q.s0, q.s1,
-               q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, lowest);
+        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f lowest=%.3f\n", q.s0, q.s1,
+        //        q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, lowest);
       }
       p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].draw_vertical_offset = 300 - lowest;
     }

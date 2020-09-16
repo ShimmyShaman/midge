@@ -30,6 +30,7 @@ void mui_render_text_block(image_render_queue *render_queue, mc_node *visual_nod
   mui_ui_element *element = (mui_ui_element *)visual_node->data;
   mui_text_block *text_block = (mui_text_block *)element->data;
 
-  mcr_issue_render_command_text(render_queue, (unsigned int)element->bounds.x, (unsigned int)element->bounds.y,
-                                text_block->str->text, text_block->font_resource_uid, text_block->font_color);
+  mcr_issue_render_command_text(render_queue, (unsigned int)element->layout->__bounds.x,
+                                (unsigned int)element->layout->__bounds.y, text_block->str->text,
+                                text_block->font_resource_uid, text_block->font_color);
 }

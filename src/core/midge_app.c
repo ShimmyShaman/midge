@@ -132,6 +132,8 @@ void midge_initialize_app(struct timespec *app_begin_time)
   obtain_midge_global_root(&global_data);
   global_data->app_begin_time = app_begin_time;
 
+  global_data->requires_layout_update = true;
+
   struct timespec source_load_complete_time;
   clock_gettime(CLOCK_REALTIME, &source_load_complete_time);
 
@@ -349,10 +351,16 @@ void midge_run_app()
     // Update State
     {
       // As is global node update despite any requirement
-      mca_update_node_list(global_data->children);
-      global_data->ui_state->requires_update = false;
+      // mca_update_node_list_logic(global_data->children);
+      if (global_data->requires_layout_update) {
+        mca_update_node_layout(global_data->global_node);
+        global_data->requires_layout_update = false;
+        printf("layout updated\n");
+      }
+
+      // TODO Get rid of this field maybe?
+      // global_data->ui_state->requires_update = false;
     }
-    // -- TODO ?
 
     if (global_data->exit_requested)
       break;

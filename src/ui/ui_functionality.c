@@ -36,12 +36,12 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
 
 void mui_initialize_core_ui_components() {}
 
-void mui_update_ui()
+void mui_update_element_layout(mui_ui_element *element)
 {
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
+  // global_root_data *global_data;
+  // obtain_midge_global_root(&global_data);
 
-  global_data->requires_rerender = true;
+  // global_data->requires_rerender = true;
 }
 
 void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x, int screen_y,
@@ -66,9 +66,9 @@ void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
   case NODE_TYPE_UI: {
     mui_ui_element *element = (mui_ui_element *)node->data;
 
-    if (screen_x < (int)element->bounds.x || screen_y < (int)element->bounds.y ||
-        screen_x >= (int)(element->bounds.x + element->bounds.width) ||
-        screen_y >= (int)(element->bounds.y + element->bounds.height))
+    if (screen_x < (int)element->layout->__bounds.x || screen_y < (int)element->layout->__bounds.y ||
+        screen_x >= (int)(element->layout->__bounds.x + element->layout->__bounds.width) ||
+        screen_y >= (int)(element->layout->__bounds.y + element->layout->__bounds.height))
       break;
 
     // Append children
@@ -91,9 +91,9 @@ void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
     visual_project_data *project = (visual_project_data *)node->data;
 
     mui_ui_element *container_element = (mui_ui_element *)project->editor_container->data;
-    if (screen_x < container_element->bounds.x || screen_y < container_element->bounds.y ||
-        screen_x >= container_element->bounds.x + project->screen.width ||
-        screen_y >= container_element->bounds.y + project->screen.height)
+    if (screen_x < container_element->layout->__bounds.x || screen_y < container_element->layout->__bounds.y ||
+        screen_x >= container_element->layout->__bounds.x + project->screen.width ||
+        screen_y >= container_element->layout->__bounds.y + project->screen.height)
       break;
 
     // Add any children before
@@ -171,6 +171,7 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
   mc_node *node = (mc_node *)malloc(sizeof(mc_node));
 
   node->type = NODE_TYPE_UI;
+  node->visible = true;
   if (parent_node->type == NODE_TYPE_UI) {
     mui_ui_element *parent_element = (mui_ui_element *)parent_node->data;
     switch (parent_element->type) {
@@ -203,15 +204,27 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
   mui_ui_element *element = (mui_ui_element *)malloc(sizeof(mui_ui_element));
   node->data = element;
 
-  element->visible = true;
-  element->bounds = {};
+  {
+    // Initialize layout
+    element->layout = (node_layout_info *)malloc(sizeof(node_layout_info));
+
+    element->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+    element->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+    element->layout->preferred_width = 0;
+    element->layout->preferred_height = 0;
+    element->layout->min_width = 0;
+    element->layout->min_height = 0;
+    element->layout->max_width = 0;
+    element->layout->max_height = 0;
+    element->layout->padding = {0, 0, 0, 0};
+  }
   element->visual_node = node;
   element->type = element_type;
   element->requires_rerender = false;
 
   element->data = NULL;
 
-  mca_set_node_requires_update(node);
+  mca_set_node_requires_layout_update(node);
 
   if (created_element)
     *created_element = element;

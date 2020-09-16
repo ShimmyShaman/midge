@@ -1,4 +1,5 @@
 
+#include "env/environment_definitions.h"
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
@@ -20,7 +21,10 @@ void init_modus_operandi_curator()
   mui_text_block *text_block;
   mui_init_text_block(global_data->global_node, &text_block);
 
-  text_block->element->bounds = {150, 300, 0, 0};
+  node_layout_info *layout = text_block->element->layout;
+  layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+  layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  layout->padding = {150, 300, 0, 0};
 
   set_c_str(text_block->str, "");
   for (int a = 32; a < 128; ++a) {
@@ -31,5 +35,5 @@ void init_modus_operandi_curator()
   }
   text_block->font_color = COLOR_LIGHT_YELLOW;
 
-  mca_set_node_requires_update(text_block->element->visual_node);
+  mca_set_node_requires_layout_update(text_block->element->visual_node);
 }
