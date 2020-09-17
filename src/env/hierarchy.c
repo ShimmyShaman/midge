@@ -114,10 +114,7 @@ void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layou
   case NODE_TYPE_UI: {
     mui_ui_element *element = (mui_ui_element *)node->data;
     switch (element->type) {
-    case UI_ELEMENT_TEXT_BLOCK:
-    case UI_ELEMENT_CONTEXT_MENU: {
-      // printf("mca_update_child_node_layout--UI_ELEMENT_CONTEXT_MENU\n");
-      // mui_layout_context_menu_extents(node, available_area, restraints);
+    case UI_ELEMENT_TEXT_BLOCK: {
       node_layout_info *layout = element->layout;
 
       // Preferred value > padding (within min/max if set)
@@ -130,19 +127,29 @@ void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layou
         bounds.width = layout->preferred_width;
       }
       else {
-        // padding adjusted from available
-        bounds.width = available_area->width - layout->padding.right - layout->padding.left;
-
-        // Specified bounds
-        if (layout->min_width && bounds.width < layout->min_width) {
-          bounds.width = layout->min_width;
+        if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
+          if (layout->min_width)
+            bounds.width += layout->min_width;
+          else {
+            layout->__bounds.width = 0;
+            break;
+          }
         }
-        if (layout->max_width && bounds.width > layout->max_width) {
-          bounds.width = layout->max_width;
-        }
+        else {
+          // padding adjusted from available
+          bounds.width = available_area->width - layout->padding.right - layout->padding.left;
 
-        if (bounds.width < 0) {
-          bounds.width = 0;
+          // Specified bounds
+          if (layout->min_width && bounds.width < layout->min_width) {
+            bounds.width = layout->min_width;
+          }
+          if (layout->max_width && bounds.width > layout->max_width) {
+            bounds.width = layout->max_width;
+          }
+
+          if (bounds.width < 0) {
+            bounds.width = 0;
+          }
         }
       }
 
@@ -152,24 +159,36 @@ void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layou
         bounds.height = layout->preferred_height;
       }
       else {
-        // padding adjusted from available
-        bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
-
-        // Specified bounds
-        if (layout->min_height && bounds.height < layout->min_height) {
-          bounds.height = layout->min_height;
+        if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
+          if (layout->min_height)
+            bounds.height += layout->min_height;
+          else {
+            layout->__bounds.height = 0;
+            break;
+          }
         }
-        if (layout->max_height && bounds.height > layout->max_height) {
-          bounds.height = layout->max_height;
-        }
+        else {
+          // padding adjusted from available
+          bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
 
-        if (bounds.height < 0) {
-          bounds.height = 0;
+          // Specified bounds
+          if (layout->min_height && bounds.height < layout->min_height) {
+            bounds.height = layout->min_height;
+          }
+          if (layout->max_height && bounds.height > layout->max_height) {
+            bounds.height = layout->max_height;
+          }
+
+          if (bounds.height < 0) {
+            bounds.height = 0;
+          }
         }
       }
 
-      if (!bounds.width || !bounds.height)
+      if (!bounds.width || !bounds.height) {
+        layout->__bounds = bounds;
         break;
+      }
 
       // X
       switch (layout->horizontal_alignment) {
@@ -210,6 +229,20 @@ void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layou
         layout->__bounds = bounds;
         mca_set_node_requires_rerender(node);
       }
+    } break;
+    case UI_ELEMENT_CONTEXT_MENU: {
+      // mui_update_context_menu_layout(node, available_area, restraints);
+  mui_context_menu *context_menu = (mui_context_menu *)element->data;
+
+      // Determine the maximum width requested by child controls and the cumulative height
+      float max_child_width = 0, cumulative_height = ;
+      for(int a = 0; a < context_menu->_buttons.count; ++a){
+
+      }
+
+      // Ensure they lie within min & max width parameters
+
+      // Set accordingly
     } break;
     default:
       MCerror(9117, "mca_update_node_layout_extents::Unsupported element type:%i", element->type);
