@@ -43,10 +43,10 @@ void mui_render_context_menu(image_render_queue *render_queue, mc_node *visual_n
   mui_context_menu *context_menu = (mui_context_menu *)element->data;
 
   // Background
-  mcr_issue_render_command_colored_rect(
-      render_queue, (unsigned int)element->layout->__bounds.x, (unsigned int)element->layout->__bounds.y,
-      (unsigned int)element->layout->__bounds.width, (unsigned int)element->layout->__bounds.height,
-      context_menu->background_color);
+  mcr_issue_render_command_colored_rect(render_queue, (unsigned int)element->layout->__bounds.x,
+                                        (unsigned int)element->layout->__bounds.y,
+                                        (unsigned int)element->layout->__bounds.width,
+                                        (unsigned int)element->layout->__bounds.height, context_menu->background_color);
 
   // Children
   for (int a = 0; a < context_menu->children->count; ++a) {
@@ -80,11 +80,12 @@ void mui_context_menu_add_option(mui_ui_element *menu_element, const char *optio
       menu->_buttons.items[a]->element->visual_node->visible = false;
 
       menu->_buttons.items[a]->element->layout->padding = {2, 2, 2, 2};
-      // menu->_buttons.items[a]->element->layout->preferred_width = (float)project->screen.width;
-      menu->_buttons.items[a]->element->layout->preferred_height = 28.f;
+      // menu->_buttons.items[a]->element->layout->preferred_width = 118.f;
+      // menu->_buttons.items[a]->element->layout->preferred_height = 28.f;
     }
   }
 
   set_c_str(menu->_buttons.items[menu->_buttons.count]->str, option_text);
   menu->_buttons.items[menu->_buttons.count]->element->visual_node->visible = true;
+  ++menu->_buttons.count;
 }

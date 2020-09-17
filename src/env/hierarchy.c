@@ -25,6 +25,8 @@ void exit_app(mc_node *node_scope, int result)
 
 void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach)
 {
+  printf("added node %i to %i\n", node_to_attach->type, hierarchy_node->type);
+
   switch (hierarchy_node->type) {
   case NODE_TYPE_GLOBAL_ROOT: {
     global_root_data *global_data = (global_root_data *)hierarchy_node->data;
@@ -255,44 +257,55 @@ void mca_update_list_nodes_layout_extents(mc_node_list *node_list, layout_extent
   for (int a = 0; a < node_list->count; ++a) {
     mc_node *node = node_list->items[a];
 
-    // printf("mca_update_node_layout--\n");
     switch (node->type) {
     case NODE_TYPE_UI: {
       mui_ui_element *element = (mui_ui_element *)node->data;
       if (!element->requires_layout_update)
         continue;
+      element->requires_layout_update = false;
+
+      mc_rectf new_bounds = element->layout->__bounds;
 
       switch (element->type) {
       case UI_ELEMENT_TEXT_BLOCK: {
         mui_text_block *text_block = (mui_text_block *)element->data;
 
         float str_width, str_height;
-        mcr_determine_text_display_dimensions(text_block->font_resource_uid, text_block->str->text, &str_width,
-                                              &str_height);
+        if (!element->layout->preferred_width || element->layout->preferred_height)
+          mcr_determine_text_display_dimensions(text_block->font_resource_uid, text_block->str->text, &str_width,
+                                                &str_height);
 
         // Width
         if (element->layout->preferred_width)
-          element->layout->__bounds.width = element->layout->preferred_width;
+          new_bounds.width = element->layout->preferred_width;
         else
-          element->layout->__bounds.width = str_width;
+          new_bounds.width = str_width;
 
         // Height
         if (element->layout->preferred_height)
-          element->layout->__bounds.height = element->layout->preferred_height;
+          new_bounds.height = element->layout->preferred_height;
         else
-          element->layout->__bounds.height = str_height;
+          new_bounds.height = str_height;
 
       } break;
       case UI_ELEMENT_BUTTON: {
-        if (!element->layout->preferred_width) {
-          MCerror(2651, "Not Supported");
-        }
-        if (!element->layout->preferred_height) {
-          MCerror(2652, "Not Supported");
-        }
+        mui_button *button = (mui_button *)element->data;
 
-        element->layout->__bounds.width = element->layout->preferred_width;
-        element->layout->__bounds.height = element->layout->preferred_height;
+        float str_width, str_height;
+        if (!element->layout->preferred_width || !element->layout->preferred_height)
+          mcr_determine_text_display_dimensions(button->font_resource_uid, button->str->text, &str_width, &str_height);
+
+        // Width
+        if (element->layout->preferred_width)
+          new_bounds.width = element->layout->preferred_width;
+        else
+          new_bounds.width = str_width;
+
+        // Height
+        if (element->layout->preferred_height)
+          new_bounds.height = element->layout->preferred_height;
+        else
+          new_bounds.height = str_height;
       } break;
       case UI_ELEMENT_CONTEXT_MENU: {
         mui_context_menu *context_menu = (mui_context_menu *)element->data;
@@ -316,21 +329,28 @@ void mca_update_list_nodes_layout_extents(mc_node_list *node_list, layout_extent
         }
 
         if (element->layout->preferred_width) {
-          element->layout->__bounds.width = element->layout->preferred_width;
+          new_bounds.width = element->layout->preferred_width;
         }
         else {
-          element->layout->__bounds.width = max_child_width;
+          new_bounds.width = max_child_width;
         }
         if (element->layout->preferred_height) {
-          element->layout->__bounds.height = element->layout->preferred_height;
+          new_bounds.height = element->layout->preferred_height;
         }
         else {
-          element->layout->__bounds.height = cumulative_height;
+          new_bounds.height = cumulative_height;
         }
-
       } break;
       default:
         MCerror(9268, "mca_update_list_nodes_layout_extents::Unsupported element type:%i", element->type);
+      }
+
+      // Determine if the new bounds is worth setting
+      if (new_bounds.x != element->layout->__bounds.x || new_bounds.y != element->layout->__bounds.y ||
+          new_bounds.width != element->layout->__bounds.width ||
+          new_bounds.height != element->layout->__bounds.height) {
+        element->layout->__bounds = new_bounds;
+        mca_set_node_requires_rerender(node);
       }
     } break;
     default:
@@ -342,28 +362,32 @@ void mca_update_list_nodes_layout_extents(mc_node_list *node_list, layout_extent
 void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
 // layout_extent_restraints restraints)
 {
-  // printf("mca_update_node_layout--\n");
+  // printf("mca_update_node_layout--%i\n", node->type);
   switch (node->type) {
   case NODE_TYPE_UI: {
     mui_ui_element *element = (mui_ui_element *)node->data;
+
+    mc_rectf new_bounds = element->layout->__bounds;
+    // printf("mca_update_node_layout:element-%i\n", element->type);
     switch (element->type) {
     case UI_ELEMENT_TEXT_BLOCK: {
-      element->layout->__bounds.x = available_area->x + element->layout->padding.left;
-      element->layout->__bounds.y = available_area->y + element->layout->padding.top;
+      new_bounds.x = available_area->x + element->layout->padding.left;
+      new_bounds.y = available_area->y + element->layout->padding.top;
 
     } break;
     case UI_ELEMENT_BUTTON: {
-      element->layout->__bounds.x = available_area->x + element->layout->padding.left;
-      element->layout->__bounds.y = available_area->y + element->layout->padding.top;
+      new_bounds.x = available_area->x + element->layout->padding.left;
+      new_bounds.y = available_area->y + element->layout->padding.top;
 
+      printf("set button to %.3f %.3f\n", new_bounds.x, new_bounds.y);
     } break;
     case UI_ELEMENT_CONTEXT_MENU: {
       mui_context_menu *context_menu = (mui_context_menu *)element->data;
 
-      element->layout->__bounds.x = available_area->x + element->layout->padding.left;
-      element->layout->__bounds.y = available_area->y + element->layout->padding.top;
+      new_bounds.x = available_area->x + element->layout->padding.left;
+      new_bounds.y = available_area->y + element->layout->padding.top;
 
-      mc_rectf child_bounds = element->layout->__bounds;
+      mc_rectf child_bounds = new_bounds;
       for (int b = 0; b < context_menu->_buttons.count; ++b) {
         mui_button *button = context_menu->_buttons.items[b];
         mca_update_node_layout(button->element->visual_node, &child_bounds);
@@ -371,6 +395,8 @@ void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
         child_bounds.y += button->element->layout->padding.top + button->element->layout->__bounds.height +
                           button->element->layout->padding.bottom;
       }
+      printf("context_menu>bounds:{%.2f %.2f %.2f %.2f}\n", new_bounds.x, new_bounds.y, new_bounds.width,
+             new_bounds.height);
       //   // // Determine children extents
       //   // mca_update_list_nodes_layout_extents(context_menu->children, available_area,
       //   //                                      LAYOUT_RESTRAINT_HORIZONTAL | LAYOUT_RESTRAINT_VERTICAL);
@@ -401,14 +427,20 @@ void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
       //   // else {
       //   //   element->layout->__bounds.height = cumulative_height;
       //   // }
-
     } break;
     default:
       MCerror(9270, "mca_update_node_layout::Unsupported element type:%i", element->type);
     }
+
+    // Determine if the new bounds is worth setting
+    if (new_bounds.x != element->layout->__bounds.x || new_bounds.y != element->layout->__bounds.y ||
+        new_bounds.width != element->layout->__bounds.width || new_bounds.height != element->layout->__bounds.height) {
+      element->layout->__bounds = new_bounds;
+      mca_set_node_requires_rerender(node);
+    }
   } break;
-    case NODE_TYPE -- Whats 8??
-    
+    // case NODE_TYPE -- Whats 8??
+
     // case NODE_TYPE_GLOBAL_ROOT: {
     //   global_root_data *global_data = (global_root_data *)node->data;
 

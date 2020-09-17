@@ -360,7 +360,7 @@ void midge_run_app()
 
         mc_rectf bounds = {0.f, 0.f, (float)global_data->screen.width, (float)global_data->screen.height};
         for (int a = 0; a < global_data->children->count; ++a) {
-          mca_update_node_layout(global_data->children, &bounds);
+          mca_update_node_layout(global_data->children->items[a], &bounds);
         }
         global_data->requires_layout_update = false;
         printf("layout updated\n");

@@ -36,13 +36,15 @@ void mui_render_button(image_render_queue *render_queue, mc_node *visual_node)
   mui_button *button = (mui_button *)element->data;
 
   // Background
-  mcr_issue_render_command_colored_rect(
-      render_queue, (unsigned int)element->layout->__bounds.x, (unsigned int)element->layout->__bounds.y,
-      (unsigned int)element->layout->__bounds.width, (unsigned int)element->layout->__bounds.height,
-      button->background_color);
+  mcr_issue_render_command_colored_rect(render_queue, (unsigned int)element->layout->__bounds.x,
+                                        (unsigned int)element->layout->__bounds.y,
+                                        (unsigned int)element->layout->__bounds.width,
+                                        (unsigned int)element->layout->__bounds.height, button->background_color);
 
   // Text
+  printf("renderbutton- %u %u %s %u\n", (unsigned int)element->layout->__bounds.x,
+         (unsigned int)element->layout->__bounds.y, button->str->text, button->font_resource_uid);
   mcr_issue_render_command_text(render_queue, (unsigned int)element->layout->__bounds.x,
-                                (unsigned int)element->layout->__bounds.y, button->str->text,
-                                button->font_resource_uid, button->font_color);
+                                (unsigned int)element->layout->__bounds.y, button->str->text, button->font_resource_uid,
+                                button->font_color);
 }
