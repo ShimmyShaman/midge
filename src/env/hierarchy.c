@@ -108,166 +108,318 @@ void mca_init_mc_node(mc_node *hierarchy_node, node_type type, mc_node **node)
 // }
 // void mca_update_node_layout_location(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints) {}
 
-void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints)
+// void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints)
+// {
+//   switch (node->type) {
+//   case NODE_TYPE_UI: {
+//     mui_ui_element *element = (mui_ui_element *)node->data;
+//     switch (element->type) {
+//     case UI_ELEMENT_TEXT_BLOCK: {
+//       mca_node_layout *layout = element->layout;
+
+//       // Preferred value > padding (within min/max if set)
+
+//       mc_rectf bounds;
+
+//       // Width
+//       if (layout->preferred_width) {
+//         // Set to preferred width
+//         bounds.width = layout->preferred_width;
+//       }
+//       else {
+//         if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
+//           if (layout->min_width)
+//             bounds.width += layout->min_width;
+//           else {
+//             layout->__bounds.width = 0;
+//             break;
+//           }
+//         }
+//         else {
+//           // padding adjusted from available
+//           bounds.width = available_area->width - layout->padding.right - layout->padding.left;
+
+//           // Specified bounds
+//           if (layout->min_width && bounds.width < layout->min_width) {
+//             bounds.width = layout->min_width;
+//           }
+//           if (layout->max_width && bounds.width > layout->max_width) {
+//             bounds.width = layout->max_width;
+//           }
+
+//           if (bounds.width < 0) {
+//             bounds.width = 0;
+//           }
+//         }
+//       }
+
+//       // Height
+//       if (layout->preferred_height) {
+//         // Set to preferred height
+//         bounds.height = layout->preferred_height;
+//       }
+//       else {
+//         if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
+//           if (layout->min_height)
+//             bounds.height += layout->min_height;
+//           else {
+//             layout->__bounds.height = 0;
+//             break;
+//           }
+//         }
+//         else {
+//           // padding adjusted from available
+//           bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
+
+//           // Specified bounds
+//           if (layout->min_height && bounds.height < layout->min_height) {
+//             bounds.height = layout->min_height;
+//           }
+//           if (layout->max_height && bounds.height > layout->max_height) {
+//             bounds.height = layout->max_height;
+//           }
+
+//           if (bounds.height < 0) {
+//             bounds.height = 0;
+//           }
+//         }
+//       }
+
+//       if (!bounds.width || !bounds.height) {
+//         layout->__bounds = bounds;
+//         break;
+//       }
+
+//       // X
+//       switch (layout->horizontal_alignment) {
+//       case HORIZONTAL_ALIGNMENT_LEFT: {
+//         bounds.x = available_area->x + layout->padding.left;
+//       } break;
+//       case HORIZONTAL_ALIGNMENT_RIGHT: {
+//         bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
+//       } break;
+//       case HORIZONTAL_ALIGNMENT_CENTRED: {
+//         bounds.x = available_area->x + layout->padding.left +
+//                    (available_area->width - layout->padding.right - bounds.width) / 2.f;
+//       } break;
+//       default:
+//         MCerror(7180, "NotSupported:%i", layout->horizontal_alignment);
+//       }
+
+//       // Y
+//       switch (layout->vertical_alignment) {
+//       case VERTICAL_ALIGNMENT_TOP: {
+//         bounds.y = available_area->y + layout->padding.top;
+//       } break;
+//       case VERTICAL_ALIGNMENT_BOTTOM: {
+//         bounds.y = available_area->y + available_area->height - layout->padding.bottom - bounds.height;
+//       } break;
+//       case VERTICAL_ALIGNMENT_CENTRED: {
+//         bounds.y = available_area->y + layout->padding.top +
+//                    (available_area->height - layout->padding.bottom - bounds.height) / 2.f;
+//       } break;
+//       default:
+//         MCerror(7195, "NotSupported:%i", layout->vertical_alignment);
+//       }
+
+//       printf("bounds = {%.3f, %.3f, %.3f, %.3f}\n", bounds.x, bounds.y, bounds.width, bounds.height);
+
+//       if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width
+//       ||
+//           bounds.height != layout->__bounds.height) {
+//         layout->__bounds = bounds;
+//         mca_set_node_requires_rerender(node);
+//       }
+//     } break;
+//     case UI_ELEMENT_CONTEXT_MENU: {
+//       // mui_update_context_menu_layout(node, available_area, restraints);
+//       mui_context_menu *context_menu = (mui_context_menu *)element->data;
+
+//       // Determine the maximum width requested by child controls and the cumulative height
+
+//       // Ensure they lie within min & max width parameters
+
+//       // Set accordingly
+//     } break;
+//     default:
+//       MCerror(9117, "mca_update_node_layout_extents::Unsupported element type:%i", element->type);
+//     }
+//   } break;
+//   default:
+//     MCerror(9121, "mca_update_node_layout_extents::Unsupported node type:%i", node->type);
+//   }
+// }
+
+void mca_update_list_nodes_layout_extents(mc_node_list *node_list, layout_extent_restraints restraints)
 {
+  for (int a = 0; a < node_list->count; ++a) {
+    mc_node *node = node_list->items[a];
+
+    // printf("mca_update_node_layout--\n");
+    switch (node->type) {
+    case NODE_TYPE_UI: {
+      mui_ui_element *element = (mui_ui_element *)node->data;
+      if (!element->requires_layout_update)
+        continue;
+
+      switch (element->type) {
+      case UI_ELEMENT_TEXT_BLOCK: {
+        mui_text_block *text_block = (mui_text_block *)element->data;
+
+        float str_width, str_height;
+        mcr_determine_text_display_dimensions(text_block->font_resource_uid, text_block->str->text, &str_width,
+                                              &str_height);
+
+        // Width
+        if (element->layout->preferred_width)
+          element->layout->__bounds.width = element->layout->preferred_width;
+        else
+          element->layout->__bounds.width = str_width;
+
+        // Height
+        if (element->layout->preferred_height)
+          element->layout->__bounds.height = element->layout->preferred_height;
+        else
+          element->layout->__bounds.height = str_height;
+
+      } break;
+      case UI_ELEMENT_BUTTON: {
+        if (!element->layout->preferred_width) {
+          MCerror(2651, "Not Supported");
+        }
+        if (!element->layout->preferred_height) {
+          MCerror(2652, "Not Supported");
+        }
+
+        element->layout->__bounds.width = element->layout->preferred_width;
+        element->layout->__bounds.height = element->layout->preferred_height;
+      } break;
+      case UI_ELEMENT_CONTEXT_MENU: {
+        mui_context_menu *context_menu = (mui_context_menu *)element->data;
+
+        // Determine children extents
+        mca_update_list_nodes_layout_extents(context_menu->children,
+                                             LAYOUT_RESTRAINT_HORIZONTAL | LAYOUT_RESTRAINT_VERTICAL);
+        // mca_update_list_nodes_layout(context_menu->children, available_area);
+
+        float max_child_width = 0, cumulative_height = 0;
+        for (int a = 0; a < context_menu->_buttons.count; ++a) {
+          mui_button *button = context_menu->_buttons.items[a];
+
+          if (button->element->layout->__bounds.width > max_child_width) {
+            max_child_width = button->element->layout->padding.left + button->element->layout->__bounds.width +
+                              button->element->layout->padding.right;
+          }
+
+          cumulative_height += button->element->layout->padding.top + button->element->layout->__bounds.height +
+                               button->element->layout->padding.bottom;
+        }
+
+        if (element->layout->preferred_width) {
+          element->layout->__bounds.width = element->layout->preferred_width;
+        }
+        else {
+          element->layout->__bounds.width = max_child_width;
+        }
+        if (element->layout->preferred_height) {
+          element->layout->__bounds.height = element->layout->preferred_height;
+        }
+        else {
+          element->layout->__bounds.height = cumulative_height;
+        }
+
+      } break;
+      default:
+        MCerror(9268, "mca_update_list_nodes_layout_extents::Unsupported element type:%i", element->type);
+      }
+    } break;
+    default:
+      MCerror(9272, "mca_update_list_nodes_layout_extents::Unsupported node type:%i", node->type);
+    }
+  }
+}
+
+void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
+// layout_extent_restraints restraints)
+{
+  // printf("mca_update_node_layout--\n");
   switch (node->type) {
   case NODE_TYPE_UI: {
     mui_ui_element *element = (mui_ui_element *)node->data;
     switch (element->type) {
     case UI_ELEMENT_TEXT_BLOCK: {
-      node_layout_info *layout = element->layout;
+      element->layout->__bounds.x = available_area->x + element->layout->padding.left;
+      element->layout->__bounds.y = available_area->y + element->layout->padding.top;
 
-      // Preferred value > padding (within min/max if set)
+    } break;
+    case UI_ELEMENT_BUTTON: {
+      element->layout->__bounds.x = available_area->x + element->layout->padding.left;
+      element->layout->__bounds.y = available_area->y + element->layout->padding.top;
 
-      mc_rectf bounds;
-
-      // Width
-      if (layout->preferred_width) {
-        // Set to preferred width
-        bounds.width = layout->preferred_width;
-      }
-      else {
-        if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
-          if (layout->min_width)
-            bounds.width += layout->min_width;
-          else {
-            layout->__bounds.width = 0;
-            break;
-          }
-        }
-        else {
-          // padding adjusted from available
-          bounds.width = available_area->width - layout->padding.right - layout->padding.left;
-
-          // Specified bounds
-          if (layout->min_width && bounds.width < layout->min_width) {
-            bounds.width = layout->min_width;
-          }
-          if (layout->max_width && bounds.width > layout->max_width) {
-            bounds.width = layout->max_width;
-          }
-
-          if (bounds.width < 0) {
-            bounds.width = 0;
-          }
-        }
-      }
-
-      // Height
-      if (layout->preferred_height) {
-        // Set to preferred height
-        bounds.height = layout->preferred_height;
-      }
-      else {
-        if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
-          if (layout->min_height)
-            bounds.height += layout->min_height;
-          else {
-            layout->__bounds.height = 0;
-            break;
-          }
-        }
-        else {
-          // padding adjusted from available
-          bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
-
-          // Specified bounds
-          if (layout->min_height && bounds.height < layout->min_height) {
-            bounds.height = layout->min_height;
-          }
-          if (layout->max_height && bounds.height > layout->max_height) {
-            bounds.height = layout->max_height;
-          }
-
-          if (bounds.height < 0) {
-            bounds.height = 0;
-          }
-        }
-      }
-
-      if (!bounds.width || !bounds.height) {
-        layout->__bounds = bounds;
-        break;
-      }
-
-      // X
-      switch (layout->horizontal_alignment) {
-      case HORIZONTAL_ALIGNMENT_LEFT: {
-        bounds.x = available_area->x + layout->padding.left;
-      } break;
-      case HORIZONTAL_ALIGNMENT_RIGHT: {
-        bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
-      } break;
-      case HORIZONTAL_ALIGNMENT_CENTRED: {
-        bounds.x = available_area->x + layout->padding.left +
-                   (available_area->width - layout->padding.right - bounds.width) / 2.f;
-      } break;
-      default:
-        MCerror(7180, "NotSupported:%i", layout->horizontal_alignment);
-      }
-
-      // Y
-      switch (layout->vertical_alignment) {
-      case VERTICAL_ALIGNMENT_TOP: {
-        bounds.y = available_area->y + layout->padding.top;
-      } break;
-      case VERTICAL_ALIGNMENT_BOTTOM: {
-        bounds.y = available_area->y + available_area->height - layout->padding.bottom - bounds.height;
-      } break;
-      case VERTICAL_ALIGNMENT_CENTRED: {
-        bounds.y = available_area->y + layout->padding.top +
-                   (available_area->height - layout->padding.bottom - bounds.height) / 2.f;
-      } break;
-      default:
-        MCerror(7195, "NotSupported:%i", layout->vertical_alignment);
-      }
-
-      printf("bounds = {%.3f, %.3f, %.3f, %.3f}\n", bounds.x, bounds.y, bounds.width, bounds.height);
-
-      if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width ||
-          bounds.height != layout->__bounds.height) {
-        layout->__bounds = bounds;
-        mca_set_node_requires_rerender(node);
-      }
     } break;
     case UI_ELEMENT_CONTEXT_MENU: {
-      // mui_update_context_menu_layout(node, available_area, restraints);
-  mui_context_menu *context_menu = (mui_context_menu *)element->data;
+      mui_context_menu *context_menu = (mui_context_menu *)element->data;
 
-      // Determine the maximum width requested by child controls and the cumulative height
-      float max_child_width = 0, cumulative_height = ;
-      for(int a = 0; a < context_menu->_buttons.count; ++a){
+      element->layout->__bounds.x = available_area->x + element->layout->padding.left;
+      element->layout->__bounds.y = available_area->y + element->layout->padding.top;
 
+      mc_rectf child_bounds = element->layout->__bounds;
+      for (int b = 0; b < context_menu->_buttons.count; ++b) {
+        mui_button *button = context_menu->_buttons.items[b];
+        mca_update_node_layout(button->element->visual_node, &child_bounds);
+
+        child_bounds.y += button->element->layout->padding.top + button->element->layout->__bounds.height +
+                          button->element->layout->padding.bottom;
       }
+      //   // // Determine children extents
+      //   // mca_update_list_nodes_layout_extents(context_menu->children, available_area,
+      //   //                                      LAYOUT_RESTRAINT_HORIZONTAL | LAYOUT_RESTRAINT_VERTICAL);
+      //   // // mca_update_list_nodes_layout(context_menu->children, available_area);
 
-      // Ensure they lie within min & max width parameters
+      //   // float max_child_width = 0, cumulative_height = 0;
+      //   // for (int a = 0; a < context_menu->_buttons.count; ++a) {
+      //   //   mui_button *button = context_menu->_buttons.items[a];
 
-      // Set accordingly
+      //   //   if (button->element->layout->__bounds.width > max_child_width) {
+      //   //     max_child_width = button->element->layout->padding.left + button->element->layout->__bounds.width +
+      //   //                       button->element->layout->padding.right;
+      //   //   }
+
+      //   //   cumulative_height += button->element->layout->padding.top + button->element->layout->__bounds.height +
+      //   //                        button->element->layout->padding.bottom;
+      //   // }
+
+      //   // if (element->layout->preferred_width) {
+      //   //   element->layout->__bounds.width = element->layout->preferred_width;
+      //   // }
+      //   // else {
+      //   //   element->layout->__bounds.width = max_child_width;
+      //   // }
+      //   // if (element->layout->preferred_height) {
+      //   //   element->layout->__bounds.height = element->layout->preferred_height;
+      //   // }
+      //   // else {
+      //   //   element->layout->__bounds.height = cumulative_height;
+      //   // }
+
     } break;
     default:
-      MCerror(9117, "mca_update_node_layout_extents::Unsupported element type:%i", element->type);
+      MCerror(9270, "mca_update_node_layout::Unsupported element type:%i", element->type);
     }
   } break;
-  default:
-    MCerror(9121, "mca_update_node_layout_extents::Unsupported node type:%i", node->type);
-  }
-}
+    case NODE_TYPE -- Whats 8??
+    
+    // case NODE_TYPE_GLOBAL_ROOT: {
+    //   global_root_data *global_data = (global_root_data *)node->data;
 
-void mca_update_node_layout(mc_node *node)
-{
-  // printf("mca_update_node_layout--\n");
-  switch (node->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    global_root_data *global_data = (global_root_data *)node->data;
-
-    mc_rectf bounds = {0, 0, (float)global_data->screen.width, (float)global_data->screen.height};
-    for (int a = 0; a < global_data->children->count; ++a) {
-      // printf("mca_update_node_layout--child %p\n", global_data->children->items[a]);
-      if (global_data->children->items[a]->visible) {
-        // printf("mca_update_node_layout--child visible\n");
-        mca_update_child_node_layout(global_data->children->items[a], &bounds, LAYOUT_RESTRAINT_NONE);
-      }
-    }
+    //   mc_rectf bounds = {0, 0, (float)global_data->screen.width, (float)global_data->screen.height};
+    //   for (int a = 0; a < global_data->children->count; ++a) {
+    //     // printf("mca_update_node_layout--child %p\n", global_data->children->items[a]);
+    //     if (global_data->children->items[a]->visible) {
+    //       // printf("mca_update_node_layout--child visible\n");
+    //       mca_update_child_node_layout(global_data->children->items[a], &bounds, LAYOUT_RESTRAINT_NONE);
+    //     }
+    //   }
 
     // for (int a = 0; a < global_data->children->count; ++a) {
     //   mca_update_node_layout_location(global_data->children->items[a], &bounds);
@@ -285,8 +437,8 @@ void mca_update_node_layout(mc_node *node)
     // for (int a = 0; a < global_data->children->count; ++a) {
     //   mca_update_node_layout_positions(global_data->children->items[a], &bounds);
     // }
-
-  } break;
+    // }
+    // break;
   // case NODE_TYPE_VISUAL_PROJECT: {
   //   // Update despite requirements
   //   mca_update_visual_project(node);

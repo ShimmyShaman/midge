@@ -28,17 +28,17 @@ typedef struct mc_paddingf {
   float left, top, right, bottom;
 } mc_paddingf;
 
-typedef struct node_layout_info {
+typedef struct mca_node_layout {
   horizontal_alignment_type horizontal_alignment;
   vertical_alignment_type vertical_alignment;
   float preferred_width, preferred_height;
-  float min_width, min_height;
-  float max_width, max_height;
+  // float min_width, min_height;
+  // float max_width, max_height;
   mc_paddingf padding;
 
   // Application Set Field
   mc_rectf __bounds;
-} node_layout_info;
+} mca_node_layout;
 
 typedef struct mui_ui_state {
   bool requires_update;
@@ -69,7 +69,8 @@ void exit_app(mc_node *hierarchical_call_scope, int result);
 void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach);
 void mca_init_mc_node(mc_node *hierarchy_node, node_type type, mc_node **node);
 // void mca_update_node_layout_extents(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints);
-void mca_update_node_layout(mc_node *node);
+void mca_update_list_nodes_layout_extents(mc_node_list *node_list, layout_extent_restraints restraints);
+void mca_update_node_layout(mc_node *node, mc_rectf *available_area);
 void mca_render_node_list_headless(mc_node_list *node_list);
 void mca_render_node_list_present(image_render_queue *render_queue, mc_node_list *node_list);
 void mca_set_node_requires_layout_update(mc_node *node);

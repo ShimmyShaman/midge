@@ -21,7 +21,7 @@ void init_modus_operandi_curator()
   mui_text_block *text_block;
   mui_init_text_block(global_data->global_node, &text_block);
 
-  node_layout_info *layout = text_block->element->layout;
+  mca_node_layout *layout = text_block->element->layout;
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
   layout->padding = {150, 300, 0, 0};

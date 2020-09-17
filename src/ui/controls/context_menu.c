@@ -33,7 +33,7 @@ void mui_init_context_menu(mc_node *parent, mui_context_menu **p_context_menu)
 // void mui_layout_context_menu_extents(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints) {
 
 //   mui_ui_element *element = (mui_ui_element *)node->data;
-//   node_layout_info *layout = node->
+//   mca_node_layout *layout = node->
 // }
 
 void mui_render_context_menu(image_render_queue *render_queue, mc_node *visual_node)

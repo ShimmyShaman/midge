@@ -206,16 +206,16 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
 
   {
     // Initialize layout
-    element->layout = (node_layout_info *)malloc(sizeof(node_layout_info));
+    element->layout = (mca_node_layout *)malloc(sizeof(mca_node_layout));
 
     element->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
     element->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
     element->layout->preferred_width = 0;
     element->layout->preferred_height = 0;
-    element->layout->min_width = 0;
-    element->layout->min_height = 0;
-    element->layout->max_width = 0;
-    element->layout->max_height = 0;
+    // element->layout->min_width = 0;
+    // element->layout->min_height = 0;
+    // element->layout->max_width = 0;
+    // element->layout->max_height = 0;
     element->layout->padding = {0, 0, 0, 0};
   }
   element->visual_node = node;

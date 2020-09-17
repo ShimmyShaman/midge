@@ -207,10 +207,13 @@ typedef struct render_queue {
   image_render_queue *image_renders;
 } render_queue;
 
+struct loaded_font_list; // From mc_vulkan.h - compiled later
 typedef struct render_thread_info {
   mthread_info *thread_info;
   render_queue render_queue;
   resource_queue resource_queue;
+  // ptr reference only no need to release
+  loaded_font_list *loaded_fonts;
   bool render_thread_initialized;
   window_input_buffer input_buffer;
 } render_thread_info;

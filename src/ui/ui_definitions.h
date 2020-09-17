@@ -21,7 +21,7 @@ typedef struct mui_ui_element {
   bool requires_layout_update, requires_rerender;
   // unsigned int headless_image_resource_uid;
 
-  node_layout_info *layout;
+  mca_node_layout *layout;
 
   void *data;
 } mui_ui_element;

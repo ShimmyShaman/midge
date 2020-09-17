@@ -56,6 +56,12 @@ typedef struct loaded_font_info {
   stbtt_bakedchar *char_data;
 } loaded_font_info;
 
+typedef struct loaded_font_list {
+  uint32_t count;
+  uint32_t allocated;
+  loaded_font_info *fonts;
+} loaded_font_list;
+
 typedef struct sampled_image {
   VkFormat format;
   uint32_t width, height;
@@ -182,11 +188,7 @@ typedef struct vk_render_state {
     sampled_image *samples;
   } textures;
 
-  struct {
-    uint32_t count;
-    uint32_t allocated;
-    loaded_font_info *fonts;
-  } loaded_fonts;
+  loaded_font_list loaded_fonts;
 
 } vk_render_state;
 

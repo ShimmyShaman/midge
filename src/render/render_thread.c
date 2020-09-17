@@ -849,6 +849,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   global_data->screen.width = vkrs->window_width;
   global_data->screen.height = vkrs->window_height;
   printf("Vulkan Initialized!\n");
+  render_thread->loaded_fonts = &vkrs->loaded_fonts;
+
   VK_CHECK((VkResult)wures, "mxcb_update_window");
   // printf("mrt-2:good\n");
   render_thread->render_thread_initialized = true;

@@ -1,4 +1,8 @@
 #include "render/render_common.h"
+#include "core/core_definitions.h"
+#include "render/mc_vulkan.h"
+
+#include "stb_truetype.h"
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
 void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
@@ -27,6 +31,58 @@ void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_p
   command->data.font.path = font_path;
   // printf("hrc-resource_cmd->data.font.height:%f\n", command->data.font.height);
   // pthread_mutex_unlock(&resource_queue->mutex);
+}
+
+void mcr_determine_text_display_dimensions(unsigned int font_resource, const char *text, float *text_width,
+                                           float *text_height)
+{
+  if (text == NULL || text[0] == '\0') {
+    *text_width = 0;
+    *text_height = 0;
+    return;
+  }
+
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  if (font_resource == 0) {
+    // Use the global default font resource
+    font_resource = global_data->ui_state->default_font_resource;
+  }
+
+  // Obtain the font
+  loaded_font_info *font = NULL;
+  for (int f = 0; f < global_data->render_thread->loaded_fonts->count; ++f) {
+    if (global_data->render_thread->loaded_fonts->fonts[f].resource_uid == font_resource) {
+      font = &global_data->render_thread->loaded_fonts->fonts[f];
+      break;
+    }
+  }
+
+  if (!font) {
+    MCerror(7857, "Could not find requested font uid=%u\n", font_resource);
+  }
+
+  *text_width = 0;
+  *text_height = font->draw_vertical_offset;
+
+  int text_length = strlen(text);
+  for (int c = 0; c < text_length; ++c) {
+
+    char letter = text[c];
+    if (letter < 32 || letter > 127) {
+      MCerror(7857, "TODO character %i not supported.\n", letter);
+    }
+
+    // Source texture bounds
+    stbtt_aligned_quad q;
+
+    // printf("garbagein: %i %i %f %f %i\n", (int)font_image->width, (int)font_image->height, align_x, align_y, letter -
+    // 32);
+
+    stbtt_GetBakedQuad(font->char_data, 256, 256, letter - 32, text_width, text_height, &q, 1);
+    // printf("char:'%c' w:%.2f h:%.2f\n", letter, *text_width, *text_height);
+  }
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @render_queue
