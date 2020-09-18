@@ -19,6 +19,8 @@ void mui_init_button(mc_node *parent, mui_button **p_button)
 
   //   printf("mui-ib-3\n");
   button->tag = NULL;
+  button->left_click = NULL;
+
   init_c_str(&button->str);
   button->font_resource_uid = 0;
   button->font_color = COLOR_GHOST_WHITE;

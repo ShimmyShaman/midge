@@ -14,6 +14,9 @@ typedef enum ui_element_type {
   UI_ELEMENT_CONTEXT_MENU,
 } ui_element_type;
 
+// // struct
+// struct mui_button;
+
 typedef struct mui_ui_element {
   mc_node *visual_node;
   ui_element_type type;
@@ -37,8 +40,8 @@ typedef struct mui_panel {
 // Controls
 typedef struct mui_text_block {
   mui_ui_element *element;
-  c_str *str;
 
+  c_str *str;
   unsigned int font_resource_uid;
   render_color font_color;
 } mui_text_block;
@@ -46,10 +49,13 @@ typedef struct mui_text_block {
 // Controls
 typedef struct mui_button {
   mui_ui_element *element;
-  c_str *str;
 
   void *tag;
 
+  // void (*left_click)(mui_button *button, mc_point click_location);
+  void *left_click;
+
+  c_str *str;
   unsigned int font_resource_uid;
   render_color font_color;
 

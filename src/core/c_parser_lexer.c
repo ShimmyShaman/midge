@@ -2637,7 +2637,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     bool is_modifier = true;
     while (is_modifier) {
       switch (token_type) {
-        case MC_TOKEN_CONST_KEYWORD:
+      case MC_TOKEN_CONST_KEYWORD:
       case MC_TOKEN_UNSIGNED_KEYWORD:
       case MC_TOKEN_SIGNED_KEYWORD: {
         ++peek_ahead;
@@ -2681,6 +2681,33 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     case MC_TOKEN_CLOSING_BRACKET:
       mcs_parse_cast_expression(ps, parent, false, additional_destination);
       break;
+    case MC_TOKEN_OPEN_BRACKET: {
+      // Could be a method or function pointer search further
+      mcs_peek_token_type(ps, false, peek_ahead + 1, &token_type);
+      switch (token_type) {
+      case MC_TOKEN_STAR_CHARACTER: {
+        do {
+          ++peek_ahead;
+          mcs_peek_token_type(ps, false, peek_ahead, &token_type);
+        } while (token_type == MC_TOKEN_STAR_CHARACTER);
+
+        switch (token_type) {
+        case MC_TOKEN_CLOSING_BRACKET: {
+          mcs_parse_cast_expression(ps, parent, true, additional_destination);
+        } break;
+        default:
+          // print_syntax_node(cast_expression, 0);
+          print_parse_error(ps->code, ps->index, "mcs_parse_cast_expression", "is_fptr");
+          MCerror(2700, "TODO:\"type [*](*\">%s(%i)", get_mc_token_type_name(token_type), peek_ahead);
+          break;
+        }
+      } break;
+      default:
+        print_parse_error(ps->code, ps->index, "parse_bracket", "is_fptr");
+        MCerror(2691, "TODO:\"type [*](\">%s(%i)", get_mc_token_type_name(token_type), peek_ahead);
+        break;
+      }
+    } break;
     default:
       // print_syntax_node(cast_expression, 0);
       print_parse_error(ps->code, ps->index, "parse_bracket", "is_fptr");

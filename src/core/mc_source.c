@@ -619,10 +619,10 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "mui_init_button")) {
-  //   // print_syntax_node(ast, 0);
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
-  // }
+  if (!strcmp(func_info->name, "mui_handle_mouse_left_click")) {
+    // print_syntax_node(ast, 0);
+    printf("mc_transcription:\n%s||\n", mc_transcription);
+  }
   // if (!strcmp(func_info->name, "mcs_parse_through_supernumerary_tokens")) {
   //   // print_syntax_node(ast, 0);
   //   // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
@@ -636,6 +636,8 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   }
   free(mc_transcription);
   // printf("idfc-5\n");
+
+  // TODO extract this method and common call it where its repeated across midge
   char buf[512];
   sprintf(buf, "%s = &%s_mc_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
   // printf("idfc-6\n");

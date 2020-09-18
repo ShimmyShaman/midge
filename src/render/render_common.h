@@ -112,14 +112,18 @@ typedef struct render_color {
     1.f, 1.f, 102.f / 255.f, 1.f \
   }
 
-typedef struct mc_rectf {
-  float x, y;
-  float width, height;
-} mc_rect;
+typedef struct mc_point {
+  int x, y;
+} mc_point;
 
 typedef struct mc_size {
   unsigned int width, height;
 } mc_size;
+
+typedef struct mc_rectf {
+  float x, y;
+  float width, height;
+} mc_rect;
 
 typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,

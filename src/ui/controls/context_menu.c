@@ -66,6 +66,13 @@ void mui_context_menu_clear_options(mui_ui_element *menu_element)
   context_menu->_buttons.count = 0;
 }
 
+void mui_context_menu_option_clicked(mui_button *button, mc_point click_point)
+{
+  printf("Button clicked at %i, %i\n", click_point.x, click_point.y);
+}
+
+void mui_temp_TODO(int a) { printf("you entered the number %i!!!!~!~~~\n", a); }
+
 void mui_context_menu_add_option(mui_ui_element *menu_element, const char *option_text)
 {
   mui_context_menu *menu = (mui_context_menu *)menu_element->data;
@@ -80,6 +87,16 @@ void mui_context_menu_add_option(mui_ui_element *menu_element, const char *optio
       menu->_buttons.items[a]->element->visual_node->visible = false;
 
       menu->_buttons.items[a]->element->layout->padding = {2, 2, 2, 2};
+
+      // printf("mui_temp_TODO:%p\n", *((void **)mui_temp_TODO));
+      // printf("mui_temp_TODO:%p\n", mui_temp_TODO);
+      // printf("mui_temp_TODO:%p\n", &mui_temp_TODO);
+      // void *bb = (void *)&mui_temp_TODO;
+      // printf("mui_temp_TODO:%p\n", (void *)&bb);
+
+      // DEBUG TODO (has to be set with void for now)
+      menu->_buttons.items[a]->left_click = (void *)&mui_context_menu_option_clicked;
+
       // menu->_buttons.items[a]->element->layout->preferred_width = 118.f;
       // menu->_buttons.items[a]->element->layout->preferred_height = 28.f;
     }

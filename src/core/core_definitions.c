@@ -148,9 +148,11 @@ int find_function_info_by_ptr(void *function_ptr, function_info **result)
   obtain_midge_global_root(&global_data);
 
   for (int i = 0; i < global_data->functions.count; ++i) {
+    // printf("compare-fffbyptr! %p <> %p  '%s'\n", function_ptr, global_data->functions.items[i]->ptr_declaration,
+    //  global_data->functions.items[i]->name);
     if (function_ptr == global_data->functions.items[i]->ptr_declaration) {
       // printf("found! %p <> %p  '%s' %p\n", function_ptr, global_data->functions.items[i]->ptr_declaration,
-      //        global_data->functions.items[i]->name, result);
+      //  global_data->functions.items[i]->name, result);
       *result = global_data->functions.items[i];
       return 0;
     }
