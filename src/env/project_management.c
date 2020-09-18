@@ -16,7 +16,7 @@ void mca_init_visual_project_container(mc_node *project_node)
   mui_init_panel(project_node, &panel);
   panel->background_color = COLOR_MIDNIGHT_EXPRESS;
 
-  panel->element->layout->padding = {400, 200, 0, 0};
+  panel->element->layout->padding = {0, 0, 0, 0};
   panel->element->layout->preferred_width = (float)project->screen.width;
   panel->element->layout->preferred_height = (float)project->screen.height;
 
@@ -40,6 +40,9 @@ void mca_create_new_visual_project(const char *project_name)
 
   project->screen.width = 600;
   project->screen.height = 480;
+  project->screen.offset_x = 400;
+  project->screen.offset_y = 200;
+  mca_init_node_layout(&project->layout);
 
   project->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   project->children->alloc = 0;

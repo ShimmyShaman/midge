@@ -22,6 +22,7 @@ void mui_init_button(mc_node *parent, mui_button **p_button)
   button->left_click = NULL;
 
   init_c_str(&button->str);
+  set_c_str(button->str, "button");
   button->font_resource_uid = 0;
   button->font_color = COLOR_GHOST_WHITE;
 

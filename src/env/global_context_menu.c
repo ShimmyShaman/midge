@@ -2,6 +2,28 @@
 #include "env/environment_definitions.h"
 #include "ui/ui_definitions.h"
 
+void mca_handle_global_context_menu_option_selected(const char *selected_option)
+{
+  if (!strcmp(selected_option, "Add Button")) {
+    global_root_data *global_data;
+    obtain_midge_global_root(&global_data);
+
+    switch (global_data->ui_state->global_context_menu_context_node->type) {
+    case NODE_TYPE_VISUAL_PROJECT: {
+      mui_button *button;
+      mui_init_button(global_data->ui_state->global_context_menu_context_node, &button);
+
+      set_c_str(button->str, "button");
+
+    } break;
+    default:
+      MCerror(9815, "TODO");
+    }
+    return;
+  }
+  // printf("unhandled menu option selected:'%s'", selected_option);
+}
+
 void mca_init_global_context_menu()
 {
   global_root_data *global_data;
@@ -12,6 +34,7 @@ void mca_init_global_context_menu()
 
   // Set to global
   global_data->ui_state->global_context_menu = context_menu->element->visual_node;
+  global_data->ui_state->global_context_menu_context_node = NULL;
   context_menu->element->visual_node->visible = false;
 
   context_menu->element->layout->padding = {150, 200, 0, 0};
@@ -21,13 +44,14 @@ void mca_init_global_context_menu()
   context_menu->element->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   context_menu->background_color = COLOR_DARK_SLATE_GRAY;
+  context_menu->option_selected = (void *)&mca_handle_global_context_menu_option_selected;
 }
 
 void mca_render_global_context_menu(image_render_queue *render_queue, mc_node *node) {}
 
 void mca_gcm_handler(mc_node event_node) { printf("!!!!It Registered!!!!!\n"); }
 
-void mca_activate_global_context_menu(mc_node *node, int screen_x, int screen_y)
+void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int screen_y)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -35,6 +59,7 @@ void mca_activate_global_context_menu(mc_node *node, int screen_x, int screen_y)
   // Show
   // printf("mca_activate_global_context_menu--node %p\n", node);
   global_data->ui_state->global_context_menu->visible = true;
+  global_data->ui_state->global_context_menu_context_node = context_node;
 
   // Set New Layout
   mui_ui_element *gcm_element = (mui_ui_element *)global_data->ui_state->global_context_menu->data;
@@ -42,8 +67,11 @@ void mca_activate_global_context_menu(mc_node *node, int screen_x, int screen_y)
 
   mui_context_menu_clear_options(gcm_element);
 
-  // Alter available options depending on the type of node activated on
-  switch (node->type) {
+  // Alter available options depending on the type of context_node activated on
+  switch (context_node->type) {
+  case NODE_TYPE_VISUAL_PROJECT: {
+    mui_context_menu_add_option(gcm_element, "Add Button");
+  } break;
   default:
     // Respond with the default options
     mui_context_menu_add_option(gcm_element, "Add Button");

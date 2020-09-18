@@ -72,6 +72,9 @@ typedef struct mui_context_menu {
     mui_button **items;
   } _buttons;
 
+  // void (*option_selected)(const char *option_title);
+  void *option_selected;
+
   render_color background_color;
 } mui_context_menu;
 

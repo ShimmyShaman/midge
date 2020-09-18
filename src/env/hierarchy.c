@@ -80,6 +80,22 @@ void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_atta
   // printf("mca_attach_node_to_hierarchy-9\n");
 }
 
+void mca_init_node_layout(mca_node_layout **layout)
+{
+  // Initialize layout
+  (*layout) = (mca_node_layout *)malloc(sizeof(mca_node_layout));
+
+  (*layout)->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+  (*layout)->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+  (*layout)->preferred_width = 0;
+  (*layout)->preferred_height = 0;
+  // (*layout)->min_width = 0;
+  // (*layout)->min_height = 0;
+  // (*layout)->max_width = 0;
+  // (*layout)->max_height = 0;
+  (*layout)->padding = {0, 0, 0, 0};
+}
+
 void mca_init_mc_node(mc_node *hierarchy_node, node_type type, mc_node **node)
 {
   (*node) = (mc_node *)malloc(sizeof(mc_node));
@@ -353,6 +369,23 @@ void mca_update_list_nodes_layout_extents(mc_node_list *node_list, layout_extent
         mca_set_node_requires_rerender(node);
       }
     } break;
+    case NODE_TYPE_VISUAL_PROJECT: {
+      visual_project_data *visual_project = (visual_project_data *)node->data;
+
+      // Determine children extents
+      mca_update_list_nodes_layout_extents(visual_project->children, LAYOUT_RESTRAINT_NONE);
+
+      mc_rectf new_bounds = {(float)visual_project->screen.offset_x, (float)visual_project->screen.offset_y,
+                             (float)visual_project->screen.width, (float)visual_project->screen.height};
+
+      // Determine if the new bounds is worth setting
+      if (new_bounds.x != visual_project->layout->__bounds.x || new_bounds.y != visual_project->layout->__bounds.y ||
+          new_bounds.width != visual_project->layout->__bounds.width ||
+          new_bounds.height != visual_project->layout->__bounds.height) {
+        visual_project->layout->__bounds = new_bounds;
+        mca_set_node_requires_rerender(node);
+      }
+    } break;
     default:
       MCerror(9272, "mca_update_list_nodes_layout_extents::Unsupported node type:%i", node->type);
     }
@@ -439,8 +472,29 @@ void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
       mca_set_node_requires_rerender(node);
     }
   } break;
-    // case NODE_TYPE -- Whats 8??
+  case NODE_TYPE_VISUAL_PROJECT: {
+    visual_project_data *visual_project = (visual_project_data *)node->data;
 
+    visual_project->layout->padding.left = visual_project->screen.offset_x;
+    visual_project->layout->padding.top = visual_project->screen.offset_y;
+
+    mc_rectf new_bounds = {(float)visual_project->screen.offset_x, (float)visual_project->screen.offset_y,
+                           (float)visual_project->screen.width, (float)visual_project->screen.height};
+
+    mca_update_node_layout(visual_project->editor_container, &new_bounds);
+    for (int a = 0; a < visual_project->children->count; ++a) {
+      mca_update_node_layout(visual_project->children->items[a], &new_bounds);
+    }
+
+    // Determine if the new bounds is worth setting
+    if (new_bounds.x != visual_project->layout->__bounds.x || new_bounds.y != visual_project->layout->__bounds.y ||
+        new_bounds.width != visual_project->layout->__bounds.width ||
+        new_bounds.height != visual_project->layout->__bounds.height) {
+      visual_project->layout->__bounds = new_bounds;
+      mca_set_node_requires_rerender(node);
+    }
+  } break;
+  case NODE_TYPE_NONE?????
     // case NODE_TYPE_GLOBAL_ROOT: {
     //   global_root_data *global_data = (global_root_data *)node->data;
 

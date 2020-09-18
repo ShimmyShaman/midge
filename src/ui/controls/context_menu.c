@@ -68,10 +68,21 @@ void mui_context_menu_clear_options(mui_ui_element *menu_element)
 
 void mui_context_menu_option_clicked(mui_button *button, mc_point click_point)
 {
-  printf("Button clicked at %i, %i\n", click_point.x, click_point.y);
-}
+  // Get the context menu
+  mc_node *context_menu_node = (mc_node *)button->element->visual_node->parent;
+  mui_ui_element *context_menu_element = (mui_ui_element *)context_menu_node->data;
+  mui_context_menu *context_menu = (mui_context_menu *)context_menu_element->data;
 
-void mui_temp_TODO(int a) { printf("you entered the number %i!!!!~!~~~\n", a); }
+  if (context_menu->option_selected) {
+    // Fire the event handler
+    void (*option_selected_event)(const char *) = (void (*)(const char *))context_menu->option_selected;
+    option_selected_event(button->str->text);
+  }
+
+  // Hide the context menu
+  context_menu_node->visible = false;
+  mca_set_node_requires_rerender(context_menu_node);
+}
 
 void mui_context_menu_add_option(mui_ui_element *menu_element, const char *option_text)
 {
