@@ -69,14 +69,19 @@ typedef struct visual_project_data {
 
 // hierarchy.c
 void exit_app(mc_node *hierarchical_call_scope, int result);
-void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach);
+
+void mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list);
+void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach, unsigned int z_layer_index);
+void mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_index);
 void mca_init_node_layout(mca_node_layout **layout);
 void mca_init_mc_node(mc_node *hierarchy_node, node_type type, mc_node **node);
-// void mca_update_node_layout_extents(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints);
-void mca_update_list_nodes_layout_extents(mc_node_list *node_list, layout_extent_restraints restraints);
+
+void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints);
 void mca_update_node_layout(mc_node *node, mc_rectf *available_area);
+
 void mca_render_node_list_headless(mc_node_list *node_list);
 void mca_render_node_list_present(image_render_queue *render_queue, mc_node_list *node_list);
+
 void mca_set_node_requires_layout_update(mc_node *node);
 void mca_set_node_requires_rerender(mc_node *node);
 

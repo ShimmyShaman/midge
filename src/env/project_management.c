@@ -21,7 +21,8 @@ void mca_init_visual_project_container(mc_node *project_node)
   panel->element->layout->preferred_height = (float)project->screen.height;
 
   // Set container to seperate field and clear children
-  project->editor_container = project->children->items[0];
+  project->editor_container = panel->element->visual_node;
+  project->children->items[0] = NULL;
   project->children->count = 0;
 }
 

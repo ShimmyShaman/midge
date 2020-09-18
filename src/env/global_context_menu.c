@@ -32,6 +32,8 @@ void mca_init_global_context_menu()
   mui_context_menu *context_menu;
   mui_init_context_menu(global_data->global_node, &context_menu);
 
+  mca_modify_z_layer_index(context_menu->element->visual_node, 10U);
+
   // Set to global
   global_data->ui_state->global_context_menu = context_menu->element->visual_node;
   global_data->ui_state->global_context_menu_context_node = NULL;
@@ -71,6 +73,19 @@ void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int s
   switch (context_node->type) {
   case NODE_TYPE_VISUAL_PROJECT: {
     mui_context_menu_add_option(gcm_element, "Add Button");
+  } break;
+  case NODE_TYPE_UI: {
+    mui_ui_element *element = (mui_ui_element *)context_node->data;
+    switch (element->type) {
+    case UI_ELEMENT_BUTTON: {
+
+    } break;
+    default:
+      // Respond with the default options
+      mui_context_menu_add_option(gcm_element, "Add Button");
+      // TODO make this a (none) disabled button
+      break;
+    }
   } break;
   default:
     // Respond with the default options

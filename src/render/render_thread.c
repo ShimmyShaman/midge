@@ -881,7 +881,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
         for (int r = 0; r < render_thread->render_queue.count; ++r) {
           cmd_count += render_thread->render_queue.image_renders[r].command_count;
         }
-        printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n", render_thread->render_queue.count,
+        printf("Vulkan entered render_queue! %u sequences using %u draw-commands\n", render_thread->render_queue.count,
                cmd_count);
       }
       res = render_through_queue(vkrs, &render_thread->render_queue);

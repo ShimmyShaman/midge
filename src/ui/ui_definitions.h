@@ -96,6 +96,7 @@ void mui_render_element_present(image_render_queue *render_queue, mc_node *eleme
 
 // Control Initialization
 void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element);
+void mui_get_hierarchical_children_node_list(mc_node *hierarchy_node, mc_node_list **parent_node_list);
 
 void mui_init_panel(mc_node *parent, mui_panel **p_panel);
 void mui_render_panel(image_render_queue *render_queue, mc_node *ui_node);

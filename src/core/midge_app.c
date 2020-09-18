@@ -356,7 +356,10 @@ void midge_run_app()
       // As is global node update despite any requirement
       // mca_update_node_list_logic(global_data->children);
       if (global_data->requires_layout_update) {
-        mca_update_list_nodes_layout_extents(global_data->children, LAYOUT_RESTRAINT_NONE);
+        for (int a = 0; a < global_data->children->count; ++a) {
+          printf("macl:%i\n", a);
+          mca_update_node_layout_extents(global_data->children->items[a], LAYOUT_RESTRAINT_NONE);
+        }
 
         mc_rectf bounds = {0.f, 0.f, (float)global_data->screen.width, (float)global_data->screen.height};
         for (int a = 0; a < global_data->children->count; ++a) {

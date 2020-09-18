@@ -144,7 +144,7 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
   case NODE_TYPE_GLOBAL_ROOT: {
     // global_root_data *global_data = (global_root_data *)node->data;
 
-    printf("global_node-left_click\n");
+    // printf("global_node-left_click\n");
   } break;
   case NODE_TYPE_UI: {
     mui_ui_element *element = (mui_ui_element *)ui_node->data;
@@ -172,10 +172,16 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
     } break;
     case UI_ELEMENT_CONTEXT_MENU: {
       // Do nothing
+      *handled = true;
     } break;
     default:
       MCerror(9155, "_mui_get_interactive_nodes_within_node_at_point::>unsupported element type:%i", element->type);
     }
+  } break;
+  case NODE_TYPE_VISUAL_PROJECT: {
+    // Nothing
+    // Maybe editor container ? TODO
+    // printf("NODE_TYPE_VISUAL_PROJECT-left_click\n");
   } break;
   default:
     MCerror(9159, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", ui_node->type);
@@ -209,34 +215,32 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
   obtain_midge_global_root(&global_data);
 
   // Node
-  mc_node *node = (mc_node *)malloc(sizeof(mc_node));
+  mc_node *node;
+  mca_init_mc_node(parent_node, NODE_TYPE_UI, &node);
 
-  node->type = NODE_TYPE_UI;
-  node->visible = true;
-  if (parent_node->type == NODE_TYPE_UI) {
-    mui_ui_element *parent_element = (mui_ui_element *)parent_node->data;
-    switch (parent_element->type) {
-    case UI_ELEMENT_PANEL: {
-      mui_panel *panel = (mui_panel *)parent_element->data;
+  // if (parent_node->type == NODE_TYPE_UI) {
+  //   mui_ui_element *parent_element = (mui_ui_element *)parent_node->data;
+  //   switch (parent_element->type) {
+  //   case UI_ELEMENT_PANEL: {
+  //     mui_panel *panel = (mui_panel *)parent_element->data;
 
-      append_to_collection((void ***)&panel->children->items, &panel->children->alloc, &panel->children->count, node);
-      node->parent = parent_node;
+  //     append_to_collection((void ***)&panel->children->items, &panel->children->alloc, &panel->children->count,
+  //     node); node->parent = parent_node;
 
-    } break;
-    case UI_ELEMENT_CONTEXT_MENU: {
-      mui_context_menu *menu = (mui_context_menu *)parent_element->data;
+  //   } break;
+  //   case UI_ELEMENT_CONTEXT_MENU: {
+  //     mui_context_menu *menu = (mui_context_menu *)parent_element->data;
 
-      append_to_collection((void ***)&menu->children->items, &menu->children->alloc, &menu->children->count, node);
-      node->parent = parent_node;
-    } break;
-    default: {
-      MCerror(1805, "mui_init_ui_element::Unsupported type : %i", parent_element->type);
-    }
-    }
-  }
-  else {
-    mca_attach_node_to_hierarchy(parent_node, node);
-  }
+  //     append_to_collection((void ***)&menu->children->items, &menu->children->alloc, &menu->children->count, node);
+  //     node->parent = parent_node;
+  //   } break;
+  //   default: {
+  //     MCerror(1805, "mui_init_ui_element::Unsupported type : %i", parent_element->type);
+  //   }
+  //   }
+  // }
+  // else {
+  // }
   // // pthread_mutex_lock(&global_data->uid_counter.mutex);
   // // node->uid = global_data->uid_counter.uid_index++;
   // // pthread_mutex_unlock(&global_data->uid_counter.mutex);
@@ -269,4 +273,23 @@ void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui
 
   if (created_element)
     *created_element = element;
+}
+
+void mui_get_hierarchical_children_node_list(mc_node *hierarchy_node, mc_node_list **children_node_list)
+{
+  mui_ui_element *element = (mui_ui_element *)hierarchy_node->data;
+
+  *children_node_list = NULL;
+  switch (element->type) {
+  case UI_ELEMENT_PANEL: {
+    mui_panel *item = (mui_panel *)element->data;
+    *children_node_list = item->children;
+  } break;
+  case UI_ELEMENT_CONTEXT_MENU: {
+    mui_context_menu *item = (mui_context_menu *)element->data;
+    *children_node_list = item->children;
+  } break;
+  default:
+    MCerror(8286, "TODO Support %i", element->type);
+  }
 }
