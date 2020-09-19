@@ -134,8 +134,8 @@ void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 
   _mui_get_interactive_nodes_within_node_at_point(global_data->global_node, screen_x, screen_y, *layered_hit_list);
 
-  printf("mui_get_interactive_nodes_at_point(%i, %i) : list_count:%i\n", screen_x, screen_y,
-         (*layered_hit_list)->count);
+  // printf("mui_get_interactive_nodes_at_point(%i, %i) : list_count:%i\n", screen_x, screen_y,
+  //        (*layered_hit_list)->count);
 }
 
 void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)

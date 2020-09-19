@@ -40,13 +40,14 @@ void mca_handle_global_context_menu_option_selected(const char *selected_option)
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
   mc_node *context_node = global_data->ui_state->global_context_menu.context_node;
+  mc_point context_location = global_data->ui_state->global_context_menu.context_location;
 
   if (!global_data->ui_state->global_context_menu.context_node) {
     printf("ERROR(non-fatal) global-context-menu selected but no context node exists");
     return;
   }
 
-  if(!strcmp(selected_option, "Cancel") {
+  if (!strcmp(selected_option, "Cancel")) {
     return;
   }
 
@@ -66,9 +67,9 @@ void mca_handle_global_context_menu_option_selected(const char *selected_option)
 
   for (int i = 0; i < options_list->count; ++i) {
     if (!strcmp(options_list->items[i]->option_text, selected_option)) {
-      void (*event_handler)(mc_node *, const char *) =
-          (void (*)(mc_node *, const char *))options_list->items[i]->event_handler;
-      event_handler(context_node, selected_option);
+      void (*event_handler)(mc_node *, mc_point, const char *) =
+          (void (*)(mc_node *, mc_point, const char *))options_list->items[i]->event_handler;
+      event_handler(context_node, context_location, selected_option);
       return;
     }
   }
@@ -93,7 +94,7 @@ void mca_global_context_menu_create_context_list(node_type node_type,
 
   mca_global_context_node_option_list *list =
       (mca_global_context_node_option_list *)malloc(sizeof(mca_global_context_node_option_list));
-  list->node_type = NODE_TYPE_GLOBAL_ROOT;
+  list->node_type = node_type;
 
   list->alloc = 0;
   list->count = 0;
@@ -148,6 +149,7 @@ void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int s
   mui_ui_element *gcm_element = (mui_ui_element *)global_data->ui_state->global_context_menu.node->data;
   mui_context_menu_clear_options(gcm_element);
 
+  printf("options_list count:%i\n", global_data->ui_state->global_context_menu.context_options.count);
   // Obtain list for node type
   mca_global_context_node_option_list *options_list = NULL;
   for (int i = 0; i < global_data->ui_state->global_context_menu.context_options.count; ++i) {
@@ -156,6 +158,7 @@ void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int s
       break;
     }
   }
+  printf("options_list %s for %i\n", options_list ? "FOUND" : "MISSING", context_node->type);
 
   if (options_list) {
     for (int i = 0; i < options_list->count; ++i) {
@@ -167,6 +170,7 @@ void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int s
   // Show
   global_data->ui_state->global_context_menu.node->visible = true;
   global_data->ui_state->global_context_menu.context_node = context_node;
+  global_data->ui_state->global_context_menu.context_location = {screen_x, screen_y};
 
   // Set New Layout
   gcm_element->layout->padding = {(float)screen_x, (float)screen_y, 0, 0};

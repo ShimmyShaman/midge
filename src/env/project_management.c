@@ -3,6 +3,29 @@
 #include "render/render_common.h"
 #include "ui/ui_definitions.h"
 
+void mca_visual_project_create_add_button(mc_node *context_node, mc_point context_location, const char *selected_text)
+{
+  mui_button *button;
+  mui_init_button(context_node, &button);
+
+  visual_project_data *visual_project = (visual_project_data *)context_node->data;
+
+  button->element->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+  button->element->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  button->element->layout->padding = {(float)(context_location.x - (int)visual_project->layout->padding.left),
+                                      (float)(context_location.y - (int)visual_project->layout->padding.top), 0.f,
+                                      0.f};
+}
+
+void mca_init_visual_project_context_menu_options()
+{
+  // TODO this void * casting business
+  void *arg = (void *)&mca_visual_project_create_add_button;
+  mca_global_context_menu_add_option_to_node_context(NODE_TYPE_VISUAL_PROJECT, "add button", arg);
+}
+
+void mca_init_visual_project_management() { mca_init_visual_project_context_menu_options(); }
+
 void mca_init_visual_project_container(mc_node *project_node)
 {
   visual_project_data *project = (visual_project_data *)project_node->data;

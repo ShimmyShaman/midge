@@ -51,7 +51,7 @@ typedef struct mca_global_context_node_option_list {
   unsigned int alloc, count;
   mca_global_context_node_option **items;
 } mca_global_context_node_option_list;
-
+  
 typedef struct mui_ui_state {
   bool requires_update;
   mc_node_list *cache_layered_hit_list;
@@ -60,6 +60,7 @@ typedef struct mui_ui_state {
   struct {
     mc_node *node;
     mc_node *context_node;
+    mc_point context_location;
     struct {
       unsigned int alloc, count;
       mca_global_context_node_option_list **items;
@@ -111,6 +112,7 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
                           size_t optional_item_allocation_size);
 
 // project_management.c
+void mca_init_visual_project_management();
 void mca_create_new_visual_project(const char *project_name);
 void mca_update_visual_project(mc_node *project_node);
 void mca_render_project_headless(mc_node *visual_project);

@@ -450,9 +450,9 @@ void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints rest
     visual_project_data *visual_project = (visual_project_data *)node->data;
 
     // Determine children extents
-    printf("vpec\n");
+    // printf("vpec\n");
     mca_update_node_layout_extents(visual_project->editor_container, LAYOUT_RESTRAINT_NONE);
-    printf("vpch\n");
+    // printf("vpch\n");
     for (int a = 0; a < visual_project->children->count; ++a) {
       mca_update_node_layout_extents(visual_project->children->items[a], LAYOUT_RESTRAINT_NONE);
     }
@@ -476,7 +476,7 @@ void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints rest
 void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
 // layout_extent_restraints restraints)
 {
-  printf("mca_update_node_layout--%i\n", node->type);
+  // printf("mca_update_node_layout--%i\n", node->type);
   switch (node->type) {
   case NODE_TYPE_UI: {
     mui_ui_element *element = (mui_ui_element *)node->data;
@@ -494,7 +494,8 @@ void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
         // printf("visual_project child:%i\n", visual_project->children->items[a]->type);
         mca_update_node_layout(panel->children->items[a], &new_bounds);
       }
-      printf("panel>bounds:{%.2f %.2f %.2f %.2f}\n", new_bounds.x, new_bounds.y, new_bounds.width, new_bounds.height);
+      // printf("panel>bounds:{%.2f %.2f %.2f %.2f}\n", new_bounds.x, new_bounds.y, new_bounds.width,
+      // new_bounds.height);
     } break;
     case UI_ELEMENT_TEXT_BLOCK: {
       new_bounds.x = available_area->x + element->layout->padding.left;
@@ -505,7 +506,7 @@ void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
       new_bounds.x = available_area->x + element->layout->padding.left;
       new_bounds.y = available_area->y + element->layout->padding.top;
 
-      printf("set button to %.3f %.3f\n", new_bounds.x, new_bounds.y);
+      // printf("set button to %.3f %.3f\n", new_bounds.x, new_bounds.y);
     } break;
     case UI_ELEMENT_CONTEXT_MENU: {
       mui_context_menu *context_menu = (mui_context_menu *)element->data;

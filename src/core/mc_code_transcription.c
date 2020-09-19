@@ -1837,7 +1837,7 @@ int mct_transcribe_fptr_invocation(mct_transcription_state *ts, mc_syntax_node *
   mct_append_node_text_to_c_str(ts->str, syntax_node->invocation.function_identity);
   append_to_c_strf(ts->str, ", %i, &%s);\n", syntax_node->invocation.arguments->count + 1, ARGUMENT_DATA_NAME);
 
-  mct_append_to_c_str(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
+  // mct_append_to_c_str(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
   mct_append_to_c_str(ts, "clint_process(buf);\n");
 
   // External non-MC function

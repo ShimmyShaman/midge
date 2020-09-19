@@ -126,6 +126,7 @@ void initialize_midge_components()
   // Environment
   mca_init_global_context_menu();
   mca_init_global_node_context_menu_options();
+  mca_init_visual_project_management();
 
   // Modules
   init_modus_operandi_curator();
@@ -362,7 +363,7 @@ void midge_run_app()
       // mca_update_node_list_logic(global_data->children);
       if (global_data->requires_layout_update) {
         for (int a = 0; a < global_data->children->count; ++a) {
-          printf("macl:%i\n", a);
+          // printf("macl:%i\n", a);
           mca_update_node_layout_extents(global_data->children->items[a], LAYOUT_RESTRAINT_NONE);
         }
 
@@ -389,11 +390,11 @@ void midge_run_app()
       global_data->render_thread->render_queue.count = 0;
 
       // Rerender all headless images
-      printf("headless\n");
+      // printf("headless\n");
       mca_render_node_list_headless(global_data->children);
 
       // Queue the updated render
-      printf("present\n");
+      // printf("present\n");
       mca_render_presentation();
 
       // Release lock and allow rendering
