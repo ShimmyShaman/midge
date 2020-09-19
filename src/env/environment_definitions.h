@@ -63,7 +63,7 @@ typedef struct mui_ui_state {
     struct {
       unsigned int alloc, count;
       mca_global_context_node_option_list **items;
-    } context_options
+    } context_options;
 
   } global_context_menu;
 } mui_ui_state;
@@ -119,6 +119,14 @@ void mca_render_project_present(image_render_queue *render_queue, mc_node *visua
 // global_context_menu.c
 void mca_init_global_context_menu();
 void mca_render_global_context_menu(image_render_queue *render_queue, mc_node *node);
+void mca_global_context_menu_create_context_list(node_type node_type,
+                                                 mca_global_context_node_option_list **context_list);
+void mca_global_context_menu_add_option_to_node_context(
+    node_type node_type, const char *option_text,
+    /*void (*event_handler)(mc_node *, const char *)*/ void *event_handler);
 void mca_activate_global_context_menu(mc_node *node, int screen_x, int screen_y);
 void mca_hide_global_context_menu();
+
+// global_root.c
+void mca_init_global_node_context_menu_options();
 #endif // MC_UTIL_H

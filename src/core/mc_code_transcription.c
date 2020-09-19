@@ -1779,7 +1779,7 @@ int mct_transcribe_fptr_invocation(mct_transcription_state *ts, mc_syntax_node *
   mct_append_to_c_str(ts, "}\n");
 
   // MC-Function
-  mct_append_to_c_str(ts, "printf(\"befpficheck\\n\");if (ptr_func_info) {printf(\"wasfnptr\\n\");\n");
+  mct_append_to_c_str(ts, "if (ptr_func_info) {\n");
   ++ts->indent;
 
   mct_append_indent_to_c_str(ts); // TODO -- count arguments based on function pointer type?

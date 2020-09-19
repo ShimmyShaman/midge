@@ -2,55 +2,7 @@
 #include "env/environment_definitions.h"
 #include "ui/ui_definitions.h"
 
-void mca_handle_global_context_menu_option_selected(const char *selected_option)
-{
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
-  mc_node *context_node = global_data->ui_state->global_context_menu_context_node;
-
-  // TODO register control options and handling seperately in their modules
-
-  if (!strcmp(selected_option, "Cancel")) {
-    // Do nothing
-    return;
-  }
-  if (!strcmp(selected_option, "Add Button")) {
-    // Add a button to the context node
-    switch (context_node->type) {
-    case NODE_TYPE_VISUAL_PROJECT: {
-      mui_button *button;
-      mui_init_button(context_node, &button);
-
-      set_c_str(button->str, "button");
-
-    } break;
-    default:
-      MCerror(9815, "TODO");
-    }
-    return;
-  }
-  if (!strcmp(selected_option, "New Module...")) {
-    // Lets only have one project at a time for the time being -- TODO
-    bool visual_app_exists = false;
-    for (int a = 0; a < global_data->children->count; ++a) {
-      if (global_data->children->items[a]->type == NODE_TYPE_VISUAL_PROJECT) {
-        visual_app_exists = true;
-        break;
-      }
-    }
-
-    if (!visual_app_exists)
-      mca_create_new_visual_project("PushTheButton");
-  }
-  if (!strcmp(selected_option, "Change Button Text To 'click me!'")) {
-    // Lets only have one project at a time for the time being -- TODO
-    mui_ui_element *element = (mui_ui_element *)context_node->data;
-    mui_button *button = (mui_button *)element->data;
-
-    set_c_str(button->str, "click me!");
-    mca_set_node_requires_layout_update(element->visual_node);
-  }
-}
+void mca_handle_global_context_menu_option_selected(const char *selected_option);
 
 void mca_init_global_context_menu()
 {
@@ -63,8 +15,12 @@ void mca_init_global_context_menu()
   mca_modify_z_layer_index(context_menu->element->visual_node, 10U);
 
   // Set to global
-  global_data->ui_state->global_context_menu = context_menu->element->visual_node;
-  global_data->ui_state->global_context_menu_context_node = NULL;
+  global_data->ui_state->global_context_menu.node = context_menu->element->visual_node;
+  global_data->ui_state->global_context_menu.context_node = NULL;
+  global_data->ui_state->global_context_menu.context_options.alloc = 0;
+  global_data->ui_state->global_context_menu.context_options.count = 0;
+  global_data->ui_state->global_context_menu.context_options.items = NULL;
+
   context_menu->element->visual_node->visible = false;
 
   context_menu->element->layout->padding = {150, 200, 0, 0};
@@ -75,77 +31,142 @@ void mca_init_global_context_menu()
 
   context_menu->background_color = COLOR_DARK_SLATE_GRAY;
   context_menu->option_selected = (void *)&mca_handle_global_context_menu_option_selected;
-
-  // TODO CONTEXT OPTIONS
-  {
-    mca_global_context_node_option_list *options_list =
-        (mca_global_context_node_option_list *)malloc(sizeof(mca_global_context_node_option_list));
-    options_list->node_type = NODE_TYPE_GLOBAL_ROOT;
-
-    mca_global_context_node_option *option =
-        (mca_global_context_node_option *)malloc(sizeof(mca_global_context_node_option));
-    option->option_text = strdup("New Module");
-    append_to_collection((void ***)&options_list->items, &options_list->alloc, &options_list->count, option);
-
-    option = (mca_global_context_node_option *)malloc(sizeof(mca_global_context_node_option));
-    option->option_text = strdup("Cancel");
-    append_to_collection((void ***)&options_list->items, &options_list->alloc, &options_list->count, option);
-  }
 }
 
 void mca_render_global_context_menu(image_render_queue *render_queue, mc_node *node) {}
 
-void mca_gcm_handler(mc_node event_node) { printf("!!!!It Registered!!!!!\n"); }
+void mca_handle_global_context_menu_option_selected(const char *selected_option)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+  mc_node *context_node = global_data->ui_state->global_context_menu.context_node;
+
+  if (!global_data->ui_state->global_context_menu.context_node) {
+    printf("ERROR(non-fatal) global-context-menu selected but no context node exists");
+    return;
+  }
+
+  if(!strcmp(selected_option, "Cancel") {
+    return;
+  }
+
+  mca_global_context_node_option_list *options_list = NULL;
+  for (int i = 0; i < global_data->ui_state->global_context_menu.context_options.count; ++i) {
+    if (global_data->ui_state->global_context_menu.context_options.items[i]->node_type == context_node->type) {
+      options_list = global_data->ui_state->global_context_menu.context_options.items[i];
+      break;
+    }
+  }
+  if (!options_list) {
+    // TODO??
+    printf("ERROR(non-fatal): Couldn't find option for given context-node(%i) and selected option(%s)",
+           context_node->type, selected_option);
+    return;
+  }
+
+  for (int i = 0; i < options_list->count; ++i) {
+    if (!strcmp(options_list->items[i]->option_text, selected_option)) {
+      void (*event_handler)(mc_node *, const char *) =
+          (void (*)(mc_node *, const char *))options_list->items[i]->event_handler;
+      event_handler(context_node, selected_option);
+      return;
+    }
+  }
+
+  printf(
+      "ERROR(non-fatal): Couldn't find selected option text match for given context-node(%i) and selected option(%s)",
+      context_node->type, selected_option);
+}
+
+void mca_global_context_menu_create_context_list(node_type node_type,
+                                                 mca_global_context_node_option_list **context_list)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  // Argument check for duplicates
+  for (int i = 0; i < global_data->ui_state->global_context_menu.context_options.count; ++i) {
+    if (global_data->ui_state->global_context_menu.context_options.items[i]->node_type == node_type) {
+      MCerror(7874, "context menu options list already exists for node-type:%i", node_type);
+    }
+  }
+
+  mca_global_context_node_option_list *list =
+      (mca_global_context_node_option_list *)malloc(sizeof(mca_global_context_node_option_list));
+  list->node_type = NODE_TYPE_GLOBAL_ROOT;
+
+  list->alloc = 0;
+  list->count = 0;
+  list->items = NULL;
+
+  mc_node *gcm_node = global_data->ui_state->global_context_menu.node;
+
+  append_to_collection((void ***)&global_data->ui_state->global_context_menu.context_options.items,
+                       &global_data->ui_state->global_context_menu.context_options.alloc,
+                       &global_data->ui_state->global_context_menu.context_options.count, list);
+
+  *context_list = list;
+}
+
+void mca_global_context_menu_add_option_to_node_context(
+    node_type node_type, const char *option_text,
+    /*void (*event_handler)(mc_node *, const char *)*/ void *event_handler)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  // Obtain list, or create a new one
+  mca_global_context_node_option_list *options_list = NULL;
+  for (int i = 0; i < global_data->ui_state->global_context_menu.context_options.count; ++i) {
+    if (global_data->ui_state->global_context_menu.context_options.items[i]->node_type == node_type) {
+      options_list = global_data->ui_state->global_context_menu.context_options.items[i];
+      break;
+    }
+  }
+  if (!options_list) {
+    mca_global_context_menu_create_context_list(node_type, &options_list);
+  }
+
+  // Add
+  mca_global_context_node_option *option =
+      (mca_global_context_node_option *)malloc(sizeof(mca_global_context_node_option));
+  option->option_text = strdup(option_text);
+  option->event_handler = (void *)event_handler;
+  append_to_collection((void ***)&options_list->items, &options_list->alloc, &options_list->count, option);
+}
+
+// void mca_global_context_menu_create_context_option(mca_global_context_node_option_list *context_list,)
+// {
+
+// }
 
 void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int screen_y)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  // Show
-  // printf("mca_activate_global_context_menu--node %p\n", node);
-
-  mui_ui_element *gcm_element = (mui_ui_element *)global_data->ui_state->global_context_menu->data;
+  mui_ui_element *gcm_element = (mui_ui_element *)global_data->ui_state->global_context_menu.node->data;
   mui_context_menu_clear_options(gcm_element);
 
-  // Alter available options depending on the type of context_node activated on
-  switch (context_node->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    mui_context_menu_add_option(gcm_element, "New Module...");
-    mui_context_menu_add_option(gcm_element, "Cancel");
-  } break;
-  case NODE_TYPE_VISUAL_PROJECT: {
-    mui_context_menu_add_option(gcm_element, "Add Button");
-    mui_context_menu_add_option(gcm_element, "Edit Module Details");
-    mui_context_menu_add_option(gcm_element, "Cancel");
-  } break;
-  case NODE_TYPE_UI: {
-    mui_ui_element *element = (mui_ui_element *)context_node->data;
-    switch (element->type) {
-    case UI_ELEMENT_BUTTON: {
-      mui_context_menu_add_option(gcm_element, "Change Button Text To 'click me!'");
-      mui_context_menu_add_option(gcm_element, "Cancel");
-    } break;
-    default:
-      // Respond with the default options
-      mui_context_menu_add_option(gcm_element, "Cancel");
-      // mui_context_menu_add_option(gcm_element, "Add Button");
-      // TODO make this a (none) disabled button
+  // Obtain list for node type
+  mca_global_context_node_option_list *options_list = NULL;
+  for (int i = 0; i < global_data->ui_state->global_context_menu.context_options.count; ++i) {
+    if (global_data->ui_state->global_context_menu.context_options.items[i]->node_type == context_node->type) {
+      options_list = global_data->ui_state->global_context_menu.context_options.items[i];
       break;
     }
-  } break;
-  default:
-    // Don't show
-    // TODO make this a (none) disabled button
-    mui_context_menu_add_option(gcm_element, "Cancel");
-    // // Respond with the default options
-    // mui_context_menu_add_option(gcm_element, "Add Button");
-    break;
   }
 
+  if (options_list) {
+    for (int i = 0; i < options_list->count; ++i) {
+      mui_context_menu_add_option(gcm_element, options_list->items[i]->option_text);
+    }
+  }
+  mui_context_menu_add_option(gcm_element, "Cancel");
+
   // Show
-  global_data->ui_state->global_context_menu->visible = true;
-  global_data->ui_state->global_context_menu_context_node = context_node;
+  global_data->ui_state->global_context_menu.node->visible = true;
+  global_data->ui_state->global_context_menu.context_node = context_node;
 
   // Set New Layout
   gcm_element->layout->padding = {(float)screen_x, (float)screen_y, 0, 0};
@@ -158,7 +179,7 @@ void mca_hide_global_context_menu()
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  global_data->ui_state->global_context_menu->visible = true;
+  global_data->ui_state->global_context_menu.node->visible = true;
 
-  mca_set_node_requires_layout_update(global_data->ui_state->global_context_menu);
+  mca_set_node_requires_layout_update(global_data->ui_state->global_context_menu.node);
 }

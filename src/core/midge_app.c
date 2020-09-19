@@ -79,6 +79,7 @@ void complete_midge_app_compile()
       "src/env/util.c",
       "src/env/project_management.c",
       "src/env/global_context_menu.c",
+      "src/env/global_root.c",
       "src/ui/controls/panel.c",
       "src/ui/controls/text_block.c",
       "src/ui/controls/button.c",
@@ -109,6 +110,9 @@ void mui_render_element_present(image_render_queue *render_queue, mc_node *eleme
 void init_modus_operandi_curator();
 }
 
+
+
+
 void initialize_midge_components()
 {
   global_root_data *global_data;
@@ -121,6 +125,7 @@ void initialize_midge_components()
 
   // Environment
   mca_init_global_context_menu();
+  mca_init_global_node_context_menu_options();
 
   // Modules
   init_modus_operandi_curator();
