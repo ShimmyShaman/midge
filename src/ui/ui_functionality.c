@@ -202,7 +202,15 @@ void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, boo
     *handled = true;
   } break;
   case NODE_TYPE_UI: {
-    printf("Node_type_interaction skipped\n");
+    mca_activate_global_context_menu(node, screen_x, screen_y);
+    *handled = true;
+    // mui_ui_element *element = (mui_ui_element *)node->data;
+
+    // switch (element) {
+    // case UI_ELEMENT_BUTTON:
+    //   break;
+    // default:
+    // }
   } break;
   default:
     MCerror(8315, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);

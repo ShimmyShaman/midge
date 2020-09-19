@@ -40,13 +40,32 @@ typedef struct mca_node_layout {
   mc_rectf __bounds;
 } mca_node_layout;
 
+typedef struct mca_global_context_node_option {
+  char *option_text;
+  void *event_handler;
+} mca_global_context_node_option;
+
+typedef struct mca_global_context_node_option_list {
+  node_type node_type;
+
+  unsigned int alloc, count;
+  mca_global_context_node_option **items;
+} mca_global_context_node_option_list;
+
 typedef struct mui_ui_state {
   bool requires_update;
   mc_node_list *cache_layered_hit_list;
   unsigned int default_font_resource;
 
-  mc_node *global_context_menu;
-  mc_node *global_context_menu_context_node;
+  struct {
+    mc_node *node;
+    mc_node *context_node;
+    struct {
+      unsigned int alloc, count;
+      mca_global_context_node_option_list **items;
+    } context_options
+
+  } global_context_menu;
 } mui_ui_state;
 
 typedef struct visual_project_data {
