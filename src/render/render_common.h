@@ -23,6 +23,10 @@ typedef struct render_color {
   /*(render_color)*/ {         \
     0.10f, 0.10f, 0.17f, 1.f   \
   }
+#define COLOR_DEEP_FIR \
+  /*(render_color)*/ {         \
+    0.05f, 0.14f, 0.09f, 1.f   \
+  }
 #define COLOR_MACARONI_AND_CHEESE \
   /*(render_color)*/ {            \
     1.f, 0.72f, 0.50f, 1.f        \

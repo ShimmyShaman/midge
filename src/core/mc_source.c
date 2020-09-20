@@ -864,6 +864,10 @@ int instantiate_ast_children(mc_node *definitions_owner, source_file_info *sourc
         function_info *info;
         instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
         info->source->source_file = source_file;
+
+        append_to_collection((void ***)&info->source->source_file->definitions.items,
+                             &info->source->source_file->definitions.alloc,
+                             &info->source->source_file->definitions.count, info->source);
         // printf("--defined:'%s'\n", child->function.name->text);
       }
     } break;
@@ -875,6 +879,9 @@ int instantiate_ast_children(mc_node *definitions_owner, source_file_info *sourc
         struct_info *info;
         instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
         info->source->source_file = source_file;
+        append_to_collection((void ***)&info->source->source_file->definitions.items,
+                             &info->source->source_file->definitions.alloc,
+                             &info->source->source_file->definitions.count, info->source);
         // printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->structure.type_name->text);
         // sprintf(buf,
         //         "#ifndef %s\n"
@@ -889,6 +896,9 @@ int instantiate_ast_children(mc_node *definitions_owner, source_file_info *sourc
         instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-0");
         info->source->source_file = source_file;
+        append_to_collection((void ***)&info->source->source_file->definitions.items,
+                             &info->source->source_file->definitions.alloc,
+                             &info->source->source_file->definitions.count, info->source);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-1");
         // printf("--defined: enum '%s'\n", child->type_alias.type_descriptor->enumeration.name->text);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-2");
@@ -913,12 +923,18 @@ int instantiate_ast_children(mc_node *definitions_owner, source_file_info *sourc
       struct_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       info->source->source_file = source_file;
+      append_to_collection((void ***)&info->source->source_file->definitions.items,
+                           &info->source->source_file->definitions.alloc, &info->source->source_file->definitions.count,
+                           info->source);
       // printf("--declared: struct '%s'\n", child->structure.type_name->text);
     } break;
     case MC_SYNTAX_ENUM: {
       enumeration_info *info;
       instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       info->source->source_file = source_file;
+      append_to_collection((void ***)&info->source->source_file->definitions.items,
+                           &info->source->source_file->definitions.alloc, &info->source->source_file->definitions.count,
+                           info->source);
       // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE: {

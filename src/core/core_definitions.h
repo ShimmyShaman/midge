@@ -64,6 +64,11 @@ typedef enum preprocessor_define_type {
   PREPROCESSOR_DEFINE_FUNCTION_LIKE,
 } preprocessor_define_type;
 
+typedef enum mc_app_event_type {
+  MC_APP_EVENT_NULL = 0,
+  MC_APP_EVENT_POST_INITIALIZATION,
+} mc_app_event_type;
+
 typedef struct struct_id {
   char *identifier;
   unsigned short version;

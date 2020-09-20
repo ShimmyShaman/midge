@@ -51,12 +51,13 @@ typedef struct mca_global_context_node_option_list {
   unsigned int alloc, count;
   mca_global_context_node_option **items;
 } mca_global_context_node_option_list;
-  
+
 typedef struct mui_ui_state {
   bool requires_update;
   mc_node_list *cache_layered_hit_list;
   unsigned int default_font_resource;
 
+  // Modules
   struct {
     mc_node *node;
     mc_node *context_node;
@@ -67,6 +68,8 @@ typedef struct mui_ui_state {
     } context_options;
 
   } global_context_menu;
+
+  void *hierarchy_viewer_state;
 } mui_ui_state;
 
 typedef struct visual_project_data {

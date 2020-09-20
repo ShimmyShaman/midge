@@ -45,9 +45,30 @@ void mui_render_button(image_render_queue *render_queue, mc_node *visual_node)
                                         (unsigned int)element->layout->__bounds.height, button->background_color);
 
   // Text
-  printf("renderbutton- %u %u %s %u\n", (unsigned int)element->layout->__bounds.x,
-         (unsigned int)element->layout->__bounds.y, button->str->text, button->font_resource_uid);
+  // printf("renderbutton- %u %u %s %u\n", (unsigned int)element->layout->__bounds.x,
+  //        (unsigned int)element->layout->__bounds.y, button->str->text, button->font_resource_uid);
   mcr_issue_render_command_text(render_queue, (unsigned int)element->layout->__bounds.x,
                                 (unsigned int)element->layout->__bounds.y, button->str->text, button->font_resource_uid,
                                 button->font_color);
+}
+
+// void mca_button_context_change_text(mc_node *context_node, mc_point context_location, const char *selected_text)
+// {
+//   mui_button *button;
+//   mui_init_button(context_node, &button);
+
+//   visual_project_data *visual_project = (visual_project_data *)context_node->data;
+
+//   button->element->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+//   button->element->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+//   button->element->layout->padding = {(float)(context_location.x - (int)visual_project->layout->padding.left),
+//                                       (float)(context_location.y - (int)visual_project->layout->padding.top), 0.f,
+//                                       0.f};
+// }
+
+void mca_init_button_context_menu_options()
+{
+  // // TODO this void * casting business
+  // void *arg = (void *)&mca_visual_project_create_add_button;
+  // mca_global_context_menu_add_option_to_node_context(NODE_TYPE_BUTTON, "change text", arg);
 }

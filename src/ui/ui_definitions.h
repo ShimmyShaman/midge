@@ -106,6 +106,7 @@ void mui_render_text_block(image_render_queue *render_queue, mc_node *ui_node);
 
 void mui_init_button(mc_node *parent, mui_button **p_button);
 void mui_render_button(image_render_queue *render_queue, mc_node *ui_node);
+void mca_init_button_context_menu_options();
 
 void mui_init_context_menu(mc_node *parent, mui_context_menu **p_button);
 void mui_render_context_menu(image_render_queue *render_queue, mc_node *ui_node);

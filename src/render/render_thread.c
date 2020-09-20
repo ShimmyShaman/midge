@@ -68,12 +68,16 @@ int set_scissor_cmd(VkCommandBuffer command_buffer, int32_t x, int32_t y, uint32
   return 0;
 }
 
-int mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long size_in_bytes, void *p_src,
-                                         VkDescriptorBufferInfo *descriptor_buffer_info)
+VkResult mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long size_in_bytes, void *p_src,
+                                              VkDescriptorBufferInfo *descriptor_buffer_info)
 {
   if (p_vkrs->render_data_buffer.frame_utilized_amount + size_in_bytes >= p_vkrs->render_data_buffer.allocated_size) {
     printf("Requested more data then remaining in render_data_buffer\n");
-    return 1;
+    return VK_ERROR_OUT_OF_HOST_MEMORY;
+  }
+  if (p_vkrs->render_data_buffer.queued_copies_count + 1 >= p_vkrs->render_data_buffer.queued_copies_alloc) {
+    printf("Requested a queued copy when one isn't allocated for\n");
+    return VK_ERROR_OUT_OF_HOST_MEMORY;
   }
 
   // TODO -- refactor this
@@ -92,7 +96,7 @@ int mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long 
       ((size_in_bytes / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
       p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
   // printf("minUniformBufferOffsetAlignment:%lu\n", p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment);
-  return 0;
+  return VK_SUCCESS;
 }
 
 VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
@@ -157,10 +161,12 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
 
   // printf("mrt_rcq-2\n");
   VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
-  mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(render_color), frag_ubo_data, frag_ubo_info);
+  res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(render_color), frag_ubo_data, frag_ubo_info);
+  VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
 
   VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
-  mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+  res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+  VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
 
   // Global Vertex Shader Uniform Buffer
   VkWriteDescriptorSet *write = &writes[write_index++];
@@ -263,7 +269,8 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
 
   VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
-  mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+  res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+  VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
 
   // Global Vertex Shader Uniform Buffer
   VkWriteDescriptorSet *write = &writes[write_index++];
@@ -446,10 +453,13 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     int write_index = 0;
 
     VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
-    mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+    res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+    VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
 
     VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
-    mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(frag_ubo_tint_texcoordbounds), frag_ubo_data, frag_ubo_info);
+    res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(frag_ubo_tint_texcoordbounds), frag_ubo_data,
+                                               frag_ubo_info);
+    VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
 
     // Global Vertex Shader Uniform Buffer
     VkWriteDescriptorSet *write = &writes[write_index++];
@@ -546,7 +556,8 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     glm_mat4_mul((vec4 *)&proj, (vec4 *)&view, (vec4 *)&vpc);
     glm_mat4_mul((vec4 *)&clip, (vec4 *)&vpc, (vec4 *)&vpc);
 
-    mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), &vpc, &copy_buffer.vpc_desc_buffer_info);
+    res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), &vpc, &copy_buffer.vpc_desc_buffer_info);
+    VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
     // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
   }
   // printf("sequence : %u, %u\n", sequence->image_width, sequence->image_height);

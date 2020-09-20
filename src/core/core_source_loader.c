@@ -1311,6 +1311,7 @@ int _mcl_load_app_mc_source()
       "src/env/environment_definitions.h",
       "src/ui/ui_definitions.h",
       "src/control/mc_controller.h",
+      "src/modules/app_modules.h",
 
       // Source required for app initialization
       "src/platform/mc_xcb.c",

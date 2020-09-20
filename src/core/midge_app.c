@@ -90,6 +90,7 @@ void complete_midge_app_compile()
 
       // Modules
       "src/modules/modus_operandi/modus_operandi_curator.c",
+      "src/modules/hierarchy_viewer/hierarchy_viewer.c",
       NULL,
   };
 
@@ -107,7 +108,7 @@ void mui_render_element_headless(mc_node *element_node);
 void mui_render_element_present(image_render_queue *render_queue, mc_node *element_node);
 
 // Modules
-void init_modus_operandi_curator();
+// void init_modus_operandi_curator();
 }
 
 
@@ -130,6 +131,7 @@ void initialize_midge_components()
 
   // Modules
   init_modus_operandi_curator();
+  init_hierarchy_viewer();
 }
 
 void midge_initialize_app(struct timespec *app_begin_time)

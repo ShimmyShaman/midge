@@ -34,7 +34,7 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
   *p_ui_state = ui_state;
 }
 
-void mui_initialize_core_ui_components() {}
+void mui_initialize_core_ui_components() { mca_init_button_context_menu_options(); }
 
 void mui_update_element_layout(mui_ui_element *element)
 {
@@ -170,12 +170,13 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
       }
       *handled = true;
     } break;
+    case UI_ELEMENT_PANEL:
     case UI_ELEMENT_CONTEXT_MENU: {
       // Do nothing
       *handled = true;
     } break;
     default:
-      MCerror(9155, "_mui_get_interactive_nodes_within_node_at_point::>unsupported element type:%i", element->type);
+      MCerror(9155, "mui_handle_mouse_left_click::>unsupported element type:%i", element->type);
     }
   } break;
   case NODE_TYPE_VISUAL_PROJECT: {
@@ -184,7 +185,7 @@ void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, b
     // printf("NODE_TYPE_VISUAL_PROJECT-left_click\n");
   } break;
   default:
-    MCerror(9159, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", ui_node->type);
+    MCerror(9159, "mui_handle_mouse_left_click::>unsupported node type:%i", ui_node->type);
   }
 }
 
@@ -213,7 +214,7 @@ void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, boo
     // }
   } break;
   default:
-    MCerror(8315, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);
+    MCerror(8315, "mui_handle_mouse_right_click::>unsupported node type:%i", node->type);
   }
 }
 

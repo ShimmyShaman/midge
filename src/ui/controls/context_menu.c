@@ -5,9 +5,6 @@
 
 void mui_init_context_menu(mc_node *parent, mui_context_menu **p_context_menu)
 {
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
-
   // UI Element
   mui_ui_element *element;
   mui_init_ui_element(parent, UI_ELEMENT_CONTEXT_MENU, &element);
