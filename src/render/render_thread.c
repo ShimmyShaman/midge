@@ -908,6 +908,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     // Render Commands
     pthread_mutex_lock(&render_thread->render_queue.mutex);
     if (render_thread->render_queue.count) {
+      struct timespec render_start_time;
+      clock_gettime(CLOCK_REALTIME, &render_start_time);
       {
         // DEBUG
         uint cmd_count = 0;
@@ -921,7 +923,12 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
       VK_CHECK(res, "render_through_queue");
       render_thread->render_queue.count = 0;
 
-      printf("Vulkan rendered render_queue!\n");
+      struct timespec render_end_time;
+      clock_gettime(CLOCK_REALTIME, &render_end_time);
+
+      printf("Vulkan rendered render_queue! %.3f ms\n",
+             (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
+                 1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
       ++frame_updates;
     }
     pthread_mutex_unlock(&render_thread->render_queue.mutex);
