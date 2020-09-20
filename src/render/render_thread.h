@@ -8,7 +8,7 @@
 #include "platform/mc_xcb.h"
 #include "render/render_common.h"
 
-#define MRT_SEQUENCE_COPY_BUFFER_SIZE 8192
+#define MRT_SEQUENCE_COPY_BUFFER_SIZE 98192
 
 typedef struct mrt_sequence_copy_buffer {
   VkDescriptorBufferInfo vpc_desc_buffer_info;

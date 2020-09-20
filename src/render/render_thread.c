@@ -72,7 +72,11 @@ VkResult mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned 
                                               VkDescriptorBufferInfo *descriptor_buffer_info)
 {
   if (p_vkrs->render_data_buffer.frame_utilized_amount + size_in_bytes >= p_vkrs->render_data_buffer.allocated_size) {
-    printf("Requested more data then remaining in render_data_buffer\n");
+    printf("Requested more data then remaining in render_data_buffer\n"
+           "p_vkrs->render_data_buffer.frame_utilized_amount:%lu\n"
+           "size_in_bytes:%lu\n"
+           "p_vkrs->render_data_buffer.allocated_size:%lu\n",
+           p_vkrs->render_data_buffer.frame_utilized_amount, size_in_bytes, p_vkrs->render_data_buffer.allocated_size);
     return VK_ERROR_OUT_OF_HOST_MEMORY;
   }
   if (p_vkrs->render_data_buffer.queued_copies_count + 1 >= p_vkrs->render_data_buffer.queued_copies_alloc) {
@@ -96,6 +100,8 @@ VkResult mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned 
       ((size_in_bytes / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
       p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
   // printf("minUniformBufferOffsetAlignment:%lu\n", p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment);
+
+  // printf("wdqrd- : %lu\n", p_vkrs->render_data_buffer.frame_utilized_amount);
   return VK_SUCCESS;
 }
 
@@ -120,6 +126,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(vert_data_scale_offset);
+  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
   float scale_multiplier =
       1.f / (float)(sequence->image_width < sequence->image_height ? sequence->image_width : sequence->image_height);
@@ -134,6 +141,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   // Fragment Data
   render_color *frag_ubo_data = (render_color *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(render_color);
+  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
   memcpy(frag_ubo_data, &cmd->data.colored_rect_info.color, sizeof(render_color));
 
@@ -225,6 +233,7 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(vert_data_scale_offset);
+  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
   float scale_multiplier =
       1.f / (float)(sequence->image_width < sequence->image_height ? sequence->image_width : sequence->image_height);
@@ -336,6 +345,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     return VK_SUCCESS;
   }
 
+  // printf("mrt-0\n");
   // Get the font image
   loaded_font_info *font = NULL;
   for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
@@ -355,6 +365,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   float align_x = cmd->x;
   float align_y = cmd->y;
 
+  // printf("mrt-1\n");
   int text_length = strlen(cmd->data.print_text.text);
   for (int c = 0; c < text_length; ++c) {
 
@@ -378,6 +389,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
                        &align_y, &q,
                        1); // 1=opengl & d3d10+,0=d3d9
 
+    // printf("mrt-2\n");
     // stbtt_bakedchar *b = font->char_data + (letter - 32);
     // q.y0 += b->y1 - b->y0;
     // q.y1 += b->y1 - b->y0;
@@ -399,9 +411,11 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     // printf("align_x=%.2f align_y=%.2f\n", align_x, align_y);
     // printf("font->draw_vertical_offset=%.2f\n", font->draw_vertical_offset);
 
-    // Vertex Uniform Buffer Object
+    // Vertex Uniform Buffer Object  -- TODO do checking on copy_buffer->index and data array size
     vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
     copy_buffer->index += sizeof(vert_data_scale_offset);
+    VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+    // printf("mrt-2a\n");
 
     float scale_multiplier =
         1.f / (float)(sequence->image_width < sequence->image_height ? sequence->image_width : sequence->image_height);
@@ -412,10 +426,12 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     vert_ubo_data->offset.y = -1.0f + 2.0f * (float)q.y0 / (float)(sequence->image_height) +
                               1.0f * (float)height / (float)(sequence->image_height);
 
+    // printf("mrt-3\n");
     // Fragment Data
     frag_ubo_tint_texcoordbounds *frag_ubo_data =
         (frag_ubo_tint_texcoordbounds *)&copy_buffer->data[copy_buffer->index];
     copy_buffer->index += sizeof(frag_ubo_tint_texcoordbounds);
+    VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
     memcpy(&frag_ubo_data->tint, &cmd->data.print_text.color, sizeof(float) * 4);
     frag_ubo_data->tex_coord_bounds.s0 = q.s0;
@@ -429,6 +445,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     set_scissor_cmd(command_buffer, (int32_t)(q.x0 < 0 ? 0 : q.x0), (int32_t)(q.y0 < 0 ? 0 : q.y0), (uint32_t)width,
                     (uint32_t)height);
 
+    // printf("mrt-4\n");
     // Allocate the descriptor set from the pool.
     VkDescriptorSetAllocateInfo setAllocInfo = {};
     setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -452,6 +469,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     int buffer_info_index = 0;
     int write_index = 0;
 
+    // printf("mrt-5\n");
     VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
     res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
     VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
@@ -461,6 +479,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
                                                frag_ubo_info);
     VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
 
+    // printf("mrt-6\n");
     // Global Vertex Shader Uniform Buffer
     VkWriteDescriptorSet *write = &writes[write_index++];
     write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -494,6 +513,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     write->dstArrayElement = 0;
     write->dstBinding = 2;
 
+    // printf("mrt-7\n");
     VkDescriptorImageInfo image_sampler_info = {};
     image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     image_sampler_info.imageView = font_image->view;
@@ -510,6 +530,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     write->dstArrayElement = 0;
     write->dstBinding = 3;
 
+    // printf("mrt-8\n");
     vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->font_prog.pipeline_layout, 0, 1,
@@ -521,6 +542,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     vkCmdBindVertexBuffers(command_buffer, 0, 1, &p_vkrs->textured_shape_vertices.buf, offsets);
 
     vkCmdDraw(command_buffer, 2 * 3, 1, 0, 0);
+    // printf("mrt-9\n");
   }
 
   free(cmd->data.print_text.text);

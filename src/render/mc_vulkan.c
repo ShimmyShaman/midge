@@ -766,7 +766,7 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   p_vkrs->global_vert_uniform_buffer.buffer_info.range = sizeof(float) * 16;
 
   /* SHARED BUFFER */
-  p_vkrs->render_data_buffer.allocated_size = 131072; // TODO reduce/refactor etc
+  p_vkrs->render_data_buffer.allocated_size = 262144; // TODO reduce/refactor etc
   buf_info = {};
   buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   buf_info.pNext = NULL;

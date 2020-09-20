@@ -166,7 +166,7 @@ void init_hierarchy_viewer()
   hv_state->path_states.items = NULL;
 
   // Rest of the UI
-  const int TEXT_LINE_COUNT = 16;
+  const int TEXT_LINE_COUNT = 26;
   hv_state->text_lines.size = 0;
   hv_state->text_lines.visible_count = TEXT_LINE_COUNT;
   reallocate_collection((void ***)&hv_state->text_lines.items, &hv_state->text_lines.size, TEXT_LINE_COUNT, 0);
