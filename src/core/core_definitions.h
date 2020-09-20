@@ -35,9 +35,12 @@ typedef enum node_type {
   NODE_TYPE_GLOBAL_ROOT,
   NODE_TYPE_CONSOLE_APP,
   NODE_TYPE_VISUAL_PROJECT,
-  NODE_TYPE_UI,
+  NODE_TYPE_MUI_PANEL,
+  NODE_TYPE_MUI_CONTEXT_MENU,
+  NODE_TYPE_MUI_BUTTON,
+  NODE_TYPE_MUI_TEXT_BLOCK,
   NODE_TYPE_ABSTRACT,
-  NODE_TYPE_MIDGE_EXCLUSIVE_MAXIMUM = 1000,
+  NODE_TYPE_MIDGE_EXCLUSIVE_MAXIMUM = 3000,
 } node_type;
 
 typedef enum parameter_kind {
@@ -223,21 +226,24 @@ typedef struct event_handler_array {
   int (***handlers)(int, void **);
 } event_handler_array;
 
-typedef struct mc_node {
-  node_type type;
-  char *name;
-  bool visible;
-
-  mc_node *parent;
-
-  void *data;
-} mc_node;
-
+struct mc_node;
 typedef struct mc_node_list {
   unsigned int alloc, count;
   mc_node **items;
-  unsigned int *z_layer_indices;
 } mc_node_list;
+
+struct mca_node_layout;
+typedef struct mc_node {
+  node_type type;
+  char *name;
+
+  mc_node *parent;
+  mc_node_list *children;
+
+  mca_node_layout *layout;
+
+  void *data;
+} mc_node;
 
 // Incomplete Structure declarations
 struct render_thread_info;

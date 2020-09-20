@@ -113,6 +113,8 @@ void __mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_sta
 
   tl_element->layout->padding.left = depth * 16;
 
+  tl_button->tag = (void *)sp_state;
+
   if (sp_state->collapsed)
     set_c_str(tl_button->str, "+ ");
   else
@@ -140,6 +142,15 @@ void mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_state
   }
 
   mca_set_node_requires_layout_update(hv_state->root_node);
+}
+
+void __mc_hv_text_line_left_click_handler(mui_button *button, mc_point click_location)
+{
+  mc_hv_source_path_state *sp_state = (mc_hv_source_path_state *)button->tag;
+
+  sp_state->collapsed = !sp_state->collapsed;
+
+  mca_set_node_requires_layout_update(button->element->visual_node);
 }
 
 void init_hierarchy_viewer()
@@ -175,6 +186,7 @@ void init_hierarchy_viewer()
     mui_button *button;
     mui_init_button(hv_state->root_node, &button);
     hv_state->text_lines.items[i] = button->element->visual_node;
+    button->left_click = &__mc_hv_text_line_left_click_handler;
 
     mca_node_layout *layout = button->element->layout;
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;

@@ -111,9 +111,6 @@ void mui_render_element_present(image_render_queue *render_queue, mc_node *eleme
 // void init_modus_operandi_curator();
 }
 
-
-
-
 void initialize_midge_components()
 {
   global_root_data *global_data;
@@ -203,15 +200,12 @@ void mca_render_presentation()
   sequence->data.target_image.image_uid = global_data->present_image_resource_uid;
 
   for (int a = 0; a < global_data->children->count; ++a) {
-    switch (global_data->children->items[a]->type) {
-    case NODE_TYPE_UI:
-      mui_render_element_present(sequence, global_data->children->items[a]);
-      break;
-    case NODE_TYPE_VISUAL_PROJECT:
-      mca_render_project_present(sequence, global_data->children->items[a]);
-      break;
-    default:
-      MCerror(296, "mca_render_presentation>|Unsupported node type:%i", global_data->children->items[a]->type);
+    mc_node *child = global_data->children->items[a];
+    if (child->layout && child->layout->render_present) {
+      // TODO fptr casting
+      void (*render_node_presentation)(image_render_queue *, mc_node *) =
+          (void (*)(image_render_queue *, mc_node *))child->layout->render_present;
+      render_node_presentation(sequence, child);
     }
   }
 }
@@ -365,13 +359,26 @@ void midge_run_app()
       // mca_update_node_list_logic(global_data->children);
       if (global_data->requires_layout_update) {
         for (int a = 0; a < global_data->children->count; ++a) {
-          // printf("macl:%i\n", a);
-          mca_update_node_layout_extents(global_data->children->items[a], LAYOUT_RESTRAINT_NONE);
+          mc_node *child = global_data->children->items[a];
+          if (child->layout && child->layout->determine_layout_extents) {
+            // TODO fptr casting
+            void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
+                (void (*)(mc_node *, layout_extent_restraints))child->layout->determine_layout_extents;
+            determine_layout_extents(child, LAYOUT_RESTRAINT_NONE);
+          }
         }
 
+        // Update the layout
         mc_rectf bounds = {0.f, 0.f, (float)global_data->screen.width, (float)global_data->screen.height};
         for (int a = 0; a < global_data->children->count; ++a) {
-          mca_update_node_layout(global_data->children->items[a], &bounds);
+          mc_node *child = global_data->children->items[a];
+
+          if (child->layout && child->layout->update_layout) {
+            // TODO fptr casting
+            void (*update_node_layout)(mc_node *, mc_rectf *) =
+                (void (*)(mc_node *, mc_rectf *))child->layout->update_layout;
+            update_node_layout(child, &bounds);
+          }
         }
         global_data->requires_layout_update = false;
         printf("layout updated\n");
@@ -391,9 +398,16 @@ void midge_run_app()
       // Clear the render queue
       global_data->render_thread->render_queue.count = 0;
 
-      // Rerender all headless images
+      // Rerender headless images
       // printf("headless\n");
-      mca_render_node_list_headless(global_data->children);
+      for (int a = 0; a < global_data->children->count; ++a) {
+        mc_node *child = global_data->children->items[a];
+        if (child->layout && child->layout->render_headless) {
+          // TODO fptr casting
+          void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
+          render_node_headless(child);
+        }
+      }
 
       // Queue the updated render
       // printf("present\n");

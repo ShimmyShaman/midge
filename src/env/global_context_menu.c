@@ -12,28 +12,26 @@ void mca_init_global_context_menu()
   mui_context_menu *context_menu;
   mui_init_context_menu(global_data->global_node, &context_menu);
 
-  mca_modify_z_layer_index(context_menu->element->visual_node, 10U);
+  mca_modify_z_layer_index(context_menu->node, 10U);
 
   // Set to global
-  global_data->ui_state->global_context_menu.node = context_menu->element->visual_node;
+  global_data->ui_state->global_context_menu.node = context_menu->node;
   global_data->ui_state->global_context_menu.context_node = NULL;
   global_data->ui_state->global_context_menu.context_options.alloc = 0;
   global_data->ui_state->global_context_menu.context_options.count = 0;
   global_data->ui_state->global_context_menu.context_options.items = NULL;
 
-  context_menu->element->visual_node->visible = false;
+  context_menu->node->layout->visible = false;
 
-  context_menu->element->layout->padding = {150, 200, 0, 0};
-  context_menu->element->layout->preferred_width = 120.f;
-  context_menu->element->layout->preferred_height = 90.f;
-  context_menu->element->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
-  context_menu->element->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  context_menu->node->layout->padding = {150, 200, 0, 0};
+  context_menu->node->layout->preferred_width = 120.f;
+  context_menu->node->layout->preferred_height = 90.f;
+  context_menu->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+  context_menu->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   context_menu->background_color = COLOR_DARK_SLATE_GRAY;
   context_menu->option_selected = (void *)&mca_handle_global_context_menu_option_selected;
 }
-
-void mca_render_global_context_menu(image_render_queue *render_queue, mc_node *node) {}
 
 void mca_handle_global_context_menu_option_selected(const char *selected_option)
 {
@@ -146,8 +144,8 @@ void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int s
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  mui_ui_element *gcm_element = (mui_ui_element *)global_data->ui_state->global_context_menu.node->data;
-  mui_context_menu_clear_options(gcm_element);
+  mui_context_menu *context_menu = (mui_context_menu *)global_data->ui_state->global_context_menu.node->data;
+  mui_context_menu_clear_options(context_menu);
 
   printf("options_list count:%i\n", global_data->ui_state->global_context_menu.context_options.count);
   // Obtain list for node type
@@ -162,20 +160,20 @@ void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int s
 
   if (options_list) {
     for (int i = 0; i < options_list->count; ++i) {
-      mui_context_menu_add_option(gcm_element, options_list->items[i]->option_text);
+      mui_context_menu_add_option(context_menu, options_list->items[i]->option_text);
     }
   }
-  mui_context_menu_add_option(gcm_element, "Cancel");
+  mui_context_menu_add_option(context_menu, "Cancel");
 
   // Show
-  global_data->ui_state->global_context_menu.node->visible = true;
+  global_data->ui_state->global_context_menu.node->layout->visible = true;
   global_data->ui_state->global_context_menu.context_node = context_node;
   global_data->ui_state->global_context_menu.context_location = {screen_x, screen_y};
 
   // Set New Layout
-  gcm_element->layout->padding = {(float)screen_x, (float)screen_y, 0, 0};
+  context_menu->node->layout->padding = {(float)screen_x, (float)screen_y, 0, 0};
 
-  mca_set_node_requires_layout_update(gcm_element->visual_node);
+  mca_set_node_requires_layout_update(context_menu->node);
 }
 
 void mca_hide_global_context_menu()
@@ -183,7 +181,7 @@ void mca_hide_global_context_menu()
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  global_data->ui_state->global_context_menu.node->visible = true;
+  global_data->ui_state->global_context_menu.node->layout->visible = true;
 
   mca_set_node_requires_layout_update(global_data->ui_state->global_context_menu.node);
 }

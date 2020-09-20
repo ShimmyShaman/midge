@@ -29,6 +29,9 @@ typedef struct mc_paddingf {
 } mc_paddingf;
 
 typedef struct mca_node_layout {
+  bool visible;
+
+  // Layout Properties
   horizontal_alignment_type horizontal_alignment;
   vertical_alignment_type vertical_alignment;
   float preferred_width, preferred_height;
@@ -36,9 +39,27 @@ typedef struct mca_node_layout {
   // float max_width, max_height;
   mc_paddingf padding;
 
-  // Application Set Field
+  // Functional Delegates
+  // void (*determine_node_layout_extents)(mc_node *, layout_extent_restraints)
+  void *determine_layout_extents;
+  // void (*update_node_layout)(mc_node *, const mc_rectf *)
+  void *update_layout;
+  // void (*render_node_headless)(mc_node *)
+  void *render_headless;
+  // void (*render_node_presentation)(const image_render_queue *, mc_node *)
+  void *render_present;
+
+  // Application Set Fields
+  // -- set these fields with the mca_ functions set_node_...
+  bool __requires_layout_update, __requires_rerender;
+
   mc_rectf __bounds;
+
 } mca_node_layout;
+
+typedef struct mca_node_functionality {
+
+} mca_node_functionality;
 
 typedef struct mca_global_context_node_option {
   char *option_text;

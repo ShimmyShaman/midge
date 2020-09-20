@@ -23,117 +23,124 @@ void exit_app(mc_node *node_scope, int result)
   }
 }
 
-void mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list)
-{
-  switch (hierarchy_node->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    global_root_data *global_data = (global_root_data *)hierarchy_node->data;
-    *sub_node_list = global_data->children;
-  } break;
-  case NODE_TYPE_UI: {
-    mui_get_hierarchical_children_node_list(hierarchy_node, sub_node_list);
-  } break;
-  case NODE_TYPE_VISUAL_PROJECT: {
-    visual_project_data *project = (visual_project_data *)hierarchy_node->data;
-    *sub_node_list = project->children;
-  } break;
-  default:
-    MCerror(3565, "mca_get_sub_hierarchy_node_list>Unsupported node type:%i", hierarchy_node->type);
-  }
-}
+// void mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list)
+// {
+//   switch (hierarchy_node->type) {
+//   case NODE_TYPE_GLOBAL_ROOT: {
+//     global_root_data *global_data = (global_root_data *)hierarchy_node->data;
+//     *sub_node_list = global_data->children;
+//   } break;
+//   case NODE_TYPE_UI: {
+//     mui_get_hierarchical_children_node_list(hierarchy_node, sub_node_list);
+//   } break;
+//   case NODE_TYPE_VISUAL_PROJECT: {
+//     visual_project_data *project = (visual_project_data *)hierarchy_node->data;
+//     *sub_node_list = project->children;
+//   } break;
+//   default:
+//     MCerror(3565, "mca_get_sub_hierarchy_node_list>Unsupported node type:%i", hierarchy_node->type);
+//   }
+// }
 
-void __mca_insert_node_into_node_list(mc_node_list *parent_node_list, mc_node *node_to_insert,
-                                      unsigned int z_layer_index)
-{
-  // Resize node list if need be
-  {
-    if (parent_node_list->count + 1 > parent_node_list->alloc) {
-      unsigned int realloc_amount = parent_node_list->alloc + 8 + parent_node_list->alloc / 3;
-      // printf("reallocate collection size %i->%i\n", parent_node_list->alloc, realloc_amount);
-      mc_node **new_items = (mc_node **)malloc(sizeof(mc_node *) * realloc_amount);
-      unsigned int *new_z_layer_indices = (unsigned int *)malloc(sizeof(unsigned int) * realloc_amount);
-      if (!new_items || !new_z_layer_indices) {
-        MCerror(32, "append_to_collection malloc error");
-      }
+// void __mca_insert_node_into_node_list(mc_node_list *parent_node_list, mc_node *node_to_insert,
+//                                       unsigned int z_layer_index)
+// {
+//   // Resize node list if need be
+//   {
+//     if (parent_node_list->count + 1 > parent_node_list->alloc) {
+//       unsigned int realloc_amount = parent_node_list->alloc + 8 + parent_node_list->alloc / 3;
+//       // printf("reallocate collection size %i->%i\n", parent_node_list->alloc, realloc_amount);
+//       mc_node **new_items = (mc_node **)malloc(sizeof(mc_node *) * realloc_amount);
+//       unsigned int *new_z_layer_indices = (unsigned int *)malloc(sizeof(unsigned int) * realloc_amount);
+//       if (!new_items || !new_z_layer_indices) {
+//         MCerror(32, "append_to_collection malloc error");
+//       }
 
-      if (parent_node_list->alloc) {
-        memcpy(new_items, parent_node_list->items, parent_node_list->count * sizeof(mc_node *));
-        free(parent_node_list->items);
-        memcpy(new_z_layer_indices, parent_node_list->items, parent_node_list->count * sizeof(unsigned int));
-        free(parent_node_list->z_layer_indices);
-      }
+//       if (parent_node_list->alloc) {
+//         memcpy(new_items, parent_node_list->items, parent_node_list->count * sizeof(mc_node *));
+//         free(parent_node_list->items);
+//         memcpy(new_z_layer_indices, parent_node_list->items, parent_node_list->count * sizeof(unsigned int));
+//         free(parent_node_list->z_layer_indices);
+//       }
 
-      parent_node_list->items = new_items;
-      parent_node_list->z_layer_indices = new_z_layer_indices;
-      parent_node_list->alloc = realloc_amount;
-    }
-  }
+//       parent_node_list->items = new_items;
+//       parent_node_list->z_layer_indices = new_z_layer_indices;
+//       parent_node_list->alloc = realloc_amount;
+//     }
+//   }
 
-  // Fit the item in where z-appropriate
-  {
-    // Insert
-    int insertion_index = -1;
-    for (int n = parent_node_list->count - 1; n >= 0; --n) {
-      if (z_layer_index >= parent_node_list->z_layer_indices[n]) {
-        insertion_index = n + 1;
-        break;
-      }
-    }
+//   // Fit the item in where z-appropriate
+//   {
+//     // Insert
+//     int insertion_index = -1;
+//     for (int n = parent_node_list->count - 1; n >= 0; --n) {
+//       if (z_layer_index >= parent_node_list->z_layer_indices[n]) {
+//         insertion_index = n + 1;
+//         break;
+//       }
+//     }
 
-    if (insertion_index < 0)
-      insertion_index = 0;
+//     if (insertion_index < 0)
+//       insertion_index = 0;
 
-    for (int i = parent_node_list->count; i > insertion_index; --i) {
-      parent_node_list->items[i] = parent_node_list->items[i - 1];
-    }
-    parent_node_list->items[insertion_index] = node_to_insert;
-    parent_node_list->z_layer_indices[insertion_index] = z_layer_index;
-  }
+//     for (int i = parent_node_list->count; i > insertion_index; --i) {
+//       parent_node_list->items[i] = parent_node_list->items[i - 1];
+//     }
+//     parent_node_list->items[insertion_index] = node_to_insert;
+//     parent_node_list->z_layer_indices[insertion_index] = z_layer_index;
+//   }
 
-  // Increment list count
-  ++parent_node_list->count;
-}
+//   // Increment list count
+//   ++parent_node_list->count;
+// }
 
 void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach, unsigned int z_layer_index)
 {
   printf("added node %i to %i\n", node_to_attach->type, hierarchy_node->type);
   // midge_error_print_thread_stack_trace();
 
-  mc_node_list *parent_node_list;
-  mca_get_sub_hierarchy_node_list(hierarchy_node, &parent_node_list);
+  // mc_node_list *parent_node_list;
+  // mca_get_sub_hierarchy_node_list(hierarchy_node, &parent_node_list);
 
-  __mca_insert_node_into_node_list(parent_node_list, node_to_attach, z_layer_index);
+  // __mca_insert_node_into_node_list(parent_node_list, node_to_attach, z_layer_index);
+
+  if (!hierarchy_node->children) {
+    MCerror(9108, "Attempt to attach node to parent who has no children");
+  }
+
+  append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
+                       &hierarchy_node->children->count, node_to_attach);
   node_to_attach->parent = hierarchy_node;
 }
 
-void mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_index)
-{
-  mc_node_list *parent_node_list;
-  mca_get_sub_hierarchy_node_list(hierarchy_node->parent, &parent_node_list);
+// void mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_index)
+// {
+//   mc_node_list *parent_node_list;
+//   mca_get_sub_hierarchy_node_list(hierarchy_node->parent, &parent_node_list);
 
-  // Get the current index
-  int current_index = -1;
-  for (int n = parent_node_list->count - 1; n >= 0; ++n) {
-    if (parent_node_list->items[n] == hierarchy_node) {
-      current_index = n;
-      break;
-    }
-  }
+//   // Get the current index
+//   int current_index = -1;
+//   for (int n = parent_node_list->count - 1; n >= 0; ++n) {
+//     if (parent_node_list->items[n] == hierarchy_node) {
+//       current_index = n;
+//       break;
+//     }
+//   }
 
-  if (current_index < 0) {
-    MCerror(9123, "Could not find node in hierarchical parents list");
-  }
+//   if (current_index < 0) {
+//     MCerror(9123, "Could not find node in hierarchical parents list");
+//   }
 
-  // Remove it
-  for (int i = current_index + 1; i < parent_node_list->count; ++i) {
-    parent_node_list->items[i - 1] = parent_node_list->items[i];
-    parent_node_list->z_layer_indices[i - 1] = parent_node_list->z_layer_indices[i];
-  }
-  --parent_node_list->count;
+//   // Remove it
+//   for (int i = current_index + 1; i < parent_node_list->count; ++i) {
+//     parent_node_list->items[i - 1] = parent_node_list->items[i];
+//     parent_node_list->z_layer_indices[i - 1] = parent_node_list->z_layer_indices[i];
+//   }
+//   --parent_node_list->count;
 
-  // Reinsert it
-  __mca_insert_node_into_node_list(parent_node_list, hierarchy_node, new_z_layer_index);
-}
+//   // Reinsert it
+//   __mca_insert_node_into_node_list(parent_node_list, hierarchy_node, new_z_layer_index);
+// }
 
 void mca_init_node_layout(mca_node_layout **layout)
 {
@@ -149,6 +156,14 @@ void mca_init_node_layout(mca_node_layout **layout)
   // (*layout)->max_width = 0;
   // (*layout)->max_height = 0;
   (*layout)->padding = {0, 0, 0, 0};
+
+  (*layout)->determine_layout_extents = NULL;
+  (*layout)->update_layout = NULL;
+  (*layout)->render_headless = NULL;
+  (*layout)->render_present = NULL;
+
+  (*layout)->__requires_layout_update = true;
+  (*layout)->__requires_rerender = false;
 }
 
 void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
@@ -156,7 +171,9 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
   (*node) = (mc_node *)malloc(sizeof(mc_node));
 
   (*node)->type = type;
-  (*node)->visible = true;
+  (*node)->name = NULL;
+
+  (*node)->layout = NULL;
 
   (*node)->data = NULL;
 
@@ -329,123 +346,6 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints)
 {
   switch (node->type) {
-  case NODE_TYPE_UI: {
-    mui_ui_element *element = (mui_ui_element *)node->data;
-    if (!element->requires_layout_update)
-      break;
-    element->requires_layout_update = false;
-
-    mc_rectf new_bounds = element->layout->__bounds;
-
-    switch (element->type) {
-    case UI_ELEMENT_PANEL: {
-      mui_panel *panel = (mui_panel *)element->data;
-
-      // Determine children extents
-      for (int a = 0; a < panel->children->count; ++a) {
-        mca_update_node_layout_extents(panel->children->items[a], restraints);
-      }
-
-      if (element->layout->preferred_width) {
-        new_bounds.width = element->layout->preferred_width;
-      }
-      else {
-        MCerror(7295, "NotYetSupported");
-      }
-      if (element->layout->preferred_height) {
-        new_bounds.height = element->layout->preferred_height;
-      }
-      else {
-        MCerror(7301, "NotYetSupported");
-      }
-    } break;
-    case UI_ELEMENT_TEXT_BLOCK: {
-      mui_text_block *text_block = (mui_text_block *)element->data;
-
-      float str_width, str_height;
-      if (!element->layout->preferred_width || element->layout->preferred_height)
-        mcr_determine_text_display_dimensions(text_block->font_resource_uid, text_block->str->text, &str_width,
-                                              &str_height);
-
-      // Width
-      if (element->layout->preferred_width)
-        new_bounds.width = element->layout->preferred_width;
-      else
-        new_bounds.width = str_width;
-
-      // Height
-      if (element->layout->preferred_height)
-        new_bounds.height = element->layout->preferred_height;
-      else
-        new_bounds.height = str_height;
-
-    } break;
-    case UI_ELEMENT_BUTTON: {
-      mui_button *button = (mui_button *)element->data;
-
-      float str_width, str_height;
-      if (!element->layout->preferred_width || !element->layout->preferred_height)
-        mcr_determine_text_display_dimensions(button->font_resource_uid, button->str->text, &str_width, &str_height);
-
-      // Width
-      if (element->layout->preferred_width)
-        new_bounds.width = element->layout->preferred_width;
-      else
-        new_bounds.width = str_width;
-
-      // Height
-      if (element->layout->preferred_height)
-        new_bounds.height = element->layout->preferred_height;
-      else
-        new_bounds.height = str_height;
-    } break;
-    case UI_ELEMENT_CONTEXT_MENU: {
-      mui_context_menu *context_menu = (mui_context_menu *)element->data;
-
-      // Determine children extents
-      for (int a = 0; a < context_menu->children->count; ++a) {
-        mca_update_node_layout_extents(context_menu->children->items[a],
-                                       LAYOUT_RESTRAINT_HORIZONTAL | LAYOUT_RESTRAINT_VERTICAL);
-      }
-      // mca_update_list_nodes_layout(context_menu->children, available_area);
-
-      float max_child_width = 0, cumulative_height = 0;
-      for (int a = 0; a < context_menu->_buttons.count; ++a) {
-        mui_button *button = context_menu->_buttons.items[a];
-
-        if (button->element->layout->__bounds.width > max_child_width) {
-          max_child_width = button->element->layout->padding.left + button->element->layout->__bounds.width +
-                            button->element->layout->padding.right;
-        }
-
-        cumulative_height += button->element->layout->padding.top + button->element->layout->__bounds.height +
-                             button->element->layout->padding.bottom;
-      }
-
-      if (element->layout->preferred_width) {
-        new_bounds.width = element->layout->preferred_width;
-      }
-      else {
-        new_bounds.width = max_child_width;
-      }
-      if (element->layout->preferred_height) {
-        new_bounds.height = element->layout->preferred_height;
-      }
-      else {
-        new_bounds.height = cumulative_height;
-      }
-    } break;
-    default:
-      MCerror(9268, "mca_update_node_layout_extents::Unsupported element type:%i", element->type);
-    }
-
-    // Determine if the new bounds is worth setting
-    if (new_bounds.x != element->layout->__bounds.x || new_bounds.y != element->layout->__bounds.y ||
-        new_bounds.width != element->layout->__bounds.width || new_bounds.height != element->layout->__bounds.height) {
-      element->layout->__bounds = new_bounds;
-      mca_set_node_requires_rerender(node);
-    }
-  } break;
   case NODE_TYPE_VISUAL_PROJECT: {
     visual_project_data *visual_project = (visual_project_data *)node->data;
 
@@ -473,278 +373,82 @@ void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints rest
   }
 }
 
-void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
-// layout_extent_restraints restraints)
-{
-  // printf("mca_update_node_layout--%i\n", node->type);
-  switch (node->type) {
-  case NODE_TYPE_UI: {
-    mui_ui_element *element = (mui_ui_element *)node->data;
+// void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
+// // layout_extent_restraints restraints)
+// {
+//   // printf("mca_update_node_layout--%i\n", node->type);
+//   switch (node->type) {
+//   case NODE_TYPE_VISUAL_PROJECT: {
+//     visual_project_data *visual_project = (visual_project_data *)node->data;
 
-    mc_rectf new_bounds = element->layout->__bounds;
-    // printf("mca_update_node_layout:element-%i\n", element->type);
-    switch (element->type) {
-    case UI_ELEMENT_PANEL: {
-      mui_panel *panel = (mui_panel *)element->data;
+//     visual_project->layout->padding.left = visual_project->screen.offset_x;
+//     visual_project->layout->padding.top = visual_project->screen.offset_y;
 
-      new_bounds.x = available_area->x + element->layout->padding.left;
-      new_bounds.y = available_area->y + element->layout->padding.top;
+//     mc_rectf new_bounds = {(float)visual_project->screen.offset_x, (float)visual_project->screen.offset_y,
+//                            (float)visual_project->screen.width, (float)visual_project->screen.height};
 
-      for (int a = 0; a < panel->children->count; ++a) {
-        // printf("visual_project child:%i\n", visual_project->children->items[a]->type);
-        mca_update_node_layout(panel->children->items[a], &new_bounds);
-      }
-      // printf("panel>bounds:{%.2f %.2f %.2f %.2f}\n", new_bounds.x, new_bounds.y, new_bounds.width,
-      // new_bounds.height);
-    } break;
-    case UI_ELEMENT_TEXT_BLOCK: {
-      new_bounds.x = available_area->x + element->layout->padding.left;
-      new_bounds.y = available_area->y + element->layout->padding.top;
+//     // printf("visual_project ec:%i\n", visual_project->editor_container->type);
+//     mca_update_node_layout(visual_project->editor_container, &new_bounds);
+//     for (int a = 0; a < visual_project->children->count; ++a) {
+//       // printf("visual_project child:%i\n", visual_project->children->items[a]->type);
+//       mca_update_node_layout(visual_project->children->items[a], &new_bounds);
+//     }
 
-    } break;
-    case UI_ELEMENT_BUTTON: {
-      new_bounds.x = available_area->x + element->layout->padding.left;
-      new_bounds.y = available_area->y + element->layout->padding.top;
+//     // Determine if the new bounds is worth setting
+//     if (new_bounds.x != visual_project->layout->__bounds.x || new_bounds.y != visual_project->layout->__bounds.y ||
+//         new_bounds.width != visual_project->layout->__bounds.width ||
+//         new_bounds.height != visual_project->layout->__bounds.height) {
+//       visual_project->layout->__bounds = new_bounds;
+//       mca_set_node_requires_rerender(node);
+//     }
+//   } break;
+// case NODE
+//   default:
+//     MCerror(9617, "mca_update_node_layout::Unsupported node type:%i", node->type);
+//   }
 
-      // printf("set button to %.3f %.3f\n", new_bounds.x, new_bounds.y);
-    } break;
-    case UI_ELEMENT_CONTEXT_MENU: {
-      mui_context_menu *context_menu = (mui_context_menu *)element->data;
-
-      new_bounds.x = available_area->x + element->layout->padding.left;
-      new_bounds.y = available_area->y + element->layout->padding.top;
-
-      mc_rectf child_bounds = new_bounds;
-      for (int b = 0; b < context_menu->_buttons.count; ++b) {
-        mui_button *button = context_menu->_buttons.items[b];
-        mca_update_node_layout(button->element->visual_node, &child_bounds);
-
-        child_bounds.y += button->element->layout->padding.top + button->element->layout->__bounds.height +
-                          button->element->layout->padding.bottom;
-      }
-      // printf("context_menu>bounds:{%.2f %.2f %.2f %.2f}\n", new_bounds.x, new_bounds.y, new_bounds.width,
-      //        new_bounds.height);
-      //   // // Determine children extents
-      //   // mca_update_list_nodes_layout_extents(context_menu->children, available_area,
-      //   //                                      LAYOUT_RESTRAINT_HORIZONTAL | LAYOUT_RESTRAINT_VERTICAL);
-      //   // // mca_update_list_nodes_layout(context_menu->children, available_area);
-
-      //   // float max_child_width = 0, cumulative_height = 0;
-      //   // for (int a = 0; a < context_menu->_buttons.count; ++a) {
-      //   //   mui_button *button = context_menu->_buttons.items[a];
-
-      //   //   if (button->element->layout->__bounds.width > max_child_width) {
-      //   //     max_child_width = button->element->layout->padding.left + button->element->layout->__bounds.width +
-      //   //                       button->element->layout->padding.right;
-      //   //   }
-
-      //   //   cumulative_height += button->element->layout->padding.top + button->element->layout->__bounds.height +
-      //   //                        button->element->layout->padding.bottom;
-      //   // }
-
-      //   // if (element->layout->preferred_width) {
-      //   //   element->layout->__bounds.width = element->layout->preferred_width;
-      //   // }
-      //   // else {
-      //   //   element->layout->__bounds.width = max_child_width;
-      //   // }
-      //   // if (element->layout->preferred_height) {
-      //   //   element->layout->__bounds.height = element->layout->preferred_height;
-      //   // }
-      //   // else {
-      //   //   element->layout->__bounds.height = cumulative_height;
-      //   // }
-    } break;
-    default:
-      MCerror(9270, "mca_update_node_layout::Unsupported element type:%i", element->type);
-    }
-
-    // Determine if the new bounds is worth setting
-    if (new_bounds.x != element->layout->__bounds.x || new_bounds.y != element->layout->__bounds.y ||
-        new_bounds.width != element->layout->__bounds.width || new_bounds.height != element->layout->__bounds.height) {
-      element->layout->__bounds = new_bounds;
-      mca_set_node_requires_rerender(node);
-    }
-  } break;
-  case NODE_TYPE_VISUAL_PROJECT: {
-    visual_project_data *visual_project = (visual_project_data *)node->data;
-
-    visual_project->layout->padding.left = visual_project->screen.offset_x;
-    visual_project->layout->padding.top = visual_project->screen.offset_y;
-
-    mc_rectf new_bounds = {(float)visual_project->screen.offset_x, (float)visual_project->screen.offset_y,
-                           (float)visual_project->screen.width, (float)visual_project->screen.height};
-
-    // printf("visual_project ec:%i\n", visual_project->editor_container->type);
-    mca_update_node_layout(visual_project->editor_container, &new_bounds);
-    for (int a = 0; a < visual_project->children->count; ++a) {
-      // printf("visual_project child:%i\n", visual_project->children->items[a]->type);
-      mca_update_node_layout(visual_project->children->items[a], &new_bounds);
-    }
-
-    // Determine if the new bounds is worth setting
-    if (new_bounds.x != visual_project->layout->__bounds.x || new_bounds.y != visual_project->layout->__bounds.y ||
-        new_bounds.width != visual_project->layout->__bounds.width ||
-        new_bounds.height != visual_project->layout->__bounds.height) {
-      visual_project->layout->__bounds = new_bounds;
-      mca_set_node_requires_rerender(node);
-    }
-  } break;
-    // case NODE_TYPE_NONE?????
-    // case NODE_TYPE_GLOBAL_ROOT: {
-    //   global_root_data *global_data = (global_root_data *)node->data;
-
-    //   mc_rectf bounds = {0, 0, (float)global_data->screen.width, (float)global_data->screen.height};
-    //   for (int a = 0; a < global_data->children->count; ++a) {
-    //     // printf("mca_update_node_layout--child %p\n", global_data->children->items[a]);
-    //     if (global_data->children->items[a]->visible) {
-    //       // printf("mca_update_node_layout--child visible\n");
-    //       mca_update_child_node_layout(global_data->children->items[a], &bounds, LAYOUT_RESTRAINT_NONE);
-    //     }
-    //   }
-
-    // for (int a = 0; a < global_data->children->count; ++a) {
-    //   mca_update_node_layout_location(global_data->children->items[a], &bounds);
-    // }
-
-    // // Set child positions
-    // for (int a = 0; a < global_data->children->count; ++a) {
-    //   switch (global_data->children->items[a]->type) {
-    //   default:
-    //     MCerror(8124, "TODO %i", global_data->children->items[a]->type)
-    //   }
-    // }
-
-    // mc_rectf bounds = {0, 0, (float)global_data->screen.width, (float)global_data->screen.height};
-    // for (int a = 0; a < global_data->children->count; ++a) {
-    //   mca_update_node_layout_positions(global_data->children->items[a], &bounds);
-    // }
-    // }
-    // break;
-  // case NODE_TYPE_VISUAL_PROJECT: {
-  //   // Update despite requirements
-  //   mca_update_visual_project(node);
-  // } break;
-  // case NODE_TYPE_UI: {
-  //   mui_ui_element *element = (mui_ui_element *)node->data;
-  //   // Nothing for the moment -- TODO?
-  // } break;
-  default:
-    MCerror(9617, "mca_update_node_layout::Unsupported node type:%i", node->type);
-  }
-
-  // for (int nl_index = 0; nl_index < node_list->count; ++nl_index) {
-  //   mc_node *node = node_list->items[nl_index];
-  //   switch (node->type) {
-  //   case NODE_TYPE_VISUAL_PROJECT: {
-  //     // Update despite requirements
-  //     mca_update_visual_project(node);
-  //   } break;
-  //   case NODE_TYPE_UI: {
-  //     mui_ui_element *element = (mui_ui_element *)node->data;
-  //     if (!element->requires_layout_update)
-  //       break;
-
-  //     // UI Update
-  //     mui_update_element_layout(element);
-
-  //     // TODO -- this should maybe be somewhere else?
-  //     element->requires_layout_update = false;
-
-  //     // Trigger rerender
-  //     mca_set_node_requires_rerender(node);
-  //   } break;
-  //   default:
-  //     MCerror(9613, "mca_update_node_list::Unsupported node type:%i", node->type);
-  //   }
-  // }
-}
-
-void mca_render_node_list_headless(mc_node_list *node_list)
-{
-  for (int a = 0; a < node_list->count; ++a) {
-    mc_node *node = node_list->items[a];
-    switch (node->type) {
-    case NODE_TYPE_UI: {
-      mui_render_element_headless(node);
-    } break;
-    case NODE_TYPE_VISUAL_PROJECT: {
-      mca_render_project_headless(node);
-    } break;
-    default:
-      MCerror(1837, "mca_update_headless_render_images>|Unsupported node type:%i", node->type);
-    }
-  }
-}
-
-void mca_render_node_list_present(image_render_queue *render_queue, mc_node_list *node_list)
-{
-  for (int a = 0; a < node_list->count; ++a) {
-    mc_node *node = node_list->items[a];
-    if (!node->visible)
-      continue;
-
-    switch (node->type) {
-    case NODE_TYPE_UI: {
-      mui_render_element_present(render_queue, node);
-    } break;
-    case NODE_TYPE_VISUAL_PROJECT: {
-      mca_render_project_present(render_queue, node);
-    } break;
-    default:
-      MCerror(1837, "mca_render_node_list_present>|Unsupported node type:%i", node->type);
-    }
-  }
-}
+// }
 
 void mca_set_node_requires_layout_update(mc_node *node)
 {
+  // DEBUG?
+  if (!node->layout) {
+    MCerror(8416, "Can't set an update for a node with no layout");
+  }
+
   // Set update required on all ancestors of the node
   while (node) {
-    switch (node->type) {
-    case NODE_TYPE_GLOBAL_ROOT: {
-      global_root_data *global_data = (global_root_data *)node->data;
-      global_data->requires_layout_update = true;
-    } break;
-    case NODE_TYPE_VISUAL_PROJECT: {
-      visual_project_data *project = (visual_project_data *)node->data;
-      project->ui_state->requires_update = true;
-    } break;
-    case NODE_TYPE_UI: {
-      // printf("mseu-4\n");
-      mui_ui_element *element = (mui_ui_element *)node->data;
-      element->requires_layout_update = true;
-    } break;
-    default:
-      MCerror(1252, "mca_set_node_requires_layout_update::>unsupported node type:%i", node->type);
+    // DEBUG?
+    if (!node->layout) {
+      MCerror(8523, "Can't set an update for a node with a parent with no layout");
     }
 
+    // Set
+    node->layout->__requires_layout_update = true;
+
+    // Move upwards through the ancestry
     node = node->parent;
   }
 }
 
 void mca_set_node_requires_rerender(mc_node *node)
 {
+  // DEBUG?
+  if (!node->layout) {
+    MCerror(8416, "Can't set an update for a node with no layout");
+  }
+
   // Set update required on all ancestors of the node
   while (node) {
-    switch (node->type) {
-    case NODE_TYPE_GLOBAL_ROOT: {
-      global_root_data *global_data = (global_root_data *)node->data;
-      global_data->requires_rerender = true;
-    } break;
-    case NODE_TYPE_VISUAL_PROJECT: {
-      visual_project_data *project = (visual_project_data *)node->data;
-      project->requires_rerender = true;
-    } break;
-    case NODE_TYPE_UI: {
-      // printf("mseu-4\n");
-      mui_ui_element *element = (mui_ui_element *)node->data;
-      element->requires_rerender = true;
-    } break;
-    default:
-      MCerror(148, "mui_set_element_update::>unsupported node type:%i", node->type);
+    // DEBUG?
+    if (!node->layout) {
+      MCerror(8523, "Can't set an update for a node with a parent with no layout");
     }
 
+    // Set
+    node->layout->__requires_rerender = true;
+
+    // Move upwards through the ancestry
     node = node->parent;
   }
 }

@@ -138,167 +138,169 @@ void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
   //        (*layered_hit_list)->count);
 }
 
-void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)
-{
-  switch (ui_node->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    // global_root_data *global_data = (global_root_data *)node->data;
+// void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)
+// {
+//   switch (ui_node->type) {
+//   case NODE_TYPE_GLOBAL_ROOT: {
+//     // global_root_data *global_data = (global_root_data *)node->data;
 
-    // printf("global_node-left_click\n");
-  } break;
-  case NODE_TYPE_UI: {
-    mui_ui_element *element = (mui_ui_element *)ui_node->data;
+//     // printf("global_node-left_click\n");
+//   } break;
+//   case NODE_TYPE_UI: {
+//     mui_ui_element *element = (mui_ui_element *)ui_node->data;
 
-    switch (element->type) {
-    case UI_ELEMENT_BUTTON: {
-      mui_button *button = (mui_button *)element->data;
-      if (button->left_click) {
-        // TODO -- better function pointer transcription
-        // void (*event_handler)(int, void **) = (void (*)(int, void **))button->left_click;
-        // void *args[2];
-        // int b = 80085;
-        // args[0] = &b;
-        // event_handler(2, args);
+//     switch (element->type) {
+//     case UI_ELEMENT_BUTTON: {
+//       mui_button *button = (mui_button *)element->data;
+//       if (button->left_click) {
+//         // TODO -- better function pointer transcription
+//         // void (*event_handler)(int, void **) = (void (*)(int, void **))button->left_click;
+//         // void *args[2];
+//         // int b = 80085;
+//         // args[0] = &b;
+//         // event_handler(2, args);
 
-        // void (*event_handler)(int) = (void (*)(int))button->left_click;
-        // printf("event_handler@hmlc:%p\n", event_handler);
-        // event_handler(4241);
+//         // void (*event_handler)(int) = (void (*)(int))button->left_click;
+//         // printf("event_handler@hmlc:%p\n", event_handler);
+//         // event_handler(4241);
 
-        // DEBUG TODO -- has to be casted to local fptr first
-        void (*event_handler)(mui_button *, mc_point) = (void (*)(mui_button *, mc_point))button->left_click;
-        event_handler(button, (mc_point){screen_x, screen_y});
-      }
-      *handled = true;
-    } break;
-    case UI_ELEMENT_PANEL:
-    case UI_ELEMENT_CONTEXT_MENU: {
-      // Do nothing
-      *handled = true;
-    } break;
-    default:
-      MCerror(9155, "mui_handle_mouse_left_click::>unsupported element type:%i", element->type);
-    }
-  } break;
-  case NODE_TYPE_VISUAL_PROJECT: {
-    // Nothing
-    // Maybe editor container ? TODO
-    // printf("NODE_TYPE_VISUAL_PROJECT-left_click\n");
-  } break;
-  default:
-    MCerror(9159, "mui_handle_mouse_left_click::>unsupported node type:%i", ui_node->type);
-  }
-}
+//         // DEBUG TODO -- has to be casted to local fptr first
+//         void (*event_handler)(mui_button *, mc_point) = (void (*)(mui_button *, mc_point))button->left_click;
+//         event_handler(button, (mc_point){screen_x, screen_y});
+//       }
+//       *handled = true;
+//     } break;
+//     case UI_ELEMENT_PANEL:
+//     case UI_ELEMENT_CONTEXT_MENU: {
+//       // Do nothing
+//       *handled = true;
+//     } break;
+//     default:
+//       MCerror(9155, "mui_handle_mouse_left_click::>unsupported element type:%i", element->type);
+//     }
+//   } break;
+//   case NODE_TYPE_VISUAL_PROJECT: {
+//     // Nothing
+//     // Maybe editor container ? TODO
+//     // printf("NODE_TYPE_VISUAL_PROJECT-left_click\n");
+//   } break;
+//   default:
+//     MCerror(9159, "mui_handle_mouse_left_click::>unsupported node type:%i", ui_node->type);
+//   }
+// }
 
-void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, bool *handled)
-{
-  *handled = false;
+// void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, bool *handled)
+// {
+//   *handled = false;
 
-  switch (node->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    mca_activate_global_context_menu(node, screen_x, screen_y);
-    *handled = true;
-  } break;
-  case NODE_TYPE_VISUAL_PROJECT: {
-    mca_activate_global_context_menu(node, screen_x, screen_y);
-    *handled = true;
-  } break;
-  case NODE_TYPE_UI: {
-    mca_activate_global_context_menu(node, screen_x, screen_y);
-    *handled = true;
-    // mui_ui_element *element = (mui_ui_element *)node->data;
+//   switch (node->type) {
+//   case NODE_TYPE_GLOBAL_ROOT: {
+//     mca_activate_global_context_menu(node, screen_x, screen_y);
+//     *handled = true;
+//   } break;
+//   case NODE_TYPE_VISUAL_PROJECT: {
+//     mca_activate_global_context_menu(node, screen_x, screen_y);
+//     *handled = true;
+//   } break;
+//   case NODE_TYPE_UI: {
+//     mca_activate_global_context_menu(node, screen_x, screen_y);
+//     *handled = true;
+//     // mui_ui_element *element = (mui_ui_element *)node->data;
 
-    // switch (element) {
-    // case UI_ELEMENT_BUTTON:
-    //   break;
-    // default:
-    // }
-  } break;
-  default:
-    MCerror(8315, "mui_handle_mouse_right_click::>unsupported node type:%i", node->type);
-  }
-}
+//     // switch (element) {
+//     // case UI_ELEMENT_BUTTON:
+//     //   break;
+//     // default:
+//     // }
+//   } break;
+//   default:
+//     MCerror(8315, "mui_handle_mouse_right_click::>unsupported node type:%i", node->type);
+//   }
+// }
 
-void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element)
-{
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
+// void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element)
+// {
+//   global_root_data *global_data;
+//   obtain_midge_global_root(&global_data);
 
-  // Node
-  mc_node *node;
-  mca_init_mc_node(parent_node, NODE_TYPE_UI, &node);
+//   // Node
+//   mc_node *node;
+//   mca_init_mc_node(parent_node, NODE_TYPE_UI, &node);
+//   mca_init_node_layout(&node->layout);
 
-  // if (parent_node->type == NODE_TYPE_UI) {
-  //   mui_ui_element *parent_element = (mui_ui_element *)parent_node->data;
-  //   switch (parent_element->type) {
-  //   case UI_ELEMENT_PANEL: {
-  //     mui_panel *panel = (mui_panel *)parent_element->data;
+//   // if (parent_node->type == NODE_TYPE_UI) {
+//   //   mui_ui_element *parent_element = (mui_ui_element *)parent_node->data;
+//   //   switch (parent_element->type) {
+//   //   case UI_ELEMENT_PANEL: {
+//   //     mui_panel *panel = (mui_panel *)parent_element->data;
 
-  //     append_to_collection((void ***)&panel->children->items, &panel->children->alloc, &panel->children->count,
-  //     node); node->parent = parent_node;
+//   //     append_to_collection((void ***)&panel->children->items, &panel->children->alloc, &panel->children->count,
+//   //     node); node->parent = parent_node;
 
-  //   } break;
-  //   case UI_ELEMENT_CONTEXT_MENU: {
-  //     mui_context_menu *menu = (mui_context_menu *)parent_element->data;
+//   //   } break;
+//   //   case UI_ELEMENT_CONTEXT_MENU: {
+//   //     mui_context_menu *menu = (mui_context_menu *)parent_element->data;
 
-  //     append_to_collection((void ***)&menu->children->items, &menu->children->alloc, &menu->children->count, node);
-  //     node->parent = parent_node;
-  //   } break;
-  //   default: {
-  //     MCerror(1805, "mui_init_ui_element::Unsupported type : %i", parent_element->type);
-  //   }
-  //   }
-  // }
-  // else {
-  // }
-  // // pthread_mutex_lock(&global_data->uid_counter.mutex);
-  // // node->uid = global_data->uid_counter.uid_index++;
-  // // pthread_mutex_unlock(&global_data->uid_counter.mutex);
+//   //     append_to_collection((void ***)&menu->children->items, &menu->children->alloc, &menu->children->count,
+//   node);
+//   //     node->parent = parent_node;
+//   //   } break;
+//   //   default: {
+//   //     MCerror(1805, "mui_init_ui_element::Unsupported type : %i", parent_element->type);
+//   //   }
+//   //   }
+//   // }
+//   // else {
+//   // }
+//   // // pthread_mutex_lock(&global_data->uid_counter.mutex);
+//   // // node->uid = global_data->uid_counter.uid_index++;
+//   // // pthread_mutex_unlock(&global_data->uid_counter.mutex);
 
-  // UI Element
-  mui_ui_element *element = (mui_ui_element *)malloc(sizeof(mui_ui_element));
-  node->data = element;
+//   // UI Element
+//   mui_ui_element *element = (mui_ui_element *)malloc(sizeof(mui_ui_element));
+//   node->data = element;
 
-  {
-    // Initialize layout
-    element->layout = (mca_node_layout *)malloc(sizeof(mca_node_layout));
+//   {
+//     // Initialize layout
+//     element->layout = (mca_node_layout *)malloc(sizeof(mca_node_layout));
 
-    element->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-    element->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
-    element->layout->preferred_width = 0;
-    element->layout->preferred_height = 0;
-    // element->layout->min_width = 0;
-    // element->layout->min_height = 0;
-    // element->layout->max_width = 0;
-    // element->layout->max_height = 0;
-    element->layout->padding = {0, 0, 0, 0};
-  }
-  element->visual_node = node;
-  element->type = element_type;
-  element->requires_rerender = false;
+//     element->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+//     element->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+//     element->layout->preferred_width = 0;
+//     element->layout->preferred_height = 0;
+//     // element->layout->min_width = 0;
+//     // element->layout->min_height = 0;
+//     // element->layout->max_width = 0;
+//     // element->layout->max_height = 0;
+//     element->layout->padding = {0, 0, 0, 0};
+//   }
+//   element->visual_node = node;
+//   element->type = element_type;
+//   element->requires_rerender = false;
 
-  element->data = NULL;
+//   element->data = NULL;
 
-  mca_set_node_requires_layout_update(node);
+//   mca_set_node_requires_layout_update(node);
 
-  if (created_element)
-    *created_element = element;
-}
+//   if (created_element)
+//     *created_element = element;
+// }
 
-void mui_get_hierarchical_children_node_list(mc_node *hierarchy_node, mc_node_list **children_node_list)
-{
-  mui_ui_element *element = (mui_ui_element *)hierarchy_node->data;
+// void mui_get_hierarchical_children_node_list(mc_node *hierarchy_node, mc_node_list **children_node_list)
+// {
+//   mui_ui_element *element = (mui_ui_element *)hierarchy_node->data;
 
-  *children_node_list = NULL;
-  switch (element->type) {
-  case UI_ELEMENT_PANEL: {
-    mui_panel *item = (mui_panel *)element->data;
-    *children_node_list = item->children;
-  } break;
-  case UI_ELEMENT_CONTEXT_MENU: {
-    mui_context_menu *item = (mui_context_menu *)element->data;
-    *children_node_list = item->children;
-  } break;
-  default:
-    MCerror(8286, "TODO Support %i", element->type);
-  }
-}
+//   *children_node_list = NULL;
+//   switch (element->type) {
+//   case UI_ELEMENT_PANEL: {
+//     mui_panel *item = (mui_panel *)element->data;
+//     *children_node_list = item->children;
+//   } break;
+//   case UI_ELEMENT_CONTEXT_MENU: {
+//     mui_context_menu *item = (mui_context_menu *)element->data;
+//     *children_node_list = item->children;
+//   } break;
+//   default:
+//     MCerror(8286, "TODO Support %i", element->type);
+//   }
+// }
