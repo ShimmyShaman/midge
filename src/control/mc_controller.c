@@ -38,7 +38,7 @@ typedef struct mci_input_event {
   bool handled;
 } mci_input_event;
 
-void mcc_issue_input_event(window_input_event_type event_type, int button_code)
+void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -50,15 +50,15 @@ void mcc_issue_input_event(window_input_event_type event_type, int button_code)
   input_event.handled = false;
 
   mc_node_list *node_hit_list;
-  mui_get_interactive_nodes_at_point(screen_x, screen_y, &node_hit_list);
+  mui_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
+                                     &node_hit_list);
 
-  mc_point click_point = {screen_x, screen_y};
   for (int a = 0; a < node_hit_list->count && !input_event.handled; ++a) {
     mc_node *node = node_hit_list->items[a];
     if (node->layout && node->layout->handle_input_event) {
       // TODO fptr casting
       void (*handle_input_event)(mc_node *, mci_input_event *) =
-          (void (*)(mc_node *, mci_input_event))node->layout->handle_input_event; // TODO add type of mouse event
+          (void (*)(mc_node *, mci_input_event *))node->layout->handle_input_event; // TODO add type of mouse event
       handle_input_event(node, &input_event);
     }
   }

@@ -40,6 +40,7 @@ typedef struct mca_node_layout {
   mc_paddingf padding;
 
   // Input Handlers
+  // void (*handle_input_event)(mc_node *, mci_input_event *)
   void *handle_input_event;
 
   // Functional Delegates

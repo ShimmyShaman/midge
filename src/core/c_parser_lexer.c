@@ -2698,13 +2698,13 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
         default:
           // print_syntax_node(cast_expression, 0);
           print_parse_error(ps->code, ps->index, "mcs_parse_cast_expression", "is_fptr");
-          MCerror(2700, "TODO:\"type [*](*\">%s(%i)", get_mc_token_type_name(token_type), peek_ahead);
+          MCerror(2701, "TODO:\"type [*](*\">%s(%i)", get_mc_token_type_name(token_type), peek_ahead);
           break;
         }
       } break;
       default:
         print_parse_error(ps->code, ps->index, "parse_bracket", "is_fptr");
-        MCerror(2691, "TODO:\"type [*](\">%s(%i)", get_mc_token_type_name(token_type), peek_ahead);
+        MCerror(2707, "TODO:\"type [*](\">%s(%i)", get_mc_token_type_name(token_type), peek_ahead + 1);
         break;
       }
     } break;

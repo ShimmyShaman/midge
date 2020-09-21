@@ -405,7 +405,7 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
       input_buffer->events[input_buffer->event_count++].detail.mouse.y = release->event_y;
       pthread_mutex_unlock(&input_buffer->mutex);
     } break;
-    case XCB_MOTION_NORMAL: {
+    case XCB_MOTION_NOTIFY: {
       xcb_motion_notify_event_t *motion = (xcb_motion_notify_event_t *)event;
       pthread_mutex_lock(&input_buffer->mutex);
       if (input_buffer->event_count >= MAX_QUEUED_KEY_EVENTS)

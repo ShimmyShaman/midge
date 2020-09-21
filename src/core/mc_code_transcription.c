@@ -419,6 +419,9 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     _determine_type_of_expression_subsearch(parent_struct_info->fields, expression->member_access_expression.identifier,
                                             result);
   } break;
+  case MC_SYNTAX_BITWISE_EXPRESSION: {
+    
+  } break;
   case MC_TOKEN_IDENTIFIER: {
     for (int d = ts->scope_index; d >= 0; --d) {
       // printf("scope:%i c-:%i\n", d, ts->scope[d].variable_count);
@@ -541,7 +544,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
   } break;
   default:
     print_syntax_node(expression, 0);
-    MCerror(129, "Unsupported:%s", get_mc_syntax_token_type_name(expression->type));
+    MCerror(7544, "Unsupported:%s", get_mc_syntax_token_type_name(expression->type));
   }
 
   return 0;
@@ -727,6 +730,40 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
     free(text);
 
   } break;
+  case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
+    // Find the type of the expression
+    mct_expression_type_info expr_type_info;
+    determine_type_of_expression(ts, argument->parenthesized_expression.expression, &expr_type_info);
+    // printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
+    //        expr_type_info.deref_count);
+    if (!expr_type_info.type_name) {
+      MCerror(566, "TODO");
+    }
+
+    if (expr_type_info.is_fptr || expr_type_info.is_array) {
+      MCerror(8741, "TODO");
+    }
+
+    // Evaluate it to a local field
+    append_to_c_str(ts->str, expr_type_info.type_name);
+    append_to_c_str(ts->str, " ");
+    for (int d = 0; d < expr_type_info.deref_count; ++d) {
+      MCerror(6748, "TODO -- pointers...");
+      append_to_c_str(ts->str, "*");
+    }
+    append_to_c_strf(ts->str, "%s_%i = ", argument_data_name, arg_index);
+
+    mct_transcribe_expression(ts, argument->parenthesized_expression.expression);
+    append_to_c_str(ts->str, ";\n");
+
+    // Set to parameter reference
+    mct_append_indent_to_c_str(ts);
+    append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
+
+    mct_release_expression_type_info_fields(&expr_type_info);
+    // printf("After:\n%s||\n", ts->str->text);
+
+  } break;
   case MC_SYNTAX_OPERATIONAL_EXPRESSION: {
     // printf("mtmi-4\n");
     {
@@ -755,11 +792,8 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
     }
     append_to_c_strf(ts->str, "%s_%i = ", argument_data_name, arg_index);
 
-    char *expression_text;
-    copy_syntax_node_to_text(argument, &expression_text);
-    append_to_c_str(ts->str, expression_text);
+    mct_transcribe_expression(ts, argument);
     append_to_c_str(ts->str, ";\n");
-    free(expression_text);
 
     // Set to parameter reference
     mct_append_indent_to_c_str(ts);
@@ -1006,7 +1040,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
     } break;
     default:
       print_syntax_node(argument, 0);
-      MCerror(225, "NotYetSupported:%s", get_mc_syntax_token_type_name(argument->type));
+      MCerror(1009, "NotYetSupported:%s", get_mc_syntax_token_type_name(argument->type));
     }
   }
   }
