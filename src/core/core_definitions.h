@@ -265,7 +265,6 @@ typedef struct global_root_data {
   bool input_state_requires_update;
 
   struct mui_ui_state *ui_state;
-  bool requires_layout_update, requires_rerender;
   unsigned int present_image_resource_uid;
 
   // struct {

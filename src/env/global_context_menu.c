@@ -12,8 +12,6 @@ void mca_init_global_context_menu()
   mui_context_menu *context_menu;
   mui_init_context_menu(global_data->global_node, &context_menu);
 
-  mca_modify_z_layer_index(context_menu->node, 10U);
-
   // Set to global
   global_data->ui_state->global_context_menu.node = context_menu->node;
   global_data->ui_state->global_context_menu.context_node = NULL;
@@ -23,6 +21,7 @@ void mca_init_global_context_menu()
 
   context_menu->node->layout->visible = false;
 
+  context_menu->node->layout->z_layer_index = 10;
   context_menu->node->layout->padding = {150, 200, 0, 0};
   context_menu->node->layout->preferred_width = 120.f;
   context_menu->node->layout->preferred_height = 90.f;
@@ -31,6 +30,8 @@ void mca_init_global_context_menu()
 
   context_menu->background_color = COLOR_DARK_SLATE_GRAY;
   context_menu->option_selected = (void *)&mca_handle_global_context_menu_option_selected;
+
+  mca_set_node_requires_layout_update(context_menu->node);
 }
 
 void mca_handle_global_context_menu_option_selected(const char *selected_option)

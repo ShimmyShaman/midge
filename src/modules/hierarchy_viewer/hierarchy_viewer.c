@@ -105,21 +105,20 @@ void __mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_sta
   mc_node *tl_node = hv_state->text_lines.items[*text_line_index];
   *text_line_index += 1;
 
-  mui_ui_element *tl_element = (mui_ui_element *)tl_node->data;
-  mui_button *tl_button = (mui_button *)tl_element->data;
+  mui_button *tl_button = (mui_button *)tl_node->data;
 
-  tl_node->visible = true;
-  mca_set_node_requires_layout_update(tl_node);
+  // Make visible and adjust horizontal indent
+  tl_node->layout->padding.left = depth * 16;
+  tl_node->layout->visible = true;
 
-  tl_element->layout->padding.left = depth * 16;
-
+  // Set path section
   tl_button->tag = (void *)sp_state;
-
   if (sp_state->collapsed)
     set_c_str(tl_button->str, "+ ");
   else
     set_c_str(tl_button->str, "- ");
   append_to_c_str(tl_button->str, sp_state->section_name);
+  mca_set_node_requires_layout_update(tl_node);
 
   if (!sp_state->collapsed) {
     for (int i = 0; i < sp_state->children.count && *text_line_index < hv_state->text_lines.size; ++i) {
@@ -130,6 +129,7 @@ void __mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_sta
 
 void mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_state)
 {
+  // printf("mc_hv_update_hierarchy_view_text_lines\n");
   int tl_index = 0;
 
   for (int i = 0; i < hv_state->path_states.count && tl_index < hv_state->text_lines.size; ++i) {
@@ -138,7 +138,7 @@ void mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_state
 
   hv_state->text_lines.visible_count = tl_index;
   for (int i = tl_index; i < hv_state->text_lines.size; ++i) {
-    hv_state->text_lines.items[i]->visible = false;
+    hv_state->text_lines.items[i]->layout->visible = false;
   }
 
   mca_set_node_requires_layout_update(hv_state->root_node);
@@ -146,11 +146,26 @@ void mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_state
 
 void __mc_hv_text_line_left_click_handler(mui_button *button, mc_point click_location)
 {
+  // printf("__mc_hv_text_line_left_click_handler\n");
   mc_hv_source_path_state *sp_state = (mc_hv_source_path_state *)button->tag;
 
+  // printf("sp_state->collapsed:%i\n", sp_state->collapsed);
   sp_state->collapsed = !sp_state->collapsed;
+  printf("sp_state->collapsed:%i %s\n", sp_state->collapsed, sp_state->section_name);
 
-  mca_set_node_requires_layout_update(button->element->visual_node);
+  mca_set_node_requires_layout_update(button->node);
+}
+
+void _mc_hv_update_hierarchy_viewer_layout(mc_node *node, mc_rectf *available_area)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  // Update the text lines (collapsed/text/etc)
+  mc_hv_update_hierarchy_view_text_lines((mc_hv_hierarchy_view_state *)global_data->ui_state->hierarchy_viewer_state);
+
+  // Continue with the underlying panel update
+  __mui_update_panel_layout(node, available_area);
 }
 
 void init_hierarchy_viewer()
@@ -162,16 +177,17 @@ void init_hierarchy_viewer()
   mui_panel *panel;
   mui_init_panel(global_data->global_node, &panel);
 
-  panel->element->layout->padding = {100, 100, 0, 0};
-  panel->element->layout->preferred_width = 400;
-  panel->element->layout->preferred_height = 720;
+  panel->node->layout->padding = {100, 100, 0, 0};
+  panel->node->layout->preferred_width = 400;
+  panel->node->layout->preferred_height = 720;
+  panel->node->layout->update_layout = (void *)&_mc_hv_update_hierarchy_viewer_layout;
   panel->background_color = COLOR_DEEP_FIR;
 
   // Data
   mc_hv_hierarchy_view_state *hv_state = (mc_hv_hierarchy_view_state *)malloc(sizeof(mc_hv_hierarchy_view_state));
   global_data->ui_state->hierarchy_viewer_state = (void *)hv_state;
 
-  hv_state->root_node = panel->element->visual_node;
+  hv_state->root_node = panel->node;
   hv_state->path_states.count = 0;
   hv_state->path_states.alloc = 0;
   hv_state->path_states.items = NULL;
@@ -185,10 +201,10 @@ void init_hierarchy_viewer()
   for (int i = 0; i < hv_state->text_lines.size; ++i) {
     mui_button *button;
     mui_init_button(hv_state->root_node, &button);
-    hv_state->text_lines.items[i] = button->element->visual_node;
+    hv_state->text_lines.items[i] = button->node;
     button->left_click = &__mc_hv_text_line_left_click_handler;
 
-    mca_node_layout *layout = button->element->layout;
+    mca_node_layout *layout = button->node->layout;
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
     layout->padding = {4, (float)(i * 24), 0, 0};

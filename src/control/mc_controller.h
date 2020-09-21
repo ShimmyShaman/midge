@@ -31,6 +31,15 @@ typedef struct mci_input_state {
 
 } mci_input_state;
 
+typedef struct mci_input_event {
+  window_input_event_type type;
+  int button_code;
+
+  mci_input_state *input_state;
+
+  bool handled;
+} mci_input_event;
+
 extern "C" {
 void mcc_initialize_input_state();
 }

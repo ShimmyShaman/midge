@@ -40,6 +40,7 @@ int begin_render_thread()
   obtain_midge_global_root(&global_data);
 
   global_data->render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
+  printf("global_data->render_thread = %p\n", global_data->render_thread);
   global_data->render_thread->render_thread_initialized = false;
   {
     // Resource Queue
@@ -124,10 +125,10 @@ void initialize_midge_components()
   // Environment
   mca_init_global_context_menu();
   mca_init_global_node_context_menu_options();
-  mca_init_visual_project_management();
+  // mca_init_visual_project_management();
 
   // Modules
-  init_modus_operandi_curator();
+  // init_modus_operandi_curator();
   init_hierarchy_viewer();
 }
 
@@ -135,9 +136,9 @@ void midge_initialize_app(struct timespec *app_begin_time)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
-  global_data->app_begin_time = app_begin_time;
 
-  global_data->requires_layout_update = true;
+  // Set Times
+  global_data->app_begin_time = app_begin_time;
 
   struct timespec source_load_complete_time;
   clock_gettime(CLOCK_REALTIME, &source_load_complete_time);
@@ -154,16 +155,26 @@ void midge_initialize_app(struct timespec *app_begin_time)
   complete_midge_app_compile();
   printf("midge compilation complete\n");
 
+  // Complete Initialization of the global root node
+  mca_init_node_layout(&global_data->global_node->layout);
+  global_data->global_node->layout->__requires_rerender = true;
+
   // Initialize main thread
   initialize_midge_components();
   printf("midge components initialized\n");
 
-  // Wait for render thread initialization and all resources to load before
+  // Wait for render thread initialization and all initial resources to load before
   // continuing with the next set of commands
   bool waited = false;
+  int count = 0;
   while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue.count) {
-    waited = true;
+    waited = !global_data->render_thread->render_thread_initialized;
     usleep(1);
+    ++count;
+    if (count % 100000 == 0) {
+      printf("global_data->render_thread = %p %i %u\n", global_data->render_thread,
+             global_data->render_thread->render_thread_initialized, global_data->render_thread->resource_queue.count);
+    }
   }
 
   // Set properties
@@ -201,7 +212,7 @@ void mca_render_presentation()
 
   for (int a = 0; a < global_data->global_node->children->count; ++a) {
     mc_node *child = global_data->global_node->children->items[a];
-    if (child->layout && child->layout->render_present) {
+    if (child->layout && child->layout->visible && child->layout->render_present) {
       // TODO fptr casting
       void (*render_node_presentation)(image_render_queue *, mc_node *) =
           (void (*)(image_render_queue *, mc_node *))child->layout->render_present;
@@ -216,19 +227,13 @@ void midge_run_app()
 
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
+  mc_node *global_root_node = global_data->global_node;
   // printf("defaultfont-0:%u\n", global_data->default_font_resource);
   // printf("global_data->ui_state:%p\n", global_data->ui_state);
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);
   clock_gettime(CLOCK_REALTIME, &logic_update_frametime);
-
-  mc_input_event *input_event = (mc_input_event *)malloc(sizeof(mc_input_event));
-  input_event->type = INPUT_EVENT_NONE;
-  input_event->altDown = false;
-  input_event->ctrlDown = false;
-  input_event->shiftDown = false;
-  input_event->handled = true;
 
   int DEBUG_secs_of_last_5sec_update = 0;
 
@@ -357,7 +362,7 @@ void midge_run_app()
     {
       // As is global node update despite any requirement
       // mca_update_node_list_logic(global_data->global_node->children);
-      if (global_data->requires_layout_update) {
+      if (global_root_node->layout->__requires_layout_update) {
         for (int a = 0; a < global_data->global_node->children->count; ++a) {
           mc_node *child = global_data->global_node->children->items[a];
           if (child->layout && child->layout->determine_layout_extents) {
@@ -369,18 +374,19 @@ void midge_run_app()
         }
 
         // Update the layout
-        mc_rectf bounds = {0.f, 0.f, (float)global_data->screen.width, (float)global_data->screen.height};
-        for (int a = 0; a < global_data->global_node->children->count; ++a) {
-          mc_node *child = global_data->global_node->children->items[a];
+        global_root_node->layout->__bounds = {0.f, 0.f, (float)global_data->screen.width,
+                                              (float)global_data->screen.height};
+        for (int a = 0; a < global_root_node->children->count; ++a) {
+          mc_node *child = global_root_node->children->items[a];
 
           if (child->layout && child->layout->update_layout) {
             // TODO fptr casting
             void (*update_node_layout)(mc_node *, mc_rectf *) =
                 (void (*)(mc_node *, mc_rectf *))child->layout->update_layout;
-            update_node_layout(child, &bounds);
+            update_node_layout(child, &global_root_node->layout->__bounds);
           }
         }
-        global_data->requires_layout_update = false;
+        global_root_node->layout->__requires_layout_update = false;
         printf("layout updated\n");
       }
 
@@ -392,7 +398,7 @@ void midge_run_app()
       break;
 
     // Render State Changes
-    if (global_data->requires_rerender) {
+    if (global_root_node->layout->__requires_rerender) {
       pthread_mutex_lock(&global_data->render_thread->render_queue.mutex);
 
       // Clear the render queue
@@ -400,10 +406,11 @@ void midge_run_app()
 
       // Rerender headless images
       // printf("headless\n");
-      for (int a = 0; a < global_data->global_node->children->count; ++a) {
-        mc_node *child = global_data->global_node->children->items[a];
-        if (child->layout && child->layout->render_headless) {
+      for (int a = 0; a < global_root_node->children->count; ++a) {
+        mc_node *child = global_root_node->children->items[a];
+        if (child->layout && child->layout->visible && child->layout->render_headless) {
           // TODO fptr casting
+          printf("rh-child-type:%i\n", child->type);
           void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
           render_node_headless(child);
         }
@@ -417,7 +424,7 @@ void midge_run_app()
       pthread_mutex_unlock(&global_data->render_thread->render_queue.mutex);
 
       // Reset States
-      global_data->requires_rerender = false;
+      global_root_node->layout->__requires_rerender = false;
     }
   }
 }
@@ -428,6 +435,8 @@ void midge_cleanup_app()
 
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
+
+  // TODO invoke release resources on children...
 
   // End render thread
   end_mthread(global_data->render_thread->thread_info);

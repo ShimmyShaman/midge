@@ -420,7 +420,8 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
                                             result);
   } break;
   case MC_SYNTAX_BITWISE_EXPRESSION: {
-    
+    // Determine the type of the left-hand-side
+    determine_type_of_expression(ts, expression->bitwise_expression.left, result);
   } break;
   case MC_TOKEN_IDENTIFIER: {
     for (int d = ts->scope_index; d >= 0; --d) {

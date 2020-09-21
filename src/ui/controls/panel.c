@@ -52,7 +52,7 @@ void __mui_update_panel_layout(mc_node *node, mc_rectf *available_area)
   if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
       new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
     node->layout->__bounds = new_bounds;
-    mca_set_node_requires_layout_update(node);
+    mca_set_node_requires_rerender(node);
   }
 
   // Children
@@ -64,16 +64,21 @@ void __mui_update_panel_layout(mc_node *node, mc_rectf *available_area)
       update_layout(child, &node->layout->__bounds);
     }
   }
+
+  node->layout->__requires_layout_update = false;
+
+  // Set rerender anyway because lazy TODO--maybe
+  mca_set_node_requires_rerender(node);
 }
 
-void __mui_render_panel_headless(image_render_queue *render_queue, mc_node *node)
+void __mui_render_panel_headless(mc_node *node)
 {
   mui_panel *panel = (mui_panel *)node->data;
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
     mc_node *child = node->children->items[a];
-    if (child->layout && child->layout->render_headless) {
+    if (child->layout && child->layout->visible && child->layout->render_headless) {
       // TODO fptr casting
       void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
       render_node_headless(child);
@@ -92,7 +97,7 @@ void __mui_render_panel_present(image_render_queue *render_queue, mc_node *node)
   // Children
   for (int a = 0; a < node->children->count; ++a) {
     mc_node *child = node->children->items[a];
-    if (child->layout && child->layout->render_present) {
+    if (child->layout && child->layout->visible && child->layout->render_present) {
       // TODO fptr casting
       void (*render_node_presentation)(image_render_queue *, mc_node *) =
           (void (*)(image_render_queue *, mc_node *))child->layout->render_present;

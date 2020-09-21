@@ -39,6 +39,8 @@ typedef struct mca_node_layout {
   // float max_width, max_height;
   mc_paddingf padding;
 
+  unsigned int z_layer_index;
+
   // Input Handlers
   // void (*handle_input_event)(mc_node *, mci_input_event *)
   void *handle_input_event;

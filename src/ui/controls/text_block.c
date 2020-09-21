@@ -46,8 +46,13 @@ void __mui_update_text_block_layout(mc_node *node, mc_rectf *available_area)
   if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
       new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
     node->layout->__bounds = new_bounds;
-    mca_set_node_requires_layout_update(node);
+    mca_set_node_requires_rerender(node);
   }
+
+  node->layout->__requires_layout_update = false;
+
+  // Set rerender anyway because lazy TODO--maybe
+  mca_set_node_requires_rerender(node);
 }
 
 void __mui_render_text_block_present(image_render_queue *render_queue, mc_node *node)

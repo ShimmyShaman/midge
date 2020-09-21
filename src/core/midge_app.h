@@ -14,12 +14,12 @@ typedef struct update_callback_timer {
   void *state;
 } update_callback_timer;
 
-typedef struct mc_input_event {
-  bool shiftDown, ctrlDown, altDown;
-  window_input_event_type type;
-  window_input_event_detail detail;
-  bool handled;
-} mc_input_event;
+// typedef struct mc_input_event {
+//   bool shiftDown, ctrlDown, altDown;
+//   window_input_event_type type;
+//   window_input_event_detail detail;
+//   bool handled;
+// } mc_input_event;
 
 typedef struct midge_app_info {
   struct timespec *app_begin_time;

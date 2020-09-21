@@ -1,3 +1,4 @@
+#include "control/mc_controller.h"
 #include "env/environment_definitions.h"
 #include "render/render_common.h"
 #include "render/render_thread.h"
@@ -45,8 +46,13 @@ void __mui_update_button_layout(mc_node *node, mc_rectf *available_area)
   if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
       new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
     node->layout->__bounds = new_bounds;
-    mca_set_node_requires_layout_update(node);
+    mca_set_node_requires_rerender(node);
   }
+
+  node->layout->__requires_layout_update = false;
+
+  // Set rerender anyway because text could've changed
+  mca_set_node_requires_rerender(node);
 }
 
 void __mui_render_button_present(image_render_queue *render_queue, mc_node *node)
@@ -67,6 +73,25 @@ void __mui_render_button_present(image_render_queue *render_queue, mc_node *node
                                 button->font_color);
 }
 
+void _mui_button_handle_input_event(mc_node *button_node, mci_input_event *input_event)
+{
+  // printf("_mui_button_handle_input_event\n");
+  mui_button *button = (mui_button *)button_node->data;
+
+  if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+    // printf("_mui_button_handle_input_event-1\n");
+    if (button->left_click && (mc_mouse_button_code)input_event->button_code == MOUSE_BUTTON_LEFT) {
+      // printf("_mui_button_handle_input_event-2\n");
+      // Fire left-click
+      // TODO fptr casting
+      void (*left_click)(mui_button *, mc_point) = (void (*)(mui_button *, mc_point))button->left_click;
+      left_click(button, (mc_point){input_event->input_state->mouse.x, input_event->input_state->mouse.y});
+    }
+  }
+
+  input_event->handled = true;
+}
+
 void mui_init_button(mc_node *parent, mui_button **p_button)
 {
   // Node
@@ -79,6 +104,7 @@ void mui_init_button(mc_node *parent, mui_button **p_button)
   node->layout->update_layout = (void *)&__mui_update_button_layout;
   node->layout->render_headless = NULL;
   node->layout->render_present = (void *)&__mui_render_button_present;
+  node->layout->handle_input_event = (void *)&_mui_button_handle_input_event;
 
   // Control
   mui_button *button = (mui_button *)malloc(sizeof(mui_button));
@@ -98,4 +124,11 @@ void mui_init_button(mc_node *parent, mui_button **p_button)
 
   // Set to out pointer
   *p_button = button;
+}
+
+void mca_init_button_context_menu_options()
+{
+  // // TODO this void * casting business
+  // void *arg = (void *)&mca_visual_project_create_add_button;
+  // mca_global_context_menu_add_option_to_node_context(NODE_TYPE_BUTTON, "change text", arg);
 }

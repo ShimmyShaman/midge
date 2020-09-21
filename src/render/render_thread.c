@@ -871,6 +871,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
 
 VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state *vkrs)
 {
+  printf("mrt-rul-0\n");
   VkResult res;
   mthread_info *thr = render_thread->thread_info;
 
@@ -878,7 +879,9 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   obtain_midge_global_root(&global_data);
 
   // -- Update
+  // printf("mrt-rul-1\n");
   int wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
+  // printf("mrt-rul-2\n");
   global_data->screen.width = vkrs->window_width;
   global_data->screen.height = vkrs->window_height;
   printf("Vulkan Initialized!\n");
@@ -892,7 +895,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   uint frame_updates = 0;
   while (!thr->should_exit && !vkrs->xcb_winfo->input_requests_exit) {
     // TODO DEBUG
-    usleep(10);
+    // printf("mrt-rul-3:loop\n");
+    // usleep(1000000);
 
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue.mutex);
@@ -944,7 +948,7 @@ void *midge_render_thread(void *vargp)
 {
   render_thread_info *render_thread = (render_thread_info *)vargp;
 
-  // printf("~~midge_render_thread called!~~\n");
+  printf("~~midge_render_thread called!~~\n");
 
   mthread_info *thr = render_thread->thread_info;
   // printf("mrt-2: %p\n", thr);
@@ -969,6 +973,7 @@ void *midge_render_thread(void *vargp)
     render_thread->thread_info->has_concluded = 1;
     return NULL;
   }
+  // printf("mrt-3\n");
 
   res = mvk_init_resources(&vkrs);
   if (res) {
@@ -976,6 +981,7 @@ void *midge_render_thread(void *vargp)
     render_thread->thread_info->has_concluded = 1;
     return NULL;
   }
+  // printf("mrt-4\n");
 
   // Update Loop
   res = mrt_run_update_loop(render_thread, &vkrs);
@@ -984,6 +990,7 @@ void *midge_render_thread(void *vargp)
     render_thread->thread_info->has_concluded = 1;
     return NULL;
   }
+  // printf("mrt-5\n");
 
   // Vulkan Cleanup
   res = mvk_destroy_resources(&vkrs);

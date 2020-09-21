@@ -64,7 +64,7 @@ extern "C" {
 void mui_initialize_ui_state(mui_ui_state **p_ui_state);
 void mui_initialize_core_ui_components();
 
-// void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list);
+void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list);
 
 // void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);
 // void mui_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);

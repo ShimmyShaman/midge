@@ -29,15 +29,6 @@ void mcc_initialize_input_state()
 //   MOUSE_EVENT_LEFT_DOWN,
 // } mci_mouse_event_type;
 
-typedef struct mci_input_event {
-  window_input_event_type type;
-  int button_code;
-
-  mci_input_state *input_state;
-
-  bool handled;
-} mci_input_event;
-
 void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
 {
   global_root_data *global_data;
@@ -53,6 +44,7 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
   mui_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
                                      &node_hit_list);
 
+  // printf("mouse_event nhl:%i\n", node_hit_list->count);
   for (int a = 0; a < node_hit_list->count && !input_event.handled; ++a) {
     mc_node *node = node_hit_list->items[a];
     if (node->layout && node->layout->handle_input_event) {
@@ -62,6 +54,7 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
       handle_input_event(node, &input_event);
     }
   }
+  // printf("mouse_event handled:%i\n", input_event.handled);
 }
 
 void _mcc_set_button_state(bool is_down, bool is_event, int *output)
@@ -115,7 +108,7 @@ void mcc_handle_xcb_input()
         break;
       }
 
-      mcc_issue_input_event(xcb_input->type, xcb_input->detail.mouse.button);
+      mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button);
     } break;
     case INPUT_EVENT_MOUSE_RELEASE: {
       input_state->mouse.x = xcb_input->detail.mouse.x;
@@ -134,7 +127,7 @@ void mcc_handle_xcb_input()
         break;
       }
 
-      mcc_issue_input_event(xcb_input->type, xcb_input->detail.mouse.button);
+      mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button);
     } break;
     case INPUT_EVENT_FOCUS_IN:
     case INPUT_EVENT_FOCUS_OUT: {

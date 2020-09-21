@@ -105,42 +105,14 @@ void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_atta
   // __mca_insert_node_into_node_list(parent_node_list, node_to_attach, z_layer_index);
 
   if (!hierarchy_node->children) {
-    MCerror(9108, "Attempt to attach node to parent who has no children");
+    MCerror(9108, "Attempt to attach node (%i) to parent (%i) who has no children", node_to_attach->type,
+            hierarchy_node->type);
   }
 
   append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
                        &hierarchy_node->children->count, node_to_attach);
   node_to_attach->parent = hierarchy_node;
 }
-
-// void mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_index)
-// {
-//   mc_node_list *parent_node_list;
-//   mca_get_sub_hierarchy_node_list(hierarchy_node->parent, &parent_node_list);
-
-//   // Get the current index
-//   int current_index = -1;
-//   for (int n = parent_node_list->count - 1; n >= 0; ++n) {
-//     if (parent_node_list->items[n] == hierarchy_node) {
-//       current_index = n;
-//       break;
-//     }
-//   }
-
-//   if (current_index < 0) {
-//     MCerror(9123, "Could not find node in hierarchical parents list");
-//   }
-
-//   // Remove it
-//   for (int i = current_index + 1; i < parent_node_list->count; ++i) {
-//     parent_node_list->items[i - 1] = parent_node_list->items[i];
-//     parent_node_list->z_layer_indices[i - 1] = parent_node_list->z_layer_indices[i];
-//   }
-//   --parent_node_list->count;
-
-//   // Reinsert it
-//   __mca_insert_node_into_node_list(parent_node_list, hierarchy_node, new_z_layer_index);
-// }
 
 void mca_init_node_layout(mca_node_layout **layout)
 {
@@ -156,6 +128,8 @@ void mca_init_node_layout(mca_node_layout **layout)
   // (*layout)->max_width = 0;
   // (*layout)->max_height = 0;
   (*layout)->padding = {0, 0, 0, 0};
+
+  (*layout)->z_layer_index = 5U;
 
   (*layout)->handle_input_event = NULL;
 
