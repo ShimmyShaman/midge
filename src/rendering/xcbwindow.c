@@ -169,7 +169,7 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
       if (input_buffer->event_count >= MAX_QUEUED_KEY_EVENTS)
         break;
       input_buffer->events[input_buffer->event_count].type = INPUT_EVENT_KEY_PRESS;
-      input_buffer->events[input_buffer->event_count++].detail.keyboard.key = (key_event_code)event->pad0;
+      input_buffer->events[input_buffer->event_count++].detail.keyboard.key = (mc_key_code)event->pad0;
       pthread_mutex_unlock(&input_buffer->mutex);
     } break;
     case XCB_KEY_RELEASE: {
@@ -187,7 +187,7 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
       if (input_buffer->event_count >= MAX_QUEUED_KEY_EVENTS)
         break;
       input_buffer->events[input_buffer->event_count].type = INPUT_EVENT_KEY_RELEASE;
-      input_buffer->events[input_buffer->event_count++].detail.keyboard.key = (key_event_code)event->pad0;
+      input_buffer->events[input_buffer->event_count++].detail.keyboard.key = (mc_key_code)event->pad0;
       pthread_mutex_unlock(&input_buffer->mutex);
     } break;
     case XCB_BUTTON_PRESS: {
@@ -196,7 +196,7 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
       if (input_buffer->event_count >= MAX_QUEUED_KEY_EVENTS)
         break;
       input_buffer->events[input_buffer->event_count].type = INPUT_EVENT_MOUSE_PRESS;
-      input_buffer->events[input_buffer->event_count].detail.mouse.button = (mouse_event_code)press->detail;
+      input_buffer->events[input_buffer->event_count].detail.mouse.button = (mc_mouse_button_code)press->detail;
       input_buffer->events[input_buffer->event_count].detail.mouse.x = press->event_x;
       input_buffer->events[input_buffer->event_count++].detail.mouse.y = press->event_y;
       pthread_mutex_unlock(&input_buffer->mutex);

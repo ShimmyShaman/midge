@@ -256,7 +256,6 @@ typedef struct global_root_data {
   bool exit_requested;
 
   mc_node *global_node;
-  mc_node_list *children;
 
   struct {
     unsigned int width, height;

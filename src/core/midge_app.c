@@ -85,7 +85,7 @@ void complete_midge_app_compile()
       "src/ui/controls/button.c",
       "src/ui/controls/context_menu.c",
       "src/ui/ui_functionality.c",
-      "src/ui/ui_render.c",
+      // "src/ui/ui_render.c",
       "src/control/mc_controller.c",
 
       // Modules
@@ -199,8 +199,8 @@ void mca_render_presentation()
   sequence->image_height = global_data->screen.height;
   sequence->data.target_image.image_uid = global_data->present_image_resource_uid;
 
-  for (int a = 0; a < global_data->children->count; ++a) {
-    mc_node *child = global_data->children->items[a];
+  for (int a = 0; a < global_data->global_node->children->count; ++a) {
+    mc_node *child = global_data->global_node->children->items[a];
     if (child->layout && child->layout->render_present) {
       // TODO fptr casting
       void (*render_node_presentation)(image_render_queue *, mc_node *) =
@@ -356,10 +356,10 @@ void midge_run_app()
     // Update Visible Layout
     {
       // As is global node update despite any requirement
-      // mca_update_node_list_logic(global_data->children);
+      // mca_update_node_list_logic(global_data->global_node->children);
       if (global_data->requires_layout_update) {
-        for (int a = 0; a < global_data->children->count; ++a) {
-          mc_node *child = global_data->children->items[a];
+        for (int a = 0; a < global_data->global_node->children->count; ++a) {
+          mc_node *child = global_data->global_node->children->items[a];
           if (child->layout && child->layout->determine_layout_extents) {
             // TODO fptr casting
             void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
@@ -370,8 +370,8 @@ void midge_run_app()
 
         // Update the layout
         mc_rectf bounds = {0.f, 0.f, (float)global_data->screen.width, (float)global_data->screen.height};
-        for (int a = 0; a < global_data->children->count; ++a) {
-          mc_node *child = global_data->children->items[a];
+        for (int a = 0; a < global_data->global_node->children->count; ++a) {
+          mc_node *child = global_data->global_node->children->items[a];
 
           if (child->layout && child->layout->update_layout) {
             // TODO fptr casting
@@ -400,8 +400,8 @@ void midge_run_app()
 
       // Rerender headless images
       // printf("headless\n");
-      for (int a = 0; a < global_data->children->count; ++a) {
-        mc_node *child = global_data->children->items[a];
+      for (int a = 0; a < global_data->global_node->children->count; ++a) {
+        mc_node *child = global_data->global_node->children->items[a];
         if (child->layout && child->layout->render_headless) {
           // TODO fptr casting
           void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;

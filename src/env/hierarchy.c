@@ -157,6 +157,8 @@ void mca_init_node_layout(mca_node_layout **layout)
   // (*layout)->max_height = 0;
   (*layout)->padding = {0, 0, 0, 0};
 
+  (*layout)->handle_input_event = NULL;
+
   (*layout)->determine_layout_extents = NULL;
   (*layout)->update_layout = NULL;
   (*layout)->render_headless = NULL;
@@ -174,6 +176,7 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
   (*node)->name = NULL;
 
   (*node)->layout = NULL;
+  (*node)->children = NULL;
 
   (*node)->data = NULL;
 

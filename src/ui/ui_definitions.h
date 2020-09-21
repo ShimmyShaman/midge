@@ -17,8 +17,6 @@ typedef enum ui_element_type {
 typedef struct mui_panel {
   mc_node *node;
 
-  mc_node_list *children;
-
   render_color background_color;
 } mui_panel;
 
@@ -49,8 +47,6 @@ typedef struct mui_button {
 
 typedef struct mui_context_menu {
   mc_node *node;
-
-  mc_node_list *children;
 
   struct {
     unsigned int alloc, count;
@@ -93,8 +89,8 @@ void mca_init_button_context_menu_options();
 
 void mui_init_context_menu(mc_node *parent, mui_context_menu **p_button);
 // void mui_render_context_menu(image_render_queue *render_queue, mc_node *ui_node);
-void mui_context_menu_clear_options(mui_ui_element *menu_element);
-void mui_context_menu_add_option(mui_ui_element *menu_element, const char *option_text);
+void mui_context_menu_clear_options(mui_context_menu *menu);
+void mui_context_menu_add_option(mui_context_menu *menu, const char *option_text);
 }
 
 #endif // UI_DEFINITIONS_H

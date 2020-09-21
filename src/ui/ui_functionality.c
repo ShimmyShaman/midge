@@ -36,87 +36,26 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
 
 void mui_initialize_core_ui_components() { mca_init_button_context_menu_options(); }
 
-void mui_update_element_layout(mui_ui_element *element)
-{
-  // global_root_data *global_data;
-  // obtain_midge_global_root(&global_data);
-
-  // global_data->requires_rerender = true;
-}
-
 void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x, int screen_y,
                                                      mc_node_list *layered_hit_list)
 {
-  // Including the node itself **
-  switch (node->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    global_root_data *global_data = (global_root_data *)node->data;
-
-    if (screen_x < 0 || screen_y < 0 || screen_x >= global_data->screen.width || screen_y >= global_data->screen.height)
-      break;
-
-    // Add any children before
-    for (int a = 0; a < global_data->children->count; ++a) {
-      _mui_get_interactive_nodes_within_node_at_point(global_data->children->items[a], screen_x, screen_y,
-                                                      layered_hit_list);
-    }
-
-    append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
-  } break;
-  case NODE_TYPE_UI: {
-    mui_ui_element *element = (mui_ui_element *)node->data;
-
-    if (screen_x < (int)element->layout->__bounds.x || screen_y < (int)element->layout->__bounds.y ||
-        screen_x >= (int)(element->layout->__bounds.x + element->layout->__bounds.width) ||
-        screen_y >= (int)(element->layout->__bounds.y + element->layout->__bounds.height))
-      break;
-
-    // Append children
-    switch (element->type) {
-    case UI_ELEMENT_TEXT_BLOCK:
-    case UI_ELEMENT_BUTTON:
-      break;
-    case UI_ELEMENT_CONTEXT_MENU: {
-      mui_context_menu *context_menu = (mui_context_menu *)element->data;
-      for (int a = 0; a < context_menu->children->count; ++a) {
-        _mui_get_interactive_nodes_within_node_at_point(context_menu->children->items[a], screen_x, screen_y,
-                                                        layered_hit_list);
-      }
-    } break;
-    case UI_ELEMENT_PANEL: {
-      mui_panel *panel = (mui_panel *)element->data;
-      for (int a = 0; a < panel->children->count; ++a) {
-        _mui_get_interactive_nodes_within_node_at_point(panel->children->items[a], screen_x, screen_y,
-                                                        layered_hit_list);
-      }
-    } break;
-    default:
-      MCerror(115, "_mui_get_interactive_nodes_within_node_at_point::>NODE_TYPE_UI>unsupported element type:%i",
-              node->type);
-    }
-
-    append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
-  } break;
-  case NODE_TYPE_VISUAL_PROJECT: {
-    visual_project_data *project = (visual_project_data *)node->data;
-
-    mui_ui_element *container_element = (mui_ui_element *)project->editor_container->data;
-    if (screen_x < container_element->layout->__bounds.x || screen_y < container_element->layout->__bounds.y ||
-        screen_x >= container_element->layout->__bounds.x + project->screen.width ||
-        screen_y >= container_element->layout->__bounds.y + project->screen.height)
-      break;
-
-    // Add any children before
-    for (int a = 0; a < project->children->count; ++a) {
-      _mui_get_interactive_nodes_within_node_at_point(project->children->items[a], screen_x, screen_y,
-                                                      layered_hit_list);
-    }
-
-    append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
-  } break;
-  default:
-    MCerror(1227, "_mui_get_interactive_nodes_within_node_at_point::>unsupported node type:%i", node->type);
+  if (!node->layout) {
+    // A non-visible node
+    return;
   }
+
+  if (screen_x < (int)node->layout->__bounds.x || screen_y < (int)node->layout->__bounds.y ||
+      screen_x >= (int)(node->layout->__bounds.x + node->layout->__bounds.width) ||
+      screen_y >= (int)(node->layout->__bounds.y + node->layout->__bounds.height))
+    return;
+
+  if (node->children) {
+    for (int a = 0; a < node->children->count; ++a) {
+      _mui_get_interactive_nodes_within_node_at_point(node->children->items[a], screen_x, screen_y, layered_hit_list);
+    }
+  }
+
+  append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count, node);
 }
 
 // Returns a list of ui-type nodes at the given point of the screen. Nodes at the nearer Z are earlier in the list.

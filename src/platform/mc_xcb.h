@@ -21,9 +21,10 @@ typedef enum window_input_event_type {
   INPUT_EVENT_KEY_RELEASE,
   INPUT_EVENT_MOUSE_PRESS,
   INPUT_EVENT_MOUSE_RELEASE,
+  INPUT_EVENT_MOUSE_MOVE,
 } window_input_event_type;
 
-typedef enum key_event_code {
+typedef enum mc_key_code {
   KEY_CODE_NONE = 0,
 
   // From XCB codes I THINK... Poor way of doing it
@@ -122,9 +123,9 @@ typedef enum key_event_code {
   KEY_CODE_ARROW_LEFT = 113,
   KEY_CODE_ARROW_RIGHT = 114,
   KEY_CODE_DELETE = 119,
-} key_event_code;
+} mc_key_code;
 
-typedef enum mouse_event_code {
+typedef enum mc_mouse_button_code {
   MOUSE_BUTTON_NONE = 0,
   MOUSE_BUTTON_LEFT = 1,
   MOUSE_BUTTON_MIDDLE = 2,
@@ -133,14 +134,14 @@ typedef enum mouse_event_code {
   MOUSE_BUTTON_SCROLL_DOWN = 5,
   MOUSE_BUTTON_PREVIOUS = 8,
   MOUSE_BUTTON_NEXT = 9,
-} mouse_event_code;
+} mc_mouse_button_code;
 
 typedef union window_input_event_detail {
   struct {
-    key_event_code key;
+    mc_key_code key;
   } keyboard;
   struct {
-    mouse_event_code button;
+    mc_mouse_button_code button;
     uint x, y;
   } mouse;
 } window_input_event_detail;
@@ -170,7 +171,7 @@ typedef struct mxcb_window_info {
 } mxcb_window_info;
 
 extern "C" {
-int get_key_input_code_char(bool shift, key_event_code code, char *c);
+int get_key_input_code_char(bool shift, mc_key_code code, char *c);
 
 int mxcb_init_window(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);
 

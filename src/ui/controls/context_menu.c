@@ -7,8 +7,8 @@ void __mui_determine_context_menu_extents(mc_node *node, layout_extent_restraint
   mui_context_menu *context_menu = (mui_context_menu *)node->data;
 
   // Children
-  for (int a = 0; a < context_menu->children->count; ++a) {
-    mc_node *child = context_menu->children->items[a];
+  for (int a = 0; a < node->children->count; ++a) {
+    mc_node *child = node->children->items[a];
     if (child->layout && child->layout->determine_layout_extents) {
       // TODO fptr casting
       void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
@@ -69,8 +69,8 @@ void __mui_update_context_menu_layout(mc_node *node, mc_rectf *available_area)
   }
 
   // Children
-  for (int a = 0; a < context_menu->children->count; ++a) {
-    mc_node *child = context_menu->children->items[a];
+  for (int a = 0; a < node->children->count; ++a) {
+    mc_node *child = node->children->items[a];
     if (child->layout && child->layout->update_layout) {
       // TODO fptr casting
       void (*update_layout)(mc_node *, mc_rectf *) = (void (*)(mc_node *, mc_rectf *))child->layout->update_layout;
@@ -84,8 +84,8 @@ void __mui_render_context_menu_headless(image_render_queue *render_queue, mc_nod
   mui_context_menu *context_menu = (mui_context_menu *)node->data;
 
   // Children
-  for (int a = 0; a < context_menu->children->count; ++a) {
-    mc_node *child = context_menu->children->items[a];
+  for (int a = 0; a < node->children->count; ++a) {
+    mc_node *child = node->children->items[a];
     if (child->layout && child->layout->render_headless) {
       // TODO fptr casting
       void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
@@ -104,8 +104,8 @@ void __mui_render_context_menu_present(image_render_queue *render_queue, mc_node
                                         (unsigned int)node->layout->__bounds.height, context_menu->background_color);
 
   // Children
-  for (int a = 0; a < context_menu->children->count; ++a) {
-    mc_node *child = context_menu->children->items[a];
+  for (int a = 0; a < node->children->count; ++a) {
+    mc_node *child = node->children->items[a];
     if (child->layout && child->layout->render_present) {
       // TODO fptr casting
       void (*render_node_presentation)(image_render_queue *, mc_node *) =
@@ -136,9 +136,9 @@ void mui_init_context_menu(mc_node *parent, mui_context_menu **p_context_menu)
 
   context_menu->background_color = COLOR_BURLY_WOOD;
 
-  context_menu->children = (mc_node_list *)malloc(sizeof(mc_node_list));
-  context_menu->children->alloc = 0;
-  context_menu->children->count = 0;
+  node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
+  node->children->alloc = 0;
+  node->children->count = 0;
 
   context_menu->_buttons.alloc = 0;
   context_menu->_buttons.count = 0;

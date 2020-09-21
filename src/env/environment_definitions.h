@@ -39,6 +39,9 @@ typedef struct mca_node_layout {
   // float max_width, max_height;
   mc_paddingf padding;
 
+  // Input Handlers
+  void *handle_input_event;
+
   // Functional Delegates
   // void (*determine_node_layout_extents)(mc_node *, layout_extent_restraints)
   void *determine_layout_extents;
