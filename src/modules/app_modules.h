@@ -5,10 +5,21 @@
 #include "env/environment_definitions.h"
 #include "ui/ui_definitions.h"
 
+typedef enum mc_hv_hierarchical_item_type {
+  MC_HV_HIERARCHICAL_NULL = 0,
+  MC_HV_HIERARCHICAL_FOLDER,
+  MC_HV_HIERARCHICAL_C_SOURCE,
+  MC_HV_HIERARCHICAL_C_HEADER,
+  MC_HV_HIERARCHICAL_STRUCT_DEFINITION,
+  MC_HV_HIERARCHICAL_FUNCTION_DEFINITION,
+  MC_HV_HIERARCHICAL_ENUM_DEFINITION,
+} mc_hv_hierarchical_item_type;
+
 // TODO better way of this -- seperate includes and includes brought in etc
 // hierarchy_viewer.c
 typedef struct mc_hv_source_path_state {
-  char *section_name;
+  mc_hv_hierarchical_item_type item_type;
+  char *item_name;
   bool collapsed;
 
   struct {
