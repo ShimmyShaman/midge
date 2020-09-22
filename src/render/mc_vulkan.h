@@ -73,24 +73,13 @@ typedef struct sampled_image {
   VkFramebuffer framebuffer;
 } sampled_image;
 
-typedef struct mvk_buffer_alloc {
-  VkDeviceSize size;
-  VkDeviceSize utilized;
-  VkDeviceSize memory_offset;
-  VkBuffer buffer;
-} mvk_buffer_alloc;
-
-typedef struct mvk_memory_block {
-  VkDeviceSize total_allocation;
-  VkDeviceSize individual_buffer_size;
+typedef struct mvk_dynamic_buffer_block {
+  VkDeviceSize allocated_size;
   VkDeviceMemory memory;
 
-  struct {
-    unsigned int count;
-    unsigned int activated;
-    mvk_buffer_alloc **items;
-  } buffers;
-} mvk_memory_block;
+  VkBuffer buffer;
+  VkDeviceSize utilized;
+} mvk_dynamic_buffer_block;
 
 typedef struct vk_render_state {
 
@@ -167,14 +156,12 @@ typedef struct vk_render_state {
   // } global_vert_uniform_buffer;
 
   struct {
-
     struct {
-      VkDeviceSize min_buffer_allocation;
-      VkDeviceSize next_min_buffer_count_allocation;
+      VkDeviceSize min_memory_allocation;
 
-      unsigned int count;
+      unsigned int size;
       unsigned int activated;
-      mvk_memory_block **memory_block;
+      mvk_dynamic_buffer_block **blocks;
     } dynamic_buffers;
 
     // VkDeviceSize allocated_size;

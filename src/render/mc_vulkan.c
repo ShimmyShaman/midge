@@ -786,17 +786,15 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 
   // p_vkrs->render_data_buffer.frame_utilized_amount = 0;
 
-  p_vkrs->render_data_buffer.dynamic_buffers.count = 0;
+  p_vkrs->render_data_buffer.dynamic_buffers.size = 0;
   p_vkrs->render_data_buffer.dynamic_buffers.activated = 0;
-  p_vkrs->render_data_buffer.dynamic_buffers.total_memory_allocated = 0;
-  p_vkrs->render_data_buffer.dynamic_buffers.min_memory_allocation = 16384;
-  p_vkrs->render_data_buffer.dynamic_buffers.max_memory_allocation = 4194304;
+  p_vkrs->render_data_buffer.dynamic_buffers.min_memory_allocation = 32768;
   p_vkrs->render_data_buffer.queued_copies_alloc = 2048U;
   p_vkrs->render_data_buffer.queued_copies_count = 0U;
   p_vkrs->render_data_buffer.queued_copies =
       (queued_copy_info *)malloc(sizeof(queued_copy_info) * p_vkrs->render_data_buffer.queued_copies_alloc);
 
-  int res = mvk_allocate_dynamic_render_data_memory(p_vkrs, 0);
+  // int res = mvk_allocate_dynamic_render_data_memory(p_vkrs, 0);
   VK_CHECK(res, "Dynamic Render Data Buffer Allocation");
 
   return res;
@@ -804,35 +802,63 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 
 VkResult mvk_allocate_dynamic_render_data_memory(vk_render_state *p_vkrs, int min_buffer_size)
 {
-
   VkDeviceSize next_mem_block_size = p_vkrs->render_data_buffer.dynamic_buffers.min_memory_allocation;
   {
-    // 1 2 3 4 5 6 7 8 9 10
-    int pow_2_multiplier = 1 + (int)p_vkrs->render_data_buffer.dynamic_buffers.count / 2;
-    next_mem_block_size =
-        pow_2_multiplier * pow_2_multiplier * p_vkrs->render_data_buffer.dynamic_buffers.min_memory_allocation;
-
-    if (next_mem_block_size < min_buffer_size) {
-      next_mem_block_size = min_buffer_size;
+    for (int m = 0; m < (int)p_vkrs->render_data_buffer.dynamic_buffers.size / 2; ++m) {
+      next_mem_block_size *= 2;
+    }
+    while (next_mem_block_size < min_buffer_size) {
+      next_mem_block_size *= 2;
     }
   }
 
-  // Create the memory block
-  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->render_data_buffer.buffer, &mem_reqs);
+  // Attach a new block onto the current collection
+  mvk_dynamic_buffer_block *block = (mvk_dynamic_buffer_block *)malloc(sizeof(mvk_dynamic_buffer_block));
+  block->allocated_size = next_mem_block_size;
+  block->utilized = 0;
+
+  // Attach it
+  reallocate_collection((void ***)&p_vkrs->render_data_buffer.dynamic_buffers.blocks,
+                        &p_vkrs->render_data_buffer.dynamic_buffers.size,
+                        p_vkrs->render_data_buffer.dynamic_buffers.size + 1, 0);
+  p_vkrs->render_data_buffer.dynamic_buffers.blocks[p_vkrs->render_data_buffer.dynamic_buffers.size - 1] = block;
+
+  // Create the buffer
+  VkBufferCreateInfo buffer_create_info = {};
+  buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buffer_create_info.pNext = NULL;
+  buffer_create_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+  buffer_create_info.size = block->allocated_size;
+  buffer_create_info.queueFamilyIndexCount = 0;
+  buffer_create_info.pQueueFamilyIndices = NULL;
+  buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  buffer_create_info.flags = 0;
+  VkResult res = vkCreateBuffer(p_vkrs->device, &buffer_create_info, NULL, &block->buffer);
+  VK_CHECK(res, "vkCreateBuffer");
+
+  // Create & allocate the memory block
+  VkMemoryRequirements mem_reqs;
+  vkGetBufferMemoryRequirements(p_vkrs->device, block->buffer, &mem_reqs);
 
   VkMemoryAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   alloc_info.pNext = NULL;
   alloc_info.memoryTypeIndex = 0;
 
-  alloc_info.allocationSize = 262144 + 262144 + 262144; // mem_reqs.size;
+  alloc_info.allocationSize = next_mem_block_size;
   bool pass = mvk_get_properties_memory_type_index(
       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       &alloc_info.memoryTypeIndex);
   VK_ASSERT(pass, "No mappable, coherent memory");
 
-  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->render_data_buffer.memory));
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &block->memory);
   VK_CHECK(res, "vkAllocateMemory");
+
+  // Bind together
+  res = vkBindBufferMemory(p_vkrs->device, block->buffer, block->memory, 0);
+  VK_CHECK(res, "vkBindBufferMemory");
+
+  printf("Created block with memory=%lu\n", next_mem_block_size);
 }
 
 VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
@@ -2033,8 +2059,12 @@ void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
   // vkDestroyBuffer(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, NULL);
   // vkFreeMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, NULL);
 
-  vkDestroyBuffer(p_vkrs->device, p_vkrs->render_data_buffer.buffer, NULL);
-  vkFreeMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, NULL);
+  for (int i = 0; i < p_vkrs->render_data_buffer.dynamic_buffers.size; ++i) {
+    mvk_dynamic_buffer_block *block = p_vkrs->render_data_buffer.dynamic_buffers.blocks[i];
+
+    vkDestroyBuffer(p_vkrs->device, block->buffer, NULL);
+    vkFreeMemory(p_vkrs->device, block->memory, NULL);
+  }
 
   if (p_vkrs->render_data_buffer.queued_copies) {
     free(p_vkrs->render_data_buffer.queued_copies);

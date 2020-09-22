@@ -68,49 +68,95 @@ int set_scissor_cmd(VkCommandBuffer command_buffer, int32_t x, int32_t y, uint32
   return 0;
 }
 
+VkResult mrt_execute_render_buffer_queued_copies(vk_render_state *p_vkrs, mvk_dynamic_buffer_block *buffer_block)
+{
+  if (!buffer_block) {
+    // Set the block to the latest
+    if (p_vkrs->render_data_buffer.dynamic_buffers.activated == 0 ||
+        p_vkrs->render_data_buffer.dynamic_buffers.size == 0) {
+      return VK_SUCCESS;
+    }
+
+    buffer_block =
+        p_vkrs->render_data_buffer.dynamic_buffers.blocks[p_vkrs->render_data_buffer.dynamic_buffers.activated - 1];
+  }
+
+  uint8_t *pData;
+  VkResult res = vkMapMemory(p_vkrs->device, buffer_block->memory, 0, buffer_block->utilized, 0, (void **)&pData);
+  VK_CHECK(res, "vkMapMemory");
+
+  // Buffer Copies
+  for (int k = 0; k < p_vkrs->render_data_buffer.queued_copies_count; ++k) {
+    // printf("BufferCopy: %p (+%lu) bytes:%lu\n", pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+    //        p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+    //        p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
+    memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
+           p_vkrs->render_data_buffer.queued_copies[k].p_source,
+           p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
+  }
+
+  vkUnmapMemory(p_vkrs->device, buffer_block->memory);
+  return res;
+}
+
 VkResult mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long size_in_bytes, void *p_src,
                                               VkDescriptorBufferInfo *descriptor_buffer_info)
 {
-  // Find the buffer to copy to
-  if(!p_vkrs->render_data_buffer.dynamic_buffers.activated) {
-    
-  } 
-  else {
+  VkResult res = VK_SUCCESS;
 
+  mvk_dynamic_buffer_block *buffer_block;
+  {
+    if (p_vkrs->render_data_buffer.dynamic_buffers.activated == 0) {
+      buffer_block = NULL;
+    }
+    else {
+      buffer_block =
+          p_vkrs->render_data_buffer.dynamic_buffers.blocks[p_vkrs->render_data_buffer.dynamic_buffers.activated - 1];
+    }
+
+    if (!buffer_block || buffer_block->utilized + size_in_bytes >= buffer_block->allocated_size) {
+      // Increment
+      if (buffer_block) {
+        mrt_execute_render_buffer_queued_copies(p_vkrs, buffer_block);
+      }
+      ++p_vkrs->render_data_buffer.dynamic_buffers.activated;
+      p_vkrs->render_data_buffer.queued_copies_count = 0;
+
+      if (p_vkrs->render_data_buffer.dynamic_buffers.activated > p_vkrs->render_data_buffer.dynamic_buffers.size) {
+        // Dynamically create another
+        res = mvk_allocate_dynamic_render_data_memory(p_vkrs, size_in_bytes);
+        VK_CHECK(res, "mvk_allocate_dynamic_render_data_memory");
+      }
+
+      buffer_block =
+          p_vkrs->render_data_buffer.dynamic_buffers.blocks[p_vkrs->render_data_buffer.dynamic_buffers.activated - 1];
+      buffer_block->utilized = 0;
+    }
   }
 
-  if (p_vkrs->render_data_buffer.frame_utilized_amount + size_in_bytes >= p_vkrs->render_data_buffer.allocated_size) {
-    printf("Requested more data then remaining in render_data_buffer\n"
-           "p_vkrs->render_data_buffer.frame_utilized_amount:%lu\n"
-           "size_in_bytes:%lu\n"
-           "p_vkrs->render_data_buffer.allocated_size:%lu\n",
-           p_vkrs->render_data_buffer.frame_utilized_amount, size_in_bytes, p_vkrs->render_data_buffer.allocated_size);
-    return VK_ERROR_OUT_OF_HOST_MEMORY;
-  }
   if (p_vkrs->render_data_buffer.queued_copies_count + 1 >= p_vkrs->render_data_buffer.queued_copies_alloc) {
     printf("Requested a queued copy when one isn't allocated for\n");
     return VK_ERROR_OUT_OF_HOST_MEMORY;
   }
 
   // TODO -- refactor this
-  descriptor_buffer_info->buffer = p_vkrs->render_data_buffer.buffer;
-  descriptor_buffer_info->offset = p_vkrs->render_data_buffer.frame_utilized_amount;
+  descriptor_buffer_info->buffer = buffer_block->buffer;
+  descriptor_buffer_info->offset = buffer_block->utilized;
   descriptor_buffer_info->range = size_in_bytes;
 
   // printf("wdqrd- : %lu\n", p_vkrs->render_data_buffer.frame_utilized_amount);
 
   p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].p_source = p_src;
   p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count].dest_offset =
-      p_vkrs->render_data_buffer.frame_utilized_amount;
+      buffer_block->utilized;
   p_vkrs->render_data_buffer.queued_copies[p_vkrs->render_data_buffer.queued_copies_count++].size_in_bytes =
       size_in_bytes;
-  p_vkrs->render_data_buffer.frame_utilized_amount +=
-      ((size_in_bytes / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
-      p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
+  buffer_block->utilized += ((size_in_bytes / p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment) + 1UL) *
+                            p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment;
   // printf("minUniformBufferOffsetAlignment:%lu\n", p_vkrs->gpu_props.limits.minUniformBufferOffsetAlignment);
 
   // printf("wdqrd- : %lu\n", p_vkrs->render_data_buffer.frame_utilized_amount);
-  return VK_SUCCESS;
+  return res;
 }
 
 VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
@@ -390,8 +436,8 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     // Source texture bounds
     stbtt_aligned_quad q;
 
-    // printf("garbagein: %i %i %f %f %i\n", (int)font_image->width, (int)font_image->height, align_x, align_y, letter -
-    // 32);
+    // printf("garbagein: %i %i %f %f %i\n", (int)font_image->width, (int)font_image->height, align_x, align_y, letter
+    // - 32);
 
     stbtt_GetBakedQuad(font->char_data, (int)font_image->width, (int)font_image->height, letter - 32, &align_x,
                        &align_y, &q,
@@ -622,22 +668,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     return VK_ERROR_UNKNOWN;
   }
   if (p_vkrs->render_data_buffer.queued_copies_count) {
-    uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, p_vkrs->render_data_buffer.buffer_offset,
-                      p_vkrs->render_data_buffer.frame_utilized_amount, 0, (void **)&pData);
-    VK_CHECK(res, "vkMapMemory");
-
-    // Buffer Copies
-    for (int k = 0; k < p_vkrs->render_data_buffer.queued_copies_count; ++k) {
-      // printf("BufferCopy: %p (+%lu) bytes:%lu\n", pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-      //        p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-      //        p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
-      memcpy(pData + p_vkrs->render_data_buffer.queued_copies[k].dest_offset,
-             p_vkrs->render_data_buffer.queued_copies[k].p_source,
-             p_vkrs->render_data_buffer.queued_copies[k].size_in_bytes);
-    }
-
-    vkUnmapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory);
+    mrt_execute_render_buffer_queued_copies(p_vkrs, NULL);
   }
 
   return VK_SUCCESS;
