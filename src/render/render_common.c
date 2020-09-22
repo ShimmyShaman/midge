@@ -116,6 +116,9 @@ void mcr_issue_render_command_text(image_render_queue *render_queue, unsigned in
 void mcr_issue_render_command_colored_rect(image_render_queue *render_queue, unsigned int x, unsigned int y,
                                            unsigned int width, unsigned int height, render_color color)
 {
+  if (!color.a)
+    return;
+
   element_render_command *render_cmd;
   obtain_element_render_command(render_queue, &render_cmd);
 

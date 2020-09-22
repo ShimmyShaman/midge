@@ -96,12 +96,18 @@ void mcc_handle_xcb_input()
       input_state->mouse.y = xcb_input->detail.mouse.y;
 
       // Set input event for controls to handle
+      bool issue_mouse_event = true;
       switch (xcb_input->detail.mouse.button) {
       case MOUSE_BUTTON_LEFT: {
         _mcc_set_button_state(true, true, &input_state->mouse.left);
       } break;
       case MOUSE_BUTTON_RIGHT: {
         _mcc_set_button_state(true, true, &input_state->mouse.right);
+        if (input_state->alt_function & BUTTON_STATE_DOWN) {
+          issue_mouse_event = false;
+
+          mca_activate_global_context_menu(input_state->mouse.x, input_state->mouse.y);
+        }
       } break;
       default:
         // TODO

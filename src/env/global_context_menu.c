@@ -140,7 +140,7 @@ void mca_global_context_menu_add_option_to_node_context(
 
 // }
 
-void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int screen_y)
+void mca_activate_global_context_menu(int screen_x, int screen_y)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -148,28 +148,38 @@ void mca_activate_global_context_menu(mc_node *context_node, int screen_x, int s
   mui_context_menu *context_menu = (mui_context_menu *)global_data->ui_state->global_context_menu.node->data;
   mui_context_menu_clear_options(context_menu);
 
-  printf("options_list count:%i\n", global_data->ui_state->global_context_menu.context_options.count);
-  // Obtain list for node type
-  mca_global_context_node_option_list *options_list = NULL;
-  for (int i = 0; i < global_data->ui_state->global_context_menu.context_options.count; ++i) {
-    if (global_data->ui_state->global_context_menu.context_options.items[i]->node_type == context_node->type) {
-      options_list = global_data->ui_state->global_context_menu.context_options.items[i];
-      break;
-    }
-  }
-  printf("options_list %s for %i\n", options_list ? "FOUND" : "MISSING", context_node->type);
+  mc_node_list *node_hit_list;
+  mui_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
+                                     &node_hit_list);
 
-  if (options_list) {
-    for (int i = 0; i < options_list->count; ++i) {
-      mui_context_menu_add_option(context_menu, options_list->items[i]->option_text);
-    }
-  }
-  mui_context_menu_add_option(context_menu, "Cancel");
+  // List the nodes
+  printf("node_hit_list:%i\n", node_hit_list->count);
+  for (int i = 0; i < node_hit_list->count; ++i)
+    printf("--%i %s\n", node_hit_list->items[i]->type,
+           node_hit_list->items[i]->name ? node_hit_list->items[i]->name : "");
+           
+  // printf("options_list count:%i\n", global_data->ui_state->global_context_menu.context_options.count);
+  // // Obtain list for node type
+  // mca_global_context_node_option_list *options_list = NULL;
+  // for (int i = 0; i < global_data->ui_state->global_context_menu.context_options.count; ++i) {
+  //   if (global_data->ui_state->global_context_menu.context_options.items[i]->node_type == context_node->type) {
+  //     options_list = global_data->ui_state->global_context_menu.context_options.items[i];
+  //     break;
+  //   }
+  // }
+  // printf("options_list %s for %i\n", options_list ? "FOUND" : "MISSING", context_node->type);
+
+  // if (options_list) {
+  //   for (int i = 0; i < options_list->count; ++i) {
+  //     mui_context_menu_add_option(context_menu, options_list->items[i]->option_text);
+  //   }
+  // }
+  // mui_context_menu_add_option(context_menu, "Cancel");
 
   // Show
   global_data->ui_state->global_context_menu.node->layout->visible = true;
-  global_data->ui_state->global_context_menu.context_node = context_node;
-  global_data->ui_state->global_context_menu.context_location = {screen_x, screen_y};
+  // global_data->ui_state->global_context_menu.context_node = context_node;
+  // global_data->ui_state->global_context_menu.context_location = {screen_x, screen_y};
 
   // Set New Layout
   context_menu->node->layout->padding = {(float)screen_x, (float)screen_y, 0, 0};

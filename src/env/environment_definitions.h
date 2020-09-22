@@ -156,7 +156,7 @@ void mca_global_context_menu_create_context_list(node_type node_type,
 void mca_global_context_menu_add_option_to_node_context(
     node_type node_type, const char *option_text,
     /*void (*event_handler)(mc_node *, const char *)*/ void *event_handler);
-void mca_activate_global_context_menu(mc_node *node, int screen_x, int screen_y);
+void mca_activate_global_context_menu(int screen_x, int screen_y);
 void mca_hide_global_context_menu();
 
 // global_root.c
