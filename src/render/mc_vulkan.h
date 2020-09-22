@@ -73,6 +73,25 @@ typedef struct sampled_image {
   VkFramebuffer framebuffer;
 } sampled_image;
 
+typedef struct mvk_buffer_alloc {
+  VkDeviceSize size;
+  VkDeviceSize utilized;
+  VkDeviceSize memory_offset;
+  VkBuffer buffer;
+} mvk_buffer_alloc;
+
+typedef struct mvk_memory_block {
+  VkDeviceSize total_allocation;
+  VkDeviceSize individual_buffer_size;
+  VkDeviceMemory memory;
+
+  struct {
+    unsigned int count;
+    unsigned int activated;
+    mvk_buffer_alloc **items;
+  } buffers;
+} mvk_memory_block;
+
 typedef struct vk_render_state {
 
   mxcb_window_info *xcb_winfo;
@@ -141,17 +160,28 @@ typedef struct vk_render_state {
   mat4s Clip;
   mat4s MVP;
 
-  struct {
-    VkBuffer buf;
-    VkDeviceMemory mem;
-    VkDescriptorBufferInfo buffer_info;
-  } global_vert_uniform_buffer;
+  // struct {
+  //   VkBuffer buf;
+  //   VkDeviceMemory mem;
+  //   VkDescriptorBufferInfo buffer_info;
+  // } global_vert_uniform_buffer;
 
   struct {
-    VkDeviceSize allocated_size;
-    VkBuffer buffer;
-    VkDeviceMemory memory;
-    VkDeviceSize frame_utilized_amount;
+
+    struct {
+      VkDeviceSize min_buffer_allocation;
+      VkDeviceSize next_min_buffer_count_allocation;
+
+      unsigned int count;
+      unsigned int activated;
+      mvk_memory_block **memory_block;
+    } dynamic_buffers;
+
+    // VkDeviceSize allocated_size;
+    // VkBuffer buffer;
+    // VkDeviceSize buffer_offset;
+    // VkDeviceMemory memory;
+    // VkDeviceSize frame_utilized_amount;
 
     unsigned int queued_copies_alloc;
     unsigned int queued_copies_count;

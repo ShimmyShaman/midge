@@ -71,6 +71,14 @@ int set_scissor_cmd(VkCommandBuffer command_buffer, int32_t x, int32_t y, uint32
 VkResult mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned long size_in_bytes, void *p_src,
                                               VkDescriptorBufferInfo *descriptor_buffer_info)
 {
+  // Find the buffer to copy to
+  if(!p_vkrs->render_data_buffer.dynamic_buffers.activated) {
+    
+  } 
+  else {
+
+  }
+
   if (p_vkrs->render_data_buffer.frame_utilized_amount + size_in_bytes >= p_vkrs->render_data_buffer.allocated_size) {
     printf("Requested more data then remaining in render_data_buffer\n"
            "p_vkrs->render_data_buffer.frame_utilized_amount:%lu\n"
@@ -563,7 +571,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   mrt_sequence_copy_buffer copy_buffer;
   copy_buffer.index = 0;
 
-  p_vkrs->render_data_buffer.frame_utilized_amount = 0;
+  p_vkrs->render_data_buffer.dynamic_buffers.activated = 0;
   p_vkrs->render_data_buffer.queued_copies_count = 0U;
 
   mat4 vpc;
@@ -615,7 +623,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   }
   if (p_vkrs->render_data_buffer.queued_copies_count) {
     uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, 0,
+    res = vkMapMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, p_vkrs->render_data_buffer.buffer_offset,
                       p_vkrs->render_data_buffer.frame_utilized_amount, 0, (void **)&pData);
     VK_CHECK(res, "vkMapMemory");
 

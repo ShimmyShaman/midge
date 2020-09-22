@@ -719,93 +719,120 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   glm_mat4_mul((vec4 *)&p_vkrs->Projection, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
   glm_mat4_mul((vec4 *)&p_vkrs->Clip, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
 
-  /* VULKAN_KEY_START */
+  // /* VULKAN_KEY_START */
   VkBufferCreateInfo buf_info = {};
-  buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  buf_info.pNext = NULL;
-  buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-  buf_info.size = sizeof(float) * 16;
-  buf_info.queueFamilyIndexCount = 0;
-  buf_info.pQueueFamilyIndices = NULL;
-  buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  buf_info.flags = 0;
-  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->global_vert_uniform_buffer.buf);
-  VK_CHECK(res, "vkCreateBuffer");
+  // buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  // buf_info.pNext = NULL;
+  // buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+  // buf_info.size = sizeof(float) * 16;
+  // buf_info.queueFamilyIndexCount = 0;
+  // buf_info.pQueueFamilyIndices = NULL;
+  // buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  // buf_info.flags = 0;
+  // res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->global_vert_uniform_buffer.buf);
+  // VK_CHECK(res, "vkCreateBuffer");
 
   VkMemoryRequirements mem_reqs;
-  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, &mem_reqs);
+  // vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, &mem_reqs);
+
+  // alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  // alloc_info.pNext = NULL;
+  // alloc_info.memoryTypeIndex = 0;
+
+  // alloc_info.allocationSize = mem_reqs.size;
+  bool pass;
+  // bool pass = mvk_get_properties_memory_type_index(
+  //     p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+  //     &alloc_info.memoryTypeIndex);
+  // VK_ASSERT(pass, "No mappable, coherent memory");
+
+  // res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->global_vert_uniform_buffer.mem));
+  // VK_CHECK(res, "vkAllocateMemory");
+
+  uint8_t *pData;
+  // res = vkMapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, 0, mem_reqs.size, 0, (void **)&pData);
+  // VK_CHECK(res, "vkMapMemory");
+
+  // memcpy(pData, &p_vkrs->MVP, sizeof(float) * 16);
+
+  // vkUnmapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem);
+
+  // res = vkBindBufferMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf,
+  //                          p_vkrs->global_vert_uniform_buffer.mem, 0);
+  // VK_CHECK(res, "vkBindBufferMemory");
+
+  // p_vkrs->global_vert_uniform_buffer.buffer_info.buffer = p_vkrs->global_vert_uniform_buffer.buf;
+  // p_vkrs->global_vert_uniform_buffer.buffer_info.offset = 0;
+  // p_vkrs->global_vert_uniform_buffer.buffer_info.range = sizeof(float) * 16;
+
+  /* SHARED BUFFER */
+  // p_vkrs->render_data_buffer.allocated_size = 262144 + 262144 + 262144; // TODO reduce/refactor etc
+  // buf_info = {};
+  // buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  // buf_info.pNext = NULL;
+  // buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+  // buf_info.size = 262144; // p_vkrs->render_data_buffer.allocated_size;
+  // buf_info.queueFamilyIndexCount = 0;
+  // buf_info.pQueueFamilyIndices = NULL;
+  // buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  // buf_info.flags = 0;
+  // res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->render_data_buffer.buffer);
+  // VK_CHECK(res, "vkCreateBuffer");
+
+  // p_vkrs->render_data_buffer.buffer_offset = 262144;
+  // res = vkBindBufferMemory(p_vkrs->device, p_vkrs->render_data_buffer.buffer, p_vkrs->render_data_buffer.memory,
+  //                          p_vkrs->render_data_buffer.buffer_offset);
+  // VK_CHECK(res, "vkBindBufferMemory");
+
+  // p_vkrs->render_data_buffer.frame_utilized_amount = 0;
+
+  p_vkrs->render_data_buffer.dynamic_buffers.count = 0;
+  p_vkrs->render_data_buffer.dynamic_buffers.activated = 0;
+  p_vkrs->render_data_buffer.dynamic_buffers.total_memory_allocated = 0;
+  p_vkrs->render_data_buffer.dynamic_buffers.min_memory_allocation = 16384;
+  p_vkrs->render_data_buffer.dynamic_buffers.max_memory_allocation = 4194304;
+  p_vkrs->render_data_buffer.queued_copies_alloc = 2048U;
+  p_vkrs->render_data_buffer.queued_copies_count = 0U;
+  p_vkrs->render_data_buffer.queued_copies =
+      (queued_copy_info *)malloc(sizeof(queued_copy_info) * p_vkrs->render_data_buffer.queued_copies_alloc);
+
+  int res = mvk_allocate_dynamic_render_data_memory(p_vkrs, 0);
+  VK_CHECK(res, "Dynamic Render Data Buffer Allocation");
+
+  return res;
+}
+
+VkResult mvk_allocate_dynamic_render_data_memory(vk_render_state *p_vkrs, int min_buffer_size)
+{
+
+  VkDeviceSize next_mem_block_size = p_vkrs->render_data_buffer.dynamic_buffers.min_memory_allocation;
+  {
+    // 1 2 3 4 5 6 7 8 9 10
+    int pow_2_multiplier = 1 + (int)p_vkrs->render_data_buffer.dynamic_buffers.count / 2;
+    next_mem_block_size =
+        pow_2_multiplier * pow_2_multiplier * p_vkrs->render_data_buffer.dynamic_buffers.min_memory_allocation;
+
+    if (next_mem_block_size < min_buffer_size) {
+      next_mem_block_size = min_buffer_size;
+    }
+  }
+
+  // Create the memory block
+  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->render_data_buffer.buffer, &mem_reqs);
 
   VkMemoryAllocateInfo alloc_info = {};
   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   alloc_info.pNext = NULL;
   alloc_info.memoryTypeIndex = 0;
 
-  alloc_info.allocationSize = mem_reqs.size;
+  alloc_info.allocationSize = 262144 + 262144 + 262144; // mem_reqs.size;
   bool pass = mvk_get_properties_memory_type_index(
-      p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      &alloc_info.memoryTypeIndex);
-  VK_ASSERT(pass, "No mappable, coherent memory");
-
-  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->global_vert_uniform_buffer.mem));
-  VK_CHECK(res, "vkAllocateMemory");
-
-  uint8_t *pData;
-  res = vkMapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, 0, mem_reqs.size, 0, (void **)&pData);
-  VK_CHECK(res, "vkMapMemory");
-
-  memcpy(pData, &p_vkrs->MVP, sizeof(float) * 16);
-
-  vkUnmapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem);
-
-  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf,
-                           p_vkrs->global_vert_uniform_buffer.mem, 0);
-  VK_CHECK(res, "vkBindBufferMemory");
-
-  p_vkrs->global_vert_uniform_buffer.buffer_info.buffer = p_vkrs->global_vert_uniform_buffer.buf;
-  p_vkrs->global_vert_uniform_buffer.buffer_info.offset = 0;
-  p_vkrs->global_vert_uniform_buffer.buffer_info.range = sizeof(float) * 16;
-
-  /* SHARED BUFFER */
-  p_vkrs->render_data_buffer.allocated_size = 262144; // TODO reduce/refactor etc
-  buf_info = {};
-  buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  buf_info.pNext = NULL;
-  buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-  buf_info.size = p_vkrs->render_data_buffer.allocated_size;
-  buf_info.queueFamilyIndexCount = 0;
-  buf_info.pQueueFamilyIndices = NULL;
-  buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  buf_info.flags = 0;
-  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->render_data_buffer.buffer);
-  VK_CHECK(res, "vkCreateBuffer");
-
-  vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->render_data_buffer.buffer, &mem_reqs);
-
-  alloc_info = {};
-  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  alloc_info.pNext = NULL;
-  alloc_info.memoryTypeIndex = 0;
-
-  alloc_info.allocationSize = mem_reqs.size;
-  pass = mvk_get_properties_memory_type_index(
       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       &alloc_info.memoryTypeIndex);
   VK_ASSERT(pass, "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->render_data_buffer.memory));
   VK_CHECK(res, "vkAllocateMemory");
-
-  res = vkBindBufferMemory(p_vkrs->device, p_vkrs->render_data_buffer.buffer, p_vkrs->render_data_buffer.memory, 0);
-  VK_CHECK(res, "vkBindBufferMemory");
-
-  p_vkrs->render_data_buffer.frame_utilized_amount = 0;
-
-  p_vkrs->render_data_buffer.queued_copies_alloc = 2048U;
-  p_vkrs->render_data_buffer.queued_copies_count = 0U;
-  p_vkrs->render_data_buffer.queued_copies =
-      (queued_copy_info *)malloc(sizeof(queued_copy_info) * p_vkrs->render_data_buffer.queued_copies_alloc);
-
-  return res;
 }
 
 VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
@@ -2003,8 +2030,8 @@ void mvk_destroy_renderpasses(vk_render_state *p_vkrs)
 
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
 {
-  vkDestroyBuffer(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, NULL);
-  vkFreeMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, NULL);
+  // vkDestroyBuffer(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, NULL);
+  // vkFreeMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, NULL);
 
   vkDestroyBuffer(p_vkrs->device, p_vkrs->render_data_buffer.buffer, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->render_data_buffer.memory, NULL);
