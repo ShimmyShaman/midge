@@ -29,12 +29,13 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
     free(*collection);
   }
 
-  printf("Expanded collection capacity from %i to %i items.", *current_allocation, realloc_amount);
+  // printf("Expanded collection capacity from %i to %i items.", *current_allocation, realloc_amount);
   if (optional_item_allocation_size) {
     for (int i = *current_allocation; i < realloc_amount; ++i) {
       new_collection[i] = (void *)malloc(optional_item_allocation_size);
     }
 
+    printf("Expanded collection capacity from %i to %i items.", *current_allocation, realloc_amount);
     printf(" Also allocated %i items with size=%lu.", realloc_amount - *current_allocation,
            optional_item_allocation_size);
   }

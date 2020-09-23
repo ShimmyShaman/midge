@@ -92,6 +92,8 @@ void complete_midge_app_compile()
       // Modules
       "src/modules/modus_operandi/modus_operandi_curator.c",
       "src/modules/hierarchy_viewer/hierarchy_viewer.c",
+      "src/modules/source_editor/source_editor_pool.c",
+      "src/modules/source_editor/function_editor.c",
       NULL,
   };
 
@@ -125,6 +127,7 @@ void initialize_midge_components()
   // Environment
   mca_init_global_context_menu();
   mca_init_global_node_context_menu_options();
+  mca_init_source_editor_pool();
   // mca_init_visual_project_management();
 
   // Modules
@@ -203,7 +206,7 @@ void mca_render_presentation()
   image_render_queue *sequence;
   obtain_image_render_queue(&global_data->render_thread->render_queue, &sequence);
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
-  sequence->clear_color = COLOR_NEARLY_BLACK;
+  sequence->clear_color = COLOR_MIDNIGHT_EXPRESS;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
   sequence->image_width = global_data->screen.width;

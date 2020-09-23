@@ -254,8 +254,8 @@ void __mc_hv_text_line_left_click_handler(mui_button *button, mc_point click_loc
   case MC_HV_HIERARCHICAL_FUNCTION_DEFINITION: {
     // Activate the code editor with the function
     source_definition *definition = (source_definition *)sp_state->data;
-    
-    mca_edit_code_definition(definition);
+
+    mca_activate_source_editor_for_definition(definition);
   } break;
   case MC_HV_HIERARCHICAL_C_HEADER:
   case MC_HV_HIERARCHICAL_C_SOURCE:
@@ -292,8 +292,8 @@ void init_hierarchy_viewer()
   mui_panel *panel;
   mui_init_panel(global_data->global_node, &panel);
 
-  panel->node->layout->padding = {100, 100, 0, 0};
-  panel->node->layout->preferred_width = 400;
+  panel->node->layout->padding = {20, 20, 0, 0};
+  panel->node->layout->preferred_width = 360;
   panel->node->layout->preferred_height = 720;
   panel->node->layout->update_layout = (void *)&_mc_hv_update_hierarchy_viewer_layout;
   panel->background_color = COLOR_DEEP_FIR;
