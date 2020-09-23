@@ -97,6 +97,7 @@ typedef struct mui_ui_state {
   } global_context_menu;
 
   void *hierarchy_viewer_state;
+  void *code_editor_pool;
 } mui_ui_state;
 
 typedef struct visual_project_data {

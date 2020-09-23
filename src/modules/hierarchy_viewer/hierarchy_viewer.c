@@ -137,6 +137,7 @@ void mc_hv_add_file_to_hierarchy_state(mc_hv_hierarchy_view_state *hv_state, sou
     mc_hv_source_path_state *sps = (mc_hv_source_path_state *)malloc(sizeof(mc_hv_source_path_state));
     sps->collapsed = true;
     source_definition *definition = source_file->definitions.items[i];
+    sps->data = definition;
     switch (definition->type) {
     case SOURCE_DEFINITION_STRUCTURE: {
       sps->item_type = MC_HV_HIERARCHICAL_STRUCT_DEFINITION;
@@ -243,11 +244,31 @@ void __mc_hv_text_line_left_click_handler(mui_button *button, mc_point click_loc
   // printf("__mc_hv_text_line_left_click_handler\n");
   mc_hv_source_path_state *sp_state = (mc_hv_source_path_state *)button->tag;
 
-  // printf("sp_state->collapsed:%i\n", sp_state->collapsed);
-  sp_state->collapsed = !sp_state->collapsed;
-  printf("sp_state->collapsed:%i %s\n", sp_state->collapsed, sp_state->item_name);
+  if (sp_state->item_type == MC_HV_HIERARCHICAL_FUNCTION_DEFINITION) {
+  }
+  switch (sp_state->item_type) {
+  case MC_HV_HIERARCHICAL_ENUM_DEFINITION:
+  case MC_HV_HIERARCHICAL_STRUCT_DEFINITION:
+    // Do nothing
+    break;
+  case MC_HV_HIERARCHICAL_FUNCTION_DEFINITION: {
+    // Activate the code editor with the function
+    source_definition *definition = (source_definition *)sp_state->data;
+    
+    mca_edit_code_definition(definition);
+  } break;
+  case MC_HV_HIERARCHICAL_C_HEADER:
+  case MC_HV_HIERARCHICAL_C_SOURCE:
+  case MC_HV_HIERARCHICAL_FOLDER: {
+    sp_state->collapsed = !sp_state->collapsed;
+    printf("sp_state->collapsed:%i %s\n", sp_state->collapsed, sp_state->item_name);
 
-  mca_set_node_requires_layout_update(button->node);
+    mca_set_node_requires_layout_update(button->node);
+  } break;
+  default:
+    MCerror(257, "Unsupported: %i", sp_state->item_type);
+  }
+  // printf("sp_state->collapsed:%i\n", sp_state->collapsed);
 }
 
 void _mc_hv_update_hierarchy_viewer_layout(mc_node *node, mc_rectf *available_area)
