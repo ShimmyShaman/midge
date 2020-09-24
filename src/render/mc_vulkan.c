@@ -608,6 +608,8 @@ uint32_t mvk_get_physical_memory_type_index(vk_render_state *p_vkrs, uint32_t ty
 
 VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
 {
+  VkResult res;
+
   /* allow custom depth formats */
   VkFormat colorFormat = p_vkrs->format;
 
@@ -629,13 +631,12 @@ VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
   VkCommandBufferAllocateInfo cmd = {};
   cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   cmd.pNext = NULL;
-  cmd.commandPool = p_vkrs->command_pool;dwdwd
+  cmd.commandPool = p_vkrs->command_pool;
   cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  cmd.commandBufferCount = p_vkrs->swap_chain.size;
+  cmd.commandBufferCount = 1;
 
-  p_vkrs->swap_chain.command_buffers = (VkCommandBuffer *)malloc(sizeof(VkCommandBuffer) * p_vkrs->swap_chain.size);
-  VK_ASSERT(p_vkrs->swap_chain.command_buffers, "failed to allocate swap chain command buffers");
-  res = vkAllocateCommandBuffers(p_vkrs->device, &cmd, p_vkrs->swap_chain.command_buffers);
+  res = vkAllocateCommandBuffers(p_vkrs->device, &cmd, &p_vkrs->headless.command_buffer);
+  VK_CHECK(res, "vkAllocateCommandBuffers");
 
   // VkFormatProperties props;
   // vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], p_vkrs->depth.format, &props);
@@ -651,7 +652,7 @@ VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
   //   return (VkResult)MVK_ERROR_UNSUPPORTED_DEPTH_FORMAT;
   // }
 
-  VkResult res = vkCreateImage(p_vkrs->device, &imageCreateInfo, NULL, &p_vkrs->headless.image);
+  res = vkCreateImage(p_vkrs->device, &imageCreateInfo, NULL, &p_vkrs->headless.image);
   VK_CHECK(res, "vkCreateImage");
 
   VkMemoryRequirements memReqs;

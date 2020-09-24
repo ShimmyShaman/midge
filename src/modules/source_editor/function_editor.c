@@ -269,7 +269,7 @@ void __mcm_render_function_editor_present(image_render_queue *render_queue, mc_n
 {
   mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
 
-  mcr_issue_render_command_colored_rect(render_queue, (unsigned int)node->layout->__bounds.x,
+  mcr_issue_render_command_colored_quad(render_queue, (unsigned int)node->layout->__bounds.x,
                                         (unsigned int)node->layout->__bounds.y,
                                         (unsigned int)node->layout->__bounds.width,
                                         (unsigned int)node->layout->__bounds.height, function_editor->background_color);
@@ -398,6 +398,10 @@ int mcm_convert_syntax_to_rtf(c_str *code_rtf, mc_syntax_node *syntax_node)
 
 int _mcm_set_definition_to_function_editor(mcm_function_editor *function_editor, function_info *function)
 {
+  // Set
+  function_editor->function = function;
+
+  // Parse
   int result = parse_definition_to_syntax_tree(function->source->code, &function_editor->code.syntax);
   if (result) {
     // printf("cees-4\n");

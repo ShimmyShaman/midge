@@ -802,6 +802,14 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
       vkDestroyFence(p_vkrs->device, drawFence, NULL);
     } break;
     case NODE_RENDER_TARGET_IMAGE: {
+      // Adjust render command absolute coordinates for relative render target
+      for (int j = 0; j < sequence->command_count; ++j) {
+        element_render_command *cmd = &sequence->commands[j];
+
+        cmd->x -= sequence->data.target_image.screen_offset_coordinates.x;
+        cmd->y -= sequence->data.target_image.screen_offset_coordinates.y;
+      }
+
       // Obtain the target image
       sampled_image *target_image =
           &p_vkrs->textures.samples[sequence->data.target_image.image_uid - RESOURCE_UID_BEGIN];
@@ -929,6 +937,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   VK_CHECK((VkResult)wures, "mxcb_update_window");
   // printf("mrt-2:good\n");
   render_thread->render_thread_initialized = true;
+
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
   uint frame_updates = 0;

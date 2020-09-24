@@ -90,7 +90,7 @@ void __mui_render_panel_present(image_render_queue *render_queue, mc_node *node)
 {
   mui_panel *panel = (mui_panel *)node->data;
 
-  mcr_issue_render_command_colored_rect(
+  mcr_issue_render_command_colored_quad(
       render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, panel->background_color);
 

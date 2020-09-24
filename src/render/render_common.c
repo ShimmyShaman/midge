@@ -120,7 +120,7 @@ void mcr_issue_render_command_text(image_render_queue *render_queue, unsigned in
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @render_queue
-void mcr_issue_render_command_colored_rect(image_render_queue *render_queue, unsigned int x, unsigned int y,
+void mcr_issue_render_command_colored_quad(image_render_queue *render_queue, unsigned int x, unsigned int y,
                                            unsigned int width, unsigned int height, render_color color)
 {
   if (!color.a)
@@ -135,4 +135,19 @@ void mcr_issue_render_command_colored_rect(image_render_queue *render_queue, uns
   render_cmd->data.colored_rect_info.width = width;
   render_cmd->data.colored_rect_info.height = height;
   render_cmd->data.colored_rect_info.color = color;
+}
+
+// Ensure this function is accessed within a thread mutex lock of the @render_queue
+void mcr_issue_render_command_textured_quad(image_render_queue *render_queue, unsigned int x, unsigned int y,
+                                            unsigned int width, unsigned int height, unsigned int texture_resource)
+{
+  element_render_command *render_cmd;
+  obtain_element_render_command(render_queue, &render_cmd);
+
+  render_cmd->type = RENDER_COMMAND_TEXTURED_QUAD;
+  render_cmd->x = x;
+  render_cmd->y = y;
+  render_cmd->data.textured_rect_info.width = width;
+  render_cmd->data.textured_rect_info.height = height;
+  render_cmd->data.textured_rect_info.texture_uid = texture_resource;
 }

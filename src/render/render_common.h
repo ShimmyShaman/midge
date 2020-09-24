@@ -23,9 +23,9 @@ typedef struct render_color {
   /*(render_color)*/ {         \
     0.10f, 0.10f, 0.17f, 1.f   \
   }
-#define COLOR_DEEP_FIR \
-  /*(render_color)*/ {         \
-    0.05f, 0.14f, 0.09f, 1.f   \
+#define COLOR_DEEP_FIR       \
+  /*(render_color)*/ {       \
+    0.05f, 0.14f, 0.09f, 1.f \
   }
 #define COLOR_MACARONI_AND_CHEESE \
   /*(render_color)*/ {            \
@@ -179,6 +179,12 @@ typedef struct image_render_queue {
   union {
     struct {
       unsigned int image_uid;
+
+      // For render target images, given render commands are given in absolute screen coordinates
+      // An offset is needed to apply to align it with the render target
+      struct {
+        unsigned int x, y;
+      } screen_offset_coordinates;
     } target_image;
   } data;
 } image_render_queue;

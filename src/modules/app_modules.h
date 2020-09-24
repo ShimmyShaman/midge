@@ -55,8 +55,9 @@ typedef struct mcm_source_line {
 struct mcm_source_editor_pool;
 typedef struct mcm_function_editor {
   mc_node *node;
-
   mcm_source_editor_pool *source_editor_pool;
+
+  function_info *function;
   render_color background_color;
 
   struct {
@@ -75,9 +76,10 @@ typedef struct mcm_function_editor {
 
 typedef struct mcm_source_editor_pool {
   unsigned int max_instance_count;
-
-  unsigned int size;
-  mcm_function_editor **instances;
+  struct {
+    unsigned int size;
+    mcm_function_editor **instances;
+  } function_editor;
 } mcm_source_editor_pool;
 
 extern "C" {

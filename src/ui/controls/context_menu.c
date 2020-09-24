@@ -103,7 +103,7 @@ void __mui_render_context_menu_present(image_render_queue *render_queue, mc_node
 {
   mui_context_menu *context_menu = (mui_context_menu *)node->data;
 
-  mcr_issue_render_command_colored_rect(render_queue, (unsigned int)node->layout->__bounds.x,
+  mcr_issue_render_command_colored_quad(render_queue, (unsigned int)node->layout->__bounds.x,
                                         (unsigned int)node->layout->__bounds.y,
                                         (unsigned int)node->layout->__bounds.width,
                                         (unsigned int)node->layout->__bounds.height, context_menu->background_color);

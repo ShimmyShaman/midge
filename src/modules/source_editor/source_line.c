@@ -65,17 +65,20 @@ void __mcm_render_source_line_headless(mc_node *node)
   image_render_queue *rq;
   obtain_image_render_queue(&global_data->render_thread->render_queue, &rq);
   rq->render_target = NODE_RENDER_TARGET_IMAGE;
-  rq->clear_color = COLOR_YELLOW;
+  rq->clear_color = COLOR_NEARLY_BLACK;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
   rq->image_width = 768; // TODO
   rq->image_height = 22; // TODO
   rq->data.target_image.image_uid = source_line->image_resource_uid;
+  rq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
+  rq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
-//   render_color font_color = COLOR_NODE_ORANGE;
-//   mcr_issue_render_command_text(rq, (unsigned int)node->layout->__bounds.x,
-//                                 (unsigned int)node->layout->__bounds.y, source_line->rtf->text,
-//                                 source_line->font_resource_uid, font_color);
+  render_color font_color = COLOR_NODE_ORANGE;
+  render_color quad_color = COLOR_POWDER_BLUE;
+
+  mcr_issue_render_command_text(rq, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
+                                source_line->rtf->text, source_line->font_resource_uid, font_color);
 }
 
 void __mcm_render_source_line_present(image_render_queue *render_queue, mc_node *node)
@@ -85,10 +88,10 @@ void __mcm_render_source_line_present(image_render_queue *render_queue, mc_node 
   // Text
   // printf("rendersource_line- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, source_line->rtf->text, source_line->font_resource_uid);
-  render_color font_color = COLOR_NODE_ORANGE;
-  //   mcr_issue_render_command_text(render_queue, (unsigned int)node->layout->__bounds.x,
-  //                                 (unsigned int)node->layout->__bounds.y, source_line->rtf->text,
-  //                                 source_line->font_resource_uid, font_color);
+
+  mcr_issue_render_command_textured_quad(render_queue, (unsigned int)node->layout->__bounds.x,
+                                         (unsigned int)node->layout->__bounds.y, 768, 22,
+                                         source_line->image_resource_uid);
 }
 
 void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
