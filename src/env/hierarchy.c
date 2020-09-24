@@ -123,10 +123,10 @@ void mca_init_node_layout(mca_node_layout **layout)
   (*layout)->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
   (*layout)->preferred_width = 0;
   (*layout)->preferred_height = 0;
-  // (*layout)->min_width = 0;
-  // (*layout)->min_height = 0;
-  // (*layout)->max_width = 0;
-  // (*layout)->max_height = 0;
+  (*layout)->min_width = 0;
+  (*layout)->min_height = 0;
+  (*layout)->max_width = 0;
+  (*layout)->max_height = 0;
   (*layout)->padding = {0, 0, 0, 0};
 
   (*layout)->z_layer_index = 5U;
@@ -320,35 +320,35 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 //   }
 // }
 
-void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints)
-{
-  switch (node->type) {
-  case NODE_TYPE_VISUAL_PROJECT: {
-    visual_project_data *visual_project = (visual_project_data *)node->data;
+// void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints)
+// {
+//   switch (node->type) {
+//   case NODE_TYPE_VISUAL_PROJECT: {
+//     visual_project_data *visual_project = (visual_project_data *)node->data;
 
-    // Determine children extents
-    // printf("vpec\n");
-    mca_update_node_layout_extents(visual_project->editor_container, LAYOUT_RESTRAINT_NONE);
-    // printf("vpch\n");
-    for (int a = 0; a < visual_project->children->count; ++a) {
-      mca_update_node_layout_extents(visual_project->children->items[a], LAYOUT_RESTRAINT_NONE);
-    }
+//     // Determine children extents
+//     // printf("vpec\n");
+//     mca_update_node_layout_extents(visual_project->editor_container, LAYOUT_RESTRAINT_NONE);
+//     // printf("vpch\n");
+//     for (int a = 0; a < visual_project->children->count; ++a) {
+//       mca_update_node_layout_extents(visual_project->children->items[a], LAYOUT_RESTRAINT_NONE);
+//     }
 
-    mc_rectf new_bounds = {(float)visual_project->screen.offset_x, (float)visual_project->screen.offset_y,
-                           (float)visual_project->screen.width, (float)visual_project->screen.height};
+//     mc_rectf new_bounds = {(float)visual_project->screen.offset_x, (float)visual_project->screen.offset_y,
+//                            (float)visual_project->screen.width, (float)visual_project->screen.height};
 
-    // Determine if the new bounds is worth setting
-    if (new_bounds.x != visual_project->layout->__bounds.x || new_bounds.y != visual_project->layout->__bounds.y ||
-        new_bounds.width != visual_project->layout->__bounds.width ||
-        new_bounds.height != visual_project->layout->__bounds.height) {
-      visual_project->layout->__bounds = new_bounds;
-      mca_set_node_requires_rerender(node);
-    }
-  } break;
-  default:
-    MCerror(9272, "mca_update_node_layout_extents::Unsupported node type:%i", node->type);
-  }
-}
+//     // Determine if the new bounds is worth setting
+//     if (new_bounds.x != visual_project->layout->__bounds.x || new_bounds.y != visual_project->layout->__bounds.y ||
+//         new_bounds.width != visual_project->layout->__bounds.width ||
+//         new_bounds.height != visual_project->layout->__bounds.height) {
+//       visual_project->layout->__bounds = new_bounds;
+//       mca_set_node_requires_rerender(node);
+//     }
+//   } break;
+//   default:
+//     MCerror(9272, "mca_update_node_layout_extents::Unsupported node type:%i", node->type);
+//   }
+// }
 
 // void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
 // // layout_extent_restraints restraints)
@@ -385,6 +385,170 @@ void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints rest
 //   }
 
 // }
+
+void mca_determine_typical_node_extents(mca_node_layout *layout, layout_extent_restraints restraints)
+{
+  const float MAX_EXTENT_VALUE = 100000.f;
+
+  // Width
+  if (layout->preferred_width) {
+    // Set to preferred width
+    layout->determined_extents.width = layout->preferred_width;
+  }
+  else {
+    if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
+      if (layout->min_width)
+        layout->determined_extents.width = layout->min_width;
+      else {
+        layout->determined_extents.width = 0;
+      }
+    }
+    else {
+      // padding adjusted from available
+      layout->determined_extents.width = MAX_EXTENT_VALUE;
+
+      // Specified bounds
+      if (layout->min_width && layout->determined_extents.width < layout->min_width) {
+        layout->determined_extents.width = layout->min_width;
+      }
+      if (layout->max_width && layout->determined_extents.width > layout->max_width) {
+        layout->determined_extents.width = layout->max_width;
+      }
+
+      if (layout->determined_extents.width < 0) {
+        layout->determined_extents.width = 0;
+      }
+    }
+  }
+
+  // Height
+  if (layout->preferred_height) {
+    // Set to preferred height
+    layout->determined_extents.height = layout->preferred_height;
+  }
+  else {
+    if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
+      if (layout->min_height)
+        layout->determined_extents.height = layout->min_height;
+      else {
+        layout->determined_extents.height = 0;
+      }
+    }
+    else {
+      // padding adjusted from available
+      layout->determined_extents.height = MAX_EXTENT_VALUE;
+
+      // Specified bounds
+      if (layout->min_height && layout->determined_extents.height < layout->min_height) {
+        layout->determined_extents.height = layout->min_height;
+      }
+      if (layout->max_height && layout->determined_extents.height > layout->max_height) {
+        layout->determined_extents.height = layout->max_height;
+      }
+
+      if (layout->determined_extents.height < 0) {
+        layout->determined_extents.height = 0;
+      }
+    }
+  }
+}
+
+void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
+{
+  // Preferred value > padding (within min/max if set)
+  mc_rectf bounds;
+  mca_node_layout *layout = node->layout;
+
+  // Width
+  if (layout->preferred_width) {
+    // Set to preferred width
+    bounds.width = layout->preferred_width;
+  }
+  else {
+    // padding adjusted from available
+    bounds.width = available_area->width - layout->padding.right - layout->padding.left;
+
+    // Specified bounds
+    if (layout->min_width && bounds.width < layout->min_width) {
+      bounds.width = layout->min_width;
+    }
+    if (layout->max_width && bounds.width > layout->max_width) {
+      bounds.width = layout->max_width;
+    }
+
+    if (bounds.width < 0) {
+      bounds.width = 0;
+    }
+  }
+
+  // Height
+  if (layout->preferred_height) {
+    // Set to preferred height
+    bounds.height = layout->preferred_height;
+  }
+  else {
+    // padding adjusted from available
+    bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
+
+    // Specified bounds
+    if (layout->min_height && bounds.height < layout->min_height) {
+      bounds.height = layout->min_height;
+    }
+    if (layout->max_height && bounds.height > layout->max_height) {
+      bounds.height = layout->max_height;
+    }
+
+    if (bounds.height < 0) {
+      bounds.height = 0;
+    }
+  }
+
+  // X
+  switch (layout->horizontal_alignment) {
+  case HORIZONTAL_ALIGNMENT_LEFT: {
+    printf("left %.3f %.3f\n", available_area->x, layout->padding.left);
+    bounds.x = available_area->x + layout->padding.left;
+  } break;
+  case HORIZONTAL_ALIGNMENT_RIGHT: {
+    printf("right %.3f %.3f %.3f %.3f\n", available_area->x, layout->padding.left, layout->padding.right, bounds.width);
+    bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
+  } break;
+  case HORIZONTAL_ALIGNMENT_CENTRED: {
+    printf("centred %.3f %.3f %.3f %.3f %.3f\n", available_area->x, layout->padding.left, available_area->width,
+           layout->padding.right, bounds.width);
+    bounds.x = available_area->x + layout->padding.left +
+               (available_area->width - (layout->padding.left + bounds.width + layout->padding.right)) / 2.f;
+  } break;
+  default:
+    MCerror(7371, "NotSupported:%i", layout->horizontal_alignment);
+  }
+
+  // Y
+  switch (layout->vertical_alignment) {
+  case VERTICAL_ALIGNMENT_TOP: {
+    bounds.y = available_area->y + layout->padding.top;
+  } break;
+  case VERTICAL_ALIGNMENT_BOTTOM: {
+    bounds.y = available_area->y + available_area->height - layout->padding.bottom - bounds.height;
+  } break;
+  case VERTICAL_ALIGNMENT_CENTRED: {
+    bounds.y = available_area->y + layout->padding.top +
+               (available_area->height - (layout->padding.bottom + bounds.height + layout->padding.top)) / 2.f;
+  } break;
+  default:
+    MCerror(7387, "NotSupported:%i", layout->vertical_alignment);
+  }
+
+  // Set if different
+  if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width ||
+      bounds.height != layout->__bounds.height) {
+    layout->__bounds = bounds;
+    mca_set_node_requires_rerender(node);
+  }
+
+  // Clear
+  node->layout->__requires_layout_update = false;
+}
 
 void mca_set_node_requires_layout_update(mc_node *node)
 {

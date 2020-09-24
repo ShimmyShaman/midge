@@ -1,6 +1,7 @@
 
 #include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
+#include "env/environment_definitions.h"
 #include "modules/app_modules.h"
 #include "render/render_common.h"
 
@@ -178,39 +179,24 @@ int _mcm_update_line_details(mcm_function_editor *fedit, mc_rectf *available_are
 
 void __mcm_determine_function_editor_extents(mc_node *node, layout_extent_restraints restraints)
 {
-  mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
+  // const float MAX_EXTENT_VALUE = 100000.f;
 
-  // Children
-  for (int a = 0; a < node->children->count; ++a) {
-    mc_node *child = node->children->items[a];
-    if (child->layout && child->layout->determine_layout_extents) {
-      // TODO fptr casting
-      void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
-          (void (*)(mc_node *, layout_extent_restraints))child->layout->determine_layout_extents;
-      determine_layout_extents(child, restraints);
-    }
-  }
+  // mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
 
-  // Determine
-  mc_rectf new_bounds = node->layout->__bounds;
+  // Width
   if (node->layout->preferred_width) {
-    new_bounds.width = node->layout->preferred_width;
+    node->layout->determined_extents.width = node->layout->preferred_width;
   }
   else {
     // MCerror(7295, "NotYetSupported");
   }
+
+  // Height
   if (node->layout->preferred_height) {
-    new_bounds.height = node->layout->preferred_height;
+    node->layout->determined_extents.height = node->layout->preferred_height;
   }
   else {
     MCerror(7301, "NotYetSupported");
-  }
-
-  // Determine if the new bounds is worth setting
-  if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-      new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-    node->layout->__bounds = new_bounds;
-    mca_set_node_requires_layout_update(node);
   }
 }
 
@@ -218,18 +204,13 @@ void __mcm_update_function_editor_layout(mc_node *node, mc_rectf *available_area
 {
   mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
 
-  mc_rectf new_bounds = node->layout->__bounds;
-  new_bounds.x = available_area->x + node->layout->padding.left;
-  new_bounds.y = available_area->y + node->layout->padding.top;
-  new_bounds.width = available_area->width - node->layout->padding.left - node->layout->padding.right;
-
-  // Determine if the new bounds is worth setting
-  if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-      new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-    node->layout->__bounds = new_bounds;
-
-    mca_set_node_requires_rerender(node);
-  }
+  mca_update_typical_node_layout(node, available_area);
+  printf("function_editor-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y, available_area->width,
+         available_area->height);
+  printf("function_editor-padding %.3f %.3f %.3f*%.3f\n", node->layout->padding.left, node->layout->padding.top,
+         node->layout->padding.right, node->layout->padding.bottom);
+  printf("function_editor-bounds %.3f %.3f %.3f*%.3f\n", node->layout->__bounds.x, node->layout->__bounds.y,
+         node->layout->__bounds.width, node->layout->__bounds.height);
 
   // Align text lines to fit to the container
   _mcm_update_line_details(function_editor, &node->layout->__bounds);
@@ -310,6 +291,7 @@ void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *sour
   layout->padding.left = 400;
   layout->padding.top = 20;
   layout->padding.right = 20;
+  layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   function_editor->background_color = COLOR_NEARLY_BLACK;
   function_editor->node->children = (mc_node_list *)malloc(sizeof(mc_node_list));

@@ -35,9 +35,13 @@ typedef struct mca_node_layout {
   horizontal_alignment_type horizontal_alignment;
   vertical_alignment_type vertical_alignment;
   float preferred_width, preferred_height;
-  // float min_width, min_height;
-  // float max_width, max_height;
+  float min_width, min_height;
+  float max_width, max_height;
   mc_paddingf padding;
+
+  struct {
+    float width, height;
+  } determined_extents;
 
   unsigned int z_layer_index;
 
@@ -127,8 +131,10 @@ void mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_
 void mca_init_node_layout(mca_node_layout **layout);
 void mca_init_mc_node(mc_node *hierarchy_node, node_type type, mc_node **node);
 
-void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints);
-void mca_update_node_layout(mc_node *node, mc_rectf *available_area);
+// void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints);
+void mca_determine_typical_node_extents(mca_node_layout *layout, layout_extent_restraints restraints);
+void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area);
+// void mca_update_node_layout(mc_node *node, mc_rectf *available_area);
 
 void mca_render_node_list_headless(mc_node_list *node_list);
 void mca_render_node_list_present(image_render_queue *render_queue, mc_node_list *node_list);

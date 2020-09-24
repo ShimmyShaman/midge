@@ -5,6 +5,8 @@
 
 void __mcm_determine_source_line_extents(mc_node *node, layout_extent_restraints restraints)
 {
+  const float MAX_EXTENT_VALUE = 100000.f;
+
   mcm_source_line *source_line = (mcm_source_line *)node->data;
 
   mc_rectf new_bounds = node->layout->__bounds;
@@ -16,21 +18,24 @@ void __mcm_determine_source_line_extents(mc_node *node, layout_extent_restraints
 
   // Width
   if (node->layout->preferred_width)
-    new_bounds.width = node->layout->preferred_width;
-  else
-    new_bounds.width = rtf_width;
+    node->layout->determined_extents.width = node->layout->preferred_width;
+  else {
+    if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
+      node->layout->determined_extents.width = rtf_width;
+    }
+    else
+      node->layout->determined_extents.width = MAX_EXTENT_VALUE;
+  }
 
   // Height
   if (node->layout->preferred_height)
-    new_bounds.height = node->layout->preferred_height;
-  else
-    new_bounds.height = rtf_height;
-
-  // Determine if the new bounds is worth setting
-  if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-      new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-    node->layout->__bounds = new_bounds;
-    mca_set_node_requires_layout_update(node);
+    node->layout->determined_extents.height = node->layout->preferred_height;
+  else {
+    if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
+      node->layout->determined_extents.height = rtf_height;
+    }
+    else
+      node->layout->determined_extents.height = MAX_EXTENT_VALUE;
   }
 }
 
@@ -38,28 +43,27 @@ void __mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
 {
   mcm_source_line *source_line = (mcm_source_line *)node->data;
 
-  mc_rectf new_bounds = node->layout->__bounds;
-  new_bounds.x = available_area->x + node->layout->padding.left;
-  new_bounds.y = available_area->y + node->layout->padding.top;
+  mca_update_typical_node_layout(node, available_area);
+
+  int midge_error_r;
 
   // Determine if the new bounds is worth setting
-  if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-      new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-    node->layout->__bounds = new_bounds;
+  if (node->layout->__requires_rerender) {
 
-    if (node->layout->__bounds.width > 0 && node->layout->__bounds.height > 0) {
-      mca_set_node_requires_rerender(node);
-
+    printf("source-line-bounds %.3f*%.3f\n", node->layout->__bounds.width, node->layout->__bounds.height);
+    unsigned int layout_width = (unsigned int)node->layout->__bounds.width;
+    unsigned int layout_height = (unsigned int)node->layout->__bounds.height;
+    if (layout_width && layout_height) {
       // Ensure render target dimensions are sufficient
       if (source_line->render_target.resource_uid) {
         bool recreate_texture_resource = false;
-        if (!source_line->render_target.width || source_line->render_target.width < new_bounds.width) {
+        if (!source_line->render_target.width || source_line->render_target.width < layout_width) {
           recreate_texture_resource = true;
-          source_line->render_target.width = (unsigned int)new_bounds.width;
+          source_line->render_target.width = layout_width;
         }
-        if (!source_line->render_target.height || source_line->render_target.height < new_bounds.height) {
+        if (!source_line->render_target.height || source_line->render_target.height < layout_height) {
           recreate_texture_resource = true;
-          source_line->render_target.height = (unsigned int)new_bounds.height;
+          source_line->render_target.height = layout_height;
         }
         if (recreate_texture_resource) {
           // Dispose of the current one
@@ -72,8 +76,8 @@ void __mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
         }
       }
       else {
-        source_line->render_target.width = (unsigned int)node->layout->__bounds.width;
-        source_line->render_target.height = (unsigned int)node->layout->__bounds.height;
+        source_line->render_target.width = layout_width;
+        source_line->render_target.height = layout_height;
         printf("creating texture %.3f*%.3f\n", node->layout->__bounds.width, node->layout->__bounds.height);
         printf("creating texture %u*%u\n", source_line->render_target.width, source_line->render_target.height);
         mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height, true,
@@ -81,13 +85,10 @@ void __mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
       }
     }
   }
-
   node->layout->__requires_layout_update = false;
 
   // Set rerender anyway because lazy TODO--maybe
   mca_set_node_requires_rerender(node);
-  /***************************************8*/
-  double brackets does something , try not print them
 }
 
 void __mcm_render_source_line_headless(mc_node *node)
@@ -137,6 +138,9 @@ void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
 
   // Layout
   mca_init_node_layout(&node->layout);
+  node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+  node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+
   node->layout->determine_layout_extents = (void *)&__mcm_determine_source_line_extents;
   node->layout->update_layout = (void *)&__mcm_update_source_line_layout;
   node->layout->render_headless = (void *)&__mcm_render_source_line_headless;
