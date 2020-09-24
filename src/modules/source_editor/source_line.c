@@ -157,8 +157,6 @@ void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
   source_line->render_target.width = 0;
   source_line->render_target.height = 0;
 
-  source_line->render_target.resource_uid = 0;
-
   // Set to out pointer
   *p_source_line = source_line;
 }

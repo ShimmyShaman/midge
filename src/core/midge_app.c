@@ -95,6 +95,7 @@ void complete_midge_app_compile()
       "src/modules/source_editor/source_editor_pool.c",
       "src/modules/source_editor/function_editor.c",
       "src/modules/source_editor/source_line.c",
+      "src/modules/three_d/three_d.c",
       NULL,
   };
 
@@ -134,6 +135,7 @@ void initialize_midge_components()
   // Modules
   // init_modus_operandi_curator();
   init_hierarchy_viewer();
+  init_three_d_portal();
 }
 
 void midge_initialize_app(struct timespec *app_begin_time)

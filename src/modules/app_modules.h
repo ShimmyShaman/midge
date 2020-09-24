@@ -102,6 +102,9 @@ void mcm_init_source_line(mc_node *parent_node, mcm_source_line **source_line);
 // source_editor/function_editor.c
 void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *source_editor_pool,
                               mcm_function_editor **p_function_editor);
+
+// three_d/three_d.c
+void init_three_d_portal();
 }
 
 #endif // APP_MODULES_H

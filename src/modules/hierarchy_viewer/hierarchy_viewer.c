@@ -292,6 +292,7 @@ void init_hierarchy_viewer()
   mui_panel *panel;
   mui_init_panel(global_data->global_node, &panel);
 
+  panel->node->layout->visible = false;
   panel->node->layout->padding = {20, 20, 0, 0};
   panel->node->layout->preferred_width = 360;
   panel->node->layout->preferred_height = 720;

@@ -23,13 +23,13 @@ void __mui_determine_panel_extents(mc_node *node, layout_extent_restraints restr
     new_bounds.width = node->layout->preferred_width;
   }
   else {
-    MCerror(7295, "NotYetSupported");
+    MCerror(7226, "NotYetSupported");
   }
   if (node->layout->preferred_height) {
     new_bounds.height = node->layout->preferred_height;
   }
   else {
-    MCerror(7301, "NotYetSupported");
+    MCerror(7332, "NotYetSupported");
   }
 
   // Determine if the new bounds is worth setting
