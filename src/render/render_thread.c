@@ -284,6 +284,12 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
 {
   VkResult res;
 
+  if (!cmd->data.textured_rect_info.texture_uid) {
+    // Ignore call
+    printf("Ignored mrt_render_textured_quad call because texture resource uid == 0\n");
+    return VK_SUCCESS;
+  }
+
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(vert_data_scale_offset);

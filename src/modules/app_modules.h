@@ -49,7 +49,10 @@ typedef struct mcm_source_line {
   c_str *rtf;
 
   unsigned int font_resource_uid;
-  unsigned int image_resource_uid;
+  struct {
+    unsigned int width, height;
+    unsigned int resource_uid;
+  } render_target;
 } mcm_source_line;
 
 struct mcm_source_editor_pool;

@@ -46,13 +46,48 @@ void __mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
   if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
       new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
     node->layout->__bounds = new_bounds;
-    mca_set_node_requires_rerender(node);
+
+    if (node->layout->__bounds.width > 0 && node->layout->__bounds.height > 0) {
+      mca_set_node_requires_rerender(node);
+
+      // Ensure render target dimensions are sufficient
+      if (source_line->render_target.resource_uid) {
+        bool recreate_texture_resource = false;
+        if (!source_line->render_target.width || source_line->render_target.width < new_bounds.width) {
+          recreate_texture_resource = true;
+          source_line->render_target.width = (unsigned int)new_bounds.width;
+        }
+        if (!source_line->render_target.height || source_line->render_target.height < new_bounds.height) {
+          recreate_texture_resource = true;
+          source_line->render_target.height = (unsigned int)new_bounds.height;
+        }
+        if (recreate_texture_resource) {
+          // Dispose of the current one
+          MCerror(8264, "TODO -- texture resource disposal");
+
+          // Create another
+          source_line->render_target.resource_uid = 0;
+          mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height, true,
+                                      &source_line->render_target.resource_uid);
+        }
+      }
+      else {
+        source_line->render_target.width = (unsigned int)node->layout->__bounds.width;
+        source_line->render_target.height = (unsigned int)node->layout->__bounds.height;
+        printf("creating texture %.3f*%.3f\n", node->layout->__bounds.width, node->layout->__bounds.height);
+        printf("creating texture %u*%u\n", source_line->render_target.width, source_line->render_target.height);
+        mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height, true,
+                                    &source_line->render_target.resource_uid);
+      }
+    }
   }
 
   node->layout->__requires_layout_update = false;
 
   // Set rerender anyway because lazy TODO--maybe
   mca_set_node_requires_rerender(node);
+  /***************************************8*/
+  double brackets does something , try not print them
 }
 
 void __mcm_render_source_line_headless(mc_node *node)
@@ -68,13 +103,13 @@ void __mcm_render_source_line_headless(mc_node *node)
   rq->clear_color = COLOR_NEARLY_BLACK;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
-  rq->image_width = 768; // TODO
-  rq->image_height = 22; // TODO
-  rq->data.target_image.image_uid = source_line->image_resource_uid;
+  rq->image_width = source_line->render_target.width;   // TODO
+  rq->image_height = source_line->render_target.height; // TODO
+  rq->data.target_image.image_uid = source_line->render_target.resource_uid;
   rq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   rq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
-  render_color font_color = COLOR_NODE_ORANGE;
+  render_color font_color = COLOR_GHOST_WHITE;
   render_color quad_color = COLOR_POWDER_BLUE;
 
   mcr_issue_render_command_text(rq, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
@@ -90,8 +125,8 @@ void __mcm_render_source_line_present(image_render_queue *render_queue, mc_node 
   //        (unsigned int)node->layout->__bounds.y, source_line->rtf->text, source_line->font_resource_uid);
 
   mcr_issue_render_command_textured_quad(render_queue, (unsigned int)node->layout->__bounds.x,
-                                         (unsigned int)node->layout->__bounds.y, 768, 22,
-                                         source_line->image_resource_uid);
+                                         (unsigned int)node->layout->__bounds.y, source_line->render_target.width,
+                                         source_line->render_target.height, source_line->render_target.resource_uid);
 }
 
 void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
@@ -114,9 +149,11 @@ void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
 
   init_c_str(&source_line->rtf);
   source_line->font_resource_uid = 0;
-  source_line->image_resource_uid = 0;
+  source_line->render_target.resource_uid = 0;
+  source_line->render_target.width = 0;
+  source_line->render_target.height = 0;
 
-  mcr_create_texture_resource(768, 22, true, &source_line->image_resource_uid);
+  source_line->render_target.resource_uid = 0;
 
   // Set to out pointer
   *p_source_line = source_line;
