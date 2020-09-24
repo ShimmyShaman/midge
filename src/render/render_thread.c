@@ -1058,7 +1058,7 @@ int obtain_resource_command(resource_queue *queue, resource_command **p_command)
   if (queue->allocated < queue->count + 1) {
     // printf("orc-1\n");
     int new_allocated = (queue->count + 1) + 4 + (queue->count + 1) / 4;
-    // printf("orc-2\n");
+    // printf("orc-2 \n");
     resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
     // printf("orc-3\n");
 

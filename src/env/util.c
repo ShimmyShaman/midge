@@ -38,8 +38,9 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
     printf("Expanded collection capacity from %i to %i items.", *current_allocation, realloc_amount);
     printf(" Also allocated %i items with size=%lu.", realloc_amount - *current_allocation,
            optional_item_allocation_size);
+    printf("\n");
   }
-  printf("\n");
+  // printf("\n");
 
   *collection = new_collection;
   *current_allocation = realloc_amount;

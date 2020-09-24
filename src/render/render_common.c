@@ -5,16 +5,23 @@
 #include "stb_truetype.h"
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
-void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
-                                 bool use_as_render_target, unsigned int *p_resource_uid)
+void mcr_create_texture_resource(unsigned int width, unsigned int height, bool use_as_render_target,
+                                 unsigned int *p_resource_uid)
 {
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  pthread_mutex_lock(&global_data->render_thread->resource_queue.mutex);
+
   resource_command *command;
-  obtain_resource_command(resource_queue, &command);
+  obtain_resource_command(&global_data->render_thread->resource_queue, &command);
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = p_resource_uid;
   command->data.create_texture.width = width;
   command->data.create_texture.height = height;
   command->data.create_texture.use_as_render_target = use_as_render_target;
+
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue.mutex);
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
@@ -71,7 +78,7 @@ void mcr_determine_text_display_dimensions(unsigned int font_resource, const cha
 
     char letter = text[c];
     if (letter < 32 || letter > 127) {
-      MCerror(7857, "TODO character %i not supported.\n", letter);
+      MCerror(7874, "TODO character '%i' not supported.\n", letter);
     }
 
     // Source texture bounds

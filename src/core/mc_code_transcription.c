@@ -235,18 +235,25 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
       } break;
       case FIELD_KIND_NESTED_STRUCT:
       case FIELD_KIND_NESTED_UNION: {
-        // Should not be these
+        if (ptfield->sub_type.is_anonymous) {
+          // Search within the sub-types fields as if they were the parent types
+          _determine_type_of_expression_subsearch(ptfield->sub_type.fields, expression, result);
+          if (result->type_name) {
+            return 0;
+          }
+        }
         // TODO
         // print_syntax_node(expression, 0);
-        // MCerror(168, "TODO");
+        // MCerror(7168, "TODO");
       } break;
       default:
-        MCerror(332, "TODO:%i", ptfield->field_type);
+        MCerror(7332, "TODO:%i", ptfield->field_type);
       }
     }
 
     // Could not Find it!
-    MCerror(337, "Could not find identifier in parent container. should be there or identifier is wrong");
+    MCerror(7337, "Could not find identifier '%s' in parent container. should be there or identifier is wrong",
+            expression->text);
   } break;
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
     mc_syntax_node *ma_primary = expression->member_access_expression.primary;
@@ -416,6 +423,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
 
     mct_release_expression_type_info_fields(&parent_type_info);
 
+    // printf("parent_struct_info:%s\n", parent_struct_info->name);
     _determine_type_of_expression_subsearch(parent_struct_info->fields, expression->member_access_expression.identifier,
                                             result);
   } break;
@@ -788,7 +796,8 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
     append_to_c_str(ts->str, expr_type_info.type_name);
     append_to_c_str(ts->str, " ");
     for (int d = 0; d < expr_type_info.deref_count; ++d) {
-      MCerror(780, "TODO -- pointers...");
+      // print_syntax_node(argument, 0);
+      // MCerror(780, "TODO -- pointers...");
       append_to_c_str(ts->str, "*");
     }
     append_to_c_strf(ts->str, "%s_%i = ", argument_data_name, arg_index);

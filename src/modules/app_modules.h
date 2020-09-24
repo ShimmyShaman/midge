@@ -43,10 +43,34 @@ typedef struct mc_hv_hierarchy_view_state {
   } path_states;
 } mc_hv_hierarchy_view_state;
 
+typedef struct mcm_source_line {
+  mc_node *node;
+
+  c_str *rtf;
+
+  unsigned int font_resource_uid;
+  unsigned int image_resource_uid;
+} mcm_source_line;
+
+struct mcm_source_editor_pool;
 typedef struct mcm_function_editor {
   mc_node *node;
 
+  mcm_source_editor_pool *source_editor_pool;
   render_color background_color;
+
+  struct {
+    c_str *rtf;
+    mc_syntax_node *syntax;
+  } code;
+
+  struct {
+    unsigned int count, alloc;
+    mcm_source_line **items;
+  } lines;
+
+  int line_display_offset;
+
 } mcm_function_editor;
 
 typedef struct mcm_source_editor_pool {
@@ -67,8 +91,12 @@ void init_hierarchy_viewer();
 void mca_init_source_editor_pool();
 void mca_activate_source_editor_for_definition(source_definition *definition);
 
+// source_editor/source_line.c
+void mcm_init_source_line(mc_node *parent_node, mcm_source_line **source_line);
+
 // source_editor/function_editor.c
-void mcm_init_function_editor(mc_node *parent_node, function_editor **p_function_editor);
+void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *source_editor_pool,
+                              mcm_function_editor **p_function_editor);
 }
 
 #endif // APP_MODULES_H

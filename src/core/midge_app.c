@@ -94,6 +94,7 @@ void complete_midge_app_compile()
       "src/modules/hierarchy_viewer/hierarchy_viewer.c",
       "src/modules/source_editor/source_editor_pool.c",
       "src/modules/source_editor/function_editor.c",
+      "src/modules/source_editor/source_line.c",
       NULL,
   };
 
@@ -413,7 +414,7 @@ void midge_run_app()
         mc_node *child = global_root_node->children->items[a];
         if (child->layout && child->layout->visible && child->layout->render_headless) {
           // TODO fptr casting
-          printf("rh-child-type:%i\n", child->type);
+          // printf("rh-child-type:%i\n", child->type);
           void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
           render_node_headless(child);
         }

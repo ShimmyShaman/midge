@@ -625,6 +625,18 @@ VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
   imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
   imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
+  // -- Command Buffers
+  VkCommandBufferAllocateInfo cmd = {};
+  cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  cmd.pNext = NULL;
+  cmd.commandPool = p_vkrs->command_pool;dwdwd
+  cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  cmd.commandBufferCount = p_vkrs->swap_chain.size;
+
+  p_vkrs->swap_chain.command_buffers = (VkCommandBuffer *)malloc(sizeof(VkCommandBuffer) * p_vkrs->swap_chain.size);
+  VK_ASSERT(p_vkrs->swap_chain.command_buffers, "failed to allocate swap chain command buffers");
+  res = vkAllocateCommandBuffers(p_vkrs->device, &cmd, p_vkrs->swap_chain.command_buffers);
+
   // VkFormatProperties props;
   // vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], p_vkrs->depth.format, &props);
   // if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
@@ -858,7 +870,7 @@ VkResult mvk_allocate_dynamic_render_data_memory(vk_render_state *p_vkrs, int mi
   res = vkBindBufferMemory(p_vkrs->device, block->buffer, block->memory, 0);
   VK_CHECK(res, "vkBindBufferMemory");
 
-  printf("Created block with memory=%lu\n", next_mem_block_size);
+  // printf("Created block with memory=%lu\n", next_mem_block_size);
 }
 
 VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
@@ -1964,7 +1976,7 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs)
   type_count[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   type_count[0].descriptorCount = 4096;
   type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  type_count[1].descriptorCount = 1024;
+  type_count[1].descriptorCount = 2048;
 
   VkDescriptorPoolCreateInfo descriptor_pool = {};
   descriptor_pool.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
