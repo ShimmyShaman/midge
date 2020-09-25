@@ -458,6 +458,7 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
   // Preferred value > padding (within min/max if set)
   mc_rectf bounds;
   mca_node_layout *layout = node->layout;
+  layout->__requires_layout_update = false;
 
   // Width
   if (layout->preferred_width) {
@@ -506,16 +507,17 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
   // X
   switch (layout->horizontal_alignment) {
   case HORIZONTAL_ALIGNMENT_LEFT: {
-    printf("left %.3f %.3f\n", available_area->x, layout->padding.left);
+    // printf("left %.3f %.3f\n", available_area->x, layout->padding.left);
     bounds.x = available_area->x + layout->padding.left;
   } break;
   case HORIZONTAL_ALIGNMENT_RIGHT: {
-    printf("right %.3f %.3f %.3f %.3f\n", available_area->x, layout->padding.left, layout->padding.right, bounds.width);
+    // printf("right %.3f %.3f %.3f %.3f\n", available_area->x, layout->padding.left, layout->padding.right,
+    // bounds.width);
     bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
   } break;
   case HORIZONTAL_ALIGNMENT_CENTRED: {
-    printf("centred %.3f %.3f %.3f %.3f %.3f\n", available_area->x, layout->padding.left, available_area->width,
-           layout->padding.right, bounds.width);
+    // printf("centred %.3f %.3f %.3f %.3f %.3f\n", available_area->x, layout->padding.left, available_area->width,
+    //  layout->padding.right, bounds.width);
     bounds.x = available_area->x + layout->padding.left +
                (available_area->width - (layout->padding.left + bounds.width + layout->padding.right)) / 2.f;
   } break;
@@ -543,6 +545,7 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
   if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width ||
       bounds.height != layout->__bounds.height) {
     layout->__bounds = bounds;
+    printf("setrerender\n");
     mca_set_node_requires_rerender(node);
   }
 

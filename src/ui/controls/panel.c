@@ -31,29 +31,16 @@ void __mui_determine_panel_extents(mc_node *node, layout_extent_restraints restr
   else {
     MCerror(7332, "NotYetSupported");
   }
-
-  // Determine if the new bounds is worth setting
-  if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-      new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-    node->layout->__bounds = new_bounds;
-    mca_set_node_requires_layout_update(node);
-  }
 }
 
 void __mui_update_panel_layout(mc_node *node, mc_rectf *available_area)
 {
   mui_panel *panel = (mui_panel *)node->data;
 
-  mc_rectf new_bounds = node->layout->__bounds;
-  new_bounds.x = available_area->x + node->layout->padding.left;
-  new_bounds.y = available_area->y + node->layout->padding.top;
-
-  // Determine if the new bounds is worth setting
-  if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-      new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-    node->layout->__bounds = new_bounds;
-    mca_set_node_requires_rerender(node);
-  }
+  mca_update_typical_node_layout(node, available_area);
+  // mc_rectf new_bounds = node->layout->__bounds;
+  // new_bounds.x = available_area->x + node->layout->padding.left;
+  // new_bounds.y = available_area->y + node->layout->padding.top;
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -65,10 +52,9 @@ void __mui_update_panel_layout(mc_node *node, mc_rectf *available_area)
     }
   }
 
-  node->layout->__requires_layout_update = false;
 
   // Set rerender anyway because lazy TODO--maybe
-  mca_set_node_requires_rerender(node);
+  // mca_set_node_requires_rerender(node);
 }
 
 void __mui_render_panel_headless(mc_node *node)

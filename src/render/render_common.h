@@ -134,6 +134,7 @@ typedef enum element_render_command_type {
   RENDER_COMMAND_COLORED_QUAD,
   RENDER_COMMAND_TEXTURED_QUAD,
   RENDER_COMMAND_PRINT_TEXT,
+  RENDER_COMMAND_CUBE,
 } element_render_command_type;
 
 typedef enum resource_command_type {

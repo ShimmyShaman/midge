@@ -134,7 +134,7 @@ void initialize_midge_components()
 
   // Modules
   // init_modus_operandi_curator();
-  init_hierarchy_viewer();
+  // init_hierarchy_viewer();
   init_three_d_portal();
 }
 
@@ -255,7 +255,7 @@ void midge_run_app()
     bool logic_update_due = false;
     {
       // TODO DEBUG
-      usleep(10);
+      // usleep(10);
 
       long ms;  // Milliseconds
       time_t s; // Seconds
@@ -369,6 +369,8 @@ void midge_run_app()
       // As is global node update despite any requirement
       // mca_update_node_list_logic(global_data->global_node->children);
       if (global_root_node->layout->__requires_layout_update) {
+        global_root_node->layout->__requires_layout_update = false;
+        
         for (int a = 0; a < global_data->global_node->children->count; ++a) {
           mc_node *child = global_data->global_node->children->items[a];
           if (child->layout && child->layout->determine_layout_extents) {
@@ -392,7 +394,6 @@ void midge_run_app()
             update_node_layout(child, &global_root_node->layout->__bounds);
           }
         }
-        global_root_node->layout->__requires_layout_update = false;
         printf("layout updated\n");
       }
 
@@ -405,6 +406,9 @@ void midge_run_app()
 
     // Render State Changes
     if (global_root_node->layout->__requires_rerender) {
+      // Reset States
+      global_root_node->layout->__requires_rerender = false;
+
       pthread_mutex_lock(&global_data->render_thread->render_queue.mutex);
 
       // Clear the render queue
@@ -428,9 +432,6 @@ void midge_run_app()
 
       // Release lock and allow rendering
       pthread_mutex_unlock(&global_data->render_thread->render_queue.mutex);
-
-      // Reset States
-      global_root_node->layout->__requires_rerender = false;
     }
   }
 }

@@ -1934,6 +1934,263 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
   return VK_SUCCESS;
 }
 
+VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
+{
+  VkResult res;
+
+  // CreateDescriptorSetLayout
+  {
+    const int binding_count = 3;
+    VkDescriptorSetLayoutBinding layout_bindings[binding_count];
+    layout_bindings[0].binding = 0;
+    layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[0].descriptorCount = 1;
+    layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_bindings[0].pImmutableSamplers = NULL;
+
+    layout_bindings[1].binding = 1;
+    layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[1].descriptorCount = 1;
+    layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    layout_bindings[1].pImmutableSamplers = NULL;
+
+    layout_bindings[2].binding = 2;
+    layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[2].descriptorCount = 1;
+    layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    layout_bindings[2].pImmutableSamplers = NULL;
+
+    // Next take layout bindings and use them to create a descriptor set layout
+    VkDescriptorSetLayoutCreateInfo layout_create_info = {};
+    layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_create_info.pNext = NULL;
+    layout_create_info.flags = 0;
+    layout_create_info.bindingCount = 3;
+    layout_create_info.pBindings = layout_bindings;
+
+    res = vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &p_vkrs->mesh_prog.descriptor_layout);
+    VK_CHECK(res, "vkCreateDescriptorSetLayout");
+  }
+
+  const int SHADER_STAGE_MODULES = 2;
+  VkPipelineShaderStageCreateInfo shaderStages[SHADER_STAGE_MODULES];
+  {
+    const char *vertex_shader_code = "#version 450\n"
+                                     "#extension GL_ARB_separate_shader_objects : enable\n"
+                                     //  "#extension GL_ARB_shading_language_420pack : enable\n"
+                                     "layout (std140, binding = 0) uniform UBO0 {\n"
+                                     "    mat4 mvp;\n"
+                                     "} world;\n"
+                                     "layout (binding = 1) uniform UBO1 {\n"
+                                     "    vec2 offset;\n"
+                                     "    vec2 scale;\n"
+                                     "} element;\n"
+                                     "\n"
+                                     "layout(location = 0) in vec4 inPosition;\n"
+                                     "\n"
+                                     "void main() {\n"
+                                     "   gl_Position = world.mvp * inPosition;\n"
+                                     "}\n";
+
+    const char *fragment_shader_code = "#version 450\n"
+                                       "#extension GL_ARB_separate_shader_objects : enable\n"
+                                       //  "#extension GL_ARB_shading_language_420pack : enable\n"
+                                       "layout (binding = 2) uniform UBO2 {\n"
+                                       "    vec4 tint;\n"
+                                       "} element;\n"
+                                       "layout (location = 0) out vec4 outColor;\n"
+                                       "void main() {\n"
+                                       "   outColor = vec4(0.4, 0.2, 0.8, 1.0);\n"
+                                       "}\n";
+
+    {
+      VkPipelineShaderStageCreateInfo *shaderStateCreateInfo = &shaderStages[0];
+      shaderStateCreateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+      shaderStateCreateInfo->pNext = NULL;
+      shaderStateCreateInfo->pSpecializationInfo = NULL;
+      shaderStateCreateInfo->flags = 0;
+      shaderStateCreateInfo->stage = VK_SHADER_STAGE_VERTEX_BIT;
+      shaderStateCreateInfo->pName = "main";
+
+      unsigned int *vtx_spv, vtx_spv_size;
+      VkResult res = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_code, &vtx_spv, &vtx_spv_size);
+      VK_CHECK(res, "GLSLtoSPV");
+
+      VkShaderModuleCreateInfo moduleCreateInfo;
+      moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+      moduleCreateInfo.pNext = NULL;
+      moduleCreateInfo.flags = 0;
+      moduleCreateInfo.codeSize = vtx_spv_size * sizeof(unsigned int);
+      moduleCreateInfo.pCode = vtx_spv;
+
+      res = vkCreateShaderModule(p_vkrs->device, &moduleCreateInfo, NULL, &shaderStateCreateInfo->module);
+      VK_CHECK(res, "vkCreateShaderModule");
+
+      free(vtx_spv);
+    }
+    {
+      VkPipelineShaderStageCreateInfo *shaderStateCreateInfo = &shaderStages[1];
+      shaderStateCreateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+      shaderStateCreateInfo->pNext = NULL;
+      shaderStateCreateInfo->pSpecializationInfo = NULL;
+      shaderStateCreateInfo->flags = 0;
+      shaderStateCreateInfo->stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+      shaderStateCreateInfo->pName = "main";
+
+      unsigned int *vtx_spv, vtx_spv_size;
+      VkResult res = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_code, &vtx_spv, &vtx_spv_size);
+      VK_CHECK(res, "GLSLtoSPV");
+
+      VkShaderModuleCreateInfo moduleCreateInfo;
+      moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+      moduleCreateInfo.pNext = NULL;
+      moduleCreateInfo.flags = 0;
+      moduleCreateInfo.codeSize = vtx_spv_size * sizeof(unsigned int);
+      moduleCreateInfo.pCode = vtx_spv;
+
+      res = vkCreateShaderModule(p_vkrs->device, &moduleCreateInfo, NULL, &shaderStateCreateInfo->module);
+      VK_CHECK(res, "vkCreateShaderModule");
+
+      free(vtx_spv);
+    }
+  }
+
+  // Vertex Bindings
+  VkVertexInputBindingDescription bindingDescription = {};
+  const int VERTEX_ATTRIBUTE_COUNT = 1;
+  VkVertexInputAttributeDescription attributeDescriptions[VERTEX_ATTRIBUTE_COUNT];
+  {
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(vec4);
+    // printf("sizeof(vec2)=%zu\n", sizeof(vec2));
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    attributeDescriptions[0].binding = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset = 0;                       // offsetof(textured_image_vertex, position);
+  }
+
+  {
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount = VERTEX_ATTRIBUTE_COUNT;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.pNext = NULL;
+    inputAssembly.flags = 0;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkPipelineDynamicStateCreateInfo dynamicState = {};
+    memset(dynamicStateEnables, 0, sizeof(dynamicStateEnables));
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamicState.pNext = NULL;
+    dynamicState.pDynamicStates = dynamicStateEnables;
+    dynamicState.dynamicStateCount = 0;
+
+    VkPipelineViewportStateCreateInfo viewportState = {};
+    viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportState.pNext = NULL;
+    viewportState.flags = 0;
+    viewportState.viewportCount = 1; // NUM_VIEWPORTS;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    viewportState.scissorCount = 1; // NUM_SCISSORS;
+    dynamicStateEnables[dynamicState.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    viewportState.pScissors = NULL;
+    viewportState.pViewports = NULL;
+
+    VkPipelineRasterizationStateCreateInfo rasterizer = {};
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.depthBiasEnable = VK_FALSE;
+
+    VkPipelineMultisampleStateCreateInfo multisampling = {};
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+    VkPipelineColorBlendAttachmentState att_state[1];
+    att_state[0].colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    att_state[0].blendEnable = VK_TRUE;
+    att_state[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    att_state[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    att_state[0].colorBlendOp = VK_BLEND_OP_ADD;
+    att_state[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    att_state[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    att_state[0].alphaBlendOp = VK_BLEND_OP_ADD;
+
+    VkPipelineColorBlendStateCreateInfo colorBlending = {};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.flags = 0;
+    colorBlending.pNext = NULL;
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = att_state;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY;
+    colorBlending.blendConstants[0] = 1.0f;
+    colorBlending.blendConstants[1] = 1.0f;
+    colorBlending.blendConstants[2] = 1.0f;
+    colorBlending.blendConstants[3] = 1.0f;
+
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &p_vkrs->mesh_prog.descriptor_layout;
+
+    res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &p_vkrs->mesh_prog.pipeline_layout);
+    VK_CHECK(res, "vkCreatePipelineLayout :: Failed to create pipeline layout!");
+
+    VkGraphicsPipelineCreateInfo pipelineInfo = {};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.pNext = NULL;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = p_vkrs->mesh_prog.pipeline_layout;
+    pipelineInfo.renderPass = p_vkrs->present_render_pass;
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+    res =
+        vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &p_vkrs->mesh_prog.pipeline);
+    VK_CHECK(res, "vkCreateGraphicsPipelines :: Failed to create pipeline");
+  }
+
+  for (int i = 0; i < SHADER_STAGE_MODULES; ++i) {
+    vkDestroyShaderModule(p_vkrs->device, shaderStages[i].module, NULL);
+  }
+
+  VkPipelineCacheCreateInfo pipelineCache;
+  pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+  pipelineCache.pNext = NULL;
+  pipelineCache.initialDataSize = 0;
+  pipelineCache.pInitialData = NULL;
+  pipelineCache.flags = 0;
+  res = vkCreatePipelineCache(p_vkrs->device, &pipelineCache, NULL, &p_vkrs->pipelineCache);
+  assert(res == VK_SUCCESS);
+
+  return VK_SUCCESS;
+}
+
 VkResult mvk_init_framebuffers(vk_render_state *p_vkrs /*, bool include_depth*/)
 {
   /* DEPENDS on init_depth_buffer(), init_renderpass() and
@@ -2032,11 +2289,13 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   VK_CHECK(res, "mvk_init_offscreen_renderpass");
 
   res = mvk_init_tint_render_prog(vkrs);
-  VK_CHECK(res, "mvk_init_textured_render_prog");
+  VK_CHECK(res, "mvk_init_tint_render_prog");
   res = mvk_init_textured_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_textured_render_prog");
   res = mvk_init_font_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_font_render_prog");
+  res = mvk_init_mesh_render_prog(vkrs);
+  VK_CHECK(res, "mvk_init_mesh_render_prog");
 
   res = mvk_init_framebuffers(vkrs);
   VK_CHECK(res, "mvk_init_framebuffers");

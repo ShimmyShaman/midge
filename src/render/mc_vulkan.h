@@ -177,7 +177,7 @@ typedef struct vk_render_state {
 
   VkRenderPass present_render_pass, offscreen_render_pass;
 
-  render_program tint_prog, texture_prog, font_prog;
+  render_program tint_prog, texture_prog, font_prog, mesh_prog;
   VkPipelineCache pipelineCache;
 
   VkDescriptorPool descriptor_pool;
@@ -198,6 +198,12 @@ typedef struct vk_render_state {
     VkDeviceMemory mem;
     VkDescriptorBufferInfo buffer_info;
   } textured_shape_vertices;
+
+  struct {
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDescriptorBufferInfo buffer_info;
+  } cube_shape_vertices;
 
   struct {
     uint32_t count;

@@ -1,4 +1,5 @@
 
+#include "cglm/cglm.h"
 #include "m_threads.h"
 #include "midge_common.h"
 #include "render/mc_vulkan.h"
@@ -121,6 +122,55 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
 
     res =
         vkBindBufferMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.buf, p_vkrs->textured_shape_vertices.mem, 0);
+    VK_CHECK(res, "vkBindBufferMemory");
+  }
+  {
+    vec3 mesh_data[] = {{0.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 1.f},
+                        {1.f, 0.f, 0.f}, {1.f, 0.f, 1.f}, {1.f, 1.f, 0.f}, {1.f, 1.f, 1.f}};
+
+    // Cube vertices TEMP DEBUG
+    const int data_size_in_bytes = sizeof(mesh_data);
+
+    VkBufferCreateInfo buf_info = {};
+    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    buf_info.pNext = NULL;
+    buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    buf_info.size = data_size_in_bytes;
+    buf_info.queueFamilyIndexCount = 0;
+    buf_info.pQueueFamilyIndices = NULL;
+    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buf_info.flags = 0;
+    res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->cube_shape_vertices.buf);
+    VK_CHECK(res, "vkCreateBuffer");
+
+    VkMemoryRequirements mem_reqs;
+    vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->cube_shape_vertices.buf, &mem_reqs);
+
+    VkMemoryAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    alloc_info.pNext = NULL;
+    alloc_info.memoryTypeIndex = 0;
+
+    alloc_info.allocationSize = mem_reqs.size;
+    bool pass = mvk_get_properties_memory_type_index(
+        p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        &alloc_info.memoryTypeIndex);
+    VK_ASSERT(pass, "No mappable, coherent memory");
+
+    res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_shape_vertices.mem));
+    VK_CHECK(res, "vkAllocateMemory");
+    p_vkrs->cube_shape_vertices.buffer_info.range = mem_reqs.size;
+    p_vkrs->cube_shape_vertices.buffer_info.offset = 0;
+
+    uint8_t *pData;
+    res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&pData);
+    VK_CHECK(res, "vkMapMemory");
+
+    memcpy(pData, g_vb_textured_shape_2D_data, data_size_in_bytes);
+
+    vkUnmapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem);
+
+    res = vkBindBufferMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.buf, p_vkrs->cube_shape_vertices.mem, 0);
     VK_CHECK(res, "vkBindBufferMemory");
   }
 
@@ -629,7 +679,8 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
         stbtt_GetBakedQuad(cdata, (int)texWidth, (int)texHeight, ci, &ax, &ay, &q, 1);
         if (q.y0 < lowest)
           lowest = q.y0;
-        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f lowest=%.3f\n", q.s0, q.s1,
+        // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f lowest=%.3f\n", q.s0,
+        // q.s1,
         //        q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, lowest);
       }
       p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].draw_vertical_offset = 300 - lowest;

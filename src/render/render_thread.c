@@ -610,6 +610,147 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   return res;
 }
 
+VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
+                         element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
+{
+  VkResult res;
+
+  mat4 *vpc = (mat4 *)&copy_buffer->data[copy_buffer->index];
+  copy_buffer->index += sizeof(mat4);
+  {
+    // Construct the Vulkan View/Projection/Clip for the render target image
+    mat4 view;
+    mat4 proj;
+    mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
+
+    glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
+    float fovy = 72.f / 180.f * 3.1459f;
+    glm_perspective(fovy, (float)sequence->image_width / sequence->image_height, 0.01f, 1000.f, (vec4 *)&proj);
+    // glm_ortho_default((float)sequence->image_width / sequence->image_height, (vec4 *)&proj);
+    glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+    glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
+
+    // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
+  }
+  // // Bounds check
+  // if (cmd->data.colored_rect_info.width == 0 || cmd->x >= sequence->image_width ||
+  //     cmd->data.colored_rect_info.height == 0 || cmd->y >= sequence->image_height)
+  //   return VK_SUCCESS;
+
+  // // printf("mrt_rcq-0 %u %u\n", cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
+
+  // // Setup viewport and clip
+  set_viewport_cmd(command_buffer, 0.f, 0.f, (float)sequence->image_width, (float)sequence->image_height);
+  set_scissor_cmd(command_buffer, (int32_t)0, (int32_t)0, (uint32_t)sequence->image_width,
+                  (uint32_t)sequence->image_height);
+
+  // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
+
+  // Vertex Uniform Buffer Object
+  vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
+  copy_buffer->index += sizeof(vert_data_scale_offset);
+  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+
+  float scale_multiplier =
+      1.f / (float)(sequence->image_width < sequence->image_height ? sequence->image_width : sequence->image_height);
+  vert_ubo_data->scale.x = 2.f * cmd->data.colored_rect_info.width * scale_multiplier;
+  vert_ubo_data->scale.y = 2.f * cmd->data.colored_rect_info.height * scale_multiplier;
+  vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
+                            1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
+  vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
+                            1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
+
+  // printf("mrt_rcq-1\n");
+  // Fragment Data
+  render_color *frag_ubo_data = (render_color *)&copy_buffer->data[copy_buffer->index];
+  copy_buffer->index += sizeof(render_color);
+  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+
+  memcpy(frag_ubo_data, &cmd->data.colored_rect_info.color, sizeof(render_color));
+
+  // Allocate the descriptor set from the pool.
+  VkDescriptorSetAllocateInfo setAllocInfo = {};
+  setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  setAllocInfo.pNext = NULL;
+  setAllocInfo.descriptorPool = p_vkrs->descriptor_pool;
+  setAllocInfo.descriptorSetCount = 1;
+  setAllocInfo.pSetLayouts = &p_vkrs->mesh_prog.descriptor_layout;
+
+  unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
+  res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
+  VK_CHECK(res, "vkAllocateDescriptorSets");
+
+  VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
+  p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
+
+  // Queue Buffer and Descriptor Writes
+  const unsigned int MAX_DESC_SET_WRITES = 3;
+  VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
+  VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
+  int buffer_info_index = 0;
+  int write_index = 0;
+
+  VkDescriptorBufferInfo *mvp_info = &buffer_infos[buffer_info_index++];
+  res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), vpc, mvp_info);
+  VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
+
+  // printf("mrt_rcq-2\n");
+  VkDescriptorBufferInfo *frag_ubo_info = &buffer_infos[buffer_info_index++];
+  res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(render_color), frag_ubo_data, frag_ubo_info);
+  VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
+
+  VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
+  res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+  VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
+
+  // Global Vertex Shader Uniform Buffer
+  VkWriteDescriptorSet *write = &writes[write_index++];
+  write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  write->pNext = NULL;
+  write->dstSet = desc_set;
+  write->descriptorCount = 1;
+  write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  write->pBufferInfo = mvp_info;
+  write->dstArrayElement = 0;
+  write->dstBinding = 0;
+
+  // Element Vertex Shader Uniform Buffer
+  write = &writes[write_index++];
+  write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  write->pNext = NULL;
+  write->dstSet = desc_set;
+  write->descriptorCount = 1;
+  write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  write->pBufferInfo = vert_ubo_info;
+  write->dstArrayElement = 0;
+  write->dstBinding = 1;
+
+  // Element Fragment Shader Uniform Buffer
+  write = &writes[write_index++];
+  write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  write->pNext = NULL;
+  write->dstSet = desc_set;
+  write->descriptorCount = 1;
+  write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  write->pBufferInfo = frag_ubo_info;
+  write->dstArrayElement = 0;
+  write->dstBinding = 2;
+
+  // // printf("mrt_rcq-3\n");
+  vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
+
+  vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline_layout, 0, 1,
+                          &desc_set, 0, NULL);
+
+  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline);
+
+  const VkDeviceSize offsets[1] = {0};
+  vkCmdBindVertexBuffers(command_buffer, 0, 1, &p_vkrs->cube_shape_vertices.buf, offsets);
+  vkCmdDraw(command_buffer, 3 * 2 * 6, 1, 0, 0);
+
+  return res;
+}
+
 VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence)
 {
   // Descriptor Writes
@@ -661,6 +802,11 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     case RENDER_COMMAND_PRINT_TEXT: {
       res = mrt_render_text(p_vkrs, command_buffer, sequence, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_text");
+    } break;
+
+    case RENDER_COMMAND_CUBE: {
+      res = mrt_render_mesh(p_vkrs, command_buffer, sequence, cmd, &copy_buffer);
+      VK_CHECK(res, "mrt_render_cube");
     } break;
 
     default:
@@ -974,8 +1120,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
         for (int r = 0; r < render_thread->render_queue.count; ++r) {
           cmd_count += render_thread->render_queue.image_renders[r].command_count;
         }
-        printf("Vulkan entered render_queue! %u sequences using %u draw-commands\n", render_thread->render_queue.count,
-               cmd_count);
+        // printf("Vulkan entered render_queue! %u sequences using %u draw-commands\n", render_thread->render_queue.count,
+        //        cmd_count);
       }
       res = render_through_queue(vkrs, &render_thread->render_queue);
       VK_CHECK(res, "render_through_queue");
