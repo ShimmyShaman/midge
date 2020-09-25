@@ -101,7 +101,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  image_render_queue *sequence;
+  image_render_request *sequence;
   element_render_command *element_cmd;
 
   // printf("mrce-0\n");
@@ -110,7 +110,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   child->extra = entry;
   child->data.visual.visible = true;
 
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = child->data.visual.bounds.width;
   sequence->image_height = child->data.visual.bounds.height;
@@ -121,7 +121,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
   element_cmd->x = 6;
   element_cmd->y = 18;
-  element_cmd->data.print_text.font_resource_uid = cdstate->font_resource_uid;
+  element_cmd->print_text.font_resource_uid = cdstate->font_resource_uid;
 
   int indent_len = indent * 1; // + (indent ? 1 : 0);
   char indent_str[indent_len + 1];
@@ -135,12 +135,12 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   switch (entry->type) {
   case CORE_ENTRY_FUNCTION: {
     function_info *func_info = (function_info *)entry->data;
-    mc_pprintf(&element_cmd->data.print_text.text, "%s%s", indent_str, func_info->name);
+    mc_pprintf(&element_cmd->print_text.text, "%s%s", indent_str, func_info->name);
     if (func_info->source) {
-      element_cmd->data.print_text.color = COLOR_FUNCTION_GREEN;
+      element_cmd->print_text.color = COLOR_FUNCTION_GREEN;
     }
     else {
-      element_cmd->data.print_text.color = COLOR_FUNCTION_RED;
+      element_cmd->print_text.color = COLOR_FUNCTION_RED;
     }
   } break;
   case CORE_ENTRY_STRUCT: {
@@ -149,51 +149,51 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
     //     printf("mrce-struct_info->source->code:%p\n%s||\n", ((struct_info *)entry->data)->source->code,
     //            ((struct_info *)entry->data)->source->code);
     struct_info *str_info = (struct_info *)entry->data;
-    mc_pprintf(&element_cmd->data.print_text.text, "%s%s", indent_str, str_info->name);
-    element_cmd->data.print_text.color = COLOR_LIGHT_YELLOW;
+    mc_pprintf(&element_cmd->print_text.text, "%s%s", indent_str, str_info->name);
+    element_cmd->print_text.color = COLOR_LIGHT_YELLOW;
   } break;
   case CORE_ENTRY_CATEGORY_STRUCT: {
     if (entry->collapsed) {
-      mc_pprintf(&element_cmd->data.print_text.text, "%s+%s", indent_str, "structs");
+      mc_pprintf(&element_cmd->print_text.text, "%s+%s", indent_str, "structs");
     }
     else {
-      mc_pprintf(&element_cmd->data.print_text.text, "%s-%s", indent_str, "structs");
+      mc_pprintf(&element_cmd->print_text.text, "%s-%s", indent_str, "structs");
     }
-    element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
+    element_cmd->print_text.color = COLOR_BURLY_WOOD;
   } break;
   case CORE_ENTRY_CATEGORY_FUNCTION: {
     if (entry->collapsed) {
-      mc_pprintf(&element_cmd->data.print_text.text, "%s+%s", indent_str, "functions");
+      mc_pprintf(&element_cmd->print_text.text, "%s+%s", indent_str, "functions");
     }
     else {
-      mc_pprintf(&element_cmd->data.print_text.text, "%s-%s", indent_str, "functions");
+      mc_pprintf(&element_cmd->print_text.text, "%s-%s", indent_str, "functions");
     }
-    element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
+    element_cmd->print_text.color = COLOR_BURLY_WOOD;
   } break;
   case CORE_ENTRY_CATEGORY_CHILDREN: {
     if (entry->collapsed) {
-      mc_pprintf(&element_cmd->data.print_text.text, "%s+%s", indent_str, "nodes");
+      mc_pprintf(&element_cmd->print_text.text, "%s+%s", indent_str, "nodes");
     }
     else {
-      mc_pprintf(&element_cmd->data.print_text.text, "%s-%s", indent_str, "nodes");
+      mc_pprintf(&element_cmd->print_text.text, "%s-%s", indent_str, "nodes");
     }
-    element_cmd->data.print_text.color = COLOR_BURLY_WOOD;
+    element_cmd->print_text.color = COLOR_BURLY_WOOD;
   } break;
   case CORE_ENTRY_NODE: {
     mc_node_v1 *node_data = (mc_node_v1 *)entry->data;
     // printf("nodename:%s\n", node_data->name);
     if (entry->children.utilized_count) {
       if (entry->collapsed) {
-        mc_pprintf(&element_cmd->data.print_text.text, "%s+%s", indent_str, node_data->name);
+        mc_pprintf(&element_cmd->print_text.text, "%s+%s", indent_str, node_data->name);
       }
       else {
-        mc_pprintf(&element_cmd->data.print_text.text, "%s-%s", indent_str, node_data->name);
+        mc_pprintf(&element_cmd->print_text.text, "%s-%s", indent_str, node_data->name);
       }
     }
     else {
-      mc_pprintf(&element_cmd->data.print_text.text, "%s %s", indent_str, node_data->name);
+      mc_pprintf(&element_cmd->print_text.text, "%s %s", indent_str, node_data->name);
     }
-    element_cmd->data.print_text.color = COLOR_NODE_ORANGE;
+    element_cmd->print_text.color = COLOR_NODE_ORANGE;
   } break;
   default: {
     MCerror(278, "Unsupported type:%i", entry->type);
@@ -232,7 +232,7 @@ int core_display_render_v1(int argc, void **argv)
     return 0;
   core_display_state *cdstate = (core_display_state *)visual_node->extra;
 
-  image_render_queue *sequence;
+  image_render_request *sequence;
   element_render_command *element_cmd;
 
   {
@@ -247,7 +247,7 @@ int core_display_render_v1(int argc, void **argv)
     cdstate->entries_require_render_update = false;
   }
 
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = visual_node->data.visual.bounds.width;
   sequence->image_height = visual_node->data.visual.bounds.height;
@@ -258,9 +258,9 @@ int core_display_render_v1(int argc, void **argv)
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   element_cmd->x = 2;
   element_cmd->y = 2;
-  element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
-  element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
-  element_cmd->data.colored_rect_info.color = COLOR_NEARLY_BLACK;
+  element_cmd->colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
+  element_cmd->colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
+  element_cmd->colored_rect_info.color = COLOR_NEARLY_BLACK;
 
   for (int i = 0; i < visual_node->child_count; ++i) {
     node *child = (node *)visual_node->children[i];
@@ -273,9 +273,9 @@ int core_display_render_v1(int argc, void **argv)
     element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
     element_cmd->x = child->data.visual.bounds.x;
     element_cmd->y = child->data.visual.bounds.y;
-    element_cmd->data.textured_rect_info.width = child->data.visual.bounds.width;
-    element_cmd->data.textured_rect_info.height = child->data.visual.bounds.height;
-    element_cmd->data.textured_rect_info.texture_uid = child->data.visual.image_resource_uid;
+    element_cmd->textured_rect_info.width = child->data.visual.bounds.width;
+    element_cmd->textured_rect_info.height = child->data.visual.bounds.height;
+    element_cmd->textured_rect_info.texture_uid = child->data.visual.image_resource_uid;
   }
 
   // Function Button
@@ -284,26 +284,26 @@ int core_display_render_v1(int argc, void **argv)
     // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
     // element_cmd->x = cdstate->function_button_bounds.x;
     // element_cmd->y = cdstate->function_button_bounds.y;
-    // element_cmd->data.colored_rect_info.width = cdstate->function_button_bounds.width;
-    // element_cmd->data.colored_rect_info.height = cdstate->function_button_bounds.height;
-    // element_cmd->data.colored_rect_info.color = COLOR_PURPLE;
+    // element_cmd->colored_rect_info.width = cdstate->function_button_bounds.width;
+    // element_cmd->colored_rect_info.height = cdstate->function_button_bounds.height;
+    // element_cmd->colored_rect_info.color = COLOR_PURPLE;
 
     // MCcall(obtain_element_render_command(sequence, &element_cmd));
     // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
     // element_cmd->x = cdstate->function_button_bounds.x + 2;
     // element_cmd->y = cdstate->function_button_bounds.y + 2;
-    // element_cmd->data.colored_rect_info.width = cdstate->function_button_bounds.width - 4;
-    // element_cmd->data.colored_rect_info.height = cdstate->function_button_bounds.height - 4;
-    // element_cmd->data.colored_rect_info.color = (render_color){0.03f, 0.33f, 0.03f, 1.f};
+    // element_cmd->colored_rect_info.width = cdstate->function_button_bounds.width - 4;
+    // element_cmd->colored_rect_info.height = cdstate->function_button_bounds.height - 4;
+    // element_cmd->colored_rect_info.color = (render_color){0.03f, 0.33f, 0.03f, 1.f};
 
     // MCcall(obtain_element_render_command(sequence, &element_cmd));
     // element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
     // element_cmd->x = cdstate->function_button_bounds.x + 2;
     // element_cmd->y = cdstate->function_button_bounds.y + 18;
-    // element_cmd->data.print_text.font_resource_uid = cdstate->font_resource_uid;
+    // element_cmd->print_text.font_resource_uid = cdstate->font_resource_uid;
     // const char *function_text = "function";
-    // element_cmd->data.print_text.text = &function_text;
-    // element_cmd->data.print_text.color = COLOR_GHOST_WHITE;
+    // element_cmd->print_text.text = &function_text;
+    // element_cmd->print_text.color = COLOR_GHOST_WHITE;
   }
 
   register_midge_error_tag("core_display_render_v1(~)");

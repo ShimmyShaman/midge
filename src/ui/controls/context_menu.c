@@ -99,7 +99,7 @@ void __mui_render_context_menu_headless(mc_node *node)
   }
 }
 
-void __mui_render_context_menu_present(image_render_queue *render_queue, mc_node *node)
+void __mui_render_context_menu_present(image_render_request *render_queue, mc_node *node)
 {
   mui_context_menu *context_menu = (mui_context_menu *)node->data;
 
@@ -113,8 +113,8 @@ void __mui_render_context_menu_present(image_render_queue *render_queue, mc_node
     mc_node *child = node->children->items[a];
     if (child->layout && child->layout->visible && child->layout->render_present) {
       // TODO fptr casting
-      void (*render_node_presentation)(image_render_queue *, mc_node *) =
-          (void (*)(image_render_queue *, mc_node *))child->layout->render_present;
+      void (*render_node_presentation)(image_render_request *, mc_node *) =
+          (void (*)(image_render_request *, mc_node *))child->layout->render_present;
       render_node_presentation(render_queue, child);
     }
   }

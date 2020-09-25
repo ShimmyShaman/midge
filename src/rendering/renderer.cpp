@@ -251,7 +251,7 @@ int set_scissor_cmd(vk_render_state *p_vkrs, int32_t x, int32_t y, uint32_t widt
   return 0;
 }
 
-VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
+VkResult render_sequence(vk_render_state *p_vkrs, image_render_request *sequence)
 {
   // Descriptor Writes
   VkResult res;
@@ -292,31 +292,31 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
     case RENDER_COMMAND_COLORED_RECTANGLE: {
 
       // Bounds check
-      if (cmd->data.colored_rect_info.width == 0 || cmd->x >= sequence->image_width ||
-          cmd->data.colored_rect_info.height == 0 || cmd->y >= sequence->image_height)
+      if (cmd->colored_rect_info.width == 0 || cmd->x >= sequence->image_width ||
+          cmd->colored_rect_info.height == 0 || cmd->y >= sequence->image_height)
         continue;
 
       // Setup viewport and clip
       set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-      set_scissor_cmd(p_vkrs, max(cmd->x, 0), max(cmd->y, 0), cmd->data.colored_rect_info.width,
-                      cmd->data.colored_rect_info.height);
+      set_scissor_cmd(p_vkrs, max(cmd->x, 0), max(cmd->y, 0), cmd->colored_rect_info.width,
+                      cmd->colored_rect_info.height);
 
       // Vertex Uniform Buffer Object
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(vert_data_scale_offset);
 
-      vert_ubo_data->scale.x = 2.f * cmd->data.colored_rect_info.width * scale_multiplier;
-      vert_ubo_data->scale.y = 2.f * cmd->data.colored_rect_info.height * scale_multiplier;
+      vert_ubo_data->scale.x = 2.f * cmd->colored_rect_info.width * scale_multiplier;
+      vert_ubo_data->scale.y = 2.f * cmd->colored_rect_info.height * scale_multiplier;
       vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
-                                1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
+                                1.0f * (float)cmd->colored_rect_info.width / (float)(sequence->image_width);
       vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
-                                1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
+                                1.0f * (float)cmd->colored_rect_info.height / (float)(sequence->image_height);
 
       // Fragment Data
       render_color *frag_ubo_data = (render_color *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(render_color);
 
-      memcpy(frag_ubo_data, &cmd->data.colored_rect_info.color, sizeof(float) * 4);
+      memcpy(frag_ubo_data, &cmd->colored_rect_info.color, sizeof(float) * 4);
 
       // Allocate the descriptor set from the pool.
       VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -398,20 +398,20 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer[copy_buffer_used];
       copy_buffer_used += sizeof(vert_data_scale_offset);
 
-      vert_ubo_data->scale.x = 2.f * (float)cmd->data.textured_rect_info.width * scale_multiplier;
-      vert_ubo_data->scale.y = 2.f * (float)cmd->data.textured_rect_info.height * scale_multiplier;
+      vert_ubo_data->scale.x = 2.f * (float)cmd->textured_rect_info.width * scale_multiplier;
+      vert_ubo_data->scale.y = 2.f * (float)cmd->textured_rect_info.height * scale_multiplier;
       vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
-                                1.0f * (float)cmd->data.textured_rect_info.width / (float)(sequence->image_width);
+                                1.0f * (float)cmd->textured_rect_info.width / (float)(sequence->image_width);
       vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
-                                1.0f * (float)cmd->data.textured_rect_info.height / (float)(sequence->image_height);
+                                1.0f * (float)cmd->textured_rect_info.height / (float)(sequence->image_height);
 
       // printf("x:%u y:%u tri.width:%u tri.height:%u seq.width:%u seq.height:%u\n", cmd->x, cmd->y,
-      //        cmd->data.textured_rect_info.width, cmd->data.textured_rect_info.height, sequence->image_width,
+      //        cmd->textured_rect_info.width, cmd->textured_rect_info.height, sequence->image_width,
       //        sequence->image_height);
 
       // Setup viewport and clip
       set_viewport_cmd(p_vkrs, 0, 0, (float)sequence->image_width, (float)sequence->image_height);
-      set_scissor_cmd(p_vkrs, cmd->x, cmd->y, cmd->data.textured_rect_info.width, cmd->data.textured_rect_info.height);
+      set_scissor_cmd(p_vkrs, cmd->x, cmd->y, cmd->textured_rect_info.width, cmd->textured_rect_info.height);
 
       // Queue Buffer Write
       const unsigned int MAX_DESC_SET_WRITES = 8;
@@ -465,9 +465,9 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       VkDescriptorImageInfo image_sampler_info = {};
       image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
       image_sampler_info.imageView =
-          p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
+          p_vkrs->textures.samples[cmd->textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
       image_sampler_info.sampler =
-          p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].sampler;
+          p_vkrs->textures.samples[cmd->textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].sampler;
 
       // Element Fragment Shader Combined Image Sampler
       write = &writes[write_index++];
@@ -495,13 +495,13 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
 
     case RENDER_COMMAND_PRINT_TEXT: {
 
-      if (!cmd->data.print_text.text) {
+      if (!cmd->print_text.text) {
         break;
       }
       // Get the font image
       loaded_font_info *font = NULL;
       for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
-        if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->data.print_text.font_resource_uid) {
+        if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->print_text.font_resource_uid) {
           font = &p_vkrs->loaded_fonts.fonts[f];
           break;
         }
@@ -516,14 +516,14 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
       float align_x = cmd->x;
       float align_y = cmd->y;
 
-      int text_length = strlen(cmd->data.print_text.text);
+      int text_length = strlen(cmd->print_text.text);
       for (int c = 0; c < text_length; ++c) {
 
         // if (align_x > font_image->width) {
         //   break;
         // }
 
-        char letter = cmd->data.print_text.text[c];
+        char letter = cmd->print_text.text[c];
         if (letter < 32 || letter > 127) {
           printf("TODO character not supported.\n");
           continue;
@@ -567,7 +567,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         frag_ubo_tint_texcoordbounds *frag_ubo_data = (frag_ubo_tint_texcoordbounds *)&copy_buffer[copy_buffer_used];
         copy_buffer_used += sizeof(frag_ubo_tint_texcoordbounds);
 
-        memcpy(&frag_ubo_data->tint, &cmd->data.print_text.color, sizeof(float) * 4);
+        memcpy(&frag_ubo_data->tint, &cmd->print_text.color, sizeof(float) * 4);
         frag_ubo_data->tex_coord_bounds.s0 = q.s0;
         frag_ubo_data->tex_coord_bounds.s1 = q.s1;
         frag_ubo_data->tex_coord_bounds.t0 = q.t0;
@@ -586,7 +586,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         setAllocInfo.pSetLayouts = &p_vkrs->font_prog.desc_layout;
 
         unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
-        // printf("cmd->text:'%s' descriptor_set_index=%u\n", cmd->data.print_text.text, descriptor_set_index);
+        // printf("cmd->text:'%s' descriptor_set_index=%u\n", cmd->print_text.text, descriptor_set_index);
         res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
         assert(res == VK_SUCCESS);
 
@@ -668,7 +668,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, image_render_queue *sequence)
         vkCmdDraw(p_vkrs->cmd, 2 * 3, 1, 0, 0);
       }
 
-      free(cmd->data.print_text.text);
+      free(cmd->print_text.text);
     } break;
 
     default:
@@ -743,7 +743,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
 
   for (int i = 0; i < render_queue->count; ++i) {
 
-    image_render_queue *sequence = &render_queue->image_renders[i];
+    image_render_request *sequence = &render_queue->image_renders[i];
 
     // if (sequence->command_count < 1) {
     //   return VK_ERROR_UNKNOWN;

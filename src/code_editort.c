@@ -24,7 +24,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
   mc_code_editor_state_v1 *cestate = (mc_code_editor_state_v1 *)visual_node->extra;
   fld_view_state *fld_view = cestate->fld_view;
 
-  image_render_queue *sequence;
+  image_render_request *sequence;
   element_render_command *element_cmd;
 
   // printf ("######################\n");
@@ -48,7 +48,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
         // Render Line
         if (line_is_visible) {
           // printf("obtain_render_queue: ce_offset_line_index:%i\n", ce_offset_line_index);
-          MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+          MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
           sequence->render_target = NODE_RENDER_TARGET_IMAGE;
           sequence->clear_color = COLOR_TRANSPARENT;
           sequence->image_width = cestate->render_lines[ce_offset_line_index]->width;
@@ -84,7 +84,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
             // Render Line
             if (line_is_visible) {
               // printf("obtain_render_queue: ce_offset_line_index:%i\n", ce_offset_line_index);
-              MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+              MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
               sequence->render_target = NODE_RENDER_TARGET_IMAGE;
               sequence->clear_color = COLOR_TRANSPARENT;
               sequence->image_width = cestate->render_lines[ce_offset_line_index]->width;
@@ -101,16 +101,16 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
             element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
             element_cmd->x = 4 + col_index * EDITOR_FONT_HORIZONTAL_STRIDE;
             element_cmd->y = 2 + 12;
-            element_cmd->data.print_text.font_resource_uid = cestate->font_resource_uid;
-            allocate_and_copy_cstrn(element_cmd->data.print_text.text, text + s, c - s);
-            element_cmd->data.print_text.color.a = 1.f;
-            element_cmd->data.print_text.color.r = 0.61f;
-            element_cmd->data.print_text.color.g = 0.86f;
-            element_cmd->data.print_text.color.b = 0.99f;
+            element_cmd->print_text.font_resource_uid = cestate->font_resource_uid;
+            allocate_and_copy_cstrn(element_cmd->print_text.text, text + s, c - s);
+            element_cmd->print_text.color.a = 1.f;
+            element_cmd->print_text.color.r = 0.61f;
+            element_cmd->print_text.color.g = 0.86f;
+            element_cmd->print_text.color.b = 0.99f;
             // printf("print_text_command: ce_offset_line_index:%i:'%s'[len:%i]\n", ce_offset_line_index,
-            //        element_cmd->data.print_text.text, strlen(element_cmd->data.print_text.text));
+            //        element_cmd->print_text.text, strlen(element_cmd->print_text.text));
 
-            // printf("printing to :%i:'%s'\n", ce_offset_line_index, element_cmd->data.print_text.text);
+            // printf("printing to :%i:'%s'\n", ce_offset_line_index, element_cmd->print_text.text);
 
             col_index += c - s;
           }
@@ -135,11 +135,11 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
         element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
         element_cmd->x = 4 + col_index * EDITOR_FONT_HORIZONTAL_STRIDE;
         element_cmd->y = 2 + 12;
-        element_cmd->data.print_text.font_resource_uid = cestate->font_resource_uid;
-        allocate_and_copy_cstr(element_cmd->data.print_text.text, snapshot->value_text);
-        element_cmd->data.print_text.color = COLOR_YELLOW;
+        element_cmd->print_text.font_resource_uid = cestate->font_resource_uid;
+        allocate_and_copy_cstr(element_cmd->print_text.text, snapshot->value_text);
+        element_cmd->print_text.color = COLOR_YELLOW;
         // printf("print_text_command: ce_offset_line_index:%i:'%s'[len:%i]\n", ce_offset_line_index,
-        //        element_cmd->data.print_text.text, strlen(element_cmd->data.print_text.text));
+        //        element_cmd->print_text.text, strlen(element_cmd->print_text.text));
 
         col_index += strlen(snapshot->value_text);
       } break;

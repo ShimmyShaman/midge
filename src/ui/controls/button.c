@@ -55,7 +55,7 @@ void __mui_update_button_layout(mc_node *node, mc_rectf *available_area)
   mca_set_node_requires_rerender(node);
 }
 
-void __mui_render_button_present(image_render_queue *render_queue, mc_node *node)
+void __mui_render_button_present(image_render_request *render_queue, mc_node *node)
 {
   mui_button *button = (mui_button *)node->data;
 

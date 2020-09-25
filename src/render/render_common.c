@@ -93,7 +93,7 @@ void mcr_determine_text_display_dimensions(unsigned int font_resource, const cha
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @render_queue
-void mcr_issue_render_command_text(image_render_queue *render_queue, unsigned int x, unsigned int y, const char *text,
+void mcr_issue_render_command_text(image_render_request *render_queue, unsigned int x, unsigned int y, const char *text,
                                    unsigned int font_resource_uid, render_color font_color)
 {
   element_render_command *render_cmd;
@@ -104,23 +104,23 @@ void mcr_issue_render_command_text(image_render_queue *render_queue, unsigned in
   // printf("mui_rtb-3 %u %u\n", render_cmd->x, render_cmd->y);
 
   // TODO -- make the render cmd a c_str??
-  render_cmd->data.print_text.text = strdup(text);
+  render_cmd->print_text.text = strdup(text);
 
   if (font_resource_uid) {
-    render_cmd->data.print_text.font_resource_uid = font_resource_uid;
+    render_cmd->print_text.font_resource_uid = font_resource_uid;
   }
   else {
     global_root_data *global_data;
     obtain_midge_global_root(&global_data);
 
-    render_cmd->data.print_text.font_resource_uid = global_data->ui_state->default_font_resource;
-    // printf("set defaultfont %u\n", render_cmd->data.print_text.font_resource_uid);
+    render_cmd->print_text.font_resource_uid = global_data->ui_state->default_font_resource;
+    // printf("set defaultfont %u\n", render_cmd->print_text.font_resource_uid);
   }
-  render_cmd->data.print_text.color = font_color;
+  render_cmd->print_text.color = font_color;
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @render_queue
-void mcr_issue_render_command_colored_quad(image_render_queue *render_queue, unsigned int x, unsigned int y,
+void mcr_issue_render_command_colored_quad(image_render_request *render_queue, unsigned int x, unsigned int y,
                                            unsigned int width, unsigned int height, render_color color)
 {
   if (!color.a)
@@ -132,13 +132,13 @@ void mcr_issue_render_command_colored_quad(image_render_queue *render_queue, uns
   render_cmd->type = RENDER_COMMAND_COLORED_QUAD;
   render_cmd->x = x;
   render_cmd->y = y;
-  render_cmd->data.colored_rect_info.width = width;
-  render_cmd->data.colored_rect_info.height = height;
-  render_cmd->data.colored_rect_info.color = color;
+  render_cmd->colored_rect_info.width = width;
+  render_cmd->colored_rect_info.height = height;
+  render_cmd->colored_rect_info.color = color;
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @render_queue
-void mcr_issue_render_command_textured_quad(image_render_queue *render_queue, unsigned int x, unsigned int y,
+void mcr_issue_render_command_textured_quad(image_render_request *render_queue, unsigned int x, unsigned int y,
                                             unsigned int width, unsigned int height, unsigned int texture_resource)
 {
   element_render_command *render_cmd;
@@ -147,7 +147,7 @@ void mcr_issue_render_command_textured_quad(image_render_queue *render_queue, un
   render_cmd->type = RENDER_COMMAND_TEXTURED_QUAD;
   render_cmd->x = x;
   render_cmd->y = y;
-  render_cmd->data.textured_rect_info.width = width;
-  render_cmd->data.textured_rect_info.height = height;
-  render_cmd->data.textured_rect_info.texture_uid = texture_resource;
+  render_cmd->textured_rect_info.width = width;
+  render_cmd->textured_rect_info.height = height;
+  render_cmd->textured_rect_info.texture_uid = texture_resource;
 }

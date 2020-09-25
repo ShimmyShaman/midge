@@ -125,8 +125,8 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     VK_CHECK(res, "vkBindBufferMemory");
   }
   {
-    vec3 mesh_data[] = {{0.f, 0.f, 0.f}, {0.f, 0.f, 1.f}, {0.f, 1.f, 0.f}, {0.f, 1.f, 1.f},
-                        {1.f, 0.f, 0.f}, {1.f, 0.f, 1.f}, {1.f, 1.f, 0.f}, {1.f, 1.f, 1.f}};
+    vec3 mesh_data[] = {{-0.5f, -0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
+                        {0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, 0.5f}, {0.5f, 0.5f, -0.5f}, {0.5f, 0.5f, 0.5f}};
 
     // Cube vertices TEMP DEBUG
     const int data_size_in_bytes = sizeof(mesh_data);

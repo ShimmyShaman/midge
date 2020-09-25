@@ -2,7 +2,7 @@
 
 void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *state)
 {
-  image_render_queue *sequence;
+  image_render_request *sequence;
   element_render_command *element_cmd;
 
   render_color font_color = COLOR_GHOST_WHITE;
@@ -15,7 +15,7 @@ void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *stat
       rendered_line->requires_render_update = false;
 
       // printf("fer-c\n");
-      MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+      MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
       sequence->render_target = NODE_RENDER_TARGET_IMAGE;
       sequence->clear_color = COLOR_TRANSPARENT;
       sequence->image_width = rendered_line->width;
@@ -80,10 +80,10 @@ void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *stat
           element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
           element_cmd->x = 4 + t * EDITOR_FONT_HORIZONTAL_STRIDE;
           element_cmd->y = 2 + 12;
-          allocate_and_copy_cstrn(element_cmd->data.print_text.text, rendered_line->rtf->text + s, i - s);
-          // printf("line:%i text:'%s' @ %i\n", a, element_cmd->data.print_text.text, t);
-          element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
-          element_cmd->data.print_text.color = font_color;
+          allocate_and_copy_cstrn(element_cmd->print_text.text, rendered_line->rtf->text + s, i - s);
+          // printf("line:%i text:'%s' @ %i\n", a, element_cmd->print_text.text, t);
+          element_cmd->print_text.font_resource_uid = state->font_resource_uid;
+          element_cmd->print_text.color = font_color;
           t += i - s;
         }
         if (eof) {
@@ -101,7 +101,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
 
   // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
   //        command_hub->interactive_console->visual.image_resource_uid);
-  image_render_queue *sequence;
+  image_render_request *sequence;
   element_render_command *element_cmd;
   // Lines
   mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)visual_node->extra;
@@ -118,7 +118,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
   if (state->status_bar.requires_render_update) {
     state->status_bar.requires_render_update = false;
 
-    MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+    MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
     sequence->render_target = NODE_RENDER_TARGET_IMAGE;
     sequence->image_width = state->status_bar.bounds.width;
     sequence->image_height = state->status_bar.bounds.height;
@@ -129,27 +129,27 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
     element_cmd->x = 0;
     element_cmd->y = 0;
-    element_cmd->data.colored_rect_info.width = state->status_bar.bounds.width;
-    element_cmd->data.colored_rect_info.height = 2;
-    element_cmd->data.colored_rect_info.color = COLOR_GHOST_WHITE;
+    element_cmd->colored_rect_info.width = state->status_bar.bounds.width;
+    element_cmd->colored_rect_info.height = 2;
+    element_cmd->colored_rect_info.color = COLOR_GHOST_WHITE;
 
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
     element_cmd->x = 4;
     element_cmd->y = 2 + 12 + 4;
-    allocate_and_copy_cstr(element_cmd->data.print_text.text, state->status_bar.message);
-    element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
-    element_cmd->data.print_text.color.a = 1.f;
-    element_cmd->data.print_text.color.r = 0.95f;
-    element_cmd->data.print_text.color.g = 0.72f;
-    element_cmd->data.print_text.color.b = 0.49f;
+    allocate_and_copy_cstr(element_cmd->print_text.text, state->status_bar.message);
+    element_cmd->print_text.font_resource_uid = state->font_resource_uid;
+    element_cmd->print_text.color.a = 1.f;
+    element_cmd->print_text.color.r = 0.95f;
+    element_cmd->print_text.color.g = 0.72f;
+    element_cmd->print_text.color.b = 0.49f;
   }
 
   // Suggestion Box
   if (state->suggestion_box.visible && state->suggestion_box.requires_render_update) {
     state->suggestion_box.requires_render_update = false;
 
-    MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+    MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
     sequence->render_target = NODE_RENDER_TARGET_IMAGE;
     sequence->image_width = state->suggestion_box.bounds.width;
     sequence->image_height = state->suggestion_box.bounds.height;
@@ -160,31 +160,31 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
     element_cmd->x = 1;
     element_cmd->y = 1;
-    element_cmd->data.colored_rect_info.width = state->suggestion_box.bounds.width - 2;
-    element_cmd->data.colored_rect_info.height = state->suggestion_box.bounds.height - 2;
-    element_cmd->data.colored_rect_info.color = COLOR_NEARLY_BLACK;
+    element_cmd->colored_rect_info.width = state->suggestion_box.bounds.width - 2;
+    element_cmd->colored_rect_info.height = state->suggestion_box.bounds.height - 2;
+    element_cmd->colored_rect_info.color = COLOR_NEARLY_BLACK;
 
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
     element_cmd->x = 1;
     element_cmd->y = 2 + state->suggestion_box.selected_index * EDITOR_LINE_STRIDE;
-    element_cmd->data.colored_rect_info.width = state->suggestion_box.bounds.width - 2;
-    element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
-    element_cmd->data.colored_rect_info.color = COLOR_DIM_GRAY;
+    element_cmd->colored_rect_info.width = state->suggestion_box.bounds.width - 2;
+    element_cmd->colored_rect_info.height = EDITOR_LINE_STRIDE;
+    element_cmd->colored_rect_info.color = COLOR_DIM_GRAY;
 
     for (int a = 0; a < state->suggestion_box.entries.count; ++a) {
       MCcall(obtain_element_render_command(sequence, &element_cmd));
       element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
       element_cmd->x = 4;
       element_cmd->y = 2 + a * EDITOR_LINE_STRIDE + 12 + 4;
-      allocate_and_copy_cstr(element_cmd->data.print_text.text, state->suggestion_box.entries.items[a]);
-      element_cmd->data.print_text.font_resource_uid = state->font_resource_uid;
-      element_cmd->data.print_text.color = COLOR_LIGHT_YELLOW;
+      allocate_and_copy_cstr(element_cmd->print_text.text, state->suggestion_box.entries.items[a]);
+      element_cmd->print_text.font_resource_uid = state->font_resource_uid;
+      element_cmd->print_text.color = COLOR_LIGHT_YELLOW;
     }
   }
 
   // Render Main Image
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = visual_node->data.visual.bounds.width;
   sequence->image_height = visual_node->data.visual.bounds.height;
@@ -195,9 +195,9 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   element_cmd->x = 2;
   element_cmd->y = 2;
-  element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
-  element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
-  element_cmd->data.colored_rect_info.color = COLOR_NEARLY_BLACK;
+  element_cmd->colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
+  element_cmd->colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
+  element_cmd->colored_rect_info.color = COLOR_NEARLY_BLACK;
 
   if (state->selection_exists) {
     // Obtain selection bounds
@@ -237,12 +237,12 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
         element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
         element_cmd->x = 6 + (uint)(selection_start_col * EDITOR_FONT_HORIZONTAL_STRIDE);
         element_cmd->y = 7 + (selection_start_line - (int)state->line_display_offset) * EDITOR_LINE_STRIDE;
-        element_cmd->data.colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
-        element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
-        element_cmd->data.colored_rect_info.color.a = 1.f;
-        element_cmd->data.colored_rect_info.color.r = 0.67f;
-        element_cmd->data.colored_rect_info.color.g = 0.42f;
-        element_cmd->data.colored_rect_info.color.b = 0.16f;
+        element_cmd->colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
+        element_cmd->colored_rect_info.height = EDITOR_LINE_STRIDE;
+        element_cmd->colored_rect_info.color.a = 1.f;
+        element_cmd->colored_rect_info.color.r = 0.67f;
+        element_cmd->colored_rect_info.color.g = 0.42f;
+        element_cmd->colored_rect_info.color.b = 0.16f;
       }
     }
 
@@ -260,12 +260,12 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
           element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
           element_cmd->x = 6;
           element_cmd->y = 7 + i * EDITOR_LINE_STRIDE;
-          element_cmd->data.colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
-          element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
-          element_cmd->data.colored_rect_info.color.a = 1.f;
-          element_cmd->data.colored_rect_info.color.r = 0.67f;
-          element_cmd->data.colored_rect_info.color.g = 0.42f;
-          element_cmd->data.colored_rect_info.color.b = 0.16f;
+          element_cmd->colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
+          element_cmd->colored_rect_info.height = EDITOR_LINE_STRIDE;
+          element_cmd->colored_rect_info.color.a = 1.f;
+          element_cmd->colored_rect_info.color.r = 0.67f;
+          element_cmd->colored_rect_info.color.g = 0.42f;
+          element_cmd->colored_rect_info.color.b = 0.16f;
         }
       }
     }
@@ -283,12 +283,12 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
           element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
           element_cmd->x = 6;
           element_cmd->y = 7 + (selection_end_line - state->line_display_offset) * EDITOR_LINE_STRIDE;
-          element_cmd->data.colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
-          element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
-          element_cmd->data.colored_rect_info.color.a = 1.f;
-          element_cmd->data.colored_rect_info.color.r = 0.67f;
-          element_cmd->data.colored_rect_info.color.g = 0.42f;
-          element_cmd->data.colored_rect_info.color.b = 0.16f;
+          element_cmd->colored_rect_info.width = selected_columns * EDITOR_FONT_HORIZONTAL_STRIDE;
+          element_cmd->colored_rect_info.height = EDITOR_LINE_STRIDE;
+          element_cmd->colored_rect_info.color.a = 1.f;
+          element_cmd->colored_rect_info.color.r = 0.67f;
+          element_cmd->colored_rect_info.color.g = 0.42f;
+          element_cmd->colored_rect_info.color.b = 0.16f;
         }
       }
     }
@@ -303,9 +303,9 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
     element_cmd->x = 2;
     element_cmd->y = 8 + i * EDITOR_LINE_STRIDE;
-    element_cmd->data.textured_rect_info.width = state->render_lines[i]->width;
-    element_cmd->data.textured_rect_info.height = state->render_lines[i]->height;
-    element_cmd->data.textured_rect_info.texture_uid = state->render_lines[i]->image_resource_uid;
+    element_cmd->textured_rect_info.width = state->render_lines[i]->width;
+    element_cmd->textured_rect_info.height = state->render_lines[i]->height;
+    element_cmd->textured_rect_info.texture_uid = state->render_lines[i]->image_resource_uid;
   }
 
   // Status bar
@@ -313,9 +313,9 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
   element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
   element_cmd->x = state->status_bar.bounds.x;
   element_cmd->y = state->status_bar.bounds.y;
-  element_cmd->data.textured_rect_info.width = state->status_bar.bounds.width;
-  element_cmd->data.textured_rect_info.height = state->status_bar.bounds.height;
-  element_cmd->data.textured_rect_info.texture_uid = state->status_bar.image_resource_uid;
+  element_cmd->textured_rect_info.width = state->status_bar.bounds.width;
+  element_cmd->textured_rect_info.height = state->status_bar.bounds.height;
+  element_cmd->textured_rect_info.texture_uid = state->status_bar.image_resource_uid;
 
   // Suggestion box
   if (state->suggestion_box.visible) {
@@ -325,9 +325,9 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     // element_cmd->y = state->suggestion_box.bounds.y;
     element_cmd->x = 6 + (uint)((state->cursor.col + 1) * EDITOR_FONT_HORIZONTAL_STRIDE);
     element_cmd->y = 7 + (state->cursor.line - state->line_display_offset + 1) * EDITOR_LINE_STRIDE;
-    element_cmd->data.textured_rect_info.width = state->suggestion_box.bounds.width;
-    element_cmd->data.textured_rect_info.height = state->suggestion_box.bounds.height;
-    element_cmd->data.textured_rect_info.texture_uid = state->suggestion_box.image_resource_uid;
+    element_cmd->textured_rect_info.width = state->suggestion_box.bounds.width;
+    element_cmd->textured_rect_info.height = state->suggestion_box.bounds.height;
+    element_cmd->textured_rect_info.texture_uid = state->suggestion_box.image_resource_uid;
   }
 
   // printf("fer-q\n");
@@ -338,12 +338,12 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
     element_cmd->x = 6 + (uint)(state->cursor.col * EDITOR_FONT_HORIZONTAL_STRIDE);
     element_cmd->y = 7 + (state->cursor.line - state->line_display_offset) * EDITOR_LINE_STRIDE;
-    element_cmd->data.colored_rect_info.width = 2;
-    element_cmd->data.colored_rect_info.height = EDITOR_LINE_STRIDE;
-    element_cmd->data.colored_rect_info.color.a = 1.f;
-    element_cmd->data.colored_rect_info.color.r = 0.83f;
-    element_cmd->data.colored_rect_info.color.g = 0.83f;
-    element_cmd->data.colored_rect_info.color.b = 0.83f;
+    element_cmd->colored_rect_info.width = 2;
+    element_cmd->colored_rect_info.height = EDITOR_LINE_STRIDE;
+    element_cmd->colored_rect_info.color.a = 1.f;
+    element_cmd->colored_rect_info.color.r = 0.83f;
+    element_cmd->colored_rect_info.color.g = 0.83f;
+    element_cmd->colored_rect_info.color.b = 0.83f;
   }
 }
 

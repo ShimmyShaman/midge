@@ -167,10 +167,13 @@ typedef struct element_render_command {
       unsigned int width, height;
       unsigned int texture_uid;
     } textured_rect_info;
-  } data;
+    struct {
+      float *world_matrix;
+    } mesh;
+  };
 } element_render_command;
 
-typedef struct image_render_queue {
+typedef struct image_render_request {
   unsigned int image_width, image_height;
   node_render_target render_target;
   render_color clear_color;
@@ -188,7 +191,7 @@ typedef struct image_render_queue {
       } screen_offset_coordinates;
     } target_image;
   } data;
-} image_render_queue;
+} image_render_request;
 
 typedef struct resource_command {
   resource_command_type type;
@@ -217,15 +220,16 @@ typedef struct resource_queue {
 
 typedef struct render_queue {
   pthread_mutex_t mutex;
-  unsigned int count;
-  unsigned int allocated;
-  image_render_queue *image_renders;
+  unsigned int alloc, count;
+  image_render_request **items;
+
 } render_queue;
 
 struct loaded_font_list; // From mc_vulkan.h - compiled later
 typedef struct render_thread_info {
   mthread_info *thread_info;
   render_queue render_queue;
+  render_queue render_request_object_pool;
   resource_queue resource_queue;
   // ptr reference only no need to release
   loaded_font_list *loaded_fonts;
@@ -236,8 +240,8 @@ typedef struct render_thread_info {
 extern "C" {
 
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
-int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p_command);
-int obtain_element_render_command(image_render_queue *image_queue, element_render_command **p_command);
+int obtain_image_render_request(render_queue *render_queue, image_render_request **p_command);
+int obtain_element_render_command(image_render_request *image_queue, element_render_command **p_command);
 
 void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
                                  bool use_as_render_target, unsigned int *resource_uid);

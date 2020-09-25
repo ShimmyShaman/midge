@@ -257,6 +257,7 @@ typedef struct mc_node {
 struct render_thread_info;
 struct mui_ui_state;
 struct mci_input_state;
+struct frame_time;
 
 typedef struct global_root_data {
   struct timespec *app_begin_time;
@@ -271,6 +272,8 @@ typedef struct global_root_data {
 
   struct mci_input_state *input_state;
   bool input_state_requires_update;
+
+  frame_time *elapsed;
 
   struct mui_ui_state *ui_state;
   unsigned int present_image_resource_uid;

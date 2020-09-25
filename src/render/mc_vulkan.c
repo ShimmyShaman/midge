@@ -1986,10 +1986,10 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
                                      "    vec2 scale;\n"
                                      "} element;\n"
                                      "\n"
-                                     "layout(location = 0) in vec4 inPosition;\n"
+                                     "layout(location = 0) in vec3 inPosition;\n"
                                      "\n"
                                      "void main() {\n"
-                                     "   gl_Position = world.mvp * inPosition;\n"
+                                     "   gl_Position = world.mvp * vec4(inPosition, 1.0);\n"
                                      "}\n";
 
     const char *fragment_shader_code = "#version 450\n"
@@ -2068,7 +2068,7 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[0].offset = 0;                       // offsetof(textured_image_vertex, position);
+    attributeDescriptions[0].offset = 0;                             // offsetof(textured_image_vertex, position);
   }
 
   {

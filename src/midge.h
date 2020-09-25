@@ -171,6 +171,7 @@ int _midge_run()
     clint->process("#include <vulkan/vulkan_xcb.h>\n");
 
     clint->process("#define GLM_FORCE_RADIANS\n");
+    clint->process("#define GLM_FORCE_DEPTH_ZERO_TO_ONE\n");
     clint->process("#include <cglm/cglm.h>\n");
     clint->process("#include <cglm/types-struct.h>\n");
 

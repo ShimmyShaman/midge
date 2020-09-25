@@ -24,12 +24,12 @@ typedef struct usage_data_interface_state {
 
 void usage_data_interface_render(frame_time *elapsed, mc_node_v1 *visual_node)
 {
-  image_render_queue *sequence;
+  image_render_request *sequence;
   element_render_command *element_cmd;
 
   usage_data_interface_state *state = (usage_data_interface_state *)visual_node->extra;
 
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = visual_node->data.visual.bounds.width;
   sequence->image_height = visual_node->data.visual.bounds.height;
@@ -41,9 +41,9 @@ void usage_data_interface_render(frame_time *elapsed, mc_node_v1 *visual_node)
   //   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   //   element_cmd->x = 2;
   //   element_cmd->y = 2;
-  //   element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
-  //   element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
-  //   element_cmd->data.colored_rect_info.color = COLOR_NEARLY_BLACK;
+  //   element_cmd->colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
+  //   element_cmd->colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
+  //   element_cmd->colored_rect_info.color = COLOR_NEARLY_BLACK;
   // }
 
   // Corner Button
@@ -51,9 +51,9 @@ void usage_data_interface_render(frame_time *elapsed, mc_node_v1 *visual_node)
   element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   element_cmd->x = 2;
   element_cmd->y = 2;
-  element_cmd->data.colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
-  element_cmd->data.colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
-  element_cmd->data.colored_rect_info.color = COLOR_GREEN;
+  element_cmd->colored_rect_info.width = visual_node->data.visual.bounds.width - 4;
+  element_cmd->colored_rect_info.height = visual_node->data.visual.bounds.height - 4;
+  element_cmd->colored_rect_info.color = COLOR_GREEN;
 }
 
 void usage_data_interface_handle_input(frame_time *elapsed, mc_node_v1 *visual_node, mc_input_event_v1 *event)

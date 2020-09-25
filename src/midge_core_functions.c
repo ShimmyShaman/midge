@@ -213,8 +213,8 @@ int force_render_update(int argc, void **argv)
   pthread_mutex_lock(&command_hub->renderer.render_queue->mutex);
 
   // Font Writing
-  // image_render_queue *sequence;
-  // MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  // image_render_request *sequence;
+  // MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
   // sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   // sequence->image_width = 512;
   // sequence->image_height = 128;
@@ -225,28 +225,28 @@ int force_render_update(int argc, void **argv)
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 2;
   // element_cmd->y = 2;
-  // element_cmd->data.colored_rect_info.width = 508;
-  // element_cmd->data.colored_rect_info.height = 124;
-  // element_cmd->data.colored_rect_info.color = teal;
+  // element_cmd->colored_rect_info.width = 508;
+  // element_cmd->colored_rect_info.height = 124;
+  // element_cmd->colored_rect_info.color = teal;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 80;
   // element_cmd->y = 30;
-  // element_cmd->data.colored_rect_info.width = 68;
-  // element_cmd->data.colored_rect_info.height = 68;
-  // element_cmd->data.colored_rect_info.color = dark_slate_gray;
+  // element_cmd->colored_rect_info.width = 68;
+  // element_cmd->colored_rect_info.height = 68;
+  // element_cmd->colored_rect_info.color = dark_slate_gray;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
   // element_cmd->x = 82;
   // element_cmd->y = 32 + 24;
-  // element_cmd->data.print_text.text = "The quick brown fox jumps over the lazy dog!";
-  // element_cmd->data.print_text.color = black;
-  // element_cmd->data.print_text.font_resource_uid = command_hub->ui_elements[2].resource_uid;
+  // element_cmd->print_text.text = "The quick brown fox jumps over the lazy dog!";
+  // element_cmd->print_text.color = black;
+  // element_cmd->print_text.font_resource_uid = command_hub->ui_elements[2].resource_uid;
 
   // For the global node (and whole screen)
-  // MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  // MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
   // sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   // sequence->image_width = 1024;
   // sequence->image_height = 640;
@@ -256,9 +256,9 @@ int force_render_update(int argc, void **argv)
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 2;
   // element_cmd->y = 2;
-  // element_cmd->data.colored_rect_info.width = 1020;
-  // element_cmd->data.colored_rect_info.height = 636;
-  // element_cmd->data.colored_rect_info.color = dark_slate_gray;
+  // element_cmd->colored_rect_info.width = 1020;
+  // element_cmd->colored_rect_info.height = 636;
+  // element_cmd->colored_rect_info.color = dark_slate_gray;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_SAMPLE_CUBE;
@@ -272,65 +272,65 @@ int force_render_update(int argc, void **argv)
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 244;
   // element_cmd->y = 52;
-  // element_cmd->data.colored_rect_info.width = 536;
-  // element_cmd->data.colored_rect_info.height = 536;
-  // element_cmd->data.colored_rect_info.color = burlywood;
+  // element_cmd->colored_rect_info.width = 536;
+  // element_cmd->colored_rect_info.height = 536;
+  // element_cmd->colored_rect_info.color = burlywood;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
   // element_cmd->x = 256;
   // element_cmd->y = 64;
-  // element_cmd->data.textured_rect_info.width = 512;
-  // element_cmd->data.textured_rect_info.height = 128;
-  // element_cmd->data.textured_rect_info.texture_uid = command_hub->ui_elements[1].resource_uid;
+  // element_cmd->textured_rect_info.width = 512;
+  // element_cmd->textured_rect_info.height = 128;
+  // element_cmd->textured_rect_info.texture_uid = command_hub->ui_elements[1].resource_uid;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 1024 - 300 - 8;
   // element_cmd->y = 640 - 40 - 8;
-  // element_cmd->data.colored_rect_info.width = 300;
-  // element_cmd->data.colored_rect_info.height = 40;
-  // element_cmd->data.colored_rect_info.color = greenish;
+  // element_cmd->colored_rect_info.width = 300;
+  // element_cmd->colored_rect_info.height = 40;
+  // element_cmd->colored_rect_info.color = greenish;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 1024 - 300 - 8 + 4;
   // element_cmd->y = 640 - 40 - 8 + 4;
-  // element_cmd->data.colored_rect_info.width = 240;
-  // element_cmd->data.colored_rect_info.height = 32;
-  // element_cmd->data.colored_rect_info.color = ghost_white;
+  // element_cmd->colored_rect_info.width = 240;
+  // element_cmd->colored_rect_info.height = 32;
+  // element_cmd->colored_rect_info.color = ghost_white;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 1024 - 300 - 8 + 4;
   // element_cmd->y = 640 - 40 - 8 + 4;
-  // element_cmd->data.colored_rect_info.width = 2;
-  // element_cmd->data.colored_rect_info.height = 32;
-  // element_cmd->data.colored_rect_info.color = black;
+  // element_cmd->colored_rect_info.width = 2;
+  // element_cmd->colored_rect_info.height = 32;
+  // element_cmd->colored_rect_info.color = black;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 1024 - 300 - 8 + 4;
   // element_cmd->y = 640 - 40 - 8 + 4;
-  // element_cmd->data.colored_rect_info.width = 240;
-  // element_cmd->data.colored_rect_info.height = 2;
-  // element_cmd->data.colored_rect_info.color = black;
+  // element_cmd->colored_rect_info.width = 240;
+  // element_cmd->colored_rect_info.height = 2;
+  // element_cmd->colored_rect_info.color = black;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 1024 - 60 - 8 + 4 - 2;
   // element_cmd->y = 640 - 40 - 8 + 4;
-  // element_cmd->data.colored_rect_info.width = 2;
-  // element_cmd->data.colored_rect_info.height = 32;
-  // element_cmd->data.colored_rect_info.color = black;
+  // element_cmd->colored_rect_info.width = 2;
+  // element_cmd->colored_rect_info.height = 32;
+  // element_cmd->colored_rect_info.color = black;
 
   // MCcall(obtain_element_render_command(sequence, &element_cmd));
   // element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;
   // element_cmd->x = 1024 - 300 - 8 + 4;
   // element_cmd->y = 640 - 8 - 4 - 2;
-  // element_cmd->data.colored_rect_info.width = 240;
-  // element_cmd->data.colored_rect_info.height = 2;
-  // element_cmd->data.colored_rect_info.color = black;
+  // element_cmd->colored_rect_info.width = 240;
+  // element_cmd->colored_rect_info.height = 2;
+  // element_cmd->colored_rect_info.color = black;
 
   pthread_mutex_unlock(&command_hub->renderer.render_queue->mutex);
 
@@ -3590,8 +3590,8 @@ int render_global_node_v1(int argc, void **argv)
   /*mcfuncreplace*/
 
   // For the global node (and whole screen)
-  image_render_queue *sequence;
-  MCcall(obtain_image_render_queue(command_hub->renderer.render_queue, &sequence));
+  image_render_request *sequence;
+  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
   sequence->image_width = APPLICATION_SET_WIDTH;
   sequence->image_height = APPLICATION_SET_HEIGHT;
   sequence->clear_color = COLOR_DARK_SLATE_GRAY;
@@ -3606,9 +3606,9 @@ int render_global_node_v1(int argc, void **argv)
       element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
       element_cmd->x = child->data.visual.bounds.x;
       element_cmd->y = child->data.visual.bounds.y;
-      element_cmd->data.textured_rect_info.width = child->data.visual.bounds.width;
-      element_cmd->data.textured_rect_info.height = child->data.visual.bounds.height;
-      element_cmd->data.textured_rect_info.texture_uid = child->data.visual.image_resource_uid;
+      element_cmd->textured_rect_info.width = child->data.visual.bounds.width;
+      element_cmd->textured_rect_info.height = child->data.visual.bounds.height;
+      element_cmd->textured_rect_info.texture_uid = child->data.visual.image_resource_uid;
     }
   }
 
@@ -3616,9 +3616,9 @@ int render_global_node_v1(int argc, void **argv)
   // element_cmd->type = RENDER_COMMAND_TEXTURED_RECTANGLE;
   // element_cmd->x = command_hub->interactive_console->bounds.x;
   // element_cmd->y = command_hub->interactive_console->bounds.y;
-  // element_cmd->data.textured_rect_info.width = command_hub->interactive_console->bounds.width;
-  // element_cmd->data.textured_rect_info.height = command_hub->interactive_console->bounds.height;
-  // element_cmd->data.textured_rect_info.texture_uid = command_hub->interactive_console->visual.image_resource_uid;
+  // element_cmd->textured_rect_info.width = command_hub->interactive_console->bounds.width;
+  // element_cmd->textured_rect_info.height = command_hub->interactive_console->bounds.height;
+  // element_cmd->textured_rect_info.texture_uid = command_hub->interactive_console->visual.image_resource_uid;
 
   return 0;
 }

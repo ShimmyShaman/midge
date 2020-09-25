@@ -159,23 +159,24 @@ VkResult mrt_write_desc_and_queue_render_data(vk_render_state *p_vkrs, unsigned 
   return res;
 }
 
-VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
-                                 element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
+VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer,
+                                 image_render_request *sequence, element_render_command *cmd,
+                                 mrt_sequence_copy_buffer *copy_buffer)
 {
   // Bounds check
-  if (cmd->data.colored_rect_info.width == 0 || cmd->x >= sequence->image_width ||
-      cmd->data.colored_rect_info.height == 0 || cmd->y >= sequence->image_height)
+  if (cmd->colored_rect_info.width == 0 || cmd->x >= sequence->image_width || cmd->colored_rect_info.height == 0 ||
+      cmd->y >= sequence->image_height)
     return VK_SUCCESS;
 
   VkResult res;
-  // printf("mrt_rcq-0 %u %u\n", cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
+  // printf("mrt_rcq-0 %u %u\n", cmd->colored_rect_info.width, cmd->colored_rect_info.height);
 
   // Setup viewport and clip
   set_viewport_cmd(command_buffer, 0.f, 0.f, (float)sequence->image_width, (float)sequence->image_height);
   set_scissor_cmd(command_buffer, (int32_t)(cmd->x > 0 ? cmd->x : 0), (int32_t)(cmd->y > 0 ? cmd->y : 0),
-                  (uint32_t)cmd->data.colored_rect_info.width, (uint32_t)cmd->data.colored_rect_info.height);
+                  (uint32_t)cmd->colored_rect_info.width, (uint32_t)cmd->colored_rect_info.height);
 
-  // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
+  // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->colored_rect_info.width, cmd->colored_rect_info.height);
 
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
@@ -184,12 +185,12 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
 
   float scale_multiplier =
       1.f / (float)(sequence->image_width < sequence->image_height ? sequence->image_width : sequence->image_height);
-  vert_ubo_data->scale.x = 2.f * cmd->data.colored_rect_info.width * scale_multiplier;
-  vert_ubo_data->scale.y = 2.f * cmd->data.colored_rect_info.height * scale_multiplier;
+  vert_ubo_data->scale.x = 2.f * cmd->colored_rect_info.width * scale_multiplier;
+  vert_ubo_data->scale.y = 2.f * cmd->colored_rect_info.height * scale_multiplier;
   vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
-                            1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
+                            1.0f * (float)cmd->colored_rect_info.width / (float)(sequence->image_width);
   vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
-                            1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
+                            1.0f * (float)cmd->colored_rect_info.height / (float)(sequence->image_height);
 
   // printf("mrt_rcq-1\n");
   // Fragment Data
@@ -197,7 +198,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   copy_buffer->index += sizeof(render_color);
   VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
-  memcpy(frag_ubo_data, &cmd->data.colored_rect_info.color, sizeof(render_color));
+  memcpy(frag_ubo_data, &cmd->colored_rect_info.color, sizeof(render_color));
 
   // Allocate the descriptor set from the pool.
   VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -279,12 +280,13 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   return res;
 }
 
-VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
-                                  element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
+VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer,
+                                  image_render_request *sequence, element_render_command *cmd,
+                                  mrt_sequence_copy_buffer *copy_buffer)
 {
   VkResult res;
 
-  if (!cmd->data.textured_rect_info.texture_uid) {
+  if (!cmd->textured_rect_info.texture_uid) {
     // Ignore call
     printf("Ignored mrt_render_textured_quad call because texture resource uid == 0\n");
     return VK_SUCCESS;
@@ -297,21 +299,21 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
 
   float scale_multiplier =
       1.f / (float)(sequence->image_width < sequence->image_height ? sequence->image_width : sequence->image_height);
-  vert_ubo_data->scale.x = 2.f * (float)cmd->data.textured_rect_info.width * scale_multiplier;
-  vert_ubo_data->scale.y = 2.f * (float)cmd->data.textured_rect_info.height * scale_multiplier;
+  vert_ubo_data->scale.x = 2.f * (float)cmd->textured_rect_info.width * scale_multiplier;
+  vert_ubo_data->scale.y = 2.f * (float)cmd->textured_rect_info.height * scale_multiplier;
   vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
-                            1.0f * (float)cmd->data.textured_rect_info.width / (float)(sequence->image_width);
+                            1.0f * (float)cmd->textured_rect_info.width / (float)(sequence->image_width);
   vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
-                            1.0f * (float)cmd->data.textured_rect_info.height / (float)(sequence->image_height);
+                            1.0f * (float)cmd->textured_rect_info.height / (float)(sequence->image_height);
 
   // printf("x:%u y:%u tri.width:%u tri.height:%u seq.width:%u seq.height:%u\n", cmd->x, cmd->y,
-  //        cmd->data.textured_rect_info.width, cmd->data.textured_rect_info.height, sequence->image_width,
+  //        cmd->textured_rect_info.width, cmd->textured_rect_info.height, sequence->image_width,
   //        sequence->image_height);
 
   // Setup viewport and clip
   set_viewport_cmd(command_buffer, 0.f, 0.f, (float)sequence->image_width, (float)sequence->image_height);
-  set_scissor_cmd(command_buffer, (int32_t)cmd->x, (int32_t)cmd->y, (uint32_t)cmd->data.textured_rect_info.width,
-                  (uint32_t)cmd->data.textured_rect_info.height);
+  set_scissor_cmd(command_buffer, (int32_t)cmd->x, (int32_t)cmd->y, (uint32_t)cmd->textured_rect_info.width,
+                  (uint32_t)cmd->textured_rect_info.height);
 
   // Queue Buffer Write
   const unsigned int MAX_DESC_SET_WRITES = 8;
@@ -366,9 +368,9 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   VkDescriptorImageInfo image_sampler_info = {};
   image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   image_sampler_info.imageView =
-      p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
+      p_vkrs->textures.samples[cmd->textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
   image_sampler_info.sampler =
-      p_vkrs->textures.samples[cmd->data.textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].sampler;
+      p_vkrs->textures.samples[cmd->textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].sampler;
 
   // Element Fragment Shader Combined Image Sampler
   write = &writes[write_index++];
@@ -396,12 +398,12 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   return res;
 }
 
-VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
+VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_request *sequence,
                          element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
 {
   VkResult res;
 
-  if (!cmd->data.print_text.text || cmd->data.print_text.text[0] == '\0') {
+  if (!cmd->print_text.text || cmd->print_text.text[0] == '\0') {
     return VK_SUCCESS;
   }
 
@@ -409,14 +411,14 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   // Get the font image
   loaded_font_info *font = NULL;
   for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
-    if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->data.print_text.font_resource_uid) {
+    if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->print_text.font_resource_uid) {
       font = &p_vkrs->loaded_fonts.fonts[f];
       break;
     }
   }
 
   if (!font) {
-    printf("Could not find requested font uid=%u\n", cmd->data.print_text.font_resource_uid);
+    printf("Could not find requested font uid=%u\n", cmd->print_text.font_resource_uid);
     return VK_ERROR_UNKNOWN;
   }
 
@@ -426,14 +428,14 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   float align_y = cmd->y;
 
   // printf("mrt-1\n");
-  int text_length = strlen(cmd->data.print_text.text);
+  int text_length = strlen(cmd->print_text.text);
   for (int c = 0; c < text_length; ++c) {
 
     // if (align_x > font_image->width) {
     //   break;
     // }
 
-    char letter = cmd->data.print_text.text[c];
+    char letter = cmd->print_text.text[c];
     if (letter < 32 || letter > 127) {
       printf("TODO character not supported.\n");
       return VK_SUCCESS;
@@ -493,7 +495,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     copy_buffer->index += sizeof(frag_ubo_tint_texcoordbounds);
     VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
-    memcpy(&frag_ubo_data->tint, &cmd->data.print_text.color, sizeof(float) * 4);
+    memcpy(&frag_ubo_data->tint, &cmd->print_text.color, sizeof(float) * 4);
     frag_ubo_data->tex_coord_bounds.s0 = q.s0;
     frag_ubo_data->tex_coord_bounds.s1 = q.s1;
     frag_ubo_data->tex_coord_bounds.t0 = q.t0;
@@ -515,7 +517,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     setAllocInfo.pSetLayouts = &p_vkrs->font_prog.descriptor_layout;
 
     unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
-    // printf("cmd->text:'%s' descriptor_set_index=%u\n", cmd->data.print_text.text, descriptor_set_index);
+    // printf("cmd->text:'%s' descriptor_set_index=%u\n", cmd->print_text.text, descriptor_set_index);
     res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
     VK_CHECK(res, "vkAllocateDescriptorSets");
 
@@ -605,12 +607,12 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     // printf("mrt-9\n");
   }
 
-  free(cmd->data.print_text.text);
+  free(cmd->print_text.text);
 
   return res;
 }
 
-VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence,
+VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_request *sequence,
                          element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
 {
   VkResult res;
@@ -623,28 +625,52 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     mat4 proj;
     mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
 
-    glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
+    global_root_data *global_data;
+    obtain_midge_global_root(&global_data);
+
+    glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
     float fovy = 72.f / 180.f * 3.1459f;
     glm_perspective(fovy, (float)sequence->image_width / sequence->image_height, 0.01f, 1000.f, (vec4 *)&proj);
     // glm_ortho_default((float)sequence->image_width / sequence->image_height, (vec4 *)&proj);
+
+    // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
+    glm_mat4_mul((vec4 *)vpc, (vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc);
+    // }
+    // else {
+    // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
+    // }
+    // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+    //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
+    // }
+    // else {
+    glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
+    // }
+    // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
     glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-    glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
+    // }
+    // else {
+    // glm_mat4_mul((vec4 *)vpc, (vec4 *)&proj, (vec4 *)vpc);
+    // }
+
+    // glm_mat4_mul((vec4 *)vpc, (vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc);
+    // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+    // glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
 
     // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
   }
   // // Bounds check
-  // if (cmd->data.colored_rect_info.width == 0 || cmd->x >= sequence->image_width ||
-  //     cmd->data.colored_rect_info.height == 0 || cmd->y >= sequence->image_height)
+  // if (cmd->colored_rect_info.width == 0 || cmd->x >= sequence->image_width ||
+  //     cmd->colored_rect_info.height == 0 || cmd->y >= sequence->image_height)
   //   return VK_SUCCESS;
 
-  // // printf("mrt_rcq-0 %u %u\n", cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
+  // // printf("mrt_rcq-0 %u %u\n", cmd->colored_rect_info.width, cmd->colored_rect_info.height);
 
   // // Setup viewport and clip
   set_viewport_cmd(command_buffer, 0.f, 0.f, (float)sequence->image_width, (float)sequence->image_height);
   set_scissor_cmd(command_buffer, (int32_t)0, (int32_t)0, (uint32_t)sequence->image_width,
                   (uint32_t)sequence->image_height);
 
-  // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->data.colored_rect_info.width, cmd->data.colored_rect_info.height);
+  // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->colored_rect_info.width, cmd->colored_rect_info.height);
 
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
@@ -653,12 +679,12 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
 
   float scale_multiplier =
       1.f / (float)(sequence->image_width < sequence->image_height ? sequence->image_width : sequence->image_height);
-  vert_ubo_data->scale.x = 2.f * cmd->data.colored_rect_info.width * scale_multiplier;
-  vert_ubo_data->scale.y = 2.f * cmd->data.colored_rect_info.height * scale_multiplier;
+  vert_ubo_data->scale.x = 2.f * cmd->colored_rect_info.width * scale_multiplier;
+  vert_ubo_data->scale.y = 2.f * cmd->colored_rect_info.height * scale_multiplier;
   vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(sequence->image_width) +
-                            1.0f * (float)cmd->data.colored_rect_info.width / (float)(sequence->image_width);
+                            1.0f * (float)cmd->colored_rect_info.width / (float)(sequence->image_width);
   vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(sequence->image_height) +
-                            1.0f * (float)cmd->data.colored_rect_info.height / (float)(sequence->image_height);
+                            1.0f * (float)cmd->colored_rect_info.height / (float)(sequence->image_height);
 
   // printf("mrt_rcq-1\n");
   // Fragment Data
@@ -666,7 +692,7 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   copy_buffer->index += sizeof(render_color);
   VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
-  memcpy(frag_ubo_data, &cmd->data.colored_rect_info.color, sizeof(render_color));
+  memcpy(frag_ubo_data, &cmd->colored_rect_info.color, sizeof(render_color));
 
   // Allocate the descriptor set from the pool.
   VkDescriptorSetAllocateInfo setAllocInfo = {};
@@ -751,7 +777,7 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   return res;
 }
 
-VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_queue *sequence)
+VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_request *sequence)
 {
   // Descriptor Writes
   VkResult res;
@@ -832,7 +858,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
 
   for (int i = 0; i < render_queue->count; ++i) {
 
-    image_render_queue *sequence = &render_queue->image_renders[i];
+    image_render_request *sequence = &render_queue->image_renders[i];
 
     // if (sequence->command_count < 1) {
     //   return VK_ERROR_UNKNOWN;
@@ -1068,6 +1094,72 @@ VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queu
   return VK_SUCCESS;
 }
 
+VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_state *vkrs,
+                                   render_queue *rt_render_queue)
+{
+  struct timespec render_start_time;
+  clock_gettime(CLOCK_REALTIME, &render_start_time);
+
+  // Copy render requests from transient queue to render-thread only queue
+  pthread_mutex_lock(&render_thread->render_queue.mutex);
+  if (!render_thread->render_queue.count)
+    return VK_SUCCESS;
+
+  if (rt_render_queue->alloc < render_thread->render_queue.count) {
+    reallocate_collection((void ***)&rt_render_queue->items, &rt_render_queue->alloc,
+                          render_thread->render_queue.count + 4 + render_thread->render_queue.count / 4, 0);
+  }
+
+  memcpy(rt_render_queue->items, render_thread->render_queue.items,
+         sizeof(image_render_queue *) * render_thread->render_queue.count);
+  rt_render_queue->count = render_thread->render_queue.count;
+  render_thread->render_queue.count = 0;
+
+  pthread_mutex_unlock(&render_thread->render_queue.mutex);
+
+  // {
+  //   // DEBUG
+  //   uint cmd_count = 0;
+  //   for (int r = 0; r < render_thread->render_queue.count; ++r) {
+  //     cmd_count += render_thread->render_queue.image_renders[r].command_count;
+  //   }
+  //   printf("Vulkan entered render_queue! %u sequences using %u draw-commands\n",
+  //   render_thread->render_queue.count,
+  //          cmd_count);
+  // }
+
+  // Queue Render
+  res = render_through_queue(vkrs, &rt_render_queue);
+  VK_CHECK(res, "render_through_queue");
+  render_thread->render_queue.count = 0;
+
+  // After frame statistics
+  struct timespec render_end_time;
+  clock_gettime(CLOCK_REALTIME, &render_end_time);
+
+  printf("Vulkan rendered render_queue! %.3f ms\n", (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
+                                                        1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
+  ++frame_updates;
+
+  // Return the image render request objects to the pool
+  pthread_mutex_lock(&render_thread->render_request_object_pool.mutex);
+  if (render_thread->render_request_object_pool.count + rt_render_queue->count >
+      render_thread->render_request_object_pool.alloc) {
+    reallocate_collection((void ***)&render_thread->render_request_object_pool.items,
+                          &render_thread->render_request_object_pool.alloc,
+                          render_thread->render_request_object_pool.count + rt_render_queue->count + 4 +
+                              (render_thread->render_request_object_pool.count + rt_render_queue->count) / 4,
+                          0);
+  }
+
+  memcpy(render_thread->render_request_object_pool.items +
+             render_thread->render_request_object_pool.count * sizeof(image_render_request *),
+         rt_render_queue->items, sizeof(image_render_queue *) * rt_render_queue->count);
+  render_thread->render_request_object_pool.count += rt_render_queue->count;
+  rt_render_queue->count = 0;
+  pthread_mutex_unlock(&render_thread->render_request_object_pool.mutex);
+}
+
 VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state *vkrs)
 {
   printf("mrt-rul-0\n");
@@ -1090,6 +1182,10 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   // printf("mrt-2:good\n");
   render_thread->render_thread_initialized = true;
 
+  render_queue rt_render_queue;
+  rt_render_queue.alloc = 0;
+  rt_render_queue.count = 0;
+
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
   uint frame_updates = 0;
@@ -1111,32 +1207,14 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
 
     // Render Commands
     pthread_mutex_lock(&render_thread->render_queue.mutex);
-    if (render_thread->render_queue.count) {
-      struct timespec render_start_time;
-      clock_gettime(CLOCK_REALTIME, &render_start_time);
-      {
-        // DEBUG
-        uint cmd_count = 0;
-        for (int r = 0; r < render_thread->render_queue.count; ++r) {
-          cmd_count += render_thread->render_queue.image_renders[r].command_count;
-        }
-        // printf("Vulkan entered render_queue! %u sequences using %u draw-commands\n", render_thread->render_queue.count,
-        //        cmd_count);
-      }
-      res = render_through_queue(vkrs, &render_thread->render_queue);
-      VK_CHECK(res, "render_through_queue");
-      render_thread->render_queue.count = 0;
-
-      struct timespec render_end_time;
-      clock_gettime(CLOCK_REALTIME, &render_end_time);
-
-      printf("Vulkan rendered render_queue! %.3f ms\n",
-             (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
-                 1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
-      ++frame_updates;
-    }
+    // TODO review -- should be atomic anyway?
+    bool queue_not_empty = render_thread->render_queue.count;
     pthread_mutex_unlock(&render_thread->render_queue.mutex);
+    if (queue_not_empty) {
+      mrt_process_render_queues(render_thread, vkrs, &rt_render_queue);
+    }
 
+    // Update Window
     wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
     VK_CHECK((VkResult)wures, "mxcb_update_window");
   }
@@ -1238,14 +1316,14 @@ int obtain_resource_command(resource_queue *queue, resource_command **p_command)
   return 0;
 }
 
-int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p_command)
+int obtain_image_render_request(render_queue *render_queue, image_render_request **p_command)
 {
   if (render_queue->allocated < render_queue->count + 1) {
     int new_allocated = render_queue->allocated + 4 + render_queue->allocated / 4;
-    image_render_queue *new_ary = (image_render_queue *)malloc(sizeof(image_render_queue) * new_allocated);
+    image_render_request *new_ary = (image_render_request *)malloc(sizeof(image_render_request) * new_allocated);
 
     if (render_queue->allocated) {
-      memcpy(new_ary, render_queue->image_renders, sizeof(image_render_queue) * render_queue->count);
+      memcpy(new_ary, render_queue->image_renders, sizeof(image_render_request) * render_queue->count);
       free(render_queue->image_renders);
     }
     for (int i = 0; i < new_allocated - render_queue->allocated; ++i) {
@@ -1264,7 +1342,7 @@ int obtain_image_render_queue(render_queue *render_queue, image_render_queue **p
   return 0;
 }
 
-int obtain_element_render_command(image_render_queue *image_queue, element_render_command **p_command)
+int obtain_element_render_command(image_render_request *image_queue, element_render_command **p_command)
 {
   // MCcall(obtain_item_from_collection((void **)image_queue->commands, &image_queue->commands_allocated,
   //                                    &image_queue->command_count, sizeof(element_render_command), (void

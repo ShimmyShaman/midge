@@ -98,8 +98,8 @@ void __mcm_render_source_line_headless(mc_node *node)
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  image_render_queue *rq;
-  obtain_image_render_queue(&global_data->render_thread->render_queue, &rq);
+  image_render_request *rq;
+  obtain_image_render_request(&global_data->render_thread->render_queue, &rq);
   rq->render_target = NODE_RENDER_TARGET_IMAGE;
   rq->clear_color = COLOR_NEARLY_BLACK;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
@@ -117,7 +117,7 @@ void __mcm_render_source_line_headless(mc_node *node)
                                 source_line->rtf->text, source_line->font_resource_uid, font_color);
 }
 
-void __mcm_render_source_line_present(image_render_queue *render_queue, mc_node *node)
+void __mcm_render_source_line_present(image_render_request *render_queue, mc_node *node)
 {
   mcm_source_line *source_line = (mcm_source_line *)node->data;
 

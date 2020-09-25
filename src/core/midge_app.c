@@ -110,7 +110,7 @@ void mcc_initialize_input_state();
 void mcc_update_xcb_input();
 void mui_initialize_core_ui_components();
 void mui_render_element_headless(mc_node *element_node);
-void mui_render_element_present(image_render_queue *render_queue, mc_node *element_node);
+void mui_render_element_present(image_render_request *render_queue, mc_node *element_node);
 
 // Modules
 // void init_modus_operandi_curator();
@@ -206,8 +206,8 @@ void mca_render_presentation()
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  image_render_queue *sequence;
-  obtain_image_render_queue(&global_data->render_thread->render_queue, &sequence);
+  image_render_request *sequence;
+  obtain_image_render_request(&global_data->render_thread->render_queue, &sequence);
   sequence->render_target = NODE_RENDER_TARGET_PRESENT;
   sequence->clear_color = COLOR_MIDNIGHT_EXPRESS;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
@@ -220,8 +220,8 @@ void mca_render_presentation()
     mc_node *child = global_data->global_node->children->items[a];
     if (child->layout && child->layout->visible && child->layout->render_present) {
       // TODO fptr casting
-      void (*render_node_presentation)(image_render_queue *, mc_node *) =
-          (void (*)(image_render_queue *, mc_node *))child->layout->render_present;
+      void (*render_node_presentation)(image_render_request *, mc_node *) =
+          (void (*)(image_render_request *, mc_node *))child->layout->render_present;
       render_node_presentation(sequence, child);
     }
   }
@@ -241,9 +241,12 @@ void midge_run_app()
   clock_gettime(CLOCK_REALTIME, &current_frametime);
   clock_gettime(CLOCK_REALTIME, &logic_update_frametime);
 
+  struct timespec debug_start_time, debug_end_time;
+
   int DEBUG_secs_of_last_5sec_update = 0;
 
-  frame_time *elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
+  global_data->elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
+  frame_time *elapsed = global_data->elapsed;
   int ui = 0;
   while (1) {
     if (global_data->render_thread->thread_info->has_concluded) {
@@ -268,12 +271,15 @@ void midge_run_app()
         --elapsed->frame_secs;
         elapsed->frame_nsecs += 1e9;
       }
+      elapsed->frame_secsf = (float)elapsed->frame_secs + 1e-9 * elapsed->frame_nsecs;
+
       elapsed->app_secs = current_frametime.tv_sec - global_data->app_begin_time->tv_sec;
       elapsed->app_nsecs = current_frametime.tv_nsec - global_data->app_begin_time->tv_nsec;
       if (elapsed->app_nsecs < 0) {
         --elapsed->app_secs;
         elapsed->app_nsecs += 1e9;
       }
+      elapsed->app_secsf = (float)elapsed->app_secs + 1e-9 * elapsed->app_nsecs;
 
       // Logic Update
       const int ONE_MS_IN_NS = 1000000;
@@ -346,13 +352,20 @@ void midge_run_app()
     }
 
     // Handle Input
-    pthread_mutex_lock(&global_data->render_thread->input_buffer.mutex);
 
-    if (global_data->input_state_requires_update || global_data->render_thread->input_buffer.event_count > 0)
+    if (global_data->input_state_requires_update || global_data->render_thread->input_buffer.event_count) {
+      clock_gettime(CLOCK_REALTIME, &debug_start_time);
+
+      pthread_mutex_lock(&global_data->render_thread->input_buffer.mutex);
       mcc_update_xcb_input();
+      pthread_mutex_unlock(&global_data->render_thread->input_buffer.mutex);
+
+      clock_gettime(CLOCK_REALTIME, &debug_end_time);
+      printf("input_state_update took %.2f ms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+                                                      1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+    }
 
     // printf("~main_input\n");
-    pthread_mutex_unlock(&global_data->render_thread->input_buffer.mutex);
 
     if (global_data->exit_requested)
       break;
@@ -369,8 +382,10 @@ void midge_run_app()
       // As is global node update despite any requirement
       // mca_update_node_list_logic(global_data->global_node->children);
       if (global_root_node->layout->__requires_layout_update) {
+        clock_gettime(CLOCK_REALTIME, &debug_start_time);
+
         global_root_node->layout->__requires_layout_update = false;
-        
+
         for (int a = 0; a < global_data->global_node->children->count; ++a) {
           mc_node *child = global_data->global_node->children->items[a];
           if (child->layout && child->layout->determine_layout_extents) {
@@ -394,7 +409,10 @@ void midge_run_app()
             update_node_layout(child, &global_root_node->layout->__bounds);
           }
         }
-        printf("layout updated\n");
+
+        clock_gettime(CLOCK_REALTIME, &debug_end_time);
+        printf("LayoutUpdate took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+                                                 1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
       }
 
       // TODO Get rid of this field maybe?
@@ -406,6 +424,7 @@ void midge_run_app()
 
     // Render State Changes
     if (global_root_node->layout->__requires_rerender) {
+      clock_gettime(CLOCK_REALTIME, &debug_start_time);
       // Reset States
       global_root_node->layout->__requires_rerender = false;
 
@@ -416,15 +435,15 @@ void midge_run_app()
 
       // Rerender headless images
       // printf("headless\n");
-      for (int a = 0; a < global_root_node->children->count; ++a) {
-        mc_node *child = global_root_node->children->items[a];
-        if (child->layout && child->layout->visible && child->layout->render_headless) {
-          // TODO fptr casting
-          // printf("rh-child-type:%i\n", child->type);
-          void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-          render_node_headless(child);
-        }
-      }
+      // for (int a = 0; a < global_root_node->children->count; ++a) {
+      //   mc_node *child = global_root_node->children->items[a];
+      //   if (child->layout && child->layout->visible && child->layout->render_headless) {
+      //     // TODO fptr casting
+      //     // printf("rh-child-type:%i\n", child->type);
+      //     void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
+      //     render_node_headless(child);
+      //   }
+      // }
 
       // Queue the updated render
       // printf("present\n");
@@ -432,8 +451,14 @@ void midge_run_app()
 
       // Release lock and allow rendering
       pthread_mutex_unlock(&global_data->render_thread->render_queue.mutex);
+      clock_gettime(CLOCK_REALTIME, &debug_end_time);
+      printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+                                           1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
     }
   }
+
+  free(elapsed);
+  global_data->elapsed = NULL;
 }
 
 void midge_cleanup_app()

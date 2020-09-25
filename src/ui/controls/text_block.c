@@ -55,7 +55,7 @@ void __mui_update_text_block_layout(mc_node *node, mc_rectf *available_area)
   mca_set_node_requires_rerender(node);
 }
 
-void __mui_render_text_block_present(image_render_queue *render_queue, mc_node *node)
+void __mui_render_text_block_present(image_render_request *render_queue, mc_node *node)
 {
   mui_text_block *text_block = (mui_text_block *)node->data;
 

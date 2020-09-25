@@ -129,7 +129,7 @@
 //   mca_render_node_list_headless(project->children);
 // }
 
-// void mca_render_project_present(image_render_queue *render_queue, mc_node *project_node)
+// void mca_render_project_present(image_render_request *render_queue, mc_node *project_node)
 // {
 //   visual_project_data *project = (visual_project_data *)project_node->data;
 
