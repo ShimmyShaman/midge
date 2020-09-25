@@ -98,8 +98,8 @@ void __mcm_render_source_line_headless(mc_node *node)
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  image_render_request *rq;
-  obtain_image_render_request(&global_data->render_thread->render_queue, &rq);
+  image_render_details *rq;
+  mcr_obtain_image_render_request(global_data->render_thread, &rq);
   rq->render_target = NODE_RENDER_TARGET_IMAGE;
   rq->clear_color = COLOR_NEARLY_BLACK;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
@@ -115,9 +115,11 @@ void __mcm_render_source_line_headless(mc_node *node)
 
   mcr_issue_render_command_text(rq, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
                                 source_line->rtf->text, source_line->font_resource_uid, font_color);
+
+  mcr_submit_image_render_request(global_data->render_thread, &rq);
 }
 
-void __mcm_render_source_line_present(image_render_request *render_queue, mc_node *node)
+void __mcm_render_source_line_present(image_render_details *image_render_queue, mc_node *node)
 {
   mcm_source_line *source_line = (mcm_source_line *)node->data;
 
@@ -125,7 +127,7 @@ void __mcm_render_source_line_present(image_render_request *render_queue, mc_nod
   // printf("rendersource_line- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, source_line->rtf->text, source_line->font_resource_uid);
 
-  mcr_issue_render_command_textured_quad(render_queue, (unsigned int)node->layout->__bounds.x,
+  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                          (unsigned int)node->layout->__bounds.y, source_line->render_target.width,
                                          source_line->render_target.height, source_line->render_target.resource_uid);
 }

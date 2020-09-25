@@ -2,7 +2,7 @@
 
 void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *state)
 {
-  image_render_request *sequence;
+  image_render_details *sequence;
   element_render_command *element_cmd;
 
   render_color font_color = COLOR_GHOST_WHITE;
@@ -15,7 +15,7 @@ void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *stat
       rendered_line->requires_render_update = false;
 
       // printf("fer-c\n");
-      MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+      MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
       sequence->render_target = NODE_RENDER_TARGET_IMAGE;
       sequence->clear_color = COLOR_TRANSPARENT;
       sequence->image_width = rendered_line->width;
@@ -101,7 +101,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
 
   // printf("command_hub->interactive_console->visual.image_resource_uid=%u\n",
   //        command_hub->interactive_console->visual.image_resource_uid);
-  image_render_request *sequence;
+  image_render_details *sequence;
   element_render_command *element_cmd;
   // Lines
   mc_code_editor_state_v1 *state = (mc_code_editor_state_v1 *)visual_node->extra;
@@ -118,7 +118,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
   if (state->status_bar.requires_render_update) {
     state->status_bar.requires_render_update = false;
 
-    MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+    MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
     sequence->render_target = NODE_RENDER_TARGET_IMAGE;
     sequence->image_width = state->status_bar.bounds.width;
     sequence->image_height = state->status_bar.bounds.height;
@@ -149,7 +149,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
   if (state->suggestion_box.visible && state->suggestion_box.requires_render_update) {
     state->suggestion_box.requires_render_update = false;
 
-    MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+    MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
     sequence->render_target = NODE_RENDER_TARGET_IMAGE;
     sequence->image_width = state->suggestion_box.bounds.width;
     sequence->image_height = state->suggestion_box.bounds.height;
@@ -184,7 +184,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
   }
 
   // Render Main Image
-  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+  MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = visual_node->data.visual.bounds.width;
   sequence->image_height = visual_node->data.visual.bounds.height;

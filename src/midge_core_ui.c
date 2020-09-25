@@ -101,7 +101,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  image_render_request *sequence;
+  image_render_details *sequence;
   element_render_command *element_cmd;
 
   // printf("mrce-0\n");
@@ -110,7 +110,7 @@ int mcu_render_core_entry(core_display_state *cdstate, core_entry *entry, int in
   child->extra = entry;
   child->data.visual.visible = true;
 
-  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+  MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = child->data.visual.bounds.width;
   sequence->image_height = child->data.visual.bounds.height;
@@ -232,7 +232,7 @@ int core_display_render_v1(int argc, void **argv)
     return 0;
   core_display_state *cdstate = (core_display_state *)visual_node->extra;
 
-  image_render_request *sequence;
+  image_render_details *sequence;
   element_render_command *element_cmd;
 
   {
@@ -247,7 +247,7 @@ int core_display_render_v1(int argc, void **argv)
     cdstate->entries_require_render_update = false;
   }
 
-  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+  MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = visual_node->data.visual.bounds.width;
   sequence->image_height = visual_node->data.visual.bounds.height;

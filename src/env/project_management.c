@@ -129,11 +129,11 @@
 //   mca_render_node_list_headless(project->children);
 // }
 
-// void mca_render_project_present(image_render_request *render_queue, mc_node *project_node)
+// void mca_render_project_present(image_render_details *image_render_queue, mc_node *project_node)
 // {
 //   visual_project_data *project = (visual_project_data *)project_node->data;
 
-//   mui_render_panel(render_queue, project->editor_container);
+//   mui_render_panel(image_render_queue, project->editor_container);
 
-//   mca_render_node_list_present(render_queue, project->children);
+//   mca_render_node_list_present(image_render_queue, project->children);
 // }

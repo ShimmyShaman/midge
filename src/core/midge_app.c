@@ -44,14 +44,22 @@ int begin_render_thread()
   global_data->render_thread->render_thread_initialized = false;
   {
     // Resource Queue
-    pthread_mutex_init(&global_data->render_thread->resource_queue.mutex, NULL);
-    global_data->render_thread->resource_queue.count = 0;
-    global_data->render_thread->resource_queue.allocated = 0;
+    global_data->render_thread->resource_queue = (resource_queue *)malloc(sizeof(resource_queue));
+    pthread_mutex_init(&global_data->render_thread->resource_queue->mutex, NULL);
+    global_data->render_thread->resource_queue->count = 0;
+    global_data->render_thread->resource_queue->allocated = 0;
 
     // Render Queue
-    pthread_mutex_init(&global_data->render_thread->render_queue.mutex, NULL);
-    global_data->render_thread->render_queue.count = 0;
-    global_data->render_thread->render_queue.allocated = 0;
+    global_data->render_thread->image_queue = (image_render_list *)malloc(sizeof(image_render_list));
+    pthread_mutex_init(&global_data->render_thread->image_queue->mutex, NULL);
+    global_data->render_thread->image_queue->count = 0;
+    global_data->render_thread->image_queue->alloc = 0;
+
+    // Render Request Object Pool
+    global_data->render_thread->render_request_object_pool = (image_render_list *)malloc(sizeof(image_render_list));
+    pthread_mutex_init(&global_data->render_thread->render_request_object_pool->mutex, NULL);
+    global_data->render_thread->render_request_object_pool->count = 0;
+    global_data->render_thread->render_request_object_pool->alloc = 0;
 
     pthread_mutex_init(&global_data->render_thread->input_buffer.mutex, NULL);
     global_data->render_thread->input_buffer.event_count = 0;
@@ -110,7 +118,7 @@ void mcc_initialize_input_state();
 void mcc_update_xcb_input();
 void mui_initialize_core_ui_components();
 void mui_render_element_headless(mc_node *element_node);
-void mui_render_element_present(image_render_request *render_queue, mc_node *element_node);
+void mui_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
 
 // Modules
 // void init_modus_operandi_curator();
@@ -173,13 +181,13 @@ void midge_initialize_app(struct timespec *app_begin_time)
   // continuing with the next set of commands
   bool waited = false;
   int count = 0;
-  while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue.count) {
+  while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue->count) {
     waited = !global_data->render_thread->render_thread_initialized;
     usleep(1);
     ++count;
     if (count % 100000 == 0) {
       printf("global_data->render_thread = %p %i %u\n", global_data->render_thread,
-             global_data->render_thread->render_thread_initialized, global_data->render_thread->resource_queue.count);
+             global_data->render_thread->render_thread_initialized, global_data->render_thread->resource_queue->count);
     }
   }
 
@@ -206,25 +214,27 @@ void mca_render_presentation()
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  image_render_request *sequence;
-  obtain_image_render_request(&global_data->render_thread->render_queue, &sequence);
-  sequence->render_target = NODE_RENDER_TARGET_PRESENT;
-  sequence->clear_color = COLOR_MIDNIGHT_EXPRESS;
+  image_render_details *image_render;
+  mcr_obtain_image_render_request(global_data->render_thread, &image_render);
+  image_render->render_target = NODE_RENDER_TARGET_PRESENT;
+  image_render->clear_color = COLOR_MIDNIGHT_EXPRESS;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
-  sequence->image_width = global_data->screen.width;
-  sequence->image_height = global_data->screen.height;
-  sequence->data.target_image.image_uid = global_data->present_image_resource_uid;
+  image_render->image_width = global_data->screen.width;
+  image_render->image_height = global_data->screen.height;
+  image_render->data.target_image.image_uid = global_data->present_image_resource_uid;
 
   for (int a = 0; a < global_data->global_node->children->count; ++a) {
     mc_node *child = global_data->global_node->children->items[a];
     if (child->layout && child->layout->visible && child->layout->render_present) {
       // TODO fptr casting
-      void (*render_node_presentation)(image_render_request *, mc_node *) =
-          (void (*)(image_render_request *, mc_node *))child->layout->render_present;
-      render_node_presentation(sequence, child);
+      void (*render_node_presentation)(image_render_details *, mc_node *) =
+          (void (*)(image_render_details *, mc_node *))child->layout->render_present;
+      render_node_presentation(image_render, child);
     }
   }
+
+  mcr_submit_image_render_request(global_data->render_thread, image_render);
 }
 
 void midge_run_app()
@@ -258,7 +268,7 @@ void midge_run_app()
     bool logic_update_due = false;
     {
       // TODO DEBUG
-      // usleep(10);
+      usleep(10000);
 
       long ms;  // Milliseconds
       time_t s; // Seconds
@@ -352,7 +362,6 @@ void midge_run_app()
     }
 
     // Handle Input
-
     if (global_data->input_state_requires_update || global_data->render_thread->input_buffer.event_count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
 
@@ -361,8 +370,8 @@ void midge_run_app()
       pthread_mutex_unlock(&global_data->render_thread->input_buffer.mutex);
 
       clock_gettime(CLOCK_REALTIME, &debug_end_time);
-      printf("input_state_update took %.2f ms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
-                                                      1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+      // printf("input_state_update took %.2f ms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+      //                                                 1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
     }
 
     // printf("~main_input\n");
@@ -423,34 +432,30 @@ void midge_run_app()
       break;
 
     // Render State Changes
-    if (global_root_node->layout->__requires_rerender) {
+    // TODO -- do not know how to eloquently handle render update requests outpacing the render thread
+    if (global_root_node->layout->__requires_rerender && !render_thread->image_queue->count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
+
       // Reset States
       global_root_node->layout->__requires_rerender = false;
 
-      pthread_mutex_lock(&global_data->render_thread->render_queue.mutex);
-
-      // Clear the render queue
-      global_data->render_thread->render_queue.count = 0;
-
       // Rerender headless images
       // printf("headless\n");
-      // for (int a = 0; a < global_root_node->children->count; ++a) {
-      //   mc_node *child = global_root_node->children->items[a];
-      //   if (child->layout && child->layout->visible && child->layout->render_headless) {
-      //     // TODO fptr casting
-      //     // printf("rh-child-type:%i\n", child->type);
-      //     void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-      //     render_node_headless(child);
-      //   }
-      // }
+      for (int a = 0; a < global_root_node->children->count; ++a) {
+        mc_node *child = global_root_node->children->items[a];
+        if (child->layout && child->layout->visible && child->layout->render_headless) {
+          // TODO fptr casting
+          // printf("rh-child-type:%i\n", child->type);
+          void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
+          render_node_headless(child);
+        }
+      }
 
       // Queue the updated render
       // printf("present\n");
       mca_render_presentation();
 
       // Release lock and allow rendering
-      pthread_mutex_unlock(&global_data->render_thread->render_queue.mutex);
       clock_gettime(CLOCK_REALTIME, &debug_end_time);
       printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
                                            1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
@@ -474,9 +479,10 @@ void midge_cleanup_app()
   end_mthread(global_data->render_thread->thread_info);
 
   // Destroy render thread resources
-  pthread_mutex_destroy(&global_data->render_thread->resource_queue.mutex);
-  pthread_mutex_destroy(&global_data->render_thread->render_queue.mutex);
+  pthread_mutex_destroy(&global_data->render_thread->resource_queue->mutex);
+  pthread_mutex_destroy(&global_data->render_thread->image_queue->mutex);
   pthread_mutex_destroy(&global_data->render_thread->input_buffer.mutex);
 
   free(global_data->render_thread);
+  global_data->render_thread = NULL;
 }

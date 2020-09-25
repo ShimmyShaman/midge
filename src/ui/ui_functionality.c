@@ -22,13 +22,13 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
   ui_state->requires_update = true;
 
   // Resource loading
-  pthread_mutex_lock(&global_data->render_thread->resource_queue.mutex);
+  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
   // Font
   mcr_obtain_font_resource(&global_data->render_thread->resource_queue, "res/font/DroidSansMono.ttf", 18.f,
                            &ui_state->default_font_resource);
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue.mutex);
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 
   // Set
   *p_ui_state = ui_state;
@@ -76,86 +76,6 @@ void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
   // printf("mui_get_interactive_nodes_at_point(%i, %i) : list_count:%i\n", screen_x, screen_y,
   //        (*layered_hit_list)->count);
 }
-
-// void mui_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled)
-// {
-//   switch (ui_node->type) {
-//   case NODE_TYPE_GLOBAL_ROOT: {
-//     // global_root_data *global_data = (global_root_data *)node->data;
-
-//     // printf("global_node-left_click\n");
-//   } break;
-//   case NODE_TYPE_UI: {
-//     mui_ui_element *element = (mui_ui_element *)ui_node->data;
-
-//     switch (element->type) {
-//     case UI_ELEMENT_BUTTON: {
-//       mui_button *button = (mui_button *)element->data;
-//       if (button->left_click) {
-//         // TODO -- better function pointer transcription
-//         // void (*event_handler)(int, void **) = (void (*)(int, void **))button->left_click;
-//         // void *args[2];
-//         // int b = 80085;
-//         // args[0] = &b;
-//         // event_handler(2, args);
-
-//         // void (*event_handler)(int) = (void (*)(int))button->left_click;
-//         // printf("event_handler@hmlc:%p\n", event_handler);
-//         // event_handler(4241);
-
-//         // DEBUG TODO -- has to be casted to local fptr first
-//         void (*event_handler)(mui_button *, mc_point) = (void (*)(mui_button *, mc_point))button->left_click;
-//         event_handler(button, (mc_point){screen_x, screen_y});
-//       }
-//       *handled = true;
-//     } break;
-//     case UI_ELEMENT_PANEL:
-//     case UI_ELEMENT_CONTEXT_MENU: {
-//       // Do nothing
-//       *handled = true;
-//     } break;
-//     default:
-//       MCerror(9155, "mui_handle_mouse_left_click::>unsupported element type:%i", element->type);
-//     }
-//   } break;
-//   case NODE_TYPE_VISUAL_PROJECT: {
-//     // Nothing
-//     // Maybe editor container ? TODO
-//     // printf("NODE_TYPE_VISUAL_PROJECT-left_click\n");
-//   } break;
-//   default:
-//     MCerror(9159, "mui_handle_mouse_left_click::>unsupported node type:%i", ui_node->type);
-//   }
-// }
-
-// void mui_handle_mouse_right_click(mc_node *node, int screen_x, int screen_y, bool *handled)
-// {
-//   *handled = false;
-
-//   switch (node->type) {
-//   case NODE_TYPE_GLOBAL_ROOT: {
-//     mca_activate_global_context_menu(node, screen_x, screen_y);
-//     *handled = true;
-//   } break;
-//   case NODE_TYPE_VISUAL_PROJECT: {
-//     mca_activate_global_context_menu(node, screen_x, screen_y);
-//     *handled = true;
-//   } break;
-//   case NODE_TYPE_UI: {
-//     mca_activate_global_context_menu(node, screen_x, screen_y);
-//     *handled = true;
-//     // mui_ui_element *element = (mui_ui_element *)node->data;
-
-//     // switch (element) {
-//     // case UI_ELEMENT_BUTTON:
-//     //   break;
-//     // default:
-//     // }
-//   } break;
-//   default:
-//     MCerror(8315, "mui_handle_mouse_right_click::>unsupported node type:%i", node->type);
-//   }
-// }
 
 // void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element)
 // {

@@ -83,6 +83,8 @@ typedef struct mvk_dynamic_buffer_block {
 
 typedef struct vk_render_state {
 
+  unsigned int presentation_updates;
+
   mxcb_window_info *xcb_winfo;
   uint32_t window_width, window_height;
   uint32_t maximal_image_width, maximal_image_height;

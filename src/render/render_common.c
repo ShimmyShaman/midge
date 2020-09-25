@@ -4,6 +4,97 @@
 
 #include "stb_truetype.h"
 
+int mcr_obtain_image_render_request(render_thread_info *render_thread, image_render_details **p_request)
+{
+  image_render_details *render_request;
+  pthread_mutex_lock(&render_thread->render_request_object_pool->mutex);
+  if (render_thread->render_request_object_pool->count) {
+    render_request =
+        render_thread->render_request_object_pool->items[render_thread->render_request_object_pool->count - 1];
+    --render_thread->render_request_object_pool->count;
+    printf("used-already\n");
+  }
+  else {
+    // Construct another
+    render_request = (image_render_details *)malloc(sizeof(image_render_details));
+    render_request->commands_allocated = 0;
+    printf("constructed another\n");
+  }
+  pthread_mutex_unlock(&render_thread->render_request_object_pool->mutex);
+
+  render_request->command_count = 0;
+
+  *p_request = render_request;
+
+  return 0;
+}
+
+int mcr_submit_image_render_request(render_thread_info *render_thread, image_render_details *request)
+{
+  // printf("mcr_submit_image_render_request\n");
+  pthread_mutex_lock(&render_thread->image_queue->mutex);
+
+  // printf("sirr-0\n");
+  int res = append_to_collection((void ***)&render_thread->image_queue->items, &render_thread->image_queue->alloc,
+                                 &render_thread->image_queue->count, request);
+
+  // printf("sirr-1\n");
+  printf("sirr %u\n", render_thread->image_queue->count);
+  pthread_mutex_unlock(&render_thread->image_queue->mutex);
+
+  return res;
+}
+
+int mcr_obtain_element_render_command(image_render_details *image_queue, element_render_command **p_command)
+{
+  // MCcall(obtain_item_from_collection((void **)image_queue->commands, &image_queue->commands_allocated,
+  //                                    &image_queue->command_count, sizeof(element_render_command), (void
+  //                                    **)p_command));
+  if (image_queue->commands_allocated < image_queue->command_count + 1) {
+    int new_alloc = image_queue->commands_allocated + 4 + image_queue->commands_allocated / 4;
+    element_render_command *new_ary = (element_render_command *)malloc(sizeof(element_render_command) * new_alloc);
+
+    if (image_queue->commands_allocated) {
+      memcpy(new_ary, image_queue->commands, sizeof(element_render_command) * image_queue->command_count);
+      free(image_queue->commands);
+    }
+    image_queue->commands = new_ary;
+    image_queue->commands_allocated = new_alloc;
+  }
+
+  *p_command = &image_queue->commands[image_queue->command_count++];
+
+  return 0;
+}
+
+int mcr_obtain_resource_command(resource_queue *queue, resource_command **p_command)
+{
+  // MCcall(obtain_item_from_collection((void **)resource_queue->commands, &resource_queue->allocated,
+  // &resource_queue->count,
+  //                                    sizeof(resource_command), (void **)p_command));
+  // printf("orc-0\n %p", queue);
+  if (queue->allocated < queue->count + 1) {
+    // printf("orc-1\n");
+    int new_allocated = (queue->count + 1) + 4 + (queue->count + 1) / 4;
+    // printf("orc-2 \n");
+    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
+    // printf("orc-3\n");
+
+    if (queue->allocated) {
+      memcpy(new_ary, queue->commands, sizeof(resource_command) * queue->count);
+      free(queue->commands);
+    }
+    // printf("orc-4\n");
+    queue->commands = new_ary;
+    queue->allocated = new_allocated;
+  }
+  // printf("orc-5\n");
+
+  *p_command = &queue->commands[queue->count++];
+
+  return 0;
+}
+
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
 void mcr_create_texture_resource(unsigned int width, unsigned int height, bool use_as_render_target,
                                  unsigned int *p_resource_uid)
@@ -11,17 +102,17 @@ void mcr_create_texture_resource(unsigned int width, unsigned int height, bool u
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  pthread_mutex_lock(&global_data->render_thread->resource_queue.mutex);
+  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
   resource_command *command;
-  obtain_resource_command(&global_data->render_thread->resource_queue, &command);
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = p_resource_uid;
   command->data.create_texture.width = width;
   command->data.create_texture.height = height;
   command->data.create_texture.use_as_render_target = use_as_render_target;
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue.mutex);
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
@@ -31,7 +122,7 @@ void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_p
   // pthread_mutex_lock(&resource_queue->mutex);
   // printf("mcr_obtain_font_resource-font_height:%f\n", font_height);
   resource_command *command;
-  obtain_resource_command(resource_queue, &command);
+  mcr_obtain_resource_command(resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_uid = p_resource_uid;
   command->data.font.height = font_height;
@@ -92,12 +183,12 @@ void mcr_determine_text_display_dimensions(unsigned int font_resource, const cha
   }
 }
 
-// Ensure this function is accessed within a thread mutex lock of the @render_queue
-void mcr_issue_render_command_text(image_render_request *render_queue, unsigned int x, unsigned int y, const char *text,
-                                   unsigned int font_resource_uid, render_color font_color)
+// Ensure this function is accessed within a thread mutex lock of the @image_render_queue
+void mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+                                   const char *text, unsigned int font_resource_uid, render_color font_color)
 {
   element_render_command *render_cmd;
-  obtain_element_render_command(render_queue, &render_cmd);
+  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
   render_cmd->type = RENDER_COMMAND_PRINT_TEXT;
   render_cmd->x = x;
   render_cmd->y = y;
@@ -119,15 +210,15 @@ void mcr_issue_render_command_text(image_render_request *render_queue, unsigned 
   render_cmd->print_text.color = font_color;
 }
 
-// Ensure this function is accessed within a thread mutex lock of the @render_queue
-void mcr_issue_render_command_colored_quad(image_render_request *render_queue, unsigned int x, unsigned int y,
+// Ensure this function is accessed within a thread mutex lock of the @image_render_queue
+void mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                            unsigned int width, unsigned int height, render_color color)
 {
   if (!color.a)
     return;
 
   element_render_command *render_cmd;
-  obtain_element_render_command(render_queue, &render_cmd);
+  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
 
   render_cmd->type = RENDER_COMMAND_COLORED_QUAD;
   render_cmd->x = x;
@@ -137,12 +228,12 @@ void mcr_issue_render_command_colored_quad(image_render_request *render_queue, u
   render_cmd->colored_rect_info.color = color;
 }
 
-// Ensure this function is accessed within a thread mutex lock of the @render_queue
-void mcr_issue_render_command_textured_quad(image_render_request *render_queue, unsigned int x, unsigned int y,
+// Ensure this function is accessed within a thread mutex lock of the @image_render_queue
+void mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                             unsigned int width, unsigned int height, unsigned int texture_resource)
 {
   element_render_command *render_cmd;
-  obtain_element_render_command(render_queue, &render_cmd);
+  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
 
   render_cmd->type = RENDER_COMMAND_TEXTURED_QUAD;
   render_cmd->x = x;

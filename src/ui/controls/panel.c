@@ -72,12 +72,12 @@ void __mui_render_panel_headless(mc_node *node)
   }
 }
 
-void __mui_render_panel_present(image_render_request *render_queue, mc_node *node)
+void __mui_render_panel_present(image_render_details *image_render_queue, mc_node *node)
 {
   mui_panel *panel = (mui_panel *)node->data;
 
   mcr_issue_render_command_colored_quad(
-      render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
+      image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, panel->background_color);
 
   // Children
@@ -85,9 +85,9 @@ void __mui_render_panel_present(image_render_request *render_queue, mc_node *nod
     mc_node *child = node->children->items[a];
     if (child->layout && child->layout->visible && child->layout->render_present) {
       // TODO fptr casting
-      void (*render_node_presentation)(image_render_request *, mc_node *) =
-          (void (*)(image_render_request *, mc_node *))child->layout->render_present;
-      render_node_presentation(render_queue, child);
+      void (*render_node_presentation)(image_render_details *, mc_node *) =
+          (void (*)(image_render_details *, mc_node *))child->layout->render_present;
+      render_node_presentation(image_render_queue, child);
     }
   }
 }

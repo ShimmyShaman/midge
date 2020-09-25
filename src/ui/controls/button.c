@@ -55,12 +55,12 @@ void __mui_update_button_layout(mc_node *node, mc_rectf *available_area)
   mca_set_node_requires_rerender(node);
 }
 
-void __mui_render_button_present(image_render_request *render_queue, mc_node *node)
+void __mui_render_button_present(image_render_details *image_render_queue, mc_node *node)
 {
   mui_button *button = (mui_button *)node->data;
 
   // Background
-  mcr_issue_render_command_colored_quad(render_queue, (unsigned int)node->layout->__bounds.x,
+  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                         (unsigned int)node->layout->__bounds.y,
                                         (unsigned int)node->layout->__bounds.width,
                                         (unsigned int)node->layout->__bounds.height, button->background_color);
@@ -68,7 +68,7 @@ void __mui_render_button_present(image_render_request *render_queue, mc_node *no
   // Text
   // printf("renderbutton- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font_resource_uid);
-  mcr_issue_render_command_text(render_queue, (unsigned int)node->layout->__bounds.x,
+  mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                 (unsigned int)node->layout->__bounds.y, button->str->text, button->font_resource_uid,
                                 button->font_color);
 }

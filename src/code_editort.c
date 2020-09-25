@@ -24,7 +24,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
   mc_code_editor_state_v1 *cestate = (mc_code_editor_state_v1 *)visual_node->extra;
   fld_view_state *fld_view = cestate->fld_view;
 
-  image_render_request *sequence;
+  image_render_details *sequence;
   element_render_command *element_cmd;
 
   // printf ("######################\n");
@@ -48,7 +48,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
         // Render Line
         if (line_is_visible) {
           // printf("obtain_render_queue: ce_offset_line_index:%i\n", ce_offset_line_index);
-          MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+          MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
           sequence->render_target = NODE_RENDER_TARGET_IMAGE;
           sequence->clear_color = COLOR_TRANSPARENT;
           sequence->image_width = cestate->render_lines[ce_offset_line_index]->width;
@@ -84,7 +84,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
             // Render Line
             if (line_is_visible) {
               // printf("obtain_render_queue: ce_offset_line_index:%i\n", ce_offset_line_index);
-              MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+              MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
               sequence->render_target = NODE_RENDER_TARGET_IMAGE;
               sequence->clear_color = COLOR_TRANSPARENT;
               sequence->image_width = cestate->render_lines[ce_offset_line_index]->width;

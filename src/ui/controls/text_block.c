@@ -55,14 +55,14 @@ void __mui_update_text_block_layout(mc_node *node, mc_rectf *available_area)
   mca_set_node_requires_rerender(node);
 }
 
-void __mui_render_text_block_present(image_render_request *render_queue, mc_node *node)
+void __mui_render_text_block_present(image_render_details *image_render_queue, mc_node *node)
 {
   mui_text_block *text_block = (mui_text_block *)node->data;
 
   // Text
   // printf("rendertext_block- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, text_block->str->text, text_block->font_resource_uid);
-  mcr_issue_render_command_text(render_queue, (unsigned int)node->layout->__bounds.x,
+  mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                 (unsigned int)node->layout->__bounds.y, text_block->str->text,
                                 text_block->font_resource_uid, text_block->font_color);
 }

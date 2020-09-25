@@ -24,12 +24,12 @@ typedef struct usage_data_interface_state {
 
 void usage_data_interface_render(frame_time *elapsed, mc_node_v1 *visual_node)
 {
-  image_render_request *sequence;
+  image_render_details *sequence;
   element_render_command *element_cmd;
 
   usage_data_interface_state *state = (usage_data_interface_state *)visual_node->extra;
 
-  MCcall(obtain_image_render_request(command_hub->renderer.render_queue, &sequence));
+  MCcall(obtain_image_render_request(command_hub->renderer.image_render_queue, &sequence));
   sequence->render_target = NODE_RENDER_TARGET_IMAGE;
   sequence->image_width = visual_node->data.visual.bounds.width;
   sequence->image_height = visual_node->data.visual.bounds.height;

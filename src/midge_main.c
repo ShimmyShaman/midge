@@ -2621,9 +2621,9 @@ int mc_main(int argc, const char *const *argv)
     render_thread.resource_queue.allocated = 0;
 
     // Render Queue
-    pthread_mutex_init(&render_thread.render_queue.mutex, NULL);
-    render_thread.render_queue.count = 0;
-    render_thread.render_queue.allocated = 0;
+    pthread_mutex_init(&render_thread.image_render_queue.mutex, NULL);
+    render_thread.image_render_queue.count = 0;
+    render_thread.image_render_queue.allocated = 0;
 
     pthread_mutex_init(&render_thread.input_buffer.mutex, NULL);
     render_thread.input_buffer.event_count = 0;
@@ -2657,7 +2657,7 @@ int mc_main(int argc, const char *const *argv)
   // MCcall(init_void_collection_v1(&command_hub->template_collection));
   // command_hub->source_files.alloc = 0;
   // command_hub->source_files.count = 0;
-  // command_hub->renderer.render_queue = &render_thread.render_queue;
+  // command_hub->renderer.image_render_queue = &render_thread.image_render_queue;
   // command_hub->renderer.resource_queue = &render_thread.resource_queue;
   // command_hub->ui_elements = (mc_ui_element_v1 *)malloc(sizeof(mc_ui_element_v1) * 32);
   // command_hub->uid_counter = 2000;
@@ -2962,10 +2962,10 @@ int mc_main(int argc, const char *const *argv)
     }
 
     // Render State Changes
-    pthread_mutex_lock(&render_thread.render_queue.mutex);
+    pthread_mutex_lock(&render_thread.image_render_queue.mutex);
 
     // Clear the render queue?
-    // render_thread.render_queue.count = 0;
+    // render_thread.image_render_queue.count = 0;
 
     // printf("main_render\n");
     // -- Render all node descendants first
@@ -2998,7 +2998,7 @@ int mc_main(int argc, const char *const *argv)
       rerender_required = false;
     }
 
-    pthread_mutex_unlock(&render_thread.render_queue.mutex);
+    pthread_mutex_unlock(&render_thread.image_render_queue.mutex);
   }
 
   // printf("\n\nProcess Matrix:\n");
@@ -3009,7 +3009,7 @@ int mc_main(int argc, const char *const *argv)
 
   // Destroy render thread resources
   pthread_mutex_destroy(&render_thread.resource_queue.mutex);
-  pthread_mutex_destroy(&render_thread.render_queue.mutex);
+  pthread_mutex_destroy(&render_thread.image_render_queue.mutex);
   pthread_mutex_destroy(&render_thread.input_buffer.mutex);
 
   printf("\n\n</midge_core>\n");

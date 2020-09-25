@@ -430,7 +430,7 @@ typedef struct mc_command_hub_v1 {
 
   struct {
     resource_queue *resource_queue;
-    render_queue *render_queue;
+    image_render_queue *image_render_queue;
   } renderer;
   struct {
     uint count, allocated;

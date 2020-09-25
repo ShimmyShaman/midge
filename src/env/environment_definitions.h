@@ -56,7 +56,7 @@ typedef struct mca_node_layout {
   void *update_layout;
   // void (*render_node_headless)(mc_node *)
   void *render_headless;
-  // void (*render_node_presentation)(const image_render_request *, mc_node *)
+  // void (*render_node_presentation)(const image_render_details *, mc_node *)
   void *render_present;
 
   // Application Set Fields
@@ -137,7 +137,7 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area);
 // void mca_update_node_layout(mc_node *node, mc_rectf *available_area);
 
 void mca_render_node_list_headless(mc_node_list *node_list);
-void mca_render_node_list_present(image_render_request *render_queue, mc_node_list *node_list);
+void mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *node_list);
 
 void mca_set_node_requires_layout_update(mc_node *node);
 void mca_set_node_requires_rerender(mc_node *node);
@@ -153,11 +153,11 @@ void mca_init_visual_project_management();
 void mca_create_new_visual_project(const char *project_name);
 void mca_update_visual_project(mc_node *project_node);
 void mca_render_project_headless(mc_node *visual_project);
-void mca_render_project_present(image_render_request *render_queue, mc_node *visual_project);
+void mca_render_project_present(image_render_details *image_render_queue, mc_node *visual_project);
 
 // global_context_menu.c
 void mca_init_global_context_menu();
-void mca_render_global_context_menu(image_render_request *render_queue, mc_node *node);
+void mca_render_global_context_menu(image_render_details *image_render_queue, mc_node *node);
 void mca_global_context_menu_create_context_list(node_type node_type,
                                                  mca_global_context_node_option_list **context_list);
 void mca_global_context_menu_add_option_to_node_context(

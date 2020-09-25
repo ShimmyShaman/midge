@@ -57,7 +57,7 @@ static glsl_shader fragment_shader = {
 };
 
 VkResult draw_cube(vk_render_state *p_vkrs);
-VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queue);
+VkResult render_through_queue(vk_render_state *p_vkrs, image_render_queue *image_render_queue);
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue);
 VkResult load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, uint *texture_uid);
 VkResult create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height,
@@ -149,24 +149,24 @@ extern "C" void *midge_render_thread(void *vargp)
     pthread_mutex_unlock(&render_thread->resource_queue.mutex);
 
     // Render Commands
-    pthread_mutex_lock(&render_thread->render_queue.mutex);
-    if (render_thread->render_queue.count) {
+    pthread_mutex_lock(&render_thread->image_render_queue.mutex);
+    if (render_thread->image_render_queue.count) {
       // {
       //   // DEBUG
       //   uint cmd_count = 0;
-      //   for (int r = 0; r < render_thread->render_queue.count; ++r) {
-      //     cmd_count += render_thread->render_queue.image_renders[r].command_count;
+      //   for (int r = 0; r < render_thread->image_render_queue.count; ++r) {
+      //     cmd_count += render_thread->image_render_queue.image_renders[r].command_count;
       //   }
-      //   printf("Vulkan entered render_queue! %u sequences using %u draw-calls\n", render_thread->render_queue.count,
+      //   printf("Vulkan entered image_render_queue! %u sequences using %u draw-calls\n", render_thread->image_render_queue.count,
       //   cmd_count);
       // }
-      render_through_queue(&vkrs, &render_thread->render_queue);
-      render_thread->render_queue.count = 0;
+      render_through_queue(&vkrs, &render_thread->image_render_queue);
+      render_thread->image_render_queue.count = 0;
 
-      // printf("Vulkan rendered render_queue!\n");
+      // printf("Vulkan rendered image_render_queue!\n");
       ++frame_updates;
     }
-    pthread_mutex_unlock(&render_thread->render_queue.mutex);
+    pthread_mutex_unlock(&render_thread->image_render_queue.mutex);
 
     mxcb_update_window(&winfo, &render_thread->input_buffer);
   }
@@ -251,7 +251,7 @@ int set_scissor_cmd(vk_render_state *p_vkrs, int32_t x, int32_t y, uint32_t widt
   return 0;
 }
 
-VkResult render_sequence(vk_render_state *p_vkrs, image_render_request *sequence)
+VkResult render_sequence(vk_render_state *p_vkrs, image_render_details *sequence)
 {
   // Descriptor Writes
   VkResult res;
@@ -737,13 +737,13 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
   return VK_SUCCESS;
 }
 
-VkResult render_through_queue(vk_render_state *p_vkrs, render_queue *render_queue)
+VkResult render_through_queue(vk_render_state *p_vkrs, image_render_queue *image_render_queue)
 {
   VkResult res;
 
-  for (int i = 0; i < render_queue->count; ++i) {
+  for (int i = 0; i < image_render_queue->count; ++i) {
 
-    image_render_request *sequence = &render_queue->image_renders[i];
+    image_render_details *sequence = &image_render_queue->image_renders[i];
 
     // if (sequence->command_count < 1) {
     //   return VK_ERROR_UNKNOWN;

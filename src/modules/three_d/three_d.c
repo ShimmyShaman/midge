@@ -57,8 +57,8 @@ void __mctd_render_td_portal_headless(mc_node *node)
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  image_render_request *irq;
-  obtain_image_render_request(&global_data->render_thread->render_queue, &irq);
+  image_render_details *irq;
+  mcr_obtain_image_render_request(global_data->render_thread, &irq);
   irq->render_target = NODE_RENDER_TARGET_IMAGE;
   irq->clear_color = COLOR_CORNFLOWER_BLUE;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
@@ -74,18 +74,20 @@ void __mctd_render_td_portal_headless(mc_node *node)
     mc_node *child = node->children->items[a];
     if (child->layout && child->layout->visible && child->layout->render_present) {
       // TODO fptr casting
-      void (*render_node_present)(image_render_request *, mc_node *) =
-          (void (*)(image_render_request *, mc_node *))child->layout->render_present;
+      void (*render_node_present)(image_render_details *, mc_node *) =
+          (void (*)(image_render_details *, mc_node *))child->layout->render_present;
       render_node_present(irq, child);
     }
   }
+
+  mcr_submit_image_render_request(global_data->render_thread, irq);
 }
 
-void __mctd_render_td_portal_present(image_render_request *render_queue, mc_node *node)
+void __mctd_render_td_portal_present(image_render_details *image_render_queue, mc_node *node)
 {
   mctd_portal *td_portal = (mctd_portal *)node->data;
 
-  mcr_issue_render_command_textured_quad(render_queue, (unsigned int)node->layout->__bounds.x,
+  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                          (unsigned int)node->layout->__bounds.y, td_portal->render_target.width,
                                          td_portal->render_target.height, td_portal->render_target.resource_uid);
 
@@ -97,10 +99,11 @@ typedef struct cube_child {
   unsigned int mesh_resource_uid;
 } cube_child;
 
-void mctd_render_cube_present(image_render_request *render_queue, mc_node *node)
+void mctd_render_cube_present(image_render_details *image_render_queue, mc_node *node)
 {
+  // printf("mctd_render_cube_present\n");
   element_render_command *render_cmd;
-  obtain_element_render_command(render_queue, &render_cmd);
+  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
 
   render_cmd->type = RENDER_COMMAND_CUBE;
   // render_cmd->x = 800;
@@ -128,7 +131,8 @@ void mctd_render_cube_present(image_render_request *render_queue, mc_node *node)
 
     glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)view);
     float fovy = 72.f / 180.f * 3.1459f;
-    glm_perspective(fovy, (float)render_queue->image_width / render_queue->image_height, 0.01f, 1000.f, (vec4 *)&proj);
+    glm_perspective(fovy, (float)image_render_queue->image_width / image_render_queue->image_height, 0.01f, 1000.f,
+                    (vec4 *)&proj);
     // glm_ortho_default((float)sequence->image_width / sequence->image_height, (vec4 *)&proj);
     // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
     glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
