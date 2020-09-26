@@ -208,6 +208,12 @@ typedef struct vk_render_state {
   } cube_shape_vertices;
 
   struct {
+    VkBuffer buf;
+    VkDeviceMemory mem;
+    VkDescriptorBufferInfo buffer_info;
+  } cube_shape_indices;
+
+  struct {
     uint32_t count;
     uint32_t allocated;
     sampled_image *samples;

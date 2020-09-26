@@ -134,7 +134,7 @@ typedef enum element_render_command_type {
   RENDER_COMMAND_COLORED_QUAD,
   RENDER_COMMAND_TEXTURED_QUAD,
   RENDER_COMMAND_PRINT_TEXT,
-  RENDER_COMMAND_CUBE,
+  RENDER_COMMAND_MESH,
 } element_render_command_type;
 
 typedef enum resource_command_type {
@@ -237,6 +237,10 @@ typedef struct render_thread_info {
   window_input_buffer input_buffer;
 } render_thread_info;
 
+typedef struct mcr_model {
+
+} mcr_model;
+
 extern "C" {
 
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
@@ -246,6 +250,8 @@ int mcr_obtain_element_render_command(image_render_details *image_queue, element
 
 void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
                                  bool use_as_render_target, unsigned int *resource_uid);
+
+void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model);
 }
 
 #endif // MC_RENDER_COMMON_H

@@ -774,9 +774,12 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
 
   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline);
 
+  vkCmdBindIndexBuffer(command_buffer, p_vkrs->cube_shape_indices.buf, 0, VK_INDEX_TYPE_UINT32);
+
   const VkDeviceSize offsets[1] = {0};
   vkCmdBindVertexBuffers(command_buffer, 0, 1, &p_vkrs->cube_shape_vertices.buf, offsets);
-  vkCmdDraw(command_buffer, 3 * 2 * 6, 1, 0, 0);
+  // vkCmdDraw(command_buffer, 3 * 2 * 6, 1, 0, 0);
+  vkCmdDrawIndexed(command_buffer, 36, 1, 0, 0, 0);
 
   return res;
 }
@@ -834,7 +837,7 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
       VK_CHECK(res, "mrt_render_text");
     } break;
 
-    case RENDER_COMMAND_CUBE: {
+    case RENDER_COMMAND_MESH: {
       res = mrt_render_mesh(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_cube");
     } break;
@@ -1206,7 +1209,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   while (!thr->should_exit && !vkrs->xcb_winfo->input_requests_exit) {
     // TODO DEBUG
     // printf("mrt-rul-3:loop\n");
-    // usleep(1000000);
+    // usleep(1000);
 
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue->mutex);

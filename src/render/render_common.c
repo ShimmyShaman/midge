@@ -242,3 +242,66 @@ void mcr_issue_render_command_textured_quad(image_render_details *image_render_q
   render_cmd->textured_rect_info.height = height;
   render_cmd->textured_rect_info.texture_uid = texture_resource;
 }
+
+void _mcr_parse_and_append_float(const char *text, int *i, float **verts, unsigned int *valloc, unsigned int *vcount)
+{
+  while (text[*i] == ' ') {
+    ++*i;
+  }
+
+  if (*vcount + 1 > *valloc) {
+    unsigned int new_alloc = *valloc + 8 + *valloc / 3;
+
+    float *new_ary = (float *)malloc(sizeof(float) * new_alloc);
+    if (*valloc) {
+      memcpy(new_ary, *verts, *valloc * sizeof(float));
+      free(*verts);
+    }
+
+    *verts = new_ary;
+    *valloc = new_alloc;
+  }
+
+  char *end_ptr;
+  *verts[*vcount] = strtof(text + *i, &end_ptr);
+  ++*vcount;
+  *i += end_ptr - text;
+}
+
+void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
+{
+  // Load the file
+  char *file_text;
+  read_file_text(obj_path, &file_text);
+
+  // Read the vertices
+  unsigned int v_alloc = 512, v_count = 0;
+  float *vertices = (float *)malloc(sizeof(float) * v_alloc);
+
+  int i = 0;
+  bool eof = false;
+  for (;; ++i) {
+    if (file_text[i] != 'v') {
+      for (int a = 0; a < v_count;) {
+        printf("v: ");
+        printf(" %.3f", vertices[a++]);
+        printf(" %.3f", vertices[a++]);
+        printf(" %.3f\n", vertices[a++]);
+      }
+      break;
+    }
+
+    _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+    _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+    _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+
+    if (file_text[i] != '\n') {
+      MCerror(9272, "TODO");
+    }
+  }
+
+  // mcr_create_mesh_resource(vertices, v_count, unsigned int *p_resource_uid);
+
+  free(file_text);
+  MCerror(9472, "TODO");
+}

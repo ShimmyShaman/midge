@@ -97,6 +97,8 @@ void __mctd_render_td_portal_present(image_render_details *image_render_queue, m
 typedef struct cube_child {
   mat4 model;
   unsigned int mesh_resource_uid;
+
+  mcr_model *witch;
 } cube_child;
 
 void mctd_render_cube_present(image_render_details *image_render_queue, mc_node *node)
@@ -105,7 +107,7 @@ void mctd_render_cube_present(image_render_details *image_render_queue, mc_node 
   element_render_command *render_cmd;
   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
 
-  render_cmd->type = RENDER_COMMAND_CUBE;
+  render_cmd->type = RENDER_COMMAND_MESH;
   // render_cmd->x = 800;
   // render_cmd->y = 600;
   // // render_cmd->colored_rect_info.width = width;
@@ -120,8 +122,8 @@ void mctd_render_cube_present(image_render_details *image_render_queue, mc_node 
   // mat4 model;
   glm_mat4_identity((vec4 *)&cube->model);
   vec3 axis = {0.f, -1.f, 0.f};
-  // float rotate = global_data->elapsed->app_secsf - (((int)global_data->elapsed->app_secsf / 90) * 90);
-  // glm_rotate((vec4 *)&cube->model, rotate, axis);
+  float rotate = global_data->elapsed->app_secsf - (((int)global_data->elapsed->app_secsf / 90) * 90);
+  glm_rotate((vec4 *)&cube->model, rotate, axis);
   // glm_translate((vec4 *)cube->model)
   {
     // Construct the Vulkan View/Projection/Clip for the render target image
@@ -169,6 +171,8 @@ void mctd_append_cube_child(mc_node *portal_node)
   // mcr_create_render_program((float *)mesh_data, 3 * 8, indices, 6 * 2 * 3, &cube->mesh_resource_uid);
   // mcr_load_texture_resource((float *)mesh_data, ... , &cube->texture_resource_uid);
   // mcr_create_mesh_resource((float *)mesh_data, 3 * 8, indices, 6 * 2 * 3, &cube->mesh_resource_uid);
+
+  mcr_load_wavefront_obj_model("/home/jason/progs/renderer/assets/witch/object.obj", &cube->witch);
 
   node->layout->render_present = &mctd_render_cube_present;
 }
