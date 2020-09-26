@@ -631,7 +631,7 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
 
   int result = clint_declare(mc_transcription);
   if (result) {
-    // printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
+    printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
     MCerror(615, "Failed to declare function");
   }
   free(mc_transcription);

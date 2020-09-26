@@ -20,7 +20,7 @@ typedef enum mc_token_type {
   MC_TOKEN_IDENTIFIER,
   MC_TOKEN_SQUARE_OPENING_BRACKET,
   MC_TOKEN_SQUARE_CLOSING_BRACKET,
-  MC_TOKEN_OPEN_BRACKET,
+  MC_TOKEN_OPENING_BRACKET,
   MC_TOKEN_CLOSING_BRACKET,
   MC_TOKEN_SEMI_COLON,
   MC_TOKEN_COLON,
@@ -43,6 +43,7 @@ typedef enum mc_token_type {
   MC_TOKEN_EXTERN_KEYWORD,
   MC_TOKEN_IF_KEYWORD,
   MC_TOKEN_ELSE_KEYWORD,
+  MC_TOKEN_GOTO_KEYWORD,
   MC_TOKEN_WHILE_KEYWORD,
   MC_TOKEN_DO_KEYWORD,
   MC_TOKEN_FOR_KEYWORD,
@@ -51,6 +52,7 @@ typedef enum mc_token_type {
   MC_TOKEN_BREAK_KEYWORD,
   MC_TOKEN_RETURN_KEYWORD,
   MC_TOKEN_CONST_KEYWORD,
+  MC_TOKEN_STATIC_KEYWORD,
   MC_TOKEN_SIZEOF_KEYWORD,
   MC_TOKEN_OFFSETOF_KEYWORD,
   MC_TOKEN_VA_ARG_WORD,
@@ -129,6 +131,8 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_CONTINUE_STATEMENT,
   MC_SYNTAX_BREAK_STATEMENT,
   MC_SYNTAX_EXPRESSION_STATEMENT,
+  MC_SYNTAX_GOTO_STATEMENT,
+  MC_SYNTAX_LABEL_STATEMENT,
   MC_SYNTAX_DECLARATION_STATEMENT,
   MC_SYNTAX_LOCAL_VARIABLE_DECLARATION,
   MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR,
@@ -318,6 +322,12 @@ typedef struct mc_syntax_node {
           mc_syntax_node *declaration;
         } declaration_statement;
         struct {
+          mc_syntax_node *label;
+        } goto_statement;
+        struct {
+          mc_syntax_node *label;
+        } label_statement;
+        struct {
           mc_syntax_node_list *labels;
           mc_syntax_node *statement_list;
         } switch_section;
@@ -412,6 +422,7 @@ typedef struct mc_syntax_node {
         struct {
           mc_syntax_node *identifier;
           bool is_const;
+          bool is_static;
           bool has_struct_prepend;
           // -1 for unspecified (implicit signed), 0 for unsigned, 1 for explicit signed
           int is_signed;

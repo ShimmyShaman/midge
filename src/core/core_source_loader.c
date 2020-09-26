@@ -21,6 +21,12 @@ typedef struct _csl_c_str {
 #define false ((unsigned char)0)
 #endif
 
+#define MC_ASSERT(condition, message)                        \
+  if (!(condition)) {                                        \
+    printf("MC-ASSERT ERR[" #condition "] :" #message "\n"); \
+    return -37373;                                           \
+  }
+
 // TEMP will have to do function defines sooner or later
 #define VK_CHECK(res, func_name)                               \
   if (res) {                                                   \
@@ -479,6 +485,8 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_statement",
     "mcs_parse_expression_unary",
     "mcs_parse_root_statement",
+    "mcs_parse_goto_statement",
+    "mcs_parse_label_statement",
 
     // mc_code_transcription
     "mct_release_expression_type_info_fields",
@@ -497,6 +505,8 @@ const char *_mcl_core_functions[] = {
     "mct_syntax_descendants_contain_node_type",
     // "get_keyword_const_text_name",
     "mct_transcribe_fptr_invocation",
+    "mct_transcribe_goto_statement",
+    "mct_transcribe_label_statement",
 
     // mc_source
     "summarize_field_declarator_list",

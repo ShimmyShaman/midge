@@ -1,6 +1,7 @@
 #include "render/render_common.h"
 #include "core/core_definitions.h"
 #include "render/mc_vulkan.h"
+#include "render/resources/tiny_obj_loader_c.h"
 
 #include "stb_truetype.h"
 
@@ -243,65 +244,84 @@ void mcr_issue_render_command_textured_quad(image_render_details *image_render_q
   render_cmd->textured_rect_info.texture_uid = texture_resource;
 }
 
-void _mcr_parse_and_append_float(const char *text, int *i, float **verts, unsigned int *valloc, unsigned int *vcount)
+// void _mcr_parse_and_append_float(const char *text, int *i, float **verts, unsigned int *valloc, unsigned int *vcount)
+// {
+//   while (text[*i] == ' ') {
+//     ++*i;
+//   }
+
+//   if (*vcount + 1 > *valloc) {
+//     unsigned int new_alloc = *valloc + 8 + *valloc / 3;
+
+//     float *new_ary = (float *)malloc(sizeof(float) * new_alloc);
+//     if (*valloc) {
+//       memcpy(new_ary, *verts, *valloc * sizeof(float));
+//       free(*verts);
+//     }
+
+//     *verts = new_ary;
+//     *valloc = new_alloc;
+//   }
+
+//   char *end_ptr;
+//   *verts[*vcount] = strtof(text + *i, &end_ptr);
+//   ++*vcount;
+//   *i += end_ptr - text;
+
+//   printf("float:%.3f i:%i\n", *verts[*vcount], *i);
+// }
+
+void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
 {
-  while (text[*i] == ' ') {
-    ++*i;
-  }
+  // // Load the file
+  // char *file_text;
+  // read_file_text(obj_path, &file_text);
 
-  if (*vcount + 1 > *valloc) {
-    unsigned int new_alloc = *valloc + 8 + *valloc / 3;
+  // // Read the vertices
+  // unsigned int v_alloc = 512, v_count = 0;
+  // float *vertices = (float *)malloc(sizeof(float) * v_alloc);
 
-    float *new_ary = (float *)malloc(sizeof(float) * new_alloc);
-    if (*valloc) {
-      memcpy(new_ary, *verts, *valloc * sizeof(float));
-      free(*verts);
-    }
+  // int i = 0;
+  // bool eof = false;
+  // for (;; ++i) {
+  //   if (file_text[i] != 'v') {
+  //     for (int a = 0; a < v_count;) {
+  //       printf("v: ");
+  //       printf(" %.3f", vertices[a++]);
+  //       printf(" %.3f", vertices[a++]);
+  //       printf(" %.3f\n", vertices[a++]);
+  //     }
+  //     break;
+  //   }
 
-    *verts = new_ary;
-    *valloc = new_alloc;
-  }
+  //   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+  //   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+  //   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
 
-  char *end_ptr;
-  *verts[*vcount] = strtof(text + *i, &end_ptr);
-  ++*vcount;
-  *i += end_ptr - text;
+  //   if (file_text[i] != '\n') {
+  //     MCerror(9272, "TODO");
+  //   }
+  // }
+
+  // // mcr_create_mesh_resource(vertices, v_count, unsigned int *p_resource_uid);
+
+  // free(file_text);
+  // MCerror(9472, "TODO");
 }
 
 void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
 {
-  // Load the file
-  char *file_text;
-  read_file_text(obj_path, &file_text);
+  tinyobj_attrib_t attrib;
+  tinyobj_shape_t* shapes = NULL;
+  size_t num_shapes;
+  tinyobj_material_t* materials = NULL;
+  size_t num_materials;
 
-  // Read the vertices
-  unsigned int v_alloc = 512, v_count = 0;
-  float *vertices = (float *)malloc(sizeof(float) * v_alloc);
-
-  int i = 0;
-  bool eof = false;
-  for (;; ++i) {
-    if (file_text[i] != 'v') {
-      for (int a = 0; a < v_count;) {
-        printf("v: ");
-        printf(" %.3f", vertices[a++]);
-        printf(" %.3f", vertices[a++]);
-        printf(" %.3f\n", vertices[a++]);
-      }
-      break;
-    }
-
-    _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
-    _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
-    _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
-
-    if (file_text[i] != '\n') {
-      MCerror(9272, "TODO");
-    }
-  }
-
-  // mcr_create_mesh_resource(vertices, v_count, unsigned int *p_resource_uid);
-
-  free(file_text);
-  MCerror(9472, "TODO");
+  // {
+  //   unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
+  //   int ret = tinyobj_parse_obj(&attrib, &shapes, &num_shapes, &materials,
+  //                               &num_materials, filename, get_file_data, flags);
+  //   if (ret != TINYOBJ_SUCCESS) {
+  //     return 0;
+  //   }
 }

@@ -82,7 +82,10 @@ void complete_midge_app_compile()
       // "src/ui/ui_definitions.h",
       // "src/control/mc_controller.h",
       "src/modules/app_modules.h",
+      "src/render/resources/obj_loader.h",
+      "src/render/resources/hash_table.h",
 
+      "src/render/resources/hash_table.c",
       "src/render/render_common.c",
       "src/env/hierarchy.c",
       "src/env/util.c",

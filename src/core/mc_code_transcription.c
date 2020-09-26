@@ -551,6 +551,20 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     result->is_array = false;
     result->is_fptr = false;
   } break;
+  case MC_SYNTAX_DEREFERENCE_EXPRESSION: {
+    // Determine the type of the left-hand-side
+    determine_type_of_expression(ts, expression->dereference_expression.unary_expression, result);
+
+    if (!result->deref_count) {
+      MCerror(9559, "Can't dereference with no deref count");
+    }
+
+    if (!result->type_name) {
+      MCerror(9563, "TODO");
+    }
+
+    --result->deref_count;
+  } break;
   default:
     print_syntax_node(expression, 0);
     MCerror(7544, "Unsupported:%s", get_mc_syntax_token_type_name(expression->type));
@@ -742,6 +756,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
     // Find the type of the expression
     mct_expression_type_info expr_type_info;
+    // print_syntax_node(argument, 0);
     determine_type_of_expression(ts, argument->parenthesized_expression.expression, &expr_type_info);
     // printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
     //        expr_type_info.deref_count);
@@ -757,7 +772,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
     append_to_c_str(ts->str, expr_type_info.type_name);
     append_to_c_str(ts->str, " ");
     for (int d = 0; d < expr_type_info.deref_count; ++d) {
-      MCerror(6748, "TODO -- pointers...");
+      // MCerror(6748, "TODO -- pointers...");
       append_to_c_str(ts->str, "*");
     }
     append_to_c_strf(ts->str, "%s_%i = ", argument_data_name, arg_index);
@@ -1372,6 +1387,26 @@ int mct_transcribe_declarator(mct_transcription_state *ts, mc_syntax_node *synta
       append_to_c_str(ts->str, "]");
     }
   }
+
+  return 0;
+}
+
+int mct_transcribe_goto_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node)
+{
+
+  mct_append_indent_to_c_str(ts);
+  append_to_c_str(ts->str, "goto ");
+  mct_append_node_text_to_c_str(ts->str, syntax_node->goto_statement.label);
+  append_to_c_str(ts->str, ";");
+
+  return 0;
+}
+
+int mct_transcribe_label_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node)
+{
+  mct_append_indent_to_c_str(ts);
+  mct_append_node_text_to_c_str(ts->str, syntax_node->label_statement.label);
+  append_to_c_str(ts->str, ":");
 
   return 0;
 }
@@ -2499,6 +2534,12 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
   case MC_SYNTAX_VA_LIST_STATEMENT: {
     mct_transcribe_va_list_statement(ts, syntax_node);
   } break;
+  case MC_SYNTAX_GOTO_STATEMENT: {
+    mct_transcribe_goto_statement(ts, syntax_node);
+  } break;
+  case MC_SYNTAX_LABEL_STATEMENT: {
+    mct_transcribe_label_statement(ts, syntax_node);
+  } break;
   case MC_SYNTAX_VA_START_STATEMENT:
   case MC_SYNTAX_VA_END_STATEMENT: {
     // Ignore these statement...
@@ -2914,13 +2955,13 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
       strcmp(function_ast->function.return_type_identifier->type_identifier.identifier->text, "void")) {
     mct_append_indent_to_c_str(&ts);
 
-    mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_identifier);
+    mct_transcribe_type_identifier(&ts, function_ast->function.return_type_identifier);
     append_to_c_str(ts.str, " ");
     if (function_ast->function.return_type_dereference)
       mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_dereference);
 
     append_to_c_str(ts.str, "*mc_return_value = (");
-    mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_identifier);
+    mct_transcribe_type_identifier(&ts, function_ast->function.return_type_identifier);
     append_to_c_str(ts.str, " ");
     if (function_ast->function.return_type_dereference)
       mct_append_node_text_to_c_str(ts.str, function_ast->function.return_type_dereference);

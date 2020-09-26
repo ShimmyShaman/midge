@@ -1518,7 +1518,7 @@ int peek_mc_token(char *code, int i, uint tokens_ahead, mc_token *output)
   }
   case '(': {
     if (!tokens_ahead) {
-      output->type = MC_TOKEN_OPEN_BRACKET;
+      output->type = MC_TOKEN_OPENING_BRACKET;
       allocate_and_copy_cstr(output->text, "(");
       output->start_index = i;
       return 0;
