@@ -1137,33 +1137,41 @@ VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_
 
   // Queue Render
   VkResult res = render_through_queue(vkrs, rt_render_queue);
-  printf("rendered %u image requests\n", rt_render_queue->count);
+  // printf("rendered %u image requests\n", rt_render_queue->count);
   VK_CHECK(res, "render_through_queue");
 
   // After frame statistics
   struct timespec render_end_time;
   clock_gettime(CLOCK_REALTIME, &render_end_time);
 
-  printf("Vulkan rendered image_render_queue! %.3f ms\n",
-         (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
-             1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
+  // printf("Vulkan rendered image_render_queue! %.3f ms\n",
+  //        (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
+  //            1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
 
   // Return the image render request objects to the pool
   pthread_mutex_lock(&render_thread->render_request_object_pool->mutex);
-  if (render_thread->render_request_object_pool->count + rt_render_queue->count >
-      render_thread->render_request_object_pool->alloc) {
-    reallocate_collection((void ***)&render_thread->render_request_object_pool->items,
-                          &render_thread->render_request_object_pool->alloc,
-                          render_thread->render_request_object_pool->count + rt_render_queue->count + 4 +
-                              (render_thread->render_request_object_pool->count + rt_render_queue->count) / 4,
-                          0);
-  }
+  // if (render_thread->render_request_object_pool->count + rt_render_queue->count >
+  //     render_thread->render_request_object_pool->alloc) {
+  //   reallocate_collection((void ***)&render_thread->render_request_object_pool->items,
+  //                         &render_thread->render_request_object_pool->alloc,
+  //                         render_thread->render_request_object_pool->count + rt_render_queue->count + 4 +
+  //                             (render_thread->render_request_object_pool->count + rt_render_queue->count) / 4,
+  //                         0);
+  // }
 
-  memcpy(render_thread->render_request_object_pool->items +
-             render_thread->render_request_object_pool->count * sizeof(image_render_details *),
-         rt_render_queue->items, sizeof(image_render_details *) * rt_render_queue->count);
-  render_thread->render_request_object_pool->count += rt_render_queue->count;
+  // memcpy(render_thread->render_request_object_pool->items +
+  //            render_thread->render_request_object_pool->count * sizeof(image_render_details *),
+  //        rt_render_queue->items, sizeof(image_render_details *) * rt_render_queue->count);
+  // render_thread->render_request_object_pool->count += rt_render_queue->count;
+  // rt_render_queue->count = 0;
+
+  for (int i = 0; i < rt_render_queue->count; ++i) {
+    append_to_collection((void ***)&render_thread->render_request_object_pool->items,
+                         &render_thread->render_request_object_pool->alloc,
+                         &render_thread->render_request_object_pool->count, rt_render_queue->items[i]);
+  }
   rt_render_queue->count = 0;
+
   pthread_mutex_unlock(&render_thread->render_request_object_pool->mutex);
 }
 
@@ -1198,7 +1206,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   while (!thr->should_exit && !vkrs->xcb_winfo->input_requests_exit) {
     // TODO DEBUG
     // printf("mrt-rul-3:loop\n");
-    usleep(1000000);
+    // usleep(1000000);
 
     // Resource Commands
     pthread_mutex_lock(&render_thread->resource_queue->mutex);
@@ -1216,7 +1224,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     pthread_mutex_lock(&render_thread->image_queue->mutex);
     // TODO review -- should be atomic anyway?
     bool queue_not_empty = render_thread->image_queue->count;
-    printf("mrt-rul-5:loop %u\n", render_thread->image_queue->count);
+    // printf("mrt-rul-5:loop %u\n", render_thread->image_queue->count);
     pthread_mutex_unlock(&render_thread->image_queue->mutex);
     if (queue_not_empty) {
       mrt_process_render_queues(render_thread, vkrs, &rt_render_queue);

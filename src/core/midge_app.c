@@ -433,7 +433,7 @@ void midge_run_app()
 
     // Render State Changes
     // TODO -- do not know how to eloquently handle render update requests outpacing the render thread
-    if (global_root_node->layout->__requires_rerender && !render_thread->image_queue->count) {
+    if (global_root_node->layout->__requires_rerender && !global_data->render_thread->image_queue->count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
 
       // Reset States
@@ -457,8 +457,8 @@ void midge_run_app()
 
       // Release lock and allow rendering
       clock_gettime(CLOCK_REALTIME, &debug_end_time);
-      printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
-                                           1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+      // printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+      //                                      1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
     }
   }
 

@@ -12,13 +12,13 @@ int mcr_obtain_image_render_request(render_thread_info *render_thread, image_ren
     render_request =
         render_thread->render_request_object_pool->items[render_thread->render_request_object_pool->count - 1];
     --render_thread->render_request_object_pool->count;
-    printf("used-already\n");
+    // printf("render_requestu=%p %u\n", render_request, render_thread->render_request_object_pool->count);
   }
   else {
     // Construct another
     render_request = (image_render_details *)malloc(sizeof(image_render_details));
     render_request->commands_allocated = 0;
-    printf("constructed another\n");
+    // printf("render_requestn=%p\n", render_request);
   }
   pthread_mutex_unlock(&render_thread->render_request_object_pool->mutex);
 
@@ -39,7 +39,7 @@ int mcr_submit_image_render_request(render_thread_info *render_thread, image_ren
                                  &render_thread->image_queue->count, request);
 
   // printf("sirr-1\n");
-  printf("sirr %u\n", render_thread->image_queue->count);
+  // printf("sirr %u\n", render_thread->image_queue->count);
   pthread_mutex_unlock(&render_thread->image_queue->mutex);
 
   return res;
