@@ -271,51 +271,69 @@ void mcr_issue_render_command_textured_quad(image_render_details *image_render_q
 //   printf("float:%.3f i:%i\n", *verts[*vcount], *i);
 // }
 
-void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
+// void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
+// {
+// // Load the file
+// char *file_text;
+// read_file_text(obj_path, &file_text);
+
+// // Read the vertices
+// unsigned int v_alloc = 512, v_count = 0;
+// float *vertices = (float *)malloc(sizeof(float) * v_alloc);
+
+// int i = 0;
+// bool eof = false;
+// for (;; ++i) {
+//   if (file_text[i] != 'v') {
+//     for (int a = 0; a < v_count;) {
+//       printf("v: ");
+//       printf(" %.3f", vertices[a++]);
+//       printf(" %.3f", vertices[a++]);
+//       printf(" %.3f\n", vertices[a++]);
+//     }
+//     break;
+//   }
+
+//   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+//   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+//   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+
+//   if (file_text[i] != '\n') {
+//     MCerror(9272, "TODO");
+//   }
+// }
+
+// // mcr_create_mesh_resource(vertices, v_count, unsigned int *p_resource_uid);
+
+// free(file_text);
+// MCerror(9472, "TODO");
+// }
+
+void mcr_load_wavefront_obj_model(resource_queue *resource_queue, const char *obj_path, mcr_model **loaded_model)
 {
-  // // Load the file
-  // char *file_text;
-  // read_file_text(obj_path, &file_text);
+  tinyobj_obj *parsed_obj;
 
-  // // Read the vertices
-  // unsigned int v_alloc = 512, v_count = 0;
-  // float *vertices = (float *)malloc(sizeof(float) * v_alloc);
+  {
+    int ret = tinyobj_parse_obj(obj_path, &parsed_obj);
+    if (ret) {
+      MCerror(9319, "Failed to load obj model");
+    }
+  }
 
-  // int i = 0;
-  // bool eof = false;
-  // for (;; ++i) {
-  //   if (file_text[i] != 'v') {
-  //     for (int a = 0; a < v_count;) {
-  //       printf("v: ");
-  //       printf(" %.3f", vertices[a++]);
-  //       printf(" %.3f", vertices[a++]);
-  //       printf(" %.3f\n", vertices[a++]);
-  //     }
-  //     break;
-  //   }
+  resource_command *command;
+  mcr_obtain_resource_command(resource_queue, &command);
+  command->type = RESOURCE_COMMAND_LOAD_FONT;
+  command->p_uid = p_resource_uid;
+  command->data.font.height = font_height;
+  command->data.font.path = font_path;
 
-  //   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
-  //   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
-  //   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
+  // parsed_obj->attrib.vertices =
 
-  //   if (file_text[i] != '\n') {
-  //     MCerror(9272, "TODO");
-  //   }
-  // }
-
-  // // mcr_create_mesh_resource(vertices, v_count, unsigned int *p_resource_uid);
-
-  // free(file_text);
-  // MCerror(9472, "TODO");
-}
-
-void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
-{
-  tinyobj_attrib_t attrib;
-  tinyobj_shape_t* shapes = NULL;
-  size_t num_shapes;
-  tinyobj_material_t* materials = NULL;
-  size_t num_materials;
+  // tinyobj_attrib_t attrib;
+  // tinyobj_shape_t *shapes = NULL;
+  // size_t num_shapes;
+  // tinyobj_material_t *materials = NULL;
+  // size_t num_materials;
 
   // {
   //   unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;

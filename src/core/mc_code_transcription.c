@@ -565,6 +565,10 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
 
     --result->deref_count;
   } break;
+  case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
+    // Determine the type of the inner expression
+    determine_type_of_expression(ts, expression->parenthesized_expression.expression, result);
+  } break;
   default:
     print_syntax_node(expression, 0);
     MCerror(7544, "Unsupported:%s", get_mc_syntax_token_type_name(expression->type));
@@ -743,7 +747,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
     {
       mct_contains_mc_invoke(argument, &contains_mc_function_call);
       if (contains_mc_function_call) {
-        MCerror(104, "TODO");
+        MCerror(750, "TODO");
       }
     }
 
@@ -841,7 +845,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
 
       mct_contains_mc_invoke(argument->element_access_expression.access_expression, &contains_mc_function_call);
       if (contains_mc_function_call) {
-        MCerror(104, "TODO");
+        MCerror(848, "TODO");
       }
     }
 
@@ -1118,7 +1122,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   //}
 
   if (syntax_node->type != MC_SYNTAX_INVOCATION) {
-    MCerror(70, "TODO %s", get_mc_syntax_token_type_name(syntax_node->type));
+    MCerror(5570, "TODO %s", get_mc_syntax_token_type_name(syntax_node->type));
   }
 
   function_info *func_info;
@@ -2265,7 +2269,7 @@ int mct_transcribe_if_statement(mct_transcription_state *ts, mc_syntax_node *syn
   if (syntax_node->if_statement.conditional) {
     mct_contains_mc_invoke(syntax_node->if_statement.conditional, &contains_mc_function_call);
     if (contains_mc_function_call) {
-      MCerror(104, "TODO");
+      MCerror(2272, "TODO");
     }
   }
 
@@ -2319,7 +2323,7 @@ int mct_transcribe_switch_statement(mct_transcription_state *ts, mc_syntax_node 
   if (syntax_node->switch_statement.conditional) {
     mct_contains_mc_invoke(syntax_node->switch_statement.conditional, &contains_mc_function_call);
     if (contains_mc_function_call) {
-      MCerror(104, "TODO");
+      MCerror(2326, "TODO");
     }
   }
 
@@ -2559,6 +2563,8 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
     // Do MC_invokes
     bool contains_mc_function_call;
     mct_contains_mc_invoke(syntax_node->expression_statement.expression, &contains_mc_function_call);
+    // print_syntax_node(syntax_node, 0);
+    // printf("contains_mc_function_call=%s\n", contains_mc_function_call ? "true" : "false");
     if (contains_mc_function_call) {
       if (syntax_node->expression_statement.expression->type == MC_SYNTAX_ASSIGNMENT_EXPRESSION) {
         mc_syntax_node *ass_expr = syntax_node->expression_statement.expression;

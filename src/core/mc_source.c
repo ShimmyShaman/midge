@@ -456,8 +456,18 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
 
 int update_or_register_struct_info_from_syntax(mc_node *owner, mc_syntax_node *struct_ast, struct_info **p_struct_info)
 {
+  if (!struct_ast->structure.type_name) {
+    MCerror(8461, "root-level anonymous structures not yet supported");
+  }
+
   struct_info *structure_info;
-  find_struct_info(struct_ast->structure.type_name->text, &structure_info);
+  // printf("ursif0:'%p'\n", struct_ast);
+  // printf("ursif1:'%p'\n", struct_ast->structure.type_name);
+  // printf("ursif2:'%p'\n", struct_ast->structure.type_name->text);
+  // printf("ursif3:'%s'\n", struct_ast->structure.type_name->text);
+  if (struct_ast->structure.type_name) {
+    find_struct_info(struct_ast->structure.type_name->text, &structure_info);
+  }
 
   register_midge_error_tag("update_or_register_struct_info_from_syntax-1");
   if (!structure_info) {
@@ -470,7 +480,12 @@ int update_or_register_struct_info_from_syntax(mc_node *owner, mc_syntax_node *s
     structure_info->type_id->version = 1U;
 
     // Name & Version
-    allocate_and_copy_cstr(structure_info->name, struct_ast->structure.type_name->text);
+    if (struct_ast->structure.type_name) {
+      allocate_and_copy_cstr(structure_info->name, struct_ast->structure.type_name->text);
+    }
+    else {
+      structure_info->name = NULL;
+    }
     structure_info->latest_iteration = 1U;
     structure_info->source = NULL;
   }
@@ -631,7 +646,8 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
 
   int result = clint_declare(mc_transcription);
   if (result) {
-    printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
+    printf("\n\nmc_transcription:\n%.50s||\n", mc_transcription);
+    // printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
     MCerror(615, "Failed to declare function");
   }
   free(mc_transcription);

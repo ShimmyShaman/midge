@@ -59,6 +59,18 @@ int append_to_c_strf(c_str *cstr, const char *format, ...);
 int insert_into_c_str(c_str *cstr, const char *text, int index);
 }
 
+// int do_the_first_thing(int *a) { return *a + 2; }
+// int do_the_second_thing(int *a) { return *a + 4; }
+// int do_the_third_thing(int *a) { return *a + 7; }
+
+// int do_many_things()
+// {
+//   int x = 3;
+//   printf("1:%i 2:%i 3:%i A:%i\n", do_the_first_thing(&x), do_the_second_thing(&x), do_the_third_thing(&x),
+//          do_the_first_thing(&x) + do_the_second_thing(&x) + do_the_third_thing(&x));
+//          return 0;
+// }
+
 int init_c_str(c_str **ptr)
 {
   (*ptr) = (c_str *)malloc(sizeof(c_str));

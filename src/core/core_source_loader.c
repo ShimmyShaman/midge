@@ -424,6 +424,11 @@ const char *_mcl_ignore_functions[] = {
 };
 
 const char *_mcl_core_functions[] = {
+    "do_the_first_thing",
+    "do_the_second_thing",
+    "do_the_third_thing",
+    "do_many_things",
+
     "clint_process",
     "clint_declare",
 
@@ -1213,6 +1218,16 @@ int _mcl_load_core_mc_source()
     if (result != 0) {
       return result;
     }
+
+    // // DEBUG
+    // // DEBUG
+    // MCcall(clint_process("void *vv[1]; do_many_things(1, vv);"));
+
+    // if (result != 0) {
+    //   return result;
+    // }
+    // // DEBUG
+    // // DEBUG
   }
 
   // obtain_midge_global_root function

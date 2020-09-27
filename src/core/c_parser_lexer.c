@@ -2694,6 +2694,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
       }
       case MC_TOKEN_INT_KEYWORD:
       case MC_TOKEN_CHAR_KEYWORD:
+      case MC_TOKEN_LONG_KEYWORD:
       case MC_TOKEN_FLOAT_KEYWORD:
       case MC_TOKEN_VOID_KEYWORD:
         ++peek_ahead;
@@ -2777,6 +2778,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
         // Cast
         mcs_parse_cast_expression(ps, parent, false, additional_destination);
       } break;
+      case MC_TOKEN_CLOSING_BRACKET: // TODO -- is ((int)) something a cast still
       case MC_TOKEN_SEMI_COLON: {
         mcs_parse_parenthesized_expression(ps, parent, additional_destination);
       } break;
@@ -2800,8 +2802,11 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     case MC_TOKEN_INEQUALITY_OPERATOR:
     case MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR:
     case MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR:
+    case MC_TOKEN_BITWISE_LEFT_SHIFT_OPERATOR:
+    case MC_TOKEN_BITWISE_RIGHT_SHIFT_OPERATOR:
     case MC_TOKEN_BITWISE_OR_OPERATOR:
     case MC_TOKEN_BITWISE_XOR_OPERATOR:
+    case MC_TOKEN_ASSIGNMENT_OPERATOR:
     case MC_TOKEN_ARROW_OPENING_BRACKET: {
       mcs_parse_parenthesized_expression(ps, parent, additional_destination);
     } break;

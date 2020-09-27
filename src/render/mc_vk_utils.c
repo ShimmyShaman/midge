@@ -560,9 +560,11 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
     p_vkrs->textures.allocated = new_allocated;
   }
 
+image_sampler *image_sampler;
   res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels,
                                &p_vkrs->textures.samples[p_vkrs->textures.count]);
   VK_CHECK(res, "mvk_load_image_sampler");
+
   *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
   ++p_vkrs->textures.count;
 
@@ -696,7 +698,7 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels,
                                &p_vkrs->textures.samples[p_vkrs->textures.count]);
   VK_CHECK(res, "mvk_load_image_sampler");
-  *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
+  *resource_uid = p_vkrs->resource_uid_counter++;
   ++p_vkrs->textures.count;
 
   // Font is a common resource -- cache so multiple loads reference the same resource uid
@@ -742,6 +744,71 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   // global_root_data *global_data;
   // obtain_midge_global_root(&global_data);
   // printf("generated font texture> resource_uid:%u\n", global_data->ui_state->default_font_resource);
+
+  return res;
+}
+
+VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *vertices, unsigned int vertex_count, uint *resource_uid)
+{
+  VkResult res = VK_SUCCESS;
+
+  // vec3 mesh_data[] = {{-0.5f, -0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
+  //                     {0.5f, -0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},  {0.5f, 0.5f, -0.5f},  {0.5f, 0.5f, 0.5f}};
+
+  mcr_mesh *mesh = (mcr_mesh *)malloc(sizeof(mcr_mesh));
+  mesh->resource_uid = p_vkrs->resource_uid_counter++;
+
+  const int data_size_in_bytes = sizeof(float) * vertex_count;
+
+  // Buffer
+  VkBufferCreateInfo buf_info = {};
+  buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buf_info.pNext = NULL;
+  buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  buf_info.size = data_size_in_bytes;
+  buf_info.queueFamilyIndexCount = 0;
+  buf_info.pQueueFamilyIndices = NULL;
+  buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  buf_info.flags = 0;
+  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &mesh->buf);
+  VK_CHECK(res, "vkCreateBuffer");
+
+  // Memory
+  VkMemoryRequirements mem_reqs;
+  vkGetBufferMemoryRequirements(p_vkrs->device, mesh->buf, &mem_reqs);
+
+  VkMemoryAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.pNext = NULL;
+  alloc_info.memoryTypeIndex = 0;
+
+  alloc_info.allocationSize = mem_reqs.size;
+  bool pass = mvk_get_properties_memory_type_index(
+      p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      &alloc_info.memoryTypeIndex);
+  VK_ASSERT(pass, "No mappable, coherent memory");
+
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(mesh->mem));
+  VK_CHECK(res, "vkAllocateMemory");
+  mesh->buffer_info.range = mem_reqs.size;
+  mesh->buffer_info.offset = 0;
+
+  // Bind
+  uint8_t *pData;
+  res = vkMapMemory(p_vkrs->device, mesh->mem, 0, mem_reqs.size, 0, (void **)&pData);
+  VK_CHECK(res, "vkMapMemory");
+
+  memcpy(pData, vertices, data_size_in_bytes);
+
+  vkUnmapMemory(p_vkrs->device, mesh->mem);
+
+  res = vkBindBufferMemory(p_vkrs->device, mesh->buf, mesh->mem, 0);
+  VK_CHECK(res, "vkBindBufferMemory");
+
+  // Register the mesh
+  append_to_collection((void ***)&p_vkrs->loaded_meshes.items, &p_vkrs->loaded_meshes.alloc,
+                       &p_vkrs->loaded_meshes.count, mesh);
+  *resource_uid = mesh->resource_uid;
 
   return res;
 }

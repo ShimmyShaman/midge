@@ -293,6 +293,18 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
     return VK_SUCCESS;
   }
 
+  // Find the texture
+  sampled_image *image_sampler = NULL;
+  for (int f = 0; f < p_vkrs->textures.count; ++f) {
+    if (p_vkrs->textures.samples[f]->resource_uid == cmd->textured_rect_info.texture_uid) {
+      image_sampler = &p_vkrs->textures.samples[f];
+      break;
+    }
+  }
+  if (!image_sampler) {
+    MCerror(8420, "TODO could not find image-sampler with resource_uid=%u", cmd->textured_rect_info.texture_uid);
+  }
+
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(vert_data_scale_offset);
@@ -369,10 +381,8 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
 
   VkDescriptorImageInfo image_sampler_info = {};
   image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  image_sampler_info.imageView =
-      p_vkrs->textures.samples[cmd->textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].view;
-  image_sampler_info.sampler =
-      p_vkrs->textures.samples[cmd->textured_rect_info.texture_uid - RESOURCE_UID_BEGIN].sampler;
+  image_sampler_info.imageView = image_sampler->view;
+  image_sampler_info.sampler = image_sampler->sampler;
 
   // Element Fragment Shader Combined Image Sampler
   write = &writes[write_index++];
@@ -620,6 +630,20 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
 {
   VkResult res;
 
+  // Get the mesh
+  mcr_mesh *mesh = NULL;
+  for (int f = 0; f < p_vkrs->loaded_meshes.count; ++f) {
+    if (p_vkrs->loaded_meshes.items[f].resource_uid == cmd->mesh.mesh_resource_uid) {
+      mesh = &p_vkrs->loaded_meshes.fonts[f];
+      break;
+    }
+  }
+
+  if (!mesh) {
+    printf("Could not find requested mesh uid=%u\n", cmd->mesh.mesh_resource_uid);
+    return VK_ERROR_UNKNOWN;
+  }
+
   mat4 *vpc = (mat4 *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(mat4);
   {
@@ -777,7 +801,7 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   vkCmdBindIndexBuffer(command_buffer, p_vkrs->cube_shape_indices.buf, 0, VK_INDEX_TYPE_UINT32);
 
   const VkDeviceSize offsets[1] = {0};
-  vkCmdBindVertexBuffers(command_buffer, 0, 1, &p_vkrs->cube_shape_vertices.buf, offsets);
+  vkCmdBindVertexBuffers(command_buffer, 0, 1, &mesh->buf, offsets);
   // vkCmdDraw(command_buffer, 3 * 2 * 6, 1, 0, 0);
   vkCmdDrawIndexed(command_buffer, 36, 1, 0, 0, 0);
 

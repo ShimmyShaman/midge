@@ -40,7 +40,7 @@ int begin_render_thread()
   obtain_midge_global_root(&global_data);
 
   global_data->render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
-  printf("global_data->render_thread = %p\n", global_data->render_thread);
+  // printf("global_data->render_thread = %p\n", global_data->render_thread);
   global_data->render_thread->render_thread_initialized = false;
   {
     // Resource Queue
@@ -82,10 +82,11 @@ void complete_midge_app_compile()
       // "src/ui/ui_definitions.h",
       // "src/control/mc_controller.h",
       "src/modules/app_modules.h",
-      "src/render/resources/obj_loader.h",
       "src/render/resources/hash_table.h",
+      "src/render/resources/obj_loader.h",
 
       "src/render/resources/hash_table.c",
+      "src/render/resources/obj_loader.c",
       "src/render/render_common.c",
       "src/env/hierarchy.c",
       "src/env/util.c",

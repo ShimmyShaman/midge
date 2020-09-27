@@ -9,8 +9,6 @@
 #define MAX_DESCRIPTOR_SETS 4096
 #define VK_IMAGE_FORMAT VK_FORMAT_R8G8B8A8_SRGB;
 
-#define RESOURCE_UID_BEGIN 300
-
 /* Amount of time, in nanoseconds, to wait for a command buffer to complete */
 #define FENCE_TIMEOUT 100000000
 
@@ -52,7 +50,7 @@ typedef struct loaded_font_info {
   const char *name;
   float height;
   float draw_vertical_offset;
-  uint resource_uid;
+  unsigned int resource_uid;
   stbtt_bakedchar *char_data;
 } loaded_font_info;
 
@@ -61,6 +59,13 @@ typedef struct loaded_font_list {
   uint32_t allocated;
   loaded_font_info *fonts;
 } loaded_font_list;
+
+typedef struct mcr_mesh {
+  unsigned int resource_uid;
+  VkBuffer buf;
+  VkDeviceMemory mem;
+  VkDescriptorBufferInfo buffer_info;
+} mcr_mesh;
 
 typedef struct sampled_image {
   VkFormat format;
@@ -83,6 +88,7 @@ typedef struct mvk_dynamic_buffer_block {
 
 typedef struct vk_render_state {
 
+  unsigned int resource_uid_counter;
   unsigned int presentation_updates;
 
   mxcb_window_info *xcb_winfo;
@@ -220,6 +226,10 @@ typedef struct vk_render_state {
   } textures;
 
   loaded_font_list loaded_fonts;
+  struct {
+    uint32_t count, alloc;
+    mcr_mesh *items;
+  } loaded_meshes;
 
 } vk_render_state;
 
