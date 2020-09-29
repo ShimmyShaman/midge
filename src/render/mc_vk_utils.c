@@ -403,6 +403,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   VkResult res;
 
   texture_image *image_sampler = (texture_image *)malloc(sizeof(texture_image));
+  image_sampler->resource_uid = p_vkrs->resource_uid_counter++;
   VK_ASSERT(image_sampler, "malloc error 5407");
 
   image_sampler->width = texWidth;
@@ -560,7 +561,7 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
   res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
-  *resource_uid = p_vkrs->resource_uid_counter++;
+  *resource_uid = texture->resource_uid;
   append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   stbi_image_free(pixels);
@@ -590,7 +591,7 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
   res = mvk_load_image_sampler(p_vkrs, width, height, texChannels, use_as_render_target, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
-  *resource_uid = p_vkrs->resource_uid_counter++;
+  *resource_uid = texture->resource_uid;
   append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   stbi_image_free(pixels);
@@ -666,7 +667,7 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
-  *resource_uid = p_vkrs->resource_uid_counter++;
+  *resource_uid = texture->resource_uid;
   append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   // Font is a common resource -- cache so multiple loads reference the same resource uid
@@ -776,6 +777,7 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *vertices, unsigned int ve
   // Register the mesh
   append_to_collection((void ***)&p_vkrs->loaded_meshes.items, &p_vkrs->loaded_meshes.alloc,
                        &p_vkrs->loaded_meshes.count, mesh);
+
   *resource_uid = mesh->resource_uid;
 
   return res;

@@ -103,6 +103,7 @@ typedef struct cube_child {
 
 void mctd_render_cube_present(image_render_details *image_render_queue, mc_node *node)
 {
+  return;
   // printf("mctd_render_cube_present\n");
   element_render_command *render_cmd;
   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
@@ -175,7 +176,7 @@ void mctd_append_cube_child(mc_node *portal_node)
   // mcr_load_texture_resource((float *)mesh_data, ... , &cube->texture_resource_uid);
   // mcr_create_mesh_resource((float *)mesh_data, 3 * 8, indices, 6 * 2 * 3, &cube->mesh_resource_uid);
 
-  mcr_load_wavefront_obj_model("/home/jason/progs/renderer/assets/witch/object.obj", &cube->witch);
+  // mcr_load_wavefront_obj_model("/home/jason/progs/renderer/assets/witch/object.obj", &cube->witch);
 
   node->layout->render_present = &mctd_render_cube_present;
 }
