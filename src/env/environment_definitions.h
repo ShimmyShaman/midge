@@ -139,6 +139,7 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area);
 void mca_render_node_list_headless(mc_node_list *node_list);
 void mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *node_list);
 
+void mca_set_all_nodes_require_layout_update();
 void mca_set_node_requires_layout_update(mc_node *node);
 void mca_set_node_requires_rerender(mc_node *node);
 

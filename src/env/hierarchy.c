@@ -553,6 +553,26 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
   node->layout->__requires_layout_update = false;
 }
 
+void _mca_set_nodes_require_layout_update(mc_node_list *node_list)
+{
+  for (int i = 0; i < node_list->count; ++i) {
+    node_list->items[i]->layout->__requires_layout_update = true;
+
+    if (node_list->items[i]->children) {
+      _mca_set_nodes_require_layout_update(node_list->items[i]->children);
+    }
+  }
+}
+
+void mca_set_all_nodes_require_layout_update()
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  global_data->global_node->layout->__requires_layout_update = true;
+  _mca_set_nodes_require_layout_update(global_data->global_node->children);
+}
+
 void mca_set_node_requires_layout_update(mc_node *node)
 {
   // DEBUG?
