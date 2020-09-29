@@ -109,9 +109,9 @@ void mcr_create_texture_resource(unsigned int width, unsigned int height, bool u
   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = p_resource_uid;
-  command->data.create_texture.width = width;
-  command->data.create_texture.height = height;
-  command->data.create_texture.use_as_render_target = use_as_render_target;
+  command->create_texture.width = width;
+  command->create_texture.height = height;
+  command->create_texture.use_as_render_target = use_as_render_target;
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 }
@@ -126,9 +126,9 @@ void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_p
   mcr_obtain_resource_command(resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_uid = p_resource_uid;
-  command->data.font.height = font_height;
-  command->data.font.path = font_path;
-  // printf("hrc-resource_cmd->data.font.height:%f\n", command->data.font.height);
+  command->font.height = font_height;
+  command->font.path = font_path;
+  // printf("hrc-resource_cmd->font.height:%f\n", command->font.height);
   // pthread_mutex_unlock(&resource_queue->mutex);
 }
 
@@ -309,24 +309,42 @@ void mcr_issue_render_command_textured_quad(image_render_details *image_render_q
 // MCerror(9472, "TODO");
 // }
 
-void mcr_load_wavefront_obj_model(resource_queue *resource_queue, const char *obj_path, mcr_model **loaded_model)
+void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
 {
-  tinyobj_obj *parsed_obj;
+  // global_root_data *global_data;
+  // obtain_midge_global_root(&global_data);
 
-  {
-    int ret = tinyobj_parse_obj(obj_path, &parsed_obj);
-    if (ret) {
-      MCerror(9319, "Failed to load obj model");
-    }
-  }
+  // pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
-  resource_command *command;
-  mcr_obtain_resource_command(resource_queue, &command);
-  command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = p_resource_uid;
-  command->data.font.height = font_height;
-  command->data.font.path = font_path;
+  // tinyobj_obj *parsed_obj;
 
+  // {
+  //   int ret = tinyobj_parse_obj(obj_path, &parsed_obj);
+  //   if (ret) {
+  //     MCerror(9319, "Failed to load obj model");
+  //   }
+  // }
+
+  // mcr_model *model;
+  // model->parsed_obj = parsed_obj;
+  // model->mesh_resource_uid = 0;
+
+  // parsed_
+
+  // resource_command *command;
+  // mcr_obtain_resource_command(resource_queue, &command);
+  // command->type = RESOURCE_COMMAND_MESH;
+  // command->p_uid = &model->mesh_resource_uid;
+  // command->data.load_mesh.p_vertex_data = parsed_obj->attrib.vertices;
+  // command->data.load_mesh.vertex_count = parsed_obj->attrib.vertex_count;
+
+  // for (int i = 0; i < parsed_obj->attrib.num_faces)
+
+  //   mcr_obtain_resource_command(resource_queue, &command);
+  // command->type = RESOURCE_COMMAND_MESH;
+  // command->p_uid = &model->mesh_resource_uid;
+  // command->data.load_mesh.p_vertex_data = parsed_obj->attrib.vertices;
+  // command->data.load_mesh.vertex_count = parsed_obj->attrib.vertex_count;
   // parsed_obj->attrib.vertices =
 
   // tinyobj_attrib_t attrib;
@@ -342,4 +360,6 @@ void mcr_load_wavefront_obj_model(resource_queue *resource_queue, const char *ob
   //   if (ret != TINYOBJ_SUCCESS) {
   //     return 0;
   //   }
+
+  // pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 }

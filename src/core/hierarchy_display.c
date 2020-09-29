@@ -305,16 +305,16 @@ void build_core_display()
   obtain_resource_command(command_hub->renderer.resource_queue, &command);
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = &core_objects_display->data.visual.image_resource_uid;
-  command->data.create_texture.use_as_render_target = true;
-  command->data.create_texture.width = core_objects_display->data.visual.bounds.width;
-  command->data.create_texture.height = core_objects_display->data.visual.bounds.height;
+  command->create_texture.use_as_render_target = true;
+  command->create_texture.width = core_objects_display->data.visual.bounds.width;
+  command->create_texture.height = core_objects_display->data.visual.bounds.height;
 
   // Font
   obtain_resource_command(command_hub->renderer.resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_uid = &cdstate->font_resource_uid;
-  command->data.font.height = 18;
-  command->data.font.path = "res/font/DroidSansMono.ttf";
+  command->font.height = 18;
+  command->font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   // register_midge_error_tag("build_core_display_v1(~)");
 }

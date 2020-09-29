@@ -83,9 +83,9 @@ int initialize_entry_visual_nodes(node *core_display, core_display_state *cdstat
     MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
     command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
     command->p_uid = &core_entry->data.visual.image_resource_uid;
-    command->data.create_texture.use_as_render_target = true;
-    command->data.create_texture.width = core_entry->data.visual.bounds.width;
-    command->data.create_texture.height = core_entry->data.visual.bounds.height;
+    command->create_texture.use_as_render_target = true;
+    command->create_texture.width = core_entry->data.visual.bounds.width;
+    command->create_texture.height = core_entry->data.visual.bounds.height;
   }
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   // printf("bce-8\n");

@@ -185,20 +185,20 @@ int force_render_update(int argc, void **argv)
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_TEXTURE;
   command->p_uid = &command_hub->ui_elements[0].resource_uid;
-  command->data.load_texture.path = "res/texture.jpg";
+  command->load_texture.path = "res/texture.jpg";
 
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = &command_hub->ui_elements[1].resource_uid;
-  command->data.create_texture.width = 512;
-  command->data.create_texture.height = 128;
-  command->data.create_texture.use_as_render_target = true;
+  command->create_texture.width = 512;
+  command->create_texture.height = 128;
+  command->create_texture.use_as_render_target = true;
 
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_uid = &command_hub->ui_elements[2].resource_uid;
-  command->data.font.path = "res/font/LiberationMono-Regular.ttf";
-  command->data.font.height = 24.0f;
+  command->font.path = "res/font/LiberationMono-Regular.ttf";
+  command->font.height = 24.0f;
 
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
 

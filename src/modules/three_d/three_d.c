@@ -150,6 +150,9 @@ void mctd_render_cube_present(image_render_details *image_render_queue, mc_node 
 
 void mctd_append_cube_child(mc_node *portal_node)
 {
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
   // Node
   mc_node *node;
   mca_init_mc_node(portal_node, NODE_TYPE_3D_PORTAL, &node);

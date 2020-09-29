@@ -123,24 +123,24 @@ void init_usage_data_interface()
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = &usage_data_interface->data.visual.image_resource_uid;
-  command->data.create_texture.use_as_render_target = true;
-  command->data.create_texture.width = usage_data_interface->data.visual.bounds.width;
-  command->data.create_texture.height = usage_data_interface->data.visual.bounds.height;
+  command->create_texture.use_as_render_target = true;
+  command->create_texture.width = usage_data_interface->data.visual.bounds.width;
+  command->create_texture.height = usage_data_interface->data.visual.bounds.height;
 
   // Maximized Image
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = &state->alternate_image_resource_uid;
-  command->data.create_texture.use_as_render_target = true;
-  command->data.create_texture.width = state->alternate_image_bounds.width;
-  command->data.create_texture.height = state->alternate_image_bounds.height;
+  command->create_texture.use_as_render_target = true;
+  command->create_texture.width = state->alternate_image_bounds.width;
+  command->create_texture.height = state->alternate_image_bounds.height;
 
   // Font
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_uid = &state->font_resource_uid;
-  command->data.font.height = 18;
-  command->data.font.path = "res/font/DroidSansMono.ttf";
+  command->font.height = 18;
+  command->font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
 }
 

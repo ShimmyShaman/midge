@@ -91,7 +91,7 @@ typedef struct frag_ubo_tint_texcoordbounds {
   } tex_coord_bounds;
 } frag_ubo_tint_texcoordbounds;
 
-typedef struct sampled_image {
+typedef struct texture_image {
   VkFormat format;
   uint width, height;
   VkDeviceSize size;
@@ -100,7 +100,7 @@ typedef struct sampled_image {
   VkDeviceMemory memory;
   VkImageView view;
   VkFramebuffer framebuffer;
-} sampled_image;
+} texture_image;
 
 typedef struct textured_image_vertex {
   vec2 position;
@@ -193,7 +193,7 @@ typedef struct vk_render_state {
   struct {
     uint count;
     uint allocated;
-    sampled_image *samples;
+    texture_image *samples;
   } textures;
 
   struct {

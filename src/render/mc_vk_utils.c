@@ -237,22 +237,27 @@ VkResult mvk_init_resources(vk_render_state *p_vkrs)
   return res;
 }
 
-void mvk_destroy_sampled_image(vk_render_state *p_vkrs, sampled_image *sampled_image)
+void mvk_destroy_sampled_image(vk_render_state *p_vkrs, texture_image *texture_image)
 {
-  vkDestroySampler(p_vkrs->device, sampled_image->sampler, NULL);
-  vkDestroyImageView(p_vkrs->device, sampled_image->view, NULL);
-  vkDestroyImage(p_vkrs->device, sampled_image->image, NULL);
-  vkFreeMemory(p_vkrs->device, sampled_image->memory, NULL);
-  if (sampled_image->framebuffer)
-    vkDestroyFramebuffer(p_vkrs->device, sampled_image->framebuffer, NULL);
+  vkDestroySampler(p_vkrs->device, texture_image->sampler, NULL);
+  vkDestroyImageView(p_vkrs->device, texture_image->view, NULL);
+  vkDestroyImage(p_vkrs->device, texture_image->image, NULL);
+  vkFreeMemory(p_vkrs->device, texture_image->memory, NULL);
+  if (texture_image->framebuffer)
+    vkDestroyFramebuffer(p_vkrs->device, texture_image->framebuffer, NULL);
 }
 
 void mvk_destroy_resources(vk_render_state *p_vkrs)
 {
   for (int i = 0; i < p_vkrs->textures.count; ++i) {
-    mvk_destroy_sampled_image(p_vkrs, &p_vkrs->textures.samples[i]);
+    mvk_destroy_sampled_image(p_vkrs, p_vkrs->textures.items[i]);
   }
-  free(p_vkrs->textures.samples);
+  free(p_vkrs->textures.items);
+  for (int i = 0; i < p_vkrs->loaded_meshes.count; ++i) {
+    vkDestroyBuffer(p_vkrs->device, p_vkrs->loaded_meshes.items[i]->buf, NULL);
+    vkFreeMemory(p_vkrs->device, p_vkrs->loaded_meshes.items[i]->mem, NULL);
+  }
+  free(p_vkrs->loaded_meshes.items);
 
   vkDestroyBuffer(p_vkrs->device, p_vkrs->shape_vertices.buf, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, NULL);
@@ -393,10 +398,12 @@ VkResult mvk_copyBufferToImage(vk_render_state *p_vkrs, VkBuffer buffer, VkImage
 }
 
 VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const int texHeight, const int texChannels,
-                                bool use_as_render_target, const unsigned char *const pixels,
-                                sampled_image *image_sampler)
+                                bool use_as_render_target, const unsigned char *const pixels, texture_image **out_image)
 {
   VkResult res;
+
+  texture_image *image_sampler = (texture_image *)malloc(sizeof(texture_image));
+  VK_ASSERT(image_sampler, "malloc error 5407");
 
   image_sampler->width = texWidth;
   image_sampler->height = texHeight;
@@ -532,6 +539,8 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   // TODO ??
   image_sampler->framebuffer = NULL;
 
+  *out_image = image_sampler;
+
   return res;
 }
 
@@ -547,26 +556,12 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
     return VK_ERROR_UNKNOWN;
   }
 
-  // TODO -- Refactor
-  if (p_vkrs->textures.allocated < p_vkrs->textures.count + 1) {
-    int new_allocated = p_vkrs->textures.allocated + 4 + p_vkrs->textures.allocated / 4;
-    sampled_image *new_ary = (sampled_image *)malloc(sizeof(sampled_image) * new_allocated);
-
-    if (p_vkrs->textures.allocated) {
-      memcpy(new_ary, p_vkrs->textures.samples, sizeof(sampled_image) * p_vkrs->textures.allocated);
-      free(p_vkrs->textures.samples);
-    }
-    p_vkrs->textures.samples = new_ary;
-    p_vkrs->textures.allocated = new_allocated;
-  }
-
-image_sampler *image_sampler;
-  res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels,
-                               &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  texture_image *texture;
+  res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
-  *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
-  ++p_vkrs->textures.count;
+  *resource_uid = p_vkrs->resource_uid_counter++;
+  append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   stbi_image_free(pixels);
 
@@ -591,27 +586,12 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
     return VK_ERROR_UNKNOWN;
   }
 
-  // TODO -- Refactor
-  if (p_vkrs->textures.allocated < p_vkrs->textures.count + 1) {
-    int new_allocated = p_vkrs->textures.allocated + 4 + p_vkrs->textures.allocated / 4;
-    sampled_image *new_ary = (sampled_image *)malloc(sizeof(sampled_image) * new_allocated);
-
-    if (p_vkrs->textures.allocated) {
-      memcpy(new_ary, p_vkrs->textures.samples, sizeof(sampled_image) * p_vkrs->textures.allocated);
-      free(p_vkrs->textures.samples);
-    }
-    p_vkrs->textures.samples = new_ary;
-    p_vkrs->textures.allocated = new_allocated;
-  }
-
-  res = mvk_load_image_sampler(p_vkrs, width, height, texChannels, use_as_render_target, pixels,
-                               &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  texture_image *texture;
+  res = mvk_load_image_sampler(p_vkrs, width, height, texChannels, use_as_render_target, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
-  // printf("p_vkrs->textures:%u  %u\n", p_vkrs->textures.count, p_vkrs->textures.allocated);
-
-  *resource_uid = RESOURCE_UID_BEGIN + p_vkrs->textures.count;
-  ++p_vkrs->textures.count;
+  *resource_uid = p_vkrs->resource_uid_counter++;
+  append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   stbi_image_free(pixels);
 
@@ -682,24 +662,12 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
     }
   }
 
-  // TODO -- Refactor
-  if (p_vkrs->textures.allocated < p_vkrs->textures.count + 1) {
-    int new_allocated = p_vkrs->textures.allocated + 4 + p_vkrs->textures.allocated / 4;
-    sampled_image *new_ary = (sampled_image *)malloc(sizeof(sampled_image) * new_allocated);
-
-    if (p_vkrs->textures.allocated) {
-      memcpy(new_ary, p_vkrs->textures.samples, sizeof(sampled_image) * p_vkrs->textures.allocated);
-      free(p_vkrs->textures.samples);
-    }
-    p_vkrs->textures.samples = new_ary;
-    p_vkrs->textures.allocated = new_allocated;
-  }
-
-  res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels,
-                               &p_vkrs->textures.samples[p_vkrs->textures.count]);
+  texture_image *texture;
+  res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
+
   *resource_uid = p_vkrs->resource_uid_counter++;
-  ++p_vkrs->textures.count;
+  append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   // Font is a common resource -- cache so multiple loads reference the same resource uid
   {

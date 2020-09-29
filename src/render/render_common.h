@@ -142,7 +142,7 @@ typedef enum resource_command_type {
   RESOURCE_COMMAND_LOAD_TEXTURE,
   RESOURCE_COMMAND_CREATE_TEXTURE,
   RESOURCE_COMMAND_LOAD_FONT,
-  RESOURCE_COMMAND_INDEXED_MESH,
+  RESOURCE_COMMAND_LOAD_MESH,
 } resource_command_type;
 
 typedef enum node_render_target {
@@ -170,6 +170,7 @@ typedef struct element_render_command {
     } textured_rect_info;
     struct {
       float *world_matrix;
+      unsigned int mesh_resource_uid;
     } mesh;
   };
 } element_render_command;
@@ -209,7 +210,11 @@ typedef struct resource_command {
       const char *path;
       float height;
     } font;
-  } data;
+    struct {
+      float *p_data;
+      unsigned int count;
+    } load_mesh;
+  };
 } resource_command;
 
 typedef struct resource_queue {
@@ -252,7 +257,7 @@ int mcr_obtain_element_render_command(image_render_details *image_queue, element
 void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
                                  bool use_as_render_target, unsigned int *resource_uid);
 
-void mcr_load_wavefront_obj_model(resource_queue *resource_queue, const char *obj_path, mcr_model **loaded_model);
+void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model);
 }
 
 #endif // MC_RENDER_COMMON_H

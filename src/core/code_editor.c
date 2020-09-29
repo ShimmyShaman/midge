@@ -428,9 +428,9 @@ void build_code_editor()
     MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
     command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
     command->p_uid = &state->render_lines[i]->image_resource_uid;
-    command->data.create_texture.use_as_render_target = true;
-    command->data.create_texture.width = state->render_lines[i]->width = fedit->data.visual.bounds.width - 4;
-    command->data.create_texture.height = state->render_lines[i]->height = 28;
+    command->create_texture.use_as_render_target = true;
+    command->create_texture.width = state->render_lines[i]->width = fedit->data.visual.bounds.width - 4;
+    command->create_texture.height = state->render_lines[i]->height = 28;
   }
   fedit->extra = (void *)state;
   // printf("bce-w\n");
@@ -448,9 +448,9 @@ void build_code_editor()
     MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
     command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
     command->p_uid = &state->status_bar.image_resource_uid;
-    command->data.create_texture.use_as_render_target = true;
-    command->data.create_texture.width = state->status_bar.bounds.width;
-    command->data.create_texture.height = state->status_bar.bounds.height;
+    command->create_texture.use_as_render_target = true;
+    command->create_texture.width = state->status_bar.bounds.width;
+    command->create_texture.height = state->status_bar.bounds.height;
   }
 
   {
@@ -474,9 +474,9 @@ void build_code_editor()
     MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
     command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
     command->p_uid = &state->suggestion_box.image_resource_uid;
-    command->data.create_texture.use_as_render_target = true;
-    command->data.create_texture.width = state->suggestion_box.bounds.width;
-    command->data.create_texture.height = state->suggestion_box.bounds.height;
+    command->create_texture.use_as_render_target = true;
+    command->create_texture.width = state->suggestion_box.bounds.width;
+    command->create_texture.height = state->suggestion_box.bounds.height;
   }
 
   mc_process_action_arg_info_v1 **context_args =
@@ -508,31 +508,31 @@ void build_code_editor()
   //   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   //   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   //   command->p_uid = &button->image_resource_uid;
-  //   command->data.create_texture.use_as_render_target = true;
-  //   command->data.create_texture.width = fedit->data.visual.bounds.max_width;
-  //   command->data.create_texture.height = fedit->data.visual.bounds.max_height;
+  //   command->create_texture.use_as_render_target = true;
+  //   command->create_texture.width = fedit->data.visual.bounds.max_width;
+  //   command->create_texture.height = fedit->data.visual.bounds.max_height;
   // }
 
   // Function Editor Image
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = &fedit->data.visual.image_resource_uid;
-  command->data.create_texture.use_as_render_target = true;
-  command->data.create_texture.width = fedit->data.visual.bounds.width;
-  command->data.create_texture.height = fedit->data.visual.bounds.height;
+  command->create_texture.use_as_render_target = true;
+  command->create_texture.width = fedit->data.visual.bounds.width;
+  command->create_texture.height = fedit->data.visual.bounds.height;
 
   // MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   // command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   // command->p_uid = &console->input_line.image_resource_uid;
-  // command->data.create_texture.use_as_render_target = true;
-  // command->data.create_texture.width = console->input_line.width;
-  // command->data.create_texture.height = console->input_line.height;
+  // command->create_texture.use_as_render_target = true;
+  // command->create_texture.width = console->input_line.width;
+  // command->create_texture.height = console->input_line.height;
 
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_uid = &state->font_resource_uid;
-  command->data.font.height = 20;
-  command->data.font.path = "res/font/DroidSansMono.ttf";
+  command->font.height = 20;
+  command->font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
   // printf("bce-z\n");
   // printf("41cestate->code.syntax=%p\n", state->code.syntax);

@@ -13,21 +13,27 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
     switch (resource_cmd->type) {
     case RESOURCE_COMMAND_LOAD_TEXTURE: {
-      res = mvk_load_texture_from_file(p_vkrs, resource_cmd->data.load_texture.path, resource_cmd->p_uid);
+      res = mvk_load_texture_from_file(p_vkrs, resource_cmd->load_texture.path, resource_cmd->p_uid);
       VK_CHECK(res, "load_texture_from_file");
 
     } break;
     case RESOURCE_COMMAND_CREATE_TEXTURE: {
-      res = mvk_create_empty_render_target(p_vkrs, resource_cmd->data.create_texture.width,
-                                           resource_cmd->data.create_texture.height,
-                                           resource_cmd->data.create_texture.use_as_render_target, resource_cmd->p_uid);
+      res = mvk_create_empty_render_target(p_vkrs, resource_cmd->create_texture.width,
+                                           resource_cmd->create_texture.height,
+                                           resource_cmd->create_texture.use_as_render_target, resource_cmd->p_uid);
       VK_CHECK(res, "create_empty_render_target");
 
     } break;
     case RESOURCE_COMMAND_LOAD_FONT: {
-      // printf("hrc-resource_cmd->data.font.height:%f\n", resource_cmd->data.font.height);
-      res = mvk_load_font(p_vkrs, resource_cmd->data.font.path, resource_cmd->data.font.height, resource_cmd->p_uid);
+      // printf("hrc-resource_cmd->font.height:%f\n", resource_cmd->font.height);
+      res = mvk_load_font(p_vkrs, resource_cmd->font.path, resource_cmd->font.height, resource_cmd->p_uid);
       VK_CHECK(res, "load_font");
+
+    } break;
+    case RESOURCE_COMMAND_LOAD_MESH: {
+      res = mvk_load_mesh(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.count,
+                                 resource_cmd->p_uid);
+      VK_CHECK(res, "mvk_load_mesh_buffer");
 
     } break;
 
@@ -281,6 +287,32 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   return res;
 }
 
+void mrt_obtain_texture_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid, texture_image **out_image)
+{
+  for (int f = 0; f < p_vkrs->textures.count; ++f) {
+    if (p_vkrs->textures.items[f]->resource_uid == resource_uid) {
+      *out_image = p_vkrs->textures.items[f];
+      return;
+    }
+  }
+
+  *out_image = NULL;
+  MCerror(8420, "TODO could not find image-sampler with resource_uid=%u", resource_uid);
+}
+
+void mrt_obtain_mesh_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid, mcr_mesh **out_mesh)
+{
+  for (int f = 0; f < p_vkrs->loaded_meshes.count; ++f) {
+    if (p_vkrs->loaded_meshes.items[f]->resource_uid == resource_uid) {
+      *out_mesh = p_vkrs->loaded_meshes.items[f];
+      return;
+    }
+  }
+
+  *out_mesh = NULL;
+  MCerror(8420, "TODO could not find image-sampler with resource_uid=%u", resource_uid);
+}
+
 VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer,
                                   image_render_details *image_render, element_render_command *cmd,
                                   mrt_sequence_copy_buffer *copy_buffer)
@@ -294,16 +326,8 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   }
 
   // Find the texture
-  sampled_image *image_sampler = NULL;
-  for (int f = 0; f < p_vkrs->textures.count; ++f) {
-    if (p_vkrs->textures.samples[f]->resource_uid == cmd->textured_rect_info.texture_uid) {
-      image_sampler = &p_vkrs->textures.samples[f];
-      break;
-    }
-  }
-  if (!image_sampler) {
-    MCerror(8420, "TODO could not find image-sampler with resource_uid=%u", cmd->textured_rect_info.texture_uid);
-  }
+  texture_image *image_sampler = NULL;
+  mrt_obtain_texture_with_resource_uid(p_vkrs, cmd->textured_rect_info.texture_uid, &image_sampler);
 
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
@@ -434,7 +458,8 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     return VK_ERROR_UNKNOWN;
   }
 
-  sampled_image *font_image = &p_vkrs->textures.samples[font->resource_uid - RESOURCE_UID_BEGIN];
+  texture_image *font_image;
+  mrt_obtain_texture_with_resource_uid(p_vkrs, font->resource_uid, &font_image);
 
   float align_x = cmd->x;
   float align_y = cmd->y;
@@ -631,13 +656,8 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   VkResult res;
 
   // Get the mesh
-  mcr_mesh *mesh = NULL;
-  for (int f = 0; f < p_vkrs->loaded_meshes.count; ++f) {
-    if (p_vkrs->loaded_meshes.items[f].resource_uid == cmd->mesh.mesh_resource_uid) {
-      mesh = &p_vkrs->loaded_meshes.fonts[f];
-      break;
-    }
-  }
+  mcr_mesh *mesh;
+  mrt_obtain_mesh_with_resource_uid(p_vkrs, cmd->mesh.mesh_resource_uid, &mesh);
 
   if (!mesh) {
     printf("Could not find requested mesh uid=%u\n", cmd->mesh.mesh_resource_uid);
@@ -1022,8 +1042,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       }
 
       // Obtain the target image
-      sampled_image *target_image =
-          &p_vkrs->textures.samples[image_render->data.target_image.image_uid - RESOURCE_UID_BEGIN];
+      texture_image *target_image;
+      mrt_obtain_texture_with_resource_uid(p_vkrs, image_render->data.target_image.image_uid, &target_image);
 
       if (!target_image->framebuffer) {
         // Create?
@@ -1280,6 +1300,7 @@ void *midge_render_thread(void *vargp)
 
   vk_render_state vkrs = {};
   vkrs.presentation_updates = 0;
+  vkrs.resource_uid_counter = 300;
   vkrs.window_width = APPLICATION_SET_WIDTH;
   vkrs.window_height = APPLICATION_SET_HEIGHT;
   vkrs.maximal_image_width = 2048;

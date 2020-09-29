@@ -67,7 +67,8 @@ typedef struct mcr_mesh {
   VkDescriptorBufferInfo buffer_info;
 } mcr_mesh;
 
-typedef struct sampled_image {
+typedef struct texture_image {
+  unsigned int resource_uid;
   VkFormat format;
   uint32_t width, height;
   VkDeviceSize size;
@@ -76,7 +77,7 @@ typedef struct sampled_image {
   VkDeviceMemory memory;
   VkImageView view;
   VkFramebuffer framebuffer;
-} sampled_image;
+} texture_image;
 
 typedef struct mvk_dynamic_buffer_block {
   VkDeviceSize allocated_size;
@@ -219,18 +220,16 @@ typedef struct vk_render_state {
     VkDescriptorBufferInfo buffer_info;
   } cube_shape_indices;
 
+  // Loaded Indexed Resources
   struct {
-    uint32_t count;
-    uint32_t allocated;
-    sampled_image *samples;
+    uint32_t count, alloc;
+    texture_image **items;
   } textures;
-
   loaded_font_list loaded_fonts;
   struct {
     uint32_t count, alloc;
-    mcr_mesh *items;
+    mcr_mesh **items;
   } loaded_meshes;
-
 } vk_render_state;
 
 extern "C" {
