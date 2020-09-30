@@ -984,6 +984,11 @@ int tinyobj_parse_obj(const char *file_name, tinyobj_obj **obj)
   parsed_obj->materials = materials;
   parsed_obj->num_materials = num_materials;
 
+  // // Make indices useful to me
+  // parsed_obj->num_indices = parsed_obj->num_faces;
+  // parsed_obj->indices = (unsigned int *)malloc(sizeof(unsigned int) * parsed_obj->num_indices);
+  // for(int i = 0; i < )
+
   // Set to output
   *obj = parsed_obj;
 

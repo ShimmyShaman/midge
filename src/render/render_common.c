@@ -1,7 +1,7 @@
 #include "render/render_common.h"
 #include "core/core_definitions.h"
 #include "render/mc_vulkan.h"
-#include "render/resources/tiny_obj_loader_c.h"
+// #include "render/resources/tiny_obj_loader_c.h"
 
 #include "stb_truetype.h"
 
@@ -244,58 +244,64 @@ void mcr_issue_render_command_textured_quad(image_render_details *image_render_q
   render_cmd->textured_rect_info.texture_uid = texture_resource;
 }
 
-void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
-{
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
+// void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
+// {
+//   global_root_data *global_data;
+//   obtain_midge_global_root(&global_data);
 
-  tinyobj_obj *parsed_obj;
+//   tinyobj_obj *parsed_obj;
 
-  {
-    int ret = tinyobj_parse_obj(obj_path, &parsed_obj);
-    if (ret) {
-      MCerror(9319, "Failed to load obj model");
-    }
-  }
+//   {
+//     int ret = tinyobj_parse_obj(obj_path, &parsed_obj);
+//     if (ret) {
+//       MCerror(9319, "Failed to load obj model");
+//     }
+//   }
 
-  mcr_model *model = (mcr_model *)malloc(sizeof(mcr_model));
-  model->parsed_obj = parsed_obj;
-  model->mesh_resource_uid = 0;
+//   mcr_model *model = (mcr_model *)malloc(sizeof(mcr_model));
+//   model->parsed_obj = parsed_obj;
+//   model->mesh_resource_uid = 0;
 
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+//   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
-  resource_command *command;
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
-  command->type = RESOURCE_COMMAND_LOAD_MESH;
-  command->p_uid = &model->mesh_resource_uid;
-  command->load_mesh.p_data = parsed_obj->attrib.vertices;
-  command->load_mesh.data_count = parsed_obj->attrib.num_vertices * 3;
+//   resource_command *command;
+//   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+//   command->type = RESOURCE_COMMAND_LOAD_MESH;
+//   command->p_uid = &model->mesh_resource_uid;
+//   command->load_mesh.p_data = parsed_obj->attrib.vertices;
+//   command->load_mesh.data_count = parsed_obj->attrib.num_vertices * 3;
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+//   // mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+//   // command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
+//   // command->p_uid = &model->mesh_resource_uid;
+//   // command->load_mesh.p_data = parsed_obj->attrib.faces;
+//   // command->load_mesh.data_count = parsed_obj->attrib.num_vertices * 3;
 
-  *loaded_model = model;
-  printf("load_mesh:%p (%u)\n", command->load_mesh.p_data, command->load_mesh.data_count);
+//   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 
-  // for (int i = 0; i < parsed_obj->attrib.num_faces)
+//   *loaded_model = model;
+//   printf("load_mesh:%p (%u)\n", command->load_mesh.p_data, command->load_mesh.data_count);
 
-  //   mcr_obtain_resource_command(resource_queue, &command);
-  // command->type = RESOURCE_COMMAND_MESH;
-  // command->p_uid = &model->mesh_resource_uid;
-  // command->data.load_mesh.p_vertex_data = parsed_obj->attrib.vertices;
-  // command->data.load_mesh.vertex_count = parsed_obj->attrib.vertex_count;
-  // parsed_obj->attrib.vertices =
+//   // for (int i = 0; i < parsed_obj->attrib.num_faces)
 
-  // tinyobj_attrib_t attrib;
-  // tinyobj_shape_t *shapes = NULL;
-  // size_t num_shapes;
-  // tinyobj_material_t *materials = NULL;
-  // size_t num_materials;
+//   //   mcr_obtain_resource_command(resource_queue, &command);
+//   // command->type = RESOURCE_COMMAND_MESH;
+//   // command->p_uid = &model->mesh_resource_uid;
+//   // command->data.load_mesh.p_vertex_data = parsed_obj->attrib.vertices;
+//   // command->data.load_mesh.vertex_count = parsed_obj->attrib.vertex_count;
+//   // parsed_obj->attrib.vertices =
 
-  // {
-  //   unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
-  //   int ret = tinyobj_parse_obj(&attrib, &shapes, &num_shapes, &materials,
-  //                               &num_materials, filename, get_file_data, flags);
-  //   if (ret != TINYOBJ_SUCCESS) {
-  //     return 0;
-  //   }
-}
+//   // tinyobj_attrib_t attrib;
+//   // tinyobj_shape_t *shapes = NULL;
+//   // size_t num_shapes;
+//   // tinyobj_material_t *materials = NULL;
+//   // size_t num_materials;
+
+//   // {
+//   //   unsigned int flags = TINYOBJ_FLAG_TRIANGULATE;
+//   //   int ret = tinyobj_parse_obj(&attrib, &shapes, &num_shapes, &materials,
+//   //                               &num_materials, filename, get_file_data, flags);
+//   //   if (ret != TINYOBJ_SUCCESS) {
+//   //     return 0;
+//   //   }
+// }

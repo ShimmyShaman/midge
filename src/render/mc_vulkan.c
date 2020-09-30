@@ -2179,15 +2179,6 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
     vkDestroyShaderModule(p_vkrs->device, shaderStages[i].module, NULL);
   }
 
-  VkPipelineCacheCreateInfo pipelineCache;
-  pipelineCache.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-  pipelineCache.pNext = NULL;
-  pipelineCache.initialDataSize = 0;
-  pipelineCache.pInitialData = NULL;
-  pipelineCache.flags = 0;
-  res = vkCreatePipelineCache(p_vkrs->device, &pipelineCache, NULL, &p_vkrs->pipelineCache);
-  assert(res == VK_SUCCESS);
-
   return VK_SUCCESS;
 }
 
@@ -2462,6 +2453,7 @@ VkResult mvk_destroy_vulkan(vk_render_state *vkrs)
   mvk_destroy_framebuffers(vkrs);
 
   vkDestroyPipelineCache(vkrs->device, vkrs->pipelineCache, NULL);
+  mvk_destroy_render_prog(vkrs, &vkrs->mesh_prog);
   mvk_destroy_render_prog(vkrs, &vkrs->font_prog);
   mvk_destroy_render_prog(vkrs, &vkrs->texture_prog);
   mvk_destroy_render_prog(vkrs, &vkrs->tint_prog);

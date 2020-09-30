@@ -80,34 +80,34 @@ void complete_midge_app_compile()
 
   const char *remainder_app_source_files[] = {
       // "src/ui/ui_definitions.h",
-      // "src/control/mc_controller.h",
-      "src/modules/app_modules.h",
-      "src/render/resources/hash_table.h",
-      "src/render/resources/obj_loader.h",
+      "src/control/mc_controller.h",
+      // "src/modules/app_modules.h",
+      // "src/render/resources/hash_table.h",
+      // "src/render/resources/obj_loader.h",
 
-      "src/render/resources/hash_table.c",
-      "src/render/resources/obj_loader.c",
+      // "src/render/resources/hash_table.c",
+      // "src/render/resources/obj_loader.c",
       "src/render/render_common.c",
       "src/env/hierarchy.c",
       "src/env/util.c",
-      "src/env/project_management.c",
-      "src/env/global_context_menu.c",
-      "src/env/global_root.c",
-      "src/ui/controls/panel.c",
-      "src/ui/controls/text_block.c",
-      "src/ui/controls/button.c",
-      "src/ui/controls/context_menu.c",
+      // "src/env/project_management.c",
+      // "src/env/global_context_menu.c",
+      // "src/env/global_root.c",
+      // "src/ui/controls/panel.c",
+      // "src/ui/controls/text_block.c",
+      // "src/ui/controls/button.c",
+      // "src/ui/controls/context_menu.c",
       "src/ui/ui_functionality.c",
-      // "src/ui/ui_render.c",
+      // // "src/ui/ui_render.c",
       "src/control/mc_controller.c",
 
-      // Modules
-      "src/modules/modus_operandi/modus_operandi_curator.c",
-      "src/modules/hierarchy_viewer/hierarchy_viewer.c",
-      "src/modules/source_editor/source_editor_pool.c",
-      "src/modules/source_editor/function_editor.c",
-      "src/modules/source_editor/source_line.c",
-      "src/modules/three_d/three_d.c",
+      // // Modules
+      // "src/modules/modus_operandi/modus_operandi_curator.c",
+      // "src/modules/hierarchy_viewer/hierarchy_viewer.c",
+      // "src/modules/source_editor/source_editor_pool.c",
+      // "src/modules/source_editor/function_editor.c",
+      // "src/modules/source_editor/source_line.c",
+      // "src/modules/three_d/three_d.c",
       NULL,
   };
 
@@ -136,18 +136,18 @@ void initialize_midge_components()
   mcc_initialize_input_state();
 
   mui_initialize_ui_state(&global_data->ui_state);
-  mui_initialize_core_ui_components();
+  // mui_initialize_core_ui_components();
 
-  // Environment
-  mca_init_global_context_menu();
-  mca_init_global_node_context_menu_options();
-  mca_init_source_editor_pool();
-  // mca_init_visual_project_management();
+  // // Environment
+  // mca_init_global_context_menu();
+  // mca_init_global_node_context_menu_options();
+  // mca_init_source_editor_pool();
+  // // mca_init_visual_project_management();
 
-  // Modules
-  // init_modus_operandi_curator();
-  // init_hierarchy_viewer();
-  init_three_d_portal();
+  // // Modules
+  // // init_modus_operandi_curator();
+  // // init_hierarchy_viewer();
+  // init_three_d_portal();
 }
 
 void midge_initialize_app(struct timespec *app_begin_time)

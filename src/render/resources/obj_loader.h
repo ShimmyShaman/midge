@@ -77,6 +77,9 @@ typedef struct tinyobj_attrib_t {
   tinyobj_vertex_index_t *faces;
   int *face_num_verts;
   int *material_ids;
+
+  unsigned int num_indices;
+  unsigned int *indices;
 } tinyobj_attrib_t;
 
 typedef struct tinyobj_line_info_t {

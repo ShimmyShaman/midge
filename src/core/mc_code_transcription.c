@@ -16,6 +16,7 @@ typedef struct mct_transcription_state {
   // Options
   bool report_invocations_to_error_stack;
   bool report_simple_args_to_error_stack;
+  bool check_mc_functions_not_null;
   bool tag_on_function_entry;
 
   // State Values
@@ -227,6 +228,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
           if (!strcmp(identifier_name, ptfield->field.declarators->items[g]->name)) {
             // Found!
             result->is_array = false; // TODO ? this exists? 166 ptfield->field.declarators->items[g]
+            result->is_fptr = false;
             allocate_and_copy_cstr(result->type_name, ptfield->field.type_name);
             result->deref_count = ptfield->field.declarators->items[g]->deref_count;
             return 0;
@@ -401,7 +403,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     if (!parent_type_info.type_name) {
       MCerror(272, "WhatDo?");
     }
-    // printf("typeofparent-'%s' %i \n", type_of_parent, parent_deref_count);
+    // printf("typeofparent-'%s' %i \n", parent_type_info.type_name, parent_type_info.deref_count);
 
     if (parent_type_info.deref_count == 1 &&
         (mc_token_type)expression->member_access_expression.access_operator->type != MC_TOKEN_POINTER_OPERATOR) {
@@ -767,11 +769,13 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
     // printf("Type:%s:'%s':%i\n", expr_type_info.is_array ? "is_ary" : "not_ary", expr_type_info.type_name,
     //        expr_type_info.deref_count);
     if (!expr_type_info.type_name) {
+      print_syntax_node(argument, 0);
       MCerror(566, "TODO");
     }
 
     if (expr_type_info.is_fptr || expr_type_info.is_array) {
-      MCerror(8741, "TODO");
+      print_syntax_node(argument, 0);
+      MCerror(8741, "TODO %i %i", expr_type_info.is_fptr, expr_type_info.is_array);
     }
 
     // Evaluate it to a local field
@@ -1168,11 +1172,21 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   // }
   // append_to_c_str(ts->str, ";\n");
 
-  // mct_append_to_c_str(ts, "if (is_mc_invoke) {\n");
   // ++ts->indent;
   const char *ARGUMENT_DATA_NAME = "mc_vargs";
   int mc_argument_data_count = 0;
   if (func_info) {
+    // Function not null check
+    if (ts->check_mc_functions_not_null) {
+      mct_append_to_c_str(ts, "if (!");
+      append_to_c_str(ts->str, function_name);
+      append_to_c_str(ts->str, ") {\n");
+      mct_append_to_c_str(ts, "MCerror(1174, \"Attempted to invoke declared but undefined function:'");
+      append_to_c_str(ts->str, function_name);
+      append_to_c_str(ts->str, "'\");\n");
+      mct_append_to_c_str(ts, "}\n");
+    }
+
     mct_append_indent_to_c_str(ts);
     mc_argument_data_count = syntax_node->invocation.arguments->count + 1;
 
@@ -2830,6 +2844,8 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   mct_transcription_state ts;
   // -- options
   ts.report_invocations_to_error_stack = true;
+  ts.report_simple_args_to_error_stack = true;
+  ts.check_mc_functions_not_null = true;
   ts.tag_on_function_entry = true;
   // -- state
   ts.transcription_root = function_ast;
@@ -3026,6 +3042,7 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
   // -- options
   ts.report_invocations_to_error_stack = true;
   ts.report_simple_args_to_error_stack = true;
+  ts.check_mc_functions_not_null = true;
   ts.tag_on_function_entry = true;
   // -- state
   ts.transcription_root = structure_ast;

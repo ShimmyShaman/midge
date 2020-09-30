@@ -243,24 +243,36 @@ typedef struct render_thread_info {
   window_input_buffer input_buffer;
 } render_thread_info;
 
-struct tinyobj_obj;
-typedef struct mcr_model {
-  tinyobj_obj *parsed_obj;
+// struct tinyobj_obj;
+// typedef struct mcr_model {
+//   tinyobj_obj *parsed_obj;
 
-  unsigned int mesh_resource_uid;
-} mcr_model;
+//   unsigned int mesh_resource_uid;
+// } mcr_model;
 
 extern "C" {
 
-int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
 int mcr_obtain_image_render_request(render_thread_info *image_render_queue, image_render_details **p_request);
 int mcr_submit_image_render_request(render_thread_info *render_thread, image_render_details *request);
 int mcr_obtain_element_render_command(image_render_details *image_queue, element_render_command **p_command);
+int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
 
 void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
                                  bool use_as_render_target, unsigned int *resource_uid);
+void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
+                              unsigned int *p_resource_uid);
 
-void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model);
+void mcr_determine_text_display_dimensions(unsigned int font_resource, const char *text, float *text_width,
+                                           float *text_height);
+
+void mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+                                   const char *text, unsigned int font_resource_uid, render_color font_color);
+void mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+                                           unsigned int width, unsigned int height, render_color color);
+void mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+                                            unsigned int width, unsigned int height, unsigned int texture_resource);
+
+// void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model);
 }
 
 #endif // MC_RENDER_COMMON_H

@@ -124,105 +124,105 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
         vkBindBufferMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.buf, p_vkrs->textured_shape_vertices.mem, 0);
     VK_CHECK(res, "vkBindBufferMemory");
   }
-  {
-    vec3 mesh_data[] = {{-0.5f, -0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
-                        {0.5f, -0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},  {0.5f, 0.5f, -0.5f},  {0.5f, 0.5f, 0.5f}};
+  // {
+  //   vec3 mesh_data[] = {{-0.5f, -0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
+  //                       {0.5f, -0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},  {0.5f, 0.5f, -0.5f},  {0.5f, 0.5f, 0.5f}};
 
-    // Cube vertices TEMP DEBUG
-    const int data_size_in_bytes = sizeof(mesh_data);
+  //   // Cube vertices TEMP DEBUG
+  //   const int data_size_in_bytes = sizeof(mesh_data);
 
-    VkBufferCreateInfo buf_info = {};
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.pNext = NULL;
-    buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    buf_info.size = data_size_in_bytes;
-    buf_info.queueFamilyIndexCount = 0;
-    buf_info.pQueueFamilyIndices = NULL;
-    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    buf_info.flags = 0;
-    res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->cube_shape_vertices.buf);
-    VK_CHECK(res, "vkCreateBuffer");
+  //   VkBufferCreateInfo buf_info = {};
+  //   buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  //   buf_info.pNext = NULL;
+  //   buf_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  //   buf_info.size = data_size_in_bytes;
+  //   buf_info.queueFamilyIndexCount = 0;
+  //   buf_info.pQueueFamilyIndices = NULL;
+  //   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  //   buf_info.flags = 0;
+  //   res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->cube_shape_vertices.buf);
+  //   VK_CHECK(res, "vkCreateBuffer");
 
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->cube_shape_vertices.buf, &mem_reqs);
+  //   VkMemoryRequirements mem_reqs;
+  //   vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->cube_shape_vertices.buf, &mem_reqs);
 
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
+  //   VkMemoryAllocateInfo alloc_info = {};
+  //   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  //   alloc_info.pNext = NULL;
+  //   alloc_info.memoryTypeIndex = 0;
 
-    alloc_info.allocationSize = mem_reqs.size;
-    bool pass = mvk_get_properties_memory_type_index(
-        p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &alloc_info.memoryTypeIndex);
-    VK_ASSERT(pass, "No mappable, coherent memory");
+  //   alloc_info.allocationSize = mem_reqs.size;
+  //   bool pass = mvk_get_properties_memory_type_index(
+  //       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+  //       &alloc_info.memoryTypeIndex);
+  //   VK_ASSERT(pass, "No mappable, coherent memory");
 
-    res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_shape_vertices.mem));
-    VK_CHECK(res, "vkAllocateMemory");
-    p_vkrs->cube_shape_vertices.buffer_info.range = mem_reqs.size;
-    p_vkrs->cube_shape_vertices.buffer_info.offset = 0;
+  //   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_shape_vertices.mem));
+  //   VK_CHECK(res, "vkAllocateMemory");
+  //   p_vkrs->cube_shape_vertices.buffer_info.range = mem_reqs.size;
+  //   p_vkrs->cube_shape_vertices.buffer_info.offset = 0;
 
-    uint8_t *p_mapped_mem;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
-    VK_CHECK(res, "vkMapMemory");
+  //   uint8_t *p_mapped_mem;
+  //   res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
+  //   VK_CHECK(res, "vkMapMemory");
 
-    memcpy(p_mapped_mem, mesh_data, data_size_in_bytes);
+  //   memcpy(p_mapped_mem, mesh_data, data_size_in_bytes);
 
-    vkUnmapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem);
+  //   vkUnmapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem);
 
-    res = vkBindBufferMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.buf, p_vkrs->cube_shape_vertices.mem, 0);
-    VK_CHECK(res, "vkBindBufferMemory");
-  }
-  {
-    unsigned int indices[] = {
-        0, 1, 2, 2, 3, 1, 4, 5, 6, 6, 7, 5, 0, 1, 4, 4, 5, 1, 2, 3, 6, 6, 7, 3, 0, 2, 4, 4, 6, 2, 1, 3, 5, 5, 7, 3,
-    };
+  //   res = vkBindBufferMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.buf, p_vkrs->cube_shape_vertices.mem, 0);
+  //   VK_CHECK(res, "vkBindBufferMemory");
+  // }
+  // {
+  //   unsigned int indices[] = {
+  //       0, 1, 2, 2, 3, 1, 4, 5, 6, 6, 7, 5, 0, 1, 4, 4, 5, 1, 2, 3, 6, 6, 7, 3, 0, 2, 4, 4, 6, 2, 1, 3, 5, 5, 7, 3,
+  //   };
 
-    // Cube vertices TEMP DEBUG
-    const int data_size_in_bytes = sizeof(indices);
+  //   // Cube vertices TEMP DEBUG
+  //   const int data_size_in_bytes = sizeof(indices);
 
-    VkBufferCreateInfo buf_info = {};
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.pNext = NULL;
-    buf_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    buf_info.size = data_size_in_bytes;
-    buf_info.queueFamilyIndexCount = 0;
-    buf_info.pQueueFamilyIndices = NULL;
-    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    buf_info.flags = 0;
-    res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->cube_shape_indices.buf);
-    VK_CHECK(res, "vkCreateBuffer");
+  //   VkBufferCreateInfo buf_info = {};
+  //   buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  //   buf_info.pNext = NULL;
+  //   buf_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+  //   buf_info.size = data_size_in_bytes;
+  //   buf_info.queueFamilyIndexCount = 0;
+  //   buf_info.pQueueFamilyIndices = NULL;
+  //   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  //   buf_info.flags = 0;
+  //   res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->cube_shape_indices.buf);
+  //   VK_CHECK(res, "vkCreateBuffer");
 
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->cube_shape_indices.buf, &mem_reqs);
+  //   VkMemoryRequirements mem_reqs;
+  //   vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->cube_shape_indices.buf, &mem_reqs);
 
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.pNext = NULL;
-    alloc_info.memoryTypeIndex = 0;
+  //   VkMemoryAllocateInfo alloc_info = {};
+  //   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  //   alloc_info.pNext = NULL;
+  //   alloc_info.memoryTypeIndex = 0;
 
-    alloc_info.allocationSize = mem_reqs.size;
-    bool pass = mvk_get_properties_memory_type_index(
-        p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &alloc_info.memoryTypeIndex);
-    VK_ASSERT(pass, "No mappable, coherent memory");
+  //   alloc_info.allocationSize = mem_reqs.size;
+  //   bool pass = mvk_get_properties_memory_type_index(
+  //       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+  //       &alloc_info.memoryTypeIndex);
+  //   VK_ASSERT(pass, "No mappable, coherent memory");
 
-    res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_shape_indices.mem));
-    VK_CHECK(res, "vkAllocateMemory");
-    p_vkrs->cube_shape_indices.buffer_info.range = mem_reqs.size;
-    p_vkrs->cube_shape_indices.buffer_info.offset = 0;
+  //   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_shape_indices.mem));
+  //   VK_CHECK(res, "vkAllocateMemory");
+  //   p_vkrs->cube_shape_indices.buffer_info.range = mem_reqs.size;
+  //   p_vkrs->cube_shape_indices.buffer_info.offset = 0;
 
-    uint8_t *p_mapped_mem;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_indices.mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
-    VK_CHECK(res, "vkMapMemory");
+  //   uint8_t *p_mapped_mem;
+  //   res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_indices.mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
+  //   VK_CHECK(res, "vkMapMemory");
 
-    memcpy(p_mapped_mem, indices, data_size_in_bytes);
+  //   memcpy(p_mapped_mem, indices, data_size_in_bytes);
 
-    vkUnmapMemory(p_vkrs->device, p_vkrs->cube_shape_indices.mem);
+  //   vkUnmapMemory(p_vkrs->device, p_vkrs->cube_shape_indices.mem);
 
-    res = vkBindBufferMemory(p_vkrs->device, p_vkrs->cube_shape_indices.buf, p_vkrs->cube_shape_indices.mem, 0);
-    VK_CHECK(res, "vkBindBufferMemory");
-  }
+  //   res = vkBindBufferMemory(p_vkrs->device, p_vkrs->cube_shape_indices.buf, p_vkrs->cube_shape_indices.mem, 0);
+  //   VK_CHECK(res, "vkBindBufferMemory");
+  // }
 
   return res;
 }
