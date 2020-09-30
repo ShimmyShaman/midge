@@ -1079,9 +1079,9 @@ int attempt_instantiate_all_definitions_from_cached_file(mc_node *definitions_ow
 
     *used_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
   }
-  if (!strcmp(filepath, "src/m_threads.h")) {
-    *used_cached_file = true;
-  }
+  // if (!strcmp(filepath, "src/m_threads.h")) {
+  //   *used_cached_file = true;
+  // }
   // printf("'%s'\n", filepath);
   if (!*used_cached_file) {
     free(cached_file_name);

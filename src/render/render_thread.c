@@ -31,7 +31,7 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
     } break;
     case RESOURCE_COMMAND_LOAD_MESH: {
-      res = mvk_load_mesh(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.count,
+      res = mvk_load_mesh(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
                                  resource_cmd->p_uid);
       VK_CHECK(res, "mvk_load_mesh_buffer");
 
@@ -821,7 +821,7 @@ VkResult mrt_render_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   vkCmdBindIndexBuffer(command_buffer, p_vkrs->cube_shape_indices.buf, 0, VK_INDEX_TYPE_UINT32);
 
   const VkDeviceSize offsets[1] = {0};
-  vkCmdBindVertexBuffers(command_buffer, 0, 1, &mesh->buf, offsets);
+  vkCmdBindVertexBuffers(command_buffer, 0, 1, &p_vkrs->cube_shape_vertices.buf, offsets);
   // vkCmdDraw(command_buffer, 3 * 2 * 6, 1, 0, 0);
   vkCmdDrawIndexed(command_buffer, 36, 1, 0, 0, 0);
 

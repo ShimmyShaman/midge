@@ -212,7 +212,7 @@ typedef struct resource_command {
     } font;
     struct {
       float *p_data;
-      unsigned int count;
+      unsigned int data_count;
     } load_mesh;
   };
 } resource_command;
@@ -243,8 +243,11 @@ typedef struct render_thread_info {
   window_input_buffer input_buffer;
 } render_thread_info;
 
+struct tinyobj_obj;
 typedef struct mcr_model {
+  tinyobj_obj *parsed_obj;
 
+  unsigned int mesh_resource_uid;
 } mcr_model;
 
 extern "C" {

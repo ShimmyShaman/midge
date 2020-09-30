@@ -64,11 +64,11 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     p_vkrs->shape_vertices.buffer_info.range = mem_reqs.size;
     p_vkrs->shape_vertices.buffer_info.offset = 0;
 
-    uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&pData);
+    uint8_t *p_mapped_mem;
+    res = vkMapMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
     VK_CHECK(res, "vkMapMemory");
 
-    memcpy(pData, g_vb_shape_data, data_size_in_bytes);
+    memcpy(p_mapped_mem, g_vb_shape_data, data_size_in_bytes);
 
     vkUnmapMemory(p_vkrs->device, p_vkrs->shape_vertices.mem);
 
@@ -112,11 +112,11 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     p_vkrs->textured_shape_vertices.buffer_info.range = mem_reqs.size;
     p_vkrs->textured_shape_vertices.buffer_info.offset = 0;
 
-    uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&pData);
+    uint8_t *p_mapped_mem;
+    res = vkMapMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
     VK_CHECK(res, "vkMapMemory");
 
-    memcpy(pData, g_vb_textured_shape_2D_data, data_size_in_bytes);
+    memcpy(p_mapped_mem, g_vb_textured_shape_2D_data, data_size_in_bytes);
 
     vkUnmapMemory(p_vkrs->device, p_vkrs->textured_shape_vertices.mem);
 
@@ -162,11 +162,11 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     p_vkrs->cube_shape_vertices.buffer_info.range = mem_reqs.size;
     p_vkrs->cube_shape_vertices.buffer_info.offset = 0;
 
-    uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&pData);
+    uint8_t *p_mapped_mem;
+    res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
     VK_CHECK(res, "vkMapMemory");
 
-    memcpy(pData, mesh_data, data_size_in_bytes);
+    memcpy(p_mapped_mem, mesh_data, data_size_in_bytes);
 
     vkUnmapMemory(p_vkrs->device, p_vkrs->cube_shape_vertices.mem);
 
@@ -212,11 +212,11 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     p_vkrs->cube_shape_indices.buffer_info.range = mem_reqs.size;
     p_vkrs->cube_shape_indices.buffer_info.offset = 0;
 
-    uint8_t *pData;
-    res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_indices.mem, 0, mem_reqs.size, 0, (void **)&pData);
+    uint8_t *p_mapped_mem;
+    res = vkMapMemory(p_vkrs->device, p_vkrs->cube_shape_indices.mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
     VK_CHECK(res, "vkMapMemory");
 
-    memcpy(pData, indices, data_size_in_bytes);
+    memcpy(p_mapped_mem, indices, data_size_in_bytes);
 
     vkUnmapMemory(p_vkrs->device, p_vkrs->cube_shape_indices.mem);
 
@@ -717,8 +717,10 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   return res;
 }
 
-VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *vertices, unsigned int vertex_count, uint *resource_uid)
+VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data_count, uint *resource_uid)
 {
+  printf("mvk_load_mesh:%p (%u)\n", p_data, data_count);
+
   VkResult res = VK_SUCCESS;
 
   // vec3 mesh_data[] = {{-0.5f, -0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
@@ -727,7 +729,7 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *vertices, unsigned int ve
   mcr_mesh *mesh = (mcr_mesh *)malloc(sizeof(mcr_mesh));
   mesh->resource_uid = p_vkrs->resource_uid_counter++;
 
-  const int data_size_in_bytes = sizeof(float) * vertex_count;
+  const int data_size_in_bytes = sizeof(float) * data_count;
 
   // Buffer
   VkBufferCreateInfo buf_info = {};
@@ -763,11 +765,11 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *vertices, unsigned int ve
   mesh->buffer_info.offset = 0;
 
   // Bind
-  uint8_t *pData;
-  res = vkMapMemory(p_vkrs->device, mesh->mem, 0, mem_reqs.size, 0, (void **)&pData);
+  uint8_t *p_mapped_mem;
+  res = vkMapMemory(p_vkrs->device, mesh->mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
   VK_CHECK(res, "vkMapMemory");
 
-  memcpy(pData, vertices, data_size_in_bytes);
+  memcpy(p_mapped_mem, p_data, data_size_in_bytes);
 
   vkUnmapMemory(p_vkrs->device, mesh->mem);
 
@@ -779,6 +781,7 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *vertices, unsigned int ve
                        &p_vkrs->loaded_meshes.count, mesh);
 
   *resource_uid = mesh->resource_uid;
+  printf("mesh resource %u loaded\n", *resource_uid);
 
   return res;
 }

@@ -616,7 +616,7 @@ int get_line_infos(const char *buf, size_t buf_len, tinyobj_line_info_t **line_i
   if (end_idx - last_line_ending > 0) {
     (*num_lines)++;
   }
-//   printf("num_lines=%i\n", *num_lines);
+  //   printf("num_lines=%i\n", *num_lines);
 
   if (*num_lines == 0)
     return -1;
@@ -983,6 +983,9 @@ int tinyobj_parse_obj(const char *file_name, tinyobj_obj **obj)
 
   parsed_obj->materials = materials;
   parsed_obj->num_materials = num_materials;
+
+  // Set to output
+  *obj = parsed_obj;
 
   return 0;
 }

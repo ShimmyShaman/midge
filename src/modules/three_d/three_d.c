@@ -103,50 +103,50 @@ typedef struct cube_child {
 
 void mctd_render_cube_present(image_render_details *image_render_queue, mc_node *node)
 {
-  return;
-  // printf("mctd_render_cube_present\n");
-  element_render_command *render_cmd;
-  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
-
-  render_cmd->type = RENDER_COMMAND_MESH;
-  // render_cmd->x = 800;
-  // render_cmd->y = 600;
-  // // render_cmd->colored_rect_info.width = width;
-  // // render_cmd->colored_rect_info.height = height;
-  // // render_cmd->colored_rect_info.color = color;
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
   cube_child *cube = (cube_child *)node->data;
 
+  // printf("mctd_render_cube_present\n");
+
+  // printf("cube:%p\n", cube);
+  // printf("cube->model:%p\n", cube->model);
+  // printf("image_render_queue:%p\n", image_render_queue);
+  // printf("cube->witch:%p\n", cube->witch);
+  // printf("cube->model:%p\n", cube->model);
+  // printf("cube->witch->mesh_resource_uid:%u\n", cube->witch->mesh_resource_uid);
   mat4 vpc;
   // mat4 model;
   glm_mat4_identity((vec4 *)&cube->model);
-  vec3 axis = {0.f, -1.f, 0.f};
-  float rotate = global_data->elapsed->app_secsf - (((int)global_data->elapsed->app_secsf / 90) * 90);
-  glm_rotate((vec4 *)&cube->model, rotate, axis);
-  // glm_translate((vec4 *)cube->model)
-  {
-    // Construct the Vulkan View/Projection/Clip for the render target image
-    mat4 view;
-    mat4 proj;
-    mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
+  // // vec3 axis = {0.f, -1.f, 0.f};
+  // // float rotate = global_data->elapsed->app_secsf - (((int)global_data->elapsed->app_secsf / 90) * 90);
+  // // glm_rotate((vec4 *)&cube->model, rotate, axis);
+  // // // glm_translate((vec4 *)cube->model)
+  // {
+  //   // Construct the Vulkan View/Projection/Clip for the render target image
+  //   mat4 view;
+  //   mat4 proj;
+  //   mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
 
-    glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)view);
-    float fovy = 72.f / 180.f * 3.1459f;
-    glm_perspective(fovy, (float)image_render_queue->image_width / image_render_queue->image_height, 0.01f, 1000.f,
-                    (vec4 *)&proj);
-    // glm_ortho_default((float)sequence->image_width / sequence->image_height, (vec4 *)&proj);
-    // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-    glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-    glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
-  }
+  //   glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)view);
+  //   float fovy = 72.f / 180.f * 3.1459f;
+  //   glm_perspective(fovy, (float)image_render_queue->image_width / image_render_queue->image_height, 0.01f, 1000.f,
+  //                   (vec4 *)&proj);
+  //   // glm_ortho_default((float)sequence->image_width / sequence->image_height, (vec4 *)&proj);
+  //   glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+  //   glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+  //   glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
+  // }
 
+  element_render_command *render_cmd;
+  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
+
+  render_cmd->type = RENDER_COMMAND_MESH;
+  render_cmd->mesh.mesh_resource_uid = cube->witch->mesh_resource_uid;
   render_cmd->mesh.world_matrix = (float *)cube->model;
 
-  // mcr_issue_render_command_textured_mesh(cube->mesh_resouce_uid, cube->texture_resource_uid, vpc)
-
-  // render_cmd
+  // printf("<end>mctd_render_cube_present\n");
 }
 
 void mctd_append_cube_child(mc_node *portal_node)
@@ -168,6 +168,9 @@ void mctd_append_cube_child(mc_node *portal_node)
 
   cube_child *cube = (cube_child *)malloc(sizeof(cube_child));
   node->data = cube;
+
+  node->layout->render_present = &mctd_render_cube_present;
+
   // cube->render_program_uid = 0; // TODO -- share render program resource somehow
   // cube->mesh_resource_uid = 0;
   // cube->texture_resource_uid = 0;
@@ -176,9 +179,7 @@ void mctd_append_cube_child(mc_node *portal_node)
   // mcr_load_texture_resource((float *)mesh_data, ... , &cube->texture_resource_uid);
   // mcr_create_mesh_resource((float *)mesh_data, 3 * 8, indices, 6 * 2 * 3, &cube->mesh_resource_uid);
 
-  // mcr_load_wavefront_obj_model("/home/jason/progs/renderer/assets/witch/object.obj", &cube->witch);
-
-  node->layout->render_present = &mctd_render_cube_present;
+  mcr_load_wavefront_obj_model("/home/jason/progs/renderer/assets/witch/witch.obj", &cube->witch);
 }
 
 void init_three_d_portal()

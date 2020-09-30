@@ -244,71 +244,6 @@ void mcr_issue_render_command_textured_quad(image_render_details *image_render_q
   render_cmd->textured_rect_info.texture_uid = texture_resource;
 }
 
-// void _mcr_parse_and_append_float(const char *text, int *i, float **verts, unsigned int *valloc, unsigned int *vcount)
-// {
-//   while (text[*i] == ' ') {
-//     ++*i;
-//   }
-
-//   if (*vcount + 1 > *valloc) {
-//     unsigned int new_alloc = *valloc + 8 + *valloc / 3;
-
-//     float *new_ary = (float *)malloc(sizeof(float) * new_alloc);
-//     if (*valloc) {
-//       memcpy(new_ary, *verts, *valloc * sizeof(float));
-//       free(*verts);
-//     }
-
-//     *verts = new_ary;
-//     *valloc = new_alloc;
-//   }
-
-//   char *end_ptr;
-//   *verts[*vcount] = strtof(text + *i, &end_ptr);
-//   ++*vcount;
-//   *i += end_ptr - text;
-
-//   printf("float:%.3f i:%i\n", *verts[*vcount], *i);
-// }
-
-// void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
-// {
-// // Load the file
-// char *file_text;
-// read_file_text(obj_path, &file_text);
-
-// // Read the vertices
-// unsigned int v_alloc = 512, v_count = 0;
-// float *vertices = (float *)malloc(sizeof(float) * v_alloc);
-
-// int i = 0;
-// bool eof = false;
-// for (;; ++i) {
-//   if (file_text[i] != 'v') {
-//     for (int a = 0; a < v_count;) {
-//       printf("v: ");
-//       printf(" %.3f", vertices[a++]);
-//       printf(" %.3f", vertices[a++]);
-//       printf(" %.3f\n", vertices[a++]);
-//     }
-//     break;
-//   }
-
-//   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
-//   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
-//   _mcr_parse_and_append_float(file_text, &i, &vertices, &v_alloc, &v_count);
-
-//   if (file_text[i] != '\n') {
-//     MCerror(9272, "TODO");
-//   }
-// }
-
-// // mcr_create_mesh_resource(vertices, v_count, unsigned int *p_resource_uid);
-
-// free(file_text);
-// MCerror(9472, "TODO");
-// }
-
 void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
 {
   global_root_data *global_data;
@@ -316,29 +251,30 @@ void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model
 
   tinyobj_obj *parsed_obj;
 
-  // {
-  //   int ret = tinyobj_parse_obj(obj_path, &parsed_obj);
-  //   if (ret) {
-  //     MCerror(9319, "Failed to load obj model");
-  //   }
-  // }
+  {
+    int ret = tinyobj_parse_obj(obj_path, &parsed_obj);
+    if (ret) {
+      MCerror(9319, "Failed to load obj model");
+    }
+  }
 
-  // mcr_model *model;
-  // model->parsed_obj = parsed_obj;
-  // model->mesh_resource_uid = 0;
+  mcr_model *model = (mcr_model *)malloc(sizeof(mcr_model));
+  model->parsed_obj = parsed_obj;
+  model->mesh_resource_uid = 0;
 
-  // parsed_
+  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
-  // pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+  resource_command *command;
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  command->type = RESOURCE_COMMAND_LOAD_MESH;
+  command->p_uid = &model->mesh_resource_uid;
+  command->load_mesh.p_data = parsed_obj->attrib.vertices;
+  command->load_mesh.data_count = parsed_obj->attrib.num_vertices * 3;
 
-  // resource_command *command;
-  // mcr_obtain_resource_command(resource_queue, &command);
-  // command->type = RESOURCE_COMMAND_MESH;
-  // command->p_uid = &model->mesh_resource_uid;
-  // command->load_mesh.p_vertex_data = parsed_obj->attrib.vertices;
-  // command->load_mesh.vertex_count = parsed_obj->attrib.vertex_count;
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 
-  // pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+  *loaded_model = model;
+  printf("load_mesh:%p (%u)\n", command->load_mesh.p_data, command->load_mesh.data_count);
 
   // for (int i = 0; i < parsed_obj->attrib.num_faces)
 
