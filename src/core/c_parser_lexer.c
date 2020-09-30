@@ -2263,7 +2263,7 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   case MC_TOKEN_IDENTIFIER: {
     if (type_root->type_identifier.is_signed != -1) {
       print_parse_error(ps->code, ps->index, "mcs_parse_type_identifier", "");
-      MCerror(1009, "modifier cannot be pre-applied to custom struct");
+      MCerror(2266, "modifier cannot be pre-applied to custom struct");
     }
   } break;
   case MC_TOKEN_VOID_KEYWORD: {

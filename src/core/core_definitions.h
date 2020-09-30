@@ -85,7 +85,7 @@ typedef struct struct_id {
   unsigned short version;
 } struct_id;
 
-struct source_file_info;
+struct mc_source_file_info;
 struct struct_info;
 struct function_info;
 struct enumeration_info;
@@ -94,7 +94,7 @@ struct field_info_list;
 typedef struct source_definition {
   struct_id *type_id;
   source_definition_type type;
-  source_file_info *source_file;
+  mc_source_file_info *source_file;
   union {
     void *p_data;
     struct_info *structure_info;
@@ -104,7 +104,7 @@ typedef struct source_definition {
   char *code;
 } source_definition;
 
-typedef struct source_file_info {
+typedef struct mc_source_file_info {
   struct_id *type_id;
   char *filepath;
   struct {
@@ -112,7 +112,7 @@ typedef struct source_file_info {
     unsigned int count;
     source_definition **items;
   } definitions;
-} source_file_info;
+} mc_source_file_info;
 
 typedef struct enum_member_info {
   struct_id *type_id;
@@ -285,7 +285,7 @@ typedef struct global_root_data {
 
   struct {
     unsigned int alloc, count;
-    source_file_info **items;
+    mc_source_file_info **items;
   } source_files;
   struct {
     unsigned int alloc, count;

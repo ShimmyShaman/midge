@@ -8,8 +8,8 @@
 #include <stddef.h>
 
 extern "C" {
-int register_external_definitions_from_file(mc_node *definitions_owner, char *filepath, source_file_info **source_file);
-int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, source_file_info **source_file);
+int register_external_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info **source_file);
+int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info **source_file);
 
 /*
   From code definition: constructs source definition & parses to syntax, registers with hierarchy, and declares the

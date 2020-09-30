@@ -5996,7 +5996,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
   return 0;
 }
 
-int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_source_file_info_v1 *source_file,
+int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_mc_source_file_info_v1 *source_file,
                                              mc_syntax_node *struct_ast)
 {
   register_midge_error_tag("register_and_transcribe_syntax_structure()");
@@ -6047,7 +6047,7 @@ int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_
   return 0;
 }
 
-int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_source_file_info_v1 *source_file,
+int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_mc_source_file_info_v1 *source_file,
                                             mc_syntax_node *function_ast)
 {
   register_midge_error_tag("register_and_transcribe_syntax_function()");
@@ -6216,7 +6216,7 @@ int parse_and_process_mc_file_syntax(mc_command_hub_v1 *command_hub, const char 
   MCcall(parse_mc_file_to_syntax_tree(file_text, &syntax_node));
 
   // Parse all definitions
-  mc_source_file_info_v1 *source_file = (mc_source_file_info_v1 *)malloc(sizeof(mc_source_file_info_v1));
+  mc_mc_source_file_info_v1 *source_file = (mc_mc_source_file_info_v1 *)malloc(sizeof(mc_mc_source_file_info_v1));
   MCcall(append_to_collection((void ***)&command_hub->source_files.items, &command_hub->source_files.alloc,
                               &command_hub->source_files.count, source_file));
   allocate_and_copy_cstr(source_file->filepath, filepath);
@@ -6419,7 +6419,7 @@ int parse_and_process_mc_file_syntaxt(mc_command_hub_v1 *command_hub, const char
   free(file_text);
 
   // Parse all definitions
-  mc_source_file_info_v1 *source_file = (mc_source_file_info_v1 *)malloc(sizeof(mc_source_file_info_v1));
+  mc_mc_source_file_info_v1 *source_file = (mc_mc_source_file_info_v1 *)malloc(sizeof(mc_mc_source_file_info_v1));
   MCcall(append_to_collection((void ***)&command_hub->source_files.items, &command_hub->source_files.alloc,
                               &command_hub->source_files.count, source_file));
   allocate_and_copy_cstr(source_file->filepath, filepath);
@@ -6764,7 +6764,7 @@ int parse_and_process_mc_file(mc_command_hub_v1 *command_hub, const char *filepa
   free(file_text);
 
   // Parse all definitions
-  mc_source_file_info_v1 *source_file = (mc_source_file_info_v1 *)malloc(sizeof(mc_source_file_info_v1));
+  mc_mc_source_file_info_v1 *source_file = (mc_mc_source_file_info_v1 *)malloc(sizeof(mc_mc_source_file_info_v1));
   MCcall(append_to_collection((void ***)&command_hub->source_files.items, &command_hub->source_files.alloc,
                               &command_hub->source_files.count, source_file));
   allocate_and_copy_cstr(source_file->filepath, filepath);

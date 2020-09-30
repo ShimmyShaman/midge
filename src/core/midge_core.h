@@ -232,7 +232,7 @@ struct mc_template_v1;
 struct mc_procedure_template_v1;
 
 struct mc_syntax_node;
-struct mc_source_file_info_v1;
+struct mc_mc_source_file_info_v1;
 
 typedef struct mc_cstring_list_v1 {
   mc_struct_id_v1 *struct_id;
@@ -259,7 +259,7 @@ typedef struct mc_script_local_v1 {
 
 typedef struct mc_source_definition_v1 {
   source_definition_type type;
-  mc_source_file_info_v1 *source_file;
+  mc_mc_source_file_info_v1 *source_file;
   union {
     void *p_data;
     mc_struct_info_v1 *structure_info;
@@ -269,14 +269,14 @@ typedef struct mc_source_definition_v1 {
   char *code;
 } mc_source_definition_v1;
 
-typedef struct mc_source_file_info_v1 {
+typedef struct mc_mc_source_file_info_v1 {
   char *filepath;
   struct {
     uint alloc;
     uint count;
     mc_source_definition_v1 **items;
   } definitions;
-} mc_source_file_info_v1;
+} mc_mc_source_file_info_v1;
 
 typedef struct mc_struct_info_v1 {
   mc_struct_id_v1 *struct_id;
@@ -438,7 +438,7 @@ typedef struct mc_command_hub_v1 {
   } update_timers;
   struct {
     uint count, alloc;
-    mc_source_file_info_v1 **items;
+    mc_mc_source_file_info_v1 **items;
   } source_files;
   mc_process_unit_v1 *process_matrix;
   mc_workflow_process_v1 *focused_workflow;

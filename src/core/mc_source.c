@@ -68,9 +68,9 @@ int attach_enumeration_info_to_owner(mc_node *owner, enumeration_info *enum_info
 //   return 0;
 // }
 
-int initialize_source_file_info(mc_node *owner, char *filepath, source_file_info **source_file)
+int mc_init_source_file_info(mc_node *owner, char *filepath, mc_source_file_info **source_file)
 {
-  source_file_info *sfi = (source_file_info *)malloc(sizeof(source_file_info));
+  mc_source_file_info *sfi = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
   allocate_and_copy_cstr(sfi->filepath, filepath);
   sfi->definitions.alloc = 0;
   sfi->definitions.count = 0;
@@ -85,6 +85,9 @@ int initialize_source_file_info(mc_node *owner, char *filepath, source_file_info
   default:
     MCerror(52, "TODO:%i", owner->type);
   }
+
+  // // Cache files
+  // _mcl_determine_cached_file_name(filepath, &sfi->cached_file_name);
 
   if (source_file)
     *source_file = sfi;
@@ -634,10 +637,10 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "__mcm_update_source_line_layout")) {
-  //   // print_syntax_node(ast, 0);
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
-  // }
+  if (!strcmp(func_info->name, "mcl_determine_cached_file_name")) {
+    // print_syntax_node(ast, 0);
+    // printf("mc_transcription:\n%s||\n", mc_transcription);
+  }
   // if (!strcmp(func_info->name, "mcs_parse_through_supernumerary_tokens")) {
   //   // print_syntax_node(ast, 0);
   //   // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);
@@ -845,7 +848,7 @@ int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node
   return 0;
 }
 
-int instantiate_ast_children(mc_node *definitions_owner, source_file_info *source_file,
+int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *source_file,
                              mc_syntax_node_list *syntax_node_list)
 {
   for (int a = 0; a < syntax_node_list->count; ++a) {
@@ -1015,8 +1018,89 @@ int instantiate_ast_children(mc_node *definitions_owner, source_file_info *sourc
   return 0;
 }
 
-int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, source_file_info **source_file)
+int instantiate_definitions_from_cached_file(mc_node *definitions_owner, char *filepath, char *cached_file_name,
+                                             mc_source_file_info **source_file)
 {
+
+  MCerror(1030, "TODO %s", cached_file_name);
+  // Parse all definitions
+  // mc_source_file_info *lv_source_file;
+  // mc_init_source_file_info(definitions_owner, filepath, &lv_source_file);
+  // if (source_file) {
+  //   *source_file = lv_source_file;
+  // }
+  char *cache_text;
+  read_file_text(filepath, &cache_text);
+
+  return 0;
+}
+
+int mcl_determine_cached_file_name(const char *input, char **output)
+{
+  c_str *str;
+  init_c_str(&str);
+  set_c_str(str, "bin/cached/");
+
+  int fni = 0;
+  fni += 11;
+  for (int k = 0; k < 256; ++k) {
+    if (input[k] == '/') {
+      append_char_to_c_str(str, '_');
+    }
+    else {
+      if (input[k] == '\0') {
+        break;
+      }
+      append_char_to_c_str(str, input[k]);
+    }
+  }
+
+  *output = str->text;
+  release_c_str(str, false);
+
+  return 0;
+}
+
+int attempt_instantiate_all_definitions_from_cached_file(mc_node *definitions_owner, char *filepath,
+                                                         mc_source_file_info **source_file, bool *used_cached_file)
+{
+  char *cached_file_name;
+  mcl_determine_cached_file_name(filepath, &cached_file_name);
+
+  // Compare modified times and process new source or use cache
+  *used_cached_file = false;
+  if (access(cached_file_name, F_OK) != -1) {
+
+    struct stat src_attrib;
+    stat(filepath, &src_attrib);
+
+    struct stat cch_attrib;
+    stat(cached_file_name, &cch_attrib);
+
+    *used_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
+  }
+  if (!strcmp(filepath, "src/m_threads.h")) {
+    *used_cached_file = true;
+  }
+  // printf("'%s'\n", filepath);
+  if (!*used_cached_file) {
+    free(cached_file_name);
+    return 0;
+  }
+
+  instantiate_definitions_from_cached_file(definitions_owner, filepath, cached_file_name, source_file);
+
+  return 0;
+}
+
+int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info **source_file)
+{
+  // bool used_cache_file;
+  // attempt_instantiate_all_definitions_from_cached_file(definitions_owner, filepath, source_file, &used_cache_file);
+  // if (used_cache_file) {
+  //   return 0;
+  // }
+
   char *file_text;
   read_file_text(filepath, &file_text);
 
@@ -1024,8 +1108,8 @@ int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *file
   parse_file_to_syntax_tree(file_text, &syntax_node);
 
   // Parse all definitions
-  source_file_info *lv_source_file;
-  initialize_source_file_info(definitions_owner, filepath, &lv_source_file);
+  mc_source_file_info *lv_source_file;
+  mc_init_source_file_info(definitions_owner, filepath, &lv_source_file);
   if (source_file) {
     *source_file = lv_source_file;
   }
@@ -1035,6 +1119,7 @@ int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *file
   // printf("about\n");
   // printf("%i\n", *p);
   // printf("end\n");
+
   register_midge_error_tag("instantiate_all_definitions_from_file(~)");
   return 0;
 }
@@ -1133,7 +1218,7 @@ int register_external_enum_declaration(mc_node *owner, mc_syntax_node *enum_ast)
   return 0;
 }
 
-int register_external_declarations_from_syntax_children(mc_node *definitions_owner, source_file_info *source_file,
+int register_external_declarations_from_syntax_children(mc_node *definitions_owner, mc_source_file_info *source_file,
                                                         mc_syntax_node_list *syntax_node_list)
 {
   for (int a = 0; a < syntax_node_list->count; ++a) {
@@ -1297,7 +1382,8 @@ int register_external_declarations_from_syntax_children(mc_node *definitions_own
   return 0;
 }
 
-int register_external_definitions_from_file(mc_node *definitions_owner, char *filepath, source_file_info **source_file)
+int register_external_definitions_from_file(mc_node *definitions_owner, char *filepath,
+                                            mc_source_file_info **source_file)
 {
   char *file_text;
   read_file_text(filepath, &file_text);
@@ -1306,8 +1392,8 @@ int register_external_definitions_from_file(mc_node *definitions_owner, char *fi
   parse_file_to_syntax_tree(file_text, &syntax_node);
 
   // Parse all definitions
-  source_file_info *lv_source_file;
-  initialize_source_file_info(definitions_owner, filepath, &lv_source_file);
+  mc_source_file_info *lv_source_file;
+  mc_init_source_file_info(definitions_owner, filepath, &lv_source_file);
   if (source_file) {
     *source_file = lv_source_file;
   }

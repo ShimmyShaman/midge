@@ -684,6 +684,8 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
   //   argument = argument->cast_expression.expression;
   // }
 
+  // printf("argument->type:%i\n", argument->type);
+  // print_syntax_node(argument, 0);
   switch (argument->type) {
   case MC_SYNTAX_CAST_EXPRESSION: {
     int tslen = ts->str->len;
@@ -851,12 +853,12 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
 
     char *text;
     copy_syntax_node_to_text(argument, &text);
-    append_to_c_strf(ts->str, "%s[%i] = &%s;\n", argument_data_name, arg_index, text);
+    append_to_c_strf(ts->str, "%s[%i] = (void *)&%s;\n", argument_data_name, arg_index, text);
     free(text);
 
   } break;
   case MC_SYNTAX_DEREFERENCE_EXPRESSION: {
-    append_to_c_strf(ts->str, "%s[%i] = ", argument_data_name, arg_index);
+    append_to_c_strf(ts->str, "%s[%i] = (void *)", argument_data_name, arg_index);
     for (int d = 1; d < argument->dereference_expression.deref_sequence->dereference_sequence.count; ++d)
       append_to_c_str(ts->str, "*");
 
@@ -973,6 +975,11 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
   default: {
     // printf("mtmi-9\n");
     switch ((mc_token_type)argument->type) {
+    case MC_TOKEN_CHAR_LITERAL: {
+      append_to_c_strf(ts->str, "char %s_%i = %s;\n", argument_data_name, arg_index, argument->text);
+      mct_append_indent_to_c_str(ts);
+      append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
+    } break;
     case MC_TOKEN_NUMERIC_LITERAL: {
       // printf("mtmi-9\n");
       char *parameter_type_name = (char *)"int";
@@ -1069,7 +1076,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
     } break;
     default:
       print_syntax_node(argument, 0);
-      MCerror(1009, "NotYetSupported:%s", get_mc_syntax_token_type_name(argument->type));
+      MCerror(1072, "NotYetSupported:%s", get_mc_syntax_token_type_name(argument->type));
     }
   }
   }

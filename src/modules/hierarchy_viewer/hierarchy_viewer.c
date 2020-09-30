@@ -5,7 +5,7 @@
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
-void mc_hv_add_file_to_hierarchy_state(mc_hv_hierarchy_view_state *hv_state, source_file_info *source_file)
+void mc_hv_add_file_to_hierarchy_state(mc_hv_hierarchy_view_state *hv_state, mc_source_file_info *source_file)
 {
   mc_hv_source_path_state *parent_section = NULL;
   int path_len = strlen(source_file->filepath);

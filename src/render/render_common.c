@@ -311,12 +311,10 @@ void mcr_issue_render_command_textured_quad(image_render_details *image_render_q
 
 void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
 {
-  // global_root_data *global_data;
-  // obtain_midge_global_root(&global_data);
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
 
-  // pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
-
-  // tinyobj_obj *parsed_obj;
+  tinyobj_obj *parsed_obj;
 
   // {
   //   int ret = tinyobj_parse_obj(obj_path, &parsed_obj);
@@ -331,12 +329,16 @@ void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model
 
   // parsed_
 
+  // pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+
   // resource_command *command;
   // mcr_obtain_resource_command(resource_queue, &command);
   // command->type = RESOURCE_COMMAND_MESH;
   // command->p_uid = &model->mesh_resource_uid;
-  // command->data.load_mesh.p_vertex_data = parsed_obj->attrib.vertices;
-  // command->data.load_mesh.vertex_count = parsed_obj->attrib.vertex_count;
+  // command->load_mesh.p_vertex_data = parsed_obj->attrib.vertices;
+  // command->load_mesh.vertex_count = parsed_obj->attrib.vertex_count;
+
+  // pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 
   // for (int i = 0; i < parsed_obj->attrib.num_faces)
 
@@ -360,6 +362,4 @@ void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model
   //   if (ret != TINYOBJ_SUCCESS) {
   //     return 0;
   //   }
-
-  // pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 }
