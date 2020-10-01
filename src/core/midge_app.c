@@ -73,6 +73,8 @@ int begin_render_thread()
   begin_mthread(&midge_render_thread, &global_data->render_thread->thread_info, (void *)global_data->render_thread);
 }
 
+// typedef struct
+
 void complete_midge_app_compile()
 {
   global_root_data *global_data;
@@ -128,6 +130,63 @@ void mui_render_element_present(image_render_details *image_render_queue, mc_nod
 // void init_modus_operandi_curator();
 }
 
+void mca_load_open_projects()
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  char *open_list_text;
+  read_file_text("projects/open_project_list", &open_list_text);
+
+  printf("open_list_text:'%s'\n", open_list_text);
+
+  char buf[256];
+  c_str *str;
+  init_c_str(&str);
+
+  int i = 0, s = 0;
+  bool eof = false;
+  while (!eof) {
+    for (; open_list_text[i] != '|'; ++i)
+      if (open_list_text[i] == '\0') {
+        eof = true;
+        break;
+      }
+
+    if (i > s) {
+      strncpy(buf, open_list_text + s, i - s);
+      buf[i - s] = '\0';
+
+      set_c_str(str, "projects/");
+      append_to_c_str(str, buf);
+      append_to_c_str(str, "/init_");
+      append_to_c_str(str, buf);
+      append_to_c_str(str, ".c");
+
+      printf("instantiate file:'%s'\n", str->text);
+      instantiate_all_definitions_from_file(global_data->global_node, str->text, NULL);
+
+      // Initialize the module
+      mc_node *module_node;
+      mca_init_mc_node(global_data->global_node, NODE_TYPE_ABSTRACT, &module_node);
+
+      int mc_res;
+      set_c_str(str, "");
+      append_to_c_strf(str,
+                       "{\n"
+                       "  void *mc_vargs[1];\n"
+                       "  mc_vargs[0] = (void *)%p;\n"
+                       "  (*(int *)%p) = init_%s(1, mc_vargs);\n"
+                       "}\n",
+                       &module_node, &mc_res, buf);
+      clint->process(str->text);
+      if (mc_res) {
+        MCerror(8974, "--init_%s() |line~ :??? ERR:%i\n", buf, mc_res);
+      }
+    }
+  }
+}
+
 void initialize_midge_components()
 {
   global_root_data *global_data;
@@ -144,10 +203,14 @@ void initialize_midge_components()
   // mca_init_source_editor_pool();
   // // mca_init_visual_project_management();
 
-  // // Modules
+  // Modules
   // // init_modus_operandi_curator();
   // // init_hierarchy_viewer();
+  // mca_load_app_modules
   // init_three_d_portal();
+
+  // Projects
+  mca_load_open_projects();
 }
 
 void midge_initialize_app(struct timespec *app_begin_time)

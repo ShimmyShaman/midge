@@ -19,10 +19,38 @@ Midges development goals:
 
 
 
-Goal: Create the process system & UI for UI
+
+I want to explore a concept/feeling
+
+3d window module
+ - window render of a rotating cube in an empty scene TO THE RIGHT overlapping
+ - a grouped code editor box with tabs of struct proj_root, init_proj(input_thread?, render_thread, proj_root), update_proj(elapsed, proj_root), release_proj(proj_root) TO THE LEFT
+
+default struct proj_root will have
+ - cube { resource_uid, world_matrix }
+ - mat4 view
+ - mat4 proj
+
+I'd follow the cube example to create a quad mesh and load an image for the grass texture
+
+there should exist someway a little config screen with the default module methods
+ (init, update, release, and handle click/key)
+click on that screen create new function handler for handle mouse
 
 
-create a module
+flat grass plane quad with grass texture repeat
+fps view with 0-terrain world and key-move mouse-cam
+hut model imported (texture/normal/mesh)
+
+walk from outside into hut
+
+#right-click>3D-Window-Module
+
+start with a terrain landscape
+
+
+
+
 
 
 ###################################################################

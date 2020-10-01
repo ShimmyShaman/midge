@@ -386,9 +386,10 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 
 // }
 
-void mca_determine_typical_node_extents(mca_node_layout *layout, layout_extent_restraints restraints)
+void mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints)
 {
   const float MAX_EXTENT_VALUE = 100000.f;
+  mca_node_layout *layout = node->layout;
 
   // Width
   if (layout->preferred_width) {
@@ -451,10 +452,26 @@ void mca_determine_typical_node_extents(mca_node_layout *layout, layout_extent_r
       }
     }
   }
+
+  // Children
+  if (node->children) {
+    for (int a = 0; a < node->children->count; ++a) {
+      mc_node *child = node->children->items[a];
+      if (child->layout && child->layout->determine_layout_extents) {
+        // TODO fptr casting
+        void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
+            (void (*)(mc_node *, layout_extent_restraints))child->layout->determine_layout_extents;
+        determine_layout_extents(child, LAYOUT_RESTRAINT_NONE);
+      }
+    }
+  }
 }
 
 void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
 {
+  // Clear
+  node->layout->__requires_layout_update = false;
+
   // Preferred value > padding (within min/max if set)
   mc_rectf bounds;
   mca_node_layout *layout = node->layout;
@@ -549,8 +566,17 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
     mca_set_node_requires_rerender(node);
   }
 
-  // Clear
-  node->layout->__requires_layout_update = false;
+  // Children
+  if (node->children) {
+    for (int a = 0; a < node->children->count; ++a) {
+      mc_node *child = node->children->items[a];
+      if (child->layout && child->layout->update_layout) {
+        // TODO fptr casting
+        void (*update_layout)(mc_node *, mc_rectf *) = (void (*)(mc_node *, mc_rectf *))child->layout->update_layout;
+        update_layout(child, &layout->__bounds);
+      }
+    }
+  }
 }
 
 void _mca_set_nodes_require_layout_update(mc_node_list *node_list)
