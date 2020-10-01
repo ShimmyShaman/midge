@@ -153,6 +153,10 @@ char *my_strndup(const char *s, size_t len)
   return d;
 }
 
+typedef struct tinyobj_vertex_index_t {
+  int v_idx, vt_idx, vn_idx;
+} tinyobj_vertex_index_t;
+
 /* Parse raw triples: i, i/j/k, i//k, i/j */
 tinyobj_vertex_index_t parseRawTriple(const char **token)
 {

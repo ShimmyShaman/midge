@@ -114,7 +114,6 @@ void complete_midge_app_compile()
   };
 
   for (int f = 0; remainder_app_source_files[f]; ++f) {
-    printf("instantiate file:'%s'\n", remainder_app_source_files[f]);
     instantiate_all_definitions_from_file(global_data->global_node, remainder_app_source_files[f], NULL);
   }
 }
@@ -130,11 +129,46 @@ void mui_render_element_present(image_render_details *image_render_queue, mc_nod
 // void init_modus_operandi_curator();
 }
 
-void mca_load_open_projects()
-{
+void _mca_load_module(char *base_path, char *module_name) {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
+  
+  char buf[512];
+  sprintf(buf, "%s/%s/init_%s.c", base_path, module_name, module_name);
 
+  instantiate_all_definitions_from_file(global_data->global_node, buf, NULL);
+
+      // Initialize the module
+      int mc_res;
+      sprintf(buf, 
+                       "{\n"
+                       "  void *mc_vargs[1];\n"
+                       "  mc_vargs[0] = (void *)%p;\n"
+                       "  (*(int *)%p) = init_%s(1, mc_vargs);\n"
+                       "}\n",
+                       &global_data->global_node, &mc_res, module_name);
+      clint->process(buf);
+      if (mc_res) {
+        MCerror(8974, "--init_%s() |line~ :??? ERR:%i\n", module_name, mc_res);
+      }
+}
+
+void mca_load_modules()
+{
+  // Get all directories in folder
+  // TODO
+  const char *module_directories[] = {
+    "obj_loader",
+    NULL,
+  };
+
+  for(int d = 0; module_directories[d];++d) {
+    _mca_load_module("src/modules", module_directories[d]);
+  }
+}
+
+void mca_load_open_projects()
+{
   char *open_list_text;
   read_file_text("projects/open_project_list", &open_list_text);
 
@@ -157,32 +191,7 @@ void mca_load_open_projects()
       strncpy(buf, open_list_text + s, i - s);
       buf[i - s] = '\0';
 
-      set_c_str(str, "projects/");
-      append_to_c_str(str, buf);
-      append_to_c_str(str, "/init_");
-      append_to_c_str(str, buf);
-      append_to_c_str(str, ".c");
-
-      printf("instantiate file:'%s'\n", str->text);
-      instantiate_all_definitions_from_file(global_data->global_node, str->text, NULL);
-
-      // Initialize the module
-      mc_node *module_node;
-      mca_init_mc_node(global_data->global_node, NODE_TYPE_ABSTRACT, &module_node);
-
-      int mc_res;
-      set_c_str(str, "");
-      append_to_c_strf(str,
-                       "{\n"
-                       "  void *mc_vargs[1];\n"
-                       "  mc_vargs[0] = (void *)%p;\n"
-                       "  (*(int *)%p) = init_%s(1, mc_vargs);\n"
-                       "}\n",
-                       &module_node, &mc_res, buf);
-      clint->process(str->text);
-      if (mc_res) {
-        MCerror(8974, "--init_%s() |line~ :??? ERR:%i\n", buf, mc_res);
-      }
+_mca_load_module("projects", buf);
     }
   }
 }
@@ -204,6 +213,7 @@ void initialize_midge_components()
   // // mca_init_visual_project_management();
 
   // Modules
+  mca_load_modules();
   // // init_modus_operandi_curator();
   // // init_hierarchy_viewer();
   // mca_load_app_modules

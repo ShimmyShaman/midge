@@ -12,6 +12,7 @@ typedef struct cube_template_root_data {
   struct {
     mat4 world;
     unsigned int cube_resource_uid;
+    mcr_model *model;
   } cube;
 } cube_template_root_data;
 
@@ -70,13 +71,14 @@ void __cbt_render_td_ct_data_present(image_render_details *image_render_queue, m
   mca_set_node_requires_rerender(node);
 }
 
-void init_cube_template(mc_node *node)
+void init_cube_template(mc_node *app_root)
 {
   //   printf("instantiate file:'%s'\n", str->text);
   //   instantiate_all_definitions_from_file(global_data->global_node, str->text, NULL);
 
   //   module_node->
-
+mc_node *node;
+mca_init_mc_node(app_root, NODE_TYPE_ABSTRACT, &node);
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
@@ -105,9 +107,6 @@ void init_cube_template(mc_node *node)
   ct_data->render_target.height = node->layout->preferred_height;
   mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height, true,
                               &ct_data->render_target.resource_uid);
-
-                          // TODO -- create a obj_loader module and load the model and texture map
-                          // Render it
-                          // Be more pointed. Don't try to accomadate other code, write your own, use their methods    
-  mcr_load_wavefront_obj_model("/home/jason/progs/renderer/assets/witch/witch.obj", &cube->witch);
+  
+  mcr_load_wavefront_obj_model("res/cube/cube.obj", &ct_data->cube.model);
 }

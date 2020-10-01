@@ -1095,6 +1095,7 @@ int attempt_instantiate_all_definitions_from_cached_file(mc_node *definitions_ow
 
 int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info **source_file)
 {
+  printf("instantiate file:'%s'\n", filepath);
   // bool used_cache_file;
   // attempt_instantiate_all_definitions_from_cached_file(definitions_owner, filepath, source_file, &used_cache_file);
   // if (used_cache_file) {

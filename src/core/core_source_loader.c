@@ -1217,7 +1217,6 @@ int _mcl_load_core_mc_source()
 {
   char buf[512];
   for (int i = 0; _mcl_core_source_files[i]; ++i) {
-    printf("instantiate file:'%s'\n", _mcl_core_source_files[i]);
     int result = 0;
     sprintf(buf,
             "{\n"
@@ -1373,7 +1372,6 @@ int _mcl_load_app_mc_source()
   };
 
   for (int i = 0; _mcl_app_source_files[i]; ++i) {
-    printf("instantiate file:'%s'\n", _mcl_app_source_files[i]);
     int result = 0;
     sprintf(buf,
             "{\n"

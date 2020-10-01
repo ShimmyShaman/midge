@@ -271,8 +271,6 @@ void mcr_issue_render_command_colored_quad(image_render_details *image_render_qu
                                            unsigned int width, unsigned int height, render_color color);
 void mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                             unsigned int width, unsigned int height, unsigned int texture_resource);
-
-// void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model);
 }
 
 #endif // MC_RENDER_COMMON_H
