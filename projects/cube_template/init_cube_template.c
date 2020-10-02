@@ -56,6 +56,8 @@ void __cbt_render_td_ct_data_headless(mc_node *node)
     }
   }
 
+  mcr_render_model(irq, td_ct_data->cube.model);
+
   mcr_submit_image_render_request(global_data->render_thread, irq);
 }
 
@@ -107,9 +109,9 @@ void init_cube_template(mc_node *app_root)
   mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height, true,
                               &ct_data->render_target.resource_uid);
 
-  printf("ct_data=%p\n", ct_data);
-  printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
-  printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
+  // printf("ct_data=%p\n", ct_data);
+  // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
+  // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
 
   mcr_load_wavefront_obj_model("res/cube/cube.obj", &ct_data->cube.model);
 }

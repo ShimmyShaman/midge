@@ -771,6 +771,7 @@ void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model
 
   // Construct the model and load its resources
   *loaded_model = (mcr_model *)malloc(sizeof(mcr_model));
+  (*loaded_model)->texture = 0;
 
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
@@ -790,4 +791,17 @@ void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model
   command->load_indices.release_original_data_on_copy = false;
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+  mcr_load_texture_resource("res/cube/cube_diffuse.png", &(*loaded_model)->texture);
+}
+
+void mcr_render_model(image_render_details *image_render_queue, mcr_model *model)
+{
+  element_render_command *render_cmd;
+  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
+
+  render_cmd->type = RENDER_COMMAND_INDEXED_MESH;
+  render_cmd->indexed_mesh.vertex_buffer = model->vertex_buffer;
+  render_cmd->indexed_mesh.index_buffer = model->index_buffer;
+  render_cmd->indexed_mesh.texture_uid = model->texture;
 }

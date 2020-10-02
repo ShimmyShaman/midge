@@ -134,7 +134,7 @@ typedef enum element_render_command_type {
   RENDER_COMMAND_COLORED_QUAD,
   RENDER_COMMAND_TEXTURED_QUAD,
   RENDER_COMMAND_PRINT_TEXT,
-  RENDER_COMMAND_MESH,
+  RENDER_COMMAND_INDEXED_MESH,
 } element_render_command_type;
 
 typedef enum resource_command_type {
@@ -171,8 +171,10 @@ typedef struct element_render_command {
     } textured_rect_info;
     struct {
       float *world_matrix;
-      unsigned int mesh_resource_uid;
-    } mesh;
+      unsigned int vertex_buffer;
+      unsigned int index_buffer;
+      unsigned int texture_uid;
+    } indexed_mesh;
   };
 } element_render_command;
 
@@ -266,6 +268,7 @@ int obtain_resource_command(resource_queue *resource_queue, resource_command **p
 
 void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
                                  bool use_as_render_target, unsigned int *resource_uid);
+void mcr_load_texture_resource(const char *path, unsigned int *p_resource_uid);
 void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                               unsigned int *p_resource_uid);
 

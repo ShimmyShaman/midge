@@ -253,16 +253,16 @@ void mvk_destroy_resources(vk_render_state *p_vkrs)
     mvk_destroy_sampled_image(p_vkrs, p_vkrs->textures.items[i]);
   }
   free(p_vkrs->textures.items);
-  for (int i = 0; i < p_vkrs->loaded_meshes.count; ++i) {
-    vkDestroyBuffer(p_vkrs->device, p_vkrs->loaded_meshes.items[i]->buf, NULL);
-    vkFreeMemory(p_vkrs->device, p_vkrs->loaded_meshes.items[i]->mem, NULL);
+  for (int i = 0; i < p_vkrs->loaded_vertex_data.count; ++i) {
+    vkDestroyBuffer(p_vkrs->device, p_vkrs->loaded_vertex_data.items[i]->buf, NULL);
+    vkFreeMemory(p_vkrs->device, p_vkrs->loaded_vertex_data.items[i]->mem, NULL);
   }
-  free(p_vkrs->loaded_meshes.items);
-  for (int i = 0; i < p_vkrs->loaded_index_buffers.count; ++i) {
-    vkDestroyBuffer(p_vkrs->device, p_vkrs->loaded_index_buffers.items[i]->buf, NULL);
-    vkFreeMemory(p_vkrs->device, p_vkrs->loaded_index_buffers.items[i]->mem, NULL);
+  free(p_vkrs->loaded_vertex_data.items);
+  for (int i = 0; i < p_vkrs->loaded_index_data.count; ++i) {
+    vkDestroyBuffer(p_vkrs->device, p_vkrs->loaded_index_data.items[i]->buf, NULL);
+    vkFreeMemory(p_vkrs->device, p_vkrs->loaded_index_data.items[i]->mem, NULL);
   }
-  free(p_vkrs->loaded_index_buffers.items);
+  free(p_vkrs->loaded_index_data.items);
 
   vkDestroyBuffer(p_vkrs->device, p_vkrs->shape_vertices.buf, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, NULL);
@@ -732,7 +732,7 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data
   // vec3 mesh_data[] = {{-0.5f, -0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
   //                     {0.5f, -0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},  {0.5f, 0.5f, -0.5f},  {0.5f, 0.5f, 0.5f}};
 
-  mcr_mesh *mesh = (mcr_mesh *)malloc(sizeof(mcr_mesh));
+  mrt_vertex_data *mesh = (mrt_vertex_data *)malloc(sizeof(mrt_vertex_data));
   mesh->resource_uid = p_vkrs->resource_uid_counter++;
 
   const int data_size_in_bytes = sizeof(float) * data_count;
@@ -783,8 +783,8 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data
   VK_CHECK(res, "vkBindBufferMemory");
 
   // Register the mesh
-  append_to_collection((void ***)&p_vkrs->loaded_meshes.items, &p_vkrs->loaded_meshes.alloc,
-                       &p_vkrs->loaded_meshes.count, mesh);
+  append_to_collection((void ***)&p_vkrs->loaded_vertex_data.items, &p_vkrs->loaded_vertex_data.alloc,
+                       &p_vkrs->loaded_vertex_data.count, mesh);
 
   *resource_uid = mesh->resource_uid;
   printf("mesh resource %u loaded\n", *resource_uid);
@@ -796,17 +796,18 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data
   return res;
 }
 
-VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
+VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, unsigned int data_count,
                                bool release_original_data_on_copy, unsigned int *resource_uid)
 {
   printf("mvk_load_index_buffer:%p (%u)\n", p_data, data_count);
 
   VkResult res = VK_SUCCESS;
 
-  mcr_index_buffer *index_buffer = (mcr_index_buffer *)malloc(sizeof(mcr_index_buffer));
+  mrt_index_data *index_buffer = (mrt_index_data *)malloc(sizeof(mrt_index_data));
   index_buffer->resource_uid = p_vkrs->resource_uid_counter++;
+  index_buffer->count = data_count;
 
-  const int data_size_in_bytes = sizeof(float) * data_count;
+  const int data_size_in_bytes = sizeof(unsigned int) * data_count;
 
   // Buffer
   VkBufferCreateInfo buf_info = {};
@@ -854,8 +855,8 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, float *p_data, unsigned 
   VK_CHECK(res, "vkBindBufferMemory");
 
   // Register the index_buffer
-  append_to_collection((void ***)&p_vkrs->loaded_index_buffers.items, &p_vkrs->loaded_index_buffers.alloc,
-                       &p_vkrs->loaded_index_buffers.count, index_buffer);
+  append_to_collection((void ***)&p_vkrs->loaded_index_data.items, &p_vkrs->loaded_index_data.alloc,
+                       &p_vkrs->loaded_index_data.count, index_buffer);
 
   *resource_uid = index_buffer->resource_uid;
   printf("index_buffer resource %u loaded\n", *resource_uid);

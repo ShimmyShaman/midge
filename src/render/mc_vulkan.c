@@ -3,6 +3,8 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>
 
+// Code modified from vulkan-tutorial.com / other sites too (TODO -- attributation)
+
 #define MC_RT_CALL(CALL)                                                \
   {                                                                     \
     VkResult mc_rt_vk_result = CALL;                                    \
@@ -434,30 +436,29 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
   res = vkGetPhysicalDeviceSurfacePresentModesKHR(p_vkrs->gpus[0], p_vkrs->surface, &presentModeCount, presentModes);
   VK_CHECK(res, "vkGetPhysicalDeviceSurfacePresentModesKHR");
 
-  VkExtent2D swapchainExtent;
   // width and height are either both 0xFFFFFFFF, or both not 0xFFFFFFFF.
   if (surfCapabilities.currentExtent.width == 0xFFFFFFFF) {
     // If the surface size is undefined, the size is set to
     // the size of the images requested.
-    swapchainExtent.width = p_vkrs->window_width;
-    swapchainExtent.height = p_vkrs->window_height;
-    if (swapchainExtent.width < surfCapabilities.minImageExtent.width) {
-      swapchainExtent.width = surfCapabilities.minImageExtent.width;
+    p_vkrs->swap_chain.extents.width = p_vkrs->window_width;
+    p_vkrs->swap_chain.extents.height = p_vkrs->window_height;
+    if (p_vkrs->swap_chain.extents.width < surfCapabilities.minImageExtent.width) {
+      p_vkrs->swap_chain.extents.width = surfCapabilities.minImageExtent.width;
     }
-    else if (swapchainExtent.width > surfCapabilities.maxImageExtent.width) {
-      swapchainExtent.width = surfCapabilities.maxImageExtent.width;
+    else if (p_vkrs->swap_chain.extents.width > surfCapabilities.maxImageExtent.width) {
+      p_vkrs->swap_chain.extents.width = surfCapabilities.maxImageExtent.width;
     }
 
-    if (swapchainExtent.height < surfCapabilities.minImageExtent.height) {
-      swapchainExtent.height = surfCapabilities.minImageExtent.height;
+    if (p_vkrs->swap_chain.extents.height < surfCapabilities.minImageExtent.height) {
+      p_vkrs->swap_chain.extents.height = surfCapabilities.minImageExtent.height;
     }
-    else if (swapchainExtent.height > surfCapabilities.maxImageExtent.height) {
-      swapchainExtent.height = surfCapabilities.maxImageExtent.height;
+    else if (p_vkrs->swap_chain.extents.height > surfCapabilities.maxImageExtent.height) {
+      p_vkrs->swap_chain.extents.height = surfCapabilities.maxImageExtent.height;
     }
   }
   else {
     // If the surface size is defined, the swap chain size must match
-    swapchainExtent = surfCapabilities.currentExtent;
+    p_vkrs->swap_chain.extents = surfCapabilities.currentExtent;
   }
 
   // The FIFO present mode is guaranteed by the spec to be supported
@@ -502,8 +503,8 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
   swapchain_ci.surface = p_vkrs->surface;
   swapchain_ci.minImageCount = desiredNumberOfSwapChainImages;
   swapchain_ci.imageFormat = p_vkrs->format;
-  swapchain_ci.imageExtent.width = swapchainExtent.width;
-  swapchain_ci.imageExtent.height = swapchainExtent.height;
+  swapchain_ci.imageExtent.width = p_vkrs->swap_chain.extents.width;
+  swapchain_ci.imageExtent.height = p_vkrs->swap_chain.extents.height;
   swapchain_ci.preTransform = preTransform;
   swapchain_ci.compositeAlpha = compositeAlpha;
   swapchain_ci.imageArrayLayers = 1;
@@ -529,11 +530,11 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
 
   // Create the swap chain and its buffers
   // -- Size
-  p_vkrs->swap_chain.size = 0;
+  p_vkrs->swap_chain.size_count = 0;
   res = vkCreateSwapchainKHR(p_vkrs->device, &swapchain_ci, NULL, &p_vkrs->swap_chain.instance);
   VK_CHECK(res, "vkCreateSwapchainKHR");
 
-  res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain.instance, &p_vkrs->swap_chain.size, NULL);
+  res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain.instance, &p_vkrs->swap_chain.size_count, NULL);
   VK_CHECK(res, "vkGetSwapchainImagesKHR");
 
   // -- Command Buffers
@@ -542,24 +543,25 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
   cmd.pNext = NULL;
   cmd.commandPool = p_vkrs->command_pool;
   cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  cmd.commandBufferCount = p_vkrs->swap_chain.size;
+  cmd.commandBufferCount = p_vkrs->swap_chain.size_count;
 
-  p_vkrs->swap_chain.command_buffers = (VkCommandBuffer *)malloc(sizeof(VkCommandBuffer) * p_vkrs->swap_chain.size);
+  p_vkrs->swap_chain.command_buffers =
+      (VkCommandBuffer *)malloc(sizeof(VkCommandBuffer) * p_vkrs->swap_chain.size_count);
   VK_ASSERT(p_vkrs->swap_chain.command_buffers, "failed to allocate swap chain command buffers");
   res = vkAllocateCommandBuffers(p_vkrs->device, &cmd, p_vkrs->swap_chain.command_buffers);
   VK_CHECK(res, "vkAllocateCommandBuffers");
 
   // -- Images
-  VkImage *images = (VkImage *)malloc(sizeof(VkImage) * p_vkrs->swap_chain.size);
+  VkImage *images = (VkImage *)malloc(sizeof(VkImage) * p_vkrs->swap_chain.size_count);
   p_vkrs->swap_chain.images = images;
   VK_ASSERT(p_vkrs->swap_chain.images, "failed to allocate swap chain images");
-  res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain.instance, &p_vkrs->swap_chain.size, images);
+  res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain.instance, &p_vkrs->swap_chain.size_count, images);
   VK_CHECK(res, "vkGetSwapchainImagesKHR");
 
   // -- Image Views
-  p_vkrs->swap_chain.image_views = (VkImageView *)malloc(p_vkrs->swap_chain.size * sizeof(VkImageView));
+  p_vkrs->swap_chain.image_views = (VkImageView *)malloc(p_vkrs->swap_chain.size_count * sizeof(VkImageView));
   VK_ASSERT(p_vkrs->swap_chain.image_views, "failed to allocate swap chain image views");
-  for (uint32_t i = 0; i < p_vkrs->swap_chain.size; i++) {
+  for (uint32_t i = 0; i < p_vkrs->swap_chain.size_count; i++) {
     VkImageViewCreateInfo color_image_view = {};
     color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     color_image_view.pNext = NULL;
@@ -1955,7 +1957,7 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
     layout_bindings[1].pImmutableSamplers = NULL;
 
     layout_bindings[2].binding = 2;
-    layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     layout_bindings[2].descriptorCount = 1;
     layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     layout_bindings[2].pImmutableSamplers = NULL;
@@ -1987,20 +1989,28 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
                                      "} element;\n"
                                      "\n"
                                      "layout(location = 0) in vec3 inPosition;\n"
+                                     "layout(location = 1) in vec2 inTexCoord;\n"
+                                     "\n"
+                                     "layout(location = 1) out vec2 fragTexCoord;\n"
                                      "\n"
                                      "void main() {\n"
                                      "   gl_Position = world.mvp * vec4(inPosition, 1.0);\n"
+                                     "   fragTexCoord = inTexCoord;\n"
                                      "}\n";
 
     const char *fragment_shader_code = "#version 450\n"
                                        "#extension GL_ARB_separate_shader_objects : enable\n"
                                        //  "#extension GL_ARB_shading_language_420pack : enable\n"
-                                       "layout (binding = 2) uniform UBO2 {\n"
-                                       "    vec4 tint;\n"
-                                       "} element;\n"
+                                       "\n"
+                                       "layout(binding = 2) uniform sampler2D texSampler;\n"
+                                       "\n"
                                        "layout (location = 0) out vec4 outColor;\n"
+                                       "\n"
+                                       "layout(location = 1) in vec2 fragTexCoord;\n"
+                                       "\n"
                                        "void main() {\n"
-                                       "   outColor = vec4(0.4, 0.2, 0.8, 1.0);\n"
+                                       //  "   outColor = vec4(0.4, 0.2, 0.8, 1.0);\n"
+                                       "   outColor = texture(texSampler, fragTexCoord);\n"
                                        "}\n";
 
     {
@@ -2057,18 +2067,23 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
 
   // Vertex Bindings
   VkVertexInputBindingDescription bindingDescription = {};
-  const int VERTEX_ATTRIBUTE_COUNT = 1;
+  const int VERTEX_ATTRIBUTE_COUNT = 2;
   VkVertexInputAttributeDescription attributeDescriptions[VERTEX_ATTRIBUTE_COUNT];
   {
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(vec4);
+    bindingDescription.stride = sizeof(float) * 5;
     // printf("sizeof(vec2)=%zu\n", sizeof(vec2));
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[0].offset = 0;                             // offsetof(textured_image_vertex, position);
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset = 0;                          // offsetof(textured_image_vertex, position);
+
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[1].offset = sizeof(float) * 3;       // offsetof(textured_image_vertex, position);
   }
 
   {
@@ -2112,7 +2127,7 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_NONE; // VK_CULL_MODE_BACK_BIT;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -2182,6 +2197,84 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
   return VK_SUCCESS;
 }
 
+void _mvk_find_supported_format(vk_render_state *p_vkrs, VkFormat *preferred_formats,
+                                unsigned int preferred_format_count, VkImageTiling image_tiling,
+                                VkFormatFeatureFlagBits features, VkFormat *result)
+{
+  for (unsigned int i = 0; i < preferred_format_count; ++i) {
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(p_vkrs->gpus[0], preferred_formats[i], &props);
+
+    if (image_tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+      *result = preferred_formats[i];
+      return;
+    }
+    else if (image_tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+      *result = preferred_formats[i];
+      return;
+    }
+  }
+
+  *result = VK_FORMAT_UNDEFINED;
+}
+
+VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
+{
+  VkFormat preferred_depth_formats[] = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+                                        VK_FORMAT_D24_UNORM_S8_UINT};
+
+  VkFormat depth_format;
+  _mvk_find_supported_format(p_vkrs, preferred_depth_formats, 3, VK_IMAGE_TILING_OPTIMAL,
+                             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, &depth_format);
+  VK_ASSERT(depth_format != VK_FORMAT_UNDEFINED, "TODO -- Couldn't find suitable depth format");
+
+  // Color attachment
+  VkImageCreateInfo imageCreateInfo = {};
+  imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageCreateInfo.format = depth_format;
+  imageCreateInfo.extent.width = p_vkrs->swap_chain.extents.width;
+  imageCreateInfo.extent.height = p_vkrs->swap_chain.extents.height;
+  imageCreateInfo.extent.depth = 1;
+  imageCreateInfo.mipLevels = 1;
+  imageCreateInfo.arrayLayers = 1;
+  imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+  imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+  VkResult res = vkCreateImage(p_vkrs->device, &imageCreateInfo, NULL, &p_vkrs->depth_buffer.image);
+  VK_CHECK(res, "vkCreateImage");
+
+  VkMemoryRequirements memReqs;
+  vkGetImageMemoryRequirements(p_vkrs->device, p_vkrs->depth_buffer.image, &memReqs);
+
+  VkMemoryAllocateInfo memAlloc = {};
+  memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  memAlloc.allocationSize = memReqs.size;
+  memAlloc.memoryTypeIndex =
+      mvk_get_physical_memory_type_index(p_vkrs, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  res = vkAllocateMemory(p_vkrs->device, &memAlloc, NULL, &p_vkrs->depth_buffer.memory);
+  VK_CHECK(res, "vkAllocateMemory");
+  res = vkBindImageMemory(p_vkrs->device, p_vkrs->depth_buffer.image, p_vkrs->depth_buffer.memory, 0);
+  VK_CHECK(res, "vkBindImageMemory");
+
+  VkImageViewCreateInfo colorImageView = {};
+  colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  colorImageView.format = depth_format;
+  colorImageView.subresourceRange = {};
+  colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  colorImageView.subresourceRange.baseMipLevel = 0;
+  colorImageView.subresourceRange.levelCount = 1;
+  colorImageView.subresourceRange.baseArrayLayer = 0;
+  colorImageView.subresourceRange.layerCount = 1;
+  colorImageView.image = p_vkrs->depth_buffer.image;
+  res = vkCreateImageView(p_vkrs->device, &colorImageView, NULL, &p_vkrs->depth_buffer.view);
+  VK_CHECK(res, "vkCreateImageView");
+
+  return res;
+}
+
 VkResult mvk_init_framebuffers(vk_render_state *p_vkrs /*, bool include_depth*/)
 {
   /* DEPENDS on init_depth_buffer(), init_renderpass() and
@@ -2203,9 +2296,9 @@ VkResult mvk_init_framebuffers(vk_render_state *p_vkrs /*, bool include_depth*/)
 
   uint32_t i;
 
-  p_vkrs->swap_chain.framebuffers = (VkFramebuffer *)malloc(p_vkrs->swap_chain.size * sizeof(VkFramebuffer));
+  p_vkrs->swap_chain.framebuffers = (VkFramebuffer *)malloc(p_vkrs->swap_chain.size_count * sizeof(VkFramebuffer));
 
-  for (i = 0; i < p_vkrs->swap_chain.size; i++) {
+  for (i = 0; i < p_vkrs->swap_chain.size_count; i++) {
     attachments[0] = p_vkrs->swap_chain.image_views[i];
     res = vkCreateFramebuffer(p_vkrs->device, &fb_info, NULL, &p_vkrs->swap_chain.framebuffers[i]);
     VK_CHECK(res, "vkCreateFramebuffer");
@@ -2288,6 +2381,8 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   res = mvk_init_mesh_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_mesh_render_prog");
 
+  res = mvk_init_depth_resources(vkrs);
+  VK_CHECK(res, "mvk_init_depth_resources");
   res = mvk_init_framebuffers(vkrs);
   VK_CHECK(res, "mvk_init_framebuffers");
   res = mvk_init_descriptor_pool(vkrs);
@@ -2298,7 +2393,7 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
 
 void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
 {
-  for (uint32_t i = 0; i < p_vkrs->swap_chain.size; i++) {
+  for (uint32_t i = 0; i < p_vkrs->swap_chain.size_count; i++) {
     vkDestroyFramebuffer(p_vkrs->device, p_vkrs->swap_chain.framebuffers[i], NULL);
   }
   free(p_vkrs->swap_chain.framebuffers);
@@ -2346,7 +2441,7 @@ void mvk_destroy_swapchain_frame_buffers(vk_render_state *p_vkrs)
 {
   // Image Views
   if (p_vkrs->swap_chain.image_views) {
-    for (uint32_t i = 0; i < p_vkrs->swap_chain.size; i++) {
+    for (uint32_t i = 0; i < p_vkrs->swap_chain.size_count; i++) {
       vkDestroyImageView(p_vkrs->device, p_vkrs->swap_chain.image_views[i], NULL);
     }
     free(p_vkrs->swap_chain.image_views);
@@ -2362,14 +2457,14 @@ void mvk_destroy_swapchain_frame_buffers(vk_render_state *p_vkrs)
 
   // Command-Buffers
   if (p_vkrs->swap_chain.command_buffers) {
-    vkFreeCommandBuffers(p_vkrs->device, p_vkrs->command_pool, p_vkrs->swap_chain.size,
+    vkFreeCommandBuffers(p_vkrs->device, p_vkrs->command_pool, p_vkrs->swap_chain.size_count,
                          p_vkrs->swap_chain.command_buffers);
     p_vkrs->swap_chain.command_buffers = NULL;
   }
 
   vkDestroySwapchainKHR(p_vkrs->device, p_vkrs->swap_chain.instance, NULL);
 
-  p_vkrs->swap_chain.size = 0;
+  p_vkrs->swap_chain.size_count = 0;
 }
 
 void mvk_destroy_command_pool(vk_render_state *p_vkrs)

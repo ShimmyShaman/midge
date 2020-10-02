@@ -60,19 +60,20 @@ typedef struct loaded_font_list {
   loaded_font_info *fonts;
 } loaded_font_list;
 
-typedef struct mcr_mesh {
+typedef struct mrt_vertex_data {
   unsigned int resource_uid;
   VkBuffer buf;
   VkDeviceMemory mem;
   VkDescriptorBufferInfo buffer_info;
-} mcr_mesh;
+} mrt_vertex_data;
 
-typedef struct mcr_index_buffer {
+typedef struct mrt_index_data {
   unsigned int resource_uid;
+  unsigned int count;
   VkBuffer buf;
   VkDeviceMemory mem;
   VkDescriptorBufferInfo buffer_info;
-} mcr_index_buffer;
+} mrt_index_data;
 
 typedef struct texture_image {
   unsigned int resource_uid;
@@ -142,12 +143,19 @@ typedef struct vk_render_state {
   struct {
     VkSwapchainKHR instance;
     uint32_t current_index;
-    uint32_t size;
+    uint32_t size_count;
+    VkExtent2D extents;
     VkCommandBuffer *command_buffers;
     VkImage *images;
     VkImageView *image_views;
     VkFramebuffer *framebuffers;
   } swap_chain;
+
+  struct {
+    VkImage image;
+    VkDeviceMemory memory;
+    VkImageView view;
+  } depth_buffer;
 
   // HEADLESS IMAGE
   struct {
@@ -235,12 +243,12 @@ typedef struct vk_render_state {
   loaded_font_list loaded_fonts;
   struct {
     uint32_t count, alloc;
-    mcr_mesh **items;
-  } loaded_meshes;
+    mrt_vertex_data **items;
+  } loaded_vertex_data;
   struct {
     uint32_t count, alloc;
-    mcr_index_buffer **items;
-  } loaded_index_buffers;
+    mrt_index_data **items;
+  } loaded_index_data;
 } vk_render_state;
 
 extern "C" {

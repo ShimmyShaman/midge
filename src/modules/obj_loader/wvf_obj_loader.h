@@ -9,6 +9,7 @@
 typedef struct mcr_model {
   unsigned int vertex_buffer;
   unsigned int index_buffer;
+  unsigned int texture;
 } mcr_model;
 
 typedef enum _wvf_obj_cmd_type {

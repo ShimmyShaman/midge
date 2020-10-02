@@ -117,6 +117,23 @@ void mcr_create_texture_resource(unsigned int width, unsigned int height, bool u
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
+void mcr_load_texture_resource(const char *path, unsigned int *p_resource_uid)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+
+  resource_command *command;
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  command->type = RESOURCE_COMMAND_LOAD_TEXTURE;
+  command->p_uid = p_resource_uid;
+  command->load_texture.path = path;//strdup(path);
+
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+}
+
+// Ensure this function is accessed within a thread mutex lock of the @resource_queue
 void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                               unsigned int *p_resource_uid)
 {
