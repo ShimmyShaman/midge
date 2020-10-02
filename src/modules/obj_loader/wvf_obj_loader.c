@@ -1,26 +1,6 @@
 
-typedef enum obj_cmd_type {
-  OBJ_CMD_NULL = 0,
-  OBJ_CMD_EMPTY,
-  OBJ_CMD_V,
-  OBJ_CMD_VN,
-  OBJ_CMD_VT,
-  OBJ_CMD_F,
-  OBJ_CMD_G,
-  OBJ_CMD_O,
-  OBJ_CMD_USEMTL,
-  OBJ_CMD_MTLLIB
-} obj_cmd_type;
-
-typedef struct tinyobj_vertex_index_t {
-  int v_idx, vt_idx, vn_idx;
-} tinyobj_vertex_index_t;
-
-#define OBJ_IS_SPACE(x) (((x) == ' ') || ((x) == '\t'))
-#define OBJ_CPTR_SKIP_SPACE(x)                              \
-  while ((*(x) == ' ') || (*(x) == '\t') || (*(x) == '\r')) \
-    ++(x);
-#define OBJ_IS_NEW_LINE(x) (((x) == '\r') || ((x) == '\n') || ((x) == '\0'))
+#include "modules/obj_loader/wvf_obj_loader.h"
+#include "render/render_common.h"
 
 // int parseLine(Command *command, const char *p, size_t p_len, int triangulate)
 // {
@@ -86,12 +66,12 @@ typedef struct tinyobj_vertex_index_t {
 //   if (token[0] == 'f' && IS_SPACE((token[1]))) {
 //     size_t num_f = 0;
 
-//     tinyobj_vertex_index_t f[TINYOBJ_MAX_FACES_PER_F_LINE];
+//     _wvf_obj_vertex_index_list f[TINYOBJ_MAX_FACES_PER_F_LINE];
 //     token += 2;
 //     skip_space(&token);
 
 //     while (!IS_NEW_LINE(token[0])) {
-//       tinyobj_vertex_index_t vi = parse_raw_triple(&token);
+//       _wvf_obj_vertex_index_list vi = wvf_obj_parse_raw_triple(&token);
 //       skip_space_and_cr(&token);
 
 //       f[num_f] = vi;
@@ -104,9 +84,9 @@ typedef struct tinyobj_vertex_index_t {
 //       size_t k;
 //       size_t n = 0;
 
-//       tinyobj_vertex_index_t i0 = f[0];
-//       tinyobj_vertex_index_t i1;
-//       tinyobj_vertex_index_t i2 = f[1];
+//       _wvf_obj_vertex_index_list i0 = f[0];
+//       _wvf_obj_vertex_index_list i1;
+//       _wvf_obj_vertex_index_list i2 = f[1];
 
 //       MC_ASSERT(3 * num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
 
@@ -181,26 +161,7 @@ typedef struct tinyobj_vertex_index_t {
 //   return 0;
 // }
 
-typedef struct obj_cmd {
-  obj_cmd_type type;
-  int begin;
-} obj_cmd;
-
-typedef struct file_index_list {
-  obj_cmd *cmds;
-  unsigned int cmd_count;
-
-  unsigned int f_cmd_begin;
-  unsigned int v_cmd_begin;
-  unsigned int vt_cmd_begin;
-  unsigned int vn_cmd_begin;
-
-  unsigned int num_faces;
-
-  unsigned int triangle_count;
-} file_index_list;
-
-void parse_file(char *code, file_index_list *file_index)
+void wvf_obj_parse_obj_info(char *code, _wvf_obj_parsed_obj_info *file_index)
 {
   const unsigned int UNASSIGNED = 24892428U;
 
@@ -214,13 +175,13 @@ void parse_file(char *code, file_index_list *file_index)
 
   int i;
   for (i = 0; code[i] != '\0'; ++i) {
-    if (OBJ_IS_NEW_LINE(code[i])) {
+    if (_WVF_OBJ_IS_NEW_LINE(code[i])) {
       ++file_index->cmd_count;
     }
   }
 
   // Init
-  obj_cmd *cmds = (obj_cmd *)malloc(sizeof(obj_cmd) * (file_index->cmd_count + 1));
+  _wvf_obj_cmd *cmds = (_wvf_obj_cmd *)malloc(sizeof(_wvf_obj_cmd) * (file_index->cmd_count + 1));
   file_index->cmds = cmds;
 
   int cmd_index = 0;
@@ -230,19 +191,19 @@ void parse_file(char *code, file_index_list *file_index)
     case '#': {
       // Comment
       // Ignore
-      for (; !OBJ_IS_NEW_LINE(code[i]); ++i) {
+      for (; !_WVF_OBJ_IS_NEW_LINE(code[i]); ++i) {
         // Empty -- TODO allow empty semi-colon blocks
       }
     } break;
     case 'm': {
       /* load mtl */
-      if ((0 == strncmp(code + i, "mtllib", 6)) && OBJ_IS_SPACE(code[i + 6])) {
+      if ((0 == strncmp(code + i, "mtllib", 6)) && _WVF_OBJ_IS_SPACE(code[i + 6])) {
         /* By specification, `mtllib` should be appear only once in .obj */
         i += 7;
 
         // Comment
         // Ignore
-        for (; !OBJ_IS_NEW_LINE(code[i]); ++i) {
+        for (; !_WVF_OBJ_IS_NEW_LINE(code[i]); ++i) {
           // Empty -- TODO allow empty semi-colon blocks
         }
 
@@ -259,13 +220,13 @@ void parse_file(char *code, file_index_list *file_index)
     } break;
     case 'u': {
       /* use mtl */
-      if ((0 == strncmp(code + i, "usemtl", 6)) && OBJ_IS_SPACE(code[i + 6])) {
+      if ((0 == strncmp(code + i, "usemtl", 6)) && _WVF_OBJ_IS_SPACE(code[i + 6])) {
         /* By specification, `mtllib` should be appear only once in .obj */
         i += 7;
 
         // Comment
         // Ignore
-        for (; !OBJ_IS_NEW_LINE(code[i]); ++i) {
+        for (; !_WVF_OBJ_IS_NEW_LINE(code[i]); ++i) {
           // Empty -- TODO allow empty semi-colon blocks
         }
 
@@ -294,7 +255,7 @@ void parse_file(char *code, file_index_list *file_index)
       //       //     return 1;
       //       //   }
       // Ignore
-      for (; !OBJ_IS_NEW_LINE(code[i]); ++i) {
+      for (; !_WVF_OBJ_IS_NEW_LINE(code[i]); ++i) {
         // Empty -- TODO allow empty semi-colon blocks
       }
     } break;
@@ -302,18 +263,18 @@ void parse_file(char *code, file_index_list *file_index)
       // Group
 
       // Ignore
-      for (; !OBJ_IS_NEW_LINE(code[i]); ++i) {
+      for (; !_WVF_OBJ_IS_NEW_LINE(code[i]); ++i) {
         // Empty -- TODO allow empty semi-colon blocks
       }
     } break;
     case 'f': {
       // Faces
-      if (!OBJ_IS_SPACE(code[i + 1])) {
+      if (!_WVF_OBJ_IS_SPACE(code[i + 1])) {
         MCerror(9286, "Format Error");
       }
 
       // f
-      cmds[cmd_index].type = OBJ_CMD_F;
+      cmds[cmd_index].type = _wvf_obj_cmd_F;
       cmds[cmd_index].begin = i;
 
       if (file_index->f_cmd_begin == UNASSIGNED) {
@@ -325,7 +286,7 @@ void parse_file(char *code, file_index_list *file_index)
 
       // Add to triangle count
       int num_fv = 0;
-      while (!OBJ_IS_NEW_LINE(code[i])) {
+      while (!_WVF_OBJ_IS_NEW_LINE(code[i])) {
         bool val = false;
         for (; isdigit(code[i]) || code[i] == '/'; ++i) {
           val = true;
@@ -334,7 +295,7 @@ void parse_file(char *code, file_index_list *file_index)
           ++num_fv;
         }
 
-        while (OBJ_IS_SPACE(code[i])) {
+        while (_WVF_OBJ_IS_SPACE(code[i])) {
           ++i;
         }
       }
@@ -345,7 +306,7 @@ void parse_file(char *code, file_index_list *file_index)
       // Smooth Shading
 
       // Ignore
-      for (; !OBJ_IS_NEW_LINE(code[i]); ++i) {
+      for (; !_WVF_OBJ_IS_NEW_LINE(code[i]); ++i) {
         // Empty -- TODO allow empty semi-colon blocks
       }
     } break;
@@ -354,7 +315,7 @@ void parse_file(char *code, file_index_list *file_index)
       case ' ':
       case '\t': {
         // v
-        cmds[cmd_index].type = OBJ_CMD_V;
+        cmds[cmd_index].type = _wvf_obj_cmd_V;
         cmds[cmd_index].begin = i;
 
         if (file_index->v_cmd_begin == UNASSIGNED) {
@@ -366,7 +327,7 @@ void parse_file(char *code, file_index_list *file_index)
       } break;
       case 't': {
         // vt
-        cmds[cmd_index].type = OBJ_CMD_VT;
+        cmds[cmd_index].type = _wvf_obj_cmd_VT;
         cmds[cmd_index].begin = i;
 
         if (file_index->vt_cmd_begin == UNASSIGNED) {
@@ -378,7 +339,7 @@ void parse_file(char *code, file_index_list *file_index)
       } break;
       case 'n': {
         // vn
-        cmds[cmd_index].type = OBJ_CMD_VN;
+        cmds[cmd_index].type = _wvf_obj_cmd_VN;
         cmds[cmd_index].begin = i;
 
         if (file_index->vn_cmd_begin == UNASSIGNED) {
@@ -392,7 +353,7 @@ void parse_file(char *code, file_index_list *file_index)
         MCerror(8246, "ObjLoader:NotSupported:v>'%c'", code[i + 1]);
       }
 
-      for (; !OBJ_IS_NEW_LINE(code[i]); ++i) {
+      for (; !_WVF_OBJ_IS_NEW_LINE(code[i]); ++i) {
         // Empty -- TODO allow empty semi-colon blocks
       }
     } break;
@@ -436,6 +397,7 @@ void parse_file(char *code, file_index_list *file_index)
  *  - s >= s_end.
  *  - parse failure.
  */
+// TODO -- move this to a util module
 int try_parse_double(const char *s, const char *s_end, double *result)
 {
   double mantissa = 0.0;
@@ -593,6 +555,7 @@ int until_space(const char *token)
   return (int)(p - token);
 }
 
+// TODO -- move this to a util module
 int parse_float(const char **token, float *result)
 {
   const char *end;
@@ -611,124 +574,220 @@ int parse_float(const char **token, float *result)
 
 /* http://stackoverflow.com/questions/5710091/how-does-atoi-function-in-c-work
  */
-int my_atoi(const char *c)
+// TODO -- move this to a util module
+int my_atoi(const char **c)
 {
   int value = 0;
   int sign = 1;
-  if (*c == '+' || *c == '-') {
-    if (*c == '-')
+  if (**c == '+' || **c == '-') {
+    if (**c == '-')
       sign = -1;
-    c++;
+    ++*c;
   }
-  while (((*c) >= '0') && ((*c) <= '9')) { /* isdigit(*c) */
+  while (((**c) >= '0') && ((**c) <= '9')) { /* isdigit(*c) */
     value *= 10;
-    value += (int)(*c - '0');
-    c++;
+    value += (int)(**c - '0');
+    ++*c;
   }
   return value * sign;
 }
 
 /* Parse raw triples: i, i/j/k, i//k, i/j */
-tinyobj_vertex_index_t parse_raw_triple(const char **token)
+_wvf_obj_vertex_index_list wvf_obj_parse_raw_triple(const char **token)
 {
-  tinyobj_vertex_index_t vi;
+  // Subtracting 1 for 0-base-indexing
+
+  _wvf_obj_vertex_index_list vi;
   /* 0x80000000 = -2147483648 = invalid */
   vi.v_idx = (int)(0x80000000);
   vi.vn_idx = (int)(0x80000000);
   vi.vt_idx = (int)(0x80000000);
 
-  vi.v_idx = my_atoi((*token));
-  while ((*token)[0] != '\0' && (*token)[0] != '/' && (*token)[0] != ' ' && (*token)[0] != '\t' &&
-         (*token)[0] != '\r') {
-    (*token)++;
-  }
+  vi.v_idx = my_atoi(token);
+  vi.v_idx -= 1;
+  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
   if ((*token)[0] != '/') {
     return vi;
   }
-  (*token)++;
+  // printf("tokenb:'%.16s'\n", *token);
+  ++(*token);
 
   /* i//k */
   if ((*token)[0] == '/') {
-    (*token)++;
-    vi.vn_idx = my_atoi((*token));
-    while ((*token)[0] != '\0' && (*token)[0] != '/' && (*token)[0] != ' ' && (*token)[0] != '\t' &&
-           (*token)[0] != '\r') {
-      (*token)++;
-    }
+    ++(*token);
+    vi.vn_idx = my_atoi(token);
+    vi.vn_idx -= 1;
+    _WVF_OBJ_CPTR_SKIP_SPACE(*token);
     return vi;
   }
 
   /* i/j/k or i/j */
-  vi.vt_idx = my_atoi((*token));
-  while ((*token)[0] != '\0' && (*token)[0] != '/' && (*token)[0] != ' ' && (*token)[0] != '\t' &&
-         (*token)[0] != '\r') {
-    (*token)++;
-  }
+  vi.vt_idx = my_atoi(token);
+  vi.vt_idx -= 1;
+  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
+  // printf("tokenc:'%.16s'\n", *token);
   if ((*token)[0] != '/') {
     return vi;
   }
 
   /* i/j/k */
-  (*token)++; /* skip '/' */
-  vi.vn_idx = my_atoi((*token));
-  while ((*token)[0] != '\0' && (*token)[0] != '/' && (*token)[0] != ' ' && (*token)[0] != '\t' &&
-         (*token)[0] != '\r') {
-    (*token)++;
-  }
+  ++(*token); /* skip '/' */
+  vi.vn_idx = my_atoi(token);
+  vi.vn_idx -= 1;
+  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
+  // printf("tokene:'%.16s'\n", *token);
   return vi;
 }
 
-void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
+void wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info *fli,
+                                       _wvf_obj_vertex_index_list *vertex_indices, float *vertex_data, int *vi,
+                                       unsigned int *index_data, int *ii)
 {
+  // Position
+  _wvf_obj_cmd cmd = fli->cmds[fli->v_cmd_begin + vertex_indices->v_idx];
+  // DEBUG
+  if (cmd.type != _wvf_obj_cmd_V) {
+    MCerror(9732, "TODO %i", cmd.type);
+  }
+  // DEBUG
+
+  char *vc = file_text + cmd.begin + 2;
+  parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+  parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+  parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  // _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+
+  // Texture
+  cmd = fli->cmds[fli->vt_cmd_begin + vertex_indices->vt_idx];
+  // DEBUG
+  if (cmd.type != _wvf_obj_cmd_VT) {
+    MCerror(9749, "TODO %i", cmd.type);
+  }
+  // DEBUG
+
+  vc = file_text + cmd.begin + 3;
+  parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+  parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  // _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+
+  // printf(" [%i]\n", *vi);
+
+  // printf("index_data[%u] = %u\n", *ii, *ii);
+  index_data[*ii] = *ii;
+  ++*ii;
+}
+
+void _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsigned int *vertex_count,
+                                   unsigned int **indices, unsigned int *index_count)
+{
+  // TODO -- one day, maybe use https://github.com/thisistherk/fast_obj/blob/master/fast_obj.h
   char *file_text;
   read_file_text(obj_path, &file_text);
 
-  file_index_list fli;
-  parse_file(file_text, &fli);
+  _wvf_obj_parsed_obj_info fli;
+  wvf_obj_parse_obj_info(file_text, &fli);
 
-  printf("triangle_count:%u %u %u\n", fli.triangle_count, fli.num_faces, fli.f_cmd_begin);
+  // printf("triangle_count:%u %u %u\n", fli.triangle_count, fli.num_faces, fli.f_cmd_begin);
 
   // TODO -- optimise
   // 3 vertices for each triangle
-  float *vertices = (float *)malloc(sizeof(float) * fli.triangle_count * 3 * (3 + 2)); // vert-tex
-  unsigned int *indices = (unsigned int *)malloc(sizeof(unsigned int) * fli.triangle_count * 3);
+  *vertex_count = fli.triangle_count * 3 * (3 + 2);
+  *vertices = (float *)malloc(sizeof(float) * *vertex_count); // vert-tex
+  *index_count = fli.triangle_count * 3;
+  *indices = (unsigned int *)malloc(sizeof(unsigned int) * *index_count);
+
+  // printf("allocated v:%i i:%i\n", *vertex_count, *index_count);
 
   int vi = 0, ii = 0;
   for (int f = 0; f < fli.num_faces; ++f) {
     int cmd_index = fli.f_cmd_begin + f;
 
-    obj_cmd cmd = fli.cmds[cmd_index];
-    if (cmd.type != OBJ_CMD_F) {
+    _wvf_obj_cmd cmd = fli.cmds[cmd_index];
+    // DEBUG
+    if (cmd.type != _wvf_obj_cmd_F) {
       MCerror(9416, "TODO %i", cmd.type);
     }
+    // DEBUG
 
     char *code = file_text + cmd.begin + 2;
 
     size_t k;
     size_t n = 0;
 
-    OBJ_CPTR_SKIP_SPACE(code);
-    tinyobj_vertex_index_t i0 = parse_raw_triple(&code);
-    OBJ_CPTR_SKIP_SPACE(code);
-    tinyobj_vertex_index_t i1;
-    tinyobj_vertex_index_t i2 = parse_raw_triple(&code);
-    OBJ_CPTR_SKIP_SPACE(code);
+    _WVF_OBJ_CPTR_SKIP_SPACE(code);
+    _wvf_obj_vertex_index_list i0 = wvf_obj_parse_raw_triple(&code);
+    _WVF_OBJ_CPTR_SKIP_SPACE(code);
+    _wvf_obj_vertex_index_list i1;
+    _wvf_obj_vertex_index_list i2 = wvf_obj_parse_raw_triple(&code);
 
     while (true) {
-      bool brk = !OBJ_IS_NEW_LINE(*code);
+      _WVF_OBJ_CPTR_SKIP_SPACE(code);
+      // printf("codea:'%.20s'\n", code);
+      bool brk = _WVF_OBJ_IS_NEW_LINE(*code);
       if (brk)
         break;
 
       i1 = i2;
-      i2 = parse_raw_triple(&code);
-      printf("%i %i\n", i2.v_idx, i2.vt_idx);
+      i2 = wvf_obj_parse_raw_triple(&code);
+      // printf("codeb:'%.20s'\n", code);
+
+      // printf("%i %i\n", i0.v_idx, i0.vt_idx);
+      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i0, *vertices, &vi, *indices, &ii);
+      // printf("%i %i\n", i1.v_idx, i1.vt_idx);
+      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i1, *vertices, &vi, *indices, &ii);
+      // printf("%i %i\n", i2.v_idx, i2.vt_idx);
+      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i2, *vertices, &vi, *indices, &ii);
     }
     // command->num_f = 3 * n;
     // command->num_f_num_verts = n;
   }
 
+  // printf("vi=%i ii=%i\n", vi, ii);
+
   // float *vertex_data = (float *)malloc(sizeof(float) * (cmds->f_count *));
   // unsigned int *index_data =
 
+  free(file_text);
   free(fli.cmds);
+}
+
+void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  // Load the obj data
+  float *vertices;
+  unsigned int *indices, vertex_count, index_count;
+  _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
+
+  // Construct the model and load its resources
+  *loaded_model = (mcr_model *)malloc(sizeof(mcr_model));
+
+  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+
+  resource_command *command;
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  command->type = RESOURCE_COMMAND_LOAD_MESH;
+  command->p_uid = &(*loaded_model)->vertex_buffer;
+  command->load_mesh.p_data = vertices;
+  command->load_mesh.data_count = vertex_count;
+  command->load_mesh.release_original_data_on_copy = false;
+
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
+  command->p_uid = &(*loaded_model)->index_buffer;
+  command->load_indices.p_data = indices;
+  command->load_indices.data_count = index_count;
+  command->load_indices.release_original_data_on_copy = false;
+
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 }

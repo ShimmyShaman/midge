@@ -67,6 +67,13 @@ typedef struct mcr_mesh {
   VkDescriptorBufferInfo buffer_info;
 } mcr_mesh;
 
+typedef struct mcr_index_buffer {
+  unsigned int resource_uid;
+  VkBuffer buf;
+  VkDeviceMemory mem;
+  VkDescriptorBufferInfo buffer_info;
+} mcr_index_buffer;
+
 typedef struct texture_image {
   unsigned int resource_uid;
   VkFormat format;
@@ -230,6 +237,10 @@ typedef struct vk_render_state {
     uint32_t count, alloc;
     mcr_mesh **items;
   } loaded_meshes;
+  struct {
+    uint32_t count, alloc;
+    mcr_index_buffer **items;
+  } loaded_index_buffers;
 } vk_render_state;
 
 extern "C" {

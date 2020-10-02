@@ -143,6 +143,7 @@ typedef enum resource_command_type {
   RESOURCE_COMMAND_CREATE_TEXTURE,
   RESOURCE_COMMAND_LOAD_FONT,
   RESOURCE_COMMAND_LOAD_MESH,
+  RESOURCE_COMMAND_LOAD_INDEX_BUFFER,
 } resource_command_type;
 
 typedef enum node_render_target {
@@ -213,7 +214,13 @@ typedef struct resource_command {
     struct {
       float *p_data;
       unsigned int data_count;
+      bool release_original_data_on_copy;
     } load_mesh;
+    struct {
+      unsigned int *p_data;
+      unsigned int data_count;
+      bool release_original_data_on_copy;
+    } load_indices;
   };
 } resource_command;
 

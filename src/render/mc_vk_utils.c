@@ -258,6 +258,11 @@ void mvk_destroy_resources(vk_render_state *p_vkrs)
     vkFreeMemory(p_vkrs->device, p_vkrs->loaded_meshes.items[i]->mem, NULL);
   }
   free(p_vkrs->loaded_meshes.items);
+  for (int i = 0; i < p_vkrs->loaded_index_buffers.count; ++i) {
+    vkDestroyBuffer(p_vkrs->device, p_vkrs->loaded_index_buffers.items[i]->buf, NULL);
+    vkFreeMemory(p_vkrs->device, p_vkrs->loaded_index_buffers.items[i]->mem, NULL);
+  }
+  free(p_vkrs->loaded_index_buffers.items);
 
   vkDestroyBuffer(p_vkrs->device, p_vkrs->shape_vertices.buf, NULL);
   vkFreeMemory(p_vkrs->device, p_vkrs->shape_vertices.mem, NULL);
@@ -717,7 +722,8 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   return res;
 }
 
-VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data_count, uint *resource_uid)
+VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
+                       bool release_original_data_on_copy, uint *resource_uid)
 {
   printf("mvk_load_mesh:%p (%u)\n", p_data, data_count);
 
@@ -782,6 +788,81 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data
 
   *resource_uid = mesh->resource_uid;
   printf("mesh resource %u loaded\n", *resource_uid);
+
+  if (release_original_data_on_copy) {
+    free(p_data);
+  }
+
+  return res;
+}
+
+VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
+                               bool release_original_data_on_copy, unsigned int *resource_uid)
+{
+  printf("mvk_load_index_buffer:%p (%u)\n", p_data, data_count);
+
+  VkResult res = VK_SUCCESS;
+
+  mcr_index_buffer *index_buffer = (mcr_index_buffer *)malloc(sizeof(mcr_index_buffer));
+  index_buffer->resource_uid = p_vkrs->resource_uid_counter++;
+
+  const int data_size_in_bytes = sizeof(float) * data_count;
+
+  // Buffer
+  VkBufferCreateInfo buf_info = {};
+  buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  buf_info.pNext = NULL;
+  buf_info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+  buf_info.size = data_size_in_bytes;
+  buf_info.queueFamilyIndexCount = 0;
+  buf_info.pQueueFamilyIndices = NULL;
+  buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  buf_info.flags = 0;
+  res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &index_buffer->buf);
+  VK_CHECK(res, "vkCreateBuffer");
+
+  // Memory
+  VkMemoryRequirements mem_reqs;
+  vkGetBufferMemoryRequirements(p_vkrs->device, index_buffer->buf, &mem_reqs);
+
+  VkMemoryAllocateInfo alloc_info = {};
+  alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  alloc_info.pNext = NULL;
+  alloc_info.memoryTypeIndex = 0;
+
+  alloc_info.allocationSize = mem_reqs.size;
+  bool pass = mvk_get_properties_memory_type_index(
+      p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      &alloc_info.memoryTypeIndex);
+  VK_ASSERT(pass, "No mappable, coherent memory");
+
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(index_buffer->mem));
+  VK_CHECK(res, "vkAllocateMemory");
+  index_buffer->buffer_info.range = mem_reqs.size;
+  index_buffer->buffer_info.offset = 0;
+
+  // Bind
+  uint8_t *p_mapped_mem;
+  res = vkMapMemory(p_vkrs->device, index_buffer->mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
+  VK_CHECK(res, "vkMapMemory");
+
+  memcpy(p_mapped_mem, p_data, data_size_in_bytes);
+
+  vkUnmapMemory(p_vkrs->device, index_buffer->mem);
+
+  res = vkBindBufferMemory(p_vkrs->device, index_buffer->buf, index_buffer->mem, 0);
+  VK_CHECK(res, "vkBindBufferMemory");
+
+  // Register the index_buffer
+  append_to_collection((void ***)&p_vkrs->loaded_index_buffers.items, &p_vkrs->loaded_index_buffers.alloc,
+                       &p_vkrs->loaded_index_buffers.count, index_buffer);
+
+  *resource_uid = index_buffer->resource_uid;
+  printf("index_buffer resource %u loaded\n", *resource_uid);
+
+  if (release_original_data_on_copy) {
+    free(p_data);
+  }
 
   return res;
 }

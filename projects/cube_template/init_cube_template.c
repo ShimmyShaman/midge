@@ -11,7 +11,6 @@ typedef struct cube_template_root_data {
 
   struct {
     mat4 world;
-    unsigned int cube_resource_uid;
     mcr_model *model;
   } cube;
 } cube_template_root_data;
@@ -77,8 +76,8 @@ void init_cube_template(mc_node *app_root)
   //   instantiate_all_definitions_from_file(global_data->global_node, str->text, NULL);
 
   //   module_node->
-mc_node *node;
-mca_init_mc_node(app_root, NODE_TYPE_ABSTRACT, &node);
+  mc_node *node;
+  mca_init_mc_node(app_root, NODE_TYPE_ABSTRACT, &node);
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
@@ -107,6 +106,10 @@ mca_init_mc_node(app_root, NODE_TYPE_ABSTRACT, &node);
   ct_data->render_target.height = node->layout->preferred_height;
   mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height, true,
                               &ct_data->render_target.resource_uid);
-  
+
+  printf("ct_data=%p\n", ct_data);
+  printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
+  printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
+
   mcr_load_wavefront_obj_model("res/cube/cube.obj", &ct_data->cube.model);
 }

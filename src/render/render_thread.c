@@ -32,8 +32,14 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
     } break;
     case RESOURCE_COMMAND_LOAD_MESH: {
       res = mvk_load_mesh(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
-                                 resource_cmd->p_uid);
+                          resource_cmd->load_mesh.release_original_data_on_copy, resource_cmd->p_uid);
       VK_CHECK(res, "mvk_load_mesh_buffer");
+
+    } break;
+    case RESOURCE_COMMAND_LOAD_INDEX_BUFFER: {
+      res = mvk_load_index_buffer(p_vkrs, resource_cmd->load_indices.p_data, resource_cmd->load_indices.data_count,
+                                  resource_cmd->load_indices.release_original_data_on_copy, resource_cmd->p_uid);
+      VK_CHECK(res, "mvk_load_index_buffer");
 
     } break;
 
@@ -1285,6 +1291,17 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   return VK_SUCCESS;
 }
 
+void _mrt_init_vk_render_state(vk_render_state *p_vkrs)
+{
+  // Set initial values
+  p_vkrs->presentation_updates = 0;
+  p_vkrs->resource_uid_counter = 300;
+  p_vkrs->window_width = APPLICATION_SET_WIDTH;
+  p_vkrs->window_height = APPLICATION_SET_HEIGHT;
+  p_vkrs->maximal_image_width = 2048;
+  p_vkrs->maximal_image_height = 2048;
+}
+
 void *midge_render_thread(void *vargp)
 {
   render_thread_info *render_thread = (render_thread_info *)vargp;
@@ -1299,12 +1316,7 @@ void *midge_render_thread(void *vargp)
   winfo.input_requests_exit = 0;
 
   vk_render_state vkrs = {};
-  vkrs.presentation_updates = 0;
-  vkrs.resource_uid_counter = 300;
-  vkrs.window_width = APPLICATION_SET_WIDTH;
-  vkrs.window_height = APPLICATION_SET_HEIGHT;
-  vkrs.maximal_image_width = 2048;
-  vkrs.maximal_image_height = 2048;
+  _mrt_init_vk_render_state(&vkrs);
   vkrs.xcb_winfo = &winfo;
 
   // vkrs.textures.allocated = 0;

@@ -637,9 +637,9 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   char *mc_transcription;
   transcribe_function_to_mc(func_info, ast, &mc_transcription);
 
-  if (!strcmp(func_info->name, "mcl_determine_cached_file_name")) {
+  if (!strcmp(func_info->name, "mcr_load_wavefront_obj_model")) {
     // print_syntax_node(ast, 0);
-    // printf("mc_transcription:\n%s||\n", mc_transcription);
+    printf("mc_transcription:\n%s||\n", mc_transcription);
   }
   // if (!strcmp(func_info->name, "mcs_parse_through_supernumerary_tokens")) {
   //   // print_syntax_node(ast, 0);
