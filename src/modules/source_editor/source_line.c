@@ -3,7 +3,7 @@
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
-void __mcm_determine_source_line_extents(mc_node *node, layout_extent_restraints restraints)
+void _mcm_determine_source_line_extents(mc_node *node, layout_extent_restraints restraints)
 {
   const float MAX_EXTENT_VALUE = 100000.f;
 
@@ -39,7 +39,7 @@ void __mcm_determine_source_line_extents(mc_node *node, layout_extent_restraints
   }
 }
 
-void __mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
+void _mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
 {
   mcm_source_line *source_line = (mcm_source_line *)node->data;
 
@@ -91,7 +91,7 @@ void __mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
   mca_set_node_requires_rerender(node);
 }
 
-void __mcm_render_source_line_headless(mc_node *node)
+void _mcm_render_source_line_headless(mc_node *node)
 {
   mcm_source_line *source_line = (mcm_source_line *)node->data;
 
@@ -101,7 +101,7 @@ void __mcm_render_source_line_headless(mc_node *node)
   image_render_details *rq;
   mcr_obtain_image_render_request(global_data->render_thread, &rq);
   rq->render_target = NODE_RENDER_TARGET_IMAGE;
-  rq->clear_color = COLOR_NEARLY_BLACK;
+  rq->clear_color =  COLOR_NEARLY_BLACK;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
   rq->image_width = source_line->render_target.width;   // TODO
@@ -113,23 +113,31 @@ void __mcm_render_source_line_headless(mc_node *node)
   render_color font_color = COLOR_GHOST_WHITE;
   render_color quad_color = COLOR_POWDER_BLUE;
 
+  // printf("rendering_text:%s\n", source_line->rtf->text);
   mcr_issue_render_command_text(rq, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
                                 source_line->rtf->text, source_line->font_resource_uid, font_color);
 
-  mcr_submit_image_render_request(global_data->render_thread, &rq);
+  // printf("rq->render_target:%i\n", rq->render_target);
+  mcr_submit_image_render_request(global_data->render_thread, rq);
 }
 
-void __mcm_render_source_line_present(image_render_details *image_render_queue, mc_node *node)
+void _mcm_render_source_line_present(image_render_details *image_render_queue, mc_node *node)
 {
   mcm_source_line *source_line = (mcm_source_line *)node->data;
 
   // Text
-  // printf("rendersource_line- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, source_line->rtf->text, source_line->font_resource_uid);
+  // render_color color = COLOR_PURPLE;
+  // mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
+  //                                       (unsigned int)node->layout->__bounds.y, source_line->render_target.width,
+  //                                       source_line->render_target.height, color);
+
+  printf("rendersource_line- {%u %u %u %u} %s %u\n", (unsigned int)node->layout->__bounds.x,
+         (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height,
+         source_line->rtf->text, source_line->font_resource_uid);
 
   mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                         (unsigned int)node->layout->__bounds.y, source_line->render_target.width,
-                                         source_line->render_target.height, source_line->render_target.resource_uid);
+                                         (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width,
+                                         (unsigned int)node->layout->__bounds.height, source_line->render_target.resource_uid);
 }
 
 void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
@@ -143,10 +151,10 @@ void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
-  node->layout->determine_layout_extents = (void *)&__mcm_determine_source_line_extents;
-  node->layout->update_layout = (void *)&__mcm_update_source_line_layout;
-  node->layout->render_headless = (void *)&__mcm_render_source_line_headless;
-  node->layout->render_present = (void *)&__mcm_render_source_line_present;
+  node->layout->determine_layout_extents = (void *)&_mcm_determine_source_line_extents;
+  node->layout->update_layout = (void *)&_mcm_update_source_line_layout;
+  node->layout->render_headless = (void *)&_mcm_render_source_line_headless;
+  node->layout->render_present = (void *)&_mcm_render_source_line_present;
 
   // Control
   mcm_source_line *source_line = (mcm_source_line *)malloc(sizeof(mcm_source_line));

@@ -22,13 +22,12 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
   ui_state->requires_update = true;
 
   // Resource loading
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
   // Font
-  mcr_obtain_font_resource(&global_data->render_thread->resource_queue, "res/font/DroidSansMono.ttf", 18.f,
+  printf ("setting default font...\n");
+  mcr_obtain_font_resource(global_data->render_thread->resource_queue, "res/font/DroidSansMono.ttf", 18.f,
                            &ui_state->default_font_resource);
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 
   // Set
   *p_ui_state = ui_state;

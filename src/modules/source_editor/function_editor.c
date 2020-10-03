@@ -250,10 +250,10 @@ void __mcm_render_function_editor_present(image_render_details *image_render_que
 {
   mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
 
-  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                        (unsigned int)node->layout->__bounds.y,
-                                        (unsigned int)node->layout->__bounds.width,
-                                        (unsigned int)node->layout->__bounds.height, function_editor->background_color);
+  // mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
+  //                                       (unsigned int)node->layout->__bounds.y,
+  //                                       (unsigned int)node->layout->__bounds.width,
+  //                                       (unsigned int)node->layout->__bounds.height, function_editor->background_color);
   //   printf("__mcm_render_function_editor_present %u %u %u %u\n", (unsigned int)node->layout->__bounds.x,
   //          (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width,
   //          (unsigned int)node->layout->__bounds.height);
@@ -288,9 +288,9 @@ void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *sour
 
   // layout->preferred_width = 980;
   layout->preferred_height = 720;
-  layout->padding.left = 400;
+  layout->padding.left = 20;
   layout->padding.top = 20;
-  layout->padding.right = 20;
+  layout->padding.right = 520;
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   function_editor->background_color = COLOR_NEARLY_BLACK;
@@ -393,7 +393,7 @@ int _mcm_set_definition_to_function_editor(mcm_function_editor *function_editor,
   }
   else {
 
-    printf("loaded %s(...)\n", function->name);
+    printf("function_editor: loaded %s(...)\n", function->name);
     // print_syntax_node(code_syntax, 0);
     // mc_pprintf(&function_editor->status_bar.message, "loaded %s(...)", function->name);
     // function_editor->status_bar.requires_render_update = true;

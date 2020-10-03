@@ -128,7 +128,7 @@ void mcr_load_texture_resource(const char *path, unsigned int *p_resource_uid)
   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_TEXTURE;
   command->p_uid = p_resource_uid;
-  command->load_texture.path = path;//strdup(path);
+  command->load_texture.path = path; // strdup(path);
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 }
@@ -137,7 +137,7 @@ void mcr_load_texture_resource(const char *path, unsigned int *p_resource_uid)
 void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                               unsigned int *p_resource_uid)
 {
-  // pthread_mutex_lock(&resource_queue->mutex);
+  pthread_mutex_lock(&resource_queue->mutex);
   // printf("mcr_obtain_font_resource-font_height:%f\n", font_height);
   resource_command *command;
   mcr_obtain_resource_command(resource_queue, &command);
@@ -146,7 +146,7 @@ void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_p
   command->font.height = font_height;
   command->font.path = font_path;
   // printf("hrc-resource_cmd->font.height:%f\n", command->font.height);
-  // pthread_mutex_unlock(&resource_queue->mutex);
+  pthread_mutex_unlock(&resource_queue->mutex);
 }
 
 void mcr_determine_text_display_dimensions(unsigned int font_resource, const char *text, float *text_width,

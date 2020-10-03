@@ -393,6 +393,33 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
   result->type_name = NULL;
 
   switch (expression->type) {
+  case MC_SYNTAX_CAST_EXPRESSION: {
+    // Make it the cast type
+    if (expression->cast_expression.type_identifier->type == MC_SYNTAX_FUNCTION_POINTER_DECLARATION) {
+      result->is_fptr = true;
+      result->is_array = false; // TODO -- rare corner case
+
+      copy_syntax_node_to_text(expression->cast_expression.type_identifier, &result->type_name);
+      if (expression->cast_expression.type_identifier->fptr_declaration.return_type_dereference) {
+        result->deref_count = expression->cast_expression.type_identifier->fptr_declaration.return_type_dereference
+                                  ->dereference_sequence.count;
+      }
+      else {
+        result->deref_count = 0;
+      }
+    }
+    else {
+      result->is_array = false; // TODO ...
+      result->is_fptr = false;
+      copy_syntax_node_to_text(expression->cast_expression.type_identifier, &result->type_name);
+      if (expression->cast_expression.type_dereference) {
+        result->deref_count = expression->cast_expression.type_dereference->dereference_sequence.count;
+      }
+      else {
+        result->deref_count = 0;
+      }
+    }
+  } break;
   case MC_SYNTAX_OPERATIONAL_EXPRESSION: {
     // Determine the type of the left-hand-side
     determine_type_of_expression(ts, expression->operational_expression.left, result);

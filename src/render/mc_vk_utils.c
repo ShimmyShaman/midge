@@ -734,9 +734,6 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   }
 
   printf("generated font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height, *resource_uid);
-  // global_root_data *global_data;
-  // obtain_midge_global_root(&global_data);
-  // printf("generated font texture> resource_uid:%u\n", global_data->ui_state->default_font_resource);
 
   return res;
 }

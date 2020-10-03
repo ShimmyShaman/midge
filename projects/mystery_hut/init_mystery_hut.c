@@ -1,5 +1,6 @@
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
+#include "modules/source_editor/source_editor.h"
 #include "render/render_common.h"
 
 typedef struct mystery_hut {
@@ -73,6 +74,26 @@ void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_no
   // mca_set_node_requires_rerender(node);
 }
 
+void myh_init(mc_node *module_node)
+{
+  // cube_template
+  mystery_hut *ct_data = (mystery_hut *)malloc(sizeof(mystery_hut));
+  module_node->data = ct_data;
+  ct_data->node = module_node;
+
+  ct_data->render_target.resource_uid = 0;
+  ct_data->render_target.width = module_node->layout->preferred_width;
+  ct_data->render_target.height = module_node->layout->preferred_height;
+  mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height, true,
+                              &ct_data->render_target.resource_uid);
+
+  // printf("ct_data=%p\n", ct_data);
+  // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
+  // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
+
+  mcr_load_wavefront_obj_model("res/cube/cube.obj", &ct_data->cube.model);
+}
+
 void init_mystery_hut(mc_node *app_root)
 {
   //   printf("instantiate file:'%s'\n", str->text);
@@ -99,25 +120,13 @@ void init_mystery_hut(mc_node *app_root)
 
   mca_set_node_requires_layout_update(node);
 
-  // cube_template
-  mystery_hut *ct_data = (mystery_hut *)malloc(sizeof(mystery_hut));
-  node->data = ct_data;
-  ct_data->node = node;
-
-  ct_data->render_target.resource_uid = 0;
-  ct_data->render_target.width = node->layout->preferred_width;
-  ct_data->render_target.height = node->layout->preferred_height;
-  mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height, true,
-                              &ct_data->render_target.resource_uid);
-
-  // printf("ct_data=%p\n", ct_data);
-  // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
-  // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
-
-  mcr_load_wavefront_obj_model("res/cube/cube.obj", &ct_data->cube.model);
+  myh_init(node);
 }
 
-void set_mystery_hut_project_state(mc_node *app_root) { 
-  
-  
- }
+void set_mystery_hut_project_state(mc_node *app_root)
+{
+  function_info *func_info;
+  find_function_info("myh_init", &func_info);
+
+  mca_activate_source_editor_for_definition(func_info->source);
+}

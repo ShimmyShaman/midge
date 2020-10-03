@@ -366,9 +366,9 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(image_render->image_height) +
                             1.0f * (float)cmd->textured_rect_info.height / (float)(image_render->image_height);
 
-  // printf("x:%u y:%u tri.width:%u tri.height:%u seq.width:%u seq.height:%u\n", cmd->x, cmd->y,
-  //        cmd->textured_rect_info.width, cmd->textured_rect_info.height, image_render->image_width,
-  //        image_render->image_height);
+  printf("x:%u y:%u tri.width:%u tri.height:%u seq.width:%u seq.height:%u\n", cmd->x, cmd->y,
+         cmd->textured_rect_info.width, cmd->textured_rect_info.height, image_render->image_width,
+         image_render->image_height);
 
   // Setup viewport and clip
   set_viewport_cmd(command_buffer, 0.f, 0.f, (float)image_render->image_width, (float)image_render->image_height);
@@ -486,7 +486,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   float align_x = cmd->x;
   float align_y = cmd->y;
 
-  // printf("mrt-1\n");
+  // printf("mrt-1 %s\n", cmd->print_text.text);
   int text_length = strlen(cmd->print_text.text);
   for (int c = 0; c < text_length; ++c) {
 
@@ -1160,6 +1160,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       vkDestroyFence(p_vkrs->device, drawFence, NULL);
     } break;
     default:
+    printf("WAS:%i\n", image_render->render_target);
       return VK_ERROR_UNKNOWN;
     }
   }

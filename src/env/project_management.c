@@ -86,7 +86,7 @@
 //   // Resources
 //   pthread_mutex_lock(&global_data->render_thread->resource_queue.mutex);
 
-//   mcr_create_texture_resource(&global_data->render_thread->resource_queue, (unsigned int)project->screen.width,
+//   mcr_create_texture_resource(global_data->render_thread->resource_queue, (unsigned int)project->screen.width,
 //                               (unsigned int)project->screen.height, true, &project->present_image_resource_uid);
 
 //   pthread_mutex_unlock(&global_data->render_thread->resource_queue.mutex);
