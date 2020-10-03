@@ -15,7 +15,7 @@ typedef struct cube_template_root_data {
   } cube;
 } cube_template_root_data;
 
-void __cbt_render_td_ct_data_headless(mc_node *node)
+void _cbt_render_td_ct_data_headless(mc_node *node)
 {
   cube_template_root_data *td_ct_data = (cube_template_root_data *)node->data;
 
@@ -61,7 +61,7 @@ void __cbt_render_td_ct_data_headless(mc_node *node)
   mcr_submit_image_render_request(global_data->render_thread, irq);
 }
 
-void __cbt_render_td_ct_data_present(image_render_details *image_render_queue, mc_node *node)
+void _cbt_render_td_ct_data_present(image_render_details *image_render_queue, mc_node *node)
 {
   cube_template_root_data *td_ct_data = (cube_template_root_data *)node->data;
 
@@ -93,8 +93,8 @@ void init_cube_template(mc_node *app_root)
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
-  node->layout->render_headless = (void *)&__cbt_render_td_ct_data_headless;
-  node->layout->render_present = (void *)&__cbt_render_td_ct_data_present;
+  node->layout->render_headless = (void *)&_cbt_render_td_ct_data_headless;
+  node->layout->render_present = (void *)&_cbt_render_td_ct_data_present;
 
   mca_set_node_requires_layout_update(node);
 

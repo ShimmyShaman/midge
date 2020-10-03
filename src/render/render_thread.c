@@ -33,9 +33,9 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
     } break;
     case RESOURCE_COMMAND_LOAD_MESH: {
-      res = mvk_load_mesh(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
+      res = mvk_load_vertex_data(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
                           resource_cmd->load_mesh.release_original_data_on_copy, resource_cmd->p_uid);
-      VK_CHECK(res, "mvk_load_mesh_buffer");
+      VK_CHECK(res, "mvk_load_vertex_data_buffer");
 
     } break;
     case RESOURCE_COMMAND_LOAD_INDEX_BUFFER: {

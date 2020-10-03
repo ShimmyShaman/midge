@@ -18,7 +18,7 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
 VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height,
                                         bool use_as_render_target, uint *resource_uid);
 VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, float font_height, uint *resource_uid);
-VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *vertices, unsigned int vertex_count, bool release_original_data_on_copy,
+VkResult mvk_load_vertex_data(vk_render_state *p_vkrs, float *vertices, unsigned int vertex_count, bool release_original_data_on_copy,
                        uint *resource_uid);
 VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
                                bool release_original_data_on_copy, unsigned int *resource_uid);

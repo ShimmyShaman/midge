@@ -497,6 +497,7 @@ int update_or_register_struct_info_from_syntax(mc_node *owner, mc_syntax_node *s
 
     if (structure_info->is_defined) {
       // Free the field summaries
+      printf("releasing '%s'\n", structure_info->name);
       release_field_info_list(structure_info->fields);
     }
   }

@@ -741,10 +741,10 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   return res;
 }
 
-VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
+VkResult mvk_load_vertex_data(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
                        bool release_original_data_on_copy, uint *resource_uid)
 {
-  printf("mvk_load_mesh:%p (%u)\n", p_data, data_count);
+  // printf("mvk_load_vertex_data:%p (%u)\n", p_data, data_count);
 
   VkResult res = VK_SUCCESS;
 
@@ -806,7 +806,7 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data
                        &p_vkrs->loaded_vertex_data.count, mesh);
 
   *resource_uid = mesh->resource_uid;
-  printf("mesh resource %u loaded\n", *resource_uid);
+  printf("vertex_data resource %u loaded\n", *resource_uid);
 
   if (release_original_data_on_copy) {
     free(p_data);
@@ -818,7 +818,7 @@ VkResult mvk_load_mesh(vk_render_state *p_vkrs, float *p_data, unsigned int data
 VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, unsigned int data_count,
                                bool release_original_data_on_copy, unsigned int *resource_uid)
 {
-  printf("mvk_load_index_buffer:%p (%u)\n", p_data, data_count);
+  // printf("mvk_load_index_buffer:%p (%u)\n", p_data, data_count);
 
   VkResult res = VK_SUCCESS;
 
@@ -878,7 +878,7 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, un
                        &p_vkrs->loaded_index_data.count, index_buffer);
 
   *resource_uid = index_buffer->resource_uid;
-  printf("index_buffer resource %u loaded\n", *resource_uid);
+  printf("index_data resource %u loaded\n", *resource_uid);
 
   if (release_original_data_on_copy) {
     free(p_data);
