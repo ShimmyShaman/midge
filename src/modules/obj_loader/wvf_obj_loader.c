@@ -671,10 +671,17 @@ void wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info
   // DEBUG
 
   vc = file_text + cmd.begin + 3;
-  parse_float(&vc, &vertex_data[(*vi)++]);
+
+  // "Flip" texture coords to accommodate vulkans right-hand-coordinate usage & objs left-hand-coordinate output
+  float vt;
+  parse_float(&vc, &vt);
+  vertex_data[(*vi)++] = 1.f - vt;
+  // parse_float(&vc, &vertex_data[(*vi)++]);
   // printf(" %.3f", vertex_data[(*vi) - 1]);
   _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-  parse_float(&vc, &vertex_data[(*vi)++]);
+  parse_float(&vc, &vt);
+  vertex_data[(*vi)++] = 1.f - vt;
+  // parse_float(&vc, &vertex_data[(*vi)++]);
   // printf(" %.3f", vertex_data[(*vi) - 1]);
   // _WVF_OBJ_CPTR_SKIP_SPACE(vc);
 

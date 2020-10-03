@@ -69,7 +69,7 @@ void __cbt_render_td_ct_data_present(image_render_details *image_render_queue, m
                                          (unsigned int)node->layout->__bounds.y, td_ct_data->render_target.width,
                                          td_ct_data->render_target.height, td_ct_data->render_target.resource_uid);
 
-  mca_set_node_requires_rerender(node);
+  // mca_set_node_requires_rerender(node);
 }
 
 void init_cube_template(mc_node *app_root)

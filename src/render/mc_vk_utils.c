@@ -523,6 +523,28 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   res = vkCreateImageView(p_vkrs->device, &viewInfo, NULL, &image_sampler->view);
   VK_CHECK(res, "vkCreateImageView");
 
+  if (use_as_render_target) {
+
+    // Create
+    VkImageView attachments[2] = {image_sampler->view, p_vkrs->depth_buffer.view};
+
+    VkFramebufferCreateInfo framebuffer_create_info = {};
+    framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebuffer_create_info.pNext = NULL;
+    framebuffer_create_info.renderPass = p_vkrs->offscreen_render_pass;
+    framebuffer_create_info.attachmentCount = 2;
+    framebuffer_create_info.pAttachments = attachments;
+    framebuffer_create_info.width = texWidth;
+    framebuffer_create_info.height = texHeight;
+    framebuffer_create_info.layers = 1;
+
+    res = vkCreateFramebuffer(p_vkrs->device, &framebuffer_create_info, NULL, &image_sampler->framebuffer);
+    VK_CHECK(res, "vkCreateFramebuffer");
+  }
+  else {
+    image_sampler->framebuffer = NULL;
+  }
+
   // Sampler
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -541,9 +563,6 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
 
   res = vkCreateSampler(p_vkrs->device, &samplerInfo, NULL, &image_sampler->sampler);
   VK_CHECK(res, "vkCreateSampler");
-
-  // TODO ??
-  image_sampler->framebuffer = NULL;
 
   *out_image = image_sampler;
 

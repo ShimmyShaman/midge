@@ -155,6 +155,7 @@ typedef struct vk_render_state {
     VkImage image;
     VkDeviceMemory memory;
     VkImageView view;
+    VkFormat format;
   } depth_buffer;
 
   // HEADLESS IMAGE

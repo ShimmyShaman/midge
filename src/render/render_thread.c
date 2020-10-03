@@ -1076,19 +1076,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       mrt_obtain_texture_with_resource_uid(p_vkrs, image_render->data.target_image.image_uid, &target_image);
 
       if (!target_image->framebuffer) {
-        // Create?
-        VkFramebufferCreateInfo framebuffer_create_info = {};
-        framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebuffer_create_info.pNext = NULL;
-        framebuffer_create_info.renderPass = p_vkrs->offscreen_render_pass;
-        framebuffer_create_info.attachmentCount = 1;
-        framebuffer_create_info.pAttachments = &target_image->view;
-        framebuffer_create_info.width = target_image->width;
-        framebuffer_create_info.height = target_image->height;
-        framebuffer_create_info.layers = 1;
-
-        res = vkCreateFramebuffer(p_vkrs->device, &framebuffer_create_info, NULL, &target_image->framebuffer);
-        VK_CHECK(res, "vkCreateFramebuffer");
+        MCerror(1079, "target %u not specified as render target", target_image->resource_uid);
       }
 
       // TODO -- free only used descriptor sets in favor of safe vulkan multi-threading?
@@ -1107,11 +1095,13 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       beginInfo.pInheritanceInfo = NULL;                             // Optional
       vkBeginCommandBuffer(p_vkrs->headless.command_buffer, &beginInfo);
 
-      VkClearValue clear_values[1];
+      VkClearValue clear_values[2];
       clear_values[0].color.float32[0] = image_render->clear_color.r;
       clear_values[0].color.float32[1] = image_render->clear_color.g;
       clear_values[0].color.float32[2] = image_render->clear_color.b;
       clear_values[0].color.float32[3] = image_render->clear_color.a;
+      clear_values[1].depthStencil.depth = 1.0f;
+      clear_values[1].depthStencil.stencil = 0;
 
       VkRenderPassBeginInfo rp_begin;
       rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1122,7 +1112,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       rp_begin.renderArea.offset.y = 0;
       rp_begin.renderArea.extent.width = target_image->width;
       rp_begin.renderArea.extent.height = target_image->height;
-      rp_begin.clearValueCount = 1;
+      rp_begin.clearValueCount = 2;
       rp_begin.pClearValues = clear_values;
 
       vkCmdBeginRenderPass(p_vkrs->headless.command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
