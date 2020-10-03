@@ -182,28 +182,27 @@ void mcc_handle_xcb_input()
           continue;
         }
 
-        if ((input_state->ctrl_function & BUTTON_STATE_DOWN)&&
-            xcb_input->detail.keyboard.key == KEY_CODE_L) {
-              mca_set_all_nodes_require_layout_update();
+        if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && xcb_input->detail.keyboard.key == KEY_CODE_L) {
+          mca_set_all_nodes_require_layout_update();
           continue;
         }
 
-        if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
-            xcb_input->detail.keyboard.key == KEY_CODE_N) {
+        // if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
+        //     xcb_input->detail.keyboard.key == KEY_CODE_N) {
 
-          // Lets only have one project at a time for the time being -- TODO
-          bool visual_app_exists = false;
-          for (int a = 0; a < global_data->global_node->children->count; ++a) {
-            if (global_data->global_node->children->items[a]->type == NODE_TYPE_VISUAL_PROJECT) {
-              visual_app_exists = true;
-              break;
-            }
-          }
+        //   // Lets only have one project at a time for the time being -- TODO
+        //   bool visual_app_exists = false;
+        //   for (int a = 0; a < global_data->global_node->children->count; ++a) {
+        //     if (global_data->global_node->children->items[a]->type == NODE_TYPE_VISUAL_PROJECT) {
+        //       visual_app_exists = true;
+        //       break;
+        //     }
+        //   }
 
-          if (!visual_app_exists)
-            mca_create_new_visual_project("PushTheButton");
-          continue;
-        }
+        //   if (!visual_app_exists)
+        //     mcc_create_new_visual_project("PushTheButton");
+        //   continue;
+        // }
 
         // Global Node Hierarchy for (int i = 0; !input_event->handled && i < global_data->global_node->children.count;
         //                            ++i)

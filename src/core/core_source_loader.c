@@ -1364,6 +1364,7 @@ int _mcl_load_app_mc_source()
       "src/render/mc_vulkan.c",
       "src/render/mc_vk_utils.c",
       "src/render/render_thread.c",
+      "src/core/app_modules.c",
       "src/core/midge_app.c",
 
       // And everything here before -------------------------------------------------------------

@@ -122,80 +122,10 @@ extern "C" {
 void mcc_initialize_input_state();
 void mcc_update_xcb_input();
 void mui_initialize_core_ui_components();
-void mui_render_element_headless(mc_node *element_node);
-void mui_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
-
-// Modules
-// void init_modus_operandi_curator();
-}
-
-void _mca_load_module(char *base_path, char *module_name)
-{
-  global_root_data *global_data;
-  obtain_midge_global_root(&global_data);
-
-  char buf[512];
-  sprintf(buf, "%s/%s/init_%s.c", base_path, module_name, module_name);
-
-  instantiate_all_definitions_from_file(global_data->global_node, buf, NULL);
-
-  // Initialize the module
-  int mc_res;
-  sprintf(buf,
-          "{\n"
-          "  void *mc_vargs[1];\n"
-          "  mc_vargs[0] = (void *)%p;\n"
-          "  (*(int *)%p) = init_%s(1, mc_vargs);\n"
-          "}\n",
-          &global_data->global_node, &mc_res, module_name);
-  clint->process(buf);
-  if (mc_res) {
-    MCerror(8974, "--init_%s() |line~ :??? ERR:%i\n", module_name, mc_res);
-  }
-}
-
-void mca_load_modules()
-{
-  // Get all directories in folder
-  // TODO
-  const char *module_directories[] = {
-    "source_editor",
-      "obj_loader",
-      NULL,
-  };
-
-  for (int d = 0; module_directories[d]; ++d) {
-    _mca_load_module("src/modules", module_directories[d]);
-  }
-}
-
-void mca_load_open_projects()
-{
-  char *open_list_text;
-  read_file_text("projects/open_project_list", &open_list_text);
-
-  printf("open_list_text:'%s'\n", open_list_text);
-
-  char buf[256];
-  c_str *str;
-  init_c_str(&str);
-
-  int i = 0, s = 0;
-  bool eof = false;
-  while (!eof) {
-    for (; open_list_text[i] != '|'; ++i)
-      if (open_list_text[i] == '\0') {
-        eof = true;
-        break;
-      }
-
-    if (i > s) {
-      strncpy(buf, open_list_text + s, i - s);
-      buf[i - s] = '\0';
-
-      _mca_load_module("projects", buf);
-    }
-  }
+// void mui_render_element_headless(mc_node *element_node);
+// void mui_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
+void mca_load_modules();
+void mca_load_open_projects();
 }
 
 void initialize_midge_components()
