@@ -97,7 +97,7 @@ int mcr_obtain_resource_command(resource_queue *queue, resource_command **p_comm
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
-void mcr_create_texture_resource(unsigned int width, unsigned int height, bool use_as_render_target,
+void mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
                                  unsigned int *p_resource_uid)
 {
   global_root_data *global_data;
@@ -111,7 +111,7 @@ void mcr_create_texture_resource(unsigned int width, unsigned int height, bool u
   command->p_uid = p_resource_uid;
   command->create_texture.width = width;
   command->create_texture.height = height;
-  command->create_texture.use_as_render_target = use_as_render_target;
+  command->create_texture.image_usage = image_usage;
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 }

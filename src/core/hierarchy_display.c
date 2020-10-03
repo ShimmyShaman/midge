@@ -305,7 +305,7 @@ void build_core_display()
   obtain_resource_command(command_hub->renderer.resource_queue, &command);
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_uid = &core_objects_display->data.visual.image_resource_uid;
-  command->create_texture.use_as_render_target = true;
+  command->create_texture.image_usage = MVK_IMAGE_USAGE_RENDER_TARGET_2D;
   command->create_texture.width = core_objects_display->data.visual.bounds.width;
   command->create_texture.height = core_objects_display->data.visual.bounds.height;
 

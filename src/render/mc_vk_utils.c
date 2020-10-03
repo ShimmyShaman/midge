@@ -403,14 +403,16 @@ VkResult mvk_copyBufferToImage(vk_render_state *p_vkrs, VkBuffer buffer, VkImage
 }
 
 VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const int texHeight, const int texChannels,
-                                bool use_as_render_target, const unsigned char *const pixels, texture_image **out_image)
+                                mvk_image_sampler_usage image_usage, const unsigned char *const pixels,
+                                texture_image **out_image)
 {
   VkResult res;
 
   texture_image *image_sampler = (texture_image *)malloc(sizeof(texture_image));
-  image_sampler->resource_uid = p_vkrs->resource_uid_counter++;
   VK_ASSERT(image_sampler, "malloc error 5407");
 
+  image_sampler->resource_uid = p_vkrs->resource_uid_counter++;
+  image_sampler->sampler_usage = image_usage;
   image_sampler->width = texWidth;
   image_sampler->height = texHeight;
   image_sampler->size = texWidth * texHeight * 4; // TODO
@@ -452,15 +454,24 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   vkUnmapMemory(p_vkrs->device, stagingBufferMemory);
 
   // Create Image
-  VkImageUsageFlags image_usage;
-  if (use_as_render_target) {
-    image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    image_sampler->format = p_vkrs->format;
-  }
-  else {
-    image_usage = 0;
+  VkImageUsageFlags vk_image_usage_flags;
+  switch (image_usage) {
+  case MVK_IMAGE_USAGE_READ_ONLY: {
+    vk_image_usage_flags = 0;
     image_sampler->format = VK_IMAGE_FORMAT;
+  } break;
+  case MVK_IMAGE_USAGE_RENDER_TARGET_2D:
+  case MVK_IMAGE_USAGE_RENDER_TARGET_3D: {
+    vk_image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_sampler->format = p_vkrs->format;
+    vk_image_usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_sampler->format = p_vkrs->format;
+  } break;
+  default:
+    MCerror(536, "Unsupported image usage:%i", image_usage);
   }
+
+  // Image
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -472,7 +483,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   imageInfo.format = image_sampler->format;
   imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | image_usage;
+  imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | vk_image_usage_flags;
   imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.flags = 0; // Optional
@@ -480,6 +491,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   res = vkCreateImage(p_vkrs->device, &imageInfo, NULL, &image_sampler->image);
   VK_CHECK(res, "vkCreateImage");
 
+  // Memory
   vkGetImageMemoryRequirements(p_vkrs->device, image_sampler->image, &memRequirements);
 
   allocInfo = {};
@@ -523,15 +535,39 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   res = vkCreateImageView(p_vkrs->device, &viewInfo, NULL, &image_sampler->view);
   VK_CHECK(res, "vkCreateImageView");
 
-  if (use_as_render_target) {
+  switch (image_usage) {
+  case MVK_IMAGE_USAGE_READ_ONLY: {
+    // printf("MVK_IMAGE_USAGE_READ_ONLY\n");
+    image_sampler->framebuffer = NULL;
+  } break;
+  case MVK_IMAGE_USAGE_RENDER_TARGET_2D: {
+    // printf("MVK_IMAGE_USAGE_RENDER_TARGET_2D\n");
+    // Create Framebuffer
+    VkImageView attachments[1] = {image_sampler->view};
 
-    // Create
+    VkFramebufferCreateInfo framebuffer_create_info = {};
+    framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebuffer_create_info.pNext = NULL;
+    framebuffer_create_info.renderPass = p_vkrs->offscreen_render_pass_2d;
+    framebuffer_create_info.attachmentCount = 1;
+    framebuffer_create_info.pAttachments = attachments;
+    framebuffer_create_info.width = texWidth;
+    framebuffer_create_info.height = texHeight;
+    framebuffer_create_info.layers = 1;
+
+    res = vkCreateFramebuffer(p_vkrs->device, &framebuffer_create_info, NULL, &image_sampler->framebuffer);
+    VK_CHECK(res, "vkCreateFramebuffer");
+
+  } break;
+  case MVK_IMAGE_USAGE_RENDER_TARGET_3D: {
+    // printf("MVK_IMAGE_USAGE_RENDER_TARGET_3D\n");
+    // Create Framebuffer
     VkImageView attachments[2] = {image_sampler->view, p_vkrs->depth_buffer.view};
 
     VkFramebufferCreateInfo framebuffer_create_info = {};
     framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebuffer_create_info.pNext = NULL;
-    framebuffer_create_info.renderPass = p_vkrs->offscreen_render_pass;
+    framebuffer_create_info.renderPass = p_vkrs->offscreen_render_pass_3d;
     framebuffer_create_info.attachmentCount = 2;
     framebuffer_create_info.pAttachments = attachments;
     framebuffer_create_info.width = texWidth;
@@ -540,9 +576,9 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
 
     res = vkCreateFramebuffer(p_vkrs->device, &framebuffer_create_info, NULL, &image_sampler->framebuffer);
     VK_CHECK(res, "vkCreateFramebuffer");
-  }
-  else {
-    image_sampler->framebuffer = NULL;
+  } break;
+  default:
+    MCerror(536, "Unsupported image usage:%i", image_usage);
   }
 
   // Sampler
@@ -582,7 +618,7 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
   }
 
   texture_image *texture;
-  res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &texture);
+  res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, MVK_IMAGE_USAGE_READ_ONLY, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
   *resource_uid = texture->resource_uid;
@@ -596,7 +632,7 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
 }
 
 VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height,
-                                        bool use_as_render_target, uint *resource_uid)
+                                        mvk_image_sampler_usage image_usage, uint *resource_uid)
 {
   VkResult res;
 
@@ -612,7 +648,7 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
   }
 
   texture_image *texture;
-  res = mvk_load_image_sampler(p_vkrs, width, height, texChannels, use_as_render_target, pixels, &texture);
+  res = mvk_load_image_sampler(p_vkrs, width, height, texChannels, image_usage, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
   *resource_uid = texture->resource_uid;
@@ -688,7 +724,7 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   }
 
   texture_image *texture;
-  res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, false, pixels, &texture);
+  res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, MVK_IMAGE_USAGE_READ_ONLY, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
   *resource_uid = texture->resource_uid;
@@ -739,7 +775,7 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
 }
 
 VkResult mvk_load_vertex_data(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
-                       bool release_original_data_on_copy, uint *resource_uid)
+                              bool release_original_data_on_copy, uint *resource_uid)
 {
   // printf("mvk_load_vertex_data:%p (%u)\n", p_data, data_count);
 

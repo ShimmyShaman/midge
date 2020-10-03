@@ -5,6 +5,7 @@
 
 #include "platform/mc_xcb.h"
 #include <vulkan/vulkan_core.h>
+#include "render/render_common.h"
 
 #define MAX_DESCRIPTOR_SETS 4096
 #define VK_IMAGE_FORMAT VK_FORMAT_R8G8B8A8_SRGB;
@@ -77,6 +78,7 @@ typedef struct mrt_index_data {
 
 typedef struct texture_image {
   unsigned int resource_uid;
+  mvk_image_sampler_usage sampler_usage;
   VkFormat format;
   uint32_t width, height;
   VkDeviceSize size;
@@ -200,7 +202,7 @@ typedef struct vk_render_state {
     queued_copy_info *queued_copies;
   } render_data_buffer;
 
-  VkRenderPass present_render_pass, offscreen_render_pass;
+  VkRenderPass present_render_pass, offscreen_render_pass_2d, offscreen_render_pass_3d;
 
   render_program tint_prog, texture_prog, font_prog, mesh_prog;
   VkPipelineCache pipelineCache;

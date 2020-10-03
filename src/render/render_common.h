@@ -152,6 +152,13 @@ typedef enum node_render_target {
   NODE_RENDER_TARGET_IMAGE,
 } node_render_target;
 
+typedef enum mvk_image_sampler_usage {
+  MVK_IMAGE_USAGE_NULL = 0,
+  MVK_IMAGE_USAGE_READ_ONLY,
+  MVK_IMAGE_USAGE_RENDER_TARGET_2D,
+  MVK_IMAGE_USAGE_RENDER_TARGET_3D,
+} mvk_image_sampler_usage;
+
 typedef struct element_render_command {
   element_render_command_type type;
   unsigned int x, y;
@@ -207,7 +214,7 @@ typedef struct resource_command {
     } load_texture;
     struct {
       unsigned int width, height;
-      bool use_as_render_target;
+      mvk_image_sampler_usage image_usage;
     } create_texture;
     struct {
       const char *path;
@@ -267,7 +274,7 @@ int mcr_obtain_element_render_command(image_render_details *image_queue, element
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
 
 void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
-                                 bool use_as_render_target, unsigned int *resource_uid);
+                                 mvk_image_sampler_usage image_usage, unsigned int *resource_uid);
 void mcr_load_texture_resource(const char *path, unsigned int *p_resource_uid);
 void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                               unsigned int *p_resource_uid);

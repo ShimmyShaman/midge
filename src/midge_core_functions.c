@@ -170,46 +170,6 @@ int declare_function_pointer_v1(int argc, void **argv)
   return 0;
 }
 
-int force_render_update(int argc, void **argv)
-{
-  /*mcfuncreplace*/
-  mc_command_hub_v1 *command_hub; // TODO -- replace command_hub instances in code and bring over
-                                  // find_struct_info/find_function_info and do the same there.
-                                  /*mcfuncreplace*/
-
-  // Obtain the resource command queue
-  pthread_mutex_lock(&command_hub->renderer.resource_queue->mutex);
-
-  // TODO -- REFACTOR
-  resource_command *command;
-  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  command->type = RESOURCE_COMMAND_LOAD_TEXTURE;
-  command->p_uid = &command_hub->ui_elements[0].resource_uid;
-  command->load_texture.path = "res/texture.jpg";
-
-  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-  command->p_uid = &command_hub->ui_elements[1].resource_uid;
-  command->create_texture.width = 512;
-  command->create_texture.height = 128;
-  command->create_texture.use_as_render_target = true;
-
-  MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
-  command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &command_hub->ui_elements[2].resource_uid;
-  command->font.path = "res/font/LiberationMono-Regular.ttf";
-  command->font.height = 24.0f;
-
-  pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
-
-  // Wait for resources to load before proceeding
-  while (command_hub->renderer.resource_queue->count) {
-    usleep(100);
-  }
-
-  return 0;
-}
-
 /* Conforms the given type_identity to a mc_type_identity if it is available. Searches first the given func_info,
  * failing that then searches the current nodespace. else just returns the given type
  * @nodespace : *(node **) Return Value.

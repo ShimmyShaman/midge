@@ -250,10 +250,10 @@ void __mcm_render_function_editor_present(image_render_details *image_render_que
 {
   mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
 
-  // mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-  //                                       (unsigned int)node->layout->__bounds.y,
-  //                                       (unsigned int)node->layout->__bounds.width,
-  //                                       (unsigned int)node->layout->__bounds.height, function_editor->background_color);
+  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
+                                        (unsigned int)node->layout->__bounds.y,
+                                        (unsigned int)node->layout->__bounds.width,
+                                        (unsigned int)node->layout->__bounds.height, function_editor->background_color);
   //   printf("__mcm_render_function_editor_present %u %u %u %u\n", (unsigned int)node->layout->__bounds.x,
   //          (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width,
   //          (unsigned int)node->layout->__bounds.height);

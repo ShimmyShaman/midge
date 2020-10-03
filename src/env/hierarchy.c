@@ -562,7 +562,7 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
   if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width ||
       bounds.height != layout->__bounds.height) {
     layout->__bounds = bounds;
-    printf("setrerender\n");
+    // printf("setrerender\n");
     mca_set_node_requires_rerender(node);
   }
 

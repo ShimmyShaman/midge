@@ -899,20 +899,20 @@ VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
   color_reference.attachment = 0;
   color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-  VkAttachmentDescription depth_attachment = {};
-  depth_attachment.format = p_vkrs->depth_buffer.format;
-  depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-  depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-  depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-  depth_attachment.flags = 0;
+  // VkAttachmentDescription depth_attachment = {};
+  // depth_attachment.format = p_vkrs->depth_buffer.format;
+  // depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  // depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  // depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  // depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  // depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  // depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  // depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  // depth_attachment.flags = 0;
 
-  VkAttachmentReference depth_reference = {};
-  depth_reference.attachment = 1;
-  depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+  // VkAttachmentReference depth_reference = {};
+  // depth_reference.attachment = 1;
+  // depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
   VkSubpassDescription subpass = {};
   subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -922,7 +922,7 @@ VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
   subpass.colorAttachmentCount = 1;
   subpass.pColorAttachments = &color_reference;
   subpass.pResolveAttachments = NULL;
-  subpass.pDepthStencilAttachment = &depth_reference;
+  subpass.pDepthStencilAttachment = NULL; //&depth_reference;
   subpass.preserveAttachmentCount = 0;
   subpass.pPreserveAttachments = NULL;
 
@@ -936,14 +936,14 @@ VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
   subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
   subpass_dependency.dependencyFlags = 0;
 
-  VkAttachmentDescription attachment_descriptions[] = {color_attachment, depth_attachment};
-  printf("mvk_init_present_renderpass:color_attachment:%i depth_attachment:%i\n", color_attachment.format,
-         depth_attachment.format);
+  VkAttachmentDescription attachment_descriptions[] = {color_attachment}; //, depth_attachment
+  // printf("mvk_init_present_renderpass:color_attachment:%i depth_attachment:%i\n", color_attachment.format,
+  //        depth_attachment.format);
 
   VkRenderPassCreateInfo rp_info = {};
   rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
   rp_info.pNext = NULL;
-  rp_info.attachmentCount = 2;
+  rp_info.attachmentCount = 1;
   rp_info.pAttachments = attachment_descriptions;
   rp_info.subpassCount = 1;
   rp_info.pSubpasses = &subpass;
@@ -955,7 +955,7 @@ VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
   return res;
 }
 
-VkResult mvk_init_offscreen_renderpass(vk_render_state *p_vkrs)
+VkResult mvk_init_offscreen_renderpass_3d(vk_render_state *p_vkrs)
 {
   /* DEPENDS on init_depth_buffer() */
 
@@ -1036,7 +1036,77 @@ VkResult mvk_init_offscreen_renderpass(vk_render_state *p_vkrs)
   rp_info.dependencyCount = 2;
   rp_info.pDependencies = subpass_dependencies;
 
-  res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->offscreen_render_pass);
+  res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->offscreen_render_pass_3d);
+  assert(res == VK_SUCCESS);
+
+  return res;
+}
+
+VkResult mvk_init_offscreen_renderpass_2d(vk_render_state *p_vkrs)
+{
+  /* DEPENDS on init_depth_buffer() */
+
+  VkResult res;
+  /* Need attachments for render target and depth buffer */
+  VkAttachmentDescription color_attachment;
+  color_attachment.format = p_vkrs->format;
+  color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  color_attachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  color_attachment.flags = 0;
+
+  VkAttachmentReference color_reference = {};
+  color_reference.attachment = 0;
+  color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass = {};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.flags = 0;
+  subpass.inputAttachmentCount = 0;
+  subpass.pInputAttachments = NULL;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_reference;
+  subpass.pResolveAttachments = NULL;
+  subpass.pDepthStencilAttachment = NULL;
+  subpass.preserveAttachmentCount = 0;
+  subpass.pPreserveAttachments = NULL;
+
+  // Subpass dependency to wait for wsi image acquired semaphore before starting layout transition
+  VkSubpassDependency subpass_dependencies[2];
+
+  subpass_dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+  subpass_dependencies[0].dstSubpass = 0;
+  subpass_dependencies[0].srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  subpass_dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependencies[0].srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  subpass_dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  subpass_dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  subpass_dependencies[1].srcSubpass = 0;
+  subpass_dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+  subpass_dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  subpass_dependencies[1].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  subpass_dependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  subpass_dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  subpass_dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  VkAttachmentDescription attachment_descriptions[] = {color_attachment};
+
+  VkRenderPassCreateInfo rp_info = {};
+  rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  rp_info.pNext = NULL;
+  rp_info.attachmentCount = 1;
+  rp_info.pAttachments = attachment_descriptions;
+  rp_info.subpassCount = 1;
+  rp_info.pSubpasses = &subpass;
+  rp_info.dependencyCount = 2;
+  rp_info.pDependencies = subpass_dependencies;
+
+  res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->offscreen_render_pass_2d);
   assert(res == VK_SUCCESS);
 
   return res;
@@ -1377,17 +1447,17 @@ VkResult mvk_init_tint_render_prog(vk_render_state *p_vkrs)
     res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &p_vkrs->tint_prog.pipeline_layout);
     VK_CHECK(res, "vkCreatePipelineLayout :: Failed to create pipeline layout!");
 
-    VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
-    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.minDepthBounds = 0.0f; // Optional
-    depthStencil.maxDepthBounds = 1.0f; // Optional
-    depthStencil.stencilTestEnable = VK_FALSE;
-    depthStencil.front = {}; // Optional
-    depthStencil.back = {};  // Optional
+    // VkPipelineDepthStencilStateCreateInfo depthStencil = {};
+    // depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    // depthStencil.depthTestEnable = VK_TRUE;
+    // depthStencil.depthWriteEnable = VK_TRUE;
+    // depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    // depthStencil.depthBoundsTestEnable = VK_FALSE;
+    // depthStencil.minDepthBounds = 0.0f; // Optional
+    // depthStencil.maxDepthBounds = 1.0f; // Optional
+    // depthStencil.stencilTestEnable = VK_FALSE;
+    // depthStencil.front = {}; // Optional
+    // depthStencil.back = {};  // Optional
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1398,7 +1468,7 @@ VkResult mvk_init_tint_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pDepthStencilState = NULL; // &depthStencil;
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
@@ -1661,17 +1731,17 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
     res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &p_vkrs->texture_prog.pipeline_layout);
     VK_CHECK(res, "vkCreatePipelineLayout :: Failed to create pipeline layout!");
 
-    VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
-    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.minDepthBounds = 0.0f; // Optional
-    depthStencil.maxDepthBounds = 1.0f; // Optional
-    depthStencil.stencilTestEnable = VK_FALSE;
-    depthStencil.front = {}; // Optional
-    depthStencil.back = {};  // Optional
+    // VkPipelineDepthStencilStateCreateInfo depthStencil = {};
+    // depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    // depthStencil.depthTestEnable = VK_TRUE;
+    // depthStencil.depthWriteEnable = VK_TRUE;
+    // depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    // depthStencil.depthBoundsTestEnable = VK_FALSE;
+    // depthStencil.minDepthBounds = 0.0f; // Optional
+    // depthStencil.maxDepthBounds = 1.0f; // Optional
+    // depthStencil.stencilTestEnable = VK_FALSE;
+    // depthStencil.front = {}; // Optional
+    // depthStencil.back = {};  // Optional
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1682,7 +1752,7 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pDepthStencilState = NULL; //&depthStencil;
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
@@ -1956,17 +2026,17 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &p_vkrs->font_prog.pipeline_layout);
     VK_CHECK(res, "failed to create pipeline layout!");
 
-    VkPipelineDepthStencilStateCreateInfo depthStencil = {};
-    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencil.depthTestEnable = VK_TRUE;
-    depthStencil.depthWriteEnable = VK_TRUE;
-    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.minDepthBounds = 0.0f; // Optional
-    depthStencil.maxDepthBounds = 1.0f; // Optional
-    depthStencil.stencilTestEnable = VK_FALSE;
-    depthStencil.front = {}; // Optional
-    depthStencil.back = {};  // Optional
+    // VkPipelineDepthStencilStateCreateInfo depthStencil = {};
+    // depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    // depthStencil.depthTestEnable = VK_TRUE;
+    // depthStencil.depthWriteEnable = VK_TRUE;
+    // depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    // depthStencil.depthBoundsTestEnable = VK_FALSE;
+    // depthStencil.minDepthBounds = 0.0f; // Optional
+    // depthStencil.maxDepthBounds = 1.0f; // Optional
+    // depthStencil.stencilTestEnable = VK_FALSE;
+    // depthStencil.front = {}; // Optional
+    // depthStencil.back = {};  // Optional
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1977,7 +2047,7 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
-    pipelineInfo.pDepthStencilState = &depthStencil;
+    pipelineInfo.pDepthStencilState = NULL; //&depthStencil;
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
@@ -2256,7 +2326,7 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = p_vkrs->mesh_prog.pipeline_layout;
-    pipelineInfo.renderPass = p_vkrs->present_render_pass;
+    pipelineInfo.renderPass = p_vkrs->offscreen_render_pass_3d;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -2355,14 +2425,14 @@ VkResult mvk_init_framebuffers(vk_render_state *p_vkrs /*, bool include_depth*/)
    * init_swapchain_extension() */
 
   VkResult res;
-  VkImageView attachments[2];
-  attachments[1] = p_vkrs->depth_buffer.view;
+  VkImageView attachments[1];
+  // attachments[1] = p_vkrs->depth_buffer.view;
 
   VkFramebufferCreateInfo fb_info = {};
   fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
   fb_info.pNext = NULL;
   fb_info.renderPass = p_vkrs->present_render_pass;
-  fb_info.attachmentCount = 2;
+  fb_info.attachmentCount = 1;
   fb_info.pAttachments = attachments;
   fb_info.width = p_vkrs->window_width;
   fb_info.height = p_vkrs->window_height;
@@ -2438,15 +2508,17 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   VK_CHECK(res, "mvk_init_swapchain_data");
   res = mvk_init_headless_image(vkrs);
   VK_CHECK(res, "mvk_init_headless_image");
+  res = mvk_init_depth_buffer(vkrs);
+  VK_CHECK(res, "mvk_init_depth_resources");
   res = mvk_init_uniform_buffer(vkrs);
   VK_CHECK(res, "mvk_init_uniform_buffer");
 
-  res = mvk_init_depth_buffer(vkrs);
-  VK_CHECK(res, "mvk_init_depth_resources");
   res = mvk_init_present_renderpass(vkrs);
   VK_CHECK(res, "mvk_init_present_renderpass");
-  res = mvk_init_offscreen_renderpass(vkrs);
-  VK_CHECK(res, "mvk_init_offscreen_renderpass");
+  res = mvk_init_offscreen_renderpass_2d(vkrs);
+  VK_CHECK(res, "mvk_init_offscreen_renderpass_2d");
+  res = mvk_init_offscreen_renderpass_3d(vkrs);
+  VK_CHECK(res, "mvk_init_offscreen_renderpass_3d");
 
   res = mvk_init_tint_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_tint_render_prog");
@@ -2483,7 +2555,8 @@ void mvk_destroy_render_prog(vk_render_state *p_vkrs, render_program *render_pro
 void mvk_destroy_renderpasses(vk_render_state *p_vkrs)
 {
   vkDestroyRenderPass(p_vkrs->device, p_vkrs->present_render_pass, NULL);
-  vkDestroyRenderPass(p_vkrs->device, p_vkrs->offscreen_render_pass, NULL);
+  vkDestroyRenderPass(p_vkrs->device, p_vkrs->offscreen_render_pass_2d, NULL);
+  vkDestroyRenderPass(p_vkrs->device, p_vkrs->offscreen_render_pass_3d, NULL);
 }
 
 void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
@@ -2502,6 +2575,13 @@ void mvk_destroy_uniform_buffer(vk_render_state *p_vkrs)
     free(p_vkrs->render_data_buffer.queued_copies);
     p_vkrs->render_data_buffer.queued_copies = NULL;
   }
+}
+
+void mvk_destroy_depth_buffer(vk_render_state *p_vkrs)
+{
+  vkDestroyImageView(p_vkrs->device, p_vkrs->depth_buffer.view, NULL);
+  vkDestroyImage(p_vkrs->device, p_vkrs->depth_buffer.image, NULL);
+  vkFreeMemory(p_vkrs->device, p_vkrs->depth_buffer.memory, NULL);
 }
 
 void mvk_destroy_headless_image(vk_render_state *p_vkrs)
@@ -2631,6 +2711,7 @@ VkResult mvk_destroy_vulkan(vk_render_state *vkrs)
 
   // mvk_destroy_descriptor_and_pipeline_layouts(vkrs);
   mvk_destroy_uniform_buffer(vkrs);
+  mvk_destroy_depth_buffer(vkrs);
   mvk_destroy_headless_image(vkrs);
   mvk_destroy_swapchain_frame_buffers(vkrs);
 

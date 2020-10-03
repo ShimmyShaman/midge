@@ -22,7 +22,7 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
     case RESOURCE_COMMAND_CREATE_TEXTURE: {
       res = mvk_create_empty_render_target(p_vkrs, resource_cmd->create_texture.width,
                                            resource_cmd->create_texture.height,
-                                           resource_cmd->create_texture.use_as_render_target, resource_cmd->p_uid);
+                                           resource_cmd->create_texture.image_usage, resource_cmd->p_uid);
       VK_CHECK(res, "create_empty_render_target");
 
     } break;
@@ -34,7 +34,7 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
     } break;
     case RESOURCE_COMMAND_LOAD_MESH: {
       res = mvk_load_vertex_data(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
-                          resource_cmd->load_mesh.release_original_data_on_copy, resource_cmd->p_uid);
+                                 resource_cmd->load_mesh.release_original_data_on_copy, resource_cmd->p_uid);
       VK_CHECK(res, "mvk_load_vertex_data_buffer");
 
     } break;
@@ -366,9 +366,9 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(image_render->image_height) +
                             1.0f * (float)cmd->textured_rect_info.height / (float)(image_render->image_height);
 
-  printf("x:%u y:%u tri.width:%u tri.height:%u seq.width:%u seq.height:%u\n", cmd->x, cmd->y,
-         cmd->textured_rect_info.width, cmd->textured_rect_info.height, image_render->image_width,
-         image_render->image_height);
+  // printf("x:%u y:%u tri.width:%u tri.height:%u seq.width:%u seq.height:%u\n", cmd->x, cmd->y,
+  //        cmd->textured_rect_info.width, cmd->textured_rect_info.height, image_render->image_width,
+  //        image_render->image_height);
 
   // Setup viewport and clip
   set_viewport_cmd(command_buffer, 0.f, 0.f, (float)image_render->image_width, (float)image_render->image_height);
@@ -897,21 +897,25 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     element_render_command *cmd = &image_render->commands[j];
     switch (cmd->type) {
     case RENDER_COMMAND_COLORED_QUAD: {
+      // printf("RENDER_COMMAND_COLORED_QUAD\n");
       res = mrt_render_colored_quad(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_colored_rectangle");
     } break;
 
     case RENDER_COMMAND_TEXTURED_QUAD: {
+      // printf("RENDER_COMMAND_TEXTURED_QUAD\n");
       res = mrt_render_textured_quad(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_textured_quad");
     } break;
 
     case RENDER_COMMAND_PRINT_TEXT: {
+      // printf("RENDER_COMMAND_PRINT_TEXT\n");
       res = mrt_render_text(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_text");
     } break;
 
     case RENDER_COMMAND_INDEXED_MESH: {
+      // printf("RENDER_COMMAND_INDEXED_MESH\n");
       res = mrt_render_indexed_mesh(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
       VK_CHECK(res, "mrt_render_cube");
     } break;
@@ -949,6 +953,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
 
     switch (image_render->render_target) {
     case NODE_RENDER_TARGET_PRESENT: {
+      // printf("NODE_RENDER_TARGET_PRESENT\n");
       VkSemaphore imageAcquiredSemaphore;
       VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
       imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -980,13 +985,13 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       beginInfo.pInheritanceInfo = NULL;                             // Optional
       vkBeginCommandBuffer(command_buffer, &beginInfo);
 
-      VkClearValue clear_values[2];
+      VkClearValue clear_values[1];
       clear_values[0].color.float32[0] = image_render->clear_color.r;
       clear_values[0].color.float32[1] = image_render->clear_color.g;
       clear_values[0].color.float32[2] = image_render->clear_color.b;
       clear_values[0].color.float32[3] = image_render->clear_color.a;
-      clear_values[1].depthStencil.depth = 1.0f;
-      clear_values[1].depthStencil.stencil = 0;
+      // clear_values[1].depthStencil.depth = 1.0f;
+      // clear_values[1].depthStencil.stencil = 0;
 
       VkRenderPassBeginInfo rp_begin;
       rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -997,7 +1002,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       rp_begin.renderArea.offset.y = 0;
       rp_begin.renderArea.extent.width = image_render->image_width;
       rp_begin.renderArea.extent.height = image_render->image_height;
-      rp_begin.clearValueCount = 2;
+      rp_begin.clearValueCount = 1;
       rp_begin.pClearValues = clear_values;
 
       vkCmdBeginRenderPass(command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
@@ -1063,6 +1068,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       ++p_vkrs->presentation_updates;
     } break;
     case NODE_RENDER_TARGET_IMAGE: {
+      // printf("NODE_RENDER_TARGET_IMAGE\n");
       // Adjust render command absolute coordinates for relative render target
       for (int j = 0; j < image_render->command_count; ++j) {
         element_render_command *cmd = &image_render->commands[j];
@@ -1077,6 +1083,20 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
 
       if (!target_image->framebuffer) {
         MCerror(1079, "target %u not specified as render target", target_image->resource_uid);
+      }
+
+      VkRenderPass offscreen_render_pass;
+      switch (target_image->sampler_usage) {
+      case MVK_IMAGE_USAGE_RENDER_TARGET_2D: {
+        offscreen_render_pass = p_vkrs->offscreen_render_pass_2d;
+      } break;
+      case MVK_IMAGE_USAGE_RENDER_TARGET_3D: {
+        offscreen_render_pass = p_vkrs->offscreen_render_pass_3d;
+      } break;
+      default: {
+        printf("NODE_RENDER_TARGET_IMAGE: target_image does not support render target usage\n");
+        return (VkResult)1098;
+      }
       }
 
       // TODO -- free only used descriptor sets in favor of safe vulkan multi-threading?
@@ -1106,7 +1126,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       VkRenderPassBeginInfo rp_begin;
       rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
       rp_begin.pNext = NULL;
-      rp_begin.renderPass = p_vkrs->offscreen_render_pass;
+      rp_begin.renderPass = offscreen_render_pass;
       rp_begin.framebuffer = target_image->framebuffer;
       rp_begin.renderArea.offset.x = 0;
       rp_begin.renderArea.offset.y = 0;
@@ -1160,7 +1180,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       vkDestroyFence(p_vkrs->device, drawFence, NULL);
     } break;
     default:
-    printf("WAS:%i\n", image_render->render_target);
+      printf("WAS:%i\n", image_render->render_target);
       return VK_ERROR_UNKNOWN;
     }
   }
@@ -1283,7 +1303,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
       res = handle_resource_commands(vkrs, render_thread->resource_queue);
       VK_CHECK(res, "handle_resource_commands");
       render_thread->resource_queue->count = 0;
-      printf("Vulkan loaded resources!\n");
+      // printf("Vulkan loaded resources!\n");
     }
     pthread_mutex_unlock(&render_thread->resource_queue->mutex);
     // printf("mrt-rul-4:loop\n");

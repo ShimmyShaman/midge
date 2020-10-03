@@ -218,7 +218,7 @@ void init_three_d_portal()
   portal->render_target.resource_uid = 0;
   portal->render_target.width = node->layout->preferred_width;
   portal->render_target.height = node->layout->preferred_height;
-  mcr_create_texture_resource(portal->render_target.width, portal->render_target.height, true,
+  mcr_create_texture_resource(portal->render_target.width, portal->render_target.height, MVK_IMAGE_USAGE_RENDER_TARGET_3D,
                               &portal->render_target.resource_uid);
 
   // Content
