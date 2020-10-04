@@ -47,18 +47,18 @@ typedef struct render_program {
   VkPipeline pipeline;
 } render_program;
 
-typedef struct loaded_font_info {
+typedef struct font_resource {
   const char *name;
   float height;
   float draw_vertical_offset;
   unsigned int resource_uid;
   stbtt_bakedchar *char_data;
-} loaded_font_info;
+} font_resource;
 
 typedef struct loaded_font_list {
   uint32_t count;
   uint32_t allocated;
-  loaded_font_info *fonts;
+  font_resource *fonts;
 } loaded_font_list;
 
 typedef struct mrt_vertex_data {

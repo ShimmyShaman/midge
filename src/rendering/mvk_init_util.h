@@ -113,12 +113,12 @@ typedef struct render_program {
   VkPipeline pipeline;
 } render_program;
 
-typedef struct loaded_font_info {
+typedef struct font_resource {
   const char *name;
   float height;
   uint resource_uid;
   stbtt_bakedchar *char_data;
-} loaded_font_info;
+} font_resource;
 
 /*
  * Keep each of our swap chain buffers' image, command buffer and view in one
@@ -199,7 +199,7 @@ typedef struct vk_render_state {
   struct {
     uint count;
     uint allocated;
-    loaded_font_info *fonts;
+    font_resource *fonts;
   } loaded_fonts;
 
   render_program texture_prog, font_prog;

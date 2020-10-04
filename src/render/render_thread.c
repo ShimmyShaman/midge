@@ -467,7 +467,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
 
   // printf("mrt-0\n");
   // Get the font image
-  loaded_font_info *font = NULL;
+  font_resource *font = NULL;
   for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
     if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->print_text.font_resource_uid) {
       font = &p_vkrs->loaded_fonts.fonts[f];
@@ -543,9 +543,9 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
                                                                              : image_render->image_height);
     vert_ubo_data->scale.x = 2.f * width * scale_multiplier;
     vert_ubo_data->scale.y = 2.f * height * scale_multiplier;
-    vert_ubo_data->offset.x = -1.0f + 2.0f * (float)q.x0 / (float)(image_render->image_width) +
+    vert_ubo_data->offset.x = -1.0f + 2.0f * q.x0 / (float)(image_render->image_width) +
                               1.0f * (float)width / (float)(image_render->image_width);
-    vert_ubo_data->offset.y = -1.0f + 2.0f * (float)q.y0 / (float)(image_render->image_height) +
+    vert_ubo_data->offset.y = -1.0f + 2.0f * q.y0 / (float)(image_render->image_height) +
                               1.0f * (float)height / (float)(image_render->image_height);
 
     // printf("mrt-3\n");

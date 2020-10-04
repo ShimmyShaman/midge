@@ -734,10 +734,10 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
   {
     if (p_vkrs->loaded_fonts.allocated < p_vkrs->loaded_fonts.count + 1) {
       int new_allocated = p_vkrs->loaded_fonts.allocated + 4 + p_vkrs->loaded_fonts.allocated / 4;
-      loaded_font_info *new_ary = (loaded_font_info *)malloc(sizeof(loaded_font_info) * new_allocated);
+      font_resource *new_ary = (font_resource *)malloc(sizeof(font_resource) * new_allocated);
 
       if (p_vkrs->loaded_fonts.allocated) {
-        memcpy(new_ary, p_vkrs->loaded_fonts.fonts, sizeof(loaded_font_info) * p_vkrs->loaded_fonts.allocated);
+        memcpy(new_ary, p_vkrs->loaded_fonts.fonts, sizeof(font_resource) * p_vkrs->loaded_fonts.allocated);
         free(p_vkrs->loaded_fonts.fonts);
       }
       p_vkrs->loaded_fonts.fonts = new_ary;

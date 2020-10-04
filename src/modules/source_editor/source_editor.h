@@ -26,9 +26,21 @@ typedef struct mcm_function_editor {
   } code;
 
   struct {
+    float vertical_stride;
+    struct {
+      float top, left;
+    } padding;
+
     unsigned int count, alloc;
     mcm_source_line **items;
+
   } lines;
+  float font_horizontal_stride;
+
+  struct {
+    bool visible;
+    int line, col;
+  } cursor;
 
   int line_display_offset;
 

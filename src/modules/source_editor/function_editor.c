@@ -1,4 +1,5 @@
 
+#include "control/mc_controller.h"
 #include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
@@ -8,13 +9,12 @@
 int _mcm_update_line_details(mcm_function_editor *fedit, mc_rectf *available_area)
 {
   int y_index = 0;
-  const int Y_STRIDE = 22;
 
   int rtf_index = 0;
 
   char buf[512];
 
-  while (y_index * Y_STRIDE < available_area->height && rtf_index < fedit->code.rtf->len) {
+  while (y_index * fedit->lines.vertical_stride < available_area->height && rtf_index < fedit->code.rtf->len) {
 
     // Obtain the line control
     mcm_source_line *line;
@@ -29,8 +29,9 @@ int _mcm_update_line_details(mcm_function_editor *fedit, mc_rectf *available_are
 
     // Set line layout
     line->node->layout->visible = true;
-    line->node->layout->padding = {0.f, 2.f + y_index * Y_STRIDE, 0.f, 0.f};
-    line->node->layout->preferred_height = Y_STRIDE;
+    line->node->layout->padding = {fedit->lines.padding.left,
+                                   fedit->lines.padding.top + fedit->lines.vertical_stride * y_index, 0.f, 0.f};
+    line->node->layout->preferred_height = fedit->lines.vertical_stride;
 
     // Obtain the line rtf
     const char *code = fedit->code.rtf->text;
@@ -177,7 +178,7 @@ int _mcm_update_line_details(mcm_function_editor *fedit, mc_rectf *available_are
   return 0;
 }
 
-void __mcm_determine_function_editor_extents(mc_node *node, layout_extent_restraints restraints)
+void _mcm_determine_function_editor_extents(mc_node *node, layout_extent_restraints restraints)
 {
   // const float MAX_EXTENT_VALUE = 100000.f;
 
@@ -200,7 +201,7 @@ void __mcm_determine_function_editor_extents(mc_node *node, layout_extent_restra
   }
 }
 
-void __mcm_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
+void _mcm_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
 {
   mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
 
@@ -231,7 +232,7 @@ void __mcm_update_function_editor_layout(mc_node *node, mc_rectf *available_area
   mca_set_node_requires_rerender(node);
 }
 
-void __mcm_render_function_editor_headless(mc_node *node)
+void _mcm_render_function_editor_headless(mc_node *node)
 {
   mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
 
@@ -246,15 +247,14 @@ void __mcm_render_function_editor_headless(mc_node *node)
   }
 }
 
-void __mcm_render_function_editor_present(image_render_details *image_render_queue, mc_node *node)
+void _mcm_render_function_editor_present(image_render_details *image_render_queue, mc_node *node)
 {
-  mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
+  mcm_function_editor *fedit = (mcm_function_editor *)node->data;
 
-  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                        (unsigned int)node->layout->__bounds.y,
-                                        (unsigned int)node->layout->__bounds.width,
-                                        (unsigned int)node->layout->__bounds.height, function_editor->background_color);
-  //   printf("__mcm_render_function_editor_present %u %u %u %u\n", (unsigned int)node->layout->__bounds.x,
+  mcr_issue_render_command_colored_quad(
+      image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
+      (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, fedit->background_color);
+  //   printf("_mcm_render_function_editor_present %u %u %u %u\n", (unsigned int)node->layout->__bounds.x,
   //          (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width,
   //          (unsigned int)node->layout->__bounds.height);
 
@@ -268,6 +268,51 @@ void __mcm_render_function_editor_present(image_render_details *image_render_que
       render_node_presentation(image_render_queue, child);
     }
   }
+
+  if (fedit->cursor.visible) {
+    render_color cursor_color = COLOR_GHOST_WHITE;
+    mcr_issue_render_command_text(image_render_queue,
+                                  (unsigned int)(node->layout->__bounds.x + fedit->lines.padding.left +
+                                                 fedit->font_horizontal_stride * ((float)fedit->cursor.col - 0.5f)),
+                                  (unsigned int)(node->layout->__bounds.y + fedit->lines.padding.top +
+                                                 fedit->lines.vertical_stride * fedit->cursor.line),
+                                  "|", 0U, cursor_color);
+  }
+}
+
+void _mcm_handle_input(mc_node *node, mci_input_event *input_event)
+{
+  mcm_function_editor *fedit = (mcm_function_editor *)node->data;
+
+  if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+    if (input_event->button_code == MOUSE_BUTTON_LEFT) {
+
+      // printf("left_click:offset=%i %.3f  line_index:%i\n", input_event->input_state->mouse.y, node->layout->__bounds.y,
+      //        (int)((input_event->input_state->mouse.y - node->layout->__bounds.y - fedit->lines.padding.top) /
+      //              fedit->lines.vertical_stride));
+      int line_index = -1;
+      int click_relative_y =
+          input_event->input_state->mouse.y - (int)(node->layout->__bounds.y - fedit->lines.padding.top);
+      if (click_relative_y >= 0) {
+        line_index = (int)((float)click_relative_y / fedit->lines.vertical_stride);
+      }
+      if (line_index) {
+        // Find the column index
+        int click_relative_x =
+            input_event->input_state->mouse.x - (int)(node->layout->__bounds.x - fedit->lines.padding.left + 0.4f);
+        if (click_relative_x < 0 && click_relative_x > -3)
+          click_relative_x = 0;
+        if (click_relative_x >= 0) {
+          fedit->cursor.line = line_index;
+          fedit->cursor.col = (int)((float)click_relative_x / fedit->font_horizontal_stride);
+          // printf("Cursor should be placed at {%i,%i}\n", line_index, column_index);
+          fedit->cursor.visible = true;
+        }
+      }
+    }
+
+    input_event->handled = true;
+  }
 }
 
 void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *source_editor_pool,
@@ -276,15 +321,22 @@ void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *sour
   mcm_function_editor *function_editor = (mcm_function_editor *)malloc(sizeof(mcm_function_editor));
   mca_init_mc_node(parent_node, NODE_TYPE_FUNCTION_EDITOR, &function_editor->node);
   function_editor->node->data = function_editor;
+
   function_editor->source_editor_pool = source_editor_pool;
+  function_editor->lines.vertical_stride = 22.f;
+  function_editor->lines.padding.left = 2.f;
+  function_editor->lines.padding.top = 4.f;
+  // TODO
+  function_editor->font_horizontal_stride = 9.2794f;
 
   // Layout
   mca_init_node_layout(&function_editor->node->layout);
   mca_node_layout *layout = function_editor->node->layout;
-  layout->determine_layout_extents = (void *)&__mcm_determine_function_editor_extents;
-  layout->update_layout = (void *)&__mcm_update_function_editor_layout;
-  layout->render_headless = (void *)&__mcm_render_function_editor_headless;
-  layout->render_present = (void *)&__mcm_render_function_editor_present;
+  layout->determine_layout_extents = (void *)&_mcm_determine_function_editor_extents;
+  layout->update_layout = (void *)&_mcm_update_function_editor_layout;
+  layout->render_headless = (void *)&_mcm_render_function_editor_headless;
+  layout->render_present = (void *)&_mcm_render_function_editor_present;
+  layout->handle_input_event = (void *)&_mcm_handle_input;
 
   // layout->preferred_width = 980;
   layout->preferred_height = 720;

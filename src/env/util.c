@@ -45,3 +45,39 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
   *collection = new_collection;
   *current_allocation = realloc_amount;
 }
+
+int parse_past(const char *text, int *index, const char *sequence)
+{
+  for (int i = 0;; ++i) {
+    if (sequence[i] == '\0') {
+      *index += i;
+      return 0;
+    }
+    else if (text[*index + i] == '\0') {
+      return -1;
+    }
+    else if (sequence[i] != text[*index + i]) {
+      print_parse_error(text, *index + i, "see_below", "");
+      printf("!parse_past() expected:'%c' was:'%c'\n", sequence[i], text[*index + i]);
+      return 1 + i;
+    }
+  }
+}
+
+int mce_parse_past_integer(char *text, int *text_index, int *result)
+{
+  if (!isdigit(text[*text_index])) {
+    MCerror(303, "Not an integer");
+  }
+
+  int n = 0;
+  while (isdigit(text[*text_index])) {
+    n *= 10;
+    n += text[*text_index] - '0';
+    ++*text_index;
+  }
+
+  *result = n;
+
+  return 0;
+}

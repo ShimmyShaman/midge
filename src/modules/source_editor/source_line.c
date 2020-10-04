@@ -3,41 +3,42 @@
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
-void _mcm_determine_source_line_extents(mc_node *node, layout_extent_restraints restraints)
-{
-  const float MAX_EXTENT_VALUE = 100000.f;
+// void _mcm_determine_source_line_extents(mc_node *node, layout_extent_restraints restraints)
+// {
+// // printf("_mcm_determine_source_line_extents\n");
+// const float MAX_EXTENT_VALUE = 100000.f;
 
-  mcm_source_line *source_line = (mcm_source_line *)node->data;
+// mcm_source_line *source_line = (mcm_source_line *)node->data;
 
-  mc_rectf new_bounds = node->layout->__bounds;
+// mc_rectf new_bounds = node->layout->__bounds;
 
-  float rtf_width, rtf_height;
-  if (!node->layout->preferred_width || !node->layout->preferred_height)
-    mcr_determine_text_display_dimensions(source_line->font_resource_uid, source_line->rtf->text, &rtf_width,
-                                          &rtf_height);
+// float rtf_width, rtf_height;
+// if (!node->layout->preferred_width || !node->layout->preferred_height)
+//   mcr_determine_text_display_dimensions(source_line->font_resource_uid, source_line->rtf->text, &rtf_width,
+//                                         &rtf_height);
 
-  // Width
-  if (node->layout->preferred_width)
-    node->layout->determined_extents.width = node->layout->preferred_width;
-  else {
-    if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
-      node->layout->determined_extents.width = rtf_width;
-    }
-    else
-      node->layout->determined_extents.width = MAX_EXTENT_VALUE;
-  }
+// // Width
+// if (node->layout->preferred_width)
+//   node->layout->determined_extents.width = node->layout->preferred_width;
+// else {
+//   if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
+//     node->layout->determined_extents.width = rtf_width;
+//   }
+//   else
+//     node->layout->determined_extents.width = MAX_EXTENT_VALUE;
+// }
 
-  // Height
-  if (node->layout->preferred_height)
-    node->layout->determined_extents.height = node->layout->preferred_height;
-  else {
-    if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
-      node->layout->determined_extents.height = rtf_height;
-    }
-    else
-      node->layout->determined_extents.height = MAX_EXTENT_VALUE;
-  }
-}
+// // Height
+// if (node->layout->preferred_height)
+//   node->layout->determined_extents.height = node->layout->preferred_height;
+// else {
+//   if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
+//     node->layout->determined_extents.height = rtf_height;
+//   }
+//   else
+//     node->layout->determined_extents.height = MAX_EXTENT_VALUE;
+// }
+// }
 
 void _mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
 {
@@ -71,17 +72,17 @@ void _mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
 
           // Create another
           source_line->render_target.resource_uid = 0;
-          mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height, MVK_IMAGE_USAGE_RENDER_TARGET_2D,
-                                      &source_line->render_target.resource_uid);
+          mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height,
+                                      MVK_IMAGE_USAGE_RENDER_TARGET_2D, &source_line->render_target.resource_uid);
         }
       }
       else {
         source_line->render_target.width = layout_width;
         source_line->render_target.height = layout_height;
         // printf("creating texture %.3f*%.3f\n", node->layout->__bounds.width, node->layout->__bounds.height);
-        // printf("creating texture %u*%u\n", source_line->render_target.width, source_line->render_target.height);
-        mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height, MVK_IMAGE_USAGE_RENDER_TARGET_2D,
-                                    &source_line->render_target.resource_uid);
+        printf("recreating texture %u*%u\n", source_line->render_target.width, source_line->render_target.height);
+        mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height,
+                                    MVK_IMAGE_USAGE_RENDER_TARGET_2D, &source_line->render_target.resource_uid);
       }
     }
   }
@@ -101,7 +102,7 @@ void _mcm_render_source_line_headless(mc_node *node)
   image_render_details *rq;
   mcr_obtain_image_render_request(global_data->render_thread, &rq);
   rq->render_target = NODE_RENDER_TARGET_IMAGE;
-  rq->clear_color =  COLOR_NEARLY_BLACK;
+  rq->clear_color = COLOR_NEARLY_BLACK;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
   rq->image_width = source_line->render_target.width;   // TODO
@@ -110,12 +111,63 @@ void _mcm_render_source_line_headless(mc_node *node)
   rq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   rq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
-  render_color font_color = COLOR_GHOST_WHITE;
+  // render_color font_color = COLOR_GHOST_WHITE;
   render_color quad_color = COLOR_POWDER_BLUE;
 
   // printf("rendering_text:%s\n", source_line->rtf->text);
-  mcr_issue_render_command_text(rq, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
-                                source_line->rtf->text, source_line->font_resource_uid, font_color);
+  // Render the text
+  render_color font_color = COLOR_LIGHT_YELLOW;
+  int i = 0, s;
+  while (i < source_line->rtf->len) {
+    s = i;
+    if (source_line->rtf->text[i] == '[') {
+      if (source_line->rtf->text[i + 1] == '[') {
+        // Escaped. Rearrange start
+        s = i + 1;
+        i += 2;
+      }
+      else if (!strncmp(source_line->rtf->text + i, "[color=", 7)) {
+        int j = i + 7;
+        int r, g, b;
+        mce_parse_past_integer(source_line->rtf->text, &j, &r);
+        parse_past(source_line->rtf->text, &j, ",");
+        mce_parse_past_integer(source_line->rtf->text, &j, &g);
+        parse_past(source_line->rtf->text, &j, ",");
+        mce_parse_past_integer(source_line->rtf->text, &j, &b);
+        parse_past(source_line->rtf->text, &j, "]");
+
+        font_color.r = (float)r / 255.f;
+        font_color.g = (float)g / 255.f;
+        font_color.b = (float)b / 255.f;
+
+        s = i = j;
+        continue;
+      }
+      else {
+        MCerror(359, "Unsupported:'%s'", source_line->rtf->text + i);
+      }
+    }
+
+    bool eof = false;
+    for (;; ++i) {
+      if (source_line->rtf->text[i] == '\0') {
+        eof = true;
+        break;
+      }
+      else if (source_line->rtf->text[i] == '[') {
+        break;
+      }
+    }
+
+    while (i - s > 0) {
+      char buf[256];
+      int write_len = min(i - s, 255);
+      strncpy(buf, source_line->rtf->text + s, write_len);
+      mcr_issue_render_command_text(rq, (unsigned int)(s * source_line->font_horizontal_stride), 0,
+                                buf, source_line->font_resource_uid, font_color);
+      s += write_len;
+    }
+  }
 
   // printf("rq->render_target:%i\n", rq->render_target);
   mcr_submit_image_render_request(global_data->render_thread, rq);
@@ -132,12 +184,13 @@ void _mcm_render_source_line_present(image_render_details *image_render_queue, m
   //                                       source_line->render_target.height, color);
 
   // printf("rendersource_line- {%u %u %u %u} %s %u\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height,
-  //        source_line->rtf->text, source_line->font_resource_uid);
+  //        (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width, (unsigned
+  //        int)node->layout->__bounds.height, source_line->rtf->text, source_line->font_resource_uid);
 
-  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                         (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width,
-                                         (unsigned int)node->layout->__bounds.height, source_line->render_target.resource_uid);
+  mcr_issue_render_command_textured_quad(
+      image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
+      (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height,
+      source_line->render_target.resource_uid);
 }
 
 void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
@@ -151,7 +204,8 @@ void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
-  node->layout->determine_layout_extents = (void *)&_mcm_determine_source_line_extents;
+  node->layout->determine_layout_extents =
+      (void *)&mca_determine_typical_node_extents; //_mcm_determine_source_line_extents;
   node->layout->update_layout = (void *)&_mcm_update_source_line_layout;
   node->layout->render_headless = (void *)&_mcm_render_source_line_headless;
   node->layout->render_present = (void *)&_mcm_render_source_line_present;

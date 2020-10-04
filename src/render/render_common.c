@@ -135,14 +135,14 @@ void mcr_load_texture_resource(const char *path, unsigned int *p_resource_uid)
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
 void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
-                              unsigned int *p_resource_uid)
+                              font_resource **p_resource)
 {
   pthread_mutex_lock(&resource_queue->mutex);
   // printf("mcr_obtain_font_resource-font_height:%f\n", font_height);
   resource_command *command;
   mcr_obtain_resource_command(resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = p_resource_uid;
+  command->p_uid = (unsigned int *)p_resource;
   command->font.height = font_height;
   command->font.path = font_path;
   // printf("hrc-resource_cmd->font.height:%f\n", command->font.height);
@@ -167,7 +167,7 @@ void mcr_determine_text_display_dimensions(unsigned int font_resource, const cha
   }
 
   // Obtain the font
-  loaded_font_info *font = NULL;
+  font_resource *font = NULL;
   for (int f = 0; f < global_data->render_thread->loaded_fonts->count; ++f) {
     if (global_data->render_thread->loaded_fonts->fonts[f].resource_uid == font_resource) {
       font = &global_data->render_thread->loaded_fonts->fonts[f];
