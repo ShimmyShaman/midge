@@ -113,68 +113,28 @@ void _mcm_render_source_line_headless(mc_node *node)
   // printf("%u %u \n", rq->data.target_image.screen_offset_coordinates.x,
   // rq->data.target_image.screen_offset_coordinates.y);
 
-  // render_color font_color = COLOR_GHOST_WHITE;
-  render_color quad_color = COLOR_POWDER_BLUE;
-
   // printf("rendering_text:%s\n", source_line->rtf->text);
   // Render the text
-  render_color font_color = COLOR_BURLY_WOOD;
-  int i = 0, s, rm = 0;
-  while (i < source_line->rtf->len) {
-    s = i;
-    if (source_line->rtf->text[i] == '[') {
-      if (source_line->rtf->text[i + 1] == '[') {
-        // Escaped. Rearrange start
-        rm += 1;
-        s = i + 1;
-        i += 2;
-      }
-      else if (!strncmp(source_line->rtf->text + i, "[color=", 7)) {
-        int j = i + 7;
-        int r, g, b;
-        mce_parse_past_integer(source_line->rtf->text, &j, &r);
-        parse_past(source_line->rtf->text, &j, ",");
-        mce_parse_past_integer(source_line->rtf->text, &j, &g);
-        parse_past(source_line->rtf->text, &j, ",");
-        mce_parse_past_integer(source_line->rtf->text, &j, &b);
-        parse_past(source_line->rtf->text, &j, "]");
+  int horizontal_offset = 0;
+  for (int a = 0; a < source_line->source_list->count; ++a) {
 
-        font_color.r = (float)r / 255.f;
-        font_color.g = (float)g / 255.f;
-        font_color.b = (float)b / 255.f;
+    mcm_source_token *token = source_line->source_list->items[a];
 
-        rm += j - s;
-        s = i = j;
-        continue;
-      }
-      else {
-        MCerror(359, "Unsupported:'%s'", source_line->rtf->text + i);
-      }
+    render_color font_color;
+    switch (token->type) {
+    case MCM_SRC_EDITOR_EMPTY:
+    case MCM_SRC_EDITOR_NON_SEMANTIC_TEXT: {
+      font_color = COLOR_GHOST_WHITE;
+    } break;
+    default:
+      MCerror(9288, "Unsupported mcm_source_token_type=%i", token->type);
     }
 
-    bool eof = false;
-    for (;; ++i) {
-      if (source_line->rtf->text[i] == '\0') {
-        eof = true;
-        break;
-      }
-      else if (source_line->rtf->text[i] == '[') {
-        break;
-      }
-    }
+    mcr_issue_render_command_text(rq, (unsigned int)(node->layout->__bounds.x + horizontal_offset),
+                                  (unsigned int)(node->layout->__bounds.y), token->str->text,
+                                  source_line->font_resource_uid, font_color);
 
-    while (i - s > 0) {
-      char buf[256];
-      int write_len = min(i - s, 255);
-      strncpy(buf, source_line->rtf->text + s, write_len);
-      buf[write_len] = '\0';
-      printf("rendering_text:%s %u\n", buf,
-             (unsigned int)(node->layout->__bounds.x + (s - rm) * source_line->font_horizontal_stride));
-      mcr_issue_render_command_text(
-          rq, (unsigned int)(node->layout->__bounds.x + (s - rm) * source_line->font_horizontal_stride),
-          (unsigned int)(node->layout->__bounds.y), buf, source_line->font_resource_uid, font_color);
-      s += write_len;
-    }
+    horizontal_offset += token->str->len * source_line->font_horizontal_stride;
   }
 
   // printf("rq->render_target:%i\n", rq->render_target);
@@ -223,7 +183,8 @@ void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
   source_line->node = node;
   node->data = source_line;
 
-  init_c_str(&source_line->rtf);
+  // init_c_str(&source_line->rtf);
+  source_line->source_list = NULL;
   source_line->font_resource_uid = 0;
   source_line->render_target.resource_uid = 0;
   source_line->render_target.width = 0;

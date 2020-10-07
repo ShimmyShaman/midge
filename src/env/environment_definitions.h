@@ -149,6 +149,8 @@ void mca_focus_node(mc_node *node);
 void mca_obtain_focused_node(mc_node **node);
 
 // util.c
+int reallocate_array(void **array, unsigned int *current_allocation, unsigned int desired_allocation,
+                     size_t item_allocation_size);
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
 // @optional_item_allocation_size may be zero indicating no memory shall be assigned to the later allocation sizes.
 int reallocate_collection(void ***collection, unsigned int *current_allocation, unsigned int desired_allocation,

@@ -1,9 +1,28 @@
+#ifndef SOURCE_EDITOR_H
+#define SOURCE_EDITOR_H
 
+#include "core/core_definitions.h"
+#include "render/render_common.h"
+
+typedef enum mcm_source_token_type {
+  MCM_SRC_EDITOR_EMPTY = 0,
+  MCM_SRC_EDITOR_NON_SEMANTIC_TEXT,
+} mcm_source_token_type;
+
+typedef struct mcm_source_token {
+  mcm_source_token_type type;
+  c_str *str;
+} mcm_source_token;
+
+typedef struct mcm_source_token_list {
+  unsigned int alloc, count;
+  mcm_source_token **items;
+} mcm_source_token_list;
 
 typedef struct mcm_source_line {
   mc_node *node;
 
-  c_str *rtf;
+  mcm_source_token_list *source_list;
 
   unsigned int font_resource_uid;
   float font_horizontal_stride;
@@ -22,8 +41,10 @@ typedef struct mcm_function_editor {
   render_color background_color;
 
   struct {
-    c_str *rtf;
-    mc_syntax_node *syntax;
+    struct {
+      unsigned int capacity, count;
+      mcm_source_token_list **items;
+    } lines;
   } code;
 
   struct {
@@ -32,7 +53,9 @@ typedef struct mcm_function_editor {
       float top, left;
     } padding;
 
-    unsigned int count, alloc;
+    int display_offset_index;
+
+    unsigned int utilized, count, alloc;
     mcm_source_line **items;
 
   } lines;
@@ -40,11 +63,11 @@ typedef struct mcm_function_editor {
 
   struct {
     bool visible;
+
+    int rtf_index;
     int zen_col;
     int line, col;
   } cursor;
-
-  int line_display_offset;
 
 } mcm_function_editor;
 
@@ -54,6 +77,17 @@ typedef struct mcm_source_editor_pool {
     unsigned int size;
     mcm_function_editor **instances;
   } function_editor;
+
+  struct {
+    unsigned int capacity, count;
+    mcm_source_token_list **instances;
+  } source_token_lists;
+
+  struct {
+    unsigned int capacity, count;
+    mcm_source_token **instances;
+  } source_tokens;
+
 } mcm_source_editor_pool;
 
 extern "C" {
@@ -69,3 +103,4 @@ void mcm_init_source_line(mc_node *parent_node, mcm_source_line **source_line);
 void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *source_editor_pool,
                               mcm_function_editor **p_function_editor);
 }
+#endif // SOURCE_EDITOR_H

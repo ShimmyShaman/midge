@@ -3,6 +3,40 @@
 #include "env/environment_definitions.h"
 
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
+// @optional_item_allocation_size must be non-zero, the size of each item to allocate.
+int reallocate_array(void **array, unsigned int *current_allocation, unsigned int desired_allocation,
+                     size_t item_allocation_size)
+{
+  unsigned int realloc_amount;
+  if (desired_allocation) {
+    // Check
+    if (desired_allocation < *current_allocation) {
+      MCerror(1414, "TODO NotYetImplemented");
+    }
+    realloc_amount = desired_allocation;
+  }
+  else
+    realloc_amount = *current_allocation + 4 + *current_allocation / 3;
+
+  // printf("reallocate array size %i->%i\n", *current_allocation, realloc_amount);
+  void *new_array = (void **)malloc(item_allocation_size * realloc_amount);
+  if (new_array == NULL) {
+    MCerror(32, "append_to_array malloc error");
+  }
+
+  if (*current_allocation) {
+    memcpy(new_array, *array, *current_allocation * sizeof(item_allocation_size));
+    free(*array);
+  }
+
+  printf("Expanded array capacity from %u to %u items, each with size=%lu\n", *current_allocation, realloc_amount,
+         item_allocation_size);
+
+  *array = new_array;
+  *current_allocation = realloc_amount;
+}
+
+// @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
 // @optional_item_allocation_size may be zero indicating no memory shall be assigned to the later allocation sizes.
 int reallocate_collection(void ***collection, unsigned int *current_allocation, unsigned int desired_allocation,
                           size_t optional_item_allocation_size)

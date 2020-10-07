@@ -499,6 +499,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
       printf("TODO character not supported.\n");
       return VK_SUCCESS;
     }
+    printf("printing character '%c' %i\n", letter, (int)letter);
 
     // Source texture bounds
     stbtt_aligned_quad q;
