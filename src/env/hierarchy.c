@@ -119,6 +119,9 @@ void mca_init_node_layout(mca_node_layout **layout)
   // Initialize layout
   (*layout) = (mca_node_layout *)malloc(sizeof(mca_node_layout));
 
+  (*layout)->visible = true;
+  (*layout)->focused_child = NULL;
+
   (*layout)->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   (*layout)->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
   (*layout)->preferred_width = 0;
@@ -640,6 +643,74 @@ void mca_set_node_requires_rerender(mc_node *node)
 
     // Move upwards through the ancestry
     node = node->parent;
+  }
+}
+
+void mca_focus_node(mc_node *node)
+{
+  // Set layout update required on all ancestors of the node
+  while (node) {
+    // DEBUG?
+    if (!node->layout) {
+      MCerror(8523, "Can't set an update for a node with a parent with no layout");
+    }
+
+    // Set
+    node->layout->__requires_rerender = true;
+
+    if (!node->parent) {
+      break;
+    }
+    if (!node->parent->layout) {
+      MCerror(9664, "Cannot set focus to node with an ancestor without an initialized layout");
+    }
+
+    node->parent->layout->focused_child = node;
+
+    // Find the child in the parents children and set it to the highest index amongst its z-index peers
+    mc_node_list *parents_children = node->parent->children;
+    // DEBUG CHECK
+    bool found = false;
+    for (int i = 0; i < parents_children->count; ++i) {
+      if (parents_children->items[i] == node) {
+        found = true;
+
+        if (i + 1 == parents_children->count)
+          break;
+
+        int j = i + 1;
+        for (int j = i + 1; j < parents_children->count; ++j) {
+          if (parents_children->items[j]->layout &&
+              node->layout->z_layer_index < parents_children->items[j]->layout->z_layer_index)
+            break;
+        }
+        --j;
+
+        if (j > i) {
+          // Change Child Order
+          for (int k = i; k < j; ++k) {
+            parents_children->items[k] = parents_children->items[k + 1];
+          }
+
+          parents_children->items[j] = node;
+        }
+      }
+    }
+
+    // Move upwards through the ancestry
+    node = node->parent;
+  }
+}
+
+void mca_obtain_focused_node(mc_node **node)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  *node = global_data->global_node;
+
+  while ((*node)->layout && (*node)->layout->focused_child) {
+    (*node) = (*node)->layout->focused_child;
   }
 }
 

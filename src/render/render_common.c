@@ -13,13 +13,13 @@ int mcr_obtain_image_render_request(render_thread_info *render_thread, image_ren
     render_request =
         render_thread->render_request_object_pool->items[render_thread->render_request_object_pool->count - 1];
     --render_thread->render_request_object_pool->count;
-    printf("render_requestu=%p %u\n", render_request, render_thread->render_request_object_pool->count);
+    // printf("render_requestu=%p %u\n", render_request, render_thread->render_request_object_pool->count);
   }
   else {
     // Construct another
     render_request = (image_render_details *)malloc(sizeof(image_render_details));
     render_request->commands_allocated = 0;
-    printf("render_requestn=%p\n", render_request);
+    // printf("render_requestn=%p\n", render_request);
   }
   pthread_mutex_unlock(&render_thread->render_request_object_pool->mutex);
 

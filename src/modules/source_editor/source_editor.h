@@ -40,6 +40,7 @@ typedef struct mcm_function_editor {
 
   struct {
     bool visible;
+    int zen_col;
     int line, col;
   } cursor;
 

@@ -31,6 +31,8 @@ typedef struct mc_paddingf {
 typedef struct mca_node_layout {
   bool visible;
 
+  mc_node *focused_child;
+
   // Layout Properties
   horizontal_alignment_type horizontal_alignment;
   vertical_alignment_type vertical_alignment;
@@ -142,6 +144,9 @@ void mca_render_node_list_present(image_render_details *image_render_queue, mc_n
 void mca_set_all_nodes_require_layout_update();
 void mca_set_node_requires_layout_update(mc_node *node);
 void mca_set_node_requires_rerender(mc_node *node);
+
+void mca_focus_node(mc_node *node);
+void mca_obtain_focused_node(mc_node **node);
 
 // util.c
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.

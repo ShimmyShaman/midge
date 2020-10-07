@@ -57,6 +57,34 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
   // printf("mouse_event handled:%i\n", input_event.handled);
 }
 
+void mcc_issue_keyboard_event(window_input_event_type event_type, int button_code)
+{
+  printf("mcc_issue_keyboard_event\n");
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  mci_input_event input_event;
+  input_event.type = event_type;
+  input_event.button_code = button_code;
+  input_event.input_state = global_data->input_state;
+  input_event.handled = false;
+
+  mc_node *focused_node;
+  mca_obtain_focused_node(&focused_node);
+
+  while (focused_node && !input_event.handled) {
+
+    if (focused_node->layout && focused_node->layout->handle_input_event) {
+      // TODO fptr casting
+      void (*handle_input_event)(mc_node *, mci_input_event *) = (void (*)(
+          mc_node *, mci_input_event *))focused_node->layout->handle_input_event; // TODO add type of mouse event
+      handle_input_event(focused_node, &input_event);
+    }
+
+    focused_node = focused_node->parent;
+  }
+}
+
 void _mcc_set_button_state(bool is_down, bool is_event, int *output)
 {
   if (is_down) {
@@ -76,6 +104,7 @@ void _mcc_set_button_state(bool is_down, bool is_event, int *output)
 // Handles all input from the X11/xcb? platform
 void mcc_handle_xcb_input()
 {
+  // printf("mcc_handle_xcb_input\n");
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
@@ -83,7 +112,7 @@ void mcc_handle_xcb_input()
 
   // if (global_data->render_thread->input_buffer.event_count > 0) {
   //   input_event->handled = false;
-  //   // printf("input_recorded\n");
+  // printf("input_recorded\n");
 
   for (int xi_index = 0; xi_index < global_data->render_thread->input_buffer.event_count; ++xi_index) {
     // New Input Event
@@ -187,6 +216,8 @@ void mcc_handle_xcb_input()
           continue;
         }
 
+        mcc_issue_keyboard_event(xcb_input->type, (int)xcb_input->detail.keyboard.key);
+
         // if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
         //     xcb_input->detail.keyboard.key == KEY_CODE_N) {
 
@@ -238,6 +269,7 @@ void mcc_handle_xcb_input()
 
   // Reset render thread input buffer
   global_data->render_thread->input_buffer.event_count = 0;
+  // printf("</mcc_handle_xcb_input>\n");
 }
 
 void mcc_update_xcb_input()

@@ -169,7 +169,7 @@ void _mcm_render_source_line_headless(mc_node *node)
       strncpy(buf, source_line->rtf->text + s, write_len);
       buf[write_len] = '\0';
       printf("rendering_text:%s %u\n", buf,
-             0); //(unsigned int)(node->layout->__bounds.x + (s - rm) * source_line->font_horizontal_stride));
+             (unsigned int)(node->layout->__bounds.x + (s - rm) * source_line->font_horizontal_stride));
       mcr_issue_render_command_text(
           rq, (unsigned int)(node->layout->__bounds.x + (s - rm) * source_line->font_horizontal_stride),
           (unsigned int)(node->layout->__bounds.y), buf, source_line->font_resource_uid, font_color);

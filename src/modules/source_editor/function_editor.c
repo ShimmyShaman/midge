@@ -6,6 +6,66 @@
 #include "modules/app_modules.h"
 #include "render/render_common.h"
 
+void move_cursor_right(mc_code_editor_state_v1 *state)
+{
+  // Adjust the cursor index & col
+  char *code = state->code.rtf->text;
+  int i = state->cursor.rtf_index;
+
+  if (code[i] == '\0') {
+    return;
+  }
+
+  state->cursor.zen_col = 0;
+
+  print_parse_error(code, i, "mcu-initial", "");
+  // Move
+  while (code[i] == '[') {
+    if (code[i + 1] == '[') {
+      ++i;
+      break;
+    }
+
+    while (code[i] != ']') {
+      ++i;
+    }
+    ++i;
+  }
+  if (code[i] == '\0') {
+    --i;
+  }
+  ++i;
+  // Move
+  while (code[i] == '[') {
+    if (code[i + 1] == '[') {
+      ++i;
+      break;
+    }
+
+    while (code[i] != ']') {
+      ++i;
+    }
+    ++i;
+  }
+  if (code[i] == '\0') {
+    --i;
+  }
+  print_parse_error(code, i, "mcu-end", "");
+
+  state->cursor.rtf_index = i;
+  update_code_editor_cursor_line_and_column(state);
+
+  // Update the cursor visual
+  state->cursor.requires_render_update = true;
+  state->visual_node->data.visual.requires_render_update = true;
+
+  // Adjust display offset
+  if (state->cursor.line >= state->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES) {
+    // Move display offset down
+    state->line_display_offset = state->cursor.line - CODE_EDITOR_RENDERED_CODE_LINES + 1;
+  }
+}
+
 int _mcm_update_line_details(mcm_function_editor *fedit, mc_rectf *available_area)
 {
   int y_index = 0;
@@ -282,9 +342,11 @@ void _mcm_render_function_editor_present(image_render_details *image_render_queu
 
 void _mcm_handle_input(mc_node *node, mci_input_event *input_event)
 {
+  // printf("_mcm_handle_input %p %p\n", node, input_event);
   mcm_function_editor *fedit = (mcm_function_editor *)node->data;
 
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+    printf("obb\n");
     if (input_event->button_code == MOUSE_BUTTON_LEFT) {
 
       // printf("left_click:offset=%i %.3f  line_index:%i\n", input_event->input_state->mouse.y,
@@ -315,6 +377,13 @@ void _mcm_handle_input(mc_node *node, mci_input_event *input_event)
 
     input_event->handled = true;
   }
+  else if (input_event->type == INPUT_EVENT_KEY_RELEASE) {
+    printf("obc\n");
+    printf("function-editor: Key_Release: %i\n", input_event->button_code);
+
+    input_event->handled = true;
+  }
+  printf("obd %i\n", input_event->type);
 }
 
 void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *source_editor_pool,
@@ -457,7 +526,7 @@ int _mcm_set_definition_to_function_editor(mcm_function_editor *function_editor,
   mcm_convert_syntax_to_rtf(function_editor->code.rtf, function_editor->code.syntax);
   // printf("code.rtf:\n%s||\n", function_editor->code.rtf->text);
 
-  mca_set_node_requires_layout_update(function_editor->node);
+  mca_focus_node(function_editor->node);
 
   return 0;
 }
