@@ -6,6 +6,7 @@ typedef struct mcm_source_line {
   c_str *rtf;
 
   unsigned int font_resource_uid;
+  float font_horizontal_stride;
   struct {
     unsigned int width, height;
     unsigned int resource_uid;

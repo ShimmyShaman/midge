@@ -503,8 +503,8 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     // Source texture bounds
     stbtt_aligned_quad q;
 
-    // printf("garbagein: %i %i %f %f %i\n", (int)font_image->width, (int)font_image->height, align_x, align_y, letter
-    // - 32);
+    // printf("garbagein: %i %i %f %f %i\n", (int)font_image->width, (int)font_image->height, align_x, align_y,
+    //        letter - 32);
 
     stbtt_GetBakedQuad(font->char_data, (int)font_image->width, (int)font_image->height, letter - 32, &align_x,
                        &align_y, &q,
@@ -1073,6 +1073,9 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       for (int j = 0; j < image_render->command_count; ++j) {
         element_render_command *cmd = &image_render->commands[j];
 
+        // printf("node_render_target_image: %p %i %u %u : %u %u\n", cmd, cmd->type, cmd->x,
+        //        image_render->data.target_image.screen_offset_coordinates.x, cmd->y,
+        //        image_render->data.target_image.screen_offset_coordinates.y);
         cmd->x -= image_render->data.target_image.screen_offset_coordinates.x;
         cmd->y -= image_render->data.target_image.screen_offset_coordinates.y;
       }

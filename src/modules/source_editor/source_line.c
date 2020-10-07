@@ -72,6 +72,7 @@ void _mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
 
           // Create another
           source_line->render_target.resource_uid = 0;
+          // printf("recreating texture %u*%u\n", source_line->render_target.width, source_line->render_target.height);
           mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height,
                                       MVK_IMAGE_USAGE_RENDER_TARGET_2D, &source_line->render_target.resource_uid);
         }
@@ -80,7 +81,6 @@ void _mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
         source_line->render_target.width = layout_width;
         source_line->render_target.height = layout_height;
         // printf("creating texture %.3f*%.3f\n", node->layout->__bounds.width, node->layout->__bounds.height);
-        printf("recreating texture %u*%u\n", source_line->render_target.width, source_line->render_target.height);
         mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height,
                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &source_line->render_target.resource_uid);
       }
@@ -110,19 +110,22 @@ void _mcm_render_source_line_headless(mc_node *node)
   rq->data.target_image.image_uid = source_line->render_target.resource_uid;
   rq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   rq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
+  // printf("%u %u \n", rq->data.target_image.screen_offset_coordinates.x,
+  // rq->data.target_image.screen_offset_coordinates.y);
 
   // render_color font_color = COLOR_GHOST_WHITE;
   render_color quad_color = COLOR_POWDER_BLUE;
 
   // printf("rendering_text:%s\n", source_line->rtf->text);
   // Render the text
-  render_color font_color = COLOR_LIGHT_YELLOW;
-  int i = 0, s;
+  render_color font_color = COLOR_BURLY_WOOD;
+  int i = 0, s, rm = 0;
   while (i < source_line->rtf->len) {
     s = i;
     if (source_line->rtf->text[i] == '[') {
       if (source_line->rtf->text[i + 1] == '[') {
         // Escaped. Rearrange start
+        rm += 1;
         s = i + 1;
         i += 2;
       }
@@ -140,6 +143,7 @@ void _mcm_render_source_line_headless(mc_node *node)
         font_color.g = (float)g / 255.f;
         font_color.b = (float)b / 255.f;
 
+        rm += j - s;
         s = i = j;
         continue;
       }
@@ -163,8 +167,12 @@ void _mcm_render_source_line_headless(mc_node *node)
       char buf[256];
       int write_len = min(i - s, 255);
       strncpy(buf, source_line->rtf->text + s, write_len);
-      mcr_issue_render_command_text(rq, (unsigned int)(s * source_line->font_horizontal_stride), 0,
-                                buf, source_line->font_resource_uid, font_color);
+      buf[write_len] = '\0';
+      printf("rendering_text:%s %u\n", buf,
+             0); //(unsigned int)(node->layout->__bounds.x + (s - rm) * source_line->font_horizontal_stride));
+      mcr_issue_render_command_text(
+          rq, (unsigned int)(node->layout->__bounds.x + (s - rm) * source_line->font_horizontal_stride),
+          (unsigned int)(node->layout->__bounds.y), buf, source_line->font_resource_uid, font_color);
       s += write_len;
     }
   }
@@ -220,6 +228,8 @@ void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
   source_line->render_target.resource_uid = 0;
   source_line->render_target.width = 0;
   source_line->render_target.height = 0;
+
+  source_line->font_horizontal_stride = 9.2794f;
 
   // Set to out pointer
   *p_source_line = source_line;

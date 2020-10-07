@@ -287,7 +287,8 @@ void _mcm_handle_input(mc_node *node, mci_input_event *input_event)
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
     if (input_event->button_code == MOUSE_BUTTON_LEFT) {
 
-      // printf("left_click:offset=%i %.3f  line_index:%i\n", input_event->input_state->mouse.y, node->layout->__bounds.y,
+      // printf("left_click:offset=%i %.3f  line_index:%i\n", input_event->input_state->mouse.y,
+      // node->layout->__bounds.y,
       //        (int)((input_event->input_state->mouse.y - node->layout->__bounds.y - fedit->lines.padding.top) /
       //              fedit->lines.vertical_stride));
       int line_index = -1;
@@ -307,6 +308,7 @@ void _mcm_handle_input(mc_node *node, mci_input_event *input_event)
           fedit->cursor.col = (int)((float)click_relative_x / fedit->font_horizontal_stride);
           // printf("Cursor should be placed at {%i,%i}\n", line_index, column_index);
           fedit->cursor.visible = true;
+          mca_set_node_requires_rerender(node);
         }
       }
     }

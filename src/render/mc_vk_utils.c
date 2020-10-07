@@ -656,7 +656,7 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
 
   stbi_image_free(pixels);
 
-  printf("generated empty texture> width:%i height:%i channels:%i\n", width, height, texChannels);
+  // printf("generated empty texture> width:%i height:%i channels:%i\n", width, height, texChannels);
 
   return res;
 }

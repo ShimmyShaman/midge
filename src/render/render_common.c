@@ -13,13 +13,13 @@ int mcr_obtain_image_render_request(render_thread_info *render_thread, image_ren
     render_request =
         render_thread->render_request_object_pool->items[render_thread->render_request_object_pool->count - 1];
     --render_thread->render_request_object_pool->count;
-    // printf("render_requestu=%p %u\n", render_request, render_thread->render_request_object_pool->count);
+    printf("render_requestu=%p %u\n", render_request, render_thread->render_request_object_pool->count);
   }
   else {
     // Construct another
     render_request = (image_render_details *)malloc(sizeof(image_render_details));
     render_request->commands_allocated = 0;
-    // printf("render_requestn=%p\n", render_request);
+    printf("render_requestn=%p\n", render_request);
   }
   pthread_mutex_unlock(&render_thread->render_request_object_pool->mutex);
 
@@ -59,6 +59,7 @@ int mcr_obtain_element_render_command(image_render_details *image_queue, element
       memcpy(new_ary, image_queue->commands, sizeof(element_render_command) * image_queue->command_count);
       free(image_queue->commands);
     }
+    // printf("resized element render command list from %u to %u\n", image_queue->commands_allocated, new_alloc);
     image_queue->commands = new_ary;
     image_queue->commands_allocated = new_alloc;
   }
@@ -210,7 +211,7 @@ void mcr_issue_render_command_text(image_render_details *image_render_queue, uns
   render_cmd->type = RENDER_COMMAND_PRINT_TEXT;
   render_cmd->x = x;
   render_cmd->y = y;
-  // printf("mui_rtb-3 %u %u\n", render_cmd->x, render_cmd->y);
+  // printf("mui_rtb-3 %p %u %u\n", render_cmd, render_cmd->x, render_cmd->y);
 
   // TODO -- make the render cmd a c_str??
   render_cmd->print_text.text = strdup(text);

@@ -71,7 +71,7 @@ void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_no
                                          (unsigned int)node->layout->__bounds.y, mh_data->render_target.width,
                                          mh_data->render_target.height, mh_data->render_target.resource_uid);
 
-  mca_set_node_requires_rerender(node);
+  // mca_set_node_requires_rerender(node);
 }
 
 void myh_init(mc_node *module_node)
