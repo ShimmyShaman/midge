@@ -15,7 +15,7 @@ typedef struct mcm_source_token {
 } mcm_source_token;
 
 typedef struct mcm_source_token_list {
-  unsigned int alloc, count;
+  unsigned int capacity, count;
   mcm_source_token **items;
 } mcm_source_token_list;
 
@@ -55,7 +55,7 @@ typedef struct mcm_function_editor {
 
     int display_offset_index;
 
-    unsigned int utilized, count, alloc;
+    unsigned int utilized, count, capacity;
     mcm_source_line **items;
 
   } lines;
@@ -75,17 +75,17 @@ typedef struct mcm_source_editor_pool {
   unsigned int max_instance_count;
   struct {
     unsigned int size;
-    mcm_function_editor **instances;
+    mcm_function_editor **items;
   } function_editor;
 
   struct {
     unsigned int capacity, count;
-    mcm_source_token_list **instances;
+    mcm_source_token_list **items;
   } source_token_lists;
 
   struct {
     unsigned int capacity, count;
-    mcm_source_token **instances;
+    mcm_source_token **items;
   } source_tokens;
 
 } mcm_source_editor_pool;

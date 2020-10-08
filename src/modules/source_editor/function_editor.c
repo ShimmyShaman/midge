@@ -79,7 +79,7 @@ int _mcm_update_line_details(mcm_function_editor *fedit, mc_rectf *available_are
     if (y_index >= fedit->lines.count) {
       // Construct a new one
       mcm_init_source_line(fedit->node, &line);
-      append_to_collection((void ***)&fedit->lines.items, &fedit->lines.alloc, &fedit->lines.count, line);
+      append_to_collection((void ***)&fedit->lines.items, &fedit->lines.capacity, &fedit->lines.count, line);
     }
     else {
       line = fedit->lines.items[y_index];
@@ -91,6 +91,13 @@ int _mcm_update_line_details(mcm_function_editor *fedit, mc_rectf *available_are
                                    fedit->lines.padding.top + fedit->lines.vertical_stride * y_index, 0.f, 0.f};
     line->node->layout->preferred_height = fedit->lines.vertical_stride;
 
+    // Attach line source (if it exists)
+    if (y_index + fedit->lines.display_offset_index < fedit->code.lines.count) {
+      line->source_list = fedit->code.lines.items[y_index + fedit->lines.display_offset_index];
+    }
+    else
+      line->source_list = NULL;
+
     // Continue
     ++y_index;
   }
@@ -100,125 +107,6 @@ int _mcm_update_line_details(mcm_function_editor *fedit, mc_rectf *available_are
     fedit->lines.items[a]->node->layout->visible = false;
   }
 
-  // const int CODE_EDITOR_RENDERED_CODE_LINES = 12;
-  // // Copies the rtf text to the rendered lines
-  // // printf("urt-0\n");
-  // char *code = function_editor->code.rtf->text;
-  // int i = 0;
-  // int s = i;
-  // int line_index = 0;
-  // int max_line_index = function_editor->line_display_offset + CODE_EDITOR_RENDERED_CODE_LINES;
-  // char *color_from_previous_line = NULL;
-  // char *color_at_end_of_current_line = NULL;
-  // for (; i < function_editor->code.rtf->len && line_index < max_line_index;) {
-  //   // Obtain the line rtf
-  //   bool eof = false;
-  //   // printf("urt-1\n");
-  //   for (;; ++i) {
-  //     if (code[i] == '\0') {
-  //       eof = true;
-  //       break;
-  //     }
-  //     else if (code[i] == '\n') {
-  //       break;
-  //     }
-  //     else if (code[i] == '[') {
-  //       if (code[i + 1] == '[') {
-  //         ++i;
-  //         continue;
-  //       }
-  //       else if (!strncmp(code + i, "[color=", 7)) {
-  //         int j = i + 7;
-  //         for (;; ++j) {
-  //           if (code[j] == ']') {
-  //             ++j;
-  //             break;
-  //           }
-  //         }
-  //         if (color_at_end_of_current_line) {
-  //           free(color_at_end_of_current_line);
-  //         }
-  //         allocate_and_copy_cstrn(color_at_end_of_current_line, code + i, j - i);
-  //         i = j - 1;
-  //         continue;
-  //       }
-  //       print_parse_error(code, i, "mce_update_rendered_text", "Unhandled rtf?");
-  //       MCerror(1465, "Unhandled");
-  //     }
-  //   }
-  //   // register_midge_error_tag("mce_update_rendered_text-4");
-  //   // printf("urt-4\n");
-
-  //   if (line_index >= function_editor->line_display_offset) {
-  //     rendered_code_line *rendered_code_line =
-  //         function_editor->render_lines[line_index - function_editor->line_display_offset];
-  //     rendered_code_line->visible = true;
-
-  //     bool text_differs;
-  //     if (color_from_previous_line) {
-  //       int potential_line_len = (color_from_previous_line ? strlen(color_from_previous_line) : 0) + i - s;
-  //       text_differs =
-  //           rendered_code_line->rtf->len != potential_line_len ||
-  //           strncmp(rendered_code_line->rtf->text, color_from_previous_line, strlen(color_from_previous_line)) ||
-  //           strncmp(rendered_code_line->rtf->text + strlen(color_from_previous_line), code + s, s - i);
-  //     }
-  //     else {
-  //       text_differs =
-  //           rendered_code_line->rtf->len != (i - s) || strncmp(rendered_code_line->rtf->text, code + s, s - i);
-  //     }
-
-  //     if (text_differs) {
-  //       // printf("urt-5a\n");
-  //       // printf("line-%i was:'%s'\n", line_index - function_editor->line_display_offset,
-  //       // rendered_code_line->rtf->text);
-
-  //       // Set previous rtf settings
-  //       MCcall(set_c_str(rendered_code_line->rtf, ""));
-  //       if (color_from_previous_line) {
-  //         MCcall(append_to_c_str(rendered_code_line->rtf, color_from_previous_line));
-  //       }
-
-  //       // printf("urt-6\n");
-  //       // Set the line text
-  //       MCcall(append_to_c_strn(rendered_code_line->rtf, code + s, i - s));
-  //       rendered_code_line->requires_render_update = true;
-  //       function_editor->visual_node->data.visual.requires_render_update = true;
-
-  //       // printf("line-%i now:'%s'\n", line_index - function_editor->line_display_offset,
-  //       // rendered_code_line->rtf->text);
-  //     }
-  //   }
-  //   // register_midge_error_tag("mce_update_rendered_text-7");
-  //   // printf("urt-8\n");
-
-  //   ++line_index;
-  //   if (eof) {
-  //     break;
-  //   }
-  //   ++i; // Past the new-line
-  //   s = i;
-
-  //   if (color_at_end_of_current_line) {
-  //     if (color_from_previous_line) {
-  //       free(color_from_previous_line);
-  //     }
-  //     color_from_previous_line = color_at_end_of_current_line;
-  //     color_at_end_of_current_line = NULL;
-  //   }
-  //   // printf("urt-9\n");
-  // }
-
-  // // Turn off visibility of the rest of the lines
-  // if (line_index - function_editor->line_display_offset < 0) {
-  //   line_index -= line_index - function_editor->line_display_offset;
-  // }
-  // for (; line_index - function_editor->line_display_offset < CODE_EDITOR_RENDERED_CODE_LINES; ++line_index) {
-  //   rendered_code_line *rendered_code_line =
-  //       function_editor->render_lines[line_index - function_editor->line_display_offset];
-  //   rendered_code_line->visible = false;
-  // }
-
-  // register_midge_error_tag("mce_update_rendered_text(~)");
   return 0;
 }
 
@@ -250,12 +138,12 @@ void _mcm_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
   mcm_function_editor *function_editor = (mcm_function_editor *)node->data;
 
   mca_update_typical_node_layout(node, available_area);
-  printf("function_editor-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y, available_area->width,
-         available_area->height);
-  printf("function_editor-padding %.3f %.3f %.3f*%.3f\n", node->layout->padding.left, node->layout->padding.top,
-         node->layout->padding.right, node->layout->padding.bottom);
-  printf("function_editor-bounds %.3f %.3f %.3f*%.3f\n", node->layout->__bounds.x, node->layout->__bounds.y,
-         node->layout->__bounds.width, node->layout->__bounds.height);
+  // printf("function_editor-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y, available_area->width,
+  //        available_area->height);
+  // printf("function_editor-padding %.3f %.3f %.3f*%.3f\n", node->layout->padding.left, node->layout->padding.top,
+  //        node->layout->padding.right, node->layout->padding.bottom);
+  // printf("function_editor-bounds %.3f %.3f %.3f*%.3f\n", node->layout->__bounds.x, node->layout->__bounds.y,
+  //        node->layout->__bounds.width, node->layout->__bounds.height);
 
   // Align text lines to fit to the container
   _mcm_update_line_details(function_editor, &node->layout->__bounds);
@@ -326,44 +214,44 @@ void _mcm_render_function_editor_present(image_render_details *image_render_queu
 
 void mcm_set_function_editor_cursor_position(mcm_function_editor *fedit, int preferred_line, int preferred_col)
 {
-  fedit->cursor.rtf_index = 0;
+  // fedit->cursor.rtf_index = 0;
 
-  const char *code = fedit->code.rtf;
+  // const char *code = fedit->code.rtf;
 
-  // Find the start of the new line
-  int line = 0, col = 0, rtf_index;
-  for (;; ++rtf_index) {
-    if (code[i] == '\0') {
-      --i;
-      break;
-    }
-    if (code[i] == '\n') {
-      ++line;
-      if (line < preferred_line)
-        break;
-    }
-  }
+  // // Find the start of the new line
+  // int line = 0, col = 0, rtf_index;
+  // for (;; ++rtf_index) {
+  //   if (code[i] == '\0') {
+  //     --i;
+  //     break;
+  //   }
+  //   if (code[i] == '\n') {
+  //     ++line;
+  //     if (line < preferred_line)
+  //       break;
+  //   }
+  // }
 
-  if (line < preferred_line)
-    preferred_col = INT32_MAX;
+  // if (line < preferred_line)
+  //   preferred_col = INT32_MAX;
 
-  // Move to the preferred column
-  for (int c = 0; c < preferred_col; ++c) {
-    ++i;
-    if (code[i] == '\0') {
-      --i;
-      break;
-    }
-    if (code[i] == '\n') {
-      break;
-    }
-  }
+  // // Move to the preferred column
+  // for (int c = 0; c < preferred_col; ++c) {
+  //   ++i;
+  //   if (code[i] == '\0') {
+  //     --i;
+  //     break;
+  //   }
+  //   if (code[i] == '\n') {
+  //     break;
+  //   }
+  // }
 
-  fedit->cursor.rtf_index = i;
+  // fedit->cursor.rtf_index = i;
 
-  // printf("Cursor should be placed at {%i,%i}\n", line_index, column_index);
-  fedit->cursor.visible = true;
-  mca_set_node_requires_rerender(node);
+  // // printf("Cursor should be placed at {%i,%i}\n", line_index, column_index);
+  // fedit->cursor.visible = true;
+  // mca_set_node_requires_rerender(node);
 }
 
 void _mcm_handle_input(mc_node *node, mci_input_event *input_event)
@@ -393,8 +281,8 @@ void _mcm_handle_input(mc_node *node, mci_input_event *input_event)
           click_relative_x = 0;
         if (click_relative_x >= 0) {
 
-          mcm_set_function_editor_cursor(fedit, line_index,
-                                         (int)((float)click_relative_x / fedit->font_horizontal_stride));
+          mcm_set_function_editor_cursor_position(fedit, line_index,
+                                                  (int)((float)click_relative_x / fedit->font_horizontal_stride));
         }
       }
     }
@@ -452,7 +340,7 @@ void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *sour
   // function_editor->code.syntax = NULL;
 
   function_editor->lines.count = 0;
-  function_editor->lines.alloc = 0;
+  function_editor->lines.capacity = 0;
   function_editor->lines.display_offset_index = 0;
 
   *p_function_editor = function_editor;
@@ -530,16 +418,16 @@ void mcm_init_function_editor(mc_node *parent_node, mcm_source_editor_pool *sour
 
 void _mcm_update_function_editor_line_displays(mcm_function_editor *function_editor)
 {
+  // printf("_mcm_update_function_editor_line_displays\n");
   function_editor->lines.utilized = 0;
 
-  for (int line = 0; line < function_editor->lines.count; ++line) {
+  int line = 0;
+  printf("function_editor->lines.count:%u \n", function_editor->lines.count);
+  for (; line < function_editor->lines.count; ++line) {
     int code_line_index = line + function_editor->lines.display_offset_index;
 
+    printf("code_line_index:%u displayoffsetindex:%u \n", code_line_index, function_editor->lines.display_offset_index);
     if (code_line_index > function_editor->code.lines.count) {
-      // Mark the rest of the lines invisible
-      for (; line < function_editor->lines.count; ++line) {
-        function_editor->lines.items[line]->node->layout->visible = false;
-      }
       break;
     }
 
@@ -549,7 +437,14 @@ void _mcm_update_function_editor_line_displays(mcm_function_editor *function_edi
 
     source_line->node->layout->visible = true;
 
+    printf("setting line:%i with %i source_tokens\n", line, line_token_list->count);
     source_line->source_list = line_token_list;
+  }
+
+  // Mark the rest of the lines invisible
+  for (; line < function_editor->lines.count; ++line) {
+    printf("setting line:%i invisible\n", line);
+    function_editor->lines.items[line]->node->layout->visible = false;
   }
 }
 
@@ -562,18 +457,20 @@ void _mcm_obtain_source_token_from_pool(mcm_source_editor_pool *source_editor_po
   }
 
   --source_editor_pool->source_tokens.count;
-  *token = source_editor_pool->source_tokens.instances[source_editor_pool->source_tokens.count];
+  *token = source_editor_pool->source_tokens.items[source_editor_pool->source_tokens.count];
 }
 
 void _mcm_obtain_source_token_list_from_pool(mcm_source_editor_pool *source_editor_pool, mcm_source_token_list **list)
 {
   if (!source_editor_pool->source_token_lists.count) {
     *list = (mcm_source_token_list *)malloc(sizeof(mcm_source_token_list));
+    (*list)->capacity = 0U;
+    (*list)->count = 0U;
     return;
   }
 
   --source_editor_pool->source_token_lists.count;
-  *list = source_editor_pool->source_token_lists.instances[source_editor_pool->source_token_lists.count];
+  *list = source_editor_pool->source_token_lists.items[source_editor_pool->source_token_lists.count];
 }
 
 void _mcm_return_source_token_lists_to_editor_pool(mcm_source_editor_pool *source_editor_pool,
@@ -598,6 +495,7 @@ void _mcm_return_source_token_lists_to_editor_pool(mcm_source_editor_pool *sourc
 
 void _mcm_set_function_editor_lines_with_plain_text(mcm_function_editor *function_editor, const char *code)
 {
+  // printf("_mcm_set_function_editor_lines_with_plain_text\n");
   // Clear previous lines and return items to the pool
   for (int a = 0; a < function_editor->code.lines.count; ++a) {
     _mcm_return_source_token_lists_to_editor_pool(function_editor->source_editor_pool,
@@ -606,17 +504,15 @@ void _mcm_set_function_editor_lines_with_plain_text(mcm_function_editor *functio
   function_editor->code.lines.count = 0;
 
   int i = 0, s;
-  while (1) {
-
-    if (code[i] == '\0') {
-      break;
-    }
+  while (code[i] != '\0') {
 
     mcm_source_token_list *line_token_list;
     _mcm_obtain_source_token_list_from_pool(function_editor->source_editor_pool, &line_token_list);
     append_to_collection((void ***)&function_editor->code.lines.items, &function_editor->code.lines.capacity,
                          &function_editor->code.lines.count, line_token_list);
     line_token_list->count = 0;
+
+    // printf("code:(%i):'%s'\n", i, code);
 
     while (code[i] != '\0' && code[i] != '\n') {
       s = i;
@@ -668,8 +564,13 @@ void _mcm_set_function_editor_lines_with_plain_text(mcm_function_editor *functio
       } break;
       }
     }
+
+    if (code[i] == '\n') {
+      ++i;
+    }
   }
 
+  // printf("function_editor->code.lines.count:%i\n", function_editor->code.lines.count);
   _mcm_update_function_editor_line_displays(function_editor);
 }
 

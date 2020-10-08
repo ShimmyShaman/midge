@@ -499,7 +499,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
       printf("TODO character not supported.\n");
       return VK_SUCCESS;
     }
-    printf("printing character '%c' %i\n", letter, (int)letter);
+    // printf("printing character '%c' %i\n", letter, (int)letter);
 
     // Source texture bounds
     stbtt_aligned_quad q;
@@ -510,6 +510,12 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     stbtt_GetBakedQuad(font->char_data, (int)font_image->width, (int)font_image->height, letter - 32, &align_x,
                        &align_y, &q,
                        1); // 1=opengl & d3d10+,0=d3d9
+
+    // TODO -- figure out why this won't work
+    // if (letter == ' ') {
+    //   // No need to print empty space (yet...)
+    //   continue;
+    // }
 
     // printf("mrt-2\n");
     // stbtt_bakedchar *b = font->char_data + (letter - 32);

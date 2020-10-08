@@ -14,27 +14,32 @@ void mca_init_source_editor_pool()
   source_editor_pool->max_instance_count = 15;
 
   source_editor_pool->function_editor.size = 0;
+
+  source_editor_pool->source_token_lists.capacity = 0;
+  source_editor_pool->source_token_lists.count = 0;
+  source_editor_pool->source_tokens.capacity = 0;
+  source_editor_pool->source_tokens.count = 0;
 }
 
 void _mcm_obtain_function_editor_instance(mcm_source_editor_pool *source_editor_pool,
                                           mcm_function_editor **function_editor)
 {
   for (int i = 0; i < source_editor_pool->function_editor.size; ++i) {
-    if (!source_editor_pool->function_editor.instances[i]->node->layout->visible) {
-      *function_editor = source_editor_pool->function_editor.instances[i];
+    if (!source_editor_pool->function_editor.items[i]->node->layout->visible) {
+      *function_editor = source_editor_pool->function_editor.items[i];
     }
   }
 
   if (source_editor_pool->function_editor.size < source_editor_pool->max_instance_count) {
     // Construct a new instance
-    reallocate_collection((void ***)&source_editor_pool->function_editor.instances,
+    reallocate_collection((void ***)&source_editor_pool->function_editor.items,
                           &source_editor_pool->function_editor.size, source_editor_pool->function_editor.size + 1, 0);
 
     global_root_data *global_data;
     obtain_midge_global_root(&global_data);
 
     mcm_init_function_editor(global_data->global_node, source_editor_pool, function_editor);
-    source_editor_pool->function_editor.instances[source_editor_pool->function_editor.size - 1] = *function_editor;
+    source_editor_pool->function_editor.items[source_editor_pool->function_editor.size - 1] = *function_editor;
 
     return;
   }
@@ -58,8 +63,8 @@ void mca_activate_source_editor_for_definition(source_definition *definition)
     // Determine if an editor already exists with this definition;
     mcm_function_editor *function_editor = NULL;
     for (int i = 0; i < source_editor_pool->function_editor.size; ++i) {
-      if (source_editor_pool->function_editor.instances[i]->function == definition->data.func_info) {
-        function_editor = source_editor_pool->function_editor.instances[i];
+      if (source_editor_pool->function_editor.items[i]->function == definition->data.func_info) {
+        function_editor = source_editor_pool->function_editor.items[i];
         printf("feditor already existed\n");
         break;
       }

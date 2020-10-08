@@ -113,28 +113,31 @@ void _mcm_render_source_line_headless(mc_node *node)
   // printf("%u %u \n", rq->data.target_image.screen_offset_coordinates.x,
   // rq->data.target_image.screen_offset_coordinates.y);
 
-  // printf("rendering_text:%s\n", source_line->rtf->text);
-  // Render the text
-  int horizontal_offset = 0;
-  for (int a = 0; a < source_line->source_list->count; ++a) {
+  // CHECK
+  if (source_line->source_list) {
+    // printf("rendering_text:%s\n", source_line->rtf->text);
+    // Render the text
+    int horizontal_offset = 0;
+    for (int a = 0; a < source_line->source_list->count; ++a) {
 
-    mcm_source_token *token = source_line->source_list->items[a];
+      mcm_source_token *token = source_line->source_list->items[a];
 
-    render_color font_color;
-    switch (token->type) {
-    case MCM_SRC_EDITOR_EMPTY:
-    case MCM_SRC_EDITOR_NON_SEMANTIC_TEXT: {
-      font_color = COLOR_GHOST_WHITE;
-    } break;
-    default:
-      MCerror(9288, "Unsupported mcm_source_token_type=%i", token->type);
+      render_color font_color;
+      switch (token->type) {
+      case MCM_SRC_EDITOR_EMPTY:
+      case MCM_SRC_EDITOR_NON_SEMANTIC_TEXT: {
+        font_color = COLOR_GHOST_WHITE;
+      } break;
+      default:
+        MCerror(9288, "Unsupported mcm_source_token_type=%i", token->type);
+      }
+
+      mcr_issue_render_command_text(rq, (unsigned int)(node->layout->__bounds.x + horizontal_offset),
+                                    (unsigned int)(node->layout->__bounds.y), token->str->text,
+                                    source_line->font_resource_uid, font_color);
+
+      horizontal_offset += token->str->len * source_line->font_horizontal_stride;
     }
-
-    mcr_issue_render_command_text(rq, (unsigned int)(node->layout->__bounds.x + horizontal_offset),
-                                  (unsigned int)(node->layout->__bounds.y), token->str->text,
-                                  source_line->font_resource_uid, font_color);
-
-    horizontal_offset += token->str->len * source_line->font_horizontal_stride;
   }
 
   // printf("rq->render_target:%i\n", rq->render_target);
