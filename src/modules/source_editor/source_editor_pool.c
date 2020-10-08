@@ -3,12 +3,12 @@
 #include "modules/app_modules.h"
 #include "render/render_common.h"
 
-void mca_init_source_editor_pool()
+void mce_init_source_editor_pool()
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  mcm_source_editor_pool *source_editor_pool = (mcm_source_editor_pool *)malloc(sizeof(mcm_source_editor_pool));
+  mce_source_editor_pool *source_editor_pool = (mce_source_editor_pool *)malloc(sizeof(mce_source_editor_pool));
   global_data->ui_state->source_editor_pool = source_editor_pool;
 
   source_editor_pool->max_instance_count = 15;
@@ -21,8 +21,8 @@ void mca_init_source_editor_pool()
   source_editor_pool->source_tokens.count = 0;
 }
 
-void _mcm_obtain_function_editor_instance(mcm_source_editor_pool *source_editor_pool,
-                                          mcm_function_editor **function_editor)
+void _mce_obtain_function_editor_instance(mce_source_editor_pool *source_editor_pool,
+                                          mce_function_editor **function_editor)
 {
   for (int i = 0; i < source_editor_pool->function_editor.size; ++i) {
     if (!source_editor_pool->function_editor.items[i]->node->layout->visible) {
@@ -38,7 +38,7 @@ void _mcm_obtain_function_editor_instance(mcm_source_editor_pool *source_editor_
     global_root_data *global_data;
     obtain_midge_global_root(&global_data);
 
-    mcm_init_function_editor(global_data->global_node, source_editor_pool, function_editor);
+    mce_init_function_editor(global_data->global_node, source_editor_pool, function_editor);
     source_editor_pool->function_editor.items[source_editor_pool->function_editor.size - 1] = *function_editor;
 
     return;
@@ -48,20 +48,20 @@ void _mcm_obtain_function_editor_instance(mcm_source_editor_pool *source_editor_
 }
 
 extern "C" {
-int _mcm_set_definition_to_function_editor(mcm_function_editor *function_editor, function_info *function);
+int _mce_set_definition_to_function_editor(mce_function_editor *function_editor, function_info *function);
 }
 
-void mca_activate_source_editor_for_definition(source_definition *definition)
+void mce_activate_source_editor_for_definition(source_definition *definition)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  mcm_source_editor_pool *source_editor_pool = (mcm_source_editor_pool *)global_data->ui_state->source_editor_pool;
+  mce_source_editor_pool *source_editor_pool = (mce_source_editor_pool *)global_data->ui_state->source_editor_pool;
 
   switch (definition->type) {
   case SOURCE_DEFINITION_FUNCTION: {
     // Determine if an editor already exists with this definition;
-    mcm_function_editor *function_editor = NULL;
+    mce_function_editor *function_editor = NULL;
     for (int i = 0; i < source_editor_pool->function_editor.size; ++i) {
       if (source_editor_pool->function_editor.items[i]->function == definition->data.func_info) {
         function_editor = source_editor_pool->function_editor.items[i];
@@ -71,9 +71,9 @@ void mca_activate_source_editor_for_definition(source_definition *definition)
     }
 
     if (!function_editor) {
-      _mcm_obtain_function_editor_instance(source_editor_pool, &function_editor);
+      _mce_obtain_function_editor_instance(source_editor_pool, &function_editor);
 
-      _mcm_set_definition_to_function_editor(function_editor, definition->data.func_info);
+      _mce_set_definition_to_function_editor(function_editor, definition->data.func_info);
     }
 
     function_editor->node->layout->visible = true;

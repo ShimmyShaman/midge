@@ -91,7 +91,8 @@ void __mui_render_context_menu_headless(mc_node *node)
   // Children
   for (int a = 0; a < node->children->count; ++a) {
     mc_node *child = node->children->items[a];
-    if (child->layout && child->layout->visible && child->layout->render_headless) {
+    if (child->layout && child->layout->visible && child->layout->render_headless &&
+        child->layout->__requires_rerender) {
       // TODO fptr casting
       void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
       render_node_headless(child);

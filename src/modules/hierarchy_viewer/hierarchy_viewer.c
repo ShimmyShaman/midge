@@ -255,7 +255,7 @@ void __mc_hv_text_line_left_click_handler(mui_button *button, mc_point click_loc
     // Activate the code editor with the function
     source_definition *definition = (source_definition *)sp_state->data;
 
-    mca_activate_source_editor_for_definition(definition);
+    mce_activate_source_editor_for_definition(definition);
   } break;
   case MC_HV_HIERARCHICAL_C_HEADER:
   case MC_HV_HIERARCHICAL_C_SOURCE:

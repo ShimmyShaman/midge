@@ -3,7 +3,7 @@
 #include "render/render_common.h"
 
 extern "C" {
-void mca_init_source_editor_pool();
+void mce_init_source_editor_pool();
 }
 
 void init_source_editor(mc_node *app_root)
@@ -13,5 +13,5 @@ void init_source_editor(mc_node *app_root)
   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/function_editor.c", NULL);
 
-  mca_init_source_editor_pool();
+  mce_init_source_editor_pool();
 }

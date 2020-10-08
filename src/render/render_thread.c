@@ -1227,7 +1227,8 @@ VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_
   //   // DEBUG
   //   uint cmd_count = 0;
   //   for (int r = 0; r < render_thread->image_queue->count; ++r) {
-  //     cmd_count += render_thread->image_queue.image_renders[r].command_count;
+  //     cmd_count += render_thread->image_queue.items[r].command_count;
+  //     if(render_thread->image_queue.items[r]->type == )
   //   }
   //   printf("Vulkan entered image_render_queue! %u sequences using %u draw-commands\n",
   //          render_thread->image_queue->count, cmd_count);
@@ -1242,9 +1243,9 @@ VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_
   struct timespec render_end_time;
   clock_gettime(CLOCK_REALTIME, &render_end_time);
 
-  // printf("Vulkan rendered image_render_queue! %.3f ms\n",
-  //        (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
-  //            1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
+  printf("Vulkan rendered image_render_queue! %.3f ms\n",
+         (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
+             1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
 
   // Return the image render request objects to the pool
   pthread_mutex_lock(&render_thread->render_request_object_pool->mutex);

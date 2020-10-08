@@ -59,7 +59,6 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
 
 void mcc_issue_keyboard_event(window_input_event_type event_type, int button_code)
 {
-  printf("mcc_issue_keyboard_event\n");
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
@@ -211,7 +210,8 @@ void mcc_handle_xcb_input()
           continue;
         }
 
-        if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && xcb_input->detail.keyboard.key == KEY_CODE_L) {
+        if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
+            xcb_input->detail.keyboard.key == KEY_CODE_L) {
           mca_set_all_nodes_require_layout_update();
           continue;
         }

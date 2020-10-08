@@ -24,7 +24,8 @@ void _myh_render_mh_data_headless(mc_node *node)
   // Children
   for (int a = 0; a < node->children->count; ++a) {
     mc_node *child = node->children->items[a];
-    if (child->layout && child->layout->visible && child->layout->render_headless) {
+    if (child->layout && child->layout->visible && child->layout->render_headless &&
+        child->layout->__requires_rerender) {
       // TODO fptr casting
       void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
       render_node_headless(child);
@@ -128,5 +129,5 @@ void set_mystery_hut_project_state(mc_node *app_root)
   function_info *func_info;
   find_function_info("myh_init", &func_info);
 
-  mca_activate_source_editor_for_definition(func_info->source);
+  mce_activate_source_editor_for_definition(func_info->source);
 }

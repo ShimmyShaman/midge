@@ -3,12 +3,12 @@
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
-// void _mcm_determine_source_line_extents(mc_node *node, layout_extent_restraints restraints)
+// void _mce_determine_source_line_extents(mc_node *node, layout_extent_restraints restraints)
 // {
-// // printf("_mcm_determine_source_line_extents\n");
+// // printf("_mce_determine_source_line_extents\n");
 // const float MAX_EXTENT_VALUE = 100000.f;
 
-// mcm_source_line *source_line = (mcm_source_line *)node->data;
+// mce_source_line *source_line = (mce_source_line *)node->data;
 
 // mc_rectf new_bounds = node->layout->__bounds;
 
@@ -40,9 +40,9 @@
 // }
 // }
 
-void _mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
+void _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
 {
-  mcm_source_line *source_line = (mcm_source_line *)node->data;
+  mce_source_line *source_line = (mce_source_line *)node->data;
 
   mca_update_typical_node_layout(node, available_area);
 
@@ -92,12 +92,15 @@ void _mcm_update_source_line_layout(mc_node *node, mc_rectf *available_area)
   mca_set_node_requires_rerender(node);
 }
 
-void _mcm_render_source_line_headless(mc_node *node)
+void _mce_render_source_line_headless(mc_node *node)
 {
-  mcm_source_line *source_line = (mcm_source_line *)node->data;
+  // Toggle
+  node->layout->__requires_rerender = false;
 
+  // Render New Image
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
+  mce_source_line *source_line = (mce_source_line *)node->data;
 
   image_render_details *rq;
   mcr_obtain_image_render_request(global_data->render_thread, &rq);
@@ -120,16 +123,16 @@ void _mcm_render_source_line_headless(mc_node *node)
     int horizontal_offset = 0;
     for (int a = 0; a < source_line->source_list->count; ++a) {
 
-      mcm_source_token *token = source_line->source_list->items[a];
+      mce_source_token *token = source_line->source_list->items[a];
 
       render_color font_color;
       switch (token->type) {
-      case MCM_SRC_EDITOR_EMPTY:
-      case MCM_SRC_EDITOR_NON_SEMANTIC_TEXT: {
+      case MCE_SRC_EDITOR_EMPTY:
+      case MCE_SRC_EDITOR_NON_SEMANTIC_TEXT: {
         font_color = COLOR_GHOST_WHITE;
       } break;
       default:
-        MCerror(9288, "Unsupported mcm_source_token_type=%i", token->type);
+        MCerror(9288, "Unsupported mce_source_token_type=%i", token->type);
       }
 
       mcr_issue_render_command_text(rq, (unsigned int)(node->layout->__bounds.x + horizontal_offset),
@@ -144,9 +147,9 @@ void _mcm_render_source_line_headless(mc_node *node)
   mcr_submit_image_render_request(global_data->render_thread, rq);
 }
 
-void _mcm_render_source_line_present(image_render_details *image_render_queue, mc_node *node)
+void _mce_render_source_line_present(image_render_details *image_render_queue, mc_node *node)
 {
-  mcm_source_line *source_line = (mcm_source_line *)node->data;
+  mce_source_line *source_line = (mce_source_line *)node->data;
 
   // Text
   // render_color color = COLOR_PURPLE;
@@ -164,7 +167,7 @@ void _mcm_render_source_line_present(image_render_details *image_render_queue, m
       source_line->render_target.resource_uid);
 }
 
-void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
+void mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)
 {
   // Node
   mc_node *node;
@@ -176,13 +179,13 @@ void mcm_init_source_line(mc_node *parent, mcm_source_line **p_source_line)
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   node->layout->determine_layout_extents =
-      (void *)&mca_determine_typical_node_extents; //_mcm_determine_source_line_extents;
-  node->layout->update_layout = (void *)&_mcm_update_source_line_layout;
-  node->layout->render_headless = (void *)&_mcm_render_source_line_headless;
-  node->layout->render_present = (void *)&_mcm_render_source_line_present;
+      (void *)&mca_determine_typical_node_extents; //_mce_determine_source_line_extents;
+  node->layout->update_layout = (void *)&_mce_update_source_line_layout;
+  node->layout->render_headless = (void *)&_mce_render_source_line_headless;
+  node->layout->render_present = (void *)&_mce_render_source_line_present;
 
   // Control
-  mcm_source_line *source_line = (mcm_source_line *)malloc(sizeof(mcm_source_line));
+  mce_source_line *source_line = (mce_source_line *)malloc(sizeof(mce_source_line));
   source_line->node = node;
   node->data = source_line;
 

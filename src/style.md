@@ -10,4 +10,5 @@ where:
   - [r] Render
   - [vk] Vulkan
   - [a] application/project/state management
+  - [e] Editors & environment tools
 

@@ -141,7 +141,7 @@ void initialize_midge_components()
   // // Environment
   // mca_init_global_context_menu();
   // mca_init_global_node_context_menu_options();
-  // mca_init_source_editor_pool();
+  // mce_init_source_editor_pool();
   // // mca_init_visual_project_management();
 
   // Modules
@@ -452,7 +452,8 @@ void midge_run_app()
       // printf("headless\n");
       for (int a = 0; a < global_root_node->children->count; ++a) {
         mc_node *child = global_root_node->children->items[a];
-        if (child->layout && child->layout->visible && child->layout->render_headless) {
+        if (child->layout && child->layout->visible && child->layout->render_headless &&
+        child->layout->__requires_rerender) {
           // TODO fptr casting
           // printf("rh-child-type:%i\n", child->type);
           void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
