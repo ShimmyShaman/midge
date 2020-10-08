@@ -1,11 +1,95 @@
-
 #include "control/mc_controller.h"
+
 #include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
 #include "modules/app_modules.h"
 #include "modules/source_editor/source_editor.h"
 #include "render/render_common.h"
+
+void mce_move_cursor_up(mce_function_editor *fedit)
+{
+  // Get the line length
+  if (fedit->code.lines.count < fedit->cursor.line) {
+    MCerror(9114, "TODO");
+  }
+
+  if (fedit->cursor.line + fedit->lines.display_offset_index > 0) {
+    if (!fedit->cursor.zen_col) {
+      fedit->cursor.zen_col = fedit->cursor.col;
+    }
+
+    --fedit->cursor.line;
+
+    int line_len = fedit->code.lines.items[fedit->cursor.line + fedit->lines.display_offset_index]->line_len;
+    if (fedit->cursor.zen_col <= line_len) {
+      fedit->cursor.col = fedit->cursor.zen_col;
+    }
+    else {
+      fedit->cursor.col = line_len;
+    }
+  }
+  else {
+    fedit->cursor.col = 0;
+  }
+
+  mca_set_node_requires_rerender(fedit->node);
+}
+
+void mce_move_cursor_down(mce_function_editor *fedit)
+{
+  // Get the line length
+  if (fedit->code.lines.count < fedit->cursor.line) {
+    MCerror(9114, "TODO");
+  }
+
+  if (fedit->cursor.line + fedit->lines.display_offset_index + 1 < fedit->code.lines.count) {
+    if (!fedit->cursor.zen_col) {
+      fedit->cursor.zen_col = fedit->cursor.col;
+    }
+
+    ++fedit->cursor.line;
+
+    int line_len = fedit->code.lines.items[fedit->lines.display_offset_index + fedit->cursor.line]->line_len;
+    if (fedit->cursor.zen_col <= line_len) {
+      fedit->cursor.col = fedit->cursor.zen_col;
+    }
+    else {
+      fedit->cursor.col = line_len;
+    }
+  }
+  else {
+    fedit->cursor.col = fedit->code.lines.items[fedit->code.lines.count - 1]->line_len;
+  }
+
+  mca_set_node_requires_rerender(fedit->node);
+}
+
+void mce_move_cursor_left(mce_function_editor *fedit)
+{
+  // Get the line length
+  if (fedit->code.lines.count < fedit->cursor.line) {
+    MCerror(9114, "TODO");
+  }
+
+  fedit->cursor.zen_col = 0;
+
+  // Decrement the cursor col
+  if (fedit->cursor.col == 0) {
+    if (fedit->cursor.line > 0) {
+      --fedit->cursor.line;
+      fedit->cursor.col = fedit->code.lines.items[fedit->lines.display_offset_index + fedit->cursor.line]->line_len;
+    }
+    else {
+      // Do nothing -- already at beginning of document
+    }
+  }
+  else {
+    --fedit->cursor.col;
+  }
+
+  mca_set_node_requires_rerender(fedit->node);
+}
 
 void mce_move_cursor_right(mce_function_editor *fedit)
 {
@@ -15,26 +99,73 @@ void mce_move_cursor_right(mce_function_editor *fedit)
   }
 
   fedit->cursor.zen_col = 0;
-  mca_set_node_requires_rerender(fedit->node);
 
   // Determine how the cursor will move
-  mce_source_token_list *line_token_list = fedit->code.lines.items[fedit->cursor.line];
+  mce_source_token_list *line_token_list =
+      fedit->code.lines.items[fedit->lines.display_offset_index + fedit->cursor.line];
 
   // Increment the cursor col right
-  if (fedit->cursor.col >= line_token_list->char_len) {
+  if (fedit->cursor.col >= line_token_list->line_len) {
     if (fedit->cursor.line + 1 >= fedit->code.lines.count) {
       // Do nothing - already at edge of document
-      return;
     }
-
-    fedit->cursor.col = 0;
-    ++fedit->cursor.line;
-
-    // TODO  -- determine line display offset
-    return;
+    else {
+      fedit->cursor.col = 0;
+      ++fedit->cursor.line;
+      // TODO  -- determine line display offset
+    }
+  }
+  else {
+    ++fedit->cursor.col;
   }
 
-  ++fedit->cursor.col;
+  mca_set_node_requires_rerender(fedit->node);
+}
+
+void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int document_line, int document_col)
+{
+
+  fedit->cursor.zen_col = 0;
+
+  // Offset --
+  if (fedit->lines.display_offset_index) {
+    MCerror(9924, "TODO");
+  }
+  // preferred_line -= fedit->lines.display_offset_index;
+  // if (preferred_line + fedit->lines.display_offset_index < 0)
+  //   preferred_line = 0;
+  // if (preferred_line +fedit->lines.display_offset_index >= fedit->code.lines.count) {
+  //   preferred_line
+  // }
+
+  // Determine how the cursor will move
+  if (document_line >= fedit->code.lines.count) {
+    fedit->cursor.line = fedit->code.lines.count - 1 - fedit->lines.display_offset_index;
+    fedit->cursor.col = fedit->code.lines.items[fedit->code.lines.count - 1]->line_len;
+  }
+  else {
+    if (document_line < 0) {
+      document_line = 0;
+      document_col = 0;
+    }
+
+    fedit->cursor.line = document_line - fedit->lines.display_offset_index;
+    if (document_col <= 0) {
+      fedit->cursor.col = 0;
+    }
+    else {
+      if (document_col > fedit->code.lines.items[document_line]->line_len) {
+        fedit->cursor.col = fedit->code.lines.items[document_line]->line_len;
+      }
+      else {
+        fedit->cursor.col = document_col;
+      }
+    }
+  }
+
+  printf("Cursor placed at {%i,%i}\n", fedit->cursor.line, fedit->cursor.col);
+  fedit->cursor.visible = true;
+  mca_set_node_requires_rerender(fedit->node);
 }
 
 int _mce_update_line_details(mce_function_editor *fedit, mc_rectf *available_area)
@@ -197,55 +328,13 @@ void _mce_render_function_editor_present(image_render_details *image_render_queu
   }
 }
 
-void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int preferred_line, int preferred_col)
-{
-  // fedit->cursor.rtf_index = 0;
-
-  // const char *code = fedit->code.rtf;
-
-  // // Find the start of the new line
-  // int line = 0, col = 0, rtf_index;
-  // for (;; ++rtf_index) {
-  //   if (code[i] == '\0') {
-  //     --i;
-  //     break;
-  //   }
-  //   if (code[i] == '\n') {
-  //     ++line;
-  //     if (line < preferred_line)
-  //       break;
-  //   }
-  // }
-
-  // if (line < preferred_line)
-  //   preferred_col = INT32_MAX;
-
-  // // Move to the preferred column
-  // for (int c = 0; c < preferred_col; ++c) {
-  //   ++i;
-  //   if (code[i] == '\0') {
-  //     --i;
-  //     break;
-  //   }
-  //   if (code[i] == '\n') {
-  //     break;
-  //   }
-  // }
-
-  // fedit->cursor.rtf_index = i;
-
-  // // printf("Cursor should be placed at {%i,%i}\n", line_index, column_index);
-  // fedit->cursor.visible = true;
-  // mca_set_node_requires_rerender(node);
-}
-
 void _mce_handle_input(mc_node *node, mci_input_event *input_event)
 {
   // printf("_mce_handle_input %p %p\n", node, input_event);
   mce_function_editor *fedit = (mce_function_editor *)node->data;
 
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
-    printf("obb\n");
+    // printf("obb\n");
     if (input_event->button_code == MOUSE_BUTTON_LEFT) {
 
       // printf("left_click:offset=%i %.3f  line_index:%i\n", input_event->input_state->mouse.y,
@@ -258,7 +347,7 @@ void _mce_handle_input(mc_node *node, mci_input_event *input_event)
       if (click_relative_y >= 0) {
         line_index = (int)((float)click_relative_y / fedit->lines.vertical_stride);
       }
-      if (line_index) {
+      if (line_index >= 0) {
         // Find the column index
         int click_relative_x =
             input_event->input_state->mouse.x - (int)(node->layout->__bounds.x - fedit->lines.padding.left + 0.4f);
@@ -282,6 +371,15 @@ void _mce_handle_input(mc_node *node, mci_input_event *input_event)
 
     if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_L) {
       mce_move_cursor_right(fedit);
+    }
+    if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_J) {
+      mce_move_cursor_left(fedit);
+    }
+    if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_I) {
+      mce_move_cursor_up(fedit);
+    }
+    if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_K) {
+      mce_move_cursor_down(fedit);
     }
   }
   // printf("obd %i\n", input_event->type);
@@ -501,7 +599,7 @@ void _mce_set_function_editor_lines_with_plain_text(mce_function_editor *functio
     append_to_collection((void ***)&function_editor->code.lines.items, &function_editor->code.lines.capacity,
                          &function_editor->code.lines.count, line_token_list);
     line_token_list->count = 0;
-    line_token_list->char_len = 0;
+    line_token_list->line_len = 0;
 
     // printf("code:(%i):'%s'\n", i, code);
 
@@ -556,7 +654,7 @@ void _mce_set_function_editor_lines_with_plain_text(mce_function_editor *functio
       }
 
       // Add to the line total length
-      line_token_list->char_len += token->str->len;
+      line_token_list->line_len += token->str->len;
     }
 
     if (code[i] == '\n') {

@@ -15,7 +15,7 @@ typedef struct mce_source_token {
 } mce_source_token;
 
 typedef struct mce_source_token_list {
-  unsigned int char_len;
+  unsigned int line_len;
   unsigned int capacity, count;
   mce_source_token **items;
 } mce_source_token_list;
