@@ -57,6 +57,7 @@ int append_to_c_str(c_str *cstr, const char *text);
 int append_to_c_strn(c_str *cstr, const char *text, int n);
 int append_to_c_strf(c_str *cstr, const char *format, ...);
 int insert_into_c_str(c_str *cstr, const char *text, int index);
+int restrict_c_str(c_str *cstr, int len);
 }
 
 // int do_the_first_thing(int *a) { return *a + 2; }
@@ -327,7 +328,7 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
 int insert_into_c_str(c_str *cstr, const char *text, int index)
 {
   if (index > cstr->len) {
-    MCerror(667, "TODO");
+    MCerror(4331, "TODO");
   }
 
   int n = strlen(text);
@@ -365,6 +366,17 @@ int insert_into_c_str(c_str *cstr, const char *text, int index)
   memcpy(cstr->text + index, text, sizeof(char) * n);
   cstr->len += n;
   cstr->text[cstr->len] = '\0';
+
+  return 0;
+}
+
+int restrict_c_str(c_str *cstr, int len)
+{
+  if (len > cstr->len)
+    return 0;
+
+  cstr->len = len;
+  cstr->text[len] = '\0';
 
   return 0;
 }

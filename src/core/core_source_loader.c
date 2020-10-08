@@ -166,7 +166,7 @@ int release__csl_c_str(_csl_c_str *ptr, bool free_char_string_also)
 int insert_into__csl_c_str(_csl_c_str *cstr, const char *text, int index)
 {
   if (index > cstr->len) {
-    MCerror(667, "TODO");
+    MCerror(8169, "TODO");
   }
 
   int n = strlen(text);
@@ -444,6 +444,7 @@ const char *_mcl_core_functions[] = {
     "append_to_c_strn",
     "append_to_c_strf",
     "insert_into_c_str",
+    "restrict_c_str",
 
     // core_definitions
     "obtain_midge_global_root",

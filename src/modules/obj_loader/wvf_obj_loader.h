@@ -55,7 +55,7 @@ typedef struct _wvf_obj_parsed_obj_info {
 } _wvf_obj_parsed_obj_info;
 
 extern "C" {
-void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model);
+void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model);
 }
 
 #endif // OBJ_LOADER_H

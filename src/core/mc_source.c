@@ -694,7 +694,7 @@ int instantiate_struct_definition_from_ast(mc_node *definition_owner, source_def
   int result = clint_declare(mc_transcription);
   if (result) {
     printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
-    MCerror(667, "Failed to declare structure");
+    MCerror(7667, "Failed to declare structure");
   }
   free(mc_transcription);
 

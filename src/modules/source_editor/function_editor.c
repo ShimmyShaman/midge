@@ -14,14 +14,14 @@ void mce_move_cursor_up(mce_function_editor *fedit)
     MCerror(9114, "TODO");
   }
 
-  if (fedit->cursor.line + fedit->lines.display_offset_index > 0) {
+  if (fedit->cursor.line + fedit->lines.display_index_offset > 0) {
     if (!fedit->cursor.zen_col) {
       fedit->cursor.zen_col = fedit->cursor.col;
     }
 
     --fedit->cursor.line;
 
-    int line_len = fedit->code.lines.items[fedit->cursor.line + fedit->lines.display_offset_index]->line_len;
+    int line_len = fedit->code.lines.items[fedit->cursor.line + fedit->lines.display_index_offset]->line_len;
     if (fedit->cursor.zen_col <= line_len) {
       fedit->cursor.col = fedit->cursor.zen_col;
     }
@@ -43,14 +43,14 @@ void mce_move_cursor_down(mce_function_editor *fedit)
     MCerror(9114, "TODO");
   }
 
-  if (fedit->cursor.line + fedit->lines.display_offset_index + 1 < fedit->code.lines.count) {
+  if (fedit->cursor.line + fedit->lines.display_index_offset + 1 < fedit->code.lines.count) {
     if (!fedit->cursor.zen_col) {
       fedit->cursor.zen_col = fedit->cursor.col;
     }
 
     ++fedit->cursor.line;
 
-    int line_len = fedit->code.lines.items[fedit->lines.display_offset_index + fedit->cursor.line]->line_len;
+    int line_len = fedit->code.lines.items[fedit->lines.display_index_offset + fedit->cursor.line]->line_len;
     if (fedit->cursor.zen_col <= line_len) {
       fedit->cursor.col = fedit->cursor.zen_col;
     }
@@ -78,7 +78,7 @@ void mce_move_cursor_left(mce_function_editor *fedit)
   if (fedit->cursor.col == 0) {
     if (fedit->cursor.line > 0) {
       --fedit->cursor.line;
-      fedit->cursor.col = fedit->code.lines.items[fedit->lines.display_offset_index + fedit->cursor.line]->line_len;
+      fedit->cursor.col = fedit->code.lines.items[fedit->lines.display_index_offset + fedit->cursor.line]->line_len;
     }
     else {
       // Do nothing -- already at beginning of document
@@ -102,7 +102,7 @@ void mce_move_cursor_right(mce_function_editor *fedit)
 
   // Determine how the cursor will move
   mce_source_token_list *line_token_list =
-      fedit->code.lines.items[fedit->lines.display_offset_index + fedit->cursor.line];
+      fedit->code.lines.items[fedit->lines.display_index_offset + fedit->cursor.line];
 
   // Increment the cursor col right
   if (fedit->cursor.col >= line_token_list->line_len) {
@@ -128,19 +128,19 @@ void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int doc
   fedit->cursor.zen_col = 0;
 
   // Offset --
-  if (fedit->lines.display_offset_index) {
+  if (fedit->lines.display_index_offset) {
     MCerror(9924, "TODO");
   }
-  // preferred_line -= fedit->lines.display_offset_index;
-  // if (preferred_line + fedit->lines.display_offset_index < 0)
+  // preferred_line -= fedit->lines.display_index_offset;
+  // if (preferred_line + fedit->lines.display_index_offset < 0)
   //   preferred_line = 0;
-  // if (preferred_line +fedit->lines.display_offset_index >= fedit->code.lines.count) {
+  // if (preferred_line +fedit->lines.display_index_offset >= fedit->code.lines.count) {
   //   preferred_line
   // }
 
   // Determine how the cursor will move
   if (document_line >= fedit->code.lines.count) {
-    fedit->cursor.line = fedit->code.lines.count - 1 - fedit->lines.display_offset_index;
+    fedit->cursor.line = fedit->code.lines.count - 1 - fedit->lines.display_index_offset;
     fedit->cursor.col = fedit->code.lines.items[fedit->code.lines.count - 1]->line_len;
   }
   else {
@@ -149,7 +149,7 @@ void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int doc
       document_col = 0;
     }
 
-    fedit->cursor.line = document_line - fedit->lines.display_offset_index;
+    fedit->cursor.line = document_line - fedit->lines.display_index_offset;
     if (document_col <= 0) {
       fedit->cursor.col = 0;
     }
@@ -166,6 +166,179 @@ void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int doc
   printf("Cursor placed at {%i,%i}\n", fedit->cursor.line, fedit->cursor.col);
   fedit->cursor.visible = true;
   mca_set_node_requires_rerender(fedit->node);
+}
+
+void _mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
+{
+  mce_source_token_list *line_list = fedit->code.lines.items[fedit->lines.display_index_offset + fedit->cursor.line];
+
+  printf("was:");
+  for (int d = 0; d < line_list->count; ++d) {
+    if (d > 0 && d + 1 < line_list->count) {
+      printf("#");
+    }
+    printf("%s", line_list->items[d]->str->text);
+  }
+  printf("\n");
+
+  int str_len = strlen(str);
+  if (!str_len) {
+    // Nothing to insert
+    return;
+  }
+
+  bool str_is_empty = true;
+  for (int a = 0; a < str_len; ++a) {
+    if (str[a] != ' ') {
+      str_is_empty = false;
+      break;
+    }
+  }
+
+  bool DEBUG_SPLIT = false;
+
+  int accumulate_line_len = 0;
+  bool inserted = false;
+  for (int a = 0; a <= line_list->count; ++a) {
+    mce_source_token *next;
+
+    // printf("fedit->cursor.col:%i accumulate_line_len:%i\n", fedit->cursor.col, accumulate_line_len);
+    if (fedit->cursor.col == accumulate_line_len) {
+      if (a > 0) {
+        // Attempt to append to previous
+        mce_source_token *previous = line_list->items[a - 1];
+
+        if ((str_is_empty && previous->type == MCE_SRC_EDITOR_EMPTY) ||
+            (!str_is_empty && previous->type == MCE_SRC_EDITOR_NON_SEMANTIC_TEXT)) {
+          append_to_c_str(previous->str, str);
+          line_list->line_len += str_len;
+          inserted = true;
+          break;
+        }
+      }
+      if (a < line_list->count) {
+        next = line_list->items[a];
+
+        // Attempt to prepend to next
+        if ((str_is_empty && next->type == MCE_SRC_EDITOR_EMPTY) ||
+            (!str_is_empty && next->type == MCE_SRC_EDITOR_NON_SEMANTIC_TEXT)) {
+          insert_into_c_str(next->str, str, 0);
+          line_list->line_len += str_len;
+          inserted = true;
+          break;
+        }
+      }
+
+      // Insert into new token
+      mce_source_token *insert_token;
+      mce_obtain_source_token_from_pool(fedit->source_editor_pool, &insert_token);
+      if (str_is_empty) {
+        insert_token->type = MCE_SRC_EDITOR_EMPTY;
+      }
+      else {
+        insert_token->type = MCE_SRC_EDITOR_NON_SEMANTIC_TEXT;
+      }
+      set_c_str(insert_token->str, str);
+
+      insert_in_collection((void ***)&line_list->items, &line_list->capacity, &line_list->count, a, insert_token);
+      line_list->line_len += str_len;
+      inserted = true;
+      break;
+    }
+
+    if (a == line_list->count)
+      break;
+
+    next = line_list->items[a];
+    if (accumulate_line_len + next->str->len > fedit->cursor.col) {
+      int offset_in_next_str = fedit->cursor.col - accumulate_line_len;
+
+      // printf("cursorcol:%i all:%i offset:%i\n", fedit->cursor.col, accumulate_line_len, offset_in_next_str);
+      if ((str_is_empty && next->type == MCE_SRC_EDITOR_EMPTY) ||
+          (!str_is_empty && next->type == MCE_SRC_EDITOR_NON_SEMANTIC_TEXT)) {
+
+        insert_into_c_str(next->str, str, offset_in_next_str);
+        line_list->line_len += str_len;
+        inserted = true;
+        break;
+      }
+
+      if (DEBUG_SPLIT) {
+        MCerror(7250, "happened");
+      }
+
+      // Split token up
+      // -- Second part
+      mce_source_token *second_part;
+      mce_obtain_source_token_from_pool(fedit->source_editor_pool, &second_part);
+      if (next->type == MCE_SRC_EDITOR_EMPTY) {
+        second_part->type = MCE_SRC_EDITOR_EMPTY;
+      }
+      else {
+        second_part->type = MCE_SRC_EDITOR_NON_SEMANTIC_TEXT;
+      }
+      set_c_str(second_part->str, next->str->text + offset_in_next_str);
+      insert_in_collection((void ***)&line_list->items, &line_list->capacity, &line_list->count, a + 1, second_part);
+
+      // printf("first:'%s'  second:'%s'\n", next->str->text, second_part->str->text);
+      // -- Restrict first
+      next->type = second_part->type;
+      restrict_c_str(next->str, offset_in_next_str);
+
+      printf("spl:");
+      for (int d = 0; d < line_list->count; ++d) {
+        if (d > 0 && d + 1 < line_list->count) {
+          printf("#");
+        }
+        printf("%s", line_list->items[d]->str->text);
+      }
+      printf("\n");
+      DEBUG_SPLIT = true;
+
+      // Continue through loop again
+      // --a;
+      // continue;
+    }
+
+    accumulate_line_len += next->str->len;
+  }
+
+  if (!inserted) {
+    // Append new token onto line list
+    MCerror(9264, "TODO?");
+  }
+  printf("now:");
+  for (int d = 0; d < line_list->count; ++d) {
+    if (d > 0 && d + 1 < line_list->count) {
+      printf("#");
+    }
+    printf("%s", line_list->items[d]->str->text);
+  }
+  printf("\n");
+
+  mca_set_node_requires_rerender(fedit->lines.items[fedit->lines.display_index_offset + fedit->cursor.line]->node);
+}
+
+void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
+{
+  int s = 0;
+  for (int a = 0;; ++a) {
+    if (str[a] == '\0')
+      break;
+    else if (str[a] == '\n') {
+      char *part = strndup(str + s, a - s);
+      _mce_insert_string_at_cursor(fedit, part);
+      free(part);
+
+      s = a + 2;
+
+      // Insert New Line
+      MCerror(9552, "TODO");
+    }
+  }
+
+  if (*(str + s) != '\0')
+    _mce_insert_string_at_cursor(fedit, str + s);
 }
 
 int _mce_update_line_details(mce_function_editor *fedit, mc_rectf *available_area)
@@ -192,8 +365,8 @@ int _mce_update_line_details(mce_function_editor *fedit, mc_rectf *available_are
     line->node->layout->preferred_height = fedit->lines.vertical_stride;
 
     // Attach line source (if it exists)
-    if (y_index + fedit->lines.display_offset_index < fedit->code.lines.count) {
-      line->source_list = fedit->code.lines.items[y_index + fedit->lines.display_offset_index];
+    if (y_index + fedit->lines.display_index_offset < fedit->code.lines.count) {
+      line->source_list = fedit->code.lines.items[y_index + fedit->lines.display_index_offset];
       line->node->layout->visible = line->source_list->count;
     }
     else {
@@ -393,14 +566,25 @@ void _mce_handle_input(mc_node *node, mci_input_event *input_event)
     if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_L) {
       mce_move_cursor_right(fedit);
     }
-    if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_J) {
+    else if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_J) {
       mce_move_cursor_left(fedit);
     }
-    if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_I) {
+    else if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_I) {
       mce_move_cursor_up(fedit);
     }
-    if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_K) {
+    else if ((input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) && input_event->button_code == KEY_CODE_K) {
       mce_move_cursor_down(fedit);
+    }
+    else {
+      char c[2];
+      int res = get_key_input_code_char((input_event->input_state->shift_function & BUTTON_STATE_DOWN),
+                                        (mc_key_code)input_event->button_code, &c[0]);
+      c[1] = '\0';
+
+      if (!res) {
+        printf("print string '%s'\n", c);
+        mce_insert_string_at_cursor(fedit, c);
+      }
     }
   }
   // printf("obd %i\n", input_event->type);
@@ -452,80 +636,10 @@ void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *sour
 
   function_editor->lines.count = 0;
   function_editor->lines.capacity = 0;
-  function_editor->lines.display_offset_index = 0;
+  function_editor->lines.display_index_offset = 0;
 
   *p_function_editor = function_editor;
 }
-
-// int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
-// {
-//   // printf("csntr-0\n");
-//   if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
-
-//     // printf("csntr-2\n");
-//     // RTF - prepend
-//     switch ((mc_token_type)syntax_node->type) {
-//     case MC_TOKEN_LINE_COMMENT:
-//       append_to_c_str(rtf, "[color=22,162,18]");
-//       break;
-//     default:
-//       break;
-//     }
-//     // printf("csntr-3\n");
-
-//     // Content
-//     int s = 0;
-//     for (int i = 0;; ++i) {
-//       if (syntax_node->text[i] == '\0') {
-//         if (i - s) {
-//           append_to_c_strn(rtf, syntax_node->text + s, i - s);
-//         }
-//         break;
-//       }
-//       else if (syntax_node->text[i] == '[') {
-//         // Copy to this point
-//         append_to_c_strn(rtf, syntax_node->text + s, i - s);
-//         // MCcall(append_to_c_str(rtf, "["));
-//         append_to_c_str(rtf, "[[");
-//         s = i + 1;
-//       }
-//     }
-//     // printf("csntr-6\n");
-
-//     // RTF - append
-//     switch ((mc_token_type)syntax_node->type) {
-//     case MC_TOKEN_LINE_COMMENT:
-//       append_to_c_str(rtf, "[color=156,219,253]");
-//       break;
-//     default:
-//       break;
-//     }
-
-//     // printf("csntr-7\n");
-//     return 0;
-//   }
-
-//   // printf("csntr-8\n");
-//   // Syntax Node -- convert each child
-//   for (int a = 0; a < syntax_node->children->count; ++a) {
-//     mc_syntax_node *child = syntax_node->children->items[a];
-
-//     _mce_convert_syntax_node_to_rtf(rtf, child);
-//   }
-//   // printf("csntr-9\n");
-
-//   return 0;
-// }
-
-// int mce_convert_semantic_tokens_to_rtf(c_str *code_rtf, mc_syntax_node *syntax_node)
-// {
-//   const char *DEFAULT_CODE_COLOR = "[color=156,219,253]";
-
-//   set_c_str(code_rtf, DEFAULT_CODE_COLOR);
-//   _mce_convert_syntax_node_to_rtf(code_rtf, syntax_node);
-
-//   return 0;
-// }
 
 void _mce_update_function_editor_line_displays(mce_function_editor *function_editor)
 {
@@ -535,9 +649,9 @@ void _mce_update_function_editor_line_displays(mce_function_editor *function_edi
   int line = 0;
   printf("function_editor->lines.count:%u \n", function_editor->lines.count);
   for (; line < function_editor->lines.count; ++line) {
-    int code_line_index = line + function_editor->lines.display_offset_index;
+    int code_line_index = line + function_editor->lines.display_index_offset;
 
-    printf("code_line_index:%u displayoffsetindex:%u \n", code_line_index, function_editor->lines.display_offset_index);
+    printf("code_line_index:%u displayoffsetindex:%u \n", code_line_index, function_editor->lines.display_index_offset);
     if (code_line_index > function_editor->code.lines.count) {
       break;
     }
@@ -560,58 +674,13 @@ void _mce_update_function_editor_line_displays(mce_function_editor *function_edi
   }
 }
 
-void _mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token **token)
-{
-  if (!source_editor_pool->source_tokens.count) {
-    *token = (mce_source_token *)malloc(sizeof(mce_source_token));
-    init_c_str(&(*token)->str);
-    return;
-  }
-
-  --source_editor_pool->source_tokens.count;
-  *token = source_editor_pool->source_tokens.items[source_editor_pool->source_tokens.count];
-}
-
-void _mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list)
-{
-  if (!source_editor_pool->source_token_lists.count) {
-    *list = (mce_source_token_list *)malloc(sizeof(mce_source_token_list));
-    (*list)->capacity = 0U;
-    (*list)->count = 0U;
-    return;
-  }
-
-  --source_editor_pool->source_token_lists.count;
-  *list = source_editor_pool->source_token_lists.items[source_editor_pool->source_token_lists.count];
-}
-
-void _mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
-                                                   mce_source_token_list **lists, unsigned int count)
-{
-  for (int a = 0; a < count; ++a) {
-    mce_source_token_list *list = lists[a];
-
-    for (int b = 0; b < list->count; ++b) {
-      // Return the source tokens to the pool
-      append_to_collection((void ***)&source_editor_pool->source_tokens.items,
-                           &source_editor_pool->source_tokens.capacity, &source_editor_pool->source_tokens.count,
-                           list->items[b]);
-    }
-
-    // Return the list to the pool
-    append_to_collection((void ***)&source_editor_pool->source_token_lists.items,
-                         &source_editor_pool->source_token_lists.capacity,
-                         &source_editor_pool->source_token_lists.count, list);
-  }
-}
-
 void _mce_set_function_editor_lines_with_plain_text(mce_function_editor *function_editor, const char *code)
 {
   // printf("_mce_set_function_editor_lines_with_plain_text\n");
   // Clear previous lines and return items to the pool
   for (int a = 0; a < function_editor->code.lines.count; ++a) {
-    _mce_return_source_token_lists_to_editor_pool(function_editor->source_editor_pool,
-                                                  function_editor->code.lines.items, function_editor->code.lines.count);
+    mce_return_source_token_lists_to_editor_pool(function_editor->source_editor_pool, function_editor->code.lines.items,
+                                                 function_editor->code.lines.count);
   }
   function_editor->code.lines.count = 0;
 
@@ -619,7 +688,7 @@ void _mce_set_function_editor_lines_with_plain_text(mce_function_editor *functio
   while (code[i] != '\0') {
 
     mce_source_token_list *line_token_list;
-    _mce_obtain_source_token_list_from_pool(function_editor->source_editor_pool, &line_token_list);
+    mce_obtain_source_token_list_from_pool(function_editor->source_editor_pool, &line_token_list);
     append_to_collection((void ***)&function_editor->code.lines.items, &function_editor->code.lines.capacity,
                          &function_editor->code.lines.count, line_token_list);
     line_token_list->count = 0;
@@ -631,7 +700,7 @@ void _mce_set_function_editor_lines_with_plain_text(mce_function_editor *functio
       s = i;
 
       mce_source_token *token;
-      _mce_obtain_source_token_from_pool(function_editor->source_editor_pool, &token);
+      mce_obtain_source_token_from_pool(function_editor->source_editor_pool, &token);
       append_to_collection((void ***)&line_token_list->items, &line_token_list->capacity, &line_token_list->count,
                            token);
 
@@ -671,8 +740,7 @@ void _mce_set_function_editor_lines_with_plain_text(mce_function_editor *functio
         }
 
         token->type = MCE_SRC_EDITOR_NON_SEMANTIC_TEXT;
-        set_c_str(token->str, ""); // TODO a set_c_strn?
-        append_to_c_strn(token->str, code + s, i - s);
+        set_c_strn(token->str, code + s, i - s);
 
       } break;
       }
@@ -718,7 +786,7 @@ int _mce_set_definition_to_function_editor(mce_function_editor *function_editor,
   // // printf("cees-7\n");
 
   // TODO -- initially set to somewhere in the code - end of first or last line or something (visibility trumps?)
-  function_editor->lines.display_offset_index = 0;
+  function_editor->lines.display_index_offset = 0;
   function_editor->cursor.line = 0;
   function_editor->cursor.col = 0;
 

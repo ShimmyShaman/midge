@@ -58,7 +58,7 @@ typedef struct mce_function_editor {
       float top, left;
     } padding;
 
-    int display_offset_index;
+    int display_index_offset;
 
     unsigned int utilized, count, capacity;
     mce_source_line **items;
@@ -106,5 +106,10 @@ void mce_init_source_line(mc_node *parent_node, mce_source_line **source_line);
 // source_editor/function_editor.c
 void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *source_editor_pool,
                               mce_function_editor **p_function_editor);
+
+void mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token **token);
+void mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list);
+void mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
+                                                  mce_source_token_list **lists, unsigned int count);
 }
 #endif // SOURCE_EDITOR_H

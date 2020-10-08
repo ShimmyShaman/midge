@@ -85,14 +85,15 @@ void myh_init(mc_node *module_node)
   ct_data->render_target.resource_uid = 0;
   ct_data->render_target.width = module_node->layout->preferred_width;
   ct_data->render_target.height = module_node->layout->preferred_height;
-  mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height, MVK_IMAGE_USAGE_RENDER_TARGET_3D,
-                              &ct_data->render_target.resource_uid);
+  mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height,
+                              MVK_IMAGE_USAGE_RENDER_TARGET_3D, &ct_data->render_target.resource_uid);
 
   // printf("ct_data=%p\n", ct_data);
   // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
   // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
 
-  mcr_load_wavefront_obj_model("res/cube/cube.obj", &ct_data->cube.model);
+  mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
+  // mcr_load_wavefront_obj_model("res/models/viking_room.obj", "res/models/viking_room.png", &ct_data->cube.model);
 }
 
 void init_mystery_hut(mc_node *app_root)

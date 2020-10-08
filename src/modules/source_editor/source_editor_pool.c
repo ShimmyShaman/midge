@@ -47,6 +47,51 @@ void _mce_obtain_function_editor_instance(mce_source_editor_pool *source_editor_
   MCerror(9945, "NotYetImplemented, use an older code editor instance");
 }
 
+void mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token **token)
+{
+  if (!source_editor_pool->source_tokens.count) {
+    *token = (mce_source_token *)malloc(sizeof(mce_source_token));
+    init_c_str(&(*token)->str);
+    return;
+  }
+
+  --source_editor_pool->source_tokens.count;
+  *token = source_editor_pool->source_tokens.items[source_editor_pool->source_tokens.count];
+}
+
+void mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list)
+{
+  if (!source_editor_pool->source_token_lists.count) {
+    *list = (mce_source_token_list *)malloc(sizeof(mce_source_token_list));
+    (*list)->capacity = 0U;
+    (*list)->count = 0U;
+    return;
+  }
+
+  --source_editor_pool->source_token_lists.count;
+  *list = source_editor_pool->source_token_lists.items[source_editor_pool->source_token_lists.count];
+}
+
+void mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
+                                                   mce_source_token_list **lists, unsigned int count)
+{
+  for (int a = 0; a < count; ++a) {
+    mce_source_token_list *list = lists[a];
+
+    for (int b = 0; b < list->count; ++b) {
+      // Return the source tokens to the pool
+      append_to_collection((void ***)&source_editor_pool->source_tokens.items,
+                           &source_editor_pool->source_tokens.capacity, &source_editor_pool->source_tokens.count,
+                           list->items[b]);
+    }
+
+    // Return the list to the pool
+    append_to_collection((void ***)&source_editor_pool->source_token_lists.items,
+                         &source_editor_pool->source_token_lists.capacity,
+                         &source_editor_pool->source_token_lists.count, list);
+  }
+}
+
 extern "C" {
 int _mce_set_definition_to_function_editor(mce_function_editor *function_editor, function_info *function);
 }

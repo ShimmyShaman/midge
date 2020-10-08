@@ -33,23 +33,24 @@ int read_file_text(const char *filepath, char **output)
   return 0;
 }
 
-int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count, void *item)
+int append_to_collection(void ***collection, unsigned int *collection_capacity, unsigned int *collection_count,
+                         void *item)
 {
-  if (*collection_count + 1 > *collection_alloc) {
-    unsigned int realloc_amount = *collection_alloc + 8 + *collection_alloc / 3;
-    // printf("reallocate collection size %i->%i\n", *collection_alloc, realloc_amount);
-    void **new_collection = (void **)malloc(sizeof(void *) * realloc_amount);
+  if (*collection_count + 1 > *collection_capacity) {
+    unsigned int recapacity_amount = *collection_capacity + 8 + *collection_capacity / 3;
+    // printf("recapacity collection size %i->%i\n", *collection_capacity, recapacity_amount);
+    void **new_collection = (void **)malloc(sizeof(void *) * recapacity_amount);
     if (new_collection == NULL) {
       MCerror(32, "append_to_collection malloc error");
     }
 
-    if (*collection_alloc) {
+    if (*collection_capacity) {
       memcpy(new_collection, *collection, *collection_count * sizeof(void *));
       free(*collection);
     }
 
     *collection = new_collection;
-    *collection_alloc = realloc_amount;
+    *collection_capacity = recapacity_amount;
   }
 
   (*collection)[*collection_count] = item;
@@ -57,24 +58,24 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
   return 0;
 }
 
-int insert_in_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
+int insert_in_collection(void ***collection, unsigned int *collection_capacity, unsigned int *collection_count,
                          int insertion_index, void *item)
 {
-  if (*collection_count + 1 > *collection_alloc) {
-    unsigned int realloc_amount = *collection_alloc + 8 + *collection_alloc / 3;
-    // printf("reallocate collection size %i->%i\n", *collection_alloc, realloc_amount);
-    void **new_collection = (void **)malloc(sizeof(void *) * realloc_amount);
+  if (*collection_count + 1 > *collection_capacity) {
+    unsigned int recapacity_amount = *collection_capacity + 8 + *collection_capacity / 3;
+    // printf("recapacity collection size %i->%i\n", *collection_capacity, recapacity_amount);
+    void **new_collection = (void **)malloc(sizeof(void *) * recapacity_amount);
     if (new_collection == NULL) {
       MCerror(57, "append_to_collection malloc error");
     }
 
-    if (*collection_alloc) {
+    if (*collection_capacity) {
       memcpy(new_collection, *collection, *collection_count * sizeof(void *));
       free(*collection);
     }
 
     *collection = new_collection;
-    *collection_alloc = realloc_amount;
+    *collection_capacity = recapacity_amount;
   }
 
   for (int i = *collection_count; i > insertion_index; --i) {

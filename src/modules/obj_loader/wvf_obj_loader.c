@@ -766,7 +766,7 @@ void _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsig
   free(fli.cmds);
 }
 
-void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model)
+void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -799,7 +799,7 @@ void mcr_load_wavefront_obj_model(const char *obj_path, mcr_model **loaded_model
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 
-  mcr_load_texture_resource("res/cube/cube_diffuse.png", &(*loaded_model)->texture);
+  mcr_load_texture_resource(diffuse_path, &(*loaded_model)->texture);
 }
 
 void mcr_render_model(image_render_details *image_render_queue, mcr_model *model)

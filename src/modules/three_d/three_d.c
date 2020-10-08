@@ -180,7 +180,7 @@ void mctd_append_cube_child(mc_node *portal_node)
   // mcr_load_texture_resource((float *)mesh_data, ... , &cube->texture_resource_uid);
   // mcr_create_mesh_resource((float *)mesh_data, 3 * 8, indices, 6 * 2 * 3, &cube->mesh_resource_uid);
 
-  mcr_load_wavefront_obj_model("/home/jason/progs/renderer/assets/witch/witch.obj", &cube->witch);
+  mcr_load_wavefront_obj_model("/home/jason/progs/renderer/assets/witch/witch.obj", "TODO", &cube->witch);
 }
 
 void init_three_d_portal()

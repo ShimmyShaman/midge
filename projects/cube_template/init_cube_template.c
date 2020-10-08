@@ -114,5 +114,5 @@ void init_cube_template(mc_node *app_root)
   // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
   // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
 
-  mcr_load_wavefront_obj_model("res/cube/cube.obj", &ct_data->cube.model);
+  mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
 }
