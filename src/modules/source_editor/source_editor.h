@@ -40,6 +40,10 @@ typedef struct mce_function_editor {
 
   function_info *function;
   render_color background_color;
+  struct {
+    render_color color;
+    unsigned int thickness;
+  } border;
 
   struct {
     struct {

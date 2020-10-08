@@ -326,6 +326,27 @@ void _mce_render_function_editor_present(image_render_details *image_render_queu
                                                  fedit->lines.vertical_stride * fedit->cursor.line),
                                   "|", 0U, cursor_color);
   }
+
+  {
+    // Border
+    mcr_issue_render_command_colored_quad(
+        image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
+        (unsigned int)node->layout->__bounds.width, (unsigned int)fedit->border.thickness, fedit->border.color);
+    mcr_issue_render_command_colored_quad(
+        image_render_queue, (unsigned int)node->layout->__bounds.x,
+        (unsigned int)node->layout->__bounds.y + fedit->border.thickness, (unsigned int)fedit->border.thickness,
+        (unsigned int)node->layout->__bounds.height - fedit->border.thickness, fedit->border.color);
+    mcr_issue_render_command_colored_quad(
+        image_render_queue,
+        (unsigned int)node->layout->__bounds.x + node->layout->__bounds.width - fedit->border.thickness,
+        (unsigned int)node->layout->__bounds.y + fedit->border.thickness, (unsigned int)fedit->border.thickness,
+        (unsigned int)node->layout->__bounds.height - fedit->border.thickness, fedit->border.color);
+    mcr_issue_render_command_colored_quad(
+        image_render_queue, (unsigned int)node->layout->__bounds.x + fedit->border.thickness,
+        (unsigned int)node->layout->__bounds.y + node->layout->__bounds.height - fedit->border.thickness,
+        (unsigned int)node->layout->__bounds.width - fedit->border.thickness * 2, (unsigned int)fedit->border.thickness,
+        fedit->border.color);
+  }
 }
 
 void _mce_handle_input(mc_node *node, mci_input_event *input_event)
@@ -416,6 +437,9 @@ void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *sour
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   function_editor->background_color = COLOR_NEARLY_BLACK;
+  function_editor->border.color = COLOR_GHOST_WHITE;
+  function_editor->border.thickness = 2U;
+
   function_editor->node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   function_editor->node->children->alloc = 0;
   function_editor->node->children->count = 0;
