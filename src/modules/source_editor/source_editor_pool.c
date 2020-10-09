@@ -52,11 +52,11 @@ void mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_poo
   if (!source_editor_pool->source_tokens.count) {
     *token = (mce_source_token *)malloc(sizeof(mce_source_token));
     init_c_str(&(*token)->str);
-    return;
   }
-
-  --source_editor_pool->source_tokens.count;
-  *token = source_editor_pool->source_tokens.items[source_editor_pool->source_tokens.count];
+  else {
+    --source_editor_pool->source_tokens.count;
+    *token = source_editor_pool->source_tokens.items[source_editor_pool->source_tokens.count];
+  }
 }
 
 void mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list)
@@ -73,7 +73,7 @@ void mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_edito
 }
 
 void mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
-                                                   mce_source_token_list **lists, unsigned int count)
+                                                  mce_source_token_list **lists, unsigned int count)
 {
   for (int a = 0; a < count; ++a) {
     mce_source_token_list *list = lists[a];

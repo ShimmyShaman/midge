@@ -5,13 +5,18 @@
 #include "render/render_common.h"
 
 typedef enum mce_source_token_type {
-  MCE_SRC_EDITOR_EMPTY = 0,
-  MCE_SRC_EDITOR_NON_SEMANTIC_TEXT,
+  MCE_SRC_EDITOR_NULL = 0,
+  MCE_SRC_EDITOR_NEW_LINE,
+  MCE_SRC_EDITOR_END_OF_FILE,
+  MCE_SRC_EDITOR_UNPROCESSED_TEXT,
+
 } mce_source_token_type;
 
 typedef struct mce_source_token {
   mce_source_token_type type;
   c_str *str;
+
+  mce_source_token *next;
 } mce_source_token;
 
 typedef struct mce_source_token_list {
@@ -23,7 +28,7 @@ typedef struct mce_source_token_list {
 typedef struct mce_source_line {
   mc_node *node;
 
-  mce_source_token_list *source_list;
+  mce_source_token *initial_token;
 
   unsigned int font_resource_uid;
   float font_horizontal_stride;
@@ -46,10 +51,10 @@ typedef struct mce_function_editor {
   } border;
 
   struct {
-    struct {
-      unsigned int capacity, count;
-      mce_source_token_list **items;
-    } lines;
+    mce_source_token *first;
+    unsigned int capacity, count;
+    mce_source_token **line_initial_tokens;
+    unsigned int *line_lengths, line_lengths_size;
   } code;
 
   struct {

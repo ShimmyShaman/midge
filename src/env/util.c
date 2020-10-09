@@ -11,7 +11,7 @@ int reallocate_array(void **array, unsigned int *current_allocation, unsigned in
   if (desired_allocation) {
     // Check
     if (desired_allocation < *current_allocation) {
-      MCerror(1414, "TODO NotYetImplemented");
+      MCerror(1423, "TODO NotYetImplemented");
     }
     realloc_amount = desired_allocation;
   }
@@ -45,7 +45,7 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
   if (desired_allocation) {
     // Check
     if (desired_allocation < *current_allocation) {
-      MCerror(1414, "TODO NotYetImplemented");
+      MCerror(1489, "TODO NotYetImplemented");
     }
     realloc_amount = desired_allocation;
   }
