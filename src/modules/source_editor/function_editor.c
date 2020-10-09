@@ -124,7 +124,6 @@ void mce_move_cursor_right(mce_function_editor *fedit)
 
 void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int document_line, int document_col)
 {
-
   fedit->cursor.zen_col = 0;
 
   // Offset --
@@ -168,6 +167,35 @@ void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int doc
   mca_set_node_requires_rerender(fedit->node);
 }
 
+// void mce_insert_new_line_at_cursor(mce_function_editor *fedit)
+// {
+//   mce_source_token_list *line_list = fedit->code.lines.items[fedit->lines.display_index_offset + fedit->cursor.line];
+
+//   int accumulate_line_len = 0;
+//   bool inserted = false;
+//   for (int a = 0; a < line_list->count; ++a) {
+//     mce_source_token *next = line_list->items[a];
+
+//     if (fedit->cursor.col == accumulate_line_len) {
+//     }
+//     else if (fedit->cursor.col < accumulate_line_len + next->str->len) {
+// // Split
+
+//       continue;
+//     }
+//     else {
+//       accumulate_line_len += next->str->len;
+//     }
+//   }
+
+//   mce_source_token_list *new_line_list;
+//   mce_obtain_source_token_list_from_pool(function_editor->source_editor_pool, &new_line_list);
+//   insert_in_collection((void ***)&function_editor->code.lines.items, &function_editor->code.lines.capacity,
+//                        &function_editor->code.lines.count, fedit->cursor.line, new_line_list);
+//   line_token_list->count = 0;
+//   line_token_list->line_len = 0;
+// }
+
 void _mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
 {
   mce_source_token_list *line_list = fedit->code.lines.items[fedit->lines.display_index_offset + fedit->cursor.line];
@@ -187,10 +215,10 @@ void _mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
     return;
   }
 
-  bool str_is_empty = true;
-  for (int a = 0; a < str_len; ++a) {
-    if (str[a] != ' ') {
-      str_is_empty = false;
+  bool contiguous_str_type = true;
+  for (int a = 1; a < str_len; ++a) {
+    if (str[a - 1] != str[a] && ((str[a - 1] == ' ' || str[a - 1] == '\n') || (str[a] == ' ' || str[a] == '\n')) {
+      contiguous_str_type = false;
       break;
     }
   }
@@ -254,8 +282,9 @@ void _mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
       int offset_in_next_str = fedit->cursor.col - accumulate_line_len;
 
       // printf("cursorcol:%i all:%i offset:%i\n", fedit->cursor.col, accumulate_line_len, offset_in_next_str);
-      if ((str_is_empty && next->type == MCE_SRC_EDITOR_EMPTY) ||
-          (!str_is_empty && next->type == MCE_SRC_EDITOR_NON_SEMANTIC_TEXT)) {
+      // Attempt straight insertion
+      if (contiguous_str_type && (str[0] == ' ' && next->type == MCE_SRC_EDITOR_EMPTY) ||
+          (str[0] != ' ' && str[0] != '\n' && next->type == MCE_SRC_EDITOR_NON_SEMANTIC_TEXT)) {
 
         insert_into_c_str(next->str, str, offset_in_next_str);
         line_list->line_len += str_len;
@@ -316,6 +345,10 @@ void _mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
   }
   printf("\n");
 
+  mce_set_function_editor_cursor_position(fedit, fedit->cursor.line, fedit->cursor.col + str_len);
+  if (line_list->count) {
+    fedit->lines.items[fedit->cursor.line]->node->layout->visible = true;
+  }
   mca_set_node_requires_rerender(fedit->lines.items[fedit->lines.display_index_offset + fedit->cursor.line]->node);
 }
 
@@ -326,14 +359,16 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
     if (str[a] == '\0')
       break;
     else if (str[a] == '\n') {
-      char *part = strndup(str + s, a - s);
-      _mce_insert_string_at_cursor(fedit, part);
-      free(part);
-
-      s = a + 2;
+      if (a > s) {
+        char *part = strndup(str + s, a - s);
+        _mce_insert_string_at_cursor(fedit, part);
+        free(part);
+      }
 
       // Insert New Line
-      MCerror(9552, "TODO");
+      mce_insert_new_line_at_cursor(mce_function_editor * fedit);
+
+      s = a + 1;
     }
   }
 
