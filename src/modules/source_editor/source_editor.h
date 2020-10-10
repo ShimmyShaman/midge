@@ -78,6 +78,11 @@ typedef struct mce_function_editor {
     int line, col;
   } cursor;
 
+  struct {
+    bool exists;
+    int line, col;
+  } selection;
+
 } mce_function_editor;
 
 typedef struct mce_source_editor_pool {

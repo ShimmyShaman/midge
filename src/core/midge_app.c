@@ -453,7 +453,7 @@ void midge_run_app()
       for (int a = 0; a < global_root_node->children->count; ++a) {
         mc_node *child = global_root_node->children->items[a];
         if (child->layout && child->layout->visible && child->layout->render_headless &&
-        child->layout->__requires_rerender) {
+            child->layout->__requires_rerender) {
           // TODO fptr casting
           // printf("rh-child-type:%i\n", child->type);
           void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
@@ -467,8 +467,8 @@ void midge_run_app()
 
       // Release lock and allow rendering
       clock_gettime(CLOCK_REALTIME, &debug_end_time);
-      // printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
-      //                                      1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+      printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+                                           1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
     }
   }
 
