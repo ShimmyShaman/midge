@@ -18,14 +18,14 @@ int reallocate_array(void **array, unsigned int *current_allocation, unsigned in
   else
     realloc_amount = *current_allocation + 4 + *current_allocation / 3;
 
-  // printf("reallocate array size %i->%i\n", *current_allocation, realloc_amount);
+  printf("reallocate array size %i->%i\n", *current_allocation, realloc_amount);
   void *new_array = (void **)malloc(item_allocation_size * realloc_amount);
   if (new_array == NULL) {
     MCerror(32, "append_to_array malloc error");
   }
 
   if (*current_allocation) {
-    memcpy(new_array, *array, *current_allocation * sizeof(item_allocation_size));
+    memcpy(new_array, *array, *current_allocation * item_allocation_size);
     free(*array);
   }
 

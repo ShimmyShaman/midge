@@ -116,16 +116,17 @@ void _mce_render_source_line_headless(mc_node *node)
   // printf("%u %u \n", rq->data.target_image.screen_offset_coordinates.x,
   // rq->data.target_image.screen_offset_coordinates.y);
 
-  // CHECK
+  // Render the source token linked list
   mce_source_token *token = source_line->initial_token;
   int horizontal_offset = 0;
+  int debug_token_count = 0;
   while (token) {
     render_color font_color;
-    int len;
+    bool end_of_line = false;
     switch (token->type) {
     case MCE_SRC_EDITOR_NEW_LINE:
     case MCE_SRC_EDITOR_END_OF_FILE:
-      len = 0;
+      end_of_line = true;
       break;
     case MCE_SRC_EDITOR_UNPROCESSED_TEXT:
       font_color = COLOR_POWDER_BLUE;
@@ -134,18 +135,20 @@ void _mce_render_source_line_headless(mc_node *node)
       MCerror(9288, "Unsupported mce_source_token_type=%i", token->type);
     }
 
-    if (!len)
+    if (end_of_line)
       break;
 
+    printf("source-line text:(%i)'%s'\n", horizontal_offset, token->str->text);
     mcr_issue_render_command_text(rq, (unsigned int)(node->layout->__bounds.x + horizontal_offset),
                                   (unsigned int)(node->layout->__bounds.y), token->str->text,
                                   source_line->font_resource_uid, font_color);
+    ++debug_token_count;
 
     horizontal_offset += token->str->len * source_line->font_horizontal_stride;
     token = token->next;
   }
 
-  // printf("rq->render_target:%i\n", rq->render_target);
+  printf("source-line-text rendered through %i tokens\n", debug_token_count);
   mcr_submit_image_render_request(global_data->render_thread, rq);
 }
 

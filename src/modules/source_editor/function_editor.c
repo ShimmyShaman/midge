@@ -416,26 +416,27 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
 //     _mce_insert_string_at_cursor(fedit, str + s);
 // }
 
-void _mce_update_function_editor_line_displays(mce_function_editor *function_editor)
+void _mce_update_function_editor_line_start_tokens(mce_function_editor *function_editor)
 {
-  // printf("_mce_update_function_editor_line_displays\n");
+  // printf("_mce_update_function_editor_line_start_tokens\n");
   function_editor->lines.utilized = 0;
 
-  int line = 0;
   printf("function_editor->lines.count:%u \n", function_editor->lines.count);
-  for (; line < function_editor->lines.count; ++line) {
+  for (int line = 0; line < function_editor->lines.count; ++line) {
     int code_line_index = line + function_editor->lines.display_index_offset;
     mce_source_line *source_line = function_editor->lines.items[line];
 
-    printf("code_line_index:%u displayoffsetindex:%u \n", code_line_index, function_editor->lines.display_index_offset);
+    // printf("code_line_index:%u displayoffsetindex:%u \n", code_line_index,
+    // function_editor->lines.display_index_offset);
     if (code_line_index >= function_editor->code.count) {
+      printf("set line %i visible false\n", line);
       source_line->node->layout->visible = false;
       continue;
     }
 
     // Set
     source_line->node->layout->visible = true;
-    // printf("set line %i visible true\n", line);
+    printf("set line %i visible true\n", line);
 
     // TODO -- this is where you'd determine the hash and compare with what is already rendered
     source_line->initial_token = function_editor->code.line_initial_tokens[code_line_index];
@@ -447,6 +448,7 @@ int _mce_update_line_positions(mce_function_editor *fedit, mc_rectf *available_a
 {
   int y_index = 0;
 
+  bool line_count_changed = false;
   while (y_index * fedit->lines.vertical_stride < available_area->height) {
 
     // Obtain the line control
@@ -455,13 +457,13 @@ int _mce_update_line_positions(mce_function_editor *fedit, mc_rectf *available_a
       // Construct a new one
       mce_init_source_line(fedit->node, &line);
       append_to_collection((void ***)&fedit->lines.items, &fedit->lines.capacity, &fedit->lines.count, line);
+      line_count_changed = true;
     }
     else {
       line = fedit->lines.items[y_index];
     }
 
     // Set line layout
-    printf("set line %i visible true\n", y_index);
     line->node->layout->padding = {fedit->lines.padding.left,
                                    fedit->lines.padding.top + fedit->lines.vertical_stride * y_index, 0.f, 0.f};
     line->node->layout->preferred_height = fedit->lines.vertical_stride;
@@ -478,6 +480,10 @@ int _mce_update_line_positions(mce_function_editor *fedit, mc_rectf *available_a
 
     // Continue
     ++y_index;
+  }
+
+  if (line_count_changed) {
+    _mce_update_function_editor_line_start_tokens(fedit);
   }
 
   return 0;
@@ -521,7 +527,6 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
 
   // Align text lines to fit to the container
   _mce_update_line_positions(function_editor, &node->layout->__bounds);
-  _mce_update_function_editor_line_displays(function_editor);
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -726,8 +731,8 @@ void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *sour
   function_editor->node->children->count = 0;
 
   function_editor->code.capacity = 0;
-  function_editor->code.line_lengths_size = 0;
   function_editor->code.count = 0;
+  function_editor->code.line_lengths_size = 0;
 
   // init_c_str(&function_editor->code.rtf);
   // function_editor->code.syntax = NULL;
@@ -760,63 +765,93 @@ void _mce_set_function_editor_code_with_plain_text(mce_function_editor *fedit, c
   // Iterate through the given text
   int line_index = 0;
   int i = 0;
-  while (1) {
+  while (code[i] != '\0') {
     append_to_collection((void ***)&fedit->code.line_initial_tokens, &fedit->code.capacity, &fedit->code.count, token);
-    if (fedit->code.capacity != fedit->code.line_lengths_size) {
+    if (fedit->code.line_lengths_size < fedit->code.count) {
       reallocate_array((void **)&fedit->code.line_lengths, &fedit->code.line_lengths_size, fedit->code.capacity,
                        sizeof(unsigned int));
-    }
-    fedit->code.line_lengths[fedit->code.count - 1] = 0;
 
-    int s = i;
-    switch (code[i]) {
-    case '\n':
-    case '\0':
-      break;
-    default: {
-      while (code[i] != '\n' && code[i] != '\0') {
-        ++i;
+      // fedit->code.line
+
+      //     for (int k = 0; k < fedit->code.count - 1; ++k) {
+      //       printf("-%u", fedit->code.line_lengths[k]);
+      //     }
+      //     printf("\n");
+    }
+    //   // if (fedit->code.count > 1) {
+    //   //   printf("line_len:%u = %u\n", fedit->code.count - 2, fedit->code.line_lengths[fedit->code.count - 2]);
+    //   // }
+
+    unsigned int *line_len = &fedit->code.line_lengths[fedit->code.count - 1];
+    *line_len = 0;
+    while (code[i] != '\n' && code[i] != '\0') {
+      int s = i;
+      switch (code[i]) {
+      case '\n':
+      case '\0':
+        break;
+      default: {
+        while (code[i] != '\n' && code[i] != '\0') {
+          ++i;
+        }
+        token->type = MCE_SRC_EDITOR_UNPROCESSED_TEXT;
+        set_c_strn(token->str, code + s, i - s);
+        *line_len = (unsigned int)(*line_len + i - s);
+
+        // Set Next Token
+        if (!token->next) {
+          mce_obtain_source_token_from_pool(source_editor_pool, &token->next);
+          token->next->next = NULL;
+        }
+        token = token->next;
+      } break;
       }
-      break;
-    }
     }
 
-    if (code[i] == '\0') {
+    if (code[i] == '\n') {
+      // New-line
+      token->type = MCE_SRC_EDITOR_NEW_LINE;
+      set_c_str(token->str, "\n");
+      ++i;
+
+      // -- Set Next token
+      if (!token->next) {
+        mce_obtain_source_token_from_pool(source_editor_pool, &token->next);
+        token->next->next = NULL;
+      }
+      token = token->next;
+      continue;
+    }
+    else if (code[i] == '\0') {
       token->type = MCE_SRC_EDITOR_END_OF_FILE;
-      set_c_str(token->str, "\0");
-      fedit->code.line_lengths[fedit->code.count - 1] = i - s;
+      set_c_str(token->str, "");
 
-      // Remove any remaining tokens
+      // Remove any remaining source tokens and return them to the pool
       mce_source_token *return_token = token->next;
       token->next = NULL;
-      while (token) {
-        // Return the source tokens to the pool
+      while (return_token) {
+        printf("dHDOULHND TBE HERe\n");
+        // Just reappend to the pool collection
         append_to_collection((void ***)&source_editor_pool->source_tokens.items,
                              &source_editor_pool->source_tokens.capacity, &source_editor_pool->source_tokens.count,
                              return_token);
 
         return_token = return_token->next;
       }
-
       break;
     }
 
-    // New-line
-    token->type = MCE_SRC_EDITOR_NEW_LINE;
-    set_c_strn(token->str, code + s, i - s + 1);
-    fedit->code.line_lengths[fedit->code.count - 1] = i - s;
-    ++i;
+    //   MCerror(8834, "Flow error");
+  }
 
-    // -- Set Next token
-    if (!token->next) {
-      mce_obtain_source_token_from_pool(source_editor_pool, &token->next);
-      token->next->next = NULL;
-    }
+  printf("fedit->code.count:%i\n", fedit->code.count);
+  token = fedit->code.line_initial_tokens[0];
+  while (token) {
+    printf("token:'%s'\n", token->str->text);
     token = token->next;
   }
 
-  // printf("fedit->code.lines.count:%i\n", fedit->code.lines.count);
-  _mce_update_function_editor_line_displays(fedit);
+  _mce_update_function_editor_line_start_tokens(fedit);
 }
 
 // Do not call directly, prefer calling through mce_activate_source_editor_for_definition
