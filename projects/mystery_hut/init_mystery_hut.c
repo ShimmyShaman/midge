@@ -77,13 +77,15 @@ void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_no
 
 void _myh_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+  // printf("_myh_handle_input\n");
+  input_event->handled = true;
+  if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
     input_event->handled = true;
     mca_focus_node(node);
   }
 }
 
-void myh_init(mc_node *module_node)
+void myh_load_resources(mc_node *module_node)
 {
   // cube_template
   mystery_hut *ct_data = (mystery_hut *)malloc(sizeof(mystery_hut));
@@ -100,8 +102,8 @@ void myh_init(mc_node *module_node)
   // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
   // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
 
-  mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
-  // mcr_load_wavefront_obj_model("res/models/viking_room.obj", "res/models/viking_room.png", &ct_data->cube.model);
+  // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
+  mcr_load_wavefront_obj_model("res/models/viking_room.obj", "res/models/viking_room.png", &ct_data->cube.model);
 }
 
 void init_mystery_hut(mc_node *app_root)
@@ -131,13 +133,14 @@ void init_mystery_hut(mc_node *app_root)
 
   mca_set_node_requires_layout_update(node);
 
-  myh_init(node);
+  myh_load_resources(node);
 }
 
 void set_mystery_hut_project_state(mc_node *app_root)
 {
   function_info *func_info;
-  find_function_info("myh_init", &func_info);
-
+  // find_function_info("init_mystery_hut", &func_info);
+  // mce_activate_source_editor_for_definition(func_info->source);
+  find_function_info("myh_load_resources", &func_info);
   mce_activate_source_editor_for_definition(func_info->source);
 }

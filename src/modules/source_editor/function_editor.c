@@ -194,6 +194,11 @@ void _mce_render_function_editor_present(image_render_details *image_render_queu
         "|", 0U, cursor_color);
   }
 
+  render_color title_color = COLOR_FUNCTION_GREEN;
+  mcr_issue_render_command_colored_quad(
+      image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
+      (unsigned int)node->layout->__bounds.width, (unsigned int)fedit->lines.padding.top - 4, title_color);
+
   {
     // Border
     mcr_issue_render_command_colored_quad(
@@ -344,7 +349,7 @@ void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int doc
     }
   }
 
-  printf("Cursor placed at {%i,%i}\n", fedit->cursor.line, fedit->cursor.col);
+  // printf("Cursor placed at {%i,%i}\n", fedit->cursor.line, fedit->cursor.col);
   fedit->cursor.visible = true;
   mca_set_node_requires_rerender(fedit->node);
 }
@@ -814,6 +819,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
 {
   // printf("_mce_function_editor_handle_input %p %p\n", node, input_event);
   mce_function_editor *fedit = (mce_function_editor *)node->data;
+  input_event->handled = true;
 
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
     // printf("obb\n");
@@ -825,25 +831,25 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
       //              fedit->lines.vertical_stride));
       int line_index = -1;
       int click_relative_y =
-          input_event->input_state->mouse.y - (int)(node->layout->__bounds.y - fedit->lines.padding.top);
+          input_event->input_state->mouse.y - (int)(node->layout->__bounds.y + fedit->lines.padding.top);
       if (click_relative_y >= 0) {
         line_index = (int)((float)click_relative_y / fedit->lines.vertical_stride);
       }
       if (line_index >= 0) {
         // Find the column index
         int click_relative_x =
-            input_event->input_state->mouse.x - (int)(node->layout->__bounds.x - fedit->lines.padding.left + 0.4f);
+            input_event->input_state->mouse.x -
+            (int)(node->layout->__bounds.x + fedit->lines.padding.left - fedit->font_horizontal_stride * 0.5f);
         if (click_relative_x < 0 && click_relative_x > -3)
           click_relative_x = 0;
         if (click_relative_x >= 0) {
-          
+
           mce_set_function_editor_cursor_position(fedit, line_index,
                                                   (int)((float)click_relative_x / fedit->font_horizontal_stride));
         }
       }
     }
 
-    input_event->handled = true;
     mca_focus_node(node);
   }
   else if (input_event->type == INPUT_EVENT_KEY_RELEASE) {
@@ -955,7 +961,7 @@ void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *sour
   function_editor->source_editor_pool = source_editor_pool;
   function_editor->lines.vertical_stride = 22.f;
   function_editor->lines.padding.left = 2.f;
-  function_editor->lines.padding.top = 4.f;
+  function_editor->lines.padding.top = 18.f;
   // TODO
   function_editor->font_horizontal_stride = 9.2794f;
 

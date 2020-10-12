@@ -718,6 +718,11 @@ VkResult mrt_render_indexed_mesh(vk_render_state *p_vkrs, VkCommandBuffer comman
     // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
     mat4 world;
     glm_mat4_identity((vec4 *)&world);
+    vec3 axis = {0.f, 1.f, 0.f};
+    glm_rotate((vec4 *)&world, 180.f, axis);
+    axis[1] = 0.f;
+    axis[2] = 1.f;
+    glm_rotate((vec4 *)&world, 90.f, axis);
     glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
     // }
     // else {

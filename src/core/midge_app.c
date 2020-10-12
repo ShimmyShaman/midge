@@ -445,12 +445,12 @@ void midge_run_app()
     if (global_root_node->layout->__requires_rerender && !global_data->render_thread->image_queue->count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
 
-      printf("child-order:\n");
-      for (int a = 0; a < global_root_node->children->count; ++a) {
-        mc_node *child = global_root_node->children->items[a];
+      // printf("child-order:\n");
+      // for (int a = 0; a < global_root_node->children->count; ++a) {
+      //   mc_node *child = global_root_node->children->items[a];
 
-        printf(":%i:%p\n", a, child);
-      }
+      //   printf(":%i:%p\n", a, child);
+      // }
 
       // Reset States
       global_root_node->layout->__requires_rerender = false;

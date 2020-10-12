@@ -24,10 +24,9 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
   // Resource loading
 
   // Font
-  printf ("setting default font...\n");
+  printf("setting default font...\n");
   mcr_obtain_font_resource(global_data->render_thread->resource_queue, "res/font/DroidSansMono.ttf", 18.f,
                            &ui_state->default_font_resource);
-
 
   // Set
   *p_ui_state = ui_state;
@@ -49,7 +48,7 @@ void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
     return;
 
   if (node->children) {
-    for (int a = 0; a < node->children->count; ++a) {
+    for (int a = node->children->count - 1; a >= 0; --a) {
       _mui_get_interactive_nodes_within_node_at_point(node->children->items[a], screen_x, screen_y, layered_hit_list);
     }
   }
