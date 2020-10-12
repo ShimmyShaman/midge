@@ -156,9 +156,9 @@ void _mce_render_function_editor_headless(mc_node *node)
   }
 
   clock_gettime(CLOCK_REALTIME, &debug_end_time);
-  printf("FunctionEditorHeadless: rendered %i children took %.2fms\n", debug_count,
-         1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
-             1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+  // printf("FunctionEditorHeadless: rendered %i children took %.2fms\n", debug_count,
+  //        1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+  //            1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
 }
 
 void _mce_render_function_editor_present(image_render_details *image_render_queue, mc_node *node)
@@ -836,7 +836,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
         if (click_relative_x < 0 && click_relative_x > -3)
           click_relative_x = 0;
         if (click_relative_x >= 0) {
-
+          
           mce_set_function_editor_cursor_position(fedit, line_index,
                                                   (int)((float)click_relative_x / fedit->font_horizontal_stride));
         }
@@ -844,6 +844,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
     }
 
     input_event->handled = true;
+    mca_focus_node(node);
   }
   else if (input_event->type == INPUT_EVENT_KEY_RELEASE) {
     // printf("obc %i\n", input_event->input_state->ctrl_function);

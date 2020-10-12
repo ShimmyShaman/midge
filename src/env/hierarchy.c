@@ -679,10 +679,11 @@ void mca_focus_node(mc_node *node)
           break;
 
         int j = i + 1;
-        for (int j = i + 1; j < parents_children->count; ++j) {
+        for (; j < parents_children->count; ++j) {
           if (parents_children->items[j]->layout &&
-              node->layout->z_layer_index < parents_children->items[j]->layout->z_layer_index)
+              node->layout->z_layer_index < parents_children->items[j]->layout->z_layer_index) {
             break;
+          }
         }
         --j;
 

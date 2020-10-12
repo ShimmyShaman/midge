@@ -75,6 +75,14 @@ void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_no
   // mca_set_node_requires_rerender(node);
 }
 
+void _myh_handle_input(mc_node *node, mci_input_event *input_event)
+{
+  if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+    input_event->handled = true;
+    mca_focus_node(node);
+  }
+}
+
 void myh_init(mc_node *module_node)
 {
   // cube_template
@@ -119,6 +127,7 @@ void init_mystery_hut(mc_node *app_root)
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
   node->layout->render_headless = (void *)&_myh_render_mh_data_headless;
   node->layout->render_present = (void *)&_myh_render_mh_data_present;
+  node->layout->handle_input_event = (void *)&_myh_handle_input;
 
   mca_set_node_requires_layout_update(node);
 

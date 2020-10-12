@@ -1243,9 +1243,9 @@ VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_
   struct timespec render_end_time;
   clock_gettime(CLOCK_REALTIME, &render_end_time);
 
-  printf("Vulkan rendered image_render_queue! %.3f ms\n",
-         (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
-             1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
+  // printf("Vulkan rendered image_render_queue! %.3f ms\n",
+  //        (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
+  //            1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
 
   // Return the image render request objects to the pool
   pthread_mutex_lock(&render_thread->render_request_object_pool->mutex);
