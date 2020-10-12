@@ -502,6 +502,16 @@ void mce_delete_selection(mce_function_editor *fedit)
   while (!deletion_completed) {
     printf("delete loop:%i [%i-%i] [%i-%i]\n", delete_token->type, accumulate_line, accumulate_line_len, end_line,
            end_col);
+    if (accumulate_line == end_line && accumulate_line_len == end_col) {
+      if (start_initial_token_deleted) {
+        first_token = delete_token;
+      }
+      else {
+        first_token->next = delete_token;
+      }
+      deletion_completed = true;
+      break;
+    }
 
     bool loop = true;
     switch (delete_token->type) {
@@ -549,18 +559,8 @@ void mce_delete_selection(mce_function_editor *fedit)
                            &fedit->source_editor_pool->source_tokens.count, delete_token);
       delete_token = delete_token->next; // TODO -- bad form adding from next when token has been 'returned' already
 
-    printf("defrep:%i [%i-%i] [%i-%i]\n", delete_token->type, accumulate_line, accumulate_line_len, end_line,
-           end_col);
-      if (accumulate_line == end_line && accumulate_line_len == end_col) {
-        if (start_initial_token_deleted) {
-          first_token = delete_token;
-        }
-        else {
-          first_token->next = delete_token;
-        }
-        deletion_completed = true;
-        break;
-      }
+      printf("defrep:%i [%i-%i] [%i-%i]\n", delete_token->type, accumulate_line, accumulate_line_len, end_line,
+             end_col);
     } break;
     }
   }
@@ -594,6 +594,9 @@ void mce_delete_selection(mce_function_editor *fedit)
 
     token = token->next;
   }
+
+  fedit->cursor.line = start_line;
+  fedit->cursor.col = start_col;
 
   {
     printf("after:");
