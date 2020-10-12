@@ -380,7 +380,7 @@ void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int doc
 
 // Given cursor can define beginning or end of selection, this function returns the absolute bounds of that selection
 // @returns 1 if the selection length is 0, otherwise 0
-int _mce_obtain_function_editor_selection_bounds(mce_function_editor *fedit, int *start_line, int start_col,
+int _mce_obtain_function_editor_selection_bounds(mce_function_editor *fedit, int *start_line, int *start_col,
                                                  int *end_line, int *end_col)
 {
   if (fedit->selection.line < fedit->cursor.line) {
@@ -418,18 +418,38 @@ int _mce_obtain_function_editor_selection_bounds(mce_function_editor *fedit, int
 
 void mce_delete_selection(mce_function_editor *fedit)
 {
+  // MCerror(8421, "TODO");
   fedit->selection.exists = false;
 
   // Obtain the selection bounds
   // -- cursor can define either the start or the end of the selection
   int start_line, start_col, end_line, end_col;
-  if (_mce_obtain_function_editor_selection_bounds(fedit, &start_line, &start_col, &end_line, &end_col))
+  int zero_size_selection =
+      _mce_obtain_function_editor_selection_bounds(fedit, &start_line, &start_col, &end_line, &end_col);
+  if (zero_size_selection)
     return;
 
-  // Find the first contained source token
+  // DEBUG
+  // bool DEBUG_SPLIT = false;
+  // mce_source_token *debug_initial_token = token;
+  {
+    printf("was:");
+    mce_source_token *debug_token = fedit->code.line_initial_tokens[start_line];
+    while (debug_token && debug_token->type != MCE_SRC_EDITOR_NEW_LINE) {
+
+      printf("#%s-%i", debug_token->str->text, debug_token->type);
+
+      debug_token = debug_token->next;
+    }
+    printf("#\n");
+  }
+  // DEBUG
+
+  // Find the first source token
   // -- (split to if need be)
-  mce_source_token *first_token = fedit->code.initial_line_tokens[start_line], delete_token;
+  mce_source_token *first_token = fedit->code.line_initial_tokens[start_line], *delete_token;
   int accumulate_line = start_line, accumulate_line_len = 0;
+  bool start_initial_token_deleted = true, deletion_completed = false;
   while (1) {
     if (accumulate_line_len + first_token->str->len < start_col) {
       if (first_token->type == MCE_SRC_EDITOR_NEW_LINE) {
@@ -438,50 +458,156 @@ void mce_delete_selection(mce_function_editor *fedit)
 
       accumulate_line_len += first_token->str->len;
       first_token = first_token->next;
+      start_initial_token_deleted = false;
       continue;
     }
 
     if (accumulate_line_len + first_token->str->len > start_col) {
+      int split_token_len = 0;
+      if (start_line == end_line && accumulate_line_len + first_token->str->len > end_col) {
+        // Split into a new token
+        mce_source_token *split;
+        mce_obtain_source_token_from_pool(fedit->source_editor_pool, &split);
+
+        split->type = MCE_SRC_EDITOR_UNPROCESSED_TEXT;
+        set_c_str(split->str, first_token->str->text + end_col - accumulate_line_len);
+        split->next = first_token->next;
+
+        split_token_len = split->str->len;
+        first_token->next = split;
+        deletion_completed = true;
+      }
+
       int offset_in_next_str = start_col - accumulate_line_len;
 
-      // Register previous len
-      accumulate_line_len += first_token->str->len;
+      // Register tokens len before resizing it
+      accumulate_line_len += first_token->str->len - split_token_len;
 
       // Need to restrict the token down
       first_token->type = MCE_SRC_EDITOR_UNPROCESSED_TEXT;
       restrict_c_str(first_token->str, offset_in_next_str);
+      start_initial_token_deleted = false;
+    }
+    else {
+      accumulate_line_len += first_token->str->len;
+      start_initial_token_deleted = false;
     }
 
     delete_token = first_token->next;
     break;
   }
+  printf("first_token:'%s'-%i [%i-%i]\n", first_token->str->text, first_token->type, start_line, start_col);
 
   // Begin Deleting tokens until end_line/col is reached
-  while (1) {
-    if (delete_token->type == MCE_SRC_EDITOR_NEW_LINE) {
-      MCerror(8216, "TODO DEBUG");
-    }
-    else {
-      if (accumulate_line == end_line && start_col + delete_token->str->len > end_col) {
+  while (!deletion_completed) {
+    printf("delete loop:%i [%i-%i] [%i-%i]\n", delete_token->type, accumulate_line, accumulate_line_len, end_line,
+           end_col);
+
+    bool loop = true;
+    switch (delete_token->type) {
+    case MCE_SRC_EDITOR_NEW_LINE:
+      // Remove Token(s)
+      // -- Just reappend to the pool collection
+      accumulate_line_len += delete_token->str->len;
+
+      append_to_collection((void ***)&fedit->source_editor_pool->source_tokens.items,
+                           &fedit->source_editor_pool->source_tokens.capacity,
+                           &fedit->source_editor_pool->source_tokens.count, delete_token);
+      delete_token = delete_token->next; // TODO -- bad form adding from next when token has been 'returned' already
+
+      ++accumulate_line;
+      accumulate_line_len = 0;
+      break;
+    case MCE_SRC_EDITOR_END_OF_FILE:
+      MCerror(8467, "TODO DEBUG");
+      break;
+    default: {
+      if (accumulate_line == end_line && accumulate_line_len + delete_token->str->len > end_col) {
         // Restrict text in token
         delete_token->type = MCE_SRC_EDITOR_UNPROCESSED_TEXT;
-        char *remaining = strdup(delete_token->str->text + end_col - start_col);
+        char *remaining = strdup(delete_token->str->text + end_col - accumulate_line_len);
         set_c_str(delete_token->str, remaining);
         free(remaining);
+
+        // Re-link
+        if (start_initial_token_deleted) {
+          first_token = delete_token;
+        }
+        else {
+          first_token->next = delete_token;
+        }
+        deletion_completed = true;
         break;
       }
-      else {
-        // Delete whole token
-        if (accumulate_line == end_line && start_col + delete_token->str->len > end_col)
-          first_token =
 
-              // Just reappend to the pool collection
-              append_to_collection((void ***)&source_editor_pool->source_tokens.items,
-                                   &source_editor_pool->source_tokens.capacity,
-                                   &source_editor_pool->source_tokens.count, delete_token);
+      // Remove Token(s)
+      // -- Just reappend to the pool collection
+      accumulate_line_len += delete_token->str->len;
+
+      append_to_collection((void ***)&fedit->source_editor_pool->source_tokens.items,
+                           &fedit->source_editor_pool->source_tokens.capacity,
+                           &fedit->source_editor_pool->source_tokens.count, delete_token);
+      delete_token = delete_token->next; // TODO -- bad form adding from next when token has been 'returned' already
+
+    printf("defrep:%i [%i-%i] [%i-%i]\n", delete_token->type, accumulate_line, accumulate_line_len, end_line,
+           end_col);
+      if (accumulate_line == end_line && accumulate_line_len == end_col) {
+        if (start_initial_token_deleted) {
+          first_token = delete_token;
+        }
+        else {
+          first_token->next = delete_token;
+        }
+        deletion_completed = true;
+        break;
       }
+    } break;
     }
   }
+
+  // Recalculate affected line lengths & set initial tokens
+  fedit->code.count = start_line + 1;
+  if (start_initial_token_deleted) {
+    fedit->code.line_initial_tokens[fedit->code.count - 1] = first_token;
+  }
+  else {
+    first_token = fedit->code.line_initial_tokens[fedit->code.count - 1];
+  }
+
+  unsigned int *line_len = &fedit->code.line_lengths[fedit->code.count - 1];
+  *line_len = 0;
+  mce_source_token *token = first_token;
+  while (token && token->type != MCE_SRC_EDITOR_END_OF_FILE) {
+    switch (token->type) {
+    case MCE_SRC_EDITOR_NEW_LINE:
+      ++fedit->code.count;
+      ++line_len;
+
+      fedit->code.line_initial_tokens[fedit->code.count - 1] = token->next;
+      break;
+    case MCE_SRC_EDITOR_END_OF_FILE:
+      break;
+    default: {
+      *line_len += token->str->len;
+    } break;
+    }
+
+    token = token->next;
+  }
+
+  {
+    printf("after:");
+    mce_source_token *debug_token = fedit->code.line_initial_tokens[start_line];
+    while (debug_token && debug_token->type != MCE_SRC_EDITOR_NEW_LINE) {
+
+      printf("#%s", debug_token->str->text);
+
+      debug_token = debug_token->next;
+    }
+    printf("#\n");
+  }
+  // DEBUG
+  _mce_update_function_editor_line_start_tokens(fedit);
 }
 
 void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
@@ -749,6 +875,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
         mce_insert_string_at_cursor(fedit, c);
       } break;
       case KEY_CODE_BACKSPACE: {
+        // return;
         if (fedit->selection.exists) {
           MCerror(7651, "TODO");
         }
@@ -772,6 +899,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
         mce_delete_selection(fedit);
       } break;
       case KEY_CODE_DELETE: {
+        // return;
         if (fedit->selection.exists) {
           MCerror(7651, "TODO");
         }
