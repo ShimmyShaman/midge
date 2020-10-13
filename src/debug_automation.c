@@ -63,14 +63,14 @@ void create_hello_world_visual_app()
   // Create the initialize function
   const char *init_code = "void initialize_hello_world_visual_app(node *p_node)\n"
                           "{\n"
-                          "  mui_text_block *text_block;\n"
-                          "  mui_init_text_block(p_node, &text_block);\n"
+                          "  mcu_text_block *text_block;\n"
+                          "  mcu_init_text_block(p_node, &text_block);\n"
                           "\n"
                           "  set_c_str(text_block->text, \"Hello Universe\");\n"
                           "  text_block->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;\n"
                           "  text_block->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;\n"
                           "\n"
-                          "  mui_update_ui(p_node);\n"
+                          "  mcu_update_ui(p_node);\n"
                           "}";
 
   mc_function_info_v1 *func_info;

@@ -722,7 +722,10 @@ VkResult mrt_render_indexed_mesh(vk_render_state *p_vkrs, VkCommandBuffer comman
     glm_rotate((vec4 *)&world, 180.f, axis);
     axis[1] = 0.f;
     axis[2] = 1.f;
-    glm_rotate((vec4 *)&world, 90.f, axis);
+    glm_rotate((vec4 *)&world, 180.f, axis);
+    axis[0] = 1.f;
+    axis[2] = 0.f;
+    glm_rotate((vec4 *)&world, -90.f, axis);
     glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
     // }
     // else {

@@ -85,7 +85,7 @@ typedef struct mca_global_context_node_option_list {
   mca_global_context_node_option **items;
 } mca_global_context_node_option_list;
 
-typedef struct mui_ui_state {
+typedef struct mcu_ui_state {
   bool requires_update;
   mc_node_list *cache_layered_hit_list;
   unsigned int default_font_resource;
@@ -104,7 +104,7 @@ typedef struct mui_ui_state {
 
   void *hierarchy_viewer_state;
   void *source_editor_pool;
-} mui_ui_state;
+} mcu_ui_state;
 
 typedef struct visual_project_data {
   const char *name;
@@ -114,7 +114,7 @@ typedef struct visual_project_data {
   } screen;
 
   // App Stuff
-  struct mui_ui_state *ui_state;
+  struct mcu_ui_state *ui_state;
   bool requires_update, requires_rerender;
   unsigned int present_image_resource_uid;
 
@@ -128,7 +128,7 @@ typedef struct visual_project_data {
 void exit_app(mc_node *hierarchical_call_scope, int result);
 
 void mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list);
-void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach, unsigned int z_layer_index);
+void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach);
 void mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_index);
 void mca_init_node_layout(mca_node_layout **layout);
 void mca_init_mc_node(mc_node *hierarchy_node, node_type type, mc_node **node);

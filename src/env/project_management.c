@@ -5,8 +5,8 @@
 
 // void mca_visual_project_create_add_button(mc_node *context_node, mc_point context_location, const char *selected_text)
 // {
-//   mui_button *button;
-//   mui_init_button(context_node, &button);
+//   mcu_button *button;
+//   mcu_init_button(context_node, &button);
 
 //   visual_project_data *visual_project = (visual_project_data *)context_node->data;
 
@@ -34,8 +34,8 @@
 //   }
 
 //   // Panel
-//   mui_panel *panel;
-//   mui_init_panel(project_node, &panel);
+//   mcu_panel *panel;
+//   mcu_init_panel(project_node, &panel);
 //   panel->background_color = COLOR_MIDNIGHT_EXPRESS;
 
 //   panel->element->layout->padding = {0, 0, 0, 0};
@@ -59,10 +59,10 @@
 
 //   // Layout
 //   mca_init_node_layout(&node->layout);
-//   // node->layout->determine_layout_extents = (void *)&__mui_determine_panel_extents;
-//   // node->layout->update_layout = (void *)&__mui_update_panel_layout;
-//   // node->layout->render_headless = (void *)&__mui_render_panel_headless;
-//   // node->layout->render_present = (void *)&__mui_render_panel_present;
+//   // node->layout->determine_layout_extents = (void *)&__mcu_determine_panel_extents;
+//   // node->layout->update_layout = (void *)&__mcu_update_panel_layout;
+//   // node->layout->render_headless = (void *)&__mcu_render_panel_headless;
+//   // node->layout->render_present = (void *)&__mcu_render_panel_present;
 
 //   // Project
 //   visual_project_data *project = (visual_project_data *)malloc(sizeof(visual_project_data));
@@ -81,7 +81,7 @@
 //   project->children->count = 0;
 
 //   project->present_image_resource_uid = 0;
-//   mui_initialize_ui_state(&project->ui_state);
+//   mcu_initialize_ui_state(&project->ui_state);
 
 //   // Resources
 //   pthread_mutex_lock(&global_data->render_thread->resource_queue.mutex);
@@ -107,7 +107,7 @@
 
 //   // {
 //   //   // TEMPORARY -- FIX When UI UPDATE is fixed
-//   //   mui_ui_element *element = (mui_ui_element *)project->editor_container->data;
+//   //   mcu_ui_element *element = (mcu_ui_element *)project->editor_container->data;
 //   //   if (element->requires_layout_update) {
 //   //     element->requires_layout_update = false;
 
@@ -133,7 +133,7 @@
 // {
 //   visual_project_data *project = (visual_project_data *)project_node->data;
 
-//   mui_render_panel(image_render_queue, project->editor_container);
+//   mcu_render_panel(image_render_queue, project->editor_container);
 
 //   mca_render_node_list_present(image_render_queue, project->children);
 // }

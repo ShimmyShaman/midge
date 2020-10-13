@@ -3,12 +3,12 @@
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
-void mui_initialize_ui_state(mui_ui_state **p_ui_state)
+void mcu_initialize_ui_state(mcu_ui_state **p_ui_state)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  mui_ui_state *ui_state = (mui_ui_state *)malloc(sizeof(mui_ui_state));
+  mcu_ui_state *ui_state = (mcu_ui_state *)malloc(sizeof(mcu_ui_state));
 
   // cache_layered_hit_list
   ui_state->cache_layered_hit_list = (mc_node_list *)malloc(sizeof(mc_node_list));
@@ -32,9 +32,12 @@ void mui_initialize_ui_state(mui_ui_state **p_ui_state)
   *p_ui_state = ui_state;
 }
 
-void mui_initialize_core_ui_components() { mca_init_button_context_menu_options(); }
+// void mcu_initialize_core_ui_components()
+// {
+//   // mca_init_button_context_menu_options();
+// }
 
-void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x, int screen_y,
+void _mcu_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x, int screen_y,
                                                      mc_node_list *layered_hit_list)
 {
   if (!node->layout) {
@@ -49,7 +52,7 @@ void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
 
   if (node->children) {
     for (int a = node->children->count - 1; a >= 0; --a) {
-      _mui_get_interactive_nodes_within_node_at_point(node->children->items[a], screen_x, screen_y, layered_hit_list);
+      _mcu_get_interactive_nodes_within_node_at_point(node->children->items[a], screen_x, screen_y, layered_hit_list);
     }
   }
 
@@ -57,7 +60,7 @@ void _mui_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
 }
 
 // Returns a list of ui-type nodes at the given point of the screen. Nodes at the nearer Z are earlier in the list.
-void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list)
+void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -69,13 +72,13 @@ void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
   *layered_hit_list = global_data->ui_state->cache_layered_hit_list;
   (*layered_hit_list)->count = 0;
 
-  _mui_get_interactive_nodes_within_node_at_point(global_data->global_node, screen_x, screen_y, *layered_hit_list);
+  _mcu_get_interactive_nodes_within_node_at_point(global_data->global_node, screen_x, screen_y, *layered_hit_list);
 
-  // printf("mui_get_interactive_nodes_at_point(%i, %i) : list_count:%i\n", screen_x, screen_y,
+  // printf("mcu_get_interactive_nodes_at_point(%i, %i) : list_count:%i\n", screen_x, screen_y,
   //        (*layered_hit_list)->count);
 }
 
-// void mui_init_ui_element(mc_node *parent_node, ui_element_type element_type, mui_ui_element **created_element)
+// void mcu_init_ui_element(mc_node *parent_node, ui_element_type element_type, mcu_ui_element **created_element)
 // {
 //   global_root_data *global_data;
 //   obtain_midge_global_root(&global_data);
@@ -86,24 +89,24 @@ void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 //   mca_init_node_layout(&node->layout);
 
 //   // if (parent_node->type == NODE_TYPE_UI) {
-//   //   mui_ui_element *parent_element = (mui_ui_element *)parent_node->data;
+//   //   mcu_ui_element *parent_element = (mcu_ui_element *)parent_node->data;
 //   //   switch (parent_element->type) {
 //   //   case UI_ELEMENT_PANEL: {
-//   //     mui_panel *panel = (mui_panel *)parent_element->data;
+//   //     mcu_panel *panel = (mcu_panel *)parent_element->data;
 
 //   //     append_to_collection((void ***)&panel->children->items, &panel->children->alloc, &panel->children->count,
 //   //     node); node->parent = parent_node;
 
 //   //   } break;
 //   //   case UI_ELEMENT_CONTEXT_MENU: {
-//   //     mui_context_menu *menu = (mui_context_menu *)parent_element->data;
+//   //     mcu_context_menu *menu = (mcu_context_menu *)parent_element->data;
 
 //   //     append_to_collection((void ***)&menu->children->items, &menu->children->alloc, &menu->children->count,
 //   node);
 //   //     node->parent = parent_node;
 //   //   } break;
 //   //   default: {
-//   //     MCerror(1805, "mui_init_ui_element::Unsupported type : %i", parent_element->type);
+//   //     MCerror(1805, "mcu_init_ui_element::Unsupported type : %i", parent_element->type);
 //   //   }
 //   //   }
 //   // }
@@ -114,7 +117,7 @@ void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 //   // // pthread_mutex_unlock(&global_data->uid_counter.mutex);
 
 //   // UI Element
-//   mui_ui_element *element = (mui_ui_element *)malloc(sizeof(mui_ui_element));
+//   mcu_ui_element *element = (mcu_ui_element *)malloc(sizeof(mcu_ui_element));
 //   node->data = element;
 
 //   {
@@ -143,18 +146,18 @@ void mui_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 //     *created_element = element;
 // }
 
-// void mui_get_hierarchical_children_node_list(mc_node *hierarchy_node, mc_node_list **children_node_list)
+// void mcu_get_hierarchical_children_node_list(mc_node *hierarchy_node, mc_node_list **children_node_list)
 // {
-//   mui_ui_element *element = (mui_ui_element *)hierarchy_node->data;
+//   mcu_ui_element *element = (mcu_ui_element *)hierarchy_node->data;
 
 //   *children_node_list = NULL;
 //   switch (element->type) {
 //   case UI_ELEMENT_PANEL: {
-//     mui_panel *item = (mui_panel *)element->data;
+//     mcu_panel *item = (mcu_panel *)element->data;
 //     *children_node_list = item->children;
 //   } break;
 //   case UI_ELEMENT_CONTEXT_MENU: {
-//     mui_context_menu *item = (mui_context_menu *)element->data;
+//     mcu_context_menu *item = (mcu_context_menu *)element->data;
 //     *children_node_list = item->children;
 //   } break;
 //   default:

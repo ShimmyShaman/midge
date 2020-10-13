@@ -172,7 +172,7 @@ void __mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_sta
   mc_node *tl_node = hv_state->text_lines.items[*text_line_index];
   *text_line_index += 1;
 
-  mui_button *tl_button = (mui_button *)tl_node->data;
+  mcu_button *tl_button = (mcu_button *)tl_node->data;
 
   // Make visible and adjust horizontal indent
   tl_node->layout->padding.left = depth * 16;
@@ -239,7 +239,7 @@ void mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_state
   mca_set_node_requires_layout_update(hv_state->root_node);
 }
 
-void __mc_hv_text_line_left_click_handler(mui_button *button, mc_point click_location)
+void __mc_hv_text_line_left_click_handler(mcu_button *button, mc_point click_location)
 {
   // printf("__mc_hv_text_line_left_click_handler\n");
   mc_hv_source_path_state *sp_state = (mc_hv_source_path_state *)button->tag;
@@ -280,7 +280,7 @@ void _mc_hv_update_hierarchy_viewer_layout(mc_node *node, mc_rectf *available_ar
   mc_hv_update_hierarchy_view_text_lines((mc_hv_hierarchy_view_state *)global_data->ui_state->hierarchy_viewer_state);
 
   // Continue with the underlying panel update
-  __mui_update_panel_layout(node, available_area);
+  __mcu_update_panel_layout(node, available_area);
 }
 
 void init_hierarchy_viewer()
@@ -289,8 +289,8 @@ void init_hierarchy_viewer()
   obtain_midge_global_root(&global_data);
 
   // Panel
-  mui_panel *panel;
-  mui_init_panel(global_data->global_node, &panel);
+  mcu_panel *panel;
+  mcu_init_panel(global_data->global_node, &panel);
 
   panel->node->layout->visible = false;
   panel->node->layout->padding = {20, 20, 0, 0};
@@ -315,8 +315,8 @@ void init_hierarchy_viewer()
   reallocate_collection((void ***)&hv_state->text_lines.items, &hv_state->text_lines.size, TEXT_LINE_COUNT, 0);
 
   for (int i = 0; i < hv_state->text_lines.size; ++i) {
-    mui_button *button;
-    mui_init_button(hv_state->root_node, &button);
+    mcu_button *button;
+    mcu_init_button(hv_state->root_node, &button);
     hv_state->text_lines.items[i] = button->node;
     button->left_click = &__mc_hv_text_line_left_click_handler;
 

@@ -31,7 +31,7 @@ void exit_app(mc_node *node_scope, int result)
 //     *sub_node_list = global_data->children;
 //   } break;
 //   case NODE_TYPE_UI: {
-//     mui_get_hierarchical_children_node_list(hierarchy_node, sub_node_list);
+//     mcu_get_hierarchical_children_node_list(hierarchy_node, sub_node_list);
 //   } break;
 //   case NODE_TYPE_VISUAL_PROJECT: {
 //     visual_project_data *project = (visual_project_data *)hierarchy_node->data;
@@ -94,7 +94,7 @@ void exit_app(mc_node *node_scope, int result)
 //   ++parent_node_list->count;
 // }
 
-void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach, unsigned int z_layer_index)
+void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach)
 {
   printf("added node %i to %i\n", node_to_attach->type, hierarchy_node->type);
   // midge_error_print_thread_stack_trace();
@@ -157,8 +157,7 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 
   (*node)->data = NULL;
 
-  const unsigned int DEFAULT_Z_LAYER = 5;
-  mca_attach_node_to_hierarchy(hierarchy_parent, *node, DEFAULT_Z_LAYER);
+  mca_attach_node_to_hierarchy(hierarchy_parent, *node);
 }
 
 // void mca_logic_update_node_list(mc_node_list *node_list)
@@ -171,7 +170,7 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 //       mca_update_visual_project(node);
 //     } break;
 //     case NODE_TYPE_UI: {
-//       mui_ui_element *element = (mui_ui_element *)node->data;
+//       mcu_ui_element *element = (mcu_ui_element *)node->data;
 //       // Nothing for the moment -- TODO?
 //     } break;
 //     default:
@@ -185,7 +184,7 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 // {
 //   switch (node->type) {
 //   case NODE_TYPE_UI: {
-//     mui_ui_element *element = (mui_ui_element *)node->data;
+//     mcu_ui_element *element = (mcu_ui_element *)node->data;
 //     switch (element->type) {
 //     case UI_ELEMENT_TEXT_BLOCK: {
 //       mca_node_layout *layout = element->layout;
@@ -305,8 +304,8 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 //       }
 //     } break;
 //     case UI_ELEMENT_CONTEXT_MENU: {
-//       // mui_update_context_menu_layout(node, available_area, restraints);
-//       mui_context_menu *context_menu = (mui_context_menu *)element->data;
+//       // mcu_update_context_menu_layout(node, available_area, restraints);
+//       mcu_context_menu *context_menu = (mcu_context_menu *)element->data;
 
 //       // Determine the maximum width requested by child controls and the cumulative height
 

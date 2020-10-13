@@ -31,6 +31,7 @@ void mca_load_modules()
   // Get all directories in folder
   // TODO
   const char *module_directories[] = {
+      "modus_operandi",
       "source_editor",
       "obj_loader",
       NULL,

@@ -35,10 +35,10 @@ typedef enum node_type {
   NODE_TYPE_GLOBAL_ROOT,
   NODE_TYPE_CONSOLE_APP,
   NODE_TYPE_VISUAL_PROJECT,
-  NODE_TYPE_MUI_PANEL,
-  NODE_TYPE_MUI_CONTEXT_MENU,
-  NODE_TYPE_MUI_BUTTON,
-  NODE_TYPE_MUI_TEXT_BLOCK,
+  NODE_TYPE_MCU_PANEL,
+  NODE_TYPE_MCU_CONTEXT_MENU,
+  NODE_TYPE_MCU_BUTTON,
+  NODE_TYPE_MCU_TEXT_BLOCK,
 
   NODE_TYPE_FUNCTION_EDITOR,
   NODE_TYPE_STRUCT_EDITOR,
@@ -255,7 +255,7 @@ typedef struct mc_node {
 
 // Incomplete Structure declarations
 struct render_thread_info;
-struct mui_ui_state;
+struct mcu_ui_state;
 struct mci_input_state;
 struct frame_time;
 
@@ -275,7 +275,7 @@ typedef struct global_root_data {
 
   frame_time *elapsed;
 
-  struct mui_ui_state *ui_state;
+  struct mcu_ui_state *ui_state;
   unsigned int present_image_resource_uid;
 
   // struct {

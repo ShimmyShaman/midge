@@ -2292,7 +2292,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mc_syntax_node *synta
       // }
 
       // // TODO DEBUG
-      // if (!strcmp(syntax_node->text, "mui_context_menu_option_clicked")) {
+      // if (!strcmp(syntax_node->text, "mcu_context_menu_option_clicked")) {
       //   MCerror(2091, "reached");
       // }
 

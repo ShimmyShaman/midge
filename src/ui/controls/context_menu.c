@@ -2,9 +2,9 @@
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
-void __mui_determine_context_menu_extents(mc_node *node, layout_extent_restraints restraints)
+void __mcu_determine_context_menu_extents(mc_node *node, layout_extent_restraints restraints)
 {
-  mui_context_menu *context_menu = (mui_context_menu *)node->data;
+  mcu_context_menu *context_menu = (mcu_context_menu *)node->data;
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -20,7 +20,7 @@ void __mui_determine_context_menu_extents(mc_node *node, layout_extent_restraint
   // Determine
   float max_child_width = 0, cumulative_height = 0;
   for (int a = 0; a < context_menu->_buttons.count; ++a) {
-    mui_button *button = context_menu->_buttons.items[a];
+    mcu_button *button = context_menu->_buttons.items[a];
 
     if (button->node->layout->__bounds.width > max_child_width) {
       max_child_width = button->node->layout->padding.left + button->node->layout->__bounds.width +
@@ -53,9 +53,9 @@ void __mui_determine_context_menu_extents(mc_node *node, layout_extent_restraint
   }
 }
 
-void __mui_update_context_menu_layout(mc_node *node, mc_rectf *available_area)
+void __mcu_update_context_menu_layout(mc_node *node, mc_rectf *available_area)
 {
-  mui_context_menu *context_menu = (mui_context_menu *)node->data;
+  mcu_context_menu *context_menu = (mcu_context_menu *)node->data;
 
   mc_rectf new_bounds = node->layout->__bounds;
   new_bounds.x = available_area->x + node->layout->padding.left;
@@ -84,9 +84,9 @@ void __mui_update_context_menu_layout(mc_node *node, mc_rectf *available_area)
   mca_set_node_requires_rerender(node);
 }
 
-void __mui_render_context_menu_headless(mc_node *node)
+void __mcu_render_context_menu_headless(mc_node *node)
 {
-  mui_context_menu *context_menu = (mui_context_menu *)node->data;
+  mcu_context_menu *context_menu = (mcu_context_menu *)node->data;
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -100,9 +100,9 @@ void __mui_render_context_menu_headless(mc_node *node)
   }
 }
 
-void __mui_render_context_menu_present(image_render_details *image_render_queue, mc_node *node)
+void __mcu_render_context_menu_present(image_render_details *image_render_queue, mc_node *node)
 {
-  mui_context_menu *context_menu = (mui_context_menu *)node->data;
+  mcu_context_menu *context_menu = (mcu_context_menu *)node->data;
 
   mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                         (unsigned int)node->layout->__bounds.y,
@@ -121,21 +121,21 @@ void __mui_render_context_menu_present(image_render_details *image_render_queue,
   }
 }
 
-void mui_init_context_menu(mc_node *parent, mui_context_menu **p_context_menu)
+void mcu_init_context_menu(mc_node *parent, mcu_context_menu **p_context_menu)
 {
   // Node
   mc_node *node;
-  mca_init_mc_node(parent, NODE_TYPE_MUI_CONTEXT_MENU, &node);
+  mca_init_mc_node(parent, NODE_TYPE_MCU_CONTEXT_MENU, &node);
 
   // Layout
   mca_init_node_layout(&node->layout);
-  node->layout->determine_layout_extents = (void *)&__mui_determine_context_menu_extents;
-  node->layout->update_layout = (void *)&__mui_update_context_menu_layout;
-  node->layout->render_headless = (void *)&__mui_render_context_menu_headless;
-  node->layout->render_present = (void *)&__mui_render_context_menu_present;
+  node->layout->determine_layout_extents = (void *)&__mcu_determine_context_menu_extents;
+  node->layout->update_layout = (void *)&__mcu_update_context_menu_layout;
+  node->layout->render_headless = (void *)&__mcu_render_context_menu_headless;
+  node->layout->render_present = (void *)&__mcu_render_context_menu_present;
 
   // Control
-  mui_context_menu *context_menu = (mui_context_menu *)malloc(sizeof(mui_context_menu));
+  mcu_context_menu *context_menu = (mcu_context_menu *)malloc(sizeof(mcu_context_menu));
   context_menu->node = node;
   node->data = context_menu;
 
@@ -152,7 +152,7 @@ void mui_init_context_menu(mc_node *parent, mui_context_menu **p_context_menu)
   *p_context_menu = context_menu;
 }
 
-void mui_context_menu_clear_options(mui_context_menu *context_menu)
+void mcu_context_menu_clear_options(mcu_context_menu *context_menu)
 {
   for (int i = 0; i < context_menu->_buttons.count; ++i) {
     set_c_str(context_menu->_buttons.items[i]->str, "");
@@ -161,11 +161,11 @@ void mui_context_menu_clear_options(mui_context_menu *context_menu)
   context_menu->_buttons.count = 0;
 }
 
-void mui_context_menu_option_clicked(mui_button *button, mc_point click_point)
+void mcu_context_menu_option_clicked(mcu_button *button, mc_point click_point)
 {
   // Get the context menu
   mc_node *context_menu_node = (mc_node *)button->node->parent;
-  mui_context_menu *context_menu = (mui_context_menu *)context_menu_node->data;
+  mcu_context_menu *context_menu = (mcu_context_menu *)context_menu_node->data;
 
   if (context_menu->option_selected) {
     // Fire the event handler
@@ -179,7 +179,7 @@ void mui_context_menu_option_clicked(mui_button *button, mc_point click_point)
   mca_set_node_requires_rerender(context_menu_node);
 }
 
-void mui_context_menu_add_option(mui_context_menu *menu, const char *option_text)
+void mcu_context_menu_add_option(mcu_context_menu *menu, const char *option_text)
 {
   if (menu->_buttons.count + 1 > menu->_buttons.alloc) {
 
@@ -187,19 +187,19 @@ void mui_context_menu_add_option(mui_context_menu *menu, const char *option_text
     reallocate_collection((void ***)&menu->_buttons.items, &menu->_buttons.alloc, 0, 0);
 
     for (int a = prev_alloc; a < menu->_buttons.alloc; ++a) {
-      mui_init_button(menu->node, &menu->_buttons.items[a]);
+      mcu_init_button(menu->node, &menu->_buttons.items[a]);
       menu->_buttons.items[a]->node->layout->visible = false;
 
       menu->_buttons.items[a]->node->layout->padding = {2, 2, 2, 2};
 
-      // printf("mui_temp_TODO:%p\n", *((void **)mui_temp_TODO));
-      // printf("mui_temp_TODO:%p\n", mui_temp_TODO);
-      // printf("mui_temp_TODO:%p\n", &mui_temp_TODO);
-      // void *bb = (void *)&mui_temp_TODO;
-      // printf("mui_temp_TODO:%p\n", (void *)&bb);
+      // printf("mcu_temp_TODO:%p\n", *((void **)mcu_temp_TODO));
+      // printf("mcu_temp_TODO:%p\n", mcu_temp_TODO);
+      // printf("mcu_temp_TODO:%p\n", &mcu_temp_TODO);
+      // void *bb = (void *)&mcu_temp_TODO;
+      // printf("mcu_temp_TODO:%p\n", (void *)&bb);
 
       // DEBUG TODO (has to be set with void for now)
-      menu->_buttons.items[a]->left_click = (void *)&mui_context_menu_option_clicked;
+      menu->_buttons.items[a]->left_click = (void *)&mcu_context_menu_option_clicked;
 
       // menu->_buttons.items[a]->element->layout->preferred_width = 118.f;
       // menu->_buttons.items[a]->element->layout->preferred_height = 28.f;

@@ -95,9 +95,9 @@ void complete_midge_app_compile()
       // "src/env/project_management.c",
       // "src/env/global_context_menu.c",
       // "src/env/global_root.c",
-      // "src/ui/controls/panel.c",
-      // "src/ui/controls/text_block.c",
-      // "src/ui/controls/button.c",
+      "src/ui/controls/panel.c",
+      "src/ui/controls/text_block.c",
+      "src/ui/controls/button.c",
       // "src/ui/controls/context_menu.c",
       "src/ui/ui_functionality.c",
       // // "src/ui/ui_render.c",
@@ -121,9 +121,9 @@ void complete_midge_app_compile()
 extern "C" {
 void mcc_initialize_input_state();
 void mcc_update_xcb_input();
-void mui_initialize_core_ui_components();
-// void mui_render_element_headless(mc_node *element_node);
-// void mui_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
+// void mcu_initialize_core_ui_components();
+// void mcu_render_element_headless(mc_node *element_node);
+// void mcu_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
 void mca_load_modules();
 void mca_load_open_projects();
 }
@@ -135,8 +135,8 @@ void initialize_midge_components()
 
   mcc_initialize_input_state();
 
-  mui_initialize_ui_state(&global_data->ui_state);
-  // mui_initialize_core_ui_components();
+  mcu_initialize_ui_state(&global_data->ui_state);
+  // mcu_initialize_core_ui_components();
 
   // // Environment
   // mca_init_global_context_menu();

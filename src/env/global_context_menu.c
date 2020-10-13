@@ -9,8 +9,8 @@ void mca_init_global_context_menu()
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  mui_context_menu *context_menu;
-  mui_init_context_menu(global_data->global_node, &context_menu);
+  mcu_context_menu *context_menu;
+  mcu_init_context_menu(global_data->global_node, &context_menu);
 
   // Set to global
   global_data->ui_state->global_context_menu.node = context_menu->node;
@@ -145,11 +145,11 @@ void mca_activate_global_context_menu(int screen_x, int screen_y)
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
 
-  mui_context_menu *context_menu = (mui_context_menu *)global_data->ui_state->global_context_menu.node->data;
-  mui_context_menu_clear_options(context_menu);
+  mcu_context_menu *context_menu = (mcu_context_menu *)global_data->ui_state->global_context_menu.node->data;
+  mcu_context_menu_clear_options(context_menu);
 
   mc_node_list *node_hit_list;
-  mui_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
+  mcu_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
                                      &node_hit_list);
 
   // List the nodes
@@ -171,10 +171,10 @@ void mca_activate_global_context_menu(int screen_x, int screen_y)
 
   // if (options_list) {
   //   for (int i = 0; i < options_list->count; ++i) {
-  //     mui_context_menu_add_option(context_menu, options_list->items[i]->option_text);
+  //     mcu_context_menu_add_option(context_menu, options_list->items[i]->option_text);
   //   }
   // }
-  // mui_context_menu_add_option(context_menu, "Cancel");
+  // mcu_context_menu_add_option(context_menu, "Cancel");
 
   // Show
   global_data->ui_state->global_context_menu.node->layout->visible = true;

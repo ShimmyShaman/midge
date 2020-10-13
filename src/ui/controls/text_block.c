@@ -3,9 +3,9 @@
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
 
-void __mui_determine_text_block_extents(mc_node *node, layout_extent_restraints restraints)
+void __mcu_determine_text_block_extents(mc_node *node, layout_extent_restraints restraints)
 {
-  mui_text_block *text_block = (mui_text_block *)node->data;
+  mcu_text_block *text_block = (mcu_text_block *)node->data;
 
   mc_rectf new_bounds = node->layout->__bounds;
 
@@ -34,9 +34,9 @@ void __mui_determine_text_block_extents(mc_node *node, layout_extent_restraints 
   }
 }
 
-void __mui_update_text_block_layout(mc_node *node, mc_rectf *available_area)
+void __mcu_update_text_block_layout(mc_node *node, mc_rectf *available_area)
 {
-  mui_text_block *text_block = (mui_text_block *)node->data;
+  mcu_text_block *text_block = (mcu_text_block *)node->data;
 
   mc_rectf new_bounds = node->layout->__bounds;
   new_bounds.x = available_area->x + node->layout->padding.left;
@@ -55,9 +55,9 @@ void __mui_update_text_block_layout(mc_node *node, mc_rectf *available_area)
   mca_set_node_requires_rerender(node);
 }
 
-void __mui_render_text_block_present(image_render_details *image_render_queue, mc_node *node)
+void __mcu_render_text_block_present(image_render_details *image_render_queue, mc_node *node)
 {
-  mui_text_block *text_block = (mui_text_block *)node->data;
+  mcu_text_block *text_block = (mcu_text_block *)node->data;
 
   // Text
   // printf("rendertext_block- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
@@ -67,21 +67,21 @@ void __mui_render_text_block_present(image_render_details *image_render_queue, m
                                 text_block->font_resource_uid, text_block->font_color);
 }
 
-void mui_init_text_block(mc_node *parent, mui_text_block **p_text_block)
+void mcu_init_text_block(mc_node *parent, mcu_text_block **p_text_block)
 {
   // Node
   mc_node *node;
-  mca_init_mc_node(parent, NODE_TYPE_MUI_TEXT_BLOCK, &node);
+  mca_init_mc_node(parent, NODE_TYPE_MCU_TEXT_BLOCK, &node);
 
   // Layout
   mca_init_node_layout(&node->layout);
-  node->layout->determine_layout_extents = (void *)&__mui_determine_text_block_extents;
-  node->layout->update_layout = (void *)&__mui_update_text_block_layout;
+  node->layout->determine_layout_extents = (void *)&__mcu_determine_text_block_extents;
+  node->layout->update_layout = (void *)&__mcu_update_text_block_layout;
   node->layout->render_headless = NULL;
-  node->layout->render_present = (void *)&__mui_render_text_block_present;
+  node->layout->render_present = (void *)&__mcu_render_text_block_present;
 
   // Control
-  mui_text_block *text_block = (mui_text_block *)malloc(sizeof(mui_text_block));
+  mcu_text_block *text_block = (mcu_text_block *)malloc(sizeof(mcu_text_block));
   text_block->node = node;
   node->data = text_block;
 

@@ -41,7 +41,7 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
   input_event.handled = false;
 
   mc_node_list *node_hit_list;
-  mui_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
+  mcu_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
                                      &node_hit_list);
 
   // printf("mouse_event nhl:%i\n", node_hit_list->count);
