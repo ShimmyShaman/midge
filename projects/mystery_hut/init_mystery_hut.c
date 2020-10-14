@@ -83,6 +83,8 @@ void _myh_handle_input(mc_node *node, mci_input_event *input_event)
     input_event->handled = true;
     mca_focus_node(node);
   }
+
+  // TODO -- asdf
 }
 
 void myh_load_resources(mc_node *module_node)
@@ -141,6 +143,6 @@ void set_mystery_hut_project_state(mc_node *app_root)
   function_info *func_info;
   // find_function_info("init_mystery_hut", &func_info);
   // mce_activate_source_editor_for_definition(func_info->source);
-  find_function_info("myh_load_resources", &func_info);
+  find_function_info("_myh_handle_input", &func_info);
   mce_activate_source_editor_for_definition(func_info->source);
 }
