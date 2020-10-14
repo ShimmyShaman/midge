@@ -10,19 +10,19 @@ typedef enum mce_source_token_type {
   // MCE_SE_EMPTY_SPACE,
 } mce_source_token_type;
 
-typedef struct mce_source_line_token {
-  unsigned int len;
-
-  mce_source_token *first;
-  mce_source_line_token *prev, *next;
-} mce_source_line_token;
-
 typedef struct mce_source_token {
   mce_source_token_type type;
   c_str *str;
 
   mce_source_token *next;
 } mce_source_token;
+
+typedef struct mce_source_line_token {
+  unsigned int len;
+
+  mce_source_token *first;
+  mce_source_line_token *prev, *next;
+} mce_source_line_token;
 
 typedef struct mce_source_token_list {
   unsigned int line_len;

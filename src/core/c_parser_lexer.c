@@ -2809,7 +2809,8 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     case MC_TOKEN_BITWISE_OR_OPERATOR:
     case MC_TOKEN_BITWISE_XOR_OPERATOR:
     case MC_TOKEN_ASSIGNMENT_OPERATOR:
-    case MC_TOKEN_ARROW_OPENING_BRACKET: {
+    case MC_TOKEN_ARROW_OPENING_BRACKET:
+    case MC_TOKEN_ARROW_CLOSING_BRACKET: {
       mcs_parse_parenthesized_expression(ps, parent, additional_destination);
     } break;
     case MC_TOKEN_STAR_CHARACTER: {

@@ -2,11 +2,26 @@
 #include "core/core_definitions.h"
 #include <stdio.h>
 
-int mc_throw_delayed_error(int error_no, int day, int month, int hour) { return 0; }
+int mc_throw_delayed_error(int error_no, const char *error_message, int year, int month, int day)
+{
+  time_t T = time(NULL);
+  struct tm tm = *localtime(&T);
+
+  // printf("System Date is: %02d/%02d/%04d\n", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+  // printf("System Time is: %02d:%02d:%02d\n", tm.tm_hour, tm.tm_min, tm.tm_sec);
+
+  if (year > tm.tm_year + 1900 ||
+      (year == tm.tm_year + 1900 && (month > tm.tm_mon + 1 || (month == tm.tm_mon + 1 && day >= tm.tm_mday)))) {
+    printf("DelayedErr:'%s'\n", error_message);
+    MCerror(error_no, "TODO");
+  }
+
+  return 0;
+}
 
 int read_file_text(const char *filepath, char **output)
 {
-  // printf("rft-0\n");s
+  // printf("rft-0\n");
   // printf("rft-0 '%s' '%p'\n", filepath, output);
   // Parse
   FILE *f = fopen(filepath, "rb");

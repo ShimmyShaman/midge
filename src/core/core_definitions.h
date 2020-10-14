@@ -317,7 +317,7 @@ extern "C" {
 
 int obtain_midge_global_root(global_root_data **root_data);
 
-int mc_throw_delayed_error(int error_no, int day, int month, int hour);
+int mc_throw_delayed_error(int error_no, const char *error_message, int year, int month, int day);
 
 int read_file_text(const char *filepath, char **output);
 
