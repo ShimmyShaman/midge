@@ -2,9 +2,11 @@
 #include "core/core_definitions.h"
 #include <stdio.h>
 
+int mc_throw_delayed_error(int error_no, int day, int month, int hour) { return 0; }
+
 int read_file_text(const char *filepath, char **output)
 {
-  // printf("rft-0\n");
+  // printf("rft-0\n");s
   // printf("rft-0 '%s' '%p'\n", filepath, output);
   // Parse
   FILE *f = fopen(filepath, "rb");

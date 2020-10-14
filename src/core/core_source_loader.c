@@ -448,6 +448,7 @@ const char *_mcl_core_functions[] = {
 
     // core_definitions
     "obtain_midge_global_root",
+    "mc_throw_delayed_error",
     "read_file_text",
     "append_to_collection",
     "insert_in_collection",
