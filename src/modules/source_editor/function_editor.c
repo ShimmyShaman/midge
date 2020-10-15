@@ -439,16 +439,29 @@ void mce_delete_selection(mce_function_editor *fedit)
 
   printf("start_line=%i, start_col=%i, end_line=%i, end_col=%i\n", start_line, start_col, end_line, end_col);
 
+  // DEBUG
+  {
+    for (int a = start_line; a < fedit->code.count; ++a) {
+      mce_source_token *ttoken = fedit->code.line_tokens[a]->first;
+      printf("mdsBefore[%i]:", a);
+      while (ttoken) {
+        printf("#");
+        printf("%s(%i)", ttoken->str->text, ttoken->type);
+        ttoken = ttoken->next;
+      }
+      printf("#\n");
+    }
+  }
+  // DEBUG
+
   // Delete from the first line
   mce_source_line_token *start_line_token = fedit->code.line_tokens[start_line];
   mce_source_token *before_token, *del_token;
   int accumulate_line_len = 0;
   int delete_char_count = (end_line > start_line ? start_line_token->len : end_col) - start_col;
   if (start_col == 0) {
-    if (end_line > start_line || end_col - start_col >= before_token->str->len) {
-      before_token = NULL;
-      del_token = start_line_token->first;
-    }
+    before_token = NULL;
+    del_token = start_line_token->first;
   }
   else {
     before_token = del_token = start_line_token->first;
@@ -460,10 +473,10 @@ void mce_delete_selection(mce_function_editor *fedit)
       }
     }
 
+    printf("del_token->str->len:%i start_col:%i accumulate_line_len:%i delete_char_count:%i\n", del_token->str->len,
+           start_col, accumulate_line_len, delete_char_count);
     if (del_token && start_col > accumulate_line_len) {
       // Delete a section of the tokens string
-      printf("del_token->str->len:%i start_col:%i accumulate_line_len:%i delete_char_count:%i\n", del_token->str->len,
-             start_col, accumulate_line_len, delete_char_count);
       int delete_amount = del_token->str->len - (start_col - accumulate_line_len);
       if (start_line == end_line && delete_char_count < delete_amount) {
         delete_amount = delete_char_count;
@@ -489,8 +502,10 @@ void mce_delete_selection(mce_function_editor *fedit)
   // Delete what remains required from the start line
   mce_source_token *ttoken;
   mce_source_line_token *tline;
+  printf("mds-3a: delete_char_count:%i\n", delete_char_count);
   while (del_token && (delete_char_count > 0 || end_line > start_line)) {
     if (del_token->str->len <= delete_char_count) {
+      printf("mds-3b: %i del_token->str->len:%u %s\n", del_token->type, del_token->str->len, del_token->str->text);
       delete_char_count -= del_token->str->len;
       ttoken = del_token->next;
 
@@ -510,7 +525,10 @@ void mce_delete_selection(mce_function_editor *fedit)
     break;
   }
 
+  printf("mds-4\n");
   if (end_line > start_line) {
+    printf("mds-4a in_between_line_count:%i\n", in_between_line_count);
+
     // Delete any in-between lines
     tline = start_line_token;
     for (int n = 0; n < in_between_line_count; ++n) {
@@ -533,20 +551,25 @@ void mce_delete_selection(mce_function_editor *fedit)
     }
 
     // Delete the last line
-    tline = tline->next;
-    ttoken->next = del_token = tline->first;
+    del_token = tline->next->first;
 
-    int delete_char_count = end_col;
+    tline->next = tline->next->next;
+    if (tline->next) {
+      tline->next->prev = tline;
+    }
+    printf("mds-4d tline->len:%u delete_char_count=%i\n", tline->len, delete_char_count);
+    printf("mds-4f del_token:(%i)'%s'\n", del_token->type, del_token->str->text);
+
     while (delete_char_count > 0) {
       if (del_token->str->len <= delete_char_count) {
         delete_char_count -= del_token->str->len;
-        ttoken->next = del_token->next;
+        ttoken = del_token->next;
 
         // Delete the token fully
         append_to_collection((void ***)&fedit->source_editor_pool->source_tokens.items,
                              &fedit->source_editor_pool->source_tokens.capacity,
                              &fedit->source_editor_pool->source_tokens.count, del_token);
-        del_token = ttoken->next;
+        del_token = ttoken;
         printf("loop4\n");
         continue;
       }
@@ -554,19 +577,23 @@ void mce_delete_selection(mce_function_editor *fedit)
       // Delete the first section of the token
       del_token->type = MCE_SE_UNPROCESSED_TEXT;
       char *remaining = strdup(del_token->str->text + delete_char_count);
+      printf("mds-4h remaining:'%s'\n", remaining);
       set_c_str(del_token->str, remaining);
       free(remaining);
 
       break;
     }
   }
+  printf("mds-7 before_token:%p del_token:%p\n", before_token, del_token);
 
   if (before_token) {
+    printf("mds-7a before_token:'%s'\n", before_token->str->text);
     before_token->next = del_token;
   }
   else {
     start_line_token->first = del_token;
   }
+  printf("mds-7b del_token:'%s'\n", del_token ? del_token->str->text : "(nil)");
 
   // Recount the start line
   tline = fedit->code.line_tokens[start_line];
@@ -589,6 +616,28 @@ void mce_delete_selection(mce_function_editor *fedit)
 
   fedit->cursor.line = start_line;
   fedit->cursor.col = start_col;
+
+  // DEBUG
+  {
+    for (int a = start_line; a < fedit->code.count; ++a) {
+      ttoken = fedit->code.line_tokens[a]->first;
+      if (a > 0 && fedit->code.line_tokens[a]->prev != fedit->code.line_tokens[a - 1]) {
+        MCerror(6733, "TODO:%i", a);
+      }
+      if (a + 1 < fedit->code.count && fedit->code.line_tokens[a]->next != fedit->code.line_tokens[a + 1]) {
+        MCerror(6746, "TODO:%i", a);
+      }
+
+      printf("mdsAFter[%i]:", a);
+      while (ttoken) {
+        printf("#");
+        printf("%s(%i)", ttoken->str->text, ttoken->type);
+        ttoken = ttoken->next;
+      }
+      printf("#\n");
+    }
+  }
+  // DEBUG
 
   _mce_update_function_editor_visible_source_lines(fedit);
 }
