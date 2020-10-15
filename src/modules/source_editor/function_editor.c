@@ -963,7 +963,16 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
   int cursor_start_line = fedit->cursor.line;
   mce_source_line_token *line = fedit->code.line_tokens[cursor_start_line];
 
+  const char *c = str;
   mce_source_token *token = line->first;
+  if (!token && *c != '\n') {
+    mce_obtain_source_token_from_pool(fedit->source_editor_pool, &token);
+    line->first = token;
+
+    token->type = MCE_SE_UNPROCESSED_TEXT;
+    set_c_str(token->str, "");
+    token->next = NULL;
+  }
   int accumulate_line_len = 0;
   while (1) {
     if (accumulate_line_len + token->str->len < fedit->cursor.col) {
@@ -995,7 +1004,6 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
 
   bool altered_line_order = false;
 
-  const char *c = str;
   while (*c != '\0') {
     if (*c == '\n') {
       // Form a new line with the remainder tokens
@@ -1015,8 +1023,10 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
       new_line->first->type = MCE_SE_UNPROCESSED_TEXT;
       set_c_str(new_line->first->str, "");
 
-      new_line->first->next = token->next;
-      token->next = NULL;
+      if (token) {
+        new_line->first->next = token->next;
+        token->next = NULL;
+      }
 
       line = new_line;
       token = line->first;

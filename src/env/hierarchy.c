@@ -96,13 +96,13 @@ void exit_app(mc_node *node_scope, int result)
 
 void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach)
 {
-  printf("added node %i to %i\n", node_to_attach->type, hierarchy_node->type);
+  // printf("added node %i to %i\n", node_to_attach->type, hierarchy_node->type);
   // midge_error_print_thread_stack_trace();
 
   // mc_node_list *parent_node_list;
   // mca_get_sub_hierarchy_node_list(hierarchy_node, &parent_node_list);
 
-  // __mca_insert_node_into_node_list(parent_node_list, node_to_attach, z_layer_index);
+  // __mca_insert_node_ into_node_list(parent_node_list, node_to_attach, z_layer_index);
 
   if (!hierarchy_node->children) {
     MCerror(9108, "Attempt to attach node (%i) to parent (%i) who has no children", node_to_attach->type,
