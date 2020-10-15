@@ -1,0 +1,3 @@
+#ifndef FUNCTION_DEBUG_H
+#define FUNCTION_DEBUG_H
+#endif // FUNCTION_DEBUG_H

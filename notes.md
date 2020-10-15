@@ -9,7 +9,7 @@ Midges development goals:
     * To reduce dimensionality of the context and allowable outcomes in order to increase accuracy
         and reduce recovery from error.
     * Develop tools and allowances for as rich a user-input as possible. Starting with key-strokes
-      and mouse-clicks with an eye on gestures and AV input.
+      and mouse-clicks with a direction towards gestures and AV input.
     
 ###################################################################
 ###################################################################
@@ -18,9 +18,24 @@ Midges development goals:
 ###################################################################
 
 
+The System:
+
+[Secondary]
+ Develop The Target Application:
+  - Has to take advantage of scalable - repeatable processes
+  - 
+
+[Primary]
+ Develop the tools to build the target application quicker/better
+ !Develop the tools to build the above tools quicker/better
 
 
 ###################################################################
+Visual Debugger:
+
+  See values of the last call of the function
+  Ability to pause/breakpoint at a line(first statement of the line) & continue
+
 ###################################################################
 
 
