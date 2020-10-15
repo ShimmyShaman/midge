@@ -314,6 +314,47 @@ void mce_move_cursor_right(mce_function_editor *fedit)
   mca_set_node_requires_rerender(fedit->node);
 }
 
+void mce_move_cursor_end(mce_function_editor *fedit)
+{
+  fedit->cursor.zen_col = 0;
+
+  // Set the cursor col to the end
+  fedit->cursor.col = fedit->code.line_tokens[fedit->cursor.line]->len;
+
+  mca_set_node_requires_rerender(fedit->node);
+}
+
+void mce_move_cursor_home(mce_function_editor *fedit)
+{
+  fedit->cursor.zen_col = 0;
+
+  mce_source_token *token = fedit->code.line_tokens[fedit->cursor.line]->first;
+  int end_of_empty = 0;
+  while (token) {
+    int off = end_of_empty;
+    while (end_of_empty - off < token->str->len) {
+      if (token->str->text[end_of_empty - off] != ' ' && token->str->text[end_of_empty - off] != '\t')
+        break;
+      ++end_of_empty;
+    }
+    if (end_of_empty - off >= token->str->len) {
+      token = token->next;
+      continue;
+    }
+    break;
+  }
+
+  // Set
+  if (fedit->cursor.col != 0 && end_of_empty >= fedit->cursor.col) {
+    fedit->cursor.col = 0;
+  }
+  else {
+    fedit->cursor.col = end_of_empty;
+  }
+
+  mca_set_node_requires_rerender(fedit->node);
+}
+
 void mce_set_function_editor_cursor_position(mce_function_editor *fedit, int document_line, int document_col)
 {
   fedit->cursor.zen_col = 0;
@@ -1393,7 +1434,16 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
 
     input_event->handled = true;
 
-    if (input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) {
+    if (input_event->input_state->alt_function & BUTTON_STATE_DOWN) {
+      switch (input_event->button_code) {
+      case KEY_CODE_A:
+        mce_move_cursor_home(fedit);
+        break;
+      default:
+        break;
+      }
+    }
+    else if (input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) {
       switch (input_event->button_code) {
       case KEY_CODE_L:
         mce_move_cursor_right(fedit);
@@ -1406,6 +1456,9 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
         break;
       case KEY_CODE_K:
         mce_move_cursor_down(fedit);
+        break;
+      case KEY_CODE_SEMI_COLON:
+        mce_move_cursor_end(fedit);
         break;
       case KEY_CODE_S: {
         char *code;
@@ -1425,6 +1478,12 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
         c[0] = '\n';
         c[1] = '\0';
         mce_insert_string_at_cursor(fedit, c);
+      } break;
+      case KEY_CODE_HOME: {
+        mce_move_cursor_home(fedit);
+      } break;
+      case KEY_CODE_END: {
+        mce_move_cursor_end(fedit);
       } break;
       case KEY_CODE_BACKSPACE: {
         // return;
