@@ -84,32 +84,108 @@ int _mce_update_line_positions(mce_function_editor *fedit, mc_rectf *available_a
 
 void _mce_determine_function_editor_extents(mc_node *node, layout_extent_restraints restraints)
 {
-  // const float MAX_EXTENT_VALUE = 100000.f;
-
-  // mce_function_editor *function_editor = (mce_function_editor *)node->data;
-
-  // Width
-  if (node->layout->preferred_width) {
-    node->layout->determined_extents.width = node->layout->preferred_width;
-  }
-  else {
-    // MCerror(7295, "NotYetSupported");
-  }
-
-  // Height
-  if (node->layout->preferred_height) {
-    node->layout->determined_extents.height = node->layout->preferred_height;
-  }
-  else {
-    MCerror(7301, "NotYetSupported");
-  }
+  mca_determine_typical_node_extents(node, restraints);
 }
 
 void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
 {
-  mce_function_editor *function_editor = (mce_function_editor *)node->data;
+  // Clear
+  node->layout->__requires_layout_update = false;
 
-  mca_update_typical_node_layout(node, available_area);
+  // Preferred value > padding (within min/max if set)
+  mc_rectf bounds;
+  mca_node_layout *layout = node->layout;
+  layout->__requires_layout_update = false;
+
+  // Width
+  if (layout->preferred_width) {
+    // Set to preferred width
+    bounds.width = layout->preferred_width;
+  }
+  else {
+    // padding adjusted from available
+    bounds.width = available_area->width - layout->padding.right - layout->padding.left;
+
+    // Specified bounds
+    if (layout->min_width && bounds.width < layout->min_width) {
+      bounds.width = layout->min_width;
+    }
+    if (layout->max_width && bounds.width > layout->max_width) {
+      bounds.width = layout->max_width;
+    }
+
+    if (bounds.width < 0) {
+      bounds.width = 0;
+    }
+  }
+
+  // Height
+  if (layout->preferred_height) {
+    // Set to preferred height
+    bounds.height = layout->preferred_height;
+  }
+  else {
+    // padding adjusted from available
+    bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
+
+    // Specified bounds
+    if (layout->min_height && bounds.height < layout->min_height) {
+      bounds.height = layout->min_height;
+    }
+    if (layout->max_height && bounds.height > layout->max_height) {
+      bounds.height = layout->max_height;
+    }
+
+    if (bounds.height < 0) {
+      bounds.height = 0;
+    }
+  }
+
+  // X
+  switch (layout->horizontal_alignment) {
+  case HORIZONTAL_ALIGNMENT_LEFT: {
+    // printf("left %.3f %.3f\n", available_area->x, layout->padding.left);
+    bounds.x = available_area->x + layout->padding.left;
+  } break;
+  case HORIZONTAL_ALIGNMENT_RIGHT: {
+    // printf("right %.3f %.3f %.3f %.3f\n", available_area->x, layout->padding.left, layout->padding.right,
+    // bounds.width);
+    bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
+  } break;
+  case HORIZONTAL_ALIGNMENT_CENTRED: {
+    // printf("centred %.3f %.3f %.3f %.3f %.3f\n", available_area->x, layout->padding.left, available_area->width,
+    //  layout->padding.right, bounds.width);
+    bounds.x = available_area->x + layout->padding.left +
+               (available_area->width - (layout->padding.left + bounds.width + layout->padding.right)) / 2.f;
+  } break;
+  default:
+    MCerror(7371, "NotSupported:%i", layout->horizontal_alignment);
+  }
+
+  // Y
+  switch (layout->vertical_alignment) {
+  case VERTICAL_ALIGNMENT_TOP: {
+    bounds.y = available_area->y + layout->padding.top;
+  } break;
+  case VERTICAL_ALIGNMENT_BOTTOM: {
+    bounds.y = available_area->y + available_area->height - layout->padding.bottom - bounds.height;
+  } break;
+  case VERTICAL_ALIGNMENT_CENTRED: {
+    bounds.y = available_area->y + layout->padding.top +
+               (available_area->height - (layout->padding.bottom + bounds.height + layout->padding.top)) / 2.f;
+  } break;
+  default:
+    MCerror(7387, "NotSupported:%i", layout->vertical_alignment);
+  }
+
+  // Set if different
+  if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width ||
+      bounds.height != layout->__bounds.height) {
+    layout->__bounds = bounds;
+    // printf("setrerender\n");
+    mca_set_node_requires_rerender(node);
+  }
+
   // printf("function_editor-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y,
   // available_area->width,
   //        available_area->height);
@@ -119,7 +195,8 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
   //        node->layout->__bounds.width, node->layout->__bounds.height);
 
   // Align text lines to fit to the container
-  _mce_update_line_positions(function_editor, &node->layout->__bounds);
+  mce_function_editor *fedit = (mce_function_editor *)node->data;
+  _mce_update_line_positions(fedit, &node->layout->__bounds);
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -131,10 +208,10 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
     }
   }
 
-  node->layout->__requires_layout_update = false;
+  // node->layout->__requires_layout_update = false;
 
-  // Set rerender anyway because lazy TODO--maybe
-  mca_set_node_requires_rerender(node);
+  // // Set rerender anyway because lazy TODO--maybe
+  // mca_set_node_requires_rerender(node);
 }
 
 void _mce_render_function_editor_headless(mc_node *node)
