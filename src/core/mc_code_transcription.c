@@ -14,10 +14,7 @@ int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_nod
 #define MCT_TS_MAX_SCOPE_DEPTH 256
 typedef struct mct_transcription_state {
   // Options
-  bool report_invocations_to_error_stack;
-  bool report_simple_args_to_error_stack;
-  bool check_mc_functions_not_null;
-  bool tag_on_function_entry;
+  mct_function_transcription_options *options;
 
   // State Values
   mc_syntax_node *transcription_root;
@@ -1124,7 +1121,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   // DEBUG
 
   //{
-  //   if (ts->report_invocations_to_error_stack) {
+  //   if (ts->options->report_invocations_to_error_stack) {
   //     mct_append_to_c_str(ts, "{\n");
   //     ++ts->indent;
   //     mct_append_to_c_str(ts, "int midge_error_stack_index;\n");
@@ -1150,7 +1147,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   // register_midge_error_tag("mct_transcribe_statement_list-ES9");
 
   // if (syntax_node->expression_statement.expression->type == MC_SYNTAX_INVOCATION) {
-  //   if (ts->report_invocations_to_error_stack) {
+  //   if (ts->options->report_invocations_to_error_stack) {
   //     mct_append_indent_to_c_str(ts);
   //     append_to_c_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
   //     --ts->indent;
@@ -1204,7 +1201,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
   int mc_argument_data_count = 0;
   if (func_info) {
     // Function not null check
-    if (ts->check_mc_functions_not_null) {
+    if (ts->options->check_mc_functions_not_null) {
       mct_append_to_c_str(ts, "if (!");
       append_to_c_str(ts->str, function_name);
       append_to_c_str(ts->str, ") {\n");
@@ -1287,7 +1284,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
     }
   }
 
-  if (ts->report_invocations_to_error_stack) {
+  if (ts->options->report_invocations_to_error_stack) {
     mct_append_to_c_str(ts, "{\n");
     ++ts->indent;
     mct_append_to_c_str(ts, "int midge_error_stack_index;\n");
@@ -1327,7 +1324,7 @@ int mct_transcribe_mc_invocation(mct_transcription_state *ts, mc_syntax_node *sy
     // mct_append_to_c_str(ts, "}\n");
   }
 
-  if (ts->report_invocations_to_error_stack) {
+  if (ts->options->report_invocations_to_error_stack) {
     mct_append_indent_to_c_str(ts);
     append_to_c_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
 
@@ -1585,7 +1582,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       mct_append_node_text_to_c_str(ts->str, thr_invocation->invocation.arguments->items[3]);
       append_to_c_str(ts->str, ";\n");
 
-      if (ts->report_invocations_to_error_stack) {
+      if (ts->options->report_invocations_to_error_stack) {
         mct_append_to_c_str(ts, "{\n");
         ++ts->indent;
         mct_append_to_c_str(ts, "int midge_error_stack_index;\n");
@@ -1607,7 +1604,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       mct_append_node_text_to_c_str(ts->str, thr_invocation->invocation.arguments->items[1]);
       append_to_c_str(ts->str, ", __mch_thread_entry, (void *)mcti_wrapper_state);\n");
 
-      if (ts->report_invocations_to_error_stack) {
+      if (ts->options->report_invocations_to_error_stack) {
         mct_append_indent_to_c_str(ts);
         append_to_c_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
 
@@ -1759,7 +1756,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       MCerror(1417, "Nested invokes not yet supported just flat 'res = function()'");
     }
 
-    if (ts->report_invocations_to_error_stack) {
+    if (ts->options->report_invocations_to_error_stack) {
       mct_append_to_c_str(ts, "{\n");
       ++ts->indent;
       mct_append_to_c_str(ts, "int midge_error_stack_index;\n");
@@ -1782,7 +1779,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
           declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
       append_to_c_str(ts->str, ";\n");
     }
-    if (ts->report_invocations_to_error_stack) {
+    if (ts->options->report_invocations_to_error_stack) {
       mct_append_indent_to_c_str(ts);
       append_to_c_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
 
@@ -2521,6 +2518,9 @@ int mct_transcribe_while_statement(mct_transcription_state *ts, mc_syntax_node *
 
 int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node)
 {
+  mct_statement_transcription_info st_info = {};
+  st_info.str_index = ts->str->len;
+
   switch (syntax_node->type) {
   case MC_SYNTAX_CONTINUE_STATEMENT:
   case MC_SYNTAX_BREAK_STATEMENT: {
@@ -2852,9 +2852,10 @@ int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_nod
 //   return 0;
 // }
 
-int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function_ast, char **mc_transcription)
+int mct_transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function_ast,
+                              mct_function_transcription_options *options, char **mc_transcription)
 {
-  register_midge_error_tag("transcribe_function_to_mc()");
+  register_midge_error_tag("mct_transcribe_function_to_mc()");
 
   if (function_ast->type != MC_SYNTAX_FUNCTION) {
     MCerror(889, "MCT:Not Supported");
@@ -2870,10 +2871,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
 
   mct_transcription_state ts;
   // -- options
-  ts.report_invocations_to_error_stack = true;
-  ts.report_simple_args_to_error_stack = true;
-  ts.check_mc_functions_not_null = true;
-  ts.tag_on_function_entry = true;
+  ts.options = options;
   // -- state
   ts.transcription_root = function_ast;
   ts.indent = 0;
@@ -2902,7 +2900,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
   ++ts.indent;
 
   // Initial
-  if (ts.tag_on_function_entry) {
+  if (ts.options->tag_on_function_entry) {
     append_to_c_strf(ts.str, "  register_midge_error_tag(\"%s()\");\n\n", function_ast->function.name->text);
   }
 
@@ -3053,7 +3051,7 @@ int transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function
 
   // printf("mc_transcription:\n%s||\n", *mc_transcription);
 
-  register_midge_error_tag("transcribe_function_to_mc(~)");
+  register_midge_error_tag("mct_transcribe_function_to_mc(~)");
   return 0;
 }
 
@@ -3067,10 +3065,11 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
 
   mct_transcription_state ts;
   // -- options
-  ts.report_invocations_to_error_stack = true;
-  ts.report_simple_args_to_error_stack = true;
-  ts.check_mc_functions_not_null = true;
-  ts.tag_on_function_entry = true;
+  ts.options = NULL;
+  // ts.options->report_invocations_to_error_stack = true;
+  // ts.report_simple_args_to_error_stack = true;
+  // ts.check_mc_functions_not_null = true;
+  // ts.options->tag_on_function_entry = true;
   // -- state
   ts.transcription_root = structure_ast;
   ts.indent = 0;

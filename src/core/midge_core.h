@@ -1128,7 +1128,7 @@ int (*parse_mc_file_to_syntax_tree)(char *code, mc_syntax_node **file_ast);
 int (*parse_definition_to_syntax_tree)(char *code, mc_syntax_node **file_ast);
 int (*copy_syntax_node_to_text)(mc_syntax_node *syntax_node, char **output);
 int (*transcribe_code_block_ast_to_mc_definition)(mc_syntax_node *function_syntax, char **output);
-int (*transcribe_function_to_mc)(mc_function_info_v1 *func_info, mc_syntax_node *function_ast, char **mc_transcription);
+int (*mct_transcribe_function_to_mc)(mc_function_info_v1 *func_info, mc_syntax_node *function_ast, char **mc_transcription);
 
 int (*parse_and_process_function_definition)(mc_source_definition_v1 *source_definition,
                                              mc_function_info_v1 **function_definition, bool skip_clint_declaration);

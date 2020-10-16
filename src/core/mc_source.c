@@ -636,7 +636,13 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
 
   // Instantiate Function
   char *mc_transcription;
-  transcribe_function_to_mc(func_info, ast, &mc_transcription);
+  mct_function_transcription_options options = {};
+  options.report_invocations_to_error_stack = true;
+  options.report_simple_args_to_error_stack = true;
+  options.check_mc_functions_not_null = true;
+  options.tag_on_function_entry = false;
+  options.report_variable_index = NULL;
+  mct_transcribe_function_to_mc(func_info, ast, &options, &mc_transcription);
 
   // if (!strcmp(func_info->name, "_mcm_handle_input")) {
   //   print_syntax_node(ast, 0);

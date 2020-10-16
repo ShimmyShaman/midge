@@ -101,15 +101,26 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
   //          (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width,
   //          (unsigned int)node->layout->__bounds.height);
 
-  // Children
-  for (int a = 0; a < node->children->count; ++a) {
-    mc_node *child = node->children->items[a];
-    if (child->layout && child->layout->visible && child->layout->render_present) {
-      // TODO fptr casting
-      void (*render_node_presentation)(image_render_details *, mc_node *) =
-          (void (*)(image_render_details *, mc_node *))child->layout->render_present;
-      render_node_presentation(image_render_queue, child);
-    }
+  // // Children
+  // for (int a = 0; a < node->children->count; ++a) {
+  //   mc_node *child = node->children->items[a];
+  //   if (child->layout && child->layout->visible && child->layout->render_present) {
+  //     // TODO fptr casting
+  //     void (*render_node_presentation)(image_render_details *, mc_node *) =
+  //         (void (*)(image_render_details *, mc_node *))child->layout->render_present;
+  //     render_node_presentation(image_render_queue, child);
+  //   }
+  // }
+  render_color font_color = COLOR_LIGHT_SKY_BLUE;
+
+  float horizontal_offset = fdebug->lines.padding.left;
+  mce_function_debug_line *line = fdebug->code.first_line;
+  for (unsigned int y = (unsigned int)(node->layout->__bounds.y + fdebug->lines.padding.top);
+       line && y < (unsigned int)(node->layout->__bounds.y + node->layout->__bounds.height); y += 22U) {
+
+    mcr_issue_render_command_text(image_render_queue, (unsigned int)(node->layout->__bounds.x + horizontal_offset), y,
+                                  line->str->text, 0, font_color);
+    line = line->next;
   }
 
   //   if (fdebug->cursor.visible) {
@@ -162,6 +173,14 @@ void _mce_function_debug_handle_input(mc_node *node, mci_input_event *input_even
   // TODO -- asdf
 }
 
+int _mce_report_variable_value(mct_function_variable_report_index *report_index, unsigned int call_uid,
+                               const char *type_identifier, const char *variable_name, int line, int col, void *p_value)
+{
+  printf("_mce_report_variable_value: '%s':'%s' %i:%i\n", variable_name, type_identifier, line, col);
+
+  return 0;
+}
+
 void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
 {
   global_root_data *global_data;
@@ -203,24 +222,36 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   function_debug->node->children->alloc = 0;
   function_debug->node->children->count = 0;
 
+  fdebug->variable_value_report_index =
+      (mct_function_transcription_options *)malloc(sizeof(mct_function_transcription_options));
+  fdebug->variable_value_report_index->call_uid_counter = 1;
+  // fdebug->variable_value_report_index->call_track_limit = 0;
+  fdebug->variable_value_report_index->calls.capacity = 0;
+  fdebug->variable_value_report_index->calls.count = 0;
+  fdebug->variable_value_report_index->report_variable_value_delegate = (void *)&_mce_report_variable_value;
+
   *p_function_debugger = function_debug;
 }
 
-typedef struct mce_function_debug_line {
-  char *text;
-  // TODO -- future colored text parts
-
-  mce_function_debug_line *next;
-} mce_function_debug_line;
-
-void _mce_transcribe_syntax_to_function_debug_display(mc_syntax_node *syntax_node, mce_function_debug_line *line)
+void _mce_transcribe_syntax_to_function_debug_display(mc_syntax_node *syntax_node, mce_function_debug_line **line)
 {
   if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
 
     switch ((mc_token_type)syntax_node->type) {
     // case MC_TOKEN_LINE_COMMENT:
+    case MC_TOKEN_NEW_LINE: {
+      mce_function_debug_line *new_line = (mce_function_debug_line *)malloc(sizeof(mce_function_debug_line));
+      init_c_str(&new_line->str);
+      new_line->next = NULL;
+
+      (*line)->next = new_line;
+      *line = new_line;
+    } break;
     default:
-      MCerror(9216, "TODO:%i", syntax_node->type);
+      append_to_c_str((*line)->str, syntax_node->text);
+      break;
+      // print_syntax_node(syntax_node, 0);
+      // MCerror(9216, "TODO:%i", syntax_node->type);
     }
 
     return;
@@ -230,13 +261,14 @@ void _mce_transcribe_syntax_to_function_debug_display(mc_syntax_node *syntax_nod
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
 
-    MCcall(_mce_transcribe_syntax_to_function_debug_display(rtf, child));
+    _mce_transcribe_syntax_to_function_debug_display(child, line);
   }
 }
 
 void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function_info *function)
 {
-  int result = parse_definition_to_syntax_tree(function->source->code, &fdebug->code.syntax);
+  mc_syntax_node *function_syntax;
+  int result = parse_definition_to_syntax_tree(function->source->code, &function_syntax);
   if (result) {
     // printf("cees-4\n");
     printf("PARSE_ERROR:8154\n");
@@ -255,7 +287,25 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
   // Clear any code
 
   // Transcribe
-  _mce_transcribe_syntax_to_function_debug_display(fdebug, fdebug->code.syntax);
+  mce_function_debug_line *line = (mce_function_debug_line *)malloc(sizeof(mce_function_debug_line));
+  init_c_str(&line->str);
+  line->next = NULL;
+
+  fdebug->code.first_line = line;
+  _mce_transcribe_syntax_to_function_debug_display(function_syntax, &line);
+
+  // TODO -- Clear fdebug->variable_value_report_index
+
+  char *mc_transcription;
+  mct_function_transcription_options options = {};
+  options.report_invocations_to_error_stack = true;
+  options.report_simple_args_to_error_stack = true;
+  options.check_mc_functions_not_null = true;
+  options.tag_on_function_entry = false;
+  options.report_variable_values = fdebug->variable_value_report_index;
+  mct_transcribe_function_to_mc(function, function_syntax, &options, &mc_transcription);
+
+  printf("fdebug.mc_transcription:\n%s||\n", mc_transcription);
 }
 
 void mce_activate_function_debugging(function_info *func_info)

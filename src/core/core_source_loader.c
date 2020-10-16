@@ -392,6 +392,10 @@ const char *_mcl_core_structs[] = {
     // mc_code_transcription.c
     "mct_transcription_state",
     "mct_expression_type_info",
+    "mct_function_transcription_options",
+    "mct_function_variable_value",
+    "mct_function_variable_value_list",
+    "mct_function_variable_report_index",
 
     // And everything here before -------------------------------------------------------------
     NULL,
@@ -593,7 +597,7 @@ const char *_mcl_core_functions[] = {
     "initialize_parameter_info_from_syntax_node",
     "attach_struct_info_to_owner",
     "attach_enumeration_info_to_owner",
-    "transcribe_function_to_mc",
+    "mct_transcribe_function_to_mc",
     "update_or_register_struct_info_from_syntax",
     "register_sub_type_syntax_to_field_info",
     "transcribe_struct_to_mc",

@@ -2,6 +2,14 @@
 #define FUNCTION_DEBUG_H
 
 #include "core/c_parser_lexer.h"
+#include "core/mc_code_transcription.h"
+
+typedef struct mce_function_debug_line {
+  c_str *str;
+  // TODO -- future colored text parts
+
+  mce_function_debug_line *next;
+} mce_function_debug_line;
 
 typedef struct mce_function_debug {
 
@@ -15,6 +23,7 @@ typedef struct mce_function_debug {
 
   struct {
     mc_syntax_node *syntax;
+    mce_function_debug_line *first_line;
   } code;
 
   struct {
@@ -25,6 +34,8 @@ typedef struct mce_function_debug {
     int display_index_offset;
     float vertical_stride;
   } lines;
+
+  mct_function_variable_report_index *variable_value_report_index;
 
   float font_horizontal_stride;
 } mce_function_debug;

@@ -151,6 +151,7 @@ void set_mystery_hut_project_state(mc_node *app_root)
   find_function_info("_myh_handle_input", &func_info);
   mce_activate_source_editor_for_definition(func_info->source);
 
-  find_function_info("mce_delete_selection", &func_info);
+  find_function_info("_myh_handle_input", &func_info);
+  // find_function_info("mce_delete_selection", &func_info);
   mce_activate_function_debugging(func_info);
 }
