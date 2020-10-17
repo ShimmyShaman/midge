@@ -641,7 +641,7 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   options.report_simple_args_to_error_stack = true;
   options.check_mc_functions_not_null = true;
   options.tag_on_function_entry = false;
-  options.report_variable_index = NULL;
+  options.report_variable_values = NULL;
   mct_transcribe_function_to_mc(func_info, ast, &options, &mc_transcription);
 
   // if (!strcmp(func_info->name, "_mcm_handle_input")) {

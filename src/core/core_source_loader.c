@@ -396,6 +396,7 @@ const char *_mcl_core_structs[] = {
     "mct_function_variable_value",
     "mct_function_variable_value_list",
     "mct_function_variable_report_index",
+    "mct_statement_transcription_info",
 
     // And everything here before -------------------------------------------------------------
     NULL,

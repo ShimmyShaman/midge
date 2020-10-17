@@ -222,13 +222,13 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   function_debug->node->children->alloc = 0;
   function_debug->node->children->count = 0;
 
-  fdebug->variable_value_report_index =
-      (mct_function_transcription_options *)malloc(sizeof(mct_function_transcription_options));
-  fdebug->variable_value_report_index->call_uid_counter = 1;
-  // fdebug->variable_value_report_index->call_track_limit = 0;
-  fdebug->variable_value_report_index->calls.capacity = 0;
-  fdebug->variable_value_report_index->calls.count = 0;
-  fdebug->variable_value_report_index->report_variable_value_delegate = (void *)&_mce_report_variable_value;
+  function_debug->variable_value_report_index =
+      (mct_function_variable_report_index *)malloc(sizeof(mct_function_variable_report_index));
+  function_debug->variable_value_report_index->call_uid_counter = 1;
+  // function_debug->variable_value_report_index->call_track_limit = 0;
+  function_debug->variable_value_report_index->calls.capacity = 0;
+  function_debug->variable_value_report_index->calls.count = 0;
+  function_debug->variable_value_report_index->report_variable_value_delegate = (void *)&_mce_report_variable_value;
 
   *p_function_debugger = function_debug;
 }
