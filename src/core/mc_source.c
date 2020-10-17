@@ -314,6 +314,8 @@ int summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
       declarator->deref_count = 0;
     }
 
+    declarator->is_array = (declarator_syntax->field_declarator.array_size ? true : false);
+
     append_to_collection((void ***)&(*field_declarators_list)->items, &(*field_declarators_list)->alloc,
                          &(*field_declarators_list)->count, declarator);
   }
@@ -380,12 +382,10 @@ int summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_info
       if (field_syntax->nested_type.declarators) {
         field->sub_type.is_anonymous = false;
 
-        if (field_syntax->nested_type.declarators) {
-          summarize_field_declarator_list(field_syntax->nested_type.declarators, &field->sub_type.declarators);
-        }
+        summarize_field_declarator_list(field_syntax->nested_type.declarators, &field->sub_type.declarators);
       }
       else {
-        field->sub_type.is_anonymous = true;
+        field->sub_type.is_anonymous = !field->sub_type.type_name;
       }
     } break;
     default: {
@@ -423,6 +423,7 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
 
     if (subtype_syntax->union_decl.type_name) {
       copy_syntax_node_to_text(subtype_syntax->union_decl.type_name, &field->sub_type.type_name);
+      printf("sub-type:'%s'\n", field->sub_type.type_name);
     }
     else {
       field->sub_type.type_name = NULL;
@@ -1132,6 +1133,69 @@ int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *file
   return 0;
 }
 
+int register_external_struct_declaration(mc_node *owner, mc_syntax_node *struct_ast)
+{
+  if (!struct_ast->structure.type_name) {
+    MCerror(8461, "root-level anonymous external structures not yet supported");
+  }
+
+  struct_info *structure_info;
+  find_struct_info(struct_ast->structure.type_name->text, &structure_info);
+  if (structure_info) {
+    MCerror(1013, "TODO?");
+  }
+
+  // register_midge_error_tag("update_or_register_struct_info_from_syntax-1");
+  if (!structure_info) {
+    structure_info = (struct_info *)malloc(sizeof(struct_info));
+
+    attach_struct_info_to_owner(owner, structure_info);
+
+    structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
+    allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
+    structure_info->type_id->version = 1U;
+
+    // Name & Version
+    if (struct_ast->structure.type_name) {
+      allocate_and_copy_cstr(structure_info->name, struct_ast->structure.type_name->text);
+    }
+    else {
+      structure_info->name = NULL;
+    }
+    structure_info->latest_iteration = 0U;
+    structure_info->source = NULL;
+  }
+  else {
+    free(structure_info->mc_declared_name);
+
+    if (structure_info->is_defined) {
+      // Free the field summaries
+      printf("releasing '%s'\n", structure_info->name);
+      release_field_info_list(structure_info->fields);
+    }
+  }
+  register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
+
+  structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION;
+  structure_info->mc_declared_name = NULL;
+
+  // Set the values parsed
+  if (struct_ast->structure.fields) {
+    structure_info->is_defined = true;
+
+    summarize_type_field_list(struct_ast->structure.fields, &structure_info->fields);
+  }
+  else {
+    structure_info->is_defined = false;
+  }
+  register_midge_error_tag("update_or_register_struct_info_from_syntax-4");
+
+  // Set
+  // *p_struct_info = structure_info;a
+
+  return 0;
+}
+
 int register_external_enum_declaration(mc_node *owner, mc_syntax_node *enum_ast)
 {
   enumeration_info *enum_info;
@@ -1271,7 +1335,8 @@ int register_external_declarations_from_syntax_children(mc_node *definitions_own
       switch (child->type_alias.type_descriptor->type) {
       case MC_SYNTAX_UNION:
       case MC_SYNTAX_STRUCTURE: {
-        MCerror(1151, "TODO");
+        register_external_struct_declaration(definitions_owner, child->type_alias.type_descriptor);
+        // MCerror(1151, "TODO");
         // struct_info *info;
         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
         // info->source->source_file = source_file;

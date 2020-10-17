@@ -77,7 +77,7 @@ void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_no
 
 void _myh_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  // printf("_myh_handle_input\n");
+  printf("_myh_handle_input\n");
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
     input_event->handled = true;

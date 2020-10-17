@@ -14,6 +14,16 @@ int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_nod
 
 #define MCT_TS_MAX_VARIABLES 64
 #define MCT_TS_MAX_SCOPE_DEPTH 256
+typedef struct mct_transcription_scope_variable {
+  mc_syntax_node *declaration_node;
+  char *name;
+} mct_transcription_scope_variable;
+
+typedef struct mct_transcription_scope {
+  int variable_count;
+  mct_transcription_scope_variable *variables;
+} mct_transcription_scope;
+
 typedef struct mct_transcription_state {
   // Options
   mct_function_transcription_options *options;
@@ -24,18 +34,12 @@ typedef struct mct_transcription_state {
   int indent;
 
   // Variable scopes
-  struct {
-    int variable_count;
-    struct {
-      mc_syntax_node *declaration_node;
-      char *name;
-    } variables[64];
-  } scope[256];
+  mct_transcription_scope *scope;
   int scope_index;
 } mct_transcription_state;
 
 typedef struct mct_statement_transcription_info {
-  unsigned int str_index;
+  unsigned int begin_index, prefix_end_index;
 } mct_statement_transcription_info;
 
 typedef struct mct_expression_type_info {
@@ -228,10 +232,10 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
       switch (ptfield->field_type) {
       case FIELD_KIND_STANDARD: {
         for (int g = 0; g < ptfield->field.declarators->count; ++g) {
-          printf("%s<>%s\n", identifier_name, ptfield->field.declarators->items[g]->name);
+          // printf("p:%s<>%s\n", identifier_name, ptfield->field.declarators->items[g]->name);
           if (!strcmp(identifier_name, ptfield->field.declarators->items[g]->name)) {
             // Found!
-            result->is_array = false; // TODO ? this exists? 166 ptfield->field.declarators->items[g]
+            result->is_array = ptfield->field.declarators->items[g]->is_array;
             result->is_fptr = false;
             allocate_and_copy_cstr(result->type_name, ptfield->field.type_name);
             result->deref_count = ptfield->field.declarators->items[g]->deref_count;
@@ -241,15 +245,33 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
       } break;
       case FIELD_KIND_NESTED_STRUCT:
       case FIELD_KIND_NESTED_UNION: {
-        printf("%s<><anon-%s>\n", identifier_name,
-               ptfield->field_type == 2 ? "struct" : (ptfield->field_type == 3 ? "union" : "unknown"));
         if (ptfield->sub_type.is_anonymous) {
+          // printf("%s<><anon-%s>\n", identifier_name,
+          //        ptfield->field_type == 2 ? "struct" : (ptfield->field_type == 3 ? "union" : "unknown"));
+
           // Search within the sub-types fields as if they were the parent types
           _determine_type_of_expression_subsearch(ptfield->sub_type.fields, expression, result);
           if (result->type_name) {
             return 0;
           }
         }
+        // else {
+        //   for (int g = 0; g < ptfield->sub_type.declarators->count; ++g) {
+        //     printf("%s<>%s\n", identifier_name, ptfield->sub_type.declarators->items[g]->name);
+        //     if (!strcmp(identifier_name, ptfield->sub_type.declarators->items[g]->name)) {
+
+        //       // _determine_type_of_expression_subsearch(ptfield->sub_type.fields,
+        //       expression->member_access_expression.)
+
+        //       // Found!
+        //       result->is_array = false; // TODO ? this exists? 166 ptfield->field.declarators->items[g]
+        //       result->is_fptr = false;
+        //       allocate_and_copy_cstr(result->type_name, ptfield->field.type_name);
+        //       result->deref_count = ptfield->field.declarators->items[g]->deref_count;
+        //       return 0;
+        //     }
+        //   }
+        // }
       } break;
       default:
         print_syntax_node(expression, 0);
@@ -258,10 +280,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
     }
 
     // Could not Find it!
-    print_syntax_node(expression, 0);
-    MCerror(7337, "Could not find identifier '%s' in parent container. should be there or identifier is wrong",
-            expression->text);
-    // return 0;
+    return 0;
   } break;
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
     mc_syntax_node *ma_primary = expression->member_access_expression.primary;
@@ -277,7 +296,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
       // printf("ptfield:%i primary_name:%s\n", f, primary_name);
       switch (ptfield->field_type) {
       case FIELD_KIND_STANDARD: {
-        printf("standard-ptfield:%s\n", ptfield->field.declarators->items[0]->name);
+        // printf("standard-ptfield:%s\n", ptfield->field.declarators->items[0]->name);
         for (int g = 0; g < ptfield->field.declarators->count; ++g) {
           if (!strcmp(primary_name, ptfield->field.declarators->items[g]->name)) {
             // Found!
@@ -289,7 +308,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
               if (ptfield->field.declarators->items[g]->deref_count == 1 &&
                   (mc_token_type)expression->member_access_expression.access_operator->type !=
                       MC_TOKEN_POINTER_OPERATOR) {
-                MCerror(214, "TODO");
+                MCerror(8311, "TODO");
               }
               else if (ptfield->field.declarators->items[g]->deref_count == 0 &&
                        (mc_token_type)expression->member_access_expression.access_operator->type !=
@@ -312,8 +331,26 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
               }
               return 0;
             }
+            case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
+              struct_info *primary_type_info;
+              find_struct_info(ptfield->field.type_name, &primary_type_info);
+              if (!primary_type_info) {
+                MCerror(6393, "uh oh, what do we do now...?");
+              }
+
+              // printf("parent_struct_info:%s\n", parent_struct_info->name);
+              // printf("panda\n");
+              // print_syntax_node(expression, 0);
+              _determine_type_of_expression_subsearch(primary_type_info->fields,
+                                                      expression->member_access_expression.identifier, result);
+              if (!result->type_name) {
+                print_syntax_node(expression, 0);
+                MCerror(8348, "couldn't obtain result for expression");
+              }
+            } break;
             default:
-              MCerror(214, "TODO - Unsupported:%s",
+              print_syntax_node(expression, 0);
+              MCerror(7335, "TODO - Unsupported:%s",
                       get_mc_syntax_token_type_name(expression->member_access_expression.identifier->type));
             }
             return 0;
@@ -324,12 +361,27 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
       case FIELD_KIND_NESTED_UNION: {
         if (ptfield->sub_type.is_anonymous) {
           // Search within the sub-types fields as if they were the parent types
-          _determine_type_of_expression_subsearch(ptfield->sub_type.fields,
-                                                  expression, result);
+          _determine_type_of_expression_subsearch(ptfield->sub_type.fields, expression, result);
+          // printf("gets here \n");
           if (result->type_name) {
             return 0;
+            // struct_info *primary_type_info;
+            // find_struct_info(result->type_name, &primary_type_info);
+            // if (!primary_type_info) {
+            //   MCerror(7239, "uh oh, what do we do now...? %s", result->type_name);
+            // }
+
+            // _determine_type_of_expression_subsearch(primary_type_info->fields,
+            //                                         expression->member_access_expression.identifier, result);
+            // if (!result->type_name) {
+            //   print_syntax_node(expression, 0);
+            // MCerror(8337, "TODO:%s", result->type_name);
+            // }
           }
+          // printf("gets here \n");
+          break;
         }
+
         if (!ptfield->sub_type.declarators || !ptfield->sub_type.declarators->count) {
           MCerror(232, "Mislabled subtype");
         }
@@ -345,6 +397,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
 
         if (!found)
           break;
+        // printf("found !%s\n", primary_name);
 
         // Search for the identifier type within this one
         _determine_type_of_expression_subsearch(ptfield->sub_type.fields,
@@ -352,6 +405,8 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
         if (!result->type_name) {
           MCerror(222, "TODO?");
         }
+        // printf("RESULT:%s\n", result->type_name);
+
         return 0;
       } break;
       default:
@@ -364,8 +419,9 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
     MCerror(343, "TODO %s", get_mc_syntax_token_type_name(expression->type));
   }
 
-  print_syntax_node(expression, 0);
-  MCerror(189, "TODO : shouldn't reach here %s", result->type_name);
+  // print_syntax_node(expression, 0);
+  // MCerror(189, "TODO : shouldn't reach here %s", result->type_name);
+  return 0;
 }
 
 // int get_keyword_const_text_name(mc_token_type keyword_type, const char **p_text)
@@ -461,11 +517,15 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
 
     mct_release_expression_type_info_fields(&parent_type_info);
 
-    printf("parent_struct_info:%s\n", parent_struct_info->name);
-    printf("panda\n");
-    print_syntax_node(expression, 0);
+    // printf("parent_struct_info:%s\n", parent_struct_info->name);
+    // printf("panda\n");
+    // print_syntax_node(expression, 0);
     _determine_type_of_expression_subsearch(parent_struct_info->fields, expression->member_access_expression.identifier,
                                             result);
+    if (!result->type_name) {
+      print_syntax_node(expression, 0);
+      MCerror(7470, "couldn't obtain result for expression");
+    }
   } break;
   case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION: {
     // Determine the type of the left-hand-side
@@ -474,11 +534,11 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     // print_syntax_node(expression, 0);
     // printf("type %s array\n", result->is_array ? "is" : "is NOT");
     if (result->is_array) {
-      // It is already dereferenced with its type info
+      // It is already implicitly dereferenced with its type info
     }
     else {
       if (!result->deref_count) {
-        MCerror(9467, "Don't know how to return element access type if it isn't dereferenceable");
+        MCerror(9467, "Don't know how to return element access type if it isn't dereferenceable:%s", result->type_name);
       }
       --result->deref_count;
     }
@@ -2018,6 +2078,31 @@ int mct_transcribe_fptr_invocation(mct_transcription_state *ts, mc_syntax_node *
   return 0;
 }
 
+int mct_transcribe_variable_value_report(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
+                                         mc_syntax_node *variable)
+{
+  mct_expression_type_info type_info;
+  determine_type_of_expression(ts, variable, &type_info);
+
+  insert_into_c_str(ts->str, "{\n", st_info->prefix_end_index);
+  st_info->prefix_end_index += 2;
+
+  char buf[512];
+  sprintf(buf,
+          "  int (**mc_fp_report_variable_value(int, void *) = (int (**)(int, void *))%p;\n"
+          "  (*mc_fp_report_variable_value)(0, NULL);\n",
+          ts->options->report_variable_values->report_variable_value_delegate);
+  insert_into_c_str(ts->str, buf, st_info->prefix_end_index);
+  st_info->prefix_end_index += strlen(buf);
+
+  insert_into_c_str(ts->str, "}\n", st_info->prefix_end_index);
+  st_info->prefix_end_index += 2;
+
+  mct_release_expression_type_info_fields(&type_info);
+
+  return 0;
+}
+
 int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
                               mc_syntax_node *syntax_node)
 {
@@ -2047,11 +2132,22 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
   } break;
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION: {
     // mct_append_node_text_to_c_str(ts->str, syntax_node->assignment_expression.variable);
-    {
-      mct_expression_type_info type_info;
-      determine_type_of_expression(ts, syntax_node->assignment_expression.variable, &type_info);
-      append_to_c_strf(ts->str, "// was:%s\n", type_info.type_name);
-      mct_release_expression_type_info_fields(&type_info);
+    if (ts->options->report_variable_values) {
+      mct_transcribe_variable_value_report(ts, st_info, syntax_node->assignment_expression.variable);
+      // mct_expression_type_info type_info;
+      // // printf("wallaby\n");
+      // // print_syntax_node(syntax_node, 0);
+      // determine_type_of_expression(ts, syntax_node->assignment_expression.variable, &type_info);
+
+      // insert_into_c_str(ts->str, "{\n", st_info->prefix_end_index);
+      // st_info->prefix_end_index += 2;
+      // insert_into_c_str(ts->str, "", st_info->prefix_end_index);
+      // st_info->prefix_end_index += 7;
+      // insert_into_c_str(ts->str, "}\n", st_info->prefix_end_index);
+      // st_info->prefix_end_index += 2;
+      // // insert_in_c_str(ts->str, "}", st_info->str_index);
+      // // append_to_c_strf(ts->str, "// was:%s\n", type_info.type_name);
+      // mct_release_expression_type_info_fields(&type_info);
     }
     mct_transcribe_expression(ts, NULL, syntax_node->assignment_expression.variable);
     append_to_c_str(ts->str, " ");
@@ -2553,7 +2649,7 @@ int mct_transcribe_while_statement(mct_transcription_state *ts, mc_syntax_node *
 int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node)
 {
   mct_statement_transcription_info st_info = {};
-  st_info.str_index = ts->str->len;
+  st_info.begin_index = st_info.prefix_end_index = ts->str->len;
 
   switch (syntax_node->type) {
   case MC_SYNTAX_CONTINUE_STATEMENT:
@@ -2911,6 +3007,12 @@ int mct_transcribe_function_to_mc(function_info *func_info, mc_syntax_node *func
   ts.indent = 0;
   init_c_str(&ts.str);
   // -- scope
+  mct_transcription_scope scope[MCT_TS_MAX_SCOPE_DEPTH];
+  mct_transcription_scope_variable scope_variables[MCT_TS_MAX_SCOPE_DEPTH * MCT_TS_MAX_VARIABLES];
+  for (int a = 0; a < MCT_TS_MAX_SCOPE_DEPTH; ++a) {
+    scope[a].variables = &scope_variables[a * MCT_TS_MAX_VARIABLES];
+  }
+  ts.scope = &scope[0];
   ts.scope_index = 0;
   ts.scope[ts.scope_index].variable_count = 0;
 
@@ -3109,6 +3211,12 @@ int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *structu
   ts.indent = 0;
   init_c_str(&ts.str);
   // -- scope
+  mct_transcription_scope scope[MCT_TS_MAX_SCOPE_DEPTH];
+  mct_transcription_scope_variable scope_variables[MCT_TS_MAX_SCOPE_DEPTH * MCT_TS_MAX_VARIABLES];
+  for (int a = 0; a < MCT_TS_MAX_SCOPE_DEPTH; ++a) {
+    scope[a].variables = &scope_variables[a * MCT_TS_MAX_VARIABLES];
+  }
+  ts.scope = &scope[0];
   ts.scope_index = 0;
   ts.scope[ts.scope_index].variable_count = 0;
 

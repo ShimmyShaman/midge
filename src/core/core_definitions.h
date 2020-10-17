@@ -141,6 +141,7 @@ typedef struct preprocess_define_info {
 
 typedef struct field_declarator_info {
   unsigned int deref_count;
+  bool is_array;
   union {
     char *name;
     struct {

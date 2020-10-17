@@ -163,7 +163,6 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
 
 void _mce_function_debug_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  // printf("_myh_handle_input\n");
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
     input_event->handled = true;
@@ -173,10 +172,12 @@ void _mce_function_debug_handle_input(mc_node *node, mci_input_event *input_even
   // TODO -- asdf
 }
 
-int _mce_report_variable_value(mct_function_variable_report_index *report_index, unsigned int call_uid,
-                               const char *type_identifier, const char *variable_name, int line, int col, void *p_value)
+int _mce_report_variable_value()
+// int _mce_report_variable_value(mct_function_variable_report_index *report_index, unsigned int call_uid,
+//                                const char *type_identifier, const char *variable_name, int line, int col, void
+//                                *p_value)
 {
-  printf("_mce_report_variable_value: '%s':'%s' %i:%i\n", variable_name, type_identifier, line, col);
+  printf("_mce_report_variable_value:\n"); // '%s':'%s' %i:%i\n", variable_name, type_identifier, line, col);
 
   return 0;
 }
@@ -229,6 +230,7 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   function_debug->variable_value_report_index->calls.capacity = 0;
   function_debug->variable_value_report_index->calls.count = 0;
   function_debug->variable_value_report_index->report_variable_value_delegate = (void *)&_mce_report_variable_value;
+  printf("_mce_report_variable_value=%p\n", (void *)&_mce_report_variable_value);
 
   *p_function_debugger = function_debug;
 }
@@ -306,6 +308,12 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
   mct_transcribe_function_to_mc(function, function_syntax, &options, &mc_transcription);
 
   printf("fdebug.mc_transcription:\n%s||\n", mc_transcription);
+
+  // TODO
+  // Keep a pointer of old function delegate
+
+  // Instantiate new transcription
+  TODO
 }
 
 void mce_activate_function_debugging(function_info *func_info)

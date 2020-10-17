@@ -390,6 +390,8 @@ const char *_mcl_core_structs[] = {
     "parsing_state",
 
     // mc_code_transcription.c
+    "mct_transcription_scope_variable",
+    "mct_transcription_scope",
     "mct_transcription_state",
     "mct_expression_type_info",
     "mct_function_transcription_options",
@@ -516,10 +518,10 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_function_pointer_declaration",
     "mct_transcribe_mc_invocation_argument",
     "mct_syntax_descendants_contain_node_type",
-    // "get_keyword_const_text_name",
     "mct_transcribe_fptr_invocation",
     "mct_transcribe_goto_statement",
     "mct_transcribe_label_statement",
+    "mct_transcribe_variable_value_report",
 
     // mc_source
     "summarize_field_declarator_list",
@@ -535,6 +537,7 @@ const char *_mcl_core_functions[] = {
     "instantiate_definition",
     "update_or_register_enum_info_from_syntax",
     "register_external_definitions_from_file",
+    "register_external_struct_declaration",
     "register_external_enum_declaration",
     "register_external_declarations_from_syntax_children",
     "mcl_determine_cached_file_name",
