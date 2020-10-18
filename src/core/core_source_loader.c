@@ -425,6 +425,7 @@ const char *_mcl_ignore_functions[] = {
     "cprintf",
     "allocate_and_copy_cstr",
     "allocate_and_copy_cstrn",
+    "isalpha",
     // "clint_declare",
 
     // And everything here before -------------------------------------------------------------

@@ -11,6 +11,25 @@ typedef struct mce_function_debug_line {
   mce_function_debug_line *next;
 } mce_function_debug_line;
 
+typedef struct mce_function_debug_variable_report {
+  char *name;
+  char *type_identity;
+  unsigned int deref_count;
+  bool is_array, is_fptr;
+  int line, col;
+  void *value;
+
+} mce_function_debug_variable_report;
+
+typedef struct mce_function_debug_function_call {
+  unsigned int call_uid;
+
+  struct {
+    unsigned int capacity, count;
+    mce_function_debug_variable_report **items;
+  } variable_reports;
+} mce_function_debug_function_call;
+
 typedef struct mce_function_debug {
 
   mc_node *node;
@@ -34,6 +53,12 @@ typedef struct mce_function_debug {
     int display_index_offset;
     float vertical_stride;
   } lines;
+
+  struct {
+    unsigned int capacity, count;
+    mce_function_debug_function_call **items;
+    mce_function_debug_function_call *recent;
+  } call_reports;
 
   mct_function_variable_report_index *variable_value_report_index;
   void *previous_debug_fptr;

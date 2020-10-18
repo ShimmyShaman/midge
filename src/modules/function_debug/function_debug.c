@@ -101,6 +101,16 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
   //          (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width,
   //          (unsigned int)node->layout->__bounds.height);
 
+  // Most Recent Variable Values
+  if (fdebug->call_reports.recent) {
+    for (int i = 0; i < fdebug->call_reports.recent->variable_reports.count; ++i) {
+      mce_function_debug_variable_report *var_report = fdebug->call_reports.recent->variable_reports.items[i];
+      mcr_issue_render_command_colored_quad(
+          image_render_queue, (unsigned int)(node->layout->__bounds.x + var_report, (unsigned int)node->layout->__bounds.y,
+          (unsigned int)node->layout->__bounds.width, (unsigned int)fdebug->border.thickness, fdebug->border.color);
+    }
+  }
+
   // // Children
   // for (int a = 0; a < node->children->count; ++a) {
   //   mc_node *child = node->children->items[a];
@@ -173,19 +183,115 @@ void _mce_function_debug_handle_input(mc_node *node, mci_input_event *input_even
 }
 
 // int _mce_report_variable_value()
-int _mce_report_variable_value(mct_function_variable_report_index *report_index, // unsigned int call_uid,
-                               const char *type_identifier, const char *variable_name, int line, int col, void *p_value)
+int _mce_report_variable_value(mct_function_variable_report_index *report_index, unsigned int call_uid,
+                               mct_expression_type_info *type_info, const char *variable_name, int line, int col,
+                               void *p_value)
 {
-  printf("_mce_report_variable_value:type_identifier:'%s'\n", type_identifier);
-  printf("_mce_report_variable_value:variable_name:'%s'\n", variable_name);
-  printf("_mce_report_variable_value:line:'%i'\n", line);
-  printf("_mce_report_variable_value:col:'%i'\n", col);
+  mce_function_debug *fdebug = (mce_function_debug *)report_index->tag_data;
 
-  if (!strcmp(type_identifier, "bool")) {
-    printf("_mce_report_variable_value:value:'%u'\n", *(unsigned char *)p_value);
+  // Obtain the call report
+  mce_function_debug_function_call *function_call = NULL;
+  for (int i = 0; i < fdebug->call_reports.count; ++i) {
+    if (call_uid == fdebug->call_reports.items[i]->call_uid) {
+      function_call = fdebug->call_reports.items[i];
+      break;
+    }
+  }
+  if (!function_call) {
+    function_call = (mce_function_debug_function_call *)malloc(sizeof(mce_function_debug_function_call));
+    function_call->call_uid = call_uid;
+    function_call->variable_reports.capacity = 0U;
+    function_call->variable_reports.count = 0U;
+
+    append_to_collection((void ***)&fdebug->call_reports.items, &fdebug->call_reports.capacity,
+                         &fdebug->call_reports.count, function_call);
+
+    // Set the most recent call variable
+    if (!fdebug->call_reports.recent || fdebug->call_reports.recent->call_uid < call_uid) {
+      fdebug->call_reports.recent = function_call;
+    }
+  }
+
+  mce_function_debug_variable_report *variable_report =
+      (mce_function_debug_variable_report *)malloc(sizeof(mce_function_debug_variable_report));
+  variable_report->type_identity = strdup(type_info->type_name);
+  variable_report->deref_count = type_info->deref_count;
+  variable_report->is_array = type_info->is_array;
+  variable_report->name = strdup(variable_name);
+  variable_report->line = line;
+  variable_report->col = col;
+  printf("variable_report:%p\n", variable_report);
+  append_to_collection((void ***)&function_call->variable_reports.items, &function_call->variable_reports.capacity,
+                       &function_call->variable_reports.count, variable_report);
+  printf("variable_report added to function call\n");
+
+  // printf("_mce_report_variable_value:call_uid:'%u'\n", call_uid);
+  // printf("_mce_report_variable_value:type_identifier:'%s'\n", type_info->type_name);
+  // printf("_mce_report_variable_value:variable_name:'%s'\n", variable_name);
+  // printf("_mce_report_variable_value:line:'%i'\n", line);
+  // printf("_mce_report_variable_value:col:'%i'\n", col);
+
+  if (type_info->deref_count) {
+    if (type_info->deref_count == 1 && !strcmp(type_info->type_name, "const char *")) {
+      printf("FLD:%s:%s[%i]:'%s'\n", variable_name, type_info->type_name, type_info->deref_count,
+             *(const char **)p_value);
+      variable_report->value = strdup(*(const char **)p_value);
+    }
+    else if (type_info->deref_count == 1 && !strcmp(type_info->type_name, "char *")) {
+      printf("FLD:%s:%s[%i]:'%s'\n", variable_name, type_info->type_name, type_info->deref_count, *(char **)p_value);
+      variable_report->value = strdup(*(char **)p_value);
+    }
+    else {
+      printf("FLD:%s:%s[%i]:value:'%p'\n", variable_name, type_info->type_name, type_info->deref_count,
+             *(void **)p_value);
+      variable_report->value = *(void **)p_value;
+    }
   }
   else {
-    printf("Do not know how to handle unknown type:'%s'\n", type_identifier);
+    if (!strcmp(type_info->type_name, "bool")) {
+      printf("FLD:%s:%s[%i]:value:'%s'\n", variable_name, type_info->type_name, type_info->deref_count,
+             (*(bool *)p_value) ? "true" : "false");
+      variable_report->value = (void *)malloc(sizeof(bool));
+      *((bool *)variable_report->value) = *(bool *)p_value;
+    }
+    else if (!strcmp(type_info->type_name, "float")) {
+      printf("FLD:%s:%s[%i]:value:'%f'\n", variable_name, type_info->type_name, type_info->deref_count,
+             *(float *)p_value);
+      variable_report->value = (void *)malloc(sizeof(float));
+      *((float *)variable_report->value) = *(float *)p_value;
+    }
+    else if (!strcmp(type_info->type_name, "int")) {
+      printf("FLD:%s:%s[%i]:value:'%i'\n", variable_name, type_info->type_name, type_info->deref_count,
+             *(int *)p_value);
+      variable_report->value = (void *)malloc(sizeof(int));
+      *((int *)variable_report->value) = *(int *)p_value;
+    }
+    else if (!strcmp(type_info->type_name, "char")) {
+      printf("FLD:%s:%s[%i]:value:'%c'\n", variable_name, type_info->type_name, type_info->deref_count,
+             *(char *)p_value);
+      variable_report->value = (void *)malloc(sizeof(char));
+      *((char *)variable_report->value) = *(char *)p_value;
+    }
+    else if (!strcmp(type_info->type_name, "unsigned int")) {
+      printf("FLD:%s:%s[%i]:value:'%u'\n", variable_name, type_info->type_name, type_info->deref_count,
+             *(unsigned int *)p_value);
+      variable_report->value = (void *)malloc(sizeof(unsigned int));
+      *((unsigned int *)variable_report->value) = *(unsigned int *)p_value;
+    }
+    else {
+      enumeration_info *enum_info;
+      find_enumeration_info(type_info->type_name, &enum_info);
+      if (enum_info) {
+        printf("FLD:%s:%s[%i]:%i\n", variable_name, type_info->type_name, type_info->deref_count, *(int *)p_value);
+        variable_report->value = (void *)malloc(sizeof(int));
+        *((int *)variable_report->value) = *(int *)p_value;
+      }
+      else {
+        printf("Do not know how to handle unknown type. FLD:%s::'%s'[%i]\n", variable_name, type_info->type_name,
+               type_info->deref_count);
+        variable_report->value = NULL;
+      }
+    }
   }
 
   return 0;
@@ -235,11 +341,19 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   function_debug->variable_value_report_index =
       (mct_function_variable_report_index *)malloc(sizeof(mct_function_variable_report_index));
   function_debug->variable_value_report_index->call_uid_counter = 1;
+  function_debug->variable_value_report_index->tag_data = (void *)function_debug;
   // function_debug->variable_value_report_index->call_track_limit = 0;
   function_debug->variable_value_report_index->calls.capacity = 0;
   function_debug->variable_value_report_index->calls.count = 0;
+  // function_debug->variable_value_report_index->begin_report_variable_values_delegate =
+  //     (void *)&_mce_begin_report_variable_values;
   function_debug->variable_value_report_index->report_variable_value_delegate = (void *)&_mce_report_variable_value;
-  printf("_mce_report_variable_value=%p\n", (void *)&_mce_report_variable_value);
+  printf("function_debug=%p\n", function_debug);
+  printf("function_debug->variable_value_report_index=%p\n", function_debug->variable_value_report_index);
+
+  function_debug->call_reports.capacity = 0U;
+  function_debug->call_reports.count = 0U;
+  function_debug->call_reports.latest = NULL;
 
   *p_function_debugger = function_debug;
 }

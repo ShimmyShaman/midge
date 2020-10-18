@@ -40,6 +40,7 @@ typedef struct mct_transcription_state {
 
 typedef struct mct_statement_transcription_info {
   unsigned int begin_index, prefix_end_index;
+  bool variable_reported;
 } mct_statement_transcription_info;
 
 typedef struct mct_expression_type_info {
@@ -1496,7 +1497,8 @@ int mct_transcribe_function_pointer_declaration(mct_transcription_state *ts, mc_
   return 0;
 }
 
-int mct_transcribe_declarator(mct_transcription_state *ts, mc_syntax_node *syntax_node)
+int mct_transcribe_declarator(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
+                              mc_syntax_node *syntax_node)
 {
   if (syntax_node->local_variable_declarator.type_dereference) {
     mct_append_node_text_to_c_str(ts->str, syntax_node->local_variable_declarator.type_dereference);
@@ -1514,14 +1516,14 @@ int mct_transcribe_declarator(mct_transcription_state *ts, mc_syntax_node *synta
     if (syntax_node->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER) {
       append_to_c_str(ts->str, " = ");
       mct_transcribe_expression(
-          ts, NULL,
+          ts, st_info,
           syntax_node->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
     }
     else {
       append_to_c_str(ts->str, "[");
       if (syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression) {
         mct_transcribe_expression(
-            ts, NULL,
+            ts, st_info,
             syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression);
       }
       append_to_c_str(ts->str, "]");
@@ -2093,27 +2095,37 @@ int mct_transcribe_variable_value_report(mct_transcription_state *ts, mct_statem
   char buf[1536];
   sprintf(buf,
           "  int (*mc_fp_report_variable_value)(int, void *) = *(int (**)(int, void *))%p;\n"
-          "  void *mc_fld_vargs[7];\n"
-          "  mc_fld_vargs[0] = (void *)%p;\n"
-          "  const char *mc_fld_type_identifier = \"%s\";\n"
-          "  mc_fld_vargs[1] = (void *)&mc_fld_type_identifier;\n"
+          "  void *mc_fld_vargs[8];\n"
+          "  void *mc_fld_report_index = (void *)%p;\n"
+          "  mc_fld_vargs[0] = (void *)&mc_fld_report_index;\n"
+          "  mc_fld_vargs[1] = (void *)&mc_fld_function_call_uid;\n"
+          // TODO -- the use of info_mc_v1 eeegh
+          "  mct_expression_type_info_mc_v1 variable_type;\n"
+          "  variable_type.type_name = (char *)\"%s\";\n"
+          "  variable_type.deref_count = %u;\n"
+          "  variable_type.is_array = (bool)%u;\n"
+          "  variable_type.is_fptr = (bool)%u;\n"
+          "  void *mc_fld_type_identifier = (void *)&variable_type;\n"
+          "  mc_fld_vargs[2] = (void *)&mc_fld_type_identifier;\n"
           "  const char *mc_fld_variable_name = \"%s\";\n"
-          "  mc_fld_vargs[2] = (void *)&mc_fld_variable_name;\n"
+          "  mc_fld_vargs[3] = (void *)&mc_fld_variable_name;\n"
           "  int mc_fld_line = %i;\n"
-          "  mc_fld_vargs[3] = (void *)&mc_fld_line;\n"
+          "  mc_fld_vargs[4] = (void *)&mc_fld_line;\n"
           "  int mc_fld_col = %i;\n"
-          "  mc_fld_vargs[4] = (void *)&mc_fld_col;\n"
+          "  mc_fld_vargs[5] = (void *)&mc_fld_col;\n"
           "  void *mc_fld_p_value = (void *)&(%s);\n"
-          "  mc_fld_vargs[5] = (void *)&mc_fld_p_value;\n"
+          "  mc_fld_vargs[6] = (void *)&mc_fld_p_value;\n"
           "  int mc_fld_dummy_ret;\n"
-          "  mc_fld_vargs[6] = (void *)&mc_fld_dummy_ret;\n"
-          "  int mc_fld_res = mc_fp_report_variable_value(7, mc_fld_vargs);\n"
-          "  printf(\"mc_fld_res=%%i\\n\", mc_fld_res);"
+          "  mc_fld_vargs[7] = (void *)&mc_fld_dummy_ret;\n"
+          "  int mc_fld_res = mc_fp_report_variable_value(8, mc_fld_vargs);\n"
+          // "  printf(\"mc_fld_res=%%i\\n\", mc_fld_res);\n"
           "  if(mc_fld_res) {\n"
           "    printf(\"ERR[%%i]: report_variable_value_delegate\\n\", mc_fld_res);\n"
+          "    return mc_fld_res;\n"
           "  }\n",
           ts->options->report_variable_values->report_variable_value_delegate, ts->options->report_variable_values,
-          type_info.type_name, // TODO is_ary, fptr, etc...
+          type_info.type_name, type_info.deref_count, type_info.is_array,
+          type_info.is_fptr, // TODO is_ary, fptr, etc...
           variable_name, variable->begin.line, variable->begin.col, variable_name);
 
   insert_into_c_str(ts->str, buf, st_info->prefix_end_index);
@@ -2152,37 +2164,19 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
       if (a > 0) {
         append_to_c_str(ts->str, ", ");
       }
-      mct_transcribe_declarator(ts, syntax_node->local_variable_declaration.declarators->items[a]);
+      mct_transcribe_declarator(ts, st_info, syntax_node->local_variable_declaration.declarators->items[a]);
     }
   } break;
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION: {
-    // mct_append_node_text_to_c_str(ts->str, syntax_node->assignment_expression.variable);
-    if (ts->options->report_variable_values) {
-      mct_transcribe_variable_value_report(ts, st_info, syntax_node->assignment_expression.variable);
-      // mct_expression_type_info type_info;
-      // // printf("wallaby\n");
-      // // print_syntax_node(syntax_node, 0);
-      // determine_type_of_expression(ts, syntax_node->assignment_expression.variable, &type_info);
-
-      // insert_into_c_str(ts->str, "{\n", st_info->prefix_end_index);
-      // st_info->prefix_end_index += 2;
-      // insert_into_c_str(ts->str, "", st_info->prefix_end_index);
-      // st_info->prefix_end_index += 7;
-      // insert_into_c_str(ts->str, "}\n", st_info->prefix_end_index);
-      // st_info->prefix_end_index += 2;
-      // // insert_in_c_str(ts->str, "}", st_info->str_index);
-      // // append_to_c_strf(ts->str, "// was:%s\n", type_info.type_name);
-      // mct_release_expression_type_info_fields(&type_info);
-    }
-    mct_transcribe_expression(ts, NULL, syntax_node->assignment_expression.variable);
+    mct_transcribe_expression(ts, st_info, syntax_node->assignment_expression.variable);
     append_to_c_str(ts->str, " ");
     mct_append_node_text_to_c_str(ts->str, syntax_node->assignment_expression.assignment_operator);
     append_to_c_str(ts->str, " ");
-    mct_transcribe_expression(ts, NULL, syntax_node->assignment_expression.value_expression);
+    mct_transcribe_expression(ts, st_info, syntax_node->assignment_expression.value_expression);
   } break;
   case MC_SYNTAX_PARENTHESIZED_EXPRESSION: {
     append_to_c_str(ts->str, "(");
-    mct_transcribe_expression(ts, NULL, syntax_node->parenthesized_expression.expression);
+    mct_transcribe_expression(ts, st_info, syntax_node->parenthesized_expression.expression);
     append_to_c_str(ts->str, ")");
   } break;
   case MC_SYNTAX_TYPE_INITIALIZER: {
@@ -2203,7 +2197,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
         }
         append_to_c_str(ts->str, " ");
 
-        mct_transcribe_expression(ts, NULL, syntax_node->initializer_expression.list->items[a]);
+        mct_transcribe_expression(ts, st_info, syntax_node->initializer_expression.list->items[a]);
       }
       append_to_c_str(ts->str, " ");
     }
@@ -2215,22 +2209,33 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
       MCerror(745, "TODO");
     }
 
-    mct_transcribe_expression(ts, NULL, syntax_node->operational_expression.left);
+    mct_transcribe_expression(ts, st_info, syntax_node->operational_expression.left);
     append_to_c_str(ts->str, " ");
     mct_append_node_text_to_c_str(ts->str, syntax_node->operational_expression.operational_operator);
     append_to_c_str(ts->str, " ");
-    mct_transcribe_expression(ts, NULL, syntax_node->operational_expression.right);
+    mct_transcribe_expression(ts, st_info, syntax_node->operational_expression.right);
     // printf("%s\n", ts->str->text);
   } break;
   case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
-    mct_transcribe_expression(ts, NULL, syntax_node->member_access_expression.primary);
+
+    if (ts->options->report_variable_values && st_info && !st_info->variable_reported) {
+      st_info->variable_reported = true;
+      mct_transcribe_variable_value_report(ts, st_info, syntax_node);
+    }
+
+    mct_transcribe_expression(ts, st_info, syntax_node->member_access_expression.primary);
     mct_append_node_text_to_c_str(ts->str, syntax_node->member_access_expression.access_operator);
-    mct_transcribe_expression(ts, NULL, syntax_node->member_access_expression.identifier);
-    // printf("%s\n", ts->str->text);
+    mct_transcribe_expression(ts, st_info, syntax_node->member_access_expression.identifier);
+    // printf("%s %s\n", st_info ? (st_info->variable_reported ? "reported" : "reset") : "(null)",
+    //        ts->str->text + ts->str->len - 20);
+
+    if (ts->options->report_variable_values && st_info) {
+      st_info->variable_reported = false;
+    }
   } break;
   case MC_SYNTAX_DEREFERENCE_EXPRESSION: {
     mct_append_node_text_to_c_str(ts->str, syntax_node->dereference_expression.deref_sequence);
-    mct_transcribe_expression(ts, NULL, syntax_node->dereference_expression.unary_expression);
+    mct_transcribe_expression(ts, st_info, syntax_node->dereference_expression.unary_expression);
     // printf("%s\n", ts->str->text);
   } break;
   case MC_SYNTAX_LOGICAL_EXPRESSION: {
@@ -2238,32 +2243,32 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
       MCerror(764, "TODO");
     }
 
-    mct_transcribe_expression(ts, NULL, syntax_node->logical_expression.left);
+    mct_transcribe_expression(ts, st_info, syntax_node->logical_expression.left);
     mct_append_node_text_to_c_str(ts->str, syntax_node->logical_expression.logical_operator);
-    mct_transcribe_expression(ts, NULL, syntax_node->logical_expression.right);
+    mct_transcribe_expression(ts, st_info, syntax_node->logical_expression.right);
   } break;
   case MC_SYNTAX_BITWISE_EXPRESSION: {
     if (!syntax_node->logical_expression.right) {
       MCerror(764, "TODO");
     }
 
-    mct_transcribe_expression(ts, NULL, syntax_node->bitwise_expression.left);
+    mct_transcribe_expression(ts, st_info, syntax_node->bitwise_expression.left);
     mct_append_node_text_to_c_str(ts->str, syntax_node->bitwise_expression.bitwise_operator);
-    mct_transcribe_expression(ts, NULL, syntax_node->bitwise_expression.right);
+    mct_transcribe_expression(ts, st_info, syntax_node->bitwise_expression.right);
   } break;
   case MC_SYNTAX_RELATIONAL_EXPRESSION: {
     if (!syntax_node->relational_expression.right) {
       MCerror(777, "TODO");
     }
 
-    mct_transcribe_expression(ts, NULL, syntax_node->relational_expression.left);
+    mct_transcribe_expression(ts, st_info, syntax_node->relational_expression.left);
     mct_append_node_text_to_c_str(ts->str, syntax_node->relational_expression.relational_operator);
-    mct_transcribe_expression(ts, NULL, syntax_node->relational_expression.right);
+    mct_transcribe_expression(ts, st_info, syntax_node->relational_expression.right);
   } break;
   case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION: {
-    mct_transcribe_expression(ts, NULL, syntax_node->element_access_expression.primary);
+    mct_transcribe_expression(ts, st_info, syntax_node->element_access_expression.primary);
     append_to_c_str(ts->str, "[");
-    mct_transcribe_expression(ts, NULL, syntax_node->element_access_expression.access_expression);
+    mct_transcribe_expression(ts, st_info, syntax_node->element_access_expression.access_expression);
     append_to_c_str(ts->str, "]");
   } break;
 
@@ -2298,7 +2303,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
     }
     append_to_c_str(ts->str, ")");
 
-    mct_transcribe_expression(ts, NULL, syntax_node->cast_expression.expression);
+    mct_transcribe_expression(ts, st_info, syntax_node->cast_expression.expression);
   } break;
   case MC_SYNTAX_VA_ARG_EXPRESSION: {
     MCerror(517, "COTTONEYE");
@@ -2317,11 +2322,11 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
     // append_to_c_str(ts->str, ")\n");
   } break;
   case MC_SYNTAX_TERNARY_CONDITIONAL: {
-    mct_transcribe_expression(ts, NULL, syntax_node->ternary_conditional.condition);
+    mct_transcribe_expression(ts, st_info, syntax_node->ternary_conditional.condition);
     append_to_c_str(ts->str, " ? ");
-    mct_transcribe_expression(ts, NULL, syntax_node->ternary_conditional.true_expression);
+    mct_transcribe_expression(ts, st_info, syntax_node->ternary_conditional.true_expression);
     append_to_c_str(ts->str, " : ");
-    mct_transcribe_expression(ts, NULL, syntax_node->ternary_conditional.false_expression);
+    mct_transcribe_expression(ts, st_info, syntax_node->ternary_conditional.false_expression);
   } break;
   case MC_SYNTAX_SIZEOF_EXPRESSION: {
     append_to_c_str(ts->str, "sizeof(");
@@ -2406,7 +2411,7 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
 
     // Just straight copy
     mct_append_node_text_to_c_str(ts->str, syntax_node->prepended_unary.prepend_operator);
-    mct_transcribe_expression(ts, NULL, syntax_node->prepended_unary.unary_expression);
+    mct_transcribe_expression(ts, st_info, syntax_node->prepended_unary.unary_expression);
   } break;
   case MC_SYNTAX_STRING_LITERAL_EXPRESSION:
   case MC_SYNTAX_FIXREMENT_EXPRESSION: {
@@ -2427,6 +2432,18 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
       mct_append_node_text_to_c_str(ts->str, syntax_node);
     } break;
     case MC_TOKEN_IDENTIFIER: {
+      if (ts->options->report_variable_values && st_info && !st_info->variable_reported) {
+
+        // DEBUG
+        // Theres a more complete way, but for now lets ignore identifiers true/false && containing capital letters
+        if (strcmp(syntax_node->text, "true") && strcmp(syntax_node->text, "false") &&
+            isalpha(syntax_node->text[0]) == 2) {
+
+          mct_transcribe_variable_value_report(ts, st_info, syntax_node);
+        }
+        // DEBUG
+      }
+
       // {
       //   function_info *func_info;
       //   find_function_info(syntax_node->text, &func_info);
@@ -2459,7 +2476,8 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
   return 0;
 }
 
-int mct_transcribe_if_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node)
+int mct_transcribe_if_statement(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
+                                mc_syntax_node *syntax_node)
 {
   register_midge_error_tag("mct_transcribe_if_statement()");
   // printf("cb: %p\n", syntax_node);
@@ -2472,10 +2490,14 @@ int mct_transcribe_if_statement(mct_transcription_state *ts, mc_syntax_node *syn
       MCerror(2272, "TODO");
     }
   }
+  // // DEBUG
+  // const char *conditional_type = get_mc_syntax_token_type_name(syntax_node->if_statement.conditional->type);
+  // printf("if-conditional:%s\n", conditional_type);
+  // // DEBUG
 
   // Initialization
   mct_append_to_c_str(ts, "if (");
-  mct_transcribe_expression(ts, NULL, syntax_node->if_statement.conditional);
+  mct_transcribe_expression(ts, st_info, syntax_node->if_statement.conditional);
   append_to_c_str(ts->str, ") ");
 
   if (syntax_node->if_statement.do_statement->type != MC_SYNTAX_CODE_BLOCK) {
@@ -2491,7 +2513,7 @@ int mct_transcribe_if_statement(mct_transcription_state *ts, mc_syntax_node *syn
 
     if (syntax_node->if_statement.else_continuance->type == MC_SYNTAX_IF_STATEMENT) {
 
-      mct_transcribe_if_statement(ts, syntax_node->if_statement.else_continuance);
+      mct_transcribe_if_statement(ts, st_info, syntax_node->if_statement.else_continuance);
     }
     else {
       if (syntax_node->if_statement.do_statement->type != MC_SYNTAX_CODE_BLOCK) {
@@ -2675,6 +2697,7 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
 {
   mct_statement_transcription_info st_info = {};
   st_info.begin_index = st_info.prefix_end_index = ts->str->len;
+  st_info.variable_reported = false;
 
   switch (syntax_node->type) {
   case MC_SYNTAX_CONTINUE_STATEMENT:
@@ -2733,7 +2756,7 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
     mct_transcribe_switch_statement(ts, syntax_node);
   } break;
   case MC_SYNTAX_IF_STATEMENT: {
-    mct_transcribe_if_statement(ts, syntax_node);
+    mct_transcribe_if_statement(ts, &st_info, syntax_node);
   } break;
   case MC_SYNTAX_DECLARATION_STATEMENT: {
     mct_transcribe_declaration_statement(ts, syntax_node);
@@ -3064,6 +3087,33 @@ int mct_transcribe_function_to_mc(function_info *func_info, mc_syntax_node *func
   if (ts.options->tag_on_function_entry) {
     append_to_c_strf(ts.str, "  register_midge_error_tag(\"%s()\");\n\n", function_ast->function.name->text);
   }
+  if (ts.options->report_variable_values) {
+    char buf[256];
+    sprintf(buf,
+            "  // Function Variable Value Reporting UID\n"
+            "  unsigned int mc_fld_function_call_uid;\n"
+            "  {\n"
+            "    unsigned int *mc_fld_function_call_uid_counter = ((unsigned int *)%p);\n"
+            "    mc_fld_function_call_uid = *mc_fld_function_call_uid_counter;\n"
+            "    ++*mc_fld_function_call_uid_counter;\n"
+            "  }\n\n",
+            // "  {\n"
+            // "    int (*begin_report_variable_values)(int, void *) = *(int (**)(int, void *))%p;\n"
+            // "    void *mc_fld_vargs[2];\n"
+            // "    unsigned int *mc_fld_call_uid = &mc_fld_function_call_uid;\n"
+            // "    mc_fld_vargs[0] = (void *)&mc_fld_call_uid;\n"
+            // "    int mc_fld_dummy_ret;\n"
+            // "    mc_fld_vargs[1] = (void *)&mc_fld_dummy_ret;\n"
+            // "    int mc_fld_res = begin_report_variable_values(2, mc_fld_vargs);\n"
+            // // "  printf(\"mc_fld_res=%%i\\n\", mc_fld_res);\n"
+            // "    if(mc_fld_res) {\n"
+            // "      printf(\"ERR[%%i]: report_variable_value_delegate\\n\", mc_fld_res);\n"
+            // "      return mc_fld_res;\n"
+            // "  }\n",
+            // ts.options->report_variable_values->begin_report_variable_values_delegate);
+            &ts.options->report_variable_values->call_uid_counter);
+    append_to_c_str(ts.str, buf);
+  }
 
   // Function Parameters
   append_to_c_str(ts.str, "  // Function Parameters\n");
@@ -3095,6 +3145,12 @@ int mct_transcribe_function_to_mc(function_info *func_info, mc_syntax_node *func
         }
       }
       append_to_c_strf(ts.str, "*)mc_argsv[%i];\n", p);
+
+      if (ts.options->report_variable_values) {
+        mct_statement_transcription_info st_info = {};
+        st_info.begin_index = st_info.prefix_end_index = ts.str->len;
+        mct_transcribe_variable_value_report(&ts, &st_info, parameter_syntax->parameter.name);
+      }
     } break;
     case PARAMETER_KIND_FUNCTION_POINTER: {
       mct_add_scope_variable(&ts, parameter_syntax);

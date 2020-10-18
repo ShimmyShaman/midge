@@ -26,6 +26,7 @@ typedef struct mct_function_variable_report_index {
   unsigned int call_uid_counter;
 
   // unsigned int call_invocation_limit;
+  void *tag_data;
 
   struct {
     unsigned int capacity, count;
