@@ -2087,17 +2087,42 @@ int mct_transcribe_variable_value_report(mct_transcription_state *ts, mct_statem
   insert_into_c_str(ts->str, "{\n", st_info->prefix_end_index);
   st_info->prefix_end_index += 2;
 
-  char buf[512];
+  char *variable_name;
+  copy_syntax_node_to_text(variable, &variable_name);
+
+  char buf[1536];
   sprintf(buf,
-          "  int (**mc_fp_report_variable_value(int, void *) = (int (**)(int, void *))%p;\n"
-          "  (*mc_fp_report_variable_value)(0, NULL);\n",
-          ts->options->report_variable_values->report_variable_value_delegate);
+          "  int (*mc_fp_report_variable_value)(int, void *) = *(int (**)(int, void *))%p;\n"
+          "  void *mc_fld_vargs[7];\n"
+          "  mc_fld_vargs[0] = (void *)%p;\n"
+          "  const char *mc_fld_type_identifier = \"%s\";\n"
+          "  mc_fld_vargs[1] = (void *)&mc_fld_type_identifier;\n"
+          "  const char *mc_fld_variable_name = \"%s\";\n"
+          "  mc_fld_vargs[2] = (void *)&mc_fld_variable_name;\n"
+          "  int mc_fld_line = %i;\n"
+          "  mc_fld_vargs[3] = (void *)&mc_fld_line;\n"
+          "  int mc_fld_col = %i;\n"
+          "  mc_fld_vargs[4] = (void *)&mc_fld_col;\n"
+          "  void *mc_fld_p_value = (void *)&(%s);\n"
+          "  mc_fld_vargs[5] = (void *)&mc_fld_p_value;\n"
+          "  int mc_fld_dummy_ret;\n"
+          "  mc_fld_vargs[6] = (void *)&mc_fld_dummy_ret;\n"
+          "  int mc_fld_res = mc_fp_report_variable_value(7, mc_fld_vargs);\n"
+          "  printf(\"mc_fld_res=%%i\\n\", mc_fld_res);"
+          "  if(mc_fld_res) {\n"
+          "    printf(\"ERR[%%i]: report_variable_value_delegate\\n\", mc_fld_res);\n"
+          "  }\n",
+          ts->options->report_variable_values->report_variable_value_delegate, ts->options->report_variable_values,
+          type_info.type_name, // TODO is_ary, fptr, etc...
+          variable_name, variable->begin.line, variable->begin.col, variable_name);
+
   insert_into_c_str(ts->str, buf, st_info->prefix_end_index);
   st_info->prefix_end_index += strlen(buf);
 
   insert_into_c_str(ts->str, "}\n", st_info->prefix_end_index);
   st_info->prefix_end_index += 2;
 
+  free(variable_name);
   mct_release_expression_type_info_fields(&type_info);
 
   return 0;

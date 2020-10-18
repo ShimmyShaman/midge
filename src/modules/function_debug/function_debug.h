@@ -36,6 +36,8 @@ typedef struct mce_function_debug {
   } lines;
 
   mct_function_variable_report_index *variable_value_report_index;
+  void *previous_debug_fptr;
+  unsigned int fld_instantiation_uid;
 
   float font_horizontal_stride;
 } mce_function_debug;

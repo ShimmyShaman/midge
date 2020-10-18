@@ -172,12 +172,21 @@ void _mce_function_debug_handle_input(mc_node *node, mci_input_event *input_even
   // TODO -- asdf
 }
 
-int _mce_report_variable_value()
-// int _mce_report_variable_value(mct_function_variable_report_index *report_index, unsigned int call_uid,
-//                                const char *type_identifier, const char *variable_name, int line, int col, void
-//                                *p_value)
+// int _mce_report_variable_value()
+int _mce_report_variable_value(mct_function_variable_report_index *report_index, // unsigned int call_uid,
+                               const char *type_identifier, const char *variable_name, int line, int col, void *p_value)
 {
-  printf("_mce_report_variable_value:\n"); // '%s':'%s' %i:%i\n", variable_name, type_identifier, line, col);
+  printf("_mce_report_variable_value:type_identifier:'%s'\n", type_identifier);
+  printf("_mce_report_variable_value:variable_name:'%s'\n", variable_name);
+  printf("_mce_report_variable_value:line:'%i'\n", line);
+  printf("_mce_report_variable_value:col:'%i'\n", col);
+
+  if (!strcmp(type_identifier, "bool")) {
+    printf("_mce_report_variable_value:value:'%u'\n", *(unsigned char *)p_value);
+  }
+  else {
+    printf("Do not know how to handle unknown type:'%s'\n", type_identifier);
+  }
 
   return 0;
 }
@@ -307,13 +316,34 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
   options.report_variable_values = fdebug->variable_value_report_index;
   mct_transcribe_function_to_mc(function, function_syntax, &options, &mc_transcription);
 
-  printf("fdebug.mc_transcription:\n%s||\n", mc_transcription);
-
   // TODO
   // Keep a pointer of old function delegate
+  fdebug->previous_debug_fptr = (void *)*function->ptr_declaration;
 
   // Instantiate new transcription
-  TODO
+  c_str *str;
+  init_c_str(&str); // TODO -- maybe init with char*
+  set_c_str(str, mc_transcription);
+  free(mc_transcription);
+
+  int i;
+  for (i = 0;; ++i) {
+    if (str->text[i] == '(') {
+      break;
+    } // TODO -- replace with method call
+  }
+  char buf[256];
+  sprintf(buf, "_fld%u", fdebug->fld_instantiation_uid);
+  insert_into_c_str(str, buf, i);
+
+  printf("fdebug.mc_transcription:\n%s||\n", str->text);
+  clint_declare(str->text);
+
+  sprintf(buf, "%s = &%s_mc_v%u_fld%u;", function->name, function->name, function->latest_iteration,
+          fdebug->fld_instantiation_uid);
+  ++fdebug->fld_instantiation_uid;
+  // printf("idfc-6\n");
+  clint_process(buf);
 }
 
 void mce_activate_function_debugging(function_info *func_info)

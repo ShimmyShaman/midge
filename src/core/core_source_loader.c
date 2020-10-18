@@ -15,7 +15,7 @@ typedef struct _csl_c_str {
 #define bool unsigned char
 #endif
 #ifndef true
-#define true ((unsigned char)0xff)
+#define true ((unsigned char)0x7F)
 #endif
 #ifndef false
 #define false ((unsigned char)0)
