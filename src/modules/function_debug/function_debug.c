@@ -103,11 +103,16 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
 
   // Most Recent Variable Values
   if (fdebug->call_reports.recent) {
+    render_color color = {24.f / 255.f, 36.f / 255.f, 64.f / 255.f, 1.f};
     for (int i = 0; i < fdebug->call_reports.recent->variable_reports.count; ++i) {
       mce_function_debug_variable_report *var_report = fdebug->call_reports.recent->variable_reports.items[i];
       mcr_issue_render_command_colored_quad(
-          image_render_queue, (unsigned int)(node->layout->__bounds.x + var_report, (unsigned int)node->layout->__bounds.y,
-          (unsigned int)node->layout->__bounds.width, (unsigned int)fdebug->border.thickness, fdebug->border.color);
+          image_render_queue,
+          (unsigned int)(node->layout->__bounds.x + fdebug->lines.padding.left +
+                         var_report->col * fdebug->font_horizontal_stride),
+          (unsigned int)(node->layout->__bounds.y + fdebug->lines.padding.top) - 3U +
+              22U * (unsigned int)(fdebug->lines.display_index_offset + var_report->line),
+          (unsigned int)(strlen(var_report->name) * fdebug->font_horizontal_stride), (unsigned int)22, color);
     }
   }
 
@@ -175,12 +180,30 @@ void _mce_function_debug_handle_input(mc_node *node, mci_input_event *input_even
 {
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
-    input_event->handled = true;
     mca_focus_node(node);
+
+    mce_function_debug *fdebug = (mce_function_debug *)node->data;
+
+    for (int i = 0; i < fdebug->call_reports.recent->variable_reports.count; ++i) {
+      mce_function_debug_variable_report *var_report = fdebug->call_reports.recent->variable_reports.items[i];
+
+      mc_rect hit_rect;
+      hit_rect.x = (unsigned int)(node->layout->__bounds.x + fdebug->lines.padding.left +
+                                  var_report->col * fdebug->font_horizontal_stride);
+      mcr_issue_render_command_colored_quad(
+          image_render_queue,
+          (unsigned int)(node->layout->__bounds.x + fdebug->lines.padding.left +
+                         var_report->col * fdebug->font_horizontal_stride),
+          (unsigned int)(node->layout->__bounds.y + fdebug->lines.padding.top) - 3U +
+              22U * (unsigned int)(fdebug->lines.display_index_offset + var_report->line),
+          (unsigned int)(strlen(var_report->name) * fdebug->font_horizontal_stride), (unsigned int)22, color);
+    }
   }
 
   // TODO -- asdf
 }
+
+void mce_function_debug_update_report_display(mce_function_debug *fdebug) {}
 
 // int _mce_report_variable_value()
 int _mce_report_variable_value(mct_function_variable_report_index *report_index, unsigned int call_uid,
@@ -297,6 +320,16 @@ int _mce_report_variable_value(mct_function_variable_report_index *report_index,
   return 0;
 }
 
+int _mce_end_report_variable_values(mct_function_variable_report_index *report_index, unsigned int call_uid)
+{
+  mce_function_debug *fdebug = (mce_function_debug *)report_index->tag_data;
+
+  mce_function_debug_update_report_display(fdebug);
+  printf("_mce_end_report_variable_values\n");
+
+  return 0;
+}
+
 void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
 {
   global_root_data *global_data;
@@ -334,6 +367,9 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   function_debug->border.color = COLOR_GHOST_WHITE;
   function_debug->border.thickness = 2U;
 
+  function_debug->font_horizontal_stride = 9.2794f;
+  function_debug->lines.display_index_offset = 0;
+
   function_debug->node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   function_debug->node->children->alloc = 0;
   function_debug->node->children->count = 0;
@@ -348,12 +384,14 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   // function_debug->variable_value_report_index->begin_report_variable_values_delegate =
   //     (void *)&_mce_begin_report_variable_values;
   function_debug->variable_value_report_index->report_variable_value_delegate = (void *)&_mce_report_variable_value;
+  function_debug->variable_value_report_index->end_report_variable_values_delegate =
+      (void *)&_mce_end_report_variable_values;
   printf("function_debug=%p\n", function_debug);
   printf("function_debug->variable_value_report_index=%p\n", function_debug->variable_value_report_index);
 
   function_debug->call_reports.capacity = 0U;
   function_debug->call_reports.count = 0U;
-  function_debug->call_reports.latest = NULL;
+  function_debug->call_reports.recent = NULL;
 
   *p_function_debugger = function_debug;
 }
@@ -427,6 +465,7 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
   options.report_simple_args_to_error_stack = true;
   options.check_mc_functions_not_null = true;
   options.tag_on_function_entry = false;
+  options.tag_on_function_exit = false;
   options.report_variable_values = fdebug->variable_value_report_index;
   mct_transcribe_function_to_mc(function, function_syntax, &options, &mc_transcription);
 

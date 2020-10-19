@@ -37,6 +37,9 @@ typedef struct mct_function_variable_report_index {
   // *type_identifier, const char *variable_name, int line, int col, void *p_value)
   void *report_variable_value_delegate;
 
+  // int end_report_variable_values(mct_function_variable_report_index *report_index, unsigned int call_uid)
+  void *end_report_variable_values_delegate;
+
 } mct_function_variable_report_index;
 
 typedef struct mct_function_transcription_options {
@@ -44,7 +47,7 @@ typedef struct mct_function_transcription_options {
   bool report_invocations_to_error_stack;
   bool report_simple_args_to_error_stack;
   bool check_mc_functions_not_null;
-  bool tag_on_function_entry;
+  bool tag_on_function_entry, tag_on_function_exit;
 
   mct_function_variable_report_index *report_variable_values;
 

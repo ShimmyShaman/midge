@@ -523,6 +523,9 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_goto_statement",
     "mct_transcribe_label_statement",
     "mct_transcribe_variable_value_report",
+    "mct_transcribe_function_end",
+    "mct_transcribe_indent",
+    "mct_transcribe_indented_text",
 
     // mc_source
     "summarize_field_declarator_list",
@@ -577,9 +580,7 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_preprocessor_directive",
     "mcs_parse_struct_declaration_list",
     "copy_syntax_node_to_text",
-    "mct_append_indent_to_c_str",
     "mct_contains_mc_invoke",
-    "mct_append_to_c_str",
     "mct_append_node_text_to_c_str",
     "mct_transcribe_expression",
     "mct_transcribe_type_identifier",
