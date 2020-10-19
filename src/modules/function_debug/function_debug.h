@@ -16,8 +16,9 @@ typedef struct mce_function_debug_variable_report {
   char *type_identity;
   unsigned int deref_count;
   bool is_array, is_fptr;
-  int line, col;
+  int line, col, length;
   void *value;
+  char *value_display_text;
 
 } mce_function_debug_variable_report;
 
@@ -54,10 +55,16 @@ typedef struct mce_function_debug {
     float vertical_stride;
   } lines;
 
+  mce_function_debug_function_call *displayed_call;
+  struct {
+    unsigned int image_resource_uid;
+    unsigned int width, height;
+    mce_function_debug_variable_report *item;
+  } displayed_variable_window;
+
   struct {
     unsigned int capacity, count;
     mce_function_debug_function_call **items;
-    mce_function_debug_function_call *recent;
   } call_reports;
 
   mct_function_variable_report_index *variable_value_report_index;

@@ -406,6 +406,7 @@ const char *_mcl_core_structs[] = {
 
 const char *_mcl_ignore_functions[] = {
     "printf",
+    "strcat",
     "strcmp",
     "strncmp",
     "free",
@@ -525,7 +526,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_variable_value_report",
     "mct_transcribe_function_end",
     "mct_transcribe_indent",
-    "mct_transcribe_indented_text",
+    "mct_transcribe_text_with_indent",
 
     // mc_source
     "summarize_field_declarator_list",
