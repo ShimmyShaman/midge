@@ -135,6 +135,7 @@ typedef enum element_render_command_type {
   RENDER_COMMAND_TEXTURED_QUAD,
   RENDER_COMMAND_PRINT_TEXT,
   RENDER_COMMAND_INDEXED_MESH,
+  RENDER_COMMAND_PROGRAM,
 } element_render_command_type;
 
 typedef enum resource_command_type {
@@ -183,6 +184,13 @@ typedef struct element_render_command {
       unsigned int index_buffer;
       unsigned int texture_uid;
     } indexed_mesh;
+    struct {
+      float *world_matrix;
+      unsigned int program_uid;
+      unsigned int vertex_buffer;
+      unsigned int index_buffer;
+      unsigned int texture_uid;
+    } render_program;
   };
 } element_render_command;
 
@@ -205,6 +213,13 @@ typedef struct image_render_details {
     } target_image;
   } data;
 } image_render_details;
+
+typedef struct mcr_render_program_create_info {
+
+  // TODO -- string versions / not filepaths // mandatory one is set / other is null
+  char *vertex_shader_filepath;
+  char *fragment_shader_filepath;
+} mcr_render_program_create_info;
 
 typedef struct resource_command {
   resource_command_type type;
@@ -231,6 +246,9 @@ typedef struct resource_command {
       unsigned int data_count;
       bool release_original_data_on_copy;
     } load_indices;
+    struct {
+      mcr_render_program_create_info create_info;
+    } create_render_program;
   };
 } resource_command;
 
@@ -266,13 +284,6 @@ typedef struct render_thread_info {
 
 //   unsigned int mesh_resource_uid;
 // } mcr_model;
-
-typedef struct mcr_render_program_create_info {
-
-  // TODO -- string versions / not filepaths // mandatory one is set / other is null
-  const char *vertex_shader_filepath;
-  const char *fragment_shader_filepath;
-} mcr_render_program_create_info;
 
 extern "C" {
 

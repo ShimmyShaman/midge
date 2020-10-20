@@ -163,21 +163,19 @@ void mcr_create_render_program(mcr_render_program_create_info *create_info, unsi
   command->p_uid = p_resource_uid;
 
   // Straight duplicate the create info so it can be safely accessed and properly released on another thread
-  mcr_render_program_create_info *create_info_deep_copy =
-      (mcr_render_program_create_info *)malloc(sizeof(mcr_render_program_create_info));
-  command->create_render_program.create_info = create_info_deep_copy;
+  mcr_render_program_create_info *rpci = &command->create_render_program.create_info;
 
   if (create_info->vertex_shader_filepath) {
-    create_info_deep_copy->vertex_shader_filepath = strdup(create_info->vertex_shader_filepath);
+    rpci->vertex_shader_filepath = strdup(create_info->vertex_shader_filepath);
   }
   else {
-    MCerror(8173, "NotYetSupported")
+    MCerror(8173, "NotYetSupported");
   }
   if (create_info->fragment_shader_filepath) {
-    create_info_deep_copy->fragment_shader_filepath = strdup(create_info->fragment_shader_filepath);
+    rpci->fragment_shader_filepath = strdup(create_info->fragment_shader_filepath);
   }
   else {
-    MCerror(8174, "NotYetSupported")
+    MCerror(8174, "NotYetSupported");
   }
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);

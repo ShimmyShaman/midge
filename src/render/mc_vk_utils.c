@@ -958,7 +958,7 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     layout_create_info.bindingCount = 3;
     layout_create_info.pBindings = layout_bindings;
 
-    res = vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &p_vkrs->mesh_prog.descriptor_layout);
+    res = vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &render_prog->descriptor_layout);
     VK_CHECK(res, "vkCreateDescriptorSetLayout");
   }
 
@@ -966,7 +966,7 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
   VkPipelineShaderStageCreateInfo shaderStages[SHADER_STAGE_MODULES];
   {
     {
-      const char *vertex_shader_code;
+      char *vertex_shader_code;
       read_file_text(create_info->vertex_shader_filepath, &vertex_shader_code);
 
       VkPipelineShaderStageCreateInfo *shaderStateCreateInfo = &shaderStages[0];
@@ -995,7 +995,7 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
       free(vtx_spv);
     }
     {
-      const char *fragment_shader_code;
+      char *fragment_shader_code;
       read_file_text(create_info->fragment_shader_filepath, &fragment_shader_code);
 
       VkPipelineShaderStageCreateInfo *shaderStateCreateInfo = &shaderStages[1];
@@ -1123,9 +1123,9 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &p_vkrs->mesh_prog.descriptor_layout;
+    pipelineLayoutInfo.pSetLayouts = &render_prog->descriptor_layout;
 
-    res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &p_vkrs->mesh_prog.pipeline_layout);
+    res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &render_prog->pipeline_layout);
     VK_CHECK(res, "vkCreatePipelineLayout :: Failed to create pipeline layout!");
 
     VkPipelineDepthStencilStateCreateInfo depthStencil = {};
@@ -1153,13 +1153,13 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = p_vkrs->mesh_prog.pipeline_layout;
+    pipelineInfo.layout = render_prog->pipeline_layout;
     pipelineInfo.renderPass = p_vkrs->offscreen_render_pass_3d;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
     res =
-        vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &p_vkrs->mesh_prog.pipeline);
+        vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &render_prog->pipeline);
     VK_CHECK(res, "vkCreateGraphicsPipelines :: Failed to create pipeline");
   }
 
@@ -1172,6 +1172,7 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
                        &p_vkrs->loaded_render_programs.count, render_prog);
 
   *resource_uid = render_prog->resource_uid;
+  printf("render_prog resource %u loaded\n", *resource_uid);
 
   return res;
 }

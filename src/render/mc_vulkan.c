@@ -2545,11 +2545,24 @@ void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
   free(p_vkrs->swap_chain.framebuffers);
 }
 
-void mvk_destroy_render_prog(vk_render_state *p_vkrs, render_program *render_prog)
+void mvk_destroy_render_program(vk_render_state *p_vkrs, render_program *render_prog)
 {
   vkDestroyPipeline(p_vkrs->device, render_prog->pipeline, NULL);
   vkDestroyDescriptorSetLayout(p_vkrs->device, render_prog->descriptor_layout, NULL);
   vkDestroyPipelineLayout(p_vkrs->device, render_prog->pipeline_layout, NULL);
+}
+
+void mvk_destroy_all_render_programs(vk_render_state *p_vkrs)
+{
+  mvk_destroy_render_program(p_vkrs, &p_vkrs->mesh_prog);
+  mvk_destroy_render_program(p_vkrs, &p_vkrs->font_prog);
+  mvk_destroy_render_program(p_vkrs, &p_vkrs->texture_prog);
+  mvk_destroy_render_program(p_vkrs, &p_vkrs->tint_prog);
+
+  for (int i = 0; i < p_vkrs->loaded_render_programs.count; ++i) {
+    mvk_destroy_render_program(p_vkrs, p_vkrs->loaded_render_programs.items[i]);
+  }
+  p_vkrs->loaded_render_programs.count = 0;
 }
 
 void mvk_destroy_renderpasses(vk_render_state *p_vkrs)
@@ -2702,10 +2715,7 @@ VkResult mvk_destroy_vulkan(vk_render_state *vkrs)
   mvk_destroy_framebuffers(vkrs);
 
   vkDestroyPipelineCache(vkrs->device, vkrs->pipelineCache, NULL);
-  mvk_destroy_render_prog(vkrs, &vkrs->mesh_prog);
-  mvk_destroy_render_prog(vkrs, &vkrs->font_prog);
-  mvk_destroy_render_prog(vkrs, &vkrs->texture_prog);
-  mvk_destroy_render_prog(vkrs, &vkrs->tint_prog);
+  mvk_destroy_all_render_programs(vkrs);
 
   mvk_destroy_renderpasses(vkrs);
 

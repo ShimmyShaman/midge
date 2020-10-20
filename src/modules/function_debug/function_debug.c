@@ -492,8 +492,8 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   function_debug->variable_value_report_index->report_variable_value_delegate = (void *)&_mce_report_variable_value;
   function_debug->variable_value_report_index->end_report_variable_values_delegate = NULL; // TODO -- this causes crash
   //     (void *)&_mce_end_report_variable_values;
-  printf("function_debug=%p\n", function_debug);
-  printf("function_debug->variable_value_report_index=%p\n", function_debug->variable_value_report_index);
+  // printf("function_debug=%p\n", function_debug);
+  // printf("function_debug->variable_value_report_index=%p\n", function_debug->variable_value_report_index);
 
   function_debug->call_reports.capacity = 0U;
   function_debug->call_reports.count = 0U;
@@ -604,7 +604,7 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
   sprintf(buf, "_fld%u", fdebug->fld_instantiation_uid);
   insert_into_c_str(str, buf, i);
 
-  printf("fdebug.mc_transcription:\n%s||\n", str->text);
+  // printf("fdebug.mc_transcription:\n%s||\n", str->text);
   clint_declare(str->text);
 
   sprintf(buf, "%s = &%s_mc_v%u_fld%u;", function->name, function->name, function->latest_iteration,

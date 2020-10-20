@@ -13,4 +13,4 @@ layout(location = 1) out vec2 fragTexCoord;
 void main() {
   gl_Position = world.mvp * vec4(inPosition, 1.0);
   fragTexCoord = inTexCoord;
-};
+}
