@@ -117,11 +117,27 @@ void mcr_sprint_variable_report_value(char *buf, mce_function_debug_variable_rep
     if (!strcmp(debug_var->type_identity, "bool")) {
       sprintf(buf, "%s", (*(bool *)debug_var->value) ? "true" : "false");
     }
-    else if (!strcmp(debug_var->type_identity, "window_input_event_type")) {
+    else if (!strcmp(debug_var->type_identity, "float")) {
+      sprintf(buf, "%f", *(float *)debug_var->value);
+    }
+    else if (!strcmp(debug_var->type_identity, "int")) {
       sprintf(buf, "%i", *(int *)debug_var->value);
     }
+    else if (!strcmp(debug_var->type_identity, "char")) {
+      sprintf(buf, "%c", *(char *)debug_var->value);
+    }
+    else if (!strcmp(debug_var->type_identity, "unsigned int")) {
+      sprintf(buf, "%u", *(unsigned int *)debug_var->value);
+    }
     else {
-      sprintf(buf, "unhandled %s TODO-9401", debug_var->type_identity);
+      enumeration_info *enum_info;
+      find_enumeration_info(debug_var->type_identity, &enum_info);
+      if (enum_info) {
+        sprintf(buf, "%s:%i", debug_var->type_identity, *(int *)debug_var->value);
+      }
+      else {
+        sprintf(buf, "unhandled %s (9401)", debug_var->type_identity);
+      }
     }
   }
 }
@@ -349,7 +365,8 @@ int _mce_report_variable_value(mct_function_variable_report_index *report_index,
       variable_report->value = strdup(*(const char **)p_value);
     }
     else if (type_info->deref_count == 1 && !strcmp(type_info->type_name, "char *")) {
-      // printf("FLD:%s:%s[%i]:'%s'\n", variable_name, type_info->type_name, type_info->deref_count, *(char **)p_value);
+      // printf("FLD:%s:%s[%i]:'%s'\n", variable_name, type_info->type_name, type_info->deref_count, *(char
+      // **)p_value);
       variable_report->value = strdup(*(char **)p_value);
     }
     else {

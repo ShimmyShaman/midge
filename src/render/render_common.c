@@ -150,6 +150,39 @@ void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_p
   pthread_mutex_unlock(&resource_queue->mutex);
 }
 
+void mcr_create_render_program(mcr_render_program_create_info *create_info, unsigned int *p_resource_uid)
+{
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
+
+  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+
+  resource_command *command;
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  command->type = RESOURCE_COMMAND_CREATE_RENDER_PROGRAM;
+  command->p_uid = p_resource_uid;
+
+  // Straight duplicate the create info so it can be safely accessed and properly released on another thread
+  mcr_render_program_create_info *create_info_deep_copy =
+      (mcr_render_program_create_info *)malloc(sizeof(mcr_render_program_create_info));
+  command->create_render_program.create_info = create_info_deep_copy;
+
+  if (create_info->vertex_shader_filepath) {
+    create_info_deep_copy->vertex_shader_filepath = strdup(create_info->vertex_shader_filepath);
+  }
+  else {
+    MCerror(8173, "NotYetSupported")
+  }
+  if (create_info->fragment_shader_filepath) {
+    create_info_deep_copy->fragment_shader_filepath = strdup(create_info->fragment_shader_filepath);
+  }
+  else {
+    MCerror(8174, "NotYetSupported")
+  }
+
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+}
+
 void mcr_determine_text_display_dimensions(unsigned int font_resource, const char *text, float *text_width,
                                            float *text_height)
 {

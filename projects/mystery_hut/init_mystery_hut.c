@@ -14,6 +14,8 @@ typedef struct mystery_hut {
   struct {
     mat4 world;
     mcr_model *model;
+
+    unsigned int render_program_resource_uid;
   } cube;
 } mystery_hut;
 
@@ -61,6 +63,14 @@ void _myh_render_mh_data_headless(mc_node *node)
 
   mcr_render_model(irq, mh_data->cube.model);
 
+  // mat4 world;
+  // mat4 view;
+  // mat4 projection;
+  // vertex_buffer (pos/uv)
+  // index_buffer
+  // texture
+  // mcr_render_with_program(irq, )
+
   mcr_submit_image_render_request(global_data->render_thread, irq);
 }
 
@@ -77,7 +87,7 @@ void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_no
 
 void _myh_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  printf("_myh_handle_input\n");
+  // printf("_myh_handle_input\n");
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
     input_event->handled = true;
@@ -100,12 +110,19 @@ void myh_load_resources(mc_node *module_node)
   mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height,
                               MVK_IMAGE_USAGE_RENDER_TARGET_3D, &ct_data->render_target.resource_uid);
 
+  mcr_render_program_create_info create_info = {};
+  create_info.vertex_shader_filepath = "projects/mystery_hut/model.vert";
+  create_info.fragment_shader_filepath = "projects/mystery_hut/model.frag";
+
+  ct_data->cube.render_program_resource_uid = 0U;
+  mcr_create_render_program(create_info, &ct_data->cube.render_program_resource_uid);
+
   // printf("ct_data=%p\n", ct_data);
   // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
   // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
 
   // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
-  mcr_load_wavefront_obj_model("res/models/viking_room.obj", "res/models/viking_room.png", &ct_data->cube.model);
+  mcr_load_wavefront_obj_model("res/models/viking_room.obj", "res/models/debug_texture.png", &ct_data->cube.model);
 }
 
 void _myh_update(frame_time *elapsed, mci_input_state *input_state, void *state) {}

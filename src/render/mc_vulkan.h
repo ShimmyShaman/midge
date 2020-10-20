@@ -4,8 +4,8 @@
 #define MC_VULKAN_H
 
 #include "platform/mc_xcb.h"
-#include <vulkan/vulkan_core.h>
 #include "render/render_common.h"
+#include <vulkan/vulkan_core.h>
 
 #define MAX_DESCRIPTOR_SETS 4096
 #define VK_IMAGE_FORMAT VK_FORMAT_R8G8B8A8_SRGB;
@@ -42,6 +42,7 @@ typedef struct textured_image_vertex {
 } textured_image_vertex;
 
 typedef struct render_program {
+  unsigned int resource_uid;
   VkDescriptorSetLayout descriptor_layout;
   VkPipelineLayout pipeline_layout;
   VkPipeline pipeline;
@@ -252,6 +253,10 @@ typedef struct vk_render_state {
     uint32_t count, alloc;
     mrt_index_data **items;
   } loaded_index_data;
+  struct {
+    uint32_t count, alloc; // TODO rename alloc >> capacity
+    render_program **items;
+  } loaded_render_programs;
 } vk_render_state;
 
 extern "C" {

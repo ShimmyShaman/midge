@@ -32,6 +32,12 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
       VK_CHECK(res, "load_font");
 
     } break;
+    case RESOURCE_COMMAND_CREATE_RENDER_PROGRAM: {
+      // printf("hrc-resource_cmd->font.height:%f\n", resource_cmd->font.height);
+      res = mvk_create_render_program(p_vkrs, resource_cmd->create_render_program.create_info, resource_cmd->p_uid);
+      VK_CHECK(res, "load_font");
+
+    } break;
     case RESOURCE_COMMAND_LOAD_MESH: {
       res = mvk_load_vertex_data(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
                                  resource_cmd->load_mesh.release_original_data_on_copy, resource_cmd->p_uid);
@@ -306,6 +312,20 @@ void mrt_obtain_texture_with_resource_uid(vk_render_state *p_vkrs, unsigned int 
 
   *out_image = NULL;
   MCerror(8420, "TODO could not find image-sampler with resource_uid=%u", resource_uid);
+}
+
+void mrt_obtain_render_program_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid,
+                                                 render_program **out_render_program)
+{
+  for (int f = 0; f < p_vkrs->loaded_render_programs.count; ++f) {
+    if (p_vkrs->loaded_render_programs.items[f]->resource_uid == resource_uid) {
+      *out_render_program = p_vkrs->loaded_render_programs.items[f];
+      return;
+    }
+  }
+
+  *out_render_program = NULL;
+  MCerror(8420, "TODO could not find render program with resource_uid=%u", resource_uid);
 }
 
 void mrt_obtain_vertices_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid,
@@ -686,6 +706,9 @@ VkResult mrt_render_indexed_mesh(vk_render_state *p_vkrs, VkCommandBuffer comman
   VkResult res;
 
   // Get the resources
+  render_program *render_prog;
+  mrt_obtain_render_program_with_resource_uid(p_vkrs, cmd->indexed_mesh.render_program, &render_prog);
+
   mrt_vertex_data *vertices;
   mrt_obtain_vertices_with_resource_uid(p_vkrs, cmd->indexed_mesh.vertex_buffer, &vertices);
 
@@ -793,7 +816,7 @@ VkResult mrt_render_indexed_mesh(vk_render_state *p_vkrs, VkCommandBuffer comman
   setAllocInfo.pNext = NULL;
   setAllocInfo.descriptorPool = p_vkrs->descriptor_pool;
   setAllocInfo.descriptorSetCount = 1;
-  setAllocInfo.pSetLayouts = &p_vkrs->mesh_prog.descriptor_layout;
+  setAllocInfo.pSetLayouts = &render_prog->descriptor_layout;
 
   unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
   res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
@@ -858,10 +881,10 @@ VkResult mrt_render_indexed_mesh(vk_render_state *p_vkrs, VkCommandBuffer comman
   // // printf("mrt_rcq-3\n");
   vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
 
-  vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline_layout, 0, 1,
+  vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_prog->pipeline_layout, 0, 1,
                           &desc_set, 0, NULL);
 
-  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline);
+  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_prog->pipeline);
 
   vkCmdBindIndexBuffer(command_buffer, indices->buf, 0, VK_INDEX_TYPE_UINT32);
 

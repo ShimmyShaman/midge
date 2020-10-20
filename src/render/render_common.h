@@ -144,6 +144,7 @@ typedef enum resource_command_type {
   RESOURCE_COMMAND_LOAD_FONT,
   RESOURCE_COMMAND_LOAD_MESH,
   RESOURCE_COMMAND_LOAD_INDEX_BUFFER,
+  RESOURCE_COMMAND_CREATE_RENDER_PROGRAM,
 } resource_command_type;
 
 typedef enum node_render_target {
@@ -266,6 +267,13 @@ typedef struct render_thread_info {
 //   unsigned int mesh_resource_uid;
 // } mcr_model;
 
+typedef struct mcr_render_program_create_info {
+
+  // TODO -- string versions / not filepaths // mandatory one is set / other is null
+  const char *vertex_shader_filepath;
+  const char *fragment_shader_filepath;
+} mcr_render_program_create_info;
+
 extern "C" {
 
 int mcr_obtain_image_render_request(render_thread_info *image_render_queue, image_render_details **p_request);
@@ -278,6 +286,7 @@ void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int wi
 void mcr_load_texture_resource(const char *path, unsigned int *p_resource_uid);
 void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                               unsigned int *p_resource_uid);
+void mcr_create_render_program(mcr_render_program_create_info *create_info, unsigned int *p_resource_uid);
 
 void mcr_determine_text_display_dimensions(unsigned int font_resource, const char *text, float *text_width,
                                            float *text_height);

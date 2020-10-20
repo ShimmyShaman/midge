@@ -1630,7 +1630,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
                                           (mc_key_code)input_event->button_code, &c[0]);
 
         if (!res) {
-          printf("print string '%s'\n", c);
+          // printf("print string '%s'\n", c);
           mce_insert_string_at_cursor(fedit, c);
         }
       }

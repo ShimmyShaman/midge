@@ -31,12 +31,6 @@ The System:
 
 
 ###################################################################
-Visual Debugger:
-
-  See values of the last call of the function
-  Ability to pause/breakpoint at a line(first statement of the line) & continue
-
-###################################################################
 
 
 I want to explore a concept/feeling
