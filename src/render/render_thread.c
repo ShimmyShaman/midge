@@ -914,58 +914,58 @@ VkResult mrt_render_program(vk_render_state *p_vkrs, VkCommandBuffer command_buf
 
   // printf("rim: %p %p %p\n", vertices, indices, image_sampler);
 
-  // // Matrix
-  // copy_buffer->data[copy_buffer->index] = cmd->render_program.data[0];
-  // copy_buffer->index += sizeof(mat4);
-  // {
-  //   // Construct the Vulkan View/Projection/Clip for the render target image
-  //   mat4 view;
-  //   mat4 proj;
-  //   mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
+  // Matrix
+  mat4 *vpc = (mat4 *)&copy_buffer->data[copy_buffer->index];
+  copy_buffer->index += sizeof(mat4);
+  {
+    // Construct the Vulkan View/Projection/Clip for the render target image
+    mat4 view;
+    mat4 proj;
+    mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
 
-  //   global_root_data *global_data;
-  //   obtain_midge_global_root(&global_data);
+    global_root_data *global_data;
+    obtain_midge_global_root(&global_data);
 
-  //   glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
-  //   float fovy = 72.f / 180.f * 3.1459f;
-  //   glm_perspective(fovy, (float)image_render->image_width / image_render->image_height, 0.01f, 1000.f, (vec4 *)&proj);
-  //   // glm_ortho_default((float)image_render->image_width / image_render->image_height, (vec4 *)&proj);
+    glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
+    float fovy = 72.f / 180.f * 3.1459f;
+    glm_perspective(fovy, (float)image_render->image_width / image_render->image_height, 0.01f, 1000.f, (vec4 *)&proj);
+    // glm_ortho_default((float)image_render->image_width / image_render->image_height, (vec4 *)&proj);
 
-  //   // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
-  //   mat4 world;
-  //   glm_mat4_identity((vec4 *)&world);
-  //   vec3 axis = {0.f, 1.f, 0.f};
-  //   glm_rotate((vec4 *)&world, 180.f, axis);
-  //   axis[1] = 0.f;
-  //   axis[2] = 1.f;
-  //   glm_rotate((vec4 *)&world, 180.f, axis);
-  //   axis[0] = 1.f;
-  //   axis[2] = 0.f;
-  //   glm_rotate((vec4 *)&world, -90.f, axis);
-  //   glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
-  //   // }
-  //   // else {
-  //   // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
-  //   // }
-  //   // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
-  //   //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
-  //   // }
-  //   // else {
-  //   glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
-  //   // }
-  //   // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
-  //   glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-  //   // }
-  //   // else {
-  //   // glm_mat4_mul((vec4 *)vpc, (vec4 *)&proj, (vec4 *)vpc);
-  //   // }
+    // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
+    mat4 world;
+    glm_mat4_identity((vec4 *)&world);
+    vec3 axis = {0.f, 1.f, 0.f};
+    glm_rotate((vec4 *)&world, 180.f, axis);
+    axis[1] = 0.f;
+    axis[2] = 1.f;
+    glm_rotate((vec4 *)&world, 180.f, axis);
+    axis[0] = 1.f;
+    axis[2] = 0.f;
+    glm_rotate((vec4 *)&world, -90.f, axis);
+    glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
+    // }
+    // else {
+    // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
+    // }
+    // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+    //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
+    // }
+    // else {
+    glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
+    // }
+    // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+    glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+    // }
+    // else {
+    // glm_mat4_mul((vec4 *)vpc, (vec4 *)&proj, (vec4 *)vpc);
+    // }
 
-  //   // glm_mat4_mul((vec4 *)vpc, (vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc);
-  //   // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-  //   // glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
+    // glm_mat4_mul((vec4 *)vpc, (vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc);
+    // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+    // glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
 
-  //   // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
-  // }
+    // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
+  }
   // // Bounds check
   // if (cmd->colored_rect_info.width == 0 || cmd->x >= image_render->image_width ||
   //     cmd->colored_rect_info.height == 0 || cmd->y >= image_render->image_height)
