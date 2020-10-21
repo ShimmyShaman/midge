@@ -1105,9 +1105,11 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
       char *parameter_type_name = (char *)"int";
       if (parameter) {
         if (parameter->type_deref_count) {
+          print_syntax_node(argument, 0);
           MCerror(915, "Incorrect argument?");
         }
         if (parameter->parameter_type != PARAMETER_KIND_STANDARD) {
+          print_syntax_node(argument, 0);
           MCerror(918, "Incorrect argument by paramter type");
         }
 

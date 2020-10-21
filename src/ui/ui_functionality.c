@@ -18,7 +18,7 @@ void mcu_initialize_ui_state(mcu_ui_state **p_ui_state)
       (mc_node **)malloc(sizeof(mc_node *) * ui_state->cache_layered_hit_list->alloc);
   // printf("@creation global_data->ui_state:%p\n", global_data->ui_state);
 
-  ui_state->default_font_resource = 0;
+  ui_state->default_font_resource = NULL;
   ui_state->requires_update = true;
 
   // Resource loading

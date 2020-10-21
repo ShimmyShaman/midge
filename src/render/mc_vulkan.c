@@ -2545,7 +2545,7 @@ void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
   free(p_vkrs->swap_chain.framebuffers);
 }
 
-void mvk_destroy_render_program(vk_render_state *p_vkrs, render_program *render_prog)
+void mvk_destroy_render_program(vk_render_state *p_vkrs, mcr_render_program *render_prog)
 {
   vkDestroyPipeline(p_vkrs->device, render_prog->pipeline, NULL);
   vkDestroyDescriptorSetLayout(p_vkrs->device, render_prog->descriptor_layout, NULL);

@@ -270,7 +270,7 @@ void _mce_render_function_editor_present(image_render_details *image_render_queu
                        fedit->font_horizontal_stride * ((float)fedit->cursor.col - 0.5f)),
         (unsigned int)(node->layout->__bounds.y + fedit->lines.padding.top +
                        fedit->lines.vertical_stride * (fedit->cursor.line - fedit->lines.display_index_offset)),
-        "|", 0U, cursor_color);
+        "|", NULL, cursor_color);
   }
 
   render_color title_color = COLOR_FUNCTION_GREEN;

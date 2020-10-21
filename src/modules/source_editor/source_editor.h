@@ -35,11 +35,11 @@ typedef struct mce_source_line {
 
   mce_source_line_token *line_token;
 
-  unsigned int font_resource_uid;
+  font_resource *font;
   float font_horizontal_stride;
   struct {
     unsigned int width, height;
-    unsigned int resource_uid;
+    mcr_texture_image *image;
   } render_target;
 } mce_source_line;
 

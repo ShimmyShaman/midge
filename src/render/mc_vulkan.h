@@ -41,43 +41,50 @@ typedef struct textured_image_vertex {
   vec2 tex_coord;
 } textured_image_vertex;
 
-typedef struct render_program {
+typedef struct mcr_render_program {
   unsigned int resource_uid;
   VkDescriptorSetLayout descriptor_layout;
   VkPipelineLayout pipeline_layout;
   VkPipeline pipeline;
-} render_program;
+} mcr_render_program;
 
 typedef struct font_resource {
   const char *name;
   float height;
   float draw_vertical_offset;
-  unsigned int resource_uid;
+  mcr_texture_image *texture;
   stbtt_bakedchar *char_data;
 } font_resource;
 
 typedef struct loaded_font_list {
   uint32_t count;
-  uint32_t allocated;
-  font_resource *fonts;
+  uint32_t capacity;
+  font_resource **fonts;
 } loaded_font_list;
 
-typedef struct mrt_vertex_data {
+typedef struct mcr_vertex_buffer {
   unsigned int resource_uid;
   VkBuffer buf;
   VkDeviceMemory mem;
   VkDescriptorBufferInfo buffer_info;
-} mrt_vertex_data;
+} mcr_vertex_buffer;
 
-typedef struct mrt_index_data {
+typedef struct mcr_index_buffer {
   unsigned int resource_uid;
   unsigned int count;
   VkBuffer buf;
   VkDeviceMemory mem;
   VkDescriptorBufferInfo buffer_info;
-} mrt_index_data;
+} mcr_index_buffer;
 
-typedef struct texture_image {
+typedef struct mcr_render_program_data {
+  void **input_buffers;
+  mcr_index_buffer *indices;
+  mcr_vertex_buffer *vertices;
+
+} mcr_render_program_data;
+
+typedef struct mcr_texture_image {
   unsigned int resource_uid;
   mvk_image_sampler_usage sampler_usage;
   VkFormat format;
@@ -88,7 +95,7 @@ typedef struct texture_image {
   VkDeviceMemory memory;
   VkImageView view;
   VkFramebuffer framebuffer;
-} texture_image;
+} mcr_texture_image;
 
 typedef struct mvk_dynamic_buffer_block {
   VkDeviceSize allocated_size;
@@ -205,7 +212,7 @@ typedef struct vk_render_state {
 
   VkRenderPass present_render_pass, offscreen_render_pass_2d, offscreen_render_pass_3d;
 
-  render_program tint_prog, texture_prog, font_prog, mesh_prog;
+  mcr_render_program tint_prog, texture_prog, font_prog, mesh_prog;
   VkPipelineCache pipelineCache;
 
   VkDescriptorPool descriptor_pool;
@@ -242,20 +249,20 @@ typedef struct vk_render_state {
   // Loaded Indexed Resources
   struct {
     uint32_t count, alloc;
-    texture_image **items;
+    mcr_texture_image **items;
   } textures;
   loaded_font_list loaded_fonts;
   struct {
     uint32_t count, alloc;
-    mrt_vertex_data **items;
+    mcr_vertex_buffer **items;
   } loaded_vertex_data;
   struct {
     uint32_t count, alloc;
-    mrt_index_data **items;
+    mcr_index_buffer **items;
   } loaded_index_data;
   struct {
     uint32_t count, alloc; // TODO rename alloc >> capacity
-    render_program **items;
+    mcr_render_program **items;
   } loaded_render_programs;
 } vk_render_state;
 

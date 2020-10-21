@@ -12,7 +12,7 @@ void __mcu_determine_button_extents(mc_node *node, layout_extent_restraints rest
 
   float str_width, str_height;
   if (!node->layout->preferred_width || !node->layout->preferred_height)
-    mcr_determine_text_display_dimensions(button->font_resource_uid, button->str->text, &str_width, &str_height);
+    mcr_determine_text_display_dimensions(button->font, button->str->text, &str_width, &str_height);
 
   // Width
   if (node->layout->preferred_width)
@@ -67,9 +67,9 @@ void __mcu_render_button_present(image_render_details *image_render_queue, mc_no
 
   // Text
   // printf("renderbutton- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font_resource_uid);
+  //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font->resource_uid);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y, button->str->text, button->font_resource_uid,
+                                (unsigned int)node->layout->__bounds.y, button->str->text, button->font,
                                 button->font_color);
 }
 
@@ -117,7 +117,7 @@ void mcu_init_button(mc_node *parent, mcu_button **p_button)
 
   init_c_str(&button->str);
   set_c_str(button->str, "button");
-  button->font_resource_uid = 0;
+  button->font = NULL;
   button->font_color = COLOR_GHOST_WHITE;
 
   button->background_color = COLOR_DIM_GRAY;

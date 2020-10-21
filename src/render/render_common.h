@@ -116,25 +116,12 @@ typedef struct render_color {
     1.f, 1.f, 102.f / 255.f, 1.f \
   }
 
-typedef struct mc_point {
-  int x, y;
-} mc_point;
-
-typedef struct mc_size {
-  unsigned int width, height;
-} mc_size;
-
-typedef struct mc_rectf {
-  float x, y;
-  float width, height;
-} mc_rect;
-
 typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,
   RENDER_COMMAND_COLORED_QUAD,
   RENDER_COMMAND_TEXTURED_QUAD,
   RENDER_COMMAND_PRINT_TEXT,
-  RENDER_COMMAND_INDEXED_MESH,
+  // RENDER_COMMAND_INDEXED_MESH,
   RENDER_COMMAND_PROGRAM,
 } element_render_command_type;
 
@@ -143,7 +130,7 @@ typedef enum resource_command_type {
   RESOURCE_COMMAND_LOAD_TEXTURE,
   RESOURCE_COMMAND_CREATE_TEXTURE,
   RESOURCE_COMMAND_LOAD_FONT,
-  RESOURCE_COMMAND_LOAD_MESH,
+  RESOURCE_COMMAND_LOAD_VERTEX_BUFFER,
   RESOURCE_COMMAND_LOAD_INDEX_BUFFER,
   RESOURCE_COMMAND_CREATE_RENDER_PROGRAM,
 } resource_command_type;
@@ -161,6 +148,25 @@ typedef enum mvk_image_sampler_usage {
   MVK_IMAGE_USAGE_RENDER_TARGET_3D,
 } mvk_image_sampler_usage;
 
+// Shapes
+typedef struct mc_point {
+  int x, y;
+} mc_point;
+
+typedef struct mc_size {
+  unsigned int width, height;
+} mc_size;
+
+typedef struct mc_rectf {
+  float x, y;
+  float width, height;
+} mc_rect;
+
+// Resources
+struct font_resource;
+struct mcr_texture_image;
+struct mcr_render_program;
+struct mcr_render_program_data;
 typedef struct element_render_command {
   element_render_command_type type;
   unsigned int x, y;
@@ -171,25 +177,30 @@ typedef struct element_render_command {
     } colored_rect_info;
     struct {
       char *text;
-      unsigned int font_resource_uid;
+      font_resource *font;
       render_color color;
     } print_text;
     struct {
       unsigned int width, height;
-      unsigned int texture_uid;
+      mcr_texture_image *texture;
     } textured_rect_info;
+    // struct {
+    //   float *world_matrix;
+    //   mcr_vertex_buffer *vertex_buffer;
+
+    //   unsigned int vertex_buffer;
+    //   unsigned int index_buffer;
+    //   unsigned int texture_uid;
+    // } indexed_mesh;
     struct {
-      float *world_matrix;
-      unsigned int vertex_buffer;
-      unsigned int index_buffer;
-      unsigned int texture_uid;
-    } indexed_mesh;
-    struct {
-      float *world_matrix;
-      unsigned int program_uid;
-      unsigned int vertex_buffer;
-      unsigned int index_buffer;
-      unsigned int texture_uid;
+      mcr_render_program *program;
+      mcr_render_program_data *data;
+
+      // float *world_matrix;
+      // unsigned int program_uid;
+      // unsigned int vertex_buffer;
+      // unsigned int index_buffer;
+      // unsigned int texture_uid;
     } render_program;
   };
 } element_render_command;
@@ -203,7 +214,7 @@ typedef struct image_render_details {
   element_render_command *commands;
   union {
     struct {
-      unsigned int image_uid;
+      mcr_texture_image *image;
 
       // For render target images, given render commands are given in absolute screen coordinates
       // An offset is needed to apply to align it with the render target
@@ -214,16 +225,33 @@ typedef struct image_render_details {
   } data;
 } image_render_details;
 
+typedef struct mcr_layout_binding {
+  VkDescriptorType type;
+  VkShaderStageFlags stage_bit;
+} mcr_layout_binding;
+
+typedef struct mcr_input_binding {
+  VkFormat format;
+  unsigned int size_in_bytes;
+} mcr_input_binding;
+
 typedef struct mcr_render_program_create_info {
 
   // TODO -- string versions / not filepaths // mandatory one is set / other is null
   char *vertex_shader_filepath;
   char *fragment_shader_filepath;
+
+  // TODO -- make these arrays (& not alloc/release) for performance/clarity?
+  unsigned int buffer_binding_count;
+  mcr_layout_binding buffer_bindings[16];
+
+  unsigned int input_binding_count;
+  mcr_input_binding input_bindings[16];
 } mcr_render_program_create_info;
 
 typedef struct resource_command {
   resource_command_type type;
-  unsigned int *p_uid;
+  void *p_resource;
   union {
     struct {
       const char *path;
@@ -293,21 +321,21 @@ int mcr_obtain_element_render_command(image_render_details *image_queue, element
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
 
 void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
-                                 mvk_image_sampler_usage image_usage, unsigned int *resource_uid);
-void mcr_load_texture_resource(const char *path, unsigned int *p_resource_uid);
+                                 mvk_image_sampler_usage image_usage, mcr_texture_image **p_texture);
+void mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
 void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
-                              unsigned int *p_resource_uid);
-void mcr_create_render_program(mcr_render_program_create_info *create_info, unsigned int *p_resource_uid);
+                              font_resource **font);
+void mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_resource);
 
-void mcr_determine_text_display_dimensions(unsigned int font_resource, const char *text, float *text_width,
+void mcr_determine_text_display_dimensions(font_resource *font, const char *text, float *text_width,
                                            float *text_height);
 
 void mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                   const char *text, unsigned int font_resource_uid, render_color font_color);
+                                   const char *text, font_resource *font, render_color font_color);
 void mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                            unsigned int width, unsigned int height, render_color color);
 void mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                            unsigned int width, unsigned int height, unsigned int texture_resource);
+                                            unsigned int width, unsigned int height, mcr_texture_image *texture);
 }
 
 #endif // MC_RENDER_COMMON_H

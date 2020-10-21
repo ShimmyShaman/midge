@@ -88,7 +88,7 @@ typedef struct mca_global_context_node_option_list {
 typedef struct mcu_ui_state {
   bool requires_update;
   mc_node_list *cache_layered_hit_list;
-  unsigned int default_font_resource;
+  font_resource *default_font_resource;
 
   // Modules
   struct {
@@ -106,23 +106,23 @@ typedef struct mcu_ui_state {
   void *source_editor_pool;
 } mcu_ui_state;
 
-typedef struct visual_project_data {
-  const char *name;
-  struct {
-    unsigned int offset_x, offset_y;
-    unsigned int width, height;
-  } screen;
+// typedef struct visual_project_data {
+//   const char *name;
+//   struct {
+//     unsigned int offset_x, offset_y;
+//     unsigned int width, height;
+//   } screen;
 
-  // App Stuff
-  struct mcu_ui_state *ui_state;
-  bool requires_update, requires_rerender;
-  unsigned int present_image_resource_uid;
+//   // App Stuff
+//   struct mcu_ui_state *ui_state;
+//   bool requires_update, requires_rerender;
+//   unsigned int present_image;
 
-  mc_node *editor_container;
-  mca_node_layout *layout;
-  mc_node_list *children;
+//   mc_node *editor_container;
+//   mca_node_layout *layout;
+//   mc_node_list *children;
 
-} visual_project_data;
+// } visual_project_data;
 
 // hierarchy.c
 void exit_app(mc_node *hierarchical_call_scope, int result);

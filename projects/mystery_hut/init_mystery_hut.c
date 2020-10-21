@@ -8,70 +8,72 @@ typedef struct mystery_hut {
 
   struct {
     unsigned int width, height;
-    unsigned int resource_uid;
+    mcr_texture_image *image;
   } render_target;
 
   struct {
     mat4 world;
-    mcr_model *model;
+    // mcr_model *model;
 
-    unsigned int render_program_resource_uid;
+    mcr_render_program *render_program;
+    mcr_render_program_data render_data;
   } cube;
 } mystery_hut;
 
-// void create_wvp_matrix(mat4 *)
-// {
-//   // Matrix
-//   mat4 *vpc = (mat4 *)malloc(sizeof(mat4));
+void create_wvp_matrix(mat4 **out_wvp)
+{
+  // Matrix
+  mat4 *vpc = (mat4 *)malloc(sizeof(mat4));
+  *out_wvp = vpc;
 
-//   // Construct the Vulkan View/Projection/Clip for the render target image
-//   mat4 view;
-//   mat4 proj;
-//   mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
+  // Construct the Vulkan View/Projection/Clip for the render target image
+  mat4 view;
+  mat4 proj;
+  mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
 
-//   global_root_data *global_data;
-//   obtain_midge_global_root(&global_data);
+  global_root_data *global_data;
+  obtain_midge_global_root(&global_data);
 
-//   glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
-//   float fovy = 72.f / 180.f * 3.1459f;
-//   glm_perspective(fovy, (float)image_render->image_width / image_render->image_height, 0.01f, 1000.f, (vec4 *)&proj);
-//   // glm_ortho_default((float)image_render->image_width / image_render->image_height, (vec4 *)&proj);
+  glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
+  float fovy = 72.f / 180.f * 3.1459f;
+  glm_perspective(fovy, (float)APPLICATION_SET_WIDTH / APPLICATION_SET_HEIGHT, 0.01f, 1000.f, (vec4 *)&proj);
+  // glm_ortho_default((float)image_render->image_width / image_render->image_height, (vec4 *)&proj);
 
-//   // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
-//   mat4 world;
-//   glm_mat4_identity((vec4 *)&world);
-//   vec3 axis = {0.f, 1.f, 0.f};
-//   glm_rotate((vec4 *)&world, 180.f, axis);
-//   axis[1] = 0.f;
-//   axis[2] = 1.f;
-//   glm_rotate((vec4 *)&world, 180.f, axis);
-//   axis[0] = 1.f;
-//   axis[2] = 0.f;
-//   glm_rotate((vec4 *)&world, -90.f, axis);
-//   glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
-//   // }
-//   // else {
-//   // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
-//   // }
-//   // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
-//   //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
-//   // }
-//   // else {
-//   glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
-//   // }
-//   // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
-//   glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-//   // }
-//   // else {
-//   // glm_mat4_mul((vec4 *)vpc, (vec4 *)&proj, (vec4 *)vpc);
-//   // }
+  // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
+  mat4 world;
+  glm_mat4_identity((vec4 *)&world);
+  vec3 axis = {0.f, 1.f, 0.f};
+  glm_rotate((vec4 *)&world, 180.f, axis);
+  axis[1] = 0.f;
+  axis[2] = 1.f;
+  glm_rotate((vec4 *)&world, 180.f, axis);
+  axis[0] = 1.f;
+  axis[2] = 0.f;
+  glm_rotate((vec4 *)&world, -90.f, axis);
+  glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
+  // }
+  // else {
+  // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
+  // }
+  // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+  //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
+  // }
+  // else {
+  glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
+  // }
+  // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+  glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+  // }
+  // else {
+  // glm_mat4_mul((vec4 *)vpc, (vec4 *)&proj, (vec4 *)vpc);
+  // }
 
-//   // glm_mat4_mul((vec4 *)vpc, (vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc);
-//   // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-//   // glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
+  // glm_mat4_mul((vec4 *)vpc, (vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc);
+  // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+  // glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
 
-//   // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
-// }
+  // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
+}
 
 void _myh_render_mh_data_headless(mc_node *node)
 {
@@ -100,7 +102,7 @@ void _myh_render_mh_data_headless(mc_node *node)
   // global_data->screen.height);
   irq->image_width = mh_data->render_target.width;   // TODO
   irq->image_height = mh_data->render_target.height; // TODO
-  irq->data.target_image.image_uid = mh_data->render_target.resource_uid;
+  irq->data.target_image.image = mh_data->render_target.image;
   irq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
@@ -120,14 +122,15 @@ void _myh_render_mh_data_headless(mc_node *node)
   mcr_obtain_element_render_command(irq, &render_cmd);
 
   render_cmd->type = RENDER_COMMAND_PROGRAM;
-  render_cmd->render_program.program_uid = mh_data->cube.render_program_resource_uid;
+  render_cmd->render_program.program = mh_data->cube.render_program;
+  render_cmd->render_program.data = &mh_data->cube.render_data;
 
   // render_cmd->render_program
   //     .
 
-  render_cmd->render_program.vertex_buffer = mh_data->cube.model->vertex_buffer;
-  render_cmd->render_program.index_buffer = mh_data->cube.model->index_buffer;
-  render_cmd->render_program.texture_uid = mh_data->cube.model->texture;
+  // render_cmd->render_program.vertex_buffer = mh_data->cube.model->vertex_buffer;
+  // render_cmd->render_program.index_buffer = mh_data->cube.model->index_buffer;
+  // render_cmd->render_program.texture_uid = mh_data->cube.model->texture;
 
   // mat4 world;
   // mat4 view;
@@ -146,7 +149,7 @@ void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_no
 
   mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                          (unsigned int)node->layout->__bounds.y, mh_data->render_target.width,
-                                         mh_data->render_target.height, mh_data->render_target.resource_uid);
+                                         mh_data->render_target.height, mh_data->render_target.image);
 
   // mca_set_node_requires_rerender(node);
 }
@@ -170,23 +173,36 @@ void myh_load_resources(mc_node *module_node)
   module_node->data = ct_data;
   ct_data->node = module_node;
 
-  ct_data->render_target.resource_uid = 0;
   ct_data->render_target.width = module_node->layout->preferred_width;
   ct_data->render_target.height = module_node->layout->preferred_height;
   mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height,
-                              MVK_IMAGE_USAGE_RENDER_TARGET_3D, &ct_data->render_target.resource_uid);
+                              MVK_IMAGE_USAGE_RENDER_TARGET_3D, &ct_data->render_target.image);
 
   // Render Program
-  ct_data->cube.render_program_resource_uid = 0U;
   mcr_render_program_create_info create_info = {};
   create_info.vertex_shader_filepath = (char *)"projects/mystery_hut/model.vert";
   create_info.fragment_shader_filepath = (char *)"projects/mystery_hut/model.frag";
+  create_info.buffer_binding_count = 2;
+  create_info.buffer_bindings[0] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT};
+  create_info.buffer_bindings[1] = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT};
+  create_info.input_binding_count = 2;
+  create_info.input_bindings[0] = {VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3};
+  create_info.input_bindings[0] = {VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2};
+  mcr_create_render_program(&create_info, &ct_data->cube.render_program);
 
-  mcr_create_render_program(&create_info, &ct_data->cube.render_program_resource_uid);
+  // Render Data
+  ct_data->cube.render_data.input_buffers = (void **)malloc(sizeof(void *) * 2);
+
+  // world-view-projection
+  create_wvp_matrix((mat4 **)&ct_data->cube.render_data.input_buffers[0]);
 
   // Cube Model
   // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
-  mcr_load_wavefront_obj_model("res/models/viking_room.obj", "res/models/debug_texture.png", &ct_data->cube.model);
+  // mcr_load_wavefront_obj("res/models/viking_room.obj", );
+
+  mcr_load_wavefront_obj("res/cube/cube.obj", &ct_data->cube.render_data.vertices, &ct_data->cube.render_data.indices);
+  mcr_load_texture_resource("res/cube/cube_diffuse.png",
+                            (mcr_texture_image *)&ct_data->cube.render_data.input_buffers[1]);
 }
 
 void _myh_update(frame_time *elapsed, mci_input_state *input_state, void *state) {}

@@ -25,7 +25,7 @@ typedef struct mcu_text_block {
   mc_node *node;
 
   c_str *str;
-  unsigned int font_resource_uid;
+  font_resource *font;
   render_color font_color;
 } mcu_text_block;
 
@@ -39,7 +39,7 @@ typedef struct mcu_button {
   void *left_click;
 
   c_str *str;
-  unsigned int font_resource_uid;
+  font_resource *font;
   render_color font_color;
 
   render_color background_color;

@@ -13,40 +13,45 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
     switch (resource_cmd->type) {
     case RESOURCE_COMMAND_LOAD_TEXTURE: {
-      res = mvk_load_texture_from_file(p_vkrs, resource_cmd->load_texture.path, resource_cmd->p_uid);
+      res = mvk_load_texture_from_file(p_vkrs, resource_cmd->load_texture.path,
+                                       (mcr_texture_image **)resource_cmd->p_resource);
 
       // TODO manage the freeing or strdup of the path char string
       VK_CHECK(res, "load_texture_from_file");
 
     } break;
     case RESOURCE_COMMAND_CREATE_TEXTURE: {
-      res = mvk_create_empty_render_target(p_vkrs, resource_cmd->create_texture.width,
-                                           resource_cmd->create_texture.height,
-                                           resource_cmd->create_texture.image_usage, resource_cmd->p_uid);
+      res = mvk_create_empty_render_target(
+          p_vkrs, resource_cmd->create_texture.width, resource_cmd->create_texture.height,
+          resource_cmd->create_texture.image_usage, (mcr_texture_image **)resource_cmd->p_resource);
       VK_CHECK(res, "create_empty_render_target");
 
     } break;
     case RESOURCE_COMMAND_LOAD_FONT: {
       // printf("hrc-resource_cmd->font.height:%f\n", resource_cmd->font.height);
-      res = mvk_load_font(p_vkrs, resource_cmd->font.path, resource_cmd->font.height, resource_cmd->p_uid);
+      res = mvk_load_font(p_vkrs, resource_cmd->font.path, resource_cmd->font.height,
+                          (font_resource **)resource_cmd->p_resource);
       VK_CHECK(res, "load_font");
 
     } break;
     case RESOURCE_COMMAND_CREATE_RENDER_PROGRAM: {
       // printf("hrc-resource_cmd->font.height:%f\n", resource_cmd->font.height);
-      res = mvk_create_render_program(p_vkrs, &resource_cmd->create_render_program.create_info, resource_cmd->p_uid);
+      res = mvk_create_render_program(p_vkrs, &resource_cmd->create_render_program.create_info,
+                                      (mcr_render_program **)resource_cmd->p_resource);
       VK_CHECK(res, "load_font");
 
     } break;
-    case RESOURCE_COMMAND_LOAD_MESH: {
-      res = mvk_load_vertex_data(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
-                                 resource_cmd->load_mesh.release_original_data_on_copy, resource_cmd->p_uid);
+    case RESOURCE_COMMAND_LOAD_VERTEX_BUFFER: {
+      res = mvk_load_vertex_data_buffer(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
+                                        resource_cmd->load_mesh.release_original_data_on_copy,
+                                        (mcr_vertex_buffer **)resource_cmd->p_resource);
       VK_CHECK(res, "mvk_load_vertex_data_buffer");
 
     } break;
     case RESOURCE_COMMAND_LOAD_INDEX_BUFFER: {
       res = mvk_load_index_buffer(p_vkrs, resource_cmd->load_indices.p_data, resource_cmd->load_indices.data_count,
-                                  resource_cmd->load_indices.release_original_data_on_copy, resource_cmd->p_uid);
+                                  resource_cmd->load_indices.release_original_data_on_copy,
+                                  (mcr_index_buffer **)resource_cmd->p_resource);
       VK_CHECK(res, "mvk_load_index_buffer");
 
     } break;
@@ -301,59 +306,61 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   return res;
 }
 
-void mrt_obtain_texture_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid, texture_image **out_image)
-{
-  for (int f = 0; f < p_vkrs->textures.count; ++f) {
-    if (p_vkrs->textures.items[f]->resource_uid == resource_uid) {
-      *out_image = p_vkrs->textures.items[f];
-      return;
-    }
-  }
+// void mrt_obtain_texture_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid,
+//                                           mcr_texture_image **out_image)
+// {
+//   for (int f = 0; f < p_vkrs->textures.count; ++f) {
+//     if (p_vkrs->textures.items[f]->resource_uid == resource_uid) {
+//       *out_image = p_vkrs->textures.items[f];
+//       return;
+//     }
+//   }
 
-  *out_image = NULL;
-  MCerror(8420, "TODO could not find image-sampler with resource_uid=%u", resource_uid);
-}
+//   *out_image = NULL;
+//   MCerror(8420, "TODO could not find image-sampler with resource_uid=%u", resource_uid);
+// }
 
-void mrt_obtain_render_program_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid,
-                                                 render_program **out_render_program)
-{
-  for (int f = 0; f < p_vkrs->loaded_render_programs.count; ++f) {
-    if (p_vkrs->loaded_render_programs.items[f]->resource_uid == resource_uid) {
-      *out_render_program = p_vkrs->loaded_render_programs.items[f];
-      return;
-    }
-  }
+// void mrt_obtain_render_program_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid,
+//                                                  mcr_render_program **out_render_program)
+// {
+//   for (int f = 0; f < p_vkrs->loaded_render_programs.count; ++f) {
+//     if (p_vkrs->loaded_render_programs.items[f]->resource_uid == resource_uid) {
+//       *out_render_program = p_vkrs->loaded_render_programs.items[f];
+//       return;
+//     }
+//   }
 
-  *out_render_program = NULL;
-  MCerror(8420, "TODO could not find render program with resource_uid=%u", resource_uid);
-}
+//   *out_render_program = NULL;
+//   MCerror(8420, "TODO could not find render program with resource_uid=%u", resource_uid);
+// }
 
-void mrt_obtain_vertices_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid,
-                                           mrt_vertex_data **out_mesh)
-{
-  for (int f = 0; f < p_vkrs->loaded_vertex_data.count; ++f) {
-    if (p_vkrs->loaded_vertex_data.items[f]->resource_uid == resource_uid) {
-      *out_mesh = p_vkrs->loaded_vertex_data.items[f];
-      return;
-    }
-  }
+// void mrt_obtain_vertices_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid,
+//                                            mcr_vertex_buffer **out_mesh)
+// {
+//   for (int f = 0; f < p_vkrs->loaded_vertex_data.count; ++f) {
+//     if (p_vkrs->loaded_vertex_data.items[f]->resource_uid == resource_uid) {
+//       *out_mesh = p_vkrs->loaded_vertex_data.items[f];
+//       return;
+//     }
+//   }
 
-  *out_mesh = NULL;
-  MCerror(8420, "TODO could not find vertex data with resource_uid=%u", resource_uid);
-}
+//   *out_mesh = NULL;
+//   MCerror(8420, "TODO could not find vertex data with resource_uid=%u", resource_uid);
+// }
 
-void mrt_obtain_indices_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid, mrt_index_data **result)
-{
-  for (int f = 0; f < p_vkrs->loaded_index_data.count; ++f) {
-    if (p_vkrs->loaded_index_data.items[f]->resource_uid == resource_uid) {
-      *result = p_vkrs->loaded_index_data.items[f];
-      return;
-    }
-  }
+// void mrt_obtain_indices_with_resource_uid(vk_render_state *p_vkrs, unsigned int resource_uid, mcr_index_buffer
+// **result)
+// {
+//   for (int f = 0; f < p_vkrs->loaded_index_data.count; ++f) {
+//     if (p_vkrs->loaded_index_data.items[f]->resource_uid == resource_uid) {
+//       *result = p_vkrs->loaded_index_data.items[f];
+//       return;
+//     }
+//   }
 
-  *result = NULL;
-  MCerror(8420, "TODO could not find index data with resource_uid=%u", resource_uid);
-}
+//   *result = NULL;
+//   MCerror(8420, "TODO could not find index data with resource_uid=%u", resource_uid);
+// }
 
 VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer command_buffer,
                                   image_render_details *image_render, element_render_command *cmd,
@@ -361,15 +368,14 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
 {
   VkResult res;
 
-  if (!cmd->textured_rect_info.texture_uid) {
+  if (!cmd->textured_rect_info.texture) {
     // Ignore call
-    printf("Ignored mrt_render_textured_quad call because texture resource uid == 0\n");
+    printf("Ignored mrt_render_textured_quad call because texture was NULL\n");
     return VK_SUCCESS;
   }
 
   // Find the texture
-  texture_image *image_sampler = NULL;
-  mrt_obtain_texture_with_resource_uid(p_vkrs, cmd->textured_rect_info.texture_uid, &image_sampler);
+  mcr_texture_image *image_sampler = cmd->textured_rect_info.texture;
 
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
@@ -487,21 +493,13 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
 
   // printf("mrt-0\n");
   // Get the font image
-  font_resource *font = NULL;
-  for (int f = 0; f < p_vkrs->loaded_fonts.count; ++f) {
-    if (p_vkrs->loaded_fonts.fonts[f].resource_uid == cmd->print_text.font_resource_uid) {
-      font = &p_vkrs->loaded_fonts.fonts[f];
-      break;
-    }
-  }
-
+  font_resource *font = cmd->print_text.font;
   if (!font) {
-    printf("Could not find requested font uid=%u\n", cmd->print_text.font_resource_uid);
+    printf("Could not render text because font was NULL\n");
     return VK_ERROR_UNKNOWN;
   }
 
-  texture_image *font_image;
-  mrt_obtain_texture_with_resource_uid(p_vkrs, font->resource_uid, &font_image);
+  mcr_texture_image *font_image = font->texture;
 
   float align_x = cmd->x;
   float align_y = cmd->y;
@@ -699,218 +697,213 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   return res;
 }
 
-VkResult mrt_render_indexed_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer,
-                                 image_render_details *image_render, element_render_command *cmd,
-                                 mrt_sequence_copy_buffer *copy_buffer)
+// VkResult mrt_render_indexed_mesh(vk_render_state *p_vkrs, VkCommandBuffer command_buffer,
+//                                  image_render_details *image_render, element_render_command *cmd,
+//                                  mrt_sequence_copy_buffer *copy_buffer)
+// {
+//   VkResult res;
+
+//   // Get the resources
+//   mcr_vertex_buffer *vertices
+//   mrt_obtain_vertices_with_resource_uid(p_vkrs, cmd->indexed_mesh.vertex_buffer, &vertices);
+
+//   mcr_index_buffer *indices;
+//   mrt_obtain_indices_with_resource_uid(p_vkrs, cmd->indexed_mesh.index_buffer, &indices);
+
+//   // Find the texture
+//   mcr_texture_image *image_sampler = NULL;
+//   mrt_obtain_texture_with_resource_uid(p_vkrs, cmd->indexed_mesh.texture_uid, &image_sampler);
+
+//   // printf("rim: %p %p %p\n", vertices, indices, image_sampler);
+
+//   // Matrix
+//   mat4 *vpc = (mat4 *)&copy_buffer->data[copy_buffer->index];
+//   copy_buffer->index += sizeof(mat4);
+//   {
+//     // Construct the Vulkan View/Projection/Clip for the render target image
+//     mat4 view;
+//     mat4 proj;
+//     mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
+
+//     global_root_data *global_data;
+//     obtain_midge_global_root(&global_data);
+
+//     glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
+//     float fovy = 72.f / 180.f * 3.1459f;
+//     glm_perspective(fovy, (float)image_render->image_width / image_render->image_height, 0.01f, 1000.f, (vec4
+//     *)&proj);
+//     // glm_ortho_default((float)image_render->image_width / image_render->image_height, (vec4 *)&proj);
+
+//     // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
+//     mat4 world;
+//     glm_mat4_identity((vec4 *)&world);
+//     vec3 axis = {0.f, 1.f, 0.f};
+//     glm_rotate((vec4 *)&world, 180.f, axis);
+//     axis[1] = 0.f;
+//     axis[2] = 1.f;
+//     glm_rotate((vec4 *)&world, 180.f, axis);
+//     axis[0] = 1.f;
+//     axis[2] = 0.f;
+//     glm_rotate((vec4 *)&world, -90.f, axis);
+//     glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
+//     // }
+//     // else {
+//     // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
+//     // }
+//     // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+//     //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
+//     // }
+//     // else {
+//     glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
+//     // }
+//     // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+//     glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+//     // }
+//     // else {
+//     // glm_mat4_mul((vec4 *)vpc, (vec4 *)&proj, (vec4 *)vpc);
+//     // }
+
+//     // glm_mat4_mul((vec4 *)vpc, (vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc);
+//     // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
+//     // glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
+
+//     // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
+//   }
+//   // // Bounds check
+//   // if (cmd->colored_rect_info.width == 0 || cmd->x >= image_render->image_width ||
+//   //     cmd->colored_rect_info.height == 0 || cmd->y >= image_render->image_height)
+//   //   return VK_SUCCESS;
+
+//   // // printf("mrt_rcq-0 %u %u\n", cmd->colored_rect_info.width, cmd->colored_rect_info.height);
+
+//   // // Setup viewport and clip
+//   set_viewport_cmd(command_buffer, 0.f, 0.f, (float)image_render->image_width, (float)image_render->image_height);
+//   set_scissor_cmd(command_buffer, (int32_t)0, (int32_t)0, (uint32_t)image_render->image_width,
+//                   (uint32_t)image_render->image_height);
+
+//   // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->colored_rect_info.width, cmd->colored_rect_info.height);
+
+//   // Vertex Uniform Buffer Object
+//   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
+//   copy_buffer->index += sizeof(vert_data_scale_offset);
+//   VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+
+//   float scale_multiplier =
+//       1.f / (float)(image_render->image_width < image_render->image_height ? image_render->image_width
+//                                                                            : image_render->image_height);
+//   vert_ubo_data->scale.x = 2.f * cmd->colored_rect_info.width * scale_multiplier;
+//   vert_ubo_data->scale.y = 2.f * cmd->colored_rect_info.height * scale_multiplier;
+//   vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(image_render->image_width) +
+//                             1.0f * (float)cmd->colored_rect_info.width / (float)(image_render->image_width);
+//   vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(image_render->image_height) +
+//                             1.0f * (float)cmd->colored_rect_info.height / (float)(image_render->image_height);
+
+//   // printf("mrt_rcq-1\n");
+//   // Fragment Data
+//   render_color *frag_ubo_data = (render_color *)&copy_buffer->data[copy_buffer->index];
+//   copy_buffer->index += sizeof(render_color);
+//   VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+
+//   memcpy(frag_ubo_data, &cmd->colored_rect_info.color, sizeof(render_color));
+
+//   // Allocate the descriptor set from the pool.
+//   VkDescriptorSetAllocateInfo setAllocInfo = {};
+//   setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+//   setAllocInfo.pNext = NULL;
+//   setAllocInfo.descriptorPool = p_vkrs->descriptor_pool;
+//   setAllocInfo.descriptorSetCount = 1;
+//   setAllocInfo.pSetLayouts = &p_vkrs->mesh_prog.descriptor_layout;
+
+//   unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
+//   res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
+//   VK_CHECK(res, "vkAllocateDescriptorSets");
+
+//   VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
+//   p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
+
+//   // Queue Buffer and Descriptor Writes
+//   const unsigned int MAX_DESC_SET_WRITES = 3;
+//   VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
+//   VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
+//   int buffer_info_index = 0;
+//   int write_index = 0;
+
+//   VkDescriptorBufferInfo *mvp_info = &buffer_infos[buffer_info_index++];
+//   res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), vpc, mvp_info);
+//   VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
+
+//   VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
+//   res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
+//   VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
+
+//   // Global Vertex Shader Uniform Buffer
+//   VkWriteDescriptorSet *write = &writes[write_index++];
+//   write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//   write->pNext = NULL;
+//   write->dstSet = desc_set;
+//   write->descriptorCount = 1;
+//   write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//   write->pBufferInfo = mvp_info;
+//   write->dstArrayElement = 0;
+//   write->dstBinding = 0;
+
+//   // Element Vertex Shader Uniform Buffer
+//   write = &writes[write_index++];
+//   write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//   write->pNext = NULL;
+//   write->dstSet = desc_set;
+//   write->descriptorCount = 1;
+//   write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//   write->pBufferInfo = vert_ubo_info;
+//   write->dstArrayElement = 0;
+//   write->dstBinding = 1;
+
+//   VkDescriptorImageInfo image_sampler_info = {};
+//   image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//   image_sampler_info.imageView = image_sampler->view;
+//   image_sampler_info.sampler = image_sampler->sampler;
+
+//   // Element Fragment Shader Combined Image Sampler
+//   write = &writes[write_index++];
+//   write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//   write->pNext = NULL;
+//   write->dstSet = desc_set;
+//   write->descriptorCount = 1;
+//   write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+//   write->pImageInfo = &image_sampler_info;
+//   write->dstArrayElement = 0;
+//   write->dstBinding = 2;
+
+//   // // printf("mrt_rcq-3\n");
+//   vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
+
+//   vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline_layout, 0, 1,
+//                           &desc_set, 0, NULL);
+
+//   vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline);
+
+//   vkCmdBindIndexBuffer(command_buffer, indices->buf, 0, VK_INDEX_TYPE_UINT32);
+
+//   const VkDeviceSize offsets[1] = {0};
+//   vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertices->buf, offsets);
+//   // vkCmdDraw(command_buffer, 3 * 2 * 6, 1, 0, 0);
+//   vkCmdDrawIndexed(command_buffer, indices->count, 1, 0, 0, 0);
+
+//   return res;
+// }
+
+VkResult mrt_render_render_program(vk_render_state *p_vkrs, VkCommandBuffer command_buffer,
+                                   image_render_details *image_render, element_render_command *cmd,
+                                   mrt_sequence_copy_buffer *copy_buffer)
 {
   VkResult res;
 
   // Get the resources
-  mrt_vertex_data *vertices;
-  mrt_obtain_vertices_with_resource_uid(p_vkrs, cmd->indexed_mesh.vertex_buffer, &vertices);
+  mcr_render_program *render_prog = cmd->render_program.program;
 
-  mrt_index_data *indices;
-  mrt_obtain_indices_with_resource_uid(p_vkrs, cmd->indexed_mesh.index_buffer, &indices);
-
-  // Find the texture
-  texture_image *image_sampler = NULL;
-  mrt_obtain_texture_with_resource_uid(p_vkrs, cmd->indexed_mesh.texture_uid, &image_sampler);
-
-  // printf("rim: %p %p %p\n", vertices, indices, image_sampler);
-
-  // Matrix
-  mat4 *vpc = (mat4 *)&copy_buffer->data[copy_buffer->index];
-  copy_buffer->index += sizeof(mat4);
-  {
-    // Construct the Vulkan View/Projection/Clip for the render target image
-    mat4 view;
-    mat4 proj;
-    mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
-
-    global_root_data *global_data;
-    obtain_midge_global_root(&global_data);
-
-    glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
-    float fovy = 72.f / 180.f * 3.1459f;
-    glm_perspective(fovy, (float)image_render->image_width / image_render->image_height, 0.01f, 1000.f, (vec4 *)&proj);
-    // glm_ortho_default((float)image_render->image_width / image_render->image_height, (vec4 *)&proj);
-
-    // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
-    mat4 world;
-    glm_mat4_identity((vec4 *)&world);
-    vec3 axis = {0.f, 1.f, 0.f};
-    glm_rotate((vec4 *)&world, 180.f, axis);
-    axis[1] = 0.f;
-    axis[2] = 1.f;
-    glm_rotate((vec4 *)&world, 180.f, axis);
-    axis[0] = 1.f;
-    axis[2] = 0.f;
-    glm_rotate((vec4 *)&world, -90.f, axis);
-    glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
-    // }
-    // else {
-    // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
-    // }
-    // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
-    //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
-    // }
-    // else {
-    glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
-    // }
-    // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
-    glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-    // }
-    // else {
-    // glm_mat4_mul((vec4 *)vpc, (vec4 *)&proj, (vec4 *)vpc);
-    // }
-
-    // glm_mat4_mul((vec4 *)vpc, (vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc);
-    // glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
-    // glm_mat4_mul((vec4 *)&clip, (vec4 *)vpc, (vec4 *)vpc);
-
-    // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
-  }
-  // // Bounds check
-  // if (cmd->colored_rect_info.width == 0 || cmd->x >= image_render->image_width ||
-  //     cmd->colored_rect_info.height == 0 || cmd->y >= image_render->image_height)
-  //   return VK_SUCCESS;
-
-  // // printf("mrt_rcq-0 %u %u\n", cmd->colored_rect_info.width, cmd->colored_rect_info.height);
-
-  // // Setup viewport and clip
-  set_viewport_cmd(command_buffer, 0.f, 0.f, (float)image_render->image_width, (float)image_render->image_height);
-  set_scissor_cmd(command_buffer, (int32_t)0, (int32_t)0, (uint32_t)image_render->image_width,
-                  (uint32_t)image_render->image_height);
-
-  // printf("%u %u %u %u\n", cmd->x, cmd->y, cmd->colored_rect_info.width, cmd->colored_rect_info.height);
-
-  // Vertex Uniform Buffer Object
-  vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
-  copy_buffer->index += sizeof(vert_data_scale_offset);
-  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
-
-  float scale_multiplier =
-      1.f / (float)(image_render->image_width < image_render->image_height ? image_render->image_width
-                                                                           : image_render->image_height);
-  vert_ubo_data->scale.x = 2.f * cmd->colored_rect_info.width * scale_multiplier;
-  vert_ubo_data->scale.y = 2.f * cmd->colored_rect_info.height * scale_multiplier;
-  vert_ubo_data->offset.x = -1.0f + 2.0f * (float)cmd->x / (float)(image_render->image_width) +
-                            1.0f * (float)cmd->colored_rect_info.width / (float)(image_render->image_width);
-  vert_ubo_data->offset.y = -1.0f + 2.0f * (float)cmd->y / (float)(image_render->image_height) +
-                            1.0f * (float)cmd->colored_rect_info.height / (float)(image_render->image_height);
-
-  // printf("mrt_rcq-1\n");
-  // Fragment Data
-  render_color *frag_ubo_data = (render_color *)&copy_buffer->data[copy_buffer->index];
-  copy_buffer->index += sizeof(render_color);
-  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
-
-  memcpy(frag_ubo_data, &cmd->colored_rect_info.color, sizeof(render_color));
-
-  // Allocate the descriptor set from the pool.
-  VkDescriptorSetAllocateInfo setAllocInfo = {};
-  setAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  setAllocInfo.pNext = NULL;
-  setAllocInfo.descriptorPool = p_vkrs->descriptor_pool;
-  setAllocInfo.descriptorSetCount = 1;
-  setAllocInfo.pSetLayouts = &p_vkrs->mesh_prog.descriptor_layout;
-
-  unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
-  res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
-  VK_CHECK(res, "vkAllocateDescriptorSets");
-
-  VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
-  p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
-
-  // Queue Buffer and Descriptor Writes
-  const unsigned int MAX_DESC_SET_WRITES = 3;
-  VkWriteDescriptorSet writes[MAX_DESC_SET_WRITES];
-  VkDescriptorBufferInfo buffer_infos[MAX_DESC_SET_WRITES];
-  int buffer_info_index = 0;
-  int write_index = 0;
-
-  VkDescriptorBufferInfo *mvp_info = &buffer_infos[buffer_info_index++];
-  res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(mat4), vpc, mvp_info);
-  VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
-
-  VkDescriptorBufferInfo *vert_ubo_info = &buffer_infos[buffer_info_index++];
-  res = mrt_write_desc_and_queue_render_data(p_vkrs, sizeof(vert_data_scale_offset), vert_ubo_data, vert_ubo_info);
-  VK_CHECK(res, "mrt_write_desc_and_queue_render_data");
-
-  // Global Vertex Shader Uniform Buffer
-  VkWriteDescriptorSet *write = &writes[write_index++];
-  write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  write->pNext = NULL;
-  write->dstSet = desc_set;
-  write->descriptorCount = 1;
-  write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  write->pBufferInfo = mvp_info;
-  write->dstArrayElement = 0;
-  write->dstBinding = 0;
-
-  // Element Vertex Shader Uniform Buffer
-  write = &writes[write_index++];
-  write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  write->pNext = NULL;
-  write->dstSet = desc_set;
-  write->descriptorCount = 1;
-  write->descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  write->pBufferInfo = vert_ubo_info;
-  write->dstArrayElement = 0;
-  write->dstBinding = 1;
-
-  VkDescriptorImageInfo image_sampler_info = {};
-  image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  image_sampler_info.imageView = image_sampler->view;
-  image_sampler_info.sampler = image_sampler->sampler;
-
-  // Element Fragment Shader Combined Image Sampler
-  write = &writes[write_index++];
-  write->sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  write->pNext = NULL;
-  write->dstSet = desc_set;
-  write->descriptorCount = 1;
-  write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  write->pImageInfo = &image_sampler_info;
-  write->dstArrayElement = 0;
-  write->dstBinding = 2;
-
-  // // printf("mrt_rcq-3\n");
-  vkUpdateDescriptorSets(p_vkrs->device, write_index, writes, 0, NULL);
-
-  vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline_layout, 0, 1,
-                          &desc_set, 0, NULL);
-
-  vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, p_vkrs->mesh_prog.pipeline);
-
-  vkCmdBindIndexBuffer(command_buffer, indices->buf, 0, VK_INDEX_TYPE_UINT32);
-
-  const VkDeviceSize offsets[1] = {0};
-  vkCmdBindVertexBuffers(command_buffer, 0, 1, &vertices->buf, offsets);
-  // vkCmdDraw(command_buffer, 3 * 2 * 6, 1, 0, 0);
-  vkCmdDrawIndexed(command_buffer, indices->count, 1, 0, 0, 0);
-
-  return res;
-}
-
-VkResult mrt_render_program(vk_render_state *p_vkrs, VkCommandBuffer command_buffer, image_render_details *image_render,
-                            element_render_command *cmd, mrt_sequence_copy_buffer *copy_buffer)
-{
-  VkResult res;
-
-  // Get the resources
-  render_program *render_prog;
-  mrt_obtain_render_program_with_resource_uid(p_vkrs, cmd->render_program.program_uid, &render_prog);
-
-  mrt_vertex_data *vertices;
-  mrt_obtain_vertices_with_resource_uid(p_vkrs, cmd->render_program.vertex_buffer, &vertices);
-
-  mrt_index_data *indices;
-  mrt_obtain_indices_with_resource_uid(p_vkrs, cmd->render_program.index_buffer, &indices);
-
-  // Find the texture
-  texture_image *image_sampler = NULL;
-  mrt_obtain_texture_with_resource_uid(p_vkrs, cmd->render_program.texture_uid, &image_sampler);
+  mcr_vertex_buffer *vertices = cmd->render_program.data->vertices;
+  mcr_index_buffer *indices = cmd->render_program.data->indices;
+  mcr_texture_image *image_sampler = (mcr_texture_image *)cmd->render_program.data->input_buffers[1];
 
   // printf("rim: %p %p %p\n", vertices, indices, image_sampler);
 
@@ -1146,16 +1139,16 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
       VK_CHECK(res, "mrt_render_text");
     } break;
 
-    case RENDER_COMMAND_INDEXED_MESH: {
-      // printf("RENDER_COMMAND_INDEXED_MESH\n");
-      res = mrt_render_indexed_mesh(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
-      VK_CHECK(res, "mrt_render_indexed_mesh");
-    } break;
+      // case RENDER_COMMAND_INDEXED_MESH: {
+      //   // printf("RENDER_COMMAND_INDEXED_MESH\n");
+      //   res = mrt_render_indexed_mesh(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
+      //   VK_CHECK(res, "mrt_render_indexed_mesh");
+      // } break;
 
     case RENDER_COMMAND_PROGRAM: {
       // printf("RENDER_COMMAND_PROGRAM\n");
-      res = mrt_render_program(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
-      VK_CHECK(res, "mrt_render_program");
+      res = mrt_render_render_program(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
+      VK_CHECK(res, "mrt_render_render_program");
     } break;
 
     default:
@@ -1319,8 +1312,7 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       }
 
       // Obtain the target image
-      texture_image *target_image;
-      mrt_obtain_texture_with_resource_uid(p_vkrs, image_render->data.target_image.image_uid, &target_image);
+      mcr_texture_image *target_image = image_render->data.target_image.image;
 
       if (!target_image->framebuffer) {
         MCerror(1079, "target %u not specified as render target", target_image->resource_uid);

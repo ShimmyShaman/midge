@@ -269,6 +269,7 @@ typedef struct global_root_data {
 
   struct {
     unsigned int width, height;
+    void *present_image;
   } screen;
 
   struct mci_input_state *input_state;
@@ -277,7 +278,6 @@ typedef struct global_root_data {
   frame_time *elapsed;
 
   struct mcu_ui_state *ui_state;
-  unsigned int present_image_resource_uid;
 
   // struct {
   //   pthread_mutex_t mutex;

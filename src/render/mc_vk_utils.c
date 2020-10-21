@@ -237,14 +237,14 @@ VkResult mvk_init_resources(vk_render_state *p_vkrs)
   return res;
 }
 
-void mvk_destroy_sampled_image(vk_render_state *p_vkrs, texture_image *texture_image)
+void mvk_destroy_sampled_image(vk_render_state *p_vkrs, mcr_texture_image *mcr_texture_image)
 {
-  vkDestroySampler(p_vkrs->device, texture_image->sampler, NULL);
-  vkDestroyImageView(p_vkrs->device, texture_image->view, NULL);
-  vkDestroyImage(p_vkrs->device, texture_image->image, NULL);
-  vkFreeMemory(p_vkrs->device, texture_image->memory, NULL);
-  if (texture_image->framebuffer)
-    vkDestroyFramebuffer(p_vkrs->device, texture_image->framebuffer, NULL);
+  vkDestroySampler(p_vkrs->device, mcr_texture_image->sampler, NULL);
+  vkDestroyImageView(p_vkrs->device, mcr_texture_image->view, NULL);
+  vkDestroyImage(p_vkrs->device, mcr_texture_image->image, NULL);
+  vkFreeMemory(p_vkrs->device, mcr_texture_image->memory, NULL);
+  if (mcr_texture_image->framebuffer)
+    vkDestroyFramebuffer(p_vkrs->device, mcr_texture_image->framebuffer, NULL);
 }
 
 void mvk_destroy_resources(vk_render_state *p_vkrs)
@@ -404,11 +404,11 @@ VkResult mvk_copyBufferToImage(vk_render_state *p_vkrs, VkBuffer buffer, VkImage
 
 VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, const int texHeight, const int texChannels,
                                 mvk_image_sampler_usage image_usage, const unsigned char *const pixels,
-                                texture_image **out_image)
+                                mcr_texture_image **out_image)
 {
   VkResult res;
 
-  texture_image *image_sampler = (texture_image *)malloc(sizeof(texture_image));
+  mcr_texture_image *image_sampler = (mcr_texture_image *)malloc(sizeof(mcr_texture_image));
   VK_ASSERT(image_sampler, "malloc error 5407");
 
   image_sampler->resource_uid = p_vkrs->resource_uid_counter++;
@@ -605,7 +605,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   return res;
 }
 
-VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, uint *resource_uid)
+VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, mcr_texture_image **p_resource)
 {
   VkResult res;
 
@@ -617,22 +617,22 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
     return VK_ERROR_UNKNOWN;
   }
 
-  texture_image *texture;
+  mcr_texture_image *texture;
   res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, MVK_IMAGE_USAGE_READ_ONLY, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
-  *resource_uid = texture->resource_uid;
   append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   stbi_image_free(pixels);
 
+  *p_resource = texture;
   printf("loaded %s> width:%i height:%i channels:%i\n", filepath, texWidth, texHeight, texChannels);
 
   return res;
 }
 
 VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height,
-                                        mvk_image_sampler_usage image_usage, uint *resource_uid)
+                                        mvk_image_sampler_usage image_usage, mcr_texture_image **p_resource)
 {
   VkResult res;
 
@@ -647,21 +647,22 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
     return VK_ERROR_UNKNOWN;
   }
 
-  texture_image *texture;
+  mcr_texture_image *texture;
   res = mvk_load_image_sampler(p_vkrs, width, height, texChannels, image_usage, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
-  *resource_uid = texture->resource_uid;
   append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   stbi_image_free(pixels);
 
+  *p_resource = texture;
   // printf("generated empty texture> width:%i height:%i channels:%i\n", width, height, texChannels);
 
   return res;
 }
 
-VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, float font_height, uint *resource_uid)
+VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, float font_height,
+                       font_resource **p_resource)
 {
   VkResult res;
 
@@ -689,12 +690,12 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
     }
 
     for (int i = 0; i < p_vkrs->loaded_fonts.count; ++i) {
-      if (p_vkrs->loaded_fonts.fonts[i].height == font_height &&
-          !strcmp(p_vkrs->loaded_fonts.fonts[i].name, font_name)) {
-        *resource_uid = p_vkrs->loaded_fonts.fonts[i].resource_uid;
+      if (p_vkrs->loaded_fonts.fonts[i]->height == font_height &&
+          !strcmp(p_vkrs->loaded_fonts.fonts[i]->name, font_name)) {
+        *p_resource = p_vkrs->loaded_fonts.fonts[i];
 
         printf("using cached font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height,
-               *resource_uid);
+               (*p_resource)->texture->resource_uid);
         free(font_name);
 
         return VK_SUCCESS;
@@ -723,31 +724,22 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
     }
   }
 
-  texture_image *texture;
+  mcr_texture_image *texture;
   res = mvk_load_image_sampler(p_vkrs, texWidth, texHeight, texChannels, MVK_IMAGE_USAGE_READ_ONLY, pixels, &texture);
   VK_CHECK(res, "mvk_load_image_sampler");
 
-  *resource_uid = texture->resource_uid;
   append_to_collection((void ***)&p_vkrs->textures.items, &p_vkrs->textures.alloc, &p_vkrs->textures.count, texture);
 
   // Font is a common resource -- cache so multiple loads reference the same resource uid
   {
-    if (p_vkrs->loaded_fonts.allocated < p_vkrs->loaded_fonts.count + 1) {
-      int new_allocated = p_vkrs->loaded_fonts.allocated + 4 + p_vkrs->loaded_fonts.allocated / 4;
-      font_resource *new_ary = (font_resource *)malloc(sizeof(font_resource) * new_allocated);
+    font_resource *font = (font_resource *)malloc(sizeof(font_resource));
+    append_to_collection((void ***)&p_vkrs->loaded_fonts.fonts, &p_vkrs->loaded_fonts.capacity,
+                         &p_vkrs->loaded_fonts.count, font);
 
-      if (p_vkrs->loaded_fonts.allocated) {
-        memcpy(new_ary, p_vkrs->loaded_fonts.fonts, sizeof(font_resource) * p_vkrs->loaded_fonts.allocated);
-        free(p_vkrs->loaded_fonts.fonts);
-      }
-      p_vkrs->loaded_fonts.fonts = new_ary;
-      p_vkrs->loaded_fonts.allocated = new_allocated;
-    }
-
-    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].name = font_name;
-    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].height = font_height;
-    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].resource_uid = *resource_uid;
-    p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].char_data = cdata;
+    font->name = font_name;
+    font->height = font_height;
+    font->texture = texture;
+    font->char_data = cdata;
     {
       float lowest = 500;
       for (int ci = 0; ci < 96; ++ci) {
@@ -764,27 +756,28 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
         // q.s1,
         //        q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, lowest);
       }
-      p_vkrs->loaded_fonts.fonts[p_vkrs->loaded_fonts.count].draw_vertical_offset = 300 - lowest;
+      font->draw_vertical_offset = 300 - lowest;
     }
-    ++p_vkrs->loaded_fonts.count;
-  }
 
-  printf("generated font texture> name:%s height:%.2f resource_uid:%u\n", font_name, font_height, *resource_uid);
+    *p_resource = font;
+    printf("generated font resource> name:%s height:%.2f resource_uid:%u\n", font_name, font_height,
+           font->texture->resource_uid);
+  }
 
   return res;
 }
 
-VkResult mvk_load_vertex_data(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
-                              bool release_original_data_on_copy, uint *resource_uid)
+VkResult mvk_load_vertex_data_buffer(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
+                                     bool release_original_data_on_copy, mcr_vertex_buffer **p_resource)
 {
-  // printf("mvk_load_vertex_data:%p (%u)\n", p_data, data_count);
+  // printf("mvk_load_vertex_data_buffer:%p (%u)\n", p_data, data_count);
 
   VkResult res = VK_SUCCESS;
 
   // vec3 mesh_data[] = {{-0.5f, -0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
   //                     {0.5f, -0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},  {0.5f, 0.5f, -0.5f},  {0.5f, 0.5f, 0.5f}};
 
-  mrt_vertex_data *mesh = (mrt_vertex_data *)malloc(sizeof(mrt_vertex_data));
+  mcr_vertex_buffer *mesh = (mcr_vertex_buffer *)malloc(sizeof(mcr_vertex_buffer));
   mesh->resource_uid = p_vkrs->resource_uid_counter++;
 
   const int data_size_in_bytes = sizeof(float) * data_count;
@@ -838,8 +831,8 @@ VkResult mvk_load_vertex_data(vk_render_state *p_vkrs, float *p_data, unsigned i
   append_to_collection((void ***)&p_vkrs->loaded_vertex_data.items, &p_vkrs->loaded_vertex_data.alloc,
                        &p_vkrs->loaded_vertex_data.count, mesh);
 
-  *resource_uid = mesh->resource_uid;
-  printf("vertex_data resource %u loaded\n", *resource_uid);
+  *p_resource = mesh;
+  printf("vertex_data resource %u loaded\n", mesh->resource_uid);
 
   if (release_original_data_on_copy) {
     free(p_data);
@@ -849,13 +842,12 @@ VkResult mvk_load_vertex_data(vk_render_state *p_vkrs, float *p_data, unsigned i
 }
 
 VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, unsigned int data_count,
-                               bool release_original_data_on_copy, unsigned int *resource_uid)
+                               bool release_original_data_on_copy, mcr_index_buffer **p_resource)
 {
   // printf("mvk_load_index_buffer:%p (%u)\n", p_data, data_count);
-
   VkResult res = VK_SUCCESS;
 
-  mrt_index_data *index_buffer = (mrt_index_data *)malloc(sizeof(mrt_index_data));
+  mcr_index_buffer *index_buffer = (mcr_index_buffer *)malloc(sizeof(mcr_index_buffer));
   index_buffer->resource_uid = p_vkrs->resource_uid_counter++;
   index_buffer->count = data_count;
 
@@ -910,8 +902,8 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, un
   append_to_collection((void ***)&p_vkrs->loaded_index_data.items, &p_vkrs->loaded_index_data.alloc,
                        &p_vkrs->loaded_index_data.count, index_buffer);
 
-  *resource_uid = index_buffer->resource_uid;
-  printf("index_data resource %u loaded\n", *resource_uid);
+  *p_resource = index_buffer;
+  printf("index_data resource %u loaded\n", index_buffer->resource_uid);
 
   if (release_original_data_on_copy) {
     free(p_data);
@@ -921,41 +913,35 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, un
 }
 
 VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_create_info *create_info,
-                                   unsigned int *resource_uid)
+                                   mcr_render_program **out_render_program)
 {
   VkResult res = VK_SUCCESS;
 
-  render_program *render_prog = (render_program *)malloc(sizeof(render_program));
+  mcr_render_program *render_prog = (mcr_render_program *)malloc(sizeof(mcr_render_program));
   render_prog->resource_uid = p_vkrs->resource_uid_counter++;
 
   // CreateDescriptorSetLayout
   {
-    const int binding_count = 3;
-    VkDescriptorSetLayoutBinding layout_bindings[binding_count];
-    layout_bindings[0].binding = 0;
-    layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layout_bindings[0].descriptorCount = 1;
-    layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    layout_bindings[0].pImmutableSamplers = NULL;
+    // const int binding_count = 3;
+    VkDescriptorSetLayoutBinding layout_bindings[create_info->buffer_binding_count];
+    for (int i = 0; i < create_info->buffer_binding_count; ++i) {
+      printf("buffer-bindings[%i]={%i,%i}\n", i, create_info->buffer_bindings[i].type,
+             create_info->buffer_bindings[i].stage_bit);
 
-    layout_bindings[1].binding = 1;
-    layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    layout_bindings[1].descriptorCount = 1;
-    layout_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    layout_bindings[1].pImmutableSamplers = NULL;
-
-    layout_bindings[2].binding = 2;
-    layout_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    layout_bindings[2].descriptorCount = 1;
-    layout_bindings[2].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-    layout_bindings[2].pImmutableSamplers = NULL;
+      layout_bindings[i].binding = i;
+      layout_bindings[i].descriptorType = create_info->buffer_bindings[i].type;
+      layout_bindings[i].descriptorCount = 1;
+      layout_bindings[i].stageFlags = create_info->buffer_bindings[i].stage_bit;
+      layout_bindings[i].pImmutableSamplers = NULL;
+      layout_bindings[i].binding = i;
+    }
 
     // Next take layout bindings and use them to create a descriptor set layout
     VkDescriptorSetLayoutCreateInfo layout_create_info = {};
     layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layout_create_info.pNext = NULL;
     layout_create_info.flags = 0;
-    layout_create_info.bindingCount = 3;
+    layout_create_info.bindingCount = create_info->buffer_binding_count;
     layout_create_info.pBindings = layout_bindings;
 
     res = vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &render_prog->descriptor_layout);
@@ -1026,24 +1012,25 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
   }
 
   // Vertex Bindings
+  // TODO -- multiple bindings ?? atm just the one binding will suffice
   VkVertexInputBindingDescription bindingDescription = {};
-  const int VERTEX_ATTRIBUTE_COUNT = 2;
-  VkVertexInputAttributeDescription attributeDescriptions[VERTEX_ATTRIBUTE_COUNT];
+  VkVertexInputAttributeDescription attributeDescriptions[create_info->input_binding_count];
   {
+    unsigned int offset_in_bytes = 0U;
+    for (int i = 0; i < create_info->input_binding_count; ++i) {
+      printf("input-bindings[%i]={%i,%i}\n", i, create_info->input_bindings[i].format,
+             create_info->input_bindings[i].size_in_bytes);
+      attributeDescriptions[i].binding = 0;
+      attributeDescriptions[i].location = i;
+      attributeDescriptions[i].format = create_info->input_bindings[i].format;
+      attributeDescriptions[i].offset = offset_in_bytes;
+
+      offset_in_bytes += create_info->input_bindings[i].size_in_bytes;
+    }
+
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(float) * 5;
-    // printf("sizeof(vec2)=%zu\n", sizeof(vec2));
+    bindingDescription.stride = offset_in_bytes;
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[0].offset = 0;                          // offsetof(textured_image_vertex, position);
-
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT; // p_vkrs->format; // VK_FORMAT_R32G32_SFLOAT;
-    attributeDescriptions[1].offset = sizeof(float) * 3;       // offsetof(textured_image_vertex, position);
   }
 
   {
@@ -1051,7 +1038,7 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
     vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.vertexAttributeDescriptionCount = VERTEX_ATTRIBUTE_COUNT;
+    vertexInputInfo.vertexAttributeDescriptionCount = create_info->input_binding_count;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
 
@@ -1158,8 +1145,7 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    res =
-        vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &render_prog->pipeline);
+    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &render_prog->pipeline);
     VK_CHECK(res, "vkCreateGraphicsPipelines :: Failed to create pipeline");
   }
 
@@ -1171,8 +1157,9 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
   append_to_collection((void ***)&p_vkrs->loaded_render_programs.items, &p_vkrs->loaded_render_programs.alloc,
                        &p_vkrs->loaded_render_programs.count, render_prog);
 
-  *resource_uid = render_prog->resource_uid;
-  printf("render_prog resource %u loaded\n", *resource_uid);
+  // Set
+  *out_render_program = render_prog;
+  printf("render_prog resource %u loaded\n", render_prog->resource_uid);
 
   return res;
 }

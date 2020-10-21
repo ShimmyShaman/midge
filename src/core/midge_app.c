@@ -231,7 +231,7 @@ void mca_render_presentation()
   // global_data->screen.height);
   image_render->image_width = global_data->screen.width;
   image_render->image_height = global_data->screen.height;
-  image_render->data.target_image.image_uid = global_data->present_image_resource_uid;
+  image_render->data.target_image.image = (mcr_texture_image *)global_data->screen.present_image;
 
   for (int a = 0; a < global_data->global_node->children->count; ++a) {
     mc_node *child = global_data->global_node->children->items[a];

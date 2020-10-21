@@ -20,7 +20,7 @@ void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *stat
       sequence->clear_color = COLOR_TRANSPARENT;
       sequence->image_width = rendered_line->width;
       sequence->image_height = rendered_line->height;
-      sequence->data.target_image.image_uid = rendered_line->image_resource_uid;
+      // sequence->data.target_image.image_uid = rendered_line->image_resource_uid;
 
       // Move through the rtf
       int i = 0;
@@ -123,7 +123,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     sequence->image_width = state->status_bar.bounds.width;
     sequence->image_height = state->status_bar.bounds.height;
     sequence->clear_color = COLOR_NEARLY_BLACK;
-    sequence->data.target_image.image_uid = state->status_bar.image_resource_uid;
+    // sequence->data.target_image.image_uid = state->status_bar.image_resource_uid;
 
     MCcall(obtain_element_render_command(sequence, &element_cmd));
     element_cmd->type = RENDER_COMMAND_COLORED_RECTANGLE;

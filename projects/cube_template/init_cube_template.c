@@ -6,12 +6,12 @@ typedef struct cube_template_root_data {
 
   struct {
     unsigned int width, height;
-    unsigned int resource_uid;
+    mcr_texture_image *image;
   } render_target;
 
   struct {
     mat4 world;
-    mcr_model *model;
+    // mcr_model *model;
   } cube;
 } cube_template_root_data;
 
@@ -42,7 +42,7 @@ void _cbt_render_td_ct_data_headless(mc_node *node)
   // global_data->screen.height);
   irq->image_width = td_ct_data->render_target.width;   // TODO
   irq->image_height = td_ct_data->render_target.height; // TODO
-  irq->data.target_image.image_uid = td_ct_data->render_target.resource_uid;
+  irq->data.target_image.image = td_ct_data->render_target.image;
   irq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
@@ -57,7 +57,7 @@ void _cbt_render_td_ct_data_headless(mc_node *node)
     }
   }
 
-  mcr_render_model(irq, td_ct_data->cube.model);
+  // mcr_render_model(irq, td_ct_data->cube.model);
 
   mcr_submit_image_render_request(global_data->render_thread, irq);
 }
@@ -68,7 +68,7 @@ void _cbt_render_td_ct_data_present(image_render_details *image_render_queue, mc
 
   mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                          (unsigned int)node->layout->__bounds.y, td_ct_data->render_target.width,
-                                         td_ct_data->render_target.height, td_ct_data->render_target.resource_uid);
+                                         td_ct_data->render_target.height, td_ct_data->render_target.image);
 
   // mca_set_node_requires_rerender(node);
 }
@@ -104,15 +104,15 @@ void init_cube_template(mc_node *app_root)
   node->data = ct_data;
   ct_data->node = node;
 
-  ct_data->render_target.resource_uid = 0;
+  ct_data->render_target.image = NULL;
   ct_data->render_target.width = node->layout->preferred_width;
   ct_data->render_target.height = node->layout->preferred_height;
-  mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height, MVK_IMAGE_USAGE_RENDER_TARGET_3D,
-                              &ct_data->render_target.resource_uid);
+  mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height,
+                              MVK_IMAGE_USAGE_RENDER_TARGET_3D, &ct_data->render_target.image);
 
   // printf("ct_data=%p\n", ct_data);
   // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
   // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
 
-  mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
+  // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
 }

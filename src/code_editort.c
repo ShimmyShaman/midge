@@ -53,7 +53,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
           sequence->clear_color = COLOR_TRANSPARENT;
           sequence->image_width = cestate->render_lines[ce_offset_line_index]->width;
           sequence->image_height = cestate->render_lines[ce_offset_line_index]->height;
-          sequence->data.target_image.image_uid = cestate->render_lines[ce_offset_line_index]->image_resource_uid;
+          // sequence->data.target_image.image = cestate->render_lines[ce_offset_line_index]->image;
 
           MCcall(set_c_str(cestate->render_lines[ce_offset_line_index]->rtf, ""));
         }
@@ -89,7 +89,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
               sequence->clear_color = COLOR_TRANSPARENT;
               sequence->image_width = cestate->render_lines[ce_offset_line_index]->width;
               sequence->image_height = cestate->render_lines[ce_offset_line_index]->height;
-              sequence->data.target_image.image_uid = cestate->render_lines[ce_offset_line_index]->image_resource_uid;
+              // sequence->data.target_image.image_uid = cestate->render_lines[ce_offset_line_index]->image_resource_uid;
 
               MCcall(set_c_str(cestate->render_lines[ce_offset_line_index]->rtf, ""));
             }

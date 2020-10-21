@@ -766,7 +766,7 @@ void _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsig
   free(fli.cmds);
 }
 
-void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model)
+void mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buffer, mcr_index_buffer **index_buffer)
 {
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -777,38 +777,69 @@ void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path
   _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
 
   // Construct the model and load its resources
-  *loaded_model = (mcr_model *)malloc(sizeof(mcr_model));
-  (*loaded_model)->texture = 0;
-
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
   resource_command *command;
   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
-  command->type = RESOURCE_COMMAND_LOAD_MESH;
-  command->p_uid = &(*loaded_model)->vertex_buffer;
+  command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
+  command->p_resource = (void *)vertex_buffer;
   command->load_mesh.p_data = vertices;
   command->load_mesh.data_count = vertex_count;
-  command->load_mesh.release_original_data_on_copy = false;
+  command->load_mesh.release_original_data_on_copy = false; // TODO -- toggle to true?
 
   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
-  command->p_uid = &(*loaded_model)->index_buffer;
+  command->p_resource = (void *)index_buffer;
   command->load_indices.p_data = indices;
   command->load_indices.data_count = index_count;
-  command->load_indices.release_original_data_on_copy = false;
+  command->load_indices.release_original_data_on_copy = false; // TODO -- toggle to true?
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
-
-  mcr_load_texture_resource(diffuse_path, &(*loaded_model)->texture);
 }
 
-void mcr_render_model(image_render_details *image_render_queue, mcr_model *model)
-{
-  element_render_command *render_cmd;
-  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
+// void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model)
+// {
+//   global_root_data *global_data;
+//   obtain_midge_global_root(&global_data);
 
-  render_cmd->type = RENDER_COMMAND_INDEXED_MESH;
-  render_cmd->indexed_mesh.vertex_buffer = model->vertex_buffer;
-  render_cmd->indexed_mesh.index_buffer = model->index_buffer;
-  render_cmd->indexed_mesh.texture_uid = model->texture;
-}
+//   // Load the obj data
+//   float *vertices;
+//   unsigned int *indices, vertex_count, index_count;
+//   _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
+
+//   // Construct the model and load its resources
+//   *loaded_model = (mcr_model *)malloc(sizeof(mcr_model));
+//   (*loaded_model)->texture = 0;
+
+//   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+
+//   resource_command *command;
+//   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+//   command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
+//   command->p_resource = &(*loaded_model)->vertex_buffer;
+//   command->load_mesh.p_data = vertices;
+//   command->load_mesh.data_count = vertex_count;
+//   command->load_mesh.release_original_data_on_copy = false;
+
+//   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+//   command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
+//   command->p_resource = &(*loaded_model)->index_buffer;
+//   command->load_indices.p_data = indices;
+//   command->load_indices.data_count = index_count;
+//   command->load_indices.release_original_data_on_copy = false;
+
+//   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+//   mcr_load_texture_resource(diffuse_path, &(*loaded_model)->texture);
+// }
+
+// void mcr_render_model(image_render_details *image_render_queue, mcr_model *model)
+// {
+//   element_render_command *render_cmd;
+//   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
+
+//   render_cmd->type = RENDER_COMMAND_INDEXED_MESH;
+//   render_cmd->indexed_mesh.vertex_buffer = model->vertex_buffer;
+//   render_cmd->indexed_mesh.index_buffer = model->index_buffer;
+//   render_cmd->indexed_mesh.texture_uid = model->texture;
+// }

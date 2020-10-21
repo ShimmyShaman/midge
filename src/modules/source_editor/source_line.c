@@ -56,7 +56,7 @@ void _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
     unsigned int layout_height = (unsigned int)node->layout->__bounds.height;
     if (layout_width && layout_height) {
       // Ensure render target dimensions are sufficient
-      if (source_line->render_target.resource_uid) {
+      if (source_line->render_target.image) {
         bool recreate_texture_resource = false;
         if (!source_line->render_target.width || source_line->render_target.width < layout_width) {
           recreate_texture_resource = true;
@@ -71,10 +71,10 @@ void _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
           MCerror(8264, "TODO -- texture resource disposal");
 
           // Create another
-          source_line->render_target.resource_uid = 0;
+          source_line->render_target.image = NULL;
           // printf("recreating texture %u*%u\n", source_line->render_target.width, source_line->render_target.height);
           mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height,
-                                      MVK_IMAGE_USAGE_RENDER_TARGET_2D, &source_line->render_target.resource_uid);
+                                      MVK_IMAGE_USAGE_RENDER_TARGET_2D, &source_line->render_target.image);
         }
       }
       else {
@@ -82,7 +82,7 @@ void _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
         source_line->render_target.height = layout_height;
         // printf("creating texture %.3f*%.3f\n", node->layout->__bounds.width, node->layout->__bounds.height);
         mcr_create_texture_resource(source_line->render_target.width, source_line->render_target.height,
-                                    MVK_IMAGE_USAGE_RENDER_TARGET_2D, &source_line->render_target.resource_uid);
+                                    MVK_IMAGE_USAGE_RENDER_TARGET_2D, &source_line->render_target.image);
       }
     }
   }
@@ -110,7 +110,7 @@ void _mce_render_source_line_headless(mc_node *node)
   // global_data->screen.height);
   rq->image_width = source_line->render_target.width;   // TODO
   rq->image_height = source_line->render_target.height; // TODO
-  rq->data.target_image.image_uid = source_line->render_target.resource_uid;
+  rq->data.target_image.image = source_line->render_target.image;
   rq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   rq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
   // printf("%u %u \n", rq->data.target_image.screen_offset_coordinates.x,
@@ -141,8 +141,8 @@ void _mce_render_source_line_headless(mc_node *node)
 
     // printf("source-line text:(%i)'%s'\n", horizontal_offset, token->str->text);
     mcr_issue_render_command_text(rq, (unsigned int)(node->layout->__bounds.x + horizontal_offset),
-                                  (unsigned int)(node->layout->__bounds.y), token->str->text,
-                                  source_line->font_resource_uid, font_color);
+                                  (unsigned int)(node->layout->__bounds.y), token->str->text, source_line->font,
+                                  font_color);
     // ++debug_token_count;
 
     horizontal_offset += token->str->len * source_line->font_horizontal_stride;
@@ -167,10 +167,10 @@ void _mce_render_source_line_present(image_render_details *image_render_queue, m
   //        (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width, (unsigned
   //        int)node->layout->__bounds.height, source_line->rtf->text, source_line->font_resource_uid);
 
-  mcr_issue_render_command_textured_quad(
-      image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
-      (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height,
-      source_line->render_target.resource_uid);
+  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
+                                         (unsigned int)node->layout->__bounds.y,
+                                         (unsigned int)node->layout->__bounds.width,
+                                         (unsigned int)node->layout->__bounds.height, source_line->render_target.image);
 }
 
 void mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)
@@ -197,8 +197,8 @@ void mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)
 
   // init_c_str(&source_line->rtf);
   source_line->line_token = NULL;
-  source_line->font_resource_uid = 0;
-  source_line->render_target.resource_uid = 0;
+  source_line->font = NULL;
+  source_line->render_target.image = NULL;
   source_line->render_target.width = 0;
   source_line->render_target.height = 0;
 

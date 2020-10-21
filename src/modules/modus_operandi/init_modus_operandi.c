@@ -8,7 +8,7 @@ typedef struct modus_operandi_data {
 
   struct {
     unsigned int width, height;
-    unsigned int resource_uid;
+    mcr_texture_image *image;
   } render_target;
 
 } modus_operandi_data;
@@ -40,7 +40,7 @@ void _mco_render_mo_data_headless(mc_node *node)
   // global_data->screen.height);
   irq->image_width = modata->render_target.width;   // TODO
   irq->image_height = modata->render_target.height; // TODO
-  irq->data.target_image.image_uid = modata->render_target.resource_uid;
+  irq->data.target_image.image = modata->render_target.image;
   irq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
@@ -64,7 +64,7 @@ void _mco_render_mo_data_present(image_render_details *image_render_queue, mc_no
 
   mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                          (unsigned int)node->layout->__bounds.y, modata->render_target.width,
-                                         modata->render_target.height, modata->render_target.resource_uid);
+                                         modata->render_target.height, modata->render_target.image);
 }
 
 void _mco_handle_input(mc_node *node, mci_input_event *input_event)
@@ -84,11 +84,11 @@ void mco_load_resources(mc_node *module_node)
   module_node->data = mo_data;
   mo_data->node = module_node;
 
-  mo_data->render_target.resource_uid = 0;
+  mo_data->render_target.image = NULL;
   mo_data->render_target.width = module_node->layout->preferred_width;
   mo_data->render_target.height = module_node->layout->preferred_height;
   mcr_create_texture_resource(mo_data->render_target.width, mo_data->render_target.height,
-                              MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mo_data->render_target.resource_uid);
+                              MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mo_data->render_target.image);
 }
 
 void init_modus_operandi(mc_node *app_root)

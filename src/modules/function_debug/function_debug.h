@@ -57,7 +57,7 @@ typedef struct mce_function_debug {
 
   mce_function_debug_function_call *displayed_call;
   struct {
-    unsigned int image_resource_uid;
+    mcr_texture_image *image;
     unsigned int width, height;
     mce_function_debug_variable_report *item;
   } displayed_variable_window;

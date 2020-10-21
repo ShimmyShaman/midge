@@ -188,7 +188,7 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
        line && y < (unsigned int)(node->layout->__bounds.y + node->layout->__bounds.height); y += 22U) {
 
     mcr_issue_render_command_text(image_render_queue, (unsigned int)(node->layout->__bounds.x + horizontal_offset), y,
-                                  line->str->text, 0, font_color);
+                                  line->str->text, NULL, font_color);
     line = line->next;
   }
 
@@ -201,7 +201,7 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
   //         (unsigned int)(node->layout->__bounds.y + fdebug->lines.padding.top +
   //                        fdebug->lines.vertical_stride * (fdebug->cursor.line -
   //                        fdebug->lines.display_index_offset)),
-  //         "|", 0U, cursor_color);
+  //         "|", NULL, cursor_color);
   //   }
 
   render_color title_color = COLOR_NODE_ORANGE;
@@ -248,7 +248,7 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
                                           (unsigned int)30, back_color);
 
     font_color = COLOR_GHOST_WHITE;
-    mcr_issue_render_command_text(image_render_queue, x_draw_pos + 4, y_draw_pos + 4 + 22U * 0, buf, 0, font_color);
+    mcr_issue_render_command_text(image_render_queue, x_draw_pos + 4, y_draw_pos + 4 + 22U * 0, buf, NULL, font_color);
   }
 }
 
@@ -500,13 +500,13 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   function_debug->displayed_call = NULL;
 
   function_debug->displayed_variable_window.item = NULL;
-  function_debug->displayed_variable_window.image_resource_uid = 0U;
+  function_debug->displayed_variable_window.image = NULL;
   function_debug->displayed_variable_window.width = 240;
   function_debug->displayed_variable_window.height = 150;
 
   mcr_create_texture_resource(function_debug->displayed_variable_window.width,
                               function_debug->displayed_variable_window.height, MVK_IMAGE_USAGE_RENDER_TARGET_2D,
-                              &function_debug->displayed_variable_window.image_resource_uid);
+                              &function_debug->displayed_variable_window.image);
 
   *p_function_debugger = function_debug;
 }

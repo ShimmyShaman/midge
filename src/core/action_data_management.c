@@ -34,7 +34,7 @@ void usage_data_interface_render(frame_time *elapsed, mc_node_v1 *visual_node)
   sequence->image_width = visual_node->data.visual.bounds.width;
   sequence->image_height = visual_node->data.visual.bounds.height;
   sequence->clear_color = COLOR_GHOST_WHITE;
-  sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
+  // sequence->data.target_image.image_uid = visual_node->data.visual.image_resource_uid;
 
   // if (!state->minimized) {
   //   MCcall(obtain_element_render_command(sequence, &element_cmd));

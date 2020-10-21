@@ -261,7 +261,7 @@ void build_core_display()
   core_objects_display->data.visual.bounds.y = 0;
   core_objects_display->data.visual.bounds.width = 300;
   core_objects_display->data.visual.bounds.height = 900;
-  core_objects_display->data.visual.image_resource_uid = 0;
+  core_objects_display->data.visual.image = NULL;
   core_objects_display->data.visual.requires_render_update = true;
   core_objects_display->data.visual.render_delegate = &core_display_render;
   core_objects_display->data.visual.visible = true;
@@ -271,7 +271,7 @@ void build_core_display()
   cdstate->visual_node = core_objects_display;
   core_objects_display->extra = cdstate;
   cdstate->entry_display_offset = 0;
-  cdstate->font_resource_uid = 0;
+  cdstate->font = NULL;
   cdstate->global_core_entry = (core_entry *)malloc(sizeof(core_entry));
   cdstate->global_core_entry->type = CORE_ENTRY_NODE;
   cdstate->global_core_entry->data = command_hub->global_node;
@@ -304,7 +304,7 @@ void build_core_display()
   // Function Editor Image
   obtain_resource_command(command_hub->renderer.resource_queue, &command);
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
-  command->p_uid = &core_objects_display->data.visual.image_resource_uid;
+  command->p_uid = &core_objects_display->data.visual.image;
   command->create_texture.image_usage = MVK_IMAGE_USAGE_RENDER_TARGET_2D;
   command->create_texture.width = core_objects_display->data.visual.bounds.width;
   command->create_texture.height = core_objects_display->data.visual.bounds.height;
@@ -312,7 +312,7 @@ void build_core_display()
   // Font
   obtain_resource_command(command_hub->renderer.resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &cdstate->font_resource_uid;
+  command->p_uid = &cdstate->font;
   command->font.height = 18;
   command->font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);
