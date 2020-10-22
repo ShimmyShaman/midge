@@ -33,7 +33,9 @@ void _mce_determine_function_debug_extents(mc_node *node, layout_extent_restrain
 
 void _mce_update_function_debug_layout(mc_node *node, mc_rectf *available_area)
 {
+  // printf("function_debug\n");
   mca_update_typical_node_layout(node, available_area);
+  // printf("/function_debug\n");
   //   mce_function_debug *function_debug = (mce_function_debug *)node->data;
 
   // printf("function_debug-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y,
@@ -462,7 +464,9 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
   layout->handle_input_event = (void *)&_mce_function_debug_handle_input;
 
   // layout->preferred_width = 980;
-  layout->preferred_height = 720;
+  // layout->preferred_height = 720;
+  layout->min_width = 120;
+  layout->min_height = 80;
   layout->padding.left = 120;
   layout->padding.top = 280;
   layout->padding.right = 240;

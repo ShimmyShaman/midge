@@ -200,8 +200,9 @@ void myh_load_resources(mc_node *module_node)
   // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
   // mcr_load_wavefront_obj("res/models/viking_room.obj", );
 
-  mcr_load_wavefront_obj("res/cube/cube.obj", &ct_data->cube.render_data.vertices, &ct_data->cube.render_data.indices);
-  mcr_load_texture_resource("res/cube/cube_diffuse.png",
+  // mcr_load_wavefront_obj("res/cube/cube.obj", &ct_data->cube.render_data.vertices, &ct_data->cube.render_data.indices);
+  mcr_load_wavefront_obj("res/models/viking_room.obj", &ct_data->cube.render_data.vertices, &ct_data->cube.render_data.indices);
+  mcr_load_texture_resource("res/models/viking_room.png",
                             (mcr_texture_image *)&ct_data->cube.render_data.input_buffers[1]);
 }
 

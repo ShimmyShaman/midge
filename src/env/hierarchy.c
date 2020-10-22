@@ -505,8 +505,11 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
   if (layout->preferred_height) {
     // Set to preferred height
     bounds.height = layout->preferred_height;
+    // printf("preferred\n");
   }
   else {
+    // printf("available_area->height:%.3f layout->padding.bottom:%.3f layout->padding.top:%.3f\n", available_area->height,
+    //        layout->padding.bottom, layout->padding.top);
     // padding adjusted from available
     bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
 
