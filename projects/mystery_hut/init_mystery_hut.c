@@ -183,11 +183,11 @@ void myh_load_resources(mc_node *module_node)
   create_info.vertex_shader_filepath = (char *)"projects/mystery_hut/model.vert";
   create_info.fragment_shader_filepath = (char *)"projects/mystery_hut/model.frag";
   create_info.buffer_binding_count = 2;
-  create_info.buffer_bindings[0] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT};
-  create_info.buffer_bindings[1] = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT};
+  create_info.buffer_bindings[0] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(mat4)};
+  create_info.buffer_bindings[1] = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0U};
   create_info.input_binding_count = 2;
   create_info.input_bindings[0] = {VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3};
-  create_info.input_bindings[0] = {VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2};
+  create_info.input_bindings[1] = {VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2};
   mcr_create_render_program(&create_info, &ct_data->cube.render_program);
 
   // Render Data

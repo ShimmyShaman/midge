@@ -46,6 +46,10 @@ typedef struct mcr_render_program {
   VkDescriptorSetLayout descriptor_layout;
   VkPipelineLayout pipeline_layout;
   VkPipeline pipeline;
+
+  unsigned int layout_binding_count;
+  mcr_layout_binding *layout_bindings;
+
 } mcr_render_program;
 
 typedef struct font_resource {

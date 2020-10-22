@@ -917,16 +917,19 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
 {
   VkResult res = VK_SUCCESS;
 
-  mcr_render_program *render_prog = (mcr_render_program *)malloc(sizeof(mcr_render_program));
-  render_prog->resource_uid = p_vkrs->resource_uid_counter++;
+  mcr_render_program *render_program = (mcr_render_program *)malloc(sizeof(mcr_render_program));
+  render_program->resource_uid = p_vkrs->resource_uid_counter++;
 
   // CreateDescriptorSetLayout
   {
-    // const int binding_count = 3;
+    render_program->layout_binding_count = create_info->buffer_binding_count;
+    render_program->layout_bindings =
+        (mcr_layout_binding *)malloc(sizeof(mcr_layout_binding) * create_info->buffer_binding_count);
+
     VkDescriptorSetLayoutBinding layout_bindings[create_info->buffer_binding_count];
     for (int i = 0; i < create_info->buffer_binding_count; ++i) {
-      printf("buffer-bindings[%i]={%i,%i}\n", i, create_info->buffer_bindings[i].type,
-             create_info->buffer_bindings[i].stage_bit);
+      // printf("buffer-bindings[%i]={%i,%i}\n", i, create_info->buffer_bindings[i].type,
+      //        create_info->buffer_bindings[i].stage_bit);
 
       layout_bindings[i].binding = i;
       layout_bindings[i].descriptorType = create_info->buffer_bindings[i].type;
@@ -934,6 +937,10 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
       layout_bindings[i].stageFlags = create_info->buffer_bindings[i].stage_bit;
       layout_bindings[i].pImmutableSamplers = NULL;
       layout_bindings[i].binding = i;
+
+      render_program->layout_bindings[i].type = create_info->buffer_bindings[i].type;
+      render_program->layout_bindings[i].size_in_bytes = create_info->buffer_bindings[i].size_in_bytes;
+      render_program->layout_bindings[i].stage_bit = create_info->buffer_bindings[i].stage_bit;
     }
 
     // Next take layout bindings and use them to create a descriptor set layout
@@ -944,7 +951,7 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     layout_create_info.bindingCount = create_info->buffer_binding_count;
     layout_create_info.pBindings = layout_bindings;
 
-    res = vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &render_prog->descriptor_layout);
+    res = vkCreateDescriptorSetLayout(p_vkrs->device, &layout_create_info, NULL, &render_program->descriptor_layout);
     VK_CHECK(res, "vkCreateDescriptorSetLayout");
   }
 
@@ -1018,8 +1025,8 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
   {
     unsigned int offset_in_bytes = 0U;
     for (int i = 0; i < create_info->input_binding_count; ++i) {
-      printf("input-bindings[%i]={%i,%i}\n", i, create_info->input_bindings[i].format,
-             create_info->input_bindings[i].size_in_bytes);
+      // printf("input-bindings[%i]={%i,%i}\n", i, create_info->input_bindings[i].format,
+      //        create_info->input_bindings[i].size_in_bytes);
       attributeDescriptions[i].binding = 0;
       attributeDescriptions[i].location = i;
       attributeDescriptions[i].format = create_info->input_bindings[i].format;
@@ -1110,9 +1117,9 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = &render_prog->descriptor_layout;
+    pipelineLayoutInfo.pSetLayouts = &render_program->descriptor_layout;
 
-    res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &render_prog->pipeline_layout);
+    res = vkCreatePipelineLayout(p_vkrs->device, &pipelineLayoutInfo, NULL, &render_program->pipeline_layout);
     VK_CHECK(res, "vkCreatePipelineLayout :: Failed to create pipeline layout!");
 
     VkPipelineDepthStencilStateCreateInfo depthStencil = {};
@@ -1140,12 +1147,12 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
-    pipelineInfo.layout = render_prog->pipeline_layout;
+    pipelineInfo.layout = render_program->pipeline_layout;
     pipelineInfo.renderPass = p_vkrs->offscreen_render_pass_3d;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &render_prog->pipeline);
+    res = vkCreateGraphicsPipelines(p_vkrs->device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &render_program->pipeline);
     VK_CHECK(res, "vkCreateGraphicsPipelines :: Failed to create pipeline");
   }
 
@@ -1155,11 +1162,11 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
 
   // Register the render program
   append_to_collection((void ***)&p_vkrs->loaded_render_programs.items, &p_vkrs->loaded_render_programs.alloc,
-                       &p_vkrs->loaded_render_programs.count, render_prog);
+                       &p_vkrs->loaded_render_programs.count, render_program);
 
   // Set
-  *out_render_program = render_prog;
-  printf("render_prog resource %u loaded\n", render_prog->resource_uid);
+  *out_render_program = render_program;
+  printf("render_program resource %u loaded\n", render_program->resource_uid);
 
   return res;
 }

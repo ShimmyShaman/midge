@@ -228,11 +228,13 @@ typedef struct image_render_details {
 typedef struct mcr_layout_binding {
   VkDescriptorType type;
   VkShaderStageFlags stage_bit;
+  // If applicable
+  size_t size_in_bytes;
 } mcr_layout_binding;
 
 typedef struct mcr_input_binding {
   VkFormat format;
-  unsigned int size_in_bytes;
+  size_t size_in_bytes;
 } mcr_input_binding;
 
 typedef struct mcr_render_program_create_info {

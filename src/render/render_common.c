@@ -186,15 +186,16 @@ void mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_
     MCerror(8174, "NotYetSupported");
   }
 
-  for (int i = 0; i < create_info->buffer_binding_count; ++i) {
-    printf("crbuffer-bindings[%i]={%i,%i}\n", i, create_info->buffer_bindings[i].type,
-           create_info->buffer_bindings[i].stage_bit);
-  }
-  for (int i = 0; i < create_info->input_binding_count; ++i) {
-    printf("crinput-bindings[%i]={%i,%i}\n", i, create_info->input_bindings[i].format,
-           create_info->input_bindings[i].size_in_bytes);
-  }
+  // for (int i = 0; i < create_info->buffer_binding_count; ++i) {
+  //   printf("crbuffer-bindings[%i]={%i,%i,%lu}\n", i, create_info->buffer_bindings[i].type,
+  //          create_info->buffer_bindings[i].stage_bit, create_info->buffer_bindings[i].size_in_bytes);
+  // }
+  // for (int i = 0; i < create_info->input_binding_count; ++i) {
+  //   printf("crinput-bindings[%i]={%i,%lu}\n", i, create_info->input_bindings[i].format,
+  //          create_info->input_bindings[i].size_in_bytes);
+  // }
 
+  // printf("sizeof(mcr_layout_binding):%lu\n", sizeof(mcr_layout_binding));
   rpci->buffer_binding_count = create_info->buffer_binding_count;
   memcpy(rpci->buffer_bindings, create_info->buffer_bindings,
          sizeof(mcr_layout_binding) * create_info->buffer_binding_count);
