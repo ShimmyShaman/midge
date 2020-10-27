@@ -236,10 +236,22 @@ void mca_render_presentation()
   for (int a = 0; a < global_data->global_node->children->count; ++a) {
     mc_node *child = global_data->global_node->children->items[a];
     if (child->layout && child->layout->visible && child->layout->render_present) {
+      // // DEBUG - TIME
+      // struct timespec debug_start_time, debug_end_time;
+      // clock_gettime(CLOCK_REALTIME, &debug_start_time);
+      // // DEBUG - TIME
+
       // TODO fptr casting
       void (*render_node_presentation)(image_render_details *, mc_node *) =
           (void (*)(image_render_details *, mc_node *))child->layout->render_present;
       render_node_presentation(image_render, child);
+
+      // // DEBUG - TIME
+      // clock_gettime(CLOCK_REALTIME, &debug_end_time);
+      // printf("'%s'-Rerender took %.2fms\n", child->name == NULL ? "(null)" : child->name,
+      //        1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+      //            1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+      // // DEBUG - TIME
     }
   }
 
@@ -248,7 +260,7 @@ void mca_render_presentation()
 
 void midge_run_app()
 {
-  printf("~midge_run_app()~\n");
+  printf("midge_run_app()\n");
 
   global_root_data *global_data;
   obtain_midge_global_root(&global_data);

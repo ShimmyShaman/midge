@@ -638,18 +638,18 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   // Instantiate Function
   char *mc_transcription;
   mct_function_transcription_options options = {};
-  options.report_invocations_to_error_stack = true;
-  options.report_simple_args_to_error_stack = true;
-  options.check_mc_functions_not_null = true;
+  options.report_invocations_to_error_stack = false;
+  options.report_simple_args_to_error_stack = false;
+  options.check_mc_functions_not_null = false;
   options.tag_on_function_entry = false;
   options.tag_on_function_exit = false;
   options.report_variable_values = NULL;
   mct_transcribe_function_to_mc(func_info, ast, &options, &mc_transcription);
 
-  // if (!strcmp(func_info->name, "_mcm_handle_input")) {
-  //   print_syntax_node(ast, 0);
-  //   printf("mc_transcription:\n%s||\n", mc_transcription);
-  // }
+  if (!strcmp(func_info->name, "_mce_render_function_editor_present")) {
+    // print_syntax_node(ast, 0);
+    printf("mc_transcription:\n%s||\n", mc_transcription);
+  }
   // if (!strcmp(func_info->name, "mcs_parse_through_supernumerary_tokens")) {
   //   // print_syntax_node(ast, 0);
   //   // printf("callit-fptr-addr:%p\n", func_info->ptr_declaration);

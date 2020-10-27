@@ -69,8 +69,8 @@ void _mce_render_function_debug_headless(mc_node *node)
 {
   mce_function_debug *function_debug = (mce_function_debug *)node->data;
 
-  struct timespec debug_start_time, debug_end_time;
-  clock_gettime(CLOCK_REALTIME, &debug_start_time);
+  // struct timespec debug_start_time, debug_end_time;
+  // clock_gettime(CLOCK_REALTIME, &debug_start_time);
   int debug_count = 0;
 
   // Children
@@ -85,7 +85,7 @@ void _mce_render_function_debug_headless(mc_node *node)
     }
   }
 
-  clock_gettime(CLOCK_REALTIME, &debug_end_time);
+  // clock_gettime(CLOCK_REALTIME, &debug_end_time);
   // printf("FunctionDebugHeadless: rendered %i children took %.2fms\n", debug_count,
   //        1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
   //            1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
@@ -447,6 +447,7 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
 
   mca_init_mc_node(global_data->global_node, NODE_TYPE_ABSTRACT, &function_debug->node);
   function_debug->node->data = function_debug;
+  function_debug->node->name = "function_debug";
 
   function_debug->lines.vertical_stride = 22.f;
   function_debug->lines.padding.left = 6.f;

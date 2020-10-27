@@ -714,6 +714,8 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 {
   VkResult res;
 
+// TODO DON"T NEED THIS CODE???
+// TODO DON"T NEED THIS CODE???
   float fov = glm_rad(45.0f);
 
   if (p_vkrs->window_width > p_vkrs->window_height) {
@@ -733,9 +735,11 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   glm_mat4_mul((vec4 *)&p_vkrs->View, (vec4 *)&p_vkrs->Model, (vec4 *)&p_vkrs->MVP);
   glm_mat4_mul((vec4 *)&p_vkrs->Projection, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
   glm_mat4_mul((vec4 *)&p_vkrs->Clip, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
+// TODO DON"T NEED THIS CODE???
+// TODO DON"T NEED THIS CODE???
 
   // /* VULKAN_KEY_START */
-  VkBufferCreateInfo buf_info = {};
+  // VkBufferCreateInfo buf_info = {};
   // buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   // buf_info.pNext = NULL;
   // buf_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -747,7 +751,7 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   // res = vkCreateBuffer(p_vkrs->device, &buf_info, NULL, &p_vkrs->global_vert_uniform_buffer.buf);
   // VK_CHECK(res, "vkCreateBuffer");
 
-  VkMemoryRequirements mem_reqs;
+  // VkMemoryRequirements mem_reqs;
   // vkGetBufferMemoryRequirements(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.buf, &mem_reqs);
 
   // alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -755,7 +759,7 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   // alloc_info.memoryTypeIndex = 0;
 
   // alloc_info.allocationSize = mem_reqs.size;
-  bool pass;
+  // bool pass;
   // bool pass = mvk_get_properties_memory_type_index(
   //     p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
   //     &alloc_info.memoryTypeIndex);
@@ -764,7 +768,7 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   // res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->global_vert_uniform_buffer.mem));
   // VK_CHECK(res, "vkAllocateMemory");
 
-  uint8_t *pData;
+  // uint8_t *pData;
   // res = vkMapMemory(p_vkrs->device, p_vkrs->global_vert_uniform_buffer.mem, 0, mem_reqs.size, 0, (void **)&pData);
   // VK_CHECK(res, "vkMapMemory");
 
@@ -810,9 +814,9 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
       (queued_copy_info *)malloc(sizeof(queued_copy_info) * p_vkrs->render_data_buffer.queued_copies_alloc);
 
   // int res = mvk_allocate_dynamic_render_data_memory(p_vkrs, 0);
-  VK_CHECK(res, "Dynamic Render Data Buffer Allocation");
+  // VK_CHECK(res, "Dynamic Render Data Buffer Allocation");
 
-  return res;
+  return VK_SUCCESS;
 }
 
 VkResult mvk_allocate_dynamic_render_data_memory(vk_render_state *p_vkrs, int min_buffer_size)

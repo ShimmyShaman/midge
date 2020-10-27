@@ -172,6 +172,7 @@ struct __mce_stack_entry {
   char *function_name;
   char *file_name;
   int line;
+  struct timespec start_time;
 };
 
 struct __mce_thread_entry_stack {
@@ -185,6 +186,7 @@ struct __mce_thread_entry_stack {
 struct __mce_thread_entry_stack *MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_MAX_THREAD_COUNT];
 unsigned int MIDGE_ERROR_THREAD_INDEX;
 unsigned int MIDGE_ERROR_THREAD_HISTORICAL_COUNT;
+// bool MIDGE_ERROR_STACK_PROFILING_ENABLED;
 
 void register_midge_stack_invocation(const char *function_name, const char *file_name, int line,
                                      int *midge_error_stack_index)
@@ -228,6 +230,7 @@ void register_midge_stack_invocation(const char *function_name, const char *file
     }
   }
   threades->stack[threades->stack_index].line = line;
+
 }
 
 void register_midge_stack_return(int midge_error_stack_index)
@@ -427,6 +430,7 @@ void initialize_midge_error_handling()
       MIDGE_ERROR_THREAD_STACKS[t]->stack[i].file_name =
           (char *)malloc(sizeof(char) * (MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE + 1));
       MIDGE_ERROR_THREAD_STACKS[t]->stack[i].file_name[0] = '\0';
+      // MIDGE_ERROR_THREAD_STACKS[t]->stack[i].total = {};
     }
   }
   // MIDGE_ERROR_STACK_INDEX = 0;

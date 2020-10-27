@@ -2006,6 +2006,12 @@ int mct_transcribe_fptr_invocation(mct_transcription_state *ts, mc_syntax_node *
   mct_transcribe_text_with_indent(ts, "if (ptr_func_info) {\n");
   ++ts->indent;
 
+  // // DEBUG - TIME
+  //
+  //
+  // // DEBUG - TIME
+  // DEBUG
+
   mct_transcribe_indent(ts); // TODO -- count arguments based on function pointer type?
   const char *ARGUMENT_DATA_NAME = "mc_fp_vargs";
   append_to_c_strf(ts->str, "void *%s[%i];\n", ARGUMENT_DATA_NAME, syntax_node->invocation.arguments->count + 1);
@@ -2075,8 +2081,29 @@ int mct_transcribe_fptr_invocation(mct_transcription_state *ts, mc_syntax_node *
   mct_append_node_text_to_c_str(ts->str, syntax_node->invocation.function_identity);
   append_to_c_strf(ts->str, ", %i, &%s);\n", syntax_node->invocation.arguments->count + 1, ARGUMENT_DATA_NAME);
 
+  // DEBUG
+  mct_transcribe_text_with_indent(ts, "// DEBUG - TIME\n");
+  mct_transcribe_text_with_indent(ts, "struct timespec debug_fptr_start_time, debug_fptr_end_time;\n");
+  mct_transcribe_text_with_indent(ts, "clock_gettime(CLOCK_REALTIME, &debug_fptr_start_time);\n");
+  mct_transcribe_text_with_indent(ts, "// DEBUG - TIME\n");
+  // DEBUG
+
   // mct_transcribe_text_with_indent(ts, "printf(\"buf:\\n%s||\\n\", buf);\n");
   mct_transcribe_text_with_indent(ts, "clint_process(buf);\n");
+
+  // DEBUG
+  mct_transcribe_text_with_indent(ts, "\n// DEBUG - TIME\n");
+  mct_transcribe_text_with_indent(ts, "clock_gettime(CLOCK_REALTIME, &debug_fptr_end_time);\n");
+  mct_transcribe_text_with_indent(ts, "if (!strcmp(\"_mco_render_mo_data_present\", ptr_func_info->name)) {\n");
+  mct_transcribe_text_with_indent(ts, "  printf(\"\\nfptr-invocation took %.2fms\\n\",\n");
+  mct_transcribe_text_with_indent(
+      ts, "              1000.f * (debug_fptr_end_time.tv_sec - debug_fptr_start_time.tv_sec) +\n");
+  mct_transcribe_text_with_indent(
+      ts, "              1e-6 * (debug_fptr_end_time.tv_nsec - debug_fptr_start_time.tv_nsec));\n");
+  mct_transcribe_text_with_indent(ts, "}\n\n");
+  mct_transcribe_text_with_indent(ts, "// DEBUG - TIME\n\n");
+  // DEBUG
+
   mct_transcribe_text_with_indent(ts, "if (mc_fptr_result) {\n");
   ++ts->indent;
   mct_transcribe_text_with_indent(ts, "printf(\"--");

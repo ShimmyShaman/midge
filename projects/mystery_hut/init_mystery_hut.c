@@ -11,16 +11,15 @@ typedef struct mystery_hut {
     mcr_texture_image *image;
   } render_target;
 
+  bool rerender_toggle;
   struct {
-    mat4 world;
-    // mcr_model *model;
-
+    float rotX, rotY, rotZ;
     mcr_render_program *render_program;
     mcr_render_program_data render_data;
   } cube;
 } mystery_hut;
 
-void create_wvp_matrix(mat4 **out_wvp)
+void create_wvp_matrix(mystery_hut *mh_data, mat4 **out_wvp)
 {
   // Matrix
   mat4 *vpc = (mat4 *)malloc(sizeof(mat4));
@@ -43,13 +42,13 @@ void create_wvp_matrix(mat4 **out_wvp)
   mat4 world;
   glm_mat4_identity((vec4 *)&world);
   vec3 axis = {0.f, 1.f, 0.f};
-  glm_rotate((vec4 *)&world, 180.f, axis);
+  glm_rotate((vec4 *)&world, mh_data->cube.rotY / 180.f * 3.1459f, axis);
   axis[1] = 0.f;
   axis[2] = 1.f;
-  glm_rotate((vec4 *)&world, 180.f, axis);
+  glm_rotate((vec4 *)&world, mh_data->cube.rotZ / 180.f * 3.1459f, axis);
   axis[0] = 1.f;
   axis[2] = 0.f;
-  glm_rotate((vec4 *)&world, -90.f, axis);
+  glm_rotate((vec4 *)&world, mh_data->cube.rotX / 180.f * 3.1459f, axis);
   glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
   // }
   // else {
@@ -151,7 +150,8 @@ void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_no
                                          (unsigned int)node->layout->__bounds.y, mh_data->render_target.width,
                                          mh_data->render_target.height, mh_data->render_target.image);
 
-  // mca_set_node_requires_rerender(node);
+  if (mh_data->rerender_toggle)
+    mca_set_node_requires_rerender(node);
 }
 
 void _myh_handle_input(mc_node *node, mci_input_event *input_event)
@@ -159,24 +159,77 @@ void _myh_handle_input(mc_node *node, mci_input_event *input_event)
   // printf("_myh_handle_input\n");
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
-    input_event->handled = true;
     mca_focus_node(node);
   }
 
   // TODO -- asdf
+  if (input_event->type == INPUT_EVENT_KEY_PRESS) {
+    mystery_hut *mh_data = (mystery_hut *)node->data;
+    bool recalc = true;
+    switch (input_event->button_code) {
+    case KEY_CODE_D: {
+      mh_data->rerender_toggle = mh_data->rerender_toggle ? false : true;
+      mh_data->cube.rotX += 5.f;
+      if (mh_data->cube.rotX > 180.f) {
+        mh_data->cube.rotX -= 360.f;
+      }
+      printf("D:%.3f\n", mh_data->cube.rotX);
+    } break;
+    case KEY_CODE_A: {
+      mh_data->cube.rotX -= 5.f;
+      if (mh_data->cube.rotX < -180.f) {
+        mh_data->cube.rotX += 360.f;
+      }
+      printf("A:%.3f\n", mh_data->cube.rotX);
+    } break;
+    case KEY_CODE_W: {
+      mh_data->cube.rotY += 5.f;
+      if (mh_data->cube.rotY > 180.f)
+        mh_data->cube.rotY -= 360.f;
+      printf("W:%.3f\n", mh_data->cube.rotY);
+    } break;
+    case KEY_CODE_S: {
+      mh_data->cube.rotY -= 5.f;
+      if (mh_data->cube.rotY < -180.f)
+        mh_data->cube.rotY += 360.f;
+      printf("S:%.3f\n", mh_data->cube.rotY);
+    } break;
+    case KEY_CODE_E: {
+      mh_data->cube.rotZ += 5.f;
+      if (mh_data->cube.rotZ > 180.f)
+        mh_data->cube.rotZ -= 360.f;
+      printf("E:%.3f\n", mh_data->cube.rotZ);
+    } break;
+    case KEY_CODE_Q: {
+      mh_data->cube.rotZ -= 5.f;
+      if (mh_data->cube.rotZ < -180.f)
+        mh_data->cube.rotZ += 360.f;
+      printf("Q:%.3f\n", mh_data->cube.rotZ);
+    } break;
+
+    default:
+      recalc = false;
+      break;
+    }
+
+    if (recalc) {
+      create_wvp_matrix(mh_data, (mat4 **)&mh_data->cube.render_data.input_buffers[0]);
+      mca_set_node_requires_rerender(node);
+    }
+  }
 }
 
 void myh_load_resources(mc_node *module_node)
 {
   // cube_template
-  mystery_hut *ct_data = (mystery_hut *)malloc(sizeof(mystery_hut));
-  module_node->data = ct_data;
-  ct_data->node = module_node;
+  mystery_hut *mh_data = (mystery_hut *)malloc(sizeof(mystery_hut));
+  module_node->data = mh_data;
+  mh_data->node = module_node;
 
-  ct_data->render_target.width = module_node->layout->preferred_width;
-  ct_data->render_target.height = module_node->layout->preferred_height;
-  mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height,
-                              MVK_IMAGE_USAGE_RENDER_TARGET_3D, &ct_data->render_target.image);
+  mh_data->render_target.width = module_node->layout->preferred_width;
+  mh_data->render_target.height = module_node->layout->preferred_height;
+  mcr_create_texture_resource(mh_data->render_target.width, mh_data->render_target.height,
+                              MVK_IMAGE_USAGE_RENDER_TARGET_3D, &mh_data->render_target.image);
 
   // Render Program
   mcr_render_program_create_info create_info = {};
@@ -188,22 +241,26 @@ void myh_load_resources(mc_node *module_node)
   create_info.input_binding_count = 2;
   create_info.input_bindings[0] = {VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3};
   create_info.input_bindings[1] = {VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2};
-  mcr_create_render_program(&create_info, &ct_data->cube.render_program);
+  mcr_create_render_program(&create_info, &mh_data->cube.render_program);
 
   // Render Data
-  ct_data->cube.render_data.input_buffers = (void **)malloc(sizeof(void *) * 2);
+  mh_data->cube.render_data.input_buffers = (void **)malloc(sizeof(void *) * 2);
 
   // world-view-projection
-  create_wvp_matrix((mat4 **)&ct_data->cube.render_data.input_buffers[0]);
+  mh_data->rerender_toggle = false;
+  mh_data->cube.rotX = mh_data->cube.rotY = mh_data->cube.rotZ = 0;
+  create_wvp_matrix(mh_data, (mat4 **)&mh_data->cube.render_data.input_buffers[0]);
 
   // Cube Model
-  // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
+  // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &mh_data->cube.model);
   // mcr_load_wavefront_obj("res/models/viking_room.obj", );
 
-  // mcr_load_wavefront_obj("res/cube/cube.obj", &ct_data->cube.render_data.vertices, &ct_data->cube.render_data.indices);
-  mcr_load_wavefront_obj("res/models/viking_room.obj", &ct_data->cube.render_data.vertices, &ct_data->cube.render_data.indices);
+  // mcr_load_wavefront_obj("res/cube/cube.obj", &mh_data->cube.render_data.vertices,
+  // &mh_data->cube.render_data.indices);
+  mcr_load_wavefront_obj("res/models/viking_room.obj", &mh_data->cube.render_data.vertices,
+                         &mh_data->cube.render_data.indices);
   mcr_load_texture_resource("res/models/viking_room.png",
-                            (mcr_texture_image *)&ct_data->cube.render_data.input_buffers[1]);
+                            (mcr_texture_image *)&mh_data->cube.render_data.input_buffers[1]);
 }
 
 void _myh_update(frame_time *elapsed, mci_input_state *input_state, void *state) {}
@@ -216,6 +273,8 @@ void init_mystery_hut(mc_node *app_root)
   //   module_node->
   mc_node *node;
   mca_init_mc_node(app_root, NODE_TYPE_ABSTRACT, &node);
+  node->name = "mystery_hut";
+
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;

@@ -155,6 +155,10 @@ void _mce_render_source_line_headless(mc_node *node)
 
 void _mce_render_source_line_present(image_render_details *image_render_queue, mc_node *node)
 {
+  // // DEBUG - TIME
+  // struct timespec debug_start_time, debug_end_time;
+  // clock_gettime(CLOCK_REALTIME, &debug_start_time);
+  // // DEBUG - TIME
   mce_source_line *source_line = (mce_source_line *)node->data;
 
   // Text
@@ -171,6 +175,11 @@ void _mce_render_source_line_present(image_render_details *image_render_queue, m
                                          (unsigned int)node->layout->__bounds.y,
                                          (unsigned int)node->layout->__bounds.width,
                                          (unsigned int)node->layout->__bounds.height, source_line->render_target.image);
+  // // DEBUG - TIME
+  // clock_gettime(CLOCK_REALTIME, &debug_end_time);
+  // printf("%.4fms-", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+  //                                               1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+  // // DEBUG - TIME
 }
 
 void mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)

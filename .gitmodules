@@ -1,3 +1,6 @@
 [submodule "dep/cglm"]
 	path = dep/cglm
 	url = https://github.com/recp/cglm.git
+[submodule "dep/tinycc"]
+	path = dep/tinycc
+	url = https://github.com/ShimmyShaman/tinycc.git

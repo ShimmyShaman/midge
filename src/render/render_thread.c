@@ -1080,8 +1080,10 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
 VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_state *vkrs,
                                    image_render_list *rt_render_queue)
 {
-  struct timespec render_start_time;
-  clock_gettime(CLOCK_REALTIME, &render_start_time);
+  // DEBUG
+  // struct timespec render_start_time;
+  // clock_gettime(CLOCK_REALTIME, &render_start_time);
+  // DEBUG
 
   // Copy render requests from transient queue to render-thread only queue
   pthread_mutex_lock(&render_thread->image_queue->mutex);
@@ -1119,12 +1121,13 @@ VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_
   VK_CHECK(res, "render_through_queue");
 
   // After frame statistics
-  struct timespec render_end_time;
-  clock_gettime(CLOCK_REALTIME, &render_end_time);
-
+  // DEBUG
+  // struct timespec render_end_time;
+  // clock_gettime(CLOCK_REALTIME, &render_end_time);
   // printf("Vulkan rendered image_render_queue! %.3f ms\n",
   //        (double)(render_end_time.tv_sec - render_start_time.tv_sec) * 1000 +
   //            1e-6 * (render_end_time.tv_nsec - render_start_time.tv_nsec));
+  // DEBUG
 
   // Return the image render request objects to the pool
   pthread_mutex_lock(&render_thread->render_request_object_pool->mutex);
