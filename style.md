@@ -13,3 +13,5 @@ where:
   - [o] Operations and tools
   - [e] Editors & environment functions
 
+Git structure based on:
+https://nvie.com/posts/a-successful-git-branching-model/
