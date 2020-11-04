@@ -10,6 +10,7 @@
                 "/usr/include",
                 "/usr/include/x86_64-linux-gnu",
                 "/home/jason/midge/dep/cglm/include",
+                "/home/jason/midge/dep/tinycc",
                 "/home/jason/midge/dep/glslang",
                 "/home/jason/midge/dep/stb"
             ],
