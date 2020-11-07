@@ -15,6 +15,27 @@ Midges development goals:
 ###################################################################
 ###################################################################
 ###################################################################
+
+
+
+
+Target: March 30
+
+5 Months. ~150 days
+
+
+
+LVKAPI: A graphical framework / API and 'tools'
+TinyCI: A C interpreter with redefinition
+
+midge: An editor which is built on both
+The editor is the main contribution
+
+
+an editor which evokes interactive development to create interactive applications
+
+
+
 ###################################################################
 
 
