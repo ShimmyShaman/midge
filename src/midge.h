@@ -12,6 +12,7 @@
 // #include <string.h>
 // #include <sys/types.h>
 // #include <unistd.h>
+#include "dep/tinycc/libtccinterp.h"
 #include <time.h>
 
 // #include <iostream>
@@ -151,16 +152,6 @@ int _midge_run()
   struct timespec app_begin_time;
   clock_gettime(CLOCK_REALTIME, &app_begin_time);
 
-  mcc_interpret_file("/home/jason/midge/src/midge_error_handling.h");
-
-    struct timespec error_handling_read_time;
-    clock_gettime(CLOCK_REALTIME, &error_handling_read_time);
-    printf("Error Handling Read Complete took %.2f seconds\n",
-           error_handling_read_time.tv_sec - app_begin_time.tv_sec +
-               1e-9 * (error_handling_read_time.tv_nsec - app_begin_time.tv_nsec));
-
-
-
   // tcc_load_archive
   // // clint->allowRedefinition();
   // try {
@@ -212,6 +203,16 @@ int _midge_run()
   //          library_base_complete_time.tv_sec - app_begin_time.tv_sec +
   //              1e-9 * (library_base_complete_time.tv_nsec - app_begin_time.tv_nsec));
 
+  mcc_interpret_file("/home/jason/midge/src/midge_error_handling.h");
+  mcc_interpret_file("/home/jason/midge/src/core/core_source_loader.c");
+
+  struct timespec error_handling_read_time;
+  clock_gettime(CLOCK_REALTIME, &error_handling_read_time);
+  printf("Core compile & load complete took %.2f seconds\n",
+         error_handling_read_time.tv_sec - app_begin_time.tv_sec +
+             1e-9 * (error_handling_read_time.tv_nsec - app_begin_time.tv_nsec));
+
+  void (*vfptr)(void) = tcci_get_symbol("initialize_midge_error_handling");
   //   // Error Handling
   //   clint->process("{\n"
   //                  "  initialize_midge_error_handling();\n"
@@ -257,7 +258,7 @@ int _midge_run()
   //   std::cerr << "midge.h] Caught Error:" << std::endl;
   //   std::cerr << e.what() << '\n';
   // }
-  puts("</midge>");
+  puts("\n</midge>");
   return 0;
 }
 #endif // MIDGE_H

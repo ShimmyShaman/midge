@@ -368,6 +368,7 @@ int mcc_interpret_file(const char *filepath)
   fclose(f);
   contents[fsize] = '\0';
 
+  printf("...interpreting file '%s'\n", filepath);
   return tcc_interpret_file(__mc_itp, filepath, contents);
 }
 
@@ -377,9 +378,11 @@ int main(int argc, const char *const *argv)
 
   __mc_itp = tcci_new();
 
+  tcci_add_symbol(__mc_itp, "mcc_interpret_file", &mcc_interpret_file);
+
   res = mcc_interpret_file("/home/jason/midge/src/midge.h");
   if (res) {
-    puts("\nCompilation Failed.");
+    printf("\nCompilation Failed. res=%i\n", res);
     goto do_exit;
   }
 
