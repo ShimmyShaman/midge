@@ -132,6 +132,7 @@ int mc_dummy_function_v1(int argsc, void **argsv) { return 0; }
 
 // extern int tcc_load_archive(TCCState *s1, int fd, int alacarte);
 extern int mcc_interpret_file(const char *filepath);
+extern void *mcc_get_global_symbol(const char *symbol_name);
 
 int _midge_run()
 {
@@ -203,8 +204,10 @@ int _midge_run()
   //          library_base_complete_time.tv_sec - app_begin_time.tv_sec +
   //              1e-9 * (library_base_complete_time.tv_nsec - app_begin_time.tv_nsec));
 
-  mcc_interpret_file("/home/jason/midge/src/midge_error_handling.h");
-  mcc_interpret_file("/home/jason/midge/src/core/core_source_loader.c");
+  if (mcc_interpret_file("/home/jason/midge/src/midge_error_handling.h"))
+    goto error_exit;
+  if (mcc_interpret_file("/home/jason/midge/src/core/core_source_loader.c"))
+    goto error_exit;
 
   struct timespec error_handling_read_time;
   clock_gettime(CLOCK_REALTIME, &error_handling_read_time);
@@ -212,7 +215,7 @@ int _midge_run()
          error_handling_read_time.tv_sec - app_begin_time.tv_sec +
              1e-9 * (error_handling_read_time.tv_nsec - app_begin_time.tv_nsec));
 
-  void (*vfptr)(void) = tcci_get_symbol("initialize_midge_error_handling");
+  void (*vfptr)(void) = mcc_get_global_symbol("initialize_midge_error_handling");
   //   // Error Handling
   //   clint->process("{\n"
   //                  "  initialize_midge_error_handling();\n"
@@ -258,7 +261,12 @@ int _midge_run()
   //   std::cerr << "midge.h] Caught Error:" << std::endl;
   //   std::cerr << e.what() << '\n';
   // }
+
   puts("\n</midge>");
   return 0;
+
+error_exit:
+  puts("\n</midge error>");
+return 88;
 }
 #endif // MIDGE_H

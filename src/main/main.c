@@ -4,8 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
-#include "tcc.h"
+#include "libtccinterp.h"
 
 // typedef struct mc_compiler_index {
 //   unsigned int dyn_statement_invoke_uid;
@@ -262,7 +263,7 @@
 //   ds = tcci_new();
 
 //   // const char *struct_a = "typedef struct pummel { int target; void *sorty; } pummel;";
-//   // if (tcc_interpret_file(ds, "my_code_file.c", 7 /* line_offset */, struct_a)) {
+//   // if (tcci_add_string(ds, "my_code_file.c", 7 /* line_offset */, struct_a)) {
 //   //   puts("error interpreting pummel");
 //   //   exit(1);
 //   // }
@@ -278,7 +279,7 @@
 //   //                         "void alpha() { prealpha();\n puts(\"alpha\"); }\n";
 
 //   const char *program_a = "void alpha() { const char *cobeta = \"alpha\";\n puts(cobeta); }\n";
-//   if (tcc_interpret_file(ds, "alpha.c" /* line_offset */, program_a)) {
+//   if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a)) {
 //     puts("error interpreting alpha");
 //     usleep(100000);
 //     exit(1);
@@ -295,7 +296,7 @@
 //   puts("#########################");
 
 //   const char *program_b = "void beta() { alpha();\n puts(\"then beta\");\n }\n";
-//   if (tcc_interpret_file(ds, "beta.c" /* line_offset */, program_b)) {
+//   if (tcci_add_string(ds, "beta.c" /* line_offset */, program_b)) {
 //     puts("error interpreting beta");
 //     usleep(100000);
 //     exit(1);
@@ -313,7 +314,7 @@
 
 //   puts("#####Redefining alpha()#####");
 //   const char *program_a_2 = "void alpha() { const char *cobeta = \"alpha\";\n printf(\"%s \", cobeta); }\n";
-//   if (tcc_interpret_file(ds, "alpha.c" /* line_offset */, program_a_2)) {
+//   if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a_2)) {
 //     puts("error interpreting alpha 2");
 //     usleep(100000);
 //     exit(1);
@@ -339,15 +340,9 @@
 // #include <stdio.h>
 // #include <stdlib.h>
 // #include <string>
-// #include <time.h>
+#include <time.h>
 // #include <unistd.h>
 // #include <vector>
-
-// #include "cling/Interpreter/Interpreter.h"
-
-// using namespace std;
-
-// cling::Interpreter *clint;
 
 static TCCInterpState *__mc_itp;
 
@@ -368,26 +363,53 @@ int mcc_interpret_file(const char *filepath)
   fclose(f);
   contents[fsize] = '\0';
 
-  printf("...interpreting file '%s'\n", filepath);
-  return tcc_interpret_file(__mc_itp, filepath, contents);
+  printf("\n...interpreting file '%s'\n", filepath);
+  return tcci_add_string(__mc_itp, filepath, contents);
 }
+
+void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(__mc_itp, symbol_name); }
+
+#define MCcall(func_call)                          \
+  res = func_call;                                 \
+  if (res) {                                       \
+    printf("\nCompilation Failed. res=%i\n", res); \
+    goto do_exit;                                  \
+  }
 
 int main(int argc, const char *const *argv)
 {
-  int res;
+  int res = 0;
+  struct timespec app_begin_time;
 
+  // Begin
+  clock_gettime(CLOCK_REALTIME, &app_begin_time);
+
+  // Initialize the interpreter
   __mc_itp = tcci_new();
 
+  // Add Include Paths
+  MCcall(tcci_add_include_path(__mc_itp, "/home/jason/midge/src"));
+
   tcci_add_symbol(__mc_itp, "mcc_interpret_file", &mcc_interpret_file);
+  tcci_add_symbol(__mc_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
 
-  res = mcc_interpret_file("/home/jason/midge/src/midge.h");
-  if (res) {
-    printf("\nCompilation Failed. res=%i\n", res);
-    goto do_exit;
+  const char *initial_compile_list[] = {
+      "/home/jason/midge/dep/tinycc/lib/va_list.c",
+      "/home/jason/midge/src/midge_error_handling.c",
+      "/home/jason/midge/src/core/core_source_loader.c",
+  };
+  MCcall(tcci_add_files(__mc_itp, initial_compile_list, 3));
+
+  void (*init_error_handling)(void) = tcci_get_symbol(__mc_itp, "initialize_midge_error_handling");
+  init_error_handling();
+
+  void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
+      tcci_get_symbol(__mc_itp, "register_midge_thread_creation");
+  {
+    unsigned int dummy_uint;
+    int dummy_int;
+    register_midge_thread_creation(&dummy_uint, "main", "main.c", 406, &dummy_int);
   }
-
-  int (*_midge_run)() = tcci_get_symbol(__mc_itp, "_midge_run");
-  res = _midge_run();
 
   // clint->loadFile("/home/jason/midge/src/main/remove_mc_mcva_calls.c");
   // clint->process("remove_all_MCcalls();");
