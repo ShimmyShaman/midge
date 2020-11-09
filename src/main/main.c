@@ -346,7 +346,19 @@
 
 static TCCInterpState *__mc_itp;
 
-int mcc_interpret_file(const char *filepath)
+int mcc_interpret_and_execute_string(const char *filename, const char *contents)
+{
+  printf("\n...interpreting file-str '%s'\n", filename);
+  return tcci_add_string(__mc_itp, filename, contents);
+}
+
+int mcc_interpret_file_contents(const char *filename, const char *contents)
+{
+  printf("\n...interpreting file-str '%s'\n", filename);
+  return tcci_add_string(__mc_itp, filename, contents);
+}
+
+int mcc_interpret_file_on_disk(const char *filepath)
 {
   // Read the file
   FILE *f = fopen(filepath, "rb");
@@ -363,8 +375,17 @@ int mcc_interpret_file(const char *filepath)
   fclose(f);
   contents[fsize] = '\0';
 
-  printf("\n...interpreting file '%s'\n", filepath);
+  printf("\n...interpreting file-dsk '%s'\n", filepath);
   return tcci_add_string(__mc_itp, filepath, contents);
+}
+
+int mcc_interpret_files_in_block(const char **files, int nb_files)
+{
+  printf("\n...interpreting file-blk:\n");
+  for (int i = 0; i < nb_files; ++i) {
+    printf("--'%s'\n", files[i]);
+  }
+  return tcci_add_files(__mc_itp, files, nb_files);
 }
 
 void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(__mc_itp, symbol_name); }
@@ -390,7 +411,9 @@ int main(int argc, const char *const *argv)
   // Add Include Paths
   MCcall(tcci_add_include_path(__mc_itp, "/home/jason/midge/src"));
 
-  tcci_add_symbol(__mc_itp, "mcc_interpret_file", &mcc_interpret_file);
+  tcci_add_symbol(__mc_itp, "mcc_interpret_file_contents", &mcc_interpret_file_contents);
+  tcci_add_symbol(__mc_itp, "mcc_interpret_file_on_disk", &mcc_interpret_file_on_disk);
+  tcci_add_symbol(__mc_itp, "mcc_interpret_files_in_block", &mcc_interpret_files_in_block);
   tcci_add_symbol(__mc_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
 
   const char *initial_compile_list[] = {
@@ -398,7 +421,7 @@ int main(int argc, const char *const *argv)
       "/home/jason/midge/src/midge_error_handling.c",
       "/home/jason/midge/src/core/core_source_loader.c",
   };
-  MCcall(tcci_add_files(__mc_itp, initial_compile_list, 3));
+  MCcall(mcc_interpret_files_in_block( initial_compile_list, 3));
 
   void (*init_error_handling)(void) = tcci_get_symbol(__mc_itp, "initialize_midge_error_handling");
   init_error_handling();

@@ -2,10 +2,11 @@
 
 #include <pthread.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
 #include "midge_common.h"
-#include <string.h>
 
 typedef struct _csl_c_str {
   unsigned int alloc;
@@ -264,7 +265,7 @@ static size_t _mcl_save_text_to_file(char *filepath, char *text)
 }
 
 static int _mcl_find_sequence_in_text_ignoring_empty_text(const char *text, const char *first, const char *second,
-                                                   const char *third, int *index)
+                                                          const char *third, int *index)
 {
   for (int i = 0;; ++i) {
 
@@ -586,7 +587,8 @@ const char *_mcl_core_functions[] = {
     NULL,
 };
 
-static int _mcl_print_parse_error(const char *const text, int index, const char *const function_name, const char *section_id)
+static int _mcl_print_parse_error(const char *const text, int index, const char *const function_name,
+                                  const char *section_id)
 {
   const int LEN = 84;
   const int FH = LEN / 2 - 2;
@@ -1058,7 +1060,6 @@ int _mcl_load_core_temp_source()
   // return 0;
 
   for (int a = 0; _mcl_core_source_files[a]; ++a) {
-
     char *file_text;
 
     char *cached_file_name;
@@ -1099,7 +1100,8 @@ int _mcl_load_core_temp_source()
     //   printf("def:\n%s||\n", src->text);
     //   return 3;
     // }
-    MCcall(clint_declare(src->text));
+
+    MCcall(mcc_interpret_file_contents(_mcl_core_source_files[a], src->text));
 
     if (!use_cached_file) {
       // Save the processed version to file
@@ -1179,7 +1181,7 @@ static int _mcl_init_core_data()
       "  *(void **)(%p) = (void *)global_root_data;"
       "}",
       &p_global_root);
-  MCcall(clint_process(buf));
+  MCcall(mcc_interpret_and_execute_string("_mcl_init_core_data]init.c", buf));
 
   sprintf(buf,
           "int mc_core_v_obtain_midge_global_root(mc_core_v_global_root_data **root_data) {\n"
@@ -1187,7 +1189,7 @@ static int _mcl_init_core_data()
           "  return 0;\n"
           "}\n",
           p_global_root);
-  MCcall(clint_declare(buf));
+  MCcall(mcc_interpret_file_contents("core_source_loader]obtain.c", buf));
 
   return 0;
 }

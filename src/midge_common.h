@@ -17,6 +17,10 @@
 #define false ((unsigned char)0)
 #endif
 
+int mcc_interpret_file_contents(const char *filename, const char *contents);
+int mcc_interpret_file_on_disk(const char *filepath);
+int mcc_interpret_files_in_block(const char **files, int nb_files);
+
 #define MCerror(error_code, error_message, ...)                          \
   printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
   return error_code;

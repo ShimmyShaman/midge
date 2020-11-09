@@ -131,7 +131,7 @@ int mc_dummy_function_v1(int argsc, void **argsv) { return 0; }
 // // }
 
 // extern int tcc_load_archive(TCCState *s1, int fd, int alacarte);
-extern int mcc_interpret_file(const char *filepath);
+extern int mcc_interpret_file_on_disk(const char *filepath);
 extern void *mcc_get_global_symbol(const char *symbol_name);
 
 int _midge_run()
@@ -195,7 +195,7 @@ int _midge_run()
   //   // Load non-MC App source
   //   printf("<AppSourceLoading>\n");
   // clint->loadFile("/home/jason/midge/src/midge_error_handling.h");
-  // mcc_interpret_file("/home/jason/midge/src/midge_error_handling.h");
+  // mcc_interpret_file_on_disk("/home/jason/midge/src/midge_error_handling.h");
   //   clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
 
   //   struct timespec library_base_complete_time;
@@ -204,9 +204,9 @@ int _midge_run()
   //          library_base_complete_time.tv_sec - app_begin_time.tv_sec +
   //              1e-9 * (library_base_complete_time.tv_nsec - app_begin_time.tv_nsec));
 
-  if (mcc_interpret_file("/home/jason/midge/src/midge_error_handling.h"))
+  if (mcc_interpret_file_on_disk("/home/jason/midge/src/midge_error_handling.h"))
     goto error_exit;
-  if (mcc_interpret_file("/home/jason/midge/src/core/core_source_loader.c"))
+  if (mcc_interpret_file_on_disk("/home/jason/midge/src/core/core_source_loader.c"))
     goto error_exit;
 
   struct timespec error_handling_read_time;
