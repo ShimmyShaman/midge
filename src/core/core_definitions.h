@@ -3,8 +3,6 @@
 #ifndef CORE_DEFINITIONS_H
 #define CORE_DEFINITIONS_H
 
-#include <stddef.h>
-
 #ifndef bool
 #define bool unsigned char
 #endif
@@ -23,12 +21,13 @@ typedef enum source_file_type {
   SOURCE_FILE_EXCLUSIVE_MAX = 100,
 } source_file_type;
 
-typedef enum source_definition_type {
+enum source_definition_type {
   SOURCE_DEFINITION_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
   SOURCE_DEFINITION_FUNCTION,
   SOURCE_DEFINITION_STRUCTURE,
   SOURCE_DEFINITION_ENUMERATION,
-} source_definition_type;
+};
+typedef enum source_definition_type source_definition_type;
 
 typedef enum node_type {
   NODE_TYPE_NONE = 1,
@@ -94,12 +93,12 @@ struct field_info_list;
 typedef struct source_definition {
   struct_id *type_id;
   source_definition_type type;
-  mc_source_file_info *source_file;
+  struct mc_source_file_info *source_file;
   union {
     void *p_data;
-    struct_info *structure_info;
-    function_info *func_info;
-    enumeration_info *enum_info;
+    struct struct_info *structure_info;
+    struct function_info *func_info;
+    struct enumeration_info *enum_info;
   } data;
   char *code;
 } source_definition;
@@ -163,13 +162,13 @@ typedef struct field_info {
   union {
     struct {
       char *type_name;
-      struct_info *type_info;
+      struct struct_info *type_info;
       field_declarator_info_list *declarators;
     } field;
     struct {
       bool is_union, is_anonymous;
       char *type_name;
-      field_info_list *fields;
+      struct field_info_list *fields;
       field_declarator_info_list *declarators;
     } sub_type;
   };
@@ -238,7 +237,7 @@ typedef struct event_handler_array {
 struct mc_node;
 typedef struct mc_node_list {
   unsigned int alloc, count;
-  mc_node **items;
+  struct mc_node **items;
 } mc_node_list;
 
 struct mca_node_layout;
@@ -246,10 +245,10 @@ typedef struct mc_node {
   node_type type;
   char *name;
 
-  mc_node *parent;
+  struct mc_node *parent;
   mc_node_list *children;
 
-  mca_node_layout *layout;
+  struct mca_node_layout *layout;
 
   void *data;
 } mc_node;
@@ -275,7 +274,7 @@ typedef struct global_root_data {
   struct mci_input_state *input_state;
   bool input_state_requires_update;
 
-  frame_time *elapsed;
+  struct frame_time *elapsed;
 
   struct mcu_ui_state *ui_state;
 
@@ -314,8 +313,6 @@ typedef struct global_root_data {
   } event_handlers;
 } global_root_data;
 
-extern "C" {
-
 int obtain_midge_global_root(global_root_data **root_data);
 
 int mc_throw_delayed_error(int error_no, const char *error_message, int year, int month, int day);
@@ -326,8 +323,7 @@ int append_to_collection(void ***collection, unsigned int *collection_alloc, uns
                          void *item);
 int insert_in_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
                          int insertion_index, void *item);
-int remove_from_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
-                           int index);
+int remove_from_collection(void ***collection, unsigned int *collection_count, int index);
 int remove_ptr_from_collection(void ***collection, unsigned int *collection_count, bool return_error_on_failure,
                                void *ptr);
 
@@ -343,6 +339,5 @@ int release_field_declarator_info_list(field_declarator_info_list *declarator_li
 int release_field_info(field_info *ptr);
 int release_field_info_list(field_info_list *ptr);
 int release_parameter_info(parameter_info *ptr);
-};
 
 #endif // CORE_DEFINITIONS_H

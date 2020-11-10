@@ -1,4 +1,11 @@
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <ctype.h>
+
+#include "midge_error_handling.h"
 #include "midge_common.h"
 
 #include "core/c_parser_lexer.h"

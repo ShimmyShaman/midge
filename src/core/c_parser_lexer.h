@@ -174,14 +174,14 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_DEREFERENCE_EXPRESSION,
 } mc_syntax_node_type;
 
-struct mc_syntax_node;
+typedef struct mc_syntax_node mc_syntax_node;
 typedef struct mc_syntax_node_list {
   unsigned int alloc;
   unsigned int count;
-  mc_syntax_node **items;
+  struct mc_syntax_node **items;
 } mc_syntax_node_list;
 
-typedef struct mc_syntax_node {
+struct mc_syntax_node {
   mc_syntax_node_type type;
   mc_syntax_node *parent;
   struct {
@@ -465,13 +465,12 @@ typedef struct mc_syntax_node {
       };
     };
   };
-} mc_syntax_node;
+};
 
-extern "C" {
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
 int copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);
 int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast);
 int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast);
-}
+const char *get_mc_syntax_token_type_name(mc_syntax_node_type type);
 
 #endif // C_PARSER_LEXER_H

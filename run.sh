@@ -52,7 +52,7 @@ echo Compiling
 # #     -o bin/vulkanexp
 
 gcc -o bin/midge                \
--Idep/tinycc/                   \
+-Idep/                          \
 dep/tinycc/libtcc.c             \
 -ldl                            \
 -lpthread                       \

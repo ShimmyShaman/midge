@@ -2842,7 +2842,7 @@ int define_struct_from_code_editor(mc_code_editor_state_v1 *state)
 
       printf("field %s (%ux*)%s has been removed in redefinition\n", field_info->type_name,
              field_info->type_deref_count, field_info->name);
-      remove_from_collection((void ***)&editor_struct->fields, &editor_struct_fields_alloc, &editor_struct->field_count,
+      remove_from_collection((void ***)&editor_struct->fields, &editor_struct->field_count,
                              i);
     }
     printf("dsfce-3\n");

@@ -40,8 +40,14 @@ typedef struct mci_input_event {
   bool handled;
 } mci_input_event;
 
+#ifdef __cplusplus
 extern "C" {
+#endif
+
 void mcc_initialize_input_state();
+
+#ifdef __cplusplus
 }
+#endif
 
 #endif // MC_CONTROLLER_H

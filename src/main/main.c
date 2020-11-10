@@ -6,7 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "libtccinterp.h"
+#include "tinycc/libtccinterp.h"
 
 // typedef struct mc_compiler_index {
 //   unsigned int dyn_statement_invoke_uid;
@@ -282,9 +282,13 @@
 //   printf("before:%p\n", f);
 
 //   const char *program_a =
-//       "#include <stdlib.h>\n"
-//       "#include <stdio.h>\n"
-//       "void alpha() { char c = '/'; switch(c) { default:\nputs(\"got\");\nbreak; } }\n";
+//       // "#include <stdlib.h>\n"
+//       // "#include <stdio.h>\n"
+//       "struct y;\n"
+//       "struct x { struct y *p; /* ... */ };\n"
+//       "struct y { struct x *q; /* ... */ };\n"
+//       "void alpha() { struct x d; struct y e; d.p = &e; }\n";
+
 //   if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a)) {
 //     puts("error interpreting alpha");
 //     usleep(100000);
@@ -361,10 +365,11 @@
 
 static TCCInterpState *__mc_itp;
 
-int mcc_interpret_and_execute_single_use_code(const char *filename, const char *contents)
+int mcc_interpret_and_execute_single_use_code(const char *filename, const char *comma_seperated_includes,
+                                              const char *contents)
 {
   printf("\n...interpreting single-use '%s'\n", filename);
-  return tcci_execute_single_use_code(__mc_itp, filename, contents);
+  return tcci_execute_single_use_code(__mc_itp, filename, comma_seperated_includes, contents);
 }
 
 int mcc_interpret_file_contents(const char *filename, const char *contents)
@@ -403,6 +408,8 @@ int mcc_interpret_files_in_block(const char **files, int nb_files)
   return tcci_add_files(__mc_itp, files, nb_files);
 }
 
+void *mcc_add_global_symbol(const char *symbol_name, void *ptr) { return tcci_add_symbol(__mc_itp, symbol_name, ptr); }
+
 void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(__mc_itp, symbol_name); }
 
 #define MCcall(func_call)                          \
@@ -411,6 +418,13 @@ void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(__
     printf("\nCompilation Failed. res=%i\n", res); \
     goto do_exit;                                  \
   }
+
+#define IPPY 8
+#if IPPY
+#undef IPPY
+#endif
+#define IPPY 2
+void doexp() { mcc_interpret_and_execute_single_use_code("sippy.c", "<stdio.h>", "printf(\"IPPY:%i\\n\", IPPY);"); }
 
 int main(int argc, const char *const *argv)
 {
@@ -425,12 +439,23 @@ int main(int argc, const char *const *argv)
 
   // Add Include Paths
   MCcall(tcci_add_include_path(__mc_itp, "/home/jason/midge/src"));
+  MCcall(tcci_add_include_path(__mc_itp, "/home/jason/midge/dep"));
+
+  tcci_add_symbol(__mc_itp, "tcci_add_include_path", &tcci_add_include_path);
+  tcci_add_symbol(__mc_itp, "tcci_add_files", &tcci_add_files);
+  tcci_add_symbol(__mc_itp, "tcci_add_symbol", &tcci_add_symbol);
+  tcci_add_symbol(__mc_itp, "tcci_new", &tcci_new);
+  tcci_add_symbol(__mc_itp, "tcci_delete", &tcci_delete);
 
   tcci_add_symbol(__mc_itp, "mcc_interpret_and_execute_single_use_code", &mcc_interpret_and_execute_single_use_code);
   tcci_add_symbol(__mc_itp, "mcc_interpret_file_contents", &mcc_interpret_file_contents);
   tcci_add_symbol(__mc_itp, "mcc_interpret_file_on_disk", &mcc_interpret_file_on_disk);
   tcci_add_symbol(__mc_itp, "mcc_interpret_files_in_block", &mcc_interpret_files_in_block);
+  tcci_add_symbol(__mc_itp, "mcc_add_global_symbol", &mcc_add_global_symbol);
   tcci_add_symbol(__mc_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
+
+  doexp();
+  exit(0);
 
   const char *initial_compile_list[] = {
       "/home/jason/midge/dep/tinycc/lib/va_list.c",

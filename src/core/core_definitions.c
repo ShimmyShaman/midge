@@ -1,6 +1,13 @@
 
-#include "core/core_definitions.h"
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
+
+#include <time.h>
+
+#include "midge_error_handling.h"
+#include "midge_common.h"
+#include "core/core_definitions.h"
 
 int mc_throw_delayed_error(int error_no, const char *error_message, int year, int month, int day)
 {

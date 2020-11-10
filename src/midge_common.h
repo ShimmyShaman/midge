@@ -3,10 +3,6 @@
 #ifndef MIDGE_COMMON_H
 #define MIDGE_COMMON_H
 
-// #include <stdarg.h>
-// #include <stdio.h>
-// #include <string.h>
-
 #ifndef bool
 #define bool unsigned char
 #endif
@@ -21,6 +17,8 @@ int mcc_interpret_and_execute_single_use_code(const char *filename, const char *
 int mcc_interpret_file_contents(const char *filename, const char *contents);
 int mcc_interpret_file_on_disk(const char *filepath);
 int mcc_interpret_files_in_block(const char **files, int nb_files);
+void *mcc_add_global_symbol(const char *symbol_name, void *ptr);
+void *mcc_get_global_symbol(const char *symbol_name);
 
 #define MCerror(error_code, error_message, ...)                          \
   printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \

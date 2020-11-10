@@ -1,6 +1,17 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "midge_common.h"
+#include "midge_error_handling.h"
+
 #include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
-#include "midge_common.h"
+#include "core/mc_code_transcription.h"
 
 int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field);
 
@@ -197,15 +208,16 @@ int update_or_register_function_info_from_syntax(mc_node *owner, mc_syntax_node 
     // Declare the functions pointer with cling
     // printf("--attempting:'%s'\n", func_info->name);
     char buf[512];
-    sprintf(buf, "int (*%s)(int, void **);", func_info->name);
-    clint_declare(buf);
-    sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
-    clint_process(buf);
+    func_info->ptr_declaration = mcc_add_global_symbol(func_info->name, NULL);
+    // sprintf(buf, "int (*%s)(int, void **);", func_info->name);
+    // clint_declare(buf);
+    // sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
+    // clint_process(buf);
     // printf("--declared:'%s()'\n", func_info->name);
 
     // Assign the functions pointer
-    sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
-    clint_process(buf);
+    // sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
+    // clint_process(buf);
     // printf("func_info->ptr_declaration:%p\n", func_info->ptr_declaration);
   }
   else {

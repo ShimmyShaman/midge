@@ -1,20 +1,18 @@
-/* mc_code_parser.c */
+/* mc_code_transcription.c */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <ctype.h>
+
+#include "midge_error_handling.h"
 
 #include "core/mc_code_transcription.h"
 
-struct mct_transcription_state;
-struct mct_expression_type_info;
-struct mct_statement_transcription_info;
-int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *syntax_node);
-int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node *syntax_node);
-int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node);
-int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
-                              mc_syntax_node *syntax_node);
-int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_node);
-int mct_transcribe_function_end(mct_transcription_state *ts);
-
 #define MCT_TS_MAX_VARIABLES 64
 #define MCT_TS_MAX_SCOPE_DEPTH 256
+
 typedef struct mct_transcription_scope_variable {
   mc_syntax_node *declaration_node;
   char *name;
@@ -52,6 +50,14 @@ typedef struct mct_expression_type_info {
   bool is_array;
   bool is_fptr;
 } mct_expression_type_info;
+
+int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *syntax_node);
+int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node *syntax_node);
+int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node);
+int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
+                              mc_syntax_node *syntax_node);
+int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_node);
+int mct_transcribe_function_end(mct_transcription_state *ts);
 
 int mct_release_expression_type_info_fields(mct_expression_type_info *eti)
 {
