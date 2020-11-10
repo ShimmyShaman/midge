@@ -278,7 +278,13 @@
 //   //                         "static void prealpha() { puts(global_str); }\n"
 //   //                         "void alpha() { prealpha();\n puts(\"alpha\"); }\n";
 
-//   const char *program_a = "void alpha() { const char *cobeta = \"alpha\";\n puts(cobeta); }\n";
+//   int *f = malloc(sizeof(int) * 8);
+//   printf("before:%p\n", f);
+
+//   const char *program_a =
+//       "#include <stdlib.h>\n"
+//       "#include <stdio.h>\n"
+//       "void alpha() { char c = '/'; switch(c) { default:\nputs(\"got\");\nbreak; } }\n";
 //   if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a)) {
 //     puts("error interpreting alpha");
 //     usleep(100000);
@@ -295,35 +301,37 @@
 //   alpha();
 //   puts("#########################");
 
-//   const char *program_b = "void beta() { alpha();\n puts(\"then beta\");\n }\n";
-//   if (tcci_add_string(ds, "beta.c" /* line_offset */, program_b)) {
-//     puts("error interpreting beta");
-//     usleep(100000);
-//     exit(1);
-//   }
+//   int *t = malloc(sizeof(int) * 8);
+//   printf("after:%p\n", t);
+//   // const char *program_b = "void beta() { alpha();\n puts(\"then beta\");\n }\n";
+//   // if (tcci_add_string(ds, "beta.c" /* line_offset */, program_b)) {
+//   //   puts("error interpreting beta");
+//   //   usleep(100000);
+//   //   exit(1);
+//   // }
 
-//   void (*beta)(void) = tcci_get_symbol(ds, "beta");
-//   if (!beta) {
-//     puts("could not find symbol beta");
-//     usleep(100000);
-//     exit(1);
-//   }
-//   puts("#####Calling beta()#####");
-//   beta();
-//   puts("#########################");
+//   // void (*beta)(void) = tcci_get_symbol(ds, "beta");
+//   // if (!beta) {
+//   //   puts("could not find symbol beta");
+//   //   usleep(100000);
+//   //   exit(1);
+//   // }
+//   // puts("#####Calling beta()#####");
+//   // beta();
+//   // puts("#########################");
 
-//   puts("#####Redefining alpha()#####");
-//   const char *program_a_2 = "void alpha() { const char *cobeta = \"alpha\";\n printf(\"%s \", cobeta); }\n";
-//   if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a_2)) {
-//     puts("error interpreting alpha 2");
-//     usleep(100000);
-//     exit(1);
-//   }
-//   puts("#########################");
+//   // puts("#####Redefining alpha()#####");
+//   // const char *program_a_2 = "void alpha() { const char *cobeta = \"alpha\";\n printf(\"%s \", cobeta); }\n";
+//   // if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a_2)) {
+//   //   puts("error interpreting alpha 2");
+//   //   usleep(100000);
+//   //   exit(1);
+//   // }
+//   // puts("#########################");
 
-//   puts("##Calling beta() again###");
-//   beta();
-//   puts("#########################");
+//   // puts("##Calling beta() again###");
+//   // beta();
+//   // puts("#########################");
 //   tcci_delete(ds);
 
 //   usleep(100000);
@@ -332,6 +340,13 @@
 //   return 0;
 // }
 
+// ############################################################################################################
+// ############################################################################################################
+// ############################################################################################################
+// ############################################################################################################
+// ############################################################################################################
+// ############################################################################################################
+// ############################################################################################################
 // #include <cstring>
 // #include <fstream>
 // #include <iostream>
@@ -346,10 +361,10 @@
 
 static TCCInterpState *__mc_itp;
 
-int mcc_interpret_and_execute_string(const char *filename, const char *contents)
+int mcc_interpret_and_execute_single_use_code(const char *filename, const char *contents)
 {
-  printf("\n...interpreting file-str '%s'\n", filename);
-  return tcci_add_string(__mc_itp, filename, contents);
+  printf("\n...interpreting single-use '%s'\n", filename);
+  return tcci_execute_single_use_code(__mc_itp, filename, contents);
 }
 
 int mcc_interpret_file_contents(const char *filename, const char *contents)
@@ -411,6 +426,7 @@ int main(int argc, const char *const *argv)
   // Add Include Paths
   MCcall(tcci_add_include_path(__mc_itp, "/home/jason/midge/src"));
 
+  tcci_add_symbol(__mc_itp, "mcc_interpret_and_execute_single_use_code", &mcc_interpret_and_execute_single_use_code);
   tcci_add_symbol(__mc_itp, "mcc_interpret_file_contents", &mcc_interpret_file_contents);
   tcci_add_symbol(__mc_itp, "mcc_interpret_file_on_disk", &mcc_interpret_file_on_disk);
   tcci_add_symbol(__mc_itp, "mcc_interpret_files_in_block", &mcc_interpret_files_in_block);
@@ -421,7 +437,7 @@ int main(int argc, const char *const *argv)
       "/home/jason/midge/src/midge_error_handling.c",
       "/home/jason/midge/src/core/core_source_loader.c",
   };
-  MCcall(mcc_interpret_files_in_block( initial_compile_list, 3));
+  MCcall(mcc_interpret_files_in_block(initial_compile_list, 3));
 
   void (*init_error_handling)(void) = tcci_get_symbol(__mc_itp, "initialize_midge_error_handling");
   init_error_handling();
@@ -433,6 +449,11 @@ int main(int argc, const char *const *argv)
     int dummy_int;
     register_midge_thread_creation(&dummy_uint, "main", "main.c", 406, &dummy_int);
   }
+  int *dd = (int *)malloc(sizeof(int) * 4);
+  printf("&malloc=%p *ptr=%p\n", &malloc, dd);
+
+  void (*mcl_load_app_source)(void) = tcci_get_symbol(__mc_itp, "mcl_load_app_source");
+  mcl_load_app_source();
 
   // clint->loadFile("/home/jason/midge/src/main/remove_mc_mcva_calls.c");
   // clint->process("remove_all_MCcalls();");

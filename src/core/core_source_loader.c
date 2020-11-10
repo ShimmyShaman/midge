@@ -1,12 +1,16 @@
 /* core_source_loader.c */
 
-#include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#include <ctype.h>
+#include <pthread.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include "midge_common.h"
+#include "midge_error_handling.h"
 
 typedef struct _csl_c_str {
   unsigned int alloc;
@@ -73,8 +77,9 @@ static void *__mch_thread_entry(void *state)
   return NULL;
 }
 
-static int init__csl_c_str(_csl_c_str **ptr)
+int init__csl_c_str(_csl_c_str **ptr)
 {
+  int *dd = (int *)malloc(sizeof(int) * 4);
   (*ptr) = (_csl_c_str *)malloc(sizeof(_csl_c_str));
   (*ptr)->alloc = 2;
   (*ptr)->len = 0;
@@ -727,272 +732,278 @@ static int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
     }
   }
 
-  // Functions
-  for (int i = 0; i < src->len; ++i) {
-    // Remove Includes
-    if (src->text[i] == '#') {
-      if (!strncmp(src->text + i, "#include \"", 10)) {
+  // // Functions
+  // for (int i = 0; i < src->len; ++i) {
+  //   // Remove Includes
+  //   if (src->text[i] == '#') {
+  //     if (!strncmp(src->text + i, "#include \"", 10)) {
 
-        int s = i, e = i;
-        while (src->text[e] != '\n') {
-          ++e;
-        }
+  //       int s = i, e = i;
+  //       while (src->text[e] != '\n') {
+  //         ++e;
+  //       }
 
-        // printf("removing ...'");
-        // for (int a = 0; a < e - s; ++a)
-        //   printf("%c", src->text[s + a]);
-        // printf("'");
-        // printf("-'%i' chars\n", e - s);
+  //       // printf("removing ...'");
+  //       // for (int a = 0; a < e - s; ++a)
+  //       //   printf("%c", src->text[s + a]);
+  //       // printf("'");
+  //       // printf("-'%i' chars\n", e - s);
 
-        // Delete all includes
-        MCcall(remove_from__csl_c_str(src, s, e - s));
-        --i;
-        // if (!strcmp(_mcl_core_source_files[a], "src/midge_common.h"))
-        //   printf("def:\n%s||\n", src->text);
-        //   return 0;
-        continue;
-      }
-    }
-  }
+  //       // Delete all includes
+  //       MCcall(remove_from__csl_c_str(src, s, e - s));
+  //       --i;
+  //       // if (!strcmp(_mcl_core_source_files[a], "src/midge_common.h"))
+  //       //   printf("def:\n%s||\n", src->text);
+  //       //   return 0;
+  //       continue;
+  //     }
+  //   }
+  // }
 
-  for (int i = 0; i < src->len; ++i) {
+  // for (int i = 0; i < src->len; ++i) {
+  //   // Exceptions
+  //   switch (src->text[i - 1]) {
+  //   case '_':
+  //   case '"':
+  //     continue;
+  //   default: {
+  //     if (isalpha(src->text[i - 1]))
+  //       continue;
+  //     break;
+  //   }
+  //   }
+
+  //   // Check against each object identity
+  //   for (int o = 0; _mcl_core_structs[o]; ++o) {
+  //     int n = strlen(_mcl_core_structs[o]);
+  //     if (!strncmp(src->text + i, _mcl_core_structs[o], n)) {
+  //       switch (src->text[i + n]) {
+  //       case '_':
+  //       case '"':
+  //         continue;
+  //       default: {
+  //         if (isalpha(src->text[i + n]))
+  //           continue;
+  //         break;
+  //       }
+  //       }
+
+  //       // Insert
+  //       MCcall(insert_into__csl_c_str(src, "mc_core_v_", i));
+  //       i += 10 + n - 1;
+  //     }
+  //   }
+  // }
+
+  // // Error-Handling
+  // for (int i = 0; i < src->len; ++i) {
+  //   if (src->text[i] == '(') {
+  //     // Is it a function that can be "MCcalled"
+  //     // It has to be a direct function call (a-z,_, no dereferences)
+  //     // It has to be connected to the previous line by only spaces
+  //     bool valid = true;
+  //     bool in_identity = true;
+  //     int func_start_index = -1;
+  //     for (int a = i - 1;; --a) {
+  //       if (a < 0) {
+  //         valid = false;
+  //         break;
+  //       }
+  //       if (in_identity) {
+  //         if (isalnum(src->text[a]) || src->text[a] == '_') {
+  //           continue;
+  //         }
+  //         if (i - a == 1) {
+  //           valid = false;
+  //           break;
+  //         }
+  //         in_identity = false;
+  //         func_start_index = a + 1;
+  //       }
+  //       if (src->text[a] == ' ')
+  //         continue;
+  //       if (src->text[a] != '\n') {
+  //         valid = false;
+  //       }
+  //       break;
+  //     }
+  //     //
+  //     if (valid) {
+  //       valid = false;
+  //       for (int a = 0;; ++a) {
+  //         if (!_mcl_core_functions[a])
+  //           break;
+  //         if (!strncmp(src->text + func_start_index, _mcl_core_functions[a], strlen(_mcl_core_functions[a]))) {
+  //           valid = true;
+  //           break;
+  //         }
+  //       }
+  //       if (!valid) {
+  //         // if (!strncmp(src->text + func_start_index, "clint_process", 13) ||
+  //         //     !strncmp(src->text + func_start_index, "clint_declare", 13)) {
+  //         //   valid = true;
+  //         // }
+  //         // else
+  //         {
+  //           char fname[128];
+  //           int f;
+  //           for (f = 0; f < 128 & func_start_index + f < i; ++f)
+  //             fname[f] = src->text[func_start_index + f];
+  //           fname[f] = '\0';
+  //           bool specified = false;
+  //           for (int f = 0; _mcl_ignore_functions[f]; ++f) {
+  //             if (!strcmp(_mcl_ignore_functions[f], fname)) {
+  //               specified = true;
+  //               break;
+  //             }
+  //           }
+  //           if (!specified) {
+  //             printf("i:%i\n", i);
+  //             printf("core-function-to-add:\n\"%s\",\n\n\n", fname);
+  //             // MCerror(465, "core_source_loader: unspecified ignore function:'%s'\n", fname);
+  //             return -5;
+  //           }
+  //         }
+  //       }
+  //     }
+  //     if (valid) {
+  //       int function_end_index = i + 1;
+  //       int bracket_count = 1;
+  //       while (bracket_count) {
+  //         switch (src->text[function_end_index]) {
+  //         case '"': {
+  //           bool escaped = false;
+  //           bool loop = true;
+  //           while (loop) {
+  //             ++function_end_index;
+  //             switch (src->text[function_end_index]) {
+  //             case '\\': {
+  //               escaped = !escaped;
+  //             } break;
+  //             case '\0': {
+  //               MCerror(92, "unexpected eof");
+  //             }
+  //             case '"': {
+  //               if (escaped) {
+  //                 escaped = false;
+  //                 break;
+  //               }
+  //               loop = false;
+  //             } break;
+  //             default: {
+  //               escaped = false;
+  //             } break;
+  //             }
+  //           }
+  //         } break;
+  //         case '\0': {
+  //           _mcl_print_parse_error(src->text, i, "began here", "");
+  //           MCerror(469, "CheckIt");
+  //         }
+  //         case '(':
+  //           ++bracket_count;
+  //           break;
+  //         case ')': {
+  //           --bracket_count;
+  //           break;
+  //         }
+  //         default:
+  //           break;
+  //         }
+  //         function_end_index++;
+  //       }
+  //       if (src->text[function_end_index] == ';') {
+
+  //         const char *before_template =
+  //             "{int mc_error_stack_index; "
+  //             "register_midge_stack_invocation(\"%s\", \"%s\", __LINE__, &mc_error_stack_index); "
+  //             "int mc_res = mc_core_v_";
+
+  //         const char *after_template = " if (mc_res) { "
+  //                                      "printf(\"--%s |line :%%i :ERR:%%i\\n\", __LINE__, mc_res); "
+  //                                      "return mc_res; "
+  //                                      "} "
+  //                                      "register_midge_stack_return(mc_error_stack_index);}";
+
+  //         const int FNBUF_SIZE = 164;
+  //         char fnbuf[FNBUF_SIZE];
+  //         for (int b = 0; b < 164; ++b) {
+  //           char c = src->text[func_start_index /*+ 10 strlen("mc_core_v_")*/ + b];
+  //           if (c == '(') {
+  //             fnbuf[b] = '\0';
+  //             break;
+  //           }
+  //           fnbuf[b] = c;
+  //         }
+  //         char befbuf[384];
+  //         sprintf(befbuf, before_template, fnbuf, _mcl_core_source_files[source_file_index]);
+
+  //         char aftbuf[384];
+  //         // int d = 0;
+  //         // bool in_literal = false;
+  //         // for (int b = 0; d < FNBUF_SIZE - 4; ++b) {
+  //         //   char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
+  //         //   if (!in_literal && c == ';') {
+  //         //     fnbuf[d] = '\0';
+  //         //     break;
+  //         //   }
+  //         //   else if (d > FNBUF_SIZE - 4) {
+  //         //     if (in_literal)
+  //         //       fnbuf[d++] = '"';
+  //         //     fnbuf[d] = '\0';
+  //         //     break;
+  //         //   }
+  //         //   if (c == '"') {
+  //         //     fnbuf[d++] = '\\';
+  //         //     in_literal = !in_literal;
+  //         //   }
+  //         //   else if (c == '%') {
+  //         //     fnbuf[d++] = '%';
+  //         //   }
+  //         //   else if (c == '\\') {
+  //         //     fnbuf[d++] = '\\';
+  //         //   }
+  //         //   fnbuf[d++] = c;
+  //         // }
+  //         sprintf(aftbuf, after_template, fnbuf);
+
+  //         int len = strlen(befbuf) + strlen(aftbuf) + function_end_index + 1 - func_start_index;
+
+  //         // Turn it into a temporary MCcall
+  //         MCcall(insert_into__csl_c_str(src, aftbuf, function_end_index + 1));
+  //         MCcall(insert_into__csl_c_str(src, befbuf, func_start_index));
+  //         i += strlen(befbuf) + strlen(aftbuf);
+  //         // if (len > 490) {
+  //         //   MCcall(insert_into__csl_c_str(src, "\n", function_end_index + 1));
+  //         //   ++i;
+  //         // }
+
+  //         // printf("#########################################################\n"
+  //         //        "src:\n%s||\n",
+  //         //        src->text);
+  //       }
+  //     }
+  //   }
+  // }
+
+  for (int i = 1; i < src->len; ++i) {
     // Exceptions
+    // printf("src->text:%p %c\n", src->text, src->text[i - 1]);
+//     puts("got7");
     switch (src->text[i - 1]) {
     case '_':
     case '"':
       continue;
     default: {
+//     puts("got6");
       if (isalpha(src->text[i - 1]))
         continue;
+
+//     puts("got9");
       break;
     }
     }
-
-    // Check against each object identity
-    for (int o = 0; _mcl_core_structs[o]; ++o) {
-      int n = strlen(_mcl_core_structs[o]);
-      if (!strncmp(src->text + i, _mcl_core_structs[o], n)) {
-        switch (src->text[i + n]) {
-        case '_':
-        case '"':
-          continue;
-        default: {
-          if (isalpha(src->text[i + n]))
-            continue;
-          break;
-        }
-        }
-
-        // Insert
-        MCcall(insert_into__csl_c_str(src, "mc_core_v_", i));
-        i += 10 + n - 1;
-      }
-    }
-  }
-
-  // Error-Handling
-  for (int i = 0; i < src->len; ++i) {
-    if (src->text[i] == '(') {
-      // Is it a function that can be "MCcalled"
-      // It has to be a direct function call (a-z,_, no dereferences)
-      // It has to be connected to the previous line by only spaces
-      bool valid = true;
-      bool in_identity = true;
-      int func_start_index = -1;
-      for (int a = i - 1;; --a) {
-        if (a < 0) {
-          valid = false;
-          break;
-        }
-        if (in_identity) {
-          if (isalnum(src->text[a]) || src->text[a] == '_') {
-            continue;
-          }
-          if (i - a == 1) {
-            valid = false;
-            break;
-          }
-          in_identity = false;
-          func_start_index = a + 1;
-        }
-        if (src->text[a] == ' ')
-          continue;
-        if (src->text[a] != '\n') {
-          valid = false;
-        }
-        break;
-      }
-      //
-      if (valid) {
-        valid = false;
-        for (int a = 0;; ++a) {
-          if (!_mcl_core_functions[a])
-            break;
-          if (!strncmp(src->text + func_start_index, _mcl_core_functions[a], strlen(_mcl_core_functions[a]))) {
-            valid = true;
-            break;
-          }
-        }
-        if (!valid) {
-          // if (!strncmp(src->text + func_start_index, "clint_process", 13) ||
-          //     !strncmp(src->text + func_start_index, "clint_declare", 13)) {
-          //   valid = true;
-          // }
-          // else
-          {
-            char fname[128];
-            int f;
-            for (f = 0; f < 128 & func_start_index + f < i; ++f)
-              fname[f] = src->text[func_start_index + f];
-            fname[f] = '\0';
-            bool specified = false;
-            for (int f = 0; _mcl_ignore_functions[f]; ++f) {
-              if (!strcmp(_mcl_ignore_functions[f], fname)) {
-                specified = true;
-                break;
-              }
-            }
-            if (!specified) {
-              printf("i:%i\n", i);
-              printf("core-function-to-add:\n\"%s\",\n\n\n", fname);
-              // MCerror(465, "core_source_loader: unspecified ignore function:'%s'\n", fname);
-              return -5;
-            }
-          }
-        }
-      }
-      if (valid) {
-        int function_end_index = i + 1;
-        int bracket_count = 1;
-        while (bracket_count) {
-          switch (src->text[function_end_index]) {
-          case '"': {
-            bool escaped = false;
-            bool loop = true;
-            while (loop) {
-              ++function_end_index;
-              switch (src->text[function_end_index]) {
-              case '\\': {
-                escaped = !escaped;
-              } break;
-              case '\0': {
-                MCerror(92, "unexpected eof");
-              }
-              case '"': {
-                if (escaped) {
-                  escaped = false;
-                  break;
-                }
-                loop = false;
-              } break;
-              default: {
-                escaped = false;
-              } break;
-              }
-            }
-          } break;
-          case '\0': {
-            _mcl_print_parse_error(src->text, i, "began here", "");
-            MCerror(469, "CheckIt");
-          }
-          case '(':
-            ++bracket_count;
-            break;
-          case ')': {
-            --bracket_count;
-            break;
-          }
-          default:
-            break;
-          }
-          function_end_index++;
-        }
-        if (src->text[function_end_index] == ';') {
-
-          const char *before_template =
-              "{int mc_error_stack_index; "
-              "register_midge_stack_invocation(\"%s\", \"%s\", __LINE__, &mc_error_stack_index); "
-              "int mc_res = mc_core_v_";
-
-          const char *after_template = " if (mc_res) { "
-                                       "printf(\"--%s |line :%%i :ERR:%%i\\n\", __LINE__, mc_res); "
-                                       "return mc_res; "
-                                       "} "
-                                       "register_midge_stack_return(mc_error_stack_index);}";
-
-          const int FNBUF_SIZE = 164;
-          char fnbuf[FNBUF_SIZE];
-          for (int b = 0; b < 164; ++b) {
-            char c = src->text[func_start_index /*+ 10 strlen("mc_core_v_")*/ + b];
-            if (c == '(') {
-              fnbuf[b] = '\0';
-              break;
-            }
-            fnbuf[b] = c;
-          }
-          char befbuf[384];
-          sprintf(befbuf, before_template, fnbuf, _mcl_core_source_files[source_file_index]);
-
-          char aftbuf[384];
-          // int d = 0;
-          // bool in_literal = false;
-          // for (int b = 0; d < FNBUF_SIZE - 4; ++b) {
-          //   char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
-          //   if (!in_literal && c == ';') {
-          //     fnbuf[d] = '\0';
-          //     break;
-          //   }
-          //   else if (d > FNBUF_SIZE - 4) {
-          //     if (in_literal)
-          //       fnbuf[d++] = '"';
-          //     fnbuf[d] = '\0';
-          //     break;
-          //   }
-          //   if (c == '"') {
-          //     fnbuf[d++] = '\\';
-          //     in_literal = !in_literal;
-          //   }
-          //   else if (c == '%') {
-          //     fnbuf[d++] = '%';
-          //   }
-          //   else if (c == '\\') {
-          //     fnbuf[d++] = '\\';
-          //   }
-          //   fnbuf[d++] = c;
-          // }
-          sprintf(aftbuf, after_template, fnbuf);
-
-          int len = strlen(befbuf) + strlen(aftbuf) + function_end_index + 1 - func_start_index;
-
-          // Turn it into a temporary MCcall
-          MCcall(insert_into__csl_c_str(src, aftbuf, function_end_index + 1));
-          MCcall(insert_into__csl_c_str(src, befbuf, func_start_index));
-          i += strlen(befbuf) + strlen(aftbuf);
-          // if (len > 490) {
-          //   MCcall(insert_into__csl_c_str(src, "\n", function_end_index + 1));
-          //   ++i;
-          // }
-
-          // printf("#########################################################\n"
-          //        "src:\n%s||\n",
-          //        src->text);
-        }
-      }
-    }
-  }
-
-  for (int i = 0; i < src->len; ++i) {
-    // Exceptions
-    switch (src->text[i - 1]) {
-    case '_':
-    case '"':
-      continue;
-    default: {
-      if (isalpha(src->text[i - 1]))
-        continue;
-      break;
-    }
-    }
+// puts("got8");
 
     for (int o = 0; _mcl_core_functions[o]; ++o) {
       int n = strlen(_mcl_core_functions[o]);
@@ -1014,6 +1025,7 @@ static int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
         i += 10 + n - 1;
       }
     }
+// puts("got9");
   }
 
   return 0;
@@ -1050,6 +1062,7 @@ static int _mcl_determine_cached_file_name(const char *input, char **output)
 
 int _mcl_load_core_temp_source()
 {
+  printf("init__csl_c_str=%p\n", &init__csl_c_str);
   _csl_c_str *src;
   MCcall(init__csl_c_str(&src));
 
@@ -1078,7 +1091,7 @@ int _mcl_load_core_temp_source()
       use_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
     }
 
-    //  use_cached_file = false;
+     use_cached_file = false;
     if (use_cached_file) {
       MCcall(_mcl_read_all_file_text(cached_file_name, &file_text));
       MCcall(set__csl_c_str(src, file_text));
@@ -1093,6 +1106,7 @@ int _mcl_load_core_temp_source()
       free(file_text);
 
       printf("declaring file[src]:'%s'\n", _mcl_core_source_files[a]);
+      // printf("_mcl_format_core_file=%p\n")
       MCcall(_mcl_format_core_file(src, a));
     }
 
@@ -1181,7 +1195,7 @@ static int _mcl_init_core_data()
       "  *(void **)(%p) = (void *)global_root_data;"
       "}",
       &p_global_root);
-  MCcall(mcc_interpret_and_execute_string("_mcl_init_core_data]init.c", buf));
+  MCcall(mcc_interpret_and_execute_single_use_code("_mcl_init_core_data]init.c", buf));
 
   sprintf(buf,
           "int mc_core_v_obtain_midge_global_root(mc_core_v_global_root_data **root_data) {\n"
@@ -1213,7 +1227,7 @@ static int _mcl_load_core_mc_source()
             "}",
             _mcl_core_source_files[i], &result);
 
-    MCcall(clint_process(buf));
+    MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_core_mc_source]instantiate.c", buf));
 
     if (result != 0) {
       return result;
@@ -1240,7 +1254,7 @@ static int _mcl_load_core_mc_source()
             "  *(void **)%p = (void *)global_data;\n"
             "}",
             &p_global_data);
-    MCcall(clint_process(buf));
+    MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_core_mc_source]obtain_global_root_ptr.c", buf));
 
     char fbuf[148];
     sprintf(fbuf,
@@ -1259,12 +1273,12 @@ static int _mcl_load_core_mc_source()
             "  int result = mc_core_v_instantiate_definition(global_data->global_node, (char *)%p,"
             "                 NULL, NULL, NULL);\n"
             "  if (result) {\n"
-            "    printf(\"--mc_core_v_instantiate_definition #in - clint_process\\n\");\n"
+            "    printf(\"--mc_core_v_instantiate_definition #in - single_use\\n\");\n"
             "    *(int *)(%p) = result;\n"
             "  }\n"
             "}",
             fbuf, &result);
-    MCcall(clint_process(buf));
+    MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_core_mc_source]instantiate_obtain_global_data.c", buf));
 
     if (result != 0) {
       return result;
@@ -1317,7 +1331,7 @@ static int _mcl_load_app_mc_source()
             "  }\n"
             "}",
             _mcl_external_dependency_source_files[i], &result);
-    MCcall(clint_process(buf));
+    MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_app_mc_source]register_external_file.c", buf));
 
     if (result != 0) {
       return result;
@@ -1384,7 +1398,7 @@ static int _mcl_load_app_mc_source()
             "  }\n"
             "}",
             _mcl_app_source_files[i], &result);
-    MCcall(clint_process(buf));
+    MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_app_mc_source]register_external_file.c", buf));
 
     if (result != 0) {
       return result;

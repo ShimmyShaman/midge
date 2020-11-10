@@ -17,6 +17,7 @@
 #define false ((unsigned char)0)
 #endif
 
+int mcc_interpret_and_execute_single_use_code(const char *filename, const char *contents);
 int mcc_interpret_file_contents(const char *filename, const char *contents);
 int mcc_interpret_file_on_disk(const char *filepath);
 int mcc_interpret_files_in_block(const char **files, int nb_files);

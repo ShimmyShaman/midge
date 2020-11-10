@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 // #include "p_threa"
 #include "midge_common.h"
 #include "midge_error_handling.h"
