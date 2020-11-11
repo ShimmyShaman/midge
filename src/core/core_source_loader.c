@@ -649,6 +649,8 @@ const char *_mcl_core_files[] = {
 };
 
 const char *_mcl_core_source_files[] = {
+    "src/midge_error_handling.c",
+    "src/midge_common.c",
     "src/core/core_definitions.c",
     "src/core/c_parser_lexer.c",
     "src/core/mc_code_transcription.c",

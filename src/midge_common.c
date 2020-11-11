@@ -1,7 +1,12 @@
+/* midge_common.c */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
 
 #include "midge_common.h"
 #include "midge_error_handling.h"
-
 
 int init_c_str(c_str **ptr)
 {

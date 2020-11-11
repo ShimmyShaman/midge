@@ -568,12 +568,12 @@ int update_or_register_enum_info_from_syntax(mc_node *owner, mc_syntax_node *enu
 
     // Clear the current values
     for (int i = 0; i < enum_info->members.count; ++i) {
-      sprintf(buf,
-              "#ifdef %s\n"
-              "#undef %s\n"
-              "#endif\n",
-              enum_info->members.items[i]->identity, enum_info->members.items[i]->identity);
-      clint_process(buf);
+      // sprintf(buf,
+      //         "#ifdef %s\n"
+      //         "#undef %s\n"
+      //         "#endif\n",
+      //         enum_info->members.items[i]->identity, enum_info->members.items[i]->identity);
+      // clint_process(buf);
 
       if (enum_info->members.items[i]) {
         if (enum_info->members.items[i]->identity) {
@@ -605,7 +605,7 @@ int update_or_register_enum_info_from_syntax(mc_node *owner, mc_syntax_node *enu
       copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value_expression, &member->value);
 
       sprintf(buf, "*(int *)(%p) = %s;", &latest_value, member->value); // TODO -- semi-colon
-      clint_process(buf);
+      // clint_process(buf); TODO
       sprintf(buf, "#define %s (%s)%i\n", member->identity, enum_info->mc_declared_name, latest_value);
     }
     else {
@@ -615,7 +615,7 @@ int update_or_register_enum_info_from_syntax(mc_node *owner, mc_syntax_node *enu
     }
 
     // printf("%s", buf);
-    clint_process(buf);
+    // clint_process(buf); TODO
 
     append_to_collection((void ***)&enum_info->members.items, &enum_info->members.alloc, &enum_info->members.count,
                          member);
@@ -668,7 +668,9 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
   // }
 
-  int result = clint_declare(mc_transcription);
+int result = 0;
+MCerror(8386, "progress");
+  // int result = clint_declare(mc_transcription);
   if (result) {
     printf("\n\nmc_transcription:\n%.50s||\n", mc_transcription);
     // printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
@@ -681,7 +683,7 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   char buf[512];
   sprintf(buf, "%s = &%s_mc_v%u;", func_info->name, func_info->name, func_info->latest_iteration);
   // printf("idfc-6\n");
-  clint_process(buf);
+  // clint_process(buf); TODO
 
   // printf("idfc-7 %s_v%u\n", func_info->name, func_info->latest_iteration);
   // sprintf(buf,
@@ -711,7 +713,8 @@ int instantiate_struct_definition_from_ast(mc_node *definition_owner, source_def
 
   // if (!strcmp(structure_info->name, "render_color"))
   //   printf("struct:\n%s||\n", mc_transcription);
-  int result = clint_declare(mc_transcription);
+  // int result = clint_declare(mc_transcription);
+  int result = 0;
   if (result) {
     printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
     MCerror(7667, "Failed to declare structure");
@@ -735,7 +738,8 @@ int instantiate_enum_definition_from_ast(mc_node *definition_owner, source_defin
 
   char buf[256];
   sprintf(buf, "enum %s { };", enum_info->mc_declared_name);
-  int result = clint_declare(buf);
+  int result;// = clint_declare(buf);
+  MCerror(8359, "progress");
   if (result) {
     printf("\nmc_declaration:\n%s||\n", buf);
     MCerror(691, "Failed to declare enumeration");
@@ -792,7 +796,8 @@ int instantiate_define_statement(mc_node *definition_owner, mc_syntax_node *ast,
   char *statement_text;
   copy_syntax_node_to_text(ast, &statement_text);
   // printf("\ndefine_declaration:\n%s||\n", statement_text);
-  int result = clint_declare(statement_text);
+  int result ;//= clint_declare(statement_text);
+  MCerror(9582, "progress");
   if (result) {
     printf("\ndefine_declaration:\n%s||\n", statement_text);
     MCerror(691, "Failed to declare define statement");
@@ -1003,7 +1008,8 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
               "*((int *)%p) = 111;\n"
               "#endif\n",
               identifier, &is_defined, &is_defined);
-      clint_process(buf);
+              MCerror(8383, "progress");
+      // clint_process(buf);
       if (is_defined == 222) {
         instantiate_ast_children(definitions_owner, source_file, child->preprocess_ifndef.groupopt);
       }
@@ -1254,7 +1260,8 @@ int register_external_enum_declaration(mc_node *owner, mc_syntax_node *enum_ast)
               "#undef %s\n"
               "#endif\n",
               enum_info->members.items[i]->identity, enum_info->members.items[i]->identity);
-      clint_process(buf);
+      // clint_process(buf);
+      MCerror(8521, "progress");
 
       if (enum_info->members.items[i]) {
         if (enum_info->members.items[i]->identity) {

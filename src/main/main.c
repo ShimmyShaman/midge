@@ -365,6 +365,8 @@
 
 static TCCInterpState *__mc_itp;
 
+// int mcc_set_pp_define(const char *identifier, const char *value) { return tcci_set_pp_define(__mc_itp, identifier, value); }
+
 int mcc_interpret_and_execute_single_use_code(const char *filename, const char *comma_seperated_includes,
                                               const char *contents)
 {
@@ -424,7 +426,11 @@ void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(__
 #undef IPPY
 #endif
 #define IPPY 2
-void doexp() { mcc_interpret_and_execute_single_use_code("sippy.c", "<stdio.h>", "printf(\"IPPY:%i\\n\", IPPY);"); }
+// void doexp()
+// {
+//   // mcc_set_pp_define("IPPY", "83");
+//   mcc_interpret_and_execute_single_use_code("sippy.c", "<stdio.h>", "printf(\"IPPY:%i\\n\", IPPY);");
+// }
 
 int main(int argc, const char *const *argv)
 {
@@ -454,8 +460,8 @@ int main(int argc, const char *const *argv)
   tcci_add_symbol(__mc_itp, "mcc_add_global_symbol", &mcc_add_global_symbol);
   tcci_add_symbol(__mc_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
 
-  doexp();
-  exit(0);
+  // doexp();
+  // exit(0);
 
   const char *initial_compile_list[] = {
       "/home/jason/midge/dep/tinycc/lib/va_list.c",
