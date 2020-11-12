@@ -1,13 +1,15 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include <time.h>
 
-#include "midge_error_handling.h"
-#include "midge_common.h"
 #include "core/core_definitions.h"
+#include "midge_common.h"
+#include "midge_error_handling.h"
+
+int obtain_midge_global_root(global_root_data **root_data) { MCerror(14, "TODO -- replace obtain_midge_global_root"); }
 
 int mc_throw_delayed_error(int error_no, const char *error_message, int year, int month, int day)
 {

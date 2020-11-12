@@ -365,7 +365,8 @@
 
 static TCCInterpState *__mc_itp;
 
-// int mcc_set_pp_define(const char *identifier, const char *value) { return tcci_set_pp_define(__mc_itp, identifier, value); }
+// int mcc_set_pp_define(const char *identifier, const char *value) { return tcci_set_pp_define(__mc_itp, identifier,
+// value); }
 
 int mcc_interpret_and_execute_single_use_code(const char *filename, const char *comma_seperated_includes,
                                               const char *contents)
@@ -410,7 +411,7 @@ int mcc_interpret_files_in_block(const char **files, int nb_files)
   return tcci_add_files(__mc_itp, files, nb_files);
 }
 
-void *mcc_add_global_symbol(const char *symbol_name, void *ptr) { return tcci_add_symbol(__mc_itp, symbol_name, ptr); }
+void *mcc_set_global_symbol(const char *symbol_name, void *ptr) { return tcci_add_symbol(__mc_itp, symbol_name, ptr); }
 
 void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(__mc_itp, symbol_name); }
 
@@ -421,16 +422,24 @@ void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(__
     goto do_exit;                                  \
   }
 
-#define IPPY 8
-#if IPPY
-#undef IPPY
-#endif
-#define IPPY 2
-// void doexp()
-// {
-//   // mcc_set_pp_define("IPPY", "83");
-//   mcc_interpret_and_execute_single_use_code("sippy.c", "<stdio.h>", "printf(\"IPPY:%i\\n\", IPPY);");
-// }
+void doexp()
+{
+  // mcc_set_pp_define("IPPY", "83");
+  // mcc_interpret_and_execute_single_use_code("sippy.c", "<stdio.h>", "printf(\"IPPY:%i\\n\", IPPY);");
+  const char *code = "#include <stdio.h>\n"
+                     "#define MCerror(error_code, error_message, ...)                                \\\n"
+                     "printf(\"\\n\\nERR[%i]: \" error_message \"\\n\", error_code, ##__VA_ARGS__);  \\\n"
+                     "return error_code;\n"
+                     "\n"
+                     "int doit() {\n"
+                     "  MCerror(8472, \"ERR[%i] Dummy message\", 482);\n"
+                     "}";
+
+  mcc_interpret_file_contents("dummy_doit.c", code);
+
+  int (*doit)() = mcc_get_global_symbol("doit");
+  doit();
+}
 
 int main(int argc, const char *const *argv)
 {
@@ -457,16 +466,20 @@ int main(int argc, const char *const *argv)
   tcci_add_symbol(__mc_itp, "mcc_interpret_file_contents", &mcc_interpret_file_contents);
   tcci_add_symbol(__mc_itp, "mcc_interpret_file_on_disk", &mcc_interpret_file_on_disk);
   tcci_add_symbol(__mc_itp, "mcc_interpret_files_in_block", &mcc_interpret_files_in_block);
-  tcci_add_symbol(__mc_itp, "mcc_add_global_symbol", &mcc_add_global_symbol);
+  tcci_add_symbol(__mc_itp, "mcc_set_global_symbol", &mcc_set_global_symbol);
   tcci_add_symbol(__mc_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
 
   // doexp();
   // exit(0);
 
+#define USE_CORE_LOADER_FOR_DEBUGGING
+#ifdef USE_CORE_LOADER_FOR_DEBUGGING
   const char *initial_compile_list[] = {
-      "/home/jason/midge/dep/tinycc/lib/va_list.c",
-      "/home/jason/midge/src/midge_error_handling.c",
-      "/home/jason/midge/src/core/core_source_loader.c",
+      "dep/tinycc/lib/va_list.c", // TODO -- this
+      "src/midge_error_handling.c",
+      // And everything here before -------------------------------------------------------------
+      "src/core/core_source_loader.c",
+      "src/core/init_global_root.c",
   };
   MCcall(mcc_interpret_files_in_block(initial_compile_list, 3));
 
@@ -480,12 +493,34 @@ int main(int argc, const char *const *argv)
     int dummy_int;
     register_midge_thread_creation(&dummy_uint, "main", "main.c", 406, &dummy_int);
   }
-  int *dd = (int *)malloc(sizeof(int) * 4);
-  printf("&malloc=%p *ptr=%p\n", &malloc, dd);
 
-  void (*mcl_load_app_source)(void) = tcci_get_symbol(__mc_itp, "mcl_load_app_source");
-  mcl_load_app_source();
+  void *obtain_midge_global_root = tcci_get_symbol(__mc_itp, "obtain_midge_global_root");
 
+  void (*mcl_load_app_source)(void *) = tcci_get_symbol(__mc_itp, "mcl_load_app_source");
+  mcl_load_app_source(obtain_midge_global_root);
+#else // For performance?
+
+  const char *initial_compile_list[] = {
+      "dep/tinycc/lib/va_list.c", // TODO -- this
+      "src/midge_error_handling.c",
+      "src/midge_common.c",
+      "src/core/core_definitions.c",
+      "src/core/c_parser_lexer.c",
+      "src/core/mc_code_transcription.c",
+      // And everything here before -------------------------------------------------------------
+      "src/core/mc_source.c",
+  };
+
+  // usleep(100000);
+  //   // Reload it from within midge
+  //   // int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info
+  //   **source_file) int (*instantiate_all_definitions_from_file)(void *, char *, void **) =
+  //   mcc_get_global_symbol("instantiate_all_definitions_from_file"); res = instantiate_all_definitions_from_file(NULL,
+  //   "src/midge_common.c", NULL);
+
+  //   printf("final res:%i\n", res);
+
+#endif
   // clint->loadFile("/home/jason/midge/src/main/remove_mc_mcva_calls.c");
   // clint->process("remove_all_MCcalls();");
   // return 0;

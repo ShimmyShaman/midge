@@ -9,9 +9,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "tinycc/libtccinterp.h"
 #include "midge_common.h"
 #include "midge_error_handling.h"
+#include "tinycc/libtccinterp.h"
 
 typedef struct _csl_c_str {
   unsigned int alloc;
@@ -648,7 +648,9 @@ const char *_mcl_core_files[] = {
     NULL,
 };
 
+#define MCL_CORE_SOURCE_FILE_COUNT 6
 const char *_mcl_core_source_files[] = {
+    "dep/tinycc/lib/va_list.c", // TODO -- this
     "src/midge_error_handling.c",
     "src/midge_common.c",
     "src/core/core_definitions.c",
@@ -1078,7 +1080,6 @@ static int _mcl_determine_cached_file_name(const char *input, char **output)
 
 int _mcl_load_core_temp_source(TCCInterpState *tmp_itp)
 {
-
   // Add Include Paths
   MCcall(tcci_add_include_path(tmp_itp, "/home/jason/midge/src"));
   MCcall(tcci_add_include_path(tmp_itp, "/home/jason/midge/dep"));
@@ -1087,13 +1088,13 @@ int _mcl_load_core_temp_source(TCCInterpState *tmp_itp)
   tcci_add_symbol(tmp_itp, "mcc_interpret_file_on_disk", &mcc_interpret_file_on_disk);
   tcci_add_symbol(tmp_itp, "mcc_interpret_files_in_block", &mcc_interpret_files_in_block);
   tcci_add_symbol(tmp_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
+  tcci_add_symbol(tmp_itp, "mcc_set_global_symbol", &mcc_set_global_symbol);
 
   printf("\n...interpreting temp core source:\n");
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < MCL_CORE_SOURCE_FILE_COUNT; ++i) {
     printf("--'%s'\n", _mcl_core_source_files[i]);
   }
-  MCcall(tcci_add_files(tmp_itp, _mcl_core_source_files, 4));
-
+  MCcall(tcci_add_files(tmp_itp, _mcl_core_source_files, MCL_CORE_SOURCE_FILE_COUNT));
 
   // printf("init__csl_c_str=%p\n", &init__csl_c_str);
   // _csl_c_str *src;
@@ -1164,79 +1165,81 @@ int _mcl_load_core_temp_source(TCCInterpState *tmp_itp)
   return 0;
 }
 
-static int _mcl_init_core_data()
+static int _mcl_init_core_data(TCCInterpState *tmp_itp)
 {
   char buf[3072];
   void *p_global_root;
   sprintf(
       buf,
       "{"
-      "  mc_core_v_mc_node *global = (mc_core_v_mc_node *)calloc(sizeof(mc_core_v_mc_node), 1);"
-      "  global->type = NODE_TYPE_GLOBAL_ROOT;"
-      "  allocate_and_copy_cstr(global->name, \"global\");"
-      "  global->parent = NULL;"
-      "  global->children = (mc_core_v_mc_node_list *)malloc(sizeof(mc_core_v_mc_node_list));"
-      "  global->children->count = 0;"
-      "  global->children->alloc = 0;"
-      "  global->children->items = NULL;"
-      ""
-      "  mc_core_v_global_root_data *global_root_data = (mc_core_v_global_root_data *)"
-      "                                                 malloc(sizeof(mc_core_v_global_root_data ));"
-      "  global->data = global_root_data;"
-      "  global_root_data->global_node = global;"
-      ""
-      "  global_root_data->exit_requested = false;"
-      ""
-      // "  global_root_data->children = (mc_core_v_mc_node_list *)malloc(sizeof(mc_core_v_mc_node_list));"
-      // "  global_root_data->children->alloc = 0;"
-      // "  global_root_data->children->count = 0;"
-      ""
-      "  global_root_data->source_files.alloc = 100;"
-      "  global_root_data->source_files.count = 0;"
-      "  global_root_data->source_files.items = (mc_core_v_mc_source_file_info **)"
-      "                       calloc(sizeof(mc_core_v_mc_source_file_info *), global_root_data->source_files.alloc);"
-      ""
-      "  global_root_data->functions.alloc = 100;"
-      "  global_root_data->functions.count = 0;"
-      "  global_root_data->functions.items = (mc_core_v_function_info **)calloc(sizeof(mc_core_v_function_info *),"
-      "                                         global_root_data->functions.alloc);"
-      ""
-      "  global_root_data->function_declarations.alloc = 100;"
-      "  global_root_data->function_declarations.count = 0;"
-      "  global_root_data->function_declarations.items = (mc_core_v_function_info **)"
-      "                   calloc(sizeof(mc_core_v_function_info *), global_root_data->function_declarations.alloc);"
-      ""
-      "  global_root_data->structs.alloc = 30;"
-      "  global_root_data->structs.count = 0;"
-      "  global_root_data->structs.items = (mc_core_v_struct_info **)calloc(sizeof(mc_core_v_struct_info *),"
-      "                                       global_root_data->structs.alloc);"
-      ""
-      "  global_root_data->enumerations.alloc = 20;"
-      "  global_root_data->enumerations.count = 0;"
-      "  global_root_data->enumerations.items = (mc_core_v_enumeration_info **)"
-      "                       calloc(sizeof(mc_core_v_enumeration_info *), global_root_data->enumerations.alloc);"
-      ""
-      "  global_root_data->preprocess_defines.alloc = 20;"
-      "  global_root_data->preprocess_defines.count = 0;"
-      "  global_root_data->preprocess_defines.items = (mc_core_v_preprocess_define_info **)"
-      "                       calloc(sizeof(mc_core_v_preprocess_define_info *), "
-      "                       global_root_data->preprocess_defines.alloc);"
-      ""
-      "  global_root_data->event_handlers.alloc = 0;"
-      "  global_root_data->event_handlers.count = 0;"
-      ""
-      "  *(void **)(%p) = (void *)global_root_data;"
+      // "  mc_node *global = (mc_node *)calloc(sizeof(mc_node), 1);"
+      // "  global->type = NODE_TYPE_GLOBAL_ROOT;"
+      // "  allocate_and_copy_cstr(global->name, \"global\");"
+      // "  global->parent = NULL;"
+      // "  global->children = (mc_node_list *)malloc(sizeof(mc_node_list));"
+      // "  global->children->count = 0;"
+      // "  global->children->alloc = 0;"
+      // "  global->children->items = NULL;"
+      // ""
+      // "  global_root_data *global_root_data = (global_root_data *)"
+      // "                                                 malloc(sizeof(global_root_data ));"
+      // "  global->data = global_root_data;"
+      // "  global_root_data->global_node = global;"
+      // ""
+      // "  global_root_data->exit_requested = false;"
+      // ""
+      // // "  global_root_data->children = (mc_node_list *)malloc(sizeof(mc_node_list));"
+      // // "  global_root_data->children->alloc = 0;"
+      // // "  global_root_data->children->count = 0;"
+      // ""
+      // "  global_root_data->source_files.alloc = 100;"
+      // "  global_root_data->source_files.count = 0;"
+      // "  global_root_data->source_files.items = (mc_source_file_info **)"
+      // "                       calloc(sizeof(mc_source_file_info *), global_root_data->source_files.alloc);"
+      // ""
+      // "  global_root_data->functions.alloc = 100;"
+      // "  global_root_data->functions.count = 0;"
+      // "  global_root_data->functions.items = (function_info **)calloc(sizeof(function_info *),"
+      // "                                         global_root_data->functions.alloc);"
+      // ""
+      // "  global_root_data->function_declarations.alloc = 100;"
+      // "  global_root_data->function_declarations.count = 0;"
+      // "  global_root_data->function_declarations.items = (function_info **)"
+      // "                   calloc(sizeof(function_info *), global_root_data->function_declarations.alloc);"
+      // ""
+      // "  global_root_data->structs.alloc = 30;"
+      // "  global_root_data->structs.count = 0;"
+      // "  global_root_data->structs.items = (struct_info **)calloc(sizeof(struct_info *),"
+      // "                                       global_root_data->structs.alloc);"
+      // ""
+      // "  global_root_data->enumerations.alloc = 20;"
+      // "  global_root_data->enumerations.count = 0;"
+      // "  global_root_data->enumerations.items = (enumeration_info **)"
+      // "                       calloc(sizeof(enumeration_info *), global_root_data->enumerations.alloc);"
+      // ""
+      // "  global_root_data->preprocess_defines.alloc = 20;"
+      // "  global_root_data->preprocess_defines.count = 0;"
+      // "  global_root_data->preprocess_defines.items = (preprocess_define_info **)"
+      // "                       calloc(sizeof(preprocess_define_info *), "
+      // "                       global_root_data->preprocess_defines.alloc);"
+      // ""
+      // "  global_root_data->event_handlers.alloc = 0;"
+      // "  global_root_data->event_handlers.count = 0;"
+      // ""
+      // "  *(void **)(%p) = (void *)global_root_data;"
       "}",
       &p_global_root);
+      usleep(100000);
   MCcall(mcc_interpret_and_execute_single_use_code("_mcl_init_core_data]init.c", buf));
+  return 0;
 
   sprintf(buf,
-          "int mc_core_v_obtain_midge_global_root(mc_core_v_global_root_data **root_data) {\n"
-          "  *root_data = (mc_core_v_global_root_data *)(%p);\n"
+          "int obtain_midge_global_root(global_root_data **root_data) {\n"
+          "  *root_data = (global_root_data *)(%p);\n"
           "  return 0;\n"
           "}\n",
           p_global_root);
-  MCcall(mcc_interpret_file_contents("core_source_loader]obtain.c", buf));
+  MCcall(mcc_interpret_file_contents("core_source_loader]set_obtain.c", buf));
 
   return 0;
 }
@@ -1411,7 +1414,7 @@ static int _mcl_load_app_mc_source()
             "  mc_vargs[0] = &global_data->global_node;\n"
             "  const char *filepath = \"%s\";\n"
             "  mc_vargs[1] = &filepath;\n"
-            "  void * p_null = NULL;\n"
+            "  void *p_null = NULL;\n"
             "  mc_vargs[2] = &p_null;\n"
             "  int return_value;\n"
             "  mc_vargs[3] = &return_value;\n"
@@ -1447,12 +1450,14 @@ int mcl_load_app_source()
   // MCcall(_mcl_obtain_core_source_information(&p_core_source_info));
   printf("[_mcl_load_core_temp_source]\n");
   TCCInterpState *tmp_itp = tcci_new();
+
+
   MCcall(_mcl_load_core_temp_source(tmp_itp));
 
-  tcci_delete(tmp_itp);
+  printf("[_mcl_init_core_data]\n");
+  MCcall(_mcl_init_core_data(tmp_itp));
 
-  // printf("[_mcl_init_core_data]\n");
-  // MCcall(_mcl_init_core_data());
+  tcci_delete(tmp_itp);
 
   // printf("[_mcl_load_core_mc_source]\n");
   // MCcall(_mcl_load_core_mc_source());

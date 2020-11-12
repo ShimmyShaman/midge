@@ -16,6 +16,41 @@ Midges development goals:
 ###################################################################
 ###################################################################
 
+Do pre-load
+execute instantiatetest()
+  which loads function:void alpha(void) from file alpha.c which puts("something")
+  execute alpha
+  create alpha_structs.h
+    with enum phi { PHI_NULL = 0, PHI_OPS = 3, }
+    with struct omega { int x; }
+  define new function:struct omega *beta() { struct omega *r = malloc(sizeof(struct omega); r->x = 18; return r;) }
+  redefine alpha: { omega *o = beta(); printf("omega.x=%i PHI_OPS=%i\n", o->x, PHI_OPS); free(o); }
+  execute alpha
+  redefine omega: change x to uint64_t y & uint64_t z
+  redefine phi: PHI_OPS = 8
+  redefine beta: r->y = 1111111111111111, r->z=2222222222222222  : 16places
+  redefine alpha: o->x to "%lu" (o->y + o->x)
+  execute alpha
+
+
+structs/enums:
+  to-redefine: Track all users of it. if size/ordering or values change force redefinition of all users
+
+functions:
+  to-redefine:
+    Require it to belong to a file.
+      File has a list of headers
+      File has a list of structures / enums
+    Track all users of it. If signature changes - require redefinition
+
+
+
+
+
+
+
+
+###################################################################
 
 
 

@@ -1,8 +1,8 @@
 /* midge_common.c */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "midge_common.h"

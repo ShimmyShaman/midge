@@ -17,7 +17,7 @@ int mcc_interpret_and_execute_single_use_code(const char *filename, const char *
 int mcc_interpret_file_contents(const char *filename, const char *contents);
 int mcc_interpret_file_on_disk(const char *filepath);
 int mcc_interpret_files_in_block(const char **files, int nb_files);
-void *mcc_add_global_symbol(const char *symbol_name, void *ptr);
+void *mcc_set_global_symbol(const char *symbol_name, void *ptr);
 void *mcc_get_global_symbol(const char *symbol_name);
 
 #define MCerror(error_code, error_message, ...)                          \
@@ -62,11 +62,6 @@ void *mcc_get_global_symbol(const char *symbol_name);
     strncpy(mc_tmp_cstr, src, n);                               \
     mc_tmp_cstr[n] = '\0';                                      \
     dest = mc_tmp_cstr;                                         \
-  }
-
-#define dprintf(format, ...)       \
-  {                                \
-    printf(format, ##__VA_ARGS__); \
   }
 
 typedef struct c_str {
