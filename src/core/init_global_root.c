@@ -1,22 +1,29 @@
 /* init_global_root.c */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "core/core_definitions.h"
-#include "stdlib.h"
 
 static global_root_data *__mc_global_root;
 
-global_root_data *init_global_root_data()
+int obtain_midge_global_root(global_root_data **root_data);
+
+int init_global_root_data()
 {
+  // TODO -- return error if any allocation returns NULL
   mc_node *global = (mc_node *)calloc(sizeof(mc_node), 1);
   global->type = NODE_TYPE_GLOBAL_ROOT;
-  allocate_and_copy_cstr(global->name, "global");
+
+  global->name = strdup("global");
   global->parent = NULL;
   global->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   global->children->count = 0;
   global->children->alloc = 0;
   global->children->items = NULL;
 
-  *__mc_global_root = (global_root_data *)malloc(sizeof(global_root_data));
+  __mc_global_root = (global_root_data *)malloc(sizeof(global_root_data));
   global->data = __mc_global_root;
   __mc_global_root->global_node = global;
 
@@ -57,6 +64,8 @@ global_root_data *init_global_root_data()
 
   __mc_global_root->event_handlers.alloc = 0;
   __mc_global_root->event_handlers.count = 0;
+
+  return 0;
 }
 
 int obtain_midge_global_root(global_root_data **root_data)

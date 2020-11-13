@@ -208,7 +208,8 @@ int update_or_register_function_info_from_syntax(mc_node *owner, mc_syntax_node 
     // Declare the functions pointer with cling
     // printf("--attempting:'%s'\n", func_info->name);
     char buf[512];
-    func_info->ptr_declaration = mcc_set_global_symbol(func_info->name, NULL);
+    MCerror(211, "progress");
+    // func_info->ptr_declaration = mcc_set_global_symbol(func_info->name, NULL);
     // sprintf(buf, "int (*%s)(int, void **);", func_info->name);
     // clint_declare(buf);
     // sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);

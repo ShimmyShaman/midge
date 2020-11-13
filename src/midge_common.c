@@ -80,7 +80,7 @@ int append_to_c_str(c_str *cstr, const char *text)
   // printf("atc-1\n");
   if (cstr->len + len + 1 >= cstr->alloc) {
     // printf("atc-2\n");
-    unsigned int new_allocated_size = cstr->alloc + len + 16 + (cstr->alloc) / 10;
+    unsigned int new_allocated_size = cstr->alloc + len + 16 + (cstr->alloc) / 2;
     // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
     char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
     // printf("atc-4\n");
@@ -109,7 +109,7 @@ int append_to_c_str(c_str *cstr, const char *text)
 int append_to_c_strn(c_str *cstr, const char *text, int n)
 {
   if (cstr->len + n + 1 >= cstr->alloc) {
-    unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 10;
+    unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 2;
     // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
     char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
     // printf("atc-4\n");
@@ -143,7 +143,7 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
   // printf("atcs-1\n");
   while (1) {
     if (cstr->len + chunk_size + 1 >= cstr->alloc) {
-      unsigned int new_allocated_size = chunk_size + cstr->alloc + 16 + (chunk_size + cstr->alloc) / 10;
+      unsigned int new_allocated_size = chunk_size + cstr->alloc + 16 + (chunk_size + cstr->alloc) / 2;
       // printf("atc-n3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
       char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
       // printf("atc-4\n");
@@ -273,7 +273,7 @@ int insert_into_c_str(c_str *cstr, const char *text, int index)
   }
 
   if (cstr->len + n + 1 >= cstr->alloc) {
-    unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 10;
+    unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 2;
     // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
     char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
     // printf("atc-4\n");
