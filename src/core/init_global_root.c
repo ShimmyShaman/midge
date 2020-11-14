@@ -6,9 +6,7 @@
 
 #include "core/core_definitions.h"
 
-static global_root_data *__mc_global_root;
-
-int obtain_midge_global_root(global_root_data **root_data);
+static global_root_data *__mc_global_root = NULL;
 
 int init_global_root_data()
 {

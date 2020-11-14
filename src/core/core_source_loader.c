@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "core/core_definitions.h"
 #include "midge_common.h"
 #include "midge_error_handling.h"
 #include "tinycc/libtccinterp.h"
@@ -1252,27 +1253,19 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
   int (*instantiate_all_definitions_from_file)(void *, char *, void *) =
       tcci_get_symbol(tmp_itp, "instantiate_all_definitions_from_file");
 
+  global_root_data *root_data;
+  int (*obtain_midge_global_root)(global_root_data **) = tcci_get_symbol(tmp_itp, "obtain_midge_global_root");
+  obtain_midge_global_root(&root_data);
+
   char buf[512];
   for (int i = 0; _mcl_core_files[i]; ++i) {
     int result = 0;
 
-    // sprintf(buf,
-    //         "{\n"
-    //         "  mc_core_v_global_root_data *global_data;\n"
-    //         "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
+    MCcall(instantiate_all_definitions_from_file(root_data->global_node, _mcl_core_files[i], NULL));
 
-    //         "  int result = mc_core_v_instantiate_all_definitions_from_file(global_data->global_node, (char
-    //         *)\"%s\"," "                 NULL);\n" "  if (result) {\n" "
-    //         printf(\"--mc_core_v_instantiate_all_definitions_from_file #in - clint_process\\n\");\n" "    *(int
-    //         *)(%p) = result;\n" "  }\n"
-    //         "}",
-    //         _mcl_core_source_files[i], &result);
-
-    // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_core_mc_source]instantiate.c", buf));
-
-    // if (result != 0) {
-    //   return result;
-    // }
+    if (result != 0) {
+      return result;
+    }
 
     // // DEBUG
     // // DEBUG
@@ -1522,8 +1515,21 @@ int mcl_load_app_source(TCCInterpState **itp)
     int (*init_global_root_data)(void) = tcci_get_symbol(midge_itp, "init_global_root_data");
     MCcall(init_global_root_data());
 
-    int (*obtain_midge_global_root)(void **) = tcci_get_symbol(midge_itp, "obtain_midge_global_root");
-    tcci_set_symbol(*itp, "obtain_midge_global_root", obtain_midge_global_root);
+    printf("mcl_load_app_source, addr:%p\n", mcl_load_app_source);
+
+    // global_root_data *data;
+    // int (*obtain_midge_global_root)(global_root_data **) = tcci_get_symbol(*itp, "obtain_midge_global_root");
+    // obtain_midge_global_root(&data);
+    // printf("obtain_midge_global_root(before):%p %p\n", obtain_midge_global_root, data);
+
+    int (*mdg_obtain_midge_global_root)(global_root_data **) = tcci_get_symbol(midge_itp, "obtain_midge_global_root");
+    tcci_set_symbol(*itp, "obtain_midge_global_root", mdg_obtain_midge_global_root);
+
+    // mdg_obtain_midge_global_root(&data);
+    // printf("mdg_obtain_midge_global_root(after):%p %p\n", mdg_obtain_midge_global_root, data);
+
+    // obtain_midge_global_root(&data);
+    // printf("obtain_midge_global_root(after):%p %p\n", obtain_midge_global_root, data);
   }
 
   // Load the rest of the temporary source

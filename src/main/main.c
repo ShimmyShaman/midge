@@ -278,16 +278,10 @@
 //   //                         "static void prealpha() { puts(global_str); }\n"
 //   //                         "void alpha() { prealpha();\n puts(\"alpha\"); }\n";
 
-//   int *f = malloc(sizeof(int) * 8);
-//   printf("before:%p\n", f);
-
 //   const char *program_a =
 //       // "#include <stdlib.h>\n"
-//       // "#include <stdio.h>\n"
-//       "struct y;\n"
-//       "struct x { struct y *p; /* ... */ };\n"
-//       "struct y { struct x *q; /* ... */ };\n"
-//       "void alpha() { struct x d; struct y e; d.p = &e; }\n";
+//       "#include <stdio.h>\n"
+//       "void alpha() { puts(\"alpha\"); }\n";
 
 //   if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a)) {
 //     puts("error interpreting alpha");
@@ -305,37 +299,38 @@
 //   alpha();
 //   puts("#########################");
 
-//   int *t = malloc(sizeof(int) * 8);
-//   printf("after:%p\n", t);
-//   // const char *program_b = "void beta() { alpha();\n puts(\"then beta\");\n }\n";
-//   // if (tcci_add_string(ds, "beta.c" /* line_offset */, program_b)) {
-//   //   puts("error interpreting beta");
-//   //   usleep(100000);
-//   //   exit(1);
-//   // }
+//   const char *program_b = "#include <stdio.h>\n"
+//                           "void alpha();\n"
+//                           "void beta() { alpha();\n puts(\"then beta\");\n }\n";
+//   if (tcci_add_string(ds, "beta.c" /* line_offset */, program_b)) {
+//     puts("error interpreting beta");
+//     usleep(100000);
+//     exit(1);
+//   }
 
-//   // void (*beta)(void) = tcci_get_symbol(ds, "beta");
-//   // if (!beta) {
-//   //   puts("could not find symbol beta");
-//   //   usleep(100000);
-//   //   exit(1);
-//   // }
-//   // puts("#####Calling beta()#####");
-//   // beta();
-//   // puts("#########################");
+//   void (*beta)(void) = tcci_get_symbol(ds, "beta");
+//   if (!beta) {
+//     puts("could not find symbol beta");
+//     usleep(100000);
+//     exit(1);
+//   }
+//   puts("#####Calling beta()#####");
+//   beta();
+//   puts("#########################");
 
-//   // puts("#####Redefining alpha()#####");
-//   // const char *program_a_2 = "void alpha() { const char *cobeta = \"alpha\";\n printf(\"%s \", cobeta); }\n";
-//   // if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a_2)) {
-//   //   puts("error interpreting alpha 2");
-//   //   usleep(100000);
-//   //   exit(1);
-//   // }
-//   // puts("#########################");
+//   puts("#####Redefining alpha()#####");
+//   const char *program_a_2 = "#include <stdio.h>\n"
+//                             "void alpha() { const char *cobeta = \"alpha\";\n printf(\"%s \", cobeta); }\n";
+//   if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a_2)) {
+//     puts("error interpreting alpha 2");
+//     usleep(100000);
+//     exit(1);
+//   }
+//   puts("#########################");
 
-//   // puts("##Calling beta() again###");
-//   // beta();
-//   // puts("#########################");
+//   puts("##Calling beta() again###");
+//   beta();
+//   puts("#########################");
 //   tcci_delete(ds);
 
 //   usleep(100000);
@@ -482,7 +477,8 @@ int main(int argc, const char *const *argv)
       "src/core/init_global_root.c",
       "src/core/core_source_loader.c",
   };
-  MCcall(tcci_add_files(itp, initial_compile_list, sizeof(initial_compile_list) / sizeof(const char *)));
+  MCcall(tcci_add_files(itp, initial_compile_list, 3));
+  MCcall(tcci_add_files(itp, initial_compile_list + 3, sizeof(initial_compile_list) / sizeof(const char *) - 3));
 
   int (*mcl_load_app_source)(TCCInterpState **) = tcci_get_symbol(itp, "mcl_load_app_source");
   MCcall(mcl_load_app_source(&itp));
@@ -520,7 +516,8 @@ int main(int argc, const char *const *argv)
   //   // Reload it from within midge
   //   // int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info
   //   **source_file) int (*instantiate_all_definitions_from_file)(void *, char *, void **) =
-  //   mcc_get_global_symbol("instantiate_all_definitions_from_file"); res = instantiate_all_definitions_from_file(NULL,
+  //   mcc_get_global_symbol("instantiate_all_definitions_from_file"); res =
+  instantiate_all_definitions_from_file(NULL,
   //   "src/midge_common.c", NULL);
 
   //   printf("final res:%i\n", res);

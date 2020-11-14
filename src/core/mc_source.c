@@ -669,8 +669,8 @@ int instantiate_function_definition_from_ast(mc_node *definition_owner, source_d
   //   printf("mc_transcription:\n%s||\n", mc_transcription);
   // }
 
-int result = 0;
-MCerror(8386, "progress");
+  int result = 0;
+  MCerror(8386, "progress");
   // int result = clint_declare(mc_transcription);
   if (result) {
     printf("\n\nmc_transcription:\n%.50s||\n", mc_transcription);
@@ -739,7 +739,7 @@ int instantiate_enum_definition_from_ast(mc_node *definition_owner, source_defin
 
   char buf[256];
   sprintf(buf, "enum %s { };", enum_info->mc_declared_name);
-  int result;// = clint_declare(buf);
+  int result; // = clint_declare(buf);
   MCerror(8359, "progress");
   if (result) {
     printf("\nmc_declaration:\n%s||\n", buf);
@@ -797,7 +797,7 @@ int instantiate_define_statement(mc_node *definition_owner, mc_syntax_node *ast,
   char *statement_text;
   copy_syntax_node_to_text(ast, &statement_text);
   // printf("\ndefine_declaration:\n%s||\n", statement_text);
-  int result ;//= clint_declare(statement_text);
+  int result; //= clint_declare(statement_text);
   MCerror(9582, "progress");
   if (result) {
     printf("\ndefine_declaration:\n%s||\n", statement_text);
@@ -983,7 +983,7 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
                            info->source);
       // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
-    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE: {
+    case MC_TOKEN_PP_DIRECTIVE_DEFINE: {
       preprocess_define_info *info;
       instantiate_define_statement(definitions_owner, child, &info);
 
@@ -998,33 +998,34 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
     } break;
     // TODO
     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF: {
-      char *identifier;
-      copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
-      char buf[1024];
-      int is_defined;
-      sprintf(buf,
-              "#ifndef %s\n"
-              "*((int *)%p) = 222;\n"
-              "#else\n"
-              "*((int *)%p) = 111;\n"
-              "#endif\n",
-              identifier, &is_defined, &is_defined);
-              MCerror(8383, "progress");
-      // clint_process(buf);
-      if (is_defined == 222) {
-        instantiate_ast_children(definitions_owner, source_file, child->preprocess_ifndef.groupopt);
-      }
-      else if (is_defined == 111) {
-        // Do Nothing
-        // printf("'%s' was already defined\n", identifier);
-      }
-      else {
-        MCerror(950, "All did not go to plan");
-      }
-      free(identifier);
+      // char *identifier;
+      // copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
+      // char buf[1024];
+      // int is_defined;
+      // sprintf(buf,
+      //         "#ifndef %s\n"
+      //         "*((int *)%p) = 222;\n"
+      //         "#else\n"
+      //         "*((int *)%p) = 111;\n"
+      //         "#endif\n",
+      //         identifier, &is_defined, &is_defined);
+      // MCerror(8383, "progress");
+      // // clint_process(buf);
+      // if (is_defined == 222) {
+      // Assume it is not defined
+      instantiate_ast_children(definitions_owner, source_file, child->preprocess_ifndef.groupopt);
+      // }
+      // else if (is_defined == 111) {
+      //   // Do Nothing
+      //   // printf("'%s' was already defined\n", identifier);
+      // }
+      // else {
+      //   MCerror(950, "All did not go to plan");
+      // }
+      // free(identifier);
     } break;
     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
-    case MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF:
+    case MC_TOKEN_PP_KEYWORD_ENDIF:
       break;
     default: {
       switch ((mc_token_type)child->type) {
@@ -1410,7 +1411,7 @@ int register_external_declarations_from_syntax_children(mc_node *definitions_own
       // info->source->source_file = source_file;
       // // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
-    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_DEFINE: {
+    case MC_TOKEN_PP_DIRECTIVE_DEFINE: {
       MCerror(1205, "TODO");
       // preprocess_define_info *info;
       // instantiate_define_statement(definitions_owner, child, &info);
@@ -1453,7 +1454,7 @@ int register_external_declarations_from_syntax_children(mc_node *definitions_own
     } break;
     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
       MCerror(1256, "TODO");
-    case MC_TOKEN_PREPROCESSOR_KEYWORD_ENDIF:
+    case MC_TOKEN_PP_KEYWORD_ENDIF:
       MCerror(1259, "TODO");
       break;
     default: {
