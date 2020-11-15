@@ -79,6 +79,15 @@ int attach_enumeration_info_to_owner(mc_node *owner, enumeration_info *enum_info
 //   return 0;
 // }
 
+int append_syntax_node_to_file_context(mc_syntax_node *child, c_str *file_context)
+{
+  char *code;
+  copy_syntax_node_to_text(child, &code);
+  append_to_c_str(file_context, code);
+  append_char_to_c_str(file_context, '\n');
+  free(code);
+}
+
 int mc_init_source_file_info(mc_node *owner, char *filepath, mc_source_file_info **source_file)
 {
   mc_source_file_info *sfi = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
@@ -207,8 +216,8 @@ int update_or_register_function_info_from_syntax(mc_node *owner, mc_syntax_node 
 
     // Declare the functions pointer with cling
     // printf("--attempting:'%s'\n", func_info->name);
-    char buf[512];
-    MCerror(211, "progress");
+    // char buf[512];
+    // MCerror(8211, "progress");
     // func_info->ptr_declaration = mcc_set_global_symbol(func_info->name, NULL);
     // sprintf(buf, "int (*%s)(int, void **);", func_info->name);
     // clint_declare(buf);
@@ -641,8 +650,8 @@ int update_or_register_enum_info_from_syntax(mc_node *owner, mc_syntax_node *enu
   return 0;
 }
 
-int instantiate_function_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_syntax_node *ast,
-                                             void **definition_info)
+int instantiate_function_definition_from_ast(mc_node *definition_owner, source_definition *source, c_str *file_context,
+                                             mc_syntax_node *ast, void **definition_info)
 {
   // Register Function
   function_info *func_info;
@@ -794,16 +803,16 @@ int instantiate_define_statement(mc_node *definition_owner, mc_syntax_node *ast,
     MCerror(830, "TODO :%i", ast->preprocess_define.statement_type);
   }
 
-  char *statement_text;
-  copy_syntax_node_to_text(ast, &statement_text);
-  // printf("\ndefine_declaration:\n%s||\n", statement_text);
-  int result; //= clint_declare(statement_text);
-  MCerror(9582, "progress");
-  if (result) {
-    printf("\ndefine_declaration:\n%s||\n", statement_text);
-    MCerror(691, "Failed to declare define statement");
-  }
-  free(statement_text);
+  // char *statement_text;
+  // copy_syntax_node_to_text(ast, &statement_text);
+  // // printf("\ndefine_declaration:\n%s||\n", statement_text);
+  // int result; //= clint_declare(statement_text);
+  // MCerror(9582, "progress");
+  // if (result) {
+  //   printf("\ndefine_declaration:\n%s||\n", statement_text);
+  //   MCerror(691, "Failed to declare define statement");
+  // }
+  // free(statement_text);
 
   return 0;
 }
@@ -818,8 +827,8 @@ int instantiate_define_statement(mc_node *definition_owner, mc_syntax_node *ast,
   @definition_info is OUT. May be NULL, if not dereference will be set with p-to-function_info/struct_info/enum_info
   etc.
 */
-int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
-                           void **definition_info)
+int instantiate_definition(mc_node *definition_owner, c_str *file_context, char *code, mc_syntax_node *ast,
+                           source_definition *source, void **definition_info)
 {
   register_midge_error_tag("instantiate_definition()");
   // Compile Code to Syntax
@@ -842,7 +851,7 @@ int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node
   switch (ast->type) {
   case MC_SYNTAX_FUNCTION: {
     source->type = SOURCE_DEFINITION_FUNCTION;
-    instantiate_function_definition_from_ast(definition_owner, source, ast, &p_definition_info);
+    instantiate_function_definition_from_ast(definition_owner, source, file_context, ast, &p_definition_info);
 
     function_info *func_info = (function_info *)p_definition_info;
     func_info->source = source;
@@ -875,7 +884,7 @@ int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node
   return 0;
 }
 
-int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *source_file,
+int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *source_file, c_str *file_context,
                              mc_syntax_node_list *syntax_node_list)
 {
   for (int a = 0; a < syntax_node_list->count; ++a) {
@@ -900,15 +909,19 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
       }
     } break;
     case MC_SYNTAX_FUNCTION: {
+
       if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
         // Function Declaration only
+        // puts(file_context->text);
+        append_syntax_node_to_file_context(child, file_context);
+
         update_or_register_function_info_from_syntax(NULL, child, NULL);
         // printf("--fdecl:'%s'\n", child->function.name->text);
       }
       else {
         // Assume to be function definition
         function_info *info;
-        instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
+        instantiate_definition(definitions_owner, file_context, NULL, child, NULL, (void **)&info);
         info->source->source_file = source_file;
 
         append_to_collection((void ***)&info->source->source_file->definitions.items,
@@ -918,12 +931,14 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
       }
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
+      MCerror(9821, "TODO");
       char buf[1024];
       switch (child->type_alias.type_descriptor->type) {
       case MC_SYNTAX_UNION:
       case MC_SYNTAX_STRUCTURE: {
         struct_info *info;
-        instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
+        instantiate_definition(definitions_owner, file_context, NULL, child->type_alias.type_descriptor, NULL,
+                               (void **)&info);
         info->source->source_file = source_file;
         append_to_collection((void ***)&info->source->source_file->definitions.items,
                              &info->source->source_file->definitions.alloc,
@@ -939,7 +954,8 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
       } break;
       case MC_SYNTAX_ENUM: {
         enumeration_info *info;
-        instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
+        instantiate_definition(definitions_owner, file_context, NULL, child->type_alias.type_descriptor, NULL,
+                               (void **)&info);
         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-0");
         info->source->source_file = source_file;
         append_to_collection((void ***)&info->source->source_file->definitions.items,
@@ -966,8 +982,9 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
       }
     } break;
     case MC_SYNTAX_STRUCTURE: {
+      MCerror(9691, "TODO");
       struct_info *info;
-      instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
+      instantiate_definition(definitions_owner, file_context, NULL, child, NULL, (void **)&info);
       info->source->source_file = source_file;
       append_to_collection((void ***)&info->source->source_file->definitions.items,
                            &info->source->source_file->definitions.alloc, &info->source->source_file->definitions.count,
@@ -975,8 +992,9 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
       // printf("--declared: struct '%s'\n", child->structure.type_name->text);
     } break;
     case MC_SYNTAX_ENUM: {
+      MCerror(9781, "TODO");
       enumeration_info *info;
-      instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
+      instantiate_definition(definitions_owner, file_context, NULL, child, NULL, (void **)&info);
       info->source->source_file = source_file;
       append_to_collection((void ***)&info->source->source_file->definitions.items,
                            &info->source->source_file->definitions.alloc, &info->source->source_file->definitions.count,
@@ -984,6 +1002,8 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
       // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
     case MC_TOKEN_PP_DIRECTIVE_DEFINE: {
+      append_syntax_node_to_file_context(child, file_context);
+
       preprocess_define_info *info;
       instantiate_define_statement(definitions_owner, child, &info);
 
@@ -1013,7 +1033,7 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
       // // clint_process(buf);
       // if (is_defined == 222) {
       // Assume it is not defined
-      instantiate_ast_children(definitions_owner, source_file, child->preprocess_ifndef.groupopt);
+      instantiate_ast_children(definitions_owner, source_file, file_context, child->preprocess_ifndef.groupopt);
       // }
       // else if (is_defined == 111) {
       //   // Do Nothing
@@ -1024,7 +1044,9 @@ int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *so
       // }
       // free(identifier);
     } break;
-    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
+    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE: {
+      MCerror(1028, "TODO");
+    } break;
     case MC_TOKEN_PP_KEYWORD_ENDIF:
       break;
     default: {
@@ -1144,7 +1166,11 @@ int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *file
     *source_file = lv_source_file;
   }
 
-  instantiate_ast_children(definitions_owner, lv_source_file, syntax_node->children);
+  c_str *file_context;
+  init_c_str(&file_context);
+  instantiate_ast_children(definitions_owner, lv_source_file, file_context, syntax_node->children);
+
+  release_c_str(file_context, true);
   // int *p = 0;
   // printf("about\n");
   // printf("%i\n", *p);

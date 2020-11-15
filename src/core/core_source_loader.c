@@ -383,6 +383,7 @@ const char *_mcl_core_structs[] = {
 
 const char *_mcl_ignore_functions[] = {
     "printf",
+    "puts",
     "strcat",
     "strcmp",
     "strncmp",
@@ -508,6 +509,7 @@ const char *_mcl_core_functions[] = {
     // mc_source
     "summarize_field_declarator_list",
     "summarize_type_field_list",
+    "append_syntax_node_to_file_context",
     "transcribe_enumeration_to_mc",
     "instantiate_define_statement",
     "instantiate_struct_definition_from_ast",
@@ -1126,7 +1128,7 @@ int _mcl_load_core_temp_source(TCCInterpState *tmp_itp)
       use_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
     }
 
-    use_cached_file = false;
+    // use_cached_file = false;
     if (use_cached_file) {
       MCcall(_mcl_read_all_file_text(cached_file_name, &file_text));
       MCcall(set__csl_c_str(src, file_text));
