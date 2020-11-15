@@ -440,7 +440,7 @@ int _mce_end_report_variable_values(mct_function_variable_report_index *report_i
 
 void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mce_function_debug *function_debug = (mce_function_debug *)malloc(sizeof(mce_function_debug));
@@ -621,7 +621,7 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
 
 void mce_activate_function_debugging(function_info *func_info)
 {
-  // global_root_data *global_data;
+  // mc_global_data *global_data;
   // obtain_midge_global_root(&global_data);
 
   // mce_function_debug_pool *debug_pool = (mce_function_debug_pool *)global_data->ui_state->function_debug_pool;

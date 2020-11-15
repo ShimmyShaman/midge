@@ -30,7 +30,7 @@ void create_wvp_matrix(mystery_hut *mh_data, mat4 **out_wvp)
   mat4 proj;
   mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
 
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
@@ -90,7 +90,7 @@ void _myh_render_mh_data_headless(mc_node *node)
   }
 
   // Render the render target
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   image_render_details *irq;

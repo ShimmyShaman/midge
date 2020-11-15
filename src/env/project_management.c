@@ -50,7 +50,7 @@
 
 // void mca_create_new_visual_project(const char *project_name)
 // {
-//   global_root_data *global_data;
+//   mc_global_data *global_data;
 //   obtain_midge_global_root(&global_data);
 
 //   // Node

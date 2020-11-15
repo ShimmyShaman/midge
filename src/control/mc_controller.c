@@ -4,7 +4,7 @@
 
 void mcc_initialize_input_state()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mci_input_state *input_state = (mci_input_state *)malloc(sizeof(mci_input_state));
@@ -31,7 +31,7 @@ void mcc_initialize_input_state()
 
 void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mci_input_event input_event;
@@ -59,7 +59,7 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
 
 void mcc_issue_keyboard_event(window_input_event_type event_type, int button_code)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mci_input_event input_event;
@@ -104,7 +104,7 @@ void _mcc_set_button_state(bool is_down, bool is_event, int *output)
 void mcc_handle_xcb_input()
 {
   // printf("mcc_handle_xcb_input\n");
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mci_input_state *input_state = global_data->input_state;
@@ -274,7 +274,7 @@ void mcc_handle_xcb_input()
 
 void mcc_update_xcb_input()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mci_input_state *input_state = global_data->input_state;

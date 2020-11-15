@@ -5,7 +5,7 @@
 
 void mcu_initialize_ui_state(mcu_ui_state **p_ui_state)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mcu_ui_state *ui_state = (mcu_ui_state *)malloc(sizeof(mcu_ui_state));
@@ -62,7 +62,7 @@ void _mcu_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
 // Returns a list of ui-type nodes at the given point of the screen. Nodes at the nearer Z are earlier in the list.
 void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // Use the cache list
@@ -80,7 +80,7 @@ void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 
 // void mcu_init_ui_element(mc_node *parent_node, ui_element_type element_type, mcu_ui_element **created_element)
 // {
-//   global_root_data *global_data;
+//   mc_global_data *global_data;
 //   obtain_midge_global_root(&global_data);
 
 //   // Node

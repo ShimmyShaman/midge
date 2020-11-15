@@ -3,6 +3,8 @@
 #ifndef CORE_DEFINITIONS_H
 #define CORE_DEFINITIONS_H
 
+#include "tinycc/libtccinterp.h"
+
 #ifndef bool
 #define bool unsigned char
 #endif
@@ -259,9 +261,11 @@ struct mcu_ui_state;
 struct mci_input_state;
 struct frame_time;
 
-typedef struct global_root_data {
+typedef struct mc_global_data {
   struct timespec *app_begin_time;
   struct render_thread_info *render_thread;
+
+  TCCInterpState *interpreter;
   bool exit_requested;
 
   mc_node *global_node;
@@ -311,9 +315,9 @@ typedef struct global_root_data {
     unsigned int alloc, count;
     event_handler_array **items;
   } event_handlers;
-} global_root_data;
+} mc_global_data;
 
-int obtain_midge_global_root(global_root_data **root_data);
+int obtain_midge_global_root(mc_global_data **root_data);
 
 int mc_throw_delayed_error(int error_no, const char *error_message, int year, int month, int day);
 

@@ -13,12 +13,12 @@
 #define false ((unsigned char)0)
 #endif
 
-int mcc_interpret_and_execute_single_use_code(const char *filename, const char *contents);
-int mcc_interpret_file_contents(const char *filename, const char *contents);
-int mcc_interpret_file_on_disk(const char *filepath);
-int mcc_interpret_files_in_block(const char **files, int nb_files);
-void *mcc_set_global_symbol(const char *symbol_name, void *ptr);
-void *mcc_get_global_symbol(const char *symbol_name);
+// int mcc_interpret_and_execute_single_use_code(const char *filename, const char *contents);
+// int mcc_interpret_file_contents(const char *filename, const char *contents);
+// int mcc_interpret_file_on_disk(const char *filepath);
+// int mcc_interpret_files_in_block(const char **files, int nb_files);
+// void *mcc_set_global_symbol(const char *symbol_name, void *ptr);
+// void *mcc_get_global_symbol(const char *symbol_name);
 
 #define MCerror(error_code, error_message, ...)                          \
   printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
@@ -63,6 +63,13 @@ void *mcc_get_global_symbol(const char *symbol_name);
     mc_tmp_cstr[n] = '\0';                                      \
     dest = mc_tmp_cstr;                                         \
   }
+
+// struct bitty;
+// struct bitty {
+//   int a;
+//   struct bitty *b;
+// };
+// typedef struct bitty bitty;
 
 typedef struct c_str {
   unsigned int alloc;

@@ -98,7 +98,7 @@ void _mce_render_source_line_headless(mc_node *node)
   node->layout->__requires_rerender = false;
 
   // Render New Image
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
   mce_source_line *source_line = (mce_source_line *)node->data;
 

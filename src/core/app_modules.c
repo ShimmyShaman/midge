@@ -3,7 +3,7 @@
 
 void _mca_load_module(char *base_path, char *module_name)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   char buf[512];
@@ -45,7 +45,7 @@ void mca_load_modules()
 
 void _mca_set_project_state(char *base_path, char *module_name)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   char buf[512];

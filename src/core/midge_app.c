@@ -36,7 +36,7 @@
 
 int begin_render_thread()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   global_data->render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
@@ -77,7 +77,7 @@ int begin_render_thread()
 
 void complete_midge_app_compile()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   const char *remainder_app_source_files[] = {
@@ -130,7 +130,7 @@ void mca_load_open_projects();
 
 void initialize_midge_components()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mcc_initialize_input_state();
@@ -157,7 +157,7 @@ void initialize_midge_components()
 
 void midge_initialize_app(struct timespec *app_begin_time)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // Set Times
@@ -220,7 +220,7 @@ void midge_initialize_app(struct timespec *app_begin_time)
 
 void mca_render_presentation()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   image_render_details *image_render;
@@ -262,7 +262,7 @@ void midge_run_app()
 {
   printf("midge_run_app()\n");
 
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
   mc_node *global_root_node = global_data->global_node;
   // printf("defaultfont-0:%u\n", global_data->default_font_resource);
@@ -499,7 +499,7 @@ void midge_cleanup_app()
 {
   printf("~midge_cleanup_app()~\n");
 
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // TODO invoke release resources on children...

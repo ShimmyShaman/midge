@@ -27,7 +27,7 @@ void exit_app(mc_node *node_scope, int result)
 // {
 //   switch (hierarchy_node->type) {
 //   case NODE_TYPE_GLOBAL_ROOT: {
-//     global_root_data *global_data = (global_root_data *)hierarchy_node->data;
+//     mc_global_data *global_data = (mc_global_data *)hierarchy_node->data;
 //     *sub_node_list = global_data->children;
 //   } break;
 //   case NODE_TYPE_UI: {
@@ -597,7 +597,7 @@ void _mca_set_nodes_require_layout_update(mc_node_list *node_list)
 
 void mca_set_all_nodes_require_layout_update()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   global_data->global_node->layout->__requires_layout_update = true;
@@ -707,7 +707,7 @@ void mca_focus_node(mc_node *node)
 
 void mca_obtain_focused_node(mc_node **node)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   *node = global_data->global_node;

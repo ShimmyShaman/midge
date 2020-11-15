@@ -1160,7 +1160,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
 {
   // printf("mrt-rul-0\n");
   VkResult res;
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mthread_info *thr = render_thread->thread_info;

@@ -29,7 +29,7 @@ void _mco_render_mo_data_headless(mc_node *node)
   }
 
   // Render the render target
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   image_render_details *irq;
@@ -93,7 +93,7 @@ void mco_load_resources(mc_node *module_node)
 
 void init_modus_operandi(mc_node *app_root)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);

@@ -243,6 +243,8 @@ const char *get_mc_token_type_name(mc_token_type type)
 const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
 {
   switch ((mc_syntax_node_type)type) {
+  case MC_SYNTAX_FILE_ROOT:
+    return "MC_SYNTAX_FILE_ROOT";
   case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF:
     return "MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF";
   case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:

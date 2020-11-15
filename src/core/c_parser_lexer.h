@@ -473,5 +473,6 @@ int copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);
 int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast);
 int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast);
 const char *get_mc_syntax_token_type_name(mc_syntax_node_type type);
+int release_syntax_node(mc_syntax_node *syntax_node);
 
 #endif // C_PARSER_LEXER_H

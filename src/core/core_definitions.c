@@ -144,7 +144,7 @@ int remove_ptr_from_collection(void ***collection, unsigned int *collection_coun
 
 int find_function_info(char *name, function_info **result)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   for (int i = 0; i < global_data->functions.count; ++i) {
@@ -169,7 +169,7 @@ int find_function_info(char *name, function_info **result)
 
 int find_function_info_by_ptr(void *function_ptr, function_info **result)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   for (int i = 0; i < global_data->functions.count; ++i) {
@@ -192,7 +192,7 @@ int find_function_info_by_ptr(void *function_ptr, function_info **result)
 int find_struct_info(char *name, struct_info **result)
 {
   // printf("fsi-0\n");
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
   // printf("fsi-1 %s\n", name);
 
@@ -212,7 +212,7 @@ int find_struct_info(char *name, struct_info **result)
 
 int find_enumeration_info(char *name, enumeration_info **result)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // printf("find_enum(%s)=", name);
@@ -234,7 +234,7 @@ int find_enumeration_info(char *name, enumeration_info **result)
 
 int find_enum_member_info(char *name, enumeration_info **result_type, enum_member_info **result)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // printf("find_enum(%s)=", name);

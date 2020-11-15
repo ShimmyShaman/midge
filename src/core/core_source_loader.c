@@ -345,7 +345,7 @@ const char *_mcl_core_structs[] = {
     "preprocessor_define_type",
     "struct_id",
     "source_definition",
-    "global_root_data",
+    "mc_global_data",
     "mc_source_file_info",
     "function_info",
     "parameter_info",
@@ -405,6 +405,7 @@ const char *_mcl_ignore_functions[] = {
     "allocate_and_copy_cstr",
     "allocate_and_copy_cstrn",
     "isalpha",
+    "tcci_add_string",
     // "clint_declare",
 
     // And everything here before -------------------------------------------------------------
@@ -507,26 +508,12 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_text_with_indent",
 
     // mc_source
-    "summarize_field_declarator_list",
-    "summarize_type_field_list",
-    "append_syntax_node_to_file_context",
-    "transcribe_enumeration_to_mc",
-    "instantiate_define_statement",
-    "instantiate_struct_definition_from_ast",
-    "instantiate_enum_definition_from_ast",
-    "update_or_register_function_info_from_syntax",
-    "attach_function_info_to_owner",
-    "instantiate_function_definition_from_ast",
-    "instantiate_ast_children",
-    "instantiate_definition",
-    "update_or_register_enum_info_from_syntax",
-    "register_external_definitions_from_file",
-    "register_external_struct_declaration",
-    "register_external_enum_declaration",
-    "register_external_declarations_from_syntax_children",
-    "mcl_determine_cached_file_name",
-    "attempt_instantiate_all_definitions_from_cached_file",
-    "instantiate_definitions_from_cached_file",
+    "mcs_summarize_field_declarator_list",
+    "mcs_summarize_type_field_list",
+    "mcs_register_struct_declaration",
+    "mcs_process_ast_root_children",
+    "mcs_process_file_ast",
+    "mcs_interpret_file",
 
     "parse_file_to_syntax_tree",
     "mc_init_source_file_info",
@@ -1185,52 +1172,52 @@ static int _mcl_init_core_data(TCCInterpState *tmp_itp)
           // "  global->children->alloc = 0;"
           // "  global->children->items = NULL;"
           // ""
-          // "  global_root_data *global_root_data = (global_root_data *)"
-          // "                                                 malloc(sizeof(global_root_data ));"
-          // "  global->data = global_root_data;"
-          // "  global_root_data->global_node = global;"
+          // "  mc_global_data *mc_global_data = (mc_global_data *)"
+          // "                                                 malloc(sizeof(mc_global_data ));"
+          // "  global->data = mc_global_data;"
+          // "  mc_global_data->global_node = global;"
           // ""
-          // "  global_root_data->exit_requested = false;"
+          // "  mc_global_data->exit_requested = false;"
           // ""
-          // // "  global_root_data->children = (mc_node_list *)malloc(sizeof(mc_node_list));"
-          // // "  global_root_data->children->alloc = 0;"
-          // // "  global_root_data->children->count = 0;"
+          // // "  mc_global_data->children = (mc_node_list *)malloc(sizeof(mc_node_list));"
+          // // "  mc_global_data->children->alloc = 0;"
+          // // "  mc_global_data->children->count = 0;"
           // ""
-          // "  global_root_data->source_files.alloc = 100;"
-          // "  global_root_data->source_files.count = 0;"
-          // "  global_root_data->source_files.items = (mc_source_file_info **)"
-          // "                       calloc(sizeof(mc_source_file_info *), global_root_data->source_files.alloc);"
+          // "  mc_global_data->source_files.alloc = 100;"
+          // "  mc_global_data->source_files.count = 0;"
+          // "  mc_global_data->source_files.items = (mc_source_file_info **)"
+          // "                       calloc(sizeof(mc_source_file_info *), mc_global_data->source_files.alloc);"
           // ""
-          // "  global_root_data->functions.alloc = 100;"
-          // "  global_root_data->functions.count = 0;"
-          // "  global_root_data->functions.items = (function_info **)calloc(sizeof(function_info *),"
-          // "                                         global_root_data->functions.alloc);"
+          // "  mc_global_data->functions.alloc = 100;"
+          // "  mc_global_data->functions.count = 0;"
+          // "  mc_global_data->functions.items = (function_info **)calloc(sizeof(function_info *),"
+          // "                                         mc_global_data->functions.alloc);"
           // ""
-          // "  global_root_data->function_declarations.alloc = 100;"
-          // "  global_root_data->function_declarations.count = 0;"
-          // "  global_root_data->function_declarations.items = (function_info **)"
-          // "                   calloc(sizeof(function_info *), global_root_data->function_declarations.alloc);"
+          // "  mc_global_data->function_declarations.alloc = 100;"
+          // "  mc_global_data->function_declarations.count = 0;"
+          // "  mc_global_data->function_declarations.items = (function_info **)"
+          // "                   calloc(sizeof(function_info *), mc_global_data->function_declarations.alloc);"
           // ""
-          // "  global_root_data->structs.alloc = 30;"
-          // "  global_root_data->structs.count = 0;"
-          // "  global_root_data->structs.items = (struct_info **)calloc(sizeof(struct_info *),"
-          // "                                       global_root_data->structs.alloc);"
+          // "  mc_global_data->structs.alloc = 30;"
+          // "  mc_global_data->structs.count = 0;"
+          // "  mc_global_data->structs.items = (struct_info **)calloc(sizeof(struct_info *),"
+          // "                                       mc_global_data->structs.alloc);"
           // ""
-          // "  global_root_data->enumerations.alloc = 20;"
-          // "  global_root_data->enumerations.count = 0;"
-          // "  global_root_data->enumerations.items = (enumeration_info **)"
-          // "                       calloc(sizeof(enumeration_info *), global_root_data->enumerations.alloc);"
+          // "  mc_global_data->enumerations.alloc = 20;"
+          // "  mc_global_data->enumerations.count = 0;"
+          // "  mc_global_data->enumerations.items = (enumeration_info **)"
+          // "                       calloc(sizeof(enumeration_info *), mc_global_data->enumerations.alloc);"
           // ""
-          // "  global_root_data->preprocess_defines.alloc = 20;"
-          // "  global_root_data->preprocess_defines.count = 0;"
-          // "  global_root_data->preprocess_defines.items = (preprocess_define_info **)"
+          // "  mc_global_data->preprocess_defines.alloc = 20;"
+          // "  mc_global_data->preprocess_defines.count = 0;"
+          // "  mc_global_data->preprocess_defines.items = (preprocess_define_info **)"
           // "                       calloc(sizeof(preprocess_define_info *), "
-          // "                       global_root_data->preprocess_defines.alloc);"
+          // "                       mc_global_data->preprocess_defines.alloc);"
           // ""
-          // "  global_root_data->event_handlers.alloc = 0;"
-          // "  global_root_data->event_handlers.count = 0;"
+          // "  mc_global_data->event_handlers.alloc = 0;"
+          // "  mc_global_data->event_handlers.count = 0;"
           // ""
-          // "  *(void **)(%p) = (void *)global_root_data;"
+          // "  *(void **)(%p) = (void *)mc_global_data;"
           "}",
           &p_global_root);
   // usleep(100000);
@@ -1238,8 +1225,8 @@ static int _mcl_init_core_data(TCCInterpState *tmp_itp)
   return 0;
 
   sprintf(buf,
-          "int obtain_midge_global_root(global_root_data **root_data) {\n"
-          "  *root_data = (global_root_data *)(%p);\n"
+          "int obtain_midge_global_root(mc_global_data **root_data) {\n"
+          "  *root_data = (mc_global_data *)(%p);\n"
           "  return 0;\n"
           "}\n",
           p_global_root);
@@ -1252,18 +1239,20 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
 {
   // int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info
   // **source_file)
-  int (*instantiate_all_definitions_from_file)(void *, char *, void *) =
-      tcci_get_symbol(tmp_itp, "instantiate_all_definitions_from_file");
+  int (*mcs_interpret_file)(TCCInterpState *, const char *) = tcci_get_symbol(tmp_itp, "mcs_interpret_file");
+  if (!mcs_interpret_file) {
+    MCerror(1240, "Couldn't obtain mcs_interpret_file");
+  }
 
-  global_root_data *root_data;
-  int (*obtain_midge_global_root)(global_root_data **) = tcci_get_symbol(tmp_itp, "obtain_midge_global_root");
-  obtain_midge_global_root(&root_data);
+  // mc_global_data *root_data;
+  // int (*obtain_midge_global_root)(mc_global_data **) = tcci_get_symbol(tmp_itp, "obtain_midge_global_root");
+  // obtain_midge_global_root(&root_data);
 
   char buf[512];
   for (int i = 0; _mcl_core_files[i]; ++i) {
     int result = 0;
 
-    MCcall(instantiate_all_definitions_from_file(root_data->global_node, _mcl_core_files[i], NULL));
+    MCcall(mcs_interpret_file(tmp_itp, _mcl_core_files[i]));
 
     if (result != 0) {
       return result;
@@ -1285,7 +1274,7 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
     //   void *p_global_data;
     //   sprintf(buf,
     //           "{\n"
-    //           "  mc_core_v_global_root_data *global_data;\n"
+    //           "  mc_core_v_mc_global_data *global_data;\n"
     //           "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
     //           "  *(void **)%p = (void *)global_data;\n"
     //           "}",
@@ -1294,8 +1283,8 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
 
     //   char fbuf[148];
     //   sprintf(fbuf,
-    //           "int obtain_midge_global_root(global_root_data **root_data) {\n"
-    //           "  *root_data = (global_root_data *)(%p);\n"
+    //           "int obtain_midge_global_root(mc_global_data **root_data) {\n"
+    //           "  *root_data = (mc_global_data *)(%p);\n"
     //           "  return 0;\n"
     //           "}\n",
     //           p_global_data);
@@ -1303,7 +1292,7 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
     //   int result = 0;
     //   sprintf(buf,
     //           "{\n"
-    //           "  mc_core_v_global_root_data *global_data;\n"
+    //           "  mc_core_v_mc_global_data *global_data;\n"
     //           "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
 
     //           "  int result = mc_core_v_instantiate_definition(global_data->global_node, (char *)%p,"
@@ -1342,7 +1331,7 @@ static int _mcl_load_app_mc_source()
     sprintf(buf,
             "{\n"
             "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
-            "  mc_core_v_global_root_data *global_data;\n"
+            "  mc_core_v_mc_global_data *global_data;\n"
             "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
             ""
             "  void *mc_vargs[4];\n"
@@ -1409,7 +1398,7 @@ static int _mcl_load_app_mc_source()
     sprintf(buf,
             "{\n"
             "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
-            "  mc_core_v_global_root_data *global_data;\n"
+            "  mc_core_v_mc_global_data *global_data;\n"
             "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
             ""
             "  void *mc_vargs[4];\n"
@@ -1514,17 +1503,17 @@ int mcl_load_app_source(TCCInterpState **itp)
     }
 
     // Initialize midge global data and allow it to be obtained from temp source interpreter
-    int (*init_global_root_data)(void) = tcci_get_symbol(midge_itp, "init_global_root_data");
-    MCcall(init_global_root_data());
+    int (*init_mc_global_data)(TCCInterpState *) = tcci_get_symbol(midge_itp, "init_mc_global_data");
+    MCcall(init_mc_global_data(midge_itp));
 
     printf("mcl_load_app_source, addr:%p\n", mcl_load_app_source);
 
-    // global_root_data *data;
-    // int (*obtain_midge_global_root)(global_root_data **) = tcci_get_symbol(*itp, "obtain_midge_global_root");
+    // mc_global_data *data;
+    // int (*obtain_midge_global_root)(mc_global_data **) = tcci_get_symbol(*itp, "obtain_midge_global_root");
     // obtain_midge_global_root(&data);
     // printf("obtain_midge_global_root(before):%p %p\n", obtain_midge_global_root, data);
 
-    int (*mdg_obtain_midge_global_root)(global_root_data **) = tcci_get_symbol(midge_itp, "obtain_midge_global_root");
+    int (*mdg_obtain_midge_global_root)(mc_global_data **) = tcci_get_symbol(midge_itp, "obtain_midge_global_root");
     tcci_set_symbol(*itp, "obtain_midge_global_root", mdg_obtain_midge_global_root);
 
     // mdg_obtain_midge_global_root(&data);

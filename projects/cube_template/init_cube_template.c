@@ -31,7 +31,7 @@ void _cbt_render_td_ct_data_headless(mc_node *node)
   }
 
   // Render the render target
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   image_render_details *irq;

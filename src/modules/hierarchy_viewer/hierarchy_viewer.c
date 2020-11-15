@@ -273,7 +273,7 @@ void __mc_hv_text_line_left_click_handler(mcu_button *button, mc_point click_loc
 
 void _mc_hv_update_hierarchy_viewer_layout(mc_node *node, mc_rectf *available_area)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // Update the text lines (collapsed/text/etc)
@@ -285,7 +285,7 @@ void _mc_hv_update_hierarchy_viewer_layout(mc_node *node, mc_rectf *available_ar
 
 void init_hierarchy_viewer()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // Panel

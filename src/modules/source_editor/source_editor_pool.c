@@ -5,7 +5,7 @@
 
 void mce_init_source_editor_pool()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mce_source_editor_pool *source_editor_pool = (mce_source_editor_pool *)malloc(sizeof(mce_source_editor_pool));
@@ -35,7 +35,7 @@ void _mce_obtain_function_editor_instance(mce_source_editor_pool *source_editor_
     reallocate_collection((void ***)&source_editor_pool->function_editor.items,
                           &source_editor_pool->function_editor.size, source_editor_pool->function_editor.size + 1, 0);
 
-    global_root_data *global_data;
+    mc_global_data *global_data;
     obtain_midge_global_root(&global_data);
 
     mce_init_function_editor(global_data->global_node, source_editor_pool, function_editor);
@@ -98,7 +98,7 @@ int _mce_set_definition_to_function_editor(mce_function_editor *function_editor,
 
 void mce_activate_source_editor_for_definition(source_definition *definition)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mce_source_editor_pool *source_editor_pool = (mce_source_editor_pool *)global_data->ui_state->source_editor_pool;

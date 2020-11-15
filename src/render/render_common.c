@@ -103,7 +103,7 @@ void mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_im
 {
   *p_resource = NULL;
 
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
@@ -124,7 +124,7 @@ void mcr_load_texture_resource(const char *path, mcr_texture_image **p_resource)
 {
   *p_resource = NULL;
 
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
@@ -160,7 +160,7 @@ void mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_
 {
   *p_resource = NULL;
 
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
@@ -215,7 +215,7 @@ void mcr_determine_text_display_dimensions(font_resource *font, const char *text
     return;
   }
 
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   if (!font) {
@@ -263,7 +263,7 @@ void mcr_issue_render_command_text(image_render_details *image_render_queue, uns
     render_cmd->print_text.font = font;
   }
   else {
-    global_root_data *global_data;
+    mc_global_data *global_data;
     obtain_midge_global_root(&global_data);
 
     render_cmd->print_text.font = global_data->ui_state->default_font_resource;

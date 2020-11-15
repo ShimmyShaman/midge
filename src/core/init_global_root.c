@@ -4,11 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "tinycc/libtccinterp.h"
+
 #include "core/core_definitions.h"
 
-static global_root_data *__mc_global_root = NULL;
+static mc_global_data *__mc_global_root = NULL;
 
-int init_global_root_data()
+int init_mc_global_data(TCCInterpState *tis)
 {
   // TODO -- return error if any allocation returns NULL
   mc_node *global = (mc_node *)calloc(sizeof(mc_node), 1);
@@ -21,10 +23,11 @@ int init_global_root_data()
   global->children->alloc = 0;
   global->children->items = NULL;
 
-  __mc_global_root = (global_root_data *)malloc(sizeof(global_root_data));
+  __mc_global_root = (mc_global_data *)malloc(sizeof(mc_global_data));
   global->data = __mc_global_root;
   __mc_global_root->global_node = global;
 
+  __mc_global_root->interpreter = tis;
   __mc_global_root->exit_requested = false;
 
   // "  __mc_global_root->children = (mc_node_list *)malloc(sizeof(mc_node_list));"
@@ -66,7 +69,7 @@ int init_global_root_data()
   return 0;
 }
 
-int obtain_midge_global_root(global_root_data **root_data)
+int obtain_midge_global_root(mc_global_data **root_data)
 {
   *root_data = __mc_global_root;
   return 0;

@@ -6,7 +6,7 @@ void mca_handle_global_context_menu_option_selected(const char *selected_option)
 
 void mca_init_global_context_menu()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mcu_context_menu *context_menu;
@@ -36,7 +36,7 @@ void mca_init_global_context_menu()
 
 void mca_handle_global_context_menu_option_selected(const char *selected_option)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
   mc_node *context_node = global_data->ui_state->global_context_menu.context_node;
   mc_point context_location = global_data->ui_state->global_context_menu.context_location;
@@ -81,7 +81,7 @@ void mca_handle_global_context_menu_option_selected(const char *selected_option)
 void mca_global_context_menu_create_context_list(node_type node_type,
                                                  mca_global_context_node_option_list **context_list)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // Argument check for duplicates
@@ -112,7 +112,7 @@ void mca_global_context_menu_add_option_to_node_context(
     node_type node_type, const char *option_text,
     /*void (*event_handler)(mc_node *, const char *)*/ void *event_handler)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // Obtain list, or create a new one
@@ -142,7 +142,7 @@ void mca_global_context_menu_add_option_to_node_context(
 
 void mca_activate_global_context_menu(int screen_x, int screen_y)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   mcu_context_menu *context_menu = (mcu_context_menu *)global_data->ui_state->global_context_menu.node->data;
@@ -189,7 +189,7 @@ void mca_activate_global_context_menu(int screen_x, int screen_y)
 
 void mca_hide_global_context_menu()
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   global_data->ui_state->global_context_menu.node->layout->visible = true;

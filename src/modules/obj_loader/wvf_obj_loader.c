@@ -768,7 +768,7 @@ void _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsig
 
 void mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buffer, mcr_index_buffer **index_buffer)
 {
-  global_root_data *global_data;
+  mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
   // Load the obj data
@@ -799,7 +799,7 @@ void mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buf
 
 // void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model)
 // {
-//   global_root_data *global_data;
+//   mc_global_data *global_data;
 //   obtain_midge_global_root(&global_data);
 
 //   // Load the obj data
