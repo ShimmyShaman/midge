@@ -215,7 +215,6 @@ typedef struct function_info {
   struct_id *type_id;
   source_definition *source;
   char *name;
-  unsigned int latest_iteration;
   int (**ptr_declaration)(int, void **);
   struct {
     char *name;

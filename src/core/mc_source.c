@@ -19,49 +19,96 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
 
 int attach_function_info_to_owner(function_info *func_info)
 {
-  switch (owner->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    mc_global_data *data = (mc_global_data *)owner->data;
-    append_to_collection((void ***)&data->functions.items, &data->functions.alloc, &data->functions.count,
-                         (void *)func_info);
-    break;
-  }
-  default:
-    MCerror(9, "TODO:%i", owner->type);
-  }
+  mc_global_data *data;
+  obtain_midge_global_root(&data);
+
+  append_to_collection((void ***)&data->functions.items, &data->functions.alloc, &data->functions.count,
+                       (void *)func_info);
 
   return 0;
 }
 
 int attach_struct_info_to_owner(struct_info *structure_info)
 {
-  switch (owner->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    mc_global_data *data = (mc_global_data *)owner->data;
-    append_to_collection((void ***)&data->structs.items, &data->structs.alloc, &data->structs.count,
-                         (void *)structure_info);
-    break;
-  }
-  default:
-    MCerror(9, "TODO:%i", owner->type);
-  }
+  mc_global_data *data;
+  obtain_midge_global_root(&data);
+
+  append_to_collection((void ***)&data->structs.items, &data->structs.alloc, &data->structs.count,
+                       (void *)structure_info);
 
   return 0;
 }
 
 int attach_enumeration_info_to_owner(enumeration_info *enum_info)
 {
-  switch (owner->type) {
-  case NODE_TYPE_GLOBAL_ROOT: {
-    mc_global_data *data = (mc_global_data *)owner->data;
-    append_to_collection((void ***)&data->enumerations.items, &data->enumerations.alloc, &data->enumerations.count,
-                         (void *)enum_info);
-    break;
-  }
+  mc_global_data *data;
+  obtain_midge_global_root(&data);
+
+  append_to_collection((void ***)&data->enumerations.items, &data->enumerations.alloc, &data->enumerations.count,
+                       (void *)enum_info);
+
+  return 0;
+}
+
+int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_node,
+                                               parameter_info **initialized_parameter)
+{
+  parameter_info *parameter = (parameter_info *)calloc(sizeof(parameter_info), 1);
+  parameter->type_id = (struct_id *)malloc(sizeof(struct_id));
+  allocate_and_copy_cstr(parameter->type_id->identifier, "parameter_info");
+  parameter->type_id->version = 1U;
+
+  switch (parameter_syntax_node->parameter.type) {
+  case PARAMETER_KIND_STANDARD: {
+    register_midge_error_tag("initialize_parameter_info_from_syntax_node-STANDARD");
+    parameter->parameter_type = PARAMETER_KIND_STANDARD;
+
+    // Name
+    copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name);
+
+    // Type
+    copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name);
+    if (parameter_syntax_node->parameter.type_dereference) {
+      parameter->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
+    }
+    else {
+      parameter->type_deref_count = 0;
+    }
+
+  } break;
+  case PARAMETER_KIND_FUNCTION_POINTER: {
+    register_midge_error_tag("initialize_parameter_info_from_syntax_node-FUNCTION_POINTER");
+    parameter->parameter_type = PARAMETER_KIND_FUNCTION_POINTER;
+
+    // Name
+    copy_syntax_node_to_text(parameter_syntax_node->parameter.function_pointer->fptr_declarator.name, &parameter->name);
+
+    // Type
+    copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->return_type);
+    if (parameter_syntax_node->parameter.type_dereference) {
+      parameter->return_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
+    }
+    else {
+      parameter->return_deref_count = 0;
+    }
+
+    // print_syntax_node(parameter_syntax_node, 0);
+  } break;
+  case PARAMETER_KIND_VARIABLE_ARGS: {
+    register_midge_error_tag("initialize_parameter_info_from_syntax_node-VARIABLE_ARGS");
+    parameter->parameter_type = PARAMETER_KIND_VARIABLE_ARGS;
+
+    parameter->type_name = NULL;
+    parameter->type_version = 0;
+    parameter->type_deref_count = 0;
+    parameter->name = NULL;
+
+  } break;
   default:
-    MCerror(9, "TODO:%i", owner->type);
+    MCerror(125, "NotSupported:%i", parameter_syntax_node->parameter.type);
   }
 
+  *initialized_parameter = parameter;
   return 0;
 }
 
@@ -251,6 +298,165 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
   return 0;
 }
 
+int mcs_register_function_declaration(mc_syntax_node *function_ast, function_info **p_func_info)
+{
+  // Ensure a function info entry exists for the declared function
+  function_info *func_info;
+  find_function_info(function_ast->function.name->text, &func_info);
+  if (func_info) {
+    // TODO -- argument equity check
+    return 0;
+  }
+
+  func_info = (function_info *)calloc(1, sizeof(function_info));
+  attach_function_info_to_owner(func_info);
+
+  func_info->name = strdup(function_ast->function.name->text);
+
+  // Return-type & Parameters
+  copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name);
+  if (function_ast->function.return_type_dereference) {
+    func_info->return_type.deref_count = function_ast->function.return_type_dereference->dereference_sequence.count;
+  }
+  else {
+    func_info->return_type.deref_count = 0;
+  }
+
+  register_midge_error_tag("update_or_register_function_info_from_syntax-3");
+  func_info->parameter_count = function_ast->function.parameters->count;
+  func_info->parameters = (parameter_info **)malloc(sizeof(parameter_info *) * func_info->parameter_count);
+  for (int p = 0; p < func_info->parameter_count; ++p) {
+    parameter_info *parameter;
+    initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &parameter);
+    func_info->parameters[p] = parameter;
+  }
+
+  return 0;
+}
+
+int mcs_register_function_definition(mc_syntax_node *function_ast, function_info **p_func_info)
+{
+  function_info *func_info;
+  mcs_register_function_declaration(function_ast, &func_info);
+
+  MCerror(241, "TODO");
+
+  //   function_info *func_info;
+  //   find_function_info(function_ast->function.name->text, &func_info);
+
+  //   bool is_declaration_only = (mc_token_type)function_ast->function.code_block->type == MC_TOKEN_SEMI_COLON;
+
+  //   register_midge_error_tag("update_or_register_function_info_from_syntax-1");
+  //   if (!func_info) {
+  //     func_info = (function_info *)malloc(sizeof(function_info));
+
+  //     if (is_declaration_only) {
+  //       // Attach to loose declarations
+  //       mc_global_data *root_data;
+  //       obtain_midge_global_root(&root_data);
+
+  //       append_to_collection((void ***)&root_data->function_declarations.items,
+  //       &root_data->function_declarations.alloc,
+  //                            &root_data->function_declarations.count, func_info);
+  //     }
+  //     else {
+  //       // Only attach definitions, not declarations
+  //       if (!owner) {
+  //         MCerror(162, "owner can only be NULL for a function declaration");
+  //       }
+
+  //       attach_function_info_to_owner(owner, func_info);
+  //     }
+
+  //     func_info->type_id = (struct_id *)malloc(sizeof(struct_id));
+  //     allocate_and_copy_cstr(func_info->type_id->identifier, "function_info");
+  //     func_info->type_id->version = 1U;
+
+  //     // Name & Version
+  //     allocate_and_copy_cstr(func_info->name, function_ast->function.name->text);
+  //     func_info->latest_iteration = is_declaration_only ? 0U : 1U;
+
+  //     // Declare the functions pointer with cling
+  //     // printf("--attempting:'%s'\n", func_info->name);
+  //     // char buf[512];
+  //     // MCerror(8211, "progress");
+  //     // func_info->ptr_declaration = mcc_set_global_symbol(func_info->name, NULL);
+  //     // sprintf(buf, "int (*%s)(int, void **);", func_info->name);
+  //     // clint_declare(buf);
+  //     // sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
+  //     // clint_process(buf);
+  //     // printf("--declared:'%s()'\n", func_info->name);
+
+  //     // Assign the functions pointer
+  //     // sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
+  //     // clint_process(buf);
+  //     // printf("func_info->ptr_declaration:%p\n", func_info->ptr_declaration);
+  //   }
+  //   else {
+  //     if (!is_declaration_only && func_info->latest_iteration < 1) {
+  //       // Function has only been declared, not defined
+  //       // Remove from loose declarations
+  //       mc_global_data *root_data;
+  //       obtain_midge_global_root(&root_data);
+  //       remove_ptr_from_collection((void ***)&root_data->function_declarations.items,
+  //                                  &root_data->function_declarations.count, true, func_info);
+
+  //       // Attach to owner
+  //       func_info->latest_iteration = 1U;
+  //       attach_function_info_to_owner(owner, func_info);
+  //     }
+
+  //     // TODO -- this was causing a segmentation fault or something - TODO
+  //     // if (func_info->return_type.name) {
+  //     //   free(func_info->return_type.name);
+  //     // }
+
+  //     // Free parameters -- allow them to be changed
+  //     // register_midge_error_tag("update_or_register_function_info_from_syntax-1a");
+  //     // if (func_info->parameter_count) {
+  //     //   for (int a = 0; a < func_info->parameter_count; ++a) {
+  //     //     if (func_info->parameters[a]) {
+  //     //       release_parameter_info(func_info->parameters[a]);
+  //     //       func_info->parameters[a] = NULL;
+  //     //     }
+  //     //   }
+  //     // }
+  //     func_info->parameter_count = 0;
+  //     register_midge_error_tag("update_or_register_function_info_from_syntax-1b");
+  //   }
+  //   register_midge_error_tag("update_or_register_function_info_from_syntax-2");
+
+  //   // Return-type & Parameters
+  //   copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name);
+  //   if (function_ast->function.return_type_dereference) {
+  //     func_info->return_type.deref_count =
+  //     function_ast->function.return_type_dereference->dereference_sequence.count;
+  //   }
+  //   else {
+  //     func_info->return_type.deref_count = 0;
+  //   }
+
+  //   register_midge_error_tag("update_or_register_function_info_from_syntax-3");
+  //   func_info->parameter_count = function_ast->function.parameters->count;
+  //   func_info->parameters = (parameter_info **)malloc(sizeof(parameter_info *) * func_info->parameter_count);
+  //   for (int p = 0; p < func_info->parameter_count; ++p) {
+  //     parameter_info *parameter;
+  //     initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &parameter);
+  //     func_info->parameters[p] = parameter;
+  //   }
+
+  //   // TODO
+  //   func_info->variable_parameter_begin_index = -1;
+  //   func_info->struct_usage_count = 0;
+  //   func_info->struct_usage = NULL;
+
+  //   // Set
+  //   if (p_func_info)
+  //     *p_func_info = func_info;
+
+  return 0;
+}
+
 int mcs_register_struct_declaration(mc_syntax_node *struct_ast)
 {
   if (!struct_ast->structure.type_name) {
@@ -267,7 +473,7 @@ int mcs_register_struct_declaration(mc_syntax_node *struct_ast)
   if (!structure_info) {
     structure_info = (struct_info *)malloc(sizeof(struct_info));
 
-    attach_struct_info_to_owner(owner, structure_info);
+    attach_struct_info_to_owner(structure_info);
 
     structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
     allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
@@ -338,19 +544,21 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
       // }
     } break;
     case MC_SYNTAX_FUNCTION: {
-      MCerror(1132, "TODO");
-      // if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
-      //   // Function Declaration only
-      //   update_or_register_function_info_from_syntax(NULL, child, NULL);
-      //   printf("--fdecl:'%s'\n", child->function.name->text);
-      // }
-      // else {
-      //   // Assume to be function definition
-      //   function_info *info;
-      //   instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
-      //   info->source->source_file = source_file;
-      //   printf("--defined:'%s'\n", child->function.name->text);
-      // }
+      if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
+        function_info *info;
+        // Function Declaration only
+        mcs_register_function_declaration(child, &info);
+        printf("--fdecl:'%s'\n", child->function.name->text);
+      }
+      else {
+        MCerror(1124, "TODO");
+        // Assume to be function definition
+        function_info *info;
+        mcs_register_function_definition(child, &info);
+        // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
+        // info->source->source_file = source_file;
+        printf("--defined:'%s'\n", child->function.name->text);
+      }
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
       char buf[1024];
@@ -358,8 +566,8 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
       case MC_SYNTAX_UNION:
       case MC_SYNTAX_STRUCTURE: {
         print_syntax_node(child->type_alias.type_descriptor, 0);
-        mcs_register_struct_declaration(definitions_owner, child->type_alias.type_descriptor);
-        MCerror(1151, "TODO");
+        mcs_register_struct_declaration(child->type_alias.type_descriptor);
+        // MCerror(1151, "TODO");
         // struct_info *info;
         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
         // info->source->source_file = source_file;
@@ -555,189 +763,6 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 
 //   if (source_file)
 //     *source_file = sfi;
-
-//   return 0;
-// }
-
-// int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_node,
-//                                                parameter_info **initialized_parameter)
-// {
-//   parameter_info *parameter = (parameter_info *)calloc(sizeof(parameter_info), 1);
-//   parameter->type_id = (struct_id *)malloc(sizeof(struct_id));
-//   allocate_and_copy_cstr(parameter->type_id->identifier, "parameter_info");
-//   parameter->type_id->version = 1U;
-
-//   switch (parameter_syntax_node->parameter.type) {
-//   case PARAMETER_KIND_STANDARD: {
-//     register_midge_error_tag("initialize_parameter_info_from_syntax_node-STANDARD");
-//     parameter->parameter_type = PARAMETER_KIND_STANDARD;
-
-//     // Name
-//     copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name);
-
-//     // Type
-//     copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name);
-//     if (parameter_syntax_node->parameter.type_dereference) {
-//       parameter->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
-//     }
-//     else {
-//       parameter->type_deref_count = 0;
-//     }
-
-//   } break;
-//   case PARAMETER_KIND_FUNCTION_POINTER: {
-//     register_midge_error_tag("initialize_parameter_info_from_syntax_node-FUNCTION_POINTER");
-//     parameter->parameter_type = PARAMETER_KIND_FUNCTION_POINTER;
-
-//     // Name
-//     copy_syntax_node_to_text(parameter_syntax_node->parameter.function_pointer->fptr_declarator.name,
-//     &parameter->name);
-
-//     // Type
-//     copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->return_type);
-//     if (parameter_syntax_node->parameter.type_dereference) {
-//       parameter->return_deref_count =
-//       parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
-//     }
-//     else {
-//       parameter->return_deref_count = 0;
-//     }
-
-//     // print_syntax_node(parameter_syntax_node, 0);
-//   } break;
-//   case PARAMETER_KIND_VARIABLE_ARGS: {
-//     register_midge_error_tag("initialize_parameter_info_from_syntax_node-VARIABLE_ARGS");
-//     parameter->parameter_type = PARAMETER_KIND_VARIABLE_ARGS;
-
-//     parameter->type_name = NULL;
-//     parameter->type_version = 0;
-//     parameter->type_deref_count = 0;
-//     parameter->name = NULL;
-
-//   } break;
-//   default:
-//     MCerror(125, "NotSupported:%i", parameter_syntax_node->parameter.type);
-//   }
-
-//   *initialized_parameter = parameter;
-//   return 0;
-// }
-
-// int update_or_register_function_info_from_syntax(mc_node *owner, mc_syntax_node *function_ast,
-//                                                  function_info **p_func_info)
-// {
-//   function_info *func_info;
-//   find_function_info(function_ast->function.name->text, &func_info);
-
-//   bool is_declaration_only = (mc_token_type)function_ast->function.code_block->type == MC_TOKEN_SEMI_COLON;
-
-//   register_midge_error_tag("update_or_register_function_info_from_syntax-1");
-//   if (!func_info) {
-//     func_info = (function_info *)malloc(sizeof(function_info));
-
-//     if (is_declaration_only) {
-//       // Attach to loose declarations
-//       mc_global_data *root_data;
-//       obtain_midge_global_root(&root_data);
-
-//       append_to_collection((void ***)&root_data->function_declarations.items,
-//       &root_data->function_declarations.alloc,
-//                            &root_data->function_declarations.count, func_info);
-//     }
-//     else {
-//       // Only attach definitions, not declarations
-//       if (!owner) {
-//         MCerror(162, "owner can only be NULL for a function declaration");
-//       }
-
-//       attach_function_info_to_owner(owner, func_info);
-//     }
-
-//     func_info->type_id = (struct_id *)malloc(sizeof(struct_id));
-//     allocate_and_copy_cstr(func_info->type_id->identifier, "function_info");
-//     func_info->type_id->version = 1U;
-
-//     // Name & Version
-//     allocate_and_copy_cstr(func_info->name, function_ast->function.name->text);
-//     func_info->latest_iteration = is_declaration_only ? 0U : 1U;
-
-//     // Declare the functions pointer with cling
-//     // printf("--attempting:'%s'\n", func_info->name);
-//     // char buf[512];
-//     // MCerror(8211, "progress");
-//     // func_info->ptr_declaration = mcc_set_global_symbol(func_info->name, NULL);
-//     // sprintf(buf, "int (*%s)(int, void **);", func_info->name);
-//     // clint_declare(buf);
-//     // sprintf(buf, "%s = (int (*)(int, void **))0;", func_info->name);
-//     // clint_process(buf);
-//     // printf("--declared:'%s()'\n", func_info->name);
-
-//     // Assign the functions pointer
-//     // sprintf(buf, "*((void **)%p) = (void *)&%s;", &func_info->ptr_declaration, func_info->name);
-//     // clint_process(buf);
-//     // printf("func_info->ptr_declaration:%p\n", func_info->ptr_declaration);
-//   }
-//   else {
-//     if (!is_declaration_only && func_info->latest_iteration < 1) {
-//       // Function has only been declared, not defined
-//       // Remove from loose declarations
-//       mc_global_data *root_data;
-//       obtain_midge_global_root(&root_data);
-//       remove_ptr_from_collection((void ***)&root_data->function_declarations.items,
-//                                  &root_data->function_declarations.count, true, func_info);
-
-//       // Attach to owner
-//       func_info->latest_iteration = 1U;
-//       attach_function_info_to_owner(owner, func_info);
-//     }
-
-//     // TODO -- this was causing a segmentation fault or something - TODO
-//     // if (func_info->return_type.name) {
-//     //   free(func_info->return_type.name);
-//     // }
-
-//     // Free parameters -- allow them to be changed
-//     // register_midge_error_tag("update_or_register_function_info_from_syntax-1a");
-//     // if (func_info->parameter_count) {
-//     //   for (int a = 0; a < func_info->parameter_count; ++a) {
-//     //     if (func_info->parameters[a]) {
-//     //       release_parameter_info(func_info->parameters[a]);
-//     //       func_info->parameters[a] = NULL;
-//     //     }
-//     //   }
-//     // }
-//     func_info->parameter_count = 0;
-//     register_midge_error_tag("update_or_register_function_info_from_syntax-1b");
-//   }
-//   register_midge_error_tag("update_or_register_function_info_from_syntax-2");
-
-//   // Return-type & Parameters
-//   copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name);
-//   if (function_ast->function.return_type_dereference) {
-//     func_info->return_type.deref_count =
-//     function_ast->function.return_type_dereference->dereference_sequence.count;
-//   }
-//   else {
-//     func_info->return_type.deref_count = 0;
-//   }
-
-//   register_midge_error_tag("update_or_register_function_info_from_syntax-3");
-//   func_info->parameter_count = function_ast->function.parameters->count;
-//   func_info->parameters = (parameter_info **)malloc(sizeof(parameter_info *) * func_info->parameter_count);
-//   for (int p = 0; p < func_info->parameter_count; ++p) {
-//     parameter_info *parameter;
-//     initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &parameter);
-//     func_info->parameters[p] = parameter;
-//   }
-
-//   // TODO
-//   func_info->variable_parameter_begin_index = -1;
-//   func_info->struct_usage_count = 0;
-//   func_info->struct_usage = NULL;
-
-//   // Set
-//   if (p_func_info)
-//     *p_func_info = func_info;
 
 //   return 0;
 // }

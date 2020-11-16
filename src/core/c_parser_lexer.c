@@ -968,6 +968,8 @@ int release_syntax_node(mc_syntax_node *syntax_node)
     }
   } break;
   default: {
+    if()
+
     MCerror(661, "release_syntax_node(); Clear type:%s for proper release of item collections",
             get_mc_syntax_token_type_name(syntax_node->type));
   }

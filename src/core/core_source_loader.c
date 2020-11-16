@@ -508,12 +508,16 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_text_with_indent",
 
     // mc_source
+    "attach_struct_info_to_owner",
+    "attach_function_info_to_owner",
     "mcs_summarize_field_declarator_list",
     "mcs_summarize_type_field_list",
     "mcs_register_struct_declaration",
     "mcs_process_ast_root_children",
     "mcs_process_file_ast",
     "mcs_interpret_file",
+    "mcs_register_function_declaration",
+    "mcs_register_function_definition",
 
     "parse_file_to_syntax_tree",
     "mc_init_source_file_info",
