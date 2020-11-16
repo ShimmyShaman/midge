@@ -95,11 +95,13 @@ int append_to_c_str(c_str *cstr, const char *text)
   }
 
   // printf("atc-9\n");
-  // printf("atcs-a cstrtext:'%s' len:%u end:'%c'\n", cstr->text, cstr->len, cstr->text[cstr->len]);
-  // printf("atcs-b text:'%s'\n", text);
+  // printf("atcs-a cstrtext:'%s'\n", cstr->text);
+  // printf("atcs-b len:%u\n",  cstr->len);
+  // printf("atcs-c end:'%c'\n",  cstr->text[cstr->len]);
+  // printf("atcs-d text:'%s'\n", text);
   // memcpy(cstr->text + cstr->len, text, sizeof(char) * len);
   strcpy(cstr->text + cstr->len, text);
-  // printf("atcs-c cstrtext:'%s' len:%u end:'%c'\n", cstr->text + cstr->len - 2, cstr->len, cstr->text[cstr->len]);
+  // printf("atcs-e cstrtext:'%s' len:%u end:'%c'\n", cstr->text + cstr->len - 2, cstr->len, cstr->text[cstr->len]);
   cstr->len += len;
   cstr->text[cstr->len] = '\0';
 

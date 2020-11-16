@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <ctype.h>
+#include <unistd.h>
 
 #include "midge_common.h"
 #include "midge_error_handling.h"
@@ -245,22 +246,22 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
   switch ((mc_syntax_node_type)type) {
   case MC_SYNTAX_FILE_ROOT:
     return "MC_SYNTAX_FILE_ROOT";
-  case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF:
-    return "MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF";
-  case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
-    return "MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE";
-  case MC_TOKEN_PP_DIRECTIVE_DEFINE:
-    return "MC_TOKEN_PP_DIRECTIVE_DEFINE";
+  case MC_SYNTAX_PP_DIRECTIVE_IFNDEF:
+    return "MC_SYNTAX_PP_DIRECTIVE_IFNDEF";
+  case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
+    return "MC_SYNTAX_PP_DIRECTIVE_INCLUDE";
+  case MC_SYNTAX_PP_DIRECTIVE_DEFINE:
+    return "MC_SYNTAX_PP_DIRECTIVE_DEFINE";
   case MC_SYNTAX_FUNCTION:
     return "MC_SYNTAX_FUNCTION";
   case MC_SYNTAX_EXTERN_C_BLOCK:
     return "MC_SYNTAX_EXTERN_C_BLOCK";
   case MC_SYNTAX_TYPE_ALIAS:
     return "MC_SYNTAX_TYPE_ALIAS";
-  case MC_SYNTAX_STRUCTURE:
-    return "MC_SYNTAX_STRUCTURE";
-  case MC_SYNTAX_UNION:
-    return "MC_SYNTAX_UNION";
+  case MC_SYNTAX_STRUCT_DECL:
+    return "MC_SYNTAX_STRUCT_DECL";
+  case MC_SYNTAX_UNION_DECL:
+    return "MC_SYNTAX_UNION_DECL";
   case MC_SYNTAX_ENUM:
     return "MC_SYNTAX_ENUM";
   case MC_SYNTAX_ENUM_MEMBER:
@@ -445,7 +446,7 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
   case MC_SYNTAX_INVOCATION: {
     function_info *func_info;
     char *function_name;
-    copy_syntax_node_to_text(syntax_node->invocation.function_identity, &function_name);
+    mcs_copy_syntax_node_to_text(syntax_node->invocation.function_identity, &function_name);
     find_function_info(function_name, &func_info);
     free(function_name);
     printf("|--%s : %p", type_name, func_info);
@@ -481,74 +482,44 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
 
   return 0;
 }
-
-int _copy_syntax_node_to_text(c_str *cstr, mc_syntax_node *syntax_node)
+#include <unistd.h>
+int mcs_append_syntax_node_to_c_str(c_str *cstr, mc_syntax_node *syntax_node)
 {
   const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
-  register_midge_error_tag("_copy_syntax_node_to_text(%s)", type_name);
+  register_midge_error_tag("mcs_append_syntax_node_to_c_str(%s)", type_name);
+
   if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     // printf("syntax_node:%p\n", syntax_node);
+    // printf("cstr:%p\n", cstr);
     // printf("syntax_node->text:%p\n", syntax_node->text);
     // printf("syntax_node->text:%s\n", syntax_node->text);
     append_to_c_str(cstr, syntax_node->text);
-    register_midge_error_tag("_copy_syntax_node_to_text(~t)");
+    // printf("syntax_node:%p\n", syntax_node);
+    // usleep(10000);
+    register_midge_error_tag("_mcs_copy_syntax_node_to_text(~t)");
     return 0;
   }
 
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
 
-    _copy_syntax_node_to_text(cstr, child);
+    mcs_append_syntax_node_to_c_str(cstr, child);
   }
-  // switch (syntax_node->type) {
-  // case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
-  //   for (int a = 0; a < syntax_node->children->count; ++a) {
-  //     mc_syntax_node *child = syntax_node->children->items[a];
 
-  //     copy_syntax_node_to_text(cstr, child);
-  //   }
-  // } break;
-  // default: {
-  //   MCerror(290, "MCS_copy_syntax_node_to_text:>Unsupported-token:%s",
-  //           get_mc_syntax_token_type_name(syntax_node->type));
-  // }
-  // }
-
-  // register_midge_error_tag("_copy_syntax_node_to_text(~*)");
+  register_midge_error_tag("mcs_copy_syntax_node_to_text(~*)");
   return 0;
 }
 
-int copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output)
+int mcs_copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output)
 {
-  const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
-  register_midge_error_tag("copy_syntax_node_to_text(%s)", type_name);
-  if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
-    allocate_and_copy_cstr(*output, syntax_node->text);
-    register_midge_error_tag("copy_syntax_node_to_text(~)");
-    return 0;
-  }
-
   c_str *cstr;
   init_c_str(&cstr);
 
-  _copy_syntax_node_to_text(cstr, syntax_node);
-
-  if (!output) {
-    MCerror(364, "Arg Error");
-  }
-  register_midge_error_tag("copy_syntax_node_to_text-2");
-
-  // printf("52:%p\n", output);
-  // printf("53:%p\n", *output);
-  // printf("54:%p\n", cstr);
-  // printf("55:%p\n", cstr->text);
-  // printf("56:%s\n", cstr->text);
+  mcs_append_syntax_node_to_c_str(cstr, syntax_node);
 
   *output = cstr->text;
-  register_midge_error_tag("copy_syntax_node_to_text-3");
   release_c_str(cstr, false);
 
-  register_midge_error_tag("copy_syntax_node_to_text(~*)");
   return 0;
 }
 
@@ -588,16 +559,16 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_FILE_ROOT: {
     // Nothing
   } break;
-  case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF: {
+  case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
     syntax_node->preprocess_ifndef.identifier = NULL;
     syntax_node->preprocess_ifndef.groupopt = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
     syntax_node->preprocess_ifndef.groupopt->alloc = 0;
     syntax_node->preprocess_ifndef.groupopt->count = 0;
   } break;
-  case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE: {
+  case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
     // Temporary. TODO
   } break;
-  case MC_TOKEN_PP_DIRECTIVE_DEFINE: {
+  case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
     syntax_node->preprocess_define.statement_type = PREPROCESSOR_DEFINE_NULL;
     syntax_node->preprocess_define.identifier = NULL;
     syntax_node->preprocess_define.replacement_list = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
@@ -623,11 +594,11 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->type_alias.type_descriptor = NULL;
     syntax_node->type_alias.alias = NULL;
   } break;
-  case MC_SYNTAX_STRUCTURE: {
-    syntax_node->structure.type_name = NULL;
-    syntax_node->structure.fields = NULL;
+  case MC_SYNTAX_STRUCT_DECL: {
+    syntax_node->struct_decl.type_name = NULL;
+    syntax_node->struct_decl.fields = NULL;
   } break;
-  case MC_SYNTAX_UNION: {
+  case MC_SYNTAX_UNION_DECL: {
     syntax_node->union_decl.type_name = NULL;
     syntax_node->union_decl.fields = NULL;
   } break;
@@ -902,78 +873,80 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   return 0;
 }
 
+// TODO -- inline this method
+int release_syntax_node_list(mc_syntax_node_list *list, bool release_items)
+{
+  if (!list)
+    return 0;
+
+  if (list->alloc) {
+    for (int i = 0; release_items && i < list->count; ++i) {
+      release_syntax_node(list->items[i]);
+    }
+
+    free(list->items);
+  }
+
+  free(list);
+
+  return 0;
+}
+
 int release_syntax_node(mc_syntax_node *syntax_node)
 {
   if (!syntax_node) {
     return 0;
   }
 
-  // printf("release-%s\n", get_mc_syntax_token_type_name(syntax_node->type));
-  if ((int)syntax_node->type >= (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
-    if (syntax_node->children) {
-      if (syntax_node->children->alloc) {
-        // printf("child_count-%i\n", syntax_node->children->count);
-        for (int i = 0; i < syntax_node->children->count; ++i) {
-
-          release_syntax_node(syntax_node->children->items[i]);
-        }
-
-        free(syntax_node->children->items);
-      }
-
-      free(syntax_node->children);
-    }
-  }
-  else {
+  // Tokens
+  if ((int)syntax_node->type < (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     if (syntax_node->text) {
       free(syntax_node->text);
     }
+    return 0;
   }
 
+  // Release all children
+  release_syntax_node_list(syntax_node->children, true);
+
+  // Release all created lists (but not their items which were released with children above)
   switch (syntax_node->type) {
   case MC_SYNTAX_FUNCTION: {
-    if (syntax_node->function.parameters) {
-      if (syntax_node->function.parameters->alloc) {
-        free(syntax_node->function.parameters->items);
-      }
-
-      free(syntax_node->function.parameters);
-    }
+    release_syntax_node_list(syntax_node->function.parameters, false);
   } break;
-  case MC_SYNTAX_STRUCTURE: {
-    if (syntax_node->structure.fields) {
-      if (syntax_node->structure.fields->alloc) {
-        free(syntax_node->structure.fields->items);
-      }
-
-      free(syntax_node->structure.fields);
-    }
+  case MC_SYNTAX_STRUCT_DECL: {
+    release_syntax_node_list(syntax_node->struct_decl.fields, false);
   } break;
   case MC_SYNTAX_ENUM: {
-    if (syntax_node->enumeration.members) {
-      if (syntax_node->enumeration.members->alloc) {
-        free(syntax_node->enumeration.members->items);
-      }
-
-      free(syntax_node->enumeration.members);
-    }
+    release_syntax_node_list(syntax_node->enumeration.members, false);
   } break;
   case MC_SYNTAX_INVOCATION: {
-    if (syntax_node->invocation.arguments) {
-      if (syntax_node->invocation.arguments->alloc) {
-        free(syntax_node->invocation.arguments->items);
-      }
-
-      free(syntax_node->invocation.arguments);
-    }
+    release_syntax_node_list(syntax_node->invocation.arguments, false);
   } break;
+  case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
+    release_syntax_node_list(syntax_node->preprocess_define.replacement_list, false);
+  } break;
+  case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
+    release_syntax_node_list(syntax_node->preprocess_ifndef.groupopt, false);
+  } break;
+  case MC_SYNTAX_FIELD_DECLARATION: {
+    release_syntax_node_list(syntax_node->field.declarators, false);
+  } break;
+  case MC_SYNTAX_FILE_ROOT:
+  case MC_SYNTAX_TYPE_IDENTIFIER:
+  case MC_SYNTAX_FIELD_DECLARATOR:
+  case MC_SYNTAX_DEREFERENCE_SEQUENCE:
+  case MC_SYNTAX_TYPE_ALIAS:
+  case MC_SYNTAX_PARAMETER_DECLARATION:
+    break;
   default: {
-    if()
+    // syntax_node->fi
 
     MCerror(661, "release_syntax_node(); Clear type:%s for proper release of item collections",
             get_mc_syntax_token_type_name(syntax_node->type));
   }
   }
+
   // TODO this -- should be releasing syntax nodes when you parse anything
   return 0;
 }
@@ -4461,7 +4434,7 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
   } break;
   case MC_TOKEN_PP_KEYWORD_IFNDEF: {
     mc_syntax_node *ifndef_directive;
-    mcs_construct_syntax_node(ps, MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF, NULL, parent, &ifndef_directive);
+    mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_IFNDEF, NULL, parent, &ifndef_directive);
     if (additional_destination) {
       *additional_destination = ifndef_directive;
     }
@@ -4515,7 +4488,7 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
   } break;
   case MC_TOKEN_PP_KEYWORD_INCLUDE: {
     mc_syntax_node *include_directive;
-    mcs_construct_syntax_node(ps, MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE, NULL, parent, &include_directive);
+    mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_INCLUDE, NULL, parent, &include_directive);
     if (additional_destination) {
       *additional_destination = include_directive;
     }
@@ -4536,7 +4509,7 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
   } break;
   case MC_TOKEN_PP_KEYWORD_DEFINE: {
     mc_syntax_node *define_directive;
-    mcs_construct_syntax_node(ps, MC_TOKEN_PP_DIRECTIVE_DEFINE, NULL, parent, &define_directive);
+    mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_DEFINE, NULL, parent, &define_directive);
     if (additional_destination) {
       *additional_destination = define_directive;
     }
@@ -4939,11 +4912,11 @@ int mcs_parse_type_declaration(parsing_state *ps, mc_syntax_node *parent, mc_syn
   mc_syntax_node *type_definition = NULL;
   bool is_struct = false;
   if (token_type == MC_TOKEN_STRUCT_KEYWORD) {
-    mcs_construct_syntax_node(ps, MC_SYNTAX_STRUCTURE, NULL, parent, &type_definition);
+    mcs_construct_syntax_node(ps, MC_SYNTAX_STRUCT_DECL, NULL, parent, &type_definition);
     is_struct = true;
   }
   else if (token_type == MC_TOKEN_UNION_KEYWORD) {
-    mcs_construct_syntax_node(ps, MC_SYNTAX_UNION, NULL, parent, &type_definition);
+    mcs_construct_syntax_node(ps, MC_SYNTAX_UNION_DECL, NULL, parent, &type_definition);
   }
   else {
     MCerror(3889, "expected union or struct keyword");
@@ -4960,7 +4933,7 @@ int mcs_parse_type_declaration(parsing_state *ps, mc_syntax_node *parent, mc_syn
   if (token_type == MC_TOKEN_IDENTIFIER) {
     name_declared = true;
     if (is_struct) {
-      mcs_parse_through_token(ps, type_definition, MC_TOKEN_IDENTIFIER, &type_definition->structure.type_name);
+      mcs_parse_through_token(ps, type_definition, MC_TOKEN_IDENTIFIER, &type_definition->struct_decl.type_name);
     }
     else {
       mcs_parse_through_token(ps, type_definition, MC_TOKEN_IDENTIFIER, &type_definition->union_decl.type_name);
@@ -4974,7 +4947,7 @@ int mcs_parse_type_declaration(parsing_state *ps, mc_syntax_node *parent, mc_syn
     mcs_parse_through_supernumerary_tokens(ps, type_definition);
 
     if (is_struct) {
-      mcs_parse_struct_declaration_list(ps, type_definition, &type_definition->structure.fields);
+      mcs_parse_struct_declaration_list(ps, type_definition, &type_definition->struct_decl.fields);
     }
     else {
       mcs_parse_struct_declaration_list(ps, type_definition, &type_definition->union_decl.fields);
@@ -4989,7 +4962,7 @@ int mcs_parse_type_declaration(parsing_state *ps, mc_syntax_node *parent, mc_syn
     }
 
     if (is_struct) {
-      type_definition->structure.fields = NULL;
+      type_definition->struct_decl.fields = NULL;
     }
     else {
       type_definition->union_decl.fields = NULL;
@@ -5115,7 +5088,8 @@ int mcs_parse_function_definition(parsing_state *ps, mc_syntax_node *parent, mc_
     mcs_parse_code_block(ps, function, &function->function.code_block);
   }
   else {
-    mcs_parse_through_token(ps, function, MC_TOKEN_SEMI_COLON, &function->function.code_block);
+    function->function.code_block = NULL;
+    mcs_parse_through_token(ps, function, MC_TOKEN_SEMI_COLON, NULL);
   }
 
   // print_syntax_node(function, 0);
@@ -5185,6 +5159,16 @@ int mcs_parse_root_statement(parsing_state *ps, mc_syntax_node *parent, mc_synta
     if (additional_destination) {
       *additional_destination = declaration;
     }
+
+    mcs_peek_token_type(ps, false, 0, &token_type);
+    if (token_type == MC_TOKEN_SEMI_COLON) {
+      mcs_parse_through_supernumerary_tokens(ps, declaration);
+      mcs_parse_through_token(ps, declaration, MC_TOKEN_SEMI_COLON, NULL);
+    }
+  } break;
+  case MC_TOKEN_ENUM_KEYWORD: {
+    mc_syntax_node *declaration;
+    mcs_parse_enum_definition(ps, parent, &declaration);
 
     mcs_peek_token_type(ps, false, 0, &token_type);
     if (token_type == MC_TOKEN_SEMI_COLON) {

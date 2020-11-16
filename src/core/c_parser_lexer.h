@@ -109,14 +109,14 @@ typedef enum mc_token_type {
 typedef enum mc_syntax_node_type {
   MC_SYNTAX_ROOT = MC_TOKEN_EXCLUSIVE_MAX_VALUE,
   MC_SYNTAX_FILE_ROOT,
-  MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF,
-  MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE,
-  MC_TOKEN_PP_DIRECTIVE_DEFINE,
+  MC_SYNTAX_PP_DIRECTIVE_IFNDEF,
+  MC_SYNTAX_PP_DIRECTIVE_INCLUDE,
+  MC_SYNTAX_PP_DIRECTIVE_DEFINE,
   MC_SYNTAX_EXTERN_C_BLOCK,
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_TYPE_ALIAS,
-  MC_SYNTAX_STRUCTURE,
-  MC_SYNTAX_UNION,
+  MC_SYNTAX_STRUCT_DECL,
+  MC_SYNTAX_UNION_DECL,
   MC_SYNTAX_ENUM,
   MC_SYNTAX_ENUM_MEMBER,
   MC_SYNTAX_NESTED_TYPE_DECLARATION,
@@ -213,7 +213,7 @@ struct mc_syntax_node {
         struct {
           mc_syntax_node *type_name;
           mc_syntax_node_list *fields;
-        } structure;
+        } struct_decl;
         struct {
           mc_syntax_node *type_name;
           mc_syntax_node_list *fields;
@@ -469,7 +469,8 @@ struct mc_syntax_node {
 };
 
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
-int copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);
+int mcs_append_syntax_node_to_c_str(c_str *cstr, mc_syntax_node *syntax_node);
+int mcs_copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);
 int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast);
 int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast);
 const char *get_mc_syntax_token_type_name(mc_syntax_node_type type);

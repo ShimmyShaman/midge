@@ -13,7 +13,7 @@
 
 #include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
-// #include "core/mc_code_transcription.h"
+#include "core/mc_code_transcription.h"
 
 int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field);
 
@@ -64,10 +64,10 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     parameter->parameter_type = PARAMETER_KIND_STANDARD;
 
     // Name
-    copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name);
+    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name);
 
     // Type
-    copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name);
+    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name);
     if (parameter_syntax_node->parameter.type_dereference) {
       parameter->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
     }
@@ -81,10 +81,11 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     parameter->parameter_type = PARAMETER_KIND_FUNCTION_POINTER;
 
     // Name
-    copy_syntax_node_to_text(parameter_syntax_node->parameter.function_pointer->fptr_declarator.name, &parameter->name);
+    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.function_pointer->fptr_declarator.name,
+                                 &parameter->name);
 
     // Type
-    copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->return_type);
+    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->return_type);
     if (parameter_syntax_node->parameter.type_dereference) {
       parameter->return_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
     }
@@ -131,8 +132,8 @@ int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
     if (declarator_syntax->field_declarator.function_pointer) {
       // Function pointer
       // print_syntax_node(declarator_syntax->field_declarator.function_pointer, 0);
-      copy_syntax_node_to_text(declarator_syntax->field_declarator.function_pointer->fptr_declarator.name,
-                               &declarator->function_pointer.identifier);
+      mcs_copy_syntax_node_to_text(declarator_syntax->field_declarator.function_pointer->fptr_declarator.name,
+                                   &declarator->function_pointer.identifier);
       if (declarator_syntax->field_declarator.function_pointer->fptr_declarator.fp_dereference) {
         declarator->function_pointer.fp_deref_count = declarator_syntax->field_declarator.function_pointer
                                                           ->fptr_declarator.fp_dereference->dereference_sequence.count;
@@ -145,7 +146,7 @@ int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
       // TODO -- parameters
     }
     else {
-      copy_syntax_node_to_text(declarator_syntax->field_declarator.name, &declarator->name);
+      mcs_copy_syntax_node_to_text(declarator_syntax->field_declarator.name, &declarator->name);
     }
     if (declarator_syntax->field_declarator.type_dereference) {
       declarator->deref_count = declarator_syntax->field_declarator.type_dereference->dereference_sequence.count;
@@ -163,7 +164,7 @@ int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
   //   field->field_type = FIELD_KIND_FUNCTION_POINTER;
 
   //   mc_syntax_node *fps = field_syntax->field.function_pointer;
-  //   copy_syntax_node_to_text(fps->function_pointer_declaration.identifier, &field->function_pointer.identifier);
+  //   mcs_copy_syntax_node_to_text(fps->function_pointer_declaration.identifier, &field->function_pointer.identifier);
   //   if (!fps->function_pointer_declaration.type_dereference)
   //     field->function_pointer.deref_count = 0;
   //   else
@@ -196,7 +197,7 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
       switch (field_syntax->field.type) {
       case FIELD_KIND_STANDARD: {
         field->field_type = FIELD_KIND_STANDARD;
-        copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->field.type_name);
+        mcs_copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->field.type_name);
 
         mcs_summarize_field_declarator_list(field_syntax->field.declarators, &field->field.declarators);
       } break;
@@ -206,10 +207,10 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
       }
     } break;
     case MC_SYNTAX_NESTED_TYPE_DECLARATION: {
-      if (field_syntax->nested_type.declaration->type == MC_SYNTAX_UNION) {
+      if (field_syntax->nested_type.declaration->type == MC_SYNTAX_UNION_DECL) {
         field->field_type = FIELD_KIND_NESTED_UNION;
       }
-      else if (field_syntax->nested_type.declaration->type == MC_SYNTAX_STRUCTURE) {
+      else if (field_syntax->nested_type.declaration->type == MC_SYNTAX_STRUCT_DECL) {
         field->field_type = FIELD_KIND_NESTED_STRUCT;
       }
       else {
@@ -258,11 +259,11 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
   // } sub_type;
 
   // print_syntax_node(subtype_syntax, 0);
-  if (subtype_syntax->type == MC_SYNTAX_UNION) {
+  if (subtype_syntax->type == MC_SYNTAX_UNION_DECL) {
     field->sub_type.is_union = true;
 
     if (subtype_syntax->union_decl.type_name) {
-      copy_syntax_node_to_text(subtype_syntax->union_decl.type_name, &field->sub_type.type_name);
+      mcs_copy_syntax_node_to_text(subtype_syntax->union_decl.type_name, &field->sub_type.type_name);
       printf("sub-type:'%s'\n", field->sub_type.type_name);
     }
     else {
@@ -275,11 +276,11 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
 
     mcs_summarize_type_field_list(subtype_syntax->union_decl.fields, &field->sub_type.fields);
   }
-  else if (subtype_syntax->type == MC_SYNTAX_STRUCTURE) {
+  else if (subtype_syntax->type == MC_SYNTAX_STRUCT_DECL) {
     field->sub_type.is_union = false;
 
     if (subtype_syntax->structure.type_name) {
-      copy_syntax_node_to_text(subtype_syntax->structure.type_name, &field->sub_type.type_name);
+      mcs_copy_syntax_node_to_text(subtype_syntax->structure.type_name, &field->sub_type.type_name);
     }
     else {
       field->sub_type.type_name = NULL;
@@ -301,20 +302,19 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
 int mcs_register_function_declaration(mc_syntax_node *function_ast, function_info **p_func_info)
 {
   // Ensure a function info entry exists for the declared function
-  function_info *func_info;
-  find_function_info(function_ast->function.name->text, &func_info);
-  if (func_info) {
+  find_function_info(function_ast->function.name->text, p_func_info);
+  if (*p_func_info) {
     // TODO -- argument equity check
     return 0;
   }
 
-  func_info = (function_info *)calloc(1, sizeof(function_info));
+  function_info *func_info = (function_info *)calloc(1, sizeof(function_info));
   attach_function_info_to_owner(func_info);
 
   func_info->name = strdup(function_ast->function.name->text);
 
   // Return-type & Parameters
-  copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name);
+  mcs_copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name);
   if (function_ast->function.return_type_dereference) {
     func_info->return_type.deref_count = function_ast->function.return_type_dereference->dereference_sequence.count;
   }
@@ -336,9 +336,9 @@ int mcs_register_function_declaration(mc_syntax_node *function_ast, function_inf
 
 int mcs_register_function_definition(mc_syntax_node *function_ast, function_info **p_func_info)
 {
-  function_info *func_info;
-  mcs_register_function_declaration(function_ast, &func_info);
+  mcs_register_function_declaration(function_ast, p_func_info);
 
+  function_info *func_info = *p_func_info;
   MCerror(241, "TODO");
 
   //   function_info *func_info;
@@ -427,7 +427,7 @@ int mcs_register_function_definition(mc_syntax_node *function_ast, function_info
   //   register_midge_error_tag("update_or_register_function_info_from_syntax-2");
 
   //   // Return-type & Parameters
-  //   copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name);
+  //   mcs_copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name);
   //   if (function_ast->function.return_type_dereference) {
   //     func_info->return_type.deref_count =
   //     function_ast->function.return_type_dereference->dereference_sequence.count;
@@ -457,62 +457,82 @@ int mcs_register_function_definition(mc_syntax_node *function_ast, function_info
   return 0;
 }
 
-int mcs_register_struct_declaration(mc_syntax_node *struct_ast)
+int mcs_register_struct_declaration(mc_syntax_node *struct_ast, struct_info **p_struct_info)
 {
-  if (!struct_ast->structure.type_name) {
+  if (!struct_ast->struct_decl.type_name) {
     MCerror(8461, "root-level anonymous external structures not yet supported");
   }
 
-  struct_info *structure_info;
-  find_struct_info(struct_ast->structure.type_name->text, &structure_info);
-  if (structure_info) {
-    MCerror(1013, "TODO?");
+  find_struct_info(struct_ast->struct_decl.type_name->text, p_struct_info);
+  if (*p_struct_info) {
+    return 0;
   }
 
-  // register_midge_error_tag("update_or_register_struct_info_from_syntax-1");
-  if (!structure_info) {
-    structure_info = (struct_info *)malloc(sizeof(struct_info));
+  struct_info *si = malloc(sizeof(struct_info));
+  mcs_copy_syntax_node_to_text(struct_ast->structure.type_name, &si->name);
+  si->is_defined = false;
+  si->is_union = struct_ast->type == MC_SYNTAX_UNION_DECL;
 
-    attach_struct_info_to_owner(structure_info);
+  *p_struct_info = si;
 
-    structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
-    allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
-    structure_info->type_id->version = 1U;
+  return 0;
+}
 
-    // Name & Version
-    if (struct_ast->structure.type_name) {
-      allocate_and_copy_cstr(structure_info->name, struct_ast->structure.type_name->text);
-    }
-    else {
-      structure_info->name = NULL;
-    }
-    structure_info->latest_iteration = 0U;
-    structure_info->source = NULL;
+int mcs_register_struct_definition(mc_syntax_node *struct_ast, struct_info **p_struct_info)
+{
+  mcs_register_struct_declaration(struct_ast, p_struct_info);
+
+  if (!struct_ast->structure.fields) {
+    // Declaration only
+    return 0;
   }
-  else {
-    free(structure_info->mc_declared_name);
 
-    if (structure_info->is_defined) {
-      // Free the field summaries
-      printf("releasing '%s'\n", structure_info->name);
-      release_field_info_list(structure_info->fields);
-    }
-  }
-  register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
+  MCerror(1480, "TODO");
 
-  structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION;
-  structure_info->mc_declared_name = NULL;
+  // // register_midge_error_tag("update_or_register_struct_info_from_syntax-1");
+  // if (!structure_info) {
+  //   structure_info = (struct_info *)malloc(sizeof(struct_info));
 
-  // Set the values parsed
-  if (struct_ast->structure.fields) {
-    structure_info->is_defined = true;
+  //   attach_struct_info_to_owner(structure_info);
 
-    mcs_summarize_type_field_list(struct_ast->structure.fields, &structure_info->fields);
-  }
-  else {
-    structure_info->is_defined = false;
-  }
-  register_midge_error_tag("update_or_register_struct_info_from_syntax-4");
+  //   structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
+  //   allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
+  //   structure_info->type_id->version = 1U;
+
+  //   // Name & Version
+  //   if (struct_ast->structure.type_name) {
+  //     allocate_and_copy_cstr(structure_info->name, struct_ast->structure.type_name->text);
+  //   }
+  //   else {
+  //     structure_info->name = NULL;
+  //   }
+  //   structure_info->latest_iteration = 0U;
+  //   structure_info->source = NULL;
+  // }
+  // else {
+  //   free(structure_info->mc_declared_name);
+
+  //   if (structure_info->is_defined) {
+  //     // Free the field summaries
+  //     printf("releasing '%s'\n", structure_info->name);
+  //     release_field_info_list(structure_info->fields);
+  //   }
+  // }
+  // register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
+
+  // structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION_DECL;
+  // structure_info->mc_declared_name = NULL;
+
+  // // Set the values parsed
+  // if (struct_ast->structure.fields) {
+  //   structure_info->is_defined = true;
+
+  //   mcs_summarize_type_field_list(struct_ast->structure.fields, &structure_info->fields);
+  // }
+  // else {
+  //   structure_info->is_defined = false;
+  // }
+  // register_midge_error_tag("update_or_register_struct_info_from_syntax-4");
 
   // Set
   // *p_struct_info = structure_info;a
@@ -544,7 +564,7 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
       // }
     } break;
     case MC_SYNTAX_FUNCTION: {
-      if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
+      if (!child->function.code_block) {
         function_info *info;
         // Function Declaration only
         mcs_register_function_declaration(child, &info);
@@ -563,10 +583,11 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
     case MC_SYNTAX_TYPE_ALIAS: {
       char buf[1024];
       switch (child->type_alias.type_descriptor->type) {
-      case MC_SYNTAX_UNION:
-      case MC_SYNTAX_STRUCTURE: {
-        print_syntax_node(child->type_alias.type_descriptor, 0);
-        mcs_register_struct_declaration(child->type_alias.type_descriptor);
+      case MC_SYNTAX_UNION_DECL:
+      case MC_SYNTAX_STRUCT_DECL: {
+        // print_syntax_node(child->type_alias.type_descriptor, 0);
+        struct_info *info;
+        mcs_register_struct_definition(child->type_alias.type_descriptor, &info);
         // MCerror(1151, "TODO");
         // struct_info *info;
         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
@@ -581,7 +602,6 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
         // // clint_process(buf);
       } break;
       case MC_SYNTAX_ENUM: {
-        MCerror(1152, "TODO");
         // register_external_enum_declaration(definitions_owner, child->type_alias.type_descriptor);
         // enumeration_info *info;
         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
@@ -607,7 +627,9 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
         break;
       }
     } break;
-    case MC_SYNTAX_STRUCTURE: {
+    case MC_SYNTAX_STRUCT_DECL: {
+      struct_info *info;
+      mcs_register_struct_definition(child, &info);
       MCerror(1191, "TODO");
       // struct_info *info;
       // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
@@ -621,7 +643,7 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
       // info->source->source_file = source_file;
       // // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
-    case MC_TOKEN_PP_DIRECTIVE_DEFINE: {
+    case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
       // Ignore for now
       // MCerror(1205, "TODO");
 
@@ -638,12 +660,13 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
       // // }
     } break;
     // TODO
-    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF: {
+    case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
       // Assume all ifndefs (for the moment TODO ) to be true
       mcs_process_ast_root_children(child->preprocess_ifndef.groupopt);
     } break;
-    case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
-      MCerror(1256, "TODO");
+    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
+      // Ignore for now
+      // MCerror(1256, "TODO");
       break;
     default: {
       switch ((mc_token_type)child->type) {
@@ -667,19 +690,10 @@ int mcs_process_ast_root_children(mc_syntax_node_list *children)
   return 0;
 }
 
-int mcs_process_file_ast(mc_syntax_node *file_ast, char **generated_code)
+int mcs_process_file_ast(mc_syntax_node *file_ast)
 {
-  c_str *genc;
-
-  // Init generated code
-  init_c_str(&genc);
-
   mcs_process_ast_root_children(file_ast->children);
 
-  // TODO -- transcribe file
-
-  *generated_code = genc->text;
-  release_c_str(genc, false);
   return 0;
 }
 
@@ -690,6 +704,8 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
   mc_syntax_node *file_ast;
   mc_global_data *gdata;
 
+  printf("midge-interpret '%s'\n", filepath);
+
   // Read the file
   read_file_text(filepath, &code);
 
@@ -698,8 +714,24 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
   free(code);
 
   // Obtain function/struct/enum information & dependencies
+  mcs_process_file_ast(file_ast);
+
   // Generate code (from the AST) with midge insertions integrated (stack call / error tracking)
-  mcs_process_file_ast(file_ast, &code);
+  {
+    mct_function_transcription_options options = {};
+    options.report_invocations_to_error_stack = true;
+    options.report_simple_args_to_error_stack = true;
+    options.check_mc_functions_not_null = true;
+    options.tag_on_function_entry = false;
+    options.tag_on_function_exit = false;
+    options.report_variable_values = NULL;
+
+    printf("transcribing '%s'...\n", filepath);
+    mct_transcribe_file_ast(file_ast, &options, &code);
+  }
+
+  printf("\ngen-code:\n%s||\n", code);
+  // MCerror(7704, "TODO");
 
   // Send the code to the interpreter
   obtain_midge_global_root(&gdata);
@@ -734,7 +766,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 // int append_syntax_node_to_file_context(mc_syntax_node *child, c_str *file_context)
 // {
 //   char *code;
-//   copy_syntax_node_to_text(child, &code);
+//   mcs_copy_syntax_node_to_text(child, &code);
 //   append_to_c_str(file_context, code);
 //   append_char_to_c_str(file_context, '\n');
 //   free(code);
@@ -814,7 +846,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   }
 //   register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
 
-//   structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION;
+//   structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION_DECL;
 //   c_str *mc_func_name;
 //   init_c_str(&mc_func_name);
 //   append_to_c_strf(mc_func_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
@@ -899,9 +931,9 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   for (int i = 0; i < enum_ast->enumeration.members->count; ++i) {
 //     enum_member_info *member = (enum_member_info *)malloc(sizeof(enum_member_info));
 
-//     copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier, &member->identity);
-//     if (enum_ast->enumeration.members->items[i]->enum_member.value_expression) {
-//       copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value_expression,
+//     mcs_copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier,
+//     &member->identity); if (enum_ast->enumeration.members->items[i]->enum_member.value_expression) {
+//       mcs_copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value_expression,
 //       &member->value);
 
 //       sprintf(buf, "*(int *)(%p) = %s;", &latest_value, member->value); // TODO -- semi-colon
@@ -1061,27 +1093,27 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   case PREPROCESSOR_DEFINE_REMOVAL: {
 //     *info = (preprocess_define_info *)malloc(sizeof(preprocess_define_info));
 //     (*info)->statement_type = ast->preprocess_define.statement_type;
-//     copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
+//     mcs_copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
 
 //     (*info)->replacement = NULL;
 //   } break;
 //   case PREPROCESSOR_DEFINE_FUNCTION_LIKE: {
 //     // Do nothing...
 //     // char *statement_text;
-//     // copy_syntax_node_to_text(ast, &statement_text);
+//     // mcs_copy_syntax_node_to_text(ast, &statement_text);
 //     // printf("\nfunctionlike:\n%s||\n", statement_text);
 //     // free(statement_text);
 //   } break;
 //   case PREPROCESSOR_DEFINE_REPLACEMENT: {
 //     *info = (preprocess_define_info *)malloc(sizeof(preprocess_define_info));
 //     (*info)->statement_type = ast->preprocess_define.statement_type;
-//     copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
+//     mcs_copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
 
 //     c_str *str;
 //     init_c_str(&str);
 //     for (int i = 0; i < ast->preprocess_define.replacement_list->count; ++i) {
 //       char *node_text;
-//       copy_syntax_node_to_text(ast->preprocess_define.replacement_list->items[i], &node_text);
+//       mcs_copy_syntax_node_to_text(ast->preprocess_define.replacement_list->items[i], &node_text);
 //       append_to_c_str(str, node_text);
 //       free(node_text);
 //     }
@@ -1096,7 +1128,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   }
 
 //   // char *statement_text;
-//   // copy_syntax_node_to_text(ast, &statement_text);
+//   // mcs_copy_syntax_node_to_text(ast, &statement_text);
 //   // // printf("\ndefine_declaration:\n%s||\n", statement_text);
 //   // int result; //= clint_declare(statement_text);
 //   // MCerror(9582, "progress");
@@ -1128,7 +1160,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //     parse_definition_to_syntax_tree(code, &ast);
 //   }
 //   else if (!code) {
-//     copy_syntax_node_to_text(ast, &code);
+//     mcs_copy_syntax_node_to_text(ast, &code);
 //   }
 
 //   // TODO -- check type hasn't changed with definition
@@ -1148,8 +1180,8 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //     function_info *func_info = (function_info *)p_definition_info;
 //     func_info->source = source;
 //   } break;
-//   case MC_SYNTAX_UNION:
-//   case MC_SYNTAX_STRUCTURE: {
+//   case MC_SYNTAX_UNION_DECL:
+//   case MC_SYNTAX_STRUCT_DECL: {
 //     source->type = SOURCE_DEFINITION_STRUCTURE;
 //     instantiate_struct_definition_from_ast(definition_owner, source, ast, &p_definition_info);
 
@@ -1226,8 +1258,8 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //       MCerror(9821, "TODO");
 //       char buf[1024];
 //       switch (child->type_alias.type_descriptor->type) {
-//       case MC_SYNTAX_UNION:
-//       case MC_SYNTAX_STRUCTURE: {
+//       case MC_SYNTAX_UNION_DECL:
+//       case MC_SYNTAX_STRUCT_DECL: {
 //         struct_info *info;
 //         instantiate_definition(definitions_owner, file_context, NULL, child->type_alias.type_descriptor, NULL,
 //                                (void **)&info);
@@ -1273,7 +1305,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //         break;
 //       }
 //     } break;
-//     case MC_SYNTAX_STRUCTURE: {
+//     case MC_SYNTAX_STRUCT_DECL: {
 //       MCerror(9691, "TODO");
 //       struct_info *info;
 //       instantiate_definition(definitions_owner, file_context, NULL, child, NULL, (void **)&info);
@@ -1293,7 +1325,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //                            &info->source->source_file->definitions.count, info->source);
 //       // printf("--declared: enum '%s'\n", child->enumeration.name->text);
 //     } break;
-//     case MC_TOKEN_PP_DIRECTIVE_DEFINE: {
+//     case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
 //       append_syntax_node_to_file_context(child, file_context);
 
 //       preprocess_define_info *info;
@@ -1309,9 +1341,9 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //       // }
 //     } break;
 //     // TODO
-//     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF: {
+//     case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
 //       // char *identifier;
-//       // copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
+//       // mcs_copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
 //       // char buf[1024];
 //       // int is_defined;
 //       // sprintf(buf,
@@ -1336,7 +1368,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //       // }
 //       // free(identifier);
 //     } break;
-//     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE: {
+//     case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
 //       MCerror(1028, "TODO");
 //     } break;
 //     case MC_TOKEN_PP_KEYWORD_ENDIF:
@@ -1517,7 +1549,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   }
 //   register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
 
-//   structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION;
+//   structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION_DECL;
 //   structure_info->mc_declared_name = NULL;
 
 //   // Set the values parsed
@@ -1611,10 +1643,11 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //     enum_member_info *member = (enum_member_info *)malloc(sizeof(enum_member_info));
 //     // printf("reed-8c\n");
 
-//     copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier, &member->identity);
+//     mcs_copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.identifier,
+//     &member->identity);
 //     // printf("reed-8d\n");
 //     if (enum_ast->enumeration.members->items[i]->enum_member.value_expression) {
-//       copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value_expression,
+//       mcs_copy_syntax_node_to_text(enum_ast->enumeration.members->items[i]->enum_member.value_expression,
 //       &member->value);
 //       // printf("reed-8e\n");
 //     }
@@ -1677,8 +1710,8 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //     case MC_SYNTAX_TYPE_ALIAS: {
 //       char buf[1024];
 //       switch (child->type_alias.type_descriptor->type) {
-//       case MC_SYNTAX_UNION:
-//       case MC_SYNTAX_STRUCTURE: {
+//       case MC_SYNTAX_UNION_DECL:
+//       case MC_SYNTAX_STRUCT_DECL: {
 //         register_external_struct_declaration(definitions_owner, child->type_alias.type_descriptor);
 //         // MCerror(1151, "TODO");
 //         // struct_info *info;
@@ -1721,7 +1754,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //         break;
 //       }
 //     } break;
-//     case MC_SYNTAX_STRUCTURE: {
+//     case MC_SYNTAX_STRUCT_DECL: {
 //       MCerror(1191, "TODO");
 //       // struct_info *info;
 //       // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
@@ -1735,7 +1768,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //       // info->source->source_file = source_file;
 //       // // printf("--declared: enum '%s'\n", child->enumeration.name->text);
 //     } break;
-//     case MC_TOKEN_PP_DIRECTIVE_DEFINE: {
+//     case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
 //       MCerror(1205, "TODO");
 //       // preprocess_define_info *info;
 //       // instantiate_define_statement(definitions_owner, child, &info);
@@ -1750,10 +1783,10 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //       // // }
 //     } break;
 //     // TODO
-//     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_IFNDEF: {
+//     case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
 //       MCerror(1220, "TODO");
 //       // char *identifier;
-//       // copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
+//       // mcs_copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
 //       // char buf[1024];
 //       // int is_defined;
 //       // sprintf(buf,
@@ -1776,7 +1809,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //       // }
 //       // free(identifier);
 //     } break;
-//     case MC_SYNTAX_PREPROCESSOR_DIRECTIVE_INCLUDE:
+//     case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
 //       MCerror(1256, "TODO");
 //     case MC_TOKEN_PP_KEYWORD_ENDIF:
 //       MCerror(1259, "TODO");

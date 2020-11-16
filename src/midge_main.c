@@ -5680,10 +5680,10 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
   if (parameter_syntax_node->parameter.is_function_pointer_declaration) {
     parameter->is_function_pointer = true;
 
-    MCcall(copy_syntax_node_to_text(parameter_syntax_node, &parameter->full_function_pointer_declaration));
+    MCcall(mcs_copy_syntax_node_to_text(parameter_syntax_node, &parameter->full_function_pointer_declaration));
 
     mc_syntax_node *fpsn = parameter_syntax_node->parameter.function_pointer_declaration;
-    MCcall(copy_syntax_node_to_text(fpsn->function_pointer_declaration.identifier, (char **)&parameter->name));
+    MCcall(mcs_copy_syntax_node_to_text(fpsn->function_pointer_declaration.identifier, (char **)&parameter->name));
 
     if (fpsn->function_pointer_declaration.type_dereference) {
       parameter->type_deref_count = fpsn->function_pointer_declaration.type_dereference->dereference_sequence.count;
@@ -5700,7 +5700,8 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     parameter->is_function_pointer = false;
 
     // Type
-    MCcall(copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name));
+    MCcall(
+        mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name));
     if (parameter_syntax_node->parameter.type_dereference) {
       parameter->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
     }
@@ -5713,7 +5714,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
     // -- TODO -- mc-type?
 
     // Name
-    MCcall(copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name));
+    MCcall(mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name));
   }
 
   *initialized_parameter = parameter;
@@ -5729,7 +5730,7 @@ int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_
   mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
   definition->type = SOURCE_DEFINITION_STRUCTURE;
   definition->source_file = source_file;
-  MCcall(copy_syntax_node_to_text(struct_ast, &definition->code));
+  MCcall(mcs_copy_syntax_node_to_text(struct_ast, &definition->code));
   MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
                               &source_file->definitions.count, definition));
 
@@ -5768,154 +5769,6 @@ int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_
   printf("#######################\n");
 
   register_midge_error_tag("register_and_transcribe_syntax_structure(~)");
-  return 0;
-}
-
-int register_and_transcribe_syntax_function(mc_command_hub_v1 *command_hub, mc_mc_source_file_info_v1 *source_file,
-                                            mc_syntax_node *function_ast)
-{
-  register_midge_error_tag("register_and_transcribe_syntax_function()");
-  bool is_declaration_only = (mc_token_type)function_ast->function.code_block->type == MC_TOKEN_SEMI_COLON;
-
-  // Generate the function information from the syntax tree
-  mc_function_info_v1 *func_info;
-  {
-    // printf("papsyntax-0 %p\n", function_ast);
-    {
-      // Search for pre-existing
-      void *mc_vargs[3];
-      mc_vargs[0] = (void *)&func_info;
-      mc_vargs[1] = (void *)&command_hub->nodespace;
-      mc_vargs[2] = (void *)&function_ast->function.name->text;
-      find_function_info(3, mc_vargs);
-    }
-    if (func_info) {
-      // Pre-existing function information
-      // ~~temp
-      if (func_info->latest_iteration == 0) {
-        func_info->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
-        allocate_and_copy_cstr(func_info->struct_id->identifier, "function_info");
-        func_info->struct_id->version = 1U;
-      }
-
-      // Update iteration
-      if (!is_declaration_only) {
-        ++func_info->latest_iteration;
-      }
-    }
-    else {
-      // Construct it
-      func_info = (mc_function_info_v1 *)malloc(sizeof(mc_function_info_v1));
-      MCcall(append_to_collection((void ***)&command_hub->global_node->functions,
-                                  &command_hub->global_node->functions_alloc, &command_hub->global_node->function_count,
-                                  (void *)func_info));
-
-      func_info->struct_id = (mc_struct_id_v1 *)malloc(sizeof(mc_struct_id_v1));
-      allocate_and_copy_cstr(func_info->struct_id->identifier, "function_info");
-      func_info->struct_id->version = 1U;
-
-      // Name & Version
-      allocate_and_copy_cstr(func_info->name, function_ast->function.name->text);
-      func_info->latest_iteration = 1U;
-
-      // Declare the functions pointer with cling
-      char *cling_declaration;
-      mc_pprintf(&cling_declaration, "int (*%s)(int, void **);", func_info->name);
-      MCcall(clint_declare(cling_declaration));
-      free(cling_declaration);
-    }
-
-    register_midge_error_tag("register_and_transcribe_syntax_function-2");
-
-    if (!is_declaration_only) {
-      // Definition
-      // Source-references
-      func_info->source = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
-      func_info->source->type = SOURCE_DEFINITION_FUNCTION;
-      func_info->source->source_file = source_file;
-      func_info->source->func_info = func_info;
-      MCcall(copy_syntax_node_to_text(function_ast, &func_info->source->code));
-      // func_info->source->code = definitions[a].text;
-      MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
-                                  &source_file->definitions.count, func_info->source));
-    }
-    else {
-      // Nothing?
-      func_info->source = NULL;
-    }
-
-    // printf("papsyntax-2\n");
-    // Return-type & Parameters
-    MCcall(copy_syntax_node_to_text(function_ast->function.return_type_identifier, &func_info->return_type.name));
-    if (function_ast->function.return_type_dereference) {
-      func_info->return_type.deref_count = function_ast->function.return_type_dereference->dereference_sequence.count;
-    }
-    else {
-      func_info->return_type.deref_count = 0;
-    }
-
-    register_midge_error_tag("register_and_transcribe_syntax_function-3");
-    func_info->parameter_count = function_ast->function.parameters->count;
-    func_info->parameters =
-        (mc_parameter_info_v1 **)malloc(sizeof(mc_parameter_info_v1 *) * func_info->parameter_count);
-    for (int p = 0; p < func_info->parameter_count; ++p) {
-      mc_parameter_info_v1 *parameter;
-      MCcall(initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &parameter));
-      func_info->parameters[p] = parameter;
-    }
-
-    // TODO
-    func_info->variable_parameter_begin_index = -1;
-    func_info->struct_usage_count = 0;
-    func_info->struct_usage = NULL;
-  }
-  register_midge_error_tag("register_and_transcribe_syntax_function-4");
-
-  if (is_declaration_only) {
-    return 0;
-  }
-  // Transcribe to MC function format
-  char *mc_format_definition;
-  MCcall(transcribe_code_block_ast_to_mc_definition(function_ast->function.code_block, &mc_format_definition));
-
-  register_midge_error_tag("parse_and_process_mc_file_syntax-5");
-  // printf("papsyntax-5\n");
-  // printf("mc_format_definition:\n%s||\n", mc_format_definition);
-
-  // Define the new function
-  {
-    void *vargs[2];
-    vargs[0] = &func_info->name;
-    vargs[1] = &mc_format_definition;
-    MCcall(instantiate_function(2, vargs));
-  }
-
-  // MCcall(clint_declare(mc_format_definition));
-  printf("register_and_transcribe_syntax_function-6\n");
-
-  if (!func_info->source->source_file) {
-    MCerror(6133, "How?");
-  }
-  if (!func_info->source->source_file->filepath) {
-    MCerror(6135, "How?");
-  }
-  printf("func_info->name:%p\n", func_info->source->source_file->filepath);
-
-  printf("papcf-FunctionInfo Loaded:\n");
-  printf(" -- source_filepath:%s:\n", func_info->source ? func_info->source->source_file->filepath : "(null)");
-  printf(" -- name:%s:\n", func_info->name);
-  printf(" -- latest_iteration:%u:\n", func_info->latest_iteration);
-  printf(" -- return_type.name:%s:\n", func_info->return_type.name);
-  printf(" -- return_type.deref_count:%u:\n", func_info->return_type.deref_count);
-  printf(" -- parameter_count:%u:\n", func_info->parameter_count);
-  printf(" -- struct_usage_count:%u:\n", func_info->struct_usage_count);
-  printf(" -- variable_parameter_begin_index:%i:\n", func_info->variable_parameter_begin_index);
-  // printf(" -- code:\n%s\n",
-  //        func_info->source_file->definitions.items[func_info->source_file->definitions.count - 1]->code);
-  // printf(" -- mc_code:\n%s\n", mc_format_definition);
-  printf("#######################\n");
-
-  register_midge_error_tag("register_and_transcribe_syntax_function(~)");
   return 0;
 }
 
@@ -6237,7 +6090,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   MCcall(clint_process("parse_mc_to_syntax_tree = &parse_mc_to_syntax_tree_v1;"));
   MCcall(clint_process("parse_mc_file_to_syntax_tree = &parse_mc_file_to_syntax_tree_v1;"));
   MCcall(clint_process("parse_definition_to_syntax_tree = &parse_definition_to_syntax_tree_v1;"));
-  MCcall(clint_process("copy_syntax_node_to_text = &copy_syntax_node_to_text_v1;"));
+  MCcall(clint_process("mcs_copy_syntax_node_to_text = &mcs_copy_syntax_node_to_text_v1;"));
 
   // mc_code_transcriber.c
   {

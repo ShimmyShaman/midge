@@ -57,10 +57,12 @@ typedef struct mct_function_transcription_options {
 extern "C" {
 #endif
 
-int mct_transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function_ast,
-                                  mct_function_transcription_options *options, char **mc_transcription);
-int transcribe_enumeration_to_mc(enumeration_info *enum_info, mc_syntax_node *enumeration_ast, char **mc_transcription);
-int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *struct_ast, char **mc_transcription);
+int mct_transcribe_file_ast(mc_syntax_node *file_root, mct_function_transcription_options *options, char **generated);
+// int mct_transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function_ast,
+//                                   mct_function_transcription_options *options, char **mc_transcription);
+// int transcribe_enumeration_to_mc(enumeration_info *enum_info, mc_syntax_node *enumeration_ast, char
+// **mc_transcription); int transcribe_struct_to_mc(struct_info *structure_info, mc_syntax_node *struct_ast, char
+// **mc_transcription);
 
 #ifdef __cplusplus
 }

@@ -406,6 +406,7 @@ const char *_mcl_ignore_functions[] = {
     "allocate_and_copy_cstrn",
     "isalpha",
     "tcci_add_string",
+    "usleep",
     // "clint_declare",
 
     // And everything here before -------------------------------------------------------------
@@ -459,7 +460,7 @@ const char *_mcl_core_functions[] = {
     "mcs_add_syntax_node_to_parent",
     "get_mc_token_type_name",
     "get_mc_syntax_token_type_name",
-    "_copy_syntax_node_to_text",
+    "_mcs_copy_syntax_node_to_text",
     "print_syntax_node",
     "print_parse_error",
     "_mcs_parse_token",
@@ -503,9 +504,15 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_goto_statement",
     "mct_transcribe_label_statement",
     "mct_transcribe_variable_value_report",
+    "mct_transcribe_struct_definition",
+    "mct_transcribe_function",
+    "mct_transcribe_type_alias",
     "mct_transcribe_function_end",
     "mct_transcribe_indent",
     "mct_transcribe_text_with_indent",
+    "mct_transcribe_file_root_children",
+    "mct_transcribe_file_ast",
+    "mcs_append_syntax_node_to_c_str",
 
     // mc_source
     "attach_struct_info_to_owner",
@@ -518,6 +525,8 @@ const char *_mcl_core_functions[] = {
     "mcs_interpret_file",
     "mcs_register_function_declaration",
     "mcs_register_function_definition",
+    "mcs_register_struct_declaration",
+    "mcs_register_struct_definition",
 
     "parse_file_to_syntax_tree",
     "mc_init_source_file_info",
@@ -550,9 +559,9 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_function_definition",
     "mcs_parse_preprocessor_directive",
     "mcs_parse_struct_declaration_list",
-    "copy_syntax_node_to_text",
+    "mcs_copy_syntax_node_to_text",
     "mct_contains_mc_invoke",
-    "mct_append_node_text_to_c_str",
+    "mcs_append_syntax_node_to_c_str",
     "mct_transcribe_expression",
     "mct_transcribe_type_identifier",
     "mct_transcribe_mc_invocation",

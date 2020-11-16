@@ -23,13 +23,12 @@ typedef enum source_file_type {
   SOURCE_FILE_EXCLUSIVE_MAX = 100,
 } source_file_type;
 
-enum source_definition_type {
+typedef enum source_definition_type {
   SOURCE_DEFINITION_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
   SOURCE_DEFINITION_FUNCTION,
   SOURCE_DEFINITION_STRUCTURE,
   SOURCE_DEFINITION_ENUMERATION,
-};
-typedef enum source_definition_type source_definition_type;
+} source_definition_type;
 
 typedef enum node_type {
   NODE_TYPE_NONE = 1,
