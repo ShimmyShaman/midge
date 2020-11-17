@@ -301,7 +301,7 @@ void midge_error_print_thread_stack_trace()
   printf("\nThread-Id:%lu\n", threades->thread_id);
 
   for (int i = 0; i <= threades->stack_index; ++i) {
-    printf("[%i]@%s :(file='%s' :%i)\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
+    printf("[%i]@%s :(file='%s:%i')\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
            threades->stack[i].line);
   }
 }
@@ -342,7 +342,7 @@ static void handler(int sig)
     printf("\n---------------################------------\n");
     printf("---------------  Stack Trace   ------------\n");
     printf("---------------Most Recent Last------------\n\n");
-    // printf("size:%i\n", MIDGE_ERROR_STACK_INDEX);
+    // printf("size:%i\n", MIDGE_ERROR_MAX_THREAD_COUNT);
 
     for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
       struct __mce_thread_entry_stack *threades = MIDGE_ERROR_THREAD_STACKS[t];
@@ -352,7 +352,7 @@ static void handler(int sig)
       printf("\nThread-Id:%lu\n", threades->thread_id);
 
       for (int i = 0; i <= threades->stack_index; ++i) {
-        printf("[%i]@%s :(file='%s' :%i)\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
+        printf("[%i]@%s :(file='%s:%i')\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
                threades->stack[i].line);
       }
       // if(MIDGE_ERROR_STACK_ACTIVITY_LINE >= 0)

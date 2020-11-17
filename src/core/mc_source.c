@@ -299,8 +299,32 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
   return 0;
 }
 
+int mcs_construct_dependency(function_info *dependent_function, const char *identity)
+{
+  struct_info *si;
+  find_struct_info(identity, &si);
+  if (si) {
+  }
+
+  enumeration_info *ei;
+  find_enumeration_info(identity, &ei);
+  if (ei) {
+  }
+
+  function_info *fi;
+  find_function_info(identity, &fi);
+  if (fi) {
+  }
+
+  return 0;
+}
+
+int mcs_determine_code_dependencies(function_info *dependent_function, mc_syntax_node *code_block) { return 0; }
+
 int mcs_register_function_declaration(mc_syntax_node *function_ast, function_info **p_func_info)
 {
+  int p;
+
   // Ensure a function info entry exists for the declared function
   find_function_info(function_ast->function.name->text, p_func_info);
 
@@ -324,7 +348,7 @@ int mcs_register_function_declaration(mc_syntax_node *function_ast, function_inf
 
     fi->parameter_count = function_ast->function.parameters->count;
     fi->parameters = (parameter_info **)malloc(sizeof(parameter_info *) * fi->parameter_count);
-    for (int p = 0; p < fi->parameter_count; ++p) {
+    for (p = 0; p < fi->parameter_count; ++p) {
       parameter_info *parameter;
       initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &parameter);
       fi->parameters[p] = parameter;
@@ -334,13 +358,33 @@ int mcs_register_function_declaration(mc_syntax_node *function_ast, function_inf
     // TODO -- check equality of ast signature with previous declaration
   }
 
+  // puts("bbb");
   if (function_ast->function.code_block) {
     if (fi->is_defined) {
       MCerror(9443, "Redefinition - TODO check");
     }
 
-    MCerror(9242, "PROGRESS");
+    // puts("1");
+    // Reset dependencies
+    fi->nb_dependencies = 0;
+
+    mc_syntax_node *param;
+    for (p = 0; p < function_ast->function.parameters->count; ++p) {
+      puts("2");
+      param = function_ast->function.parameters->items[p];
+
+      if (param->parameter.type_identifier &&
+          param->parameter.type_identifier->type_identifier.identifier->type == MC_TOKEN_IDENTIFIER) {
+        // TODO
+        // mcs_construct_dependency(fi, param->parameter.type_identifier->type_identifier.identifier->text);
+      }
+    }
+
+    // TODO
+    // Move through the function code and determine the dependencies of the function(functions/structs/enums it uses)
+    // mcs_determine_code_dependencies(fi, function_ast->function.code_block);
   }
+  // puts("ccc");
 
   return 0;
 }
@@ -422,18 +466,14 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // }
     } break;
     case MC_SYNTAX_FUNCTION: {
+      function_info *info;
+      // Function Declaration only
+      mcs_register_function_declaration(child, &info);
+
       if (!child->function.code_block) {
-        function_info *info;
-        // Function Declaration only
-        mcs_register_function_declaration(child, &info);
         printf("--fdecl:'%s'\n", child->function.name->text);
       }
       else {
-        MCerror(1124, "TODO");
-        // Assume to be function definition
-        function_info *info;
-        mcs_register_function_declaration(child, &info);
-        // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
         // info->source->source_file = source_file;
         printf("--defined:'%s'\n", child->function.name->text);
       }
@@ -459,7 +499,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
         // //         info->name, info->name, info->mc_declared_name);
         // // clint_process(buf);
       } break;
-      case MC_SYNTAX_ENUM: {
+      case MC_SYNTAX_ENUM_DECL: {
         // register_external_enum_declaration(definitions_owner, child->type_alias.type_descriptor);
         // enumeration_info *info;
         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
@@ -494,7 +534,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // info->source->source_file = source_file;
       // // printf("--declared: struct '%s'\n", child->struct_decl.type_name->text);
     } break;
-    case MC_SYNTAX_ENUM: {
+    case MC_SYNTAX_ENUM_DECL: {
       MCerror(1198, "TODO");
       // enumeration_info *info;
       // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
@@ -518,6 +558,10 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // // }
     } break;
     // TODO
+    case MC_SYNTAX_PP_DIRECTIVE_IFDEF: {
+      // Assume all ifndefs (for the moment TODO ) to be true
+      mcs_process_ast_root_children(source_file, child->preprocess_ifdef.groupopt);
+    } break;
     case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
       // Assume all ifndefs (for the moment TODO ) to be true
       mcs_process_ast_root_children(source_file, child->preprocess_ifndef.groupopt);
@@ -528,6 +572,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       break;
     default: {
       switch ((mc_token_type)child->type) {
+      case MC_TOKEN_PP_KEYWORD_IFDEF:
       case MC_TOKEN_PP_KEYWORD_IFNDEF:
       case MC_TOKEN_PP_KEYWORD_ENDIF:
         MCerror(5313, "TODO");
@@ -1045,7 +1090,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //     struct_info *structure_info = (struct_info *)p_definition_info;
 //     structure_info->source = source;
 //   } break;
-//   case MC_SYNTAX_ENUM: {
+//   case MC_SYNTAX_ENUM_DECL: {
 //     source->type = SOURCE_DEFINITION_ENUMERATION;
 //     instantiate_enum_definition_from_ast(definition_owner, source, ast, &p_definition_info);
 
@@ -1133,7 +1178,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //         //         info->name, info->name, info->mc_declared_name);
 //         // clint_process(buf);
 //       } break;
-//       case MC_SYNTAX_ENUM: {
+//       case MC_SYNTAX_ENUM_DECL: {
 //         enumeration_info *info;
 //         instantiate_definition(definitions_owner, file_context, NULL, child->type_alias.type_descriptor, NULL,
 //                                (void **)&info);
@@ -1172,7 +1217,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //                            &info->source->source_file->definitions.count, info->source);
 //       // printf("--declared: struct '%s'\n", child->struct_decl.type_name->text);
 //     } break;
-//     case MC_SYNTAX_ENUM: {
+//     case MC_SYNTAX_ENUM_DECL: {
 //       MCerror(9781, "TODO");
 //       enumeration_info *info;
 //       instantiate_definition(definitions_owner, file_context, NULL, child, NULL, (void **)&info);
@@ -1584,7 +1629,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //         // //         info->name, info->name, info->mc_declared_name);
 //         // // clint_process(buf);
 //       } break;
-//       case MC_SYNTAX_ENUM: {
+//       case MC_SYNTAX_ENUM_DECL: {
 //         register_external_enum_declaration(definitions_owner, child->type_alias.type_descriptor);
 //         // enumeration_info *info;
 //         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void
@@ -1618,7 +1663,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //       // info->source->source_file = source_file;
 //       // // printf("--declared: struct '%s'\n", child->struct_decl.type_name->text);
 //     } break;
-//     case MC_SYNTAX_ENUM: {
+//     case MC_SYNTAX_ENUM_DECL: {
 //       MCerror(1198, "TODO");
 //       // enumeration_info *info;
 //       // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);

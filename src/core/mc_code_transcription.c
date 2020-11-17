@@ -768,17 +768,16 @@ int mct_transcribe_type_identifier(mct_transcription_state *ts, mc_syntax_node *
   }
 
   // type identifier
-  char *mc_declared_name = NULL;
   struct_info *structure_info;
   find_struct_info(syntax_node->type_identifier.identifier->text, &structure_info);
-  if (structure_info && structure_info->mc_declared_name) {
-    append_to_c_str(ts->str, structure_info->mc_declared_name);
+  if (structure_info) {
+    append_to_c_str(ts->str, structure_info->name);
   }
   else {
     enumeration_info *enum_info;
     find_enumeration_info(syntax_node->type_identifier.identifier->text, &enum_info);
-    if (enum_info && enum_info->mc_declared_name) {
-      append_to_c_str(ts->str, enum_info->mc_declared_name);
+    if (enum_info) {
+      append_to_c_str(ts->str, enum_info->name);
     }
     else {
       mcs_append_syntax_node_to_c_str(ts->str, syntax_node->type_identifier.identifier);
@@ -1147,8 +1146,7 @@ int mct_transcribe_mc_invocation_argument(mct_transcription_state *ts, parameter
       //   printf("enum was :%p\n", enum_member);
       // }
       if (enum_member) {
-        char *enum_name = enum_info->mc_declared_name ? enum_info->mc_declared_name : enum_info->name;
-        append_to_c_strf(ts->str, "%s %s_%i = %s;\n", enum_name, argument_data_name, arg_index, argument->text);
+        append_to_c_strf(ts->str, "%s %s_%i = %s;\n", enum_info->name, argument_data_name, arg_index, argument->text);
         mct_transcribe_indent(ts);
         append_to_c_strf(ts->str, "%s[%i] = &%s_%i;\n", argument_data_name, arg_index, argument_data_name, arg_index);
         break;
@@ -2793,7 +2791,7 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
       }
       else {
         mct_transcribe_indent(ts);
-        append_to_c_str(ts->str, "*mc_return_value = ");
+        append_to_c_str(ts->str, "return ");
         mct_transcribe_expression(ts, NULL, syntax_node->return_statement.expression);
         append_to_c_str(ts->str, ";\n");
       }
@@ -3071,7 +3069,7 @@ int mct_transcribe_function_end(mct_transcription_state *ts)
 {
   append_to_c_str(ts->str, "\n");
   mct_transcribe_indent(ts);
-  append_to_c_str(ts->str, "// MC_RETURN\n");
+  // append_to_c_str(ts->str, "// Return\n");
   if (ts->options->tag_on_function_exit) {
     mct_transcribe_indent(ts);
     append_to_c_strf(ts->str, "register_midge_error_tag(\"%s(~)\");\n", ts->transcription_root->function.name->text);
@@ -3163,10 +3161,12 @@ int mct_transcribe_function(mct_transcription_state *ts, mc_syntax_node *functio
     }
     mcs_append_syntax_node_to_c_str(ts->str, function_ast->function.parameters->items[p]);
   }
-  append_to_c_str(ts->str, ") ");
+  append_to_c_str(ts->str, ")");
 
-  if (function_ast->function.code_block)
+  if (function_ast->function.code_block) {
+    append_to_c_str(ts->str, " ");
     mct_transcribe_code_block(ts, function_ast->function.code_block);
+  }
   else
     append_to_c_str(ts->str, ";");
 
@@ -3454,7 +3454,7 @@ int mct_transcribe_function(mct_transcription_state *ts, mc_syntax_node *functio
 //     append_to_c_str(ts.str, "struct \n");
 //   else if (structure_ast->type == MC_SYNTAX_UNION_DECL)
 //     append_to_c_str(ts.str, "union \n");
-//   append_to_c_str(ts.str, structure_info->mc_declared_name);
+//   append_to_c_str(ts.str, structure_info->name);
 
 //   if (structure_ast->struct_decl.fields) {
 //     append_to_c_str(ts.str, " {\n");
@@ -3479,9 +3479,15 @@ int mct_transcribe_function(mct_transcription_state *ts, mc_syntax_node *functio
 //   return 0;
 // }
 
-int mct_transcribe_enum_declaration(mct_transcription_state *ts, mc_syntax_node *structure_ast)
+int mct_transcribe_enum_declaration(mct_transcription_state *ts, mc_syntax_node *enum_ast)
 {
-  MCerror(3484, "PROGRESS");
+  if (enum_ast->type != MC_SYNTAX_ENUM_DECL) {
+    MCerror(1242, "MCT:Invalid Argument");
+  }
+
+  mcs_append_syntax_node_to_c_str(ts->str, enum_ast);
+
+  return 0;
 }
 
 int mct_transcribe_struct_declaration(mct_transcription_state *ts, mc_syntax_node *structure_ast)
@@ -3492,12 +3498,13 @@ int mct_transcribe_struct_declaration(mct_transcription_state *ts, mc_syntax_nod
 
   // Header
   if (structure_ast->type == MC_SYNTAX_STRUCT_DECL)
-    append_to_c_str(ts->str, "struct \n");
+    append_to_c_str(ts->str, "struct ");
   else if (structure_ast->type == MC_SYNTAX_UNION_DECL)
-    append_to_c_str(ts->str, "union \n");
+    append_to_c_str(ts->str, "union ");
   mcs_append_syntax_node_to_c_str(ts->str, structure_ast->struct_decl.type_name);
 
   if (structure_ast->struct_decl.fields) {
+    // Definition
     append_to_c_str(ts->str, " {\n");
     ++ts->indent;
 
@@ -3505,6 +3512,9 @@ int mct_transcribe_struct_declaration(mct_transcription_state *ts, mc_syntax_nod
 
     --ts->indent;
     append_to_c_str(ts->str, "}");
+  }
+  else {
+    // Just a declaration
   }
 
   return 0;
@@ -3519,7 +3529,7 @@ int mct_transcribe_type_alias(mct_transcription_state *ts, mc_syntax_node *type_
   case MC_SYNTAX_STRUCT_DECL: {
     mct_transcribe_struct_declaration(ts, type_define->type_alias.type_descriptor);
   } break;
-  case MC_SYNTAX_ENUM: {
+  case MC_SYNTAX_ENUM_DECL: {
     mct_transcribe_enum_declaration(ts, type_define->type_alias.type_descriptor);
   } break;
   default:
@@ -3541,22 +3551,48 @@ int mct_transcribe_file_root_children(mct_transcription_state *ts, mc_syntax_nod
 
     // Tokens
     if (child->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
+      // printf("ts->str (%s):\n%s||\n", get_mc_syntax_token_type_name(child->type), ts->str->text);
+      // print_syntax_node(child, 0);
+      // printf("%u %u\n", ts->str->alloc, ts->str->len);
       mcs_append_syntax_node_to_c_str(ts->str, child);
+      // printf("ts->str (%s):\n%s||\n", get_mc_syntax_token_type_name(child->type), ts->str->text);
+      // MCerror(3554, "HERE");
       continue;
     }
 
     // Syntax-Nodes
     switch (child->type) {
+    case MC_SYNTAX_PP_DIRECTIVE_DEFINE:
+    case MC_SYNTAX_PP_DIRECTIVE_IFDEF:
     case MC_SYNTAX_PP_DIRECTIVE_IFNDEF:
-    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
-    case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
+    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
       mct_transcribe_file_root_children(ts, child->children);
+      // usleep(10000);
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
       mct_transcribe_type_alias(ts, child);
     } break;
     case MC_SYNTAX_FUNCTION: {
       mct_transcribe_function(ts, child);
+    } break;
+    case MC_SYNTAX_ENUM_DECL: {
+      mct_transcribe_enum_declaration(ts, child);
+    } break;
+    case MC_SYNTAX_UNION_DECL: {
+      mct_transcribe_struct_declaration(ts, child);
+
+      // if (!child->union_decl.fields) {
+      // Forward declaration
+      append_to_c_str(ts->str, ";");
+      // }
+    } break;
+    case MC_SYNTAX_STRUCT_DECL: {
+      mct_transcribe_struct_declaration(ts, child);
+
+      // if (!child->struct_decl.fields) {
+      // Forward declaration
+      append_to_c_str(ts->str, ";");
+      // }
     } break;
     default:
       MCerror(3479, "mct_transcribe_file_root_children: Unsupported Root=%s",

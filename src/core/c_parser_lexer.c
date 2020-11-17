@@ -51,6 +51,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_PP_KEYWORD_INCLUDE";
   case MC_TOKEN_PP_KEYWORD_IFNDEF:
     return "MC_TOKEN_PP_KEYWORD_IFNDEF";
+  case MC_TOKEN_PP_KEYWORD_IFDEF:
+    return "MC_TOKEN_PP_KEYWORD_IFDEF";
   case MC_TOKEN_PP_KEYWORD_ENDIF:
     return "MC_TOKEN_PP_KEYWORD_ENDIF";
   case MC_TOKEN_PP_IDENTIFIER:
@@ -246,6 +248,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
   switch ((mc_syntax_node_type)type) {
   case MC_SYNTAX_FILE_ROOT:
     return "MC_SYNTAX_FILE_ROOT";
+  case MC_SYNTAX_PP_DIRECTIVE_IFDEF:
+    return "MC_SYNTAX_PP_DIRECTIVE_IFDEF";
   case MC_SYNTAX_PP_DIRECTIVE_IFNDEF:
     return "MC_SYNTAX_PP_DIRECTIVE_IFNDEF";
   case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
@@ -262,10 +266,10 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_STRUCT_DECL";
   case MC_SYNTAX_UNION_DECL:
     return "MC_SYNTAX_UNION_DECL";
-  case MC_SYNTAX_ENUM:
-    return "MC_SYNTAX_ENUM";
-  case MC_SYNTAX_ENUM_MEMBER:
-    return "MC_SYNTAX_ENUM_MEMBER";
+  case MC_SYNTAX_ENUM_DECL:
+    return "MC_SYNTAX_ENUM_DECL";
+  case MC_SYNTAX_ENUM_DECL_MEMBER:
+    return "MC_SYNTAX_ENUM_DECL_MEMBER";
   case MC_SYNTAX_NESTED_TYPE_DECLARATION:
     return "MC_SYNTAX_NESTED_TYPE_DECLARATION";
   case MC_SYNTAX_CODE_BLOCK:
@@ -485,8 +489,8 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
 #include <unistd.h>
 int mcs_append_syntax_node_to_c_str(c_str *cstr, mc_syntax_node *syntax_node)
 {
-  const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
-  register_midge_error_tag("mcs_append_syntax_node_to_c_str(%s)", type_name);
+  // const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
+  // register_midge_error_tag("mcs_append_syntax_node_to_c_str(%s)", type_name);
 
   if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     // printf("syntax_node:%p\n", syntax_node);
@@ -494,6 +498,7 @@ int mcs_append_syntax_node_to_c_str(c_str *cstr, mc_syntax_node *syntax_node)
     // printf("syntax_node->text:%p\n", syntax_node->text);
     // printf("syntax_node->text:%s\n", syntax_node->text);
     append_to_c_str(cstr, syntax_node->text);
+    // printf("cstr->text:%s\n", cstr->text);
     // printf("syntax_node:%p\n", syntax_node);
     // usleep(10000);
     register_midge_error_tag("_mcs_copy_syntax_node_to_text(~t)");
@@ -559,6 +564,12 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_FILE_ROOT: {
     // Nothing
   } break;
+  case MC_SYNTAX_PP_DIRECTIVE_IFDEF: {
+    syntax_node->preprocess_ifdef.identifier = NULL;
+    syntax_node->preprocess_ifdef.groupopt = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+    syntax_node->preprocess_ifdef.groupopt->alloc = 0;
+    syntax_node->preprocess_ifdef.groupopt->count = 0;
+  } break;
   case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
     syntax_node->preprocess_ifndef.identifier = NULL;
     syntax_node->preprocess_ifndef.groupopt = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
@@ -575,14 +586,14 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->preprocess_define.replacement_list->alloc = 0;
     syntax_node->preprocess_define.replacement_list->count = 0;
   } break;
-  case MC_SYNTAX_ENUM: {
+  case MC_SYNTAX_ENUM_DECL: {
     syntax_node->enumeration.name = NULL;
     syntax_node->enumeration.type_identity = NULL;
     syntax_node->enumeration.members = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
     syntax_node->enumeration.members->alloc = 0;
     syntax_node->enumeration.members->count = 0;
   } break;
-  case MC_SYNTAX_ENUM_MEMBER: {
+  case MC_SYNTAX_ENUM_DECL_MEMBER: {
     syntax_node->enum_member.identifier = NULL;
     syntax_node->enum_member.value_expression = NULL;
   } break;
@@ -892,45 +903,57 @@ int release_syntax_node_list(mc_syntax_node_list *list, bool release_items)
   return 0;
 }
 
-int release_syntax_node(mc_syntax_node *syntax_node)
+int release_syntax_node(mc_syntax_node *sn)
 {
-  if (!syntax_node) {
+  if (!sn) {
     return 0;
   }
 
   // Tokens
-  if ((int)syntax_node->type < (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
-    if (syntax_node->text) {
-      free(syntax_node->text);
+  if ((int)sn->type < (int)MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
+    if (sn->text) {
+      free(sn->text);
     }
     return 0;
   }
 
   // Release all children
-  release_syntax_node_list(syntax_node->children, true);
+  release_syntax_node_list(sn->children, true);
 
   // Release all created lists (but not their items which were released with children above)
-  switch (syntax_node->type) {
+  switch (sn->type) {
   case MC_SYNTAX_FUNCTION: {
-    release_syntax_node_list(syntax_node->function.parameters, false);
+    release_syntax_node_list(sn->function.parameters, false);
   } break;
   case MC_SYNTAX_STRUCT_DECL: {
-    release_syntax_node_list(syntax_node->struct_decl.fields, false);
+    release_syntax_node_list(sn->struct_decl.fields, false);
   } break;
-  case MC_SYNTAX_ENUM: {
-    release_syntax_node_list(syntax_node->enumeration.members, false);
+  case MC_SYNTAX_UNION_DECL: {
+    release_syntax_node_list(sn->union_decl.fields, false);
+  } break;
+  case MC_SYNTAX_ENUM_DECL: {
+    release_syntax_node_list(sn->enumeration.members, false);
   } break;
   case MC_SYNTAX_INVOCATION: {
-    release_syntax_node_list(syntax_node->invocation.arguments, false);
+    release_syntax_node_list(sn->invocation.arguments, false);
   } break;
   case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
-    release_syntax_node_list(syntax_node->preprocess_define.replacement_list, false);
+    release_syntax_node_list(sn->preprocess_define.replacement_list, false);
+  } break;
+  case MC_SYNTAX_PP_DIRECTIVE_IFDEF: {
+    release_syntax_node_list(sn->preprocess_ifdef.groupopt, false);
   } break;
   case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
-    release_syntax_node_list(syntax_node->preprocess_ifndef.groupopt, false);
+    release_syntax_node_list(sn->preprocess_ifndef.groupopt, false);
   } break;
   case MC_SYNTAX_FIELD_DECLARATION: {
-    release_syntax_node_list(syntax_node->field.declarators, false);
+    release_syntax_node_list(sn->field.declarators, false);
+  } break;
+  case MC_SYNTAX_NESTED_TYPE_DECLARATION: {
+    release_syntax_node_list(sn->nested_type.declarators, false);
+  } break;
+  case MC_SYNTAX_FUNCTION_POINTER_DECLARATOR: {
+    release_syntax_node_list(sn->fptr_declarator.parameters, false);
   } break;
   case MC_SYNTAX_FILE_ROOT:
   case MC_SYNTAX_TYPE_IDENTIFIER:
@@ -938,12 +961,12 @@ int release_syntax_node(mc_syntax_node *syntax_node)
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:
   case MC_SYNTAX_TYPE_ALIAS:
   case MC_SYNTAX_PARAMETER_DECLARATION:
+  case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
+  case MC_SYNTAX_ENUM_DECL_MEMBER:
     break;
   default: {
-    // syntax_node->fi
-
-    MCerror(661, "release_syntax_node(); Clear type:%s for proper release of item collections",
-            get_mc_syntax_token_type_name(syntax_node->type));
+    MCerror(6616, "release_sn(); Clear type:%s for proper release of item collections",
+            get_mc_syntax_token_type_name(sn->type));
   }
   }
 
@@ -1419,6 +1442,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       // Keywords
       if (slen == 13 && !strncmp(code + s, "##__VA_ARGS__", slen)) {
         *token_type = MC_TOKEN_PP_KEYWORD_VARIADIC_ARGS;
+        if (text) {
+          allocate_and_copy_cstrn(*text, code + s, slen);
+        }
+        break;
+      }
+      if (slen == 6 && !strncmp(code + s, "#ifdef", slen)) {
+        *token_type = MC_TOKEN_PP_KEYWORD_IFDEF;
         if (text) {
           allocate_and_copy_cstrn(*text, code + s, slen);
         }
@@ -2274,7 +2304,7 @@ int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_synt
   }
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
-    MCerror(808, "MCS:>:ERR-token:%s", get_mc_token_type_name(token_type));
+    MCerror(6808, "MCS:>:ERR-token:%s", get_mc_token_type_name(token_type));
   }
   }
 
@@ -4421,6 +4451,126 @@ int mcs_parse_function_definition_header(parsing_state *ps, mc_syntax_node *func
   return 0;
 }
 
+int mcs_parse_pp_ifndef(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_token_type token_type;
+
+  mc_syntax_node *ifndef_directive;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_IFNDEF, NULL, parent, &ifndef_directive);
+  if (additional_destination) {
+    *additional_destination = ifndef_directive;
+  }
+
+  mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_PP_KEYWORD_IFNDEF, NULL);
+
+  mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
+  mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_IDENTIFIER, &ifndef_directive->preprocess_ifndef.identifier);
+  mcs_peek_token_type(ps, true, 0, &token_type);
+  if (token_type == MC_TOKEN_SPACE_SEQUENCE)
+    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
+  mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
+
+  while (1) {
+    mcs_peek_token_type(ps, true, 0, &token_type);
+    if (token_type == MC_TOKEN_NULL_CHARACTER) {
+      MCerror(3831, "TODO");
+    }
+    if (token_type == MC_TOKEN_PP_KEYWORD_ENDIF) {
+      break;
+    }
+    mc_syntax_node *group_option;
+    mcs_parse_root_statement(ps, ifndef_directive, &group_option);
+
+    append_to_collection((void ***)&ifndef_directive->preprocess_ifndef.groupopt->items,
+                         &ifndef_directive->preprocess_ifndef.groupopt->alloc,
+                         &ifndef_directive->preprocess_ifndef.groupopt->count, group_option);
+
+    mcs_parse_through_supernumerary_tokens(ps, ifndef_directive);
+  }
+
+  mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_PP_KEYWORD_ENDIF, NULL);
+  while (1) {
+    mcs_peek_token_type(ps, true, 0, &token_type);
+    switch (token_type) {
+    case MC_TOKEN_SPACE_SEQUENCE:
+    case MC_TOKEN_LINE_COMMENT:
+    case MC_TOKEN_MULTI_LINE_COMMENT:
+      mcs_parse_through_token(ps, ifndef_directive, token_type, NULL);
+      continue;
+    case MC_TOKEN_NEW_LINE:
+      mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
+      break;
+    case MC_TOKEN_NULL_CHARACTER:
+      break;
+    default:
+      MCerror(3857, "TODO:%s", get_mc_token_type_name(token_type));
+    }
+    break;
+  }
+
+  return 0;
+}
+
+int mcs_parse_pp_ifdef(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_token_type token_type;
+
+  mc_syntax_node *ifdef_directive;
+  mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_IFDEF, NULL, parent, &ifdef_directive);
+  if (additional_destination) {
+    *additional_destination = ifdef_directive;
+  }
+
+  mcs_parse_through_token(ps, ifdef_directive, MC_TOKEN_PP_KEYWORD_IFDEF, NULL);
+
+  mcs_parse_through_token(ps, ifdef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
+  mcs_parse_through_token(ps, ifdef_directive, MC_TOKEN_IDENTIFIER, &ifdef_directive->preprocess_ifndef.identifier);
+  mcs_peek_token_type(ps, true, 0, &token_type);
+  if (token_type == MC_TOKEN_SPACE_SEQUENCE)
+    mcs_parse_through_token(ps, ifdef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
+  mcs_parse_through_token(ps, ifdef_directive, MC_TOKEN_NEW_LINE, NULL);
+
+  while (1) {
+    mcs_peek_token_type(ps, true, 0, &token_type);
+    if (token_type == MC_TOKEN_NULL_CHARACTER) {
+      MCerror(3831, "TODO");
+    }
+    if (token_type == MC_TOKEN_PP_KEYWORD_ENDIF) {
+      break;
+    }
+    mc_syntax_node *group_option;
+    mcs_parse_root_statement(ps, ifdef_directive, &group_option);
+
+    append_to_collection((void ***)&ifdef_directive->preprocess_ifndef.groupopt->items,
+                         &ifdef_directive->preprocess_ifndef.groupopt->alloc,
+                         &ifdef_directive->preprocess_ifndef.groupopt->count, group_option);
+
+    mcs_parse_through_supernumerary_tokens(ps, ifdef_directive);
+  }
+
+  mcs_parse_through_token(ps, ifdef_directive, MC_TOKEN_PP_KEYWORD_ENDIF, NULL);
+  while (1) {
+    mcs_peek_token_type(ps, true, 0, &token_type);
+    switch (token_type) {
+    case MC_TOKEN_SPACE_SEQUENCE:
+    case MC_TOKEN_LINE_COMMENT:
+    case MC_TOKEN_MULTI_LINE_COMMENT:
+      mcs_parse_through_token(ps, ifdef_directive, token_type, NULL);
+      continue;
+    case MC_TOKEN_NEW_LINE:
+      mcs_parse_through_token(ps, ifdef_directive, MC_TOKEN_NEW_LINE, NULL);
+      break;
+    case MC_TOKEN_NULL_CHARACTER:
+      break;
+    default:
+      MCerror(3857, "TODO:%s", get_mc_token_type_name(token_type));
+    }
+    break;
+  }
+
+  return 0;
+}
+
 int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   register_midge_error_tag("mcs_parse_preprocessor_directive()");
@@ -4432,59 +4582,11 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
   case MC_TOKEN_PP_KEYWORD_ENDIF: {
     mcs_parse_through_token(ps, parent, MC_TOKEN_PP_KEYWORD_ENDIF, additional_destination);
   } break;
+  case MC_TOKEN_PP_KEYWORD_IFDEF: {
+    mcs_parse_pp_ifdef(ps, parent, additional_destination);
+  } break;
   case MC_TOKEN_PP_KEYWORD_IFNDEF: {
-    mc_syntax_node *ifndef_directive;
-    mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_IFNDEF, NULL, parent, &ifndef_directive);
-    if (additional_destination) {
-      *additional_destination = ifndef_directive;
-    }
-
-    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_PP_KEYWORD_IFNDEF, NULL);
-
-    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
-    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_IDENTIFIER, &ifndef_directive->preprocess_ifndef.identifier);
-    mcs_peek_token_type(ps, true, 0, &token_type);
-    if (token_type == MC_TOKEN_SPACE_SEQUENCE)
-      mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
-    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
-
-    while (1) {
-      mcs_peek_token_type(ps, true, 0, &token_type);
-      if (token_type == MC_TOKEN_NULL_CHARACTER) {
-        MCerror(3831, "TODO");
-      }
-      if (token_type == MC_TOKEN_PP_KEYWORD_ENDIF) {
-        break;
-      }
-      mc_syntax_node *group_option;
-      mcs_parse_root_statement(ps, ifndef_directive, &group_option);
-
-      append_to_collection((void ***)&ifndef_directive->preprocess_ifndef.groupopt->items,
-                           &ifndef_directive->preprocess_ifndef.groupopt->alloc,
-                           &ifndef_directive->preprocess_ifndef.groupopt->count, group_option);
-
-      mcs_parse_through_supernumerary_tokens(ps, ifndef_directive);
-    }
-
-    mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_PP_KEYWORD_ENDIF, NULL);
-    while (1) {
-      mcs_peek_token_type(ps, true, 0, &token_type);
-      switch (token_type) {
-      case MC_TOKEN_SPACE_SEQUENCE:
-      case MC_TOKEN_LINE_COMMENT:
-      case MC_TOKEN_MULTI_LINE_COMMENT:
-        mcs_parse_through_token(ps, ifndef_directive, token_type, NULL);
-        continue;
-      case MC_TOKEN_NEW_LINE:
-        mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
-        break;
-      case MC_TOKEN_NULL_CHARACTER:
-        break;
-      default:
-        MCerror(3857, "TODO:%s", get_mc_token_type_name(token_type));
-      }
-      break;
-    }
+    mcs_parse_pp_ifndef(ps, parent, additional_destination);
   } break;
   case MC_TOKEN_PP_KEYWORD_INCLUDE: {
     mc_syntax_node *include_directive;
@@ -4621,7 +4723,7 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
 int mcs_parse_enum_definition(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   mc_syntax_node *enum_definition;
-  mcs_construct_syntax_node(ps, MC_SYNTAX_ENUM, NULL, parent, &enum_definition);
+  mcs_construct_syntax_node(ps, MC_SYNTAX_ENUM_DECL, NULL, parent, &enum_definition);
   if (additional_destination) {
     *additional_destination = enum_definition;
   }
@@ -4651,7 +4753,7 @@ int mcs_parse_enum_definition(parsing_state *ps, mc_syntax_node *parent, mc_synt
     }
 
     mc_syntax_node *enum_member;
-    mcs_construct_syntax_node(ps, MC_SYNTAX_ENUM_MEMBER, NULL, enum_definition, &enum_member);
+    mcs_construct_syntax_node(ps, MC_SYNTAX_ENUM_DECL_MEMBER, NULL, enum_definition, &enum_member);
 
     mcs_parse_through_token(ps, enum_member, MC_TOKEN_IDENTIFIER, &enum_member->enum_member.identifier);
 
@@ -5001,6 +5103,11 @@ int mcs_parse_type_alias_definition(parsing_state *ps, mc_syntax_node *parent, m
       mcs_peek_token_type(ps, false, 2, &token_type);
       switch (token_type) {
       case MC_TOKEN_CURLY_OPENING_BRACKET: {
+        // Type Definition & Struct definition
+        mcs_parse_type_declaration(ps, type_alias_definition, &type_alias_definition->type_alias.type_descriptor);
+      } break;
+      case MC_TOKEN_IDENTIFIER: {
+        // Type Definition only
         mcs_parse_type_declaration(ps, type_alias_definition, &type_alias_definition->type_alias.type_descriptor);
       } break;
       default: {
@@ -5146,6 +5253,7 @@ int mcs_parse_root_statement(parsing_state *ps, mc_syntax_node *parent, mc_synta
   case MC_TOKEN_PP_KEYWORD_ENDIF:
   case MC_TOKEN_PP_KEYWORD_DEFINE:
   case MC_TOKEN_PP_KEYWORD_INCLUDE:
+  case MC_TOKEN_PP_KEYWORD_IFDEF:
   case MC_TOKEN_PP_KEYWORD_IFNDEF: {
     mcs_parse_preprocessor_directive(ps, parent, additional_destination);
   } break;

@@ -121,16 +121,15 @@ typedef struct enum_member_info {
 } enum_member_info;
 
 typedef struct enumeration_info {
-  struct_id *type_id;
-  source_definition *source;
   char *name;
-  unsigned int latest_iteration;
-  char *mc_declared_name;
   bool is_defined;
+  
   struct {
     unsigned int count, alloc;
     enum_member_info **items;
   } members;
+
+  source_definition *source;
 } enumeration_info;
 
 typedef struct preprocess_define_info {
@@ -181,13 +180,12 @@ typedef struct field_info_list {
 } field_info_list;
 
 typedef struct struct_info {
-  struct_id *type_id;
-  bool is_union;
-  source_definition *source;
   char *name;
-  unsigned int latest_iteration;
-  char *mc_declared_name;
+  bool is_union;
   bool is_defined;
+
+  source_definition *source;
+
   field_info_list *fields;
 } struct_info;
 

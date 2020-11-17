@@ -405,7 +405,6 @@ const char *_mcl_ignore_functions[] = {
     "allocate_and_copy_cstr",
     "allocate_and_copy_cstrn",
     "isalpha",
-    "tcci_add_string",
     "usleep",
     // "clint_declare",
 
@@ -414,13 +413,7 @@ const char *_mcl_ignore_functions[] = {
 };
 
 const char *_mcl_core_functions[] = {
-    "do_the_first_thing",
-    "do_the_second_thing",
-    "do_the_third_thing",
-    "do_many_things",
-
-    "clint_process",
-    "clint_declare",
+    "tcci_add_string",
 
     // midge_common
     "init_c_str",
@@ -484,6 +477,8 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_root_statement",
     "mcs_parse_goto_statement",
     "mcs_parse_label_statement",
+"mcs_parse_pp_ifdef",
+"mcs_parse_pp_ifndef",
 
     // mc_code_transcription
     "mct_release_expression_type_info_fields",
@@ -505,6 +500,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_label_statement",
     "mct_transcribe_variable_value_report",
     "mct_transcribe_struct_declaration",
+    "mct_transcribe_enum_declaration",
     "mct_transcribe_function",
     "mct_transcribe_type_alias",
     "mct_transcribe_function_end",
@@ -1459,13 +1455,15 @@ int mcl_load_app_source(TCCInterpState **itp)
   init_error_handling();
 
   unsigned int temp_source_error_thread_index;
-  void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
-      tcci_get_symbol(*itp, "register_midge_thread_creation");
+  int temp_source_error_stack_index;
+  // void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
+  //     tcci_get_symbol(*itp, "register_midge_thread_creation");
   {
-    int dummy_int;
     register_midge_thread_creation(&temp_source_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463,
-                                   &dummy_int);
+                                   &temp_source_error_stack_index);
   }
+
+  // register_midge_stack_invocation("mcl_load_app_source", "core_source_loader.c", 100, temp_source_error_stack_index);
 
   // Initialize the new interpreter
   unsigned int midge_error_thread_index;
@@ -1504,16 +1502,16 @@ int mcl_load_app_source(TCCInterpState **itp)
     };
     MCcall(tcci_add_files(midge_itp, initial_compile_list, sizeof(initial_compile_list) / sizeof(const char *)));
 
-    void (*init_error_handling)(void) = tcci_get_symbol(midge_itp, "initialize_midge_error_handling");
-    init_error_handling();
+    // void (*init_error_handling)(void) = tcci_get_symbol(midge_itp, "initialize_midge_error_handling");
+    // init_error_handling();
 
-    void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
-        tcci_get_symbol(midge_itp, "register_midge_thread_creation");
-    {
-      int dummy_int;
-      register_midge_thread_creation(&midge_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463,
-                                     &dummy_int);
-    }
+    // void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
+    //     tcci_get_symbol(midge_itp, "register_midge_thread_creation");
+    // {
+    //   int dummy_int;
+    //   register_midge_thread_creation(&midge_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463,
+    //                                  &dummy_int);
+    // }
 
     // Initialize midge global data and allow it to be obtained from temp source interpreter
     int (*init_mc_global_data)(TCCInterpState *) = tcci_get_symbol(midge_itp, "init_mc_global_data");

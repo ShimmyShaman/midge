@@ -4,12 +4,14 @@
 #define C_PARSER_LEXER_H
 
 #include "core/core_definitions.h"
+#include "midge_common.h"
 
 typedef enum mc_token_type {
   MC_TOKEN_NULL = 0,
   MC_TOKEN_NULL_CHARACTER,
   MC_TOKEN_PP_KEYWORD_DEFINE,
   MC_TOKEN_PP_KEYWORD_INCLUDE,
+  MC_TOKEN_PP_KEYWORD_IFDEF,
   MC_TOKEN_PP_KEYWORD_IFNDEF,
   MC_TOKEN_PP_KEYWORD_ENDIF,
   MC_TOKEN_PP_KEYWORD_VARIADIC_ARGS,
@@ -109,6 +111,7 @@ typedef enum mc_token_type {
 typedef enum mc_syntax_node_type {
   MC_SYNTAX_ROOT = MC_TOKEN_EXCLUSIVE_MAX_VALUE,
   MC_SYNTAX_FILE_ROOT,
+  MC_SYNTAX_PP_DIRECTIVE_IFDEF,
   MC_SYNTAX_PP_DIRECTIVE_IFNDEF,
   MC_SYNTAX_PP_DIRECTIVE_INCLUDE,
   MC_SYNTAX_PP_DIRECTIVE_DEFINE,
@@ -117,8 +120,8 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_TYPE_ALIAS,
   MC_SYNTAX_STRUCT_DECL,
   MC_SYNTAX_UNION_DECL,
-  MC_SYNTAX_ENUM,
-  MC_SYNTAX_ENUM_MEMBER,
+  MC_SYNTAX_ENUM_DECL,
+  MC_SYNTAX_ENUM_DECL_MEMBER,
   MC_SYNTAX_NESTED_TYPE_DECLARATION,
   MC_SYNTAX_CODE_BLOCK,
   MC_SYNTAX_STATEMENT_LIST,
@@ -179,7 +182,7 @@ typedef struct mc_syntax_node mc_syntax_node;
 typedef struct mc_syntax_node_list {
   unsigned int alloc;
   unsigned int count;
-  struct mc_syntax_node **items;
+  mc_syntax_node **items;
 } mc_syntax_node_list;
 
 struct mc_syntax_node {
@@ -234,7 +237,7 @@ struct mc_syntax_node {
         struct {
           mc_syntax_node *identifier;
           mc_syntax_node_list *groupopt;
-        } preprocess_ifndef;
+        } preprocess_ifndef, preprocess_ifdef;
         struct {
 
         } preprocess_include;
@@ -469,11 +472,12 @@ struct mc_syntax_node {
 };
 
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
-int mcs_append_syntax_node_to_c_str(c_str *cstr, mc_syntax_node *syntax_node);
+int mcs_append_syntax_node_to_c_str(c_str *str, mc_syntax_node *syntax_node);
 int mcs_copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);
 int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast);
 int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast);
 const char *get_mc_syntax_token_type_name(mc_syntax_node_type type);
 int release_syntax_node(mc_syntax_node *syntax_node);
+int mcs_append_syntax_node_to_c_str(c_str *str, mc_syntax_node *syntax_node);
 
 #endif // C_PARSER_LEXER_H
