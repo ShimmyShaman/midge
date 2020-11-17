@@ -504,7 +504,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_goto_statement",
     "mct_transcribe_label_statement",
     "mct_transcribe_variable_value_report",
-    "mct_transcribe_struct_definition",
+    "mct_transcribe_struct_declaration",
     "mct_transcribe_function",
     "mct_transcribe_type_alias",
     "mct_transcribe_function_end",

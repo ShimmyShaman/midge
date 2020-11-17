@@ -3479,7 +3479,12 @@ int mct_transcribe_function(mct_transcription_state *ts, mc_syntax_node *functio
 //   return 0;
 // }
 
-int mct_transcribe_struct_definition(mct_transcription_state *ts, mc_syntax_node *structure_ast)
+int mct_transcribe_enum_declaration(mct_transcription_state *ts, mc_syntax_node *structure_ast)
+{
+  MCerror(3484, "PROGRESS");
+}
+
+int mct_transcribe_struct_declaration(mct_transcription_state *ts, mc_syntax_node *structure_ast)
 {
   if (structure_ast->type != MC_SYNTAX_STRUCT_DECL && structure_ast->type != MC_SYNTAX_UNION_DECL) {
     MCerror(1242, "MCT:Invalid Argument");
@@ -3510,8 +3515,12 @@ int mct_transcribe_type_alias(mct_transcription_state *ts, mc_syntax_node *type_
   append_to_c_str(ts->str, "typedef ");
 
   switch (type_define->type_alias.type_descriptor->type) {
+  case MC_SYNTAX_UNION_DECL:
   case MC_SYNTAX_STRUCT_DECL: {
-    mct_transcribe_struct_definition(ts, type_define->type_alias.type_descriptor);
+    mct_transcribe_struct_declaration(ts, type_define->type_alias.type_descriptor);
+  } break;
+  case MC_SYNTAX_ENUM: {
+    mct_transcribe_enum_declaration(ts, type_define->type_alias.type_descriptor);
   } break;
   default:
     MCerror(3455, "mct_transcribe_type_alias: Unsupported type-descriptor=%s",
@@ -3539,6 +3548,7 @@ int mct_transcribe_file_root_children(mct_transcription_state *ts, mc_syntax_nod
     // Syntax-Nodes
     switch (child->type) {
     case MC_SYNTAX_PP_DIRECTIVE_IFNDEF:
+    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
     case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
       mct_transcribe_file_root_children(ts, child->children);
     } break;

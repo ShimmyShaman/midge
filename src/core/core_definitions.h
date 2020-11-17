@@ -210,11 +210,13 @@ typedef struct parameter_info {
   char *name;
 } parameter_info;
 
+struct function_info;
 typedef struct function_info {
-  struct_id *type_id;
+  // struct_id *type_id;
   source_definition *source;
+  bool is_defined;
   char *name;
-  int (**ptr_declaration)(int, void **);
+  // int (**ptr_declaration)(int, void **);
   struct {
     char *name;
     unsigned int deref_count;
@@ -222,9 +224,12 @@ typedef struct function_info {
   // char *code;
   unsigned int parameter_count;
   parameter_info **parameters;
-  int variable_parameter_begin_index;
-  unsigned int struct_usage_count;
-  struct_info **struct_usage;
+  // int variable_parameter_begin_index;
+
+  unsigned int nb_dependents;
+  struct function_info **dependents;
+  unsigned int nb_dependencies;
+  struct function_info **dependencies;
 } function_info;
 
 typedef struct event_handler_array {
@@ -330,7 +335,7 @@ int remove_ptr_from_collection(void ***collection, unsigned int *collection_coun
                                void *ptr);
 
 int find_function_info(char *function_name, function_info **result);
-int find_function_info_by_ptr(void *function_ptr, function_info **result);
+// int find_function_info_by_ptr(void *function_ptr, function_info **result);
 int find_struct_info(char *function_name, struct_info **structure_info);
 int find_enumeration_info(char *function_name, enumeration_info **enum_info);
 int find_enum_member_info(char *name, enumeration_info **result_type, enum_member_info **result);
