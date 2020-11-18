@@ -581,7 +581,7 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
 
   char *mc_transcription;
   mct_function_transcription_options options = {};
-  options.report_invocations_to_error_stack = true;
+  options.report_function_entry_exit_to_stack = true;
   options.report_simple_args_to_error_stack = true;
   options.check_mc_functions_not_null = true;
   options.tag_on_function_entry = false;

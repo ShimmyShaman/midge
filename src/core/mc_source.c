@@ -621,7 +621,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
   // Generate code (from the AST) with midge insertions integrated (stack call / error tracking)
   {
     mct_function_transcription_options options = {};
-    options.report_invocations_to_error_stack = true;
+    options.report_function_entry_exit_to_stack = true;
     options.report_simple_args_to_error_stack = true;
     options.check_mc_functions_not_null = true;
     options.tag_on_function_entry = false;
@@ -885,7 +885,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   // Instantiate Function
 //   char *mc_transcription;
 //   mct_function_transcription_options options = {};
-//   options.report_invocations_to_error_stack = false;
+//   options.report_function_entry_exit_to_stack = false;
 //   options.report_simple_args_to_error_stack = false;
 //   options.check_mc_functions_not_null = false;
 //   options.tag_on_function_entry = false;

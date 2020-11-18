@@ -477,8 +477,8 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_root_statement",
     "mcs_parse_goto_statement",
     "mcs_parse_label_statement",
-"mcs_parse_pp_ifdef",
-"mcs_parse_pp_ifndef",
+    "mcs_parse_pp_ifdef",
+    "mcs_parse_pp_ifndef",
 
     // mc_code_transcription
     "mct_release_expression_type_info_fields",
@@ -493,7 +493,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_non_mc_invocation",
     "mct_transcribe_function_pointer_declarator",
     "mct_transcribe_function_pointer_declaration",
-    "mct_transcribe_mc_invocation_argument",
+    // "mct_transcribe_mc_invocation_argument",
     "mct_syntax_descendants_contain_node_type",
     "mct_transcribe_fptr_invocation",
     "mct_transcribe_goto_statement",
@@ -560,7 +560,7 @@ const char *_mcl_core_functions[] = {
     "mcs_append_syntax_node_to_c_str",
     "mct_transcribe_expression",
     "mct_transcribe_type_identifier",
-    "mct_transcribe_mc_invocation",
+    "mct_transcribe_invocation",
     "mct_transcribe_declarator",
     "mct_transcribe_code_block",
     "mct_transcribe_if_statement",

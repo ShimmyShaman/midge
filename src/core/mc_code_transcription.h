@@ -44,7 +44,7 @@ typedef struct mct_function_variable_report_index {
 
 typedef struct mct_function_transcription_options {
 
-  bool report_invocations_to_error_stack;
+  bool report_function_entry_exit_to_stack;
   bool report_simple_args_to_error_stack;
   bool check_mc_functions_not_null;
   bool tag_on_function_entry, tag_on_function_exit;
