@@ -1,9 +1,9 @@
 # __midge__
 
-A graphical development engine and editor environment intended for use with machine _"intelligent"_ systems.
+A graphical development framework and editor environment intended for innovative development of interactive visual applications.
 
 #### Focus on visualization of data and errors
-Allows quick reiteration and fixing of problems.
+Allows quick evaluation and fixing of problems and iterative progression.
 
 #### Automation of process and workflow generation
 
@@ -20,8 +20,8 @@ data science ('2.0') functions to produce software faster.
 
 #### Dynamic recompilation
   
-Using the [cling c++ interpreter](https://root.cern.ch/cling) to enable dynamic
-evaluation and quicker readjustments of projects.
+Utilizing [TinyCC](https://bellard.org/tcc/tcc-doc.html) to enable dynamic
+interpretation and quicker readjustments of projects.
 
 #### Maximal configuration of development environment
   
@@ -40,6 +40,6 @@ in any immediate future._
 _no concrete instructions yet_
 
 * __Requires:__
-- [cling c++ interpreter](https://root.cern.ch/cling)
+- [TinyCC for midge](https://github.com/ShimmyShaman/tinycc)
 - [cglm](https://github.com/recp/cglm)
 - [vulkan sdk](https://www.lunarg.com/vulkan-sdk/)
