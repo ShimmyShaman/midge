@@ -1326,6 +1326,7 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
 
 static int _mcl_load_app_mc_source()
 {
+  MCerror(1329, "PROGRESS");
   const char *_mcl_external_dependency_source_files[] = {
       "src/temp/external_decl.h",
 
@@ -1484,15 +1485,15 @@ int mcl_load_app_source(TCCInterpState **itp)
     tcci_set_symbol(midge_itp, "tcci_delete", &tcci_delete);
 
     // Allow obtaining of the midge interpreter from both interpreter states
-    char buf[128];
-    sprintf(buf,
-            "#include \"tinycc/libtccinterp.h\"\n"
-            "TCCInterpState *mc_obtain_interpreter() {\n"
-            "  return (TCCInterpState *)%p;\n"
-            "}",
-            midge_itp);
-    MCcall(tcci_add_string(*itp, "obtain_interpreter.c", buf));
-    MCcall(tcci_add_string(midge_itp, "obtain_interpreter.c", buf));
+    // char buf[128];
+    // sprintf(buf,
+    //         "#include \"tinycc/libtccinterp.h\"\n"
+    //         "TCCInterpState *mc_obtain_interpreter() {\n"
+    //         "  return (TCCInterpState *)%p;\n"
+    //         "}",
+    //         midge_itp);
+    // MCcall(tcci_add_string(*itp, "obtain_interpreter.c", buf));
+    // MCcall(tcci_add_string(midge_itp, "obtain_interpreter.c", buf));
 
     const char *initial_compile_list[] = {
         "dep/tinycc/lib/va_list.c", // TODO -- this
@@ -1517,7 +1518,7 @@ int mcl_load_app_source(TCCInterpState **itp)
     int (*init_mc_global_data)(TCCInterpState *) = tcci_get_symbol(midge_itp, "init_mc_global_data");
     MCcall(init_mc_global_data(midge_itp));
 
-    printf("mcl_load_app_source, addr:%p\n", mcl_load_app_source);
+    // printf("mcl_load_app_source, addr:%p\n", mcl_load_app_source);
 
     // mc_global_data *data;
     // int (*obtain_midge_global_root)(mc_global_data **) = tcci_get_symbol(*itp, "obtain_midge_global_root");
@@ -1546,8 +1547,9 @@ int mcl_load_app_source(TCCInterpState **itp)
   tcci_delete(*itp);
   *itp = midge_itp;
 
-  // printf("[_mcl_load_app_mc_source]\n");
-  // MCcall(_mcl_load_app_mc_source());
+  // Load the remainder of the application source files with the new interpreter
+  printf("[_mcl_load_app_mc_source]\n");
+  MCcall(_mcl_load_app_mc_source());
 
   printf("[_mcl_load_source:COMPLETE]\n");
 
