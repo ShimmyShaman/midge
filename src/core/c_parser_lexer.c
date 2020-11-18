@@ -955,6 +955,18 @@ int release_syntax_node(mc_syntax_node *sn)
   case MC_SYNTAX_FUNCTION_POINTER_DECLARATOR: {
     release_syntax_node_list(sn->fptr_declarator.parameters, false);
   } break;
+  case MC_SYNTAX_STATEMENT_LIST: {
+    release_syntax_node_list(sn->statement_list.statements, false);
+  } break;
+  case MC_SYNTAX_SWITCH_SECTION: {
+    release_syntax_node_list(sn->switch_section.labels, false);
+  } break;
+  case MC_SYNTAX_SWITCH_STATEMENT: {
+    release_syntax_node_list(sn->switch_statement.sections, false);
+  } break;
+  case MC_SYNTAX_INITIALIZER_EXPRESSION: {
+    release_syntax_node_list(sn->initializer_expression.list, false);
+  } break;
   case MC_SYNTAX_FILE_ROOT:
   case MC_SYNTAX_TYPE_IDENTIFIER:
   case MC_SYNTAX_FIELD_DECLARATOR:
@@ -963,6 +975,40 @@ int release_syntax_node(mc_syntax_node *sn)
   case MC_SYNTAX_PARAMETER_DECLARATION:
   case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
   case MC_SYNTAX_ENUM_DECL_MEMBER:
+  case MC_SYNTAX_DEREFERENCE_EXPRESSION:
+  case MC_SYNTAX_PARENTHESIZED_EXPRESSION:
+  case MC_SYNTAX_SIZEOF_EXPRESSION:
+  case MC_SYNTAX_CAST_EXPRESSION:
+  case MC_SYNTAX_ASSIGNMENT_EXPRESSION:
+  case MC_SYNTAX_EXPRESSION_STATEMENT:
+  case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION:
+  case MC_SYNTAX_OPERATIONAL_EXPRESSION:
+  case MC_SYNTAX_ELEMENT_ACCESS_EXPRESSION:
+  case MC_SYNTAX_RETURN_STATEMENT:
+  case MC_SYNTAX_CODE_BLOCK:
+  case MC_SYNTAX_RELATIONAL_EXPRESSION:
+  case MC_SYNTAX_LOGICAL_EXPRESSION:
+  case MC_SYNTAX_IF_STATEMENT:
+  case MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER:
+  case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR:
+  case MC_SYNTAX_LOCAL_VARIABLE_DECLARATION:
+  case MC_SYNTAX_DECLARATION_STATEMENT:
+  case MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER:
+  case MC_SYNTAX_VA_LIST_STATEMENT:
+  case MC_SYNTAX_VA_START_STATEMENT:
+  case MC_SYNTAX_FIXREMENT_EXPRESSION:
+  case MC_SYNTAX_VA_END_STATEMENT:
+  case MC_SYNTAX_SWITCH_CASE_LABEL:
+  case MC_SYNTAX_VA_ARG_EXPRESSION:
+  case MC_SYNTAX_STRING_LITERAL_EXPRESSION:
+  case MC_SYNTAX_PREPENDED_UNARY_EXPRESSION:
+  case MC_SYNTAX_BREAK_STATEMENT:
+  case MC_SYNTAX_SWITCH_DEFAULT_LABEL:
+  case MC_SYNTAX_FOR_STATEMENT:
+  case MC_SYNTAX_WHILE_STATEMENT:
+  case MC_SYNTAX_CONTINUE_STATEMENT:
+  case MC_SYNTAX_TERNARY_CONDITIONAL:
+    // sn->ternary_conditional.
     break;
   default: {
     MCerror(6616, "release_sn(); Clear type:%s for proper release of item collections",

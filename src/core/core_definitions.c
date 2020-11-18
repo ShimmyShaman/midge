@@ -142,7 +142,7 @@ int remove_ptr_from_collection(void ***collection, unsigned int *collection_coun
   return 0;
 }
 
-int find_function_info(char *name, function_info **result)
+int find_function_info(const char *name, function_info **result)
 {
   mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -189,7 +189,7 @@ int find_function_info(char *name, function_info **result)
 //   return 0;
 // }
 
-int find_struct_info(char *name, struct_info **result)
+int find_struct_info(const char *name, struct_info **result)
 {
   // printf("fsi-0\n");
   mc_global_data *global_data;
@@ -210,7 +210,7 @@ int find_struct_info(char *name, struct_info **result)
   return 0;
 }
 
-int find_enumeration_info(char *name, enumeration_info **result)
+int find_enumeration_info(const char *name, enumeration_info **result)
 {
   mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
@@ -232,7 +232,7 @@ int find_enumeration_info(char *name, enumeration_info **result)
   return 0;
 }
 
-int find_enum_member_info(char *name, enumeration_info **result_type, enum_member_info **result)
+int find_enum_member_info(const char *name, enumeration_info **result_type, enum_member_info **result)
 {
   mc_global_data *global_data;
   obtain_midge_global_root(&global_data);

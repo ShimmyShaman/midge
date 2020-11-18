@@ -370,7 +370,6 @@ int mcs_register_function_declaration(mc_syntax_node *function_ast, function_inf
 
     mc_syntax_node *param;
     for (p = 0; p < function_ast->function.parameters->count; ++p) {
-      puts("2");
       param = function_ast->function.parameters->items[p];
 
       if (param->parameter.type_identifier &&
@@ -475,7 +474,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       }
       else {
         // info->source->source_file = source_file;
-        printf("--defined:'%s'\n", child->function.name->text);
+        printf("--fdefn:'%s'\n", child->function.name->text);
       }
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
@@ -632,7 +631,8 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
     mct_transcribe_file_ast(file_ast, &options, &code);
   }
 
-  printf("\ngen-code:\n%s||\n", code);
+  // if (!strcmp("src/core/mc_source.c", filepath))
+    // printf("\ngen-code:\n%s||\n", code);
   // MCerror(7704, "TODO");
 
   // Send the code to the interpreter

@@ -52,17 +52,15 @@ void register_midge_error_tag(const char *fmt, ...);
 #define MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE 80
 #define IGNORE_MIDGE_ERROR_STACK_TRACE false
 
+void register_midge_stack_function_entry(const char *function_name, const char *file_name, int line,
+                                         int *midge_error_stack_index);
 void register_midge_stack_invocation(const char *function_name, const char *file_name, int line,
                                      int *midge_error_stack_index);
-
 void register_midge_stack_return(int midge_error_stack_index);
-
 void register_midge_thread_creation(unsigned int *midge_error_thread_index, const char *base_function_name,
                                     const char *file_name, int line, int *midge_error_stack_index);
-
 void register_midge_thread_conclusion(unsigned int midge_error_thread_index);
 
 void midge_error_print_thread_stack_trace();
-
 void initialize_midge_error_handling();
 #endif // MIDGE_ERROR_HANDLING_H

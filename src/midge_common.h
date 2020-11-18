@@ -85,7 +85,7 @@ int release_c_str(c_str *ptr, bool free_char_string_also);
 int append_char_to_c_str(c_str *cstr, char c);
 int append_to_c_str(c_str *cstr, const char *text);
 int append_to_c_strn(c_str *cstr, const char *text, int n);
-int append_to_c_strf(c_str *cstr, const char *format, ...);
+int append_to_c_strf(c_str *cstr, const char *fmt, ...);
 int insert_into_c_str(c_str *cstr, const char *text, int index);
 int restrict_c_str(c_str *cstr, int len);
 #endif // MIDGE_COMMON_H

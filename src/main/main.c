@@ -271,16 +271,20 @@
 //   // tcc_original();
 //   puts("\n####################\n\n");
 
-//   // const char *program_a = "const char *global_str = \"pre#alpha\";\n"
-//   //                         "static int global_phi = 88;\n"
-//   //                         "struct omega { int a; char *b; };\n"
-//   //                         "typedef struct omega omega;\n"
-//   //                         "static void prealpha() { puts(global_str); }\n"
-//   //                         "void alpha() { prealpha();\n puts(\"alpha\"); }\n";
+//   const char *program_a = "#include <stdio.h>\n"
+//                           "void print_things(int nb, ...) {\n"
+//                           "  printf(\"printing %i things...\\n\", nb);\n"
+//                           "  va_list vl;\n"
+//                           "  va_start(vl, nb);\n"
+//                           "  for(int i = 0; i < nb; ++i) {\n"
+//                           "    int v = va_arg(vl, int);\n"
+//                           "    printf(\"--%i\\n\", v);\n"
+//                           "  }\n"
+//                           "  va_end(vl);\n"
+//                           "}";
 
 //   const char *program_a =
 //       // "#include <stdlib.h>\n"
-//       "#include <stdio.h>\n"
 //       "void alpha() { puts(\"alpha\"); }\n";
 
 //   if (tcci_add_string(ds, "alpha.c" /* line_offset */, program_a)) {
@@ -465,9 +469,6 @@ int main(int argc, const char *const *argv)
   // tcci_set_symbol(itp, "mcc_set_global_symbol", &mcc_set_global_symbol);
   // tcci_set_symbol(itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
 
-  // doexp();
-  // exit(0);
-
 #define USE_CORE_LOADER_FOR_DEBUGGING
 #ifdef USE_CORE_LOADER_FOR_DEBUGGING
   const char *initial_compile_list[] = {
@@ -479,6 +480,17 @@ int main(int argc, const char *const *argv)
   };
   MCcall(tcci_add_files(itp, initial_compile_list, 3));
   MCcall(tcci_add_files(itp, initial_compile_list + 3, sizeof(initial_compile_list) / sizeof(const char *) - 3));
+
+  // int (*print_things)(int, ...) = tcci_get_symbol(itp, "print_things");
+  // int *na = malloc(sizeof(int) * 4);
+  // na[0] = 1;
+  // na[1] = 3;
+  // na[2] = 6;
+  // na[3] = 10;
+  // printf("calling print_things:\n");
+  // MCcall(print_things(5, 3, 6, 9, 12, 28));
+
+  // exit(0);
 
   int (*mcl_load_app_source)(TCCInterpState **) = tcci_get_symbol(itp, "mcl_load_app_source");
   MCcall(mcl_load_app_source(&itp));

@@ -77,7 +77,7 @@ int append_to_c_str(c_str *cstr, const char *text)
   // printf("text:'%s'\n", text);
 
   int len = strlen(text);
-  // printf("atc-1\n");
+  // printf("atc-1 %p\n", cstr);
   if (cstr->len + len + 1 >= cstr->alloc) {
     // printf("atc-2\n");
     unsigned int new_allocated_size = cstr->alloc + len + 16 + (cstr->alloc) / 2;
@@ -132,7 +132,7 @@ int append_to_c_strn(c_str *cstr, const char *text, int n)
   return 0;
 }
 
-int append_to_c_strf(c_str *cstr, const char *format, ...)
+int append_to_c_strf(c_str *cstr, const char *fmt, ...)
 {
   // register_midge_error_tag("append_to_c_strf()");
   // printf("atcs-0\n");
@@ -140,7 +140,7 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
   int i = 0;
 
   va_list valist;
-  va_start(valist, format);
+  va_start(valist, fmt);
 
   // printf("atcs-1\n");
   while (1) {
@@ -163,11 +163,11 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
 
     // printf("'%c' chunk_size=%i cstr->len=%u\n", format[i], chunk_size, cstr->len);
     for (int a = 0; a < chunk_size; ++a) {
-      cstr->text[cstr->len++] = format[i];
+      cstr->text[cstr->len++] = fmt[i];
       // cstr->text[cstr->len] = '\0';
       // printf("cstr:'%s'\n", cstr->text);
 
-      if (format[i] == '\0') {
+      if (fmt[i] == '\0') {
         // printf("atcs-3\n");
         --cstr->len;
         va_end(valist);
@@ -175,8 +175,8 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
         return 0;
       }
 
-      if (format[i] == '%') {
-        if (format[i + 1] == '%') {
+      if (fmt[i] == '%') {
+        if (fmt[i + 1] == '%') {
           // printf("atcs-4\n");
           // Use as an escape character
           ++i;
@@ -185,8 +185,8 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
           --cstr->len;
           // Search to replace the format
           ++i;
-          // printf("atcs-5 i:%i i:'%c'\n", i, format[i]);
-          switch (format[i]) {
+          // printf("atcs-5 i:%i i:'%c'\n", i, fmt[i]);
+          switch (fmt[i]) {
           case 'i': {
             int value = va_arg(valist, int);
 
@@ -244,7 +244,7 @@ int append_to_c_strf(c_str *cstr, const char *format, ...)
             append_to_c_str(cstr, buf);
           } break;
           default: {
-            MCerror(99, "TODO:%c", format[i]);
+            MCerror(99, "TODO:%c", fmt[i]);
           }
           }
         }

@@ -2,10 +2,11 @@
 
 #include <pthread.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
+#include <time.h>
 // #include "p_threa"
 #include "midge_common.h"
 #include "midge_error_handling.h"
@@ -33,6 +34,20 @@ struct __mce_thread_entry_stack *MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_MAX_THREA
 unsigned int MIDGE_ERROR_THREAD_INDEX;
 unsigned int MIDGE_ERROR_THREAD_HISTORICAL_COUNT;
 // bool MIDGE_ERROR_STACK_PROFILING_ENABLED;
+
+
+void print_things(int nb, ...)
+{
+  puts("a0");
+  printf("printing %i things...\n", nb);
+  va_list vl;
+  va_start(vl, nb);
+  for (int i = 0; i < nb; ++i) {
+    int v = va_arg(vl, int);
+    printf("--%i\n", v);
+  }
+  va_end(vl);
+};
 
 static int ensure_cstr_alloc(unsigned int *allocated_size, char **cstr, unsigned int min_alloc)
 {
@@ -154,6 +169,50 @@ void register_midge_error_tag(const char *fmt, ...)
     }
     }
   }
+}
+
+void register_midge_stack_function_entry(const char *function_name, const char *file_name, int line,
+                                         int *midge_error_stack_index)
+{
+  struct __mce_thread_entry_stack *threades = NULL;
+  pthread_t tid = pthread_self();
+  for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
+    if (tid == MIDGE_ERROR_THREAD_STACKS[t]->thread_id) {
+      threades = MIDGE_ERROR_THREAD_STACKS[t];
+      break;
+    }
+    else if (tid == (pthread_t)0) {
+      break;
+    }
+  }
+  if (!threades) {
+    printf("could not find stack for thread with id %lu\n", tid);
+    return;
+  }
+
+  threades->stack_activity_line = -1;
+  if (threades->stack_index + 1 >= MIDGE_ERROR_STACK_MAX_SIZE) {
+    printf("MIDGE_ERROR_STACK: invocation of '%s' exceeded stack index\n", function_name);
+    return;
+  }
+  // printf("MIDGE_ERROR_STACK: function_name:%s added\n", function_name);
+
+  ++threades->stack_index;
+  *midge_error_stack_index = threades->stack_index;
+
+  for (int i = 0; i < MIDGE_ERROR_STACK_MAX_FUNCTION_NAME_SIZE; ++i) {
+    threades->stack[threades->stack_index].function_name[i] = function_name[i];
+    if (function_name[i] == '\0') {
+      break;
+    }
+  }
+  for (int i = 0; i < MIDGE_ERROR_STACK_MAX_FILE_NAME_SIZE; ++i) {
+    threades->stack[threades->stack_index].file_name[i] = file_name[i];
+    if (file_name[i] == '\0') {
+      break;
+    }
+  }
+  threades->stack[threades->stack_index].line = line;
 }
 
 void register_midge_stack_invocation(const char *function_name, const char *file_name, int line,
