@@ -204,7 +204,7 @@ void mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)
   source_line->node = node;
   node->data = source_line;
 
-  // init_c_str(&source_line->rtf);
+  // init_mc_str(&source_line->rtf);
   source_line->line_token = NULL;
   source_line->font = NULL;
   source_line->render_target.image = NULL;

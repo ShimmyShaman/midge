@@ -6,7 +6,7 @@
 // {
 //   char linebuf[4096];
 //   const char *token;
-//   MC_ASSERT(p_len < 4095, "TODO");
+//   MCassert(p_len < 4095, "TODO");
 
 //   memcpy(linebuf, p, p_len);
 //   linebuf[p_len] = '\0';
@@ -18,7 +18,7 @@
 //   /* Skip leading space. */
 //   skip_space(&token);
 
-//   MC_ASSERT(token, "TODO");
+//   MCassert(token, "TODO");
 //   if (token[0] == '\0') { /* empty line */
 //     return 0;
 //   }
@@ -88,7 +88,7 @@
 //       _wvf_obj_vertex_index_list i1;
 //       _wvf_obj_vertex_index_list i2 = f[1];
 
-//       MC_ASSERT(3 * num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
+//       MCassert(3 * num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
 
 //       for (k = 2; k < num_f; k++) {
 //         i1 = i2;
@@ -105,7 +105,7 @@
 //     }
 //     else {
 //       size_t k = 0;
-//       MC_ASSERT(num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
+//       MCassert(num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
 //       for (k = 0; k < num_f; k++) {
 //         command->f[k] = f[k];
 //       }

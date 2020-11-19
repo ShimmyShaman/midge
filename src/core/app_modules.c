@@ -72,8 +72,8 @@ void mca_load_open_projects()
   printf("open_list_text:'%s'\n", open_list_text);
 
   char buf[256];
-  c_str *str;
-  init_c_str(&str);
+  mc_str *str;
+  init_mc_str(&str);
 
   int i = 0, s = 0;
   bool eof = false;

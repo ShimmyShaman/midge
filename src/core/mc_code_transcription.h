@@ -3,8 +3,6 @@
 #ifndef MC_CODE_TRANSCRIPTION_H
 #define MC_CODE_TRANSCRIPTION_H
 
-#include "midge_common.h"
-
 #include "core/c_parser_lexer.h"
 
 typedef struct mct_function_variable_value {

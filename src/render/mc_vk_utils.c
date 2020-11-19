@@ -1,7 +1,6 @@
 
 #include "cglm/cglm.h"
 #include "m_threads.h"
-#include "midge_common.h"
 #include "render/mc_vulkan.h"
 #include <vulkan/vulkan.h>
 

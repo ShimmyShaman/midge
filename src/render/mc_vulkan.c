@@ -1154,6 +1154,7 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   char *exePath = strdup("/home/jason/midge/dep/glslang/bin/glslangValidator");
   char *arg_V = strdup("-V");
   char *arg_H = strdup("-H");
+  
   char *argv[4] = {exePath, execOutput, arg_V,
                    // arg_H,
                    NULL};

@@ -28,7 +28,7 @@ void insert_text_into_editor_at_cursor(code_editor_state *state, char *text)
   // printf("itie-1:\n%s||\n", text);
   // printf("itie-2:\n%i||\n", state->cursor.rtf_index);
 
-  insert_into_c_str(state->code.rtf, text, state->cursor.rtf_index);
+  insert_into_mc_str(state->code.rtf, text, state->cursor.rtf_index);
   // printf("itie-3\n");
   state->cursor.rtf_index += strlen(text);
   update_code_editor_cursor_line_and_column(state);
@@ -1034,7 +1034,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         insert_text_into_editor_at_cursor(state, &c);
         {
           void **result = (void **)malloc(sizeof(void *) * 1);
-          allocate_and_copy_cstr(result[0], c);
+          result[0] = strdup(c);
           report_user_action_effect(state->entry_pad, action_uid, result);
         }
       }

@@ -7,8 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-// #include "p_threa"
-#include "midge_common.h"
+
 #include "midge_error_handling.h"
 
 char *MIDGE_ERROR_TAG[MIDGE_ERROR_TAG_MAX_SIZE];

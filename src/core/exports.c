@@ -4,51 +4,51 @@
 
 size_t save_text_to_file(char *filepath, char *text);
 
-void _export_app_write_main_c(mc_node_v1 *node, c_str *src, c_str *path)
+void _export_app_write_main_c(mc_node_v1 *node, mc_str *src, mc_str *path)
 {
   console_app_info *app_info = (console_app_info *)node->extra;
 
-  set_c_str(src, "#include <stdio.h>\n"
+  set_mc_str(src, "#include <stdio.h>\n"
                  "\n");
 
   // OTHER STUFF TEMPORARRY
-  append_to_c_str(src, "typedef struct node {\n"
+  append_to_mc_str(src, "typedef struct node {\n"
                        "const char *name;\n"
                        "} node;\n"
                        "\n");
 
   if (app_info) {
     if (app_info->initialize_app) {
-      append_to_c_str(src, app_info->initialize_app->source->code);
-      append_to_c_str(src, "\n\n");
+      append_to_mc_str(src, app_info->initialize_app->source->code);
+      append_to_mc_str(src, "\n\n");
     }
   }
   // OTHER STUFF TEMPORARRY
 
-  append_to_c_str(src, "int main()\n"
+  append_to_mc_str(src, "int main()\n"
                        "{\n");
 
   // -- Node
-  append_to_c_strf(src, "  node app_root;\n", node->name);
-  append_to_c_strf(src, "  app_root.name = \"%s\";\n", node->name);
-  append_to_c_str(src, "\n");
+  append_to_mc_strf(src, "  node app_root;\n", node->name);
+  append_to_mc_strf(src, "  app_root.name = \"%s\";\n", node->name);
+  append_to_mc_str(src, "\n");
 
   // -- Initialize
   if (app_info) {
     if (app_info->initialize_app) {
-      append_to_c_strf(src, "  %s(&app_root);\n", app_info->initialize_app->name);
-      append_to_c_str(src, "\n");
+      append_to_mc_strf(src, "  %s(&app_root);\n", app_info->initialize_app->name);
+      append_to_mc_str(src, "\n");
     }
   }
 
   // Cleanup -- TODO
 
   // Exit
-  append_to_c_str(src, "  return 0;\n");
-  append_to_c_str(src, "}\n");
+  append_to_mc_str(src, "  return 0;\n");
+  append_to_mc_str(src, "}\n");
 
   // Write to file
-  append_to_c_str(path, "main.c");
+  append_to_mc_str(path, "main.c");
   save_text_to_file(path->text, src->text);
 }
 
@@ -66,33 +66,33 @@ void export_node_to_application(mc_node_v1 *node, char *directory_path)
   }
 
   // Generate the source
-  c_str *src, *path;
-  init_c_str(&src);
-  init_c_str(&path);
+  mc_str *src, *path;
+  init_mc_str(&src);
+  init_mc_str(&path);
 
   // FILE:[node.c]
-  // append_to_c_strf(src, "  node %s;\n", node->name);
+  // append_to_mc_strf(src, "  node %s;\n", node->name);
 
   // // Write to file
-  // set_c_str(path, directory_path);
+  // set_mc_str(path, directory_path);
   // if (path->text[path->len - 1] != '/')
-  //   append_to_c_str(path, "/");
-  // append_to_c_str(path, "node.c");
+  //   append_to_mc_str(path, "/");
+  // append_to_mc_str(path, "node.c");
   // save_text_to_file(path->text, src->text);
 
   // FILE:[main.c]
-  set_c_str(path, directory_path);
+  set_mc_str(path, directory_path);
   if (path->text[path->len - 1] != '/') {
-    append_to_c_str(path, "/");
+    append_to_mc_str(path, "/");
   }
   _export_app_write_main_c(node, src, path);
 
   // Compile
-  c_str *output_path;
-  init_c_str(&output_path);
-  append_to_c_str(output_path, directory_path);
-  append_to_c_str(output_path, "/");
-  append_to_c_str(output_path, node->name);
+  mc_str *output_path;
+  init_mc_str(&output_path);
+  append_to_mc_str(output_path, directory_path);
+  append_to_mc_str(output_path, "/");
+  append_to_mc_str(output_path, node->name);
 
   char *clargs[5];
   const char *command = "/home/jason/cling/inst/bin/clang";
@@ -129,6 +129,6 @@ void export_node_to_application(mc_node_v1 *node, char *directory_path)
 
   printf("%s compiled!\n", output_path->text);
 
-  release_c_str(output_path, true);
+  release_mc_str(output_path, true);
   // return child_status;
 }

@@ -51,7 +51,7 @@ void mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_poo
 {
   if (!source_editor_pool->source_tokens.count) {
     *token = (mce_source_token *)malloc(sizeof(mce_source_token));
-    init_c_str(&(*token)->str);
+    init_mc_str(&(*token)->str);
   }
   else {
     --source_editor_pool->source_tokens.count;

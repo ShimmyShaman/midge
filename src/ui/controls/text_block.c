@@ -11,8 +11,7 @@ void __mcu_determine_text_block_extents(mc_node *node, layout_extent_restraints 
 
   float str_width, str_height;
   if (!node->layout->preferred_width || !node->layout->preferred_height)
-    mcr_determine_text_display_dimensions(text_block->font, text_block->str->text, &str_width,
-                                          &str_height);
+    mcr_determine_text_display_dimensions(text_block->font, text_block->str->text, &str_width, &str_height);
 
   // Width
   if (node->layout->preferred_width)
@@ -63,8 +62,8 @@ void __mcu_render_text_block_present(image_render_details *image_render_queue, m
   // printf("rendertext_block- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, text_block->str->text, text_block->font->resource_uid);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y, text_block->str->text,
-                                text_block->font, text_block->font_color);
+                                (unsigned int)node->layout->__bounds.y, text_block->str->text, text_block->font,
+                                text_block->font_color);
 }
 
 void mcu_init_text_block(mc_node *parent, mcu_text_block **p_text_block)
@@ -85,7 +84,7 @@ void mcu_init_text_block(mc_node *parent, mcu_text_block **p_text_block)
   text_block->node = node;
   node->data = text_block;
 
-  init_c_str(&text_block->str);
+  init_mc_str(&text_block->str);
   text_block->font = NULL;
   text_block->font_color = COLOR_GHOST_WHITE;
 

@@ -80,7 +80,7 @@ void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *stat
           element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
           element_cmd->x = 4 + t * EDITOR_FONT_HORIZONTAL_STRIDE;
           element_cmd->y = 2 + 12;
-          allocate_and_copy_cstrn(element_cmd->print_text.text, rendered_line->rtf->text + s, i - s);
+          element_cmd->print_text.text = strdup(rendered_line->rtf->text + s, i - s);
           // printf("line:%i text:'%s' @ %i\n", a, element_cmd->print_text.text, t);
           element_cmd->print_text.font_resource_uid = state->font_resource_uid;
           element_cmd->print_text.color = font_color;
@@ -137,7 +137,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
     element_cmd->x = 4;
     element_cmd->y = 2 + 12 + 4;
-    allocate_and_copy_cstr(element_cmd->print_text.text, state->status_bar.message);
+    element_cmd->print_text.text = strdup(state->status_bar.message);
     element_cmd->print_text.font_resource_uid = state->font_resource_uid;
     element_cmd->print_text.color.a = 1.f;
     element_cmd->print_text.color.r = 0.95f;
@@ -177,7 +177,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
       element_cmd->type = RENDER_COMMAND_PRINT_TEXT;
       element_cmd->x = 4;
       element_cmd->y = 2 + a * EDITOR_LINE_STRIDE + 12 + 4;
-      allocate_and_copy_cstr(element_cmd->print_text.text, state->suggestion_box.entries.items[a]);
+      element_cmd->print_text.text = strdup(state->suggestion_box.entries.items[a]);
       element_cmd->print_text.font_resource_uid = state->font_resource_uid;
       element_cmd->print_text.color = COLOR_LIGHT_YELLOW;
     }
@@ -399,7 +399,7 @@ void build_code_editor()
     // Source
     state->source_data = NULL;
     state->code.syntax = NULL;
-    init_c_str(&state->code.rtf);
+    init_mc_str(&state->code.rtf);
     state->code.syntax_updated = false;
   }
 
@@ -419,8 +419,8 @@ void build_code_editor()
 
     state->render_lines[i]->index = i;
     state->render_lines[i]->requires_render_update = true;
-    MCcall(init_c_str(&state->render_lines[i]->rtf));
-    // MCcall(set_c_str(state->render_lines[i]->rtf, ""));
+    MCcall(init_mc_str(&state->render_lines[i]->rtf));
+    // MCcall(set_mc_str(state->render_lines[i]->rtf, ""));
     //  "!this is twenty nine letters! "
     //  "!this is twenty nine letters! "
     //  "!this is twenty nine letters! ";
@@ -554,7 +554,7 @@ void load_existing_struct_into_code_editor(mc_struct_info_v1 *structure)
   mc_code_editor_state_v1 *cestate = (mc_code_editor_state_v1 *)code_editor->extra;
   cestate->source_data = structure->source;
 
-  set_c_str(cestate->code.rtf, structure->source->code);
+  set_mc_str(cestate->code.rtf, structure->source->code);
 
   mce_update_rendered_text(cestate);
 }

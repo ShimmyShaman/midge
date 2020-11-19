@@ -256,7 +256,7 @@ void mcr_issue_render_command_text(image_render_details *image_render_queue, uns
   render_cmd->y = y;
   // printf("mcu_rtb-3 %p %u %u\n", render_cmd, render_cmd->x, render_cmd->y);
 
-  // TODO -- make the render cmd a c_str??
+  // TODO -- make the render cmd a mc_str??
   render_cmd->print_text.text = strdup(text);
 
   if (font) {

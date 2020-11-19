@@ -2286,13 +2286,13 @@ int submit_user_command(int argc, void **argsv);
 #include "m_threads.h"
 int mc_main(int argc, const char *const *argv)
 {
-  // c_str *str;
-  // init_c_str(&str);
-  // set_c_str(str, "holo");
+  // mc_str *str;
+  // init_mc_str(&str);
+  // set_mc_str(str, "holo");
   // printf("strbef:'%s'\n", str->text);
-  // insert_into_c_str(str, "bo", 2);
+  // insert_into_mc_str(str, "bo", 2);
   // printf("straft:'%s'\n", str->text);
-  // insert_into_c_str(str, "mo", 4);
+  // insert_into_mc_str(str, "mo", 4);
   // printf("strlat:'%s'\n", str->text);
   // return 0;
 

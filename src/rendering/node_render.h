@@ -2,8 +2,6 @@
 #ifndef NODE_RENDER_H
 #define NODE_RENDER_H
 
-#include "midge_common.h"
-
 // typedef struct mc_struct_id_v1 {
 //   const char *identifier;
 //   unsigned short version;

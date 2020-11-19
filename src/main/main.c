@@ -414,13 +414,6 @@
 
 // void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(loader_itp, symbol_name); }
 
-#define MCcall(func_call)                          \
-  res = func_call;                                 \
-  if (res) {                                       \
-    printf("\nCompilation Failed. res=%i\n", res); \
-    goto do_exit;                                  \
-  }
-
 // void doexp()
 // {
 //   // mcc_set_pp_define("IPPY", "83");
@@ -439,6 +432,14 @@
 //   int (*doit)() = mcc_get_global_symbol("doit");
 //   doit();
 // }
+#define MCcall(function)                                           \
+  {                                                                \
+    int mc_res = function;                                         \
+    if (mc_res) {                                                  \
+      printf("--" #function "line:%i:ERR:%i\n", __LINE__, mc_res); \
+      exit(mc_res);                                                \
+    }                                                              \
+  }
 
 int main(int argc, const char *const *argv)
 {
@@ -463,6 +464,8 @@ int main(int argc, const char *const *argv)
   tcci_set_symbol(loader_itp, "tcci_new", &tcci_new);
   tcci_set_symbol(loader_itp, "tcci_delete", &tcci_delete);
 
+  tcci_define_symbol(loader_itp, "MC_TEMP_SOURCE_LOAD", "1");
+
   // tcci_set_symbol(loader_itp, "mcc_interpret_and_execute_single_use_code",
   // &mcc_interpret_and_execute_single_use_code); tcci_set_symbol(loader_itp, "mcc_interpret_file_contents",
   // &mcc_interpret_file_contents); tcci_set_symbol(loader_itp, "mcc_interpret_file_on_disk",
@@ -473,12 +476,15 @@ int main(int argc, const char *const *argv)
   const char *initial_compile_list[] = {
       "dep/tinycc/lib/va_list.c", // TODO -- this
       "src/midge_error_handling.c",
-      // And everything here before -------------------------------------------------------------
       "src/core/init_global_root.c",
+      "src/core/mc_str.c",
       "src/core/core_source_loader.c",
   };
-  MCcall(tcci_add_files(loader_itp, initial_compile_list, 3));
-  MCcall(tcci_add_files(loader_itp, initial_compile_list + 3, sizeof(initial_compile_list) / sizeof(const char *) - 3));
+
+  // TODO -- remember why I split them up into 2 compiles -- maybe comment it for next time
+  int initial_source_count = sizeof(initial_compile_list) / sizeof(const char *);
+  MCcall(tcci_add_files(loader_itp, initial_compile_list, initial_source_count - 2));
+  MCcall(tcci_add_files(loader_itp, initial_compile_list + initial_source_count - 2, 2));
 
   // int (*print_things)(int, ...) = tcci_get_symbol(loader_itp, "print_things");
   // int *na = malloc(sizeof(int) * 4);

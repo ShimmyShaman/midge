@@ -6,7 +6,6 @@
 #include <ctype.h>
 #include <unistd.h>
 
-#include "midge_common.h"
 #include "midge_error_handling.h"
 
 #include "core/c_parser_lexer.h"
@@ -22,7 +21,7 @@ typedef struct parsing_state {
 } parsing_state;
 
 // extern "C" {
-// int init_c_str(c_str **ptr);
+// int init_mc_str(mc_str **ptr);
 // }
 
 int mcs_parse_type_identifier(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
@@ -487,17 +486,17 @@ int print_syntax_node(mc_syntax_node *syntax_node, int depth)
   return 0;
 }
 #include <unistd.h>
-int mcs_append_syntax_node_to_c_str(c_str *cstr, mc_syntax_node *syntax_node)
+int mcs_append_syntax_node_to_mc_str(mc_str *cstr, mc_syntax_node *syntax_node)
 {
   // const char *type_name = get_mc_syntax_token_type_name(syntax_node->type);
-  // register_midge_error_tag("mcs_append_syntax_node_to_c_str(%s)", type_name);
+  // register_midge_error_tag("mcs_append_syntax_node_to_mc_str(%s)", type_name);
 
   if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
     // printf("syntax_node:%p\n", syntax_node);
     // printf("cstr:%p\n", cstr);
     // printf("syntax_node->text:%p\n", syntax_node->text);
     // printf("syntax_node->text:%s\n", syntax_node->text);
-    append_to_c_str(cstr, syntax_node->text);
+    append_to_mc_str(cstr, syntax_node->text);
     // printf("cstr->text:%s\n", cstr->text);
     // printf("syntax_node:%p\n", syntax_node);
     // usleep(10000);
@@ -508,7 +507,7 @@ int mcs_append_syntax_node_to_c_str(c_str *cstr, mc_syntax_node *syntax_node)
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
 
-    mcs_append_syntax_node_to_c_str(cstr, child);
+    mcs_append_syntax_node_to_mc_str(cstr, child);
   }
 
   register_midge_error_tag("mcs_copy_syntax_node_to_text(~*)");
@@ -517,13 +516,13 @@ int mcs_append_syntax_node_to_c_str(c_str *cstr, mc_syntax_node *syntax_node)
 
 int mcs_copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output)
 {
-  c_str *cstr;
-  init_c_str(&cstr);
+  mc_str *cstr;
+  init_mc_str(&cstr);
 
-  mcs_append_syntax_node_to_c_str(cstr, syntax_node);
+  mcs_append_syntax_node_to_mc_str(cstr, syntax_node);
 
   *output = cstr->text;
-  release_c_str(cstr, false);
+  release_mc_str(cstr, false);
 
   return 0;
 }
@@ -1026,48 +1025,48 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
   case '\0': {
     *token_type = MC_TOKEN_NULL_CHARACTER;
     if (text) {
-      allocate_and_copy_cstr(*text, "");
+      *text = strdup("");
     }
   } break;
   case '{': {
     *token_type = MC_TOKEN_CURLY_OPENING_BRACKET;
     if (text) {
-      allocate_and_copy_cstr(*text, "{");
+      *text = strdup("{");
     }
     ++*index;
   } break;
   case '}': {
     *token_type = MC_TOKEN_CURLY_CLOSING_BRACKET;
     if (text) {
-      allocate_and_copy_cstr(*text, "}");
+      *text = strdup("}");
     }
     ++*index;
   } break;
   case '(': {
     *token_type = MC_TOKEN_OPENING_BRACKET;
     if (text) {
-      allocate_and_copy_cstr(*text, "(");
+      *text = strdup("(");
     }
     ++*index;
   } break;
   case ')': {
     *token_type = MC_TOKEN_CLOSING_BRACKET;
     if (text) {
-      allocate_and_copy_cstr(*text, ")");
+      *text = strdup(")");
     }
     ++*index;
   } break;
   case '[': {
     *token_type = MC_TOKEN_SQUARE_OPENING_BRACKET;
     if (text) {
-      allocate_and_copy_cstr(*text, "[");
+      *text = strdup("[");
     }
     ++*index;
   } break;
   case ']': {
     *token_type = MC_TOKEN_SQUARE_CLOSING_BRACKET;
     if (text) {
-      allocate_and_copy_cstr(*text, "]");
+      *text = strdup("]");
     }
     ++*index;
   } break;
@@ -1100,7 +1099,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       }
     }
     if (text) {
-      allocate_and_copy_cstrn(*text, code + s, *index - s);
+      *text = strndup(code + s, *index - s);
     }
   } break;
   case '\'': {
@@ -1115,20 +1114,20 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     *index += 2;
 
     if (text) {
-      allocate_and_copy_cstrn(*text, code + s, *index - s);
+      *text = strndup(code + s, *index - s);
     }
   } break;
   case ';': {
     *token_type = MC_TOKEN_SEMI_COLON;
     if (text) {
-      allocate_and_copy_cstr(*text, ";");
+      *text = strdup(";");
     }
     ++*index;
   } break;
   case ':': {
     *token_type = MC_TOKEN_COLON;
     if (text) {
-      allocate_and_copy_cstr(*text, ":");
+      *text = strdup(":");
     }
     ++*index;
   } break;
@@ -1136,7 +1135,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_INEQUALITY_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "!=");
+        *text = strdup("!=");
       }
       *index += 2;
       break;
@@ -1144,14 +1143,14 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_LOGICAL_NOT_OPERATOR;
     if (text) {
-      allocate_and_copy_cstr(*text, "!");
+      *text = strdup("!");
     }
     ++*index;
   } break;
   case '.': {
     *token_type = MC_TOKEN_DECIMAL_POINT;
     if (text) {
-      allocate_and_copy_cstr(*text, ".");
+      *text = strdup(".");
     }
     ++*index;
   } break;
@@ -1159,7 +1158,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_MULTIPLY_AND_ASSIGN_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "*=");
+        *text = strdup("*=");
       }
       *index += 2;
       break;
@@ -1167,14 +1166,14 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_STAR_CHARACTER;
     if (text) {
-      allocate_and_copy_cstr(*text, "*");
+      *text = strdup("*");
     }
     ++*index;
   } break;
   case '~': {
     *token_type = MC_TOKEN_BITWISE_NOT_OPERATOR;
     if (text) {
-      allocate_and_copy_cstr(*text, "~");
+      *text = strdup("~");
     }
     ++*index;
   } break;
@@ -1182,7 +1181,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '>') {
       *token_type = MC_TOKEN_POINTER_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "->");
+        *text = strdup("->");
       }
       *index += 2;
       break;
@@ -1190,7 +1189,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     else if (code[*index + 1] == '-') {
       *token_type = MC_TOKEN_DECREMENT_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "--");
+        *text = strdup("--");
       }
       *index += 2;
       break;
@@ -1198,7 +1197,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     else if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "-=");
+        *text = strdup("-=");
       }
       *index += 2;
       break;
@@ -1206,7 +1205,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_SUBTRACT_OPERATOR;
     if (text) {
-      allocate_and_copy_cstr(*text, "-");
+      *text = strdup("-");
     }
     ++*index;
   } break;
@@ -1214,7 +1213,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '+') {
       *token_type = MC_TOKEN_INCREMENT_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "++");
+        *text = strdup("++");
       }
       *index += 2;
       break;
@@ -1222,7 +1221,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     else if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "+=");
+        *text = strdup("+=");
       }
       *index += 2;
       break;
@@ -1230,7 +1229,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_PLUS_OPERATOR;
     if (text) {
-      allocate_and_copy_cstr(*text, "+");
+      *text = strdup("+");
     }
     ++*index;
   } break;
@@ -1238,7 +1237,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_MODULO_AND_ASSIGN_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "%=");
+        *text = strdup("%=");
       }
       *index += 2;
       break;
@@ -1246,7 +1245,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_MODULO_OPERATOR;
     if (text) {
-      allocate_and_copy_cstr(*text, "%");
+      *text = strdup("%");
     }
     ++*index;
   } break;
@@ -1254,7 +1253,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '&') {
       *token_type = MC_TOKEN_LOGICAL_AND_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "&&");
+        *text = strdup("&&");
       }
       *index += 2;
       break;
@@ -1262,7 +1261,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     else if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_BINARY_AND_ASSIGNMENT_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "&=");
+        *text = strdup("&=");
       }
       *index += 2;
       break;
@@ -1270,7 +1269,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_AMPERSAND_CHARACTER;
     if (text) {
-      allocate_and_copy_cstr(*text, "&");
+      *text = strdup("&");
     }
     ++*index;
   } break;
@@ -1278,7 +1277,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '|') {
       *token_type = MC_TOKEN_LOGICAL_OR_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "||");
+        *text = strdup("||");
       }
       *index += 2;
       break;
@@ -1286,7 +1285,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     else if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_BINARY_OR_ASSIGNMENT_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "|=");
+        *text = strdup("|=");
       }
       *index += 2;
       break;
@@ -1294,35 +1293,35 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_BITWISE_OR_OPERATOR;
     if (text) {
-      allocate_and_copy_cstr(*text, "|");
+      *text = strdup("|");
     }
     ++*index;
   } break;
   case '\\': {
     *token_type = MC_TOKEN_ESCAPE_CHARACTER;
     if (text) {
-      allocate_and_copy_cstr(*text, "\\");
+      *text = strdup("\\");
     }
     ++*index;
   } break;
   case ',': {
     *token_type = MC_TOKEN_COMMA;
     if (text) {
-      allocate_and_copy_cstr(*text, ",");
+      *text = strdup(",");
     }
     ++*index;
   } break;
   case '?': {
     *token_type = MC_TOKEN_TERNARY_OPERATOR;
     if (text) {
-      allocate_and_copy_cstr(*text, "?");
+      *text = strdup("?");
     }
     ++*index;
   } break;
   case '\n': {
     *token_type = MC_TOKEN_NEW_LINE;
     if (text) {
-      allocate_and_copy_cstr(*text, "\n");
+      *text = strdup("\n");
     }
     ++*index;
   } break;
@@ -1333,7 +1332,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       ++*index;
     }
     if (text) {
-      allocate_and_copy_cstrn(*text, code + s, *index - s);
+      *text = strndup(code + s, *index - s);
     }
   } break;
   case '/': {
@@ -1352,7 +1351,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       }
 
       if (text) {
-        allocate_and_copy_cstrn(*text, code + s, *index - s);
+        *text = strndup(code + s, *index - s);
       }
       // printf("after the line:'%c'\n", code[*index]);
 
@@ -1372,7 +1371,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       }
 
       if (text) {
-        allocate_and_copy_cstrn(*text, code + s, *index - s);
+        *text = strndup(code + s, *index - s);
       }
       // printf("after the line:'%c'\n", code[*index]);
 
@@ -1383,7 +1382,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     default: {
       *token_type = MC_TOKEN_DIVIDE_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "/");
+        *text = strdup("/");
       }
       ++*index;
     } break;
@@ -1393,7 +1392,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_EQUALITY_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "==");
+        *text = strdup("==");
       }
       *index += 2;
       break;
@@ -1401,7 +1400,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_ASSIGNMENT_OPERATOR;
     if (text) {
-      allocate_and_copy_cstr(*text, "=");
+      *text = strdup("=");
     }
     ++*index;
   } break;
@@ -1409,7 +1408,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_LESS_THAN_OR_EQUAL_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "<=");
+        *text = strdup("<=");
       }
       *index += 2;
       break;
@@ -1418,7 +1417,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       if (code[*index + 2] == '=') {
         *token_type = MC_TOKEN_BITWISE_LEFT_SHIFT_AND_ASSIGN_OPERATOR;
         if (text) {
-          allocate_and_copy_cstr(*text, "<<=");
+          *text = strdup("<<=");
         }
         *index += 3;
         break;
@@ -1426,7 +1425,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
       *token_type = MC_TOKEN_BITWISE_LEFT_SHIFT_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, "<<");
+        *text = strdup("<<");
       }
       *index += 2;
       break;
@@ -1434,7 +1433,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_ARROW_OPENING_BRACKET;
     if (text) {
-      allocate_and_copy_cstr(*text, "<");
+      *text = strdup("<");
     }
     ++*index;
   } break;
@@ -1442,7 +1441,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
     if (code[*index + 1] == '=') {
       *token_type = MC_TOKEN_MORE_THAN_OR_EQUAL_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, ">=");
+        *text = strdup(">=");
       }
       *index += 2;
       break;
@@ -1451,7 +1450,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       if (code[*index + 2] == '=') {
         *token_type = MC_TOKEN_BITWISE_RIGHT_SHIFT_AND_ASSIGN_OPERATOR;
         if (text) {
-          allocate_and_copy_cstr(*text, ">>=");
+          *text = strdup(">>=");
         }
         *index += 3;
         break;
@@ -1459,7 +1458,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
       *token_type = MC_TOKEN_BITWISE_RIGHT_SHIFT_OPERATOR;
       if (text) {
-        allocate_and_copy_cstr(*text, ">>");
+        *text = strdup(">>");
       }
       *index += 2;
       break;
@@ -1467,7 +1466,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_ARROW_CLOSING_BRACKET;
     if (text) {
-      allocate_and_copy_cstr(*text, ">");
+      *text = strdup(">");
     }
     ++*index;
   } break;
@@ -1489,42 +1488,42 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       if (slen == 13 && !strncmp(code + s, "##__VA_ARGS__", slen)) {
         *token_type = MC_TOKEN_PP_KEYWORD_VARIADIC_ARGS;
         if (text) {
-          allocate_and_copy_cstrn(*text, code + s, slen);
+          *text = strndup(code + s, slen);
         }
         break;
       }
       if (slen == 6 && !strncmp(code + s, "#ifdef", slen)) {
         *token_type = MC_TOKEN_PP_KEYWORD_IFDEF;
         if (text) {
-          allocate_and_copy_cstrn(*text, code + s, slen);
+          *text = strndup(code + s, slen);
         }
         break;
       }
       if (slen == 7 && !strncmp(code + s, "#ifndef", slen)) {
         *token_type = MC_TOKEN_PP_KEYWORD_IFNDEF;
         if (text) {
-          allocate_and_copy_cstrn(*text, code + s, slen);
+          *text = strndup(code + s, slen);
         }
         break;
       }
       if (slen == 6 && !strncmp(code + s, "#endif", slen)) {
         *token_type = MC_TOKEN_PP_KEYWORD_ENDIF;
         if (text) {
-          allocate_and_copy_cstrn(*text, code + s, slen);
+          *text = strndup(code + s, slen);
         }
         break;
       }
       if (slen == 7 && !strncmp(code + s, "#define", slen)) {
         *token_type = MC_TOKEN_PP_KEYWORD_DEFINE;
         if (text) {
-          allocate_and_copy_cstrn(*text, code + s, slen);
+          *text = strndup(code + s, slen);
         }
         break;
       }
       if (slen == 8 && !strncmp(code + s, "#include", slen)) {
         *token_type = MC_TOKEN_PP_KEYWORD_INCLUDE;
         if (text) {
-          allocate_and_copy_cstrn(*text, code + s, slen);
+          *text = strndup(code + s, slen);
         }
         break;
       }
@@ -1532,7 +1531,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
 
     *token_type = MC_TOKEN_PP_IDENTIFIER;
     if (text) {
-      allocate_and_copy_cstrn(*text, code + s, slen);
+      *text = strndup(code + s, slen);
     }
 
     // char *error_text;
@@ -1560,7 +1559,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         if (slen == 2 && !strncmp(code + s, "if", slen)) {
           *token_type = MC_TOKEN_IF_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
@@ -1575,231 +1574,231 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
           *index += 4;
 
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 7 && !strncmp(code + s, "typedef", slen)) {
           *token_type = MC_TOKEN_TYPEDEF_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 4 && !strncmp(code + s, "else", slen)) {
           *token_type = MC_TOKEN_ELSE_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 4 && !strncmp(code + s, "goto", slen)) {
           *token_type = MC_TOKEN_GOTO_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 5 && !strncmp(code + s, "while", slen)) {
           *token_type = MC_TOKEN_WHILE_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 6 && !strncmp(code + s, "va_arg", slen)) {
           *token_type = MC_TOKEN_VA_ARG_WORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 7 && !strncmp(code + s, "va_list", slen)) {
           *token_type = MC_TOKEN_VA_LIST_WORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 8 && !strncmp(code + s, "va_start", slen)) {
           *token_type = MC_TOKEN_VA_START_WORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 6 && !strncmp(code + s, "va_end", slen)) {
           *token_type = MC_TOKEN_VA_END_WORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 6 && !strncmp(code + s, "sizeof", slen)) {
           *token_type = MC_TOKEN_SIZEOF_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 8 && !strncmp(code + s, "offsetof", slen)) {
           *token_type = MC_TOKEN_OFFSETOF_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 2 && !strncmp(code + s, "do", slen)) {
           *token_type = MC_TOKEN_DO_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 3 && !strncmp(code + s, "for", slen)) {
           *token_type = MC_TOKEN_FOR_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 8 && !strncmp(code + s, "continue", slen)) {
           *token_type = MC_TOKEN_CONTINUE_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 5 && !strncmp(code + s, "break", slen)) {
           *token_type = MC_TOKEN_BREAK_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 6 && !strncmp(code + s, "switch", slen)) {
           *token_type = MC_TOKEN_SWITCH_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 6 && !strncmp(code + s, "return", slen)) {
           *token_type = MC_TOKEN_RETURN_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 5 && !strncmp(code + s, "const", slen)) {
           *token_type = MC_TOKEN_CONST_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 6 && !strncmp(code + s, "static", slen)) {
           *token_type = MC_TOKEN_STATIC_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 4 && !strncmp(code + s, "case", slen)) {
           *token_type = MC_TOKEN_CASE_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 7 && !strncmp(code + s, "default", slen)) {
           *token_type = MC_TOKEN_DEFAULT_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 4 && !strncmp(code + s, "enum", slen)) {
           *token_type = MC_TOKEN_ENUM_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 6 && !strncmp(code + s, "struct", slen)) {
           *token_type = MC_TOKEN_STRUCT_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 5 && !strncmp(code + s, "union", slen)) {
           *token_type = MC_TOKEN_UNION_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 4 && !strncmp(code + s, "void", slen)) {
           *token_type = MC_TOKEN_VOID_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 4 && !strncmp(code + s, "char", slen)) {
           *token_type = MC_TOKEN_CHAR_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 3 && !strncmp(code + s, "int", slen)) {
           *token_type = MC_TOKEN_INT_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 8 && !strncmp(code + s, "unsigned", slen)) {
           *token_type = MC_TOKEN_UNSIGNED_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 6 && !strncmp(code + s, "signed", slen)) {
           *token_type = MC_TOKEN_SIGNED_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         // if (slen == 4 && !strncmp(code + s, "bool", slen)) {
         //   *token_type = MC_TOKEN_BOOL_KEYWORD;
         //   if (text) {
-        //     allocate_and_copy_cstrn(*text, code + s, slen);
+        //     *text = strndup(code + s, slen);
         //   }
         //   break;
         // }
         if (slen == 5 && !strncmp(code + s, "float", slen)) {
           *token_type = MC_TOKEN_FLOAT_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 4 && !strncmp(code + s, "long", slen)) {
           *token_type = MC_TOKEN_LONG_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
         if (slen == 5 && !strncmp(code + s, "short", slen)) {
           *token_type = MC_TOKEN_SHORT_KEYWORD;
           if (text) {
-            allocate_and_copy_cstrn(*text, code + s, slen);
+            *text = strndup(code + s, slen);
           }
           break;
         }
@@ -1808,7 +1807,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       // Plain Identifier
       *token_type = MC_TOKEN_IDENTIFIER;
       if (text) {
-        allocate_and_copy_cstrn(*text, code + s, slen);
+        *text = strndup(code + s, slen);
       }
       break;
     }
@@ -1954,7 +1953,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       }
 
       if (text) {
-        allocate_and_copy_cstrn(*text, code + s, *index - s);
+        *text = strndup(code + s, *index - s);
       }
       break;
     }

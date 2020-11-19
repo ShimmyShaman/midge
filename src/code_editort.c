@@ -55,7 +55,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
           sequence->image_height = cestate->render_lines[ce_offset_line_index]->height;
           // sequence->data.target_image.image = cestate->render_lines[ce_offset_line_index]->image;
 
-          MCcall(set_c_str(cestate->render_lines[ce_offset_line_index]->rtf, ""));
+          MCcall(set_mc_str(cestate->render_lines[ce_offset_line_index]->rtf, ""));
         }
       }
 
@@ -91,7 +91,7 @@ int code_editor_render_fld_view_code(frame_time *elapsed, mc_node_v1 *visual_nod
               sequence->image_height = cestate->render_lines[ce_offset_line_index]->height;
               // sequence->data.target_image.image_uid = cestate->render_lines[ce_offset_line_index]->image_resource_uid;
 
-              MCcall(set_c_str(cestate->render_lines[ce_offset_line_index]->rtf, ""));
+              MCcall(set_mc_str(cestate->render_lines[ce_offset_line_index]->rtf, ""));
             }
           }
 
@@ -297,7 +297,7 @@ int fld_append_variable_snapshot(fld_view_state *fld_view, fld_variable_snapshot
   return 0;
 }
 
-int obtain_syntax_node_parsed_code(mc_syntax_node *syntax_node, c_str *cstr)
+int obtain_syntax_node_parsed_code(mc_syntax_node *syntax_node, mc_str *cstr)
 {
   for (int a = 0; a < syntax_node->children->count; ++a) {
     mc_syntax_node *child = syntax_node->children->items[a];
@@ -308,7 +308,7 @@ int obtain_syntax_node_parsed_code(mc_syntax_node *syntax_node, c_str *cstr)
     }
     else {
 
-      MCcall(append_to_c_str(cstr, child->text));
+      MCcall(append_to_mc_str(cstr, child->text));
     }
   }
 
@@ -475,7 +475,7 @@ int fld_obtain_member_variable_type(struct_info *root_type, fld_member_access_se
   MCerror(799, "couldn't find field for member:'%s'", variable_sequence->next->identity);
 }
 
-int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_declaration,
+int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, mc_str *debug_declaration,
                                fld_transcription_state *transcription_state, mc_syntax_node *syntax_node)
 {
   /*mcfuncreplace*/
@@ -491,7 +491,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
         MCerror(641, "AST Format Error");
       }
 
-      MCcall(append_to_c_str(debug_declaration, "{\n"));
+      MCcall(append_to_mc_str(debug_declaration, "{\n"));
       MCcall(fld_append_visual_code(fld_view, "{\n"));
     }
 
@@ -509,14 +509,14 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
           // printf("ptr-text:%p\n", child->text);
           // printf("-text:'%s'\n", child->text);
 
-          MCcall(append_to_c_str(debug_declaration, child->text));
+          MCcall(append_to_mc_str(debug_declaration, child->text));
           MCcall(fld_append_visual_code(fld_view, child->text));
         }
       }
       --transcription_state->scope_depth;
     }
 
-    // MCcall(append_to_c_str(debug_declaration, "  printf(\"NO! no. this. <()>\\n\");\n  return 0;\n"));
+    // MCcall(append_to_mc_str(debug_declaration, "  printf(\"NO! no. this. <()>\\n\");\n  return 0;\n"));
     // MCcall(fld_append_visual_code(fld_view, "  printf(\"NO! no. this. <()>\\n\");\n  return 0;\n"));
     if (transcription_state->scope_depth > 0) {
       if ((int)syntax_node->children->items[syntax_node->children->count - 1]->type !=
@@ -524,17 +524,17 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
         MCerror(671, "AST Format Error");
       }
 
-      MCcall(append_to_c_str(debug_declaration, "}"));
+      MCcall(append_to_mc_str(debug_declaration, "}"));
       MCcall(fld_append_visual_code(fld_view, "}"));
     }
   } break;
   // case MC_SYNTAX_LOCAL_VA: {
   //   // Type
   //   if (syntax_node->local_declaration.mc_type) {
-  //     MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.mc_type->declared_mc_name));
+  //     MCcall(append_to_mc_str(debug_declaration, syntax_node->local_declaration.mc_type->declared_mc_name));
   //   }
   //   else {
-  //     MCcall(append_to_c_str(debug_declaration, syntax_node->local_declaration.type_identifier->text));
+  //     MCcall(append_to_mc_str(debug_declaration, syntax_node->local_declaration.type_identifier->text));
   //   }
   //   MCcall(fld_append_visual_code(fld_view, syntax_node->local_declaration.type_identifier->text));
 
@@ -550,7 +550,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   //       // printf("ptr-text:%p\n", child->text);
   //       // printf("-text:'%s'\n", child->text);
 
-  //       MCcall(append_to_c_str(debug_declaration, child->text));
+  //       MCcall(append_to_mc_str(debug_declaration, child->text));
   //       MCcall(fld_append_visual_code(fld_view, child->text));
   //     }
   //   }
@@ -564,8 +564,8 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   // // case MC_SYNTAX_ASSIGNMENT_STATEMENT: {
   //   // Variable
   //   {
-  //     c_str *variable_full_identity;
-  //     MCcall(init_c_str(&variable_full_identity));
+  //     mc_str *variable_full_identity;
+  //     MCcall(init_mc_str(&variable_full_identity));
   //     MCcall(obtain_syntax_node_parsed_code(syntax_node->assignment.variable, variable_full_identity));
 
   //     fld_variable_snapshot *variable_snapshot = NULL;
@@ -628,7 +628,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   //     if (variable_snapshot) {
   //       MCcall(fld_append_variable_snapshot(fld_view, variable_snapshot));
 
-  //       MCvacall(append_to_c_strf(debug_declaration,
+  //       MCvacall(append_to_mc_strf(debug_declaration,
   //                                 "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
   //                                 "(fld_variable_snapshot *)%p, &%s));\n ",
   //                                 cestate, variable_snapshot, variable_full_identity->text));
@@ -638,8 +638,8 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   //       MCcall(fld_append_visual_code(fld_view, variable_full_identity->text));
   //     }
 
-  //     MCcall(append_to_c_str(debug_declaration, variable_full_identity->text));
-  //     MCcall(release_c_str(variable_full_identity));
+  //     MCcall(append_to_mc_str(debug_declaration, variable_full_identity->text));
+  //     MCcall(release_mc_str(variable_full_identity));
   //   }
 
   //   // Rest
@@ -652,7 +652,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
   //     }
   //     else {
 
-  //       MCcall(append_to_c_str(debug_declaration, child->text));
+  //       MCcall(append_to_mc_str(debug_declaration, child->text));
   //       MCcall(fld_append_visual_code(fld_view, child->text));
   //     }
   //   }
@@ -671,7 +671,7 @@ int fld_transcribe_syntax_node(mc_code_editor_state_v1 *cestate, c_str *debug_de
         // printf("ptr-text:%p\n", child->text);
         // printf("-text:'%s'\n", child->text);
 
-        MCcall(append_to_c_str(debug_declaration, child->text));
+        MCcall(append_to_mc_str(debug_declaration, child->text));
         MCcall(fld_append_visual_code(fld_view, child->text));
       }
     }
@@ -701,9 +701,9 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   printf("function '%s' code:\n%s\n", function->name, function->source->code);
 
   // Replace the function with the debug version && form the displayed code for the debug view
-  c_str *debug_declaration;
-  MCcall(init_c_str(&debug_declaration));
-  // MCcall(append_to_c_strf(debug_declaration, "a %p %p %s c", debug_declaration, debug_declaration, "b"));
+  mc_str *debug_declaration;
+  MCcall(init_mc_str(&debug_declaration));
+  // MCcall(append_to_mc_strf(debug_declaration, "a %p %p %s c", debug_declaration, debug_declaration, "b"));
   // printf("cstr:'%s'\n", debug_declaration->text);
   // return 0;
   printf("op03\n");
@@ -721,7 +721,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
 
   //
   printf("op04\n");
-  MCvacall(append_to_c_strf(debug_declaration, "int %s(int argc, void **argv) {\n", debug_function_name));
+  MCvacall(append_to_mc_strf(debug_declaration, "int %s(int argc, void **argv) {\n", debug_function_name));
 
   printf("op05\n");
   // printf("cstr: alloc=%u len=%u str=||%s||\n", debug_declaration->alloc, debug_declaration->len,
@@ -739,7 +739,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
 
   // Arguments
   {
-    MCcall(append_to_c_str(debug_declaration, "  // Arguments\n"));
+    MCcall(append_to_mc_str(debug_declaration, "  // Arguments\n"));
     for (int a = 0; a < function->parameter_count; ++a) {
       const char **p_utilized_type_name;
       if (function->parameters[a]->mc_declared_type) {
@@ -754,7 +754,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
       }
       deref_buf[function->parameters[a]->type_deref_count] = '\0';
 
-      MCvacall(append_to_c_strf(debug_declaration, "  %s %s%s = *(%s %s*)argv[%i];\n", *p_utilized_type_name, deref_buf,
+      MCvacall(append_to_mc_strf(debug_declaration, "  %s %s%s = *(%s %s*)argv[%i];\n", *p_utilized_type_name, deref_buf,
                                 function->parameters[a]->name, *p_utilized_type_name, deref_buf, a));
       printf("op03\n");
 
@@ -775,7 +775,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
 
       printf("op06\n");
       // Report the value at call
-      MCvacall(append_to_c_strf(debug_declaration,
+      MCvacall(append_to_mc_strf(debug_declaration,
                                 "  MCcall(fld_report_variable_snapshot((mc_code_editor_state_v1 *)%p, "
                                 "(fld_variable_snapshot *)%p, &%s));\n ",
                                 cestate, argument_snapshot, function->parameters[a]->name));
@@ -786,7 +786,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
     }
 
     MCcall(fld_append_visual_code(cestate->fld_view, ") {\n"));
-    MCcall(append_to_c_str(debug_declaration, "\n"));
+    MCcall(append_to_mc_str(debug_declaration, "\n"));
   }
 
   //
@@ -799,15 +799,15 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   // MCcall(fld_transcribe_syntax_node(cestate, debug_declaration, &transcription_state,
   //                                   cestate->source_interpretation.function_ast));
 
-  // MCcall(append_to_c_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
+  // MCcall(append_to_mc_str(debug_declaration, "  printf(\"this instead!\\n\");\n"
   //                                             "\n"
   //                                             "  return 0;\n"
   //                                             "}"));
-  MCcall(append_to_c_str(debug_declaration, "  return 0;\n}"));
+  MCcall(append_to_mc_str(debug_declaration, "  return 0;\n}"));
   MCcall(fld_append_visual_code(cestate->fld_view, "}"));
   printf("lfild-func-decl:\n%s\n##########\n", debug_declaration->text);
   MCcall(clint_declare(debug_declaration->text));
-  release_c_str(debug_declaration, true);
+  release_mc_str(debug_declaration, true);
 
   char decl_buf[256];
   sprintf(decl_buf,
@@ -939,8 +939,8 @@ int ce_update_syntax_rendered_lines(mc_code_editor_state_v1 *cestate)
 
 int ce_update_txt_rendered_lines(mc_code_editor_state_v1 *cestate)
 {
-  c_str *line_text;
-  MCcall(init_c_str(&line_text));
+  mc_str *line_text;
+  MCcall(init_mc_str(&line_text));
 
   // const char *code = cestate->editor_text->text;
   // while (1) {
@@ -1263,14 +1263,14 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
         // printf("line-%i was:'%s'\n", line_index - cestate->line_display_offset, rendered_code_line->rtf->text);
 
         // Set previous rtf settings
-        MCcall(set_c_str(rendered_code_line->rtf, ""));
+        MCcall(set_mc_str(rendered_code_line->rtf, ""));
         if (color_from_previous_line) {
-          MCcall(append_to_c_str(rendered_code_line->rtf, color_from_previous_line));
+          MCcall(append_to_mc_str(rendered_code_line->rtf, color_from_previous_line));
         }
 
         // printf("urt-6\n");
         // Set the line text
-        MCcall(append_to_c_strn(rendered_code_line->rtf, code + s, i - s));
+        MCcall(append_to_mc_strn(rendered_code_line->rtf, code + s, i - s));
         rendered_code_line->requires_render_update = true;
         cestate->visual_node->data.visual.requires_render_update = true;
 
@@ -1310,14 +1310,14 @@ int mce_update_rendered_text(mc_code_editor_state_v1 *cestate)
   return 0;
 }
 
-int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
+int _mce_convert_syntax_node_to_rtf(mc_str *rtf, mc_syntax_node *syntax_node)
 {
   if ((mc_token_type)syntax_node->type < MC_TOKEN_EXCLUSIVE_MAX_VALUE) {
 
     // RTF - prepend
     switch ((mc_token_type)syntax_node->type) {
     case MC_TOKEN_LINE_COMMENT:
-      MCcall(append_to_c_str(rtf, "[color=22,162,18]"));
+      MCcall(append_to_mc_str(rtf, "[color=22,162,18]"));
       break;
     default:
       break;
@@ -1328,15 +1328,15 @@ int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
     for (int i = 0;; ++i) {
       if (syntax_node->text[i] == '\0') {
         if (i - s) {
-          MCcall(append_to_c_strn(rtf, syntax_node->text + s, i - s));
+          MCcall(append_to_mc_strn(rtf, syntax_node->text + s, i - s));
         }
         break;
       }
       else if (syntax_node->text[i] == '[') {
         // Copy to this point
-        MCcall(append_to_c_strn(rtf, syntax_node->text + s, i - s));
-        // MCcall(append_to_c_str(rtf, "["));
-        MCcall(append_to_c_str(rtf, "[["));
+        MCcall(append_to_mc_strn(rtf, syntax_node->text + s, i - s));
+        // MCcall(append_to_mc_str(rtf, "["));
+        MCcall(append_to_mc_str(rtf, "[["));
         s = i + 1;
       }
     }
@@ -1344,7 +1344,7 @@ int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
     // RTF - append
     switch ((mc_token_type)syntax_node->type) {
     case MC_TOKEN_LINE_COMMENT:
-      MCcall(append_to_c_str(rtf, "[color=156,219,253]"));
+      MCcall(append_to_mc_str(rtf, "[color=156,219,253]"));
       break;
     default:
       break;
@@ -1363,12 +1363,12 @@ int _mce_convert_syntax_node_to_rtf(c_str *rtf, mc_syntax_node *syntax_node)
   return 0;
 }
 
-int mce_convert_syntax_to_rtf(c_str *code_rtf, mc_syntax_node *syntax_node)
+int mce_convert_syntax_to_rtf(mc_str *code_rtf, mc_syntax_node *syntax_node)
 {
   register_midge_error_tag("mce_convert_syntax_to_rtf()");
   const char *DEFAULT_CODE_COLOR = "[color=156,219,253]";
 
-  MCcall(set_c_str(code_rtf, DEFAULT_CODE_COLOR));
+  MCcall(set_mc_str(code_rtf, DEFAULT_CODE_COLOR));
   MCcall(_mce_convert_syntax_node_to_rtf(code_rtf, syntax_node));
 
   register_midge_error_tag("mce_convert_syntax_to_rtf(~)");
@@ -1458,7 +1458,7 @@ int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *f
   // cestate->text->lines[cestate->text->lines_count++] = line;
 
   // Code Block
-  // set_c_str(cestate->editor_text, cestate->source_data->code);
+  // set_mc_str(cestate->editor_text, cestate->source_data->code);
   // char *source_code = cestate->source_data->code;
   // {
   //   uint line_alloc = 1;

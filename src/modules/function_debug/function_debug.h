@@ -5,7 +5,7 @@
 #include "core/mc_code_transcription.h"
 
 typedef struct mce_function_debug_line {
-  c_str *str;
+  mc_str *str;
   // TODO -- future colored text parts
 
   mce_function_debug_line *next;

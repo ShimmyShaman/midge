@@ -4,8 +4,19 @@
 #ifndef MC_RENDER_COMMON_H
 #define MC_RENDER_COMMON_H
 
-#include "midge_common.h"
 #include "platform/mc_xcb.h"
+
+// TEMP will have to do function defines sooner or later
+#define VK_CHECK(res, func_name)                               \
+  if (res) {                                                   \
+    printf("VK-ERR[%i] :%i --" func_name "\n", res, __LINE__); \
+    return res;                                                \
+  }
+#define VK_ASSERT(condition, message)                        \
+  if (!(condition)) {                                        \
+    printf("VK-ASSERT ERR[" #condition "] :" #message "\n"); \
+    return -11111;                                           \
+  }
 
 typedef struct render_color {
   float r, g, b, a;

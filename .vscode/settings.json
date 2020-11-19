@@ -67,6 +67,7 @@
         "xcbwindow.h": "c",
         "mvk_core.h": "c",
         "*.inc": "c",
-        "*.mc": "c"
+        "*.mc": "c",
+        "*.def": "c"
     },
 }

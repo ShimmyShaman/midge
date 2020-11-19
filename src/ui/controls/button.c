@@ -115,8 +115,8 @@ void mcu_init_button(mc_node *parent, mcu_button **p_button)
   button->tag = NULL;
   button->left_click = NULL;
 
-  init_c_str(&button->str);
-  set_c_str(button->str, "button");
+  init_mc_str(&button->str);
+  set_mc_str(button->str, "button");
   button->font = NULL;
   button->font_color = COLOR_GHOST_WHITE;
 

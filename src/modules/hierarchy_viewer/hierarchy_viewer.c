@@ -182,14 +182,14 @@ void __mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_sta
   tl_button->tag = (void *)sp_state;
   if (sp_state->children.count) {
     if (sp_state->collapsed)
-      set_c_str(tl_button->str, "+ ");
+      set_mc_str(tl_button->str, "+ ");
     else
-      set_c_str(tl_button->str, "- ");
+      set_mc_str(tl_button->str, "- ");
   }
   else {
-    set_c_str(tl_button->str, "  ");
+    set_mc_str(tl_button->str, "  ");
   }
-  append_to_c_str(tl_button->str, sp_state->item_name);
+  append_to_mc_str(tl_button->str, sp_state->item_name);
   switch (sp_state->item_type) {
   case MC_HV_HIERARCHICAL_STRUCT_DEFINITION: {
     tl_button->font_color = COLOR_MACARONI_AND_CHEESE;
@@ -325,8 +325,8 @@ void init_hierarchy_viewer()
     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
     layout->padding = {4, (float)(i * 24), 0, 0};
 
-    set_c_str(button->str, "text");
-    append_to_c_strf(button->str, "%i", i);
+    set_mc_str(button->str, "text");
+    append_to_mc_strf(button->str, "%i", i);
     button->background_color = COLOR_TRANSPARENT;
     button->font_color = COLOR_GHOST_WHITE;
   }

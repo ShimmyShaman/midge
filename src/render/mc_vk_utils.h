@@ -3,10 +3,7 @@
 #ifndef MC_VK_UTILS_H
 #define MC_VK_UTILS_H
 
-#include "midge_common.h"
 #include "render/mc_vulkan.h"
-
-extern "C" {
 
 VkResult mvk_init_resources(vk_render_state *p_vkrs);
 void mvk_destroy_resources(vk_render_state *p_vkrs);
@@ -24,6 +21,6 @@ VkResult mvk_load_vertex_data_buffer(vk_render_state *p_vkrs, float *vertices, u
                                      bool release_original_data_on_copy, mcr_vertex_buffer **p_resource);
 VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
                                bool release_original_data_on_copy, mcr_index_buffer **p_resource);
-}
+
 
 #endif // MC_VK_UTILS_H

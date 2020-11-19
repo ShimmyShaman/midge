@@ -8,7 +8,6 @@
 
 #include "tinycc/libtccinterp.h"
 
-#include "midge_common.h"
 #include "midge_error_handling.h"
 
 #include "core/c_parser_lexer.h"
@@ -55,7 +54,7 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
 {
   parameter_info *parameter = (parameter_info *)calloc(sizeof(parameter_info), 1);
   parameter->type_id = (struct_id *)malloc(sizeof(struct_id));
-  allocate_and_copy_cstr(parameter->type_id->identifier, "parameter_info");
+  parameter->type_id->identifier = strdup("parameter_info");
   parameter->type_id->version = 1U;
 
   switch (parameter_syntax_node->parameter.type) {
@@ -188,7 +187,7 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
 
     field_info *field = (field_info *)malloc(sizeof(field_info));
     field->type_id = (struct_id *)malloc(sizeof(struct_id));
-    allocate_and_copy_cstr(field->type_id->identifier, "field_info");
+    field->type_id->identifier = strdup("field_info");
     field->type_id->version = 1U;
 
     register_midge_error_tag("mcs_summarize_type_field_list-2a");
@@ -559,11 +558,11 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
     // TODO
     case MC_SYNTAX_PP_DIRECTIVE_IFDEF: {
       // Assume all ifndefs (for the moment TODO ) to be true
-      mcs_process_ast_root_children(source_file, child->preprocess_ifdef.groupopt);
+      MCcall(mcs_process_ast_root_children(source_file, child->preprocess_ifdef.groupopt));
     } break;
     case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
       // Assume all ifndefs (for the moment TODO ) to be true
-      mcs_process_ast_root_children(source_file, child->preprocess_ifndef.groupopt);
+      MCcall(mcs_process_ast_root_children(source_file, child->preprocess_ifndef.groupopt));
     } break;
     case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
       // Ignore for now
@@ -594,7 +593,6 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
 
 int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 {
-  puts("mcs_interpret_file");
   int res;
   char *code;
   mc_syntax_node *file_ast;
@@ -616,7 +614,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
   sf->filepath = strdup(filepath);
 
   // Obtain function/struct/enum information & dependencies
-  mcs_process_ast_root_children(sf, file_ast->children);
+  MCcall(mcs_process_ast_root_children(sf, file_ast->children));
 
   // Generate code (from the AST) with midge insertions integrated (stack call / error tracking)
   {
@@ -632,9 +630,9 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
     mct_transcribe_file_ast(file_ast, &options, &code);
   }
 
-  // if (!strcmp("src/core/mc_source.c", filepath))
-  // printf("\ngen-code:\n%s||\n", code);
-  // // MCerror(7704, "TODO");
+  // if (!strcmp("src/m_threads.h", filepath))
+  //   printf("\ngen-code:\n%s||\n", code);
+  // MCerror(7704, "TODO");
 
   // Send the code to the interpreter
   obtain_midge_global_root(&gdata);
@@ -666,12 +664,12 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 // //   return 0;
 // // }
 
-// int append_syntax_node_to_file_context(mc_syntax_node *child, c_str *file_context)
+// int append_syntax_node_to_file_context(mc_syntax_node *child, mc_str *file_context)
 // {
 //   char *code;
 //   mcs_copy_syntax_node_to_text(child, &code);
-//   append_to_c_str(file_context, code);
-//   append_char_to_c_str(file_context, '\n');
+//   append_to_mc_str(file_context, code);
+//   append_char_to_mc_str(file_context, '\n');
 //   free(code);
 // }
 
@@ -750,11 +748,11 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   register_midge_error_tag("update_or_register_struct_info_from_syntax-2");
 
 //   structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION_DECL;
-//   c_str *mc_func_name;
-//   init_c_str(&mc_func_name);
-//   append_to_c_strf(mc_func_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
+//   mc_str *mc_func_name;
+//   init_mc_str(&mc_func_name);
+//   append_to_mc_strf(mc_func_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
 //   structure_info->mc_declared_name = mc_func_name->text;
-//   release_c_str(mc_func_name, false);
+//   release_mc_str(mc_func_name, false);
 
 //   // Set the values parsed
 //   if (struct_ast->struct_decl.fields) {
@@ -875,7 +873,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   return 0;
 // }
 
-// int instantiate_function_definition_from_ast(mc_node *definition_owner, source_definition *source, c_str
+// int instantiate_function_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_str
 // *file_context,
 //                                              mc_syntax_node *ast, void **definition_info)
 // {
@@ -1012,17 +1010,17 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //     (*info)->statement_type = ast->preprocess_define.statement_type;
 //     mcs_copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
 
-//     c_str *str;
-//     init_c_str(&str);
+//     mc_str *str;
+//     init_mc_str(&str);
 //     for (int i = 0; i < ast->preprocess_define.replacement_list->count; ++i) {
 //       char *node_text;
 //       mcs_copy_syntax_node_to_text(ast->preprocess_define.replacement_list->items[i], &node_text);
-//       append_to_c_str(str, node_text);
+//       append_to_mc_str(str, node_text);
 //       free(node_text);
 //     }
 
 //     (*info)->replacement = str->text;
-//     release_c_str(str, false);
+//     release_mc_str(str, false);
 
 //     // printf("define:\n'%s'\n'%s'\n", (*info)->identifier, (*info)->replacement);
 //   } break;
@@ -1054,7 +1052,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   @definition_info is OUT. May be NULL, if not dereference will be set with
 //   p-to-function_info/struct_info/enum_info etc.
 // */
-// int instantiate_definition(mc_node *definition_owner, c_str *file_context, char *code, mc_syntax_node *ast,
+// int instantiate_definition(mc_node *definition_owner, mc_str *file_context, char *code, mc_syntax_node *ast,
 //                            source_definition *source, void **definition_info)
 // {
 //   register_midge_error_tag("instantiate_definition()");
@@ -1111,7 +1109,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //   return 0;
 // }
 
-// int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *source_file, c_str *file_context,
+// int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *source_file, mc_str *file_context,
 //                              mc_syntax_node_list *syntax_node_list)
 // {
 //   for (int a = 0; a < syntax_node_list->count; ++a) {
@@ -1315,26 +1313,26 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 
 // int mcl_determine_cached_file_name(const char *input, char **output)
 // {
-//   c_str *str;
-//   init_c_str(&str);
-//   set_c_str(str, "bin/cached/");
+//   mc_str *str;
+//   init_mc_str(&str);
+//   set_mc_str(str, "bin/cached/");
 
 //   int fni = 0;
 //   fni += 11;
 //   for (int k = 0; k < 256; ++k) {
 //     if (input[k] == '/') {
-//       append_char_to_c_str(str, '_');
+//       append_char_to_mc_str(str, '_');
 //     }
 //     else {
 //       if (input[k] == '\0') {
 //         break;
 //       }
-//       append_char_to_c_str(str, input[k]);
+//       append_char_to_mc_str(str, input[k]);
 //     }
 //   }
 
 //   *output = str->text;
-//   release_c_str(str, false);
+//   release_mc_str(str, false);
 
 //   return 0;
 // }
@@ -1395,11 +1393,11 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 //     *source_file = lv_source_file;
 //   }
 
-//   c_str *file_context;
-//   init_c_str(&file_context);
+//   mc_str *file_context;
+//   init_mc_str(&file_context);
 //   instantiate_ast_children(definitions_owner, lv_source_file, file_context, syntax_node->children);
 
-//   release_c_str(file_context, true);
+//   release_mc_str(file_context, true);
 //   // int *p = 0;
 //   // printf("about\n");
 //   // printf("%i\n", *p);

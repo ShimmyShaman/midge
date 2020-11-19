@@ -3,7 +3,6 @@
 #ifndef OBJ_LOADER_H
 #define OBJ_LOADER_H
 
-#include "midge_common.h"
 #include "render/mc_vulkan.h"
 
 // typedef struct mcr_model {

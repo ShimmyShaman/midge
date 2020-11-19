@@ -50,15 +50,15 @@ size_t _rmc_save_text_to_file(const char *filepath, char *text)
   return written;
 }
 
-typedef struct _rmc_c_str {
+typedef struct _rmc_mc_strr {
   unsigned int alloc;
   unsigned int len;
   char *text;
-} _rmc_c_str;
+} _rmc_mc_strr;
 
-int init__rmc_c_str(_rmc_c_str **ptr, char *text)
+int init__rmc_mc_strr(_rmcmc_strtr **ptr, char *text)
 {
-  (*ptr) = (_rmc_c_str *)malloc(sizeof(_rmc_c_str));
+  (*ptr) = (_rmc_mc_strr *)malloc(sizeof(_rmcmc_strtr));
   (*ptr)->len = strlen(text);
   (*ptr)->alloc = (*ptr)->len;
   (*ptr)->text = text;
@@ -66,7 +66,7 @@ int init__rmc_c_str(_rmc_c_str **ptr, char *text)
   return 0;
 }
 
-int remove_from__rmc_c_str(_rmc_c_str *cstr, int start_index, int len)
+int remove_from__rmc_mc_strr(_rmcmc_strtr *cstr, int start_index, int len)
 {
   if (start_index > cstr->len || len == 0)
     return 0;
@@ -87,7 +87,6 @@ int remove_from__rmc_c_str(_rmc_c_str *cstr, int start_index, int len)
 }
 
 const char *_mcl_source_files[] = {
-    "src/midge_common.h",
     "src/core/core_definitions.h",
     "src/core/c_parser_lexer.h",
     "src/core/mc_code_transcription.h",
@@ -111,12 +110,12 @@ void remove_all_MCcalls()
     return;
   }
 
-  _rmc_c_str *src;
-  init__rmc_c_str(&src, code);
+  _rmc_mc_strr *src;
+  init__rmc_mc_strr(&src, code);
 
   for (int i = 0; i < src->len; ++i) {
     if (!strncmp(src->text + i, "MCcall(", 6)) {
-      remove_from__rmc_c_str(src, i, 7);
+      remove_from__rmc_mc_strr(src, i, 7);
 
       // Remove the ')' at the end
       for (int j = i + 1;; ++j) {
@@ -153,7 +152,7 @@ void remove_all_MCcalls()
             printf("expected ')'\n");
             return;
           }
-          remove_from__rmc_c_str(src, j - 1, 1);
+          remove_from__rmc_mc_strr(src, j - 1, 1);
           break;
         }
       }

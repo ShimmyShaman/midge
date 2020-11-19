@@ -3,7 +3,6 @@
 #ifndef XCB_WINDOW_H
 #define XCB_WINDOW_H
 
-#include "midge_common.h"
 #include "rendering/mvk_core.h"
 
 typedef struct mxcb_window_info {

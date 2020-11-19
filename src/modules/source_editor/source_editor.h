@@ -12,7 +12,7 @@ typedef enum mce_source_token_type {
 
 typedef struct mce_source_token {
   mce_source_token_type type;
-  c_str *str;
+  mc_str *str;
 
   mce_source_token *next;
 } mce_source_token;

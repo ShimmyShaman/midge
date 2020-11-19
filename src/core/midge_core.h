@@ -679,7 +679,7 @@ typedef struct rendered_code_line {
   uint index;
   bool requires_render_update;
   uint image_resource_uid;
-  c_str *rtf;
+  mc_str *rtf;
   uint width, height;
   bool visible;
 } rendered_code_line;
@@ -736,7 +736,7 @@ typedef struct mc_code_editor_state_v1 {
 
   struct {
     mc_syntax_node *syntax;
-    c_str *rtf;
+    mc_str *rtf;
     bool syntax_updated;
   } code;
 

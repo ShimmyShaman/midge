@@ -24,7 +24,7 @@ typedef struct mcu_panel {
 typedef struct mcu_text_block {
   mc_node *node;
 
-  c_str *str;
+  mc_str *str;
   font_resource *font;
   render_color font_color;
 } mcu_text_block;
@@ -38,7 +38,7 @@ typedef struct mcu_button {
   // void (*left_click)(mcu_button *button, mc_point click_location);
   void *left_click;
 
-  c_str *str;
+  mc_str *str;
   font_resource *font;
   render_color font_color;
 

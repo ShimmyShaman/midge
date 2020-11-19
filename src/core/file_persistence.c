@@ -72,10 +72,10 @@ void save_source_to_file(mc_source_definition_v1 *source_definition)
   // TODO -- this somewhere else
   // printf("function->source->code:\n%s||\n", function->source->code);
 
-  c_str *save_text;
-  init_c_str(&save_text);
+  mc_str *save_text;
+  init_mc_str(&save_text);
 
-  append_to_c_strf(
+  append_to_mc_strf(
       save_text,
       "/* %s\n   Copyright 2020, Adam Rasburn, All Rights Reserved.\n*/\n\n#include \"core/midge_core.h\"\n\n\n",
       source_definition->source_file->filepath);
@@ -85,18 +85,18 @@ void save_source_to_file(mc_source_definition_v1 *source_definition)
     mc_source_definition_v1 *definition = source_definition->source_file->definitions.items[i];
     switch (definition->type) {
     case SOURCE_DEFINITION_FUNCTION: {
-      append_to_c_str(save_text, definition->code);
+      append_to_mc_str(save_text, definition->code);
     } break;
     case SOURCE_DEFINITION_STRUCTURE: {
       printf("sftf-struct:\n%s||\n", definition->code);
-      append_to_c_str(save_text, definition->code);
+      append_to_mc_str(save_text, definition->code);
     } break;
     default: {
       printf("ERROR 85\n");
     }
     }
 
-    append_to_c_str(save_text, "\n\n");
+    append_to_mc_str(save_text, "\n\n");
   }
 
   // printf("sftf-0\n");
@@ -105,7 +105,7 @@ void save_source_to_file(mc_source_definition_v1 *source_definition)
   // printf("sftf-0\n");
   size_t written = save_text_to_file(source_definition->source_file->filepath, save_text->text);
 
-  release_c_str(save_text, true);
+  release_mc_str(save_text, true);
 
   if (written) {
     printf("saved function to file '%s' (%zu bytes)\n", source_definition->source_file->filepath, written);

@@ -4,7 +4,6 @@
 #define MC_RENDER_THREAD_H
 
 #include "m_threads.h"
-#include "midge_common.h"
 #include "platform/mc_xcb.h"
 #include "render/render_common.h"
 

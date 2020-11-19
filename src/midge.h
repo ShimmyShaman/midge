@@ -71,7 +71,7 @@
 //     return;
 
 //   std::string lookedUpAddress = clint->lookupFileOrLibrary(name);
-//   printf("lookup: %s\n", lookedUpAddress.c_str());
+//   printf("lookup: %s\n", lookedUpAddress.mc_str());
 //   result = clint->loadLibrary(lookedUpAddress);
 //   if (result == cling::Interpreter::kSuccess)
 //     return;

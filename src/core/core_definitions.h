@@ -3,17 +3,9 @@
 #ifndef CORE_DEFINITIONS_H
 #define CORE_DEFINITIONS_H
 
-#include "tinycc/libtccinterp.h"
+#include "mc_types.h"
 
-#ifndef bool
-#define bool unsigned char
-#endif
-#ifndef true
-#define true ((unsigned char)0x7F)
-#endif
-#ifndef false
-#define false ((unsigned char)0)
-#endif
+#include "tinycc/libtccinterp.h"
 
 typedef enum source_file_type {
   SOURCE_FILE_NULL = 0,
@@ -123,7 +115,7 @@ typedef struct enum_member_info {
 typedef struct enumeration_info {
   char *name;
   bool is_defined;
-  
+
   struct {
     unsigned int count, alloc;
     enum_member_info **items;

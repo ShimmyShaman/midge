@@ -9,195 +9,46 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "core/core_definitions.h"
-#include "midge_common.h"
+#include "core_definitions.h"
+#include "mc_str.h"
 #include "midge_error_handling.h"
+
 #include "tinycc/libtccinterp.h"
 
-typedef struct _csl_c_str {
-  unsigned int alloc;
-  unsigned int len;
-  char *text;
-} _csl_c_str;
+// static void *__mch_thread_entry(void *state)
+// {
+//   unsigned int mc_error_thread_index;
+//   int base_error_stack_index;
+//   register_midge_thread_creation(&mc_error_thread_index, "__mch_thread_entry", "core_source_loader.c", 54,
+//                                  &base_error_stack_index);
 
-#define MCcall(function)                                                                   \
-  {                                                                                        \
-    int mc_error_stack_index;                                                              \
-    register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
-    int mc_res = function;                                                                 \
-    if (mc_res) {                                                                          \
-      printf("--" #function "line:%i:ERR:%i\n", __LINE__, mc_res);                         \
-      return mc_res;                                                                       \
-    }                                                                                      \
-    register_midge_stack_return(mc_error_stack_index);                                     \
-  }
+//   void **state_args = (void **)state;
+//   int (*mc_routine)(int, void **) = *(int (**)(int, void **))state_args[0];
+//   void *wrapped_state = state_args[1];
 
-#define MCvacall(function)                                                                 \
-  {                                                                                        \
-    int mc_error_stack_index;                                                              \
-    register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
-    int mc_res = function;                                                                 \
-    if (mc_res) {                                                                          \
-      printf("-- line:%d varg-function-call:%i\n", __LINE__, mc_res);                      \
-      return mc_res;                                                                       \
-    }                                                                                      \
-    register_midge_stack_return(mc_error_stack_index);                                     \
-  }
+//   void *mcf_vargs[2];
+//   mcf_vargs[0] = &wrapped_state;
+//   void *routine_result;
+//   mcf_vargs[1] = &routine_result;
 
-static void *__mch_thread_entry(void *state)
-{
-  unsigned int mc_error_thread_index;
-  int base_error_stack_index;
-  register_midge_thread_creation(&mc_error_thread_index, "__mch_thread_entry", "core_source_loader.c", 54,
-                                 &base_error_stack_index);
+//   // printf("mc_routine ptr:%p\n", mc_routine);
+//   // printf("mc_routine deref ptr:%p\n", *mc_routine);
+//   {
+//     int mc_error_stack_index;
+//     register_midge_stack_invocation("unknown-thread-start-function", __FILE__, __LINE__ + 1, &mc_error_stack_index);
+//     int mc_res = mc_routine(2, mcf_vargs);
+//     if (mc_res) {
+//       printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
+//       return NULL;
+//     }
+//     register_midge_stack_return(mc_error_stack_index);
+//   }
+//   // printf("routine called\n");
 
-  void **state_args = (void **)state;
-  int (*mc_routine)(int, void **) = *(int (**)(int, void **))state_args[0];
-  void *wrapped_state = state_args[1];
-
-  void *mcf_vargs[2];
-  mcf_vargs[0] = &wrapped_state;
-  void *routine_result;
-  mcf_vargs[1] = &routine_result;
-
-  // printf("mc_routine ptr:%p\n", mc_routine);
-  // printf("mc_routine deref ptr:%p\n", *mc_routine);
-  {
-    int mc_error_stack_index;
-    register_midge_stack_invocation("unknown-thread-start-function", __FILE__, __LINE__ + 1, &mc_error_stack_index);
-    int mc_res = mc_routine(2, mcf_vargs);
-    if (mc_res) {
-      printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
-      return NULL;
-    }
-    register_midge_stack_return(mc_error_stack_index);
-  }
-  // printf("routine called\n");
-
-  register_midge_thread_conclusion(mc_error_thread_index);
-  // return routine_result;
-  return NULL;
-}
-
-int init__csl_c_str(_csl_c_str **ptr)
-{
-  int *dd = (int *)malloc(sizeof(int) * 4);
-  (*ptr) = (_csl_c_str *)malloc(sizeof(_csl_c_str));
-  (*ptr)->alloc = 2;
-  (*ptr)->len = 0;
-  (*ptr)->text = (char *)malloc(sizeof(char) * (*ptr)->alloc);
-  (*ptr)->text[0] = '\0';
-
-  return 0;
-}
-
-static int append_to__csl_c_str(_csl_c_str *cstr, const char *text)
-{
-  int len = strlen(text);
-  if (cstr->len + len + 1 >= cstr->alloc) {
-    unsigned int new_allocated_size = cstr->alloc + len + 16 + (cstr->alloc) / 10;
-    // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
-    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
-    // printf("atc-4\n");
-    memcpy(newptr, cstr->text, sizeof(char) * cstr->alloc);
-    // printf("atc-5\n");
-    free(cstr->text);
-    // printf("atc-6\n");
-    cstr->text = newptr;
-    // printf("atc-7\n");
-    cstr->alloc = new_allocated_size;
-    // printf("atc-8\n");
-  }
-
-  // printf("atcs-a cstrtext:'%s' len:%u end:'%c'\n", cstr->text, cstr->len, cstr->text[cstr->len]);
-  // printf("atcs-b text:'%s'\n", text);
-  // memcpy(cstr->text + cstr->len, text, sizeof(char) * len);
-  strcpy(cstr->text + cstr->len, text);
-  // printf("atcs-c cstrtext:'%s' len:%u end:'%c'\n", cstr->text + cstr->len - 2, cstr->len, cstr->text[cstr->len]);
-  cstr->len += len;
-  cstr->text[cstr->len] = '\0';
-
-  return 0;
-}
-
-static int set__csl_c_str(_csl_c_str *cstr, const char *src)
-{
-  cstr->len = 0;
-  cstr->text[0] = '\0';
-  append_to__csl_c_str(cstr, src);
-
-  return 0;
-}
-
-static int release__csl_c_str(_csl_c_str *ptr, bool free_char_string_also)
-{
-  if (ptr->alloc > 0 && free_char_string_also && ptr->text) {
-    free(ptr->text);
-  }
-
-  free(ptr);
-
-  return 0;
-}
-
-static int insert_into__csl_c_str(_csl_c_str *cstr, const char *text, int index)
-{
-  if (index > cstr->len) {
-    MCerror(8169, "TODO");
-  }
-
-  int n = strlen(text);
-  if (cstr->len + n + 1 >= cstr->alloc) {
-    unsigned int new_allocated_size = cstr->alloc + n + 16 + (cstr->alloc) / 10;
-    // printf("atc-3 : len:%u new_allocated_size:%u\n", cstr->len, new_allocated_size);
-    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
-    // printf("atc-4\n");
-    if (index) {
-      memcpy(newptr, cstr->text, sizeof(char) * index);
-    }
-    memcpy(newptr + index, text, sizeof(char) * n);
-    if (cstr->len - index) {
-      memcpy(newptr + index + n, cstr->text + index, sizeof(char) * (cstr->len - index));
-    }
-    // printf("atc-5\n");
-    free(cstr->text);
-    // printf("atc-6\n");
-    cstr->text = newptr;
-    // printf("atc-7\n");
-    cstr->alloc = new_allocated_size;
-    cstr->len += n;
-    cstr->text[cstr->len] = '\0';
-    // printf("atc-8\n");
-    return 0;
-  }
-
-  memmove(cstr->text + index + n, cstr->text + index, sizeof(char) * (cstr->len - index));
-  memcpy(cstr->text + index, text, sizeof(char) * n);
-  cstr->len += n;
-  cstr->text[cstr->len] = '\0';
-
-  return 0;
-}
-
-static int remove_from__csl_c_str(_csl_c_str *cstr, int start_index, int len)
-{
-  if (start_index > cstr->len || len == 0)
-    return 0;
-
-  if (start_index + len == cstr->len) {
-    cstr->len = start_index;
-    return 0;
-  }
-
-  int a;
-  for (a = 0; start_index + len + a < cstr->len; ++a) {
-    cstr->text[start_index + a] = cstr->text[start_index + len + a];
-  }
-  cstr->len -= len;
-  cstr->text[cstr->len] = '\0';
-
-  return 0;
-}
+//   register_midge_thread_conclusion(mc_error_thread_index);
+//   // return routine_result;
+//   return NULL;
+// }
 
 static int _mcl_obtain_core_source_information(void **p_core_source_info)
 {
@@ -334,7 +185,7 @@ static int _mcl_find_sequence_in_text_ignoring_empty_text(const char *text, cons
 
 const char *_mcl_core_structs[] = {
     // midge_common.h
-    "c_str",
+    "mc_str",
 
     // core_definitions.h
     "source_file_type",
@@ -402,8 +253,6 @@ const char *_mcl_ignore_functions[] = {
     "fread",
     "fclose",
     "cprintf",
-    "allocate_and_copy_cstr",
-    "allocate_and_copy_cstrn",
     "isalpha",
     "usleep",
     // "clint_declare",
@@ -416,17 +265,17 @@ const char *_mcl_core_functions[] = {
     "tcci_add_string",
 
     // midge_common
-    "init_c_str",
-    "init_c_str_with_specific_capacity",
-    "set_c_str",
-    "set_c_strn",
-    "release_c_str",
-    "append_char_to_c_str",
-    "append_to_c_str",
-    "append_to_c_strn",
-    "append_to_c_strf",
-    "insert_into_c_str",
-    "restrict_c_str",
+    "init_mc_str",
+    "init_mc_str_with_specific_capacity",
+    "set_mc_str",
+    "set_mc_strn",
+    "release_mc_str",
+    "append_char_to_mc_str",
+    "append_to_mc_str",
+    "append_to_mc_strn",
+    "append_to_mc_strf",
+    "insert_into_mc_str",
+    "restrict_mc_str",
 
     // core_definitions
     "obtain_midge_global_root",
@@ -508,7 +357,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_text_with_indent",
     "mct_transcribe_file_root_children",
     "mct_transcribe_file_ast",
-    "mcs_append_syntax_node_to_c_str",
+    "mcs_append_syntax_node_to_mc_str",
 
     // mc_source
     "attach_struct_info_to_owner",
@@ -557,7 +406,7 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_struct_declaration_list",
     "mcs_copy_syntax_node_to_text",
     "mct_contains_mc_invoke",
-    "mcs_append_syntax_node_to_c_str",
+    "mcs_append_syntax_node_to_mc_str",
     "mct_transcribe_expression",
     "mct_transcribe_type_identifier",
     "mct_transcribe_invocation",
@@ -635,11 +484,9 @@ static int _mcl_print_parse_error(const char *const text, int index, const char 
 }
 
 const char *_mcl_core_files[] = {
-    "src/midge_common.h",
     "src/core/core_definitions.h",
     "src/core/c_parser_lexer.h",
     "src/core/mc_code_transcription.h",
-    "src/midge_common.c",
     "src/core/core_definitions.c",
     "src/core/c_parser_lexer.c",
     "src/core/mc_code_transcription.c",
@@ -648,11 +495,10 @@ const char *_mcl_core_files[] = {
     NULL,
 };
 
-#define MCL_CORE_SOURCE_FILE_COUNT 7
+#define MCL_CORE_SOURCE_FILE_COUNT 4
 const char *_mcl_core_source_files[] = {
     // "dep/tinycc/lib/va_list.c", // TODO -- this
     // "src/midge_error_handling.c",
-    "src/midge_common.c",
     "src/core/core_definitions.c",
     "src/core/c_parser_lexer.c",
     "src/core/mc_code_transcription.c",
@@ -661,405 +507,17 @@ const char *_mcl_core_source_files[] = {
     NULL,
 };
 
-const char *_mcl_core_defines[] = {
-    "MIDGE_COMMON_H",
-    "CORE_DEFINITIONS_H",
-    "C_PARSER_LEXER_H",
-    "MC_CODE_TRANSCRIPTION_H",
-    // And everything here before -------------------------------------------------------------
-    NULL,
-};
-
-static int _mcl_format_core_file(_csl_c_str *src, int source_file_index)
-{
-  // // Replace Core Defines
-  // for (int i = 0; i < src->len; ++i) {
-  //   for (int a = 0; _mcl_core_defines[a]; ++a) {
-  //     if (!strncmp(src->text + i, _mcl_core_defines[a], strlen(_mcl_core_defines[a]))) {
-  //       insert_into__csl_c_str(src, "MC_CORE_DEF_", i);
-  //       i += 13;
-  //       break;
-  //     }
-  //   }
-  // }
-
-  // // Search for more structs/enums
-  // for (int i = 1; i < src->len; ++i) {
-  //   if (!strncmp(src->text + i, "typedef struct ", 15)) {
-  //     int preamble_offset = i + 15;
-  //     bool found = false;
-  //     for (int o = 0; _mcl_core_structs[o]; ++o) {
-  //       int n = strlen(_mcl_core_structs[o]);
-  //       if (!strncmp(src->text + preamble_offset, _mcl_core_structs[o], n)) {
-  //         found = true;
-  //         break;
-  //       }
-  //     }
-  //     if (!found) {
-  //       char *type_name;
-  //       for (int j = preamble_offset;; ++j) {
-  //         if (!isalpha(src->text[j]) && src->text[j] != '_') {
-  //           int len = j - (preamble_offset);
-  //           type_name = (char *)malloc(sizeof(char) * (len + 1));
-  //           strncpy(type_name, src->text + preamble_offset, len);
-  //           type_name[len] = '\0';
-  //           break;
-  //         }
-  //       }
-  //       printf("core-type-to-add:\n\"%s\",\n\n\n", type_name);
-  //       free(type_name);
-  //       return -6;
-  //     }
-  //   }
-  //   if (!strncmp(src->text + i, "typedef enum ", 14)) {
-  //     int preamble_offset = i + 14;
-  //     bool found = false;
-  //     for (int o = 0; _mcl_core_structs[o]; ++o) {
-  //       int n = strlen(_mcl_core_structs[o]);
-  //       if (!strncmp(src->text + preamble_offset, _mcl_core_structs[o], n)) {
-  //         found = true;
-  //         break;
-  //       }
-  //     }
-  //     if (!found) {
-  //       char *type_name;
-  //       for (int j = preamble_offset;; ++j) {
-  //         if (!isalpha(src->text[j]) && src->text[j] != '_') {
-  //           int len = j - (preamble_offset);
-  //           type_name = (char *)malloc(sizeof(char) * (len + 1));
-  //           strncpy(type_name, src->text + preamble_offset, len);
-  //           type_name[len] = '\0';
-  //           break;
-  //         }
-  //       }
-  //       printf("core-type-to-add:\n\"%s\",\n\n\n", type_name);
-  //       free(type_name);
-  //       return -7;
-  //     }
-  //   }
-  // }
-
-  // // No longer accept MCcall / MCvacall
-  // for (int i = 0; i < src->len; ++i) {
-  //   if (!strncmp(src->text + i, "MCcall", 6) || !strncmp(src->text + i, "MCvacall", 8)) {
-  //     MCerror(332, "'%s' contains a MCcall/MCvacall", _mcl_core_source_files[source_file_index]);
-  //   }
-  // }
-
-  // // Functions
-  // for (int i = 0; i < src->len; ++i) {
-  //   // Remove Includes
-  //   if (src->text[i] == '#') {
-  //     if (!strncmp(src->text + i, "#include \"", 10)) {
-
-  //       int s = i, e = i;
-  //       while (src->text[e] != '\n') {
-  //         ++e;
-  //       }
-
-  //       // printf("removing ...'");
-  //       // for (int a = 0; a < e - s; ++a)
-  //       //   printf("%c", src->text[s + a]);
-  //       // printf("'");
-  //       // printf("-'%i' chars\n", e - s);
-
-  //       // Delete all includes
-  //       MCcall(remove_from__csl_c_str(src, s, e - s));
-  //       --i;
-  //       // if (!strcmp(_mcl_core_source_files[a], "src/midge_common.h"))
-  //       //   printf("def:\n%s||\n", src->text);
-  //       //   return 0;
-  //       continue;
-  //     }
-  //   }
-  // }
-
-  // for (int i = 0; i < src->len; ++i) {
-  //   // Exceptions
-  //   switch (src->text[i - 1]) {
-  //   case '_':
-  //   case '"':
-  //     continue;
-  //   default: {
-  //     if (isalpha(src->text[i - 1]))
-  //       continue;
-  //     break;
-  //   }
-  //   }
-
-  //   // Check against each object identity
-  //   for (int o = 0; _mcl_core_structs[o]; ++o) {
-  //     int n = strlen(_mcl_core_structs[o]);
-  //     if (!strncmp(src->text + i, _mcl_core_structs[o], n)) {
-  //       switch (src->text[i + n]) {
-  //       case '_':
-  //       case '"':
-  //         continue;
-  //       default: {
-  //         if (isalpha(src->text[i + n]))
-  //           continue;
-  //         break;
-  //       }
-  //       }
-
-  //       // Insert
-  //       MCcall(insert_into__csl_c_str(src, "mc_core_v_", i));
-  //       i += 10 + n - 1;
-  //     }
-  //   }
-  // }
-
-  // Error-Handling
-  for (int i = 1; i < src->len; ++i) {
-    if (src->text[i] == '(') {
-      // Is it a function that can be "MCcalled"
-      // It has to be a direct function call (a-z,_, no dereferences)
-      // It has to be connected to the previous line by only spaces
-      bool valid = true;
-      bool in_identity = true;
-      int func_start_index = -1;
-      for (int a = i - 1;; --a) {
-        if (a < 0) {
-          valid = false;
-          break;
-        }
-        if (in_identity) {
-          if (isalnum(src->text[a]) || src->text[a] == '_') {
-            continue;
-          }
-          if (i - a == 1) {
-            valid = false;
-            break;
-          }
-          in_identity = false;
-          func_start_index = a + 1;
-        }
-        if (src->text[a] == ' ')
-          continue;
-        if (src->text[a] != '\n') {
-          valid = false;
-        }
-        break;
-      }
-      //
-      if (valid) {
-        valid = false;
-        for (int a = 0;; ++a) {
-          if (!_mcl_core_functions[a])
-            break;
-          if (!strncmp(src->text + func_start_index, _mcl_core_functions[a], strlen(_mcl_core_functions[a]))) {
-            valid = true;
-            break;
-          }
-        }
-        if (!valid) {
-          // if (!strncmp(src->text + func_start_index, "clint_process", 13) ||
-          //     !strncmp(src->text + func_start_index, "clint_declare", 13)) {
-          //   valid = true;
-          // }
-          // else
-          {
-            char fname[128];
-            int f;
-            for (f = 0; f < 128 & func_start_index + f < i; ++f)
-              fname[f] = src->text[func_start_index + f];
-            fname[f] = '\0';
-            bool specified = false;
-            for (int f = 0; _mcl_ignore_functions[f]; ++f) {
-              if (!strcmp(_mcl_ignore_functions[f], fname)) {
-                specified = true;
-                break;
-              }
-            }
-            if (!specified) {
-              printf("i:%i\n", i);
-              printf("core-function-to-add:\n\"%s\",\n\n\n", fname);
-              // MCerror(465, "core_source_loader: unspecified ignore function:'%s'\n", fname);
-              return -5;
-            }
-          }
-        }
-      }
-      if (valid) {
-        int function_end_index = i + 1;
-        int bracket_count = 1;
-        while (bracket_count) {
-          switch (src->text[function_end_index]) {
-          case '"': {
-            bool escaped = false;
-            bool loop = true;
-            while (loop) {
-              ++function_end_index;
-              switch (src->text[function_end_index]) {
-              case '\\': {
-                escaped = !escaped;
-              } break;
-              case '\0': {
-                MCerror(92, "unexpected eof");
-              }
-              case '"': {
-                if (escaped) {
-                  escaped = false;
-                  break;
-                }
-                loop = false;
-              } break;
-              default: {
-                escaped = false;
-              } break;
-              }
-            }
-          } break;
-          case '\0': {
-            _mcl_print_parse_error(src->text, i, "began here", "");
-            MCerror(469, "CheckIt");
-          }
-          case '(':
-            ++bracket_count;
-            break;
-          case ')': {
-            --bracket_count;
-            break;
-          }
-          default:
-            break;
-          }
-          function_end_index++;
-        }
-        if (src->text[function_end_index] == ';') {
-
-          const char *before_template =
-              "{int mc_error_stack_index; "
-              "register_midge_stack_invocation(\"%s\", \"%s\", __LINE__, &mc_error_stack_index); "
-              "int mc_res = ";
-
-          const char *after_template = " if (mc_res) { "
-                                       "printf(\"--%s |line :%%i :ERR:%%i\\n\", __LINE__, mc_res); "
-                                       "return mc_res; "
-                                       "} "
-                                       "register_midge_stack_return(mc_error_stack_index);}";
-
-          const int FNBUF_SIZE = 164;
-          char fnbuf[FNBUF_SIZE];
-          for (int b = 0; b < 164; ++b) {
-            char c = src->text[func_start_index /*+ 10 strlen("mc_core_v_")*/ + b];
-            if (c == '(') {
-              fnbuf[b] = '\0';
-              break;
-            }
-            fnbuf[b] = c;
-          }
-          char befbuf[384];
-          sprintf(befbuf, before_template, fnbuf, _mcl_core_source_files[source_file_index]);
-
-          char aftbuf[384];
-          // int d = 0;
-          // bool in_literal = false;
-          // for (int b = 0; d < FNBUF_SIZE - 4; ++b) {
-          //   char c = src->text[func_start_index + 10 /*strlen("mc_core_v_")*/ + b];
-          //   if (!in_literal && c == ';') {
-          //     fnbuf[d] = '\0';
-          //     break;
-          //   }
-          //   else if (d > FNBUF_SIZE - 4) {
-          //     if (in_literal)
-          //       fnbuf[d++] = '"';
-          //     fnbuf[d] = '\0';
-          //     break;
-          //   }
-          //   if (c == '"') {
-          //     fnbuf[d++] = '\\';
-          //     in_literal = !in_literal;
-          //   }
-          //   else if (c == '%') {
-          //     fnbuf[d++] = '%';
-          //   }
-          //   else if (c == '\\') {
-          //     fnbuf[d++] = '\\';
-          //   }
-          //   fnbuf[d++] = c;
-          // }
-          sprintf(aftbuf, after_template, fnbuf);
-
-          int len = strlen(befbuf) + strlen(aftbuf) + function_end_index + 1 - func_start_index;
-
-          // Turn it into a temporary MCcall
-          MCcall(insert_into__csl_c_str(src, aftbuf, function_end_index + 1));
-          MCcall(insert_into__csl_c_str(src, befbuf, func_start_index));
-          i += strlen(befbuf) + strlen(aftbuf);
-          // if (len > 490) {
-          //   MCcall(insert_into__csl_c_str(src, "\n", function_end_index + 1));
-          //   ++i;
-          // }
-
-          // printf("#########################################################\n"
-          //        "src:\n%s||\n",
-          //        src->text);
-        }
-      }
-    }
-  }
-
-  // puts("\n\n");
-  // puts(src->text);
-  // puts("\n\n");
-
-  // for (int i = 1; i < src->len; ++i) {
-  //   // Exceptions
-  //   // printf("src->text:%p %c\n", src->text, src->text[i - 1]);
-  //   //     puts("got7");
-  //   switch (src->text[i - 1]) {
-  //   case '_':
-  //   case '"':
-  //     continue;
-  //   default: {
-  //     //     puts("got6");
-  //     if (isalpha(src->text[i - 1]))
-  //       continue;
-
-  //     //     puts("got9");
-  //     break;
-  //   }
-  //   }
-  //   // puts("got8");
-
-  //   for (int o = 0; _mcl_core_functions[o]; ++o) {
-  //     int n = strlen(_mcl_core_functions[o]);
-  //     if (!strncmp(src->text + i, _mcl_core_functions[o], n)) {
-  //       // Exceptions
-  //       switch (src->text[i + n]) {
-  //       case '_':
-  //       case '"':
-  //         continue;
-  //       default: {
-  //         if (isalpha(src->text[i + n]))
-  //           continue;
-  //         break;
-  //       }
-  //       }
-
-  //       // Insert
-  //       MCcall(insert_into__csl_c_str(src, "mc_core_v_", i));
-  //       i += 10 + n - 1;
-  //     }
-  //   }
-  //   // puts("got9");
-  // }
-
-  return 0;
-}
-
 static int _mcl_determine_cached_file_name(const char *input, char **output)
 {
-  _csl_c_str *str;
-  MCcall(init__csl_c_str(&str));
-  MCcall(set__csl_c_str(str, "bin/cached/_cmc_"));
+  mc_str *str;
+  MCcall(init_mc_str(&str));
+  MCcall(set_mc_str(str, "bin/cached/_cmc_"));
 
   int fni = 0;
   fni += 11;
   for (int k = 0; k < 256; ++k) {
     if (input[k] == '/') {
-      append_to__csl_c_str(str, "_");
+      append_to_mc_str(str, "_");
     }
     else {
       if (input[k] == '\0') {
@@ -1068,194 +526,81 @@ static int _mcl_determine_cached_file_name(const char *input, char **output)
       char cs[3];
       cs[0] = input[k];
       cs[1] = '\0';
-      append_to__csl_c_str(str, cs);
+      append_to_mc_str(str, cs);
     }
   }
 
   *output = str->text;
-  release__csl_c_str(str, false);
+  release_mc_str(str, false);
 
   return 0;
 }
 
-int _mcl_load_core_temp_source(TCCInterpState *tmp_itp)
-{
-  // char buf[128];
-  // sprintf(buf,
-  //         "#include \"tinycc/libtccinterp.h\"\n"
-  //         "TCCInterpState *mc_obtain_interpreter() {\n"
-  //         "  return (TCCInterpState *)%p;\n"
-  //         "}",
-  //         tmp_itp);
-  // MCcall(tcci_add_string(tmp_itp, "obtain_interpreter.c", buf));
+// int _mcl_load_core_temp_source(TCCInterpState *tmp_itp)
+// {
+//   mc_str *src;
+//   MCcall(init_mc_str(&src));
 
-  // printf("\n...interpreting temp core source:\n");
-  // for (int i = 0; i < MCL_CORE_SOURCE_FILE_COUNT; ++i) {
-  //   printf("--'%s'\n", _mcl_core_source_files[i]);
-  // }
-  // MCcall(tcci_add_files(tmp_itp, _mcl_core_source_files, MCL_CORE_SOURCE_FILE_COUNT));
+//   for (int a = 0; _mcl_core_source_files[a]; ++a) {
+//     char *file_text;
 
-  printf("init__csl_c_str=%p\n", &init__csl_c_str);
-  _csl_c_str *src;
-  MCcall(init__csl_c_str(&src));
+//     char *cached_file_name;
+//     _mcl_determine_cached_file_name(_mcl_core_source_files[a], &cached_file_name);
 
-  // set__csl_c_str(src, "abcdefghijklmnopqrstuvwxyz");
-  // printf("%s\n", src->text);
-  // MCcall(remove_from__csl_c_str(src, 3, 13));
-  // printf("%s\n", src->text);
-  // return 0;
+//     // Compare modified times and process new source or use cache
+//     bool use_cached_file = false;
+//     if (access(cached_file_name, F_OK) != -1) {
 
-  for (int a = 0; _mcl_core_source_files[a]; ++a) {
-    char *file_text;
+//       struct stat src_attrib;
+//       stat(_mcl_core_source_files[a], &src_attrib);
 
-    char *cached_file_name;
-    _mcl_determine_cached_file_name(_mcl_core_source_files[a], &cached_file_name);
+//       struct stat cch_attrib;
+//       stat(cached_file_name, &cch_attrib);
 
-    // Compare modified times and process new source or use cache
-    bool use_cached_file = false;
-    if (access(cached_file_name, F_OK) != -1) {
+//       use_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
+//     }
 
-      struct stat src_attrib;
-      stat(_mcl_core_source_files[a], &src_attrib);
+//     // use_cached_file = false;
+//     if (use_cached_file) {
+//       MCcall(_mcl_read_all_file_text(cached_file_name, &file_text));
+//       MCcall(set_mc_str(src, file_text));
+//       free(file_text);
 
-      struct stat cch_attrib;
-      stat(cached_file_name, &cch_attrib);
+//       printf("declaring file[cch]:'%s'\n", _mcl_core_source_files[a]);
+//     }
+//     else {
+//       // Read & process source
+//       MCcall(_mcl_read_all_file_text(_mcl_core_source_files[a], &file_text));
+//       MCcall(set_mc_str(src, file_text));
+//       free(file_text);
 
-      use_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
-    }
+//       printf("declaring file[src]:'%s'\n", _mcl_core_source_files[a]);
+//       MCcall(_mcl_format_core_file(src, a));
+//     }
 
-    // use_cached_file = false;
-    if (use_cached_file) {
-      MCcall(_mcl_read_all_file_text(cached_file_name, &file_text));
-      MCcall(set__csl_c_str(src, file_text));
-      free(file_text);
+//     MCcall(tcci_add_string(tmp_itp, _mcl_core_source_files[a], src->text));
 
-      printf("declaring file[cch]:'%s'\n", _mcl_core_source_files[a]);
-    }
-    else {
-      // Read & process source
-      MCcall(_mcl_read_all_file_text(_mcl_core_source_files[a], &file_text));
-      MCcall(set__csl_c_str(src, file_text));
-      free(file_text);
+//     if (!use_cached_file) {
+//       // Save the processed version to file
+//       _mcl_save_text_to_file(cached_file_name, src->text);
+//     }
 
-      printf("declaring file[src]:'%s'\n", _mcl_core_source_files[a]);
-      // printf("_mcl_format_core_file=%p\n")
-      MCcall(_mcl_format_core_file(src, a));
-    }
+//     free(cached_file_name);
+//     // MCcall(clint_process("printf(\"%p\", &mc_core_v_init_mc_str);//mc_strtr *str;
+//     mc_core_v_inimc_strstr(&str);}"));
+//   }
 
-    // if (!strcmp(_mcl_core_source_files[a], "src/midge_common.h")) {
-    //   printf("def:\n%s||\n", src->text);
-    //   return 3;
-    // }
+//   release_mc_str(src, true);
 
-    // printf("file:'%s'\n%s||\n", _mcl_core_source_files[0], src->text);
-
-    MCcall(tcci_add_string(tmp_itp, _mcl_core_source_files[a], src->text));
-
-    if (!use_cached_file) {
-      // Save the processed version to file
-      _mcl_save_text_to_file(cached_file_name, src->text);
-    }
-
-    free(cached_file_name);
-    // MCcall(clint_process("printf(\"%p\", &mc_core_v_init_c_str);//{c_str *str; mc_core_v_init_c_str(&str);}"));
-  }
-
-  release__csl_c_str(src, true);
-
-  return 0;
-}
-
-static int _mcl_init_core_data(TCCInterpState *tmp_itp)
-{
-  char buf[3072];
-  void *p_global_root;
-  sprintf(buf,
-          "{"
-          // "  mc_node *global = (mc_node *)calloc(sizeof(mc_node), 1);"
-          // "  global->type = NODE_TYPE_GLOBAL_ROOT;"
-          // "  allocate_and_copy_cstr(global->name, \"global\");"
-          // "  global->parent = NULL;"
-          // "  global->children = (mc_node_list *)malloc(sizeof(mc_node_list));"
-          // "  global->children->count = 0;"
-          // "  global->children->alloc = 0;"
-          // "  global->children->items = NULL;"
-          // ""
-          // "  mc_global_data *mc_global_data = (mc_global_data *)"
-          // "                                                 malloc(sizeof(mc_global_data ));"
-          // "  global->data = mc_global_data;"
-          // "  mc_global_data->global_node = global;"
-          // ""
-          // "  mc_global_data->exit_requested = false;"
-          // ""
-          // // "  mc_global_data->children = (mc_node_list *)malloc(sizeof(mc_node_list));"
-          // // "  mc_global_data->children->alloc = 0;"
-          // // "  mc_global_data->children->count = 0;"
-          // ""
-          // "  mc_global_data->source_files.alloc = 100;"
-          // "  mc_global_data->source_files.count = 0;"
-          // "  mc_global_data->source_files.items = (mc_source_file_info **)"
-          // "                       calloc(sizeof(mc_source_file_info *), mc_global_data->source_files.alloc);"
-          // ""
-          // "  mc_global_data->functions.alloc = 100;"
-          // "  mc_global_data->functions.count = 0;"
-          // "  mc_global_data->functions.items = (function_info **)calloc(sizeof(function_info *),"
-          // "                                         mc_global_data->functions.alloc);"
-          // ""
-          // "  mc_global_data->function_declarations.alloc = 100;"
-          // "  mc_global_data->function_declarations.count = 0;"
-          // "  mc_global_data->function_declarations.items = (function_info **)"
-          // "                   calloc(sizeof(function_info *), mc_global_data->function_declarations.alloc);"
-          // ""
-          // "  mc_global_data->structs.alloc = 30;"
-          // "  mc_global_data->structs.count = 0;"
-          // "  mc_global_data->structs.items = (struct_info **)calloc(sizeof(struct_info *),"
-          // "                                       mc_global_data->structs.alloc);"
-          // ""
-          // "  mc_global_data->enumerations.alloc = 20;"
-          // "  mc_global_data->enumerations.count = 0;"
-          // "  mc_global_data->enumerations.items = (enumeration_info **)"
-          // "                       calloc(sizeof(enumeration_info *), mc_global_data->enumerations.alloc);"
-          // ""
-          // "  mc_global_data->preprocess_defines.alloc = 20;"
-          // "  mc_global_data->preprocess_defines.count = 0;"
-          // "  mc_global_data->preprocess_defines.items = (preprocess_define_info **)"
-          // "                       calloc(sizeof(preprocess_define_info *), "
-          // "                       mc_global_data->preprocess_defines.alloc);"
-          // ""
-          // "  mc_global_data->event_handlers.alloc = 0;"
-          // "  mc_global_data->event_handlers.count = 0;"
-          // ""
-          // "  *(void **)(%p) = (void *)mc_global_data;"
-          "}",
-          &p_global_root);
-  // usleep(100000);
-  // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_init_core_data]init.c", buf));
-  return 0;
-
-  sprintf(buf,
-          "int obtain_midge_global_root(mc_global_data **root_data) {\n"
-          "  *root_data = (mc_global_data *)(%p);\n"
-          "  return 0;\n"
-          "}\n",
-          p_global_root);
-  // MCcall(mcc_interpret_file_contents("core_source_loader]set_obtain.c", buf));
-
-  return 0;
-}
+//   return 0;
+// }
 
 static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
 {
-  // int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info
-  // **source_file)
   int (*mcs_interpret_file)(TCCInterpState *, const char *) = tcci_get_symbol(tmp_itp, "mcs_interpret_file");
   if (!mcs_interpret_file) {
     MCerror(1240, "Couldn't obtain mcs_interpret_file");
   }
-
-  // mc_global_data *root_data;
-  // int (*obtain_midge_global_root)(mc_global_data **) = tcci_get_symbol(tmp_itp, "obtain_midge_global_root");
-  // obtain_midge_global_root(&root_data);
 
   char buf[512];
   for (int i = 0; _mcl_core_files[i]; ++i) {
@@ -1266,59 +611,6 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
     if (result != 0) {
       return result;
     }
-
-    // // DEBUG
-    // // DEBUG
-    // MCcall(clint_process("void *vv[1]; do_many_things(1, vv);"));
-
-    // if (result != 0) {
-    //   return result;
-    // }
-    // // DEBUG
-    // // DEBUG
-    // }
-
-    // // obtain_midge_global_root function
-    // {
-    //   void *p_global_data;
-    //   sprintf(buf,
-    //           "{\n"
-    //           "  mc_core_v_mc_global_data *global_data;\n"
-    //           "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
-    //           "  *(void **)%p = (void *)global_data;\n"
-    //           "}",
-    //           &p_global_data);
-    //   // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_core_mc_source]obtain_global_root_ptr.c", buf));
-
-    //   char fbuf[148];
-    //   sprintf(fbuf,
-    //           "int obtain_midge_global_root(mc_global_data **root_data) {\n"
-    //           "  *root_data = (mc_global_data *)(%p);\n"
-    //           "  return 0;\n"
-    //           "}\n",
-    //           p_global_data);
-
-    //   int result = 0;
-    //   sprintf(buf,
-    //           "{\n"
-    //           "  mc_core_v_mc_global_data *global_data;\n"
-    //           "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
-
-    //           "  int result = mc_core_v_instantiate_definition(global_data->global_node, (char *)%p,"
-    //           "                 NULL, NULL, NULL);\n"
-    //           "  if (result) {\n"
-    //           "    printf(\"--mc_core_v_instantiate_definition #in - single_use\\n\");\n"
-    //           "    *(int *)(%p) = result;\n"
-    //           "  }\n"
-    //           "}",
-    //           fbuf, &result);
-    //   //
-    //   MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_core_mc_source]instantiate_obtain_global_data.c",
-    //   // buf));
-
-    //   if (result != 0) {
-    //     return result;
-    //   }
   }
 
   return 0;
@@ -1326,6 +618,11 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
 
 int _mcl_load_app_mc_source(TCCInterpState *itp)
 {
+  // Used by the MCcall macro
+  void (*register_midge_stack_invocation)(const char *, const char *, int, int *) =
+      tcci_get_symbol(itp, "register_midge_stack_invocation");
+  void (*register_midge_stack_return)(int) = tcci_get_symbol(itp, "register_midge_stack_return");
+
   {
     // const char *_mcl_external_dependency_source_files[] = {
     //     "src/temp/external_decl.h",
@@ -1380,24 +677,24 @@ int _mcl_load_app_mc_source(TCCInterpState *itp)
       // Headers required for app initialization
       "src/m_threads.h",
       "src/platform/mc_xcb.h",
-      "src/render/render_common.h",
-      "src/render/mc_vulkan.h",
-      "src/render/mc_vk_utils.h",
-      "src/render/render_thread.h",
-      "src/core/midge_app.h",
+      // "src/render/render_common.h",
+      // "src/render/mc_vulkan.h",
+      // "src/render/mc_vk_utils.h",
+      // "src/render/render_thread.h",
+      // "src/core/midge_app.h",
 
-      // Headers that will be declared just before app initialization
-      "src/env/environment_definitions.h",
-      "src/ui/ui_definitions.h",
-      "src/control/mc_controller.h",
+      // // Headers that will be declared just before app initialization
+      // "src/env/environment_definitions.h",
+      // "src/ui/ui_definitions.h",
+      // "src/control/mc_controller.h",
 
-      // Source required for app initialization
-      "src/platform/mc_xcb.c",
-      "src/render/mc_vulkan.c",
-      "src/render/mc_vk_utils.c",
-      "src/render/render_thread.c",
-      "src/core/app_modules.c",
-      "src/core/midge_app.c",
+      // // Source required for app initialization
+      // "src/platform/mc_xcb.c",
+      // "src/render/mc_vulkan.c",
+      // "src/render/mc_vk_utils.c",
+      // "src/render/render_thread.c",
+      // "src/core/app_modules.c",
+      // "src/core/midge_app.c",
 
       // And everything here before -------------------------------------------------------------
       NULL,
@@ -1471,7 +768,10 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
                                    &temp_source_error_stack_index);
   }
 
-  // register_midge_stack_invocation("mcl_load_app_source", "core_source_loader.c", 100, temp_source_error_stack_index);
+  // Used by the MCcall macro
+  void (*register_midge_stack_invocation)(const char *, const char *, int, int *) =
+      tcci_get_symbol(itp, "register_midge_stack_invocation");
+  void (*register_midge_stack_return)(int) = tcci_get_symbol(itp, "register_midge_stack_return");
 
   // Initialize the new interpreter
   TCCInterpState *midge_itp;
@@ -1504,8 +804,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     const char *initial_compile_list[] = {
         "dep/tinycc/lib/va_list.c", // TODO -- this
         "src/midge_error_handling.c",
-        // And everything here before -------------------------------------------------------------
         "src/core/init_global_root.c",
+        "src/core/mc_str.c",
     };
     MCcall(tcci_add_files(midge_itp, initial_compile_list, sizeof(initial_compile_list) / sizeof(const char *)));
 
@@ -1532,7 +832,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 
   // Load the rest of the temporary source
   puts("[_mcl_load_core_temp_source]");
-  MCcall(_mcl_load_core_temp_source(itp));
+  // MCcall(_mcl_load_core_temp_source(itp));
+  MCcall(tcci_add_files(itp, _mcl_core_source_files, MCL_CORE_SOURCE_FILE_COUNT));
 
   // Begin loading into the midge interpreter state using the preload interpreter state
   puts("[_mcl_load_core_mc_source]");
@@ -1540,13 +841,16 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 
   // Replace the temporary interpreter with the app version
   // -- Conclude the temporary interpreter
-  void (*register_midge_thread_conclusion)(unsigned int) = tcci_get_symbol(midge_itp, "register_midge_thread_conclusion");
+  void (*register_midge_thread_conclusion)(unsigned int) = tcci_get_symbol(itp, "register_midge_thread_conclusion");
   register_midge_thread_conclusion(temp_source_error_thread_index);
 
   // -- Switch error handling to be monitored by the mc loaded source interpreter
   init_error_handling = tcci_get_symbol(midge_itp, "initialize_midge_error_handling");
   init_error_handling();
   register_midge_thread_creation = tcci_get_symbol(midge_itp, "register_midge_thread_creation");
+
+  register_midge_stack_invocation = tcci_get_symbol(midge_itp, "register_midge_stack_invocation");
+  register_midge_stack_return = tcci_get_symbol(midge_itp, "register_midge_stack_return");
 
   {
     // Resume thread error handling
@@ -1556,8 +860,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   }
 
   // Load the remainder of the application source files with the new interpreter
-  // printf("[_mcl_load_app_mc_source]\n");
-  // MCcall(_mcl_load_app_mc_source(midge_itp));
+  printf("[_mcl_load_app_mc_source]\n");
+  MCcall(_mcl_load_app_mc_source(midge_itp));
 
   printf("[_mcl_load_source:COMPLETE]\n");
   *mc_interp = midge_itp;

@@ -139,12 +139,12 @@ void init_modus_operandi(mc_node *app_root)
   // layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
   // layout->padding = {150, 300, 0, 0};
 
-  // set_c_str(text_block->str, "");
+  // set_mc_str(text_block->str, "");
   // for (int a = 32; a < 128; ++a) {
   //   char buf[2];
   //   buf[0] = (char)a;
   //   buf[1] = '\0';
-  //   append_to_c_str(text_block->str, buf);
+  //   append_to_mc_str(text_block->str, buf);
   // }
   // text_block->font_color = COLOR_LIGHT_YELLOW;
 }
