@@ -1,4 +1,4 @@
-# __midge__
+ # __midge__
 
 A graphical development framework and editor environment intended for innovative development of interactive visual applications.
 

@@ -594,6 +594,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
 
 int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 {
+  puts("mcs_interpret_file");
   int res;
   char *code;
   mc_syntax_node *file_ast;
@@ -632,8 +633,8 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
   }
 
   // if (!strcmp("src/core/mc_source.c", filepath))
-    // printf("\ngen-code:\n%s||\n", code);
-  // MCerror(7704, "TODO");
+  // printf("\ngen-code:\n%s||\n", code);
+  // // MCerror(7704, "TODO");
 
   // Send the code to the interpreter
   obtain_midge_global_root(&gdata);

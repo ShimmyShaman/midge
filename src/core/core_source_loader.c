@@ -1324,55 +1324,55 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
   return 0;
 }
 
-static int _mcl_load_app_mc_source()
+int _mcl_load_app_mc_source(TCCInterpState *itp)
 {
-  MCerror(1329, "PROGRESS");
-  const char *_mcl_external_dependency_source_files[] = {
-      "src/temp/external_decl.h",
+  {
+    // const char *_mcl_external_dependency_source_files[] = {
+    //     "src/temp/external_decl.h",
 
-      // And everything here before -------------------------------------------------------------
-      NULL,
-  };
+    //     // And everything here before -------------------------------------------------------------
+    //     NULL,
+    // };
 
-  char buf[1536];
-  for (int i = 0; _mcl_external_dependency_source_files[i]; ++i) {
-    printf("registering external file:'%s'\n", _mcl_external_dependency_source_files[i]);
-    int result = 0;
-    sprintf(buf,
-            "{\n"
-            "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
-            "  mc_core_v_mc_global_data *global_data;\n"
-            "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
-            ""
-            "  void *mc_vargs[4];\n"
-            "  mc_vargs[0] = &global_data->global_node;\n"
-            "  const char *filepath = \"%s\";\n"
-            "  mc_vargs[1] = &filepath;\n"
-            "  void * p_null = NULL;\n"
-            "  mc_vargs[2] = &p_null;\n"
-            "  int return_value;\n"
-            "  mc_vargs[3] = &return_value;\n"
-            ""
-            "  {\n"
-            "    int midge_error_stack_index;\n"
-            "    register_midge_stack_invocation(\"instantiate_all_definitions_from_file\", \"core_source_loader.c\", "
-            "          1224, &midge_error_stack_index);\n"
-            "    int result = 0;\n"
-            "    result = register_external_definitions_from_file(4, mc_vargs);\n"
-            "    register_midge_stack_return(midge_error_stack_index);\n"
-            ""
-            "    if (result) {\n"
-            "      printf(\"--register_external_definitions_from_file #in - clint_process\\n\");\n"
-            "      *(int *)(%p) = result;\n"
-            "    }\n"
-            "  }\n"
-            "}",
-            _mcl_external_dependency_source_files[i], &result);
-    // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_app_mc_source]register_external_file.c", buf));
+    // char buf[1536];
+    // for (int i = 0; _mcl_external_dependency_source_files[i]; ++i) {
+    //   printf("registering external file:'%s'\n", _mcl_external_dependency_source_files[i]);
+    //   int result = 0;
+    //   sprintf(buf,
+    //           "{\n"
+    //           "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
+    //           "  mc_core_v_mc_global_data *global_data;\n"
+    //           "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
+    //           ""
+    //           "  void *mc_vargs[4];\n"
+    //           "  mc_vargs[0] = &global_data->global_node;\n"
+    //           "  const char *filepath = \"%s\";\n"
+    //           "  mc_vargs[1] = &filepath;\n"
+    //           "  void * p_null = NULL;\n"
+    //           "  mc_vargs[2] = &p_null;\n"
+    //           "  int return_value;\n"
+    //           "  mc_vargs[3] = &return_value;\n"
+    //           ""
+    //           "  {\n"
+    //           "    int midge_error_stack_index;\n"
+    //           "    register_midge_stack_invocation(\"instantiate_all_definitions_from_file\",
+    //           \"core_source_loader.c\", " "          1224, &midge_error_stack_index);\n" "    int result = 0;\n" "
+    //           result = register_external_definitions_from_file(4, mc_vargs);\n" "
+    //           register_midge_stack_return(midge_error_stack_index);\n"
+    //           ""
+    //           "    if (result) {\n"
+    //           "      printf(\"--register_external_definitions_from_file #in - clint_process\\n\");\n"
+    //           "      *(int *)(%p) = result;\n"
+    //           "    }\n"
+    //           "  }\n"
+    //           "}",
+    //           _mcl_external_dependency_source_files[i], &result);
+    //   // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_app_mc_source]register_external_file.c", buf));
 
-    if (result != 0) {
-      return result;
-    }
+    //   if (result != 0) {
+    //     return result;
+    //   }
+    // }
   }
 
   register_midge_error_tag("_mcl_load_app_mc_source()");
@@ -1403,43 +1403,50 @@ static int _mcl_load_app_mc_source()
       NULL,
   };
 
+  int (*mcs_interpret_file)(TCCInterpState *, const char *) = tcci_get_symbol(itp, "mcs_interpret_file");
+  if (!mcs_interpret_file) {
+    MCerror(1409, "Could not obtain mcs_interpret_file");
+  }
+  printf("mcs_interpret_file=%p\n", mcs_interpret_file);
   for (int i = 0; _mcl_app_source_files[i]; ++i) {
-    int result = 0;
-    sprintf(buf,
-            "{\n"
-            "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
-            "  mc_core_v_mc_global_data *global_data;\n"
-            "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
-            ""
-            "  void *mc_vargs[4];\n"
-            "  mc_vargs[0] = &global_data->global_node;\n"
-            "  const char *filepath = \"%s\";\n"
-            "  mc_vargs[1] = &filepath;\n"
-            "  void *p_null = NULL;\n"
-            "  mc_vargs[2] = &p_null;\n"
-            "  int return_value;\n"
-            "  mc_vargs[3] = &return_value;\n"
-            ""
-            "  {\n"
-            "    int midge_error_stack_index;\n"
-            "    register_midge_stack_invocation(\"instantiate_all_definitions_from_file\", \"core_source_loader.c\", "
-            "          1224, &midge_error_stack_index);\n"
-            "    int result = 0;\n"
-            "    result = instantiate_all_definitions_from_file(4, mc_vargs);\n"
-            "    register_midge_stack_return(midge_error_stack_index);\n"
-            ""
-            "    if (result) {\n"
-            "      printf(\"--instantiate_all_definitions_from_file #in - clint_process\\n\");\n"
-            "      *(int *)(%p) = result;\n"
-            "    }\n"
-            "  }\n"
-            "}",
-            _mcl_app_source_files[i], &result);
-    // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_app_mc_source]register_external_file.c", buf));
 
-    if (result != 0) {
-      return result;
-    }
+    MCcall(mcs_interpret_file(itp, _mcl_app_source_files[i]));
+
+    // int result = 0;
+    // sprintf(buf,
+    //         "{\n"
+    //         "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
+    //         "  mc_core_v_mc_global_data *global_data;\n"
+    //         "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
+    //         ""
+    //         "  void *mc_vargs[4];\n"
+    //         "  mc_vargs[0] = &global_data->global_node;\n"
+    //         "  const char *filepath = \"%s\";\n"
+    //         "  mc_vargs[1] = &filepath;\n"
+    //         "  void *p_null = NULL;\n"
+    //         "  mc_vargs[2] = &p_null;\n"
+    //         "  int return_value;\n"
+    //         "  mc_vargs[3] = &return_value;\n"
+    //         ""
+    //         "  {\n"
+    //         "    int midge_error_stack_index;\n"
+    //         "    register_midge_stack_invocation(\"instantiate_all_definitions_from_file\", \"core_source_loader.c\",
+    //         " "          1224, &midge_error_stack_index);\n" "    int result = 0;\n" "    result =
+    //         instantiate_all_definitions_from_file(4, mc_vargs);\n" "
+    //         register_midge_stack_return(midge_error_stack_index);\n"
+    //         ""
+    //         "    if (result) {\n"
+    //         "      printf(\"--instantiate_all_definitions_from_file #in - clint_process\\n\");\n"
+    //         "      *(int *)(%p) = result;\n"
+    //         "    }\n"
+    //         "  }\n"
+    //         "}",
+    //         _mcl_app_source_files[i], &result);
+    // // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_app_mc_source]register_external_file.c", buf));
+
+    // if (result != 0) {
+    //   return result;
+    // }
   }
 
   return 0;
@@ -1449,16 +1456,16 @@ static int _mcl_load_app_mc_source()
      initialized interpreter state which is then returned in the pointer reference. Note: Cleanup
      of the passed in interpreter will be dealt with by this method. Only freeing/deletion of the
      returned interpreter state is required by the caller. */
-int mcl_load_app_source(TCCInterpState **itp)
+int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc_interp_error_thread_index)
 {
   // Begin error handling for the temp source loading
-  void (*init_error_handling)(void) = tcci_get_symbol(*itp, "initialize_midge_error_handling");
+  void (*init_error_handling)(void) = tcci_get_symbol(itp, "initialize_midge_error_handling");
   init_error_handling();
 
   unsigned int temp_source_error_thread_index;
   int temp_source_error_stack_index;
-  // void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
-  //     tcci_get_symbol(*itp, "register_midge_thread_creation");
+  void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
+      tcci_get_symbol(itp, "register_midge_thread_creation");
   {
     register_midge_thread_creation(&temp_source_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463,
                                    &temp_source_error_stack_index);
@@ -1467,7 +1474,6 @@ int mcl_load_app_source(TCCInterpState **itp)
   // register_midge_stack_invocation("mcl_load_app_source", "core_source_loader.c", 100, temp_source_error_stack_index);
 
   // Initialize the new interpreter
-  unsigned int midge_error_thread_index;
   TCCInterpState *midge_itp;
   {
     midge_itp = tcci_new();
@@ -1492,7 +1498,7 @@ int mcl_load_app_source(TCCInterpState **itp)
     //         "  return (TCCInterpState *)%p;\n"
     //         "}",
     //         midge_itp);
-    // MCcall(tcci_add_string(*itp, "obtain_interpreter.c", buf));
+    // MCcall(tcci_add_string(itp, "obtain_interpreter.c", buf));
     // MCcall(tcci_add_string(midge_itp, "obtain_interpreter.c", buf));
 
     const char *initial_compile_list[] = {
@@ -1503,17 +1509,6 @@ int mcl_load_app_source(TCCInterpState **itp)
     };
     MCcall(tcci_add_files(midge_itp, initial_compile_list, sizeof(initial_compile_list) / sizeof(const char *)));
 
-    // void (*init_error_handling)(void) = tcci_get_symbol(midge_itp, "initialize_midge_error_handling");
-    // init_error_handling();
-
-    // void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
-    //     tcci_get_symbol(midge_itp, "register_midge_thread_creation");
-    // {
-    //   int dummy_int;
-    //   register_midge_thread_creation(&midge_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463,
-    //                                  &dummy_int);
-    // }
-
     // Initialize midge global data and allow it to be obtained from temp source interpreter
     int (*init_mc_global_data)(TCCInterpState *) = tcci_get_symbol(midge_itp, "init_mc_global_data");
     MCcall(init_mc_global_data(midge_itp));
@@ -1521,12 +1516,12 @@ int mcl_load_app_source(TCCInterpState **itp)
     // printf("mcl_load_app_source, addr:%p\n", mcl_load_app_source);
 
     // mc_global_data *data;
-    // int (*obtain_midge_global_root)(mc_global_data **) = tcci_get_symbol(*itp, "obtain_midge_global_root");
+    // int (*obtain_midge_global_root)(mc_global_data **) = tcci_get_symbol(itp, "obtain_midge_global_root");
     // obtain_midge_global_root(&data);
     // printf("obtain_midge_global_root(before):%p %p\n", obtain_midge_global_root, data);
 
     int (*mdg_obtain_midge_global_root)(mc_global_data **) = tcci_get_symbol(midge_itp, "obtain_midge_global_root");
-    tcci_set_symbol(*itp, "obtain_midge_global_root", mdg_obtain_midge_global_root);
+    tcci_set_symbol(itp, "obtain_midge_global_root", mdg_obtain_midge_global_root);
 
     // mdg_obtain_midge_global_root(&data);
     // printf("mdg_obtain_midge_global_root(after):%p %p\n", mdg_obtain_midge_global_root, data);
@@ -1537,21 +1532,34 @@ int mcl_load_app_source(TCCInterpState **itp)
 
   // Load the rest of the temporary source
   puts("[_mcl_load_core_temp_source]");
-  MCcall(_mcl_load_core_temp_source(*itp));
+  MCcall(_mcl_load_core_temp_source(itp));
 
   // Begin loading into the midge interpreter state using the preload interpreter state
   puts("[_mcl_load_core_mc_source]");
-  MCcall(_mcl_load_core_mc_source(*itp));
+  MCcall(_mcl_load_core_mc_source(itp));
 
   // Replace the temporary interpreter with the app version
-  tcci_delete(*itp);
-  *itp = midge_itp;
+  // -- Conclude the temporary interpreter
+  void (*register_midge_thread_conclusion)(unsigned int) = tcci_get_symbol(midge_itp, "register_midge_thread_conclusion");
+  register_midge_thread_conclusion(temp_source_error_thread_index);
+
+  // -- Switch error handling to be monitored by the mc loaded source interpreter
+  init_error_handling = tcci_get_symbol(midge_itp, "initialize_midge_error_handling");
+  init_error_handling();
+  register_midge_thread_creation = tcci_get_symbol(midge_itp, "register_midge_thread_creation");
+
+  {
+    // Resume thread error handling
+    int dummy_int;
+    register_midge_thread_creation(mc_interp_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1555,
+                                   &dummy_int);
+  }
 
   // Load the remainder of the application source files with the new interpreter
-  printf("[_mcl_load_app_mc_source]\n");
-  MCcall(_mcl_load_app_mc_source());
+  // printf("[_mcl_load_app_mc_source]\n");
+  // MCcall(_mcl_load_app_mc_source(midge_itp));
 
   printf("[_mcl_load_source:COMPLETE]\n");
-
+  *mc_interp = midge_itp;
   return 0;
 }

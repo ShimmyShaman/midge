@@ -16,11 +16,9 @@
 #define CLOCK_REALTIME 0
 #endif
 
-#ifndef __cplusplus
 typedef unsigned char bool;
 static const bool false = 0;
 static const bool true = 1;
-#endif
 
 typedef unsigned int uint;
 

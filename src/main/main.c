@@ -362,20 +362,20 @@
 // #include <unistd.h>
 // #include <vector>
 
-// int mcc_set_pp_define(const char *identifier, const char *value) { return tcci_set_pp_define(itp, identifier,
+// int mcc_set_pp_define(const char *identifier, const char *value) { return tcci_set_pp_define(loader_itp, identifier,
 // value); }
 
 // int mcc_interpret_and_execute_single_use_code(const char *filename, const char *comma_seperated_includes,
 //                                               const char *contents)
 // {
 //   printf("\n...interpreting single-use '%s'\n", filename);
-//   return tcci_execute_single_use_code(itp, filename, comma_seperated_includes, contents);
+//   return tcci_execute_single_use_code(loader_itp, filename, comma_seperated_includes, contents);
 // }
 
 // int mcc_interpret_file_contents(const char *filename, const char *contents)
 // {
 //   printf("\n...interpreting file-str '%s'\n", filename);
-//   return tcci_add_string(itp, filename, contents);
+//   return tcci_add_string(loader_itp, filename, contents);
 // }
 
 // int mcc_interpret_file_on_disk(const char *filepath)
@@ -396,7 +396,7 @@
 //   contents[fsize] = '\0';
 
 //   printf("\n...interpreting file-dsk '%s'\n", filepath);
-//   return tcci_add_string(itp, filepath, contents);
+//   return tcci_add_string(loader_itp, filepath, contents);
 // }
 
 // int mcc_interpret_files_in_block(const char **files, int nb_files)
@@ -405,13 +405,14 @@
 //   for (int i = 0; i < nb_files; ++i) {
 //     printf("--'%s'\n", files[i]);
 //   }
-//   return tcci_add_files(itp, files, nb_files);
+//   return tcci_add_files(loader_itp, files, nb_files);
 // }
 
-// void *mcc_set_global_symbol(const char *symbol_name, void *ptr) { return tcci_set_symbol(itp, symbol_name, ptr);
+// void *mcc_set_global_symbol(const char *symbol_name, void *ptr) { return tcci_set_symbol(loader_itp, symbol_name,
+// ptr);
 // }
 
-// void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(itp, symbol_name); }
+// void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(loader_itp, symbol_name); }
 
 #define MCcall(func_call)                          \
   res = func_call;                                 \
@@ -448,29 +449,27 @@ int main(int argc, const char *const *argv)
   clock_gettime(CLOCK_REALTIME, &app_begin_time);
 
   // Initialize the interpreter
-  TCCInterpState *itp = tcci_new();
+  TCCInterpState *loader_itp = tcci_new();
 
   // Add Include Paths
-  MCcall(tcci_add_include_path(itp, "/home/jason/midge/src"));
-  MCcall(tcci_add_include_path(itp, "/home/jason/midge/dep"));
+  MCcall(tcci_add_include_path(loader_itp, "/home/jason/midge/src"));
+  MCcall(tcci_add_include_path(loader_itp, "/home/jason/midge/dep"));
 
-  tcci_set_symbol(itp, "tcci_add_include_path", &tcci_add_include_path);
-  tcci_set_symbol(itp, "tcci_add_files", &tcci_add_files);
-  tcci_set_symbol(itp, "tcci_add_string", &tcci_add_string);
-  tcci_set_symbol(itp, "tcci_set_symbol", &tcci_set_symbol);
-  tcci_set_symbol(itp, "tcci_get_symbol", &tcci_get_symbol);
-  tcci_set_symbol(itp, "tcci_new", &tcci_new);
-  tcci_set_symbol(itp, "tcci_delete", &tcci_delete);
+  tcci_set_symbol(loader_itp, "tcci_add_include_path", &tcci_add_include_path);
+  tcci_set_symbol(loader_itp, "tcci_add_files", &tcci_add_files);
+  tcci_set_symbol(loader_itp, "tcci_add_string", &tcci_add_string);
+  tcci_set_symbol(loader_itp, "tcci_set_symbol", &tcci_set_symbol);
+  tcci_set_symbol(loader_itp, "tcci_get_symbol", &tcci_get_symbol);
+  tcci_set_symbol(loader_itp, "tcci_new", &tcci_new);
+  tcci_set_symbol(loader_itp, "tcci_delete", &tcci_delete);
 
-  // tcci_set_symbol(itp, "mcc_interpret_and_execute_single_use_code", &mcc_interpret_and_execute_single_use_code);
-  // tcci_set_symbol(itp, "mcc_interpret_file_contents", &mcc_interpret_file_contents);
-  // tcci_set_symbol(itp, "mcc_interpret_file_on_disk", &mcc_interpret_file_on_disk);
-  // tcci_set_symbol(itp, "mcc_interpret_files_in_block", &mcc_interpret_files_in_block);
-  // tcci_set_symbol(itp, "mcc_set_global_symbol", &mcc_set_global_symbol);
-  // tcci_set_symbol(itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
+  // tcci_set_symbol(loader_itp, "mcc_interpret_and_execute_single_use_code",
+  // &mcc_interpret_and_execute_single_use_code); tcci_set_symbol(loader_itp, "mcc_interpret_file_contents",
+  // &mcc_interpret_file_contents); tcci_set_symbol(loader_itp, "mcc_interpret_file_on_disk",
+  // &mcc_interpret_file_on_disk); tcci_set_symbol(loader_itp, "mcc_interpret_files_in_block",
+  // &mcc_interpret_files_in_block); tcci_set_symbol(loader_itp, "mcc_set_global_symbol", &mcc_set_global_symbol);
+  // tcci_set_symbol(loader_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
 
-#define USE_CORE_LOADER_FOR_DEBUGGING
-#ifdef USE_CORE_LOADER_FOR_DEBUGGING
   const char *initial_compile_list[] = {
       "dep/tinycc/lib/va_list.c", // TODO -- this
       "src/midge_error_handling.c",
@@ -478,10 +477,10 @@ int main(int argc, const char *const *argv)
       "src/core/init_global_root.c",
       "src/core/core_source_loader.c",
   };
-  MCcall(tcci_add_files(itp, initial_compile_list, 3));
-  MCcall(tcci_add_files(itp, initial_compile_list + 3, sizeof(initial_compile_list) / sizeof(const char *) - 3));
+  MCcall(tcci_add_files(loader_itp, initial_compile_list, 3));
+  MCcall(tcci_add_files(loader_itp, initial_compile_list + 3, sizeof(initial_compile_list) / sizeof(const char *) - 3));
 
-  // int (*print_things)(int, ...) = tcci_get_symbol(itp, "print_things");
+  // int (*print_things)(int, ...) = tcci_get_symbol(loader_itp, "print_things");
   // int *na = malloc(sizeof(int) * 4);
   // na[0] = 1;
   // na[1] = 3;
@@ -492,69 +491,28 @@ int main(int argc, const char *const *argv)
 
   // exit(0);
 
-  int (*mcl_load_app_source)(TCCInterpState **) = tcci_get_symbol(itp, "mcl_load_app_source");
-  MCcall(mcl_load_app_source(&itp));
-#else // For performance?
+  int (*mcl_load_app_source)(TCCInterpState *, TCCInterpState **, int *) =
+      tcci_get_symbol(loader_itp, "mcl_load_app_source");
+  TCCInterpState *mc_itp;
+  unsigned int mc_interp_error_thread_index;
+  MCcall(mcl_load_app_source(loader_itp, &mc_itp, &mc_interp_error_thread_index));
 
-  const char *initial_compile_list[] = {
-      "dep/tinycc/lib/va_list.c", // TODO -- this
-      "src/midge_error_handling.c",
-      "src/midge_common.c",
-      "src/core/core_definitions.c",
-      "src/core/c_parser_lexer.c",
-      "src/core/mc_code_transcription.c",
-      // And everything here before -------------------------------------------------------------
-      "src/core/mc_source.c",
-      "src/core/init_global_root.c",
-  };
-  MCcall(mcc_interpret_files_in_block(initial_compile_list, sizeof(initial_compile_list) / sizeof(const char *)));
+  // Delete the loader interpreter
+  tcci_delete(loader_itp);
+  loader_itp = NULL;
 
-  // Initialize Error Handling
-  void (*initialize_midge_error_handling)(void) = tcci_get_symbol(itp, "initialize_midge_error_handling");
-  initialize_midge_error_handling();
-
-  void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
-      tcci_get_symbol(itp, "register_midge_thread_creation");
-  {
-    unsigned int dummy_uint;
-    int dummy_int;
-    register_midge_thread_creation(&dummy_uint, "main", "main.c", 406, &dummy_int);
-  }
-
-  void (*instantiate_from_file)(void) = tcci_get_symbol(itp, "instantiate_from_file");
-  instantiate_from_file();
-
-  // usleep(100000);
-  //   // Reload it from within midge
-  //   // int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info
-  //   **source_file) int (*instantiate_all_definitions_from_file)(void *, char *, void **) =
-  //   mcc_get_global_symbol("instantiate_all_definitions_from_file"); res =
-  instantiate_all_definitions_from_file(NULL,
-  //   "src/midge_common.c", NULL);
-
-  //   printf("final res:%i\n", res);
-
-#endif
-  // clint->loadFile("/home/jason/midge/src/main/remove_mc_mcva_calls.c");
-  // clint->process("remove_all_MCcalls();");
-  // return 0;
-
-  // clint->AddIncludePath("/home/jason/midge/src");
-  // clint->AddIncludePath("/home/jason/cling/inst/include");
-
-  // clint->loadFile("/home/jason/midge/src/midge.h");
-  // char buf[512];
-  // sprintf(buf, "clint = (cling::Interpreter *)%p;", (void *)clint);
-  // clint->process(buf);
-
+  // TODO
   // int result;
   // sprintf(buf, "*(int *)(%p) = _midge_run();", &result);
   // clint->process(buf);
 
-  // IGNORE_MIDGE_ERROR_REPORT = true;
+  // Cleanup
+  // -- Conclude the temporary interpreter
+  void (*register_midge_thread_conclusion)(int) = tcci_get_symbol(mc_itp, "register_midge_thread_conclusion");
+  register_midge_thread_conclusion(mc_interp_error_thread_index);
+  tcci_delete(mc_itp);
 
 do_exit:
   usleep(1000000);
-  tcci_delete(itp);
   exit(res);
 }
