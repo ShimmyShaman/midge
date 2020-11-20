@@ -35,7 +35,7 @@ typedef struct mce_source_line {
 
   mce_source_line_token *line_token;
 
-  font_resource *font;
+  mcr_font_resource *font;
   float font_horizontal_stride;
   struct {
     unsigned int width, height;
@@ -108,7 +108,7 @@ typedef struct mce_source_editor_pool {
 
 } mce_source_editor_pool;
 
-extern "C" {
+// extern "C" {
 
 // source_editor/source_editor.c
 void mce_init_source_editor_pool();
@@ -125,5 +125,5 @@ void mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_poo
 void mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list);
 void mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
                                                   mce_source_token_list **lists, unsigned int count);
-}
+// }
 #endif // SOURCE_EDITOR_H

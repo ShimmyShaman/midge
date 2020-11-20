@@ -3,9 +3,13 @@
 #ifndef MC_VULKAN_H
 #define MC_VULKAN_H
 
+#include <vulkan/vulkan_core.h>
+
+#include "cglm/include/cglm/types-struct.h"
+#include "cglm/include/cglm/types.h"
+
 #include "platform/mc_xcb.h"
 #include "render/render_common.h"
-#include <vulkan/vulkan_core.h>
 
 #define MAX_DESCRIPTOR_SETS 4096
 #define VK_IMAGE_FORMAT VK_FORMAT_R8G8B8A8_SRGB;
@@ -40,66 +44,6 @@ typedef struct textured_image_vertex {
   vec2 position;
   vec2 tex_coord;
 } textured_image_vertex;
-
-typedef struct mcr_render_program {
-  unsigned int resource_uid;
-  VkDescriptorSetLayout descriptor_layout;
-  VkPipelineLayout pipeline_layout;
-  VkPipeline pipeline;
-
-  unsigned int layout_binding_count;
-  mcr_layout_binding *layout_bindings;
-
-} mcr_render_program;
-
-typedef struct font_resource {
-  const char *name;
-  float height;
-  float draw_vertical_offset;
-  mcr_texture_image *texture;
-  stbtt_bakedchar *char_data;
-} font_resource;
-
-typedef struct loaded_font_list {
-  uint32_t count;
-  uint32_t capacity;
-  font_resource **fonts;
-} loaded_font_list;
-
-typedef struct mcr_vertex_buffer {
-  unsigned int resource_uid;
-  VkBuffer buf;
-  VkDeviceMemory mem;
-  VkDescriptorBufferInfo buffer_info;
-} mcr_vertex_buffer;
-
-typedef struct mcr_index_buffer {
-  unsigned int resource_uid;
-  unsigned int count;
-  VkBuffer buf;
-  VkDeviceMemory mem;
-  VkDescriptorBufferInfo buffer_info;
-} mcr_index_buffer;
-
-typedef struct mcr_render_program_data {
-  void **input_buffers;
-  mcr_index_buffer *indices;
-  mcr_vertex_buffer *vertices;
-
-} mcr_render_program_data;
-
-typedef struct mcr_texture_image {
-  unsigned int resource_uid;
-  mvk_image_sampler_usage sampler_usage;
-  VkFormat format;
-  uint32_t width, height;
-  VkDeviceSize size;
-  VkSampler sampler;
-  VkImage image;
-  VkDeviceMemory memory;
-  VkImageView view;
-  VkFramebuffer framebuffer;
-} mcr_texture_image;
 
 typedef struct mvk_dynamic_buffer_block {
   VkDeviceSize allocated_size;
@@ -270,11 +214,11 @@ typedef struct vk_render_state {
   } loaded_render_programs;
 } vk_render_state;
 
-extern "C" {
+// extern "C" {
 VkResult mvk_init_vulkan(vk_render_state *vkrs);
 
 bool mvk_get_properties_memory_type_index(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask,
                                           uint32_t *typeIndex);
-}
+// }
 
 #endif // MC_VULKAN_H

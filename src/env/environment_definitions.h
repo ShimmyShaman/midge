@@ -88,7 +88,7 @@ typedef struct mca_global_context_node_option_list {
 typedef struct mcu_ui_state {
   bool requires_update;
   mc_node_list *cache_layered_hit_list;
-  font_resource *default_font_resource;
+  mcr_font_resource *default_mcr_font_resource;
 
   // Modules
   struct {

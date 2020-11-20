@@ -2,9 +2,9 @@
 #include "env/environment_definitions.h"
 #include "render/render_common.h"
 
-extern "C" {
+// extern "C" {
 void mce_init_source_editor_pool();
-}
+// }
 
 void init_source_editor(mc_node *app_root)
 {

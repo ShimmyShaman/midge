@@ -3,8 +3,11 @@
 #ifndef UI_DEFINITIONS_H
 #define UI_DEFINITIONS_H
 
+#include "mc_str.h"
+
 #include "core/core_definitions.h"
 #include "render/render_common.h"
+#include "env/environment_definitions.h"
 
 typedef enum ui_element_type {
   UI_ELEMENT_NULL = 0,
@@ -25,7 +28,7 @@ typedef struct mcu_text_block {
   mc_node *node;
 
   mc_str *str;
-  font_resource *font;
+  mcr_font_resource *font;
   render_color font_color;
 } mcu_text_block;
 
@@ -39,7 +42,7 @@ typedef struct mcu_button {
   void *left_click;
 
   mc_str *str;
-  font_resource *font;
+  mcr_font_resource *font;
   render_color font_color;
 
   render_color background_color;
@@ -59,7 +62,7 @@ typedef struct mcu_button {
 //   render_color background_color;
 // } mcu_context_menu;
 
-extern "C" {
+// extern "C" {
 // UI Functionality
 void mcu_initialize_ui_state(mcu_ui_state **p_ui_state);
 // void mcu_initialize_core_ui_components();
@@ -91,6 +94,6 @@ void mcu_init_button(mc_node *parent, mcu_button **p_button);
 // // void mcu_render_context_menu(image_render_details *image_render_queue, mc_node *ui_node);
 // void mcu_context_menu_clear_options(mcu_context_menu *menu);
 // void mcu_context_menu_add_option(mcu_context_menu *menu, const char *option_text);
-}
+// }
 
 #endif // UI_DEFINITIONS_H

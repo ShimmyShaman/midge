@@ -477,7 +477,7 @@ int main(int argc, const char *const *argv)
       "dep/tinycc/lib/va_list.c", // TODO -- this
       "src/midge_error_handling.c",
       "src/core/init_global_root.c",
-      "src/core/mc_str.c",
+      "src/mc_str.c",
       "src/core/core_source_loader.c",
   };
 

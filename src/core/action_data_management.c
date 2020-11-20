@@ -19,7 +19,7 @@ typedef struct usage_data_interface_state {
 
   action_database_index *database_index;
 
-  unsigned int font_resource_uid;
+  unsigned int mcr_font_resource_uid;
 } usage_data_interface_state;
 
 void usage_data_interface_render(frame_time *elapsed, mc_node_v1 *visual_node)
@@ -107,7 +107,7 @@ void init_usage_data_interface()
   state->alternate_image_bounds.y = 40;
   state->alternate_image_bounds.width = APPLICATION_SET_WIDTH - 298;
   state->alternate_image_bounds.height = APPLICATION_SET_HEIGHT - usage_data_interface->data.visual.bounds.y;
-  state->font_resource_uid = 0;
+  state->mcr_font_resource_uid = 0;
   state->database_index = (action_database_index *)malloc(sizeof(action_database_index));
 
   state->database_index->databases = (action_database_collection *)malloc(sizeof(action_database_collection));
@@ -138,7 +138,7 @@ void init_usage_data_interface()
   // Font
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &state->font_resource_uid;
+  command->p_uid = &state->mcr_font_resource_uid;
   command->font.height = 18;
   command->font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);

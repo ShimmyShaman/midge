@@ -229,7 +229,7 @@ VkResult mvk_init_physical_devices(vk_render_state *p_vkrs)
   p_vkrs->device_count = 0;
   VkResult res = vkEnumeratePhysicalDevices(p_vkrs->instance, &p_vkrs->device_count, NULL);
   VK_CHECK(res, "vkEnumeratePhysicalDevices");
-  VK_ASSERT(p_vkrs->device_count > 0, "Must have at least one physical device that supports Vulkan!");
+  MCassert(p_vkrs->device_count > 0, "Must have at least one physical device that supports Vulkan!");
   // printf("mied-1a\n");
 
   // printf("mied-1\n");
@@ -240,14 +240,14 @@ VkResult mvk_init_physical_devices(vk_render_state *p_vkrs)
 
   // printf("mied-2\n");
   vkGetPhysicalDeviceQueueFamilyProperties(p_vkrs->gpus[0], &p_vkrs->queue_family_count, NULL);
-  VK_ASSERT(p_vkrs->queue_family_count > 0, "Must have at least one queue family!");
+  MCassert(p_vkrs->queue_family_count > 0, "Must have at least one queue family!");
 
   // printf("before:%i\n", p_vkrs->queue_family_count);
   p_vkrs->queue_family_properties =
       (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * p_vkrs->queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(p_vkrs->gpus[0], &p_vkrs->queue_family_count,
                                            p_vkrs->queue_family_properties);
-  VK_ASSERT(p_vkrs->queue_family_count > 0, "Must have at least one queue family!");
+  MCassert(p_vkrs->queue_family_count > 0, "Must have at least one queue family!");
   // printf("after:%i\n", p_vkrs->queue_family_count);
 
   // printf("mied-3\n");
@@ -319,8 +319,8 @@ VkResult mvk_init_xcb_surface(vk_render_state *p_vkrs)
 
   // Generate error if could not find queues that support graphics
   // and present
-  VK_ASSERT(p_vkrs->graphics_queue_family_index != UINT32_MAX, "Could not find queues that support graphics");
-  VK_ASSERT(p_vkrs->present_queue_family_index != UINT32_MAX, "Could not find queues that support graphics");
+  MCassert(p_vkrs->graphics_queue_family_index != UINT32_MAX, "Could not find queues that support graphics");
+  MCassert(p_vkrs->present_queue_family_index != UINT32_MAX, "Could not find queues that support graphics");
 
   // Get the list of VkFormats that are supported:
   uint32_t formatCount;
@@ -340,7 +340,7 @@ VkResult mvk_init_xcb_surface(vk_render_state *p_vkrs)
     p_vkrs->format = VK_IMAGE_FORMAT;
   }
   else {
-    VK_ASSERT(formatCount >= 1, "No supported formats?");
+    MCassert(formatCount >= 1, "No supported formats?");
     p_vkrs->format = surfFormats[0].format;
   }
   // printf("swapchain format = %i\n", p_vkrs->format);
@@ -432,7 +432,7 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
   res = vkGetPhysicalDeviceSurfacePresentModesKHR(p_vkrs->gpus[0], p_vkrs->surface, &presentModeCount, NULL);
   VK_CHECK(res, "vkGetPhysicalDeviceSurfacePresentModesKHR");
   VkPresentModeKHR *presentModes = (VkPresentModeKHR *)malloc(presentModeCount * sizeof(VkPresentModeKHR));
-  VK_ASSERT(presentModes, "vk present modes");
+  MCassert(presentModes, "vk present modes");
   res = vkGetPhysicalDeviceSurfacePresentModesKHR(p_vkrs->gpus[0], p_vkrs->surface, &presentModeCount, presentModes);
   VK_CHECK(res, "vkGetPhysicalDeviceSurfacePresentModesKHR");
 
@@ -547,20 +547,20 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
 
   p_vkrs->swap_chain.command_buffers =
       (VkCommandBuffer *)malloc(sizeof(VkCommandBuffer) * p_vkrs->swap_chain.size_count);
-  VK_ASSERT(p_vkrs->swap_chain.command_buffers, "failed to allocate swap chain command buffers");
+  MCassert(p_vkrs->swap_chain.command_buffers, "failed to allocate swap chain command buffers");
   res = vkAllocateCommandBuffers(p_vkrs->device, &cmd, p_vkrs->swap_chain.command_buffers);
   VK_CHECK(res, "vkAllocateCommandBuffers");
 
   // -- Images
   VkImage *images = (VkImage *)malloc(sizeof(VkImage) * p_vkrs->swap_chain.size_count);
   p_vkrs->swap_chain.images = images;
-  VK_ASSERT(p_vkrs->swap_chain.images, "failed to allocate swap chain images");
+  MCassert(p_vkrs->swap_chain.images, "failed to allocate swap chain images");
   res = vkGetSwapchainImagesKHR(p_vkrs->device, p_vkrs->swap_chain.instance, &p_vkrs->swap_chain.size_count, images);
   VK_CHECK(res, "vkGetSwapchainImagesKHR");
 
   // -- Image Views
   p_vkrs->swap_chain.image_views = (VkImageView *)malloc(p_vkrs->swap_chain.size_count * sizeof(VkImageView));
-  VK_ASSERT(p_vkrs->swap_chain.image_views, "failed to allocate swap chain image views");
+  MCassert(p_vkrs->swap_chain.image_views, "failed to allocate swap chain image views");
   for (uint32_t i = 0; i < p_vkrs->swap_chain.size_count; i++) {
     VkImageViewCreateInfo color_image_view = {};
     color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -763,7 +763,7 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   // bool pass = mvk_get_properties_memory_type_index(
   //     p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
   //     &alloc_info.memoryTypeIndex);
-  // VK_ASSERT(pass, "No mappable, coherent memory");
+  // MCassert(pass, "No mappable, coherent memory");
 
   // res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->global_vert_uniform_buffer.mem));
   // VK_CHECK(res, "vkAllocateMemory");
@@ -868,7 +868,7 @@ VkResult mvk_allocate_dynamic_render_data_memory(vk_render_state *p_vkrs, int mi
   bool pass = mvk_get_properties_memory_type_index(
       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       &alloc_info.memoryTypeIndex);
-  VK_ASSERT(pass, "No mappable, coherent memory");
+  MCassert(pass, "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &block->memory);
   VK_CHECK(res, "vkAllocateMemory");
@@ -1192,7 +1192,7 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   {
     uint32_t spirv_alloc = strlen(p_shader_text);
     *spirv = (uint32_t *)malloc(sizeof(uint32_t) * spirv_alloc);
-    VK_ASSERT(*spirv, "malloc error spirv 1120");
+    MCassert(*spirv, "malloc error spirv 1120");
     *spirv_size = 0;
 
     uint32_t code;
@@ -1202,7 +1202,7 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
         // printf("reallocing to %u\n", spirv_alloc);
 
         *spirv = (uint32_t *)realloc(*spirv, sizeof(uint32_t) * spirv_alloc);
-        VK_ASSERT(*spirv, "realloc error spirv 1087");
+        MCassert(*spirv, "realloc error spirv 1087");
       }
       (*spirv)[*spirv_size] = code;
       ++*spirv_size;
@@ -2375,7 +2375,7 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
 
   _mvk_find_supported_format(p_vkrs, preferred_depth_formats, 3, VK_IMAGE_TILING_OPTIMAL,
                              VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT, &p_vkrs->depth_buffer.format);
-  VK_ASSERT(p_vkrs->depth_buffer.format != VK_FORMAT_UNDEFINED, "TODO -- Couldn't find suitable depth format");
+  MCassert(p_vkrs->depth_buffer.format != VK_FORMAT_UNDEFINED, "TODO -- Couldn't find suitable depth format");
 
   // Color attachment
   VkImageCreateInfo imageCreateInfo = {};
@@ -2499,8 +2499,8 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
 
   // printf
   int init_window_res = mxcb_init_window(vkrs->xcb_winfo, vkrs->window_width, vkrs->window_height);
-  VK_ASSERT(init_window_res == 0, "mxcb_init_window");
-  VK_ASSERT(vkrs->xcb_winfo->connection != 0, "CHECK");
+  MCassert(init_window_res == 0, "mxcb_init_window");
+  MCassert(vkrs->xcb_winfo->connection != 0, "CHECK");
 
   res = mvk_init_xcb_surface(vkrs);
   VK_CHECK(res, "mvk_init_xcb_surface");

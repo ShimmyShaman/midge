@@ -118,7 +118,7 @@ void complete_midge_app_compile()
   }
 }
 
-extern "C" {
+// extern "C" {
 void mcc_initialize_input_state();
 void mcc_update_xcb_input();
 // void mcu_initialize_core_ui_components();
@@ -126,7 +126,7 @@ void mcc_update_xcb_input();
 // void mcu_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
 void mca_load_modules();
 void mca_load_open_projects();
-}
+// }
 
 void initialize_midge_components()
 {
@@ -265,7 +265,7 @@ void midge_run_app()
   mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
   mc_node *global_root_node = global_data->global_node;
-  // printf("defaultfont-0:%u\n", global_data->default_font_resource);
+  // printf("defaultfont-0:%u\n", global_data->default_mcr_font_resource);
   // printf("global_data->ui_state:%p\n", global_data->ui_state);
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;

@@ -397,7 +397,7 @@ typedef struct mc_interactive_console_v1 {
     bool requires_render_update;
     int (*render_delegate)(int argc, void **args);
   } visual;
-  uint font_resource_uid;
+  uint mcr_font_resource_uid;
 
   struct {
     uint image_resource_uid;
@@ -687,7 +687,7 @@ struct mc_syntax_node;
 typedef struct mc_code_editor_state_v1 {
   mc_node_v1 *visual_node;
 
-  uint font_resource_uid;
+  uint mcr_font_resource_uid;
 
   int line_display_offset;
   struct {

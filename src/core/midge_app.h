@@ -26,10 +26,10 @@ typedef struct midge_app_info {
   render_color clear_color;
 } midge_app_info;
 
-extern "C" {
+// extern "C" {
 void midge_initialize_app(midge_app_info *app_info);
 void midge_run_app(midge_app_info *app_info);
 void midge_cleanup_app(midge_app_info *app_info);
-}
+// }
 
 #endif // MIDGE_APP_H

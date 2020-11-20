@@ -56,7 +56,7 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     bool pass = mvk_get_properties_memory_type_index(
         p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &alloc_info.memoryTypeIndex);
-    VK_ASSERT(pass, "No mappable, coherent memory");
+    MCassert(pass, "No mappable, coherent memory");
 
     res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->shape_vertices.mem));
     VK_CHECK(res, "vkAllocateMemory");
@@ -104,7 +104,7 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
     bool pass = mvk_get_properties_memory_type_index(
         p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
         &alloc_info.memoryTypeIndex);
-    VK_ASSERT(pass, "No mappable, coherent memory");
+    MCassert(pass, "No mappable, coherent memory");
 
     res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->textured_shape_vertices.mem));
     VK_CHECK(res, "vkAllocateMemory");
@@ -154,7 +154,7 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
   //   bool pass = mvk_get_properties_memory_type_index(
   //       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
   //       &alloc_info.memoryTypeIndex);
-  //   VK_ASSERT(pass, "No mappable, coherent memory");
+  //   MCassert(pass, "No mappable, coherent memory");
 
   //   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_shape_vertices.mem));
   //   VK_CHECK(res, "vkAllocateMemory");
@@ -204,7 +204,7 @@ VkResult mvk_init_shape_vertices(vk_render_state *p_vkrs)
   //   bool pass = mvk_get_properties_memory_type_index(
   //       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
   //       &alloc_info.memoryTypeIndex);
-  //   VK_ASSERT(pass, "No mappable, coherent memory");
+  //   MCassert(pass, "No mappable, coherent memory");
 
   //   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(p_vkrs->cube_shape_indices.mem));
   //   VK_CHECK(res, "vkAllocateMemory");
@@ -408,7 +408,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   VkResult res;
 
   mcr_texture_image *image_sampler = (mcr_texture_image *)malloc(sizeof(mcr_texture_image));
-  VK_ASSERT(image_sampler, "malloc error 5407");
+  MCassert(image_sampler, "malloc error 5407");
 
   image_sampler->resource_uid = p_vkrs->resource_uid_counter++;
   image_sampler->sampler_usage = image_usage;
@@ -438,7 +438,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   bool pass = mvk_get_properties_memory_type_index(
       p_vkrs, memRequirements.memoryTypeBits,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &allocInfo.memoryTypeIndex);
-  VK_ASSERT(pass, "No mappable, coherent memory");
+  MCassert(pass, "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &allocInfo, NULL, &stagingBufferMemory);
   VK_CHECK(res, "vkAllocateMemory");
@@ -498,7 +498,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   allocInfo.allocationSize = memRequirements.size;
   pass = mvk_get_properties_memory_type_index(p_vkrs, memRequirements.memoryTypeBits,
                                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &allocInfo.memoryTypeIndex);
-  VK_ASSERT(pass, "No mappable, coherent memory");
+  MCassert(pass, "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &allocInfo, NULL, &image_sampler->memory);
   VK_CHECK(res, "vkAllocateMemory");
@@ -661,7 +661,7 @@ VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint widt
 }
 
 VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, float font_height,
-                       font_resource **p_resource)
+                       mcr_font_resource **p_resource)
 {
   VkResult res;
 
@@ -731,7 +731,7 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
 
   // Font is a common resource -- cache so multiple loads reference the same resource uid
   {
-    font_resource *font = (font_resource *)malloc(sizeof(font_resource));
+    mcr_font_resource *font = (mcr_font_resource *)malloc(sizeof(mcr_font_resource));
     append_to_collection((void ***)&p_vkrs->loaded_fonts.fonts, &p_vkrs->loaded_fonts.capacity,
                          &p_vkrs->loaded_fonts.count, font);
 
@@ -807,7 +807,7 @@ VkResult mvk_load_vertex_data_buffer(vk_render_state *p_vkrs, float *p_data, uns
   bool pass = mvk_get_properties_memory_type_index(
       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       &alloc_info.memoryTypeIndex);
-  VK_ASSERT(pass, "No mappable, coherent memory");
+  MCassert(pass, "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(mesh->mem));
   VK_CHECK(res, "vkAllocateMemory");
@@ -878,7 +878,7 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, un
   bool pass = mvk_get_properties_memory_type_index(
       p_vkrs, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       &alloc_info.memoryTypeIndex);
-  VK_ASSERT(pass, "No mappable, coherent memory");
+  MCassert(pass, "No mappable, coherent memory");
 
   res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(index_buffer->mem));
   VK_CHECK(res, "vkAllocateMemory");

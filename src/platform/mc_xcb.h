@@ -1,9 +1,12 @@
+#ifndef MC_XCB_H
+#define MC_XCB_H
+
 #include "xcb/xcb.h"
 
 #define APPLICATION_SET_WIDTH 1540
 #define APPLICATION_SET_HEIGHT 900
 
-#include "m_threads.h"
+// #include "m_threads.h"
 #include "mc_types.h"
 
 #ifndef max
@@ -179,3 +182,4 @@ int mxcb_init_window(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int sur
 int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buffer);
 
 void mxcb_destroy_window(mxcb_window_info *mcxbWindowInfo);
+#endif // MC_XCB_H

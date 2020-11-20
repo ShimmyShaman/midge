@@ -28,7 +28,7 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
     case RESOURCE_COMMAND_LOAD_FONT: {
       // printf("hrc-resource_cmd->font.height:%f\n", resource_cmd->font.height);
       res = mvk_load_font(p_vkrs, resource_cmd->font.path, resource_cmd->font.height,
-                          (font_resource **)resource_cmd->p_resource);
+                          (mcr_font_resource **)resource_cmd->p_resource);
       VK_CHECK(res, "load_font");
 
     } break;
@@ -204,7 +204,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(vert_data_scale_offset);
-  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+  MCassert(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
   float scale_multiplier =
       1.f / (float)(image_render->image_width < image_render->image_height ? image_render->image_width
@@ -220,7 +220,7 @@ VkResult mrt_render_colored_quad(vk_render_state *p_vkrs, VkCommandBuffer comman
   // Fragment Data
   render_color *frag_ubo_data = (render_color *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(render_color);
-  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+  MCassert(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
   memcpy(frag_ubo_data, &cmd->colored_rect_info.color, sizeof(render_color));
 
@@ -322,7 +322,7 @@ VkResult mrt_render_textured_quad(vk_render_state *p_vkrs, VkCommandBuffer comma
   // Vertex Uniform Buffer Object
   vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
   copy_buffer->index += sizeof(vert_data_scale_offset);
-  VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+  MCassert(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
   float scale_multiplier =
       1.f / (float)(image_render->image_width < image_render->image_height ? image_render->image_width
@@ -435,7 +435,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
 
   // printf("mrt-0\n");
   // Get the font image
-  font_resource *font = cmd->print_text.font;
+  mcr_font_resource *font = cmd->print_text.font;
   if (!font) {
     printf("Could not render text because font was NULL\n");
     return VK_ERROR_UNKNOWN;
@@ -502,7 +502,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     // Vertex Uniform Buffer Object  -- TODO do checking on copy_buffer->index and data array size
     vert_data_scale_offset *vert_ubo_data = (vert_data_scale_offset *)&copy_buffer->data[copy_buffer->index];
     copy_buffer->index += sizeof(vert_data_scale_offset);
-    VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+    MCassert(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
     // printf("mrt-2a\n");
 
     float scale_multiplier =
@@ -520,7 +520,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     frag_ubo_tint_texcoordbounds *frag_ubo_data =
         (frag_ubo_tint_texcoordbounds *)&copy_buffer->data[copy_buffer->index];
     copy_buffer->index += sizeof(frag_ubo_tint_texcoordbounds);
-    VK_ASSERT(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
+    MCassert(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
 
     memcpy(&frag_ubo_data->tint, &cmd->print_text.color, sizeof(float) * 4);
     frag_ubo_data->tex_coord_bounds.s0 = q.s0;

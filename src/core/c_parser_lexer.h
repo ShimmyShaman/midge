@@ -4,7 +4,7 @@
 #define C_PARSER_LEXER_H
 
 #include "core/core_definitions.h"
-#include "core/mc_str.h"
+#include "mc_str.h"
 
 typedef enum mc_token_type {
   MC_TOKEN_NULL = 0,

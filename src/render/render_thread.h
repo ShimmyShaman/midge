@@ -3,6 +3,8 @@
 #ifndef MC_RENDER_THREAD_H
 #define MC_RENDER_THREAD_H
 
+#include "cglm/include/cglm/types.h"
+
 #include "m_threads.h"
 #include "platform/mc_xcb.h"
 #include "render/render_common.h"
@@ -47,8 +49,8 @@ typedef struct coloured_rect_draw_data {
 
 } coloured_rect_draw_data;
 
-extern "C" {
+// extern "C" {
 void *midge_render_thread(void *vargp);
-}
+// }
 
 #endif // RENDER_THREAD_H

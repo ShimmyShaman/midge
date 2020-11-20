@@ -1,6 +1,5 @@
 #include "render/render_common.h"
 #include "core/core_definitions.h"
-#include "render/mc_vulkan.h"
 // #include "render/resources/tiny_obj_loader_c.h"
 
 #include "stb_truetype.h"
@@ -139,13 +138,13 @@ void mcr_load_texture_resource(const char *path, mcr_texture_image **p_resource)
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
-void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
-                              font_resource **p_resource)
+void mcr_obtain_mcr_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
+                                  mcr_font_resource **p_resource)
 {
   *p_resource = NULL;
 
   pthread_mutex_lock(&resource_queue->mutex);
-  // printf("mcr_obtain_font_resource-font_height:%f\n", font_height);
+  // printf("mcr_obtain_mcr_font_resource-font_height:%f\n", font_height);
   resource_command *command;
   mcr_obtain_resource_command(resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
@@ -207,7 +206,8 @@ void mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 }
 
-void mcr_determine_text_display_dimensions(font_resource *font, const char *text, float *text_width, float *text_height)
+void mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
+                                           float *text_height)
 {
   if (text == NULL || text[0] == '\0') {
     *text_width = 0;
@@ -220,7 +220,7 @@ void mcr_determine_text_display_dimensions(font_resource *font, const char *text
 
   if (!font) {
     // Use the global default font resource
-    font = global_data->ui_state->default_font_resource;
+    font = global_data->ui_state->default_mcr_font_resource;
   }
 
   *text_width = 0;
@@ -247,7 +247,7 @@ void mcr_determine_text_display_dimensions(font_resource *font, const char *text
 
 // Ensure this function is accessed within a thread mutex lock of the @image_render_queue
 void mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                   const char *text, font_resource *font, render_color font_color)
+                                   const char *text, mcr_font_resource *font, render_color font_color)
 {
   element_render_command *render_cmd;
   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
@@ -266,7 +266,7 @@ void mcr_issue_render_command_text(image_render_details *image_render_queue, uns
     mc_global_data *global_data;
     obtain_midge_global_root(&global_data);
 
-    render_cmd->print_text.font = global_data->ui_state->default_font_resource;
+    render_cmd->print_text.font = global_data->ui_state->default_mcr_font_resource;
     // printf("set defaultfont %u\n", render_cmd->print_text.font->resource_uid);
   }
   render_cmd->print_text.color = font_color;

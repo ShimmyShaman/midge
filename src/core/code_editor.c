@@ -82,7 +82,7 @@ void code_editor_render_lines(frame_time *elapsed, mc_code_editor_state_v1 *stat
           element_cmd->y = 2 + 12;
           element_cmd->print_text.text = strdup(rendered_line->rtf->text + s, i - s);
           // printf("line:%i text:'%s' @ %i\n", a, element_cmd->print_text.text, t);
-          element_cmd->print_text.font_resource_uid = state->font_resource_uid;
+          element_cmd->print_text.mcr_font_resource_uid = state->mcr_font_resource_uid;
           element_cmd->print_text.color = font_color;
           t += i - s;
         }
@@ -138,7 +138,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
     element_cmd->x = 4;
     element_cmd->y = 2 + 12 + 4;
     element_cmd->print_text.text = strdup(state->status_bar.message);
-    element_cmd->print_text.font_resource_uid = state->font_resource_uid;
+    element_cmd->print_text.mcr_font_resource_uid = state->mcr_font_resource_uid;
     element_cmd->print_text.color.a = 1.f;
     element_cmd->print_text.color.r = 0.95f;
     element_cmd->print_text.color.g = 0.72f;
@@ -178,7 +178,7 @@ void code_editor_render(frame_time *elapsed, mc_node_v1 *visual_node)
       element_cmd->x = 4;
       element_cmd->y = 2 + a * EDITOR_LINE_STRIDE + 12 + 4;
       element_cmd->print_text.text = strdup(state->suggestion_box.entries.items[a]);
-      element_cmd->print_text.font_resource_uid = state->font_resource_uid;
+      element_cmd->print_text.mcr_font_resource_uid = state->mcr_font_resource_uid;
       element_cmd->print_text.color = COLOR_LIGHT_YELLOW;
     }
   }
@@ -381,7 +381,7 @@ void build_code_editor()
   // printf("state:'%p'\n", state);
   state->visual_node = fedit;
   state->in_view_function_live_debugger = false;
-  state->font_resource_uid = 0;
+  state->mcr_font_resource_uid = 0;
   state->cursor.line = 0;
   state->cursor.col = 0;
   state->cursor.zen_col = 0;
@@ -530,7 +530,7 @@ void build_code_editor()
 
   MCcall(obtain_resource_command(command_hub->renderer.resource_queue, &command));
   command->type = RESOURCE_COMMAND_LOAD_FONT;
-  command->p_uid = &state->font_resource_uid;
+  command->p_uid = &state->mcr_font_resource_uid;
   command->font.height = 20;
   command->font.path = "res/font/DroidSansMono.ttf";
   pthread_mutex_unlock(&command_hub->renderer.resource_queue->mutex);

@@ -74,9 +74,9 @@ typedef struct mce_function_debug {
   float font_horizontal_stride;
 } mce_function_debug;
 
-extern "C" {
+// extern "C" {
 void mce_init_function_debug_instance(mce_function_debug **function_debugger);
 void _mce_set_function_to_function_debugger(mce_function_debug *function_debugger, function_info *func_info);
-}
+// }
 
 #endif // FUNCTION_DEBUG_H

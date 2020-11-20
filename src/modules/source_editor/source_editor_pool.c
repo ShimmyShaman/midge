@@ -92,9 +92,9 @@ void mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source
   }
 }
 
-extern "C" {
+// extern "C" {
 int _mce_set_definition_to_function_editor(mce_function_editor *function_editor, function_info *function);
-}
+// }
 
 void mce_activate_source_editor_for_definition(source_definition *definition)
 {

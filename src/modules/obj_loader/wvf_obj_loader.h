@@ -53,9 +53,9 @@ typedef struct _wvf_obj_parsed_obj_info {
   unsigned int triangle_count;
 } _wvf_obj_parsed_obj_info;
 
-extern "C" {
+// extern "C" {
 void mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertices, mcr_index_buffer **indices);
 void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model);
-}
+// }
 
 #endif // OBJ_LOADER_H

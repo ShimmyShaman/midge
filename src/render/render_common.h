@@ -4,6 +4,11 @@
 #ifndef MC_RENDER_COMMON_H
 #define MC_RENDER_COMMON_H
 
+#include <pthread.h>
+
+#include <vulkan/vulkan_core.h>
+
+#include "m_threads.h"
 #include "platform/mc_xcb.h"
 
 // TEMP will have to do function defines sooner or later
@@ -12,7 +17,7 @@
     printf("VK-ERR[%i] :%i --" func_name "\n", res, __LINE__); \
     return res;                                                \
   }
-#define VK_ASSERT(condition, message)                        \
+#define MCassert(condition, message)                        \
   if (!(condition)) {                                        \
     printf("VK-ASSERT ERR[" #condition "] :" #message "\n"); \
     return -11111;                                           \
@@ -171,13 +176,74 @@ typedef struct mc_size {
 typedef struct mc_rectf {
   float x, y;
   float width, height;
-} mc_rect;
+} mc_rectf;
 
-// Resources
-struct font_resource;
-struct mcr_texture_image;
-struct mcr_render_program;
-struct mcr_render_program_data;
+typedef struct mcr_layout_binding {
+  VkDescriptorType type;
+  VkShaderStageFlags stage_bit;
+  // If applicable
+  size_t size_in_bytes;
+} mcr_layout_binding;
+
+typedef struct mcr_input_binding {
+  VkFormat format;
+  size_t size_in_bytes;
+} mcr_input_binding;
+
+typedef struct mcr_render_program {
+  unsigned int resource_uid;
+  VkDescriptorSetLayout descriptor_layout;
+  VkPipelineLayout pipeline_layout;
+  VkPipeline pipeline;
+
+  unsigned int layout_binding_count;
+  mcr_layout_binding *layout_bindings;
+
+} mcr_render_program;
+
+typedef struct mcr_vertex_buffer {
+  unsigned int resource_uid;
+  VkBuffer buf;
+  VkDeviceMemory mem;
+  VkDescriptorBufferInfo buffer_info;
+} mcr_vertex_buffer;
+
+typedef struct mcr_index_buffer {
+  unsigned int resource_uid;
+  unsigned int count;
+  VkBuffer buf;
+  VkDeviceMemory mem;
+  VkDescriptorBufferInfo buffer_info;
+} mcr_index_buffer;
+
+typedef struct mcr_render_program_data {
+  void **input_buffers;
+  mcr_index_buffer *indices;
+  mcr_vertex_buffer *vertices;
+
+} mcr_render_program_data;
+
+typedef struct mcr_texture_image {
+  unsigned int resource_uid;
+  mvk_image_sampler_usage sampler_usage;
+  VkFormat format;
+  uint32_t width, height;
+  VkDeviceSize size;
+  VkSampler sampler;
+  VkImage image;
+  VkDeviceMemory memory;
+  VkImageView view;
+  VkFramebuffer framebuffer;
+} mcr_texture_image;
+
+typedef struct mcr_font_resource {
+  const char *name;
+  float height;
+  float draw_vertical_offset;
+  mcr_texture_image *texture;
+  void *char_data;
+} mcr_font_resource;
+
 typedef struct element_render_command {
   element_render_command_type type;
   unsigned int x, y;
@@ -188,7 +254,7 @@ typedef struct element_render_command {
     } colored_rect_info;
     struct {
       char *text;
-      font_resource *font;
+      mcr_font_resource *font;
       render_color color;
     } print_text;
     struct {
@@ -235,18 +301,6 @@ typedef struct image_render_details {
     } target_image;
   } data;
 } image_render_details;
-
-typedef struct mcr_layout_binding {
-  VkDescriptorType type;
-  VkShaderStageFlags stage_bit;
-  // If applicable
-  size_t size_in_bytes;
-} mcr_layout_binding;
-
-typedef struct mcr_input_binding {
-  VkFormat format;
-  size_t size_in_bytes;
-} mcr_input_binding;
 
 typedef struct mcr_render_program_create_info {
 
@@ -307,7 +361,12 @@ typedef struct image_render_list {
 
 } image_render_list;
 
-struct loaded_font_list; // From mc_vulkan.h - compiled later
+typedef struct loaded_font_list {
+  uint32_t count;
+  uint32_t capacity;
+  mcr_font_resource **fonts;
+} loaded_font_list;
+
 typedef struct render_thread_info {
   mthread_info *thread_info;
   image_render_list *image_queue;
@@ -326,29 +385,29 @@ typedef struct render_thread_info {
 //   unsigned int mesh_resource_uid;
 // } mcr_model;
 
-extern "C" {
+// extern "C" {
 
 int mcr_obtain_image_render_request(render_thread_info *image_render_queue, image_render_details **p_request);
 int mcr_submit_image_render_request(render_thread_info *render_thread, image_render_details *request);
 int mcr_obtain_element_render_command(image_render_details *image_queue, element_render_command **p_command);
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
 
-void mcr_create_texture_resource(resource_queue *resource_queue, unsigned int width, unsigned int height,
-                                 mvk_image_sampler_usage image_usage, mcr_texture_image **p_texture);
+void mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
+                                 mcr_texture_image **p_texture);
 void mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
-void mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
-                              font_resource **font);
+void mcr_obtain_mcr_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
+                                  mcr_font_resource **font);
 void mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_resource);
 
-void mcr_determine_text_display_dimensions(font_resource *font, const char *text, float *text_width,
+void mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
                                            float *text_height);
 
 void mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                   const char *text, font_resource *font, render_color font_color);
+                                   const char *text, mcr_font_resource *font, render_color font_color);
 void mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                            unsigned int width, unsigned int height, render_color color);
 void mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                             unsigned int width, unsigned int height, mcr_texture_image *texture);
-}
+// }
 
 #endif // MC_RENDER_COMMON_H

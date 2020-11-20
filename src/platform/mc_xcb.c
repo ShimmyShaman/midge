@@ -1,8 +1,13 @@
-#include "mc_xcb.h"
+/* mc_xcb.c */
+
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <vulkan/vulkan.h>
+
+#include "mc_types.h"
 
 #include "platform/mc_xcb.h"
-#include <stdio.h>
-#include <vulkan/vulkan_xcb.h>
 
 // Using code modified from:  Niko Kauppi
 //   -- And his contributers:
@@ -244,8 +249,8 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
   dimensions.extent.width = surfaceSizeX;
   dimensions.extent.height = surfaceSizeY;
 
-  VK_ASSERT(dimensions.extent.width > 0, "");
-  VK_ASSERT(dimensions.extent.height > 0, "");
+  MCassert(dimensions.extent.width > 0, "");
+  MCassert(dimensions.extent.height > 0, "");
 
   uint32_t value_mask, value_list[32];
 

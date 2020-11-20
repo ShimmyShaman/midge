@@ -44,7 +44,7 @@ typedef struct mc_hv_hierarchy_view_state {
 } mc_hv_hierarchy_view_state;
 
 
-extern "C" {
+// extern "C" {
 // modus_operandi_curator.c
 void init_modus_operandi_curator();
 
@@ -53,6 +53,6 @@ void init_hierarchy_viewer();
 
 // three_d/three_d.c
 void init_three_d_portal();
-}
+// }
 
 #endif // APP_MODULES_H

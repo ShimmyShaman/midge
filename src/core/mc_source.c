@@ -447,7 +447,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
     child = children->items[a];
     switch (child->type) {
     case MC_SYNTAX_EXTERN_C_BLOCK: {
-      MCerror(1115, "TODO");
+      MCerror(1115, "TODO - Extern C Block Handling");
       // for (int b = 0; b < child->extern_block.declarations->count; ++b) {
       //   mc_syntax_node *declaration = child->extern_block.declarations->items[b];
       //   switch (declaration->type) {
@@ -601,10 +601,10 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
   printf("midge-interpret '%s'\n", filepath);
 
   // Read the file
-  read_file_text(filepath, &code);
+  MCcall(read_file_text(filepath, &code));
 
   // Parse the file into an AST
-  parse_file_to_syntax_tree(code, &file_ast);
+  MCcall(parse_file_to_syntax_tree(code, &file_ast));
   free(code);
 
   // Set
@@ -627,20 +627,20 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
     options.report_variable_values = NULL;
 
     printf("transcribing '%s'...\n", filepath);
-    mct_transcribe_file_ast(file_ast, &options, &code);
+    MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  // if (!strcmp("src/m_threads.h", filepath))
+  // if (!strcmp("src/ui/ui_definitions.h", filepath))
   //   printf("\ngen-code:\n%s||\n", code);
   // MCerror(7704, "TODO");
 
   // Send the code to the interpreter
-  obtain_midge_global_root(&gdata);
-  tcci_add_string(gdata->interpreter, filepath, code);
+  MCcall(obtain_midge_global_root(&gdata));
+  MCcall(tcci_add_string(gdata->interpreter, filepath, code));
 
   // Cleanup
   free(code);
-  release_syntax_node(file_ast);
+  MCcall(release_syntax_node(file_ast));
   free(file_ast);
 
   return 0;

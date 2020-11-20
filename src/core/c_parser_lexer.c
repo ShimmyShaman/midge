@@ -1007,7 +1007,8 @@ int release_syntax_node(mc_syntax_node *sn)
   case MC_SYNTAX_WHILE_STATEMENT:
   case MC_SYNTAX_CONTINUE_STATEMENT:
   case MC_SYNTAX_TERNARY_CONDITIONAL:
-    // sn->ternary_conditional.
+  case MC_SYNTAX_BITWISE_EXPRESSION:
+    // sn->bitwise_expression.
     break;
   default: {
     MCerror(6616, "release_sn(); Clear type:%s for proper release of item collections",
