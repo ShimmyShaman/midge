@@ -10,6 +10,7 @@ typedef enum mc_token_type {
   MC_TOKEN_NULL = 0,
   MC_TOKEN_NULL_CHARACTER,
   MC_TOKEN_PP_KEYWORD_DEFINE,
+  MC_TOKEN_PP_KEYWORD_UNDEFINE,
   MC_TOKEN_PP_KEYWORD_INCLUDE,
   MC_TOKEN_PP_KEYWORD_IFDEF,
   MC_TOKEN_PP_KEYWORD_IFNDEF,
@@ -115,6 +116,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_PP_DIRECTIVE_IFNDEF,
   MC_SYNTAX_PP_DIRECTIVE_INCLUDE,
   MC_SYNTAX_PP_DIRECTIVE_DEFINE,
+  MC_SYNTAX_PP_DIRECTIVE_UNDEFINE,
   MC_SYNTAX_EXTERN_C_BLOCK,
   MC_SYNTAX_FUNCTION,
   MC_SYNTAX_TYPE_ALIAS,
@@ -246,6 +248,9 @@ struct mc_syntax_node {
           mc_syntax_node_list *replacement_list;
           mc_syntax_node *identifier;
         } preprocess_define;
+        struct {
+          mc_syntax_node *identifier;
+        } preprocess_undefine;
         struct {
           bool is_system_header_search;
           mc_syntax_node *filepath;
@@ -471,6 +476,7 @@ struct mc_syntax_node {
   };
 };
 
+int print_parse_error(const char *text, int index, const char *const function_name, const char *section_id);
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
 int mcs_append_syntax_node_to_mc_str(mc_str *str, mc_syntax_node *syntax_node);
 int mcs_copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);

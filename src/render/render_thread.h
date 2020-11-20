@@ -3,10 +3,12 @@
 #ifndef MC_RENDER_THREAD_H
 #define MC_RENDER_THREAD_H
 
+#include <vulkan/vulkan.h>
+
 #include "cglm/include/cglm/types.h"
 
-#include "m_threads.h"
-#include "platform/mc_xcb.h"
+// #include "m_threads.h"
+// #include "platform/mc_xcb.h"
 #include "render/render_common.h"
 
 #define MRT_SEQUENCE_COPY_BUFFER_SIZE 98192

@@ -1,6 +1,18 @@
-#include "m_threads.h"
+/* render_thread.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "stb/stb_truetype.h"
+
+#include "cglm/include/cglm/cglm.h"
+
+// #include "m_threads.h"
+#include "core/core_definitions.h"
+#include "env/environment_definitions.h"
 #include "render/mc_vk_utils.h"
-#include <vulkan/vulkan.h>
+#include "render/render_thread.h"
 
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue)
 {
@@ -1153,6 +1165,8 @@ VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_
   rt_render_queue->count = 0;
 
   pthread_mutex_unlock(&render_thread->render_request_object_pool->mutex);
+
+  return VK_SUCCESS;
 }
 
 VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state *vkrs)
@@ -1275,18 +1289,8 @@ void *midge_render_thread(void *vargp)
   // printf("mrt-5\n");
 
   // Vulkan Cleanup
-  res = mvk_destroy_resources(&vkrs);
-  if (res) {
-    printf("--ERR[%i] mvk_destroy_resources\n", res);
-    render_thread->thread_info->has_concluded = 1;
-    return NULL;
-  }
-  res = mvk_destroy_vulkan(&vkrs);
-  if (res) {
-    printf("--ERR[%i] mvk_destroy_vulkan\n", res);
-    render_thread->thread_info->has_concluded = 1;
-    return NULL;
-  }
+  mvk_destroy_resources(&vkrs);
+  mvk_destroy_vulkan(&vkrs);
 
   render_thread->thread_info->has_concluded = 1;
   return NULL;

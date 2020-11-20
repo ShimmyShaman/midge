@@ -1787,21 +1787,25 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
             array_initialization->local_variable_array_initializer.assignment_expression->initializer_expression.list;
 
         append_to_mc_str(ts->str, " = {");
-        ++ts->indent;
 
         if (array_values->count) {
           append_to_mc_str(ts->str, "\n");
+          ++ts->indent;
 
           for (int a = 0; a < array_values->count; ++a) {
+            if (a > 0) {
+              append_to_mc_str(ts->str, ",\n");
+            }
+
             mct_transcribe_indent(ts);
             mct_transcribe_expression(ts, NULL, array_values->items[a]);
-            append_to_mc_str(ts->str, ",\n");
           }
 
+          append_to_mc_str(ts->str, "\n");
+          --ts->indent;
           mct_transcribe_indent(ts);
         }
-        --ts->indent;
-        append_to_mc_str(ts->str, "};\n");
+        append_to_mc_str(ts->str, "}");
       }
     }
   }
@@ -3553,10 +3557,11 @@ int mct_transcribe_file_root_children(mct_transcription_state *ts, mc_syntax_nod
     // Syntax-Nodes
     switch (child->type) {
     case MC_SYNTAX_PP_DIRECTIVE_DEFINE:
+    case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE:
     case MC_SYNTAX_PP_DIRECTIVE_IFDEF:
     case MC_SYNTAX_PP_DIRECTIVE_IFNDEF:
     case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
-      mct_transcribe_file_root_children(ts, child->children);
+      MCcall(mct_transcribe_file_root_children(ts, child->children));
       // usleep(10000);
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
@@ -3618,7 +3623,7 @@ int mct_transcribe_file_ast(mc_syntax_node *file_root, mct_function_transcriptio
 
   // Transcribe
   append_to_mc_str(ts.str, "#include \"midge_error_handling.h\"\n\n");
-  mct_transcribe_file_root_children(&ts, file_root->children);
+  MCcall(mct_transcribe_file_root_children(&ts, file_root->children));
   *generated = ts.str->text;
 
   release_mc_str(ts.str, false);

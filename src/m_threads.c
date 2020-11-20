@@ -148,5 +148,3 @@ int end_mthread(mthread_info *p_thread_info)
 
   return 0;
 }
-
-#endif

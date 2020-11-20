@@ -539,7 +539,8 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // info->source->source_file = source_file;
       // // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
-    case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
+    case MC_SYNTAX_PP_DIRECTIVE_DEFINE:
+    case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE: {
       // Ignore for now
       // MCerror(1205, "TODO");
 
@@ -591,6 +592,26 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
   return 0;
 }
 
+// TODO Cleanup
+#include <unistd.h>
+static size_t mcs_save_text_to_file(char *filepath, char *text)
+{
+  FILE *f = fopen(filepath, "w");
+  if (f == NULL) {
+    printf("problem opening file '%s'\n", filepath);
+    return 0;
+  }
+  fseek(f, 0, SEEK_SET);
+
+  int len = strlen(text);
+
+  size_t written = fwrite(text, sizeof(char), len, f);
+  printf("written %zu bytes to %s\n", written, filepath);
+  fclose(f);
+
+  return written;
+}
+
 int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
 {
   int res;
@@ -630,9 +651,12 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  // if (!strcmp("src/ui/ui_definitions.h", filepath))
-  //   printf("\ngen-code:\n%s||\n", code);
-  // MCerror(7704, "TODO");
+  if (!strcmp("src/core/midge_app.c", filepath)) {
+    usleep(10000);
+    // printf("\ngen-code:\n%s||\n", code);
+    mcs_save_text_to_file("src/temp/todelete.h", code);
+    // MCerror(7704, "TODO");
+  }
 
   // Send the code to the interpreter
   MCcall(obtain_midge_global_root(&gdata));

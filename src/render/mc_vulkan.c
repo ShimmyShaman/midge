@@ -1,9 +1,21 @@
+/* mc_vulkan.c */
 
-#include "render/mc_vulkan.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include <vulkan/vulkan.h>
-#include <vulkan/vulkan_core.h>
+// #include <vulkan/vulkan_core.h>
 
-// Code modified from vulkan-tutorial.com / other sites too (TODO -- attributation)
+#include "cglm/include/cglm/cglm.h"
+
+#include "env/environment_definitions.h"
+#include "render/mc_vulkan.h"
+
+// Code modified from vulkan-tutorial.com / other sites too (TODO -- attributation?)
 
 #define MC_RT_CALL(CALL)                                                \
   {                                                                     \
@@ -483,7 +495,8 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
   // Find a supported composite alpha mode - one of these is guaranteed to be set
   VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   const uint32_t compositeAlphaFlagCount = 4;
-  VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[compositeAlphaFlagCount] = {
+  VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
+      // TODO -- have to write 4 for TCC, although compositeAlphaFlagCount is a const : TCC fix needed
       VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
       VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
       VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
@@ -674,7 +687,7 @@ VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
   colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
   colorImageView.format = colorFormat;
-  colorImageView.subresourceRange = {};
+  // colorImageView.subresourceRange = { 0 };
   colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   colorImageView.subresourceRange.baseMipLevel = 0;
   colorImageView.subresourceRange.levelCount = 1;
@@ -714,8 +727,8 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 {
   VkResult res;
 
-// TODO DON"T NEED THIS CODE???
-// TODO DON"T NEED THIS CODE???
+  // TODO DON"T NEED THIS CODE???
+  // TODO DON"T NEED THIS CODE???
   float fov = glm_rad(45.0f);
 
   if (p_vkrs->window_width > p_vkrs->window_height) {
@@ -735,8 +748,8 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   glm_mat4_mul((vec4 *)&p_vkrs->View, (vec4 *)&p_vkrs->Model, (vec4 *)&p_vkrs->MVP);
   glm_mat4_mul((vec4 *)&p_vkrs->Projection, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
   glm_mat4_mul((vec4 *)&p_vkrs->Clip, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
-// TODO DON"T NEED THIS CODE???
-// TODO DON"T NEED THIS CODE???
+  // TODO DON"T NEED THIS CODE???
+  // TODO DON"T NEED THIS CODE???
 
   // /* VULKAN_KEY_START */
   // VkBufferCreateInfo buf_info = {};
@@ -878,6 +891,7 @@ VkResult mvk_allocate_dynamic_render_data_memory(vk_render_state *p_vkrs, int mi
   VK_CHECK(res, "vkBindBufferMemory");
 
   // printf("Created block with memory=%lu\n", next_mem_block_size);
+  return res;
 }
 
 VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
@@ -940,7 +954,10 @@ VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
   subpass_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
   subpass_dependency.dependencyFlags = 0;
 
-  VkAttachmentDescription attachment_descriptions[] = {color_attachment}; //, depth_attachment
+  VkAttachmentDescription attachment_descriptions[1];
+  attachment_descriptions[0] = color_attachment; // TODO -- not in an initializer due to tcc bug
+
+  //, depth_attachment
   // printf("mvk_init_present_renderpass:color_attachment:%i depth_attachment:%i\n", color_attachment.format,
   //        depth_attachment.format);
 
@@ -955,7 +972,7 @@ VkResult mvk_init_present_renderpass(vk_render_state *p_vkrs)
   rp_info.pDependencies = &subpass_dependency;
 
   res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->present_render_pass);
-  assert(res == VK_SUCCESS);
+  MCassert(res == VK_SUCCESS, "vkCreateRenderPass");
   return res;
 }
 
@@ -1026,7 +1043,10 @@ VkResult mvk_init_offscreen_renderpass_3d(vk_render_state *p_vkrs)
   subpass_dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
   subpass_dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-  VkAttachmentDescription attachment_descriptions[] = {color_attachment, depth_attachment};
+  // TODO -- not in an initializer due to tcc bug
+  VkAttachmentDescription attachment_descriptions[2];
+  attachment_descriptions[0] = color_attachment;
+  attachment_descriptions[1] = depth_attachment;
   printf("mvk_init_offscreen_renderpass:color_attachment:%i depth_attachment:%i\n", color_attachment.format,
          depth_attachment.format);
 
@@ -1041,7 +1061,7 @@ VkResult mvk_init_offscreen_renderpass_3d(vk_render_state *p_vkrs)
   rp_info.pDependencies = subpass_dependencies;
 
   res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->offscreen_render_pass_3d);
-  assert(res == VK_SUCCESS);
+  MCassert(res == VK_SUCCESS, "offscreen vkCreateRenderPass");
 
   return res;
 }
@@ -1098,7 +1118,9 @@ VkResult mvk_init_offscreen_renderpass_2d(vk_render_state *p_vkrs)
   subpass_dependencies[1].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
   subpass_dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
-  VkAttachmentDescription attachment_descriptions[] = {color_attachment};
+  // TODO -- not in an initializer due to tcc bug
+  VkAttachmentDescription attachment_descriptions[1];
+  attachment_descriptions[0] = color_attachment;
 
   VkRenderPassCreateInfo rp_info = {};
   rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -1111,7 +1133,7 @@ VkResult mvk_init_offscreen_renderpass_2d(vk_render_state *p_vkrs)
   rp_info.pDependencies = subpass_dependencies;
 
   res = vkCreateRenderPass(p_vkrs->device, &rp_info, NULL, &p_vkrs->offscreen_render_pass_2d);
-  assert(res == VK_SUCCESS);
+  MCassert(res == VK_SUCCESS, "offscreen3D:vkCreateRenderPass");
 
   return res;
 }
@@ -1154,7 +1176,7 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   char *exePath = strdup("/home/jason/midge/dep/glslang/bin/glslangValidator");
   char *arg_V = strdup("-V");
   char *arg_H = strdup("-H");
-  
+
   char *argv[4] = {exePath, execOutput, arg_V,
                    // arg_H,
                    NULL};
@@ -1498,7 +1520,7 @@ VkResult mvk_init_tint_render_prog(vk_render_state *p_vkrs)
   pipelineCache.pInitialData = NULL;
   pipelineCache.flags = 0;
   res = vkCreatePipelineCache(p_vkrs->device, &pipelineCache, NULL, &p_vkrs->pipelineCache);
-  assert(res == VK_SUCCESS);
+  MCassert(res == VK_SUCCESS, "tint_render_prog: vkCreatePipelineCache");
 
   return VK_SUCCESS;
 }
@@ -1818,7 +1840,7 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     layoutCreateInfo.pBindings = layout_bindings;
 
     res = vkCreateDescriptorSetLayout(p_vkrs->device, &layoutCreateInfo, NULL, &p_vkrs->font_prog.descriptor_layout);
-    assert(res == VK_SUCCESS);
+    MCassert(res == VK_SUCCESS, "font_render_prog: vkCreateDescriptorSetLayout");
   }
 
   const char *vertex_shader_code = "#version 450\n"
@@ -2314,8 +2336,8 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
     depthStencil.minDepthBounds = 0.0f; // Optional
     depthStencil.maxDepthBounds = 1.0f; // Optional
     depthStencil.stencilTestEnable = VK_FALSE;
-    depthStencil.front = {}; // Optional
-    depthStencil.back = {};  // Optional
+    // depthStencil.front = {}; // Optional - have to comment because of tcc bug TODO - should already be initialized to 0
+    // depthStencil.back = {};  // Optional
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -2411,7 +2433,7 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
   colorImageView.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   colorImageView.viewType = VK_IMAGE_VIEW_TYPE_2D;
   colorImageView.format = p_vkrs->depth_buffer.format;
-  colorImageView.subresourceRange = {};
+  // colorImageView.subresourceRange = {};
   colorImageView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
   colorImageView.subresourceRange.baseMipLevel = 0;
   colorImageView.subresourceRange.levelCount = 1;
@@ -2477,7 +2499,7 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs)
   descriptor_pool.pPoolSizes = type_count;
 
   res = vkCreateDescriptorPool(p_vkrs->device, &descriptor_pool, NULL, &p_vkrs->descriptor_pool);
-  assert(res == VK_SUCCESS);
+  MCassert(res == VK_SUCCESS, "vkCreateDescriptorPool");
   return res;
 }
 
@@ -2490,8 +2512,7 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   VkResult res;
   res = mvk_init_global_layer_properties(vkrs);
   VK_CHECK(res, "mvk_init_global_layer_properties");
-  res = mvk_init_device_extension_names(vkrs);
-  VK_CHECK(res, "mvk_init_device_extension_names");
+  mvk_init_device_extension_names(vkrs);
   res = mvk_init_instance(vkrs, "midge");
   VK_CHECK(res, "mvk_init_instance");
   res = mvk_init_physical_devices(vkrs);
@@ -2714,7 +2735,7 @@ void mvk_cleanup_global_layer_properties(vk_render_state *p_vkrs)
    #                 Vulkan CLEANUP                  #
    #               Initializes Vulkan                #
    ################################################### */
-VkResult mvk_destroy_vulkan(vk_render_state *vkrs)
+void mvk_destroy_vulkan(vk_render_state *vkrs)
 {
   vkDestroyDescriptorPool(vkrs->device, vkrs->descriptor_pool, NULL);
   mvk_destroy_framebuffers(vkrs);
@@ -2740,6 +2761,4 @@ VkResult mvk_destroy_vulkan(vk_render_state *vkrs)
   mvk_destroy_instance(vkrs);
   mvk_cleanup_device_extension_names(vkrs);
   mvk_cleanup_global_layer_properties(vkrs);
-
-  return VK_SUCCESS;
 }

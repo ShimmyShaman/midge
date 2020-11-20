@@ -1,10 +1,17 @@
 /* midge_app.c */
 
-#include "core_definitions.h"
-#include "render/render_thread.h"
-#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include <time.h>
+#include <unistd.h>
+
+#include "core/core_definitions.h"
 #include "core/midge_app.h"
+#include "render/render_common.h"
+#include "render/render_thread.h"
+#include "ui/ui_definitions.h"
 
 // void *callit(void *state)
 // {
@@ -45,19 +52,19 @@ int begin_render_thread()
   {
     // Resource Queue
     global_data->render_thread->resource_queue = (resource_queue *)malloc(sizeof(resource_queue));
-    pthread_mutex_init(&global_data->render_thread->resource_queue->mutex, NULL);
+    MCcall(pthread_mutex_init(&global_data->render_thread->resource_queue->mutex, NULL));
     global_data->render_thread->resource_queue->count = 0;
     global_data->render_thread->resource_queue->allocated = 0;
 
     // Render Queue
     global_data->render_thread->image_queue = (image_render_list *)malloc(sizeof(image_render_list));
-    pthread_mutex_init(&global_data->render_thread->image_queue->mutex, NULL);
+    MCcall(pthread_mutex_init(&global_data->render_thread->image_queue->mutex, NULL));
     global_data->render_thread->image_queue->count = 0;
     global_data->render_thread->image_queue->alloc = 0;
 
     // Render Request Object Pool
     global_data->render_thread->render_request_object_pool = (image_render_list *)malloc(sizeof(image_render_list));
-    pthread_mutex_init(&global_data->render_thread->render_request_object_pool->mutex, NULL);
+    MCcall(pthread_mutex_init(&global_data->render_thread->render_request_object_pool->mutex, NULL));
     global_data->render_thread->render_request_object_pool->count = 0;
     global_data->render_thread->render_request_object_pool->alloc = 0;
 
@@ -70,7 +77,8 @@ int begin_render_thread()
   // printf("global_data->render_thread:%p &global_data->render_thread:%p\n", global_data->render_thread,
   // global_data->render_thread);
 
-  begin_mthread(&midge_render_thread, &global_data->render_thread->thread_info, (void *)global_data->render_thread);
+  return begin_mthread(&midge_render_thread, &global_data->render_thread->thread_info,
+                       (void *)global_data->render_thread);
 }
 
 // typedef struct
@@ -114,7 +122,8 @@ void complete_midge_app_compile()
   };
 
   for (int f = 0; remainder_app_source_files[f]; ++f) {
-    instantiate_all_definitions_from_file(global_data->global_node, remainder_app_source_files[f], NULL);
+    // instantiate_all_definitions_from_file(global_data->global_node, remainder_app_source_files[f], NULL);
+    puts("TODO Load file");
   }
 }
 
@@ -427,8 +436,8 @@ void midge_run_app()
         }
 
         // Update the layout
-        global_root_node->layout->__bounds = {0.f, 0.f, (float)global_data->screen.width,
-                                              (float)global_data->screen.height};
+        global_root_node->layout->__bounds =
+            (mc_rectf){0.f, 0.f, (float)global_data->screen.width, (float)global_data->screen.height};
         for (int a = 0; a < global_root_node->children->count; ++a) {
           mc_node *child = global_root_node->children->items[a];
 

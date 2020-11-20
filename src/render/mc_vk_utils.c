@@ -1,10 +1,23 @@
+/* mc_vk_utils.c */
 
-#include "cglm/cglm.h"
-#include "m_threads.h"
-#include "render/mc_vulkan.h"
+#include <stdlib.h>
+#include <string.h>
+
 #include <vulkan/vulkan.h>
 
-#include "stb_truetype.h"
+#include "cglm/include/cglm/cglm.h"
+
+#define STBI_NO_SIMD
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
+#undef STB_IMAGE_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb/stb_truetype.h"
+#undef STB_TRUETYPE_IMPLEMENTATION
+
+#include "core/core_definitions.h"
+// #include "m_threads.h"
+#include "render/mc_vulkan.h"
 
 #define XY(X, Y) X, Y
 #define UV(U, V) U, V
@@ -375,8 +388,10 @@ VkResult mvk_copyBufferToImage(vk_render_state *p_vkrs, VkBuffer buffer, VkImage
   region.imageSubresource.mipLevel = 0;
   region.imageSubresource.baseArrayLayer = 0;
   region.imageSubresource.layerCount = 1;
-  region.imageOffset = {0, 0, 0};
-  region.imageExtent = {width, height, 1};
+  // region.imageOffset = {0, 0, 0};
+  region.imageExtent.width = width;
+  region.imageExtent.height = height;
+  region.imageExtent.depth = 1;
 
   vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
@@ -493,7 +508,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
   // Memory
   vkGetImageMemoryRequirements(p_vkrs->device, image_sampler->image, &memRequirements);
 
-  allocInfo = {};
+  memset(&allocInfo, 0, sizeof(allocInfo));
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
   pass = mvk_get_properties_memory_type_index(p_vkrs, memRequirements.memoryTypeBits,
@@ -1130,8 +1145,8 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
     depthStencil.minDepthBounds = 0.0f; // Optional
     depthStencil.maxDepthBounds = 1.0f; // Optional
     depthStencil.stencilTestEnable = VK_FALSE;
-    depthStencil.front = {}; // Optional
-    depthStencil.back = {};  // Optional
+    // depthStencil.front = {}; // Optional
+    // depthStencil.back = {};  // Optional
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

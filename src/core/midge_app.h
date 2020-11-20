@@ -27,9 +27,9 @@ typedef struct midge_app_info {
 } midge_app_info;
 
 // extern "C" {
-void midge_initialize_app(midge_app_info *app_info);
-void midge_run_app(midge_app_info *app_info);
-void midge_cleanup_app(midge_app_info *app_info);
+void midge_initialize_app(struct timespec *app_begin_time);
+void midge_run_app();
+void midge_cleanup_app();
 // }
 
 #endif // MIDGE_APP_H

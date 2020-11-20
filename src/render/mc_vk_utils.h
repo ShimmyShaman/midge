@@ -19,8 +19,9 @@ VkResult mvk_load_font(vk_render_state *p_vkrs, const char *const filepath, floa
                        mcr_font_resource **p_resource);
 VkResult mvk_load_vertex_data_buffer(vk_render_state *p_vkrs, float *vertices, unsigned int vertex_count,
                                      bool release_original_data_on_copy, mcr_vertex_buffer **p_resource);
-VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, float *p_data, unsigned int data_count,
+VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, unsigned int data_count,
                                bool release_original_data_on_copy, mcr_index_buffer **p_resource);
-
+VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_create_info *create_info,
+                                   mcr_render_program **out_render_program);
 
 #endif // MC_VK_UTILS_H

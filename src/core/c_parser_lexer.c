@@ -46,6 +46,8 @@ const char *get_mc_token_type_name(mc_token_type type)
     return "MC_TOKEN_NULL_CHARACTER";
   case MC_TOKEN_PP_KEYWORD_DEFINE:
     return "MC_TOKEN_PP_KEYWORD_DEFINE";
+  case MC_TOKEN_PP_KEYWORD_UNDEFINE:
+    return "MC_TOKEN_PP_KEYWORD_UNDEFINE";
   case MC_TOKEN_PP_KEYWORD_INCLUDE:
     return "MC_TOKEN_PP_KEYWORD_INCLUDE";
   case MC_TOKEN_PP_KEYWORD_IFNDEF:
@@ -255,6 +257,8 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
     return "MC_SYNTAX_PP_DIRECTIVE_INCLUDE";
   case MC_SYNTAX_PP_DIRECTIVE_DEFINE:
     return "MC_SYNTAX_PP_DIRECTIVE_DEFINE";
+  case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE:
+    return "MC_SYNTAX_PP_DIRECTIVE_UNDEFINE";
   case MC_SYNTAX_FUNCTION:
     return "MC_SYNTAX_FUNCTION";
   case MC_SYNTAX_EXTERN_C_BLOCK:
@@ -380,7 +384,7 @@ const char *get_mc_syntax_token_type_name(mc_syntax_node_type type)
   }
 }
 
-int print_parse_error(char *const text, int index, const char *const function_name, const char *section_id)
+int print_parse_error(const char *text, int index, const char *const function_name, const char *section_id)
 {
   const int LEN = 168;
   const int FH = LEN / 2 - 2;
@@ -584,6 +588,9 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
     syntax_node->preprocess_define.replacement_list = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
     syntax_node->preprocess_define.replacement_list->alloc = 0;
     syntax_node->preprocess_define.replacement_list->count = 0;
+  } break;
+  case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE: {
+    syntax_node->preprocess_define.identifier = NULL;
   } break;
   case MC_SYNTAX_ENUM_DECL: {
     syntax_node->enumeration.name = NULL;
@@ -1008,7 +1015,9 @@ int release_syntax_node(mc_syntax_node *sn)
   case MC_SYNTAX_CONTINUE_STATEMENT:
   case MC_SYNTAX_TERNARY_CONDITIONAL:
   case MC_SYNTAX_BITWISE_EXPRESSION:
-    // sn->bitwise_expression.
+  case MC_SYNTAX_OFFSETOF_EXPRESSION:
+  case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE:
+    // sn->offsetof_expression.
     break;
   default: {
     MCerror(6616, "release_sn(); Clear type:%s for proper release of item collections",
@@ -1516,6 +1525,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
       }
       if (slen == 7 && !strncmp(code + s, "#define", slen)) {
         *token_type = MC_TOKEN_PP_KEYWORD_DEFINE;
+        if (text) {
+          *text = strndup(code + s, slen);
+        }
+        break;
+      }
+      if (slen == 6 && !strncmp(code + s, "#undef", slen)) {
+        *token_type = MC_TOKEN_PP_KEYWORD_UNDEFINE;
         if (text) {
           *text = strndup(code + s, slen);
         }
@@ -4525,7 +4541,7 @@ int mcs_parse_pp_ifndef(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
       break;
     }
     mc_syntax_node *group_option;
-    mcs_parse_root_statement(ps, ifndef_directive, &group_option);
+    MCcall(mcs_parse_root_statement(ps, ifndef_directive, &group_option));
 
     append_to_collection((void ***)&ifndef_directive->preprocess_ifndef.groupopt->items,
                          &ifndef_directive->preprocess_ifndef.groupopt->alloc,
@@ -4585,7 +4601,7 @@ int mcs_parse_pp_ifdef(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node
       break;
     }
     mc_syntax_node *group_option;
-    mcs_parse_root_statement(ps, ifdef_directive, &group_option);
+    MCcall(mcs_parse_root_statement(ps, ifdef_directive, &group_option));
 
     append_to_collection((void ***)&ifdef_directive->preprocess_ifndef.groupopt->items,
                          &ifdef_directive->preprocess_ifndef.groupopt->alloc,
@@ -4754,6 +4770,18 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
     //   }
     // }
     // mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL);
+  } break;
+  case MC_TOKEN_PP_KEYWORD_UNDEFINE: {
+    mc_syntax_node *undefine_directive;
+    mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_UNDEFINE, NULL, parent, &undefine_directive);
+    if (additional_destination) {
+      *additional_destination = undefine_directive;
+    }
+
+    mcs_parse_through_token(ps, undefine_directive, MC_TOKEN_PP_KEYWORD_UNDEFINE, NULL);
+    mcs_parse_through_token(ps, undefine_directive, MC_TOKEN_SPACE_SEQUENCE, NULL);
+    mcs_parse_through_token(ps, undefine_directive, MC_TOKEN_IDENTIFIER,
+                            &undefine_directive->preprocess_undefine.identifier);
   } break;
   default: {
     // mcs_parse_through_token(ps, preprocessor_directive, token_type, NULL);
@@ -5298,10 +5326,11 @@ int mcs_parse_root_statement(parsing_state *ps, mc_syntax_node *parent, mc_synta
   // } break;
   case MC_TOKEN_PP_KEYWORD_ENDIF:
   case MC_TOKEN_PP_KEYWORD_DEFINE:
+  case MC_TOKEN_PP_KEYWORD_UNDEFINE:
   case MC_TOKEN_PP_KEYWORD_INCLUDE:
   case MC_TOKEN_PP_KEYWORD_IFDEF:
   case MC_TOKEN_PP_KEYWORD_IFNDEF: {
-    mcs_parse_preprocessor_directive(ps, parent, additional_destination);
+    MCcall(mcs_parse_preprocessor_directive(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_TYPEDEF_KEYWORD: {
     mcs_parse_type_alias_definition(ps, parent, additional_destination);
@@ -5383,7 +5412,7 @@ int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast)
   mc_token_type token_type;
   while (ps.code[ps.index] != '\0') {
 
-    mcs_parse_root_statement(&ps, NULL, ast);
+    MCcall(mcs_parse_root_statement(&ps, NULL, ast));
 
     mcs_parse_through_supernumerary_tokens(&ps, *ast);
     mcs_peek_token_type(&ps, true, 0, &token_type);
@@ -5415,7 +5444,7 @@ int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast)
 
   while (ps.code[ps.index] != '\0') {
 
-    mcs_parse_root_statement(&ps, *file_ast, NULL);
+    MCcall(mcs_parse_root_statement(&ps, *file_ast, NULL));
 
     mcs_parse_through_supernumerary_tokens(&ps, *file_ast);
     mc_token_type token_type;

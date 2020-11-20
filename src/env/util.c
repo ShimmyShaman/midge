@@ -1,5 +1,12 @@
-#include "core/core_definitions.h"
+// #include "core/core_definitions.h"
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <ctype.h>
+
+#include "core/c_parser_lexer.h"
 #include "env/environment_definitions.h"
 
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
@@ -34,6 +41,7 @@ int reallocate_array(void **array, unsigned int *current_allocation, unsigned in
 
   *array = new_array;
   *current_allocation = realloc_amount;
+  return 0;
 }
 
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
@@ -78,6 +86,7 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
 
   *collection = new_collection;
   *current_allocation = realloc_amount;
+  return 0;
 }
 
 int parse_past(const char *text, int *index, const char *sequence)

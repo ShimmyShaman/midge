@@ -104,7 +104,7 @@ static int _mcl_read_all_file_text(const char *filepath, char **contents)
   return 0;
 }
 
-static size_t _mcl_save_text_to_file(char *filepath, char *text)
+size_t _mcl_save_text_to_file(char *filepath, char *text)
 {
   FILE *f = fopen(filepath, "w");
   if (f == NULL) {
@@ -674,7 +674,8 @@ int mcl_load_remaining_app_source(TCCInterpState *itp)
   }
 
   register_midge_error_tag("mcl_load_remaining_app_source()");
-  const char *_mcl_app_source_files[] = { // TODO -- this better, should maybe not have to declare headers first (preferably at all)
+  const char *_mcl_app_source_files[] = {
+      // TODO -- this better, should maybe not have to declare headers first (preferably at all)
       // Headers required for app initialization
       "src/m_threads.h",
       "src/platform/mc_xcb.h",
@@ -690,12 +691,14 @@ int mcl_load_remaining_app_source(TCCInterpState *itp)
       "src/control/mc_controller.h",
 
       // Source required for app initialization
+      "src/env/util.c",
       "src/platform/mc_xcb.c",
-      // "src/render/mc_vulkan.c",
-      // "src/render/mc_vk_utils.c",
-      // "src/render/render_thread.c",
-      // "src/core/app_modules.c",
-      // "src/core/midge_app.c",
+      "src/render/mc_vulkan.c",
+      "src/render/mc_vk_utils.c",
+      "src/render/render_thread.c",
+      "src/core/app_modules.c",
+      "src/m_threads.c",
+      "src/core/midge_app.c",
 
       // And everything here before -------------------------------------------------------------
       NULL,
@@ -705,51 +708,35 @@ int mcl_load_remaining_app_source(TCCInterpState *itp)
   if (!mcs_interpret_file) {
     MCerror(1409, "Could not obtain mcs_interpret_file");
   }
-  printf("mcs_interpret_file=%p\n", mcs_interpret_file);
+
   for (int i = 0; _mcl_app_source_files[i]; ++i) {
 
     MCcall(mcs_interpret_file(itp, _mcl_app_source_files[i]));
-
-    // int result = 0;
-    // sprintf(buf,
-    //         "{\n"
-    //         "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
-    //         "  mc_core_v_mc_global_data *global_data;\n"
-    //         "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
-    //         ""
-    //         "  void *mc_vargs[4];\n"
-    //         "  mc_vargs[0] = &global_data->global_node;\n"
-    //         "  const char *filepath = \"%s\";\n"
-    //         "  mc_vargs[1] = &filepath;\n"
-    //         "  void *p_null = NULL;\n"
-    //         "  mc_vargs[2] = &p_null;\n"
-    //         "  int return_value;\n"
-    //         "  mc_vargs[3] = &return_value;\n"
-    //         ""
-    //         "  {\n"
-    //         "    int midge_error_stack_index;\n"
-    //         "    register_midge_stack_invocation(\"instantiate_all_definitions_from_file\", \"core_source_loader.c\",
-    //         " "          1224, &midge_error_stack_index);\n" "    int result = 0;\n" "    result =
-    //         instantiate_all_definitions_from_file(4, mc_vargs);\n" "
-    //         register_midge_stack_return(midge_error_stack_index);\n"
-    //         ""
-    //         "    if (result) {\n"
-    //         "      printf(\"--instantiate_all_definitions_from_file #in - clint_process\\n\");\n"
-    //         "      *(int *)(%p) = result;\n"
-    //         "    }\n"
-    //         "  }\n"
-    //         "}",
-    //         _mcl_app_source_files[i], &result);
-    // // MCcall(mcc_interpret_and_execute_single_use_code("mcl_load_remaining_app_source]register_external_file.c",
-    // buf));
-
-    // if (result != 0) {
-    //   return result;
-    // }
   }
 
   return 0;
 }
+
+struct foo {
+  int a;
+  char b[3];
+  double e;
+};
+
+// void init_assert_tcc_error_TODO()
+// {
+//   // TODO make this work in tcc?
+//   // Works
+//   int t[] = {4, 2};
+
+//   // Causes initializer overflow in init_assert() in tcc
+//   struct foo m = {};
+//   struct foo n = {};
+
+//   struct foo f[] = {m, n};
+
+//   return 0;
+// }
 
 /* Builds a loader on the passed in interpreter state, using that to load midge into another
      initialized interpreter state which is then returned in the pointer reference. Note: Cleanup
@@ -757,6 +744,9 @@ int mcl_load_remaining_app_source(TCCInterpState *itp)
      returned interpreter state is required by the caller. */
 int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc_interp_error_thread_index)
 {
+  // mcl_exp();
+  // exit(8);
+
   // Begin error handling for the temp source loading
   void (*init_error_handling)(void) = tcci_get_symbol(itp, "initialize_midge_error_handling");
   init_error_handling();
@@ -785,8 +775,11 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     MCcall(tcci_add_include_path(midge_itp, "/home/jason/midge/dep"));
 
     tcci_set_symbol(midge_itp, "tcci_add_include_path", &tcci_add_include_path);
+    tcci_set_symbol(midge_itp, "tcci_add_library", &tcci_add_library);
     tcci_set_symbol(midge_itp, "tcci_add_files", &tcci_add_files);
     tcci_set_symbol(midge_itp, "tcci_add_string", &tcci_add_string);
+    tcci_set_symbol(midge_itp, "tcci_define_symbol", &tcci_define_symbol);
+    tcci_set_symbol(midge_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
     tcci_set_symbol(midge_itp, "tcci_set_symbol", &tcci_set_symbol);
     tcci_set_symbol(midge_itp, "tcci_get_symbol", &tcci_get_symbol);
     tcci_set_symbol(midge_itp, "tcci_new", &tcci_new);
@@ -831,7 +824,9 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     // obtain_midge_global_root(&data);
     // printf("obtain_midge_global_root(after):%p %p\n", obtain_midge_global_root, data);
 
-    tcci
+    tcci_add_library(midge_itp, "xcb");
+    tcci_add_library(midge_itp, "vulkan");
+    tcci_define_symbol(midge_itp, "VK_USE_PLATFORM_XCB_KHR", NULL);
   }
 
   // Load the rest of the temporary source

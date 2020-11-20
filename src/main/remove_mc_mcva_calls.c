@@ -1,168 +1,170 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+// TODO Delete file
 
-#ifndef bool
-#define bool unsigned char
-#endif
-#ifndef true
-#define true ((unsigned char)0x7F)
-#endif
-#ifndef false
-#define false ((unsigned char)0)
-#endif
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <string.h>
 
-int _rmc_read_all_file_text(const char *filepath, char **contents)
-{
-  // Load the text from the core functions directory
-  FILE *f = fopen(filepath, "rb");
-  if (!f) {
-    return 44;
-  }
-  fseek(f, 0, SEEK_END);
-  long fsize = ftell(f);
-  fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+// #ifndef bool
+// #define bool unsigned char
+// #endif
+// #ifndef true
+// #define true ((unsigned char)0x7F)
+// #endif
+// #ifndef false
+// #define false ((unsigned char)0)
+// #endif
 
-  *contents = (char *)malloc(fsize + 1);
-  fread(*contents, sizeof(char), fsize, f);
-  fclose(f);
+// int _rmc_read_all_file_text(const char *filepath, char **contents)
+// {
+//   // Load the text from the core functions directory
+//   FILE *f = fopen(filepath, "rb");
+//   if (!f) {
+//     return 44;
+//   }
+//   fseek(f, 0, SEEK_END);
+//   long fsize = ftell(f);
+//   fseek(f, 0, SEEK_SET); /* same as rewind(f); */
 
-  (*contents)[fsize] = '\0';
+//   *contents = (char *)malloc(fsize + 1);
+//   fread(*contents, sizeof(char), fsize, f);
+//   fclose(f);
 
-  return 0;
-}
+//   (*contents)[fsize] = '\0';
 
-size_t _rmc_save_text_to_file(const char *filepath, char *text)
-{
-  FILE *f = fopen(filepath, "w");
-  if (f == NULL) {
-    printf("problem opening file '%s'\n", filepath);
-    return 0;
-  }
-  fseek(f, 0, SEEK_SET);
+//   return 0;
+// }
 
-  int len = strlen(text);
+// size_t _rmc_save_text_to_file(const char *filepath, char *text)
+// {
+//   FILE *f = fopen(filepath, "w");
+//   if (f == NULL) {
+//     printf("problem opening file '%s'\n", filepath);
+//     return 0;
+//   }
+//   fseek(f, 0, SEEK_SET);
 
-  size_t written = fwrite(text, sizeof(char), len, f);
-  printf("written %zu bytes to %s\n", written, filepath);
-  fclose(f);
+//   int len = strlen(text);
 
-  return written;
-}
+//   size_t written = fwrite(text, sizeof(char), len, f);
+//   printf("written %zu bytes to %s\n", written, filepath);
+//   fclose(f);
 
-typedef struct _rmc_mc_strr {
-  unsigned int alloc;
-  unsigned int len;
-  char *text;
-} _rmc_mc_strr;
+//   return written;
+// }
 
-int init__rmc_mc_strr(_rmcmc_strtr **ptr, char *text)
-{
-  (*ptr) = (_rmc_mc_strr *)malloc(sizeof(_rmcmc_strtr));
-  (*ptr)->len = strlen(text);
-  (*ptr)->alloc = (*ptr)->len;
-  (*ptr)->text = text;
+// typedef struct _rmc_mc_strr {
+//   unsigned int alloc;
+//   unsigned int len;
+//   char *text;
+// } _rmc_mc_strr;
 
-  return 0;
-}
+// int init__rmc_mc_strr(_rmcmc_strtr **ptr, char *text)
+// {
+//   (*ptr) = (_rmc_mc_strr *)malloc(sizeof(_rmcmc_strtr));
+//   (*ptr)->len = strlen(text);
+//   (*ptr)->alloc = (*ptr)->len;
+//   (*ptr)->text = text;
 
-int remove_from__rmc_mc_strr(_rmcmc_strtr *cstr, int start_index, int len)
-{
-  if (start_index > cstr->len || len == 0)
-    return 0;
+//   return 0;
+// }
 
-  if (start_index + len == cstr->len) {
-    cstr->len = start_index;
-    return 0;
-  }
+// int remove_from__rmc_mc_strr(_rmcmc_strtr *cstr, int start_index, int len)
+// {
+//   if (start_index > cstr->len || len == 0)
+//     return 0;
 
-  int a;
-  for (a = 0; start_index + len + a < cstr->len; ++a) {
-    cstr->text[start_index + a] = cstr->text[start_index + len + a];
-  }
-  cstr->len -= len;
-  cstr->text[cstr->len] = '\0';
+//   if (start_index + len == cstr->len) {
+//     cstr->len = start_index;
+//     return 0;
+//   }
 
-  return 0;
-}
+//   int a;
+//   for (a = 0; start_index + len + a < cstr->len; ++a) {
+//     cstr->text[start_index + a] = cstr->text[start_index + len + a];
+//   }
+//   cstr->len -= len;
+//   cstr->text[cstr->len] = '\0';
 
-const char *_mcl_source_files[] = {
-    "src/core/core_definitions.h",
-    "src/core/c_parser_lexer.h",
-    "src/core/mc_code_transcription.h",
-    "src/core/core_definitions.c",
-    "src/core/c_parser_lexer.c",
-    "src/core/mc_code_transcription.c",
-    // And everything here before -------------------------------------------------------------
-    "src/core/mc_source.c",
-    NULL,
-};
+//   return 0;
+// }
 
-void remove_all_MCcalls()
-{
-  const char *filepath = "src/core/mc_source.c";
-  bool write_to_file = true;
+// const char *_mcl_source_files[] = {
+//     "src/core/core_definitions.h",
+//     "src/core/c_parser_lexer.h",
+//     "src/core/mc_code_transcription.h",
+//     "src/core/core_definitions.c",
+//     "src/core/c_parser_lexer.c",
+//     "src/core/mc_code_transcription.c",
+//     // And everything here before -------------------------------------------------------------
+//     "src/core/mc_source.c",
+//     NULL,
+// };
 
-  // for(int a = 0 ; _mcl_source_files)
-  char *code;
-  if (_rmc_read_all_file_text(filepath, &code)) {
-    printf("couldn't load text\n");
-    return;
-  }
+// void remove_all_MCcalls()
+// {
+//   const char *filepath = "src/core/mc_source.c";
+//   bool write_to_file = true;
 
-  _rmc_mc_strr *src;
-  init__rmc_mc_strr(&src, code);
+//   // for(int a = 0 ; _mcl_source_files)
+//   char *code;
+//   if (_rmc_read_all_file_text(filepath, &code)) {
+//     printf("couldn't load text\n");
+//     return;
+//   }
 
-  for (int i = 0; i < src->len; ++i) {
-    if (!strncmp(src->text + i, "MCcall(", 6)) {
-      remove_from__rmc_mc_strr(src, i, 7);
+//   _rmc_mc_strr *src;
+//   init__rmc_mc_strr(&src, code);
 
-      // Remove the ')' at the end
-      for (int j = i + 1;; ++j) {
-        if (src->text[j] == '"') {
-          bool escaped = false;
-          bool loop = true;
-          while (loop) {
-            // printf(":%c", src->text[j]);
-            ++j;
-            switch (src->text[j]) {
-            case '\\': {
-              escaped = !escaped;
-            } break;
-            case '\0': {
-              printf("unexpected eof\n");
-              return;
-            }
-            case '"': {
-              if (escaped) {
-                break;
-              }
-              ++j;
-              loop = false;
-            } break;
-            default: {
-              escaped = false;
-            } break;
-            }
-          }
-        }
+//   for (int i = 0; i < src->len; ++i) {
+//     if (!strncmp(src->text + i, "MCcall(", 6)) {
+//       remove_from__rmc_mc_strr(src, i, 7);
 
-        if (src->text[j] == ';') {
-          if (src->text[j - 1] != ')') {
-            printf("expected ')'\n");
-            return;
-          }
-          remove_from__rmc_mc_strr(src, j - 1, 1);
-          break;
-        }
-      }
-    }
-  }
+//       // Remove the ')' at the end
+//       for (int j = i + 1;; ++j) {
+//         if (src->text[j] == '"') {
+//           bool escaped = false;
+//           bool loop = true;
+//           while (loop) {
+//             // printf(":%c", src->text[j]);
+//             ++j;
+//             switch (src->text[j]) {
+//             case '\\': {
+//               escaped = !escaped;
+//             } break;
+//             case '\0': {
+//               printf("unexpected eof\n");
+//               return;
+//             }
+//             case '"': {
+//               if (escaped) {
+//                 break;
+//               }
+//               ++j;
+//               loop = false;
+//             } break;
+//             default: {
+//               escaped = false;
+//             } break;
+//             }
+//           }
+//         }
 
-  printf("SUCCESS\n");
-  if (write_to_file)
-    _rmc_save_text_to_file(filepath, src->text);
-  else {
-    // printf("src:\n%s||\n", src->text);
-  }
-}
+//         if (src->text[j] == ';') {
+//           if (src->text[j - 1] != ')') {
+//             printf("expected ')'\n");
+//             return;
+//           }
+//           remove_from__rmc_mc_strr(src, j - 1, 1);
+//           break;
+//         }
+//       }
+//     }
+//   }
+
+//   printf("SUCCESS\n");
+//   if (write_to_file)
+//     _rmc_save_text_to_file(filepath, src->text);
+//   else {
+//     // printf("src:\n%s||\n", src->text);
+//   }
+// }

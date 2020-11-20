@@ -457,8 +457,11 @@ int main(int argc, const char *const *argv)
   MCcall(tcci_add_include_path(loader_itp, "/home/jason/midge/dep"));
 
   tcci_set_symbol(loader_itp, "tcci_add_include_path", &tcci_add_include_path);
+  tcci_set_symbol(loader_itp, "tcci_add_library", &tcci_add_library);
   tcci_set_symbol(loader_itp, "tcci_add_files", &tcci_add_files);
   tcci_set_symbol(loader_itp, "tcci_add_string", &tcci_add_string);
+  tcci_set_symbol(loader_itp, "tcci_define_symbol", &tcci_define_symbol);
+  tcci_set_symbol(loader_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
   tcci_set_symbol(loader_itp, "tcci_set_symbol", &tcci_set_symbol);
   tcci_set_symbol(loader_itp, "tcci_get_symbol", &tcci_get_symbol);
   tcci_set_symbol(loader_itp, "tcci_new", &tcci_new);
@@ -475,10 +478,7 @@ int main(int argc, const char *const *argv)
 
   const char *initial_compile_list[] = {
       "dep/tinycc/lib/va_list.c", // TODO -- this
-      "src/midge_error_handling.c",
-      "src/core/init_global_root.c",
-      "src/mc_str.c",
-      "src/core/core_source_loader.c",
+      "src/midge_error_handling.c", "src/core/init_global_root.c", "src/mc_str.c", "src/core/core_source_loader.c",
   };
 
   // TODO -- remember why I split them up into 2 compiles -- maybe comment it for next time
