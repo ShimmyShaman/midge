@@ -595,7 +595,7 @@ static int _mcl_determine_cached_file_name(const char *input, char **output)
 //   return 0;
 // }
 
-static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
+static int mcl_load_core_source(TCCInterpState *tmp_itp)
 {
   int (*mcs_interpret_file)(TCCInterpState *, const char *) = tcci_get_symbol(tmp_itp, "mcs_interpret_file");
   if (!mcs_interpret_file) {
@@ -616,7 +616,7 @@ static int _mcl_load_core_mc_source(TCCInterpState *tmp_itp)
   return 0;
 }
 
-int _mcl_load_app_mc_source(TCCInterpState *itp)
+int mcl_load_remaining_app_source(TCCInterpState *itp)
 {
   // Used by the MCcall macro
   void (*register_midge_stack_invocation)(const char *, const char *, int, int *) =
@@ -664,7 +664,8 @@ int _mcl_load_app_mc_source(TCCInterpState *itp)
     //           "  }\n"
     //           "}",
     //           _mcl_external_dependency_source_files[i], &result);
-    //   // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_app_mc_source]register_external_file.c", buf));
+    //   // MCcall(mcc_interpret_and_execute_single_use_code("mcl_load_remaining_app_source]register_external_file.c",
+    //   buf));
 
     //   if (result != 0) {
     //     return result;
@@ -672,24 +673,24 @@ int _mcl_load_app_mc_source(TCCInterpState *itp)
     // }
   }
 
-  register_midge_error_tag("_mcl_load_app_mc_source()");
-  const char *_mcl_app_source_files[] = {
+  register_midge_error_tag("mcl_load_remaining_app_source()");
+  const char *_mcl_app_source_files[] = { // TODO -- this better, should maybe not have to declare headers first (preferably at all)
       // Headers required for app initialization
       "src/m_threads.h",
       "src/platform/mc_xcb.h",
-      // "src/render/render_common.h",
-      // "src/render/mc_vulkan.h",
-      // "src/render/mc_vk_utils.h",
-      // "src/render/render_thread.h",
-      // "src/core/midge_app.h",
+      "src/render/render_common.h",
+      "src/render/mc_vulkan.h",
+      "src/render/mc_vk_utils.h",
+      "src/render/render_thread.h",
+      "src/core/midge_app.h",
 
-      // // Headers that will be declared just before app initialization
-      // "src/env/environment_definitions.h",
-      // "src/ui/ui_definitions.h",
-      // "src/control/mc_controller.h",
+      // Headers that will be declared just before app initialization
+      "src/env/environment_definitions.h",
+      "src/ui/ui_definitions.h",
+      "src/control/mc_controller.h",
 
-      // // Source required for app initialization
-      // "src/platform/mc_xcb.c",
+      // Source required for app initialization
+      "src/platform/mc_xcb.c",
       // "src/render/mc_vulkan.c",
       // "src/render/mc_vk_utils.c",
       // "src/render/render_thread.c",
@@ -739,7 +740,8 @@ int _mcl_load_app_mc_source(TCCInterpState *itp)
     //         "  }\n"
     //         "}",
     //         _mcl_app_source_files[i], &result);
-    // // MCcall(mcc_interpret_and_execute_single_use_code("_mcl_load_app_mc_source]register_external_file.c", buf));
+    // // MCcall(mcc_interpret_and_execute_single_use_code("mcl_load_remaining_app_source]register_external_file.c",
+    // buf));
 
     // if (result != 0) {
     //   return result;
@@ -805,7 +807,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
         "dep/tinycc/lib/va_list.c", // TODO -- this
         "src/midge_error_handling.c",
         "src/core/init_global_root.c",
-        "src/core/mc_str.c",
+        "src/mc_str.c",
     };
     MCcall(tcci_add_files(midge_itp, initial_compile_list, sizeof(initial_compile_list) / sizeof(const char *)));
 
@@ -828,6 +830,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 
     // obtain_midge_global_root(&data);
     // printf("obtain_midge_global_root(after):%p %p\n", obtain_midge_global_root, data);
+
+    tcci
   }
 
   // Load the rest of the temporary source
@@ -836,8 +840,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   MCcall(tcci_add_files(itp, _mcl_core_source_files, MCL_CORE_SOURCE_FILE_COUNT));
 
   // Begin loading into the midge interpreter state using the preload interpreter state
-  puts("[_mcl_load_core_mc_source]");
-  MCcall(_mcl_load_core_mc_source(itp));
+  puts("[mcl_load_core_source]");
+  MCcall(mcl_load_core_source(itp));
 
   // Replace the temporary interpreter with the app version
   // -- Conclude the temporary interpreter
@@ -860,8 +864,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   }
 
   // Load the remainder of the application source files with the new interpreter
-  printf("[_mcl_load_app_mc_source]\n");
-  MCcall(_mcl_load_app_mc_source(midge_itp));
+  printf("[mcl_load_remaining_app_source]\n");
+  MCcall(mcl_load_remaining_app_source(midge_itp));
 
   printf("[_mcl_load_source:COMPLETE]\n");
   *mc_interp = midge_itp;
