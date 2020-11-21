@@ -161,12 +161,6 @@ typedef struct window_input_buffer {
   uint event_count;
 } window_input_buffer;
 
-typedef struct frame_time {
-  long frame_secs, frame_nsecs;
-  long app_secs, app_nsecs;
-  float frame_secsf, app_secsf;
-} frame_time;
-
 typedef struct mxcb_window_info {
   xcb_connection_t *connection;
   xcb_screen_t *screen;

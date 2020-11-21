@@ -478,7 +478,7 @@ int main(int argc, const char *const *argv)
 
   const char *initial_compile_list[] = {
       "dep/tinycc/lib/va_list.c", // TODO -- this
-      "src/midge_error_handling.c", "src/core/init_global_root.c", "src/mc_str.c", "src/core/core_source_loader.c",
+      "src/midge_error_handling.c", "src/core/mc_app_itp_data.c", "src/mc_str.c", "src/core/core_source_loader.c",
   };
 
   // TODO -- remember why I split them up into 2 compiles -- maybe comment it for next time

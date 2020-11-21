@@ -1,6 +1,8 @@
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
 
+#include "core/midge_app.h"
+
 typedef struct cube_template_root_data {
   mc_node *node;
 
@@ -31,8 +33,8 @@ void _cbt_render_td_ct_data_headless(mc_node *node)
   }
 
   // Render the render target
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   image_render_details *irq;
   mcr_obtain_image_render_request(global_data->render_thread, &irq);

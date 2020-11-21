@@ -18,33 +18,33 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
 
 int attach_function_info_to_owner(function_info *func_info)
 {
-  mc_global_data *data;
-  obtain_midge_global_root(&data);
+  mc_app_itp_data *app_itp_data;
+  mc_obtain_app_itp_data(&app_itp_data);
 
-  append_to_collection((void ***)&data->functions.items, &data->functions.alloc, &data->functions.count,
-                       (void *)func_info);
+  append_to_collection((void ***)&app_itp_data->functions.items, &app_itp_data->functions.alloc,
+                       &app_itp_data->functions.count, (void *)func_info);
 
   return 0;
 }
 
 int attach_struct_info_to_owner(struct_info *structure_info)
 {
-  mc_global_data *data;
-  obtain_midge_global_root(&data);
+  mc_app_itp_data *app_itp_data;
+  mc_obtain_app_itp_data(&app_itp_data);
 
-  append_to_collection((void ***)&data->structs.items, &data->structs.alloc, &data->structs.count,
-                       (void *)structure_info);
+  append_to_collection((void ***)&app_itp_data->structs.items, &app_itp_data->structs.alloc,
+                       &app_itp_data->structs.count, (void *)structure_info);
 
   return 0;
 }
 
 int attach_enumeration_info_to_owner(enumeration_info *enum_info)
 {
-  mc_global_data *data;
-  obtain_midge_global_root(&data);
+  mc_app_itp_data *app_itp_data;
+  mc_obtain_app_itp_data(&app_itp_data);
 
-  append_to_collection((void ***)&data->enumerations.items, &data->enumerations.alloc, &data->enumerations.count,
-                       (void *)enum_info);
+  append_to_collection((void ***)&app_itp_data->enumerations.items, &app_itp_data->enumerations.alloc,
+                       &app_itp_data->enumerations.count, (void *)enum_info);
 
   return 0;
 }
@@ -617,7 +617,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
   int res;
   char *code;
   mc_syntax_node *file_ast;
-  mc_global_data *gdata;
+  mc_app_itp_data *app_itp_data;
 
   printf("midge-interpret '%s'\n", filepath);
 
@@ -651,16 +651,16 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  // if (!strcmp("src/m_threads.c", filepath)) {
-  //   usleep(10000);
-  //   // printf("\ngen-code:\n%s||\n", code);
-  //   mcs_save_text_to_file("src/temp/todelete.h", code);
-  //   // MCerror(7704, "TODO");
-  // }
+  if (!strcmp("src/render/render_common.c", filepath)) {
+    // usleep(10000);
+    // printf("\ngen-code:\n%s||\n", code);
+    mcs_save_text_to_file("src/temp/todelete.h", code);
+    // MCerror(7704, "TODO");
+  }
 
   // Send the code to the interpreter
-  MCcall(obtain_midge_global_root(&gdata));
-  MCcall(tcci_add_string(gdata->interpreter, filepath, code));
+  MCcall(mc_obtain_app_itp_data(&app_itp_data));
+  MCcall(tcci_add_string(app_itp_data->interpreter, filepath, code));
 
   // Cleanup
   free(code);

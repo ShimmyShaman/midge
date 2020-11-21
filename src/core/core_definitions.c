@@ -143,19 +143,19 @@ int remove_ptr_from_collection(void ***collection, unsigned int *collection_coun
 
 int find_function_info(const char *name, function_info **result)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  mc_app_itp_data *app_itp_data;
+  mc_obtain_app_itp_data(&app_itp_data);
 
-  for (int i = 0; i < global_data->functions.count; ++i) {
-    if (!strcmp(name, global_data->functions.items[i]->name)) {
-      *result = global_data->functions.items[i];
+  for (int i = 0; i < app_itp_data->functions.count; ++i) {
+    if (!strcmp(name, app_itp_data->functions.items[i]->name)) {
+      *result = app_itp_data->functions.items[i];
       return 0;
     }
   }
 
-  for (int i = 0; i < global_data->function_declarations.count; ++i) {
-    if (!strcmp(name, global_data->function_declarations.items[i]->name)) {
-      *result = global_data->function_declarations.items[i];
+  for (int i = 0; i < app_itp_data->function_declarations.count; ++i) {
+    if (!strcmp(name, app_itp_data->function_declarations.items[i]->name)) {
+      *result = app_itp_data->function_declarations.items[i];
       return 0;
     }
   }
@@ -168,16 +168,16 @@ int find_function_info(const char *name, function_info **result)
 
 // int find_function_info_by_ptr(void *function_ptr, function_info **result)
 // {
-//   mc_global_data *global_data;
-//   obtain_midge_global_root(&global_data);
+//   mc_app_itp_data *app_itp_data;
+//   mc_obtain_app_itp_data(&app_itp_data);
 
-//   for (int i = 0; i < global_data->functions.count; ++i) {
-//     // printf("compare-fffbyptr! %p <> %p  '%s'\n", function_ptr, global_data->functions.items[i]->ptr_declaration,
-//     //  global_data->functions.items[i]->name);
-//     if (function_ptr == global_data->functions.items[i]->ptr_declaration) {
-//       // printf("found! %p <> %p  '%s' %p\n", function_ptr, global_data->functions.items[i]->ptr_declaration,
-//       //  global_data->functions.items[i]->name, result);
-//       *result = global_data->functions.items[i];
+//   for (int i = 0; i < app_itp_data->functions.count; ++i) {
+//     // printf("compare-fffbyptr! %p <> %p  '%s'\n", function_ptr, app_itp_data->functions.items[i]->ptr_declaration,
+//     //  app_itp_data->functions.items[i]->name);
+//     if (function_ptr == app_itp_data->functions.items[i]->ptr_declaration) {
+//       // printf("found! %p <> %p  '%s' %p\n", function_ptr, app_itp_data->functions.items[i]->ptr_declaration,
+//       //  app_itp_data->functions.items[i]->name, result);
+//       *result = app_itp_data->functions.items[i];
 //       return 0;
 //     }
 //   }
@@ -191,13 +191,13 @@ int find_function_info(const char *name, function_info **result)
 int find_struct_info(const char *name, struct_info **result)
 {
   // printf("fsi-0\n");
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  mc_app_itp_data *app_itp_data;
+  mc_obtain_app_itp_data(&app_itp_data);
   // printf("fsi-1 %s\n", name);
 
-  for (int i = 0; i < global_data->structs.count; ++i) {
-    if (!strcmp(name, global_data->structs.items[i]->name)) {
-      *result = global_data->structs.items[i];
+  for (int i = 0; i < app_itp_data->structs.count; ++i) {
+    if (!strcmp(name, app_itp_data->structs.items[i]->name)) {
+      *result = app_itp_data->structs.items[i];
       return 0;
     }
   }
@@ -211,14 +211,14 @@ int find_struct_info(const char *name, struct_info **result)
 
 int find_enumeration_info(const char *name, enumeration_info **result)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  mc_app_itp_data *app_itp_data;
+  mc_obtain_app_itp_data(&app_itp_data);
 
   // printf("find_enum(%s)=", name);
-  for (int i = 0; i < global_data->enumerations.count; ++i) {
+  for (int i = 0; i < app_itp_data->enumerations.count; ++i) {
     // if (strcmp(name, "int") && strcmp(name, "char"))
-    if (!strcmp(name, global_data->enumerations.items[i]->name)) {
-      *result = global_data->enumerations.items[i];
+    if (!strcmp(name, app_itp_data->enumerations.items[i]->name)) {
+      *result = app_itp_data->enumerations.items[i];
       // printf("found\n");
       return 0;
     }
@@ -233,12 +233,12 @@ int find_enumeration_info(const char *name, enumeration_info **result)
 
 int find_enum_member_info(const char *name, enumeration_info **result_type, enum_member_info **result)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  mc_app_itp_data *app_itp_data;
+  mc_obtain_app_itp_data(&app_itp_data);
 
   // printf("find_enum(%s)=", name);
-  for (int i = 0; i < global_data->enumerations.count; ++i) {
-    enumeration_info *enum_info = global_data->enumerations.items[i];
+  for (int i = 0; i < app_itp_data->enumerations.count; ++i) {
+    enumeration_info *enum_info = app_itp_data->enumerations.items[i];
     for (int m = 0; m < enum_info->members.count; ++m) {
       // printf("femi- %s<>%s\n", name, enum_info->members.items[m]->identity);
       if (!strcmp(name, enum_info->members.items[m]->identity)) {

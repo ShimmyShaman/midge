@@ -4,11 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "stb/stb_truetype.h"
+
 #include "core/core_definitions.h"
 #include "render/render_common.h"
 // #include "render/resources/tiny_obj_loader_c.h"
 
-#include "stb/stb_truetype.h"
+#include "core/midge_app.h"
 
 int mcr_obtain_image_render_request(render_thread_info *render_thread, image_render_details **p_request)
 {
@@ -108,8 +110,8 @@ int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_ima
 {
   *p_resource = NULL;
 
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
@@ -131,8 +133,8 @@ int mcr_load_texture_resource(const char *path, mcr_texture_image **p_resource)
 {
   *p_resource = NULL;
 
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
@@ -171,8 +173,8 @@ int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_r
 {
   *p_resource = NULL;
 
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
 
@@ -229,8 +231,8 @@ int mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *t
     return 0;
   }
 
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   if (!font) {
     // Use the global default font resource
@@ -279,10 +281,10 @@ int mcr_issue_render_command_text(image_render_details *image_render_queue, unsi
     render_cmd->print_text.font = font;
   }
   else {
-    mc_global_data *global_data;
-    obtain_midge_global_root(&global_data);
+    midge_app_info *app_info;
+    mc_obtain_midge_app_info(&app_info);
 
-    render_cmd->print_text.font = global_data->ui_state->default_font_resource;
+    render_cmd->print_text.font = app_info->ui_state->default_font_resource;
     // printf("set defaultfont %u\n", render_cmd->print_text.font->resource_uid);
   }
   render_cmd->print_text.color = font_color;

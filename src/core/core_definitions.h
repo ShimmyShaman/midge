@@ -248,32 +248,13 @@ typedef struct mc_node {
   void *data;
 } mc_node;
 
-// Incomplete Structure declarations
-typedef struct mc_global_data {
+typedef struct mc_app_itp_data {
   struct timespec *app_begin_time;
-  render_thread_info *render_thread;
 
   TCCInterpState *interpreter;
   bool exit_requested;
 
   mc_node *global_node;
-
-  struct {
-    unsigned int width, height;
-    void *present_image;
-  } screen;
-
-  struct mci_input_state *input_state;
-  bool input_state_requires_update;
-
-  frame_time *elapsed;
-
-  mcu_ui_state *ui_state;
-
-  // struct {
-  //   pthread_mutex_t mutex;
-  //   unsigned int index;
-  // } uid_counter;
 
   struct {
     unsigned int alloc, count;
@@ -303,9 +284,9 @@ typedef struct mc_global_data {
     unsigned int alloc, count;
     event_handler_array **items;
   } event_handlers;
-} mc_global_data;
+} mc_app_itp_data;
 
-int obtain_midge_global_root(mc_global_data **root_data);
+int mc_obtain_app_itp_data(mc_app_itp_data **p_data);
 
 int mc_throw_delayed_error(int error_no, const char *error_message, int year, int month, int day);
 
