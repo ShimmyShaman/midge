@@ -1700,7 +1700,7 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
       mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[0]);
       append_to_mc_str(ts->str, ", ");
       mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[1]);
-      append_to_mc_str(ts->str, ", __mch_thread_entry, (void *)mcti_wrapper_state);\n");
+      append_to_mc_str(ts->str, ", _mca_thread_entry_wrap, (void *)mcti_wrapper_state);\n");
 
       // if (ts->options->report_function_entry_exit_to_stack) {
       //   mct_transcribe_indent(ts);

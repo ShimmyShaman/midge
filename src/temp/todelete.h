@@ -1,533 +1,304 @@
 #include "midge_error_handling.h"
 
-/* midge_app.c */
+/* m_threads.c */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
-#include <time.h>
 #include <unistd.h>
 
-#include "core/core_definitions.h"
-#include "core/midge_app.h"
-#include "render/render_common.h"
-#include "render/render_thread.h"
-#include "ui/ui_definitions.h"
+#include "midge_error_handling.h"
 
-// void *callit(void *state)
-// {
-//   printf("!!callit-mc %p\n", state);
-//   render_thread_info *global_data->render_thread = (render_thread_info *)state;
+#include "m_threads.h"
 
-//   global_data->render_thread->thread_info->has_concluded = 1;
-//   return NULL;
-// }
-
-// int dothecall(void *something)
-// {
-//   void *(*rout)(void *) = (void *(*)(void *))something;
-//   printf("dothecall\n");
-//   rout(NULL);
-//   printf("dothecall-after-rout-call\n");
-//   return 0;
-// }
-
-// int begin_silly_thread()
-// {
-//   printf("begin_silly_thread\n");
-//   dothecall(&callit);
-//   // dothecall(callit); // TODO -- C implicity converts the function so its the same as the above line, this doesn't
-//   // work atm in midge...
-
-//   return 0;
-// }
-
-int begin_render_thread() {
+void *_mca_thread_entry_wrap(void *state) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("begin_render_thread", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("_mca_thread_entry_wrap", __FILE__, __LINE__, &midge_error_stack_index);
 
-  mc_global_data *global_data;
+  unsigned int mc_error_thread_index;
 
-  obtain_midge_global_root(&global_data);
+  int base_error_stack_index;
 
-  global_data->render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
-  // printf("global_data->render_thread = %p\n", global_data->render_thread);
-  global_data->render_thread->render_thread_initialized = false;
+  register_midge_thread_creation(&mc_error_thread_index, "_mca_thread_entry_wrap", "m_threads.c", 13, &base_error_stack_index);
+
+  void **state_args = (void **)state;
+
+  int (*mc_routine)(int,void **) = *(/*!*/int (**)(int,void **))state_args[0];
+
+  void *wrapped_state = state_args[1];
+
+
+  void *mcf_vargs[2];
+
+  mcf_vargs[0] = &wrapped_state;
+  void *routine_result;
+
+  mcf_vargs[1] = &routine_result;
+
+  // printf("mc_routine ptr:%p\n", mc_routine);
+  // printf("mc_routine deref ptr:%p\n", *mc_routine);
+
+  char *fn_name = "TODO-find-by-ptr?";
+
 {
-    global_data->render_thread->resource_queue = (resource_queue *)malloc(sizeof(resource_queue));
-    MCcall(pthread_mutex_init(&global_data->render_thread->resource_queue->mutex, NULL));
-    global_data->render_thread->resource_queue->count = 0;
-    global_data->render_thread->resource_queue->allocated = 0;
+    int mc_error_stack_index;
 
-    // Render Queue
-    global_data->render_thread->image_queue = (image_render_list *)malloc(sizeof(image_render_list));
-    MCcall(pthread_mutex_init(&global_data->render_thread->image_queue->mutex, NULL));
-    global_data->render_thread->image_queue->count = 0;
-    global_data->render_thread->image_queue->alloc = 0;
+    register_midge_stack_invocation(fn_name, __FILE__, __LINE__ + 1, &mc_error_stack_index);
+    int mc_res = mc_routine(2, mcf_vargs);
 
-    // Render Request Object Pool
-    global_data->render_thread->render_request_object_pool = (image_render_list *)malloc(sizeof(image_render_list));
-    MCcall(pthread_mutex_init(&global_data->render_thread->render_request_object_pool->mutex, NULL));
-    global_data->render_thread->render_request_object_pool->count = 0;
-    global_data->render_thread->render_request_object_pool->alloc = 0;
+    if (mc_res) {
+      printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
 
-    pthread_mutex_init(&global_data->render_thread->input_buffer.mutex, NULL);
-    global_data->render_thread->input_buffer.event_count = 0;
+      {
+        // Return
+        register_midge_stack_return(midge_error_stack_index);
+        return NULL;
+      }
+
+    }
+
+    register_midge_stack_return(mc_error_stack_index);
   }
 
+  // printf("routine called\n");
 
-  // -- Start Thread
-  // dothecall(&callit);
-  // printf("global_data->render_thread:%p &global_data->render_thread:%p\n", global_data->render_thread,
-  // global_data->render_thread);
+  register_midge_thread_conclusion(mc_error_thread_index);
+  // return routine_result;
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return NULL;
+  }
+
+}
+
+
+// void *mthread_wrapper_delegate(void *ws)
+// {
+//   void **args = (void **)ws;
+//   printf("boop\n");
+//   printf("bap %p\n", args[0]);
+//   void *(*start_routine)(void *) = (void *(*)(void *))args[0];
+//   printf("bop\n");
+//   mthread_info *thread_info = (mthread_info *)args[1];
+//   printf("boom\n");
+//   void *state = args[2];
+
+//   printf("bum\n");
+//   void *result;
+//   if (!thread_info->should_exit) {
+//   printf("bim %p\n", start_routine);
+//     result = start_routine(state);
+//   }
+
+//   printf("bam\n");
+//   thread_info->has_concluded = 1;
+
+//   return result;
+// }
+
+// int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void *state)
+// {
+//   printf("bim %p\n", start_routine);
+//   *p_thread_info = (mthread_info *)malloc(sizeof *p_thread_info);
+//   (*p_thread_info)->start_routine = start_routine;
+
+//   (*p_thread_info)->should_exit = 0;
+//   (*p_thread_info)->has_concluded = 0;
+//   (*p_thread_info)->should_pause = 0;
+//   (*p_thread_info)->has_paused = 0;
+
+//   void *vargs[3];
+//   vargs[0] = (void *)start_routine;
+//   printf("bap %p\n", vargs[0]);
+//   vargs[1] = (void *)(*p_thread_info);
+//   vargs[2] = (void *)state;
+
+//   if (pthread_create(&(*p_thread_info)->threadId, NULL, mthread_wrapper_delegate, (void *)vargs)) {
+//     return 0;
+//   }
+//   return -1;
+// }
+
+int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void *state) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("begin_mthread", __FILE__, __LINE__, &midge_error_stack_index);
+
+  *p_thread_info = (mthread_info *)malloc(sizeof(mthread_info));
+  (*p_thread_info)->start_routine = start_routine;
+
+  (*p_thread_info)->should_exit = 0;
+  (*p_thread_info)->has_concluded = 0;
+  (*p_thread_info)->should_pause = 0;
+  (*p_thread_info)->has_paused = 0;
+  int result;
+  {
+    void **mcti_wrapper_state = (void **)malloc(sizeof(void *) * 2);
+    mcti_wrapper_state[0] = (void *)(*p_thread_info)->start_routine;
+    mcti_wrapper_state[1] = (void *)state;
+    result = pthread_create(&(*p_thread_info)->threadId, NULL, _mca_thread_entry_wrap, (void *)mcti_wrapper_state);
+  }
+
+  if (!result) {
+
+    {
+      // Return
+      register_midge_stack_return(midge_error_stack_index);
+      return 0;
+    }
+
+  }
+
+  printf("begin_mthread FAILURE TO START THREAD pthread_create ERR:%i\n", result);
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int pause_mthread(mthread_info *p_thread_info, bool blocking) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("pause_mthread", __FILE__, __LINE__, &midge_error_stack_index);
+
+  p_thread_info->should_pause = 1;
+
+  if (blocking) {
+    const int MAX_ITERATIONS = 2000000;
+
+    int iterations = 0;
+
+    while (!p_thread_info->has_paused&&!p_thread_info->has_concluded    ) {
+      usleep(1);
+      ++iterations;
+      if (iterations>=MAX_ITERATIONS) {
+        printf("TODO -- Thread-Handling for unresponsive thread:: \n");
+
+        {
+          // Return
+          register_midge_stack_return(midge_error_stack_index);
+          return -1;
+        }
+
+      }
+
+    }
+
+  }
+
 
 
   {
     // Return
     register_midge_stack_return(midge_error_stack_index);
-    return begin_mthread(&midge_render_thread, &global_data->render_thread->thread_info, (void *)global_data->render_thread);
+    return 0;
   }
 
 }
 
 
-// typedef struct
-
-void complete_midge_app_compile() {
+/*
+ * Holds the given mthread. Intended to be called by the thread which has been signaled to pause.
+ * @returns whether the thread since pausing has been signalled to exit (should_exit).
+ */
+int hold_mthread(mthread_info *p_thread_info) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("complete_midge_app_compile", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("hold_mthread", __FILE__, __LINE__, &midge_error_stack_index);
 
-  mc_global_data *global_data;
-
-  obtain_midge_global_root(&global_data);
-
-  const char *remainder_app_source_files[] = {
-    "src/control/mc_controller.h",
-    "src/render/render_common.c",
-    "src/env/hierarchy.c",
-    "src/env/util.c",
-    "src/ui/controls/panel.c",
-    "src/ui/controls/text_block.c",
-    "src/ui/controls/button.c",
-    "src/ui/ui_functionality.c",
-    "src/control/mc_controller.c",
-    NULL
-  };
-
-
-  for (int  f = 0  ; remainder_app_source_files[f]  ; ++f  ) {
-    puts("TODO Load file");
-  }
-
-}
-
-
-// extern "C" {
-void mcc_initialize_input_state();
-void mcc_update_xcb_input();
-// void mcu_initialize_core_ui_components();
-// void mcu_render_element_headless(mc_node *element_node);
-// void mcu_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
-void mca_load_modules();
-void mca_load_open_projects();
-// }
-
-void initialize_midge_components() {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("initialize_midge_components", __FILE__, __LINE__, &midge_error_stack_index);
-
-  mc_global_data *global_data;
-
-  obtain_midge_global_root(&global_data);
-
-  mcc_initialize_input_state();
-
-  mcu_initialize_ui_state(&global_data->ui_state);
-  // mcu_initialize_core_ui_components();
-
-  // // Environment
-  // mca_init_global_context_menu();
-  // mca_init_global_node_context_menu_options();
-  // mce_init_source_editor_pool();
-  // // mca_init_visual_project_management();
-
-  // Modules
-  mca_load_modules();
-  // // init_modus_operandi_curator();
-  // // init_hierarchy_viewer();
-  // mca_load_app_modules
-  // init_three_d_portal();
-
-  // Projects
-  mca_load_open_projects();
-}
-
-
-void midge_initialize_app(struct timespec *app_begin_time) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("midge_initialize_app", __FILE__, __LINE__, &midge_error_stack_index);
-
-  mc_global_data *global_data;
-
-  obtain_midge_global_root(&global_data);
-
-  // Set Times
-  global_data->app_begin_time = app_begin_time;
-
-  struct timespec source_load_complete_time;
-
-  clock_gettime(CLOCK_REALTIME, &source_load_complete_time);
-
-  printf("#######################\n  <<<< MIDGE >>>>\n\nCore Compile took %.2f "
-         "seconds\n", source_load_complete_time.tv_sec - global_data->app_begin_time->tv_sec + 1e-9 * (source_load_complete_time.tv_nsec - global_data->app_begin_time->tv_nsec));
-
-  // Asynchronously begin the render thread containing vulkan and xcb
-  begin_render_thread();
-
-  // Compile the remainder of the application
-  complete_midge_app_compile();
-  printf("midge compilation complete\n");
-
-  // Complete Initialization of the global root node
-  mca_init_node_layout(&global_data->global_node->layout);
-  global_data->global_node->layout->__requires_rerender = true;
-
-  // Initialize main thread
-  initialize_midge_components();
-  printf("midge components initialized\n");
-
-  // Wait for render thread initialization and all initial resources to load before
-  // continuing with the next set of commands
-  bool waited = false;
-
-  int count = 0;
-
-  while (!global_data->render_thread->render_thread_initialized||global_data->render_thread->resource_queue->count  ) {
-    waited = !global_data->render_thread->render_thread_initialized;
+  p_thread_info->has_paused = 1;
+  while (p_thread_info->should_pause  ) 
     usleep(1);
-    ++count;
-    if (count % 100000==0) {
-      printf("global_data->render_thread = %p %i %u\n", global_data->render_thread, global_data->render_thread->render_thread_initialized, global_data->render_thread->resource_queue->count);
+  p_thread_info->has_paused = 0;
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return p_thread_info->should_exit;
+  }
+
+}
+
+
+int unpause_mthread(mthread_info *p_thread_info, bool blocking) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("unpause_mthread", __FILE__, __LINE__, &midge_error_stack_index);
+
+  p_thread_info->should_pause = 0;
+
+  if (blocking) {
+    const int MAX_ITERATIONS = 2000000;
+
+    int iterations = 0;
+
+    while (p_thread_info->has_paused&&!p_thread_info->has_concluded    ) {
+      usleep(1);
+      ++iterations;
+      if (iterations>=MAX_ITERATIONS) {
+        printf("TODO -- Thread-Handling for unresponsive thread:: \n");
+
+        {
+          // Return
+          register_midge_stack_return(midge_error_stack_index);
+          return -1;
+        }
+
+      }
+
     }
 
   }
 
 
-  // Set properties
 
-  // Completed
-  struct timespec load_complete_frametime;
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
 
-  clock_gettime(CLOCK_REALTIME, &load_complete_frametime);
-  printf("##################################\n"
-         "         <<<< MIDGE >>>>\n"
-         "\n"
-         "Post-Core load took %.2f seconds (*%s)\n"
-         "App Begin took %.2f seconds\n"
-         "##################################\n", load_complete_frametime.tv_sec - source_load_complete_time.tv_sec + 1e-9 * (load_complete_frametime.tv_nsec - source_load_complete_time.tv_nsec), waited ? "vulkan-initialization limited" : "midge-compile-load limited", load_complete_frametime.tv_sec - global_data->app_begin_time->tv_sec + 1e-9 * (load_complete_frametime.tv_nsec - global_data->app_begin_time->tv_nsec));
 }
 
 
-void mca_render_presentation() {
+int end_mthread(mthread_info *p_thread_info) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("mca_render_presentation", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("end_mthread", __FILE__, __LINE__, &midge_error_stack_index);
 
-  mc_global_data *global_data;
+  p_thread_info->should_exit = 1;
 
-  obtain_midge_global_root(&global_data);
+  // printf("end_mthread:0\n");
+  const int MAX_ITERATIONS = 20000;
 
-  image_render_details *image_render;
+  int iterations = 0;
 
-  mcr_obtain_image_render_request(global_data->render_thread, &image_render);
-  image_render->render_target = NODE_RENDER_TARGET_PRESENT;
-  image_render->clear_color = COLOR_MIDNIGHT_EXPRESS;
-  // printf("global_data->screen : %u, %u\n", global_data->screen.width,
-  // global_data->screen.height);
-  image_render->image_width = global_data->screen.width;
-  image_render->image_height = global_data->screen.height;
-  image_render->data.target_image.image = (mcr_texture_image *)global_data->screen.present_image;
+  while (!p_thread_info->has_concluded  ) {
+    usleep(100);
+    ++iterations;
+    if (iterations>=MAX_ITERATIONS) {
+      printf("TODO -- Thread-Handling for unresponsive thread:: \n");
 
-  for (int  a = 0  ; a<global_data->global_node->children->count  ; ++a  ) {
-    mc_node *child = global_data->global_node->children->items[a];
+      {
+        // Return
+        register_midge_stack_return(midge_error_stack_index);
+        return -1;
+      }
 
-    if (child->layout&&child->layout->visible&&child->layout->render_present) {
-      void (*render_node_presentation)(image_render_details *,mc_node *) = (/*!*/void (*)(image_render_details *,mc_node *))child->layout->render_present;
-
-      render_node_presentation(image_render, child);
     }
 
   }
 
+  // printf("end_mthread:1\n");
 
-  mcr_submit_image_render_request(global_data->render_thread, image_render);
-}
+  free(p_thread_info);
 
 
-void midge_run_app() {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("midge_run_app", __FILE__, __LINE__, &midge_error_stack_index);
-
-  printf("midge_run_app()\n");
-
-  mc_global_data *global_data;
-
-  obtain_midge_global_root(&global_data);
-  mc_node *global_root_node = global_data->global_node;
-
-  // printf("defaultfont-0:%u\n", global_data->default_mcr_font_resource);
-  // printf("global_data->ui_state:%p\n", global_data->ui_state);
-
-  struct timespec prev_frametime, current_frametime, logic_update_frametime;
-
-  clock_gettime(CLOCK_REALTIME, &current_frametime);
-  clock_gettime(CLOCK_REALTIME, &logic_update_frametime);
-
-  struct timespec debug_start_time, debug_end_time;
-
-
-  int DEBUG_secs_of_last_5sec_update = 0;
-
-
-  global_data->elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
-  frame_time *elapsed = global_data->elapsed;
-
-  int ui = 0;
-
-  while (1  ) {
-    if (global_data->render_thread->thread_info->has_concluded) {
-      printf("Render Thread Aborted abnormally.\nShutting down...\n");
-      break;
-    }
-
-
-    // // Time
-    bool logic_update_due = false;
-
-{
-      long ms;
-      // Milliseconds
-      time_t s;
-      // Seconds
-      memcpy(&prev_frametime, &current_frametime, sizeof(struct timespec));
-      clock_gettime(CLOCK_REALTIME, &current_frametime);
-
-      elapsed->frame_secs = current_frametime.tv_sec - prev_frametime.tv_sec;
-      elapsed->frame_nsecs = current_frametime.tv_nsec - prev_frametime.tv_nsec;
-      if (elapsed->frame_nsecs<0) {
-        --elapsed->frame_secs;
-        elapsed->frame_nsecs += 1e9;
-      }
-
-      elapsed->frame_secsf = (float)elapsed->frame_secs + 1e-9 * elapsed->frame_nsecs;
-
-      elapsed->app_secs = current_frametime.tv_sec - global_data->app_begin_time->tv_sec;
-      elapsed->app_nsecs = current_frametime.tv_nsec - global_data->app_begin_time->tv_nsec;
-      if (elapsed->app_nsecs<0) {
-        --elapsed->app_secs;
-        elapsed->app_nsecs += 1e9;
-      }
-
-      elapsed->app_secsf = (float)elapsed->app_secs + 1e-9 * elapsed->app_nsecs;
-
-      // Logic Update
-      const int ONE_MS_IN_NS = 1000000;
-
-      const int FIFTY_PER_SEC = 20 * ONE_MS_IN_NS;
-
-      if (1e9 * (current_frametime.tv_sec - logic_update_frametime.tv_sec) + current_frametime.tv_nsec - logic_update_frametime.tv_nsec>FIFTY_PER_SEC) {
-        logic_update_due = true;
-
-        logic_update_frametime.tv_nsec += FIFTY_PER_SEC;
-        if (logic_update_frametime.tv_nsec>1000 * ONE_MS_IN_NS) {
-          logic_update_frametime.tv_nsec -= 1000 * ONE_MS_IN_NS;
-          ++logic_update_frametime.tv_sec;
-        }
-
-      }
-
-
-      // Update Timers
-      bool exit_gracefully = false;
-
-      // for (int i = 0; i < !exit_gracefully &&
-      // global_data->update_timers.count; ++i) {
-      //   update_callback_timer *timer =
-      //   global_data->update_timers.callbacks[i];
-
-      //   if (!timer->update_delegate || !(*timer->update_delegate)) {
-      //     continue;
-      //   }
-
-      //   // if (logic_update_due) {
-      //   //   printf("%p::%ld<>%ld\n", timer->update_delegate,
-      //   timer->next_update.tv_sec, current_frametime.tv_sec);
-      //   // }
-      //   if (current_frametime.tv_sec > timer->next_update.tv_sec ||
-      //       (current_frametime.tv_sec == timer->next_update.tv_sec &&
-      //        current_frametime.tv_nsec >= timer->next_update.tv_nsec)) {
-      //     // Update
-      //     {
-      //       void *vargs[2];
-      //       vargs[0] = (void *)&elapsed;
-      //       vargs[1] = (void *)&timer->state;
-      //       int mc_res = (*timer->update_delegate)(2, vargs);
-      //       if (mc_res) {
-      //         printf("--timer->update_delegate(2, vargs):%i\n", mc_res);
-      //         printf("Ending execution...\n");
-      //         exit_gracefully = true;
-      //         break;
-      //       }
-      //     }
-
-      //     if (timer->reset_timer_on_update)
-      //       increment_time_spec(&current_frametime, &timer->period,
-      //       &timer->next_update);
-      //     else
-      //       increment_time_spec(&timer->next_update, &timer->period,
-      //       &timer->next_update);
-      //   }
-      // }
-      if (exit_gracefully) {
-        break;
-      }
-
-    }
-
-
-    // Handle Input
-    if (global_data->input_state_requires_update||global_data->render_thread->input_buffer.event_count) {
-      clock_gettime(CLOCK_REALTIME, &debug_start_time);
-
-      pthread_mutex_lock(&global_data->render_thread->input_buffer.mutex);
-      mcc_update_xcb_input();
-      pthread_mutex_unlock(&global_data->render_thread->input_buffer.mutex);
-
-      clock_gettime(CLOCK_REALTIME, &debug_end_time);
-    }
-
-
-    // printf("~main_input\n");
-
-    if (global_data->exit_requested)     break;
-    if (global_data->render_thread->thread_info->has_concluded) {
-      printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
-      break;
-    }
-
-
-    // Update State
-    // TODO ?? -- update registered methods...
-
-    // Update Visible Layout
-{
-      if (global_root_node->layout->__requires_layout_update) {
-        clock_gettime(CLOCK_REALTIME, &debug_start_time);
-
-        global_root_node->layout->__requires_layout_update = false;
-
-        for (int  a = 0        ; a<global_data->global_node->children->count        ; ++a        ) {
-          mc_node *child = global_data->global_node->children->items[a];
-
-          if (child->layout&&child->layout->determine_layout_extents) {
-            void (*determine_layout_extents)(mc_node *,layout_extent_restraints) = (/*!*/void (*)(mc_node *,layout_extent_restraints))child->layout->determine_layout_extents;
-
-            determine_layout_extents(child, LAYOUT_RESTRAINT_NONE);
-          }
-
-        }
-
-
-        // Update the layout
-        global_root_node->layout->__bounds = (mc_rectf){ 0.f, 0.f, (float)global_data->screen.width, (float)global_data->screen.height };
-        for (int  a = 0        ; a<global_root_node->children->count        ; ++a        ) {
-          mc_node *child = global_root_node->children->items[a];
-
-
-          if (child->layout&&child->layout->update_layout) {
-            void (*update_node_layout)(mc_node *,mc_rectf *) = (/*!*/void (*)(mc_node *,mc_rectf *))child->layout->update_layout;
-
-            update_node_layout(child, &global_root_node->layout->__bounds);
-          }
-
-        }
-
-
-        clock_gettime(CLOCK_REALTIME, &debug_end_time);
-        printf("LayoutUpdate took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) + 1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
-      }
-
-    }
-
-
-    if (global_data->exit_requested)     break;
-
-    // Render State Changes
-    // TODO -- do not know how to eloquently handle render update requests outpacing the render thread
-    if (global_root_node->layout->__requires_rerender&&!global_data->render_thread->image_queue->count) {
-      clock_gettime(CLOCK_REALTIME, &debug_start_time);
-
-      // printf("child-order:\n");
-      // for (int a = 0; a < global_root_node->children->count; ++a) {
-      //   mc_node *child = global_root_node->children->items[a];
-
-      //   printf(":%i:%p\n", a, child);
-      // }
-
-      // Reset States
-      global_root_node->layout->__requires_rerender = false;
-
-      // Rerender headless images
-      // printf("headless\n");
-      for (int  a = 0      ; a<global_root_node->children->count      ; ++a      ) {
-        mc_node *child = global_root_node->children->items[a];
-
-        if (child->layout&&child->layout->visible&&child->layout->render_headless&&child->layout->__requires_rerender) {
-          void (*render_node_headless)(mc_node *) = (/*!*/void (*)(mc_node *))child->layout->render_headless;
-
-          render_node_headless(child);
-        }
-
-      }
-
-
-      // Queue the updated render
-      // printf("present\n");
-      mca_render_presentation();
-
-      // Release lock and allow rendering
-      clock_gettime(CLOCK_REALTIME, &debug_end_time);
-      printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) + 1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
-    }
-
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
   }
 
-
-  free(elapsed);
-  global_data->elapsed = NULL;
-}
-
-
-void midge_cleanup_app() {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("midge_cleanup_app", __FILE__, __LINE__, &midge_error_stack_index);
-
-  printf("~midge_cleanup_app()~\n");
-
-  mc_global_data *global_data;
-
-  obtain_midge_global_root(&global_data);
-
-  // TODO invoke release resources on children...
-
-  // End render thread
-  end_mthread(global_data->render_thread->thread_info);
-
-  // Destroy render thread resources
-  pthread_mutex_destroy(&global_data->render_thread->resource_queue->mutex);
-  pthread_mutex_destroy(&global_data->render_thread->image_queue->mutex);
-  pthread_mutex_destroy(&global_data->render_thread->input_buffer.mutex);
-
-  free(global_data->render_thread);
-  global_data->render_thread = NULL;
 }

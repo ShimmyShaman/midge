@@ -1,11 +1,49 @@
 /* m_threads.c */
 
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "midge_error_handling.h"
+
 #include "m_threads.h"
+
+void *_mca_thread_entry_wrap(void *state)
+{
+  unsigned int mc_error_thread_index;
+  int base_error_stack_index;
+  register_midge_thread_creation(&mc_error_thread_index, "_mca_thread_entry_wrap", "m_threads.c", 13,
+                                 &base_error_stack_index);
+
+  void **state_args = (void **)state;
+  int (*mc_routine)(int, void **) = *(int (**)(int, void **))state_args[0];
+  void *wrapped_state = state_args[1];
+
+  void *mcf_vargs[2];
+  mcf_vargs[0] = &wrapped_state;
+  void *routine_result;
+  mcf_vargs[1] = &routine_result;
+
+  // printf("mc_routine ptr:%p\n", mc_routine);
+  // printf("mc_routine deref ptr:%p\n", *mc_routine);
+
+  char *fn_name = "TODO-find-by-ptr?";
+  {
+    int mc_error_stack_index;
+    register_midge_stack_invocation(fn_name, __FILE__, __LINE__ + 1, &mc_error_stack_index);
+    int mc_res = mc_routine(2, mcf_vargs);
+    if (mc_res) {
+      printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
+      return NULL;
+    }
+    register_midge_stack_return(mc_error_stack_index);
+  }
+  // printf("routine called\n");
+
+  register_midge_thread_conclusion(mc_error_thread_index);
+  // return routine_result;
+  return NULL;
+}
 
 // void *mthread_wrapper_delegate(void *ws)
 // {

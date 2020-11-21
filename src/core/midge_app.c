@@ -274,7 +274,7 @@ void midge_run_app()
   mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
   mc_node *global_root_node = global_data->global_node;
-  // printf("defaultfont-0:%u\n", global_data->default_mcr_font_resource);
+  // printf("defaultfont-0:%u\n", global_data->default_font_resource);
   // printf("global_data->ui_state:%p\n", global_data->ui_state);
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;

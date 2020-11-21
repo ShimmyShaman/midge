@@ -1,8 +1,14 @@
-#include "render/render_common.h"
+/* render_common.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "core/core_definitions.h"
+#include "render/render_common.h"
 // #include "render/resources/tiny_obj_loader_c.h"
 
-#include "stb_truetype.h"
+#include "stb/stb_truetype.h"
 
 int mcr_obtain_image_render_request(render_thread_info *render_thread, image_render_details **p_request)
 {
@@ -97,8 +103,8 @@ int mcr_obtain_resource_command(resource_queue *queue, resource_command **p_comm
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
-void mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
-                                 mcr_texture_image **p_resource)
+int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
+                                mcr_texture_image **p_resource)
 {
   *p_resource = NULL;
 
@@ -116,10 +122,12 @@ void mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_im
   command->create_texture.image_usage = image_usage;
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+  return 0;
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
-void mcr_load_texture_resource(const char *path, mcr_texture_image **p_resource)
+int mcr_load_texture_resource(const char *path, mcr_texture_image **p_resource)
 {
   *p_resource = NULL;
 
@@ -135,16 +143,18 @@ void mcr_load_texture_resource(const char *path, mcr_texture_image **p_resource)
   command->load_texture.path = path; // strdup(path);
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+  return 0;
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
-void mcr_obtain_mcr_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
-                                  mcr_font_resource **p_resource)
+int mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
+                             mcr_font_resource **p_resource)
 {
   *p_resource = NULL;
 
   pthread_mutex_lock(&resource_queue->mutex);
-  // printf("mcr_obtain_mcr_font_resource-font_height:%f\n", font_height);
+  // printf("mcr_obtain_font_resource-font_height:%f\n", font_height);
   resource_command *command;
   mcr_obtain_resource_command(resource_queue, &command);
   command->type = RESOURCE_COMMAND_LOAD_FONT;
@@ -153,9 +163,11 @@ void mcr_obtain_mcr_font_resource(resource_queue *resource_queue, const char *fo
   command->font.path = font_path;
   // printf("hrc-resource_cmd->font.height:%f\n", command->font.height);
   pthread_mutex_unlock(&resource_queue->mutex);
+
+  return 0;
 }
 
-void mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_resource)
+int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_resource)
 {
   *p_resource = NULL;
 
@@ -204,15 +216,17 @@ void mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_
          sizeof(mcr_input_binding) * create_info->input_binding_count);
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+  return 0;
 }
 
-void mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
-                                           float *text_height)
+int mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
+                                          float *text_height)
 {
   if (text == NULL || text[0] == '\0') {
     *text_width = 0;
     *text_height = 0;
-    return;
+    return 0;
   }
 
   mc_global_data *global_data;
@@ -220,7 +234,7 @@ void mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *
 
   if (!font) {
     // Use the global default font resource
-    font = global_data->ui_state->default_mcr_font_resource;
+    font = global_data->ui_state->default_font_resource;
   }
 
   *text_width = 0;
@@ -243,11 +257,13 @@ void mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *
     stbtt_GetBakedQuad(font->char_data, 256, 256, letter - 32, text_width, text_height, &q, 1);
     // printf("char:'%c' w:%.2f h:%.2f\n", letter, *text_width, *text_height);
   }
+
+  return 0;
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @image_render_queue
-void mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                   const char *text, mcr_font_resource *font, render_color font_color)
+int mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+                                  const char *text, mcr_font_resource *font, render_color font_color)
 {
   element_render_command *render_cmd;
   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
@@ -266,18 +282,20 @@ void mcr_issue_render_command_text(image_render_details *image_render_queue, uns
     mc_global_data *global_data;
     obtain_midge_global_root(&global_data);
 
-    render_cmd->print_text.font = global_data->ui_state->default_mcr_font_resource;
+    render_cmd->print_text.font = global_data->ui_state->default_font_resource;
     // printf("set defaultfont %u\n", render_cmd->print_text.font->resource_uid);
   }
   render_cmd->print_text.color = font_color;
+
+  return 0;
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @image_render_queue
-void mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                           unsigned int width, unsigned int height, render_color color)
+int mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+                                          unsigned int width, unsigned int height, render_color color)
 {
   if (!color.a)
-    return;
+    return 0;
 
   element_render_command *render_cmd;
   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
@@ -288,12 +306,13 @@ void mcr_issue_render_command_colored_quad(image_render_details *image_render_qu
   render_cmd->colored_rect_info.width = width;
   render_cmd->colored_rect_info.height = height;
   render_cmd->colored_rect_info.color = color;
+
+  return 0;
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @image_render_queue
-void mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                            unsigned int width, unsigned int height,
-                                            mcr_texture_image *texture_resource)
+int mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+                                           unsigned int width, unsigned int height, mcr_texture_image *texture_resource)
 {
   element_render_command *render_cmd;
   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
@@ -304,4 +323,6 @@ void mcr_issue_render_command_textured_quad(image_render_details *image_render_q
   render_cmd->textured_rect_info.width = width;
   render_cmd->textured_rect_info.height = height;
   render_cmd->textured_rect_info.texture = texture_resource;
+
+  return 0;
 }

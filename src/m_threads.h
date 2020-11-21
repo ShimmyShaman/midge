@@ -14,6 +14,9 @@ typedef struct mthread_info {
   int should_pause, has_paused;
 } mthread_info;
 
+// TODO -- find another home for this method?
+void *_mca_thread_entry_wrap(void *state);
+
 int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void *state);
 
 int pause_mthread(mthread_info *p_thread_info, bool blocking);

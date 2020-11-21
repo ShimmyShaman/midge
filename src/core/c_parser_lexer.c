@@ -1017,7 +1017,8 @@ int release_syntax_node(mc_syntax_node *sn)
   case MC_SYNTAX_BITWISE_EXPRESSION:
   case MC_SYNTAX_OFFSETOF_EXPRESSION:
   case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE:
-    // sn->offsetof_expression.
+  case MC_SYNTAX_FUNCTION_POINTER_DECLARATION:
+    // sn->fptr_declaration.
     break;
   default: {
     MCerror(6616, "release_sn(); Clear type:%s for proper release of item collections",

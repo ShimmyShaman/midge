@@ -387,21 +387,21 @@ int mcr_submit_image_render_request(render_thread_info *render_thread, image_ren
 int mcr_obtain_element_render_command(image_render_details *image_queue, element_render_command **p_command);
 int obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
 
-void mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
+int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
                                  mcr_texture_image **p_texture);
-void mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
-void mcr_obtain_mcr_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
+int mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
+int mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                                   mcr_font_resource **font);
-void mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_resource);
+int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_resource);
 
-void mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
+int mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
                                            float *text_height);
 
-void mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+int mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                    const char *text, mcr_font_resource *font, render_color font_color);
-void mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+int mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                            unsigned int width, unsigned int height, render_color color);
-void mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
+int mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                             unsigned int width, unsigned int height, mcr_texture_image *texture);
 // }
 

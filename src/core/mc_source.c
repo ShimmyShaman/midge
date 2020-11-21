@@ -411,7 +411,7 @@ int mcs_register_struct_declaration(mc_syntax_node *struct_ast, struct_info **p_
 
     if (struct_ast->struct_decl.fields) {
       if (si->is_defined) {
-        MCerror(7471, "Redefinition - TODO check");
+        MCerror(7471, "Redefinition of '%s' - TODO check", si->name);
       }
 
       // Define
@@ -425,7 +425,7 @@ int mcs_register_struct_declaration(mc_syntax_node *struct_ast, struct_info **p_
 
     if (struct_ast->struct_decl.fields) {
       if (si->is_defined) {
-        MCerror(7471, "Redefinition - TODO check");
+        MCerror(7428, "Redefinition - TODO check");
       }
 
       // Define
@@ -469,11 +469,11 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       mcs_register_function_declaration(child, &info);
 
       if (!child->function.code_block) {
-        printf("--fdecl:'%s'\n", child->function.name->text);
+        // printf("--fdecl:'%s'\n", child->function.name->text);
       }
       else {
         // info->source->source_file = source_file;
-        printf("--fdefn:'%s'\n", child->function.name->text);
+        // printf("--fdefn:'%s'\n", child->function.name->text);
       }
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
@@ -483,7 +483,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       case MC_SYNTAX_STRUCT_DECL: {
         // print_syntax_node(child->type_alias.type_descriptor, 0);
         struct_info *info;
-        mcs_register_struct_declaration(child->type_alias.type_descriptor, &info);
+        MCcall(mcs_register_struct_declaration(child->type_alias.type_descriptor, &info));
         // MCerror(1151, "TODO");
         // struct_info *info;
         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
@@ -526,7 +526,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
     case MC_SYNTAX_UNION_DECL:
     case MC_SYNTAX_STRUCT_DECL: {
       struct_info *info;
-      mcs_register_struct_declaration(child, &info);
+      MCcall(mcs_register_struct_declaration(child, &info));
       // struct_info *info;
       // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       // info->source->source_file = source_file;
@@ -651,12 +651,12 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  if (!strcmp("src/core/midge_app.c", filepath)) {
-    usleep(10000);
-    // printf("\ngen-code:\n%s||\n", code);
-    mcs_save_text_to_file("src/temp/todelete.h", code);
-    // MCerror(7704, "TODO");
-  }
+  // if (!strcmp("src/m_threads.c", filepath)) {
+  //   usleep(10000);
+  //   // printf("\ngen-code:\n%s||\n", code);
+  //   mcs_save_text_to_file("src/temp/todelete.h", code);
+  //   // MCerror(7704, "TODO");
+  // }
 
   // Send the code to the interpreter
   MCcall(obtain_midge_global_root(&gdata));

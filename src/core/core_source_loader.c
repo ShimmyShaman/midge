@@ -15,41 +15,6 @@
 
 #include "tinycc/libtccinterp.h"
 
-// static void *__mch_thread_entry(void *state)
-// {
-//   unsigned int mc_error_thread_index;
-//   int base_error_stack_index;
-//   register_midge_thread_creation(&mc_error_thread_index, "__mch_thread_entry", "core_source_loader.c", 54,
-//                                  &base_error_stack_index);
-
-//   void **state_args = (void **)state;
-//   int (*mc_routine)(int, void **) = *(int (**)(int, void **))state_args[0];
-//   void *wrapped_state = state_args[1];
-
-//   void *mcf_vargs[2];
-//   mcf_vargs[0] = &wrapped_state;
-//   void *routine_result;
-//   mcf_vargs[1] = &routine_result;
-
-//   // printf("mc_routine ptr:%p\n", mc_routine);
-//   // printf("mc_routine deref ptr:%p\n", *mc_routine);
-//   {
-//     int mc_error_stack_index;
-//     register_midge_stack_invocation("unknown-thread-start-function", __FILE__, __LINE__ + 1, &mc_error_stack_index);
-//     int mc_res = mc_routine(2, mcf_vargs);
-//     if (mc_res) {
-//       printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
-//       return NULL;
-//     }
-//     register_midge_stack_return(mc_error_stack_index);
-//   }
-//   // printf("routine called\n");
-
-//   register_midge_thread_conclusion(mc_error_thread_index);
-//   // return routine_result;
-//   return NULL;
-// }
-
 static int _mcl_obtain_core_source_information(void **p_core_source_info)
 {
   const int STRUCT = 11;
@@ -683,21 +648,24 @@ int mcl_load_remaining_app_source(TCCInterpState *itp)
       "src/render/mc_vulkan.h",
       "src/render/mc_vk_utils.h",
       "src/render/render_thread.h",
-      "src/core/midge_app.h",
 
       // Headers that will be declared just before app initialization
       "src/env/environment_definitions.h",
       "src/ui/ui_definitions.h",
       "src/control/mc_controller.h",
+      "src/core/midge_app.h",
 
       // Source required for app initialization
+      "src/m_threads.c",
       "src/env/util.c",
       "src/platform/mc_xcb.c",
+      "src/render/render_common.c",
       "src/render/mc_vulkan.c",
       "src/render/mc_vk_utils.c",
       "src/render/render_thread.c",
       "src/core/app_modules.c",
-      "src/m_threads.c",
+      "src/ui/ui_functionality.c",
+      "src/control/mc_controller.c",
       "src/core/midge_app.c",
 
       // And everything here before -------------------------------------------------------------

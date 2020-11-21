@@ -14,7 +14,7 @@
 
 // float rtf_width, rtf_height;
 // if (!node->layout->preferred_width || !node->layout->preferred_height)
-//   mcr_determine_text_display_dimensions(source_line->mcr_font_resource_uid, source_line->rtf->text, &rtf_width,
+//   mcr_determine_text_display_dimensions(source_line->font_resource_uid, source_line->rtf->text, &rtf_width,
 //                                         &rtf_height);
 
 // // Width
@@ -169,7 +169,7 @@ void _mce_render_source_line_present(image_render_details *image_render_queue, m
 
   // printf("rendersource_line- {%u %u %u %u} %s %u\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width, (unsigned
-  //        int)node->layout->__bounds.height, source_line->rtf->text, source_line->mcr_font_resource_uid);
+  //        int)node->layout->__bounds.height, source_line->rtf->text, source_line->font_resource_uid);
 
   mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                          (unsigned int)node->layout->__bounds.y,

@@ -249,14 +249,9 @@ typedef struct mc_node {
 } mc_node;
 
 // Incomplete Structure declarations
-struct render_thread_info;
-struct mcu_ui_state;
-struct mci_input_state;
-struct frame_time;
-
 typedef struct mc_global_data {
   struct timespec *app_begin_time;
-  struct render_thread_info *render_thread;
+  render_thread_info *render_thread;
 
   TCCInterpState *interpreter;
   bool exit_requested;
@@ -271,9 +266,9 @@ typedef struct mc_global_data {
   struct mci_input_state *input_state;
   bool input_state_requires_update;
 
-  struct frame_time *elapsed;
+  frame_time *elapsed;
 
-  struct mcu_ui_state *ui_state;
+  mcu_ui_state *ui_state;
 
   // struct {
   //   pthread_mutex_t mutex;

@@ -1,6 +1,11 @@
+/* mc_controller.c */
+
+#include <stdlib.h>
+
+#include "core/core_definitions.h"
+#include "ui/ui_definitions.h"
 
 #include "control/mc_controller.h"
-#include "core/core_definitions.h"
 
 void mcc_initialize_input_state()
 {

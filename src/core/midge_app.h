@@ -6,14 +6,6 @@
 #include "platform/mc_xcb.h"
 #include "render/render_thread.h"
 
-typedef struct update_callback_timer {
-  struct timespec next_update;
-  struct timespec period;
-  bool reset_timer_on_update;
-  int (**update_delegate)(int, void **);
-  void *state;
-} update_callback_timer;
-
 // typedef struct mc_input_event {
 //   bool shiftDown, ctrlDown, altDown;
 //   window_input_event_type type;
