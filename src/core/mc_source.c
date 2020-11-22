@@ -539,6 +539,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // info->source->source_file = source_file;
       // // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
+    case MC_SYNTAX_FIELD_DECLARATION:
     case MC_SYNTAX_PP_DIRECTIVE_DEFINE:
     case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE: {
       // Ignore for now

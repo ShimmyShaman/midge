@@ -2767,6 +2767,9 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
   case MC_SYNTAX_DECLARATION_STATEMENT: {
     mct_transcribe_declaration_statement(ts, syntax_node);
   } break;
+  case MC_SYNTAX_GLOBAL_VARIABLE_DECLARATION: {
+    mct_transcribe_global_var_declaration_statement(ts, syntax_node);
+  } break;
   case MC_SYNTAX_VA_LIST_STATEMENT: {
     mct_transcribe_va_list_statement(ts, syntax_node);
   } break;
