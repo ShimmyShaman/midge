@@ -1,8 +1,14 @@
+/* hierarchy.c */
+
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
 #include "render/render_common.h"
 #include "ui/ui_definitions.h"
+
+#include "core/midge_app.h"
 
 void exit_app(mc_node *node_scope, int result)
 {
@@ -19,7 +25,8 @@ void exit_app(mc_node *node_scope, int result)
   //   }
   // } break;
   default:
-    MCerror(140, "exit_app>Unsupported node type:%i", node_scope->type);
+    printf("ERR[140]:exit_app>Unsupported node type:%i", node_scope->type);
+    exit(-1);
   }
 }
 
@@ -94,7 +101,7 @@ void exit_app(mc_node *node_scope, int result)
 //   ++parent_node_list->count;
 // }
 
-void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach)
+int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach)
 {
   // printf("added node %i to %i\n", node_to_attach->type, hierarchy_node->type);
   // midge_error_print_thread_stack_trace();
@@ -109,15 +116,18 @@ void mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_atta
             hierarchy_node->type);
   }
 
-  append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
-                       &hierarchy_node->children->count, node_to_attach);
+  MCcall(append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
+                              &hierarchy_node->children->count, node_to_attach));
   node_to_attach->parent = hierarchy_node;
+
+  return 0;
 }
 
-void mca_init_node_layout(mca_node_layout **layout)
+int mca_init_node_layout(mca_node_layout **layout)
 {
   // Initialize layout
   (*layout) = (mca_node_layout *)malloc(sizeof(mca_node_layout));
+  MCassert(*layout, "Failure to allocate memory");
 
   (*layout)->visible = true;
   (*layout)->focused_child = NULL;
@@ -130,7 +140,7 @@ void mca_init_node_layout(mca_node_layout **layout)
   (*layout)->min_height = 0;
   (*layout)->max_width = 0;
   (*layout)->max_height = 0;
-  (*layout)->padding = {0, 0, 0, 0};
+  (*layout)->padding = (mc_paddingf){0, 0, 0, 0};
 
   (*layout)->z_layer_index = 5U;
 
@@ -143,11 +153,13 @@ void mca_init_node_layout(mca_node_layout **layout)
 
   (*layout)->__requires_layout_update = true;
   (*layout)->__requires_rerender = false;
+
+  return 0;
 }
 
-void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
+int mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 {
-  (*node) = (mc_node *)malloc(sizeof(mc_node));
+  (*node) = (mc_node *)malloc(sizeof(mc_node)); // TODO malloc checks everywhere?
 
   (*node)->type = type;
   (*node)->name = NULL;
@@ -157,7 +169,9 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 
   (*node)->data = NULL;
 
-  mca_attach_node_to_hierarchy(hierarchy_parent, *node);
+  MCcall(mca_attach_node_to_hierarchy(hierarchy_parent, *node));
+
+  return 0;
 }
 
 // void mca_logic_update_node_list(mc_node_list *node_list)
@@ -388,7 +402,7 @@ void mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
 
 // }
 
-void mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints)
+int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints)
 {
   const float MAX_EXTENT_VALUE = 100000.f;
   mca_node_layout *layout = node->layout;
@@ -467,9 +481,11 @@ void mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints 
       }
     }
   }
+
+  return 0;
 }
 
-void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
+int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
 {
   // Clear
   node->layout->__requires_layout_update = false;
@@ -508,7 +524,8 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
     // printf("preferred\n");
   }
   else {
-    // printf("available_area->height:%.3f layout->padding.bottom:%.3f layout->padding.top:%.3f\n", available_area->height,
+    // printf("available_area->height:%.3f layout->padding.bottom:%.3f layout->padding.top:%.3f\n",
+    // available_area->height,
     //        layout->padding.bottom, layout->padding.top);
     // padding adjusted from available
     bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
@@ -582,29 +599,35 @@ void mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
       }
     }
   }
+
+  return 0;
 }
 
-void _mca_set_nodes_require_layout_update(mc_node_list *node_list)
+int _mca_set_nodes_require_layout_update(mc_node_list *node_list)
 {
   for (int i = 0; i < node_list->count; ++i) {
     node_list->items[i]->layout->__requires_layout_update = true;
 
     if (node_list->items[i]->children) {
-      _mca_set_nodes_require_layout_update(node_list->items[i]->children);
+      MCcall(_mca_set_nodes_require_layout_update(node_list->items[i]->children));
     }
   }
+
+  return 0;
 }
 
-void mca_set_all_nodes_require_layout_update()
+int mca_set_all_nodes_require_layout_update()
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   global_data->global_node->layout->__requires_layout_update = true;
   _mca_set_nodes_require_layout_update(global_data->global_node->children);
+
+  return 0;
 }
 
-void mca_set_node_requires_layout_update(mc_node *node)
+int mca_set_node_requires_layout_update(mc_node *node)
 {
   // DEBUG?
   if (!node->layout) {
@@ -624,9 +647,11 @@ void mca_set_node_requires_layout_update(mc_node *node)
     // Move upwards through the ancestry
     node = node->parent;
   }
+
+  return 0;
 }
 
-void mca_set_node_requires_rerender(mc_node *node)
+int mca_set_node_requires_rerender(mc_node *node)
 {
   // DEBUG?
   if (!node->layout) {
@@ -646,9 +671,11 @@ void mca_set_node_requires_rerender(mc_node *node)
     // Move upwards through the ancestry
     node = node->parent;
   }
+
+  return 0;
 }
 
-void mca_focus_node(mc_node *node)
+int mca_focus_node(mc_node *node)
 {
   // Set layout update required on all ancestors of the node
   while (node) {
@@ -703,18 +730,22 @@ void mca_focus_node(mc_node *node)
     // Move upwards through the ancestry
     node = node->parent;
   }
+
+  return 0;
 }
 
-void mca_obtain_focused_node(mc_node **node)
+int mca_obtain_focused_node(mc_node **node)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   *node = global_data->global_node;
 
   while ((*node)->layout && (*node)->layout->focused_child) {
     (*node) = (*node)->layout->focused_child;
   }
+
+  return 0;
 }
 
 // void add_notification_handler(mc_node *apex_node, unsigned int event_type, int (**handler)(int, void **))

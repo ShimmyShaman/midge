@@ -23,6 +23,10 @@ typedef struct frame_time {
 
 typedef struct midge_app_info {
   mc_app_itp_data *itp_data;
+  mc_node *global_node;
+
+  struct timespec *app_begin_time;
+  bool _exit_requested;
 
   render_thread_info *render_thread;
   frame_time *elapsed;
@@ -41,8 +45,8 @@ typedef struct midge_app_info {
 } midge_app_info;
 
 // extern "C" {
-void midge_initialize_app(struct timespec *app_begin_time);
-void midge_run_app();
+int midge_initialize_app(struct timespec *app_begin_time);
+int midge_run_app();
 void midge_cleanup_app();
 void mc_obtain_midge_app_info(midge_app_info **p_app_info);
 // }

@@ -6,11 +6,12 @@
 #include "ui/ui_definitions.h"
 
 #include "control/mc_controller.h"
+#include "core/midge_app.h"
 
-void mcc_initialize_input_state()
+int mcc_initialize_input_state()
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mci_input_state *input_state = (mci_input_state *)malloc(sizeof(mci_input_state));
   global_data->input_state = input_state;
@@ -20,6 +21,8 @@ void mcc_initialize_input_state()
   input_state->alt_function = BUTTON_STATE_UP;
   input_state->ctrl_function = BUTTON_STATE_UP;
   input_state->shift_function = BUTTON_STATE_UP;
+
+  return 0;
 }
 
 // typedef enum mci_mouse_event_type {
@@ -36,8 +39,8 @@ void mcc_initialize_input_state()
 
 void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mci_input_event input_event;
   input_event.type = event_type;
@@ -64,8 +67,8 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
 
 void mcc_issue_keyboard_event(window_input_event_type event_type, int button_code)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mci_input_event input_event;
   input_event.type = event_type;
@@ -109,8 +112,8 @@ void _mcc_set_button_state(bool is_down, bool is_event, int *output)
 void mcc_handle_xcb_input()
 {
   // printf("mcc_handle_xcb_input\n");
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mci_input_state *input_state = global_data->input_state;
 
@@ -139,7 +142,7 @@ void mcc_handle_xcb_input()
         if (input_state->alt_function & BUTTON_STATE_DOWN) {
           issue_mouse_event = false;
 
-          mca_activate_global_context_menu(input_state->mouse.x, input_state->mouse.y);
+          // mca_activate_global_context_menu(input_state->mouse.x, input_state->mouse.y);
         }
       } break;
       default:
@@ -211,7 +214,7 @@ void mcc_handle_xcb_input()
 
         if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
             xcb_input->detail.keyboard.key == KEY_CODE_W) {
-          global_data->exit_requested = true;
+          global_data->_exit_requested = true;
           continue;
         }
 
@@ -279,8 +282,8 @@ void mcc_handle_xcb_input()
 
 void mcc_update_xcb_input()
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mci_input_state *input_state = global_data->input_state;
 

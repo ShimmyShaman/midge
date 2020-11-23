@@ -7,11 +7,12 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "core/core_definitions.h"
+// #include "core/core_definitions.h"
 #include "core/midge_app.h"
-#include "render/render_common.h"
+// #include "render/render_common.h"
 #include "render/render_thread.h"
-#include "ui/ui_definitions.h"
+// #include "ui/ui_definitions.h"
+#include "control/mc_controller.h"
 
 // void *callit(void *state)
 // {
@@ -43,8 +44,8 @@
 
 int begin_render_thread()
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   global_data->render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
   // printf("global_data->render_thread = %p\n", global_data->render_thread);
@@ -83,91 +84,92 @@ int begin_render_thread()
 
 // typedef struct
 
-void complete_midge_app_compile()
-{
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+// void complete_midge_app_compile()
+// {
+//   mc_global_data *global_data;
+//   obtain_midge_global_root(&global_data);
 
-  const char *remainder_app_source_files[] = {
-      // "src/ui/ui_definitions.h",
-      "src/control/mc_controller.h",
-      // "src/modules/app_modules.h",
-      // "src/render/resources/hash_table.h",
-      // "src/render/resources/obj_loader.h",
+//   const char *remainder_app_source_files[] = {
+//       // "src/ui/ui_definitions.h",
+//       "src/control/mc_controller.h",
+//       // "src/modules/app_modules.h",
+//       // "src/render/resources/hash_table.h",
+//       // "src/render/resources/obj_loader.h",
 
-      // "src/render/resources/hash_table.c",
-      // "src/render/resources/obj_loader.c",
-      "src/render/render_common.c",
-      "src/env/hierarchy.c",
-      "src/env/util.c",
-      // "src/env/project_management.c",
-      // "src/env/global_context_menu.c",
-      // "src/env/global_root.c",
-      "src/ui/controls/panel.c",
-      "src/ui/controls/text_block.c",
-      "src/ui/controls/button.c",
-      // "src/ui/controls/context_menu.c",
-      "src/ui/ui_functionality.c",
-      // // "src/ui/ui_render.c",
-      "src/control/mc_controller.c",
+//       // "src/render/resources/hash_table.c",
+//       // "src/render/resources/obj_loader.c",
+//       "src/render/render_common.c",
+//       "src/env/hierarchy.c",
+//       "src/env/util.c",
+//       // "src/env/project_management.c",
+//       // "src/env/global_context_menu.c",
+//       // "src/env/global_root.c",
+//       "src/ui/controls/panel.c",
+//       "src/ui/controls/text_block.c",
+//       "src/ui/controls/button.c",
+//       // "src/ui/controls/context_menu.c",
+//       "src/ui/ui_functionality.c",
+//       // // "src/ui/ui_render.c",
+//       "src/control/mc_controller.c",
 
-      // // Modules
-      // "src/modules/modus_operandi/modus_operandi_curator.c",
-      // "src/modules/hierarchy_viewer/hierarchy_viewer.c",
-      // "src/modules/source_editor/source_editor_pool.c",
-      // "src/modules/source_editor/function_editor.c",
-      // "src/modules/source_editor/source_line.c",
-      // "src/modules/three_d/three_d.c",
-      NULL,
-  };
+//       // // Modules
+//       // "src/modules/modus_operandi/modus_operandi_curator.c",
+//       // "src/modules/hierarchy_viewer/hierarchy_viewer.c",
+//       // "src/modules/source_editor/source_editor_pool.c",
+//       // "src/modules/source_editor/function_editor.c",
+//       // "src/modules/source_editor/source_line.c",
+//       // "src/modules/three_d/three_d.c",
+//       NULL,
+//   };
 
-  for (int f = 0; remainder_app_source_files[f]; ++f) {
-    // instantiate_all_definitions_from_file(global_data->global_node, remainder_app_source_files[f], NULL);
-    puts("TODO Load file");
-  }
-}
-
-// extern "C" {
-void mcc_initialize_input_state();
-void mcc_update_xcb_input();
-// void mcu_initialize_core_ui_components();
-// void mcu_render_element_headless(mc_node *element_node);
-// void mcu_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
-void mca_load_modules();
-void mca_load_open_projects();
+//   for (int f = 0; remainder_app_source_files[f]; ++f) {
+//     // instantiate_all_definitions_from_file(global_data->global_node, remainder_app_source_files[f], NULL);
+//     puts("TODO Load file");
+//   }
 // }
 
-void initialize_midge_components()
+// // extern "C" {
+// void mcc_initialize_input_state();
+// void mcc_update_xcb_input();
+// // void mcu_initialize_core_ui_components();
+// // void mcu_render_element_headless(mc_node *element_node);
+// // void mcu_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
+// void mca_load_modules();
+// void mca_load_open_projects();
+// // }
+
+int initialize_midge_components()
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
-  mcc_initialize_input_state();
+  MCcall(mcc_initialize_input_state());
 
-  mcu_initialize_ui_state(&global_data->ui_state);
-  // mcu_initialize_core_ui_components();
+  // mcu_initialize_ui_state(&global_data->ui_state);
+  // // mcu_initialize_core_ui_components();
 
-  // // Environment
-  // mca_init_global_context_menu();
-  // mca_init_global_node_context_menu_options();
-  // mce_init_source_editor_pool();
-  // // mca_init_visual_project_management();
+  // // // Environment
+  // // mca_init_global_context_menu();
+  // // mca_init_global_node_context_menu_options();
+  // // mce_init_source_editor_pool();
+  // // // mca_init_visual_project_management();
 
-  // Modules
-  mca_load_modules();
-  // // init_modus_operandi_curator();
-  // // init_hierarchy_viewer();
-  // mca_load_app_modules
-  // init_three_d_portal();
+  // // Modules
+  // mca_load_modules();
+  // // // init_modus_operandi_curator();
+  // // // init_hierarchy_viewer();
+  // // mca_load_app_modules
+  // // init_three_d_portal();
 
-  // Projects
-  mca_load_open_projects();
+  // // Projects
+  // mca_load_open_projects();
+  return 0;
 }
 
-void midge_initialize_app(struct timespec *app_begin_time)
+int midge_initialize_app(struct timespec *app_begin_time)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   // Set Times
   global_data->app_begin_time = app_begin_time;
@@ -181,18 +183,18 @@ void midge_initialize_app(struct timespec *app_begin_time)
              1e-9 * (source_load_complete_time.tv_nsec - global_data->app_begin_time->tv_nsec));
 
   // Asynchronously begin the render thread containing vulkan and xcb
-  begin_render_thread();
+  MCcall(begin_render_thread());
 
   // Compile the remainder of the application
-  complete_midge_app_compile();
-  printf("midge compilation complete\n");
+  // complete_midge_app_compile();
+  // printf("midge compilation complete\n");
 
   // Complete Initialization of the global root node
-  mca_init_node_layout(&global_data->global_node->layout);
+  MCcall(mca_init_node_layout(&global_data->global_node->layout));
   global_data->global_node->layout->__requires_rerender = true;
 
   // Initialize main thread
-  initialize_midge_components();
+  MCcall(initialize_midge_components());
   printf("midge components initialized\n");
 
   // Wait for render thread initialization and all initial resources to load before
@@ -225,15 +227,17 @@ void midge_initialize_app(struct timespec *app_begin_time)
          waited ? "vulkan-initialization limited" : "midge-compile-load limited",
          load_complete_frametime.tv_sec - global_data->app_begin_time->tv_sec +
              1e-9 * (load_complete_frametime.tv_nsec - global_data->app_begin_time->tv_nsec));
+
+  return 0;
 }
 
-void mca_render_presentation()
+int mca_render_presentation()
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   image_render_details *image_render;
-  mcr_obtain_image_render_request(global_data->render_thread, &image_render);
+  MCcall(mcr_obtain_image_render_request(global_data->render_thread, &image_render));
   image_render->render_target = NODE_RENDER_TARGET_PRESENT;
   image_render->clear_color = COLOR_MIDNIGHT_EXPRESS;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
@@ -264,15 +268,17 @@ void mca_render_presentation()
     }
   }
 
-  mcr_submit_image_render_request(global_data->render_thread, image_render);
+  MCcall(mcr_submit_image_render_request(global_data->render_thread, image_render));
+
+  return 0;
 }
 
-void midge_run_app()
+int midge_run_app()
 {
   printf("midge_run_app()\n");
 
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
   mc_node *global_root_node = global_data->global_node;
   // printf("defaultfont-0:%u\n", global_data->default_font_resource);
   // printf("global_data->ui_state:%p\n", global_data->ui_state);
@@ -406,7 +412,7 @@ void midge_run_app()
 
     // printf("~main_input\n");
 
-    if (global_data->exit_requested)
+    if (global_data->_exit_requested)
       break;
     if (global_data->render_thread->thread_info->has_concluded) {
       printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
@@ -458,7 +464,7 @@ void midge_run_app()
       // global_data->ui_state->requires_update = false;
     }
 
-    if (global_data->exit_requested)
+    if (global_data->_exit_requested)
       break;
 
     // Render State Changes
@@ -502,14 +508,16 @@ void midge_run_app()
 
   free(elapsed);
   global_data->elapsed = NULL;
+
+  return 0;
 }
 
 void midge_cleanup_app()
 {
   printf("~midge_cleanup_app()~\n");
 
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   // TODO invoke release resources on children...
 

@@ -13,6 +13,7 @@
 #include "env/environment_definitions.h"
 #include "render/mc_vk_utils.h"
 #include "render/render_thread.h"
+#include "core/midge_app.h"
 
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue)
 {
@@ -1173,8 +1174,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
 {
   // printf("mrt-rul-0\n");
   VkResult res;
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mthread_info *thr = render_thread->thread_info;
   render_thread->loaded_fonts = &vkrs->loaded_fonts;

@@ -450,9 +450,11 @@ static int _mcl_print_parse_error(const char *const text, int index, const char 
 
 #define MCL_CORE_HEADER_FILE_COUNT 3
 const char *_mcl_core_header_files[] = {
-    "src/core/core_definitions.h", "src/core/c_parser_lexer.h", "src/core/mc_code_transcription.h",
+    "src/core/core_definitions.h",
+    "src/core/c_parser_lexer.h",
+    "src/core/mc_code_transcription.h",
     // And everything here before -------------------------------------------------------------
-    // "src/core/mc_source.h",
+    "src/core/mc_source.h",
 };
 
 #define MCL_CORE_SOURCE_FILE_COUNT 4
@@ -482,7 +484,7 @@ const char *_mcl_remainder_header_files[] = {
     "src/core/midge_app.h",
 };
 
-#define MCL_REMAINDER_SOURCE_FILE_COUNT 11
+// #define MCL_REMAINDER_SOURCE_FILE_COUNT 11
 const char *_mcl_remainder_source_files[] = {
     "src/mc_app_info_data.c",
     "src/m_threads.c",
@@ -492,9 +494,12 @@ const char *_mcl_remainder_source_files[] = {
     "src/render/mc_vulkan.c",
     "src/render/mc_vk_utils.c",
     "src/render/render_thread.c",
+    "src/render/render_resources.c",
 
     "src/core/app_modules.c",
     "src/ui/ui_functionality.c",
+    "src/env/hierarchy.c",
+    // "src/env/global_context_menu.c",
     "src/control/mc_controller.c",
     // And everything here before -------------------------------------------------------------
     "src/core/midge_app.c",
@@ -507,16 +512,16 @@ static int mcl_load_source_through_midge(TCCInterpState *tmp_itp)
     MCerror(1240, "Couldn't obtain mcs_interpret_file");
   }
 
-  for (int i = 0; i < MCL_CORE_HEADER_FILE_COUNT; ++i) {
+  for (int i = 0; i < sizeof(_mcl_core_header_files) / sizeof(const char *); ++i) {
     MCcall(mcs_interpret_file(tmp_itp, _mcl_core_header_files[i]));
   }
-  for (int i = 0; i < MCL_REMAINDER_HEADER_FILE_COUNT; ++i) {
+  for (int i = 0; i < sizeof(_mcl_remainder_header_files) / sizeof(const char *); ++i) {
     MCcall(mcs_interpret_file(tmp_itp, _mcl_remainder_header_files[i]));
   }
-  for (int i = 0; i < MCL_CORE_SOURCE_FILE_COUNT; ++i) {
+  for (int i = 0; i < sizeof(_mcl_core_source_files) / sizeof(const char *); ++i) {
     MCcall(mcs_interpret_file(tmp_itp, _mcl_core_source_files[i]));
   }
-  for (int i = 0; i < MCL_REMAINDER_SOURCE_FILE_COUNT; ++i) {
+  for (int i = 0; i < sizeof(_mcl_remainder_source_files) / sizeof(const char *); ++i) {
     MCcall(mcs_interpret_file(tmp_itp, _mcl_remainder_source_files[i]));
   }
 
@@ -768,6 +773,9 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     register_midge_thread_creation(mc_interp_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1555,
                                    &dummy_int);
   }
+
+  void (*mdg_init_midge_app_info)(mc_app_itp_data **) = tcci_get_symbol(midge_itp, "mc_init_midge_app_info");
+  mdg_init_midge_app_info(midge_itp);
 
   // // Load the remainder of the application source files with the new interpreter
   // printf("[mcl_load_remaining_app_source]\n");

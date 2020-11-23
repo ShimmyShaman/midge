@@ -252,7 +252,6 @@ typedef struct mc_app_itp_data {
   struct timespec *app_begin_time;
 
   TCCInterpState *interpreter;
-  bool exit_requested;
 
   mc_node *global_node;
 

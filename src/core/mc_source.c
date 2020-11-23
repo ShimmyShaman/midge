@@ -539,7 +539,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // info->source->source_file = source_file;
       // // printf("--declared: enum '%s'\n", child->enumeration.name->text);
     } break;
-    case MC_SYNTAX_FIELD_DECLARATION:
+    case MC_SYNTAX_GLOBAL_VARIABLE_DECLARATION:
     case MC_SYNTAX_PP_DIRECTIVE_DEFINE:
     case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE: {
       // Ignore for now
@@ -652,7 +652,7 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  if (!strcmp("src/render/render_common.c", filepath)) {
+  if (!strcmp("src/m_threads.c", filepath)) {
     // usleep(10000);
     // printf("\ngen-code:\n%s||\n", code);
     mcs_save_text_to_file("src/temp/todelete.h", code);

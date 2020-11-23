@@ -185,7 +185,7 @@ void register_midge_stack_function_entry(const char *function_name, const char *
     }
   }
   if (!threades) {
-    printf("could not find stack for thread with id %lu\n", tid);
+    printf("(0)could not find stack for thread with id %lu >>'%s'\n", tid, function_name);
     return;
   }
 
@@ -229,7 +229,7 @@ void register_midge_stack_invocation(const char *function_name, const char *file
     }
   }
   if (!threades) {
-    printf("could not find stack for thread with id %lu\n", tid);
+    printf("(1)could not find stack for thread with id %lu\n", tid);
     return;
   }
 
@@ -272,7 +272,7 @@ void register_midge_stack_return(int midge_error_stack_index)
     }
   }
   if (!threades) {
-    printf("could not find stack for thread with id %lu\n", tid);
+    printf("(2)could not find stack for thread with id %lu\n", tid);
     return;
   }
 
@@ -347,7 +347,7 @@ void midge_error_print_thread_stack_trace()
     }
   }
   if (!threades) {
-    printf("could not find stack for thread with id %lu\n", tid);
+    printf("(3)could not find stack for thread with id %lu\n", tid);
     return;
   }
 

@@ -28,7 +28,6 @@ int mc_init_app_itp_data(TCCInterpState *tis)
   __mc_app_itp_data->global_node = global;
 
   __mc_app_itp_data->interpreter = tis;
-  __mc_app_itp_data->exit_requested = false;
 
   // "  __mc_app_itp_data->children = (mc_node_list *)malloc(sizeof(mc_node_list));"
   // "  __mc_app_itp_data->children->alloc = 0;"

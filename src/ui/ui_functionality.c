@@ -7,11 +7,12 @@
 #include "render/render_common.h"
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
+#include "core/midge_app.h"
 
 void mcu_initialize_ui_state(mcu_ui_state **p_ui_state)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mcu_ui_state *ui_state = (mcu_ui_state *)malloc(sizeof(mcu_ui_state));
 
@@ -67,8 +68,8 @@ void _mcu_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
 // Returns a list of ui-type nodes at the given point of the screen. Nodes at the nearer Z are earlier in the list.
 void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   // Use the cache list
   // printf("layered_hit_list:%p\n", layered_hit_list);

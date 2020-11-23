@@ -463,14 +463,14 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
       result->is_fptr = true;
       result->is_array = false; // TODO -- rare corner case
 
-      mcs_copy_syntax_node_to_text(expression->cast_expression.type_identifier, &result->type_name);
-      if (expression->cast_expression.type_identifier->fptr_declaration.return_type_dereference) {
-        result->deref_count = expression->cast_expression.type_identifier->fptr_declaration.return_type_dereference
-                                  ->dereference_sequence.count;
-      }
-      else {
+      // mcs_copy_syntax_node_to_text(expression->cast_expression.type_identifier, &result->type_name);
+      // if (expression->cast_expression.type_identifier->fptr_declaration.return_type_dereference) {
+      //   result->deref_count = expression->cast_expression.type_identifier->fptr_declaration.return_type_dereference
+      //                             ->dereference_sequence.count;
+      // }
+      // else {
         result->deref_count = 0;
-      }
+      // }
     }
     else {
       result->is_array = false; // TODO ...
@@ -1441,7 +1441,15 @@ int mct_transcribe_type_identifier(mct_transcription_state *ts, mc_syntax_node *
 // }
 
 int mct_transcribe_function_pointer_declarator(mct_transcription_state *ts, mc_syntax_node *syntax_node)
-{
+{ 
+  print_syntax_node(syntax_node, 0);
+
+  if (syntax_node->fptr_declarator.return_type_dereference) {
+    for (int d = 0; d < syntax_node->fptr_declarator.return_type_dereference->dereference_sequence.count; ++d) {
+      append_to_mc_str(ts->str, "*");
+    }
+  }
+
   append_to_mc_str(ts->str, "(");
   if (syntax_node->fptr_declarator.fp_dereference) {
     for (int d = 0; d < syntax_node->fptr_declarator.fp_dereference->dereference_sequence.count; ++d) {
@@ -1491,9 +1499,7 @@ int mct_transcribe_function_pointer_declaration(mct_transcription_state *ts, mc_
 {
   mct_transcribe_type_identifier(ts, syntax_node->fptr_declaration.return_type_identifier);
   append_to_mc_str(ts->str, " ");
-  if (syntax_node->fptr_declaration.return_type_dereference) {
-    mcs_append_syntax_node_to_mc_str(ts->str, syntax_node->fptr_declaration.return_type_dereference);
-  }
+
   mct_transcribe_function_pointer_declarator(ts, syntax_node->fptr_declaration.declarator);
 
   return 0;
@@ -1551,6 +1557,105 @@ int mct_transcribe_label_statement(mct_transcription_state *ts, mc_syntax_node *
   mct_transcribe_indent(ts);
   mcs_append_syntax_node_to_mc_str(ts->str, syntax_node->label_statement.label);
   append_to_mc_str(ts->str, ":");
+
+  return 0;
+}
+
+int mct_transcribe_global_var_declaration_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node)
+{
+  print_syntax_node(syntax_node, 0);
+
+  MCerror(1562, "TODO");
+
+  // mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
+  // append_to_mc_str(ts->str, " ");
+
+  // mc_syntax_node *declarator;
+  // for (int i = 0; i < declaration->local_variable_declaration.declarators->count; ++i) {
+  //   if (i > 0) {
+  //     append_to_mc_str(ts->str, ", ");
+  //   }
+
+  //   declarator = declaration->local_variable_declaration.declarators->items[i];
+  //   if (declarator->local_variable_declarator.function_pointer) {
+  //     mct_transcribe_function_pointer_declarator(ts, declarator->local_variable_declarator.function_pointer);
+  //     // // print_syntax_node(declarator, 0);
+  //     // if (declarator->local_variable_declarator.type_dereference) {
+  //     //   mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.type_dereference);
+  //     // }
+
+  //     // mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.function_pointer);
+  //   }
+  //   else {
+  //     if (declarator->local_variable_declarator.type_dereference) {
+  //       mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.type_dereference);
+  //     }
+  //     mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.variable_name);
+  //   }
+
+  //   // Add to local scope
+  //   mct_add_scope_variable(ts, declarator);
+
+  //   // Initializer Query
+  //   if (!declarator->local_variable_declarator.initializer) {
+  //     continue;
+  //   }
+
+  //   if (declarator->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER) {
+  //     // Any invocation, do it later
+  //     // if
+  //     (declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
+  //     //         ->type == MC_SYNTAX_INVOCATION)
+  //     //   continue;
+  //     // mct_syntax_descendants_contain_node_type(declarator->local_variable_declarator.initializer,
+  //     // MC_SYNTAX_INVOCATION,
+  //     //                                          &contains_invocation);
+  //     // if (contains_invocation)
+  //     //   continue;
+
+  //     append_to_mc_str(ts->str, " = ");
+  //     mct_transcribe_expression(
+  //         ts, NULL,
+  //         declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
+  //   }
+  //   else {
+  //     mc_syntax_node *array_initialization = declarator->local_variable_declarator.initializer;
+
+  //     append_to_mc_str(ts->str, "[");
+  //     if (array_initialization->local_variable_array_initializer.size_expression) {
+  //       mct_transcribe_expression(ts, NULL, array_initialization->local_variable_array_initializer.size_expression);
+  //     }
+  //     append_to_mc_str(ts->str, "]");
+
+  //     if (declarator->local_variable_declarator.initializer->local_variable_array_initializer.assignment_expression)
+  //     {
+  //       mc_syntax_node_list *array_values =
+  //           array_initialization->local_variable_array_initializer.assignment_expression->initializer_expression.list;
+
+  //       append_to_mc_str(ts->str, " = {");
+
+  //       if (array_values->count) {
+  //         append_to_mc_str(ts->str, "\n");
+  //         ++ts->indent;
+
+  //         for (int a = 0; a < array_values->count; ++a) {
+  //           if (a > 0) {
+  //             append_to_mc_str(ts->str, ",\n");
+  //           }
+
+  //           mct_transcribe_indent(ts);
+  //           mct_transcribe_expression(ts, NULL, array_values->items[a]);
+  //         }
+
+  //         append_to_mc_str(ts->str, "\n");
+  //         --ts->indent;
+  //         mct_transcribe_indent(ts);
+  //       }
+  //       append_to_mc_str(ts->str, "}");
+  //     }
+  //   }
+  // }
+  // append_to_mc_str(ts->str, ";\n");
 
   return 0;
 }
@@ -2904,7 +3009,8 @@ int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *synta
   mct_increment_scope_depth(ts);
   ++ts->indent;
 
-  if (function_root && ts->options->report_function_entry_exit_to_stack) {
+  if (function_root && ts->options->report_function_entry_exit_to_stack &&
+      strcmp("_mca_thread_entry_wrap", ts->function_name)) {
     mct_transcribe_text_with_indent(ts, "int midge_error_stack_index;\n");
     mct_transcribe_text_with_indent(ts, "register_midge_stack_function_entry(\"");
     append_to_mc_str(ts->str, ts->function_name);
@@ -3050,7 +3156,7 @@ int mct_transcribe_function_end(mct_transcription_state *ts, mc_syntax_node *res
     mct_transcribe_indent(ts);
   }
 
-  if (ts->options->report_function_entry_exit_to_stack) {
+  if (ts->options->report_function_entry_exit_to_stack && strcmp("_mca_thread_entry_wrap", ts->function_name)) {
     append_to_mc_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
     mct_transcribe_indent(ts);
   }
@@ -3583,6 +3689,10 @@ int mct_transcribe_file_root_children(mct_transcription_state *ts, mc_syntax_nod
       // Forward declaration
       append_to_mc_str(ts->str, ";");
       // }
+    } break;
+    case MC_SYNTAX_GLOBAL_VARIABLE_DECLARATION: {
+      mct_transcribe_field(ts, child->global_var_decl_statement.declaration);
+      append_to_mc_str(ts->str, ";");
     } break;
     case MC_SYNTAX_STRUCT_DECL: {
       mct_transcribe_struct_declaration(ts, child);

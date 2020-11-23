@@ -285,6 +285,7 @@ struct mc_syntax_node {
           mc_syntax_node *function_pointer;
         } field_declarator;
         struct {
+          mc_syntax_node *return_type_dereference;
           mc_syntax_node *fp_dereference;
           mc_syntax_node *name;
           mc_syntax_node_list *parameters;
@@ -292,7 +293,6 @@ struct mc_syntax_node {
         struct {
           mc_syntax_node *return_type_identifier;
           // May be null indicating no dereference operators
-          mc_syntax_node *return_type_dereference;
           mc_syntax_node *declarator;
         } fptr_declaration;
         struct {
@@ -344,6 +344,9 @@ struct mc_syntax_node {
         struct {
           mc_syntax_node *constant;
         } switch_case_label;
+        struct {
+          mc_syntax_node *declaration;
+        } global_var_decl_statement;
         struct {
           mc_syntax_node *type_identifier;
           mc_syntax_node_list *declarators;

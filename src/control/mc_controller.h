@@ -40,6 +40,7 @@ typedef struct mci_input_event {
   bool handled;
 } mci_input_event;
 
-void mcc_initialize_input_state();
+int mcc_initialize_input_state();
+void mcc_update_xcb_input();
 
 #endif // MC_CONTROLLER_H

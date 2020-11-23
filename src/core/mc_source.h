@@ -3,9 +3,10 @@
 #ifndef MC_SOURCE_H
 #define MC_SOURCE_H
 
-#include <stddef.h>
+// #include <stddef.h>
 
-#include "core/c_parser_lexer.h"
+// #include "core/c_parser_lexer.h"
+#include "tinycc/libtccinterp.h"
 
 // int register_external_definitions_from_file(mc_node *definitions_owner, char *filepath,
 //                                             mc_source_file_info **source_file);
@@ -24,5 +25,6 @@
 // */
 // int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
 //                            void **definition_info);
+int mcs_interpret_file(TCCInterpState *tis, const char *filepath);
 
 #endif // MC_SOURCE_H
