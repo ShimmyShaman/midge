@@ -172,17 +172,17 @@ int mct_add_scope_variable(mct_transcription_state *ts, mc_syntax_node *variable
       MCerror(113, "NotSupported:%i", variable_syntax_node->parameter.type);
     }
   } break;
-  case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
+  case MC_SYNTAX_VARIABLE_DECLARATOR: {
     ts->scope[ts->scope_index].variables[variable_index_in_scope].declaration_node = variable_syntax_node;
-    if (variable_syntax_node->local_variable_declarator.function_pointer) {
-      mcs_copy_syntax_node_to_text(
-          variable_syntax_node->local_variable_declarator.function_pointer->fptr_declarator.name,
-          &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
-    }
-    else {
-      mcs_copy_syntax_node_to_text(variable_syntax_node->local_variable_declarator.variable_name,
-                                   &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
-    }
+
+    mcs_copy_syntax_node_to_text(variable_syntax_node->variable_declarator.variable_name,
+                                 &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
+  } break;
+  case MC_SYNTAX_FUNCTION_POINTER_DECLARATOR: {
+    ts->scope[ts->scope_index].variables[variable_index_in_scope].declaration_node = variable_syntax_node;
+
+    mcs_copy_syntax_node_to_text(variable_syntax_node->fptr_declarator.name,
+                                 &ts->scope[ts->scope_index].variables[variable_index_in_scope].name);
   } break;
   default:
     MCerror(105, "Unsupported:%s", get_mc_syntax_token_type_name(variable_syntax_node->type));
@@ -469,7 +469,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
       //                             ->dereference_sequence.count;
       // }
       // else {
-        result->deref_count = 0;
+      result->deref_count = 0;
       // }
     }
     else {
@@ -599,7 +599,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
               MCerror(387, "TODO:%i", param_decl->parameter.type);
             }
           } break;
-          case MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR: {
+          case MC_SYNTAX_VARIABLE_DECLARATOR: {
             mc_syntax_node *var_declarator = ts->scope[d].variables[b].declaration_node;
             mc_syntax_node *declaration = var_declarator->parent;
 
@@ -608,35 +608,35 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
               MCerror(192, "Why isn't it a declaration?");
             }
 
-            if (var_declarator->local_variable_declarator.function_pointer) {
+            result->is_fptr = false;
+            result->is_array =
+                (var_declarator->variable_declarator.initializer &&
+                 var_declarator->variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER);
 
-              result->is_fptr = true;
-              result->is_array = false; // TODO ---- fptr arrays...
+            mcs_copy_syntax_node_to_text(declaration->local_variable_declaration.type_identifier, &result->type_name);
 
-              mcs_copy_syntax_node_to_text(declaration->local_variable_declaration.type_identifier, &result->type_name);
-              if (var_declarator->local_variable_declarator.type_dereference) {
-                result->deref_count =
-                    var_declarator->local_variable_declarator.type_dereference->dereference_sequence.count;
-              }
-              else {
-                result->deref_count = 0;
-              }
+            if (var_declarator->variable_declarator.type_dereference) {
+              result->deref_count = var_declarator->variable_declarator.type_dereference->dereference_sequence.count;
             }
             else {
-              result->is_fptr = false;
-              result->is_array = (var_declarator->local_variable_declarator.initializer &&
-                                  var_declarator->local_variable_declarator.initializer->type ==
-                                      MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER);
+              result->deref_count = 0;
+            }
+          } break;
+          case MC_SYNTAX_FUNCTION_POINTER_DECLARATOR: {
+            mc_syntax_node *fptr_declarator = ts->scope[d].variables[b].declaration_node;
+            mc_syntax_node *declaration = fptr_declarator->parent;
 
-              mcs_copy_syntax_node_to_text(declaration->local_variable_declaration.type_identifier, &result->type_name);
+            result->is_fptr = true;
+            result->is_array = false; // TODO ---- fptr arrays...
 
-              if (var_declarator->local_variable_declarator.type_dereference) {
-                result->deref_count =
-                    var_declarator->local_variable_declarator.type_dereference->dereference_sequence.count;
-              }
-              else {
-                result->deref_count = 0;
-              }
+            mcs_copy_syntax_node_to_text(declaration->local_variable_declaration.type_identifier, &result->type_name);
+
+            if (fptr_declarator->fptr_declarator.return_type_dereference) {
+              result->deref_count =
+                  fptr_declarator->fptr_declarator.return_type_dereference->dereference_sequence.count;
+            }
+            else {
+              result->deref_count = 0;
             }
           } break;
           default:
@@ -1440,10 +1440,14 @@ int mct_transcribe_type_identifier(mct_transcription_state *ts, mc_syntax_node *
 //   return 0;
 // }
 
-int mct_transcribe_function_pointer_declarator(mct_transcription_state *ts, mc_syntax_node *syntax_node)
-{ 
-  print_syntax_node(syntax_node, 0);
-
+int mct_transcribe_function_pointer_declarator(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
+                                               mc_syntax_node *syntax_node)
+{
+  // puts("mct_transcribe_function_pointer_declarator");
+  // print_syntax_node(syntax_node, 0);
+  // printf("type:%s\n", get_mc_syntax_token_type_name(syntax_node->type));
+  // printf("syntax_node->fptr_declarator.name='%s'\n", syntax_node->fptr_declarator.name ?
+  // syntax_node->fptr_declarator.name->text : "(null)");
   if (syntax_node->fptr_declarator.return_type_dereference) {
     for (int d = 0; d < syntax_node->fptr_declarator.return_type_dereference->dereference_sequence.count; ++d) {
       append_to_mc_str(ts->str, "*");
@@ -1492,49 +1496,82 @@ int mct_transcribe_function_pointer_declarator(mct_transcription_state *ts, mc_s
   }
   append_to_mc_str(ts->str, ")");
 
+  if (syntax_node->fptr_declarator.initializer) {
+    mc_syntax_node *initializer = syntax_node->fptr_declarator.initializer;
+    MCcall(append_to_mc_str(ts->str, " = "));
+
+    MCcall(mct_transcribe_expression(ts, st_info, initializer->variable_assignment_initializer.value_expression));
+  }
   return 0;
 }
 
 int mct_transcribe_function_pointer_declaration(mct_transcription_state *ts, mc_syntax_node *syntax_node)
 {
+  mct_statement_transcription_info st_info = {};
+  st_info.begin_index = st_info.prefix_end_index = ts->str->len;
+  st_info.variable_reported = false;
+
   mct_transcribe_type_identifier(ts, syntax_node->fptr_declaration.return_type_identifier);
   append_to_mc_str(ts->str, " ");
 
-  mct_transcribe_function_pointer_declarator(ts, syntax_node->fptr_declaration.declarator);
+  mct_transcribe_function_pointer_declarator(ts, &st_info, syntax_node->fptr_declaration.declarator);
 
   return 0;
 }
 
-int mct_transcribe_declarator(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
-                              mc_syntax_node *syntax_node)
+int mct_transcribe_variable_declarator(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
+                                       mc_syntax_node *declarator)
 {
-  if (syntax_node->local_variable_declarator.type_dereference) {
-    mcs_append_syntax_node_to_mc_str(ts->str, syntax_node->local_variable_declarator.type_dereference);
+  if (declarator->variable_declarator.type_dereference) {
+    mcs_append_syntax_node_to_mc_str(ts->str, declarator->variable_declarator.type_dereference);
   }
   append_to_mc_str(ts->str, " ");
-  if (syntax_node->local_variable_declarator.function_pointer) {
-    mct_transcribe_function_pointer_declarator(ts, syntax_node->local_variable_declarator.function_pointer);
-    // mcs_append_syntax_node_to_mc_str(ts->str, syntax_node->local_variable_declarator.function_pointer);
-  }
-  else {
-    mcs_append_syntax_node_to_mc_str(ts->str, syntax_node->local_variable_declarator.variable_name);
-  }
 
-  if (syntax_node->local_variable_declarator.initializer) {
-    if (syntax_node->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER) {
+  mcs_append_syntax_node_to_mc_str(ts->str, declarator->variable_declarator.variable_name);
+
+  if (declarator->variable_declarator.initializer) {
+    if (declarator->variable_declarator.initializer->type == MC_SYNTAX_VARIABLE_ASSIGNMENT_INITIALIZER) {
       append_to_mc_str(ts->str, " = ");
       mct_transcribe_expression(
-          ts, st_info,
-          syntax_node->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
+          ts, st_info, declarator->variable_declarator.initializer->variable_assignment_initializer.value_expression);
     }
-    else {
+    else if (declarator->variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER) {
+      mc_syntax_node *array_initialization = declarator->variable_declarator.initializer;
+
       append_to_mc_str(ts->str, "[");
-      if (syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression) {
-        mct_transcribe_expression(
-            ts, st_info,
-            syntax_node->local_variable_declarator.initializer->local_variable_array_initializer.size_expression);
+      if (array_initialization->local_variable_array_initializer.size_expression) {
+        mct_transcribe_expression(ts, NULL, array_initialization->local_variable_array_initializer.size_expression);
       }
       append_to_mc_str(ts->str, "]");
+
+      if (declarator->variable_declarator.initializer->local_variable_array_initializer.assignment_expression) {
+        mc_syntax_node_list *array_values =
+            array_initialization->local_variable_array_initializer.assignment_expression->initializer_expression.list;
+
+        append_to_mc_str(ts->str, " = {");
+
+        if (array_values->count) {
+          append_to_mc_str(ts->str, "\n");
+          ++ts->indent;
+
+          for (int a = 0; a < array_values->count; ++a) {
+            if (a > 0) {
+              append_to_mc_str(ts->str, ",\n");
+            }
+
+            mct_transcribe_indent(ts);
+            mct_transcribe_expression(ts, NULL, array_values->items[a]);
+          }
+
+          append_to_mc_str(ts->str, "\n");
+          --ts->indent;
+          mct_transcribe_indent(ts);
+        }
+        append_to_mc_str(ts->str, "}");
+      }
+    }
+    else {
+      MCerror(1802, "Unsupported:%s", get_mc_syntax_token_type_name(declarator->variable_declarator.initializer->type));
     }
   }
 
@@ -1601,10 +1638,10 @@ int mct_transcribe_global_var_declaration_statement(mct_transcription_state *ts,
   //     continue;
   //   }
 
-  //   if (declarator->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER) {
+  //   if (declarator->local_variable_declarator.initializer->type == MC_SYNTAX_VARIABLE_ASSIGNMENT_INITIALIZER) {
   //     // Any invocation, do it later
   //     // if
-  //     (declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
+  //     (declarator->local_variable_declarator.initializer->variable_assignment_initializer.value_expression
   //     //         ->type == MC_SYNTAX_INVOCATION)
   //     //   continue;
   //     // mct_syntax_descendants_contain_node_type(declarator->local_variable_declarator.initializer,
@@ -1616,7 +1653,7 @@ int mct_transcribe_global_var_declaration_statement(mct_transcription_state *ts,
   //     append_to_mc_str(ts->str, " = ");
   //     mct_transcribe_expression(
   //         ts, NULL,
-  //         declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
+  //         declarator->local_variable_declarator.initializer->variable_assignment_initializer.value_expression);
   //   }
   //   else {
   //     mc_syntax_node *array_initialization = declarator->local_variable_declarator.initializer;
@@ -1660,164 +1697,97 @@ int mct_transcribe_global_var_declaration_statement(mct_transcription_state *ts,
   return 0;
 }
 
-int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node)
+int mct_transcribe_pthread_create_exception(mct_transcription_state *ts, mc_syntax_node *declaration,
+                                            mc_syntax_node *lv_declarator, mc_syntax_node *lvd_initializer)
+{
+  // const char *parent_type_name = get_mc_syntax_token_type_name(syntax_node->parent->type);
+  // printf("fptr parent type: '%s'\n", parent_type_name);
+
+  mc_syntax_node *thr_invocation = lvd_initializer->variable_assignment_initializer.value_expression;
+  if (thr_invocation->invocation.arguments->count != 4) {
+    MCerror(1196, "Invalid Argument Count for pthread_create() : requires 4");
+  }
+
+  mct_transcribe_indent(ts);
+  mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
+  append_to_mc_str(ts->str, " ");
+  mcs_append_syntax_node_to_mc_str(
+      ts->str, declaration->local_variable_declaration.declarators->items[0]->variable_declarator.variable_name);
+  append_to_mc_str(ts->str, ";\n");
+
+  mct_transcribe_text_with_indent(ts, "{\n");
+  ++ts->indent;
+
+  mct_transcribe_indent(ts);
+  append_to_mc_str(ts->str, "void **mcti_wrapper_state = (void **)malloc(sizeof(void *) * 2);\n");
+  mct_transcribe_indent(ts);
+  append_to_mc_str(ts->str, "mcti_wrapper_state[0] = (void *)");
+  mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[2]);
+  append_to_mc_str(ts->str, ";\n");
+  mct_transcribe_indent(ts);
+  append_to_mc_str(ts->str, "mcti_wrapper_state[1] = (void *)");
+  mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[3]);
+  append_to_mc_str(ts->str, ";\n");
+
+  // if (ts->options->report_function_entry_exit_to_stack) {
+  //   mct_transcribe_text_with_indent(ts, "{\n");
+  //   ++ts->indent;
+  //   mct_transcribe_text_with_indent(ts, "int midge_error_stack_index;\n");
+
+  //   mct_transcribe_indent(ts);
+  //   append_to_mc_strf(ts->str, "register_midge_stack_invocation(\"%s\", __FILE__, %i,
+  //                                 & midge_error_stack_index);\n",
+  //                    "pthread_create", syntax_node->begin.line + 1);
+  // }
+
+  mct_transcribe_indent(ts);
+  mcs_append_syntax_node_to_mc_str(ts->str, lv_declarator->variable_declarator.variable_name);
+  append_to_mc_str(ts->str, " = ");
+  append_to_mc_str(ts->str, "pthread_create(");
+
+  mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[0]);
+  append_to_mc_str(ts->str, ", ");
+  mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[1]);
+  append_to_mc_str(ts->str, ", _mca_thread_entry_wrap, (void *)mcti_wrapper_state);\n");
+
+  // if (ts->options->report_function_entry_exit_to_stack) {
+  //   mct_transcribe_indent(ts);
+  //   append_to_mc_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
+
+  //   --ts->indent;
+  //   mct_transcribe_text_with_indent(ts, "}\n");
+  // }
+
+  --ts->indent;
+  mct_transcribe_text_with_indent(ts, "}\n");
+
+  return 0;
+}
+
+int mct_transcribe_declaration_statement(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
+                                         mc_syntax_node *syntax_node)
 {
   register_midge_error_tag("mct_transcribe_declaration_statement()");
 
   mc_syntax_node *declaration = syntax_node->declaration_statement.declaration;
+  mc_syntax_node *declarator;
 
-  // // va-args exception
-  // if (declaration->local_variable_declaration.declarators->count == 1) {
-  //   mc_syntax_node *declarator = declaration->local_variable_declaration.declarators->items[0];
-  //   if (declarator->local_variable_declarator.initializer &&
-  //       declarator->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER &&
-  //       declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
-  //               ->type == MC_SYNTAX_VA_ARG_EXPRESSION) {
-
-  //     mc_syntax_node *function_node = syntax_node->parent;
-  //     while (function_node->type != MC_SYNTAX_FUNCTION) {
-  //       function_node = function_node->parent;
-  //       if (function_node == NULL) {
-  //         MCerror(376, "Couldn't find function ancestor");
-  //       }
-  //     }
-  //     if ((mc_token_type)function_node->function.name->type != MC_TOKEN_IDENTIFIER) {
-  //       MCerror(380, "expected otherwise");
-  //     }
-  //     function_info *housing_finfo;
-  //     find_function_info(function_node->function.name->text, &housing_finfo);
-  //     if (!housing_finfo) {
-  //       MCerror(385, "expected otherwise");
-  //     }
-  //     // print_syntax_node(declarator, 0);
-
-  //     mc_syntax_node *va_arg_expression =
-  //         declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression;
-
-  //     // mct_transcribe_indent(ts);
-  //     // append_to_mc_strf(
-  //     //     ts->str,
-  //     //     "if(%i + 1 + (%s + 1) > mc_argsc) { printf(\"\\n\\nERR[%i]: va_args access exceeded argument "
-  //     //     "count\\n       mc_argsc=%%i  params+return-count:%%i  va_list:%%i\\n\", mc_argsc, %i, %s); return %i; "
-  //     //     "}\n",
-  //     //     housing_finfo->parameter_count - 1, va_arg_expression->va_arg_expression.list_identity->text, 722,
-  //     //     housing_finfo->parameter_count - 1, va_arg_expression->va_arg_expression.list_identity->text, 722);
-
-  //     mct_transcribe_text_with_indent(ts, "++");
-  //     append_to_mc_str(ts->str, va_arg_expression->va_arg_expression.list_identity->text);
-  //     append_to_mc_str(ts->str, ";\n");
-
-  //     // mct_transcribe_indent(ts);
-  //     // append_to_mc_strf(ts->str, "printf(\"%s=%%i mc_argsv[%i + %%i]=%%p\\n\", %s, %s, mc_argsv[%i + %s]);\n",
-  //     //                  va_arg_expression->va_arg_expression.list_identity->text, housing_finfo->parameter_count -
-  //     //                  1, va_arg_expression->va_arg_expression.list_identity->text,
-  //     //                  va_arg_expression->va_arg_expression.list_identity->text, housing_finfo->parameter_count -
-  //     //                  1, va_arg_expression->va_arg_expression.list_identity->text);
-
-  //     mct_transcribe_indent(ts);
-  //     mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
-  //     append_to_mc_str(ts->str, " ");
-  //     if (declarator->local_variable_declarator.type_dereference) {
-  //       for (int d = 0; d < declarator->local_variable_declarator.type_dereference->dereference_sequence.count; ++d)
-  //       {
-  //         append_to_mc_str(ts->str, "*");
-  //       }
-  //     }
-  //     mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.variable_name);
-
-  //     append_to_mc_str(ts->str, " = *(");
-  //     mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
-  //     append_to_mc_str(ts->str, " ");
-  //     if (declarator->local_variable_declarator.type_dereference) {
-  //       for (int d = 0; d < declarator->local_variable_declarator.type_dereference->dereference_sequence.count; ++d)
-  //       {
-  //         append_to_mc_str(ts->str, "*");
-  //       }
-  //     }
-  //     append_to_mc_strf(ts->str, "*)mc_argsv[%i + %s];\n", housing_finfo->parameter_count - 1,
-  //                      va_arg_expression->va_arg_expression.list_identity->text);
-
-  //     return 0;
-  //   }
-  // }
-
+  // TODO -- this is a weak wrapper atm
   // pthread_create exception
-  if (declaration->local_variable_declaration.declarators->count == 1 &&
-      declaration->local_variable_declaration.declarators->items[0]->local_variable_declarator.initializer) {
-    mc_syntax_node *lvdi =
-        declaration->local_variable_declaration.declarators->items[0]->local_variable_declarator.initializer;
+  if (declaration->local_variable_declaration.declarators->count == 1) {
+    declarator = declaration->local_variable_declaration.declarators->items[0];
+    if (declarator->type == MC_SYNTAX_VARIABLE_DECLARATOR && declarator->variable_declarator.initializer) {
+      mc_syntax_node *lvd_initializer = declarator->variable_declarator.initializer;
 
-    if (lvdi->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER &&
-        lvdi->local_variable_assignment_initializer.value_expression->type == MC_SYNTAX_INVOCATION &&
-        (mc_token_type)lvdi->local_variable_assignment_initializer.value_expression->invocation.function_identity
-                ->type == MC_TOKEN_IDENTIFIER &&
-        !strcmp(lvdi->local_variable_assignment_initializer.value_expression->invocation.function_identity->text,
-                "pthread_create")) {
-
-      // const char *parent_type_name = get_mc_syntax_token_type_name(syntax_node->parent->type);
-      // printf("fptr parent type: '%s'\n", parent_type_name);
-
-      mc_syntax_node *thr_invocation = lvdi->local_variable_assignment_initializer.value_expression;
-      if (thr_invocation->invocation.arguments->count != 4) {
-        MCerror(1196, "Invalid Argument Count for pthread_create() : requires 4");
+      if (lvd_initializer->type == MC_SYNTAX_VARIABLE_ASSIGNMENT_INITIALIZER &&
+          lvd_initializer->variable_assignment_initializer.value_expression->type == MC_SYNTAX_INVOCATION &&
+          (mc_token_type)lvd_initializer->variable_assignment_initializer.value_expression->invocation
+                  .function_identity->type == MC_TOKEN_IDENTIFIER &&
+          !strcmp(lvd_initializer->variable_assignment_initializer.value_expression->invocation.function_identity->text,
+                  "pthread_create")) {
+        MCcall(mct_transcribe_pthread_create_exception(ts, declaration, declarator, lvd_initializer));
+        return 0;
       }
-
-      mct_transcribe_indent(ts);
-      mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
-      append_to_mc_str(ts->str, " ");
-      mcs_append_syntax_node_to_mc_str(
-          ts->str,
-          declaration->local_variable_declaration.declarators->items[0]->local_variable_declarator.variable_name);
-      append_to_mc_str(ts->str, ";\n");
-
-      mct_transcribe_text_with_indent(ts, "{\n");
-      ++ts->indent;
-
-      mct_transcribe_indent(ts);
-      append_to_mc_str(ts->str, "void **mcti_wrapper_state = (void **)malloc(sizeof(void *) * 2);\n");
-      mct_transcribe_indent(ts);
-      append_to_mc_str(ts->str, "mcti_wrapper_state[0] = (void *)");
-      mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[2]);
-      append_to_mc_str(ts->str, ";\n");
-      mct_transcribe_indent(ts);
-      append_to_mc_str(ts->str, "mcti_wrapper_state[1] = (void *)");
-      mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[3]);
-      append_to_mc_str(ts->str, ";\n");
-
-      // if (ts->options->report_function_entry_exit_to_stack) {
-      //   mct_transcribe_text_with_indent(ts, "{\n");
-      //   ++ts->indent;
-      //   mct_transcribe_text_with_indent(ts, "int midge_error_stack_index;\n");
-
-      //   mct_transcribe_indent(ts);
-      //   append_to_mc_strf(ts->str, "register_midge_stack_invocation(\"%s\", __FILE__, %i,
-      //                                 & midge_error_stack_index);\n",
-      //                    "pthread_create", syntax_node->begin.line + 1);
-      // }
-
-      mct_transcribe_indent(ts);
-      mcs_append_syntax_node_to_mc_str(
-          ts->str,
-          declaration->local_variable_declaration.declarators->items[0]->local_variable_declarator.variable_name);
-      append_to_mc_str(ts->str, " = ");
-      append_to_mc_str(ts->str, "pthread_create(");
-
-      mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[0]);
-      append_to_mc_str(ts->str, ", ");
-      mcs_append_syntax_node_to_mc_str(ts->str, thr_invocation->invocation.arguments->items[1]);
-      append_to_mc_str(ts->str, ", _mca_thread_entry_wrap, (void *)mcti_wrapper_state);\n");
-
-      // if (ts->options->report_function_entry_exit_to_stack) {
-      //   mct_transcribe_indent(ts);
-      //   append_to_mc_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
-
-      //   --ts->indent;
-      //   mct_transcribe_text_with_indent(ts, "}\n");
-      // }
-
-      --ts->indent;
-      mct_transcribe_text_with_indent(ts, "}\n");
-      return 0;
     }
   }
 
@@ -1831,146 +1801,29 @@ int mct_transcribe_declaration_statement(mct_transcription_state *ts, mc_syntax_
   mct_transcribe_type_identifier(ts, declaration->local_variable_declaration.type_identifier);
   append_to_mc_str(ts->str, " ");
 
-  mc_syntax_node *declarator;
   for (int i = 0; i < declaration->local_variable_declaration.declarators->count; ++i) {
+    declarator = declaration->local_variable_declaration.declarators->items[i];
+
+    // Seperating comma
     if (i > 0) {
       append_to_mc_str(ts->str, ", ");
     }
 
-    declarator = declaration->local_variable_declaration.declarators->items[i];
-    if (declarator->local_variable_declarator.function_pointer) {
-      mct_transcribe_function_pointer_declarator(ts, declarator->local_variable_declarator.function_pointer);
-      // // print_syntax_node(declarator, 0);
-      // if (declarator->local_variable_declarator.type_dereference) {
-      //   mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.type_dereference);
-      // }
-
-      // mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.function_pointer);
+    if (declarator->type == MC_SYNTAX_VARIABLE_DECLARATOR) {
+      mct_transcribe_variable_declarator(ts, st_info, declarator);
+    }
+    else if (declarator->type == MC_SYNTAX_FUNCTION_POINTER_DECLARATOR) {
+      mct_transcribe_function_pointer_declarator(ts, st_info, declarator);
     }
     else {
-      if (declarator->local_variable_declarator.type_dereference) {
-        mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.type_dereference);
-      }
-      mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.variable_name);
+      // TODO -- any more and turn it into a switch statement
+      MCerror(1775, "Unsupported declarator:%s", get_mc_syntax_token_type_name(declarator->type));
     }
 
     // Add to local scope
     mct_add_scope_variable(ts, declarator);
-
-    // Initializer Query
-    if (!declarator->local_variable_declarator.initializer) {
-      continue;
-    }
-
-    if (declarator->local_variable_declarator.initializer->type == MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER) {
-      // Any invocation, do it later
-      // if (declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
-      //         ->type == MC_SYNTAX_INVOCATION)
-      //   continue;
-      // mct_syntax_descendants_contain_node_type(declarator->local_variable_declarator.initializer,
-      // MC_SYNTAX_INVOCATION,
-      //                                          &contains_invocation);
-      // if (contains_invocation)
-      //   continue;
-
-      append_to_mc_str(ts->str, " = ");
-      mct_transcribe_expression(
-          ts, NULL,
-          declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
-    }
-    else {
-      mc_syntax_node *array_initialization = declarator->local_variable_declarator.initializer;
-
-      append_to_mc_str(ts->str, "[");
-      if (array_initialization->local_variable_array_initializer.size_expression) {
-        mct_transcribe_expression(ts, NULL, array_initialization->local_variable_array_initializer.size_expression);
-      }
-      append_to_mc_str(ts->str, "]");
-
-      if (declarator->local_variable_declarator.initializer->local_variable_array_initializer.assignment_expression) {
-        mc_syntax_node_list *array_values =
-            array_initialization->local_variable_array_initializer.assignment_expression->initializer_expression.list;
-
-        append_to_mc_str(ts->str, " = {");
-
-        if (array_values->count) {
-          append_to_mc_str(ts->str, "\n");
-          ++ts->indent;
-
-          for (int a = 0; a < array_values->count; ++a) {
-            if (a > 0) {
-              append_to_mc_str(ts->str, ",\n");
-            }
-
-            mct_transcribe_indent(ts);
-            mct_transcribe_expression(ts, NULL, array_values->items[a]);
-          }
-
-          append_to_mc_str(ts->str, "\n");
-          --ts->indent;
-          mct_transcribe_indent(ts);
-        }
-        append_to_mc_str(ts->str, "}");
-      }
-    }
   }
-  append_to_mc_str(ts->str, ";\n");
-
-  // Declarators & their initialization
-  // mc_syntax_node *declarator;
-  // for (int i = 0; i < declaration->local_variable_declaration.declarators->count; ++i) {
-  //   declarator = declaration->local_variable_declaration.declarators->items[i];
-
-  //   if (!declarator->local_variable_declarator.initializer) {
-  //     continue;
-  //   }
-
-  //   if (declarator->local_variable_declarator.initializer->type != MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER ||
-  //       declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
-  //               ->type != MC_SYNTAX_INVOCATION)
-  //     continue;
-
-  //   {
-  //     mct_transcribe_indent(ts);
-  //     mcs_append_syntax_node_to_mc_str(ts->str, declarator->local_variable_declarator.variable_name);
-  //     append_to_mc_str(ts->str, " = ");
-  //     mct_transcribe_expression(
-  //         ts, NULL,
-  //         declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression);
-  //     append_to_mc_str(ts->str, ";\n");
-  //   }
-  //   // if (declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
-  //   //         ->type != MC_SYNTAX_INVOCATION) {
-  //   //   print_syntax_node(
-  //   // declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression,
-  //   //       0);
-  //   //   MCerror(1417, "Nested invokes not yet supported just flat 'res = function()'");
-  //   // }
-
-  //   // if (ts->options->report_function_entry_exit_to_stack) {
-  //   //   mct_transcribe_text_with_indent(ts, "{\n");
-  //   //   ++ts->indent;
-  //   //   mct_transcribe_text_with_indent(ts, "int midge_error_stack_index;\n");
-
-  //   //   mct_transcribe_indent(ts);
-  //   //   char *function_name;
-  //   //   mcs_copy_syntax_node_to_text(
-  //   // declarator->local_variable_declarator.initializer->local_variable_assignment_initializer.value_expression
-  //   //           ->invocation.function_identity,
-  //   //       &function_name);
-  //   //   append_to_mc_strf(ts->str, "register_midge_stack_invocation(\"%s\", __FILE__, %i,
-  //   &midge_error_stack_index);\n",
-  //   //                    function_name, syntax_node->begin.line + 1);
-  //   //   free(function_name);
-  //   // }
-  //   // if (ts->options->report_function_entry_exit_to_stack) {
-  //   //   mct_transcribe_indent(ts);
-  //   //   append_to_mc_str(ts->str, "register_midge_stack_return(midge_error_stack_index);\n");
-
-  //   //   --ts->indent;
-  //   //   mct_transcribe_text_with_indent(ts, "}\n");
-  //   // }
-  // }
+  append_to_mc_str(ts->str, ";");
 
   return 0;
 }
@@ -2107,8 +1960,8 @@ int mct_transcribe_fptr_invocation(mct_transcription_state *ts, mc_syntax_node *
   // append_to_mc_strf(ts->str, "void *%s[%i];\n", ARGUMENT_DATA_NAME, syntax_node->invocation.arguments->count + 1);
 
   // for (int a = 0; a < syntax_node->invocation.arguments->count; ++a) {
-  //   mct_transcribe_mc_invocation_argument(ts, NULL, syntax_node->invocation.arguments->items[a], ARGUMENT_DATA_NAME,
-  //   a);
+  //   mct_transcribe_mc_invocation_argument(ts, NULL, syntax_node->invocation.arguments->items[a],
+  //   ARGUMENT_DATA_NAME, a);
   // }
 
   // if (strcmp(fptr_type_info->type_name, "void") || fptr_type_info->deref_count) {
@@ -2199,7 +2052,8 @@ int mct_transcribe_fptr_invocation(mct_transcription_state *ts, mc_syntax_node *
   // ++ts->indent;
   // mct_transcribe_text_with_indent(ts, "printf(\"--");
   // mcs_append_syntax_node_to_mc_str(ts->str, syntax_node->invocation.function_identity);
-  // mct_transcribe_text_with_indent(ts, "->%s line:%i ERR:%i\\n\", ptr_func_info->name, __LINE__, mc_fptr_result);\n");
+  // mct_transcribe_text_with_indent(ts, "->%s line:%i ERR:%i\\n\", ptr_func_info->name, __LINE__,
+  // mc_fptr_result);\n");
   // --ts->indent;
   // mct_transcribe_text_with_indent(ts, "}");
 
@@ -2330,7 +2184,19 @@ int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcr
       if (a > 0) {
         append_to_mc_str(ts->str, ", ");
       }
-      mct_transcribe_declarator(ts, st_info, syntax_node->local_variable_declaration.declarators->items[a]);
+
+      mc_syntax_node *declarator = syntax_node->local_variable_declaration.declarators->items[a];
+
+      switch (declarator->type) {
+      case MC_SYNTAX_FUNCTION_POINTER_DECLARATOR:
+        mct_transcribe_function_pointer_declarator(ts, st_info, declarator);
+        break;
+      case MC_SYNTAX_VARIABLE_DECLARATOR:
+        mct_transcribe_variable_declarator(ts, st_info, declarator);
+        break;
+      default:
+        MCerror(2337, "Unsupported:'%s'", get_mc_syntax_token_type_name(declarator->type));
+      }
     }
   } break;
   case MC_SYNTAX_ASSIGNMENT_EXPRESSION: {
@@ -2835,24 +2701,6 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
   } break;
   case MC_SYNTAX_RETURN_STATEMENT: {
     mct_transcribe_function_end(ts, syntax_node->return_statement.expression);
-    // bool contains_mc_function_call;
-    // mct_transcribe_text_with_indent(ts, "{\n");
-    // ++ts->indent;
-    // if (syntax_node->return_statement.expression) {
-    //   mct_contains_mc_invoke(syntax_node->return_statement.expression, &contains_mc_function_call);
-    //   if (contains_mc_function_call) {
-    //     // print_syntax_node(syntax_node->return_statement.expression, 0);
-    //     mct_transcribe_mc_invocation(ts, syntax_node->return_statement.expression, (char *)"*mc_return_value");
-    //     // printf("Transcription after return statement (str):\n%s||\n", str->text);
-    //   }
-    //   else {
-    //     mct_transcribe_indent(ts);
-    //     append_to_mc_str(ts->str, "return ");
-    //     mct_transcribe_expression(ts, NULL, syntax_node->return_statement.expression);
-    //     append_to_mc_str(ts->str, ";\n");
-    //   }
-    // }
-    // mct_transcribe_text_with_indent(ts, "}\n");
   } break;
   case MC_SYNTAX_CODE_BLOCK: {
     mct_transcribe_code_block(ts, syntax_node, false);
@@ -2870,7 +2718,7 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
     mct_transcribe_if_statement(ts, &st_info, syntax_node);
   } break;
   case MC_SYNTAX_DECLARATION_STATEMENT: {
-    mct_transcribe_declaration_statement(ts, syntax_node);
+    mct_transcribe_declaration_statement(ts, &st_info, syntax_node);
   } break;
   case MC_SYNTAX_GLOBAL_VARIABLE_DECLARATION: {
     mct_transcribe_global_var_declaration_statement(ts, syntax_node);
@@ -3058,7 +2906,7 @@ int mct_transcribe_field_declarators(mct_transcription_state *ts, mc_syntax_node
     }
     if (declarator->field_declarator.function_pointer) {
       // Function Pointer
-      mct_transcribe_function_pointer_declarator(ts, declarator->field_declarator.function_pointer);
+      mct_transcribe_function_pointer_declarator(ts, NULL, declarator->field_declarator.function_pointer);
     }
     else {
       mcs_append_syntax_node_to_mc_str(ts->str, declarator->field_declarator.name);

@@ -375,7 +375,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_expression",
     "mct_transcribe_type_identifier",
     "mct_transcribe_invocation",
-    "mct_transcribe_declarator",
+    "mct_transcribe_variable_declarator",
     "mct_transcribe_code_block",
     "mct_transcribe_if_statement",
     "mct_transcribe_statement_list",
@@ -774,8 +774,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
                                    &dummy_int);
   }
 
-  void (*mdg_init_midge_app_info)(mc_app_itp_data **) = tcci_get_symbol(midge_itp, "mc_init_midge_app_info");
-  mdg_init_midge_app_info(midge_itp);
+  void (*mdg_init_midge_app_info)() = tcci_get_symbol(midge_itp, "mc_init_midge_app_info");
+  mdg_init_midge_app_info();
 
   // // Load the remainder of the application source files with the new interpreter
   // printf("[mcl_load_remaining_app_source]\n");

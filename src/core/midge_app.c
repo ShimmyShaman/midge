@@ -77,6 +77,7 @@ int begin_render_thread()
   // dothecall(&callit);
   // printf("global_data->render_thread:%p &global_data->render_thread:%p\n", global_data->render_thread,
   // global_data->render_thread);
+    // printf("&midge_render_thread=%p\n", &midge_render_thread);
 
   return begin_mthread(&midge_render_thread, &global_data->render_thread->thread_info,
                        (void *)global_data->render_thread);

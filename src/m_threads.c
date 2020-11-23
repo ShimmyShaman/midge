@@ -16,29 +16,30 @@ void *_mca_thread_entry_wrap(void *state)
                                  &base_error_stack_index);
 
   void **state_args = (void **)state;
-  void *(*mc_routine)(void *) = *(void *(**)(void *))state_args[0];
+  void *(*mc_routine)(void *) = (void *(*)(void *))state_args[0];
   void *wrapped_state = state_args[1];
 
   // printf("mc_routine ptr:%p\n", mc_routine);
   // printf("mc_routine deref ptr:%p\n", *mc_routine);
 
   const char *fn_name = "TODO-find-by-ptr?";
+  void *thread_res;
   {
-    printf("mc_routine=%p\n", mc_routine);
+    // printf("mc_routine=%p\n", mc_routine);
     int mc_error_stack_index;
     register_midge_stack_invocation(fn_name, __FILE__, __LINE__ + 1, &mc_error_stack_index);
-    int mc_res = mc_routine(wrapped_state);
-    if (mc_res) {
-      printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
-      return NULL;
-    }
+    thread_res = mc_routine(wrapped_state);
+    // if (mc_res) {
+    //   printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
+    //   return NULL;
+    // }
     register_midge_stack_return(mc_error_stack_index);
   }
   // printf("routine called\n");
 
   register_midge_thread_conclusion(mc_error_thread_index);
   // return routine_result;
-  return NULL;
+  return thread_res;
 }
 
 // void *mthread_wrapper_delegate(void *ws)

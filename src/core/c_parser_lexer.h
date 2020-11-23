@@ -142,9 +142,9 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_GLOBAL_VARIABLE_DECLARATION,
   MC_SYNTAX_DECLARATION_STATEMENT,
   MC_SYNTAX_LOCAL_VARIABLE_DECLARATION,
-  MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR,
+  MC_SYNTAX_VARIABLE_DECLARATOR,
   MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER,
-  MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER,
+  MC_SYNTAX_VARIABLE_ASSIGNMENT_INITIALIZER,
   MC_SYNTAX_ASSIGNMENT_EXPRESSION,
   MC_SYNTAX_RETURN_STATEMENT,
   MC_SYNTAX_INVOCATION,
@@ -288,6 +288,7 @@ struct mc_syntax_node {
           mc_syntax_node *return_type_dereference;
           mc_syntax_node *fp_dereference;
           mc_syntax_node *name;
+          mc_syntax_node *initializer;
           mc_syntax_node_list *parameters;
         } fptr_declarator;
         struct {
@@ -355,16 +356,15 @@ struct mc_syntax_node {
           // May be null indicating no dereference operators
           mc_syntax_node *type_dereference;
           mc_syntax_node *variable_name;
-          mc_syntax_node *function_pointer;
           mc_syntax_node *initializer;
-        } local_variable_declarator;
+        } variable_declarator;
         struct {
           mc_syntax_node *size_expression;
           mc_syntax_node *assignment_expression;
         } local_variable_array_initializer;
         struct {
           mc_syntax_node *value_expression;
-        } local_variable_assignment_initializer;
+        } variable_assignment_initializer;
         struct {
           mc_syntax_node_list *list;
         } initializer_expression;

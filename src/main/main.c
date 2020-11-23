@@ -512,6 +512,7 @@ int main(int argc, const char *const *argv)
   // sprintf(buf, "*(int *)(%p) = _midge_run();", &result);
   // clint->process(buf);
   int (*midge_initialize_app)(struct timespec *) = tcci_get_symbol(mc_itp, "midge_initialize_app");
+  void (*midge_cleanup_app)(void) = tcci_get_symbol(mc_itp, "midge_cleanup_app");
   if (!midge_initialize_app) {
     puts("ERR[1240]: Couldn't obtain midge_initialize_app\n");
   }
@@ -530,6 +531,8 @@ int main(int argc, const char *const *argv)
     else {
       // TODO
     }
+
+    midge_cleanup_app();
   }
 
   // Cleanup

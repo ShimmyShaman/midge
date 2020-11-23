@@ -883,7 +883,7 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_LOCAL_VARIABLE_DECLARATION,
   MC_SYNTAX_LOCAL_VARIABLE_DECLARATOR,
   MC_SYNTAX_LOCAL_VARIABLE_ARRAY_INITIALIZER,
-  MC_SYNTAX_LOCAL_VARIABLE_ASSIGNMENT_INITIALIZER,
+  MC_SYNTAX_VARIABLE_ASSIGNMENT_INITIALIZER,
   MC_SYNTAX_ASSIGNMENT_EXPRESSION,
   MC_SYNTAX_RETURN_STATEMENT,
   MC_SYNTAX_INVOCATION,
@@ -1024,7 +1024,7 @@ typedef struct mc_syntax_node {
         } local_variable_array_initializer;
         struct {
           mc_syntax_node *value_expression;
-        } local_variable_assignment_initializer;
+        } variable_assignment_initializer;
         struct {
           mc_syntax_node *function_identity;
           mc_function_info_v1 *mc_function_info;
