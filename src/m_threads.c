@@ -27,15 +27,16 @@ void *_mca_thread_entry_wrap(void *state)
   {
     // printf("mc_routine=%p\n", mc_routine);
     int mc_error_stack_index;
-    register_midge_stack_invocation(fn_name, __FILE__, __LINE__ + 1, &mc_error_stack_index);
+    // register_midge_stack_invocation(fn_name, __FILE__, __LINE__ + 1, &mc_error_stack_index);
     thread_res = mc_routine(wrapped_state);
     // if (mc_res) {
     //   printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
     //   return NULL;
     // }
-    register_midge_stack_return(mc_error_stack_index);
+    // register_midge_stack_return(mc_error_stack_index);
   }
-  // printf("routine called\n");
+  // usleep(3000000);
+  // printf("routine exited\n");
 
   register_midge_thread_conclusion(mc_error_thread_index);
   // return routine_result;

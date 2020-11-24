@@ -442,7 +442,7 @@ void initialize_midge_error_handling()
   }
 
   // Error Stacks
-  MIDGE_ERROR_THREAD_HISTORICAL_COUNT = 0;
+  MIDGE_ERROR_THREAD_HISTORICAL_COUNT = 1;
   for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
     MIDGE_ERROR_THREAD_STACKS[t] = (struct __mce_thread_entry_stack *)malloc(sizeof(struct __mce_thread_entry_stack));
     MIDGE_ERROR_THREAD_STACKS[t]->thread_id = (pthread_t)0;

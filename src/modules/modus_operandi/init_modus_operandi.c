@@ -1,7 +1,11 @@
+/* init_modus_operandi */
 
-#include "env/environment_definitions.h"
-#include "render/render_thread.h"
-#include "ui/ui_definitions.h"
+#include "core/midge_app.h"
+#include "render/render_common.h"
+
+// #include "env/environment_definitions.h"
+// #include "render/render_thread.h"
+// #include "ui/ui_definitions.h"
 
 typedef struct modus_operandi_data {
   mc_node *node;
@@ -29,8 +33,8 @@ void _mco_render_mo_data_headless(mc_node *node)
   }
 
   // Render the render target
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   image_render_details *irq;
   mcr_obtain_image_render_request(global_data->render_thread, &irq);
@@ -93,9 +97,8 @@ void mco_load_resources(mc_node *module_node)
 
 void init_modus_operandi(mc_node *app_root)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
-
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
   //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
 
   mc_node *node;

@@ -317,7 +317,7 @@ const char *_mcl_core_functions[] = {
     "mct_transcribe_enum_declaration",
     "mct_transcribe_function",
     "mct_transcribe_type_alias",
-    "mct_transcribe_function_end",
+    "mct_transcribe_function_return",
     "mct_transcribe_indent",
     "mct_transcribe_text_with_indent",
     "mct_transcribe_file_root_children",
@@ -480,6 +480,7 @@ const char *_mcl_remainder_header_files[] = {
     "src/env/environment_definitions.h",
     "src/ui/ui_definitions.h",
     "src/control/mc_controller.h",
+    "src/modules/app_modules.h",
     // And everything here before -------------------------------------------------------------
     "src/core/midge_app.h",
 };
@@ -496,11 +497,11 @@ const char *_mcl_remainder_source_files[] = {
     "src/render/render_thread.c",
     "src/render/render_resources.c",
 
-    "src/core/app_modules.c",
     "src/ui/ui_functionality.c",
     "src/env/hierarchy.c",
     // "src/env/global_context_menu.c",
     "src/control/mc_controller.c",
+    "src/modules/app_modules.c",
     // And everything here before -------------------------------------------------------------
     "src/core/midge_app.c",
 };

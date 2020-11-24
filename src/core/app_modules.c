@@ -4,21 +4,23 @@
 #include <string.h>
 
 #include "core/core_definitions.h"
+#include "mc_source.h"
 #include "mc_str.h"
+#include "midge_app.h"
 
-void _mca_load_module(char *base_path, char *module_name)
+int _mca_load_module(char *base_path, char *module_name)
 {
-  puts("MODULE SKIP TODO _mca_load_module");
-  return;
-  // mc_global_data *global_data;
-  // obtain_midge_global_root(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
-  // char buf[512];
-  // sprintf(buf, "%s/%s/init_%s.c", base_path, module_name, module_name);
+  char buf[512];
+  sprintf(buf, "%s/%s/init_%s.c", base_path, module_name, module_name);
 
-  // // instantiate_all_definitions_from_file(global_data->global_node, buf, NULL);
+  MCcall(mcs_interpret_file(app_info->interpreter, buf));
 
-  // // Initialize the module
+  // instantiate_all_definitions_from_file(global_data->global_node, buf, NULL);
+
+  // Initialize the module
   // int mc_res;
   // sprintf(buf,
   //         "{\n"
@@ -26,29 +28,33 @@ void _mca_load_module(char *base_path, char *module_name)
   //         "  mc_vargs[0] = (void *)%p;\n"
   //         "  (*(int *)%p) = init_%s(1, mc_vargs);\n"
   //         "}\n",
-  //         &global_data->global_node, &mc_res, module_name);
+  //         &app_info->global_node, &mc_res, module_name);
   // clint_process(buf);
   // if (mc_res) {
   //   MCerror(8974, "--init_%s() |line~ :??? ERR:%i\n", module_name, mc_res);
   // }
+
+  return 0;
 }
 
-void mca_load_modules()
+int mca_load_modules()
 {
-  puts("MODULE SKIP TODO mca_load_modules");
+  // puts("MODULE SKIP TODO mca_load_modules");
   // // Get all directories in folder
   // // TODO
-  // const char *module_directories[] = {
-  //     "modus_operandi",
-  //     "source_editor",
-  //     "function_debug",
-  //     "obj_loader",
-  //     NULL,
-  // };
+  const char *module_directories[] = {
+      "modus_operandi",
+      // "source_editor",
+      // "function_debug",
+      // "obj_loader",
+      NULL,
+  };
 
-  // for (int d = 0; module_directories[d]; ++d) {
-  //   _mca_load_module("src/modules", module_directories[d]);
-  // }
+  for (int d = 0; module_directories[d]; ++d) {
+    MCcall(_mca_load_module("src/modules", module_directories[d]));
+  }
+
+  return 0;
 }
 
 void _mca_set_project_state(char *base_path, char *module_name)
@@ -99,7 +105,7 @@ void mca_load_open_projects()
       strncpy(buf, open_list_text + s, i - s);
       buf[i - s] = '\0';
 
-      _mca_load_module("projects", buf);
+      MCcall(_mca_load_module("projects", buf));
       _mca_set_project_state("projects", buf);
     }
   }

@@ -22,7 +22,7 @@ typedef struct frame_time {
 } frame_time;
 
 typedef struct midge_app_info {
-  mc_app_itp_data *itp_data;
+  mc_app_itp_data *interpreter;
   mc_node *global_node;
 
   struct timespec *app_begin_time;

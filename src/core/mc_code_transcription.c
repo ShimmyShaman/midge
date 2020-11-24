@@ -33,6 +33,8 @@ typedef struct mct_transcription_state {
   mc_str *str;
   int indent;
 
+  bool recent_function_exit_handled;
+
   // Variable scopes
   mct_transcription_scope *scope;
   int scope_index;
@@ -58,7 +60,7 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
 int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
                               mc_syntax_node *syntax_node);
 int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_node);
-int mct_transcribe_function_end(mct_transcription_state *ts, mc_syntax_node *result_expression);
+int mct_transcribe_function_return(mct_transcription_state *ts, mc_syntax_node *result_expression);
 
 int mct_release_expression_type_info_fields(mct_expression_type_info *eti)
 {
@@ -2700,10 +2702,10 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
     // append_to_mc_str(ts->str, "\n");
   } break;
   case MC_SYNTAX_RETURN_STATEMENT: {
-    mct_transcribe_function_end(ts, syntax_node->return_statement.expression);
+    mct_transcribe_function_return(ts, syntax_node->return_statement.expression);
   } break;
   case MC_SYNTAX_CODE_BLOCK: {
-    mct_transcribe_code_block(ts, syntax_node, false);
+    MCcall(mct_transcribe_code_block(ts, syntax_node, false));
   } break;
   case MC_SYNTAX_FOR_STATEMENT: {
     mct_transcribe_for_statement(ts, syntax_node);
@@ -2863,11 +2865,24 @@ int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *synta
     mct_transcribe_text_with_indent(ts, "register_midge_stack_function_entry(\"");
     append_to_mc_str(ts->str, ts->function_name);
     append_to_mc_str(ts->str, "\", __FILE__, __LINE__, &midge_error_stack_index);\n\n");
+    ts->recent_function_exit_handled = false;
   }
 
   if (syntax_node->code_block.statement_list) {
     mct_transcribe_statement_list(ts, syntax_node->code_block.statement_list);
     append_to_mc_str(ts->str, "\n");
+  }
+
+  if (function_root && ts->options->report_function_entry_exit_to_stack &&
+      strcmp("_mca_thread_entry_wrap", ts->function_name) && !ts->recent_function_exit_handled) {
+    if (strcmp(syntax_node->parent->function.return_type_identifier->type_identifier.identifier->text, "void") ||
+        syntax_node->parent->function.return_type_dereference) {
+      // print_syntax_node(syntax_node->parent->function.return_type_identifier, 0);
+      // printf("trs:\n%s||\n", ts->str->text);
+      MCerror(2878, "Are you missing a return for this function?  '%s'", syntax_node->parent->function.name->text);
+    }
+
+    MCcall(mct_transcribe_function_return(ts, NULL));
   }
 
   mct_decrement_scope_depth(ts);
@@ -2991,7 +3006,7 @@ int mct_transcribe_field(mct_transcription_state *ts, mc_syntax_node *syntax_nod
   return 0;
 }
 
-int mct_transcribe_function_end(mct_transcription_state *ts, mc_syntax_node *result_expression)
+int mct_transcribe_function_return(mct_transcription_state *ts, mc_syntax_node *result_expression)
 {
   append_to_mc_str(ts->str, "\n");
   mct_transcribe_text_with_indent(ts, "{\n");
@@ -3045,6 +3060,8 @@ int mct_transcribe_function_end(mct_transcription_state *ts, mc_syntax_node *res
   append_to_mc_str(ts->str, ";\n");
   --ts->indent;
   mct_transcribe_text_with_indent(ts, "}\n");
+
+  ts->recent_function_exit_handled = true;
 
   return 0;
 }
@@ -3115,7 +3132,7 @@ int mct_transcribe_function(mct_transcription_state *ts, mc_syntax_node *functio
 
   if (function_ast->function.code_block) {
     append_to_mc_str(ts->str, " ");
-    mct_transcribe_code_block(ts, function_ast->function.code_block, true);
+    MCcall(mct_transcribe_code_block(ts, function_ast->function.code_block, true));
   }
   else
     append_to_mc_str(ts->str, ";");
@@ -3358,7 +3375,7 @@ int mct_transcribe_function(mct_transcription_state *ts, mc_syntax_node *functio
 //   // TODO -- check function returns if it has a return value
 
 //   // Return Statement
-//   mct_transcribe_function_end(&ts);
+//   mct_transcribe_function_return(&ts);
 //   mct_decrement_scope_depth(&ts);
 //   append_to_mc_str(ts.str, "}");
 //   *mc_transcription = ts.str->text;
@@ -3525,7 +3542,7 @@ int mct_transcribe_file_root_children(mct_transcription_state *ts, mc_syntax_nod
       mct_transcribe_type_alias(ts, child);
     } break;
     case MC_SYNTAX_FUNCTION: {
-      mct_transcribe_function(ts, child);
+      MCcall(mct_transcribe_function(ts, child));
     } break;
     case MC_SYNTAX_ENUM_DECL: {
       mct_transcribe_enum_declaration(ts, child);

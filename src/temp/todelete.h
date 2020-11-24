@@ -1,273 +1,353 @@
 #include "midge_error_handling.h"
 
-/* m_threads.c */
+/* mc_controller.c */
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
-#include "midge_error_handling.h"
+#include "core/core_definitions.h"
+#include "ui/ui_definitions.h"
 
-#include "m_threads.h"
+#include "control/mc_controller.h"
+#include "core/midge_app.h"
 
-void *_mca_thread_entry_wrap(void *state) {
-  unsigned int  mc_error_thread_index;
-  int  base_error_stack_index;
-  register_midge_thread_creation(&mc_error_thread_index, "_mca_thread_entry_wrap", "m_threads.c", 13, &base_error_stack_index);
+int mcc_initialize_input_state() {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mcc_initialize_input_state", __FILE__, __LINE__, &midge_error_stack_index);
 
-  void ** state_args = (void **)state;
-  void *(*mc_routine)(void *) = (/*!*/void *(*)(void *))state_args[0];
-  void * wrapped_state = state_args[1];
+  midge_app_info * global_data;
+  mc_obtain_midge_app_info(&global_data);
 
-  // printf("mc_routine ptr:%p\n", mc_routine);
-  // printf("mc_routine deref ptr:%p\n", *mc_routine);
+  mci_input_state * input_state = (mci_input_state *)malloc(sizeof(mci_input_state));
+  global_data->input_state = input_state;
 
-  const char * fn_name = "TODO-find-by-ptr?";
-  void * thread_res;
+  global_data->input_state_requires_update = false;
+
+  input_state->alt_function = BUTTON_STATE_UP;
+  input_state->ctrl_function = BUTTON_STATE_UP;
+  input_state->shift_function = BUTTON_STATE_UP;
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+// typedef enum mci_mouse_event_type {
+//   MOUSE_EVENT_NONE = 0,
+//   MOUSE_EVENT_LEFT_DOWN,
+//   MOUSE_EVENT_LEFT_DOWN,
+//   MOUSE_EVENT_LEFT_DOWN,
+//   MOUSE_EVENT_LEFT_DOWN,
+//   MOUSE_EVENT_LEFT_DOWN,
+//   MOUSE_EVENT_LEFT_DOWN,
+//   MOUSE_EVENT_LEFT_DOWN,
+//   MOUSE_EVENT_LEFT_DOWN,
+// } mci_mouse_event_type;
+
+void mcc_issue_mouse_event(window_input_event_type event_type, int button_code) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mcc_issue_mouse_event", __FILE__, __LINE__, &midge_error_stack_index);
+
+  midge_app_info * global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  mci_input_event  input_event;
+  input_event.type = event_type;
+  input_event.button_code = button_code;
+  input_event.input_state = global_data->input_state;
+  input_event.handled = false;
+
+  mc_node_list * node_hit_list;
+  mcu_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y, &node_hit_list);
+
+  // printf("mouse_event nhl:%i\n", node_hit_list->count);
+  for (int  a = 0  ; a<node_hit_list->count&&!input_event.handled  ; ++a  ) {
+    mc_node * node = node_hit_list->items[a];
+    if (node->layout&&node->layout->handle_input_event) {
+      void (*handle_input_event)(mc_node *,mci_input_event *) = (/*!*/void (*)(mc_node *,mci_input_event *))node->layout->handle_input_event;      // TODO add type of mouse event
+      handle_input_event(node, &input_event);
+    }
+
+  }
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
+
+
+void mcc_issue_keyboard_event(window_input_event_type event_type, int button_code) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mcc_issue_keyboard_event", __FILE__, __LINE__, &midge_error_stack_index);
+
+  midge_app_info * global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  mci_input_event  input_event;
+  input_event.type = event_type;
+  input_event.button_code = button_code;
+  input_event.input_state = global_data->input_state;
+  input_event.handled = false;
+
+  mc_node * focused_node;
+  mca_obtain_focused_node(&focused_node);
+
+  while (focused_node&&!input_event.handled  ) {
+    if (focused_node->layout&&focused_node->layout->handle_input_event) {
+      void (*handle_input_event)(mc_node *,mci_input_event *) = (/*!*/void (*)(mc_node *,mci_input_event *))focused_node->layout->handle_input_event;      // TODO add type of mouse event
+      handle_input_event(focused_node, &input_event);
+    }
+
+
+    focused_node = focused_node->parent;
+  }
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
+
+
+void _mcc_set_button_state(bool is_down, bool is_event, int *output) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("_mcc_set_button_state", __FILE__, __LINE__, &midge_error_stack_index);
+
+  if (is_down) {
+    if (is_event)     *output = (int)BUTTON_STATE_DOWN|BUTTON_STATE_PRESSED;    else     *output = (int)BUTTON_STATE_DOWN;
+  }
+  else {
+    if (is_event)     *output = (int)BUTTON_STATE_UP|BUTTON_STATE_RELEASED;    else     *output = (int)BUTTON_STATE_UP;
+  }
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
+
+
+// Handles all input from the X11/xcb? platform
+void mcc_handle_xcb_input() {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mcc_handle_xcb_input", __FILE__, __LINE__, &midge_error_stack_index);
+
+  midge_app_info * global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  mci_input_state * input_state = global_data->input_state;
+
+  // if (global_data->render_thread->input_buffer.event_count > 0) {
+  //   input_event->handled = false;
+  // printf("input_recorded\n");
+
+  for (int  xi_index = 0  ; xi_index<global_data->render_thread->input_buffer.event_count  ; ++xi_index  ) {
+    window_input_event * xcb_input = &global_data->render_thread->input_buffer.events[xi_index];
+
+    window_input_event_type  event_type;
+    switch (xcb_input->type) {
+      case INPUT_EVENT_MOUSE_PRESS:
 {
-    int  mc_error_stack_index;
-    register_midge_stack_invocation(fn_name, __FILE__, __LINE__ + 1, &mc_error_stack_index);
-    thread_res = mc_routine(wrapped_state);
-    // if (mc_res) {
-    //   printf("--unknown-thread-start-function: line:%i: ERR:%i\n", __LINE__ - 2, mc_res);
-    //   return NULL;
-    // }
-    register_midge_stack_return(mc_error_stack_index);
-  }
+        input_state->mouse.x = xcb_input->detail.mouse.x;
+        input_state->mouse.y = xcb_input->detail.mouse.y;
 
-  // printf("routine called\n");
+        // Set input event for controls to handle
+        bool  issue_mouse_event = true;
+        switch (xcb_input->detail.mouse.button) {
+          case MOUSE_BUTTON_LEFT:
+{
+            _mcc_set_button_state(true, true, &input_state->mouse.left);
+          }
+          break;          case MOUSE_BUTTON_RIGHT:
+{
+            _mcc_set_button_state(true, true, &input_state->mouse.right);
+            if (input_state->alt_function&BUTTON_STATE_DOWN) {
+              issue_mouse_event = false;
+            }
 
-  register_midge_thread_conclusion(mc_error_thread_index);
-  // return routine_result;
-
-  {
-    // Return
-    return thread_res;
-  }
-
-}
-
-
-// void *mthread_wrapper_delegate(void *ws)
-// {
-//   void **args = (void **)ws;
-//   printf("boop\n");
-//   printf("bap %p\n", args[0]);
-//   void *(*start_routine)(void *) = (void *(*)(void *))args[0];
-//   printf("bop\n");
-//   mthread_info *thread_info = (mthread_info *)args[1];
-//   printf("boom\n");
-//   void *state = args[2];
-
-//   printf("bum\n");
-//   void *result;
-//   if (!thread_info->should_exit) {
-//   printf("bim %p\n", start_routine);
-//     result = start_routine(state);
-//   }
-
-//   printf("bam\n");
-//   thread_info->has_concluded = 1;
-
-//   return result;
-// }
-
-// int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void *state)
-// {
-//   printf("bim %p\n", start_routine);
-//   *p_thread_info = (mthread_info *)malloc(sizeof *p_thread_info);
-//   (*p_thread_info)->start_routine = start_routine;
-
-//   (*p_thread_info)->should_exit = 0;
-//   (*p_thread_info)->has_concluded = 0;
-//   (*p_thread_info)->should_pause = 0;
-//   (*p_thread_info)->has_paused = 0;
-
-//   void *vargs[3];
-//   vargs[0] = (void *)start_routine;
-//   printf("bap %p\n", vargs[0]);
-//   vargs[1] = (void *)(*p_thread_info);
-//   vargs[2] = (void *)state;
-
-//   if (pthread_create(&(*p_thread_info)->threadId, NULL, mthread_wrapper_delegate, (void *)vargs)) {
-//     return 0;
-//   }
-//   return -1;
-// }
-
-int begin_mthread(void *(*start_routine)(void *), mthread_info **p_thread_info, void *state) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("begin_mthread", __FILE__, __LINE__, &midge_error_stack_index);
-
-  *p_thread_info = (mthread_info *)malloc(sizeof(mthread_info));
-  (*p_thread_info)->start_routine = start_routine;
-
-  (*p_thread_info)->should_exit = 0;
-  (*p_thread_info)->has_concluded = 0;
-  (*p_thread_info)->should_pause = 0;
-  (*p_thread_info)->has_paused = 0;
-  int result;
-  {
-    void **mcti_wrapper_state = (void **)malloc(sizeof(void *) * 2);
-    mcti_wrapper_state[0] = (void *)(*p_thread_info)->start_routine;
-    mcti_wrapper_state[1] = (void *)state;
-    result = pthread_create(&(*p_thread_info)->threadId, NULL, _mca_thread_entry_wrap, (void *)mcti_wrapper_state);
-  }
-
-  if (!result) {
-
-    {
-      // Return
-      register_midge_stack_return(midge_error_stack_index);
-      return 0;
-    }
-
-  }
-
-  printf("begin_mthread FAILURE TO START THREAD pthread_create ERR:%i\n", result);
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}
+          }
+          break;          default:
+          break;        }
 
 
-int pause_mthread(mthread_info *p_thread_info, bool blocking) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("pause_mthread", __FILE__, __LINE__, &midge_error_stack_index);
+        mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button);
+      }
+      break;      case INPUT_EVENT_MOUSE_RELEASE:
+{
+        input_state->mouse.x = xcb_input->detail.mouse.x;
+        input_state->mouse.y = xcb_input->detail.mouse.y;
 
-  p_thread_info->should_pause = 1;
+        // Set input event for controls to handle
+        switch (xcb_input->detail.mouse.button) {
+          case MOUSE_BUTTON_LEFT:
+{
+            _mcc_set_button_state(false, true, &input_state->mouse.left);
+          }
+          break;          case MOUSE_BUTTON_RIGHT:
+{
+            _mcc_set_button_state(false, true, &input_state->mouse.right);
+          }
+          break;          default:
+          break;        }
 
-  if (blocking) {
-    const int  MAX_ITERATIONS = 2000000;
-    int  iterations = 0;
-    while (!p_thread_info->has_paused&&!p_thread_info->has_concluded    ) {
-      usleep(1);
-      ++iterations;
-      if (iterations>=MAX_ITERATIONS) {
-        printf("TODO -- Thread-Handling for unresponsive thread:: \n");
 
-        {
-          // Return
-          register_midge_stack_return(midge_error_stack_index);
-          return -1;
+        mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button);
+      }
+      break;      case INPUT_EVENT_FOCUS_IN:
+      case INPUT_EVENT_FOCUS_OUT:
+{
+        _mcc_set_button_state(false, (input_state->alt_function&BUTTON_STATE_DOWN), &input_state->alt_function);
+      }
+      break;      case INPUT_EVENT_KEY_RELEASE:
+      case INPUT_EVENT_KEY_PRESS:
+{
+        switch (xcb_input->detail.keyboard.key) {
+          case KEY_CODE_LEFT_ALT:
+          case KEY_CODE_RIGHT_ALT:
+          if (xcb_input->type==INPUT_EVENT_KEY_PRESS) {
+            input_state->alt_function = (int)BUTTON_STATE_DOWN|BUTTON_STATE_PRESSED;
+          }
+          else           if (xcb_input->type==INPUT_EVENT_KEY_RELEASE) {
+            input_state->alt_function = BUTTON_STATE_UP|BUTTON_STATE_RELEASED;
+          }
+
+          break;          case KEY_CODE_LEFT_CTRL:
+          case KEY_CODE_RIGHT_CTRL:
+          if (xcb_input->type==INPUT_EVENT_KEY_PRESS) {
+            input_state->ctrl_function = BUTTON_STATE_DOWN|BUTTON_STATE_PRESSED;
+          }
+          else           if (xcb_input->type==INPUT_EVENT_KEY_RELEASE) {
+            input_state->ctrl_function = BUTTON_STATE_UP|BUTTON_STATE_RELEASED;
+          }
+
+          break;          case KEY_CODE_LEFT_SHIFT:
+          case KEY_CODE_RIGHT_SHIFT:
+          if (xcb_input->type==INPUT_EVENT_KEY_PRESS) {
+            input_state->shift_function = BUTTON_STATE_DOWN|BUTTON_STATE_PRESSED;
+          }
+          else           if (xcb_input->type==INPUT_EVENT_KEY_RELEASE) {
+            input_state->shift_function = BUTTON_STATE_UP|BUTTON_STATE_RELEASED;
+          }
+
+          break;          default:
+{
+            if ((input_state->ctrl_function&BUTTON_STATE_DOWN)&&(input_state->shift_function&BUTTON_STATE_DOWN)&&xcb_input->detail.keyboard.key==KEY_CODE_W) {
+              global_data->_exit_requested = true;
+              continue;
+            }
+
+
+            if ((input_state->ctrl_function&BUTTON_STATE_DOWN)&&(input_state->shift_function&BUTTON_STATE_DOWN)&&xcb_input->detail.keyboard.key==KEY_CODE_L) {
+              mca_set_all_nodes_require_layout_update();
+              continue;
+            }
+
+
+            mcc_issue_keyboard_event(xcb_input->type, (int)xcb_input->detail.keyboard.key);
+
+            // if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
+            //     xcb_input->detail.keyboard.key == KEY_CODE_N) {
+
+            //   // Lets only have one project at a time for the time being -- TODO
+            //   bool visual_app_exists = false;
+            //   for (int a = 0; a < global_data->global_node->children->count; ++a) {
+            //     if (global_data->global_node->children->items[a]->type == NODE_TYPE_VISUAL_PROJECT) {
+            //       visual_app_exists = true;
+            //       break;
+            //     }
+            //   }
+
+            //   if (!visual_app_exists)
+            //     mcc_create_new_visual_project("PushTheButton");
+            //   continue;
+            // }
+
+            // Global Node Hierarchy for (int i = 0; !input_event->handled && i < global_data->global_node->children.count;
+            //                            ++i)
+            // {
+            //   node *child = (node *)global_data->global_node->children.items[i];
+            //   if (child->type != NODE_TYPE_VISUAL)
+            //     continue;
+            //   // printf("checking input delegate exinput_statets\n");
+            //   if (!child->data.vinput_stateual.input_handler || !*child->data.vinput_stateual.input_handler)
+            //     continue;
+
+            //   void *vargs[3];
+            //   vargs[0] = &elapsed;
+            //   vargs[1] = &child;
+            //   vargs[2] = &input_event;
+            //   // printf("calling input delegate\n");
+            //   // printf("loop](*child->data.vinput_stateual.input_handler):%p\n",
+            //   (*child->data.vinput_stateual.input_handler));
+            //   MCcall((*child->data.vinput_stateual.input_handler)(3, vargs));
+            // }
+
+            // if (!input_event->handled) {
+            //   printf("unhandled_keyboard_event:%i::%i\n", xcb_input->type, xcb_input->detail.keyboard.key);
+            // }
+            break;
+          }
         }
 
       }
-
-    }
+      break;      default:
+      break;    }
 
   }
 
 
+  // Reset render thread input buffer
+  global_data->render_thread->input_buffer.event_count = 0;
 
   {
     // Return
     register_midge_stack_return(midge_error_stack_index);
-    return 0;
+    return;
   }
-
 }
 
 
-/*
- * Holds the given mthread. Intended to be called by the thread which has been signaled to pause.
- * @returns whether the thread since pausing has been signalled to exit (should_exit).
- */
-int hold_mthread(mthread_info *p_thread_info) {
+void mcc_update_xcb_input() {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("hold_mthread", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("mcc_update_xcb_input", __FILE__, __LINE__, &midge_error_stack_index);
 
-  p_thread_info->has_paused = 1;
-  while (p_thread_info->should_pause  ) 
-    usleep(1);
-  p_thread_info->has_paused = 0;
+  midge_app_info * global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  mci_input_state * input_state = global_data->input_state;
+
+  // Update functions
+  input_state->alt_function &= ~BUTTON_STATE_PRESSED;
+  input_state->alt_function &= ~BUTTON_STATE_RELEASED;
+  input_state->ctrl_function &= ~BUTTON_STATE_PRESSED;
+  input_state->ctrl_function &= ~BUTTON_STATE_RELEASED;
+  input_state->shift_function &= ~BUTTON_STATE_PRESSED;
+  input_state->shift_function &= ~BUTTON_STATE_RELEASED;
+  global_data->input_state_requires_update = false;
+
+  // Handle new input
+  if (global_data->render_thread->input_buffer.event_count>0) {
+    mcc_handle_xcb_input();
+
+    global_data->input_state_requires_update = true;
+  }
 
 
   {
     // Return
     register_midge_stack_return(midge_error_stack_index);
-    return p_thread_info->should_exit;
+    return;
   }
-
 }
 
-
-int unpause_mthread(mthread_info *p_thread_info, bool blocking) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("unpause_mthread", __FILE__, __LINE__, &midge_error_stack_index);
-
-  p_thread_info->should_pause = 0;
-
-  if (blocking) {
-    const int  MAX_ITERATIONS = 2000000;
-    int  iterations = 0;
-    while (p_thread_info->has_paused&&!p_thread_info->has_concluded    ) {
-      usleep(1);
-      ++iterations;
-      if (iterations>=MAX_ITERATIONS) {
-        printf("TODO -- Thread-Handling for unresponsive thread:: \n");
-
-        {
-          // Return
-          register_midge_stack_return(midge_error_stack_index);
-          return -1;
-        }
-
-      }
-
-    }
-
-  }
-
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}
-
-
-int end_mthread(mthread_info *p_thread_info) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("end_mthread", __FILE__, __LINE__, &midge_error_stack_index);
-
-  p_thread_info->should_exit = 1;
-
-  // printf("end_mthread:0\n");
-  const int  MAX_ITERATIONS = 20000;
-  int  iterations = 0;
-  while (!p_thread_info->has_concluded  ) {
-    usleep(100);
-    ++iterations;
-    if (iterations>=MAX_ITERATIONS) {
-      printf("TODO -- Thread-Handling for unresponsive thread:: \n");
-
-      {
-        // Return
-        register_midge_stack_return(midge_error_stack_index);
-        return -1;
-      }
-
-    }
-
-  }
-
-  // printf("end_mthread:1\n");
-
-  free(p_thread_info);
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}

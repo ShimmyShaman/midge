@@ -7,12 +7,14 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "m_threads.h"
 // #include "core/core_definitions.h"
 #include "core/midge_app.h"
 // #include "render/render_common.h"
 #include "render/render_thread.h"
 // #include "ui/ui_definitions.h"
 #include "control/mc_controller.h"
+#include "modules/app_modules.h"
 
 // void *callit(void *state)
 // {
@@ -77,7 +79,7 @@ int begin_render_thread()
   // dothecall(&callit);
   // printf("global_data->render_thread:%p &global_data->render_thread:%p\n", global_data->render_thread,
   // global_data->render_thread);
-    // printf("&midge_render_thread=%p\n", &midge_render_thread);
+  // printf("&midge_render_thread=%p\n", &midge_render_thread);
 
   return begin_mthread(&midge_render_thread, &global_data->render_thread->thread_info,
                        (void *)global_data->render_thread);
@@ -139,31 +141,14 @@ int begin_render_thread()
 // void mca_load_open_projects();
 // // }
 
-int initialize_midge_components()
+int initialize_midge_state()
 {
   midge_app_info *global_data;
   mc_obtain_midge_app_info(&global_data);
 
   MCcall(mcc_initialize_input_state());
 
-  // mcu_initialize_ui_state(&global_data->ui_state);
-  // // mcu_initialize_core_ui_components();
-
-  // // // Environment
-  // // mca_init_global_context_menu();
-  // // mca_init_global_node_context_menu_options();
-  // // mce_init_source_editor_pool();
-  // // // mca_init_visual_project_management();
-
-  // // Modules
-  // mca_load_modules();
-  // // // init_modus_operandi_curator();
-  // // // init_hierarchy_viewer();
-  // // mca_load_app_modules
-  // // init_three_d_portal();
-
-  // // Projects
-  // mca_load_open_projects();
+  mcu_initialize_ui_state(&global_data->ui_state);
   return 0;
 }
 
@@ -195,7 +180,7 @@ int midge_initialize_app(struct timespec *app_begin_time)
   global_data->global_node->layout->__requires_rerender = true;
 
   // Initialize main thread
-  MCcall(initialize_midge_components());
+  MCcall(initialize_midge_state());
   printf("midge components initialized\n");
 
   // Wait for render thread initialization and all initial resources to load before
@@ -230,6 +215,27 @@ int midge_initialize_app(struct timespec *app_begin_time)
              1e-9 * (load_complete_frametime.tv_nsec - global_data->app_begin_time->tv_nsec));
 
   return 0;
+}
+
+void *mca_load_modules_then_project_async(void *state)
+{
+  int res;
+  // Modules
+  res = mca_load_modules();
+  if (res) {
+    printf("--"
+           "mca_load_modules"
+           " line:%i:ERR:%i\n",
+           __LINE__ - 5, res);
+    return NULL;
+  }
+
+  // // Projects
+  // mca_load_open_projects();
+
+  puts("modules & open-projects loading complete");
+
+  return NULL;
 }
 
 int mca_render_presentation()
@@ -283,6 +289,10 @@ int midge_run_app()
   mc_node *global_root_node = global_data->global_node;
   // printf("defaultfont-0:%u\n", global_data->default_font_resource);
   // printf("global_data->ui_state:%p\n", global_data->ui_state);
+
+  mthread_info *modules_load_thr_info;
+  MCcall(begin_mthread(&mca_load_modules_then_project_async, &modules_load_thr_info, NULL));
+  // mca_load_modules_then_project_async(NULL);
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);
