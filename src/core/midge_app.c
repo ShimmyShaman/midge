@@ -9,12 +9,12 @@
 
 #include "m_threads.h"
 // #include "core/core_definitions.h"
+#include "core/app_modules.h"
 #include "core/midge_app.h"
 // #include "render/render_common.h"
 #include "render/render_thread.h"
 // #include "ui/ui_definitions.h"
 #include "control/mc_controller.h"
-#include "modules/app_modules.h"
 
 // void *callit(void *state)
 // {

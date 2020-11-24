@@ -11,8 +11,8 @@ void mc_init_midge_app_info()
 {
   __mc_midge_app_info = malloc(sizeof(midge_app_info));
 
-  mc_obtain_app_itp_data(&__mc_midge_app_info->interpreter);
-  __mc_midge_app_info->global_node = __mc_midge_app_info->interpreter->global_node;
+  mc_obtain_app_itp_data(&__mc_midge_app_info->itp_data);
+  __mc_midge_app_info->global_node = __mc_midge_app_info->itp_data->global_node;
 
   __mc_midge_app_info->_exit_requested = false;
 }

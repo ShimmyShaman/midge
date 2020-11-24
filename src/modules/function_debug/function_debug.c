@@ -445,7 +445,7 @@ void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
 
   mce_function_debug *function_debug = (mce_function_debug *)malloc(sizeof(mce_function_debug));
 
-  mca_init_mc_node(global_data->global_node, NODE_TYPE_ABSTRACT, &function_debug->node);
+  // mca_init_mc_node(global_data->global_node, NODE_TYPE_ABSTRACT, &function_debug->node);
   function_debug->node->data = function_debug;
   function_debug->node->name = "function_debug";
 

@@ -95,8 +95,8 @@ void _mcu_button_handle_input_event(mc_node *button_node, mci_input_event *input
 void mcu_init_button(mc_node *parent, mcu_button **p_button)
 {
   // Node
-  mc_node *node;
-  mca_init_mc_node(parent, NODE_TYPE_MCU_BUTTON, &node);
+  // mc_node *node;
+  // mca_init_mc_node(parent, NODE_TYPE_MCU_BUTTON, &node);
 
   // Layout
   mca_init_node_layout(&node->layout);

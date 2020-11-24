@@ -480,7 +480,7 @@ const char *_mcl_remainder_header_files[] = {
     "src/env/environment_definitions.h",
     "src/ui/ui_definitions.h",
     "src/control/mc_controller.h",
-    "src/modules/app_modules.h",
+    "src/core/app_modules.h",
     // And everything here before -------------------------------------------------------------
     "src/core/midge_app.h",
 };
@@ -501,7 +501,7 @@ const char *_mcl_remainder_source_files[] = {
     "src/env/hierarchy.c",
     // "src/env/global_context_menu.c",
     "src/control/mc_controller.c",
-    "src/modules/app_modules.c",
+    "src/core/app_modules.c",
     // And everything here before -------------------------------------------------------------
     "src/core/midge_app.c",
 };
@@ -529,117 +529,9 @@ static int mcl_load_source_through_midge(TCCInterpState *tmp_itp)
   return 0;
 }
 
-// int mcl_load_remaining_app_source(TCCInterpState *itp)
-// {
-//   // Used by the MCcall macro
-//   void (*register_midge_stack_invocation)(const char *, const char *, int, int *) =
-//       tcci_get_symbol(itp, "register_midge_stack_invocation");
-//   void (*register_midge_stack_return)(int) = tcci_get_symbol(itp, "register_midge_stack_return");
-
-//   {
-//     // const char *_mcl_external_dependency_source_files[] = {
-//     //     "src/temp/external_decl.h",
-
-//     //     // And everything here before -------------------------------------------------------------
-//     //     NULL,
-//     // };
-
-//     // char buf[1536];
-//     // for (int i = 0; _mcl_external_dependency_source_files[i]; ++i) {
-//     //   printf("registering external file:'%s'\n", _mcl_external_dependency_source_files[i]);
-//     //   int result = 0;
-//     //   sprintf(buf,
-//     //           "{\n"
-//     //           "  //printf(\"obtain_midge_global_root:%%p\\n\", obtain_midge_global_root);\n"
-//     //           "  mc_core_v_mc_global_data *global_data;\n"
-//     //           "  MCcall(mc_core_v_obtain_midge_global_root(&global_data));\n"
-//     //           ""
-//     //           "  void *mc_vargs[4];\n"
-//     //           "  mc_vargs[0] = &global_data->global_node;\n"
-//     //           "  const char *filepath = \"%s\";\n"
-//     //           "  mc_vargs[1] = &filepath;\n"
-//     //           "  void * p_null = NULL;\n"
-//     //           "  mc_vargs[2] = &p_null;\n"
-//     //           "  int return_value;\n"
-//     //           "  mc_vargs[3] = &return_value;\n"
-//     //           ""
-//     //           "  {\n"
-//     //           "    int midge_error_stack_index;\n"
-//     //           "    register_midge_stack_invocation(\"instantiate_all_definitions_from_file\",
-//     //           \"core_source_loader.c\", " "          1224, &midge_error_stack_index);\n" "    int result = 0;\n" "
-//     //           result = register_external_definitions_from_file(4, mc_vargs);\n" "
-//     //           register_midge_stack_return(midge_error_stack_index);\n"
-//     //           ""
-//     //           "    if (result) {\n"
-//     //           "      printf(\"--register_external_definitions_from_file #in - clint_process\\n\");\n"
-//     //           "      *(int *)(%p) = result;\n"
-//     //           "    }\n"
-//     //           "  }\n"
-//     //           "}",
-//     //           _mcl_external_dependency_source_files[i], &result);
-//     //   //
-//     MCcall(mcc_interpret_and_execute_single_use_code("mcl_load_remaining_app_source]register_external_file.c",
-//     //   buf));
-
-//     //   if (result != 0) {
-//     //     return result;
-//     //   }
-//     // }
-//   }
-
-//   register_midge_error_tag("mcl_load_remaining_app_source()");
-//   const char *_mcl_app_source_files[] = {
-//       // TODO -- this better, should maybe not have to declare headers first (preferably at all)
-//       // Headers required for app initialization
-//       "src/m_threads.h",
-//       "src/platform/mc_xcb.h",
-//       "src/render/render_common.h",
-//       "src/render/mc_vulkan.h",
-//       "src/render/mc_vk_utils.h",
-//       "src/render/render_thread.h",
-
-//       // Headers that will be declared just before app initialization
-//       "src/env/environment_definitions.h",
-//       "src/ui/ui_definitions.h",
-//       "src/control/mc_controller.h",
-//       "src/core/midge_app.h",
-
-//       // Source required for app initialization
-//       "src/m_threads.c",
-//       "src/env/util.c",
-//       "src/platform/mc_xcb.c",
-//       "src/render/render_common.c",
-//       "src/render/mc_vulkan.c",
-//       "src/render/mc_vk_utils.c",
-//       "src/render/render_thread.c",
-//       "src/core/app_modules.c",
-//       "src/ui/ui_functionality.c",
-//       "src/control/mc_controller.c",
-//       "src/core/midge_app.c",
-
-//       // And everything here before -------------------------------------------------------------
-//       NULL,
-//   };
-
-//   int (*mcs_interpret_file)(TCCInterpState *, const char *) = tcci_get_symbol(itp, "mcs_interpret_file");
-//   if (!mcs_interpret_file) {
-//     MCerror(1409, "Could not obtain mcs_interpret_file");
-//   }
-
-//   for (int i = 0; _mcl_app_source_files[i]; ++i) {
-
-//     MCcall(mcs_interpret_file(itp, _mcl_app_source_files[i]));
-//   }
-
-//   return 0;
-// }
-
-// struct foo {
-//   int a;
-//   char b[3];
-//   double e;
-// };
-
+// KEEP TILL BUG FIGURED OUT
+// KEEP TILL BUG FIGURED OUT
+// KEEP TILL BUG FIGURED OUT
 // void init_assert_tcc_error_TODO()
 // {
 //   // TODO make this work in tcc?
@@ -654,6 +546,9 @@ static int mcl_load_source_through_midge(TCCInterpState *tmp_itp)
 
 //   return 0;
 // }
+// KEEP TILL BUG FIGURED OUT
+// KEEP TILL BUG FIGURED OUT
+// KEEP TILL BUG FIGURED OUT
 
 /* Builds a loader on the passed in interpreter state, using that to load midge into another
      initialized interpreter state which is then returned in the pointer reference. Note: Cleanup
@@ -784,5 +679,6 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 
   printf("[_mcl_load_source:COMPLETE]\n");
   *mc_interp = midge_itp;
+  printf("midge_itp=%p\n", midge_itp);
   return 0;
 }

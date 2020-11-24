@@ -68,9 +68,9 @@ void __mcu_render_text_block_present(image_render_details *image_render_queue, m
 
 void mcu_init_text_block(mc_node *parent, mcu_text_block **p_text_block)
 {
-  // Node
-  mc_node *node;
-  mca_init_mc_node(parent, NODE_TYPE_MCU_TEXT_BLOCK, &node);
+  // // Node
+  // mc_node *node;
+  // mca_init_mc_node(parent, NODE_TYPE_MCU_TEXT_BLOCK, &node);
 
   // Layout
   mca_init_node_layout(&node->layout);

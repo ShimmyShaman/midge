@@ -1063,8 +1063,8 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
 void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *source_editor_pool,
                               mce_function_editor **p_function_editor)
 {
-  mce_function_editor *function_editor = (mce_function_editor *)malloc(sizeof(mce_function_editor));
-  mca_init_mc_node(parent_node, NODE_TYPE_FUNCTION_EDITOR, &function_editor->node);
+  // mce_function_editor *function_editor = (mce_function_editor *)malloc(sizeof(mce_function_editor));
+  // mca_init_mc_node(parent_node, NODE_TYPE_FUNCTION_EDITOR, &function_editor->node);
   function_editor->node->data = function_editor;
   function_editor->node->name = "function_editor";
 

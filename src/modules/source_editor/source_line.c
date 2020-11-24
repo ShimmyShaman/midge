@@ -185,8 +185,8 @@ void _mce_render_source_line_present(image_render_details *image_render_queue, m
 void mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)
 {
   // Node
-  mc_node *node;
-  mca_init_mc_node(parent, NODE_TYPE_MCM_SOURCE_LINE, &node);
+  // mc_node *node;
+  // mca_init_mc_node(parent, NODE_TYPE_MCM_SOURCE_LINE, &node);
 
   // Layout
   mca_init_node_layout(&node->layout);

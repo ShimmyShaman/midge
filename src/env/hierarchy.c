@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
@@ -104,21 +105,28 @@ void exit_app(mc_node *node_scope, int result)
 int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach)
 {
   // printf("added node %i to %i\n", node_to_attach->type, hierarchy_node->type);
-  // midge_error_print_thread_stack_trace();
-
-  // mc_node_list *parent_node_list;
-  // mca_get_sub_hierarchy_node_list(hierarchy_node, &parent_node_list);
-
-  // __mca_insert_node_ into_node_list(parent_node_list, node_to_attach, z_layer_index);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
   if (!hierarchy_node->children) {
     MCerror(9108, "Attempt to attach node (%i) to parent (%i) who has no children", node_to_attach->type,
             hierarchy_node->type);
   }
 
+  // Lock thread-safety mutex
+  app_info->  
+
   MCcall(append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
                               &hierarchy_node->children->count, node_to_attach));
   node_to_attach->parent = hierarchy_node;
+
+  if (node_to_attach->layout) {
+    mca_set_node_requires_layout_update(node_to_attach);
+  }
+
+  if (!hierarchy_node->parent) {
+    // Unlock
+  }
 
   return 0;
 }
@@ -157,19 +165,18 @@ int mca_init_node_layout(mca_node_layout **layout)
   return 0;
 }
 
-int mca_init_mc_node(mc_node *hierarchy_parent, node_type type, mc_node **node)
+int mca_init_mc_node(node_type type, const char *name, mc_node **node)
 {
   (*node) = (mc_node *)malloc(sizeof(mc_node)); // TODO malloc checks everywhere?
 
   (*node)->type = type;
-  (*node)->name = NULL;
+  (*node)->name = strdup(name);
 
   (*node)->layout = NULL;
   (*node)->children = NULL;
 
   (*node)->data = NULL;
-
-  MCcall(mca_attach_node_to_hierarchy(hierarchy_parent, *node));
+  (*node)->parent = NULL;
 
   return 0;
 }
@@ -629,11 +636,13 @@ int mca_set_all_nodes_require_layout_update()
 
 int mca_set_node_requires_layout_update(mc_node *node)
 {
+  puts("a");
   // DEBUG?
   if (!node->layout) {
     MCerror(8416, "Can't set an update for a node with no layout");
   }
 
+  puts("b");
   // Set update required on all ancestors of the node
   while (node) {
     // DEBUG?
@@ -646,7 +655,9 @@ int mca_set_node_requires_layout_update(mc_node *node)
 
     // Move upwards through the ancestry
     node = node->parent;
+    printf("node('%s')=%p\n", node);
   }
+  puts("c");
 
   return 0;
 }

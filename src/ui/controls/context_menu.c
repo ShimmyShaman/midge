@@ -123,9 +123,9 @@ void __mcu_render_context_menu_present(image_render_details *image_render_queue,
 
 void mcu_init_context_menu(mc_node *parent, mcu_context_menu **p_context_menu)
 {
-  // Node
-  mc_node *node;
-  mca_init_mc_node(parent, NODE_TYPE_MCU_CONTEXT_MENU, &node);
+  // // Node
+  // mc_node *node;
+  // mca_init_mc_node(parent, NODE_TYPE_MCU_CONTEXT_MENU, &node);
 
   // Layout
   mca_init_node_layout(&node->layout);

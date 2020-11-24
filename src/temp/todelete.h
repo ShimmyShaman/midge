@@ -1,30 +1,51 @@
 #include "midge_error_handling.h"
 
-/* mc_controller.c */
+/* app_modules.c */
 
-#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <unistd.h>
+
+#include "tinycc/libtccinterp.h"
 
 #include "core/core_definitions.h"
-#include "ui/ui_definitions.h"
-
-#include "control/mc_controller.h"
+#include "core/mc_source.h"
 #include "core/midge_app.h"
+#include "mc_str.h"
+#include "midge_error_handling.h"
 
-int mcc_initialize_input_state() {
+int _mca_load_module(const char *base_path, const char *module_name) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("mcc_initialize_input_state", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("_mca_load_module", __FILE__, __LINE__, &midge_error_stack_index);
 
-  midge_app_info * global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info * app_info;
+  mc_obtain_midge_app_info(&app_info);
 
-  mci_input_state * input_state = (mci_input_state *)malloc(sizeof(mci_input_state));
-  global_data->input_state = input_state;
+  char  buf[512];
+  sprintf(buf, "%s/%s/init_%s.c", base_path, module_name, module_name);
+  if (access(buf, F_OK)==-1) {
+    MCerror(1999, "Within each module there must be a file named 'init_{%%module_name%%}.c' : This could not be accessed for "
+            "module_name='%s'", module_name);
+  }
 
-  global_data->input_state_requires_update = false;
 
-  input_state->alt_function = BUTTON_STATE_UP;
-  input_state->ctrl_function = BUTTON_STATE_UP;
-  input_state->shift_function = BUTTON_STATE_UP;
+  MCcall(mcs_interpret_file(app_info->itp_data->interpreter, buf));
+
+  // Initialize the module
+  sprintf(buf, "init_%s", module_name);
+  int (*initialize_module)(mc_node *) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
+  if (!initialize_module) {
+    MCerror(2000, "within each 'init_{%%module_name%%}.c' file there must be a method with signature 'int "
+            "init_{%%module_name%%}(mc_node *)' : This was not found for module_name='%s'", module_name);
+  }
+
+
+  // TODO -- for some reason interpreting from this function loads the functions to address ranges I normally see
+  // reserved for stack variables. Find out whats happenning -- that can't be good
+  // printf("interpreter=%p\n",app_info->itp_data->interpreter);
+  // printf("%s=%p\n", buf, initialize_module);
+  MCcall(initialize_module(app_info->global_node));
 
 
   {
@@ -36,318 +57,84 @@ int mcc_initialize_input_state() {
 }
 
 
-// typedef enum mci_mouse_event_type {
-//   MOUSE_EVENT_NONE = 0,
-//   MOUSE_EVENT_LEFT_DOWN,
-//   MOUSE_EVENT_LEFT_DOWN,
-//   MOUSE_EVENT_LEFT_DOWN,
-//   MOUSE_EVENT_LEFT_DOWN,
-//   MOUSE_EVENT_LEFT_DOWN,
-//   MOUSE_EVENT_LEFT_DOWN,
-//   MOUSE_EVENT_LEFT_DOWN,
-//   MOUSE_EVENT_LEFT_DOWN,
-// } mci_mouse_event_type;
-
-void mcc_issue_mouse_event(window_input_event_type event_type, int button_code) {
+int mca_load_modules() {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("mcc_issue_mouse_event", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("mca_load_modules", __FILE__, __LINE__, &midge_error_stack_index);
 
-  midge_app_info * global_data;
-  mc_obtain_midge_app_info(&global_data);
+  const char * module_directories[] = {
+    "modus_operandi",
+    NULL
+  };
 
-  mci_input_event  input_event;
-  input_event.type = event_type;
-  input_event.button_code = button_code;
-  input_event.input_state = global_data->input_state;
-  input_event.handled = false;
+  for (int  d = 0  ; module_directories[d]  ; ++d  ) {
+    MCcall(_mca_load_module("src/modules", module_directories[d]));
+  }
 
-  mc_node_list * node_hit_list;
-  mcu_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y, &node_hit_list);
 
-  // printf("mouse_event nhl:%i\n", node_hit_list->count);
-  for (int  a = 0  ; a<node_hit_list->count&&!input_event.handled  ; ++a  ) {
-    mc_node * node = node_hit_list->items[a];
-    if (node->layout&&node->layout->handle_input_event) {
-      void (*handle_input_event)(mc_node *,mci_input_event *) = (/*!*/void (*)(mc_node *,mci_input_event *))node->layout->handle_input_event;      // TODO add type of mouse event
-      handle_input_event(node, &input_event);
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+void _mca_set_project_state(char *base_path, char *module_name) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("_mca_set_project_state", __FILE__, __LINE__, &midge_error_stack_index);
+
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
+
+
+int mca_load_open_projects() {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_load_open_projects", __FILE__, __LINE__, &midge_error_stack_index);
+
+  char * open_list_text;
+  read_file_text("projects/open_project_list", &open_list_text);
+
+  printf("open_list_text:'%s'\n", open_list_text);
+
+  char  buf[256];
+  mc_str * str;
+  init_mc_str(&str);
+
+  int  i = 0,  s = 0;
+  bool  eof = false;
+  while (!eof  ) {
+    s = i;
+
+    for (    ; open_list_text[i]!='|'    ; ++i    )     if (open_list_text[i]=='\0') {
+      eof = true;
+      break;
+    }
+
+
+    if (i>s) {
+      strncpy(buf, open_list_text + s, i - s);
+      buf[i - s] = '\0';
+
+      MCcall(_mca_load_module("projects", buf));
+      _mca_set_project_state("projects", buf);
     }
 
   }
 
 
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
-  }
-}
-
-
-void mcc_issue_keyboard_event(window_input_event_type event_type, int button_code) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("mcc_issue_keyboard_event", __FILE__, __LINE__, &midge_error_stack_index);
-
-  midge_app_info * global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  mci_input_event  input_event;
-  input_event.type = event_type;
-  input_event.button_code = button_code;
-  input_event.input_state = global_data->input_state;
-  input_event.handled = false;
-
-  mc_node * focused_node;
-  mca_obtain_focused_node(&focused_node);
-
-  while (focused_node&&!input_event.handled  ) {
-    if (focused_node->layout&&focused_node->layout->handle_input_event) {
-      void (*handle_input_event)(mc_node *,mci_input_event *) = (/*!*/void (*)(mc_node *,mci_input_event *))focused_node->layout->handle_input_event;      // TODO add type of mouse event
-      handle_input_event(focused_node, &input_event);
-    }
-
-
-    focused_node = focused_node->parent;
-  }
-
 
   {
     // Return
     register_midge_stack_return(midge_error_stack_index);
-    return;
+    return 0;
   }
+
 }
-
-
-void _mcc_set_button_state(bool is_down, bool is_event, int *output) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("_mcc_set_button_state", __FILE__, __LINE__, &midge_error_stack_index);
-
-  if (is_down) {
-    if (is_event)     *output = (int)BUTTON_STATE_DOWN|BUTTON_STATE_PRESSED;    else     *output = (int)BUTTON_STATE_DOWN;
-  }
-  else {
-    if (is_event)     *output = (int)BUTTON_STATE_UP|BUTTON_STATE_RELEASED;    else     *output = (int)BUTTON_STATE_UP;
-  }
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
-  }
-}
-
-
-// Handles all input from the X11/xcb? platform
-void mcc_handle_xcb_input() {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("mcc_handle_xcb_input", __FILE__, __LINE__, &midge_error_stack_index);
-
-  midge_app_info * global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  mci_input_state * input_state = global_data->input_state;
-
-  // if (global_data->render_thread->input_buffer.event_count > 0) {
-  //   input_event->handled = false;
-  // printf("input_recorded\n");
-
-  for (int  xi_index = 0  ; xi_index<global_data->render_thread->input_buffer.event_count  ; ++xi_index  ) {
-    window_input_event * xcb_input = &global_data->render_thread->input_buffer.events[xi_index];
-
-    window_input_event_type  event_type;
-    switch (xcb_input->type) {
-      case INPUT_EVENT_MOUSE_PRESS:
-{
-        input_state->mouse.x = xcb_input->detail.mouse.x;
-        input_state->mouse.y = xcb_input->detail.mouse.y;
-
-        // Set input event for controls to handle
-        bool  issue_mouse_event = true;
-        switch (xcb_input->detail.mouse.button) {
-          case MOUSE_BUTTON_LEFT:
-{
-            _mcc_set_button_state(true, true, &input_state->mouse.left);
-          }
-          break;          case MOUSE_BUTTON_RIGHT:
-{
-            _mcc_set_button_state(true, true, &input_state->mouse.right);
-            if (input_state->alt_function&BUTTON_STATE_DOWN) {
-              issue_mouse_event = false;
-            }
-
-          }
-          break;          default:
-          break;        }
-
-
-        mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button);
-      }
-      break;      case INPUT_EVENT_MOUSE_RELEASE:
-{
-        input_state->mouse.x = xcb_input->detail.mouse.x;
-        input_state->mouse.y = xcb_input->detail.mouse.y;
-
-        // Set input event for controls to handle
-        switch (xcb_input->detail.mouse.button) {
-          case MOUSE_BUTTON_LEFT:
-{
-            _mcc_set_button_state(false, true, &input_state->mouse.left);
-          }
-          break;          case MOUSE_BUTTON_RIGHT:
-{
-            _mcc_set_button_state(false, true, &input_state->mouse.right);
-          }
-          break;          default:
-          break;        }
-
-
-        mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button);
-      }
-      break;      case INPUT_EVENT_FOCUS_IN:
-      case INPUT_EVENT_FOCUS_OUT:
-{
-        _mcc_set_button_state(false, (input_state->alt_function&BUTTON_STATE_DOWN), &input_state->alt_function);
-      }
-      break;      case INPUT_EVENT_KEY_RELEASE:
-      case INPUT_EVENT_KEY_PRESS:
-{
-        switch (xcb_input->detail.keyboard.key) {
-          case KEY_CODE_LEFT_ALT:
-          case KEY_CODE_RIGHT_ALT:
-          if (xcb_input->type==INPUT_EVENT_KEY_PRESS) {
-            input_state->alt_function = (int)BUTTON_STATE_DOWN|BUTTON_STATE_PRESSED;
-          }
-          else           if (xcb_input->type==INPUT_EVENT_KEY_RELEASE) {
-            input_state->alt_function = BUTTON_STATE_UP|BUTTON_STATE_RELEASED;
-          }
-
-          break;          case KEY_CODE_LEFT_CTRL:
-          case KEY_CODE_RIGHT_CTRL:
-          if (xcb_input->type==INPUT_EVENT_KEY_PRESS) {
-            input_state->ctrl_function = BUTTON_STATE_DOWN|BUTTON_STATE_PRESSED;
-          }
-          else           if (xcb_input->type==INPUT_EVENT_KEY_RELEASE) {
-            input_state->ctrl_function = BUTTON_STATE_UP|BUTTON_STATE_RELEASED;
-          }
-
-          break;          case KEY_CODE_LEFT_SHIFT:
-          case KEY_CODE_RIGHT_SHIFT:
-          if (xcb_input->type==INPUT_EVENT_KEY_PRESS) {
-            input_state->shift_function = BUTTON_STATE_DOWN|BUTTON_STATE_PRESSED;
-          }
-          else           if (xcb_input->type==INPUT_EVENT_KEY_RELEASE) {
-            input_state->shift_function = BUTTON_STATE_UP|BUTTON_STATE_RELEASED;
-          }
-
-          break;          default:
-{
-            if ((input_state->ctrl_function&BUTTON_STATE_DOWN)&&(input_state->shift_function&BUTTON_STATE_DOWN)&&xcb_input->detail.keyboard.key==KEY_CODE_W) {
-              global_data->_exit_requested = true;
-              continue;
-            }
-
-
-            if ((input_state->ctrl_function&BUTTON_STATE_DOWN)&&(input_state->shift_function&BUTTON_STATE_DOWN)&&xcb_input->detail.keyboard.key==KEY_CODE_L) {
-              mca_set_all_nodes_require_layout_update();
-              continue;
-            }
-
-
-            mcc_issue_keyboard_event(xcb_input->type, (int)xcb_input->detail.keyboard.key);
-
-            // if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
-            //     xcb_input->detail.keyboard.key == KEY_CODE_N) {
-
-            //   // Lets only have one project at a time for the time being -- TODO
-            //   bool visual_app_exists = false;
-            //   for (int a = 0; a < global_data->global_node->children->count; ++a) {
-            //     if (global_data->global_node->children->items[a]->type == NODE_TYPE_VISUAL_PROJECT) {
-            //       visual_app_exists = true;
-            //       break;
-            //     }
-            //   }
-
-            //   if (!visual_app_exists)
-            //     mcc_create_new_visual_project("PushTheButton");
-            //   continue;
-            // }
-
-            // Global Node Hierarchy for (int i = 0; !input_event->handled && i < global_data->global_node->children.count;
-            //                            ++i)
-            // {
-            //   node *child = (node *)global_data->global_node->children.items[i];
-            //   if (child->type != NODE_TYPE_VISUAL)
-            //     continue;
-            //   // printf("checking input delegate exinput_statets\n");
-            //   if (!child->data.vinput_stateual.input_handler || !*child->data.vinput_stateual.input_handler)
-            //     continue;
-
-            //   void *vargs[3];
-            //   vargs[0] = &elapsed;
-            //   vargs[1] = &child;
-            //   vargs[2] = &input_event;
-            //   // printf("calling input delegate\n");
-            //   // printf("loop](*child->data.vinput_stateual.input_handler):%p\n",
-            //   (*child->data.vinput_stateual.input_handler));
-            //   MCcall((*child->data.vinput_stateual.input_handler)(3, vargs));
-            // }
-
-            // if (!input_event->handled) {
-            //   printf("unhandled_keyboard_event:%i::%i\n", xcb_input->type, xcb_input->detail.keyboard.key);
-            // }
-            break;
-          }
-        }
-
-      }
-      break;      default:
-      break;    }
-
-  }
-
-
-  // Reset render thread input buffer
-  global_data->render_thread->input_buffer.event_count = 0;
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
-  }
-}
-
-
-void mcc_update_xcb_input() {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("mcc_update_xcb_input", __FILE__, __LINE__, &midge_error_stack_index);
-
-  midge_app_info * global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  mci_input_state * input_state = global_data->input_state;
-
-  // Update functions
-  input_state->alt_function &= ~BUTTON_STATE_PRESSED;
-  input_state->alt_function &= ~BUTTON_STATE_RELEASED;
-  input_state->ctrl_function &= ~BUTTON_STATE_PRESSED;
-  input_state->ctrl_function &= ~BUTTON_STATE_RELEASED;
-  input_state->shift_function &= ~BUTTON_STATE_PRESSED;
-  input_state->shift_function &= ~BUTTON_STATE_RELEASED;
-  global_data->input_state_requires_update = false;
-
-  // Handle new input
-  if (global_data->render_thread->input_buffer.event_count>0) {
-    mcc_handle_xcb_input();
-
-    global_data->input_state_requires_update = true;
-  }
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
-  }
-}
-

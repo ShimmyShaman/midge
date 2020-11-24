@@ -1,5 +1,8 @@
 /* init_modus_operandi */
 
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
@@ -95,14 +98,14 @@ void mco_load_resources(mc_node *module_node)
                               MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mo_data->render_target.image);
 }
 
-void init_modus_operandi(mc_node *app_root)
+int init_modus_operandi(mc_node *app_root)
 {
   midge_app_info *global_data;
   mc_obtain_midge_app_info(&global_data);
   //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
 
   mc_node *node;
-  mca_init_mc_node(app_root, NODE_TYPE_ABSTRACT, &node);
+  mca_init_mc_node(NODE_TYPE_ABSTRACT, "mod-op-root", &node);
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
@@ -121,9 +124,9 @@ void init_modus_operandi(mc_node *app_root)
   node->layout->render_present = (void *)&_mco_render_mo_data_present;
   node->layout->handle_input_event = (void *)&_mco_handle_input;
 
-  mca_set_node_requires_layout_update(node);
+  // mco_load_resources(node);
 
-  mco_load_resources(node);
+  MCcall(mca_attach_node_to_hierarchy(app_root, node));
   // Panel
   // mcu_panel *panel;
   // mcu_init_panel(global_data->global_node, &panel);
@@ -150,4 +153,6 @@ void init_modus_operandi(mc_node *app_root)
   //   append_to_mc_str(text_block->str, buf);
   // }
   // text_block->font_color = COLOR_LIGHT_YELLOW;
+
+  return 0;
 }

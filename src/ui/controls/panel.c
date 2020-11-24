@@ -94,9 +94,9 @@ void __mcu_render_panel_present(image_render_details *image_render_queue, mc_nod
 
 void mcu_init_panel(mc_node *parent, mcu_panel **p_panel)
 {
-  // Node
-  mc_node *node;
-  mca_init_mc_node(parent, NODE_TYPE_MCU_PANEL, &node);
+  // // Node
+  // mc_node *node;
+  // mca_init_mc_node(parent, NODE_TYPE_MCU_PANEL, &node);
 
   // Layout
   mca_init_node_layout(&node->layout);
