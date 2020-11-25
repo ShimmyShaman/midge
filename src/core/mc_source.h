@@ -25,6 +25,6 @@
 // */
 // int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
 //                            void **definition_info);
-int mcs_interpret_file(TCCInterpState *tis, const char *filepath);
+int mcs_interpret_file( const char *filepath);
 
 #endif // MC_SOURCE_H

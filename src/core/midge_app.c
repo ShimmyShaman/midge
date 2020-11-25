@@ -154,71 +154,6 @@ int initialize_midge_state()
   return 0;
 }
 
-int midge_initialize_app(struct timespec *app_begin_time)
-{
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  // Set Times
-  global_data->app_begin_time = app_begin_time;
-
-  struct timespec source_load_complete_time;
-  clock_gettime(CLOCK_REALTIME, &source_load_complete_time);
-
-  printf("#######################\n  <<<< MIDGE >>>>\n\nCore Compile took %.2f "
-         "seconds\n",
-         source_load_complete_time.tv_sec - global_data->app_begin_time->tv_sec +
-             1e-9 * (source_load_complete_time.tv_nsec - global_data->app_begin_time->tv_nsec));
-
-  // Asynchronously begin the render thread containing vulkan and xcb
-  MCcall(begin_render_thread());
-
-  // Compile the remainder of the application
-  // complete_midge_app_compile();
-  // printf("midge compilation complete\n");
-
-  // Complete Initialization of the global root node
-  MCcall(mca_init_node_layout(&global_data->global_node->layout));
-  global_data->global_node->layout->__requires_rerender = true;
-
-  // Initialize main thread
-  MCcall(initialize_midge_state());
-  printf("midge components initialized\n");
-
-  // Wait for render thread initialization and all initial resources to load before
-  // continuing with the next set of commands
-  bool waited = false;
-  int count = 0;
-  while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue->count) {
-    waited = !global_data->render_thread->render_thread_initialized;
-    usleep(1);
-    ++count;
-    if (count % 100000 == 0) {
-      printf("global_data->render_thread = %p %i %u\n", global_data->render_thread,
-             global_data->render_thread->render_thread_initialized, global_data->render_thread->resource_queue->count);
-    }
-  }
-
-  // Set properties
-
-  // Completed
-  struct timespec load_complete_frametime;
-  clock_gettime(CLOCK_REALTIME, &load_complete_frametime);
-  printf("##################################\n"
-         "         <<<< MIDGE >>>>\n"
-         "\n"
-         "Post-Core load took %.2f seconds (*%s)\n"
-         "App Begin took %.2f seconds\n"
-         "##################################\n",
-         load_complete_frametime.tv_sec - source_load_complete_time.tv_sec +
-             1e-9 * (load_complete_frametime.tv_nsec - source_load_complete_time.tv_nsec),
-         waited ? "vulkan-initialization limited" : "midge-compile-load limited",
-         load_complete_frametime.tv_sec - global_data->app_begin_time->tv_sec +
-             1e-9 * (load_complete_frametime.tv_nsec - global_data->app_begin_time->tv_nsec));
-
-  return 0;
-}
-
 void *mca_load_modules_then_project_async(void *state)
 {
   int res;
@@ -238,6 +173,76 @@ void *mca_load_modules_then_project_async(void *state)
   puts("modules & open-projects loading complete");
 
   return NULL;
+}
+
+int midge_initialize_app(struct timespec *app_begin_time)
+{
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  // Set Times
+  global_data->app_begin_time = app_begin_time;
+
+  struct timespec source_load_complete_time;
+  clock_gettime(CLOCK_REALTIME, &source_load_complete_time);
+
+  printf("#######################\n  <<<< MIDGE >>>>\n\nCore Compile took %.2f "
+         "seconds\n",
+         source_load_complete_time.tv_sec - global_data->app_begin_time->tv_sec +
+             1e-9 * (source_load_complete_time.tv_nsec - global_data->app_begin_time->tv_nsec));
+
+  // Asynchronously begin the render thread containing vulkan and xcb
+  MCcall(begin_render_thread());
+
+  // Complete Initialization of the global root node
+  MCcall(mca_init_node_layout(&global_data->global_node->layout));
+  global_data->global_node->layout->__requires_rerender = true;
+
+  // Initialize main thread
+  MCcall(initialize_midge_state());
+  printf("midge components initialized\n");
+
+  // Begin the async load thread of modules -then- projects
+  mthread_info *modules_load_thr_info;
+  MCcall(begin_mthread(&mca_load_modules_then_project_async, &modules_load_thr_info, NULL));
+
+  // Wait for render thread initialization and all initial resources to load before
+  // continuing with the next set of commands
+  bool waited = false;
+  int count = 0;
+  while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue->count) {
+    waited = !global_data->render_thread->render_thread_initialized;
+    usleep(1);
+    ++count;
+    if (count % 100000 == 0) {
+      printf("global_data->render_thread = %p %i %u\n", global_data->render_thread,
+             global_data->render_thread->render_thread_initialized, global_data->render_thread->resource_queue->count);
+    }
+  }
+
+  // while (!modules_load_thr_info->has_concluded) {
+  //   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
+  //   usleep(10);
+  // }
+
+  // Set properties
+
+  // Completed
+  struct timespec load_complete_frametime;
+  clock_gettime(CLOCK_REALTIME, &load_complete_frametime);
+  printf("##################################\n"
+         "         <<<< MIDGE >>>>\n"
+         "\n"
+         "Post-Core load took %.2f seconds (*%s)\n"
+         "App Begin took %.2f seconds\n"
+         "##################################\n",
+         load_complete_frametime.tv_sec - source_load_complete_time.tv_sec +
+             1e-9 * (load_complete_frametime.tv_nsec - source_load_complete_time.tv_nsec),
+         waited ? "vulkan-initialization limited" : "midge-compile-load limited",
+         load_complete_frametime.tv_sec - global_data->app_begin_time->tv_sec +
+             1e-9 * (load_complete_frametime.tv_nsec - global_data->app_begin_time->tv_nsec));
+
+  return 0;
 }
 
 int mca_render_presentation()
@@ -291,10 +296,6 @@ int midge_run_app()
   mc_node *global_root_node = global_data->global_node;
   // printf("defaultfont-0:%u\n", global_data->default_font_resource);
   // printf("global_data->ui_state:%p\n", global_data->ui_state);
-
-  mthread_info *modules_load_thr_info;
-  MCcall(begin_mthread(&mca_load_modules_then_project_async, &modules_load_thr_info, NULL));
-  // mca_load_modules_then_project_async(NULL);
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);
@@ -441,8 +442,9 @@ int midge_run_app()
       // mca_update_node_list_logic(global_data->global_node->children);
       if (global_root_node->layout->__requires_layout_update) {
         clock_gettime(CLOCK_REALTIME, &debug_start_time);
-
+puts("before-hierarchy-mutex-lock");
         pthread_mutex_lock(&global_data->hierarchy_mutex);
+puts("after-hierarchy-mutex-lock");
         global_root_node->layout->__requires_layout_update = false;
 
         for (int a = 0; a < global_data->global_node->children->count; ++a) {

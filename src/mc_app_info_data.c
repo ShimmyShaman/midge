@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <pthread.h>
+
 #include "core/midge_app.h"
 
 static midge_app_info *__mc_midge_app_info;
@@ -13,6 +15,8 @@ void mc_init_midge_app_info()
 
   mc_obtain_app_itp_data(&__mc_midge_app_info->itp_data);
   __mc_midge_app_info->global_node = __mc_midge_app_info->itp_data->global_node;
+
+  pthread_mutex_init(&__mc_midge_app_info->hierarchy_mutex, NULL);
 
   __mc_midge_app_info->_exit_requested = false;
 }

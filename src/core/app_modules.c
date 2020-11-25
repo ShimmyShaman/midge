@@ -27,7 +27,7 @@ int _mca_load_module(const char *base_path, const char *module_name)
             module_name);
   }
 
-  MCcall(mcs_interpret_file(app_info->itp_data->interpreter, buf));
+  MCcall(mcs_interpret_file(buf));
 
   // Initialize the module
   sprintf(buf, "init_%s", module_name);
@@ -57,7 +57,7 @@ int mca_load_modules()
       "modus_operandi",
       // "source_editor",
       // "function_debug",
-      // "obj_loader",
+      "obj_loader",
       NULL,
   };
 

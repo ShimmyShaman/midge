@@ -34,7 +34,6 @@ unsigned int MIDGE_ERROR_THREAD_INDEX;
 unsigned int MIDGE_ERROR_THREAD_HISTORICAL_COUNT;
 // bool MIDGE_ERROR_STACK_PROFILING_ENABLED;
 
-
 void print_things(int nb, ...)
 {
   puts("a0");
@@ -185,8 +184,8 @@ void register_midge_stack_function_entry(const char *function_name, const char *
     }
   }
   if (!threades) {
-    printf("(0)could not find stack for thread with id %lu >>'%s'\n", tid, function_name);
-    return;
+    printf("ERROR (0)could not find stack for thread with id %lu >>'%s'\n", tid, function_name);
+    exit(996);
   }
 
   threades->stack_activity_line = -1;
@@ -229,8 +228,8 @@ void register_midge_stack_invocation(const char *function_name, const char *file
     }
   }
   if (!threades) {
-    printf("(1)could not find stack for thread with id %lu\n", tid);
-    return;
+    printf("ERROR (1)could not find stack for thread with id %lu\n", tid);
+    exit(997);
   }
 
   threades->stack_activity_line = -1;
@@ -272,8 +271,8 @@ void register_midge_stack_return(int midge_error_stack_index)
     }
   }
   if (!threades) {
-    printf("(2)could not find stack for thread with id %lu\n", tid);
-    return;
+    printf("ERROR (2)could not find stack for thread with id %lu\n", tid);
+    exit(999);
   }
 
   threades->stack_activity_line = threades->stack[threades->stack_index].line;
@@ -347,8 +346,8 @@ void midge_error_print_thread_stack_trace()
     }
   }
   if (!threades) {
-    printf("(3)could not find stack for thread with id %lu\n", tid);
-    return;
+    printf("ERROR (3)could not find stack for thread with id %lu\n", tid);
+    exit(998);
   }
 
   printf("\n---------------################------------\n");

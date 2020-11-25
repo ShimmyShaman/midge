@@ -1,3 +1,14 @@
+/* wvf_obj_loader.c */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <ctype.h>
+
+#include "midge_error_handling.h"
+
+#include "core/midge_app.h"
 
 #include "modules/obj_loader/wvf_obj_loader.h"
 #include "render/render_common.h"
@@ -161,7 +172,7 @@
 //   return 0;
 // }
 
-void wvf_obj_parse_obj_info(char *code, _wvf_obj_parsed_obj_info *file_index)
+int wvf_obj_parse_obj_info(char *code, _wvf_obj_parsed_obj_info *file_index)
 {
   const unsigned int UNASSIGNED = 24892428U;
 
@@ -367,6 +378,8 @@ void wvf_obj_parse_obj_info(char *code, _wvf_obj_parsed_obj_info *file_index)
       MCerror(8205, "ObjLoader:NotSupported:'%c'", code[i]);
     }
   }
+
+  return 0;
 }
 
 /*
@@ -570,6 +583,8 @@ int parse_float(const char **token, float *result)
 
   *result = (float)(val);
   (*token) = end;
+
+  return 0;
 }
 
 /* http://stackoverflow.com/questions/5710091/how-does-atoi-function-in-c-work
@@ -639,7 +654,7 @@ _wvf_obj_vertex_index_list wvf_obj_parse_raw_triple(const char **token)
   return vi;
 }
 
-void wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info *fli,
+int wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info *fli,
                                        _wvf_obj_vertex_index_list *vertex_indices, float *vertex_data, int *vi,
                                        unsigned int *index_data, int *ii)
 {
@@ -690,9 +705,11 @@ void wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info
   // printf("index_data[%u] = %u\n", *ii, *ii);
   index_data[*ii] = *ii;
   ++*ii;
+
+  return 0;
 }
 
-void _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsigned int *vertex_count,
+int _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsigned int *vertex_count,
                                    unsigned int **indices, unsigned int *index_count)
 {
   // TODO -- one day, maybe use https://github.com/thisistherk/fast_obj/blob/master/fast_obj.h
@@ -764,12 +781,14 @@ void _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsig
 
   free(file_text);
   free(fli.cmds);
+
+  return 0;
 }
 
-void mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buffer, mcr_index_buffer **index_buffer)
+int mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buffer, mcr_index_buffer **index_buffer)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   // Load the obj data
   float *vertices;
@@ -795,6 +814,8 @@ void mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buf
   command->load_indices.release_original_data_on_copy = false; // TODO -- toggle to true?
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+  return 0;
 }
 
 // void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model)

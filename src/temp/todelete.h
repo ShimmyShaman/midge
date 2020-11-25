@@ -1,51 +1,385 @@
 #include "midge_error_handling.h"
 
-/* app_modules.c */
+/* wvf_obj_loader.c */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-#include <unistd.h>
+#include <ctype.h>
 
-#include "tinycc/libtccinterp.h"
-
-#include "core/core_definitions.h"
-#include "core/mc_source.h"
-#include "core/midge_app.h"
-#include "mc_str.h"
 #include "midge_error_handling.h"
 
-int _mca_load_module(const char *base_path, const char *module_name) {
+#include "core/midge_app.h"
+
+#include "modules/obj_loader/wvf_obj_loader.h"
+#include "render/render_common.h"
+
+// int parseLine(Command *command, const char *p, size_t p_len, int triangulate)
+// {
+//   char linebuf[4096];
+//   const char *token;
+//   MCassert(p_len < 4095, "TODO");
+
+//   memcpy(linebuf, p, p_len);
+//   linebuf[p_len] = '\0';
+
+//   token = linebuf;
+
+//   command->type = COMMAND_EMPTY;
+
+//   /* Skip leading space. */
+//   skip_space(&token);
+
+//   MCassert(token, "TODO");
+//   if (token[0] == '\0') { /* empty line */
+//     return 0;
+//   }
+
+//   if (token[0] == '#') { /* comment line */
+//     return 0;
+//   }
+
+//   /* vertex */
+//   if (token[0] == 'v' && IS_SPACE((token[1]))) {
+//     float x, y, z;
+//     token += 2;
+//     parse_float3(&x, &y, &z, &token);
+//     command->vx = x;
+//     command->vy = y;
+//     command->vz = z;
+//     command->type = COMMAND_V;
+//     return 1;
+//   }
+
+//   /* normal */
+//   if (token[0] == 'v' && token[1] == 'n' && IS_SPACE((token[2]))) {
+//     float x, y, z;
+//     token += 3;
+//     parse_float3(&x, &y, &z, &token);
+//     command->nx = x;
+//     command->ny = y;
+//     command->nz = z;
+//     command->type = COMMAND_VN;
+//     return 1;
+//   }
+
+//   /* texcoord */
+//   if (token[0] == 'v' && token[1] == 't' && IS_SPACE((token[2]))) {
+//     float x, y;
+//     token += 3;
+//     parse_float2(&x, &y, &token);
+//     command->tx = x;
+//     command->ty = y;
+//     command->type = COMMAND_VT;
+//     return 1;
+//   }
+
+//   /* face */
+//   if (token[0] == 'f' && IS_SPACE((token[1]))) {
+//     size_t num_f = 0;
+
+//     _wvf_obj_vertex_index_list f[TINYOBJ_MAX_FACES_PER_F_LINE];
+//     token += 2;
+//     skip_space(&token);
+
+//     while (!IS_NEW_LINE(token[0])) {
+//       _wvf_obj_vertex_index_list vi = wvf_obj_parse_raw_triple(&token);
+//       skip_space_and_cr(&token);
+
+//       f[num_f] = vi;
+//       num_f++;
+//     }
+
+//     command->type = COMMAND_F;
+
+//     if (triangulate) {
+//       size_t k;
+//       size_t n = 0;
+
+//       _wvf_obj_vertex_index_list i0 = f[0];
+//       _wvf_obj_vertex_index_list i1;
+//       _wvf_obj_vertex_index_list i2 = f[1];
+
+//       MCassert(3 * num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
+
+//       for (k = 2; k < num_f; k++) {
+//         i1 = i2;
+//         i2 = f[k];
+//         command->f[3 * n + 0] = i0;
+//         command->f[3 * n + 1] = i1;
+//         command->f[3 * n + 2] = i2;
+
+//         command->f_num_verts[n] = 3;
+//         n++;
+//       }
+//       command->num_f = 3 * n;
+//       command->num_f_num_verts = n;
+//     }
+//     else {
+//       size_t k = 0;
+//       MCassert(num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
+//       for (k = 0; k < num_f; k++) {
+//         command->f[k] = f[k];
+//       }
+
+//       command->num_f = num_f;
+//       command->f_num_verts[0] = (int)num_f;
+//       command->num_f_num_verts = 1;
+//     }
+
+//     return 1;
+//   }
+
+//   /* use mtl */
+//   if ((0 == strncmp(token, "usemtl", 6)) && IS_SPACE((token[6]))) {
+//     token += 7;
+
+//     skip_space(&token);
+//     command->material_name = p + (token - linebuf);
+//     size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
+//     command->material_name_len = (unsigned int)lun;
+//     command->type = COMMAND_USEMTL;
+
+//     return 1;
+//   }
+
+//   /* load mtl */
+//   if ((0 == strncmp(token, "mtllib", 6)) && IS_SPACE((token[6]))) {
+//     /* By specification, `mtllib` should be appear only once in .obj */
+//     token += 7;
+
+//     skip_space(&token);
+//     command->mtllib_name = p + (token - linebuf);
+//     size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
+//     command->mtllib_name_len = (unsigned int)lun;
+//     command->type = COMMAND_MTLLIB;
+
+//     return 1;
+//   }
+
+//   /* group name */
+//   if (token[0] == 'g' && IS_SPACE((token[1]))) {
+//     /* @todo { multiple group name. } */
+//     token += 2;
+
+//     command->group_name = p + (token - linebuf);
+//     size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
+//     command->group_name_len = (unsigned int)lun;
+//     command->type = COMMAND_G;
+
+//     return 1;
+//   }
+
+//   return 0;
+// }
+
+int wvf_obj_parse_obj_info(char *code, _wvf_obj_parsed_obj_info *file_index) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("_mca_load_module", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("wvf_obj_parse_obj_info", __FILE__, __LINE__, &midge_error_stack_index);
 
-  midge_app_info * app_info;
-  mc_obtain_midge_app_info(&app_info);
+  const unsigned int  UNASSIGNED = 24892428U;
 
-  char  buf[512];
-  sprintf(buf, "%s/%s/init_%s.c", base_path, module_name, module_name);
-  if (access(buf, F_OK)==-1) {
-    MCerror(1999, "Within each module there must be a file named 'init_{%%module_name%%}.c' : This could not be accessed for "
-            "module_name='%s'", module_name);
+  file_index->cmd_count = 0;
+  file_index->triangle_count = 0;
+  file_index->f_cmd_begin = UNASSIGNED;
+  file_index->v_cmd_begin = UNASSIGNED;
+  file_index->vt_cmd_begin = UNASSIGNED;
+  file_index->vn_cmd_begin = UNASSIGNED;
+  file_index->num_faces = 0;
+
+  int  i;
+  for (i = 0  ; code[i]!='\0'  ; ++i  ) {
+    if (_WVF_OBJ_IS_NEW_LINE(code[i])) {
+      ++file_index->cmd_count;
+    }
+
   }
 
 
-  MCcall(mcs_interpret_file(app_info->itp_data->interpreter, buf));
+  // Init
+  _wvf_obj_cmd * cmds = (_wvf_obj_cmd *)malloc(sizeof(_wvf_obj_cmd) * (file_index->cmd_count + 1));
+  file_index->cmds = cmds;
 
-  // Initialize the module
-  sprintf(buf, "init_%s", module_name);
-  int (*initialize_module)(mc_node *) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
-  if (!initialize_module) {
-    MCerror(2000, "within each 'init_{%%module_name%%}.c' file there must be a method with signature 'int "
-            "init_{%%module_name%%}(mc_node *)' : This was not found for module_name='%s'", module_name);
+  int  cmd_index = 0;
+  i = 0;
+  while (code[i]!='\0'  ) {
+    switch (code[i]) {
+      case '#':
+{
+        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
+
+        }
+
+      }
+      break;      case 'm':
+{
+        if ((0==strncmp(code + i, "mtllib", 6))&&_WVF_OBJ_IS_SPACE(code[i + 6])) {
+          i += 7;
+
+          // Comment
+          // Ignore
+          for (          ; !_WVF_OBJ_IS_NEW_LINE(code[i])          ; ++i          ) {
+
+          }
+
+
+          //         // skip_space(&i);
+          //         // command->mtllib_name = p + (token - linebuf);
+          //         // size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
+          //         // command->mtllib_name_len = (unsigned int)lun;
+          //         // command->type = COMMAND_MTLLIB;
+
+          break;
+        }
+
+
+        MCerror(8239, "ObjLoader:NotSupported:'%c'", code[i]);
+      }
+      break;      case 'u':
+{
+        if ((0==strncmp(code + i, "usemtl", 6))&&_WVF_OBJ_IS_SPACE(code[i + 6])) {
+          i += 7;
+
+          // Comment
+          // Ignore
+          for (          ; !_WVF_OBJ_IS_NEW_LINE(code[i])          ; ++i          ) {
+
+          }
+
+
+          //         // skip_space(&i);
+          //         // command->mtllib_name = p + (token - linebuf);
+          //         // size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
+          //         // command->mtllib_name_len = (unsigned int)lun;
+          //         // command->type = COMMAND_MTLLIB;
+
+          break;
+        }
+
+
+        MCerror(8239, "ObjLoader:NotSupported:'%c'", code[i]);
+      }
+      break;      case 'o':
+{
+        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
+
+        }
+
+      }
+      break;      case 'g':
+{
+        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
+
+        }
+
+      }
+      break;      case 'f':
+{
+        if (!_WVF_OBJ_IS_SPACE(code[i + 1])) {
+          MCerror(9286, "Format Error");
+        }
+
+
+        // f
+        cmds[cmd_index].type = _wvf_obj_cmd_F;
+        cmds[cmd_index].begin = i;
+
+        if (file_index->f_cmd_begin==UNASSIGNED) {
+          file_index->f_cmd_begin = cmd_index;
+        }
+
+        ++cmd_index;
+        ++file_index->num_faces;
+        i += 2;
+
+        // Add to triangle count
+        int  num_fv = 0;
+        while (!_WVF_OBJ_IS_NEW_LINE(code[i])        ) {
+          bool  val = false;
+          for (          ; isdigit(code[i])||code[i]=='/'          ; ++i          ) {
+            val = true;
+          }
+
+          if (val) {
+            ++num_fv;
+          }
+
+
+          while (_WVF_OBJ_IS_SPACE(code[i])          ) {
+            ++i;
+          }
+
+        }
+
+
+        file_index->triangle_count += num_fv - 2;
+      }
+      break;      case 's':
+{
+        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
+
+        }
+
+      }
+      break;      case 'v':
+{
+        switch (code[i + 1]) {
+          case ' ':
+          case '\t':
+{
+            cmds[cmd_index].type = _wvf_obj_cmd_V;
+            cmds[cmd_index].begin = i;
+
+            if (file_index->v_cmd_begin==UNASSIGNED) {
+              file_index->v_cmd_begin = cmd_index;
+            }
+
+            ++cmd_index;
+          }
+          break;          case 't':
+{
+            cmds[cmd_index].type = _wvf_obj_cmd_VT;
+            cmds[cmd_index].begin = i;
+
+            if (file_index->vt_cmd_begin==UNASSIGNED) {
+              file_index->vt_cmd_begin = cmd_index;
+            }
+
+            ++cmd_index;
+          }
+          break;          case 'n':
+{
+            cmds[cmd_index].type = _wvf_obj_cmd_VN;
+            cmds[cmd_index].begin = i;
+
+            if (file_index->vn_cmd_begin==UNASSIGNED) {
+              file_index->vn_cmd_begin = cmd_index;
+            }
+
+            ++cmd_index;
+          }
+          break;          default:
+          MCerror(8246, "ObjLoader:NotSupported:v>'%c'", code[i + 1]);        }
+
+
+        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
+
+        }
+
+      }
+      break;      case ' ':
+      case '\t':
+      case '\r':
+      case '\n':
+{
+        ++i;
+      }
+      break;      default:
+      MCerror(8205, "ObjLoader:NotSupported:'%c'", code[i]);    }
+
   }
 
-
-  // TODO -- for some reason interpreting from this function loads the functions to address ranges I normally see
-  // reserved for stack variables. Find out whats happenning -- that can't be good
-  // printf("interpreter=%p\n",app_info->itp_data->interpreter);
-  // printf("%s=%p\n", buf, initialize_module);
-  MCcall(initialize_module(app_info->global_node));
 
 
   {
@@ -57,76 +391,189 @@ int _mca_load_module(const char *base_path, const char *module_name) {
 }
 
 
-int mca_load_modules() {
+/*
+ * Tries to parse a floating point number located at s.
+ *
+ * s_end should be a location in the string where reading should absolutely
+ * stop. For example at the end of the string, to prevent buffer overflows.
+ *
+ * Parses the following EBNF grammar:
+ *   sign    = "+" | "-" ;
+ *   END     = ? anything not in digit ?
+ *   digit   = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+ *   integer = [sign] , digit , {digit} ;
+ *   decimal = integer , ["." , integer] ;
+ *   float   = ( decimal , END ) | ( decimal , ("E" | "e") , integer , END ) ;
+ *
+ *  Valid strings are for example:
+ *   -0  +3.1417e+2  -0.0E-3  1.0324  -1.41   11e2
+ *
+ * If the parsing is a success, result is set to the parsed value and true
+ * is returned.
+ *
+ * The function is greedy and will parse until any of the following happens:
+ *  - a non-conforming character is encountered.
+ *  - s_end is reached.
+ *
+ * The following situations triggers a failure:
+ *  - s >= s_end.
+ *  - parse failure.
+ */
+// TODO -- move this to a util module
+int try_parse_double(const char *s, const char *s_end, double *result) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("mca_load_modules", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("try_parse_double", __FILE__, __LINE__, &midge_error_stack_index);
 
-  const char * module_directories[] = {
-    "modus_operandi",
-    NULL
-  };
+  double  mantissa = 0.0;
+  /* This exponent is base 2 rather than 10.
+   * However the exponent we parse is supposed to be one of ten,
+   * thus we must take care to convert the exponent/and or the
+   * mantissa to a * 2^E, where a is the mantissa and E is the
+   * exponent.
+   * To get the final double we will use ldexp, it requires the
+   * exponent to be in base 2.
+   */
+  int  exponent = 0;
 
-  for (int  d = 0  ; module_directories[d]  ; ++d  ) {
-    MCcall(_mca_load_module("src/modules", module_directories[d]));
+  /* NOTE: THESE MUST BE DECLARED HERE SINCE WE ARE NOT ALLOWED
+   * TO JUMP OVER DEFINITIONS.
+   */
+  char  sign = '+';
+  char  exp_sign = '+';
+  const char * curr = s;
+
+  /* How many characters were read in a loop. */
+  int  read = 0;
+  /* Tells whether a loop terminated due to reaching s_end. */
+  int  end_not_reached = 0;
+
+  /*
+     BEGIN PARSING.
+     */
+
+  if (s>=s_end) {
+
+    {
+      // Return
+      register_midge_stack_return(midge_error_stack_index);
+      return -5465;
+    }
+
   }
 
 
+  /* Find out what sign we've got. */
+  if (*curr=='+'||*curr=='-') {
+    sign = *curr;
+    curr++;
+  }
+  else   if (isdigit(*curr)) {
 
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
+  }
+  else {
+    goto fail;
   }
 
-}
 
-
-void _mca_set_project_state(char *base_path, char *module_name) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("_mca_set_project_state", __FILE__, __LINE__, &midge_error_stack_index);
-
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
+  /* Read the integer part. */
+  end_not_reached = (curr!=s_end);
+  while (end_not_reached&&isdigit(*curr)  ) {
+    mantissa *= 10;
+    mantissa += (int)(*curr - 0x30);
+    curr++;
+    read++;
+    end_not_reached = (curr!=s_end);
   }
-}
 
 
-int mca_load_open_projects() {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("mca_load_open_projects", __FILE__, __LINE__, &midge_error_stack_index);
+  /* We must make sure we actually got something. */
+  if (read==0)   goto fail;
+  /* We allow numbers of form "#", "###" etc. */
+  if (!end_not_reached)   goto assemble;
 
-  char * open_list_text;
-  read_file_text("projects/open_project_list", &open_list_text);
+  /* Read the decimal part. */
+  if (*curr=='.') {
+    curr++;
+    read = 1;
+    end_not_reached = (curr!=s_end);
+    while (end_not_reached&&isdigit(*curr)    ) {
+      double  frac_value = 1.0;
+      int  f;
+      for (f = 0      ; f<read      ; f++      ) {
+        frac_value *= 0.1;
+      }
 
-  printf("open_list_text:'%s'\n", open_list_text);
+      mantissa += (int)(*curr - 0x30) * frac_value;
+      read++;
+      curr++;
+      end_not_reached = (curr!=s_end);
+    }
 
-  char  buf[256];
-  mc_str * str;
-  init_mc_str(&str);
+  }
+  else   if (*curr=='e'||*curr=='E') {
 
-  int  i = 0,  s = 0;
-  bool  eof = false;
-  while (!eof  ) {
-    s = i;
+  }
+  else {
+    goto assemble;
+  }
 
-    for (    ; open_list_text[i]!='|'    ; ++i    )     if (open_list_text[i]=='\0') {
-      eof = true;
-      break;
+
+  if (!end_not_reached)   goto assemble;
+
+  /* Read the exponent part. */
+  if (*curr=='e'||*curr=='E') {
+    curr++;
+    /* Figure out if a sign is present and if it is. */
+    end_not_reached = (curr!=s_end);
+    if (end_not_reached&&(*curr=='+'||*curr=='-')) {
+      exp_sign = *curr;
+      curr++;
+    }
+    else     if (isdigit(*curr)) {
+
+    }
+    else {
+      goto fail;
     }
 
 
-    if (i>s) {
-      strncpy(buf, open_list_text + s, i - s);
-      buf[i - s] = '\0';
-
-      MCcall(_mca_load_module("projects", buf));
-      _mca_set_project_state("projects", buf);
+    read = 0;
+    end_not_reached = (curr!=s_end);
+    while (end_not_reached&&isdigit(*curr)    ) {
+      exponent *= 10;
+      exponent += (int)(*curr - 0x30);
+      curr++;
+      read++;
+      end_not_reached = (curr!=s_end);
     }
 
+    if (read==0)     goto fail;
+  }
+
+
+  assemble:
+
+{
+    double  a = 1.0;    /* = pow(5.0, exponent); */
+    double  b = 1.0;    /* = 2.0^exponent */
+    int  i;
+    for (i = 0    ; i<exponent    ; i++    ) {
+      a = a * 5.0;
+    }
+
+
+    for (i = 0    ; i<exponent    ; i++    ) {
+      b = b * 2.0;
+    }
+
+
+    if (exp_sign=='-') {
+      a = 1.0 / a;
+      b = 1.0 / b;
+    }
+
+
+    *result = (sign=='+' ? 1 : -1) * (mantissa * a * b);
   }
 
 
@@ -137,4 +584,402 @@ int mca_load_open_projects() {
     return 0;
   }
 
+  fail:
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 6579;
+  }
+
 }
+
+
+int until_space(const char *token) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("until_space", __FILE__, __LINE__, &midge_error_stack_index);
+
+  const char * p = token;
+  while (p[0]!='\0'&&p[0]!=' '&&p[0]!='\t'&&p[0]!='\r'  ) {
+    p++;
+  }
+
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return (int)(p - token);
+  }
+
+}
+
+
+// TODO -- move this to a util module
+int parse_float(const char **token, float *result) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("parse_float", __FILE__, __LINE__, &midge_error_stack_index);
+
+  const char * end;
+  double  val = 0.0;
+  int  len_until_space = until_space((*token));
+  end = (*token) + len_until_space;
+  val = 0.0;
+  int  res = try_parse_double((*token), end, &val);
+  if (res) {
+    MCerror(7600, "couldn't parse double");
+  }
+
+
+  *result = (float)(val);
+  (*token) = end;
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+/* http://stackoverflow.com/questions/5710091/how-does-atoi-function-in-c-work
+ */
+// TODO -- move this to a util module
+int my_atoi(const char **c) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("my_atoi", __FILE__, __LINE__, &midge_error_stack_index);
+
+  int  value = 0;
+  int  sign = 1;
+  if (**c=='+'||**c=='-') {
+    if (**c=='-')     sign = -1;
+    ++*c;
+  }
+
+  while (((**c)>='0')&&((**c)<='9')  ) {
+    value *= 10;
+    value += (int)(**c - '0');
+    ++*c;
+  }
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return value * sign;
+  }
+
+}
+
+
+/* Parse raw triples: i, i/j/k, i//k, i/j */
+_wvf_obj_vertex_index_list wvf_obj_parse_raw_triple(const char **token) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("wvf_obj_parse_raw_triple", __FILE__, __LINE__, &midge_error_stack_index);
+
+  _wvf_obj_vertex_index_list  vi;
+  /* 0x80000000 = -2147483648 = invalid */
+  vi.v_idx = (int)(0x80000000);
+  vi.vn_idx = (int)(0x80000000);
+  vi.vt_idx = (int)(0x80000000);
+
+  vi.v_idx = my_atoi(token);
+  vi.v_idx -= 1;
+  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
+  if ((*token)[0]!='/') {
+
+    {
+      // Return
+      register_midge_stack_return(midge_error_stack_index);
+      return vi;
+    }
+
+  }
+
+  // printf("tokenb:'%.16s'\n", *token);
+  ++(*token);
+
+  /* i//k */
+  if ((*token)[0]=='/') {
+    ++(*token);
+    vi.vn_idx = my_atoi(token);
+    vi.vn_idx -= 1;
+    _WVF_OBJ_CPTR_SKIP_SPACE(*token);
+
+    {
+      // Return
+      register_midge_stack_return(midge_error_stack_index);
+      return vi;
+    }
+
+  }
+
+
+  /* i/j/k or i/j */
+  vi.vt_idx = my_atoi(token);
+  vi.vt_idx -= 1;
+  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
+  // printf("tokenc:'%.16s'\n", *token);
+  if ((*token)[0]!='/') {
+
+    {
+      // Return
+      register_midge_stack_return(midge_error_stack_index);
+      return vi;
+    }
+
+  }
+
+
+  /* i/j/k */
+  ++(*token);  /* skip '/' */
+  vi.vn_idx = my_atoi(token);
+  vi.vn_idx -= 1;
+  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
+  // printf("tokene:'%.16s'\n", *token);
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return vi;
+  }
+
+}
+
+
+int wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info *fli, _wvf_obj_vertex_index_list *vertex_indices, float *vertex_data, int *vi, unsigned int *index_data, int *ii) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("wvf_obj_parse_vertex_info_to_data", __FILE__, __LINE__, &midge_error_stack_index);
+
+  _wvf_obj_cmd  cmd = fli->cmds[fli->v_cmd_begin + vertex_indices->v_idx];
+  // DEBUG
+  if (cmd.type!=_wvf_obj_cmd_V) {
+    MCerror(9732, "TODO %i", cmd.type);
+  }
+
+  // DEBUG
+
+  char * vc = file_text + cmd.begin + 2;
+  parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+  parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+  parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  // _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+
+  // Texture
+  cmd = fli->cmds[fli->vt_cmd_begin + vertex_indices->vt_idx];
+  // DEBUG
+  if (cmd.type!=_wvf_obj_cmd_VT) {
+    MCerror(9749, "TODO %i", cmd.type);
+  }
+
+  // DEBUG
+
+  vc = file_text + cmd.begin + 3;
+
+  // "Flip" texture coords to accommodate vulkans right-hand-coordinate usage & objs left-hand-coordinate output
+  float  vt;
+  parse_float(&vc, &vt);
+  vertex_data[(*vi)++] = 1.f - vt;
+  // parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+  parse_float(&vc, &vt);
+  vertex_data[(*vi)++] = 1.f - vt;
+  // parse_float(&vc, &vertex_data[(*vi)++]);
+  // printf(" %.3f", vertex_data[(*vi) - 1]);
+  // _WVF_OBJ_CPTR_SKIP_SPACE(vc);
+
+  // printf(" [%i]\n", *vi);
+
+  // printf("index_data[%u] = %u\n", *ii, *ii);
+  index_data[*ii] = *ii;
+  ++*ii;
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsigned int *vertex_count, unsigned int **indices, unsigned int *index_count) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("_wvf_obj_load_vert_index_data", __FILE__, __LINE__, &midge_error_stack_index);
+
+  char * file_text;
+  read_file_text(obj_path, &file_text);
+
+  _wvf_obj_parsed_obj_info  fli;
+  wvf_obj_parse_obj_info(file_text, &fli);
+
+  // printf("triangle_count:%u %u %u\n", fli.triangle_count, fli.num_faces, fli.f_cmd_begin);
+
+  // TODO -- optimise
+  // 3 vertices for each triangle
+  *vertex_count = fli.triangle_count * 3 * (3 + 2);
+  *vertices = (float *)malloc(sizeof(float) * *vertex_count);  // vert-tex
+  *index_count = fli.triangle_count * 3;
+  *indices = (unsigned int *)malloc(sizeof(unsigned int) * *index_count);
+
+  // printf("allocated v:%i i:%i\n", *vertex_count, *index_count);
+
+  int  vi = 0,  ii = 0;
+  for (int  f = 0  ; f<fli.num_faces  ; ++f  ) {
+    int  cmd_index = fli.f_cmd_begin + f;
+
+    _wvf_obj_cmd  cmd = fli.cmds[cmd_index];
+    // DEBUG
+    if (cmd.type!=_wvf_obj_cmd_F) {
+      MCerror(9416, "TODO %i", cmd.type);
+    }
+
+    // DEBUG
+
+    char * code = file_text + cmd.begin + 2;
+
+    size_t  k;
+    size_t  n = 0;
+
+    _WVF_OBJ_CPTR_SKIP_SPACE(code);
+    _wvf_obj_vertex_index_list  i0 = wvf_obj_parse_raw_triple(&code);
+    _WVF_OBJ_CPTR_SKIP_SPACE(code);
+    _wvf_obj_vertex_index_list  i1;
+    _wvf_obj_vertex_index_list  i2 = wvf_obj_parse_raw_triple(&code);
+
+    while (true    ) {
+      _WVF_OBJ_CPTR_SKIP_SPACE(code);
+      // printf("codea:'%.20s'\n", code);
+      bool  brk = _WVF_OBJ_IS_NEW_LINE(*code);
+      if (brk)       break;
+
+      i1 = i2;
+      i2 = wvf_obj_parse_raw_triple(&code);
+      // printf("codeb:'%.20s'\n", code);
+
+      // printf("%i %i\n", i0.v_idx, i0.vt_idx);
+      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i0, *vertices, &vi, *indices, &ii);
+      // printf("%i %i\n", i1.v_idx, i1.vt_idx);
+      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i1, *vertices, &vi, *indices, &ii);
+      // printf("%i %i\n", i2.v_idx, i2.vt_idx);
+      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i2, *vertices, &vi, *indices, &ii);
+    }
+
+  }
+
+
+  // printf("vi=%i ii=%i\n", vi, ii);
+
+  // float *vertex_data = (float *)malloc(sizeof(float) * (cmds->f_count *));
+  // unsigned int *index_data =
+
+  free(file_text);
+  free(fli.cmds);
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buffer, mcr_index_buffer **index_buffer) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mcr_load_wavefront_obj", __FILE__, __LINE__, &midge_error_stack_index);
+
+  midge_app_info * global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  // Load the obj data
+  float * vertices;
+  unsigned int * indices,  vertex_count,  index_count;
+  _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
+
+  // Construct the model and load its resources
+  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+
+  resource_command * command;
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
+  command->p_resource = (void *)vertex_buffer;
+  command->load_mesh.p_data = vertices;
+  command->load_mesh.data_count = vertex_count;
+  command->load_mesh.release_original_data_on_copy = false;  // TODO -- toggle to true?
+
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
+  command->p_resource = (void *)index_buffer;
+  command->load_indices.p_data = indices;
+  command->load_indices.data_count = index_count;
+  command->load_indices.release_original_data_on_copy = false;  // TODO -- toggle to true?
+
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+// void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model)
+// {
+//   mc_global_data *global_data;
+//   obtain_midge_global_root(&global_data);
+
+//   // Load the obj data
+//   float *vertices;
+//   unsigned int *indices, vertex_count, index_count;
+//   _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
+
+//   // Construct the model and load its resources
+//   *loaded_model = (mcr_model *)malloc(sizeof(mcr_model));
+//   (*loaded_model)->texture = 0;
+
+//   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+
+//   resource_command *command;
+//   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+//   command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
+//   command->p_resource = &(*loaded_model)->vertex_buffer;
+//   command->load_mesh.p_data = vertices;
+//   command->load_mesh.data_count = vertex_count;
+//   command->load_mesh.release_original_data_on_copy = false;
+
+//   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+//   command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
+//   command->p_resource = &(*loaded_model)->index_buffer;
+//   command->load_indices.p_data = indices;
+//   command->load_indices.data_count = index_count;
+//   command->load_indices.release_original_data_on_copy = false;
+
+//   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+//   mcr_load_texture_resource(diffuse_path, &(*loaded_model)->texture);
+// }
+
+// void mcr_render_model(image_render_details *image_render_queue, mcr_model *model)
+// {
+//   element_render_command *render_cmd;
+//   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
+
+//   render_cmd->type = RENDER_COMMAND_INDEXED_MESH;
+//   render_cmd->indexed_mesh.vertex_buffer = model->vertex_buffer;
+//   render_cmd->indexed_mesh.index_buffer = model->index_buffer;
+//   render_cmd->indexed_mesh.texture_uid = model->texture;
+// }

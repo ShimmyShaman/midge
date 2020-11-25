@@ -257,8 +257,8 @@ void myh_load_resources(mc_node *module_node)
 
   // mcr_load_wavefront_obj("res/cube/cube.obj", &mh_data->cube.render_data.vertices,
   // &mh_data->cube.render_data.indices);
-  mcr_load_wavefront_obj("res/models/viking_room.obj", &mh_data->cube.render_data.vertices,
-                         &mh_data->cube.render_data.indices);
+  MCcall(mcr_load_wavefront_obj("res/models/viking_room.obj", &mh_data->cube.render_data.vertices,
+                         &mh_data->cube.render_data.indices));
   mcr_load_texture_resource("res/models/viking_room.png",
                             (mcr_texture_image *)&mh_data->cube.render_data.input_buffers[1]);
 }

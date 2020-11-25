@@ -613,14 +613,16 @@ static size_t mcs_save_text_to_file(char *filepath, char *text)
   return written;
 }
 
-int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
+int mcs_interpret_file(const char *filepath)
 {
   int res;
   char *code;
   mc_syntax_node *file_ast;
   mc_app_itp_data *app_itp_data;
 
-  printf("midge-interpret '%s'\n", filepath);
+  MCcall(mc_obtain_app_itp_data(&app_itp_data));
+
+  printf("interpreting...'%s'\n", filepath);
 
   // Read the file
   MCcall(read_file_text(filepath, &code));
@@ -648,20 +650,29 @@ int mcs_interpret_file(TCCInterpState *tis, const char *filepath)
     options.tag_on_function_exit = false;
     options.report_variable_values = NULL;
 
-    printf("transcribing '%s'...\n", filepath);
+    // printf("transcribing '%s'...\n", filepath);
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  if (!strcmp("src/core/app_modules.c", filepath)) {
-    // usleep(10000);
-    // printf("\ngen-code:\n%s||\n", code);
-    mcs_save_text_to_file("src/temp/todelete.h", code);
-    // MCerror(7704, "TODO");
-  }
+  // if (!strcmp("src/core/app_modules.c", filepath)) {
+  //   // usleep(10000);
+  //   // printf("\ngen-code:\n%s||\n", code);
+  //   mcs_save_text_to_file("src/temp/todelete.h", code);
+  //   // MCerror(7704, "TODO");
+  // }
 
   // Send the code to the interpreter
-  MCcall(mc_obtain_app_itp_data(&app_itp_data));
-  MCcall(tcci_add_string(app_itp_data->interpreter, filepath, code));
+  {
+    int mc_res = tcci_add_string(app_itp_data->interpreter, filepath, code);
+    if (mc_res) {
+      printf("--"
+             "tcci_add_string(app_itp_data->interpreter, filepath, code)"
+             "line:%i:ERR:%i\n",
+             __LINE__ - 5, mc_res);
+      mcs_save_text_to_file("src/temp/todelete.h", code);
+      return mc_res;
+    }
+  }
 
   // Cleanup
   free(code);

@@ -101,8 +101,8 @@ void mco_load_resources(mc_node *module_node)
 
   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   while (!mo_data->render_target.image) {
-    puts("wait");
-    usleep(10000);
+    // puts("wait");
+    usleep(100);
   }
 }
 

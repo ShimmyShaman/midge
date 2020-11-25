@@ -1024,7 +1024,9 @@ int release_syntax_node(mc_syntax_node *sn)
   case MC_SYNTAX_PP_DIRECTIVE_UNDEFINE:
   case MC_SYNTAX_FUNCTION_POINTER_DECLARATION:
   case MC_SYNTAX_GLOBAL_VARIABLE_DECLARATION:
-    // sn->fptr_declaration.
+  case MC_SYNTAX_GOTO_STATEMENT:
+  case MC_SYNTAX_LABEL_STATEMENT:
+    // sn->label_statement.
     break;
   default: {
     MCerror(6616, "release_sn(); Clear type:%s for proper release of item collections",
@@ -2190,7 +2192,7 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
   mcs_peek_token_type(ps, false, 0, &token_type);
   if (token_type == MC_TOKEN_IDENTIFIER) {
     MCcall(mcs_parse_through_token(ps, fp_decl, MC_TOKEN_IDENTIFIER, &fp_decl->fptr_declarator.name));
-    puts(fp_decl->fptr_declarator.name->text);
+    // puts(fp_decl->fptr_declarator.name->text);
     mcs_parse_through_supernumerary_tokens(ps, fp_decl);
   }
   else if (!allow_name_skip) {

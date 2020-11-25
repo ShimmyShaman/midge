@@ -508,22 +508,22 @@ const char *_mcl_remainder_source_files[] = {
 
 static int mcl_load_source_through_midge(TCCInterpState *tmp_itp)
 {
-  int (*mcs_interpret_file)(TCCInterpState *, const char *) = tcci_get_symbol(tmp_itp, "mcs_interpret_file");
+  int (*mcs_interpret_file)(const char *) = tcci_get_symbol(tmp_itp, "mcs_interpret_file");
   if (!mcs_interpret_file) {
     MCerror(1240, "Couldn't obtain mcs_interpret_file");
   }
 
   for (int i = 0; i < sizeof(_mcl_core_header_files) / sizeof(const char *); ++i) {
-    MCcall(mcs_interpret_file(tmp_itp, _mcl_core_header_files[i]));
+    MCcall(mcs_interpret_file(_mcl_core_header_files[i]));
   }
   for (int i = 0; i < sizeof(_mcl_remainder_header_files) / sizeof(const char *); ++i) {
-    MCcall(mcs_interpret_file(tmp_itp, _mcl_remainder_header_files[i]));
+    MCcall(mcs_interpret_file(_mcl_remainder_header_files[i]));
   }
   for (int i = 0; i < sizeof(_mcl_core_source_files) / sizeof(const char *); ++i) {
-    MCcall(mcs_interpret_file(tmp_itp, _mcl_core_source_files[i]));
+    MCcall(mcs_interpret_file(_mcl_core_source_files[i]));
   }
   for (int i = 0; i < sizeof(_mcl_remainder_source_files) / sizeof(const char *); ++i) {
-    MCcall(mcs_interpret_file(tmp_itp, _mcl_remainder_source_files[i]));
+    MCcall(mcs_interpret_file(_mcl_remainder_source_files[i]));
   }
 
   return 0;
