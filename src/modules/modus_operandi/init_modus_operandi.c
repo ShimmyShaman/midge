@@ -1,7 +1,9 @@
 /* init_modus_operandi */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#include <unistd.h>
 
 #include "core/midge_app.h"
 #include "render/render_common.h"
@@ -96,6 +98,12 @@ void mco_load_resources(mc_node *module_node)
   mo_data->render_target.height = module_node->layout->preferred_height;
   mcr_create_texture_resource(mo_data->render_target.width, mo_data->render_target.height,
                               MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mo_data->render_target.image);
+
+  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
+  while (!mo_data->render_target.image) {
+    puts("wait");
+    usleep(10000);
+  }
 }
 
 int init_modus_operandi(mc_node *app_root)
@@ -124,9 +132,10 @@ int init_modus_operandi(mc_node *app_root)
   node->layout->render_present = (void *)&_mco_render_mo_data_present;
   node->layout->handle_input_event = (void *)&_mco_handle_input;
 
-  // mco_load_resources(node);
+  mco_load_resources(node);
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
+
   // Panel
   // mcu_panel *panel;
   // mcu_init_panel(global_data->global_node, &panel);

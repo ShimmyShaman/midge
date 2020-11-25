@@ -16,6 +16,8 @@
 // #include "ui/ui_definitions.h"
 #include "control/mc_controller.h"
 
+#include "midge_app.h"
+
 // void *callit(void *state)
 // {
 //   printf("!!callit-mc %p\n", state);
@@ -440,6 +442,7 @@ int midge_run_app()
       if (global_root_node->layout->__requires_layout_update) {
         clock_gettime(CLOCK_REALTIME, &debug_start_time);
 
+        pthread_mutex_lock(&global_data->hierarchy_mutex);
         global_root_node->layout->__requires_layout_update = false;
 
         for (int a = 0; a < global_data->global_node->children->count; ++a) {
@@ -466,6 +469,8 @@ int midge_run_app()
           }
         }
 
+        pthread_mutex_unlock(&global_data->hierarchy_mutex);
+
         clock_gettime(CLOCK_REALTIME, &debug_end_time);
         printf("LayoutUpdate took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
                                                  1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
@@ -491,6 +496,7 @@ int midge_run_app()
       // }
 
       // Reset States
+      pthread_mutex_lock(&global_data->hierarchy_mutex);
       global_root_node->layout->__requires_rerender = false;
 
       // Rerender headless images
@@ -509,6 +515,8 @@ int midge_run_app()
       // Queue the updated render
       // printf("present\n");
       mca_render_presentation();
+
+      pthread_mutex_unlock(&global_data->hierarchy_mutex);
 
       // Release lock and allow rendering
       clock_gettime(CLOCK_REALTIME, &debug_end_time);
@@ -542,4 +550,7 @@ void midge_cleanup_app()
 
   free(global_data->render_thread);
   global_data->render_thread = NULL;
+
+  // App Info
+  mc_destroy_midge_app_info();
 }

@@ -3,6 +3,8 @@
 #ifndef MIDGE_APP_H
 #define MIDGE_APP_H
 
+#include <pthread.h>
+
 #include "control/mc_controller.h"
 #include "platform/mc_xcb.h"
 #include "render/render_thread.h"
@@ -31,6 +33,8 @@ typedef struct midge_app_info {
   render_thread_info *render_thread;
   frame_time *elapsed;
 
+  pthread_mutex_t hierarchy_mutex;
+
   // mcu_ui_state
   mcu_ui_state *ui_state;
   struct {
@@ -48,7 +52,9 @@ typedef struct midge_app_info {
 int midge_initialize_app(struct timespec *app_begin_time);
 int midge_run_app();
 void midge_cleanup_app();
+
 void mc_obtain_midge_app_info(midge_app_info **p_app_info);
+void mc_destroy_midge_app_info();
 // }
 
 #endif // MIDGE_APP_H

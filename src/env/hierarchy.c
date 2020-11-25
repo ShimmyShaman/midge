@@ -114,7 +114,7 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
   }
 
   // Lock thread-safety mutex
-  app_info->  
+  pthread_mutex_lock(&app_info->hierarchy_mutex);
 
   MCcall(append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
                               &hierarchy_node->children->count, node_to_attach));
@@ -124,9 +124,7 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
     mca_set_node_requires_layout_update(node_to_attach);
   }
 
-  if (!hierarchy_node->parent) {
-    // Unlock
-  }
+  pthread_mutex_unlock(&app_info->hierarchy_mutex);
 
   return 0;
 }
