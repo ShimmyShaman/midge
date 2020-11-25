@@ -365,24 +365,33 @@ int mcs_register_function_declaration(mc_syntax_node *function_ast, function_inf
 
     // puts("1");
     // Reset dependencies
+    // TODO schedule dependencies
     fi->nb_dependencies = 0;
-
-    mc_syntax_node *param;
-    for (p = 0; p < function_ast->function.parameters->count; ++p) {
-      param = function_ast->function.parameters->items[p];
-
-      if (param->parameter.type_identifier &&
-          param->parameter.type_identifier->type_identifier.identifier->type == MC_TOKEN_IDENTIFIER) {
-        // TODO
-        // mcs_construct_dependency(fi, param->parameter.type_identifier->type_identifier.identifier->text);
-      }
-    }
-
     // TODO
     // Move through the function code and determine the dependencies of the function(functions/structs/enums it uses)
     // mcs_determine_code_dependencies(fi, function_ast->function.code_block);
+
+    // mc_syntax_node *param;
+    // for (p = 0; p < function_ast->function.parameters->count; ++p) {
+    //   param = function_ast->function.parameters->items[p];
+
+    //   if (param->parameter.type_identifier &&
+    //       param->parameter.type_identifier->type_identifier.identifier->type == MC_TOKEN_IDENTIFIER) {
+    //     // TODO
+    //     // mcs_construct_dependency(fi, param->parameter.type_identifier->type_identifier.identifier->text);
+    //   }
+    // }
+
+    // Source
+    if (fi->source) {
+      MCerror(8384, "TODO");
+    }
+
+    fi->source = (source_definition *)malloc(sizeof(source_definition));
+    fi->source->source_file = source_file;
+    fi->source->code;
+    mcs_copy_syntax_node_to_text(function_ast, &fi->source->code);
   }
-  // puts("ccc");
 
   return 0;
 }
@@ -466,15 +475,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
     case MC_SYNTAX_FUNCTION: {
       function_info *info;
       // Function Declaration only
-      mcs_register_function_declaration(child, &info);
-
-      if (!child->function.code_block) {
-        // printf("--fdecl:'%s'\n", child->function.name->text);
-      }
-      else {
-        // info->source->source_file = source_file;
-        // printf("--fdefn:'%s'\n", child->function.name->text);
-      }
+      MCcall(mcs_register_function_declaration(child, &info));
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
       char buf[1024];
@@ -654,12 +655,12 @@ int mcs_interpret_file(const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  if (!strcmp("projects/mystery_hut/init_mystery_hut.c", filepath)) {
-    // usleep(10000);
-    // printf("\ngen-code:\n%s||\n", code);
-    mcs_save_text_to_file("src/temp/todelete.h", code);
-    // MCerror(7704, "TODO");
-  }
+  // if (!strcmp("projects/mystery_hut/init_mystery_hut.c", filepath)) {
+  //   // usleep(10000);
+  //   // printf("\ngen-code:\n%s||\n", code);
+  //   mcs_save_text_to_file("src/temp/todelete.h", code);
+  //   // MCerror(7704, "TODO");
+  // }
 
   // Send the code to the interpreter
   {

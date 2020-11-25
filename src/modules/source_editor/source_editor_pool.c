@@ -1,12 +1,23 @@
+/* source_editor_pool.c */
 
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "core/app_modules.h"
 #include "core/core_definitions.h"
-#include "modules/app_modules.h"
+#include "core/midge_app.h"
+
 #include "render/render_common.h"
 
-void mce_init_source_editor_pool()
+#include "modules/source_editor/source_editor.h"
+
+// Forward Declarations
+int _mce_set_definition_to_function_editor(mce_function_editor *function_editor, function_info *function);
+
+int mce_init_source_editor_pool()
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mce_source_editor_pool *source_editor_pool = (mce_source_editor_pool *)malloc(sizeof(mce_source_editor_pool));
   global_data->ui_state->source_editor_pool = source_editor_pool;
@@ -19,10 +30,12 @@ void mce_init_source_editor_pool()
   source_editor_pool->source_token_lists.count = 0;
   source_editor_pool->source_tokens.capacity = 0;
   source_editor_pool->source_tokens.count = 0;
+
+  return 0;
 }
 
-void _mce_obtain_function_editor_instance(mce_source_editor_pool *source_editor_pool,
-                                          mce_function_editor **function_editor)
+int _mce_obtain_function_editor_instance(mce_source_editor_pool *source_editor_pool,
+                                         mce_function_editor **function_editor)
 {
   for (int i = 0; i < source_editor_pool->function_editor.size; ++i) {
     if (!source_editor_pool->function_editor.items[i]->node->layout->visible) {
@@ -35,45 +48,35 @@ void _mce_obtain_function_editor_instance(mce_source_editor_pool *source_editor_
     reallocate_collection((void ***)&source_editor_pool->function_editor.items,
                           &source_editor_pool->function_editor.size, source_editor_pool->function_editor.size + 1, 0);
 
-    mc_global_data *global_data;
-    obtain_midge_global_root(&global_data);
+    midge_app_info *global_data;
+    mc_obtain_midge_app_info(&global_data);
 
     mce_init_function_editor(global_data->global_node, source_editor_pool, function_editor);
     source_editor_pool->function_editor.items[source_editor_pool->function_editor.size - 1] = *function_editor;
 
-    return;
+    return 0;
   }
 
   MCerror(9945, "NotYetImplemented, use an older code editor instance");
 }
 
-void mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token **token)
-{
-  if (!source_editor_pool->source_tokens.count) {
-    *token = (mce_source_token *)malloc(sizeof(mce_source_token));
-    init_mc_str(&(*token)->str);
-  }
-  else {
-    --source_editor_pool->source_tokens.count;
-    *token = source_editor_pool->source_tokens.items[source_editor_pool->source_tokens.count];
-  }
-}
-
-void mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list)
+int mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list)
 {
   if (!source_editor_pool->source_token_lists.count) {
     *list = (mce_source_token_list *)malloc(sizeof(mce_source_token_list));
     (*list)->capacity = 0U;
     (*list)->count = 0U;
-    return;
+    return 0;
   }
 
   --source_editor_pool->source_token_lists.count;
   *list = source_editor_pool->source_token_lists.items[source_editor_pool->source_token_lists.count];
+
+  return 0;
 }
 
-void mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
-                                                  mce_source_token_list **lists, unsigned int count)
+int mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
+                                                 mce_source_token_list **lists, unsigned int count)
 {
   for (int a = 0; a < count; ++a) {
     mce_source_token_list *list = lists[a];
@@ -90,16 +93,15 @@ void mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source
                          &source_editor_pool->source_token_lists.capacity,
                          &source_editor_pool->source_token_lists.count, list);
   }
+
+  return 0;
 }
 
-// extern "C" {
-int _mce_set_definition_to_function_editor(mce_function_editor *function_editor, function_info *function);
-// }
-
-void mce_activate_source_editor_for_definition(source_definition *definition)
+int mce_activate_source_editor_for_definition(source_definition *definition)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+printf("definition:%p\n", definition);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mce_source_editor_pool *source_editor_pool = (mce_source_editor_pool *)global_data->ui_state->source_editor_pool;
 
@@ -126,7 +128,8 @@ void mce_activate_source_editor_for_definition(source_definition *definition)
 
   } break;
   default:
-    printf("[9766] NotSupported definition->type:%i\n", definition->type);
-    return;
+    MCerror(9766, "NotSupported definition->type:%i\n", definition->type);
   }
+
+  return 0;
 }

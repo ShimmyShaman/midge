@@ -1,17 +1,32 @@
+
+#include <stdio.h>
+
 #include "core/core_definitions.h"
-#include "env/environment_definitions.h"
-#include "render/render_common.h"
+#include "core/mc_source.h"
 
-// extern "C" {
-void mce_init_source_editor_pool();
-// }
+#include "modules/source_editor/source_editor.h"
 
-void init_source_editor(mc_node *app_root)
+#define MCitpCall(itp_function, error_message)                                         \
+  {                                                                                    \
+    mc_app_itp_data *itp_data;                                                         \
+    mc_obtain_app_itp_data(&itp_data);                                                 \
+    int (*itp_function)(void) = tcci_get_symbol(itp_data->interpreter, #itp_function); \
+    if (!itp_function) {                                                               \
+      MCerror(3456, #error_message);                                                   \
+    }                                                                                  \
+    MCcall(itp_function());                                                            \
+  }
+
+int init_source_editor(mc_node *app_root)
 {
-  instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_editor.h", NULL);
-  instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_editor_pool.c", NULL);
-  instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
-  instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/function_editor.c", NULL);
+  MCcall(mcs_interpret_file("src/modules/source_editor/source_editor.h"));
+  MCcall(mcs_interpret_file("src/modules/source_editor/source_line.c"));
+  MCcall(mcs_interpret_file("src/modules/source_editor/function_editor.c"));
+  MCcall(mcs_interpret_file("src/modules/source_editor/source_editor_pool.c"));
 
-  mce_init_source_editor_pool();
+  MCitpCall(mce_init_source_editor_pool, "mce_init_source_editor_pool");
+
+  // MCcall(mce_init_source_editor_pool());
+
+  return 0;
 }

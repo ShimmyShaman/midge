@@ -1,7 +1,19 @@
+/* source_line.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "core/midge_app.h"
+
 #include "env/environment_definitions.h"
 #include "render/render_common.h"
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
+
+#include "modules/source_editor/source_editor.h"
+
+// DEBUG
+#include <unistd.h>
 
 // void _mce_determine_source_line_extents(mc_node *node, layout_extent_restraints restraints)
 // {
@@ -40,7 +52,7 @@
 // }
 // }
 
-void _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
+int _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
 {
   mce_source_line *source_line = (mce_source_line *)node->data;
 
@@ -90,6 +102,13 @@ void _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
 
   // Set rerender anyway because lazy TODO--maybe
   mca_set_node_requires_rerender(node);
+
+  while (!source_line->render_target.image) {
+    // puts("wait");
+    usleep(100);
+  }
+
+  return 0;
 }
 
 void _mce_render_source_line_headless(mc_node *node)
@@ -98,8 +117,9 @@ void _mce_render_source_line_headless(mc_node *node)
   node->layout->__requires_rerender = false;
 
   // Render New Image
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
+
   mce_source_line *source_line = (mce_source_line *)node->data;
 
   image_render_details *rq;
@@ -136,7 +156,7 @@ void _mce_render_source_line_headless(mc_node *node)
       font_color = COLOR_POWDER_BLUE;
       break;
     default:
-      MCerror(9288, "Unsupported mce_source_token_type=%i", token->type);
+      MCVerror(9288, "Unsupported mce_source_token_type=%i", token->type);
     }
 
     // printf("source-line text:(%i)'%s'\n", horizontal_offset, token->str->text);
@@ -182,14 +202,14 @@ void _mce_render_source_line_present(image_render_details *image_render_queue, m
   // // DEBUG - TIME
 }
 
-void mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)
+int mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)
 {
   // Node
-  // mc_node *node;
-  // mca_init_mc_node(parent, NODE_TYPE_MCM_SOURCE_LINE, &node);
+  mc_node *node;
+  mca_init_mc_node(NODE_TYPE_MCM_SOURCE_LINE, "source_line", &node);
 
   // Layout
-  mca_init_node_layout(&node->layout);
+  MCcall(mca_init_node_layout(&node->layout));
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
@@ -215,4 +235,8 @@ void mce_init_source_line(mc_node *parent, mce_source_line **p_source_line)
 
   // Set to out pointer
   *p_source_line = source_line;
+
+  MCcall(mca_attach_node_to_hierarchy(parent, node));
+
+  return 0;
 }

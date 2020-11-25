@@ -26,6 +26,10 @@
   }
 #endif
 
+#define MCVerror(error_code, error_message, ...)                         \
+  printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
+  return;
+
 #define MCerror(error_code, error_message, ...)                          \
   printf("\n\nERR[%i]: " error_message "\n", error_code, ##__VA_ARGS__); \
   return error_code;

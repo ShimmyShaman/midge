@@ -2,6 +2,7 @@
 #define SOURCE_EDITOR_H
 
 #include "core/core_definitions.h"
+#include "mc_str.h"
 #include "render/render_common.h"
 
 typedef enum mce_source_token_type {
@@ -10,18 +11,21 @@ typedef enum mce_source_token_type {
   // MCE_SE_EMPTY_SPACE,
 } mce_source_token_type;
 
+struct mce_source_token;
+struct mce_source_line_token;
+
 typedef struct mce_source_token {
   mce_source_token_type type;
   mc_str *str;
 
-  mce_source_token *next;
+  struct mce_source_token *next;
 } mce_source_token;
 
 typedef struct mce_source_line_token {
   unsigned int len;
 
   mce_source_token *first;
-  mce_source_line_token *prev, *next;
+  struct mce_source_line_token *prev, *next;
 } mce_source_line_token;
 
 typedef struct mce_source_token_list {
@@ -46,7 +50,7 @@ typedef struct mce_source_line {
 struct mce_source_editor_pool;
 typedef struct mce_function_editor {
   mc_node *node;
-  mce_source_editor_pool *source_editor_pool;
+  struct mce_source_editor_pool *source_editor_pool;
 
   function_info *function;
   render_color background_color;
@@ -111,19 +115,19 @@ typedef struct mce_source_editor_pool {
 // extern "C" {
 
 // source_editor/source_editor.c
-void mce_init_source_editor_pool();
-void mce_activate_source_editor_for_definition(source_definition *definition);
+int mce_init_source_editor_pool();
+int mce_activate_source_editor_for_definition(source_definition *definition);
 
 // source_editor/source_line.c
-void mce_init_source_line(mc_node *parent_node, mce_source_line **source_line);
+int mce_init_source_line(mc_node *parent_node, mce_source_line **source_line);
 
 // source_editor/function_editor.c
-void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *source_editor_pool,
+int mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *source_editor_pool,
                               mce_function_editor **p_function_editor);
 
-void mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token **token);
-void mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list);
-void mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
+int mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token **token);
+int mce_obtain_source_token_list_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token_list **list);
+int mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_editor_pool,
                                                   mce_source_token_list **lists, unsigned int count);
 // }
 #endif // SOURCE_EDITOR_H

@@ -55,7 +55,7 @@ int mca_load_modules()
   // // TODO
   const char *module_directories[] = {
       "modus_operandi",
-      // "source_editor",
+      "source_editor",
       // "function_debug",
       "obj_loader",
       NULL,

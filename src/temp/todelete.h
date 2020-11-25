@@ -14,7 +14,7 @@
 #include "env/environment_definitions.h"
 #include "render/render_common.h"
 
-// #include "modules/source_editor/source_editor.h"
+#include "modules/source_editor/source_editor.h"
 #include "modules/obj_loader/wvf_obj_loader.h"
 
 typedef struct mystery_hut {
@@ -287,7 +287,7 @@ int myh_load_resources(mc_node *module_node) {
   mh_data->cube.render_data.input_buffers = (void **)malloc(sizeof(void *) * 2);
 
   // world-view-projection
-  mh_data->rerender_toggle = true;
+  mh_data->rerender_toggle = false;
   mh_data->cube.rotX = mh_data->cube.rotY = mh_data->cube.rotZ = 0;
   create_wvp_matrix(mh_data, (mat4 **)&mh_data->cube.render_data.input_buffers[0]);
 
@@ -375,6 +375,16 @@ int init_mystery_hut(mc_node *app_root) {
 int set_mystery_hut_project_state(mc_node *app_root) {
   int midge_error_stack_index;
   register_midge_stack_function_entry("set_mystery_hut_project_state", __FILE__, __LINE__, &midge_error_stack_index);
+
+  function_info * func_info;
+  // find_function_info("init_mystery_hut", &func_info);
+  // mce_activate_source_editor_for_definition(func_info->source);
+  find_function_info("_myh_handle_input", &func_info);
+  mce_activate_source_editor_for_definition(func_info->source);
+
+  // find_function_info("_myh_handle_input", &func_info);
+  // // find_function_info("mce_delete_selection", &func_info);
+  // mce_activate_function_debugging(func_info);
 
 
   {

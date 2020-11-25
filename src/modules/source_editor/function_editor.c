@@ -1,11 +1,18 @@
-#include "control/mc_controller.h"
+/* function_editor.c */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "core/app_modules.h"
 #include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
+
+#include "control/mc_controller.h"
 #include "env/environment_definitions.h"
-#include "modules/app_modules.h"
-#include "modules/source_editor/source_editor.h"
 #include "render/render_common.h"
+
+#include "modules/source_editor/source_editor.h"
 
 void _mce_update_function_editor_visible_source_lines(mce_function_editor *function_editor)
 {
@@ -57,8 +64,8 @@ int _mce_update_line_positions(mce_function_editor *fedit, mc_rectf *available_a
     }
 
     // Set line layout
-    line->node->layout->padding = {fedit->lines.padding.left,
-                                   fedit->lines.padding.top + fedit->lines.vertical_stride * y_index, 0.f, 0.f};
+    line->node->layout->padding = (mc_paddingf){
+        fedit->lines.padding.left, fedit->lines.padding.top + fedit->lines.vertical_stride * y_index, 0.f, 0.f};
     line->node->layout->preferred_height = fedit->lines.vertical_stride;
 
     // // Attach line source (if it exists)
@@ -159,7 +166,7 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
                (available_area->width - (layout->padding.left + bounds.width + layout->padding.right)) / 2.f;
   } break;
   default:
-    MCerror(7371, "NotSupported:%i", layout->horizontal_alignment);
+    MCVerror(7371, "NotSupported:%i", layout->horizontal_alignment);
   }
 
   // Y
@@ -175,7 +182,7 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
                (available_area->height - (layout->padding.bottom + bounds.height + layout->padding.top)) / 2.f;
   } break;
   default:
-    MCerror(7387, "NotSupported:%i", layout->vertical_alignment);
+    MCVerror(7387, "NotSupported:%i", layout->vertical_alignment);
   }
 
   // Set if different
@@ -749,10 +756,10 @@ void mce_delete_selection(mce_function_editor *fedit)
     for (int a = start_line; a < fedit->code.count; ++a) {
       ttoken = fedit->code.line_tokens[a]->first;
       if (a > 0 && fedit->code.line_tokens[a]->prev != fedit->code.line_tokens[a - 1]) {
-        MCerror(6733, "TODO:%i", a);
+        MCVerror(6733, "TODO:%i", a);
       }
       if (a + 1 < fedit->code.count && fedit->code.line_tokens[a]->next != fedit->code.line_tokens[a + 1]) {
-        MCerror(6746, "TODO:%i", a);
+        MCVerror(6746, "TODO:%i", a);
       }
 
       printf("mdsAFter[%i]:", a);
@@ -767,6 +774,20 @@ void mce_delete_selection(mce_function_editor *fedit)
   // DEBUG
 
   _mce_update_function_editor_visible_source_lines(fedit);
+}
+
+int mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_pool, mce_source_token **token)
+{
+  if (!source_editor_pool->source_tokens.count) {
+    *token = (mce_source_token *)malloc(sizeof(mce_source_token));
+    init_mc_str(&(*token)->str);
+  }
+  else {
+    --source_editor_pool->source_tokens.count;
+    *token = source_editor_pool->source_tokens.items[source_editor_pool->source_tokens.count];
+  }
+
+  return 0;
 }
 
 void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
@@ -795,7 +816,7 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
       accumulate_line_len += token->str->len;
       token = token->next;
       if (!token) {
-        MCerror(9422, "TODO");
+        MCVerror(9422, "TODO");
       }
       continue;
     }
@@ -972,7 +993,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
         mce_read_text_from_function_editor(fedit, &code);
         printf("code:\n%s||\n", code);
 
-        MCerror(5859, "progress");
+        MCVerror(5859, "progress");
       } break;
       default:
         break;
@@ -995,7 +1016,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
       case KEY_CODE_BACKSPACE: {
         // return;
         if (fedit->selection.exists) {
-          MCerror(7651, "TODO");
+          MCVerror(7651, "TODO");
         }
 
         if (fedit->cursor.line == 0 && fedit->cursor.col == 0) {
@@ -1019,7 +1040,7 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
       case KEY_CODE_DELETE: {
         // return;
         if (fedit->selection.exists) {
-          MCerror(7651, "TODO");
+          MCVerror(7651, "TODO");
         }
 
         // TODO -- bounds checking ?? code.count etc
@@ -1060,13 +1081,12 @@ void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_eve
   }
 }
 
-void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *source_editor_pool,
-                              mce_function_editor **p_function_editor)
+int mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *source_editor_pool,
+                             mce_function_editor **p_function_editor)
 {
-  // mce_function_editor *function_editor = (mce_function_editor *)malloc(sizeof(mce_function_editor));
-  // mca_init_mc_node(parent_node, NODE_TYPE_FUNCTION_EDITOR, &function_editor->node);
+  mce_function_editor *function_editor = (mce_function_editor *)malloc(sizeof(mce_function_editor));
+  MCcall(mca_init_mc_node(NODE_TYPE_FUNCTION_EDITOR, "function_editor", &function_editor->node));
   function_editor->node->data = function_editor;
-  function_editor->node->name = "function_editor";
 
   function_editor->source_editor_pool = source_editor_pool;
   function_editor->lines.vertical_stride = 22.f;
@@ -1111,6 +1131,10 @@ void mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *sour
   function_editor->lines.display_index_offset = 0;
 
   *p_function_editor = function_editor;
+
+  MCcall(mca_attach_node_to_hierarchy(parent_node, function_editor->node));
+
+  return 0;
 }
 
 void _mce_set_function_editor_code_with_plain_text(mce_function_editor *fedit, const char *code)
