@@ -1,931 +1,311 @@
 #include "midge_error_handling.h"
 
-/* wvf_obj_loader.c */
+/* init_mystery_hut.c */
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
-#include <ctype.h>
+#include <unistd.h>
 
-#include "midge_error_handling.h"
+#include "cglm/include/cglm/cglm.h"
 
+#include "core/core_definitions.h"
 #include "core/midge_app.h"
-
-#include "modules/obj_loader/wvf_obj_loader.h"
+#include "env/environment_definitions.h"
 #include "render/render_common.h"
 
-// int parseLine(Command *command, const char *p, size_t p_len, int triangulate)
-// {
-//   char linebuf[4096];
-//   const char *token;
-//   MCassert(p_len < 4095, "TODO");
+// #include "modules/source_editor/source_editor.h"
+#include "modules/obj_loader/wvf_obj_loader.h"
 
-//   memcpy(linebuf, p, p_len);
-//   linebuf[p_len] = '\0';
+typedef struct mystery_hut {
+    mc_node *node;
+    struct {
+        unsigned int width,height;
+        mcr_texture_image *image;
+  } render_target;
+    bool rerender_toggle;
+    struct {
+        float rotX,rotY,rotZ;
+        mcr_render_program *render_program;
+        mcr_render_program_data render_data;
+  } cube;
+} mystery_hut;
 
-//   token = linebuf;
 
-//   command->type = COMMAND_EMPTY;
-
-//   /* Skip leading space. */
-//   skip_space(&token);
-
-//   MCassert(token, "TODO");
-//   if (token[0] == '\0') { /* empty line */
-//     return 0;
-//   }
-
-//   if (token[0] == '#') { /* comment line */
-//     return 0;
-//   }
-
-//   /* vertex */
-//   if (token[0] == 'v' && IS_SPACE((token[1]))) {
-//     float x, y, z;
-//     token += 2;
-//     parse_float3(&x, &y, &z, &token);
-//     command->vx = x;
-//     command->vy = y;
-//     command->vz = z;
-//     command->type = COMMAND_V;
-//     return 1;
-//   }
-
-//   /* normal */
-//   if (token[0] == 'v' && token[1] == 'n' && IS_SPACE((token[2]))) {
-//     float x, y, z;
-//     token += 3;
-//     parse_float3(&x, &y, &z, &token);
-//     command->nx = x;
-//     command->ny = y;
-//     command->nz = z;
-//     command->type = COMMAND_VN;
-//     return 1;
-//   }
-
-//   /* texcoord */
-//   if (token[0] == 'v' && token[1] == 't' && IS_SPACE((token[2]))) {
-//     float x, y;
-//     token += 3;
-//     parse_float2(&x, &y, &token);
-//     command->tx = x;
-//     command->ty = y;
-//     command->type = COMMAND_VT;
-//     return 1;
-//   }
-
-//   /* face */
-//   if (token[0] == 'f' && IS_SPACE((token[1]))) {
-//     size_t num_f = 0;
-
-//     _wvf_obj_vertex_index_list f[TINYOBJ_MAX_FACES_PER_F_LINE];
-//     token += 2;
-//     skip_space(&token);
-
-//     while (!IS_NEW_LINE(token[0])) {
-//       _wvf_obj_vertex_index_list vi = wvf_obj_parse_raw_triple(&token);
-//       skip_space_and_cr(&token);
-
-//       f[num_f] = vi;
-//       num_f++;
-//     }
-
-//     command->type = COMMAND_F;
-
-//     if (triangulate) {
-//       size_t k;
-//       size_t n = 0;
-
-//       _wvf_obj_vertex_index_list i0 = f[0];
-//       _wvf_obj_vertex_index_list i1;
-//       _wvf_obj_vertex_index_list i2 = f[1];
-
-//       MCassert(3 * num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
-
-//       for (k = 2; k < num_f; k++) {
-//         i1 = i2;
-//         i2 = f[k];
-//         command->f[3 * n + 0] = i0;
-//         command->f[3 * n + 1] = i1;
-//         command->f[3 * n + 2] = i2;
-
-//         command->f_num_verts[n] = 3;
-//         n++;
-//       }
-//       command->num_f = 3 * n;
-//       command->num_f_num_verts = n;
-//     }
-//     else {
-//       size_t k = 0;
-//       MCassert(num_f < TINYOBJ_MAX_FACES_PER_F_LINE, "TODO");
-//       for (k = 0; k < num_f; k++) {
-//         command->f[k] = f[k];
-//       }
-
-//       command->num_f = num_f;
-//       command->f_num_verts[0] = (int)num_f;
-//       command->num_f_num_verts = 1;
-//     }
-
-//     return 1;
-//   }
-
-//   /* use mtl */
-//   if ((0 == strncmp(token, "usemtl", 6)) && IS_SPACE((token[6]))) {
-//     token += 7;
-
-//     skip_space(&token);
-//     command->material_name = p + (token - linebuf);
-//     size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
-//     command->material_name_len = (unsigned int)lun;
-//     command->type = COMMAND_USEMTL;
-
-//     return 1;
-//   }
-
-//   /* load mtl */
-//   if ((0 == strncmp(token, "mtllib", 6)) && IS_SPACE((token[6]))) {
-//     /* By specification, `mtllib` should be appear only once in .obj */
-//     token += 7;
-
-//     skip_space(&token);
-//     command->mtllib_name = p + (token - linebuf);
-//     size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
-//     command->mtllib_name_len = (unsigned int)lun;
-//     command->type = COMMAND_MTLLIB;
-
-//     return 1;
-//   }
-
-//   /* group name */
-//   if (token[0] == 'g' && IS_SPACE((token[1]))) {
-//     /* @todo { multiple group name. } */
-//     token += 2;
-
-//     command->group_name = p + (token - linebuf);
-//     size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
-//     command->group_name_len = (unsigned int)lun;
-//     command->type = COMMAND_G;
-
-//     return 1;
-//   }
-
-//   return 0;
-// }
-
-int wvf_obj_parse_obj_info(char *code, _wvf_obj_parsed_obj_info *file_index) {
+void create_wvp_matrix(mystery_hut *mh_data, mat4 **out_wvp) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("wvf_obj_parse_obj_info", __FILE__, __LINE__, &midge_error_stack_index);
-
-  const unsigned int  UNASSIGNED = 24892428U;
-
-  file_index->cmd_count = 0;
-  file_index->triangle_count = 0;
-  file_index->f_cmd_begin = UNASSIGNED;
-  file_index->v_cmd_begin = UNASSIGNED;
-  file_index->vt_cmd_begin = UNASSIGNED;
-  file_index->vn_cmd_begin = UNASSIGNED;
-  file_index->num_faces = 0;
-
-  int  i;
-  for (i = 0  ; code[i]!='\0'  ; ++i  ) {
-    if (_WVF_OBJ_IS_NEW_LINE(code[i])) {
-      ++file_index->cmd_count;
-    }
-
-  }
-
-
-  // Init
-  _wvf_obj_cmd * cmds = (_wvf_obj_cmd *)malloc(sizeof(_wvf_obj_cmd) * (file_index->cmd_count + 1));
-  file_index->cmds = cmds;
-
-  int  cmd_index = 0;
-  i = 0;
-  while (code[i]!='\0'  ) {
-    switch (code[i]) {
-      case '#':
-{
-        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
-
-        }
-
-      }
-      break;      case 'm':
-{
-        if ((0==strncmp(code + i, "mtllib", 6))&&_WVF_OBJ_IS_SPACE(code[i + 6])) {
-          i += 7;
-
-          // Comment
-          // Ignore
-          for (          ; !_WVF_OBJ_IS_NEW_LINE(code[i])          ; ++i          ) {
-
-          }
-
-
-          //         // skip_space(&i);
-          //         // command->mtllib_name = p + (token - linebuf);
-          //         // size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
-          //         // command->mtllib_name_len = (unsigned int)lun;
-          //         // command->type = COMMAND_MTLLIB;
-
-          break;
-        }
-
-
-        MCerror(8239, "ObjLoader:NotSupported:'%c'", code[i]);
-      }
-      break;      case 'u':
-{
-        if ((0==strncmp(code + i, "usemtl", 6))&&_WVF_OBJ_IS_SPACE(code[i + 6])) {
-          i += 7;
-
-          // Comment
-          // Ignore
-          for (          ; !_WVF_OBJ_IS_NEW_LINE(code[i])          ; ++i          ) {
-
-          }
-
-
-          //         // skip_space(&i);
-          //         // command->mtllib_name = p + (token - linebuf);
-          //         // size_t lun = length_until_newline(token, (p_len - (size_t)(token - linebuf)) + 1);
-          //         // command->mtllib_name_len = (unsigned int)lun;
-          //         // command->type = COMMAND_MTLLIB;
-
-          break;
-        }
-
-
-        MCerror(8239, "ObjLoader:NotSupported:'%c'", code[i]);
-      }
-      break;      case 'o':
-{
-        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
-
-        }
-
-      }
-      break;      case 'g':
-{
-        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
-
-        }
-
-      }
-      break;      case 'f':
-{
-        if (!_WVF_OBJ_IS_SPACE(code[i + 1])) {
-          MCerror(9286, "Format Error");
-        }
-
-
-        // f
-        cmds[cmd_index].type = _wvf_obj_cmd_F;
-        cmds[cmd_index].begin = i;
-
-        if (file_index->f_cmd_begin==UNASSIGNED) {
-          file_index->f_cmd_begin = cmd_index;
-        }
-
-        ++cmd_index;
-        ++file_index->num_faces;
-        i += 2;
-
-        // Add to triangle count
-        int  num_fv = 0;
-        while (!_WVF_OBJ_IS_NEW_LINE(code[i])        ) {
-          bool  val = false;
-          for (          ; isdigit(code[i])||code[i]=='/'          ; ++i          ) {
-            val = true;
-          }
-
-          if (val) {
-            ++num_fv;
-          }
-
-
-          while (_WVF_OBJ_IS_SPACE(code[i])          ) {
-            ++i;
-          }
-
-        }
-
-
-        file_index->triangle_count += num_fv - 2;
-      }
-      break;      case 's':
-{
-        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
-
-        }
-
-      }
-      break;      case 'v':
-{
-        switch (code[i + 1]) {
-          case ' ':
-          case '\t':
-{
-            cmds[cmd_index].type = _wvf_obj_cmd_V;
-            cmds[cmd_index].begin = i;
-
-            if (file_index->v_cmd_begin==UNASSIGNED) {
-              file_index->v_cmd_begin = cmd_index;
-            }
-
-            ++cmd_index;
-          }
-          break;          case 't':
-{
-            cmds[cmd_index].type = _wvf_obj_cmd_VT;
-            cmds[cmd_index].begin = i;
-
-            if (file_index->vt_cmd_begin==UNASSIGNED) {
-              file_index->vt_cmd_begin = cmd_index;
-            }
-
-            ++cmd_index;
-          }
-          break;          case 'n':
-{
-            cmds[cmd_index].type = _wvf_obj_cmd_VN;
-            cmds[cmd_index].begin = i;
-
-            if (file_index->vn_cmd_begin==UNASSIGNED) {
-              file_index->vn_cmd_begin = cmd_index;
-            }
-
-            ++cmd_index;
-          }
-          break;          default:
-          MCerror(8246, "ObjLoader:NotSupported:v>'%c'", code[i + 1]);        }
-
-
-        for (        ; !_WVF_OBJ_IS_NEW_LINE(code[i])        ; ++i        ) {
-
-        }
-
-      }
-      break;      case ' ':
-      case '\t':
-      case '\r':
-      case '\n':
-{
-        ++i;
-      }
-      break;      default:
-      MCerror(8205, "ObjLoader:NotSupported:'%c'", code[i]);    }
-
-  }
-
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}
-
-
-/*
- * Tries to parse a floating point number located at s.
- *
- * s_end should be a location in the string where reading should absolutely
- * stop. For example at the end of the string, to prevent buffer overflows.
- *
- * Parses the following EBNF grammar:
- *   sign    = "+" | "-" ;
- *   END     = ? anything not in digit ?
- *   digit   = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
- *   integer = [sign] , digit , {digit} ;
- *   decimal = integer , ["." , integer] ;
- *   float   = ( decimal , END ) | ( decimal , ("E" | "e") , integer , END ) ;
- *
- *  Valid strings are for example:
- *   -0  +3.1417e+2  -0.0E-3  1.0324  -1.41   11e2
- *
- * If the parsing is a success, result is set to the parsed value and true
- * is returned.
- *
- * The function is greedy and will parse until any of the following happens:
- *  - a non-conforming character is encountered.
- *  - s_end is reached.
- *
- * The following situations triggers a failure:
- *  - s >= s_end.
- *  - parse failure.
- */
-// TODO -- move this to a util module
-int try_parse_double(const char *s, const char *s_end, double *result) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("try_parse_double", __FILE__, __LINE__, &midge_error_stack_index);
-
-  double  mantissa = 0.0;
-  /* This exponent is base 2 rather than 10.
-   * However the exponent we parse is supposed to be one of ten,
-   * thus we must take care to convert the exponent/and or the
-   * mantissa to a * 2^E, where a is the mantissa and E is the
-   * exponent.
-   * To get the final double we will use ldexp, it requires the
-   * exponent to be in base 2.
-   */
-  int  exponent = 0;
-
-  /* NOTE: THESE MUST BE DECLARED HERE SINCE WE ARE NOT ALLOWED
-   * TO JUMP OVER DEFINITIONS.
-   */
-  char  sign = '+';
-  char  exp_sign = '+';
-  const char * curr = s;
-
-  /* How many characters were read in a loop. */
-  int  read = 0;
-  /* Tells whether a loop terminated due to reaching s_end. */
-  int  end_not_reached = 0;
-
-  /*
-     BEGIN PARSING.
-     */
-
-  if (s>=s_end) {
-
-    {
-      // Return
-      register_midge_stack_return(midge_error_stack_index);
-      return -5465;
-    }
-
-  }
-
-
-  /* Find out what sign we've got. */
-  if (*curr=='+'||*curr=='-') {
-    sign = *curr;
-    curr++;
-  }
-  else   if (isdigit(*curr)) {
-
-  }
-  else {
-    goto fail;
-  }
-
-
-  /* Read the integer part. */
-  end_not_reached = (curr!=s_end);
-  while (end_not_reached&&isdigit(*curr)  ) {
-    mantissa *= 10;
-    mantissa += (int)(*curr - 0x30);
-    curr++;
-    read++;
-    end_not_reached = (curr!=s_end);
-  }
-
-
-  /* We must make sure we actually got something. */
-  if (read==0)   goto fail;
-  /* We allow numbers of form "#", "###" etc. */
-  if (!end_not_reached)   goto assemble;
-
-  /* Read the decimal part. */
-  if (*curr=='.') {
-    curr++;
-    read = 1;
-    end_not_reached = (curr!=s_end);
-    while (end_not_reached&&isdigit(*curr)    ) {
-      double  frac_value = 1.0;
-      int  f;
-      for (f = 0      ; f<read      ; f++      ) {
-        frac_value *= 0.1;
-      }
-
-      mantissa += (int)(*curr - 0x30) * frac_value;
-      read++;
-      curr++;
-      end_not_reached = (curr!=s_end);
-    }
-
-  }
-  else   if (*curr=='e'||*curr=='E') {
-
-  }
-  else {
-    goto assemble;
-  }
-
-
-  if (!end_not_reached)   goto assemble;
-
-  /* Read the exponent part. */
-  if (*curr=='e'||*curr=='E') {
-    curr++;
-    /* Figure out if a sign is present and if it is. */
-    end_not_reached = (curr!=s_end);
-    if (end_not_reached&&(*curr=='+'||*curr=='-')) {
-      exp_sign = *curr;
-      curr++;
-    }
-    else     if (isdigit(*curr)) {
-
-    }
-    else {
-      goto fail;
-    }
-
-
-    read = 0;
-    end_not_reached = (curr!=s_end);
-    while (end_not_reached&&isdigit(*curr)    ) {
-      exponent *= 10;
-      exponent += (int)(*curr - 0x30);
-      curr++;
-      read++;
-      end_not_reached = (curr!=s_end);
-    }
-
-    if (read==0)     goto fail;
-  }
-
-
-  assemble:
-
-{
-    double  a = 1.0;    /* = pow(5.0, exponent); */
-    double  b = 1.0;    /* = 2.0^exponent */
-    int  i;
-    for (i = 0    ; i<exponent    ; i++    ) {
-      a = a * 5.0;
-    }
-
-
-    for (i = 0    ; i<exponent    ; i++    ) {
-      b = b * 2.0;
-    }
-
-
-    if (exp_sign=='-') {
-      a = 1.0 / a;
-      b = 1.0 / b;
-    }
-
-
-    *result = (sign=='+' ? 1 : -1) * (mantissa * a * b);
-  }
-
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-  fail:
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 6579;
-  }
-
-}
-
-
-int until_space(const char *token) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("until_space", __FILE__, __LINE__, &midge_error_stack_index);
-
-  const char * p = token;
-  while (p[0]!='\0'&&p[0]!=' '&&p[0]!='\t'&&p[0]!='\r'  ) {
-    p++;
-  }
-
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return (int)(p - token);
-  }
-
-}
-
-
-// TODO -- move this to a util module
-int parse_float(const char **token, float *result) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("parse_float", __FILE__, __LINE__, &midge_error_stack_index);
-
-  const char * end;
-  double  val = 0.0;
-  int  len_until_space = until_space((*token));
-  end = (*token) + len_until_space;
-  val = 0.0;
-  int  res = try_parse_double((*token), end, &val);
-  if (res) {
-    MCerror(7600, "couldn't parse double");
-  }
-
-
-  *result = (float)(val);
-  (*token) = end;
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}
-
-
-/* http://stackoverflow.com/questions/5710091/how-does-atoi-function-in-c-work
- */
-// TODO -- move this to a util module
-int my_atoi(const char **c) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("my_atoi", __FILE__, __LINE__, &midge_error_stack_index);
-
-  int  value = 0;
-  int  sign = 1;
-  if (**c=='+'||**c=='-') {
-    if (**c=='-')     sign = -1;
-    ++*c;
-  }
-
-  while (((**c)>='0')&&((**c)<='9')  ) {
-    value *= 10;
-    value += (int)(**c - '0');
-    ++*c;
-  }
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return value * sign;
-  }
-
-}
-
-
-/* Parse raw triples: i, i/j/k, i//k, i/j */
-_wvf_obj_vertex_index_list wvf_obj_parse_raw_triple(const char **token) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("wvf_obj_parse_raw_triple", __FILE__, __LINE__, &midge_error_stack_index);
-
-  _wvf_obj_vertex_index_list  vi;
-  /* 0x80000000 = -2147483648 = invalid */
-  vi.v_idx = (int)(0x80000000);
-  vi.vn_idx = (int)(0x80000000);
-  vi.vt_idx = (int)(0x80000000);
-
-  vi.v_idx = my_atoi(token);
-  vi.v_idx -= 1;
-  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
-  if ((*token)[0]!='/') {
-
-    {
-      // Return
-      register_midge_stack_return(midge_error_stack_index);
-      return vi;
-    }
-
-  }
-
-  // printf("tokenb:'%.16s'\n", *token);
-  ++(*token);
-
-  /* i//k */
-  if ((*token)[0]=='/') {
-    ++(*token);
-    vi.vn_idx = my_atoi(token);
-    vi.vn_idx -= 1;
-    _WVF_OBJ_CPTR_SKIP_SPACE(*token);
-
-    {
-      // Return
-      register_midge_stack_return(midge_error_stack_index);
-      return vi;
-    }
-
-  }
-
-
-  /* i/j/k or i/j */
-  vi.vt_idx = my_atoi(token);
-  vi.vt_idx -= 1;
-  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
-  // printf("tokenc:'%.16s'\n", *token);
-  if ((*token)[0]!='/') {
-
-    {
-      // Return
-      register_midge_stack_return(midge_error_stack_index);
-      return vi;
-    }
-
-  }
-
-
-  /* i/j/k */
-  ++(*token);  /* skip '/' */
-  vi.vn_idx = my_atoi(token);
-  vi.vn_idx -= 1;
-  _WVF_OBJ_CPTR_SKIP_SPACE(*token);
-  // printf("tokene:'%.16s'\n", *token);
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return vi;
-  }
-
-}
-
-
-int wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info *fli, _wvf_obj_vertex_index_list *vertex_indices, float *vertex_data, int *vi, unsigned int *index_data, int *ii) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("wvf_obj_parse_vertex_info_to_data", __FILE__, __LINE__, &midge_error_stack_index);
-
-  _wvf_obj_cmd  cmd = fli->cmds[fli->v_cmd_begin + vertex_indices->v_idx];
-  // DEBUG
-  if (cmd.type!=_wvf_obj_cmd_V) {
-    MCerror(9732, "TODO %i", cmd.type);
-  }
-
-  // DEBUG
-
-  char * vc = file_text + cmd.begin + 2;
-  parse_float(&vc, &vertex_data[(*vi)++]);
-  // printf(" %.3f", vertex_data[(*vi) - 1]);
-  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-  parse_float(&vc, &vertex_data[(*vi)++]);
-  // printf(" %.3f", vertex_data[(*vi) - 1]);
-  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-  parse_float(&vc, &vertex_data[(*vi)++]);
-  // printf(" %.3f", vertex_data[(*vi) - 1]);
-  // _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-
-  // Texture
-  cmd = fli->cmds[fli->vt_cmd_begin + vertex_indices->vt_idx];
-  // DEBUG
-  if (cmd.type!=_wvf_obj_cmd_VT) {
-    MCerror(9749, "TODO %i", cmd.type);
-  }
-
-  // DEBUG
-
-  vc = file_text + cmd.begin + 3;
-
-  // "Flip" texture coords to accommodate vulkans right-hand-coordinate usage & objs left-hand-coordinate output
-  float  vt;
-  parse_float(&vc, &vt);
-  vertex_data[(*vi)++] = 1.f - vt;
-  // parse_float(&vc, &vertex_data[(*vi)++]);
-  // printf(" %.3f", vertex_data[(*vi) - 1]);
-  _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-  parse_float(&vc, &vt);
-  vertex_data[(*vi)++] = 1.f - vt;
-  // parse_float(&vc, &vertex_data[(*vi)++]);
-  // printf(" %.3f", vertex_data[(*vi) - 1]);
-  // _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-
-  // printf(" [%i]\n", *vi);
-
-  // printf("index_data[%u] = %u\n", *ii, *ii);
-  index_data[*ii] = *ii;
-  ++*ii;
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}
-
-
-int _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsigned int *vertex_count, unsigned int **indices, unsigned int *index_count) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("_wvf_obj_load_vert_index_data", __FILE__, __LINE__, &midge_error_stack_index);
-
-  char * file_text;
-  read_file_text(obj_path, &file_text);
-
-  _wvf_obj_parsed_obj_info  fli;
-  wvf_obj_parse_obj_info(file_text, &fli);
-
-  // printf("triangle_count:%u %u %u\n", fli.triangle_count, fli.num_faces, fli.f_cmd_begin);
-
-  // TODO -- optimise
-  // 3 vertices for each triangle
-  *vertex_count = fli.triangle_count * 3 * (3 + 2);
-  *vertices = (float *)malloc(sizeof(float) * *vertex_count);  // vert-tex
-  *index_count = fli.triangle_count * 3;
-  *indices = (unsigned int *)malloc(sizeof(unsigned int) * *index_count);
-
-  // printf("allocated v:%i i:%i\n", *vertex_count, *index_count);
-
-  int  vi = 0,  ii = 0;
-  for (int  f = 0  ; f<fli.num_faces  ; ++f  ) {
-    int  cmd_index = fli.f_cmd_begin + f;
-
-    _wvf_obj_cmd  cmd = fli.cmds[cmd_index];
-    // DEBUG
-    if (cmd.type!=_wvf_obj_cmd_F) {
-      MCerror(9416, "TODO %i", cmd.type);
-    }
-
-    // DEBUG
-
-    char * code = file_text + cmd.begin + 2;
-
-    size_t  k;
-    size_t  n = 0;
-
-    _WVF_OBJ_CPTR_SKIP_SPACE(code);
-    _wvf_obj_vertex_index_list  i0 = wvf_obj_parse_raw_triple(&code);
-    _WVF_OBJ_CPTR_SKIP_SPACE(code);
-    _wvf_obj_vertex_index_list  i1;
-    _wvf_obj_vertex_index_list  i2 = wvf_obj_parse_raw_triple(&code);
-
-    while (true    ) {
-      _WVF_OBJ_CPTR_SKIP_SPACE(code);
-      // printf("codea:'%.20s'\n", code);
-      bool  brk = _WVF_OBJ_IS_NEW_LINE(*code);
-      if (brk)       break;
-
-      i1 = i2;
-      i2 = wvf_obj_parse_raw_triple(&code);
-      // printf("codeb:'%.20s'\n", code);
-
-      // printf("%i %i\n", i0.v_idx, i0.vt_idx);
-      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i0, *vertices, &vi, *indices, &ii);
-      // printf("%i %i\n", i1.v_idx, i1.vt_idx);
-      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i1, *vertices, &vi, *indices, &ii);
-      // printf("%i %i\n", i2.v_idx, i2.vt_idx);
-      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i2, *vertices, &vi, *indices, &ii);
-    }
-
-  }
-
-
-  // printf("vi=%i ii=%i\n", vi, ii);
-
-  // float *vertex_data = (float *)malloc(sizeof(float) * (cmds->f_count *));
-  // unsigned int *index_data =
-
-  free(file_text);
-  free(fli.cmds);
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}
-
-
-int mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buffer, mcr_index_buffer **index_buffer) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("mcr_load_wavefront_obj", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("create_wvp_matrix", __FILE__, __LINE__, &midge_error_stack_index);
+
+  mat4 * vpc = (mat4 *)malloc(sizeof(mat4));
+  *out_wvp = vpc;
+
+  // Construct the Vulkan View/Projection/Clip for the render target image
+  mat4  view;
+  mat4  proj;
+  mat4  clip = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f };
 
   midge_app_info * global_data;
   mc_obtain_midge_app_info(&global_data);
 
-  // Load the obj data
-  float * vertices;
-  unsigned int * indices,  vertex_count,  index_count;
-  _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
+  glm_lookat((vec3){ 0, -4, -4 }, (vec3){ 0, 0, 0 }, (vec3){ 0, -1, 0 }, (vec4 *)vpc);
+  float  fovy = 72.f / 180.f * 3.1459f;
+  glm_perspective(fovy, (float)APPLICATION_SET_WIDTH / APPLICATION_SET_HEIGHT, 0.01f, 1000.f, (vec4 *)&proj);
+  // glm_ortho_default((float)image_render->image_width / image_render->image_height, (vec4 *)&proj);
 
-  // Construct the model and load its resources
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+  // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
+  mat4  world;
+  glm_mat4_identity((vec4 *)&world);
+  vec3  axis = { 0.f, 1.f, 0.f };
+  glm_rotate((vec4 *)&world, mh_data->cube.rotY / 180.f * 3.1459f, axis);
+  axis[1] = 0.f;
+  axis[2] = 1.f;
+  glm_rotate((vec4 *)&world, mh_data->cube.rotZ / 180.f * 3.1459f, axis);
+  axis[0] = 1.f;
+  axis[2] = 0.f;
+  glm_rotate((vec4 *)&world, mh_data->cube.rotX / 180.f * 3.1459f, axis);
+  glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
+  // }
+  // else {
+  // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
+  // }
+  // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+  //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
+  // }
+  // else {
+  glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
+  // }
+  // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
+  glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
 
-  resource_command * command;
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
-  command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
-  command->p_resource = (void *)vertex_buffer;
-  command->load_mesh.p_data = vertices;
-  command->load_mesh.data_count = vertex_count;
-  command->load_mesh.release_original_data_on_copy = false;  // TODO -- toggle to true?
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
 
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
-  command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
-  command->p_resource = (void *)index_buffer;
-  command->load_indices.p_data = indices;
-  command->load_indices.data_count = index_count;
-  command->load_indices.release_original_data_on_copy = false;  // TODO -- toggle to true?
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+void _myh_render_mh_data_headless(mc_node *node) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("_myh_render_mh_data_headless", __FILE__, __LINE__, &midge_error_stack_index);
+
+  mystery_hut * mh_data = (mystery_hut *)node->data;
+
+  // Children
+  for (int  a = 0  ; a<node->children->count  ; ++a  ) {
+    mc_node * child = node->children->items[a];
+    if (child->layout&&child->layout->visible&&child->layout->render_headless&&child->layout->__requires_rerender) {
+      void (*render_node_headless)(mc_node *) = (/*!*/void (*)(mc_node *))child->layout->render_headless;
+      render_node_headless(child);
+    }
+
+  }
+
+
+  // Render the render target
+  midge_app_info * global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  image_render_details * irq;
+  mcr_obtain_image_render_request(global_data->render_thread, &irq);
+  irq->render_target = NODE_RENDER_TARGET_IMAGE;
+  irq->clear_color = COLOR_CORNFLOWER_BLUE;
+  // printf("global_data->screen : %u, %u\n", global_data->screen.width,
+  // global_data->screen.height);
+  irq->image_width = mh_data->render_target.width;  // TODO
+  irq->image_height = mh_data->render_target.height;  // TODO
+  irq->data.target_image.image = mh_data->render_target.image;
+  irq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
+  irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
+
+  // Children
+  for (int  a = 0  ; a<node->children->count  ; ++a  ) {
+    mc_node * child = node->children->items[a];
+    if (child->layout&&child->layout->visible&&child->layout->render_present) {
+      void (*render_node_present)(image_render_details *,mc_node *) = (/*!*/void (*)(image_render_details *,mc_node *))child->layout->render_present;
+      render_node_present(irq, child);
+    }
+
+  }
+
+
+  // mcr_render_model(irq, mh_data->cube.model);
+  element_render_command * render_cmd;
+  mcr_obtain_element_render_command(irq, &render_cmd);
+
+  render_cmd->type = RENDER_COMMAND_PROGRAM;
+  render_cmd->render_program.program = mh_data->cube.render_program;
+  render_cmd->render_program.data = &mh_data->cube.render_data;
+
+  // render_cmd->render_program
+  //     .
+
+  // render_cmd->render_program.vertex_buffer = mh_data->cube.model->vertex_buffer;
+  // render_cmd->render_program.index_buffer = mh_data->cube.model->index_buffer;
+  // render_cmd->render_program.texture_uid = mh_data->cube.model->texture;
+
+  // mat4 world;
+  // mat4 view;
+  // mat4 projection;
+  // vertex_buffer (pos/uv/normals*)
+  // index_buffer
+  // texture
+  // mcr_render_with_program(irq, )
+
+  mcr_submit_image_render_request(global_data->render_thread, irq);
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
+
+
+void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_node *node) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("_myh_render_mh_data_present", __FILE__, __LINE__, &midge_error_stack_index);
+
+  mystery_hut * mh_data = (mystery_hut *)node->data;
+
+  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y, mh_data->render_target.width, mh_data->render_target.height, mh_data->render_target.image);
+
+  if (mh_data->rerender_toggle)   mca_set_node_requires_rerender(node);
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
+
+
+void _myh_handle_input(mc_node *node, mci_input_event *input_event) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("_myh_handle_input", __FILE__, __LINE__, &midge_error_stack_index);
+
+  input_event->handled = true;
+  if (input_event->type==INPUT_EVENT_MOUSE_PRESS||input_event->type==INPUT_EVENT_MOUSE_RELEASE) {
+    mca_focus_node(node);
+  }
+
+
+  // TODO -- asdf
+  if (input_event->type==INPUT_EVENT_KEY_PRESS) {
+    mystery_hut * mh_data = (mystery_hut *)node->data;
+    bool  recalc = true;
+    switch (input_event->button_code) {
+      case KEY_CODE_D:
+{
+        mh_data->rerender_toggle = mh_data->rerender_toggle ? false : true;
+        mh_data->cube.rotX += 5.f;
+        if (mh_data->cube.rotX>180.f) {
+          mh_data->cube.rotX -= 360.f;
+        }
+
+        printf("D:%.3f\n", mh_data->cube.rotX);
+      }
+      break;      case KEY_CODE_A:
+{
+        mh_data->cube.rotX -= 5.f;
+        if (mh_data->cube.rotX<-180.f) {
+          mh_data->cube.rotX += 360.f;
+        }
+
+        printf("A:%.3f\n", mh_data->cube.rotX);
+      }
+      break;      case KEY_CODE_W:
+{
+        mh_data->cube.rotY += 5.f;
+        if (mh_data->cube.rotY>180.f)         mh_data->cube.rotY -= 360.f;
+        printf("W:%.3f\n", mh_data->cube.rotY);
+      }
+      break;      case KEY_CODE_S:
+{
+        mh_data->cube.rotY -= 5.f;
+        if (mh_data->cube.rotY<-180.f)         mh_data->cube.rotY += 360.f;
+        printf("S:%.3f\n", mh_data->cube.rotY);
+      }
+      break;      case KEY_CODE_E:
+{
+        mh_data->cube.rotZ += 5.f;
+        if (mh_data->cube.rotZ>180.f)         mh_data->cube.rotZ -= 360.f;
+        printf("E:%.3f\n", mh_data->cube.rotZ);
+      }
+      break;      case KEY_CODE_Q:
+{
+        mh_data->cube.rotZ -= 5.f;
+        if (mh_data->cube.rotZ<-180.f)         mh_data->cube.rotZ += 360.f;
+        printf("Q:%.3f\n", mh_data->cube.rotZ);
+      }
+      break;      default:
+      recalc = false;
+      break;    }
+
+
+    if (recalc) {
+      create_wvp_matrix(mh_data, (mat4 **)&mh_data->cube.render_data.input_buffers[0]);
+      mca_set_node_requires_rerender(node);
+    }
+
+  }
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
+
+
+int myh_load_resources(mc_node *module_node) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("myh_load_resources", __FILE__, __LINE__, &midge_error_stack_index);
+
+  mystery_hut * mh_data = (mystery_hut *)malloc(sizeof(mystery_hut));
+  module_node->data = mh_data;
+  mh_data->node = module_node;
+
+  mh_data->render_target.width = module_node->layout->preferred_width;
+  mh_data->render_target.height = module_node->layout->preferred_height;
+  mcr_create_texture_resource(mh_data->render_target.width, mh_data->render_target.height, MVK_IMAGE_USAGE_RENDER_TARGET_3D, &mh_data->render_target.image);
+
+  // Render Program
+  mcr_render_program_create_info  create_info = {};
+  create_info.vertex_shader_filepath = (char *)"projects/mystery_hut/model.vert";
+  create_info.fragment_shader_filepath = (char *)"projects/mystery_hut/model.frag";
+  create_info.buffer_binding_count = 2;
+  create_info.buffer_bindings[0] = (mcr_layout_binding){ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(mat4) };
+  create_info.buffer_bindings[1] = (mcr_layout_binding){ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0U };
+  create_info.input_binding_count = 2;
+  create_info.input_bindings[0] = (mcr_input_binding){ VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3 };
+  create_info.input_bindings[1] = (mcr_input_binding){ VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2 };
+  mcr_create_render_program(&create_info, &mh_data->cube.render_program);
+
+  // Render Data
+  mh_data->cube.render_data.input_buffers = (void **)malloc(sizeof(void *) * 2);
+
+  // world-view-projection
+  mh_data->rerender_toggle = true;
+  mh_data->cube.rotX = mh_data->cube.rotY = mh_data->cube.rotZ = 0;
+  create_wvp_matrix(mh_data, (mat4 **)&mh_data->cube.render_data.input_buffers[0]);
+
+  // Cube Model
+  // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &mh_data->cube.model);
+  // mcr_load_wavefront_obj("res/models/viking_room.obj", );
+
+  // mcr_load_wavefront_obj("res/cube/cube.obj", &mh_data->cube.render_data.vertices,
+  // &mh_data->cube.render_data.indices);
+  MCcall(mcr_load_wavefront_obj("res/models/viking_room.obj", &mh_data->cube.render_data.vertices, &mh_data->cube.render_data.indices));
+
+  mh_data->cube.render_data.input_buffers[1] = NULL;
+  mcr_load_texture_resource("res/models/viking_room.png", (mcr_texture_image **)&mh_data->cube.render_data.input_buffers[1]);
+
+  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
+  while (!mh_data->cube.render_data.input_buffers[1]  ) {
+    usleep(100);
+  }
 
 
   {
@@ -937,49 +317,70 @@ int mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buff
 }
 
 
-// void mcr_load_wavefront_obj_model(const char *obj_path, const char *diffuse_path, mcr_model **loaded_model)
-// {
-//   mc_global_data *global_data;
-//   obtain_midge_global_root(&global_data);
+void _myh_update(frame_time *elapsed, mci_input_state *input_state, void *state) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("_myh_update", __FILE__, __LINE__, &midge_error_stack_index);
 
-//   // Load the obj data
-//   float *vertices;
-//   unsigned int *indices, vertex_count, index_count;
-//   _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
 
-//   // Construct the model and load its resources
-//   *loaded_model = (mcr_model *)malloc(sizeof(mcr_model));
-//   (*loaded_model)->texture = 0;
 
-//   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
 
-//   resource_command *command;
-//   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
-//   command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
-//   command->p_resource = &(*loaded_model)->vertex_buffer;
-//   command->load_mesh.p_data = vertices;
-//   command->load_mesh.data_count = vertex_count;
-//   command->load_mesh.release_original_data_on_copy = false;
 
-//   mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
-//   command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
-//   command->p_resource = &(*loaded_model)->index_buffer;
-//   command->load_indices.p_data = indices;
-//   command->load_indices.data_count = index_count;
-//   command->load_indices.release_original_data_on_copy = false;
+int init_mystery_hut(mc_node *app_root) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("init_mystery_hut", __FILE__, __LINE__, &midge_error_stack_index);
 
-//   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+  mc_node * node;
+  mca_init_mc_node(NODE_TYPE_ABSTRACT, "mystery_hut", &node);
 
-//   mcr_load_texture_resource(diffuse_path, &(*loaded_model)->texture);
-// }
+  mca_init_node_layout(&node->layout);
+  node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
+  node->children->count = 0;
+  node->children->alloc = 0;
+  node->layout->preferred_width = 900;
+  node->layout->preferred_height = 600;
 
-// void mcr_render_model(image_render_details *image_render_queue, mcr_model *model)
-// {
-//   element_render_command *render_cmd;
-//   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
+  node->layout->padding.left = 400;
+  node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+  node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
 
-//   render_cmd->type = RENDER_COMMAND_INDEXED_MESH;
-//   render_cmd->indexed_mesh.vertex_buffer = model->vertex_buffer;
-//   render_cmd->indexed_mesh.index_buffer = model->index_buffer;
-//   render_cmd->indexed_mesh.texture_uid = model->texture;
-// }
+  node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
+  node->layout->update_layout = (void *)&mca_update_typical_node_layout;
+  node->layout->render_headless = (void *)&_myh_render_mh_data_headless;
+  node->layout->render_present = (void *)&_myh_render_mh_data_present;
+  node->layout->handle_input_event = (void *)&_myh_handle_input;
+
+  myh_load_resources(node);
+
+  void * update_delegate = (void *)&_myh_update;
+  // mca_register_loop_update(app_root, update_delegate, node->data);
+
+  MCcall(mca_attach_node_to_hierarchy(app_root, node));
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int set_mystery_hut_project_state(mc_node *app_root) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("set_mystery_hut_project_state", __FILE__, __LINE__, &midge_error_stack_index);
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}

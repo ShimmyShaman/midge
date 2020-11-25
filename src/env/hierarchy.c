@@ -634,13 +634,11 @@ int mca_set_all_nodes_require_layout_update()
 
 int mca_set_node_requires_layout_update(mc_node *node)
 {
-  puts("a");
   // DEBUG?
   if (!node->layout) {
     MCerror(8416, "Can't set an update for a node with no layout");
   }
 
-  puts("b");
   // Set update required on all ancestors of the node
   while (node) {
     // DEBUG?
@@ -653,9 +651,7 @@ int mca_set_node_requires_layout_update(mc_node *node)
 
     // Move upwards through the ancestry
     node = node->parent;
-    printf("node('%s')=%p\n", node);
   }
-  puts("c");
 
   return 0;
 }

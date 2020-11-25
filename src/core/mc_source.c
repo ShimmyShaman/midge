@@ -654,12 +654,12 @@ int mcs_interpret_file(const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  // if (!strcmp("src/core/app_modules.c", filepath)) {
-  //   // usleep(10000);
-  //   // printf("\ngen-code:\n%s||\n", code);
-  //   mcs_save_text_to_file("src/temp/todelete.h", code);
-  //   // MCerror(7704, "TODO");
-  // }
+  if (!strcmp("projects/mystery_hut/init_mystery_hut.c", filepath)) {
+    // usleep(10000);
+    // printf("\ngen-code:\n%s||\n", code);
+    mcs_save_text_to_file("src/temp/todelete.h", code);
+    // MCerror(7704, "TODO");
+  }
 
   // Send the code to the interpreter
   {

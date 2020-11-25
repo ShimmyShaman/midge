@@ -68,8 +68,23 @@ int mca_load_modules()
   return 0;
 }
 
-void _mca_set_project_state(char *base_path, char *module_name)
+int _mca_set_project_state(char *base_path, char *module_name)
 {
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  char buf[512];
+  sprintf(buf, "set_%s_project_state", module_name);
+  int (*set_project_state)(mc_node *) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
+  if (!set_project_state) {
+    MCerror(2000,
+            "within each '{%%project_name%%}' project there must be a method with signature 'int "
+            "set_{%%project_name%%}(mc_node *)' : This was not found for project_name='%s'",
+            module_name);
+  }
+
+  MCcall(set_project_state(app_info->global_node));
+
   // mc_global_data *global_data;
   // obtain_midge_global_root(&global_data);
 
@@ -87,6 +102,8 @@ void _mca_set_project_state(char *base_path, char *module_name)
   // if (mc_res) {
   //   MCerror(8974, "--init_%s() |line~ :??? ERR:%i\n", module_name, mc_res);
   // }
+
+  return 0;
 }
 
 int mca_load_open_projects()

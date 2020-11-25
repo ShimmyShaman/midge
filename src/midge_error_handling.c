@@ -29,6 +29,7 @@ struct __mce_thread_entry_stack {
   int stack_activity_line;
 };
 
+pthread_mutex_t MIDGE_ERROR_THREAD_MUTEX;
 struct __mce_thread_entry_stack *MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_MAX_THREAD_COUNT];
 unsigned int MIDGE_ERROR_THREAD_INDEX;
 unsigned int MIDGE_ERROR_THREAD_HISTORICAL_COUNT;
@@ -282,6 +283,8 @@ void register_midge_stack_return(int midge_error_stack_index)
 void register_midge_thread_creation(unsigned int *midge_error_thread_index, const char *base_function_name,
                                     const char *file_name, int line, int *midge_error_stack_index)
 {
+  pthread_mutex_lock(&MIDGE_ERROR_THREAD_MUTEX);
+
   if (MIDGE_ERROR_THREAD_INDEX >= MIDGE_ERROR_MAX_THREAD_COUNT) {
     printf("ERROR MIDGETHREAD 206\n");
     return;
@@ -292,15 +295,17 @@ void register_midge_thread_creation(unsigned int *midge_error_thread_index, cons
   }
 
   struct __mce_thread_entry_stack *threades = MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX];
+  ++MIDGE_ERROR_THREAD_INDEX;
 
   threades->thread_id = pthread_self();
   threades->historical_index = MIDGE_ERROR_THREAD_HISTORICAL_COUNT++;
+
+  pthread_mutex_unlock(&MIDGE_ERROR_THREAD_MUTEX);
 
   printf("thread %u begun [%lu]\n", threades->historical_index, threades->thread_id);
 
   // TODO -- int / unsigned long ugliness
   *midge_error_thread_index = (unsigned int)threades->thread_id;
-  ++MIDGE_ERROR_THREAD_INDEX;
 
   threades->stack_index = -1;
   register_midge_stack_invocation(base_function_name, file_name, line, midge_error_stack_index);
@@ -308,13 +313,14 @@ void register_midge_thread_creation(unsigned int *midge_error_thread_index, cons
 
 void register_midge_thread_conclusion(unsigned int midge_error_thread_index)
 {
-  // TODO -- all this ain't thread-safe!
+  pthread_mutex_lock(&MIDGE_ERROR_THREAD_MUTEX);
 
   if (MIDGE_ERROR_THREAD_INDEX < 1) {
     printf("ERROR MIDGETHREAD 219\n");
-    return;
+    exit(219);
   }
 
+  int thread_removed = 0;
   for (int i = 0; i < MIDGE_ERROR_THREAD_INDEX; ++i) {
     if ((unsigned int)MIDGE_ERROR_THREAD_STACKS[i]->thread_id == midge_error_thread_index) {
       // Move the thread at this index to a higher index
@@ -325,11 +331,16 @@ void register_midge_thread_conclusion(unsigned int midge_error_thread_index)
       MIDGE_ERROR_THREAD_STACKS[i] = MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX - 1];
       MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX - 1] = t;
       --MIDGE_ERROR_THREAD_INDEX;
-      return;
+      thread_removed = 1;
+      break;
     }
   }
 
-  printf("ERROR MIDGETHREAD 313\n");
+  if (!thread_removed) {
+    printf("ERROR MIDGETHREAD 313\n");
+  }
+
+  pthread_mutex_unlock(&MIDGE_ERROR_THREAD_MUTEX);
 }
 
 void midge_error_print_thread_stack_trace()
@@ -433,6 +444,9 @@ static void handler(int sig)
 void initialize_midge_error_handling()
 {
   signal(SIGSEGV, handler); // register our handler
+
+  pthread_mutex_init(&MIDGE_ERROR_THREAD_MUTEX, NULL);
+
   MIDGE_ERROR_TAG_INDEX = 0;
   for (int i = 0; i < MIDGE_ERROR_TAG_MAX_SIZE; ++i) {
     MIDGE_ERROR_TAG_STR_LEN[i] = 512U;

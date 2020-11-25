@@ -167,8 +167,8 @@ void *mca_load_modules_then_project_async(void *state)
     return NULL;
   }
 
-  // // Projects
-  // mca_load_open_projects();
+  // Projects
+  mca_load_open_projects();
 
   puts("modules & open-projects loading complete");
 
@@ -442,9 +442,7 @@ int midge_run_app()
       // mca_update_node_list_logic(global_data->global_node->children);
       if (global_root_node->layout->__requires_layout_update) {
         clock_gettime(CLOCK_REALTIME, &debug_start_time);
-puts("before-hierarchy-mutex-lock");
         pthread_mutex_lock(&global_data->hierarchy_mutex);
-puts("after-hierarchy-mutex-lock");
         global_root_node->layout->__requires_layout_update = false;
 
         for (int a = 0; a < global_data->global_node->children->count; ++a) {

@@ -1,7 +1,19 @@
+/* init_mystery_hut.c */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <unistd.h>
+
+#include "cglm/include/cglm/cglm.h"
+
 #include "core/core_definitions.h"
+#include "core/midge_app.h"
 #include "env/environment_definitions.h"
-#include "modules/source_editor/source_editor.h"
 #include "render/render_common.h"
+
+// #include "modules/source_editor/source_editor.h"
+#include "modules/obj_loader/wvf_obj_loader.h"
 
 typedef struct mystery_hut {
   mc_node *node;
@@ -30,8 +42,8 @@ void create_wvp_matrix(mystery_hut *mh_data, mat4 **out_wvp)
   mat4 proj;
   mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
 
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   glm_lookat((vec3){0, -4, -4}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)vpc);
   float fovy = 72.f / 180.f * 3.1459f;
@@ -90,8 +102,8 @@ void _myh_render_mh_data_headless(mc_node *node)
   }
 
   // Render the render target
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   image_render_details *irq;
   mcr_obtain_image_render_request(global_data->render_thread, &irq);
@@ -219,7 +231,7 @@ void _myh_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-void myh_load_resources(mc_node *module_node)
+int myh_load_resources(mc_node *module_node)
 {
   // cube_template
   mystery_hut *mh_data = (mystery_hut *)malloc(sizeof(mystery_hut));
@@ -236,18 +248,20 @@ void myh_load_resources(mc_node *module_node)
   create_info.vertex_shader_filepath = (char *)"projects/mystery_hut/model.vert";
   create_info.fragment_shader_filepath = (char *)"projects/mystery_hut/model.frag";
   create_info.buffer_binding_count = 2;
-  create_info.buffer_bindings[0] = {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(mat4)};
-  create_info.buffer_bindings[1] = {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0U};
+  create_info.buffer_bindings[0] =
+      (mcr_layout_binding){VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(mat4)};
+  create_info.buffer_bindings[1] =
+      (mcr_layout_binding){VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0U};
   create_info.input_binding_count = 2;
-  create_info.input_bindings[0] = {VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3};
-  create_info.input_bindings[1] = {VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2};
+  create_info.input_bindings[0] = (mcr_input_binding){VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3};
+  create_info.input_bindings[1] = (mcr_input_binding){VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2};
   mcr_create_render_program(&create_info, &mh_data->cube.render_program);
 
   // Render Data
   mh_data->cube.render_data.input_buffers = (void **)malloc(sizeof(void *) * 2);
 
   // world-view-projection
-  mh_data->rerender_toggle = false;
+  mh_data->rerender_toggle = true;
   mh_data->cube.rotX = mh_data->cube.rotY = mh_data->cube.rotZ = 0;
   create_wvp_matrix(mh_data, (mat4 **)&mh_data->cube.render_data.input_buffers[0]);
 
@@ -258,22 +272,30 @@ void myh_load_resources(mc_node *module_node)
   // mcr_load_wavefront_obj("res/cube/cube.obj", &mh_data->cube.render_data.vertices,
   // &mh_data->cube.render_data.indices);
   MCcall(mcr_load_wavefront_obj("res/models/viking_room.obj", &mh_data->cube.render_data.vertices,
-                         &mh_data->cube.render_data.indices));
+                                &mh_data->cube.render_data.indices));
+
+  mh_data->cube.render_data.input_buffers[1] = NULL;
   mcr_load_texture_resource("res/models/viking_room.png",
-                            (mcr_texture_image *)&mh_data->cube.render_data.input_buffers[1]);
+                            (mcr_texture_image **)&mh_data->cube.render_data.input_buffers[1]);
+
+  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
+  while (!mh_data->cube.render_data.input_buffers[1]) {
+    // puts("wait");
+    usleep(100);
+  }
+  return 0;
 }
 
 void _myh_update(frame_time *elapsed, mci_input_state *input_state, void *state) {}
 
-void init_mystery_hut(mc_node *app_root)
+int init_mystery_hut(mc_node *app_root)
 {
   //   printf("instantiate file:'%s'\n", str->text);
   //   instantiate_all_definitions_from_file(global_data->global_node, str->text, NULL);
 
   //   module_node->
   mc_node *node;
-  mca_init_mc_node(app_root, NODE_TYPE_ABSTRACT, &node);
-  node->name = "mystery_hut";
+  mca_init_mc_node(NODE_TYPE_ABSTRACT, "mystery_hut", &node);
 
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
@@ -297,18 +319,22 @@ void init_mystery_hut(mc_node *app_root)
   void *update_delegate = (void *)&_myh_update;
   // mca_register_loop_update(app_root, update_delegate, node->data);
 
-  mca_set_node_requires_layout_update(node);
+  MCcall(mca_attach_node_to_hierarchy(app_root, node));
+
+  return 0;
 }
 
-void set_mystery_hut_project_state(mc_node *app_root)
+int set_mystery_hut_project_state(mc_node *app_root)
 {
-  function_info *func_info;
-  // find_function_info("init_mystery_hut", &func_info);
+  // function_info *func_info;
+  // // find_function_info("init_mystery_hut", &func_info);
+  // // mce_activate_source_editor_for_definition(func_info->source);
+  // find_function_info("_myh_handle_input", &func_info);
   // mce_activate_source_editor_for_definition(func_info->source);
-  find_function_info("_myh_handle_input", &func_info);
-  mce_activate_source_editor_for_definition(func_info->source);
 
-  find_function_info("_myh_handle_input", &func_info);
-  // find_function_info("mce_delete_selection", &func_info);
-  mce_activate_function_debugging(func_info);
+  // find_function_info("_myh_handle_input", &func_info);
+  // // find_function_info("mce_delete_selection", &func_info);
+  // mce_activate_function_debugging(func_info);
+
+  return 0;
 }
