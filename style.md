@@ -15,3 +15,7 @@ where:
 
 Git structure based on:
 https://nvie.com/posts/a-successful-git-branching-model/
+
+dev (default-branch) : The latest merged pull requests. (Not an immaculate priority to ensure it is fully functional)
+[Release Branches]
+  {0.1}  : Major versions will be released as their own branch with fixes/patches merged to them
