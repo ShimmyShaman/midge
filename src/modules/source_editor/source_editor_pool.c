@@ -99,7 +99,6 @@ int mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_
 
 int mce_activate_source_editor_for_definition(source_definition *definition)
 {
-printf("definition:%p\n", definition);
   midge_app_info *global_data;
   mc_obtain_midge_app_info(&global_data);
 
@@ -118,7 +117,7 @@ printf("definition:%p\n", definition);
     }
 
     if (!function_editor) {
-      _mce_obtain_function_editor_instance(source_editor_pool, &function_editor);
+      MCcall(_mce_obtain_function_editor_instance(source_editor_pool, &function_editor));
 
       _mce_set_definition_to_function_editor(function_editor, definition->data.func_info);
     }

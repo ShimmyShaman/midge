@@ -320,7 +320,8 @@ int mcs_construct_dependency(function_info *dependent_function, const char *iden
 
 int mcs_determine_code_dependencies(function_info *dependent_function, mc_syntax_node *code_block) { return 0; }
 
-int mcs_register_function_declaration(mc_syntax_node *function_ast, function_info **p_func_info)
+int mcs_register_function_declaration(mc_source_file_info *source_file, mc_syntax_node *function_ast,
+                                      function_info **p_func_info)
 {
   int p;
 
@@ -388,9 +389,14 @@ int mcs_register_function_declaration(mc_syntax_node *function_ast, function_inf
     }
 
     fi->source = (source_definition *)malloc(sizeof(source_definition));
+    fi->source->type = SOURCE_DEFINITION_FUNCTION;
     fi->source->source_file = source_file;
+    fi->source->data.func_info = fi;
     fi->source->code;
-    mcs_copy_syntax_node_to_text(function_ast, &fi->source->code);
+    MCcall(mcs_copy_syntax_node_to_text(function_ast, &fi->source->code));
+
+    MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
+                                &source_file->definitions.count, fi->source));
   }
 
   return 0;
@@ -475,7 +481,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
     case MC_SYNTAX_FUNCTION: {
       function_info *info;
       // Function Declaration only
-      MCcall(mcs_register_function_declaration(child, &info));
+      MCcall(mcs_register_function_declaration(source_file, child, &info));
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
       char buf[1024];

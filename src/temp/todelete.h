@@ -1,311 +1,864 @@
 #include "midge_error_handling.h"
 
-/* init_mystery_hut.c */
+/* hierarchy.c */
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <unistd.h>
-
-#include "cglm/include/cglm/cglm.h"
+#include <string.h>
 
 #include "core/core_definitions.h"
-#include "core/midge_app.h"
 #include "env/environment_definitions.h"
 #include "render/render_common.h"
+#include "ui/ui_definitions.h"
 
-#include "modules/source_editor/source_editor.h"
-#include "modules/obj_loader/wvf_obj_loader.h"
+#include "core/midge_app.h"
 
-typedef struct mystery_hut {
-    mc_node *node;
-    struct {
-        unsigned int width,height;
-        mcr_texture_image *image;
-  } render_target;
-    bool rerender_toggle;
-    struct {
-        float rotX,rotY,rotZ;
-        mcr_render_program *render_program;
-        mcr_render_program_data render_data;
-  } cube;
-} mystery_hut;
-
-
-void create_wvp_matrix(mystery_hut *mh_data, mat4 **out_wvp) {
+void exit_app(mc_node *node_scope, int result) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("create_wvp_matrix", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("exit_app", __FILE__, __LINE__, &midge_error_stack_index);
 
-  mat4 * vpc = (mat4 *)malloc(sizeof(mat4));
-  *out_wvp = vpc;
+  switch (node_scope->type) {
+    default:
+    printf("ERR[140]:exit_app>Unsupported node type:%i", node_scope->type);
+    exit(-1);  }
 
-  // Construct the Vulkan View/Projection/Clip for the render target image
-  mat4  view;
-  mat4  proj;
-  mat4  clip = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f };
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return;
+  }
+}
+
+
+// void mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list)
+// {
+//   switch (hierarchy_node->type) {
+//   case NODE_TYPE_GLOBAL_ROOT: {
+//     mc_global_data *global_data = (mc_global_data *)hierarchy_node->data;
+//     *sub_node_list = global_data->children;
+//   } break;
+//   case NODE_TYPE_UI: {
+//     mcu_get_hierarchical_children_node_list(hierarchy_node, sub_node_list);
+//   } break;
+//   case NODE_TYPE_VISUAL_PROJECT: {
+//     visual_project_data *project = (visual_project_data *)hierarchy_node->data;
+//     *sub_node_list = project->children;
+//   } break;
+//   default:
+//     MCerror(3565, "mca_get_sub_hierarchy_node_list>Unsupported node type:%i", hierarchy_node->type);
+//   }
+// }
+
+// void __mca_insert_node_into_node_list(mc_node_list *parent_node_list, mc_node *node_to_insert,
+//                                       unsigned int z_layer_index)
+// {
+//   // Resize node list if need be
+//   {
+//     if (parent_node_list->count + 1 > parent_node_list->alloc) {
+//       unsigned int realloc_amount = parent_node_list->alloc + 8 + parent_node_list->alloc / 3;
+//       // printf("reallocate collection size %i->%i\n", parent_node_list->alloc, realloc_amount);
+//       mc_node **new_items = (mc_node **)malloc(sizeof(mc_node *) * realloc_amount);
+//       unsigned int *new_z_layer_indices = (unsigned int *)malloc(sizeof(unsigned int) * realloc_amount);
+//       if (!new_items || !new_z_layer_indices) {
+//         MCerror(32, "append_to_collection malloc error");
+//       }
+
+//       if (parent_node_list->alloc) {
+//         memcpy(new_items, parent_node_list->items, parent_node_list->count * sizeof(mc_node *));
+//         free(parent_node_list->items);
+//         memcpy(new_z_layer_indices, parent_node_list->items, parent_node_list->count * sizeof(unsigned int));
+//         free(parent_node_list->z_layer_indices);
+//       }
+
+//       parent_node_list->items = new_items;
+//       parent_node_list->z_layer_indices = new_z_layer_indices;
+//       parent_node_list->alloc = realloc_amount;
+//     }
+//   }
+
+//   // Fit the item in where z-appropriate
+//   {
+//     // Insert
+//     int insertion_index = -1;
+//     for (int n = parent_node_list->count - 1; n >= 0; --n) {
+//       if (z_layer_index >= parent_node_list->z_layer_indices[n]) {
+//         insertion_index = n + 1;
+//         break;
+//       }
+//     }
+
+//     if (insertion_index < 0)
+//       insertion_index = 0;
+
+//     for (int i = parent_node_list->count; i > insertion_index; --i) {
+//       parent_node_list->items[i] = parent_node_list->items[i - 1];
+//     }
+//     parent_node_list->items[insertion_index] = node_to_insert;
+//     parent_node_list->z_layer_indices[insertion_index] = z_layer_index;
+//   }
+
+//   // Increment list count
+//   ++parent_node_list->count;
+// }
+
+int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_attach_node_to_hierarchy", __FILE__, __LINE__, &midge_error_stack_index);
+
+  midge_app_info * app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  if (!hierarchy_node->children) {
+    MCerror(9108, "Attempt to attach node (%i) to parent (%i) who has no children", node_to_attach->type, hierarchy_node->type);
+  }
+
+
+  // Lock thread-safety mutex
+  printf("hierarchy-locking... %p\n", &global_data->hierarchy_mutex);
+  pthread_mutex_lock(&app_info->hierarchy_mutex);
+  puts("hierarchy-locked");
+
+  MCcall(append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc, &hierarchy_node->children->count, node_to_attach));
+  node_to_attach->parent = hierarchy_node;
+
+  if (node_to_attach->layout) {
+    mca_set_node_requires_layout_update(node_to_attach);
+  }
+
+  mca_set_node_requires_rerender(node_to_attach);
+
+  pthread_mutex_unlock(&app_info->hierarchy_mutex);
+  puts("hierarchy-unlock");
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int mca_init_node_layout(mca_node_layout **layout) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_init_node_layout", __FILE__, __LINE__, &midge_error_stack_index);
+
+  (*layout) = (mca_node_layout *)malloc(sizeof(mca_node_layout));
+  MCassert(*layout, "Failure to allocate memory");
+
+  (*layout)->visible = true;
+  (*layout)->focused_child = NULL;
+
+  (*layout)->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+  (*layout)->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+  (*layout)->preferred_width = 0;
+  (*layout)->preferred_height = 0;
+  (*layout)->min_width = 0;
+  (*layout)->min_height = 0;
+  (*layout)->max_width = 0;
+  (*layout)->max_height = 0;
+  (*layout)->padding = (mc_paddingf){ 0, 0, 0, 0 };
+
+  (*layout)->z_layer_index = 5U;
+
+  (*layout)->handle_input_event = NULL;
+
+  (*layout)->determine_layout_extents = NULL;
+  (*layout)->update_layout = NULL;
+  (*layout)->render_headless = NULL;
+  (*layout)->render_present = NULL;
+
+  (*layout)->__requires_layout_update = true;
+  (*layout)->__requires_rerender = false;
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int mca_init_mc_node(node_type type, const char *name, mc_node **node) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_init_mc_node", __FILE__, __LINE__, &midge_error_stack_index);
+
+  (*node) = (mc_node *)malloc(sizeof(mc_node));  // TODO malloc checks everywhere?
+
+  (*node)->type = type;
+  (*node)->name = strdup(name);
+
+  (*node)->layout = NULL;
+  (*node)->children = NULL;
+
+  (*node)->data = NULL;
+  (*node)->parent = NULL;
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+// void mca_logic_update_node_list(mc_node_list *node_list)
+// {
+//   for (int nl_index = 0; nl_index < node_list->count; ++nl_index) {
+//     mc_node *node = node_list->items[nl_index];
+//     switch (node->type) {
+//     case NODE_TYPE_VISUAL_PROJECT: {
+//       // Update despite requirements
+//       mca_update_visual_project(node);
+//     } break;
+//     case NODE_TYPE_UI: {
+//       mcu_ui_element *element = (mcu_ui_element *)node->data;
+//       // Nothing for the moment -- TODO?
+//     } break;
+//     default:
+//       MCerror(9617, "mca_update_node_list::Unsupported node type:%i", node->type);
+//     }
+//   }
+// }
+// void mca_update_node_layout_location(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints) {}
+
+// void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints)
+// {
+//   switch (node->type) {
+//   case NODE_TYPE_UI: {
+//     mcu_ui_element *element = (mcu_ui_element *)node->data;
+//     switch (element->type) {
+//     case UI_ELEMENT_TEXT_BLOCK: {
+//       mca_node_layout *layout = element->layout;
+
+//       // Preferred value > padding (within min/max if set)
+
+//       mc_rectf bounds;
+
+//       // Width
+//       if (layout->preferred_width) {
+//         // Set to preferred width
+//         bounds.width = layout->preferred_width;
+//       }
+//       else {
+//         if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
+//           if (layout->min_width)
+//             bounds.width += layout->min_width;
+//           else {
+//             layout->__bounds.width = 0;
+//             break;
+//           }
+//         }
+//         else {
+//           // padding adjusted from available
+//           bounds.width = available_area->width - layout->padding.right - layout->padding.left;
+
+//           // Specified bounds
+//           if (layout->min_width && bounds.width < layout->min_width) {
+//             bounds.width = layout->min_width;
+//           }
+//           if (layout->max_width && bounds.width > layout->max_width) {
+//             bounds.width = layout->max_width;
+//           }
+
+//           if (bounds.width < 0) {
+//             bounds.width = 0;
+//           }
+//         }
+//       }
+
+//       // Height
+//       if (layout->preferred_height) {
+//         // Set to preferred height
+//         bounds.height = layout->preferred_height;
+//       }
+//       else {
+//         if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
+//           if (layout->min_height)
+//             bounds.height += layout->min_height;
+//           else {
+//             layout->__bounds.height = 0;
+//             break;
+//           }
+//         }
+//         else {
+//           // padding adjusted from available
+//           bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
+
+//           // Specified bounds
+//           if (layout->min_height && bounds.height < layout->min_height) {
+//             bounds.height = layout->min_height;
+//           }
+//           if (layout->max_height && bounds.height > layout->max_height) {
+//             bounds.height = layout->max_height;
+//           }
+
+//           if (bounds.height < 0) {
+//             bounds.height = 0;
+//           }
+//         }
+//       }
+
+//       if (!bounds.width || !bounds.height) {
+//         layout->__bounds = bounds;
+//         break;
+//       }
+
+//       // X
+//       switch (layout->horizontal_alignment) {
+//       case HORIZONTAL_ALIGNMENT_LEFT: {
+//         bounds.x = available_area->x + layout->padding.left;
+//       } break;
+//       case HORIZONTAL_ALIGNMENT_RIGHT: {
+//         bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
+//       } break;
+//       case HORIZONTAL_ALIGNMENT_CENTRED: {
+//         bounds.x = available_area->x + layout->padding.left +
+//                    (available_area->width - layout->padding.right - bounds.width) / 2.f;
+//       } break;
+//       default:
+//         MCerror(7180, "NotSupported:%i", layout->horizontal_alignment);
+//       }
+
+//       // Y
+//       switch (layout->vertical_alignment) {
+//       case VERTICAL_ALIGNMENT_TOP: {
+//         bounds.y = available_area->y + layout->padding.top;
+//       } break;
+//       case VERTICAL_ALIGNMENT_BOTTOM: {
+//         bounds.y = available_area->y + available_area->height - layout->padding.bottom - bounds.height;
+//       } break;
+//       case VERTICAL_ALIGNMENT_CENTRED: {
+//         bounds.y = available_area->y + layout->padding.top +
+//                    (available_area->height - layout->padding.bottom - bounds.height) / 2.f;
+//       } break;
+//       default:
+//         MCerror(7195, "NotSupported:%i", layout->vertical_alignment);
+//       }
+
+//       printf("bounds = {%.3f, %.3f, %.3f, %.3f}\n", bounds.x, bounds.y, bounds.width, bounds.height);
+
+//       if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width
+//       ||
+//           bounds.height != layout->__bounds.height) {
+//         layout->__bounds = bounds;
+//         mca_set_node_requires_rerender(node);
+//       }
+//     } break;
+//     case UI_ELEMENT_CONTEXT_MENU: {
+//       // mcu_update_context_menu_layout(node, available_area, restraints);
+//       mcu_context_menu *context_menu = (mcu_context_menu *)element->data;
+
+//       // Determine the maximum width requested by child controls and the cumulative height
+
+//       // Ensure they lie within min & max width parameters
+
+//       // Set accordingly
+//     } break;
+//     default:
+//       MCerror(9117, "mca_update_node_layout_extents::Unsupported element type:%i", element->type);
+//     }
+//   } break;
+//   default:
+//     MCerror(9121, "mca_update_node_layout_extents::Unsupported node type:%i", node->type);
+//   }
+// }
+
+// void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints)
+// {
+//   switch (node->type) {
+//   case NODE_TYPE_VISUAL_PROJECT: {
+//     visual_project_data *visual_project = (visual_project_data *)node->data;
+
+//     // Determine children extents
+//     // printf("vpec\n");
+//     mca_update_node_layout_extents(visual_project->editor_container, LAYOUT_RESTRAINT_NONE);
+//     // printf("vpch\n");
+//     for (int a = 0; a < visual_project->children->count; ++a) {
+//       mca_update_node_layout_extents(visual_project->children->items[a], LAYOUT_RESTRAINT_NONE);
+//     }
+
+//     mc_rectf new_bounds = {(float)visual_project->screen.offset_x, (float)visual_project->screen.offset_y,
+//                            (float)visual_project->screen.width, (float)visual_project->screen.height};
+
+//     // Determine if the new bounds is worth setting
+//     if (new_bounds.x != visual_project->layout->__bounds.x || new_bounds.y != visual_project->layout->__bounds.y ||
+//         new_bounds.width != visual_project->layout->__bounds.width ||
+//         new_bounds.height != visual_project->layout->__bounds.height) {
+//       visual_project->layout->__bounds = new_bounds;
+//       mca_set_node_requires_rerender(node);
+//     }
+//   } break;
+//   default:
+//     MCerror(9272, "mca_update_node_layout_extents::Unsupported node type:%i", node->type);
+//   }
+// }
+
+// void mca_update_node_layout(mc_node *node, mc_rectf *available_area)
+// // layout_extent_restraints restraints)
+// {
+//   // printf("mca_update_node_layout--%i\n", node->type);
+//   switch (node->type) {
+//   case NODE_TYPE_VISUAL_PROJECT: {
+//     visual_project_data *visual_project = (visual_project_data *)node->data;
+
+//     visual_project->layout->padding.left = visual_project->screen.offset_x;
+//     visual_project->layout->padding.top = visual_project->screen.offset_y;
+
+//     mc_rectf new_bounds = {(float)visual_project->screen.offset_x, (float)visual_project->screen.offset_y,
+//                            (float)visual_project->screen.width, (float)visual_project->screen.height};
+
+//     // printf("visual_project ec:%i\n", visual_project->editor_container->type);
+//     mca_update_node_layout(visual_project->editor_container, &new_bounds);
+//     for (int a = 0; a < visual_project->children->count; ++a) {
+//       // printf("visual_project child:%i\n", visual_project->children->items[a]->type);
+//       mca_update_node_layout(visual_project->children->items[a], &new_bounds);
+//     }
+
+//     // Determine if the new bounds is worth setting
+//     if (new_bounds.x != visual_project->layout->__bounds.x || new_bounds.y != visual_project->layout->__bounds.y ||
+//         new_bounds.width != visual_project->layout->__bounds.width ||
+//         new_bounds.height != visual_project->layout->__bounds.height) {
+//       visual_project->layout->__bounds = new_bounds;
+//       mca_set_node_requires_rerender(node);
+//     }
+//   } break;
+// case NODE
+//   default:
+//     MCerror(9617, "mca_update_node_layout::Unsupported node type:%i", node->type);
+//   }
+
+// }
+
+int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_determine_typical_node_extents", __FILE__, __LINE__, &midge_error_stack_index);
+
+  const float  MAX_EXTENT_VALUE = 100000.f;
+  mca_node_layout * layout = node->layout;
+
+  // Width
+  if (layout->preferred_width) {
+    layout->determined_extents.width = layout->preferred_width;
+  }
+  else {
+    if (restraints&LAYOUT_RESTRAINT_HORIZONTAL) {
+      if (layout->min_width)       layout->determined_extents.width = layout->min_width;      else {
+        layout->determined_extents.width = 0;
+      }
+
+    }
+    else {
+      layout->determined_extents.width = MAX_EXTENT_VALUE;
+
+      // Specified bounds
+      if (layout->min_width&&layout->determined_extents.width<layout->min_width) {
+        layout->determined_extents.width = layout->min_width;
+      }
+
+      if (layout->max_width&&layout->determined_extents.width>layout->max_width) {
+        layout->determined_extents.width = layout->max_width;
+      }
+
+
+      if (layout->determined_extents.width<0) {
+        layout->determined_extents.width = 0;
+      }
+
+    }
+
+  }
+
+
+  // Height
+  if (layout->preferred_height) {
+    layout->determined_extents.height = layout->preferred_height;
+  }
+  else {
+    if (restraints&LAYOUT_RESTRAINT_VERTICAL) {
+      if (layout->min_height)       layout->determined_extents.height = layout->min_height;      else {
+        layout->determined_extents.height = 0;
+      }
+
+    }
+    else {
+      layout->determined_extents.height = MAX_EXTENT_VALUE;
+
+      // Specified bounds
+      if (layout->min_height&&layout->determined_extents.height<layout->min_height) {
+        layout->determined_extents.height = layout->min_height;
+      }
+
+      if (layout->max_height&&layout->determined_extents.height>layout->max_height) {
+        layout->determined_extents.height = layout->max_height;
+      }
+
+
+      if (layout->determined_extents.height<0) {
+        layout->determined_extents.height = 0;
+      }
+
+    }
+
+  }
+
+
+  // Children
+  if (node->children) {
+    for (int  a = 0    ; a<node->children->count    ; ++a    ) {
+      mc_node * child = node->children->items[a];
+      if (child->layout&&child->layout->determine_layout_extents) {
+        void (*determine_layout_extents)(mc_node *,layout_extent_restraints) = (/*!*/void (*)(mc_node *,layout_extent_restraints))child->layout->determine_layout_extents;
+        determine_layout_extents(child, LAYOUT_RESTRAINT_NONE);
+      }
+
+    }
+
+  }
+
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_update_typical_node_layout", __FILE__, __LINE__, &midge_error_stack_index);
+
+  node->layout->__requires_layout_update = false;
+
+  // Preferred value > padding (within min/max if set)
+  mc_rectf  bounds;
+  mca_node_layout * layout = node->layout;
+  layout->__requires_layout_update = false;
+
+  // Width
+  if (layout->preferred_width) {
+    bounds.width = layout->preferred_width;
+  }
+  else {
+    bounds.width = available_area->width - layout->padding.right - layout->padding.left;
+
+    // Specified bounds
+    if (layout->min_width&&bounds.width<layout->min_width) {
+      bounds.width = layout->min_width;
+    }
+
+    if (layout->max_width&&bounds.width>layout->max_width) {
+      bounds.width = layout->max_width;
+    }
+
+
+    if (bounds.width<0) {
+      bounds.width = 0;
+    }
+
+  }
+
+
+  // Height
+  if (layout->preferred_height) {
+    bounds.height = layout->preferred_height;
+  }
+  else {
+    bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
+
+    // Specified bounds
+    if (layout->min_height&&bounds.height<layout->min_height) {
+      bounds.height = layout->min_height;
+    }
+
+    if (layout->max_height&&bounds.height>layout->max_height) {
+      bounds.height = layout->max_height;
+    }
+
+
+    if (bounds.height<0) {
+      bounds.height = 0;
+    }
+
+  }
+
+
+  // X
+  switch (layout->horizontal_alignment) {
+    case HORIZONTAL_ALIGNMENT_LEFT:
+{
+      bounds.x = available_area->x + layout->padding.left;
+    }
+    break;    case HORIZONTAL_ALIGNMENT_RIGHT:
+{
+      bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
+    }
+    break;    case HORIZONTAL_ALIGNMENT_CENTRED:
+{
+      bounds.x = available_area->x + layout->padding.left + (available_area->width - (layout->padding.left + bounds.width + layout->padding.right)) / 2.f;
+    }
+    break;    default:
+    MCerror(7371, "NotSupported:%i", layout->horizontal_alignment);  }
+
+
+  // Y
+  switch (layout->vertical_alignment) {
+    case VERTICAL_ALIGNMENT_TOP:
+{
+      bounds.y = available_area->y + layout->padding.top;
+    }
+    break;    case VERTICAL_ALIGNMENT_BOTTOM:
+{
+      bounds.y = available_area->y + available_area->height - layout->padding.bottom - bounds.height;
+    }
+    break;    case VERTICAL_ALIGNMENT_CENTRED:
+{
+      bounds.y = available_area->y + layout->padding.top + (available_area->height - (layout->padding.bottom + bounds.height + layout->padding.top)) / 2.f;
+    }
+    break;    default:
+    MCerror(7387, "NotSupported:%i", layout->vertical_alignment);  }
+
+
+  // Set if different
+  if (bounds.x!=layout->__bounds.x||bounds.y!=layout->__bounds.y||bounds.width!=layout->__bounds.width||bounds.height!=layout->__bounds.height) {
+    layout->__bounds = bounds;
+    // printf("setrerender\n");
+    mca_set_node_requires_rerender(node);
+  }
+
+
+  // Children
+  if (node->children) {
+    for (int  a = 0    ; a<node->children->count    ; ++a    ) {
+      mc_node * child = node->children->items[a];
+      if (child->layout&&child->layout->update_layout) {
+        void (*update_layout)(mc_node *,mc_rectf *) = (/*!*/void (*)(mc_node *,mc_rectf *))child->layout->update_layout;
+        update_layout(child, &layout->__bounds);
+      }
+
+    }
+
+  }
+
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int _mca_set_nodes_require_layout_update(mc_node_list *node_list) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("_mca_set_nodes_require_layout_update", __FILE__, __LINE__, &midge_error_stack_index);
+
+  for (int  i = 0  ; i<node_list->count  ; ++i  ) {
+    node_list->items[i]->layout->__requires_layout_update = true;
+
+    if (node_list->items[i]->children) {
+      MCcall(_mca_set_nodes_require_layout_update(node_list->items[i]->children));
+    }
+
+  }
+
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int mca_set_all_nodes_require_layout_update() {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_set_all_nodes_require_layout_update", __FILE__, __LINE__, &midge_error_stack_index);
 
   midge_app_info * global_data;
   mc_obtain_midge_app_info(&global_data);
 
-  glm_lookat((vec3){ 0, -4, -4 }, (vec3){ 0, 0, 0 }, (vec3){ 0, -1, 0 }, (vec4 *)vpc);
-  float  fovy = 72.f / 180.f * 3.1459f;
-  glm_perspective(fovy, (float)APPLICATION_SET_WIDTH / APPLICATION_SET_HEIGHT, 0.01f, 1000.f, (vec4 *)&proj);
-  // glm_ortho_default((float)image_render->image_width / image_render->image_height, (vec4 *)&proj);
+  global_data->global_node->layout->__requires_layout_update = true;
+  _mca_set_nodes_require_layout_update(global_data->global_node->children);
 
-  // if (((int)global_data->elapsed->app_secsf) % 2 == 1) {
-  mat4  world;
-  glm_mat4_identity((vec4 *)&world);
-  vec3  axis = { 0.f, 1.f, 0.f };
-  glm_rotate((vec4 *)&world, mh_data->cube.rotY / 180.f * 3.1459f, axis);
-  axis[1] = 0.f;
-  axis[2] = 1.f;
-  glm_rotate((vec4 *)&world, mh_data->cube.rotZ / 180.f * 3.1459f, axis);
-  axis[0] = 1.f;
-  axis[2] = 0.f;
-  glm_rotate((vec4 *)&world, mh_data->cube.rotX / 180.f * 3.1459f, axis);
-  glm_mat4_mul((vec4 *)vpc, (vec4 *)&world, (vec4 *)vpc);
-  // }
-  // else {
-  // glm_mat4_mul((vec4 *)cmd->mesh.world_matrix, (vec4 *)vpc, (vec4 *)vpc);
-  // }
-  // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
-  //   glm_mat4_mul((vec4 *)&clip, (vec4 *)proj, (vec4 *)proj);
-  // }
-  // else {
-  glm_mat4_mul((vec4 *)proj, (vec4 *)&clip, (vec4 *)proj);
-  // }
-  // if (((int)global_data->elapsed->app_secsf / 2) % 2 == 1) {
-  glm_mat4_mul((vec4 *)&proj, (vec4 *)vpc, (vec4 *)vpc);
 
   {
     // Return
     register_midge_stack_return(midge_error_stack_index);
-    return;
+    return 0;
   }
+
 }
 
 
-void _myh_render_mh_data_headless(mc_node *node) {
+int mca_set_node_requires_layout_update(mc_node *node) {
   int midge_error_stack_index;
-  register_midge_stack_function_entry("_myh_render_mh_data_headless", __FILE__, __LINE__, &midge_error_stack_index);
+  register_midge_stack_function_entry("mca_set_node_requires_layout_update", __FILE__, __LINE__, &midge_error_stack_index);
 
-  mystery_hut * mh_data = (mystery_hut *)node->data;
-
-  // Children
-  for (int  a = 0  ; a<node->children->count  ; ++a  ) {
-    mc_node * child = node->children->items[a];
-    if (child->layout&&child->layout->visible&&child->layout->render_headless&&child->layout->__requires_rerender) {
-      void (*render_node_headless)(mc_node *) = (/*!*/void (*)(mc_node *))child->layout->render_headless;
-      render_node_headless(child);
-    }
-
+  if (!node->layout) {
+    MCerror(8416, "Can't set an update for a node with no layout");
   }
 
 
-  // Render the render target
+  // Set update required on all ancestors of the node
+  while (node  ) {
+    if (!node->layout) {
+      MCerror(8523, "Can't set an update for a node with a parent with no layout");
+    }
+
+
+    // Set
+    node->layout->__requires_layout_update = true;
+
+    // Move upwards through the ancestry
+    node = node->parent;
+  }
+
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int mca_set_node_requires_rerender(mc_node *node) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_set_node_requires_rerender", __FILE__, __LINE__, &midge_error_stack_index);
+
+  if (!node->layout) {
+    MCerror(8416, "Can't set an update for a node with no layout");
+  }
+
+
+  // Set update required on all ancestors of the node
+  while (node  ) {
+    if (!node->layout) {
+      MCerror(8523, "Can't set an update for a node with a parent with no layout");
+    }
+
+
+    // Set
+    node->layout->__requires_rerender = true;
+    printf("'%s' __requires_rerender\n", node->name);
+
+    // Move upwards through the ancestry
+    node = node->parent;
+  }
+
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int mca_focus_node(mc_node *node) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_focus_node", __FILE__, __LINE__, &midge_error_stack_index);
+
+  while (node  ) {
+    if (!node->layout) {
+      MCerror(8523, "Can't set an update for a node with a parent with no layout");
+    }
+
+
+    // Set
+    node->layout->__requires_rerender = true;
+
+    if (!node->parent) {
+      break;
+    }
+
+    if (!node->parent->layout) {
+      MCerror(9664, "Cannot set focus to node with an ancestor without an initialized layout");
+    }
+
+
+    node->parent->layout->focused_child = node;
+
+    // Find the child in the parents children and set it to the highest index amongst its z-index peers
+    mc_node_list * parents_children = node->parent->children;
+    // DEBUG CHECK
+    bool  found = false;
+    for (int  i = 0    ; i<parents_children->count    ; ++i    ) {
+      if (parents_children->items[i]==node) {
+        found = true;
+
+        if (i + 1==parents_children->count)         break;
+
+        int  j = i + 1;
+        for (        ; j<parents_children->count        ; ++j        ) {
+          if (parents_children->items[j]->layout&&node->layout->z_layer_index<parents_children->items[j]->layout->z_layer_index) {
+            break;
+          }
+
+        }
+
+        --j;
+
+        if (j>i) {
+          for (int  k = i          ; k<j          ; ++k          ) {
+            parents_children->items[k] = parents_children->items[k + 1];
+          }
+
+
+          parents_children->items[j] = node;
+        }
+
+      }
+
+    }
+
+
+    // Move upwards through the ancestry
+    node = node->parent;
+  }
+
+
+
+  {
+    // Return
+    register_midge_stack_return(midge_error_stack_index);
+    return 0;
+  }
+
+}
+
+
+int mca_obtain_focused_node(mc_node **node) {
+  int midge_error_stack_index;
+  register_midge_stack_function_entry("mca_obtain_focused_node", __FILE__, __LINE__, &midge_error_stack_index);
+
   midge_app_info * global_data;
   mc_obtain_midge_app_info(&global_data);
 
-  image_render_details * irq;
-  mcr_obtain_image_render_request(global_data->render_thread, &irq);
-  irq->render_target = NODE_RENDER_TARGET_IMAGE;
-  irq->clear_color = COLOR_CORNFLOWER_BLUE;
-  // printf("global_data->screen : %u, %u\n", global_data->screen.width,
-  // global_data->screen.height);
-  irq->image_width = mh_data->render_target.width;  // TODO
-  irq->image_height = mh_data->render_target.height;  // TODO
-  irq->data.target_image.image = mh_data->render_target.image;
-  irq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
-  irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
+  *node = global_data->global_node;
 
-  // Children
-  for (int  a = 0  ; a<node->children->count  ; ++a  ) {
-    mc_node * child = node->children->items[a];
-    if (child->layout&&child->layout->visible&&child->layout->render_present) {
-      void (*render_node_present)(image_render_details *,mc_node *) = (/*!*/void (*)(image_render_details *,mc_node *))child->layout->render_present;
-      render_node_present(irq, child);
-    }
-
+  while ((*node)->layout&&(*node)->layout->focused_child  ) {
+    (*node) = (*node)->layout->focused_child;
   }
 
-
-  // mcr_render_model(irq, mh_data->cube.model);
-  element_render_command * render_cmd;
-  mcr_obtain_element_render_command(irq, &render_cmd);
-
-  render_cmd->type = RENDER_COMMAND_PROGRAM;
-  render_cmd->render_program.program = mh_data->cube.render_program;
-  render_cmd->render_program.data = &mh_data->cube.render_data;
-
-  // render_cmd->render_program
-  //     .
-
-  // render_cmd->render_program.vertex_buffer = mh_data->cube.model->vertex_buffer;
-  // render_cmd->render_program.index_buffer = mh_data->cube.model->index_buffer;
-  // render_cmd->render_program.texture_uid = mh_data->cube.model->texture;
-
-  // mat4 world;
-  // mat4 view;
-  // mat4 projection;
-  // vertex_buffer (pos/uv/normals*)
-  // index_buffer
-  // texture
-  // mcr_render_with_program(irq, )
-
-  mcr_submit_image_render_request(global_data->render_thread, irq);
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
-  }
-}
-
-
-void _myh_render_mh_data_present(image_render_details *image_render_queue, mc_node *node) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("_myh_render_mh_data_present", __FILE__, __LINE__, &midge_error_stack_index);
-
-  mystery_hut * mh_data = (mystery_hut *)node->data;
-
-  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y, mh_data->render_target.width, mh_data->render_target.height, mh_data->render_target.image);
-
-  if (mh_data->rerender_toggle)   mca_set_node_requires_rerender(node);
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
-  }
-}
-
-
-void _myh_handle_input(mc_node *node, mci_input_event *input_event) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("_myh_handle_input", __FILE__, __LINE__, &midge_error_stack_index);
-
-  input_event->handled = true;
-  if (input_event->type==INPUT_EVENT_MOUSE_PRESS||input_event->type==INPUT_EVENT_MOUSE_RELEASE) {
-    mca_focus_node(node);
-  }
-
-
-  // TODO -- asdf
-  if (input_event->type==INPUT_EVENT_KEY_PRESS) {
-    mystery_hut * mh_data = (mystery_hut *)node->data;
-    bool  recalc = true;
-    switch (input_event->button_code) {
-      case KEY_CODE_D:
-{
-        mh_data->rerender_toggle = mh_data->rerender_toggle ? false : true;
-        mh_data->cube.rotX += 5.f;
-        if (mh_data->cube.rotX>180.f) {
-          mh_data->cube.rotX -= 360.f;
-        }
-
-        printf("D:%.3f\n", mh_data->cube.rotX);
-      }
-      break;      case KEY_CODE_A:
-{
-        mh_data->cube.rotX -= 5.f;
-        if (mh_data->cube.rotX<-180.f) {
-          mh_data->cube.rotX += 360.f;
-        }
-
-        printf("A:%.3f\n", mh_data->cube.rotX);
-      }
-      break;      case KEY_CODE_W:
-{
-        mh_data->cube.rotY += 5.f;
-        if (mh_data->cube.rotY>180.f)         mh_data->cube.rotY -= 360.f;
-        printf("W:%.3f\n", mh_data->cube.rotY);
-      }
-      break;      case KEY_CODE_S:
-{
-        mh_data->cube.rotY -= 5.f;
-        if (mh_data->cube.rotY<-180.f)         mh_data->cube.rotY += 360.f;
-        printf("S:%.3f\n", mh_data->cube.rotY);
-      }
-      break;      case KEY_CODE_E:
-{
-        mh_data->cube.rotZ += 5.f;
-        if (mh_data->cube.rotZ>180.f)         mh_data->cube.rotZ -= 360.f;
-        printf("E:%.3f\n", mh_data->cube.rotZ);
-      }
-      break;      case KEY_CODE_Q:
-{
-        mh_data->cube.rotZ -= 5.f;
-        if (mh_data->cube.rotZ<-180.f)         mh_data->cube.rotZ += 360.f;
-        printf("Q:%.3f\n", mh_data->cube.rotZ);
-      }
-      break;      default:
-      recalc = false;
-      break;    }
-
-
-    if (recalc) {
-      create_wvp_matrix(mh_data, (mat4 **)&mh_data->cube.render_data.input_buffers[0]);
-      mca_set_node_requires_rerender(node);
-    }
-
-  }
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
-  }
-}
-
-
-int myh_load_resources(mc_node *module_node) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("myh_load_resources", __FILE__, __LINE__, &midge_error_stack_index);
-
-  mystery_hut * mh_data = (mystery_hut *)malloc(sizeof(mystery_hut));
-  module_node->data = mh_data;
-  mh_data->node = module_node;
-
-  mh_data->render_target.width = module_node->layout->preferred_width;
-  mh_data->render_target.height = module_node->layout->preferred_height;
-  mcr_create_texture_resource(mh_data->render_target.width, mh_data->render_target.height, MVK_IMAGE_USAGE_RENDER_TARGET_3D, &mh_data->render_target.image);
-
-  // Render Program
-  mcr_render_program_create_info  create_info = {};
-  create_info.vertex_shader_filepath = (char *)"projects/mystery_hut/model.vert";
-  create_info.fragment_shader_filepath = (char *)"projects/mystery_hut/model.frag";
-  create_info.buffer_binding_count = 2;
-  create_info.buffer_bindings[0] = (mcr_layout_binding){ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, sizeof(mat4) };
-  create_info.buffer_bindings[1] = (mcr_layout_binding){ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0U };
-  create_info.input_binding_count = 2;
-  create_info.input_bindings[0] = (mcr_input_binding){ VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3 };
-  create_info.input_bindings[1] = (mcr_input_binding){ VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 2 };
-  mcr_create_render_program(&create_info, &mh_data->cube.render_program);
-
-  // Render Data
-  mh_data->cube.render_data.input_buffers = (void **)malloc(sizeof(void *) * 2);
-
-  // world-view-projection
-  mh_data->rerender_toggle = false;
-  mh_data->cube.rotX = mh_data->cube.rotY = mh_data->cube.rotZ = 0;
-  create_wvp_matrix(mh_data, (mat4 **)&mh_data->cube.render_data.input_buffers[0]);
-
-  // Cube Model
-  // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &mh_data->cube.model);
-  // mcr_load_wavefront_obj("res/models/viking_room.obj", );
-
-  // mcr_load_wavefront_obj("res/cube/cube.obj", &mh_data->cube.render_data.vertices,
-  // &mh_data->cube.render_data.indices);
-  MCcall(mcr_load_wavefront_obj("res/models/viking_room.obj", &mh_data->cube.render_data.vertices, &mh_data->cube.render_data.indices));
-
-  mh_data->cube.render_data.input_buffers[1] = NULL;
-  mcr_load_texture_resource("res/models/viking_room.png", (mcr_texture_image **)&mh_data->cube.render_data.input_buffers[1]);
-
-  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
-  while (!mh_data->cube.render_data.input_buffers[1]  ) {
-    usleep(100);
-  }
 
 
   {
@@ -317,80 +870,82 @@ int myh_load_resources(mc_node *module_node) {
 }
 
 
-void _myh_update(frame_time *elapsed, mci_input_state *input_state, void *state) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("_myh_update", __FILE__, __LINE__, &midge_error_stack_index);
+// void add_notification_handler(mc_node *apex_node, unsigned int event_type, int (**handler)(int, void **))
+// {
+//   event_handler_array *handler_array = NULL;
+//   for (int i = 0; i < apex_node->event_handlers.count; ++i) {
+//     if (apex_node->event_handlers.items[i]->event_type == event_type) {
+//       handler_array = apex_node->event_handlers.items[i];
+//       break;
+//     }
+//   }
 
+//   if (handler_array == NULL) {
+//     // Make a new one
+//     handler_array = (event_handler_array *)malloc(sizeof(event_handler_array));
+//     handler_array->alloc = 0;
+//     handler_array->count = 0;
+//     handler_array->event_type = event_type;
 
+//     append_to_collection((void ***)&apex_node->event_handlers.items, &apex_node->event_handlers.alloc,
+//                          &apex_node->event_handlers.count, handler_array);
+//   }
 
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return;
-  }
-}
+//   // printf("adding %p *->%p\n", handler, *handler);
+//   append_to_collection((void ***)&handler_array->handlers, &handler_array->alloc, &handler_array->count, handler);
+// }
 
+// void notify_handlers_of_event(unsigned int event_type, void *event_data)
+// {
+//   // printf("notify_handlers_of_event\n");
+//   event_handler_array *handler_array = NULL;
+//   for (int i = 0; i < command_hub->global_node->event_handlers.count; ++i) {
+//     if (command_hub->global_node->event_handlers.items[i]->event_type == event_type) {
+//       handler_array = command_hub->global_node->event_handlers.items[i];
+//       break;
+//     }
+//   }
 
-int init_mystery_hut(mc_node *app_root) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("init_mystery_hut", __FILE__, __LINE__, &midge_error_stack_index);
+//   if (handler_array == NULL) {
+//     printf("handler_array couldnt be found for:%i out of %i events handled for\n", event_type,
+//            command_hub->global_node->event_handlers.count);
+//     return;
+//   }
 
-  mc_node * node;
-  mca_init_mc_node(NODE_TYPE_ABSTRACT, "mystery_hut", &node);
+//   // printf("hel %i [0]:%p\n", handler_array->count, handler_array->handlers[0]);
 
-  mca_init_node_layout(&node->layout);
-  node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
-  node->children->count = 0;
-  node->children->alloc = 0;
-  node->layout->preferred_width = 900;
-  node->layout->preferred_height = 600;
+//   for (int i = 0; i < handler_array->count; ++i) {
+//     if ((*handler_array->handlers[i])) {
+//       void *vargs[1];
+//       vargs[0] = &event_data;
 
-  node->layout->padding.left = 400;
-  node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-  node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+//       // printf("invoking [%i]:%p\n", i, (*handler_array->handlers[i]));
+//       (*handler_array->handlers[i])(1, vargs);
+//     }
+//   }
+//   // register_midge_error_tag("mcd_on_hierarchy_update(~)");
+// }
 
-  node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
-  node->layout->update_layout = (void *)&mca_update_typical_node_layout;
-  node->layout->render_headless = (void *)&_myh_render_mh_data_headless;
-  node->layout->render_present = (void *)&_myh_render_mh_data_present;
-  node->layout->handle_input_event = (void *)&_myh_handle_input;
+// void attach_definition_to_hierarchy(mc_node *parent_attachment, char *definition)
+// {
+//   // append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
+//   //                      &parent_attachment->child_count, node_to_add);
 
-  myh_load_resources(node);
+//   // Fire an event...
+//   unsigned int event_type = ME_NODE_HIERARCHY_UPDATED;
+//   notify_handlers_of_event(event_type, NULL);
 
-  void * update_delegate = (void *)&_myh_update;
-  // mca_register_loop_update(app_root, update_delegate, node->data);
-
-  MCcall(mca_attach_node_to_hierarchy(app_root, node));
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}
-
-
-int set_mystery_hut_project_state(mc_node *app_root) {
-  int midge_error_stack_index;
-  register_midge_stack_function_entry("set_mystery_hut_project_state", __FILE__, __LINE__, &midge_error_stack_index);
-
-  function_info * func_info;
-  // find_function_info("init_mystery_hut", &func_info);
-  // mce_activate_source_editor_for_definition(func_info->source);
-  find_function_info("_myh_handle_input", &func_info);
-  mce_activate_source_editor_for_definition(func_info->source);
-
-  // find_function_info("_myh_handle_input", &func_info);
-  // // find_function_info("mce_delete_selection", &func_info);
-  // mce_activate_function_debugging(func_info);
-
-
-  {
-    // Return
-    register_midge_stack_return(midge_error_stack_index);
-    return 0;
-  }
-
-}
+//   // TODO -- maybe find a better place to do this
+//   switch (node_to_add->type) {
+//   case NODE_TYPE_CONSOLE_APP: {
+//     console_app_info *app_info = (console_app_info *)node_to_add->extra;
+//     if (app_info->initialize && (*app_info->initialize)) {
+//       void *vargs[1];
+//       vargs[0] = &node_to_add;
+//       (*app_info->initialize)(1, vargs);
+//     }
+//   } break;
+//   default:
+//     break;
+//   }
+// }

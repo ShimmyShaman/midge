@@ -193,9 +193,8 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
     mca_set_node_requires_rerender(node);
   }
 
-  // printf("function_editor-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y,
-  // available_area->width,
-  //        available_area->height);
+  printf("function_editor-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y, available_area->width,
+         available_area->height);
   // printf("function_editor-padding %.3f %.3f %.3f*%.3f\n", node->layout->padding.left, node->layout->padding.top,
   //        node->layout->padding.right, node->layout->padding.bottom);
   // printf("function_editor-bounds %.3f %.3f %.3f*%.3f\n", node->layout->__bounds.x, node->layout->__bounds.y,
@@ -204,7 +203,7 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
   // Align text lines to fit to the container
   mce_function_editor *fedit = (mce_function_editor *)node->data;
   _mce_update_line_positions(fedit, &node->layout->__bounds);
-
+puts("after");
   // Children
   for (int a = 0; a < node->children->count; ++a) {
     mc_node *child = node->children->items[a];
@@ -214,7 +213,6 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
       update_layout(child, &node->layout->__bounds);
     }
   }
-
   // node->layout->__requires_layout_update = false;
 
   // // Set rerender anyway because lazy TODO--maybe
@@ -223,6 +221,7 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
 
 void _mce_render_function_editor_headless(mc_node *node)
 {
+  puts("_mce_render_function_editor_headless");
   mce_function_editor *function_editor = (mce_function_editor *)node->data;
 
   // struct timespec debug_start_time, debug_end_time;
@@ -1199,6 +1198,7 @@ int _mce_set_definition_to_function_editor(mce_function_editor *function_editor,
   // Set
   function_editor->function = function;
 
+  // printf("'%p' function->source=%p\n", function, function->source);
   _mce_set_function_editor_code_with_plain_text(function_editor, function->source->code);
 
   // TODO -- queue up an asynchronous semantic highlighting and information keepsake parsing of the text

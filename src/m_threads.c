@@ -35,7 +35,7 @@ void *_mca_thread_entry_wrap(void *state)
     // }
     // register_midge_stack_return(mc_error_stack_index);
   }
-  // usleep(3000000);
+  usleep(3000000);
   // printf("routine exited\n");
 
   register_midge_thread_conclusion(mc_error_thread_index);

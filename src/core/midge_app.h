@@ -33,6 +33,7 @@ typedef struct midge_app_info {
   render_thread_info *render_thread;
   frame_time *elapsed;
 
+  pthread_mutexattr_t hierarchy_mutex_attr;
   pthread_mutex_t hierarchy_mutex;
 
   // mcu_ui_state

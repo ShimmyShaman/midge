@@ -16,7 +16,10 @@ void mc_init_midge_app_info()
   mc_obtain_app_itp_data(&__mc_midge_app_info->itp_data);
   __mc_midge_app_info->global_node = __mc_midge_app_info->itp_data->global_node;
 
-  pthread_mutex_init(&__mc_midge_app_info->hierarchy_mutex, NULL);
+  pthread_mutexattr_init(&__mc_midge_app_info->hierarchy_mutex_attr);
+  pthread_mutexattr_settype(&__mc_midge_app_info->hierarchy_mutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+
+  pthread_mutex_init(&__mc_midge_app_info->hierarchy_mutex, &__mc_midge_app_info->hierarchy_mutex_attr);
 
   __mc_midge_app_info->_exit_requested = false;
 }

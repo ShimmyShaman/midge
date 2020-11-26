@@ -114,7 +114,9 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
   }
 
   // Lock thread-safety mutex
+  printf("hierarchy-locking... %p\n", &app_info->hierarchy_mutex);
   pthread_mutex_lock(&app_info->hierarchy_mutex);
+  puts("hierarchy-locked");
 
   MCcall(append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
                               &hierarchy_node->children->count, node_to_attach));
@@ -123,8 +125,10 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
   if (node_to_attach->layout) {
     mca_set_node_requires_layout_update(node_to_attach);
   }
+  mca_set_node_requires_rerender(node_to_attach);
 
   pthread_mutex_unlock(&app_info->hierarchy_mutex);
+  puts("hierarchy-unlock");
 
   return 0;
 }
@@ -672,6 +676,7 @@ int mca_set_node_requires_rerender(mc_node *node)
 
     // Set
     node->layout->__requires_rerender = true;
+    printf("'%s' __requires_rerender\n", node->name);
 
     // Move upwards through the ancestry
     node = node->parent;
