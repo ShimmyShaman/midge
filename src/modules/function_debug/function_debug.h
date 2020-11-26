@@ -3,12 +3,15 @@
 
 #include "core/c_parser_lexer.h"
 #include "core/mc_code_transcription.h"
+#include "mc_str.h"
+#include "render/render_common.h"
 
+struct mce_function_debug_line;
 typedef struct mce_function_debug_line {
   mc_str *str;
   // TODO -- future colored text parts
 
-  mce_function_debug_line *next;
+  struct mce_function_debug_line *next;
 } mce_function_debug_line;
 
 typedef struct mce_function_debug_variable_report {

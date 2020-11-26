@@ -49,7 +49,7 @@ int _mce_update_line_positions(mce_function_editor *fedit, mc_rectf *available_a
   int y_index = 0;
 
   bool line_count_changed = false;
-  while (y_index * fedit->lines.vertical_stride < available_area->height) {
+  while (y_index * fedit->lines.vertical_stride < available_area->height - 20 /* TODO ? */) {
 
     // Obtain the line control
     mce_source_line *line;
@@ -193,8 +193,9 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
     mca_set_node_requires_rerender(node);
   }
 
-  printf("function_editor-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y, available_area->width,
-         available_area->height);
+  // printf("function_editor-available %.3f %.3f %.3f*%.3f\n", available_area->x, available_area->y,
+  // available_area->width,
+  //        available_area->height);
   // printf("function_editor-padding %.3f %.3f %.3f*%.3f\n", node->layout->padding.left, node->layout->padding.top,
   //        node->layout->padding.right, node->layout->padding.bottom);
   // printf("function_editor-bounds %.3f %.3f %.3f*%.3f\n", node->layout->__bounds.x, node->layout->__bounds.y,
@@ -203,7 +204,6 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
   // Align text lines to fit to the container
   mce_function_editor *fedit = (mce_function_editor *)node->data;
   _mce_update_line_positions(fedit, &node->layout->__bounds);
-puts("after");
   // Children
   for (int a = 0; a < node->children->count; ++a) {
     mc_node *child = node->children->items[a];
@@ -221,7 +221,7 @@ puts("after");
 
 void _mce_render_function_editor_headless(mc_node *node)
 {
-  puts("_mce_render_function_editor_headless");
+  // puts("_mce_render_function_editor_headless");
   mce_function_editor *function_editor = (mce_function_editor *)node->data;
 
   // struct timespec debug_start_time, debug_end_time;

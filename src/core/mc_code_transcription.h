@@ -40,11 +40,19 @@ typedef struct mct_function_variable_report_index {
 
 } mct_function_variable_report_index;
 
+typedef struct mct_expression_type_info {
+  // If is fptr - then type_identifier will be the return - type identifier
+  char *type_name;
+  // If is fptr - then deref count will be return type deref count
+  unsigned int deref_count;
+  bool is_array;
+  bool is_fptr;
+} mct_expression_type_info;
+
 typedef struct mct_function_transcription_options {
 
   bool report_function_entry_exit_to_stack;
   bool report_simple_args_to_error_stack;
-  bool check_mc_functions_not_null;
   bool tag_on_function_entry, tag_on_function_exit;
 
   mct_function_variable_report_index *report_variable_values;

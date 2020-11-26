@@ -348,7 +348,8 @@ int midge_run_app()
               logic_update_frametime.tv_nsec >
           FIFTY_PER_SEC) {
         logic_update_due = true;
-        printf("global_root_node->layout->__requires_rerender = %i\n", global_root_node->layout->__requires_rerender);
+        // printf("global_root_node->layout->__requires_rerender = %i\n",
+        // global_root_node->layout->__requires_rerender);
 
         logic_update_frametime.tv_nsec += FIFTY_PER_SEC;
         if (logic_update_frametime.tv_nsec > 1000 * ONE_MS_IN_NS) {
@@ -443,9 +444,9 @@ int midge_run_app()
       // mca_update_node_list_logic(global_data->global_node->children);
       if (global_root_node->layout->__requires_layout_update) {
         clock_gettime(CLOCK_REALTIME, &debug_start_time);
-        printf("layout-locking... %p\n", &global_data->hierarchy_mutex);
+        // printf("layout-locking... %p\n", &global_data->hierarchy_mutex);
         MCcall(pthread_mutex_lock(&global_data->hierarchy_mutex));
-        puts("layout-locked");
+        // puts("layout-locked");
         global_root_node->layout->__requires_layout_update = false;
 
         for (int a = 0; a < global_data->global_node->children->count; ++a) {
@@ -466,7 +467,7 @@ int midge_run_app()
 
           if (child->layout && child->layout->update_layout) {
             // TODO fptr casting
-        printf("ulay-child-type:%i '%s'\n", child->type, child->name);
+            // printf("ulay-child-type:%i '%s'\n", child->type, child->name);
             void (*update_node_layout)(mc_node *, mc_rectf *) =
                 (void (*)(mc_node *, mc_rectf *))child->layout->update_layout;
             update_node_layout(child, &global_root_node->layout->__bounds);
@@ -474,7 +475,7 @@ int midge_run_app()
         }
 
         MCcall(pthread_mutex_unlock(&global_data->hierarchy_mutex));
-        puts("layout-unlock");
+        // puts("layout-unlock");
 
         clock_gettime(CLOCK_REALTIME, &debug_end_time);
         printf("LayoutUpdate took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
@@ -501,20 +502,20 @@ int midge_run_app()
       // }
 
       // Reset States
-      printf("rerender-locking... %p\n", &global_data->hierarchy_mutex);
+      // printf("rerender-locking... %p\n", &global_data->hierarchy_mutex);
       MCcall(pthread_mutex_lock(&global_data->hierarchy_mutex));
-      puts("rerender-locked");
+      // puts("rerender-locked");
       global_root_node->layout->__requires_rerender = false;
 
       // Rerender headless images
       // printf("headless\n");
       for (int a = 0; a < global_root_node->children->count; ++a) {
         mc_node *child = global_root_node->children->items[a];
-        printf("child-type:%i '%s'\n", child->type, child->name);
+        // printf("child-type:%i '%s'\n", child->type, child->name);
         if (child->layout && child->layout->visible && child->layout->render_headless &&
             child->layout->__requires_rerender) {
           // TODO fptr casting
-          printf("rh-child-type:%i '%s'\n", child->type, child->name);
+          // printf("rh-child-type:%i '%s'\n", child->type, child->name);
           void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
           render_node_headless(child);
         }
@@ -525,7 +526,7 @@ int midge_run_app()
       mca_render_presentation();
 
       MCcall(pthread_mutex_unlock(&global_data->hierarchy_mutex));
-      puts("rerender-unlock");
+      // puts("rerender-unlock");
 
       // Release lock and allow rendering
       clock_gettime(CLOCK_REALTIME, &debug_end_time);

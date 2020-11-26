@@ -1,11 +1,19 @@
-#include "control/mc_controller.h"
+/* function_debug.c */
 
-#include "core/c_parser_lexer.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// #include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
-#include "modules/app_modules.h"
-#include "modules/source_editor/source_editor.h"
+// #include "modules/source_editor/source_editor.h"
+#include "control/mc_controller.h"
+#include "core/mc_code_transcription.h"
+#include "core/midge_app.h"
 #include "render/render_common.h"
+
+#include "modules/function_debug/function_debug.h"
 
 void _mce_determine_function_debug_extents(mc_node *node, layout_extent_restraints restraints)
 {
@@ -440,8 +448,8 @@ int _mce_end_report_variable_values(mct_function_variable_report_index *report_i
 
 void mce_init_function_debug_instance(mce_function_debug **p_function_debugger)
 {
-  mc_global_data *global_data;
-  obtain_midge_global_root(&global_data);
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
 
   mce_function_debug *function_debug = (mce_function_debug *)malloc(sizeof(mce_function_debug));
 
@@ -583,7 +591,6 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
   mct_function_transcription_options options = {};
   options.report_function_entry_exit_to_stack = true;
   options.report_simple_args_to_error_stack = true;
-  options.check_mc_functions_not_null = true;
   options.tag_on_function_entry = false;
   options.tag_on_function_exit = false;
   options.report_variable_values = fdebug->variable_value_report_index;

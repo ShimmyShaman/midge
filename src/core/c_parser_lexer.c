@@ -1969,12 +1969,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         case ',':
         case ')':
         case '}':
+        case '/':
         case ';': {
           loop = false;
         } break;
         default:
           print_parse_error(code, *index, "_mcs_parse_token", "");
-          MCerror(191, "Invalid Numeric Literal character:'%c'", code[*index]);
+          MCerror(1977, "Invalid Numeric Literal character:'%c'", code[*index]);
         }
       }
 

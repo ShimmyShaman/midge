@@ -652,7 +652,6 @@ int mcs_interpret_file(const char *filepath)
     mct_function_transcription_options options = {};
     options.report_function_entry_exit_to_stack = true;
     options.report_simple_args_to_error_stack = true;
-    options.check_mc_functions_not_null = true;
     options.tag_on_function_entry = false;
     options.tag_on_function_exit = false;
     options.report_variable_values = NULL;

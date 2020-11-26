@@ -45,15 +45,6 @@ typedef struct mct_statement_transcription_info {
   bool variable_reported;
 } mct_statement_transcription_info;
 
-typedef struct mct_expression_type_info {
-  // If is fptr - then type_identifier will be the return - type identifier
-  char *type_name;
-  // If is fptr - then deref count will be return type deref count
-  unsigned int deref_count;
-  bool is_array;
-  bool is_fptr;
-} mct_expression_type_info;
-
 int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *syntax_node, bool function_root);
 int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node *syntax_node);
 int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node);
