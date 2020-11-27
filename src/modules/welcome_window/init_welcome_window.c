@@ -8,6 +8,8 @@
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
+#include "modules/ui_elements/ui_elements.h"
+
 // #include "env/environment_definitions.h"
 // #include "render/render_thread.h"
 // #include "ui/ui_definitions.h"
@@ -16,6 +18,8 @@ typedef struct welcome_window_data {
   mc_node *node;
 
   render_color background_color;
+
+  mcu_button *new_project_button;
   // struct {
   //   unsigned int width, height;
   //   mcr_texture_image *image;
@@ -72,6 +76,9 @@ void mww_render_present(image_render_details *image_render_queue, mc_node *node)
                                         (unsigned int)node->layout->__bounds.y,
                                         (unsigned int)node->layout->__bounds.width,
                                         (unsigned int)node->layout->__bounds.height, wwdata->background_color);
+
+  // Children
+  mca_render_typical_nodes_children_present(image_render_queue, node->children);
 }
 
 void mww_handle_input(mc_node *node, mci_input_event *input_event)
@@ -84,7 +91,7 @@ void mww_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-void mww_init_data(mc_node *module_node)
+int mww_init_data(mc_node *module_node)
 {
   // cube_template
   welcome_window_data *wd = (welcome_window_data *)malloc(sizeof(welcome_window_data));
@@ -92,6 +99,13 @@ void mww_init_data(mc_node *module_node)
   wd->node = module_node;
 
   wd->background_color = COLOR_CORNFLOWER_BLUE;
+
+  MCcall(mcu_init_button(module_node, &wd->new_project_button));
+  wd->new_project_button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+  wd->new_project_button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+  set_mc_str(wd->new_project_button->str, "New Project");
+  wd->new_project_button->node->layout->preferred_width = 120;
+  wd->new_project_button->node->layout->preferred_height = 28;
 
   // mo_data->render_target.image = NULL;
   // mo_data->render_target.width = module_node->layout->preferred_width;
@@ -104,6 +118,8 @@ void mww_init_data(mc_node *module_node)
   //   // puts("wait");
   //   usleep(100);
   // }
+
+  return 0;
 }
 
 int init_welcome_window(mc_node *app_root)

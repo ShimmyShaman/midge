@@ -19,14 +19,11 @@
 
 int init_ui_elements(mc_node *app_root)
 {
-  // MCcall(mcs_interpret_file("src/modules/source_editor/source_editor.h"));
-  // MCcall(mcs_interpret_file("src/modules/source_editor/source_line.c"));
-  // MCcall(mcs_interpret_file("src/modules/source_editor/function_editor.c"));
-  // MCcall(mcs_interpret_file("src/modules/source_editor/source_editor_pool.c"));
+  MCcall(mcs_interpret_file("src/modules/ui_elements/button.h"));
+
+  MCcall(mcs_interpret_file("src/modules/ui_elements/button.c"));
 
   // MCitpCall(mce_init_source_editor_pool, "mce_init_source_editor_pool");
-
-  // MCcall(mce_init_source_editor_pool());
 
   return 0;
 }
