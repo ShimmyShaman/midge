@@ -291,6 +291,7 @@ int mc_obtain_app_itp_data(mc_app_itp_data **p_data);
 int mc_throw_delayed_error(int error_no, const char *error_message, int year, int month, int day);
 
 int read_file_text(const char *filepath, char **output);
+int save_text_to_file(char *filepath, char *text);
 
 int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
                          void *item);

@@ -30,7 +30,7 @@ typedef struct welcome_window_data {
 
 void mww_render_headless(mc_node *node)
 {
-  welcome_window_data *wwdata = (welcome_window_data *)node->data;
+  welcome_window_data *wwwata = (welcome_window_data *)node->data;
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -63,7 +63,7 @@ void mww_render_headless(mc_node *node)
 
 void mww_render_present(image_render_details *image_render_queue, mc_node *node)
 {
-  welcome_window_data *wwdata = (welcome_window_data *)node->data;
+  welcome_window_data *wwwata = (welcome_window_data *)node->data;
 
   // mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
   //                                        (unsigned int)node->layout->__bounds.y, modata->render_target.width,
@@ -76,7 +76,7 @@ void mww_render_present(image_render_details *image_render_queue, mc_node *node)
   mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                         (unsigned int)node->layout->__bounds.y,
                                         (unsigned int)node->layout->__bounds.width,
-                                        (unsigned int)node->layout->__bounds.height, wwdata->background_color);
+                                        (unsigned int)node->layout->__bounds.height, wwwata->background_color);
 
   // Children
   mca_render_typical_nodes_children_present(image_render_queue, node->children);
@@ -92,34 +92,59 @@ void mww_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-void _mww_on_new_project(mcu_button *button, mc_point click_location) {}
+void _mww_on_new_project(mcu_button *button, mc_point click_location)
+{
+  welcome_window_data *ww = (welcome_window_data *)button->node->parent->data;
 
-void _mww_textbox_submit(mcu_textbox *textbox, mc_point click_location) { puts(textbox->contents->text); }
+  // Make the input textbox visible
+  ww->input_textbox->node->layout->visible = true;
+}
+
+void _mww_textbox_submit(mcu_textbox *textbox, mc_point click_location)
+{
+  if (!textbox->contents->len) {
+    return;
+  }
+
+  welcome_window_data *ww = (welcome_window_data *)textbox->node->parent->data;
+  ww->input_textbox->node->layout->visible = false;
+ todo
+  char *current_dir = get_current_dir_name();
+
+  mc_str *pd;
+  init_mc_str(&pd);
+  set_mc_str(pd, current_dir);
+
+  mc_ensure_directory_path(pd);
+
+  append_to_mc_str(pd, textbox->contents);
+}
 
 int mww_init_data(mc_node *module_node)
 {
   // cube_template
-  welcome_window_data *wd = (welcome_window_data *)malloc(sizeof(welcome_window_data));
-  module_node->data = wd;
-  wd->node = module_node;
+  welcome_window_data *ww = (welcome_window_data *)malloc(sizeof(welcome_window_data));
+  module_node->data = ww;
+  ww->node = module_node;
 
-  wd->background_color = COLOR_CORNFLOWER_BLUE;
+  ww->background_color = COLOR_CORNFLOWER_BLUE;
 
-  MCcall(mcu_init_button(module_node, &wd->new_project_button));
-  wd->new_project_button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-  wd->new_project_button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
-  set_mc_str(wd->new_project_button->str, "New Project");
-  wd->new_project_button->node->layout->preferred_width = 120;
-  wd->new_project_button->node->layout->preferred_height = 28;
-  wd->new_project_button->left_click = &_mww_on_new_project;
+  MCcall(mcu_init_button(module_node, &ww->new_project_button));
+  ww->new_project_button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+  ww->new_project_button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+  set_mc_str(ww->new_project_button->str, "New Project");
+  ww->new_project_button->node->layout->preferred_width = 120;
+  ww->new_project_button->node->layout->preferred_height = 28;
+  ww->new_project_button->left_click = &_mww_on_new_project;
 
-  MCcall(mcu_init_textbox(module_node, &wd->input_textbox));
-  wd->input_textbox->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-  wd->input_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
-  set_mc_str(wd->new_project_button->str, "New Project");
-  wd->input_textbox->node->layout->preferred_width = 160;
-  wd->input_textbox->node->layout->preferred_height = 32;
-  wd->input_textbox->submit = &_mww_textbox_submit;
+  MCcall(mcu_init_textbox(module_node, &ww->input_textbox));
+  ww->input_textbox->node->layout->visible = false;
+  ww->input_textbox->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+  ww->input_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+  set_mc_str(ww->new_project_button->str, "New Project");
+  ww->input_textbox->node->layout->preferred_width = 160;
+  ww->input_textbox->node->layout->preferred_height = 32;
+  ww->input_textbox->submit = &_mww_textbox_submit;
 
   // mo_data->render_target.image = NULL;
   // mo_data->render_target.width = module_node->layout->preferred_width;

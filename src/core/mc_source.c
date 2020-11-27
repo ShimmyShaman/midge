@@ -602,23 +602,6 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
 
 // TODO Cleanup
 #include <unistd.h>
-static size_t mcs_save_text_to_file(char *filepath, char *text)
-{
-  FILE *f = fopen(filepath, "w");
-  if (f == NULL) {
-    printf("problem opening file '%s'\n", filepath);
-    return 0;
-  }
-  fseek(f, 0, SEEK_SET);
-
-  int len = strlen(text);
-
-  size_t written = fwrite(text, sizeof(char), len, f);
-  printf("written %zu bytes to %s\n", written, filepath);
-  fclose(f);
-
-  return written;
-}
 
 int mcs_interpret_file(const char *filepath)
 {
@@ -675,7 +658,7 @@ int mcs_interpret_file(const char *filepath)
              "tcci_add_string(app_itp_data->interpreter, filepath, code)"
              "line:%i:ERR:%i\n",
              __LINE__ - 5, mc_res);
-      mcs_save_text_to_file("src/temp/todelete.h", code);
+      save_text_to_file("src/temp/todelete.h", code);
       return mc_res;
     }
   }
