@@ -186,8 +186,7 @@ int midge_initialize_app(struct timespec *app_begin_time)
   struct timespec source_load_complete_time;
   clock_gettime(CLOCK_REALTIME, &source_load_complete_time);
 
-  printf("#######################\n  <<<< MIDGE >>>>\n\nCore Compile took %.2f "
-         "seconds\n",
+  printf("[[MIDGE-CORE] > Core Compile took %.2f seconds]\n",
          source_load_complete_time.tv_sec - global_data->app_begin_time->tv_sec +
              1e-9 * (source_load_complete_time.tv_nsec - global_data->app_begin_time->tv_nsec));
 

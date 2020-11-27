@@ -20,6 +20,7 @@ typedef struct welcome_window_data {
   render_color background_color;
 
   mcu_button *new_project_button;
+  mcu_textbox *input_textbox;
   // struct {
   //   unsigned int width, height;
   //   mcr_texture_image *image;
@@ -91,6 +92,10 @@ void mww_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
+void _mww_on_new_project(mcu_button *button, mc_point click_location) {}
+
+void _mww_textbox_submit(mcu_textbox *textbox, mc_point click_location) { puts(textbox->contents->text); }
+
 int mww_init_data(mc_node *module_node)
 {
   // cube_template
@@ -106,6 +111,15 @@ int mww_init_data(mc_node *module_node)
   set_mc_str(wd->new_project_button->str, "New Project");
   wd->new_project_button->node->layout->preferred_width = 120;
   wd->new_project_button->node->layout->preferred_height = 28;
+  wd->new_project_button->left_click = &_mww_on_new_project;
+
+  MCcall(mcu_init_textbox(module_node, &wd->input_textbox));
+  wd->input_textbox->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+  wd->input_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+  set_mc_str(wd->new_project_button->str, "New Project");
+  wd->input_textbox->node->layout->preferred_width = 160;
+  wd->input_textbox->node->layout->preferred_height = 32;
+  wd->input_textbox->submit = &_mww_textbox_submit;
 
   // mo_data->render_target.image = NULL;
   // mo_data->render_target.width = module_node->layout->preferred_width;

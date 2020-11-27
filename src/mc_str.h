@@ -19,6 +19,7 @@ int append_to_mc_str(mc_str *cstr, const char *text);
 int append_to_mc_strn(mc_str *cstr, const char *text, int n);
 int append_to_mc_strf(mc_str *cstr, const char *fmt, ...);
 int insert_into_mc_str(mc_str *cstr, const char *text, int index);
+int remove_from_mc_str(mc_str *cstr, int index, int len);
 
 /* Reduce a string to a certain length. Nothing occurs if string is already at or smaller than len */
 int restrict_mc_str(mc_str *cstr, int len);

@@ -1,8 +1,8 @@
 /* mc_str.c */
 
-#include <stdlib.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "midge_error_handling.h"
@@ -304,6 +304,26 @@ int insert_into_mc_str(mc_str *str, const char *text, int index)
   }
   memcpy(str->text + index, text, sizeof(char) * n);
   str->len += n;
+  str->text[str->len] = '\0';
+
+  return 0;
+}
+
+int remove_from_mc_str(mc_str *str, int index, int len)
+{
+  if (index < 0 || index >= str->len)
+    return 0;
+
+  if (index + len >= str->len) {
+    str->len = index;
+    str->text[str->len] = '\0';
+    return 0;
+  }
+
+  for (int a = index + len; a < str->len; ++a) {
+    str->text[a - len] = str->text[a];
+  }
+  str->len -= len;
   str->text[str->len] = '\0';
 
   return 0;
