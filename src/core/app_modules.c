@@ -54,6 +54,8 @@ int mca_load_modules()
   // // Get all directories in folder
   // // TODO
   const char *module_directories[] = {
+      "ui_elements",
+      "welcome_window",
       "modus_operandi",
       "source_editor",
       // "function_debug",
