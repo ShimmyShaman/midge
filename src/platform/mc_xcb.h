@@ -7,7 +7,7 @@
 #define APPLICATION_SET_HEIGHT 900
 
 // #include "m_threads.h"
-#include "mc_types.h"
+#include <stdbool.h>
 
 #ifndef max
 #define max(x, y) x < y ? y : x

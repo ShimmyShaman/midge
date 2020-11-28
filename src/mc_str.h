@@ -1,7 +1,7 @@
 #ifndef mc_str_H
 #define mc_str_H
 
-#include "mc_types.h"
+#include <stdbool.h>
 
 typedef struct mc_str {
   unsigned int alloc;

@@ -20,9 +20,11 @@
 int init_mc_io(mc_node *app_root)
 {
   MCcall(mcs_interpret_file("src/modules/mc_io/mc_file.h"));
+  MCcall(mcs_interpret_file("src/modules/mc_io/mc_projects.h"));
   MCcall(mcs_interpret_file("src/modules/mc_io/mc_io.h"));
 
   MCcall(mcs_interpret_file("src/modules/mc_io/mc_file.c"));
+  MCcall(mcs_interpret_file("src/modules/mc_io/mc_projects.c"));
 
   // MCitpCall(mce_init_source_editor_pool, "mce_init_source_editor_pool");
 

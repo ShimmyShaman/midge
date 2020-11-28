@@ -3,7 +3,7 @@
 #ifndef CORE_DEFINITIONS_H
 #define CORE_DEFINITIONS_H
 
-#include "mc_types.h"
+#include <stdbool.h>
 
 #include "tinycc/libtccinterp.h"
 

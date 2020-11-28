@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-// #include <string.h>
+#include <string.h>
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -122,35 +122,21 @@ void _mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
   }
 
   // The current working directory... maybe should be more fixed or set on start or application directory??? TODO
-  mc_str *cwd;
-  init_mc_str(&cwd);
-  set_mc_str(cwd, buf);
-
-  mcf_concat_filepath(cwd, "projects");
-
-  // char *projects_path = strdup(cwd->text);
-  mcf_concat_filepath(cwd, textbox->contents->text);
-
-  puts(cwd->text);
-
-  bool exists;
-  mcf_directory_exists(cwd->text, &exists);
-  if (exists) {
-    // Do nothing more
-    puts("5436 - TODO - error handling");
-    return;
-  }
+  // This is the directory you'd ask the user to provide if you had a more elaborate system
+  char c = buf[strlen(buf) - 1];
+  if (c != '\\' && c != '/')
+    strcat(buf, "/");
+  strcat(buf, "projects");
 
   // Clear to create the project
   // -- create the project folder
-  puts("TODO -- progress");
+  mcf_create_project(buf, textbox->contents->text);
+
   return;
 
-  if (mkdir(cwd->text, 0700)) {
-    puts("5449 - TODO - error handling");
-    return;
-  }
+  // TODO -- load the project
 
+  // Close the welcome window
   ww->node->layout->visible = false;
 }
 

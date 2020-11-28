@@ -3,9 +3,8 @@
 #ifndef M_THREADS_H
 #define M_THREADS_H
 
+#include <stdbool.h>
 #include <pthread.h>
-
-#include "mc_types.h"
 
 typedef struct mthread_info {
   pthread_t threadId;

@@ -164,11 +164,28 @@ void *mca_load_modules_then_project_async(void *state)
            "mca_load_modules"
            " line:%i:ERR:%i\n",
            __LINE__ - 5, res);
+
+    midge_app_info *global_data;
+    mc_obtain_midge_app_info(&global_data);
+    global_data->_exit_requested = true;
+
     return NULL;
   }
 
   // Projects
-  mca_load_open_projects();
+  res = mca_load_open_projects();
+  if (res) {
+    printf("--"
+           "mca_load_open_projects"
+           " line:%i:ERR:%i\n",
+           __LINE__ - 5, res);
+
+    midge_app_info *global_data;
+    mc_obtain_midge_app_info(&global_data);
+    global_data->_exit_requested = true;
+
+    return NULL;
+  }
 
   puts("modules & open-projects loading complete");
 
@@ -217,6 +234,14 @@ int midge_initialize_app(struct timespec *app_begin_time)
       printf("global_data->render_thread = %p %i %u\n", global_data->render_thread,
              global_data->render_thread->render_thread_initialized, global_data->render_thread->resource_queue->count);
     }
+  }
+
+  if (global_data->_exit_requested) {
+    if (!global_data->render_thread->thread_info->has_concluded) {
+      end_mthread(global_data->render_thread->thread_info);
+    }
+
+    return 1;
   }
 
   // while (!modules_load_thr_info->has_concluded) {
