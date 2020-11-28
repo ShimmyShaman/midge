@@ -17,7 +17,7 @@
   }
 #endif
 
-int init_ui_elements(mc_node *app_root)
+int init_mc_io(mc_node *app_root)
 {
   MCcall(mcs_interpret_file("src/modules/mc_io/mc_file.h"));
   MCcall(mcs_interpret_file("src/modules/mc_io/mc_io.h"));

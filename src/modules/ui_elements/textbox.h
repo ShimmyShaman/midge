@@ -31,7 +31,8 @@ typedef struct mcu_textbox {
     bool visible;
   } cursor;
 
-  void (*submit)(struct mcu_textbox *);
+  // void (*submit)(mci_input_event *, struct mcu_textbox *);
+  void *submit;
 
   render_color background_color;
 } mcu_textbox;

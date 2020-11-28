@@ -88,8 +88,9 @@ void _mcu_button_handle_input_event(mc_node *button_node, mci_input_event *input
       // printf("_mcu_button_handle_input_event-2\n");
       // Fire left-click
       // TODO fptr casting
-      void (*left_click)(mcu_button *, mc_point) = (void (*)(mcu_button *, mc_point))button->left_click;
-      left_click(button, (mc_point){input_event->input_state->mouse.x, input_event->input_state->mouse.y});
+      void (*left_click)(mci_input_event *, mcu_button *) =
+          (void (*)(mci_input_event *, mcu_button *))button->left_click;
+      left_click(input_event, button);
     }
   }
 

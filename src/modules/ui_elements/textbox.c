@@ -112,7 +112,8 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
     case KEY_CODE_ENTER:
     case KEY_CODE_RETURN: {
       if (textbox->submit) {
-        textbox->submit(textbox);
+        void (*submit)(mci_input_event *, mcu_textbox *) = (void (*)(mci_input_event *, mcu_textbox *))textbox->submit;
+        submit(input_event, textbox);
       }
     } break;
     default: {

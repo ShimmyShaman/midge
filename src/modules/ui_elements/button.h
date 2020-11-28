@@ -3,6 +3,7 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
+#include "control/mc_controller.h"
 #include "core/core_definitions.h"
 #include "mc_str.h"
 #include "render/render_common.h"
@@ -12,7 +13,7 @@ typedef struct mcu_button {
 
   void *tag;
 
-  // void (*left_click)(mcu_button *button, mc_point click_location);
+  // void (*left_click)(mci_input_event *, mcu_button *); (TODO why can't I declare this with TCC??)
   void *left_click;
 
   mc_str *str;

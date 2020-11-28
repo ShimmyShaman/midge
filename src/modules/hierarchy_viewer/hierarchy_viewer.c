@@ -239,7 +239,7 @@ void mc_hv_update_hierarchy_view_text_lines(mc_hv_hierarchy_view_state *hv_state
   mca_set_node_requires_layout_update(hv_state->root_node);
 }
 
-void __mc_hv_text_line_left_click_handler(mcu_button *button, mc_point click_location)
+void __mc_hv_text_line_left_click_handler(mci_input_event *input_event, mcu_button *button)
 {
   // printf("__mc_hv_text_line_left_click_handler\n");
   mc_hv_source_path_state *sp_state = (mc_hv_source_path_state *)button->tag;
@@ -318,7 +318,7 @@ void init_hierarchy_viewer()
     mcu_button *button;
     mcu_init_button(hv_state->root_node, &button);
     hv_state->text_lines.items[i] = button->node;
-    button->left_click = &__mc_hv_text_line_left_click_handler;
+    // button->left_click = &__mc_hv_text_line_left_click_handler; TODO
 
     mca_node_layout *layout = button->node->layout;
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;

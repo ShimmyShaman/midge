@@ -161,7 +161,7 @@ void mcu_context_menu_clear_options(mcu_context_menu *context_menu)
   context_menu->_buttons.count = 0;
 }
 
-void mcu_context_menu_option_clicked(mcu_button *button, mc_point click_point)
+void mcu_context_menu_option_clicked(mci_input_event *input_event, mcu_button *button)
 {
   // Get the context menu
   mc_node *context_menu_node = (mc_node *)button->node->parent;
@@ -199,7 +199,7 @@ void mcu_context_menu_add_option(mcu_context_menu *menu, const char *option_text
       // printf("mcu_temp_TODO:%p\n", (void *)&bb);
 
       // DEBUG TODO (has to be set with void for now)
-      menu->_buttons.items[a]->left_click = (void *)&mcu_context_menu_option_clicked;
+      menu->_buttons.items[a]->left_click = &mcu_context_menu_option_clicked;
 
       // menu->_buttons.items[a]->element->layout->preferred_width = 118.f;
       // menu->_buttons.items[a]->element->layout->preferred_height = 28.f;

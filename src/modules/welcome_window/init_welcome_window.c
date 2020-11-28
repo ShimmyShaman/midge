@@ -2,12 +2,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+// #include <string.h>
 
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
+#include "modules/mc_io/mc_io.h"
 #include "modules/ui_elements/ui_elements.h"
 
 // #include "env/environment_definitions.h"
@@ -92,32 +95,63 @@ void mww_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-void _mww_on_new_project(mcu_button *button, mc_point click_location)
+void _mww_on_new_project(mci_input_event *input_event, mcu_button *button)
 {
   welcome_window_data *ww = (welcome_window_data *)button->node->parent->data;
 
   // Make the input textbox visible
   ww->input_textbox->node->layout->visible = true;
+  mca_set_node_requires_rerender(ww->input_textbox->node);
 }
 
-void _mww_textbox_submit(mcu_textbox *textbox, mc_point click_location)
+void _mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
 {
   if (!textbox->contents->len) {
+    puts("5106 - TODO - error handling");
     return;
   }
 
   welcome_window_data *ww = (welcome_window_data *)textbox->node->parent->data;
   ww->input_textbox->node->layout->visible = false;
- todo
-  char *current_dir = get_current_dir_name();
 
-  mc_str *pd;
-  init_mc_str(&pd);
-  set_mc_str(pd, current_dir);
+  char buf[256];
+  char *current_dir = getcwd(buf, 256); // TODO sizeof pointer instead of type in mc
+  if (!current_dir) {
+    puts("5415 - TODO - error handling");
+    return;
+  }
 
-  mc_ensure_directory_path(pd);
+  // The current working directory... maybe should be more fixed or set on start or application directory??? TODO
+  mc_str *cwd;
+  init_mc_str(&cwd);
+  set_mc_str(cwd, buf);
 
-  append_to_mc_str(pd, textbox->contents);
+  mcf_concat_filepath(cwd, "projects");
+
+  // char *projects_path = strdup(cwd->text);
+  mcf_concat_filepath(cwd, textbox->contents->text);
+
+  puts(cwd->text);
+
+  bool exists;
+  mcf_directory_exists(cwd->text, &exists);
+  if (exists) {
+    // Do nothing more
+    puts("5436 - TODO - error handling");
+    return;
+  }
+
+  // Clear to create the project
+  // -- create the project folder
+  puts("TODO -- progress");
+  return;
+
+  if (mkdir(cwd->text, 0700)) {
+    puts("5449 - TODO - error handling");
+    return;
+  }
+
+  ww->node->layout->visible = false;
 }
 
 int mww_init_data(mc_node *module_node)
