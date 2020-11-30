@@ -161,15 +161,20 @@ int _mca_load_project(const char *base_path, const char *project_name)
   MCcall(mcs_interpret_file(buf));
 
   sprintf(buf, "initialize_%s", project_name);
-  int (*initialize_project)(void) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
+  int (*initialize_project)(mc_node *) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
   if (!initialize_project) {
     MCerror(1999,
             "Within the projects src/app/initialize_{project_name}.c file there must be a function "
-            "with the signature 'int %s(void)' : This could not be accessed for project_name='%s'",
+            "with the signature 'int %s(mc_node *)' : This could not be accessed for project_name='%s'",
             buf, project_name);
   }
 
-  MCcall(initialize_project());
+  mc_node *project_root;
+  sprintf(buf, "%s_root", project_name);
+  mca_init_mc_node(NODE_TYPE_ABSTRACT, buf, &project_root);
+  MCcall(initialize_project(project_root));
+
+  MCcall(mca_attach_node_to_hierarchy(app_info->global_node, project_root));
 
   // MCcall(mcs_interpret_file(buf));
 

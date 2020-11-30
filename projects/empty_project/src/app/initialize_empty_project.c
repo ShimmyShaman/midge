@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#include <unistd.h>
+
 #include "core/core_definitions.h"
 #include "core/midge_app.h"
 #include "render/render_common.h"
@@ -66,10 +68,8 @@ void _cbt_render_td_ct_data_present(image_render_details *image_render_queue, mc
   // mca_set_node_requires_rerender(node);
 }
 
-int initialize_empty_project()
+int initialize_empty_project(mc_node *node)
 {
-  mc_node *node;
-  mca_init_mc_node(NODE_TYPE_ABSTRACT, "empty_root", &node);
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
@@ -99,5 +99,9 @@ int initialize_empty_project()
   mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height,
                               MVK_IMAGE_USAGE_RENDER_TARGET_3D, &ct_data->render_target.image);
 
+  while (!ct_data->render_target.image) {
+    // puts("wait");
+    usleep(100);
+  }
   return 0;
 }
