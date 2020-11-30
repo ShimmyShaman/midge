@@ -1,6 +1,8 @@
 /* mc_file.c */
 
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -28,12 +30,20 @@ int mcf_directory_exists(const char *path, bool *exists)
 {
   struct stat stats;
 
-  MCcall(stat(path, &stats));
+  puts(path);
+  int res = stat(path, &stats);
+  printf("res = %i\n", res);
+  if (!res) {
+    *exists = S_ISDIR(stats.st_mode) ? true : false;
+    return 0;
+  }
+  else if (res == -1) {
+    *exists = false;
+    return 0;
+  }
 
-  // Check for file existence
-  *exists = S_ISDIR(stats.st_mode) ? true : false;
-
-  return 0;
+  fprintf(stderr, "stat failed!\n %s\n", strerror(errno));
+  return 33;
 }
 
 // int mcf_create_directory(const char *path, const char *directory_name)

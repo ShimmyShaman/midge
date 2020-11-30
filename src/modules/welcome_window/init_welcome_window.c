@@ -101,6 +101,7 @@ void _mww_on_new_project(mci_input_event *input_event, mcu_button *button)
 
   // Make the input textbox visible
   ww->input_textbox->node->layout->visible = true;
+  mca_focus_node(ww->input_textbox->node);
   mca_set_node_requires_rerender(ww->input_textbox->node);
 }
 
