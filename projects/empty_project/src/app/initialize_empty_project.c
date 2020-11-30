@@ -1,21 +1,12 @@
+/* main_init.c */
+
+#include <stdlib.h>
+
 #include "core/core_definitions.h"
-#include "env/environment_definitions.h"
-
 #include "core/midge_app.h"
+#include "render/render_common.h"
 
-typedef struct cube_template_root_data {
-  mc_node *node;
-
-  struct {
-    unsigned int width, height;
-    mcr_texture_image *image;
-  } render_target;
-
-  struct {
-    mat4 world;
-    // mcr_model *model;
-  } cube;
-} cube_template_root_data;
+#include "../projects/empty_project/src/app/initialize_empty_project.h"
 
 void _cbt_render_td_ct_data_headless(mc_node *node)
 {
@@ -75,14 +66,10 @@ void _cbt_render_td_ct_data_present(image_render_details *image_render_queue, mc
   // mca_set_node_requires_rerender(node);
 }
 
-void init_cube_template(mc_node *app_root)
+int initialize_empty_project()
 {
-  //   printf("instantiate file:'%s'\n", str->text);
-  //   instantiate_all_definitions_from_file(global_data->global_node, str->text, NULL);
-
-  //   module_node->
   mc_node *node;
-  mca_init_mc_node(NODE_TYPE_ABSTRACT, "cube_template", &node);
+  mca_init_mc_node(NODE_TYPE_ABSTRACT, "empty_root", &node);
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
@@ -112,9 +99,5 @@ void init_cube_template(mc_node *app_root)
   mcr_create_texture_resource(ct_data->render_target.width, ct_data->render_target.height,
                               MVK_IMAGE_USAGE_RENDER_TARGET_3D, &ct_data->render_target.image);
 
-  // printf("ct_data=%p\n", ct_data);
-  // printf("&ct_data->cube.model=%p\n", &ct_data->cube.model);
-  // printf("&ct_data->cube.model=%p\n", &(ct_data->cube.model));
-
-  // mcr_load_wavefront_obj_model("res/cube/cube.obj", "res/cube/cube_diffuse.png", &ct_data->cube.model);
+  return 0;
 }

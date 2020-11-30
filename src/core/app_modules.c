@@ -1,8 +1,10 @@
 /* app_modules.c */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include <dirent.h>
 #include <unistd.h>
 
 #include "tinycc/libtccinterp.h"
@@ -109,6 +111,87 @@ int _mca_set_project_state(char *base_path, char *module_name)
   return 0;
 }
 
+int _mca_load_project(const char *base_path, const char *project_name)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  char buf[512];
+  sprintf(buf, "%s/%s/src", base_path, project_name);
+
+  // Load the source
+  // TODO - hard problem ( have to load headers than .c files but do it in order)
+  // DIR *dir;
+  // struct dirent *ent;
+  // if ((dir = opendir(buf)) != NULL) {
+  //   /* print all the files and directories within directory */
+  //   while ((ent = readdir(dir)) != NULL) {
+  //     printf("%s\n", ent->d_name);
+  //   }
+  //   closedir(dir);
+  // }
+  // else {
+  //   /* could not open directory */
+  //   perror("");
+  //   // return EXIT_FAILURE;
+  // }
+
+  // TEMP
+  mc_project_info *project = malloc(sizeof(mc_project_info));
+  project->path_src = strdup(buf);
+
+  // Temporary fixup - source load
+  // Load main_init.h && main_init.c
+  sprintf(buf, "%s/app/initialize_%s.h", project->path_src, project_name);
+  if (access(buf, F_OK) == -1) {
+    MCerror(1998,
+            "Within each projects src folder there must be a file in a folder named 'app' named "
+            "'initialize_{project_name}.h' : This could not be accessed for project_name='%s'",
+            project_name);
+  }
+  MCcall(mcs_interpret_file(buf));
+
+  sprintf(buf, "%s/app/initialize_%s.c", project->path_src, project_name);
+  if (access(buf, F_OK) == -1) {
+    MCerror(1999,
+            "Within each projects src folder there must be a file in a folder named 'app' named "
+            "'initialize_{project_name}.c' : This could not be accessed for project_name='%s'",
+            project_name);
+  }
+  MCcall(mcs_interpret_file(buf));
+
+  sprintf(buf, "initialize_%s", project_name);
+  int (*initialize_project)(void) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
+  if (!initialize_project) {
+    MCerror(1999,
+            "Within the projects src/app/initialize_{project_name}.c file there must be a function "
+            "with the signature 'int %s(void)' : This could not be accessed for project_name='%s'",
+            buf, project_name);
+  }
+
+  MCcall(initialize_project());
+
+  // MCcall(mcs_interpret_file(buf));
+
+  // // Initialize the module
+  // sprintf(buf, "main", project_name);
+  // int (*initialize_module)(mc_node *) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
+  // if (!initialize_module) {
+  //   MCerror(2000,
+  //           "within each 'init_{%%project_name%%}.c' file there must be a method with signature 'int "
+  //           "init_{%%project_name%%}(mc_node *)' : This was not found for project_name='%s'",
+  //           project_name);
+  // }
+
+  // // TODO -- for some reason interpreting from this function loads the functions to address ranges I normally see
+  // // reserved for stack variables. Find out whats happenning -- that can't be good
+  // // printf("interpreter=%p\n",app_info->itp_data->interpreter);
+  // // printf("%s=%p\n", buf, initialize_module);
+  // MCcall(initialize_module(app_info->global_node));
+
+  return 0;
+}
+
 int mca_load_open_projects()
 {
   char *open_list_text;
@@ -135,8 +218,8 @@ int mca_load_open_projects()
       strncpy(buf, open_list_text + s, i - s);
       buf[i - s] = '\0';
 
-      MCcall(_mca_load_module("projects", buf));
-      _mca_set_project_state("projects", buf);
+      MCcall(_mca_load_project("projects", buf));
+      // _mca_set_project_state("projects", buf);
     }
   }
 

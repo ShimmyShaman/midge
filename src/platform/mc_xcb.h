@@ -3,11 +3,11 @@
 
 #include "xcb/xcb.h"
 
-#define APPLICATION_SET_WIDTH 1540
-#define APPLICATION_SET_HEIGHT 900
-
 // #include "m_threads.h"
 #include <stdbool.h>
+
+#define APPLICATION_SET_WIDTH 1540
+#define APPLICATION_SET_HEIGHT 900
 
 #ifndef max
 #define max(x, y) x < y ? y : x
