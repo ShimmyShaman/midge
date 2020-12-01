@@ -78,6 +78,10 @@ typedef struct render_color {
   (render_color) {      \
     0.0f, 0.52f, 0.52f, 1.f \
   }
+#define COLOR_GRAPE                                \
+  (render_color) {                              \
+    64.f / 255.f, 57.f / 255.f, 71.f / 255.f, 1.f \
+  }
 #define COLOR_PURPLE                                \
   (render_color) {                              \
     160.f / 255.f, 32.f / 255.f, 240.f / 255.f, 1.f \

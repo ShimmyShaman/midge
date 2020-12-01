@@ -62,7 +62,8 @@ int mca_load_modules()
       "welcome_window",
       "modus_operandi",
       "source_editor",
-      // "function_debug",
+      "project_explorer",
+      // And all before...
       "obj_loader",
       NULL,
   };
@@ -118,7 +119,11 @@ int _mca_load_project(const char *base_path, const char *project_name)
   mc_obtain_midge_app_info(&app_info);
 
   char buf[512];
-  sprintf(buf, "%s/%s/src", base_path, project_name);
+  mc_project_info *project = malloc(sizeof(mc_project_info));
+  sprintf(buf, "%s/%s", base_path, project_name);
+  project->path = strdup(buf);
+  strcat(buf, "/src");
+  project->path_src = strdup(buf);
 
   // Load the source
   // TODO - hard problem ( have to load headers than .c files but do it in order)
@@ -138,8 +143,6 @@ int _mca_load_project(const char *base_path, const char *project_name)
   // }
 
   // TEMP
-  mc_project_info *project = malloc(sizeof(mc_project_info));
-  project->path_src = strdup(buf);
 
   // Temporary fixup - source load
   // Load main_init.h && main_init.c
@@ -176,6 +179,9 @@ int _mca_load_project(const char *base_path, const char *project_name)
   MCcall(initialize_project(project_root));
 
   MCcall(mca_attach_node_to_hierarchy(app_info->global_node, project_root));
+
+  project->root_node = project_root;
+  MCcall(mca_register_project_loaded(project));
 
   // MCcall(mcs_interpret_file(buf));
 

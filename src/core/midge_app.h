@@ -5,23 +5,29 @@
 
 #include <pthread.h>
 
+#include "core/core_definitions.h"
 #include "control/mc_controller.h"
 #include "platform/mc_xcb.h"
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
-
-// typedef struct mc_input_event {
-//   bool shiftDown, ctrlDown, altDown;
-//   window_input_event_type type;
-//   window_input_event_detail detail;
-//   bool handled;
-// } mc_input_event;
 
 typedef struct frame_time {
   long frame_secs, frame_nsecs;
   long app_secs, app_nsecs;
   float frame_secsf, app_secsf;
 } frame_time;
+
+typedef struct event_handler_info {
+  void *delegate;
+  void *state;
+} event_handler_info;
+
+typedef struct event_handler_array {
+  mc_app_event_type event_type;
+  unsigned int count;
+  unsigned int capacity;
+  event_handler_info **handlers;
+} event_handler_array;
 
 typedef struct midge_app_info {
   mc_app_itp_data *itp_data;
@@ -46,6 +52,16 @@ typedef struct midge_app_info {
 
   mci_input_state *input_state;
   bool input_state_requires_update;
+
+  struct {
+    unsigned int alloc, count;
+    event_handler_array **items;
+  } event_handlers;
+
+  struct {
+    mc_project_info *items;
+    unsigned int capacity, count;
+  } projects;
 
 } midge_app_info;
 

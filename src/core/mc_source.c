@@ -385,7 +385,7 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
 
     // Source
     if (fi->source) {
-      MCerror(8384, "TODO");
+      MCerror(8384, "TODO for '%s'", fi->name);
     }
 
     fi->source = (source_definition *)malloc(sizeof(source_definition));

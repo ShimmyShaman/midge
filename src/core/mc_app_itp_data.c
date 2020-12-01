@@ -62,9 +62,6 @@ int mc_init_app_itp_data(TCCInterpState *tis)
   __mc_app_itp_data->preprocess_defines.items =
       (preprocess_define_info **)calloc(sizeof(preprocess_define_info *), __mc_app_itp_data->preprocess_defines.alloc);
 
-  __mc_app_itp_data->event_handlers.alloc = 0;
-  __mc_app_itp_data->event_handlers.count = 0;
-
   return 0;
 }
 

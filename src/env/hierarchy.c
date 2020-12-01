@@ -35,8 +35,8 @@ void exit_app(mc_node *node_scope, int result)
 // {
 //   switch (hierarchy_node->type) {
 //   case NODE_TYPE_GLOBAL_ROOT: {
-//     mc_global_data *global_data = (mc_global_data *)hierarchy_node->data;
-//     *sub_node_list = global_data->children;
+//     mc_app_info *app_info = (mc_app_info *)hierarchy_node->data;
+//     *sub_node_list = app_info->children;
 //   } break;
 //   case NODE_TYPE_UI: {
 //     mcu_get_hierarchical_children_node_list(hierarchy_node, sub_node_list);
@@ -689,10 +689,10 @@ int mca_focus_node(mc_node *node)
 
 int mca_obtain_focused_node(mc_node **node)
 {
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
-  *node = global_data->global_node;
+  *node = app_info->global_node;
 
   while ((*node)->layout && (*node)->layout->focused_child) {
     (*node) = (*node)->layout->focused_child;
@@ -757,14 +757,44 @@ int mca_obtain_focused_node(mc_node **node)
 //   // register_midge_error_tag("mcd_on_hierarchy_update(~)");
 // }
 
-// void attach_definition_to_hierarchy(mc_node *parent_attachment, char *definition)
+int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  // printf("app_info->event_handlers.count:%u\n", app_info->event_handlers.count);
+  event_handler_array *eha = app_info->event_handlers.items[MC_APP_EVENT_PROJECT_LOADED];
+
+  event_handler_info *eh = (event_handler_info *)malloc(sizeof(event_handler_info));
+  eh->delegate = handler_delegate;
+  eh->state = handler_state;
+
+  // printf("eha->handlers:%p, eha->capacity:%u\n", eha->handlers, eha->capacity);
+  MCcall(append_to_collection((void ***)&eha->handlers, &eha->capacity, &eha->count, eh));
+
+  return 0;
+}
+
+int mca_register_project_loaded(mc_project_info *project)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  MCcall(append_to_collection((void ***)&app_info->projects.items, &app_info->projects.capacity,
+                              &app_info->projects.count, project));
+
+  // Fire an event...
+  event_handler_array *eha = app_info->event_handlers.items[MC_APP_EVENT_PROJECT_LOADED];
+  for (int a = 0; a < eha->count; ++a) {
+    int (*event_handler)(void *, mc_project_info *) = (int (*)(void *, mc_project_info *))eha->handlers[a]->delegate;
+    MCcall(event_handler(eha->handlers[a]->state, project));
+  }
+
+  return 0;
+}
 // {
 //   // append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
 //   //                      &parent_attachment->child_count, node_to_add);
-
-//   // Fire an event...
-//   unsigned int event_type = ME_NODE_HIERARCHY_UPDATED;
-//   notify_handlers_of_event(event_type, NULL);
 
 //   // TODO -- maybe find a better place to do this
 //   switch (node_to_add->type) {

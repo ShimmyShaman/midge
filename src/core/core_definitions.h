@@ -7,6 +7,14 @@
 
 #include "tinycc/libtccinterp.h"
 
+typedef enum mc_app_event_type {
+  MC_APP_EVENT_NULL = 0,
+  MC_APP_EVENT_POST_INITIALIZATION,
+  // int (*event_handler)(void *handler_state, mc_project_info *loaded_project)
+  MC_APP_EVENT_PROJECT_LOADED,
+  MC_APP_EXCLUSIVE_MAX,
+} mc_app_event_type;
+
 typedef enum source_file_type {
   SOURCE_FILE_NULL = 0,
   SOURCE_FILE_NODE,
@@ -67,11 +75,6 @@ typedef enum preprocessor_define_type {
   // #define identifier(identifier...opt) token-string-opt
   PREPROCESSOR_DEFINE_FUNCTION_LIKE,
 } preprocessor_define_type;
-
-typedef enum mc_app_event_type {
-  MC_APP_EVENT_NULL = 0,
-  MC_APP_EVENT_POST_INITIALIZATION,
-} mc_app_event_type;
 
 typedef struct struct_id {
   char *identifier;
@@ -223,13 +226,6 @@ typedef struct function_info {
   struct function_info **dependencies;
 } function_info;
 
-typedef struct event_handler_array {
-  unsigned int event_type;
-  unsigned int count;
-  unsigned int alloc;
-  int (***handlers)(int, void **);
-} event_handler_array;
-
 struct mc_node;
 typedef struct mc_node_list {
   unsigned int alloc, count;
@@ -280,11 +276,13 @@ typedef struct mc_app_itp_data {
     unsigned int alloc, count;
     preprocess_define_info **items;
   } preprocess_defines;
-  struct {
-    unsigned int alloc, count;
-    event_handler_array **items;
-  } event_handlers;
 } mc_app_itp_data;
+
+typedef struct mc_project_info {
+  char *path, *path_src;
+
+  mc_node *root_node;
+} mc_project_info;
 
 int mc_obtain_app_itp_data(mc_app_itp_data **p_data);
 
@@ -293,9 +291,9 @@ int mc_throw_delayed_error(int error_no, const char *error_message, int year, in
 int read_file_text(const char *filepath, char **output);
 int save_text_to_file(char *filepath, char *text);
 
-int append_to_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
+int append_to_collection(void ***collection, unsigned int *collection_capacity, unsigned int *collection_count,
                          void *item);
-int insert_in_collection(void ***collection, unsigned int *collection_alloc, unsigned int *collection_count,
+int insert_in_collection(void ***collection, unsigned int *collection_capacity, unsigned int *collection_count,
                          int insertion_index, void *item);
 int remove_from_collection(void ***collection, unsigned int *collection_count, int index);
 int remove_ptr_from_collection(void ***collection, unsigned int *collection_count, bool return_error_on_failure,
