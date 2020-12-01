@@ -12,6 +12,7 @@
 #include "core/core_definitions.h"
 #include "core/mc_source.h"
 #include "core/midge_app.h"
+#include "m_threads.h"
 #include "mc_str.h"
 #include "midge_error_handling.h"
 
@@ -193,6 +194,47 @@ int _mca_load_project(const char *base_path, const char *project_name)
   // // printf("interpreter=%p\n",app_info->itp_data->interpreter);
   // // printf("%s=%p\n", buf, initialize_module);
   // MCcall(initialize_module(app_info->global_node));
+
+  return 0;
+}
+
+void *_mca_load_project_async_thread(void *state)
+{
+  char *project_parent_dir = (char *)((void **)state)[0];
+  char *project_name = (char *)((void **)state)[1];
+
+  int res = _mca_load_project(project_parent_dir, project_name);
+  if (res) {
+    printf("--"
+           "_mca_load_project"
+           "line:%i:ERR:%i\n",
+           __LINE__ - 5, res);
+    printf("--"
+           "_mca_load_project_async_thread"
+           "line:??:ERR:%i\n",
+           res);
+  }
+
+  // At least cleanup state
+  free(project_parent_dir);
+  free(project_name);
+  free((void **)state);
+
+  return NULL;
+}
+
+int mca_load_project_async(const char *project_parent_dir, char *project_name)
+{
+  // Have to just create a thread and use it soley for the project atm TODO
+  // Probably best to just have a loader thread on standby -- Who knows, not me, not yet.
+  void **state = (void **)malloc(sizeof(void *) * 2);
+  state[0] = (void *)strdup(project_parent_dir);
+  state[1] = (void *)strdup(project_name);
+
+  mthread_info *thread;
+  MCcall(begin_mthread(&_mca_load_project_async_thread, &thread, state));
+
+  // TODO -- once thread ends there is no cleanup of thread info!!! bad bad bad issue#11
 
   return 0;
 }

@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "core/app_modules.h"
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
@@ -133,9 +134,9 @@ void _mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
   // -- create the project folder
   mcf_create_project(buf, textbox->contents->text);
 
-  return;
-
-  // TODO -- load the project
+  // Load the created project
+  // TODO -- maybe include create_project in the async call too .. maybe it takes too long?? not a priority
+  mca_load_project_async(buf, textbox->contents->text);
 
   // Close the welcome window
   ww->node->layout->visible = false;
