@@ -32,22 +32,6 @@ typedef struct mcu_text_block {
   render_color font_color;
 } mcu_text_block;
 
-// Controls
-typedef struct mcu_button {
-  mc_node *node;
-
-  void *tag;
-
-  // void (*left_click)(mcu_button *button, mc_point click_location);
-  void *left_click;
-
-  mc_str *str;
-  mcr_font_resource *font;
-  render_color font_color;
-
-  render_color background_color;
-} mcu_button;
-
 // typedef struct mcu_context_menu {
 //   mc_node *node;
 
@@ -86,7 +70,6 @@ void mcu_init_panel(mc_node *parent, mcu_panel **p_panel);
 void mcu_init_text_block(mc_node *parent, mcu_text_block **p_text_block);
 // void mcu_render_text_block(image_render_details *image_render_queue, mc_node *ui_node);
 
-void mcu_init_button(mc_node *parent, mcu_button **p_button);
 // void mcu_render_button(image_render_details *image_render_queue, mc_node *ui_node);
 // void mca_init_button_context_menu_options();
 

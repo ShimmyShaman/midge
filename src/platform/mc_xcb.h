@@ -3,11 +3,11 @@
 
 #include "xcb/xcb.h"
 
+// #include "m_threads.h"
+#include <stdbool.h>
+
 #define APPLICATION_SET_WIDTH 1540
 #define APPLICATION_SET_HEIGHT 900
-
-// #include "m_threads.h"
-#include "mc_types.h"
 
 #ifndef max
 #define max(x, y) x < y ? y : x
@@ -169,6 +169,7 @@ typedef struct mxcb_window_info {
   bool input_requests_exit;
 } mxcb_window_info;
 
+// TODO -- naming / correct file placement
 int get_key_input_code_char(bool shift, mc_key_code code, char *c);
 
 int mxcb_init_window(mxcb_window_info *mcxbWindowInfo, int surfaceSizeX, int surfaceSizeY);

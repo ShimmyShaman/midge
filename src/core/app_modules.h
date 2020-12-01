@@ -44,6 +44,7 @@
 // } mc_hv_hierarchy_view_state;
 
 int mca_load_modules();
+int mca_load_project_async(const char *project_parent_dir, char *project_name);
 int mca_load_open_projects();
 
 #endif // APP_MODULES_H

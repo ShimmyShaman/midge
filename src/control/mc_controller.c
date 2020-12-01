@@ -220,7 +220,10 @@ void mcc_handle_xcb_input()
 
         if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
             xcb_input->detail.keyboard.key == KEY_CODE_L) {
-          mca_set_all_nodes_require_layout_update();
+
+          mca_set_node_requires_layout_update(global_data->global_node);
+          if (global_data->global_node->children)
+            mca_set_descendents_require_layout_update(global_data->global_node->children);
           continue;
         }
 

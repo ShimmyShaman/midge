@@ -8,6 +8,11 @@
 // #include "core/c_parser_lexer.h"
 #include "tinycc/libtccinterp.h"
 
+typedef struct mc_project_info {
+  char *path_src;
+  
+} mc_project_info;
+
 // int register_external_definitions_from_file(mc_node *definitions_owner, char *filepath,
 //                                             mc_source_file_info **source_file);
 // int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath,
@@ -25,6 +30,6 @@
 // */
 // int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
 //                            void **definition_info);
-int mcs_interpret_file( const char *filepath);
+int mcs_interpret_file(const char *filepath);
 
 #endif // MC_SOURCE_H

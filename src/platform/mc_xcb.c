@@ -2,10 +2,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include <vulkan/vulkan.h>
 
-#include "mc_types.h"
 
 #include "platform/mc_xcb.h"
 

@@ -6,13 +6,13 @@
 // #include <sys/stat.h>
 // #include <unistd.h>
 
-#include "tinycc/libtccinterp.h"
-
 #include "midge_error_handling.h"
 
 #include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
 #include "core/mc_code_transcription.h"
+
+#include "mc_source.h"
 
 int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field);
 
@@ -600,26 +600,8 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
   return 0;
 }
 
-// TODO Cleanup
-#include <unistd.h>
-static size_t mcs_save_text_to_file(char *filepath, char *text)
-{
-  FILE *f = fopen(filepath, "w");
-  if (f == NULL) {
-    printf("problem opening file '%s'\n", filepath);
-    return 0;
-  }
-  fseek(f, 0, SEEK_SET);
-
-  int len = strlen(text);
-
-  size_t written = fwrite(text, sizeof(char), len, f);
-  printf("written %zu bytes to %s\n", written, filepath);
-  fclose(f);
-
-  return written;
-}
-
+/* interpret file to the global interpreter and process for midge.
+ */
 int mcs_interpret_file(const char *filepath)
 {
   int res;
@@ -660,10 +642,10 @@ int mcs_interpret_file(const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  // if (!strcmp("projects/mystery_hut/init_mystery_hut.c", filepath)) {
+  // if (!strcmp("src/modules/mc_io/mc_file.c", filepath)) {
   //   // usleep(10000);
   //   // printf("\ngen-code:\n%s||\n", code);
-  //   mcs_save_text_to_file("src/temp/todelete.h", code);
+  //   save_text_to_file("src/temp/todelete.h", code);
   //   // MCerror(7704, "TODO");
   // }
 
@@ -675,7 +657,7 @@ int mcs_interpret_file(const char *filepath)
              "tcci_add_string(app_itp_data->interpreter, filepath, code)"
              "line:%i:ERR:%i\n",
              __LINE__ - 5, mc_res);
-      mcs_save_text_to_file("src/temp/todelete.h", code);
+      save_text_to_file("src/temp/todelete.h", code);
       return mc_res;
     }
   }

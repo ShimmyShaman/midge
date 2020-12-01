@@ -56,6 +56,24 @@ int read_file_text(const char *filepath, char **output)
   return 0;
 }
 
+int save_text_to_file(char *filepath, char *text)
+{
+  FILE *f = fopen(filepath, "w");
+  if (f == NULL) {
+    printf("problem opening file '%s'\n", filepath);
+    return 0;
+  }
+  fseek(f, 0, SEEK_SET);
+
+  int len = strlen(text);
+
+  size_t written = fwrite(text, sizeof(char), len, f);
+  printf("written %zu bytes to %s\n", written, filepath);
+  fclose(f);
+
+  return 0;
+}
+
 int append_to_collection(void ***collection, unsigned int *collection_capacity, unsigned int *collection_count,
                          void *item)
 {

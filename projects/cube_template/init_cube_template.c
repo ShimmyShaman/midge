@@ -82,7 +82,7 @@ void init_cube_template(mc_node *app_root)
 
   //   module_node->
   mc_node *node;
-  mca_init_mc_node(app_root, NODE_TYPE_ABSTRACT, &node);
+  mca_init_mc_node(NODE_TYPE_ABSTRACT, "cube_template", &node);
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;

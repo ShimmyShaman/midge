@@ -141,9 +141,12 @@ int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area);
 int mca_render_node_list_headless(mc_node_list *node_list);
 int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *node_list);
 
-int mca_set_all_nodes_require_layout_update();
 int mca_set_node_requires_layout_update(mc_node *node);
+/* A recursive function initiating layout update on all members of the node list and THEIR descendents as well */
+int mca_set_descendents_require_layout_update(mc_node_list *node_descendents_list);
 int mca_set_node_requires_rerender(mc_node *node);
+
+int mca_render_typical_nodes_children_present(image_render_details *image_render_queue, mc_node_list *children);
 
 int mca_focus_node(mc_node *node);
 int mca_obtain_focused_node(mc_node **node);
