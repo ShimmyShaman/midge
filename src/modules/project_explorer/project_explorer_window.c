@@ -122,7 +122,7 @@ void _mcm_pjxp_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-int _mcm_pjxp_project_loaded(void *handler_state, mc_project_info *project)
+int _mcm_pjxp_project_loaded(void *handler_state, void *event_args)
 {
   // Data
   project_explorer_data *data = (project_explorer_data *)handler_state;

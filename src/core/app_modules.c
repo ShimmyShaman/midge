@@ -181,7 +181,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
   MCcall(mca_attach_node_to_hierarchy(app_info->global_node, project_root));
 
   project->root_node = project_root;
-  MCcall(mca_register_project_loaded(project));
+  MCcall(mca_register_loaded_project(project));
 
   // MCcall(mcs_interpret_file(buf));
 
@@ -245,7 +245,7 @@ int mca_load_project_async(const char *project_parent_dir, char *project_name)
   return 0;
 }
 
-int mca_load_open_projects()
+int mca_load_previously_open_projects()
 {
   char *open_list_text;
   read_file_text("projects/open_project_list", &open_list_text);

@@ -32,7 +32,7 @@ typedef struct welcome_window_data {
 
 } welcome_window_data;
 
-void mww_render_headless(mc_node *node)
+void mc_mww_render_headless(mc_node *node)
 {
   welcome_window_data *wwwata = (welcome_window_data *)node->data;
 
@@ -48,8 +48,8 @@ void mww_render_headless(mc_node *node)
   }
 
   // // Render the render target
-  // midge_app_info *global_data;
-  // mc_obtain_midge_app_info(&global_data);
+  // midge_app_info *app_info;
+  // mc_obtain_midge_app_info(&app_info);
 
   // // Children
   // for (int a = 0; a < node->children->count; ++a) {
@@ -62,10 +62,10 @@ void mww_render_headless(mc_node *node)
   //   }
   // }
 
-  // mcr_submit_image_render_request(global_data->render_thread, irq);
+  // mcr_submit_image_render_request(app_info->render_thread, irq);
 }
 
-void mww_render_present(image_render_details *image_render_queue, mc_node *node)
+void mc_mww_render_present(image_render_details *image_render_queue, mc_node *node)
 {
   welcome_window_data *wwwata = (welcome_window_data *)node->data;
 
@@ -74,8 +74,8 @@ void mww_render_present(image_render_details *image_render_queue, mc_node *node)
   //                                        modata->render_target.height, modata->render_target.image);
 
   // Render the render target
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
   mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                         (unsigned int)node->layout->__bounds.y,
@@ -86,7 +86,7 @@ void mww_render_present(image_render_details *image_render_queue, mc_node *node)
   mca_render_typical_nodes_children_present(image_render_queue, node->children);
 }
 
-void mww_handle_input(mc_node *node, mci_input_event *input_event)
+void mc_mww_handle_input(mc_node *node, mci_input_event *input_event)
 {
   // printf("_mco_handle_input\n");
   input_event->handled = true;
@@ -96,7 +96,7 @@ void mww_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-void _mww_on_new_project(mci_input_event *input_event, mcu_button *button)
+void _mc_mww_on_new_project(mci_input_event *input_event, mcu_button *button)
 {
   welcome_window_data *ww = (welcome_window_data *)button->node->parent->data;
 
@@ -106,7 +106,7 @@ void _mww_on_new_project(mci_input_event *input_event, mcu_button *button)
   mca_set_node_requires_rerender(ww->input_textbox->node);
 }
 
-void _mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
+void _mc_mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
 {
   if (!textbox->contents->len) {
     puts("5106 - TODO - error handling");
@@ -142,7 +142,24 @@ void _mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
   ww->node->layout->visible = false;
 }
 
-int mww_init_data(mc_node *module_node)
+int _mc_mww_on_inital_load_complete(void *state, void *event_arg)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  // if (!app_info->projects.count) {
+  //   // No projects on initial load, nows the time to shine baby
+  //   mc_node *node = (mc_node *)state;
+  //   node->layout->visible = true;
+  //   MCcall(mca_set_node_requires_rerender(node));
+
+  //   puts("time to shine baby");
+  // }
+
+  return 0;
+}
+
+int mc_mww_init_data(mc_node *module_node)
 {
   // cube_template
   welcome_window_data *ww = (welcome_window_data *)malloc(sizeof(welcome_window_data));
@@ -157,7 +174,7 @@ int mww_init_data(mc_node *module_node)
   set_mc_str(ww->new_project_button->str, "New Project");
   ww->new_project_button->node->layout->preferred_width = 120;
   ww->new_project_button->node->layout->preferred_height = 28;
-  ww->new_project_button->left_click = &_mww_on_new_project;
+  ww->new_project_button->left_click = &_mc_mww_on_new_project;
 
   MCcall(mcu_init_textbox(module_node, &ww->input_textbox));
   ww->input_textbox->node->layout->visible = false;
@@ -166,7 +183,7 @@ int mww_init_data(mc_node *module_node)
   set_mc_str(ww->new_project_button->str, "New Project");
   ww->input_textbox->node->layout->preferred_width = 160;
   ww->input_textbox->node->layout->preferred_height = 32;
-  ww->input_textbox->submit = &_mww_textbox_submit;
+  ww->input_textbox->submit = &_mc_mww_textbox_submit;
 
   // mo_data->render_target.image = NULL;
   // mo_data->render_target.width = module_node->layout->preferred_width;
@@ -185,8 +202,8 @@ int mww_init_data(mc_node *module_node)
 
 int init_welcome_window(mc_node *app_root)
 {
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
   //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
 
   // TODO -- get rid of node type
@@ -200,6 +217,8 @@ int init_welcome_window(mc_node *app_root)
   node->layout->preferred_width = 220;
   node->layout->preferred_height = 140;
 
+  node->layout->visible = false;
+
   // node->layout->padding.left = 120;
   // node->layout->padding.bottom = 80;
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
@@ -207,17 +226,20 @@ int init_welcome_window(mc_node *app_root)
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
-  node->layout->render_headless = (void *)&mww_render_headless;
-  node->layout->render_present = (void *)&mww_render_present;
-  node->layout->handle_input_event = (void *)&mww_handle_input;
+  node->layout->render_headless = (void *)&mc_mww_render_headless;
+  node->layout->render_present = (void *)&mc_mww_render_present;
+  node->layout->handle_input_event = (void *)&mc_mww_handle_input;
 
-  mww_init_data(node);
+  mc_mww_init_data(node);
+
+  MCcall(
+      mca_register_event_handler(MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED, _mc_mww_on_inital_load_complete, node));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 
   // Panel
   // mcu_panel *panel;
-  // mcu_init_panel(global_data->global_node, &panel);
+  // mcu_init_panel(app_info->global_node, &panel);
 
   // panel->node->layout->padding = {300, 400, 800, 60};
   // panel->background_color = COLOR_GREEN;
@@ -226,7 +248,7 @@ int init_welcome_window(mc_node *app_root)
 
   // Text Block
   // mcu_text_block *text_block;
-  // mcu_init_text_block(global_data->global_node, &text_block);
+  // mcu_init_text_block(app_info->global_node, &text_block);
 
   // mca_node_layout *layout = text_block->element->layout;
   // layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;

@@ -775,7 +775,21 @@ int mca_register_event_handler(mc_app_event_type event_type, void *handler_deleg
   return 0;
 }
 
-int mca_register_project_loaded(mc_project_info *project)
+int mca_fire_event(mc_app_event_type event_type, void *event_arg)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  event_handler_array *eha = app_info->event_handlers.items[event_type];
+  for (int a = 0; a < eha->count; ++a) {
+    int (*event_handler)(void *, void *) = (int (*)(void *, void *))eha->handlers[a]->delegate;
+    MCcall(event_handler(eha->handlers[a]->state, event_arg));
+  }
+
+  return 0;
+}
+
+int mca_register_loaded_project(mc_project_info *project)
 {
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
@@ -784,11 +798,7 @@ int mca_register_project_loaded(mc_project_info *project)
                               &app_info->projects.count, project));
 
   // Fire an event...
-  event_handler_array *eha = app_info->event_handlers.items[MC_APP_EVENT_PROJECT_LOADED];
-  for (int a = 0; a < eha->count; ++a) {
-    int (*event_handler)(void *, mc_project_info *) = (int (*)(void *, mc_project_info *))eha->handlers[a]->delegate;
-    MCcall(event_handler(eha->handlers[a]->state, project));
-  }
+  MCcall(mca_fire_event(MC_APP_EVENT_PROJECT_LOADED, (void *)project));
 
   return 0;
 }

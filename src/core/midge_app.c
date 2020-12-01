@@ -21,9 +21,9 @@
 // void *callit(void *state)
 // {
 //   printf("!!callit-mc %p\n", state);
-//   render_thread_info *global_data->render_thread = (render_thread_info *)state;
+//   render_thread_info *app_info->render_thread = (render_thread_info *)state;
 
-//   global_data->render_thread->thread_info->has_concluded = 1;
+//   app_info->render_thread->thread_info->has_concluded = 1;
 //   return NULL;
 // }
 
@@ -48,51 +48,51 @@
 
 int begin_render_thread()
 {
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
-  global_data->render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
-  // printf("global_data->render_thread = %p\n", global_data->render_thread);
-  global_data->render_thread->render_thread_initialized = false;
+  app_info->render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
+  // printf("app_info->render_thread = %p\n", app_info->render_thread);
+  app_info->render_thread->render_thread_initialized = false;
   {
     // Resource Queue
-    global_data->render_thread->resource_queue = (resource_queue *)malloc(sizeof(resource_queue));
-    MCcall(pthread_mutex_init(&global_data->render_thread->resource_queue->mutex, NULL));
-    global_data->render_thread->resource_queue->count = 0;
-    global_data->render_thread->resource_queue->allocated = 0;
+    app_info->render_thread->resource_queue = (resource_queue *)malloc(sizeof(resource_queue));
+    MCcall(pthread_mutex_init(&app_info->render_thread->resource_queue->mutex, NULL));
+    app_info->render_thread->resource_queue->count = 0;
+    app_info->render_thread->resource_queue->allocated = 0;
 
     // Render Queue
-    global_data->render_thread->image_queue = (image_render_list *)malloc(sizeof(image_render_list));
-    MCcall(pthread_mutex_init(&global_data->render_thread->image_queue->mutex, NULL));
-    global_data->render_thread->image_queue->count = 0;
-    global_data->render_thread->image_queue->alloc = 0;
+    app_info->render_thread->image_queue = (image_render_list *)malloc(sizeof(image_render_list));
+    MCcall(pthread_mutex_init(&app_info->render_thread->image_queue->mutex, NULL));
+    app_info->render_thread->image_queue->count = 0;
+    app_info->render_thread->image_queue->alloc = 0;
 
     // Render Request Object Pool
-    global_data->render_thread->render_request_object_pool = (image_render_list *)malloc(sizeof(image_render_list));
-    MCcall(pthread_mutex_init(&global_data->render_thread->render_request_object_pool->mutex, NULL));
-    global_data->render_thread->render_request_object_pool->count = 0;
-    global_data->render_thread->render_request_object_pool->alloc = 0;
+    app_info->render_thread->render_request_object_pool = (image_render_list *)malloc(sizeof(image_render_list));
+    MCcall(pthread_mutex_init(&app_info->render_thread->render_request_object_pool->mutex, NULL));
+    app_info->render_thread->render_request_object_pool->count = 0;
+    app_info->render_thread->render_request_object_pool->alloc = 0;
 
-    pthread_mutex_init(&global_data->render_thread->input_buffer.mutex, NULL);
-    global_data->render_thread->input_buffer.event_count = 0;
+    pthread_mutex_init(&app_info->render_thread->input_buffer.mutex, NULL);
+    app_info->render_thread->input_buffer.event_count = 0;
   }
 
   // -- Start Thread
   // dothecall(&callit);
-  // printf("global_data->render_thread:%p &global_data->render_thread:%p\n", global_data->render_thread,
-  // global_data->render_thread);
+  // printf("app_info->render_thread:%p &app_info->render_thread:%p\n", app_info->render_thread,
+  // app_info->render_thread);
   // printf("&midge_render_thread=%p\n", &midge_render_thread);
 
-  return begin_mthread(&midge_render_thread, &global_data->render_thread->thread_info,
-                       (void *)global_data->render_thread);
+  return begin_mthread(&midge_render_thread, &app_info->render_thread->thread_info,
+                       (void *)app_info->render_thread);
 }
 
 // typedef struct
 
 // void complete_midge_app_compile()
 // {
-//   mc_global_data *global_data;
-//   obtain_midge_global_root(&global_data);
+//   mc_app_info *app_info;
+//   obtain_midge_global_root(&app_info);
 
 //   const char *remainder_app_source_files[] = {
 //       // "src/ui/ui_definitions.h",
@@ -128,7 +128,7 @@ int begin_render_thread()
 //   };
 
 //   for (int f = 0; remainder_app_source_files[f]; ++f) {
-//     // instantiate_all_definitions_from_file(global_data->global_node, remainder_app_source_files[f], NULL);
+//     // instantiate_all_definitions_from_file(app_info->global_node, remainder_app_source_files[f], NULL);
 //     puts("TODO Load file");
 //   }
 // }
@@ -140,22 +140,25 @@ int begin_render_thread()
 // // void mcu_render_element_headless(mc_node *element_node);
 // // void mcu_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
 // void mca_load_modules();
-// void mca_load_open_projects();
+// void mca_load_previously_open_projects();
 // // }
 
 int initialize_midge_state()
 {
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
   MCcall(mcc_initialize_input_state());
 
-  mcu_initialize_ui_state(&global_data->ui_state);
+  mcu_initialize_ui_state(&app_info->ui_state);
   return 0;
 }
 
 void *mca_load_modules_then_project_async(void *state)
 {
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
   int res;
   // Modules
   res = mca_load_modules();
@@ -165,24 +168,32 @@ void *mca_load_modules_then_project_async(void *state)
            " line:%i:ERR:%i\n",
            __LINE__ - 5, res);
 
-    midge_app_info *global_data;
-    mc_obtain_midge_app_info(&global_data);
-    global_data->_exit_requested = true;
+    app_info->_exit_requested = true;
 
     return NULL;
   }
 
   // Projects
-  res = mca_load_open_projects();
+  res = mca_load_previously_open_projects();
   if (res) {
     printf("--"
-           "mca_load_open_projects"
+           "mca_load_previously_open_projects"
            " line:%i:ERR:%i\n",
            __LINE__ - 5, res);
 
-    midge_app_info *global_data;
-    mc_obtain_midge_app_info(&global_data);
-    global_data->_exit_requested = true;
+    app_info->_exit_requested = true;
+
+    return NULL;
+  }
+
+  res = mca_fire_event(MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED, NULL);
+  if (res) {
+    printf("--"
+           "mca_load_previously_open_projects"
+           " line:%i:ERR:%i\n",
+           __LINE__ - 5, res);
+
+    app_info->_exit_requested = true;
 
     return NULL;
   }
@@ -194,25 +205,25 @@ void *mca_load_modules_then_project_async(void *state)
 
 int midge_initialize_app(struct timespec *app_begin_time)
 {
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
   // Set Times
-  global_data->app_begin_time = app_begin_time;
+  app_info->app_begin_time = app_begin_time;
 
   struct timespec source_load_complete_time;
   clock_gettime(CLOCK_REALTIME, &source_load_complete_time);
 
   printf("[[MIDGE-CORE] > Core Compile took %.2f seconds]\n",
-         source_load_complete_time.tv_sec - global_data->app_begin_time->tv_sec +
-             1e-9 * (source_load_complete_time.tv_nsec - global_data->app_begin_time->tv_nsec));
+         source_load_complete_time.tv_sec - app_info->app_begin_time->tv_sec +
+             1e-9 * (source_load_complete_time.tv_nsec - app_info->app_begin_time->tv_nsec));
 
   // Asynchronously begin the render thread containing vulkan and xcb
   MCcall(begin_render_thread());
 
   // Complete Initialization of the global root node
-  MCcall(mca_init_node_layout(&global_data->global_node->layout));
-  global_data->global_node->layout->__requires_rerender = true;
+  MCcall(mca_init_node_layout(&app_info->global_node->layout));
+  app_info->global_node->layout->__requires_rerender = true;
 
   // Initialize main thread
   MCcall(initialize_midge_state());
@@ -226,19 +237,19 @@ int midge_initialize_app(struct timespec *app_begin_time)
   // continuing with the next set of commands
   bool waited = false;
   int count = 0;
-  while (!global_data->render_thread->render_thread_initialized || global_data->render_thread->resource_queue->count) {
-    waited = !global_data->render_thread->render_thread_initialized;
+  while (!app_info->render_thread->render_thread_initialized || app_info->render_thread->resource_queue->count) {
+    waited = !app_info->render_thread->render_thread_initialized;
     usleep(1);
     ++count;
     if (count % 100000 == 0) {
-      printf("global_data->render_thread = %p %i %u\n", global_data->render_thread,
-             global_data->render_thread->render_thread_initialized, global_data->render_thread->resource_queue->count);
+      printf("app_info->render_thread = %p %i %u\n", app_info->render_thread,
+             app_info->render_thread->render_thread_initialized, app_info->render_thread->resource_queue->count);
     }
   }
 
-  if (global_data->_exit_requested) {
-    if (!global_data->render_thread->thread_info->has_concluded) {
-      end_mthread(global_data->render_thread->thread_info);
+  if (app_info->_exit_requested) {
+    if (!app_info->render_thread->thread_info->has_concluded) {
+      end_mthread(app_info->render_thread->thread_info);
     }
 
     return 1;
@@ -263,29 +274,29 @@ int midge_initialize_app(struct timespec *app_begin_time)
          load_complete_frametime.tv_sec - source_load_complete_time.tv_sec +
              1e-9 * (load_complete_frametime.tv_nsec - source_load_complete_time.tv_nsec),
          waited ? "vulkan-initialization limited" : "midge-compile-load limited",
-         load_complete_frametime.tv_sec - global_data->app_begin_time->tv_sec +
-             1e-9 * (load_complete_frametime.tv_nsec - global_data->app_begin_time->tv_nsec));
+         load_complete_frametime.tv_sec - app_info->app_begin_time->tv_sec +
+             1e-9 * (load_complete_frametime.tv_nsec - app_info->app_begin_time->tv_nsec));
 
   return 0;
 }
 
 int mca_render_presentation()
 {
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
   image_render_details *image_render;
-  MCcall(mcr_obtain_image_render_request(global_data->render_thread, &image_render));
+  MCcall(mcr_obtain_image_render_request(app_info->render_thread, &image_render));
   image_render->render_target = NODE_RENDER_TARGET_PRESENT;
   image_render->clear_color = COLOR_MIDNIGHT_EXPRESS;
-  // printf("global_data->screen : %u, %u\n", global_data->screen.width,
-  // global_data->screen.height);
-  image_render->image_width = global_data->screen.width;
-  image_render->image_height = global_data->screen.height;
-  image_render->data.target_image.image = (mcr_texture_image *)global_data->screen.present_image;
+  // printf("app_info->screen : %u, %u\n", app_info->screen.width,
+  // app_info->screen.height);
+  image_render->image_width = app_info->screen.width;
+  image_render->image_height = app_info->screen.height;
+  image_render->data.target_image.image = (mcr_texture_image *)app_info->screen.present_image;
 
-  for (int a = 0; a < global_data->global_node->children->count; ++a) {
-    mc_node *child = global_data->global_node->children->items[a];
+  for (int a = 0; a < app_info->global_node->children->count; ++a) {
+    mc_node *child = app_info->global_node->children->items[a];
     if (child->layout && child->layout->visible && child->layout->render_present) {
       // // DEBUG - TIME
       // struct timespec debug_start_time, debug_end_time;
@@ -306,7 +317,7 @@ int mca_render_presentation()
     }
   }
 
-  MCcall(mcr_submit_image_render_request(global_data->render_thread, image_render));
+  MCcall(mcr_submit_image_render_request(app_info->render_thread, image_render));
 
   return 0;
 }
@@ -315,11 +326,11 @@ int midge_run_app()
 {
   printf("midge_run_app()\n");
 
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
-  mc_node *global_root_node = global_data->global_node;
-  // printf("defaultfont-0:%u\n", global_data->default_font_resource);
-  // printf("global_data->ui_state:%p\n", global_data->ui_state);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+  mc_node *global_root_node = app_info->global_node;
+  // printf("defaultfont-0:%u\n", app_info->default_font_resource);
+  // printf("app_info->ui_state:%p\n", app_info->ui_state);
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);
@@ -329,11 +340,11 @@ int midge_run_app()
 
   int DEBUG_secs_of_last_5sec_update = 0;
 
-  global_data->elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
-  frame_time *elapsed = global_data->elapsed;
+  app_info->elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
+  frame_time *elapsed = app_info->elapsed;
   int ui = 0;
   while (1) {
-    if (global_data->render_thread->thread_info->has_concluded) {
+    if (app_info->render_thread->thread_info->has_concluded) {
       printf("Render Thread Aborted abnormally.\nShutting down...\n");
       break;
     }
@@ -357,8 +368,8 @@ int midge_run_app()
       }
       elapsed->frame_secsf = (float)elapsed->frame_secs + 1e-9 * elapsed->frame_nsecs;
 
-      elapsed->app_secs = current_frametime.tv_sec - global_data->app_begin_time->tv_sec;
-      elapsed->app_nsecs = current_frametime.tv_nsec - global_data->app_begin_time->tv_nsec;
+      elapsed->app_secs = current_frametime.tv_sec - app_info->app_begin_time->tv_sec;
+      elapsed->app_nsecs = current_frametime.tv_nsec - app_info->app_begin_time->tv_nsec;
       if (elapsed->app_nsecs < 0) {
         --elapsed->app_secs;
         elapsed->app_nsecs += 1e9;
@@ -385,9 +396,9 @@ int midge_run_app()
       // Update Timers
       bool exit_gracefully = false;
       // for (int i = 0; i < !exit_gracefully &&
-      // global_data->update_timers.count; ++i) {
+      // app_info->update_timers.count; ++i) {
       //   update_callback_timer *timer =
-      //   global_data->update_timers.callbacks[i];
+      //   app_info->update_timers.callbacks[i];
 
       //   if (!timer->update_delegate || !(*timer->update_delegate)) {
       //     continue;
@@ -438,12 +449,12 @@ int midge_run_app()
     }
 
     // Handle Input
-    if (global_data->input_state_requires_update || global_data->render_thread->input_buffer.event_count) {
+    if (app_info->input_state_requires_update || app_info->render_thread->input_buffer.event_count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
 
-      MCcall(pthread_mutex_lock(&global_data->render_thread->input_buffer.mutex));
+      MCcall(pthread_mutex_lock(&app_info->render_thread->input_buffer.mutex));
       mcc_update_xcb_input();
-      MCcall(pthread_mutex_unlock(&global_data->render_thread->input_buffer.mutex));
+      MCcall(pthread_mutex_unlock(&app_info->render_thread->input_buffer.mutex));
 
       clock_gettime(CLOCK_REALTIME, &debug_end_time);
       // printf("input_state_update took %.2f ms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
@@ -452,9 +463,9 @@ int midge_run_app()
 
     // printf("~main_input\n");
 
-    if (global_data->_exit_requested)
+    if (app_info->_exit_requested)
       break;
-    if (global_data->render_thread->thread_info->has_concluded) {
+    if (app_info->render_thread->thread_info->has_concluded) {
       printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
       break;
     }
@@ -465,16 +476,16 @@ int midge_run_app()
     // Update Visible Layout
     {
       // As is global node update despite any requirement
-      // mca_update_node_list_logic(global_data->global_node->children);
+      // mca_update_node_list_logic(app_info->global_node->children);
       if (global_root_node->layout->__requires_layout_update) {
         clock_gettime(CLOCK_REALTIME, &debug_start_time);
-        // printf("layout-locking... %p\n", &global_data->hierarchy_mutex);
-        MCcall(pthread_mutex_lock(&global_data->hierarchy_mutex));
+        // printf("layout-locking... %p\n", &app_info->hierarchy_mutex);
+        MCcall(pthread_mutex_lock(&app_info->hierarchy_mutex));
         // puts("layout-locked");
         global_root_node->layout->__requires_layout_update = false;
 
-        for (int a = 0; a < global_data->global_node->children->count; ++a) {
-          mc_node *child = global_data->global_node->children->items[a];
+        for (int a = 0; a < app_info->global_node->children->count; ++a) {
+          mc_node *child = app_info->global_node->children->items[a];
           if (child->layout && child->layout->determine_layout_extents) {
             // TODO fptr casting
             void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
@@ -485,7 +496,7 @@ int midge_run_app()
 
         // Update the layout
         global_root_node->layout->__bounds =
-            (mc_rectf){0.f, 0.f, (float)global_data->screen.width, (float)global_data->screen.height};
+            (mc_rectf){0.f, 0.f, (float)app_info->screen.width, (float)app_info->screen.height};
         for (int a = 0; a < global_root_node->children->count; ++a) {
           mc_node *child = global_root_node->children->items[a];
 
@@ -498,7 +509,7 @@ int midge_run_app()
           }
         }
 
-        MCcall(pthread_mutex_unlock(&global_data->hierarchy_mutex));
+        MCcall(pthread_mutex_unlock(&app_info->hierarchy_mutex));
         // puts("layout-unlock");
 
         clock_gettime(CLOCK_REALTIME, &debug_end_time);
@@ -507,15 +518,15 @@ int midge_run_app()
       }
 
       // TODO Get rid of this field maybe?
-      // global_data->ui_state->requires_update = false;
+      // app_info->ui_state->requires_update = false;
     }
 
-    if (global_data->_exit_requested)
+    if (app_info->_exit_requested)
       break;
 
     // Render State Changes
     // TODO -- do not know how to eloquently handle render update requests outpacing the render thread
-    if (global_root_node->layout->__requires_rerender && !global_data->render_thread->image_queue->count) {
+    if (global_root_node->layout->__requires_rerender && !app_info->render_thread->image_queue->count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
 
       // printf("child-order:\n");
@@ -526,8 +537,8 @@ int midge_run_app()
       // }
 
       // Reset States
-      // printf("rerender-locking... %p\n", &global_data->hierarchy_mutex);
-      MCcall(pthread_mutex_lock(&global_data->hierarchy_mutex));
+      // printf("rerender-locking... %p\n", &app_info->hierarchy_mutex);
+      MCcall(pthread_mutex_lock(&app_info->hierarchy_mutex));
       // puts("rerender-locked");
       global_root_node->layout->__requires_rerender = false;
 
@@ -549,7 +560,7 @@ int midge_run_app()
       // printf("present\n");
       mca_render_presentation();
 
-      MCcall(pthread_mutex_unlock(&global_data->hierarchy_mutex));
+      MCcall(pthread_mutex_unlock(&app_info->hierarchy_mutex));
       // puts("rerender-unlock");
 
       // Release lock and allow rendering
@@ -560,7 +571,7 @@ int midge_run_app()
   }
 
   free(elapsed);
-  global_data->elapsed = NULL;
+  app_info->elapsed = NULL;
 
   return 0;
 }
@@ -569,21 +580,21 @@ void midge_cleanup_app()
 {
   printf("~midge_cleanup_app()~\n");
 
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
   // TODO invoke release resources on children...
 
   // End render thread
-  end_mthread(global_data->render_thread->thread_info);
+  end_mthread(app_info->render_thread->thread_info);
 
   // Destroy render thread resources
-  pthread_mutex_destroy(&global_data->render_thread->resource_queue->mutex);
-  pthread_mutex_destroy(&global_data->render_thread->image_queue->mutex);
-  pthread_mutex_destroy(&global_data->render_thread->input_buffer.mutex);
+  pthread_mutex_destroy(&app_info->render_thread->resource_queue->mutex);
+  pthread_mutex_destroy(&app_info->render_thread->image_queue->mutex);
+  pthread_mutex_destroy(&app_info->render_thread->input_buffer.mutex);
 
-  free(global_data->render_thread);
-  global_data->render_thread = NULL;
+  free(app_info->render_thread);
+  app_info->render_thread = NULL;
 
   // App Info
   mc_destroy_midge_app_info();

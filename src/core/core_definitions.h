@@ -10,8 +10,10 @@
 typedef enum mc_app_event_type {
   MC_APP_EVENT_NULL = 0,
   MC_APP_EVENT_POST_INITIALIZATION,
-  // int (*event_handler)(void *handler_state, mc_project_info *loaded_project)
+  // int (*event_handler)(void *handler_state, void *event_args)
   MC_APP_EVENT_PROJECT_LOADED,
+  // int (*event_handler)(void *handler_state, void *event_args)
+  MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED,
   MC_APP_EXCLUSIVE_MAX,
 } mc_app_event_type;
 
