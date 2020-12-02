@@ -212,15 +212,16 @@ void mcc_handle_xcb_input()
         // input_event->type = xcb_input->type;
         // input_event->detail = xcb_input->detail;
 
-        if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
-            xcb_input->detail.keyboard.key == KEY_CODE_W) {
+        // Exit when pressing F4 or Ctrl-Shift-W
+        if (xcb_input->detail.keyboard.key == KEY_CODE_F4 ||
+            ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
+             xcb_input->detail.keyboard.key == KEY_CODE_W)) {
           global_data->_exit_requested = true;
           continue;
         }
 
         if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
             xcb_input->detail.keyboard.key == KEY_CODE_L) {
-
           mca_set_node_requires_layout_update(global_data->global_node);
           if (global_data->global_node->children)
             mca_set_descendents_require_layout_update(global_data->global_node->children);

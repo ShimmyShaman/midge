@@ -281,6 +281,7 @@ typedef struct mc_app_itp_data {
 } mc_app_itp_data;
 
 typedef struct mc_project_info {
+  char *name;
   char *path, *path_src;
 
   mc_node *root_node;

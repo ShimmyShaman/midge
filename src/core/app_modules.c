@@ -120,6 +120,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
 
   char buf[512];
   mc_project_info *project = malloc(sizeof(mc_project_info));
+  project->name = strdup(project_name);
   sprintf(buf, "%s/%s", base_path, project_name);
   project->path = strdup(buf);
   strcat(buf, "/src");

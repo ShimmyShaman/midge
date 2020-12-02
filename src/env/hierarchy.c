@@ -177,7 +177,7 @@ int mca_init_mc_node(node_type type, const char *name, mc_node **node)
   (*node) = (mc_node *)malloc(sizeof(mc_node)); // TODO malloc checks everywhere?
 
   (*node)->type = type;
-  (*node)->name = strdup(name);
+  (*node)->name = name ? strdup(name) : NULL;
 
   (*node)->layout = NULL;
   (*node)->children = NULL;
@@ -452,16 +452,9 @@ int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
     // padding adjusted from available
     bounds.width = available_area->width - layout->padding.right - layout->padding.left;
 
-    // Specified bounds
-    if (layout->min_width && bounds.width < layout->min_width) {
-      bounds.width = layout->min_width;
-    }
-    if (layout->max_width && bounds.width > layout->max_width) {
-      bounds.width = layout->max_width;
-    }
-
-    if (bounds.width < 0) {
-      bounds.width = 0;
+    // Apply the determined extent
+    if (bounds.width > layout->determined_extents.width) {
+      bounds.width = layout->determined_extents.width;
     }
   }
 
@@ -471,6 +464,9 @@ int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
     bounds.height = layout->preferred_height;
     // printf("preferred\n");
   }
+  else if (layout->determined_extents.height) {
+    bounds.height = layout->determined_extents.height;
+  }
   else {
     // printf("available_area->height:%.3f layout->padding.bottom:%.3f layout->padding.top:%.3f\n",
     // available_area->height,
@@ -478,16 +474,9 @@ int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
     // padding adjusted from available
     bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
 
-    // Specified bounds
-    if (layout->min_height && bounds.height < layout->min_height) {
-      bounds.height = layout->min_height;
-    }
-    if (layout->max_height && bounds.height > layout->max_height) {
-      bounds.height = layout->max_height;
-    }
-
-    if (bounds.height < 0) {
-      bounds.height = 0;
+    // Apply the determined extent
+    if (bounds.height > layout->determined_extents.height) {
+      bounds.height = layout->determined_extents.height;
     }
   }
 
