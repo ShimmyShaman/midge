@@ -147,14 +147,15 @@ int _mc_mww_on_inital_load_complete(void *state, void *event_arg)
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
-  // if (!app_info->projects.count) {
-  //   // No projects on initial load, nows the time to shine baby
-  //   mc_node *node = (mc_node *)state;
-  //   node->layout->visible = true;
-  //   MCcall(mca_set_node_requires_rerender(node));
+  // printf("_mc_mww_on_inital_load_complete:%i\n", app_info->projects.count);
+  if (!app_info->projects.count) {
+    // No projects on initial load, nows the time to shine baby
+    mc_node *node = (mc_node *)state;
+    node->layout->visible = true;
+    MCcall(mca_set_node_requires_rerender(node));
 
-  //   puts("time to shine baby");
-  // }
+    // puts("time to shine baby");
+  }
 
   return 0;
 }

@@ -198,7 +198,7 @@ void *mca_load_modules_then_project_async(void *state)
     return NULL;
   }
 
-  puts("modules & open-projects loading complete");
+  // puts("modules & open-projects loading complete");
 
   return NULL;
 }

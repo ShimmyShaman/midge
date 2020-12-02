@@ -763,7 +763,7 @@ int mca_register_event_handler(mc_app_event_type event_type, void *handler_deleg
   mc_obtain_midge_app_info(&app_info);
 
   // printf("app_info->event_handlers.count:%u\n", app_info->event_handlers.count);
-  event_handler_array *eha = app_info->event_handlers.items[MC_APP_EVENT_PROJECT_LOADED];
+  event_handler_array *eha = app_info->event_handlers.items[event_type];
 
   event_handler_info *eh = (event_handler_info *)malloc(sizeof(event_handler_info));
   eh->delegate = handler_delegate;
@@ -777,11 +777,13 @@ int mca_register_event_handler(mc_app_event_type event_type, void *handler_deleg
 
 int mca_fire_event(mc_app_event_type event_type, void *event_arg)
 {
+  // printf("mca_fire_event:%i\n", event_type);
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
   event_handler_array *eha = app_info->event_handlers.items[event_type];
   for (int a = 0; a < eha->count; ++a) {
+    // puts("mca_fire_event_execute");
     int (*event_handler)(void *, void *) = (int (*)(void *, void *))eha->handlers[a]->delegate;
     MCcall(event_handler(eha->handlers[a]->state, event_arg));
   }
