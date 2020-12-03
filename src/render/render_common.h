@@ -22,114 +22,68 @@ typedef struct render_color {
   float r, g, b, a;
 } render_color;
 
-#define COLOR_TRANSPARENT  \
-  (render_color) {     \
-    0.0f, 0.0f, 0.0f, 0.0f \
-  }
+#define COLOR_TRANSPARENT \
+  (render_color) { 0.0f, 0.0f, 0.0f, 0.0f }
 #define COLOR_CORNFLOWER_BLUE \
-  (render_color) {        \
-    0.19f, 0.34f, 0.83f, 1.f  \
-  }
+  (render_color) { 0.19f, 0.34f, 0.83f, 1.f }
 #define COLOR_MIDNIGHT_EXPRESS \
-  (render_color) {         \
-    0.10f, 0.10f, 0.17f, 1.f   \
-  }
-#define COLOR_DEEP_FIR       \
-  (render_color) {       \
-    0.05f, 0.14f, 0.09f, 1.f \
-  }
+  (render_color) { 0.10f, 0.10f, 0.17f, 1.f }
+#define COLOR_DEEP_FIR \
+  (render_color) { 0.05f, 0.14f, 0.09f, 1.f }
 #define COLOR_MACARONI_AND_CHEESE \
-  (render_color) {            \
-    1.f, 0.72f, 0.50f, 1.f        \
-  }
-#define COLOR_DARK_GREEN   \
-  (render_color) {     \
-    0.0f, 0.25f, 0.0f, 1.f \
-  }
-#define COLOR_GREEN       \
-  (render_color) {    \
-    0.0f, 0.5f, 0.0f, 1.f \
-  }
-#define COLOR_LIME       \
-  (render_color) {   \
-    0.0f, 1.f, 0.0f, 1.f \
-  }
-#define COLOR_FUNCTION_GREEN                       \
-  (render_color) {                             \
-    40.f / 255.f, 235.f / 255.f, 40.f / 255.f, 1.f \
-  }
-#define COLOR_FUNCTION_RED                          \
-  (render_color) {                              \
-    215.f / 255.f, 195.f / 255.f, 40.f / 255.f, 1.f \
-  }
-#define COLOR_POWDER_BLUE                            \
-  (render_color) {                               \
-    176.f / 255.f, 224.f / 255.f, 230.f / 255.f, 1.f \
-  }
-#define COLOR_LIGHT_SKY_BLUE                         \
-  (render_color) {                               \
-    135.f / 255.f, 206.f / 255.f, 255.f / 250.f, 1.f \
-  }
-#define COLOR_NODE_ORANGE                           \
-  (render_color) {                              \
-    216.f / 255.f, 134.f / 255.f, 51.f / 250.f, 1.f \
-  }
-#define COLOR_TEAL          \
-  (render_color) {      \
-    0.0f, 0.52f, 0.52f, 1.f \
-  }
-#define COLOR_GRAPE                                \
-  (render_color) {                              \
-    64.f / 255.f, 57.f / 255.f, 71.f / 255.f, 1.f \
-  }
-#define COLOR_PURPLE                                \
-  (render_color) {                              \
-    160.f / 255.f, 32.f / 255.f, 240.f / 255.f, 1.f \
-  }
-#define COLOR_BURLY_WOOD     \
-  (render_color) {       \
-    0.87f, 0.72f, 0.52f, 1.f \
-  }
+  (render_color) { 1.f, 0.72f, 0.50f, 1.f }
+#define COLOR_DARK_GREEN \
+  (render_color) { 0.0f, 0.25f, 0.0f, 1.f }
+#define COLOR_GREEN \
+  (render_color) { 0.0f, 0.5f, 0.0f, 1.f }
+#define COLOR_ISLAMIC_GREEN \
+  (render_color) { 0.0f, 0.75f, 0.0f, 1.f }
+#define COLOR_LIME \
+  (render_color) { 0.0f, 1.f, 0.0f, 1.f }
+#define COLOR_FUNCTION_GREEN \
+  (render_color) { 40.f / 255.f, 235.f / 255.f, 40.f / 255.f, 1.f }
+#define COLOR_FUNCTION_RED \
+  (render_color) { 215.f / 255.f, 195.f / 255.f, 40.f / 255.f, 1.f }
+#define COLOR_POWDER_BLUE \
+  (render_color) { 176.f / 255.f, 224.f / 255.f, 230.f / 255.f, 1.f }
+#define COLOR_LIGHT_SKY_BLUE \
+  (render_color) { 135.f / 255.f, 206.f / 255.f, 255.f / 250.f, 1.f }
+#define COLOR_NODE_ORANGE \
+  (render_color) { 216.f / 255.f, 134.f / 255.f, 51.f / 250.f, 1.f }
+#define COLOR_TEAL \
+  (render_color) { 0.0f, 0.52f, 0.52f, 1.f }
+#define COLOR_GRAPE \
+  (render_color) { 64.f / 255.f, 57.f / 255.f, 71.f / 255.f, 1.f }
+#define COLOR_BLACKCURRANT \
+  (render_color) { 15.f / 255.f, 6.f / 255.f, 18.f / 255.f, 1.f }
+#define COLOR_PURPLE \
+  (render_color) { 160.f / 255.f, 32.f / 255.f, 240.f / 255.f, 1.f }
+#define COLOR_BURLY_WOOD \
+  (render_color) { 0.87f, 0.72f, 0.52f, 1.f }
 #define COLOR_DARK_SLATE_GRAY \
-  (render_color) {        \
-    0.18f, 0.18f, 0.31f, 1.f  \
-  }
-#define COLOR_NEARLY_BLACK   \
-  (render_color) {       \
-    0.13f, 0.13f, 0.13f, 1.f \
-  }
-#define COLOR_GHOST_WHITE  \
-  (render_color) {     \
-    0.97f, 0.97f, 1.f, 1.f \
-  }
-#define COLOR_BLACK    \
-  (render_color) { \
-    0.f, 0.f, 0.f, 1.f \
-  }
-#define COLOR_GRAY        \
-  (render_color) {    \
-    0.5f, 0.5f, 0.5f, 1.f \
-  }
-#define COLOR_DIM_GRAY    \
-  (render_color) {    \
-    0.3f, 0.3f, 0.3f, 1.f \
-  }
-#define COLOR_DARK_GRAY   \
-  (render_color) {    \
-    0.2f, 0.2f, 0.2f, 1.f \
-  }
-#define COLOR_YELLOW   \
-  (render_color) { \
-    1.f, 1.f, 0.f, 1.f \
-  }
-#define COLOR_RED      \
-  (render_color) { \
-    1.f, 0.f, 0.f, 1.f \
-  }
-#define COLOR_LIGHT_YELLOW       \
-  (render_color) {           \
-    1.f, 1.f, 102.f / 255.f, 1.f \
-  }
+  (render_color) { 0.18f, 0.18f, 0.31f, 1.f }
+#define COLOR_NEARLY_BLACK \
+  (render_color) { 0.13f, 0.13f, 0.13f, 1.f }
+#define COLOR_SILVER \
+  (render_color) { 0.72f, 0.72f, 0.72f, 1.f }
+#define COLOR_GHOST_WHITE \
+  (render_color) { 0.97f, 0.97f, 1.f, 1.f }
+#define COLOR_WHITE \
+  (render_color) { 1.f, 1.f, 1.f, 1.f }
+#define COLOR_BLACK \
+  (render_color) { 0.f, 0.f, 0.f, 1.f }
+#define COLOR_GRAY \
+  (render_color) { 0.5f, 0.5f, 0.5f, 1.f }
+#define COLOR_DIM_GRAY \
+  (render_color) { 0.3f, 0.3f, 0.3f, 1.f }
+#define COLOR_DARK_GRAY \
+  (render_color) { 0.2f, 0.2f, 0.2f, 1.f }
+#define COLOR_YELLOW \
+  (render_color) { 1.f, 1.f, 0.f, 1.f }
+#define COLOR_RED \
+  (render_color) { 1.f, 0.f, 0.f, 1.f }
+#define COLOR_LIGHT_YELLOW \
+  (render_color) { 1.f, 1.f, 102.f / 255.f, 1.f }
 
 typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,
@@ -392,21 +346,21 @@ int mcr_obtain_element_render_command(image_render_details *image_queue, element
 int mcr_obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
 
 int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
-                                 mcr_texture_image **p_texture);
+                                mcr_texture_image **p_texture);
 int mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
 int mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
-                                  mcr_font_resource **font);
+                             mcr_font_resource **font);
 int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_resource);
 
 int mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
-                                           float *text_height);
+                                          float *text_height);
 
 int mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                   const char *text, mcr_font_resource *font, render_color font_color);
+                                  const char *text, mcr_font_resource *font, render_color font_color);
 int mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                           unsigned int width, unsigned int height, render_color color);
+                                          unsigned int width, unsigned int height, render_color color);
 int mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                            unsigned int width, unsigned int height, mcr_texture_image *texture);
+                                           unsigned int width, unsigned int height, mcr_texture_image *texture);
 // }
 
 #endif // MC_RENDER_COMMON_H

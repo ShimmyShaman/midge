@@ -123,12 +123,12 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
   node_to_attach->parent = hierarchy_node;
 
   if (node_to_attach->layout) {
-    mca_set_node_requires_layout_update(node_to_attach);
-
     // TODO -- not sure this is the best way to handle this yet
     // .. maybe use a layout flag which specifies to update all children as well?
     if (node_to_attach->children)
       mca_set_descendents_require_layout_update(node_to_attach->children);
+
+    mca_set_node_requires_layout_update(node_to_attach);
   }
   mca_set_node_requires_rerender(node_to_attach);
 
@@ -463,9 +463,6 @@ int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
     // Set to preferred height
     bounds.height = layout->preferred_height;
     // printf("preferred\n");
-  }
-  else if (layout->determined_extents.height) {
-    bounds.height = layout->determined_extents.height;
   }
   else {
     // printf("available_area->height:%.3f layout->padding.bottom:%.3f layout->padding.top:%.3f\n",

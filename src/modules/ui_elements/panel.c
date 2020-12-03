@@ -19,6 +19,10 @@ void _mcu_render_panel_present(image_render_details *image_render_queue, mc_node
   mcr_issue_render_command_colored_quad(
       image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, panel->background_color);
+
+  if (node->children && node->children->count) {
+    mca_render_typical_nodes_children_present(image_render_queue, node->children);
+  }
 }
 
 int mcu_init_panel(mc_node *parent, mcu_panel **p_panel)
@@ -26,6 +30,9 @@ int mcu_init_panel(mc_node *parent, mcu_panel **p_panel)
   // Node
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-panel", &node));
+  node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
+  node->children->count = 0;
+  node->children->alloc = 0;
 
   // Layout
   MCcall(mca_init_node_layout(&node->layout));

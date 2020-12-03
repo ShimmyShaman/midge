@@ -43,15 +43,18 @@ void _mcu_render_textblock_present(image_render_details *image_render_queue, mc_
 {
   mcu_textblock *textblock = (mcu_textblock *)node->data;
 
+  printf("rendertextblock- %u %u %s\n", (unsigned int)node->layout->__bounds.x,
+         (unsigned int)node->layout->__bounds.y, textblock->str->text);
+
   // Background
-  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                        (unsigned int)node->layout->__bounds.y,
-                                        (unsigned int)node->layout->__bounds.width,
-                                        (unsigned int)node->layout->__bounds.height, textblock->background_color);
+  if (textblock->background_color.a) {
+    mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
+                                          (unsigned int)node->layout->__bounds.y,
+                                          (unsigned int)node->layout->__bounds.width,
+                                          (unsigned int)node->layout->__bounds.height, textblock->background_color);
+  }
 
   // Text
-  // printf("rendertextblock- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, textblock->str->text, textblock->font->resource_uid);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                 (unsigned int)node->layout->__bounds.y, textblock->str->text, textblock->font,
                                 textblock->font_color);

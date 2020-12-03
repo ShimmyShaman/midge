@@ -15,6 +15,9 @@
 #include "modules/project_explorer/project_explorer_window.h"
 #include "modules/ui_elements/ui_elements.h"
 
+#define MCM_PJXP_ENTRY_HEIGHT 12
+#define MCM_PJXP_ENTRY_INDENT 10
+
 typedef enum mcm_pjxp_entry_type {
   PJXP_NULL = 0,
   PJXP_ENTRY_UNKNOWN,
@@ -36,6 +39,7 @@ typedef struct project_explorer_data {
   struct {
     unsigned int width, height;
     mcr_texture_image *image;
+    render_color background;
   } render_target;
 
   struct {
@@ -58,34 +62,34 @@ typedef struct explored_project {
 
 } explored_project;
 
-int _mcm_pjxp_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints)
-{
-  const float MAX_EXTENT_VALUE = 100000.f;
-  mca_node_layout *layout = node->layout;
+// int _mcm_pjxp_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints)
+// {
+//   const float MAX_EXTENT_VALUE = 100000.f;
+//   mca_node_layout *layout = node->layout;
 
-  // Children
-  if (node->children) {
-    for (int a = 0; a < node->children->count; ++a) {
-      mc_node *child = node->children->items[a];
-      if (child->layout && child->layout->determine_layout_extents) {
-        // TODO fptr casting
-        void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
-            (void (*)(mc_node *, layout_extent_restraints))child->layout->determine_layout_extents;
-        determine_layout_extents(child, LAYOUT_RESTRAINT_VERTICAL);
-      }
-    }
-  }
+//   // Children
+//   if (node->children) {
+//     for (int a = 0; a < node->children->count; ++a) {
+//       mc_node *child = node->children->items[a];
+//       if (child->layout && child->layout->determine_layout_extents) {
+//         // TODO fptr casting
+//         void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
+//             (void (*)(mc_node *, layout_extent_restraints))child->layout->determine_layout_extents;
+//         determine_layout_extents(child, LAYOUT_RESTRAINT_VERTICAL);
+//       }
+//     }
+//   }
 
-  if (!layout->preferred_width || !layout->preferred_height) {
-    MCerror(5798, "ERROR -- preferred width and height should always be set, as it is a root-adjacent node");
-  }
+//   if (!layout->preferred_width || !layout->preferred_height) {
+//     MCerror(5798, "ERROR -- preferred width and height should always be set, as it is a root-adjacent node");
+//   }
 
-  // Set to preferred values
-  layout->determined_extents.width = layout->preferred_width;
-  layout->determined_extents.height = layout->preferred_height;
+//   // Set to preferred values
+//   layout->determined_extents.width = layout->preferred_width;
+//   layout->determined_extents.height = layout->preferred_height;
 
-  return 0;
-}
+//   return 0;
+// }
 
 void _mcm_pjxp_render_headless(mc_node *node)
 {
@@ -113,7 +117,7 @@ void _mcm_pjxp_render_headless(mc_node *node)
   image_render_details *irq;
   mcr_obtain_image_render_request(global_data->render_thread, &irq);
   irq->render_target = NODE_RENDER_TARGET_IMAGE;
-  irq->clear_color = COLOR_GRAPE;
+  irq->clear_color = data->render_target.background;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
   irq->image_width = data->render_target.width;   // TODO
@@ -292,20 +296,67 @@ int _mcm_pjxp_add_project_file_structure_recursive(project_explorer_data *xp, co
   return 0;
 }
 
+render_color _mcm_pjxp_get_entry_font_color(mcm_pjxp_entry_type entry_type)
+{
+  switch (entry_type) {
+  case PJXP_ENTRY_UNKNOWN:
+    return COLOR_SILVER;
+    break;
+  case PJXP_ENTRY_PROJECT:
+    return COLOR_ISLAMIC_GREEN;
+    break;
+  case PJXP_ENTRY_DIRECTORY:
+    return COLOR_LIGHT_YELLOW;
+    break;
+  case PJXP_ENTRY_HEADER:
+    return COLOR_NODE_ORANGE;
+    break;
+  case PJXP_ENTRY_SOURCE:
+    return COLOR_POWDER_BLUE;
+    break;
+  default: {
+    break;
+  }
+  }
+
+  // ERROR
+  return COLOR_RED;
+}
+
 int _mcm_pjxp_update_entries_display(project_explorer_data *pjxp)
 {
-  int max_entry_display_count = 12;
-
   // Set the display begin index
   int offset = pjxp->entries.display_offset;
-  if (offset > pjxp->entries.count - max_entry_display_count)
-    offset = pjxp->entries.count - max_entry_display_count;
+  // if (offset > pjxp->entries.count - max_entry_display_count)
+  //   offset = pjxp->entries.count - max_entry_display_count;
+  if (offset >= pjxp->entries.count)
+    offset = pjxp->entries.count - 2;
   if (offset < 0)
     offset = 0;
 
-  for (int a = 0; a < max_entry_display_count && a + offset < pjxp->entries.count; ++a) {
+  mcu_textblock *tb;
+  mcm_pjxp_entry *ent;
+  int a;
+  for (a = 0; a < pjxp->textblocks.count && a + offset < pjxp->entries.count; ++a) {
+    tb = pjxp->textblocks.items[a];
+    ent = pjxp->entries.items[a];
+
+    tb->node->layout->visible = true;
+    MCcall(set_mc_str(tb->str, ent->name));
+    tb->node->layout->padding.left = MCM_PJXP_ENTRY_INDENT * ent->indent;
+    tb->font_color = _mcm_pjxp_get_entry_font_color(ent->type);
+
+    MCcall(mca_set_node_requires_layout_update(tb->node));
+  }
+  for (; a < pjxp->textblocks.count; ++a) {
+    tb = pjxp->textblocks.items[a];
+
+    // Disappear the remainder
+    tb->node->layout->visible = false;
   }
 
+  pjxp->node->layout->visible = true;
+  MCcall(mca_set_node_requires_layout_update(pjxp->node));
   return 0;
 }
 
@@ -328,12 +379,34 @@ int _mcm_pjxp_project_loaded(void *handler_state, void *event_args)
 
   printf("project_explorer: %u entries loaded\n", data->entries.count);
   MCcall(_mcm_pjxp_update_entries_display(data));
-  // Attach
-  // MCcall(mca_attach_node_to_hierarchy(data->node, xp->root_panel->node));
+  printf("_mcm_pjxp_update_entries_display\n");
 
-  // Ensure visibility of project explorer
-  data->node->layout->visible = true;
-  MCcall(mca_set_node_requires_layout_update(data->node));
+  return 0;
+}
+
+int _mcm_pjxp_init_ui(mc_node *pjxp_node)
+{
+  project_explorer_data *pjxp = (project_explorer_data *)pjxp_node->data;
+
+  // Textblocks
+  int initial_entry_count = pjxp_node->layout->preferred_width / MCM_PJXP_ENTRY_HEIGHT;
+  for (int a = 0; a < initial_entry_count; ++a) {
+    mcu_textblock *tb;
+    MCcall(mcu_init_textblock(pjxp_node, &tb));
+
+    tb->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+    tb->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    tb->node->layout->padding.left = 6;
+    tb->node->layout->padding.top = 4 + a * 24;
+
+    tb->background_color = COLOR_TRANSPARENT;
+    tb->font_color = COLOR_BLACK;
+
+    MCcall(set_mc_str(tb->str, "(null)"));
+
+    MCcall(append_to_collection((void ***)&pjxp->textblocks.items, &pjxp->textblocks.capacity, &pjxp->textblocks.count,
+                                tb));
+  }
 
   return 0;
 }
@@ -346,12 +419,15 @@ int _mcm_pjxp_init_data(mc_node *root)
 
   data->render_target.width = root->layout->preferred_width;
   data->render_target.height = root->layout->preferred_height;
+  data->render_target.background = COLOR_BLACKCURRANT;
 
   data->entries.capacity = data->entries.count = 0;
   data->entries.display_offset = 0;
 
-  mcr_create_texture_resource(data->render_target.width, data->render_target.height, MVK_IMAGE_USAGE_RENDER_TARGET_2D,
-                              &data->render_target.image);
+  data->textblocks.capacity = data->textblocks.count = 0;
+
+  MCcall(mcr_create_texture_resource(data->render_target.width, data->render_target.height,
+                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &data->render_target.image));
 
   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   while (!data->render_target.image) {
@@ -384,13 +460,15 @@ int mcm_init_project_explorer(mc_node *app_root)
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
-  node->layout->determine_layout_extents = (void *)&_mcm_pjxp_determine_typical_node_extents;
+  node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
   node->layout->render_headless = (void *)&_mcm_pjxp_render_headless;
   node->layout->render_present = (void *)&_mcm_pjxp_render_present;
   node->layout->handle_input_event = (void *)&_mcm_pjxp_handle_input;
 
-  _mcm_pjxp_init_data(node);
+  MCcall(_mcm_pjxp_init_data(node));
+
+  MCcall(_mcm_pjxp_init_ui(node));
 
   MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_LOADED, (void *)_mcm_pjxp_project_loaded, (void *)node->data));
 
