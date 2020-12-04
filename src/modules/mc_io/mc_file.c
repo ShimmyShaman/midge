@@ -64,7 +64,7 @@ int mcf_obtain_file_extension(const char *path, char *buf, int max_len)
 
   while (*c != '\0') {
     if (a) {
-      if (a + 1 >= max_len) {
+      if (a >= max_len) {
         MCerror(6825, "File extension was too large");
       }
 
@@ -77,6 +77,7 @@ int mcf_obtain_file_extension(const char *path, char *buf, int max_len)
     ++c;
   }
 
-  buf[a] = '\0';
+  buf[a - 1] = '\0';
+  // printf("mcf_obtain_file_extension Input:'%s' Output:'%s'\n", path, buf);
   return 0;
 }

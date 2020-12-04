@@ -43,8 +43,8 @@ void _mcu_render_textblock_present(image_render_details *image_render_queue, mc_
 {
   mcu_textblock *textblock = (mcu_textblock *)node->data;
 
-  printf("rendertextblock- %u %u %s\n", (unsigned int)node->layout->__bounds.x,
-         (unsigned int)node->layout->__bounds.y, textblock->str->text);
+  // printf("rendertextblock- %u %u %s\n", (unsigned int)node->layout->__bounds.x,
+  //        (unsigned int)node->layout->__bounds.y, textblock->str->text);
 
   // Background
   if (textblock->background_color.a) {

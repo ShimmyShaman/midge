@@ -1,6 +1,8 @@
 #ifndef HASH_TABLE_H
 #define HASH_TABLE_H
 
+#include <stddef.h>
+
 // Derived from code by Syoyo Fujita and other many contributors at https://github.com/syoyo/tinyobjloader-c
 
 #define HASH_TABLE_ERROR 1
@@ -24,6 +26,7 @@ typedef struct hash_table_t {
 } hash_table_t;
 
 // extern "C" {
+unsigned long hash_djb2(const unsigned char *str);
 void create_hash_table(size_t start_capacity, hash_table_t *hash_table);
 void destroy_hash_table(hash_table_t *hash_table);
 int hash_table_insert_value(unsigned long hash, long value, hash_table_t *hash_table);

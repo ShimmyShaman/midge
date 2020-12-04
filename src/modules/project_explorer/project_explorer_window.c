@@ -11,6 +11,7 @@
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
 
+#include "modules/collections/hash_table.h"
 #include "modules/mc_io/mc_io.h"
 #include "modules/project_explorer/project_explorer_window.h"
 #include "modules/ui_elements/ui_elements.h"
@@ -28,9 +29,10 @@ typedef enum mcm_pjxp_entry_type {
 } mcm_pjxp_entry_type;
 
 typedef struct mcm_pjxp_entry {
-  char *name, *path;
+  mc_str *name, *path;
   mcm_pjxp_entry_type type;
   int indent;
+  bool collapsed;
 } mcm_pjxp_entry;
 
 typedef struct project_explorer_data {
@@ -43,14 +45,23 @@ typedef struct project_explorer_data {
   } render_target;
 
   struct {
-    unsigned int display_offset;
+    unsigned int capacity, count;
+    mc_project_info **items;
+  } projects;
 
+  struct {
     unsigned int capacity, count;
     mcm_pjxp_entry **items;
   } entries;
 
+  hash_table_t collapsed_entries;
   struct {
-    unsigned int capacity, count;
+    unsigned long entry_hash;
+    int rough_position; // The 'index' the entry hash was last time
+  } scroll_offset;
+
+  struct {
+    unsigned int capacity, count, utilized;
     mcu_textblock **items;
   } textblocks;
 
@@ -96,8 +107,8 @@ void _mcm_pjxp_render_headless(mc_node *node)
   // Toggle
   node->layout->__requires_rerender = false;
 
-  // Data
-  project_explorer_data *data = (project_explorer_data *)node->data;
+  // pjxp
+  project_explorer_data *pjxp = (project_explorer_data *)node->data;
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -117,12 +128,12 @@ void _mcm_pjxp_render_headless(mc_node *node)
   image_render_details *irq;
   mcr_obtain_image_render_request(global_data->render_thread, &irq);
   irq->render_target = NODE_RENDER_TARGET_IMAGE;
-  irq->clear_color = data->render_target.background;
+  irq->clear_color = pjxp->render_target.background;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
-  irq->image_width = data->render_target.width;   // TODO
-  irq->image_height = data->render_target.height; // TODO
-  irq->data.target_image.image = data->render_target.image;
+  irq->image_width = pjxp->render_target.width;   // TODO
+  irq->image_height = pjxp->render_target.height; // TODO
+  irq->data.target_image.image = pjxp->render_target.image;
   irq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
@@ -145,19 +156,19 @@ void _mcm_pjxp_render_present(image_render_details *image_render_queue, mc_node 
   // Toggle
   node->layout->__requires_rerender = false;
 
-  // Data
-  project_explorer_data *data = (project_explorer_data *)node->data;
+  // pjxp
+  project_explorer_data *pjxp = (project_explorer_data *)node->data;
 
   // Render Image
   mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                         (unsigned int)node->layout->__bounds.y, data->render_target.width,
-                                         data->render_target.height, data->render_target.image);
+                                         (unsigned int)node->layout->__bounds.y, pjxp->render_target.width,
+                                         pjxp->render_target.height, pjxp->render_target.image);
 }
 
 void _mcm_pjxp_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  // Data
-  project_explorer_data *data = (project_explorer_data *)node->data;
+  // pjxp
+  project_explorer_data *pjxp = (project_explorer_data *)node->data;
 
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
     // printf("obb\n");
@@ -193,14 +204,15 @@ void _mcm_pjxp_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-mcm_pjxp_entry_type _mcm_pjxp_parse_entry_type(char *ext)
+mcm_pjxp_entry_type _mcm_pjxp_parse_entry_type(char *extension)
 {
-  switch (ext[0]) {
+  printf("_mcm_pjxp_parse_entry_type:'%s'\n", extension);
+  switch (extension[0]) {
   case '\0':
     return PJXP_ENTRY_UNKNOWN;
     break;
   case 'h': {
-    if (strlen(ext) == 1) {
+    if (strlen(extension) == 1) {
       return PJXP_ENTRY_HEADER;
     }
     else {
@@ -208,7 +220,7 @@ mcm_pjxp_entry_type _mcm_pjxp_parse_entry_type(char *ext)
     }
   } break;
   case 'c': {
-    if (strlen(ext) == 1) {
+    if (strlen(extension) == 1) {
       return PJXP_ENTRY_SOURCE;
     }
     else {
@@ -221,66 +233,192 @@ mcm_pjxp_entry_type _mcm_pjxp_parse_entry_type(char *ext)
   }
 }
 
-int _mcm_pjxp_add_entry(project_explorer_data *xp, const char *full_path, const char *filename,
-                        mcm_pjxp_entry_type entry_type, int indent)
-{
-  mcm_pjxp_entry *entry = (mcm_pjxp_entry *)malloc(
-      sizeof(mcm_pjxp_entry)); // TODO -- use a pool for when projects can be closed & opened & updated
-  entry->name = strdup(filename);
-  entry->path = strdup(full_path);
-  entry->type = entry_type;
-  entry->indent = indent;
+// int _mcm_pjxp_add_entry(project_explorer_data *xp, const char *full_path, const char *filename,
+//                         mcm_pjxp_entry_type entry_type, int indent)
+// {
+//   mcm_pjxp_entry *entry = (mcm_pjxp_entry *)malloc(
+//       sizeof(mcm_pjxp_entry)); // TODO -- use a pool for when projects can be closed & opened & updated
+//   MCcall(init_mc_str(&entry->name));
+//   MCcall(set_mc_str(entry->name, filename));
+//   MCcall(init_mc_str(&entry->path));
+//   MCcall(set_mc_str(entry->path, full_path));
+//   entry->type = entry_type;
+//   entry->indent = indent;
+//   entry->collapsed = false;
 
-  MCcall(append_to_collection((void ***)&xp->entries.items, &xp->entries.capacity, &xp->entries.count, entry));
+//   MCcall(append_to_collection((void ***)&xp->entries.items, &xp->entries.capacity, &xp->entries.count, entry));
+
+//   return 0;
+// }
+
+// int _mcm_pjxp_add_project_file_structure_recursive(project_explorer_data *xp, const char *directory, int indent)
+// {
+//   // Obtain a list of all items in the directory
+//   mc_str *str;
+//   MCcall(init_mc_str(&str));
+
+//   char *c, ext[16];
+//   int a;
+
+//   DIR *dir;
+//   struct dirent *ent;
+//   if ((dir = opendir(directory)) != NULL) {
+//     /* print all the files and directories within directory */
+//     while ((ent = readdir(dir)) != NULL) {
+//       // Remove the . / .. entries
+//       if (!strncmp(ent->d_name, ".", 1))
+//         continue;
+
+//       // Create the full path of the directory entry
+//       MCcall(set_mc_str(str, directory));
+//       if (str->text[str->len - 1] != '\\' && str->text[str->len - 1] != '/') {
+//         MCcall(append_char_to_mc_str(str, '/'));
+//       }
+//       MCcall(append_to_mc_str(str, ent->d_name));
+
+//       // Obtain the path entry type
+//       struct stat stats;
+//       int res = stat(str->text, &stats);
+//       if (res) {
+//         MCerror(1919, "Odd? TODO print errno");
+//       }
+
+//       if (S_ISDIR(stats.st_mode)) {
+//         MCcall(_mcm_pjxp_add_entry(xp, str->text, ent->d_name, PJXP_ENTRY_DIRECTORY, indent));
+
+//         // printf("[D]%s\n", str->text);
+//         // Obtain the directorys sub-entries and add those too
+//         MCcall(_mcm_pjxp_add_project_file_structure_recursive(xp, str->text, indent + 1));
+//       }
+//       else {
+//         // Obtain the entry type from the file extension
+//         MCcall(mcf_obtain_file_extension(ent->d_name, ext, 16));
+//         mcm_pjxp_entry_type entry_type = _mcm_pjxp_parse_entry_type(ext);
+
+//         MCcall(_mcm_pjxp_add_entry(xp, str->text, ent->d_name, entry_type, indent));
+//       }
+//     }
+//     closedir(dir);
+//   }
+//   else {
+//     /* could not open directory */
+//     perror("");
+//     MCerror(8528, "Could not open directory '%s'", directory);
+//     // return EXIT_FAILURE;
+//   }
+
+//   // Add to parent
+//   return 0;
+// }
+
+// int _mcm_pjxp_update_entries_representation(project_explorer_data *pjxp) {
+
+//   // Create an entry for each project and all items within that project
+//   // -- maintaining previous entry information as much as possible
+//   mcm_pjxp_entry *prev_entries[pjxp->entries.capacity]
+
+//   return 0;
+// }
+
+render_color _mcm_pjxp_get_entry_font_color(mcm_pjxp_entry_type entry_type)
+{
+  switch (entry_type) {
+  case PJXP_ENTRY_UNKNOWN:
+    return COLOR_SILVER;
+  case PJXP_ENTRY_PROJECT:
+    return COLOR_ISLAMIC_GREEN;
+  case PJXP_ENTRY_DIRECTORY:
+    return COLOR_LIGHT_YELLOW;
+  case PJXP_ENTRY_HEADER:
+    return COLOR_NODE_ORANGE;
+  case PJXP_ENTRY_SOURCE:
+    return COLOR_POWDER_BLUE;
+  default: {
+    break;
+  }
+  }
+
+  // ERROR
+  return COLOR_RED;
+}
+
+int _mcm_pjxp_set_entry_textblock(project_explorer_data *pjxp, mcu_textblock *tb, mcm_pjxp_entry_type type,
+                                  const char *name, const char *full_path, int indent)
+{
+  printf("_mcm_pjxp_set_entry_textblock tb:%p type:%i name:'%s' full_path:'%s'\n", tb, type, name, full_path);
+  MCcall(set_mc_str(tb->str, name));
+  tb->node->layout->visible = true;
+  tb->node->layout->padding.left = MCM_PJXP_ENTRY_INDENT * indent;
+  tb->font_color = _mcm_pjxp_get_entry_font_color(type);
+
+  mcm_pjxp_entry *ent = (mcm_pjxp_entry *)tb->tag;
+  ent->type = type;
+  ent->indent = indent;
+  MCcall(set_mc_str(ent->name, name)); // TODO -- redundant atm remove one day
+  MCcall(set_mc_str(ent->path, full_path));
+  ent->collapsed = (hash_table_exists(full_path, &pjxp->collapsed_entries) ? true : false);
 
   return 0;
 }
 
-int _mcm_pjxp_add_project_file_structure_recursive(project_explorer_data *xp, const char *directory, int indent)
+int _mcm_pjxp_update_entries_display_from_subdirectory(project_explorer_data *pjxp, bool *awaiting_offset_entry,
+                                                       int *evaluated_count, int indent, const char *directory)
 {
   // Obtain a list of all items in the directory
-  mc_str *str;
-  MCcall(init_mc_str(&str));
-
-  char *c, ext[16];
-  int a;
+  char *c, path[256], ext[16];
+  int len;
+  unsigned long h;
 
   DIR *dir;
   struct dirent *ent;
   if ((dir = opendir(directory)) != NULL) {
     /* print all the files and directories within directory */
-    while ((ent = readdir(dir)) != NULL) {
-      // Remove the . / .. entries
+    while ((ent = readdir(dir)) != NULL && pjxp->textblocks.utilized < pjxp->textblocks.count) {
+      // Ignore the . / .. entries
       if (!strncmp(ent->d_name, ".", 1))
         continue;
 
       // Create the full path of the directory entry
-      MCcall(set_mc_str(str, directory));
-      if (str->text[str->len - 1] != '\\' && str->text[str->len - 1] != '/') {
-        MCcall(append_char_to_mc_str(str, '/'));
+      strcpy(path, directory);
+      len = strlen(path);
+      if (path[len - 1] != '\\' && path[len - 1] != '/') {
+        strcat(path, "/");
       }
-      MCcall(append_to_mc_str(str, ent->d_name));
+      strcat(path, ent->d_name);
+
+      // Awaiting Check
+      if (*awaiting_offset_entry) {
+        h = hash_djb2((unsigned char *)path);
+        *awaiting_offset_entry = (h != pjxp->scroll_offset.entry_hash ? true : false);
+      }
+
+      ++*evaluated_count;
+      if (awaiting_offset_entry)
+        continue;
 
       // Obtain the path entry type
       struct stat stats;
-      int res = stat(str->text, &stats);
+      int res = stat(path, &stats);
       if (res) {
         MCerror(1919, "Odd? TODO print errno");
       }
 
       if (S_ISDIR(stats.st_mode)) {
-        MCcall(_mcm_pjxp_add_entry(xp, str->text, ent->d_name, PJXP_ENTRY_DIRECTORY, indent));
+        MCcall(_mcm_pjxp_set_entry_textblock(pjxp, pjxp->textblocks.items[pjxp->textblocks.utilized++],
+                                             PJXP_ENTRY_DIRECTORY, ent->d_name, path, indent));
 
-        // printf("[D]%s\n", str->text);
+        // printf("[D]%s\n", path);
         // Obtain the directorys sub-entries and add those too
-        _mcm_pjxp_add_project_file_structure_recursive(xp, str->text, indent + 1);
+        MCcall(_mcm_pjxp_update_entries_display_from_subdirectory(pjxp, awaiting_offset_entry, evaluated_count,
+                                                                  indent + 1, path));
       }
       else {
         // Obtain the entry type from the file extension
         MCcall(mcf_obtain_file_extension(ent->d_name, ext, 16));
         mcm_pjxp_entry_type entry_type = _mcm_pjxp_parse_entry_type(ext);
 
-        MCcall(_mcm_pjxp_add_entry(xp, str->text, ent->d_name, entry_type, indent));
+        MCcall(_mcm_pjxp_set_entry_textblock(pjxp, pjxp->textblocks.items[pjxp->textblocks.utilized++], entry_type,
+                                             ent->d_name, path, indent));
       }
     }
     closedir(dir);
@@ -292,70 +430,53 @@ int _mcm_pjxp_add_project_file_structure_recursive(project_explorer_data *xp, co
     // return EXIT_FAILURE;
   }
 
-  // Add to parent
   return 0;
-}
-
-render_color _mcm_pjxp_get_entry_font_color(mcm_pjxp_entry_type entry_type)
-{
-  switch (entry_type) {
-  case PJXP_ENTRY_UNKNOWN:
-    return COLOR_SILVER;
-    break;
-  case PJXP_ENTRY_PROJECT:
-    return COLOR_ISLAMIC_GREEN;
-    break;
-  case PJXP_ENTRY_DIRECTORY:
-    return COLOR_LIGHT_YELLOW;
-    break;
-  case PJXP_ENTRY_HEADER:
-    return COLOR_NODE_ORANGE;
-    break;
-  case PJXP_ENTRY_SOURCE:
-    return COLOR_POWDER_BLUE;
-    break;
-  default: {
-    break;
-  }
-  }
-
-  // ERROR
-  return COLOR_RED;
 }
 
 int _mcm_pjxp_update_entries_display(project_explorer_data *pjxp)
 {
-  // Set the display begin index
-  int offset = pjxp->entries.display_offset;
-  // if (offset > pjxp->entries.count - max_entry_display_count)
-  //   offset = pjxp->entries.count - max_entry_display_count;
-  if (offset >= pjxp->entries.count)
-    offset = pjxp->entries.count - 2;
-  if (offset < 0)
-    offset = 0;
+  bool awaiting_offset_entry = pjxp->scroll_offset.entry_hash;
 
+  pjxp->textblocks.utilized = 0;
+
+  mc_project_info *project;
+  unsigned long h;
   mcu_textblock *tb;
   mcm_pjxp_entry *ent;
-  int a;
-  for (a = 0; a < pjxp->textblocks.count && a + offset < pjxp->entries.count; ++a) {
-    tb = pjxp->textblocks.items[a];
-    ent = pjxp->entries.items[a];
+  // TODO -- use this in the future to keep roughly the same scroll position as before (in the case the scroll offset
+  // entry hash is never found
+  int evaluated = 0;
 
-    tb->node->layout->visible = true;
-    MCcall(set_mc_str(tb->str, ent->name));
-    tb->node->layout->padding.left = MCM_PJXP_ENTRY_INDENT * ent->indent;
-    tb->font_color = _mcm_pjxp_get_entry_font_color(ent->type);
+  for (int p = 0; p < pjxp->projects.count && pjxp->textblocks.utilized < pjxp->textblocks.count; ++p) {
+    project = pjxp->projects.items[p];
 
-    MCcall(mca_set_node_requires_layout_update(tb->node));
+    // Project Entry
+    if (awaiting_offset_entry) {
+      h = hash_djb2(project->path);
+      awaiting_offset_entry = (h != pjxp->scroll_offset.entry_hash);
+    }
+    if (!awaiting_offset_entry) {
+      // Set
+      MCcall(_mcm_pjxp_set_entry_textblock(pjxp, pjxp->textblocks.items[pjxp->textblocks.utilized++],
+                                           PJXP_ENTRY_PROJECT, project->name, project->path, 0));
+
+      if (pjxp->textblocks.utilized >= pjxp->textblocks.count)
+        break;
+    }
+    ++evaluated;
+
+    // Recursively work through the items that can be added
+    _mcm_pjxp_update_entries_display_from_subdirectory(pjxp, &awaiting_offset_entry, &evaluated, 1, project->path);
   }
-  for (; a < pjxp->textblocks.count; ++a) {
+
+  // Disappear the remainder textblocks
+  for (int a = pjxp->textblocks.utilized; a < pjxp->textblocks.count; ++a) {
     tb = pjxp->textblocks.items[a];
 
-    // Disappear the remainder
     tb->node->layout->visible = false;
   }
 
-  pjxp->node->layout->visible = true;
+  // Finish Up
   MCcall(mca_set_node_requires_layout_update(pjxp->node));
   return 0;
 }
@@ -363,25 +484,42 @@ int _mcm_pjxp_update_entries_display(project_explorer_data *pjxp)
 int _mcm_pjxp_project_loaded(void *handler_state, void *event_args)
 {
   // Args
-  project_explorer_data *data = (project_explorer_data *)handler_state;
+  project_explorer_data *pjxp = (project_explorer_data *)handler_state;
   mc_project_info *project = (mc_project_info *)event_args;
 
-  // Add an entry for the project
-  // explored_project *xp = (explored_project *)malloc(sizeof(explored_project));
-  // xp->project = project;
+  // Ensure node is shown - now at least one project is being tracked
+  pjxp->node->layout->visible = true;
 
-  // MCcall(mcu_init_panel(data->node, &xp->root_panel));
-  // xp->root_panel->node->layout->min_height = 24;
+  MCcall(
+      append_to_collection((void ***)&pjxp->projects.items, &pjxp->projects.capacity, &pjxp->projects.count, project));
 
-  data->entries.display_offset = data->entries.count;
-  MCcall(_mcm_pjxp_add_entry(data, project->path, project->name, PJXP_ENTRY_PROJECT, 0));
-  MCcall(_mcm_pjxp_add_project_file_structure_recursive(data, project->path, 1));
+  // // Update Entry Info
+  // MCcall(_mcm_pjxp_update_entries_representation(pjxp));
+  // printf("project_explorer: %u entries loaded\n", pjxp->entries.count);
 
-  printf("project_explorer: %u entries loaded\n", data->entries.count);
-  MCcall(_mcm_pjxp_update_entries_display(data));
+  // Reset the entries displayed
+  MCcall(_mcm_pjxp_update_entries_display(pjxp));
   printf("_mcm_pjxp_update_entries_display\n");
 
   return 0;
+}
+
+void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock *textblock)
+{
+  if (!textblock->tag) {
+    MCVerror(7389, "_mcm_pjxp_textblock_left_click missing tag");
+  }
+
+  mcm_pjxp_entry *entry = (mcm_pjxp_entry *)textblock->tag;
+  printf("LEFT-CLICK-PROJECT_EXPLORER-ITEM:'%s'\n", entry->path);
+  // switch (entry->type) {
+  // case /* constant-expression */:
+  //   /* code */
+  //   break;
+
+  // default:
+  //   break;
+  // }
 }
 
 int _mcm_pjxp_init_ui(mc_node *pjxp_node)
@@ -404,6 +542,11 @@ int _mcm_pjxp_init_ui(mc_node *pjxp_node)
 
     MCcall(set_mc_str(tb->str, "(null)"));
 
+    tb->left_click = (void *)&_mcm_pjxp_textblock_left_click;
+    mcm_pjxp_entry *ent = tb->tag = (void *)malloc(sizeof(mcm_pjxp_entry));
+    MCcall(init_mc_str(&ent->name));
+    MCcall(init_mc_str(&ent->path));
+
     MCcall(append_to_collection((void ***)&pjxp->textblocks.items, &pjxp->textblocks.capacity, &pjxp->textblocks.count,
                                 tb));
   }
@@ -413,24 +556,27 @@ int _mcm_pjxp_init_ui(mc_node *pjxp_node)
 
 int _mcm_pjxp_init_data(mc_node *root)
 {
-  project_explorer_data *data = (project_explorer_data *)malloc(sizeof(project_explorer_data));
-  data->node = root;
-  root->data = data;
+  project_explorer_data *pjxp = (project_explorer_data *)malloc(sizeof(project_explorer_data));
+  pjxp->node = root;
+  root->data = pjxp;
 
-  data->render_target.width = root->layout->preferred_width;
-  data->render_target.height = root->layout->preferred_height;
-  data->render_target.background = COLOR_BLACKCURRANT;
+  pjxp->render_target.width = root->layout->preferred_width;
+  pjxp->render_target.height = root->layout->preferred_height;
+  pjxp->render_target.background = COLOR_BLACKCURRANT;
 
-  data->entries.capacity = data->entries.count = 0;
-  data->entries.display_offset = 0;
+  pjxp->entries.capacity = pjxp->entries.count = 0;
+  pjxp->projects.capacity = pjxp->projects.count = 0;
+  pjxp->textblocks.capacity = pjxp->textblocks.count = pjxp->textblocks.utilized = 0;
 
-  data->textblocks.capacity = data->textblocks.count = 0;
+  create_hash_table(128, &pjxp->collapsed_entries);
+  pjxp->scroll_offset.entry_hash = 0LU;
+  pjxp->scroll_offset.rough_position = 0;
 
-  MCcall(mcr_create_texture_resource(data->render_target.width, data->render_target.height,
-                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &data->render_target.image));
+  MCcall(mcr_create_texture_resource(pjxp->render_target.width, pjxp->render_target.height,
+                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &pjxp->render_target.image));
 
   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
-  while (!data->render_target.image) {
+  while (!pjxp->render_target.image) {
     // puts("wait");
     usleep(100);
   }
@@ -450,7 +596,7 @@ int mcm_init_project_explorer(mc_node *app_root)
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
   node->children->alloc = 0;
-  node->layout->preferred_width = 180;
+  node->layout->preferred_width = 240;
   node->layout->preferred_height = 420;
 
   node->layout->visible = false;

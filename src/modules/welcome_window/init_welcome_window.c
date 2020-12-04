@@ -117,8 +117,8 @@ void _mc_mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
   ww->input_textbox->node->layout->visible = false;
 
   char buf[256];
-  char *current_dir = getcwd(buf, 256); // TODO sizeof pointer instead of type in mc
-  if (!current_dir) {
+  char *cdr = getcwd(buf, 256); // TODO sizeof pointer instead of type in mc
+  if (!cdr) {
     puts("5415 - TODO - error handling");
     return;
   }

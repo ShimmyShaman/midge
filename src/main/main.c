@@ -477,8 +477,12 @@ int main(int argc, const char *const *argv)
   // tcci_set_symbol(loader_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
 
   const char *initial_compile_list[] = {
+      "src/main/platform_prereq.c",
       "dep/tinycc/lib/va_list.c", // TODO -- this
-      "src/midge_error_handling.c", "src/core/mc_app_itp_data.c", "src/mc_str.c", "src/core/core_source_loader.c",
+      "src/midge_error_handling.c",
+      "src/core/mc_app_itp_data.c",
+      "src/mc_str.c",
+      "src/core/core_source_loader.c",
   };
 
   // TODO -- remember why I split them up into 2 compiles -- maybe comment it for next time
@@ -486,6 +490,16 @@ int main(int argc, const char *const *argv)
   MCcall(tcci_add_files(loader_itp, initial_compile_list, initial_source_count - 2));
   MCcall(tcci_add_files(loader_itp, initial_compile_list + initial_source_count - 2, 2));
 
+  // Test Platform
+  int (*__mc_test_platform)(void) = tcci_get_symbol(loader_itp, "__mc_test_platform");
+  if (!__mc_test_platform) {
+    puts("Could not find platform test method");
+    return -1;
+  }
+  if (__mc_test_platform()) {
+    puts("Aborting application startup");
+    return -2;
+  }
   // int (*print_things)(int, ...) = tcci_get_symbol(loader_itp, "print_things");
   // int *na = malloc(sizeof(int) * 4);
   // na[0] = 1;

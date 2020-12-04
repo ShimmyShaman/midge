@@ -1,8 +1,10 @@
-#include "render/resources/hash_table.h"
+#include "modules/collections/hash_table.h"
+
+#include <stdlib.h>
 
 // Derived from code by Syoyo Fujita and other many contributors at https://github.com/syoyo/tinyobjloader-c
 
-unsigned long _hash_djb2(const unsigned char *str)
+unsigned long hash_djb2(const unsigned char *str)
 {
   unsigned long hash = 5381;
   int c;
@@ -111,7 +113,7 @@ void hash_table_maybe_grow(size_t new_n, hash_table_t *hash_table)
 
 int hash_table_exists(const char *name, hash_table_t *hash_table)
 {
-  unsigned long hash = _hash_djb2((const unsigned char *)name);
+  unsigned long hash = hash_djb2((const unsigned char *)name);
   hash_table_entry_t *res = hash_table_find(hash, hash_table);
   return res != NULL;
 }
@@ -119,7 +121,7 @@ int hash_table_exists(const char *name, hash_table_t *hash_table)
 void hash_table_set(const char *name, size_t val, hash_table_t *hash_table)
 {
   /* Hash name */
-  unsigned long hash = _hash_djb2((const unsigned char *)name);
+  unsigned long hash = hash_djb2((const unsigned char *)name);
 
   hash_table_entry_t *entry = hash_table_find(hash, hash_table);
   if (entry) {
@@ -139,7 +141,7 @@ void hash_table_set(const char *name, size_t val, hash_table_t *hash_table)
 
 long hash_table_get(const char *name, hash_table_t *hash_table)
 {
-  unsigned long hash = _hash_djb2((const unsigned char *)name);
+  unsigned long hash = hash_djb2((const unsigned char *)name);
   hash_table_entry_t *ret = hash_table_find(hash, hash_table);
   return ret->value;
 }

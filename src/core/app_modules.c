@@ -58,6 +58,7 @@ int mca_load_modules()
   // // TODO
   const char *module_directories[] = {
       "mc_io",
+      "collections",
       "ui_elements",
       "welcome_window",
       "modus_operandi",
@@ -253,7 +254,20 @@ int mca_load_previously_open_projects()
 
   printf("open_list_text:'%s'\n", open_list_text);
 
-  char buf[256];
+  // The current working directory
+  char projects_dir[256];
+  char *cdr = getcwd(projects_dir, 256); // TODO sizeof pointer instead of type in mc
+  if (!cdr) {
+    puts("5260 - TODO - error handling");
+    return;
+  }
+
+  char c = projects_dir[strlen(projects_dir) - 1];
+  if (c != '\\' && c != '/')
+    strcat(projects_dir, "/");
+  strcat(projects_dir, "projects");
+
+  char project_name[256];
   mc_str *str;
   init_mc_str(&str);
 
@@ -269,11 +283,11 @@ int mca_load_previously_open_projects()
       }
 
     if (i > s) {
-      strncpy(buf, open_list_text + s, i - s);
-      buf[i - s] = '\0';
+      strncpy(project_name, open_list_text + s, i - s);
+      project_name[i - s] = '\0';
 
-      MCcall(_mca_load_project("projects", buf));
-      // _mca_set_project_state("projects", buf);
+      MCcall(_mca_load_project("projects", project_name));
+      // _mca_set_project_state("projects", buf); TODO
     }
   }
 

@@ -1935,6 +1935,31 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         //   loop = false;
         //   ++*index;
         // } break;
+        case 'l':
+        case 'L': {
+          switch (code[*index + 1]) {
+          case 'u':
+          case 'U':
+            ++*index;
+            break;
+          case '\n':
+          case ']':
+          case ':':
+          case ' ':
+          case ',':
+          case ')':
+          case '}':
+          case ';':
+            break;
+          default: {
+            print_parse_error(code, *index, "_mcs_parse_token", "");
+            MCerror(1956, "NotYetSupported Numeric Literal unsigned postfix character:'%c'", code[*index]);
+          }
+          }
+
+          loop = false;
+          ++*index;
+        } break;
         case 'u':
         case 'U': {
           switch (code[*index + 1]) {

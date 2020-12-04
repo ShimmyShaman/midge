@@ -642,12 +642,12 @@ int mcs_interpret_file(const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  // if (!strcmp("src/modules/mc_io/mc_file.c", filepath)) {
-  //   // usleep(10000);
-  //   // printf("\ngen-code:\n%s||\n", code);
-  //   save_text_to_file("src/temp/todelete.h", code);
-  //   // MCerror(7704, "TODO");
-  // }
+  if (!strcmp("src/modules/project_explorer/project_explorer_window.c", filepath)) {
+    // usleep(10000);
+    // printf("\ngen-code:\n%s||\n", code);
+    save_text_to_file("src/temp/todelete.h", code);
+    // MCerror(7704, "TODO");
+  }
 
   // Send the code to the interpreter
   {
