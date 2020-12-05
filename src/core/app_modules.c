@@ -58,11 +58,13 @@ int mca_load_modules()
   // // TODO
   const char *module_directories[] = {
       "mc_io",
+      "collections",
       "ui_elements",
       "welcome_window",
       "modus_operandi",
+      "project_explorer",
       "source_editor",
-      // "function_debug",
+      // And all before...
       "obj_loader",
       NULL,
   };
@@ -118,7 +120,12 @@ int _mca_load_project(const char *base_path, const char *project_name)
   mc_obtain_midge_app_info(&app_info);
 
   char buf[512];
-  sprintf(buf, "%s/%s/src", base_path, project_name);
+  mc_project_info *project = malloc(sizeof(mc_project_info));
+  project->name = strdup(project_name);
+  sprintf(buf, "%s/%s", base_path, project_name);
+  project->path = strdup(buf);
+  strcat(buf, "/src");
+  project->path_src = strdup(buf);
 
   // Load the source
   // TODO - hard problem ( have to load headers than .c files but do it in order)
@@ -138,8 +145,6 @@ int _mca_load_project(const char *base_path, const char *project_name)
   // }
 
   // TEMP
-  mc_project_info *project = malloc(sizeof(mc_project_info));
-  project->path_src = strdup(buf);
 
   // Temporary fixup - source load
   // Load main_init.h && main_init.c
@@ -172,10 +177,13 @@ int _mca_load_project(const char *base_path, const char *project_name)
 
   mc_node *project_root;
   sprintf(buf, "%s_root", project_name);
-  mca_init_mc_node(NODE_TYPE_ABSTRACT, buf, &project_root);
+  MCcall(mca_init_mc_node(NODE_TYPE_ABSTRACT, buf, &project_root));
   MCcall(initialize_project(project_root));
 
   MCcall(mca_attach_node_to_hierarchy(app_info->global_node, project_root));
+
+  project->root_node = project_root;
+  MCcall(mca_register_loaded_project(project));
 
   // MCcall(mcs_interpret_file(buf));
 
@@ -239,14 +247,27 @@ int mca_load_project_async(const char *project_parent_dir, char *project_name)
   return 0;
 }
 
-int mca_load_open_projects()
+int mca_load_previously_open_projects()
 {
   char *open_list_text;
   read_file_text("projects/open_project_list", &open_list_text);
 
   printf("open_list_text:'%s'\n", open_list_text);
 
-  char buf[256];
+  // The current working directory
+  char projects_dir[256];
+  char *cdr = getcwd(projects_dir, 256); // TODO sizeof pointer instead of type in mc
+  if (!cdr) {
+    puts("5260 - TODO - error handling");
+    return 5260;
+  }
+
+  char c = projects_dir[strlen(projects_dir) - 1];
+  if (c != '\\' && c != '/')
+    strcat(projects_dir, "/");
+  strcat(projects_dir, "projects");
+
+  char project_name[256];
   mc_str *str;
   init_mc_str(&str);
 
@@ -262,11 +283,11 @@ int mca_load_open_projects()
       }
 
     if (i > s) {
-      strncpy(buf, open_list_text + s, i - s);
-      buf[i - s] = '\0';
+      strncpy(project_name, open_list_text + s, i - s);
+      project_name[i - s] = '\0';
 
-      MCcall(_mca_load_project("projects", buf));
-      // _mca_set_project_state("projects", buf);
+      MCcall(_mca_load_project("projects", project_name));
+      // _mca_set_project_state("projects", buf); TODO
     }
   }
 

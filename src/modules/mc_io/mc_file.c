@@ -57,3 +57,27 @@ int mcf_directory_exists(const char *path, bool *exists)
 
 //   return 0;
 // }
+int mcf_obtain_file_extension(const char *path, char *buf, int max_len)
+{
+  int a = 0;
+  char *c = (char *)&path[0];
+
+  while (*c != '\0') {
+    if (a) {
+      if (a >= max_len) {
+        MCerror(6825, "File extension was too large");
+      }
+
+      buf[a - 1] = *c;
+      ++a;
+    }
+    else if (*c == '.') {
+      a = 1;
+    }
+    ++c;
+  }
+
+  buf[a - 1] = '\0';
+  // printf("mcf_obtain_file_extension Input:'%s' Output:'%s'\n", path, buf);
+  return 0;
+}

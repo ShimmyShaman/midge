@@ -1935,6 +1935,31 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
         //   loop = false;
         //   ++*index;
         // } break;
+        case 'l':
+        case 'L': {
+          switch (code[*index + 1]) {
+          case 'u':
+          case 'U':
+            ++*index;
+            break;
+          case '\n':
+          case ']':
+          case ':':
+          case ' ':
+          case ',':
+          case ')':
+          case '}':
+          case ';':
+            break;
+          default: {
+            print_parse_error(code, *index, "_mcs_parse_token", "");
+            MCerror(1956, "NotYetSupported Numeric Literal unsigned postfix character:'%c'", code[*index]);
+          }
+          }
+
+          loop = false;
+          ++*index;
+        } break;
         case 'u':
         case 'U': {
           switch (code[*index + 1]) {
@@ -4445,6 +4470,8 @@ int mcs_parse_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
     case MC_TOKEN_BITWISE_LEFT_SHIFT_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_BITWISE_RIGHT_SHIFT_OPERATOR:
     case MC_TOKEN_BITWISE_RIGHT_SHIFT_AND_ASSIGN_OPERATOR:
+    case MC_TOKEN_BINARY_AND_ASSIGNMENT_OPERATOR:
+    case MC_TOKEN_BINARY_OR_ASSIGNMENT_OPERATOR:
     case MC_TOKEN_PLUS_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_SUBTRACT_AND_ASSIGN_OPERATOR:
     case MC_TOKEN_MULTIPLY_AND_ASSIGN_OPERATOR:

@@ -35,8 +35,8 @@ void exit_app(mc_node *node_scope, int result)
 // {
 //   switch (hierarchy_node->type) {
 //   case NODE_TYPE_GLOBAL_ROOT: {
-//     mc_global_data *global_data = (mc_global_data *)hierarchy_node->data;
-//     *sub_node_list = global_data->children;
+//     mc_app_info *app_info = (mc_app_info *)hierarchy_node->data;
+//     *sub_node_list = app_info->children;
 //   } break;
 //   case NODE_TYPE_UI: {
 //     mcu_get_hierarchical_children_node_list(hierarchy_node, sub_node_list);
@@ -123,12 +123,12 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
   node_to_attach->parent = hierarchy_node;
 
   if (node_to_attach->layout) {
-    mca_set_node_requires_layout_update(node_to_attach);
-
     // TODO -- not sure this is the best way to handle this yet
     // .. maybe use a layout flag which specifies to update all children as well?
     if (node_to_attach->children)
       mca_set_descendents_require_layout_update(node_to_attach->children);
+
+    mca_set_node_requires_layout_update(node_to_attach);
   }
   mca_set_node_requires_rerender(node_to_attach);
 
@@ -177,7 +177,7 @@ int mca_init_mc_node(node_type type, const char *name, mc_node **node)
   (*node) = (mc_node *)malloc(sizeof(mc_node)); // TODO malloc checks everywhere?
 
   (*node)->type = type;
-  (*node)->name = strdup(name);
+  (*node)->name = name ? strdup(name) : NULL;
 
   (*node)->layout = NULL;
   (*node)->children = NULL;
@@ -452,16 +452,9 @@ int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
     // padding adjusted from available
     bounds.width = available_area->width - layout->padding.right - layout->padding.left;
 
-    // Specified bounds
-    if (layout->min_width && bounds.width < layout->min_width) {
-      bounds.width = layout->min_width;
-    }
-    if (layout->max_width && bounds.width > layout->max_width) {
-      bounds.width = layout->max_width;
-    }
-
-    if (bounds.width < 0) {
-      bounds.width = 0;
+    // Apply the determined extent
+    if (bounds.width > layout->determined_extents.width) {
+      bounds.width = layout->determined_extents.width;
     }
   }
 
@@ -478,16 +471,9 @@ int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
     // padding adjusted from available
     bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
 
-    // Specified bounds
-    if (layout->min_height && bounds.height < layout->min_height) {
-      bounds.height = layout->min_height;
-    }
-    if (layout->max_height && bounds.height > layout->max_height) {
-      bounds.height = layout->max_height;
-    }
-
-    if (bounds.height < 0) {
-      bounds.height = 0;
+    // Apply the determined extent
+    if (bounds.height > layout->determined_extents.height) {
+      bounds.height = layout->determined_extents.height;
     }
   }
 
@@ -689,10 +675,10 @@ int mca_focus_node(mc_node *node)
 
 int mca_obtain_focused_node(mc_node **node)
 {
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
-  *node = global_data->global_node;
+  *node = app_info->global_node;
 
   while ((*node)->layout && (*node)->layout->focused_child) {
     (*node) = (*node)->layout->focused_child;
@@ -757,14 +743,56 @@ int mca_obtain_focused_node(mc_node **node)
 //   // register_midge_error_tag("mcd_on_hierarchy_update(~)");
 // }
 
-// void attach_definition_to_hierarchy(mc_node *parent_attachment, char *definition)
+int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  // printf("app_info->event_handlers.count:%u\n", app_info->event_handlers.count);
+  event_handler_array *eha = app_info->event_handlers.items[event_type];
+
+  event_handler_info *eh = (event_handler_info *)malloc(sizeof(event_handler_info));
+  eh->delegate = handler_delegate;
+  eh->state = handler_state;
+
+  // printf("eha->handlers:%p, eha->capacity:%u\n", eha->handlers, eha->capacity);
+  MCcall(append_to_collection((void ***)&eha->handlers, &eha->capacity, &eha->count, eh));
+
+  return 0;
+}
+
+int mca_fire_event(mc_app_event_type event_type, void *event_arg)
+{
+  // printf("mca_fire_event:%i\n", event_type);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  event_handler_array *eha = app_info->event_handlers.items[event_type];
+  for (int a = 0; a < eha->count; ++a) {
+    // puts("mca_fire_event_execute");
+    int (*event_handler)(void *, void *) = (int (*)(void *, void *))eha->handlers[a]->delegate;
+    MCcall(event_handler(eha->handlers[a]->state, event_arg));
+  }
+
+  return 0;
+}
+
+int mca_register_loaded_project(mc_project_info *project)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  MCcall(append_to_collection((void ***)&app_info->projects.items, &app_info->projects.capacity,
+                              &app_info->projects.count, project));
+
+  // Fire an event...
+  MCcall(mca_fire_event(MC_APP_EVENT_PROJECT_LOADED, (void *)project));
+
+  return 0;
+}
 // {
 //   // append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
 //   //                      &parent_attachment->child_count, node_to_add);
-
-//   // Fire an event...
-//   unsigned int event_type = ME_NODE_HIERARCHY_UPDATED;
-//   notify_handlers_of_event(event_type, NULL);
 
 //   // TODO -- maybe find a better place to do this
 //   switch (node_to_add->type) {

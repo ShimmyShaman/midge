@@ -6,8 +6,8 @@
 #include "mc_str.h"
 
 #include "core/core_definitions.h"
-#include "render/render_common.h"
 #include "env/environment_definitions.h"
+#include "render/render_common.h"
 
 typedef enum ui_element_type {
   UI_ELEMENT_NULL = 0,
@@ -17,20 +17,14 @@ typedef enum ui_element_type {
   UI_ELEMENT_CONTEXT_MENU,
 } ui_element_type;
 
-typedef struct mcu_panel {
-  mc_node *node;
-
-  render_color background_color;
-} mcu_panel;
-
 // Controls
-typedef struct mcu_text_block {
-  mc_node *node;
+// typedef struct mcu_text_block {
+//   mc_node *node;
 
-  mc_str *str;
-  mcr_font_resource *font;
-  render_color font_color;
-} mcu_text_block;
+//   mc_str *str;
+//   mcr_font_resource *font;
+//   render_color font_color;
+// } mcu_text_block;
 
 // typedef struct mcu_context_menu {
 //   mc_node *node;
@@ -64,10 +58,10 @@ void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 // void mcu_init_ui_element(mc_node *parent_node, ui_element_type element_type, mcu_ui_element **created_element);
 // void mcu_get_hierarchical_children_node_list(mc_node *hierarchy_node, mc_node_list **parent_node_list);
 
-void mcu_init_panel(mc_node *parent, mcu_panel **p_panel);
+// void mcu_init_panel(mc_node *parent, mcu_panel **p_panel);
 // void mcu_render_panel(image_render_details *image_render_queue, mc_node *ui_node);
 
-void mcu_init_text_block(mc_node *parent, mcu_text_block **p_text_block);
+// void mcu_init_text_block(mc_node *parent, mcu_text_block **p_text_block);
 // void mcu_render_text_block(image_render_details *image_render_queue, mc_node *ui_node);
 
 // void mcu_render_button(image_render_details *image_render_queue, mc_node *ui_node);

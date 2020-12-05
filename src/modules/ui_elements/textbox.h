@@ -37,5 +37,5 @@ typedef struct mcu_textbox {
   render_color background_color;
 } mcu_textbox;
 
-int mcu_init_textbox(mc_node *parent, mcu_textbox **p_button);
+int mcu_init_textbox(mc_node *parent, mcu_textbox **p_textbox);
 #endif // TEXTBOX_H

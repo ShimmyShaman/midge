@@ -12,8 +12,8 @@
 #include "env/environment_definitions.h"
 #include "render/render_common.h"
 
-#include "modules/source_editor/source_editor.h"
 #include "modules/obj_loader/wvf_obj_loader.h"
+#include "modules/source_editor/source_editor.h"
 
 typedef struct mystery_hut {
   mc_node *node;

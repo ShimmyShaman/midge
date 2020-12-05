@@ -151,6 +151,10 @@ int mca_render_typical_nodes_children_present(image_render_details *image_render
 int mca_focus_node(mc_node *node);
 int mca_obtain_focused_node(mc_node **node);
 
+int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state);
+int mca_fire_event(mc_app_event_type event_type, void *event_arg);
+int mca_register_loaded_project(mc_project_info *project);
+
 // util.c
 int reallocate_array(void **array, unsigned int *current_allocation, unsigned int desired_allocation,
                      size_t item_allocation_size);

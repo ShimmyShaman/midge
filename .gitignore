@@ -10,3 +10,7 @@ mcmd.txt
 working.md
 notes.md
 src/temp/todelete.h
+projects/**
+!projects/cube_template**
+!projects/empty_project**
+!projects/mystery_hut**

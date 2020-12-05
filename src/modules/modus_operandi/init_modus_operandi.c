@@ -132,6 +132,10 @@ int init_modus_operandi(mc_node *app_root)
   node->layout->render_present = (void *)&_mco_render_mo_data_present;
   node->layout->handle_input_event = (void *)&_mco_handle_input;
 
+  // TODO
+  node->layout->visible = false;
+  // TODO
+
   mco_load_resources(node);
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
