@@ -62,8 +62,8 @@ int mca_load_modules()
       "ui_elements",
       "welcome_window",
       "modus_operandi",
-      "source_editor",
       "project_explorer",
+      "source_editor",
       // And all before...
       "obj_loader",
       NULL,
