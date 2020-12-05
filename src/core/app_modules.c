@@ -60,12 +60,12 @@ int mca_load_modules()
       "mc_io",
       "collections",
       "ui_elements",
+      "obj_loader",
       "welcome_window",
       "modus_operandi",
       "project_explorer",
-      "source_editor",
       // And all before...
-      "obj_loader",
+      "source_editor",
       NULL,
   };
 

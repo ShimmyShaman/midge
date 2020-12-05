@@ -83,8 +83,7 @@ int begin_render_thread()
   // app_info->render_thread);
   // printf("&midge_render_thread=%p\n", &midge_render_thread);
 
-  return begin_mthread(&midge_render_thread, &app_info->render_thread->thread_info,
-                       (void *)app_info->render_thread);
+  return begin_mthread(&midge_render_thread, &app_info->render_thread->thread_info, (void *)app_info->render_thread);
 }
 
 // typedef struct
@@ -198,6 +197,11 @@ void *mca_load_modules_then_project_async(void *state)
     return NULL;
   }
 
+  struct timespec load_complete_time;
+  clock_gettime(CLOCK_REALTIME, &load_complete_time);
+  printf("[[MIDGE-App] > Modules/Projects Compile complete after %.2f seconds]\n",
+         load_complete_time.tv_sec - app_info->app_begin_time->tv_sec +
+             1e-9 * (load_complete_time.tv_nsec - app_info->app_begin_time->tv_nsec));
   // puts("modules & open-projects loading complete");
 
   return NULL;

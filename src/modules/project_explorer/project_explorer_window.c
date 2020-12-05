@@ -460,7 +460,7 @@ void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock 
   case PJXP_ENTRY_HEADER:
   case PJXP_ENTRY_SOURCE: {
     mca_fire_event(MC_APP_EVENT_FILE_OPEN_REQUESTED, entry->path->text);
-    // printf("MC_APP_EVENT_FILE_OPEN_REQUESTED:'%s'\n", entry->path->text);
+    printf("MC_APP_EVENT_FILE_OPEN_REQUESTED:'%s' NOT YET HANDLED\n", entry->path->text);
   } break;
   default:
     puts("NotYetImplemented - a means to open the file requested");
