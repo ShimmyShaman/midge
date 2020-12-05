@@ -1,6 +1,7 @@
 #include "modules/collections/hash_table.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 // Derived from code by Syoyo Fujita and other many contributors at https://github.com/syoyo/tinyobjloader-c
 
@@ -33,7 +34,7 @@ void destroy_hash_table(hash_table_t *hash_table)
 }
 
 /* Insert with quadratic probing */
-int hash_table_insert_value(unsigned long hash, long value, hash_table_t *hash_table)
+int hash_table_change_value(unsigned long hash, long value, hash_table_t *hash_table)
 {
   /* Insert value */
   size_t start_index = hash % hash_table->capacity;
@@ -64,12 +65,55 @@ int hash_table_insert_value(unsigned long hash, long value, hash_table_t *hash_t
 
 int hash_table_insert(unsigned long hash, long value, hash_table_t *hash_table)
 {
-  int ret = hash_table_insert_value(hash, value, hash_table);
+  int ret = hash_table_change_value(hash, value, hash_table);
   if (ret == HASH_TABLE_SUCCESS) {
     hash_table->hashes[hash_table->n] = hash;
     hash_table->n++;
   }
   return ret;
+}
+
+int hash_table_remove(unsigned long hash, hash_table_t *hash_table)
+{
+  /* Get hash */
+  size_t start_index = hash % hash_table->capacity;
+  size_t index = start_index;
+  size_t i;
+  hash_table_entry_t *start_entry = hash_table->entries + index;
+  hash_table_entry_t *entry = start_entry, *prev_entry = start_entry;
+
+  while (1) {
+    if (!entry->filled) {
+      return HASH_TABLE_SUCCESS; // Doesn't exist in hash_table
+    }
+
+    if (entry->hash != hash) {
+      prev_entry = entry;
+      entry = entry->next;
+      continue;
+    }
+
+    break;
+  }
+
+  if (entry == start_entry) {
+    if (entry->next) {
+      memcpy(start_entry, entry->next, sizeof(hash_table_entry_t));
+      memset(entry->next, 0, sizeof(hash_table_entry_t));
+    }
+    else {
+      memset(entry, 0, sizeof(hash_table_entry_t));
+    }
+  }
+  else {
+    if (entry->next) {
+      prev_entry->next = entry->next;
+    }
+    memset(entry, 0, sizeof(hash_table_entry_t));
+  }
+
+  --hash_table->n;
+  return HASH_TABLE_SUCCESS;
 }
 
 hash_table_entry_t *hash_table_find(unsigned long hash, hash_table_t *hash_table)
@@ -104,7 +148,7 @@ void hash_table_maybe_grow(size_t new_n, hash_table_t *hash_table)
   /* Rehash */
   for (i = 0; i < hash_table->capacity; i++) {
     hash_table_entry_t *entry = hash_table_find(hash_table->hashes[i], hash_table);
-    hash_table_insert_value(hash_table->hashes[i], entry->value, &new_hash_table);
+    hash_table_change_value(hash_table->hashes[i], entry->value, &new_hash_table);
   }
 
   free(hash_table->entries);
@@ -145,3 +189,79 @@ long hash_table_get(const char *name, hash_table_t *hash_table)
   hash_table_entry_t *ret = hash_table_find(hash, hash_table);
   return ret->value;
 }
+
+// /* Some 'test' code for remove */
+//   // DEBUG TEST
+//   unsigned long t = 482472827LU;
+//   // Check
+//   if (hash_table_find(t, &pjxp->collapsed_entries) != NULL)
+//     puts("test-hash ERROR 1");
+//   // Set
+//   hash_table_insert(t, 80L, &pjxp->collapsed_entries);
+//   if (pjxp->collapsed_entries.n != 1)
+//     puts("test-hash ERROR 13a");
+//   // Check
+//   hash_table_entry_t *et = hash_table_find(t, &pjxp->collapsed_entries);
+//   if (et == NULL)
+//     puts("test-hash ERROR 2");
+//   if (et->value != 80L)
+//     puts("test-hash ERROR 3a");
+//   if (et->next)
+//     puts("test-hash ERROR 3b");
+//   // TRY ANOTHER
+//   // Check
+//   if (hash_table_find(472472827LU, &pjxp->collapsed_entries) != NULL)
+//     puts("test-hash ERROR 4");
+//   // AND ANOTHER in the same bucket
+//   hash_table_insert(t + 256LU, 40L, &pjxp->collapsed_entries);
+//   if (pjxp->collapsed_entries.n != 2)
+//     puts("test-hash ERROR 13b");
+//   if (hash_table_find(t + 256LU, &pjxp->collapsed_entries) == NULL)
+//     puts("test-hash ERROR 5");
+//   if (!et->next)
+//     puts("test-hash ERROR 6a");
+//   if (et->next->value != 40L)
+//     puts("test-hash ERROR 6b");
+//   // AND ANOTHER ANOTHER in the same bucket
+//   hash_table_insert(t + 512LU, 20L, &pjxp->collapsed_entries);
+//   hash_table_entry_t *et2 = hash_table_find(t + 512LU, &pjxp->collapsed_entries);
+//   if (pjxp->collapsed_entries.n != 3)
+//     puts("test-hash ERROR 13c");
+//   if (et2 == NULL)
+//     puts("test-hash ERROR 7");
+//   if (et2->value != 20L)
+//     puts("test-hash ERROR 8a");
+//   if (!et2->next)
+//     puts("test-hash ERROR 8b");
+//   if (et2->next->value != 40L)
+//     puts("test-hash ERROR 8c");
+
+//   // Remove THE MIDDLE ONE -- which is actually the 512 eek
+//   hash_table_remove(t + 512LU, &pjxp->collapsed_entries);
+//   if (hash_table_find(t + 512LU, &pjxp->collapsed_entries) != NULL)
+//     puts("test-hash ERROR 9");
+
+//   // Check again
+//   et = hash_table_find(t, &pjxp->collapsed_entries);
+//   if (et == NULL)
+//     puts("test-hash ERROR 10z");
+//   if (et->value != 80)
+//     puts("test-hash ERROR 10a");
+//   if (!et->next)
+//     puts("test-hash ERROR 10b");
+//   if (et->next->value != 40)
+//     printf("test-hash ERROR 10c  '%l'\n", et->next->value);
+
+//   et2 = hash_table_find(t + 256LU, &pjxp->collapsed_entries);
+//   if (et2 == NULL)
+//     puts("test-hash ERROR 11");
+//   if (et2->value != 40)
+//     puts("test-hash ERROR 12a");
+//   if (et2->next)
+//     printf("test-hash ERROR 12b  '%l'\n", et2->next->value);
+
+//   if (pjxp->collapsed_entries.n != 2)
+//     puts("test-hash ERROR 13d");
+//   // FINISHED
+//   puts("test-hash FINISHED");
+//   // DEBUG TEST

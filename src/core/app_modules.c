@@ -259,7 +259,7 @@ int mca_load_previously_open_projects()
   char *cdr = getcwd(projects_dir, 256); // TODO sizeof pointer instead of type in mc
   if (!cdr) {
     puts("5260 - TODO - error handling");
-    return;
+    return 5260;
   }
 
   char c = projects_dir[strlen(projects_dir) - 1];

@@ -29,7 +29,8 @@ typedef enum mcm_pjxp_entry_type {
 } mcm_pjxp_entry_type;
 
 typedef struct mcm_pjxp_entry {
-  mc_str *name, *path;
+  unsigned long hash;
+  mc_str *path;
   mcm_pjxp_entry_type type;
   int indent;
   bool collapsed;
@@ -206,7 +207,7 @@ void _mcm_pjxp_handle_input(mc_node *node, mci_input_event *input_event)
 
 mcm_pjxp_entry_type _mcm_pjxp_parse_entry_type(char *extension)
 {
-  printf("_mcm_pjxp_parse_entry_type:'%s'\n", extension);
+  // printf("_mcm_pjxp_parse_entry_type:'%s'\n", extension);
   switch (extension[0]) {
   case '\0':
     return PJXP_ENTRY_UNKNOWN;
@@ -345,7 +346,7 @@ render_color _mcm_pjxp_get_entry_font_color(mcm_pjxp_entry_type entry_type)
 int _mcm_pjxp_set_entry_textblock(project_explorer_data *pjxp, mcu_textblock *tb, mcm_pjxp_entry_type type,
                                   const char *name, const char *full_path, int indent)
 {
-  printf("_mcm_pjxp_set_entry_textblock tb:%p type:%i name:'%s' full_path:'%s'\n", tb, type, name, full_path);
+  // printf("_mcm_pjxp_set_entry_textblock tb:%p type:%i name:'%s' full_path:'%s'\n", tb, type, name, full_path);
   MCcall(set_mc_str(tb->str, name));
   tb->node->layout->visible = true;
   tb->node->layout->padding.left = MCM_PJXP_ENTRY_INDENT * indent;
@@ -354,9 +355,9 @@ int _mcm_pjxp_set_entry_textblock(project_explorer_data *pjxp, mcu_textblock *tb
   mcm_pjxp_entry *ent = (mcm_pjxp_entry *)tb->tag;
   ent->type = type;
   ent->indent = indent;
-  MCcall(set_mc_str(ent->name, name)); // TODO -- redundant atm remove one day
+  ent->hash = hash_djb2(full_path);
   MCcall(set_mc_str(ent->path, full_path));
-  ent->collapsed = (hash_table_exists(full_path, &pjxp->collapsed_entries) ? true : false);
+  ent->collapsed = (hash_table_find(ent->hash, &pjxp->collapsed_entries) != NULL) ? true : false;
 
   return 0;
 }
@@ -369,6 +370,9 @@ int _mcm_pjxp_update_entries_display_from_subdirectory(project_explorer_data *pj
   int len;
   unsigned long h;
 
+  // directory = "/home/jason/midge/projects/cube";
+  // printf("_mcm_pjxp_update_entries_display_from_subdirectory: utilized:%u count:%u\n", pjxp->textblocks.utilized,
+  //        pjxp->textblocks.count);
   DIR *dir;
   struct dirent *ent;
   if ((dir = opendir(directory)) != NULL) {
@@ -391,10 +395,7 @@ int _mcm_pjxp_update_entries_display_from_subdirectory(project_explorer_data *pj
         h = hash_djb2((unsigned char *)path);
         *awaiting_offset_entry = (h != pjxp->scroll_offset.entry_hash ? true : false);
       }
-
       ++*evaluated_count;
-      if (awaiting_offset_entry)
-        continue;
 
       // Obtain the path entry type
       struct stat stats;
@@ -404,15 +405,16 @@ int _mcm_pjxp_update_entries_display_from_subdirectory(project_explorer_data *pj
       }
 
       if (S_ISDIR(stats.st_mode)) {
-        MCcall(_mcm_pjxp_set_entry_textblock(pjxp, pjxp->textblocks.items[pjxp->textblocks.utilized++],
-                                             PJXP_ENTRY_DIRECTORY, ent->d_name, path, indent));
+        if (!*awaiting_offset_entry)
+          MCcall(_mcm_pjxp_set_entry_textblock(pjxp, pjxp->textblocks.items[pjxp->textblocks.utilized++],
+                                               PJXP_ENTRY_DIRECTORY, ent->d_name, path, indent));
 
         // printf("[D]%s\n", path);
         // Obtain the directorys sub-entries and add those too
         MCcall(_mcm_pjxp_update_entries_display_from_subdirectory(pjxp, awaiting_offset_entry, evaluated_count,
                                                                   indent + 1, path));
       }
-      else {
+      else if (!*awaiting_offset_entry) {
         // Obtain the entry type from the file extension
         MCcall(mcf_obtain_file_extension(ent->d_name, ext, 16));
         mcm_pjxp_entry_type entry_type = _mcm_pjxp_parse_entry_type(ext);
@@ -499,7 +501,7 @@ int _mcm_pjxp_project_loaded(void *handler_state, void *event_args)
 
   // Reset the entries displayed
   MCcall(_mcm_pjxp_update_entries_display(pjxp));
-  printf("_mcm_pjxp_update_entries_display\n");
+  // printf("_mcm_pjxp_update_entries_display\n");
 
   return 0;
 }
@@ -510,16 +512,33 @@ void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock 
     MCVerror(7389, "_mcm_pjxp_textblock_left_click missing tag");
   }
 
+  // Obtain Attached Data
+  project_explorer_data *pjxp = (project_explorer_data *)textblock->node->parent->data;
   mcm_pjxp_entry *entry = (mcm_pjxp_entry *)textblock->tag;
-  printf("LEFT-CLICK-PROJECT_EXPLORER-ITEM:'%s'\n", entry->path);
-  // switch (entry->type) {
-  // case /* constant-expression */:
-  //   /* code */
-  //   break;
 
-  // default:
-  //   break;
-  // }
+  // printf("LEFT-CLICK-PROJECT_EXPLORER-ITEM:'%s'\n", entry->path->text);
+  switch (entry->type) {
+  case PJXP_ENTRY_PROJECT:
+  case PJXP_ENTRY_DIRECTORY: {
+    // Toggle the collapse
+    if (hash_table_find(entry->hash, &pjxp->collapsed_entries) != NULL) {
+      hash_table_remove(entry->hash, &pjxp->collapsed_entries);
+    }
+    else {
+      int res = hash_table_insert(entry->hash, 1, &pjxp->collapsed_entries);
+      if (res) {
+        MCVerror(8530, "TODO?");
+      }
+    }
+
+    mca_set_node_requires_layout_update(pjxp->node);
+    // TODO -- why does it also require rerender set
+    TROUBLE
+    // mca_set_node_requires_rerender(pjxp->node);
+  } break;
+  default:
+    break;
+  }
 }
 
 int _mcm_pjxp_init_ui(mc_node *pjxp_node)
@@ -544,7 +563,6 @@ int _mcm_pjxp_init_ui(mc_node *pjxp_node)
 
     tb->left_click = (void *)&_mcm_pjxp_textblock_left_click;
     mcm_pjxp_entry *ent = tb->tag = (void *)malloc(sizeof(mcm_pjxp_entry));
-    MCcall(init_mc_str(&ent->name));
     MCcall(init_mc_str(&ent->path));
 
     MCcall(append_to_collection((void ***)&pjxp->textblocks.items, &pjxp->textblocks.capacity, &pjxp->textblocks.count,
@@ -568,7 +586,7 @@ int _mcm_pjxp_init_data(mc_node *root)
   pjxp->projects.capacity = pjxp->projects.count = 0;
   pjxp->textblocks.capacity = pjxp->textblocks.count = pjxp->textblocks.utilized = 0;
 
-  create_hash_table(128, &pjxp->collapsed_entries);
+  create_hash_table(256, &pjxp->collapsed_entries);
   pjxp->scroll_offset.entry_hash = 0LU;
   pjxp->scroll_offset.rough_position = 0;
 
