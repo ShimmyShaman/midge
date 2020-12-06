@@ -15,7 +15,7 @@ typedef enum mc_app_event_type {
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is NULL}
   MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED,
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
-  MC_APP_EVENT_FILE_OPEN_REQUESTED,
+  MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED,
   MC_APP_EXCLUSIVE_MAX,
 } mc_app_event_type;
 

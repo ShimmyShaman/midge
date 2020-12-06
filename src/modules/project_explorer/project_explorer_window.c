@@ -459,8 +459,7 @@ void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock 
   } break;
   case PJXP_ENTRY_HEADER:
   case PJXP_ENTRY_SOURCE: {
-    mca_fire_event(MC_APP_EVENT_FILE_OPEN_REQUESTED, entry->path->text);
-    printf("MC_APP_EVENT_FILE_OPEN_REQUESTED:'%s' NOT YET HANDLED\n", entry->path->text);
+    mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED, entry->path->text);
   } break;
   default:
     puts("NotYetImplemented - a means to open the file requested");
@@ -477,6 +476,12 @@ int _mcm_pjxp_init_ui(mc_node *pjxp_node)
   for (int a = 0; a < initial_entry_count; ++a) {
     mcu_textblock *tb;
     MCcall(mcu_init_textblock(pjxp_node, &tb));
+
+    if (tb->node->name)
+      free(tb->node->name);
+    char tb_name[64];
+    sprintf(tb_name, "textblock-entry-%i", a);
+    tb->node->name = strdup(tb_name);
 
     tb->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
     tb->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
