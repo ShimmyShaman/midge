@@ -110,7 +110,7 @@ int _mc_construct_project_initialize_source(const char *subdir, const char *name
       "  mcr_issue_render_command_colored_quad(\n"
       "    image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,\n"
       "    (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, \n"
-      "    COLOR_MACARONI_AND_CHEESE);\n"
+      "    (render_color){0.f, 0.15f, 0.17f, 1.f});\n"
       "}\n",
       name, name, name));
 
@@ -127,8 +127,8 @@ int _mc_construct_project_initialize_source(const char *subdir, const char *name
                         "  app_root->layout->preferred_width = 900;\n"
                         "  app_root->layout->preferred_height = 600;\n"
                         "\n"
-                        "  app_root->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;\n"
-                        "  app_root->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;\n"
+                        "  app_root->layout->z_layer_index = 4U;\n"
+                        "  app_root->layout->padding = (mc_paddingf){302, 2, 2, 2};\n"
                         "\n"
                         "  app_root->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;\n"
                         "  app_root->layout->update_layout = (void *)&mca_update_typical_node_layout;\n"
