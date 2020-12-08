@@ -547,13 +547,13 @@ int mcm_init_project_explorer(mc_node *app_root)
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
   node->children->alloc = 0;
-  node->layout->preferred_width = 240;
-  node->layout->preferred_height = 420;
+  node->layout->preferred_width = 299;
+  node->layout->preferred_height = 440;
 
   node->layout->visible = false;
 
-  node->layout->padding.left = 4;
-  node->layout->padding.top = 4;
+  node->layout->padding.left = 1;
+  node->layout->padding.top = 1;
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 

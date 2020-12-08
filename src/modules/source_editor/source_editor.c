@@ -26,6 +26,26 @@ void _mc_se_render_headless(mc_node *node)
   }
 }
 
+void _mc_se_render_borders(image_render_details *image_render_queue, mc_node *node, render_color *border_color)
+{
+  const unsigned int border_width = 1;
+
+  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
+                                        (unsigned int)node->layout->__bounds.y,
+                                        (unsigned int)node->layout->__bounds.width, border_width, *border_color);
+  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
+                                        (unsigned int)node->layout->__bounds.y + border_width, border_width,
+                                        (unsigned int)node->layout->__bounds.height - border_width * 2, *border_color);
+  mcr_issue_render_command_colored_quad(
+      image_render_queue, (unsigned int)node->layout->__bounds.x + node->layout->__bounds.width - border_width,
+      (unsigned int)node->layout->__bounds.y + border_width, border_width,
+      (unsigned int)node->layout->__bounds.height - border_width * 2, *border_color);
+  mcr_issue_render_command_colored_quad(
+      image_render_queue, (unsigned int)node->layout->__bounds.x,
+      (unsigned int)(node->layout->__bounds.y + node->layout->__bounds.height - border_width * 2),
+      (unsigned int)node->layout->__bounds.width, border_width, *border_color);
+}
+
 void _mc_se_render_present(image_render_details *image_render_queue, mc_node *node)
 {
   // Data
@@ -34,6 +54,8 @@ void _mc_se_render_present(image_render_details *image_render_queue, mc_node *no
   mcr_issue_render_command_colored_quad(
       image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, se->background_color);
+
+  _mc_se_render_borders(image_render_queue, node, &se->border_color);
 }
 
 void _mc_se_handle_input(mc_node *node, mci_input_event *input_event)
@@ -57,7 +79,8 @@ int _mc_se_handle_source_file_open_request(void *handler_state, void *event_args
 
   printf("SE_OPEN:'%s'\n", filepath);
 
-  mca_focus_node(se->node);
+  se->node->layout->visible = true;
+  MCcall(mca_focus_node(se->node));
   return 0;
 }
 
@@ -80,7 +103,8 @@ int _mc_se_init_data(mc_node *node)
   node->data = (void *)se;
   se->node = node;
 
-  se->background_color = COLOR_LIGHT_YELLOW;
+  se->background_color = COLOR_NEARLY_BLACK;
+  se->border_color = COLOR_GRAY;
 
   return 0;
 }
@@ -111,7 +135,7 @@ int mc_se_init_source_editor()
   node->layout->handle_input_event = (void *)&_mc_se_handle_input;
 
   // TODO
-  //   node->layout->visible = false;
+  node->layout->visible = false;
   //
   // Source Editor Data
   MCcall(_mc_se_init_data(node));

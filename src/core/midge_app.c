@@ -292,7 +292,7 @@ int mca_render_presentation()
   image_render_details *image_render;
   MCcall(mcr_obtain_image_render_request(app_info->render_thread, &image_render));
   image_render->render_target = NODE_RENDER_TARGET_PRESENT;
-  image_render->clear_color = COLOR_MIDNIGHT_EXPRESS;
+  image_render->clear_color = (render_color){0.2f, 0.24f, 0.f, 1.f};
   // printf("app_info->screen : %u, %u\n", app_info->screen.width,
   // app_info->screen.height);
   image_render->image_width = app_info->screen.width;

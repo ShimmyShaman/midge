@@ -62,9 +62,9 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
           (void (*)(mc_node *, mci_input_event *))node->layout->handle_input_event; // TODO add type of mouse event
       handle_input_event(node, &input_event);
 
-      printf("mouse_event handled by node: %s%s%s->%s\n",
-             (node->parent && node->parent->parent) ? node->parent->parent->name : "",
-             (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "", node->name);
+      // printf("mouse_event handled by node: %s%s%s->%s\n",
+      //        (node->parent && node->parent->parent) ? node->parent->parent->name : "",
+      //        (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "", node->name);
     }
   }
 }

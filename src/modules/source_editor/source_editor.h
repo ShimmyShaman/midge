@@ -65,6 +65,7 @@ typedef struct mc_se_source_editor {
   // } pool;
 
   render_color background_color;
+  render_color border_color;
   // struct {
   //   render_color color;
   //   unsigned int thickness;

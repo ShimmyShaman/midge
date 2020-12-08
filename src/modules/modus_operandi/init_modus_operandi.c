@@ -44,7 +44,7 @@ void _mco_render_mo_data_headless(mc_node *node)
   image_render_details *irq;
   mcr_obtain_image_render_request(global_data->render_thread, &irq);
   irq->render_target = NODE_RENDER_TARGET_IMAGE;
-  irq->clear_color = COLOR_DEEP_FIR;
+  irq->clear_color = COLOR_BLACKCURRANT;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
   irq->image_width = modata->render_target.width;   // TODO
@@ -118,11 +118,11 @@ int init_modus_operandi(mc_node *app_root)
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
   node->children->alloc = 0;
-  node->layout->preferred_width = 400;
-  node->layout->preferred_height = 500;
+  node->layout->preferred_width = 299;
+  node->layout->preferred_height = 360;
 
-  node->layout->padding.left = 120;
-  node->layout->padding.bottom = 80;
+  node->layout->padding.left = 1;
+  node->layout->padding.bottom = 1;
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
@@ -133,7 +133,7 @@ int init_modus_operandi(mc_node *app_root)
   node->layout->handle_input_event = (void *)&_mco_handle_input;
 
   // TODO
-  node->layout->visible = false;
+  // node->layout->visible = false;
   // TODO
 
   mco_load_resources(node);
