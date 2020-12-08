@@ -136,7 +136,7 @@ int begin_render_thread()
 // void mcc_initialize_input_state();
 // void mcc_update_xcb_input();
 // // void mcu_initialize_core_ui_components();
-// // void mcu_render_element_headless(mc_node *element_node);
+// // void mcu_render_element_headless(render_thread_info *render_thread, mc_node *element_node);
 // // void mcu_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
 // void mca_load_modules();
 // void mca_load_previously_open_projects();
@@ -292,7 +292,7 @@ int mca_render_presentation()
   image_render_details *image_render;
   MCcall(mcr_obtain_image_render_request(app_info->render_thread, &image_render));
   image_render->render_target = NODE_RENDER_TARGET_PRESENT;
-  image_render->clear_color = (render_color){0.2f, 0.24f, 0.f, 1.f};
+  image_render->clear_color = (render_color){0.3f, 0.34f, 0.f, 1.f};
   // printf("app_info->screen : %u, %u\n", app_info->screen.width,
   // app_info->screen.height);
   image_render->image_width = app_info->screen.width;
@@ -555,8 +555,8 @@ int midge_run_app()
             child->layout->__requires_rerender) {
           // TODO fptr casting
           // printf("rh-child-type:%i '%s'\n", child->type, child->name);
-          void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-          render_node_headless(child);
+          void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+          render_node_headless(app_info->render_thread, child);
         }
       }
 

@@ -9,7 +9,7 @@
 
 #include "modules/source_editor/source_editor.h"
 
-void _mc_se_render_headless(mc_node *node)
+void _mc_se_render_headless(render_thread_info *render_thread, mc_node *node)
 {
   // Data
   mc_se_source_editor *se = (mc_se_source_editor *)node->data;
@@ -20,8 +20,8 @@ void _mc_se_render_headless(mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-      render_node_headless(child);
+      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      render_node_headless(render_thread, child);
     }
   }
 }

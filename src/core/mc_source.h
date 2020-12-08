@@ -14,7 +14,7 @@
 //                                           mc_source_file_info **source_file);
 
 // /*
-//   From code definition: constructs source definition & parses to syntax, registers with hierarchy, and declares the
+//   From code definition: constructs source definition & parses to syntax, registers with hierarchy, and declares the 
 //   definition for immediate use.
 //   @definition_owner the node in the hierarchy to attach this definition to.
 //   @code may be NULL only if ast is not, if so it will be generated from the syntax parse.

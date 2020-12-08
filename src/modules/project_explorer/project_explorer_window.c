@@ -306,7 +306,7 @@ int _mcm_pjxp_update_node_layout(mc_node *node, mc_rectf *available_area)
   return 0;
 }
 
-void _mcm_pjxp_render_headless(mc_node *node)
+void _mcm_pjxp_render_headless(render_thread_info *render_thread, mc_node *node)
 {
   // Toggle
   node->layout->__requires_rerender = false;
@@ -320,8 +320,8 @@ void _mcm_pjxp_render_headless(mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-      render_node_headless(child);
+      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      render_node_headless(render_thread, child);
     }
   }
 

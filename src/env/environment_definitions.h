@@ -138,7 +138,7 @@ int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints r
 int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area);
 // void mca_update_node_layout(mc_node *node, mc_rectf *available_area);
 
-int mca_render_node_list_headless(mc_node_list *node_list);
+int mca_render_node_list_headless(render_thread_info *render_thread, mc_node_list *node_list);
 int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *node_list);
 
 int mca_set_node_requires_layout_update(mc_node *node);
@@ -167,7 +167,7 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
 void mca_init_visual_project_management();
 void mca_create_new_visual_project(const char *project_name);
 void mca_update_visual_project(mc_node *project_node);
-void mca_render_project_headless(mc_node *visual_project);
+void mca_render_project_headless(render_thread_info *render_thread, mc_node *visual_project);
 void mca_render_project_present(image_render_details *image_render_queue, mc_node *visual_project);
 
 // global_context_menu.c

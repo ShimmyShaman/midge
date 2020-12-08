@@ -111,7 +111,7 @@ int _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
   return 0;
 }
 
-void _mce_render_source_line_headless(mc_node *node)
+void _mce_render_source_line_headless(render_thread_info *render_thread, mc_node *node)
 {
   // Toggle
   node->layout->__requires_rerender = false;

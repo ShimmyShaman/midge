@@ -4014,6 +4014,7 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   // Conditional
   mcs_peek_token_type(ps, false, 0, &token0);
   switch (token0) {
+  case MC_TOKEN_STAR_CHARACTER:
   case MC_TOKEN_LOGICAL_NOT_OPERATOR:
   case MC_TOKEN_IDENTIFIER: {
     mcs_parse_expression_conditional(ps, statement, &statement->for_statement.conditional);
@@ -4038,7 +4039,7 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   case MC_TOKEN_IDENTIFIER:
   case MC_TOKEN_INCREMENT_OPERATOR:
   case MC_TOKEN_DECREMENT_OPERATOR: {
-    mcs_parse_expression(ps, statement, &statement->for_statement.fix_expression);
+    MCcall(mcs_parse_expression(ps, statement, &statement->for_statement.fix_expression));
   } break;
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
@@ -4046,6 +4047,11 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   }
   }
   mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_peek_token_type(ps, false, 0, &token0);
+  if (token0 == MC_TOKEN_COMMA) {
+    MCerror(4052, "Using comma as a seperator not yet supported: Not sure it's good too.");
+  }
 
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_CLOSING_BRACKET, NULL));
   mcs_parse_through_supernumerary_tokens(ps, statement);
@@ -4398,7 +4404,7 @@ int mcs_parse_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
     MCcall(mcs_parse_code_block(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_FOR_KEYWORD: {
-    mcs_parse_for_statement(ps, parent, additional_destination);
+    MCcall(mcs_parse_for_statement(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_IF_KEYWORD: {
     mcs_parse_if_statement(ps, parent, additional_destination);

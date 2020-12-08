@@ -340,7 +340,7 @@ typedef struct render_thread_info {
 
 // extern "C" {
 
-int mcr_obtain_image_render_request(render_thread_info *image_render_queue, image_render_details **p_request);
+int mcr_obtain_image_render_request(render_thread_info *render_thread, image_render_details **p_request);
 int mcr_submit_image_render_request(render_thread_info *render_thread, image_render_details *request);
 int mcr_obtain_element_render_command(image_render_details *image_queue, element_render_command **p_command);
 int mcr_obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
