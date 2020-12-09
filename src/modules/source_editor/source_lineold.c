@@ -52,7 +52,7 @@
 // }
 // }
 
-int _mce_update_source_line_layout(mc_node *node, mc_rectf *available_area)
+int _mce_update_source_line_layout(mc_node *node,mc_rectf const *available_area
 {
   mce_source_line *source_line = (mce_source_line *)node->data;
 

@@ -39,7 +39,7 @@ void _mce_determine_function_debug_extents(mc_node *node, layout_extent_restrain
   //   }
 }
 
-void _mce_update_function_debug_layout(mc_node *node, mc_rectf *available_area)
+void _mce_update_function_debug_layout(mc_node *node,mc_rectf const *available_area
 {
   // printf("function_debug\n");
   mca_update_typical_node_layout(node, available_area);

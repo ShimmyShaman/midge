@@ -271,7 +271,7 @@ void __mc_hv_text_line_left_click_handler(mci_input_event *input_event, mcu_butt
   // printf("sp_state->collapsed:%i\n", sp_state->collapsed);
 }
 
-void _mc_hv_update_hierarchy_viewer_layout(mc_node *node, mc_rectf *available_area)
+void _mc_hv_update_hierarchy_viewer_layout(mc_node *node,mc_rectf const *available_area
 {
   mc_global_data *global_data;
   obtain_midge_global_root(&global_data);

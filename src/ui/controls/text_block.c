@@ -33,7 +33,7 @@ void __mcu_determine_text_block_extents(mc_node *node, layout_extent_restraints 
   }
 }
 
-void __mcu_update_text_block_layout(mc_node *node, mc_rectf *available_area)
+void __mcu_update_text_block_layout(mc_node *node,mc_rectf const *available_area
 {
   mcu_text_block *text_block = (mcu_text_block *)node->data;
 

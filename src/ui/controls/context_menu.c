@@ -53,7 +53,7 @@ void __mcu_determine_context_menu_extents(mc_node *node, layout_extent_restraint
   }
 }
 
-void __mcu_update_context_menu_layout(mc_node *node, mc_rectf *available_area)
+void __mcu_update_context_menu_layout(mc_node *node,mc_rectf const *available_area
 {
   mcu_context_menu *context_menu = (mcu_context_menu *)node->data;
 

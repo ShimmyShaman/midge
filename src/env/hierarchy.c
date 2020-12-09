@@ -433,7 +433,8 @@ int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints r
   return 0;
 }
 
-int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area)
+// TODO -- make this return int success and all delegates etc
+int mca_update_typical_node_layout(mc_node *node, mc_rectf const *available_area)
 {
   // Clear
   node->layout->__requires_layout_update = false;

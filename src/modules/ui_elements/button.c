@@ -38,7 +38,7 @@
 //   }
 // }
 
-// void __mcu_update_button_layout(mc_node *node, mc_rectf *available_area)
+// void __mcu_update_button_layout(mc_node *node,mc_rectf const *available_area
 // {
 //   mcu_button *button = (mcu_button *)node->data;
 

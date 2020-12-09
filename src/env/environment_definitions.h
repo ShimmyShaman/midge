@@ -54,11 +54,11 @@ typedef struct mca_node_layout {
   // Functional Delegates
   // void (*determine_node_layout_extents)(mc_node *, layout_extent_restraints)
   void *determine_layout_extents;
-  // void (*update_node_layout)(mc_node *, const mc_rectf *)
+  // void (*update_node_layout)(mc_node *, mc_rectf const *)
   void *update_layout;
   // void (*render_node_headless)(mc_node *)
   void *render_headless;
-  // void (*render_node_presentation)(const image_render_details *, mc_node *)
+  // void (*render_node_presentation)(image_render_details *, mc_node *)
   void *render_present;
 
   // Application Set Fields
@@ -135,8 +135,8 @@ int mca_init_mc_node(node_type type, const char *name, mc_node **node);
 
 // void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints);
 int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints);
-int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area);
-// void mca_update_node_layout(mc_node *node, mc_rectf *available_area);
+int mca_update_typical_node_layout(mc_node *node, mc_rectf const *available_area);
+// void mca_update_node_layout(mc_node *node,mc_rectf const *available_area;
 
 int mca_render_node_list_headless(render_thread_info *render_thread, mc_node_list *node_list);
 int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *node_list);

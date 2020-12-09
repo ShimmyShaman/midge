@@ -293,7 +293,7 @@ int _mcm_pjxp_update_entries_display(project_explorer_data *pjxp)
   return 0;
 }
 
-int _mcm_pjxp_update_node_layout(mc_node *node, mc_rectf *available_area)
+int _mcm_pjxp_update_node_layout(mc_node *node,mc_rectf const *available_area
 {
   // pjxp
   project_explorer_data *pjxp = (project_explorer_data *)node->data;
