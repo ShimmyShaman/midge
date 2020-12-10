@@ -112,8 +112,10 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   node->layout->handle_input_event = (void *)&_mcu_button_handle_input_event;
 
   // Default Settings
-  node->layout->preferred_width = 80;
-  node->layout->preferred_height = 24;
+  node->layout->min_width = 10;
+  node->layout->min_height = 10;
+  node->layout->max_width = 80;
+  node->layout->max_height = 24;
 
   // Control
   mcu_button *button = (mcu_button *)malloc(sizeof(mcu_button)); // TODO -- malloc check

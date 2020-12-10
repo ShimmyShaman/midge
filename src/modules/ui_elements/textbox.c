@@ -174,8 +174,9 @@ int mcu_init_textbox(mc_node *parent, mcu_textbox **p_textbox)
   node->layout->handle_input_event = (void *)&_mcu_textbox_handle_input_event;
 
   // Default Settings
-  node->layout->preferred_width = 80;
-  node->layout->preferred_height = 24;
+  node->layout->min_width = 80;
+  node->layout->min_height = 24;
+  node->layout->max_height = 24;
 
   // Control
   MCcall(_mcu_init_textbox_data(node));

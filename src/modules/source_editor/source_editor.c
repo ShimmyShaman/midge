@@ -7,6 +7,7 @@
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
 
+#include "modules/render_utilities/render_util.h"
 #include "modules/source_editor/source_editor.h"
 
 void _mc_se_render_headless(render_thread_info *render_thread, mc_node *node)
@@ -20,30 +21,11 @@ void _mc_se_render_headless(render_thread_info *render_thread, mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      void (*render_node_headless)(render_thread_info *, mc_node *) =
+          (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
       render_node_headless(render_thread, child);
     }
   }
-}
-
-void _mc_se_render_borders(image_render_details *image_render_queue, mc_node *node, render_color *border_color)
-{
-  const unsigned int border_width = 1;
-
-  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                        (unsigned int)node->layout->__bounds.y,
-                                        (unsigned int)node->layout->__bounds.width, border_width, *border_color);
-  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                        (unsigned int)node->layout->__bounds.y + border_width, border_width,
-                                        (unsigned int)node->layout->__bounds.height - border_width * 2, *border_color);
-  mcr_issue_render_command_colored_quad(
-      image_render_queue, (unsigned int)node->layout->__bounds.x + node->layout->__bounds.width - border_width,
-      (unsigned int)node->layout->__bounds.y + border_width, border_width,
-      (unsigned int)node->layout->__bounds.height - border_width * 2, *border_color);
-  mcr_issue_render_command_colored_quad(
-      image_render_queue, (unsigned int)node->layout->__bounds.x,
-      (unsigned int)(node->layout->__bounds.y + node->layout->__bounds.height - border_width * 2),
-      (unsigned int)node->layout->__bounds.width, border_width, *border_color);
 }
 
 void _mc_se_render_present(image_render_details *image_render_queue, mc_node *node)
@@ -55,7 +37,7 @@ void _mc_se_render_present(image_render_details *image_render_queue, mc_node *no
       image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, se->background_color);
 
-  _mc_se_render_borders(image_render_queue, node, &se->border_color);
+  mc_render_border(image_render_queue, node, 5, se->border_color);
 }
 
 void _mc_se_handle_input(mc_node *node, mci_input_event *input_event)

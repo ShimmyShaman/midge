@@ -59,6 +59,7 @@ int mca_load_modules()
   const char *module_directories[] = {
       "mc_io",
       "collections",
+      "render_utilities",
       "ui_elements",
       "obj_loader",
       "welcome_window",

@@ -8,6 +8,9 @@
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
+#include "modules/render_utilities/render_util.h"
+#include "modules/ui_elements/ui_elements.h"
+
 // #include "env/environment_definitions.h"
 // #include "render/render_thread.h"
 // #include "ui/ui_definitions.h"
@@ -20,9 +23,15 @@ typedef struct modus_operandi_data {
     mcr_texture_image *image;
   } render_target;
 
+  mcu_textbox *search_textbox;
+  struct {
+    unsigned int capacity, count;
+    mcu_button **items;
+  } options_buttons;
+
 } modus_operandi_data;
 
-void _mco_render_mo_data_headless(render_thread_info *render_thread, mc_node *node)
+void _mc_mo_render_mo_data_headless(render_thread_info *render_thread, mc_node *node)
 {
   modus_operandi_data *modata = (modus_operandi_data *)node->data;
 
@@ -32,7 +41,8 @@ void _mco_render_mo_data_headless(render_thread_info *render_thread, mc_node *no
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      void (*render_node_headless)(render_thread_info *, mc_node *) =
+          (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
       render_node_headless(render_thread, child);
     }
   }
@@ -67,7 +77,7 @@ void _mco_render_mo_data_headless(render_thread_info *render_thread, mc_node *no
   mcr_submit_image_render_request(global_data->render_thread, irq);
 }
 
-void _mco_render_mo_data_present(image_render_details *image_render_queue, mc_node *node)
+void _mc_mo_render_mo_data_present(image_render_details *image_render_queue, mc_node *node)
 {
   modus_operandi_data *modata = (modus_operandi_data *)node->data;
 
@@ -76,9 +86,9 @@ void _mco_render_mo_data_present(image_render_details *image_render_queue, mc_no
                                          modata->render_target.height, modata->render_target.image);
 }
 
-void _mco_handle_input(mc_node *node, mci_input_event *input_event)
+void _mc_mo_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  // printf("_mco_handle_input\n");
+  // printf("_mc_mo_handle_input\n");
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
     input_event->handled = true;
@@ -86,12 +96,14 @@ void _mco_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-void mco_load_resources(mc_node *module_node)
+int mc_mo_load_resources(mc_node *module_node)
 {
   // cube_template
   modus_operandi_data *mo_data = (modus_operandi_data *)malloc(sizeof(modus_operandi_data));
   module_node->data = mo_data;
   mo_data->node = module_node;
+
+  mo_data->options_buttons.capacity = mo_data->options_buttons.count = 0U;
 
   mo_data->render_target.image = NULL;
   mo_data->render_target.width = module_node->layout->preferred_width;
@@ -104,6 +116,41 @@ void mco_load_resources(mc_node *module_node)
     // puts("wait");
     usleep(100);
   }
+
+  return 0;
+}
+
+int mc_mo_init_ui(mc_node *module_node)
+{
+  modus_operandi_data *modata = (modus_operandi_data *)module_node->data;
+
+  MCcall(mcu_init_textbox(module_node, &modata->search_textbox));
+  modata->search_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  modata->search_textbox->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
+
+  // unsigned int y = (unsigned int)(24 + 8 + 4);
+  for (int a = 0; a < 12; ++a) {
+    mcu_button *button;
+    MCcall(mcu_init_button(module_node, &button));
+
+    button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    button->node->layout->padding = (mc_paddingf){6, 24 + 8 + a * 27, 6, 0};
+    button->node->layout->max_width = 0U;
+    button->node->layout->visible = false;
+
+    MCcall(set_mc_str(button->str, "button"));
+
+    MCcall(append_to_collection((void ***)&modata->options_buttons.items, &modata->options_buttons.capacity,
+                                &modata->options_buttons.count, button));
+  }
+
+  // // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
+  // while (!mo_data->render_target.image) {
+  //   // puts("wait");
+  //   usleep(100);
+  // }
+
+  return 0;
 }
 
 int init_modus_operandi(mc_node *app_root)
@@ -128,15 +175,17 @@ int init_modus_operandi(mc_node *app_root)
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
-  node->layout->render_headless = (void *)&_mco_render_mo_data_headless;
-  node->layout->render_present = (void *)&_mco_render_mo_data_present;
-  node->layout->handle_input_event = (void *)&_mco_handle_input;
+  node->layout->render_headless = (void *)&_mc_mo_render_mo_data_headless;
+  node->layout->render_present = (void *)&_mc_mo_render_mo_data_present;
+  node->layout->handle_input_event = (void *)&_mc_mo_handle_input;
 
   // TODO
   // node->layout->visible = false;
   // TODO
 
-  mco_load_resources(node);
+  MCcall(mc_mo_load_resources(node));
+
+  MCcall(mc_mo_init_ui(node));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 
