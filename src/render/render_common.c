@@ -111,17 +111,17 @@ int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_ima
   midge_app_info *global_data;
   mc_obtain_midge_app_info(&global_data);
 
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+  MCcall(pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex));
 
   resource_command *command;
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  MCcall(mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command));
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_resource = (void *)p_resource;
   command->create_texture.width = width;
   command->create_texture.height = height;
   command->create_texture.image_usage = image_usage;
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+  MCcall(pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex));
 
   return 0;
 }

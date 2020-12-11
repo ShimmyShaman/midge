@@ -70,8 +70,8 @@ void __mcu_render_button_present(image_render_details *image_render_queue, mc_no
                                         (unsigned int)node->layout->__bounds.height, button->background_color);
 
   // Text
-  // printf("renderbutton- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font->resource_uid);
+  // printf("renderbutton- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
+  //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font->name);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                 (unsigned int)node->layout->__bounds.y, button->str->text, button->font,
                                 button->font_color);
@@ -102,6 +102,8 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   // Node
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_MCU_BUTTON, "unnamed-button", &node));
+
+  // printf("mcu_init_button->node:%p name:%p '%s'-%i\n", node, node->name, node->name, strlen(node->name));
 
   // Layout
   MCcall(mca_init_node_layout(&node->layout));

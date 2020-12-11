@@ -3144,6 +3144,12 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
     while (token0 == MC_TOKEN_STAR_CHARACTER) {
       mcs_peek_token_type(ps, false, peek++, &token0);
     }
+    while (token0 == MC_TOKEN_CONST_KEYWORD) {
+      mcs_peek_token_type(ps, false, peek++, &token0);
+      while (token0 == MC_TOKEN_STAR_CHARACTER) {
+        mcs_peek_token_type(ps, false, peek++, &token0);
+      }
+    }
 
     switch (token0) {
     case MC_TOKEN_IDENTIFIER: {
@@ -3154,6 +3160,7 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
       // printf("parse_fptrdec:'%s'\n", declarator->fptr_declarator.name->text);
     } break;
     default:
+      print_parse_error(ps->code, ps->index, "mcs_parse_local_declaration", "see-below");
       MCerror(2993, "NotSupported:'%s'", get_mc_syntax_token_type_name(token0));
     }
 
