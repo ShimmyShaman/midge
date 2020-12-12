@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -18,6 +19,11 @@
 // #include "render/render_thread.h"
 // #include "ui/ui_definitions.h"
 
+typedef enum mc_file_dialog_mode {
+  MC_FD_MODE_NULL = 0,
+  MC_FD_MODE_DIRECTORIES_ONLY,
+} mc_file_dialog_mode;
+
 typedef struct mc_file_dialog_data {
   mc_node *node;
 
@@ -25,12 +31,21 @@ typedef struct mc_file_dialog_data {
 
   mcu_panel *panel;
 
+  struct {
+    unsigned int capacity, count, utilized;
+    mcu_button **items;
+  } displayed_items;
+
   //   mcu_button *new_project_button;
   //   mcu_textbox *input_textbox;
   // struct {
   //   unsigned int width, height;
   //   mcr_texture_image *image;
   // } render_target;
+
+  mc_str *current_directory;
+  mc_file_dialog_mode mode;
+  void *result_delegate;
 
 } mc_file_dialog_data;
 
@@ -103,9 +118,118 @@ void mc_fd_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-void _mc_fd_confirm_clicked(mci_input_event *input_event, mcu_button *button)
+int _mc_fd_open_directory(mc_file_dialog_data *fd, const char *starting_directory)
 {
+  fd->displayed_items.utilized = 0U;
+  char *c, path[256], ext[16];
+  int len;
+  mcu_button *button;
+
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir(starting_directory)) != NULL) {
+    MCcall(set_mc_str(fd->current_directory, starting_directory));
+    printf("_mc_fd_open_directory:'%s'\n", fd->current_directory->text);
+
+    /* print all the files and directories within directory */
+    while ((ent = readdir(dir)) != NULL && fd->displayed_items.utilized < fd->displayed_items.count) {
+      // Ignore the "." entry
+      if (!strcmp(ent->d_name, "."))
+        continue;
+
+      // Create the full path of the directory entry
+      strcpy(path, starting_directory);
+      len = strlen(path);
+      if (path[len - 1] != '\\' && path[len - 1] != '/') {
+        strcat(path, "/");
+      }
+      strcat(path, ent->d_name);
+
+      // printf("path:%s", path);
+      if (fd->mode == MC_FD_MODE_DIRECTORIES_ONLY) {
+        // Obtain the path entry type
+        struct stat stats;
+        int res = stat(path, &stats);
+        if (res) {
+          MCerror(1919, "Odd? TODO print errno");
+        }
+
+        if (!S_ISDIR(stats.st_mode)) {
+          // puts("--NOT dir");
+          continue;
+        }
+      }
+      // puts("");
+
+      // Assign entry
+      button = fd->displayed_items.items[fd->displayed_items.utilized++];
+      button->node->layout->visible = true;
+      MCcall(set_mc_str(button->str, ent->d_name));
+    }
+    closedir(dir);
+  }
+  else {
+    /* could not open directory */
+    perror("");
+    MCerror(8528, "Could not open directory '%s'", starting_directory);
+  }
+
+  for (int a = fd->displayed_items.utilized; a < fd->displayed_items.count; ++a) {
+    fd->displayed_items.items[a]->node->layout->visible = false;
+  }
+
+  MCcall(mca_set_node_requires_rerender(fd->node));
+
+  return 0;
+}
+
+void _mc_fd_open_current_clicked(mci_input_event *input_event, mcu_button *button)
+{
+  mc_file_dialog_data *fd = (mc_file_dialog_data *)button->tag;
+
   // TODO
+}
+
+// TODO -- all events need int returning success etc
+void _mc_fd_item_selected(mci_input_event *input_event, mcu_button *button)
+{
+  mc_file_dialog_data *fd = (mc_file_dialog_data *)button->tag;
+
+  char buf[256];
+  if (!strcmp(button->str->text, "..")) {
+    puts(".. CLICKED");
+    mcf_get_parent_directory(buf, 256, fd->current_directory->text);
+    puts(buf);
+  }
+  else {
+    strcpy(buf, fd->current_directory->text);
+    mcf_concat_filepath(buf, 256, button->str->text);
+    if (access(buf, F_OK) == -1) {
+      // File doesn't exist!
+      puts("ERROR TODO 8195");
+    }
+  }
+
+  _mc_fd_open_directory(fd, buf);
+}
+
+int _mc_fd_on_folder_dialog_request(void *handler_state, void *event_args)
+{
+  mc_file_dialog_data *fd = (mc_file_dialog_data *)handler_state;
+
+  void **vary = (void **)event_args;
+  char *starting_path = (char *)vary[0];
+  int (*result_delegate)(char *selected_path) = (int (*)(char *))vary[1];
+
+  fd->mode = MC_FD_MODE_DIRECTORIES_ONLY;
+  fd->result_delegate = (void *)result_delegate;
+
+  MCcall(_mc_fd_open_directory(fd, starting_path));
+
+  // Display
+  fd->node->layout->visible = true;
+
+  return 0;
 }
 
 int mc_fd_init_data(mc_node *module_node)
@@ -115,6 +239,11 @@ int mc_fd_init_data(mc_node *module_node)
   fd->node = module_node;
 
   fd->shade_color = (render_color){0.13f, 0.12f, 0.17f, 0.8f};
+
+  MCcall(init_mc_str(&fd->current_directory));
+  fd->result_delegate = NULL;
+
+  fd->displayed_items.capacity = fd->displayed_items.count = 0U;
 
   // mo_data->render_target.image = NULL;
   // mo_data->render_target.width = module_node->layout->preferred_width;
@@ -135,7 +264,10 @@ int mc_fd_init_ui(mc_node *module_node)
 {
   mc_file_dialog_data *fd = (mc_file_dialog_data *)module_node->data;
 
+  // Locals
+  char buf[64];
   mca_node_layout *layout;
+  mcu_button *button;
 
   // Panel
   MCcall(mcu_init_panel(module_node, &fd->panel));
@@ -148,8 +280,7 @@ int mc_fd_init_ui(mc_node *module_node)
   fd->panel->background_color = (render_color){0.35f, 0.35f, 0.35f, 1.f};
 
   // Open Button
-  mcu_button *button;
-  MCcall(mcu_init_button(fd->panel, &button));
+  MCcall(mcu_init_button(fd->panel->node, &button));
 
   layout = button->node->layout;
   layout->preferred_width = 160;
@@ -161,7 +292,32 @@ int mc_fd_init_ui(mc_node *module_node)
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
   MCcall(set_mc_str(button->str, "Open"));
   button->tag = fd;
-  button->left_click = (void *)&_mc_fd_confirm_clicked;
+  button->left_click = (void *)&_mc_fd_open_current_clicked;
+
+  // Textblocks to display items
+  for (int a = 0; a < 12; ++a) {
+    MCcall(mcu_init_button(fd->panel->node, &button));
+
+    if (button->node->name) {
+      free(button->node->name);
+      button->node->name = NULL;
+    }
+    sprintf(buf, "file-dialog-item-button-%i", a);
+    button->node->name = strdup(buf);
+
+    button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    button->node->layout->padding = (mc_paddingf){6, 24 + 8 + a * 27, 6, 0};
+    button->node->layout->max_width = 0U;
+    button->node->layout->visible = false;
+
+    button->tag = fd;
+    button->left_click = (void *)&_mc_fd_item_selected;
+
+    MCcall(set_mc_str(button->str, "button"));
+
+    MCcall(append_to_collection((void ***)&fd->displayed_items.items, &fd->displayed_items.capacity,
+                                &fd->displayed_items.count, button));
+  }
 
   return 0;
 }
@@ -181,6 +337,7 @@ int mc_fd_init_file_dialog(mc_node *app_root)
   node->children->count = 0;
   node->children->alloc = 0;
 
+  node->layout->visible = false;
   node->layout->z_layer_index = 9;
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
@@ -194,9 +351,7 @@ int mc_fd_init_file_dialog(mc_node *app_root)
   MCcall(mc_fd_init_data(node));
   MCcall(mc_fd_init_ui(node));
 
-  //   MCcall(
-  //       mca_register_event_handler(MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED, _mc_fd_on_inital_load_complete,
-  //       node));
+  MCcall(mca_register_event_handler(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, _mc_fd_on_folder_dialog_request, node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 

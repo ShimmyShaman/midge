@@ -4407,6 +4407,9 @@ int mcs_parse_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
   mc_token_type token0;
   mcs_peek_token_type(ps, false, 0, &token0);
   switch (token0) {
+  case MC_TOKEN_SEMI_COLON: {
+    MCcall(mcs_parse_through_token(ps, parent, MC_TOKEN_SEMI_COLON, additional_destination));
+  } break;
   case MC_TOKEN_CURLY_OPENING_BRACKET: {
     MCcall(mcs_parse_code_block(ps, parent, additional_destination));
   } break;

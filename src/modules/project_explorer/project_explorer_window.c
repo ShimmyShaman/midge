@@ -460,7 +460,9 @@ void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock 
   } break;
   case PJXP_ENTRY_HEADER:
   case PJXP_ENTRY_SOURCE: {
-    mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED, entry->path->text);
+    char *path = strdup(entry->path->text);
+    // printf("path %p created\n", path);
+    mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED, path, 1, path);
   } break;
   default:
     puts("NotYetImplemented - a means to open the file requested");

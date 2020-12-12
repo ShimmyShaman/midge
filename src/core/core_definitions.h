@@ -7,6 +7,7 @@
 
 #include "tinycc/libtccinterp.h"
 
+// TODO -- identify & document the parameters that need releasing by the event handler functions
 typedef enum mc_app_event_type {
   MC_APP_EVENT_NULL = 0,
   MC_APP_EVENT_POST_INITIALIZATION,
@@ -16,6 +17,13 @@ typedef enum mc_app_event_type {
   MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED,
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
   MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED,
+  // int (*event_handler)(void *handler_state, void *event_args)
+  //  {event_args is void*[] { const char *starting_directory, void *invoker_state,
+  //    int (*invoker_result_delegate)(void *invoker_state, char *selected_folder)}
+  // -* starting_directory may be NULL indicating use of current-working-directory
+  // -** selected_folder may be NULL if user cancels
+  // -*** void ary & selected_folder require releasing after use}
+  MC_APP_EVENT_FOLDER_DIALOG_REQUESTED,
   MC_APP_EXCLUSIVE_MAX,
 } mc_app_event_type;
 

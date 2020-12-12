@@ -1,5 +1,6 @@
 /* hierarchy.c */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -706,62 +707,6 @@ int mca_obtain_focused_node(mc_node **node)
   return 0;
 }
 
-// void add_notification_handler(mc_node *apex_node, unsigned int event_type, int (**handler)(int, void **))
-// {
-//   event_handler_array *handler_array = NULL;
-//   for (int i = 0; i < apex_node->event_handlers.count; ++i) {
-//     if (apex_node->event_handlers.items[i]->event_type == event_type) {
-//       handler_array = apex_node->event_handlers.items[i];
-//       break;
-//     }
-//   }
-
-//   if (handler_array == NULL) {
-//     // Make a new one
-//     handler_array = (event_handler_array *)malloc(sizeof(event_handler_array));
-//     handler_array->alloc = 0;
-//     handler_array->count = 0;
-//     handler_array->event_type = event_type;
-
-//     append_to_collection((void ***)&apex_node->event_handlers.items, &apex_node->event_handlers.alloc,
-//                          &apex_node->event_handlers.count, handler_array);
-//   }
-
-//   // printf("adding %p *->%p\n", handler, *handler);
-//   append_to_collection((void ***)&handler_array->handlers, &handler_array->alloc, &handler_array->count, handler);
-// }
-
-// void notify_handlers_of_event(unsigned int event_type, void *event_data)
-// {
-//   // printf("notify_handlers_of_event\n");
-//   event_handler_array *handler_array = NULL;
-//   for (int i = 0; i < command_hub->global_node->event_handlers.count; ++i) {
-//     if (command_hub->global_node->event_handlers.items[i]->event_type == event_type) {
-//       handler_array = command_hub->global_node->event_handlers.items[i];
-//       break;
-//     }
-//   }
-
-//   if (handler_array == NULL) {
-//     printf("handler_array couldnt be found for:%i out of %i events handled for\n", event_type,
-//            command_hub->global_node->event_handlers.count);
-//     return;
-//   }
-
-//   // printf("hel %i [0]:%p\n", handler_array->count, handler_array->handlers[0]);
-
-//   for (int i = 0; i < handler_array->count; ++i) {
-//     if ((*handler_array->handlers[i])) {
-//       void *vargs[1];
-//       vargs[0] = &event_data;
-
-//       // printf("invoking [%i]:%p\n", i, (*handler_array->handlers[i]));
-//       (*handler_array->handlers[i])(1, vargs);
-//     }
-//   }
-//   // register_midge_error_tag("mcd_on_hierarchy_update(~)");
-// }
-
 int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state)
 {
   midge_app_info *app_info;
@@ -782,6 +727,7 @@ int mca_register_event_handler(mc_app_event_type event_type, void *handler_deleg
 
 int mca_fire_event(mc_app_event_type event_type, void *event_arg)
 {
+  // TODO when this is made UI-thread-safe align mca_fire_event_and_release_data also
   // printf("mca_fire_event:%i\n", event_type);
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
@@ -791,6 +737,28 @@ int mca_fire_event(mc_app_event_type event_type, void *event_arg)
     // puts("mca_fire_event_execute");
     int (*event_handler)(void *, void *) = (int (*)(void *, void *))eha->handlers[a]->delegate;
     MCcall(event_handler(eha->handlers[a]->state, event_arg));
+  }
+
+  return 0;
+}
+
+int mca_fire_event_and_release_data(mc_app_event_type event_type, void *event_arg, int release_count, ...)
+{
+  MCcall(mca_fire_event(event_type, event_arg));
+
+  if (release_count) {
+    puts("TODO -- mca_fire_event_and_release_data va_arg fix");
+    // TODO -- make this work
+    // va_list ptrs_list;
+    // va_start(ptrs_list, release_count);
+    // for (int a = 0; a < release_count; ++a) {
+    //   void *ptr = va_arg(ptrs_list, void *);
+    //   if (ptr) {
+    //     printf("mca_fire_event_and_release_data: %p released\n", ptr);
+    //     free(ptr);
+    //   }
+    // }
+    // va_end(ptrs_list);
   }
 
   return 0;
@@ -809,21 +777,3 @@ int mca_register_loaded_project(mc_project_info *project)
 
   return 0;
 }
-// {
-//   // append_to_collection((void ***)&parent_attachment->children, &parent_attachment->children_alloc,
-//   //                      &parent_attachment->child_count, node_to_add);
-
-//   // TODO -- maybe find a better place to do this
-//   switch (node_to_add->type) {
-//   case NODE_TYPE_CONSOLE_APP: {
-//     console_app_info *app_info = (console_app_info *)node_to_add->extra;
-//     if (app_info->initialize && (*app_info->initialize)) {
-//       void *vargs[1];
-//       vargs[0] = &node_to_add;
-//       (*app_info->initialize)(1, vargs);
-//     }
-//   } break;
-//   default:
-//     break;
-//   }
-// }

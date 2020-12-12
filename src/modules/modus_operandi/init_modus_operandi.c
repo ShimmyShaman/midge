@@ -9,6 +9,7 @@
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
+#include "modules/collections/hash_table.h"
 #include "modules/render_utilities/render_util.h"
 #include "modules/ui_elements/ui_elements.h"
 
@@ -56,6 +57,7 @@ typedef struct modus_operandi_data {
   } all_ops;
   mo_operational_process *active_process;
   mo_operational_step *active_step;
+  hash_table_t active_context;
 
   mcu_textbox *search_textbox;
   struct {
@@ -130,12 +132,35 @@ void _mc_mo_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
+int _mc_mo_dialog_path_selected(void *invoker_state, char *selected_folder)
+{
+  puts("_mc_mo_dialog_path_selected");
+  return 0;
+}
+
 int _mc_mo_activate_active_step(modus_operandi_data *mo_data)
 {
   switch (mo_data->active_step->action) {
-  case MO_OPPA_OPEN_FOLDER_DIALOG:
-    puts("TODO OpenFolderDialog MO_OPPA_OPEN_FOLDER_DIALOG");
-    break;
+  case MO_OPPA_OPEN_FOLDER_DIALOG: {
+    void **vary = (void **)malloc(sizeof(void *) * 3);
+
+    // TODO -- make sure memory free is handled (TODO)
+    // TODO -- make a define or const of project label
+    mc_project_info *project = (mc_project_info *)hash_table_get("project", &mo_data->active_context);
+    if (project) {
+      vary[0] = (void *)strdup(project->path_src);
+    }
+    else {
+      char buf[256];
+      getcwd(buf, 256);
+      vary[0] = strdup(buf);
+    }
+
+    vary[1] = (void *)&_mc_mo_dialog_path_selected;
+    vary[2] = (void *)mo_data;
+
+    MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary[0], vary));
+  } break;
   default:
     MCerror(8142, "Unsupported action:%i", mo_data->active_step->action);
   }
@@ -145,15 +170,16 @@ int _mc_mo_activate_active_step(modus_operandi_data *mo_data)
 
 void _mc_mo_operational_process_selected(mci_input_event *input_event, mcu_button *button)
 {
-  printf("input_event_type:%i\n", input_event->type);
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
     mo_operational_process *mopp = (mo_operational_process *)button->tag;
-    printf("mopp selected! : '%s'\n", mopp->title);
 
     // Begin the process
     modus_operandi_data *mo_data = mopp->mo_data;
     mo_data->active_process = mopp;
     mo_data->active_step = mopp->first;
+
+    // Reset the context
+    hash_table_clear(&mo_data->active_context);
 
     _mc_mo_activate_active_step(mo_data);
   }
@@ -200,6 +226,7 @@ int mc_mo_load_resources(mc_node *module_node)
 
   mo_data->options_buttons.capacity = mo_data->options_buttons.count = 0U;
   mo_data->all_ops.capacity = mo_data->all_ops.count = 0U;
+  create_hash_table(64, &mo_data->active_context);
 
   mo_data->render_target.image = NULL;
   mo_data->render_target.width = module_node->layout->preferred_width;

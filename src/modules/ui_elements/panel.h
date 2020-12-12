@@ -16,6 +16,6 @@ typedef struct mcu_panel {
   render_color background_color;
 } mcu_panel;
 
-int mcu_init_panel(mc_node *parent, mcu_panel **p_button);
+int mcu_init_panel(mc_node *parent, mcu_panel **p_panel);
 
 #endif // PANEL_H
