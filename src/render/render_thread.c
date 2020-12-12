@@ -1244,6 +1244,7 @@ void _mrt_init_vk_render_state(vk_render_state *p_vkrs)
   p_vkrs->maximal_image_height = 2048;
 }
 
+// TODO -- look into the use of the volatile keyword with multi-threaded-access-variables
 void *midge_render_thread(void *vargp)
 {
   render_thread_info *render_thread = (render_thread_info *)vargp;
