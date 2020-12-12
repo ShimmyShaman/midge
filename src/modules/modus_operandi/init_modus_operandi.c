@@ -134,6 +134,8 @@ int _mc_mo_activate_active_step(modus_operandi_data *mo_data)
 {
   switch (mo_data->active_step->action) {
   case MO_OPPA_OPEN_FOLDER_DIALOG:
+    puts("TODO OpenFolderDialog MO_OPPA_OPEN_FOLDER_DIALOG");
+    break;
   default:
     MCerror(8142, "Unsupported action:%i", mo_data->active_step->action);
   }

@@ -61,6 +61,7 @@ int mca_load_modules()
       "collections",
       "render_utilities",
       "ui_elements",
+      "dialogs",
       "obj_loader",
       "welcome_window",
       "modus_operandi",
@@ -133,8 +134,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
   char *bltxt;
   sprintf(buf, "%s/.proj/build_list", project->path);
   MCcall(read_file_text(buf, &bltxt));
-  puts(bltxt);
-  puts("A");
+  // puts(bltxt);
 
   // Parse each file in the build list
   char *c = &bltxt[0], *s;

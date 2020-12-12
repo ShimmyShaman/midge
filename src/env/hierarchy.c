@@ -118,17 +118,35 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
   pthread_mutex_lock(&app_info->hierarchy_mutex);
   // puts("hierarchy-locked");
 
-  MCcall(append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
-                              &hierarchy_node->children->count, node_to_attach));
+  // Attach & Update
   node_to_attach->parent = hierarchy_node;
-
   if (node_to_attach->layout) {
+    // Insert it appropriately according to its z-index
+    mc_node_list *children = hierarchy_node->children;
+    int a;
+    mc_node *oc;
+    for (a = hierarchy_node->children->count; a > 0; --a) {
+      oc = children->items[a - 1];
+
+      if (oc->layout && oc->layout->z_layer_index <= node_to_attach->layout->z_layer_index) {
+        MCcall(insert_in_collection((void ***)&children->items, &children->alloc, &children->count, a, node_to_attach));
+        break;
+      }
+    }
+    if (!a) {
+      MCcall(insert_in_collection((void ***)&children->items, &children->alloc, &children->count, a, node_to_attach));
+    }
+
     // TODO -- not sure this is the best way to handle this yet
     // .. maybe use a layout flag which specifies to update all children as well?
     if (node_to_attach->children)
       mca_set_descendents_require_layout_update(node_to_attach->children);
 
     mca_set_node_requires_layout_update(node_to_attach);
+  }
+  else {
+    MCcall(append_to_collection((void ***)&hierarchy_node->children->items, &hierarchy_node->children->alloc,
+                                &hierarchy_node->children->count, node_to_attach));
   }
   mca_set_node_requires_rerender(node_to_attach);
 
@@ -636,7 +654,7 @@ int mca_focus_node(mc_node *node)
 
     node->parent->layout->focused_child = node;
 
-    // Find the child in the parents children and set it to the highest index amongst its z-index peers
+    // Find the child in the parents children and set it to the highest index amongst its z-index equals or lessers
     mc_node_list *parents_children = node->parent->children;
     // DEBUG CHECK
     bool found = false;

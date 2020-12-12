@@ -1,4 +1,4 @@
-/* init_function_debug.c */
+/* init_collections.c */
 
 #include <stdio.h>
 
