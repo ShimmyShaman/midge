@@ -134,7 +134,7 @@ void _mc_mo_handle_input(mc_node *node, mci_input_event *input_event)
 
 int _mc_mo_dialog_path_selected(void *invoker_state, char *selected_folder)
 {
-  puts("_mc_mo_dialog_path_selected");
+  printf("_mc_mo_dialog_path_selected:'%s'\n", selected_folder);
   return 0;
 }
 
@@ -156,8 +156,8 @@ int _mc_mo_activate_active_step(modus_operandi_data *mo_data)
       vary[0] = strdup(buf);
     }
 
-    vary[1] = (void *)&_mc_mo_dialog_path_selected;
-    vary[2] = (void *)mo_data;
+    vary[1] = (void *)mo_data;
+    vary[2] = (void *)&_mc_mo_dialog_path_selected;
 
     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary[0], vary));
   } break;

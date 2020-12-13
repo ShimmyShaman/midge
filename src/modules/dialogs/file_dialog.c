@@ -45,7 +45,10 @@ typedef struct mc_file_dialog_data {
 
   mc_str *current_directory;
   mc_file_dialog_mode mode;
-  void *result_delegate;
+  struct {
+    void *state;
+    void *result_delegate;
+  } callback;
 
 } mc_file_dialog_data;
 
@@ -128,7 +131,15 @@ int _mc_fd_open_directory(mc_file_dialog_data *fd, const char *starting_director
   DIR *dir;
   struct dirent *ent;
   if ((dir = opendir(starting_directory)) != NULL) {
-    MCcall(set_mc_str(fd->current_directory, starting_directory));
+    if (starting_directory) {
+      MCcall(set_mc_str(fd->current_directory, starting_directory));
+    }
+    else {
+      if (!getcwd(path, 256)) {
+        MCerror(9135, "Current Working Directory too large for this pretty big buffer");
+      }
+      MCcall(set_mc_str(fd->current_directory, path));
+    }
     printf("_mc_fd_open_directory:'%s'\n", fd->current_directory->text);
 
     /* print all the files and directories within directory */
@@ -187,19 +198,31 @@ void _mc_fd_open_current_clicked(mci_input_event *input_event, mcu_button *butto
 {
   mc_file_dialog_data *fd = (mc_file_dialog_data *)button->tag;
 
-  // TODO
+  // Wrap Up
+  fd->node->layout->visible = false;
+
+  printf("_mc_fd_open_current_clicked:'%s\n", fd->current_directory->text);
+
+  // Activate Callback
+  int (*result_delegate)(void *invoker_state, char *selected_folder) =
+      (int (*)(void *, char *))fd->callback.result_delegate;
+  if (result_delegate) {
+    result_delegate(fd->callback.state, fd->current_directory->text);
+  }
+  fd->callback.state = NULL;
+  fd->callback.result_delegate = NULL;
+
+  mca_set_node_requires_rerender(fd->node);
 }
 
-// TODO -- all events need int returning success etc
+// TODO -- all events app-wide need int returning success etc
 void _mc_fd_item_selected(mci_input_event *input_event, mcu_button *button)
 {
   mc_file_dialog_data *fd = (mc_file_dialog_data *)button->tag;
 
   char buf[256];
   if (!strcmp(button->str->text, "..")) {
-    puts(".. CLICKED");
     mcf_get_parent_directory(buf, 256, fd->current_directory->text);
-    puts(buf);
   }
   else {
     strcpy(buf, fd->current_directory->text);
@@ -219,11 +242,13 @@ int _mc_fd_on_folder_dialog_request(void *handler_state, void *event_args)
 
   void **vary = (void **)event_args;
   char *starting_path = (char *)vary[0];
-  int (*result_delegate)(char *selected_path) = (int (*)(char *))vary[1];
 
+  // Set Callback Info
+  fd->callback.state = vary[1];
+  fd->callback.result_delegate = vary[2];
+
+  // Open The Dialog at the starting path
   fd->mode = MC_FD_MODE_DIRECTORIES_ONLY;
-  fd->result_delegate = (void *)result_delegate;
-
   MCcall(_mc_fd_open_directory(fd, starting_path));
 
   // Display
@@ -241,7 +266,8 @@ int mc_fd_init_data(mc_node *module_node)
   fd->shade_color = (render_color){0.13f, 0.12f, 0.17f, 0.8f};
 
   MCcall(init_mc_str(&fd->current_directory));
-  fd->result_delegate = NULL;
+  fd->callback.state = NULL;
+  fd->callback.result_delegate = NULL;
 
   fd->displayed_items.capacity = fd->displayed_items.count = 0U;
 
@@ -283,14 +309,14 @@ int mc_fd_init_ui(mc_node *module_node)
   MCcall(mcu_init_button(fd->panel->node, &button));
 
   layout = button->node->layout;
-  layout->preferred_width = 160;
+  layout->preferred_width = 200;
   layout->preferred_height = 26;
   layout->padding = (mc_paddingf){4, 4, 4, 4};
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "Open"));
+  MCcall(set_mc_str(button->str, "Select Current Folder"));
   button->tag = fd;
   button->left_click = (void *)&_mc_fd_open_current_clicked;
 
