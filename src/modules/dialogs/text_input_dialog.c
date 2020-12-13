@@ -15,15 +15,6 @@
 #include "modules/mc_io/mc_io.h"
 #include "modules/ui_elements/ui_elements.h"
 
-// #include "env/environment_definitions.h"
-// #include "render/render_thread.h"
-// #include "ui/ui_definitions.h"
-
-typedef enum mc_file_dialog_mode {
-  MC_tid_MODE_NULL = 0,
-  MC_tid_MODE_DIRECTORIES_ONLY,
-} mc_file_dialog_mode;
-
 typedef struct mc_text_input_dialog_data {
   mc_node *node;
 
@@ -33,8 +24,6 @@ typedef struct mc_text_input_dialog_data {
   mcu_textblock *message_textblock;
   mcu_textbox *textbox;
 
-  //   mcu_button *new_project_button;
-  //   mcu_textbox *input_textbox;
   // struct {
   //   unsigned int width, height;
   //   mcr_texture_image *image;
@@ -108,7 +97,6 @@ void mc_tid_render_present(image_render_details *image_render_queue, mc_node *no
 
 void mc_tid_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  // printf("_mco_handle_input\n");
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
     input_event->handled = true;
@@ -116,146 +104,37 @@ void mc_tid_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-int _mc_tid_open_directory(mc_text_input_dialog_data *tid, const char *starting_directory)
+int _mc_tid_submit(mc_text_input_dialog_data *tid)
 {
-  tid->displayed_items.utilized = 0U;
-  char *c, path[256], ext[16];
-  int len;
-  mcu_button *button;
-
-  DIR *dir;
-  struct dirent *ent;
-  if ((dir = opendir(starting_directory)) != NULL) {
-    if (starting_directory) {
-      MCcall(set_mc_str(tid->current_directory, starting_directory));
-    }
-    else {
-      if (!getcwd(path, 256)) {
-        MCerror(9135, "Current Working Directory too large for this pretty big buffer");
-      }
-      MCcall(set_mc_str(tid->current_directory, path));
-    }
-    // printf("_mc_tid_open_directory:'%s'\n", tid->current_directory->text);
-
-    /* print all the files and directories within directory */
-    while ((ent = readdir(dir)) != NULL && tid->displayed_items.utilized < tid->displayed_items.count) {
-      // Ignore the "." entry
-      if (!strcmp(ent->d_name, "."))
-        continue;
-
-      // Create the full path of the directory entry
-      strcpy(path, starting_directory);
-      len = strlen(path);
-      if (path[len - 1] != '\\' && path[len - 1] != '/') {
-        strcat(path, "/");
-      }
-      strcat(path, ent->d_name);
-
-      // printf("path:%s", path);
-      if (tid->mode == MC_tid_MODE_DIRECTORIES_ONLY) {
-        // Obtain the path entry type
-        struct stat stats;
-        int res = stat(path, &stats);
-        if (res) {
-          MCerror(1919, "Odd? TODO print errno");
-        }
-
-        if (!S_ISDIR(stats.st_mode)) {
-          // puts("--NOT dir");
-          continue;
-        }
-      }
-      // puts("");
-
-      // Assign entry
-      button = tid->displayed_items.items[tid->displayed_items.utilized++];
-      button->node->layout->visible = true;
-      MCcall(set_mc_str(button->str, ent->d_name));
-    }
-    closedir(dir);
+  // Activate Callback
+  int (*result_delegate)(void *invoker_state, char *selected_folder) =
+      (int (*)(void *, char *))tid->callback.result_delegate;
+  if (result_delegate) {
+    MCcall(result_delegate(tid->callback.state, tid->textbox->contents->text));
   }
-  else {
-    /* could not open directory */
-    perror("");
-    MCerror(8528, "Could not open directory '%s'", starting_directory);
-  }
+  tid->callback.state = NULL;
+  tid->callback.result_delegate = NULL;
 
-  for (int a = tid->displayed_items.utilized; a < tid->displayed_items.count; ++a) {
-    tid->displayed_items.items[a]->node->layout->visible = false;
-  }
-
+  // Wrap Up
+  tid->node->layout->visible = false;
   MCcall(mca_set_node_requires_rerender(tid->node));
 
   return 0;
 }
 
-void _mc_tid_textbox_submit(mci_input_event *input_event, mcu_button *button)
+void _mc_tid_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
 {
-  // TODO
-  // TODO
-  // TODO
-  // TODO
-  // TODO
+  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)textbox->tag;
 
-  // mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)button->tag;
-
-  // // Wrap Up
-  // tid->node->layout->visible = false;
-
-  // // printf("_mc_tid_button_submit:'%s\n", tid->current_directory->text);
-
-  // // Activate Callback
-  // int (*result_delegate)(void *invoker_state, char *selected_folder) =
-  //     (int (*)(void *, char *))tid->callback.result_delegate;
-  // if (result_delegate) {
-  //   result_delegate(tid->callback.state, tid->current_directory->text);
-  // }
-  // tid->callback.state = NULL;
-  // tid->callback.result_delegate = NULL;
-
-  // mca_set_node_requires_rerender(tid->node);
+  _mc_tid_submit(tid);
 }
 
 void _mc_tid_button_submit(mci_input_event *input_event, mcu_button *button)
 {
   mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)button->tag;
 
-  // Wrap Up
-  tid->node->layout->visible = false;
-
   // printf("_mc_tid_button_submit:'%s\n", tid->current_directory->text);
-
-  // Activate Callback
-  int (*result_delegate)(void *invoker_state, char *selected_folder) =
-      (int (*)(void *, char *))tid->callback.result_delegate;
-  if (result_delegate) {
-    result_delegate(tid->callback.state, tid->current_directory->text);
-  }
-  tid->callback.state = NULL;
-  tid->callback.result_delegate = NULL;
-
-  mca_set_node_requires_rerender(tid->node);
-}
-
-// TODO -- all events app-wide need int returning success etc
-void _mc_tid_item_selected(mci_input_event *input_event, mcu_button *button)
-{
-  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)button->tag;
-
-  char buf[256];
-  if (!strcmp(button->str->text, "..")) {
-    mcf_get_parent_directory(buf, 256, tid->current_directory->text);
-  }
-  else {
-    strcpy(buf, tid->current_directory->text);
-    mcf_concat_filepath(buf, 256, button->str->text);
-    if (access(buf, F_OK) == -1) {
-      // File doesn't exist!
-      puts("ERROR TODO 8195");
-    }
-  }
-
-  _mc_tid_open_directory(tid, buf);
+  _mc_tid_submit(tid);
 }
 
 int _mc_tid_text_input_dialog_requested(void *handler_state, void *event_args)
@@ -269,12 +148,19 @@ int _mc_tid_text_input_dialog_requested(void *handler_state, void *event_args)
   tid->callback.state = vary[1];
   tid->callback.result_delegate = vary[2];
 
-  // Open The Dialog at the starting path
-  tid->mode = MC_tid_MODE_DIRECTORIES_ONLY;
-  MCcall(_mc_tid_open_directory(tid, starting_path));
+  // Reset the textbox
+  MCcall(set_mc_str(tid->textbox->contents, ""));
+
+  // Set the message
+  MCcall(set_mc_str(tid->message_textblock->str, message));
 
   // Display
   tid->node->layout->visible = true;
+
+  MCcall(mca_set_node_requires_rerender(tid->textbox->node));
+  MCcall(mca_set_node_requires_layout_update(tid->message_textblock->node));
+
+  MCcall(mca_focus_node(tid->textbox->node));
 
   return 0;
 }
@@ -318,19 +204,31 @@ int mc_tid_init_ui(mc_node *module_node)
   MCcall(mcu_init_panel(module_node, &tid->panel));
 
   layout = tid->panel->node->layout;
-  layout->max_width = 320;
   layout->padding = (mc_paddingf){40, 40, 40, 40};
-  layout->max_height = 34;
+  // TODO -- set up extents override so the dialog can adjust to the size of the message
+  layout->max_width = 400;
+  layout->max_height = 62;
 
   tid->panel->background_color = (render_color){0.35f, 0.35f, 0.35f, 1.f};
+
+  // Message Block
+  MCcall(mcu_init_textblock(tid->panel->node, &tid->message_textblock));
+
+  layout = tid->message_textblock->node->layout;
+  layout->padding = (mc_paddingf){4, 4, 4, 4};
+  layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  layout->preferred_width = 0.f;
+
+  tid->message_textblock->background_color = COLOR_GRAPE;
 
   // Textbox
   MCcall(mcu_init_textbox(tid->panel->node, &tid->textbox));
 
   layout = tid->textbox->node->layout;
-  layout->preferred_width = 240;
+  layout->preferred_width = 320;
   layout->padding = (mc_paddingf){4, 4, 4, 4};
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+  layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   tid->textbox->tag = tid;
   tid->textbox->submit = (void *)_mc_tid_textbox_submit;
@@ -342,6 +240,7 @@ int mc_tid_init_ui(mc_node *module_node)
   layout->preferred_width = 64;
   layout->padding = (mc_paddingf){4, 4, 4, 4};
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+  layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
   MCcall(set_mc_str(button->str, "Enter"));
@@ -351,11 +250,10 @@ int mc_tid_init_ui(mc_node *module_node)
   return 0;
 }
 
-int mc_tid_init_file_dialog(mc_node *app_root)
+int mc_tid_init_text_input_dialog(mc_node *app_root)
 {
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
-  //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
 
   // TODO -- get rid of node type
 

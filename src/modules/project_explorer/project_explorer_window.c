@@ -450,7 +450,7 @@ void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock 
       hash_table_remove(entry->hash, &pjxp->collapsed_entries);
     }
     else {
-      int res = hash_table_insert(entry->hash, 1, &pjxp->collapsed_entries);
+      int res = hash_table_insert(entry->hash, NULL, &pjxp->collapsed_entries);
       if (res) {
         MCVerror(8530, "TODO?");
       }

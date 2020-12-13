@@ -7,6 +7,7 @@
 
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
+#include "midge_error_handling.h"
 #include "render/render_common.h"
 #include "ui/ui_definitions.h"
 
@@ -572,6 +573,11 @@ int mca_set_descendents_require_layout_update(mc_node_list *node_list)
 
 int mca_set_node_requires_layout_update(mc_node *node)
 {
+  // printf("mca_set_node_requires_layout_update node=%s%s%s->%s\n",
+  //        (node->parent && node->parent->parent) ? node->parent->parent->name : "",
+  //        (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "", node->name);
+  // midge_error_print_thread_stack_trace();
+
   // DEBUG?
   if (!node->layout) {
     MCerror(8416, "Can't set an update for a node with no layout");

@@ -8,7 +8,10 @@
 int init_dialogs(mc_node *app_root)
 {
   MCcall(mcs_interpret_file("src/modules/dialogs/file_dialog.h"));
+  MCcall(mcs_interpret_file("src/modules/dialogs/text_input_dialog.h"));
+
   MCcall(mcs_interpret_file("src/modules/dialogs/file_dialog.c"));
+  MCcall(mcs_interpret_file("src/modules/dialogs/text_input_dialog.c"));
 
   // TODO make an anonymous data register system
   // function_debug_pool *pool = (function_debug_pool *)malloc(sizeof(function_debug_pool));
@@ -17,11 +20,19 @@ int init_dialogs(mc_node *app_root)
 
   mc_app_itp_data *itp_data;
   mc_obtain_app_itp_data(&itp_data);
+
   int (*mc_fd_init_file_dialog)(mc_node *) = tcci_get_symbol(itp_data->interpreter, "mc_fd_init_file_dialog");
   if (!mc_fd_init_file_dialog) {
     MCerror(3463, "mc_fd_init_file_dialog");
   }
   MCcall(mc_fd_init_file_dialog(app_root));
+
+  int (*mc_tid_init_text_input_dialog)(mc_node *) =
+      tcci_get_symbol(itp_data->interpreter, "mc_tid_init_text_input_dialog");
+  if (!mc_tid_init_text_input_dialog) {
+    MCerror(3464, "mc_tid_init_text_input_dialog");
+  }
+  MCcall(mc_tid_init_text_input_dialog(app_root));
 
   return 0;
 }

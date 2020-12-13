@@ -43,7 +43,7 @@ int mcf_concat_filepath_str(mc_str *path_prefix, const char *appendage)
 
 int mcf_restrict_parent_directory_str(mc_str *path)
 {
-  char *c = path->text[path->len - 1];
+  char *c = path->text + (path->len - 1);
   if (*c == '/' || *c == '\\')
     --c;
   for (;; --c) {
