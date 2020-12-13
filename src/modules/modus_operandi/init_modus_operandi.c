@@ -21,6 +21,7 @@ typedef enum mo_op_step_action_type {
   MO_OPPA_NULL = 0,
   MO_OPPA_OPEN_FILE_DIALOG,
   MO_OPPA_OPEN_FOLDER_DIALOG,
+  MO_OPPA_TEXT_INPUT_DIALOG,
 } mo_op_step_action_type;
 
 typedef enum mo_op_step_context_arg {
@@ -32,13 +33,14 @@ typedef struct mo_operational_step {
   struct mo_operational_step *next;
 
   mo_op_step_action_type action;
+  char *message;
   mo_op_step_context_arg context_arg;
   char *target_context_property;
 } mo_operational_step;
 
 struct modus_operandi_data;
 typedef struct mo_operational_process {
-  struct modus_operandi_data *mo_data;
+  struct modus_operandi_data *mod;
   char *title;
   mo_operational_step *first;
 } mo_operational_process;
@@ -67,9 +69,12 @@ typedef struct modus_operandi_data {
 
 } modus_operandi_data;
 
-void _mc_mo_render_mo_data_headless(render_thread_info *render_thread, mc_node *node)
+// Forward Declaration
+int _mc_mo_activate_active_step(modus_operandi_data *mod);
+
+void _mc_mo_render_mod_headless(render_thread_info *render_thread, mc_node *node)
 {
-  modus_operandi_data *mo_data = (modus_operandi_data *)node->data;
+  modus_operandi_data *mod = (modus_operandi_data *)node->data;
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -93,9 +98,9 @@ void _mc_mo_render_mo_data_headless(render_thread_info *render_thread, mc_node *
   irq->clear_color = COLOR_BLACKCURRANT;
   // printf("global_data->screen : %u, %u\n", global_data->screen.width,
   // global_data->screen.height);
-  irq->image_width = mo_data->render_target.width;   // TODO
-  irq->image_height = mo_data->render_target.height; // TODO
-  irq->data.target_image.image = mo_data->render_target.image;
+  irq->image_width = mod->render_target.width;   // TODO
+  irq->image_height = mod->render_target.height; // TODO
+  irq->data.target_image.image = mod->render_target.image;
   irq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
@@ -113,13 +118,13 @@ void _mc_mo_render_mo_data_headless(render_thread_info *render_thread, mc_node *
   mcr_submit_image_render_request(global_data->render_thread, irq);
 }
 
-void _mc_mo_render_mo_data_present(image_render_details *image_render_queue, mc_node *node)
+void _mc_mo_render_mod_present(image_render_details *image_render_queue, mc_node *node)
 {
-  modus_operandi_data *mo_data = (modus_operandi_data *)node->data;
+  modus_operandi_data *mod = (modus_operandi_data *)node->data;
 
   mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                         (unsigned int)node->layout->__bounds.y, mo_data->render_target.width,
-                                         mo_data->render_target.height, mo_data->render_target.image);
+                                         (unsigned int)node->layout->__bounds.y, mod->render_target.width,
+                                         mod->render_target.height, mod->render_target.image);
 }
 
 void _mc_mo_handle_input(mc_node *node, mci_input_event *input_event)
@@ -132,21 +137,67 @@ void _mc_mo_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-int _mc_mo_dialog_path_selected(void *invoker_state, char *selected_folder)
+int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
 {
-  printf("_mc_mo_dialog_path_selected:'%s'\n", selected_folder);
+  modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
+
+  // printf("_mc_mo_dialog_path_selected:'%s'\n", selected_folder);
+  if (mod->active_step->action != MO_OPPA_TEXT_INPUT_DIALOG) {
+    MCerror(8140, "TODO - state error");
+  }
+  if (!input_text) {
+    MCerror(8142, "TODO - canceled process section");
+  }
+
+  // Set the path to the target context property
+  hash_table_set(mod->active_step->target_context_property, input_text, &mod->active_context);
+
+  // Move to the next step
+  mod->active_step = mod->active_step->next;
+  MCcall(_mc_mo_activate_active_step(mod));
+
   return 0;
 }
 
-int _mc_mo_activate_active_step(modus_operandi_data *mo_data)
+int _mc_mo_dialog_path_selected(void *invoker_state, char *selected_folder)
 {
-  switch (mo_data->active_step->action) {
+  modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
+
+  // printf("_mc_mo_dialog_path_selected:'%s'\n", selected_folder);
+  if (mod->active_step->action != MO_OPPA_OPEN_FOLDER_DIALOG) {
+    MCerror(8141, "TODO - state error");
+  }
+
+  // Set the path to the target context property
+  hash_table_set(mod->active_step->target_context_property, strdup(selected_folder), &mod->active_context);
+
+  // Move to the next step
+  mod->active_step = mod->active_step->next;
+  MCcall(_mc_mo_activate_active_step(mod));
+
+  return 0;
+}
+
+int _mc_mo_activate_active_step(modus_operandi_data *mod)
+{
+  switch (mod->active_step->action) {
+  case MO_OPPA_TEXT_INPUT_DIALOG: {
+    void **vary = (void **)malloc(sizeof(void *) * 3);
+
+    // TODO -- make sure memory free is handled (TODO)
+    // TODO -- make a define or const of project label
+    vary[0] = mod->active_step->message;
+    vary[1] = (void *)mod;
+    vary[2] = (void *)&_mc_mo_dialog_input_text_entered;
+
+    MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
+  } break;
   case MO_OPPA_OPEN_FOLDER_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 3);
 
     // TODO -- make sure memory free is handled (TODO)
     // TODO -- make a define or const of project label
-    mc_project_info *project = (mc_project_info *)hash_table_get("project", &mo_data->active_context);
+    mc_project_info *project = (mc_project_info *)hash_table_get("project", &mod->active_context);
     if (project) {
       vary[0] = (void *)strdup(project->path_src);
     }
@@ -156,13 +207,13 @@ int _mc_mo_activate_active_step(modus_operandi_data *mo_data)
       vary[0] = strdup(buf);
     }
 
-    vary[1] = (void *)mo_data;
+    vary[1] = (void *)mod;
     vary[2] = (void *)&_mc_mo_dialog_path_selected;
 
     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary[0], vary));
   } break;
   default:
-    MCerror(8142, "Unsupported action:%i", mo_data->active_step->action);
+    MCerror(8142, "Unsupported action:%i", mod->active_step->action);
   }
 
   return 0;
@@ -174,30 +225,31 @@ void _mc_mo_operational_process_selected(mci_input_event *input_event, mcu_butto
     mo_operational_process *mopp = (mo_operational_process *)button->tag;
 
     // Begin the process
-    modus_operandi_data *mo_data = mopp->mo_data;
-    mo_data->active_process = mopp;
-    mo_data->active_step = mopp->first;
+    modus_operandi_data *mod = mopp->mod;
+    mod->active_process = mopp;
+    mod->active_step = mopp->first;
 
     // Reset the context
-    hash_table_clear(&mo_data->active_context);
+    // TODO -- can't just clear these properties need memory releasing
+    hash_table_clear(&mod->active_context);
 
-    _mc_mo_activate_active_step(mo_data);
+    _mc_mo_activate_active_step(mod);
   }
 }
 
-int mc_mo_update_options_display(modus_operandi_data *mo_data)
+int mc_mo_update_options_display(modus_operandi_data *mod)
 {
   // Order according to search text match score
-  // if(!mo_data->search_textbox->contents->len) {
+  // if(!mod->search_textbox->contents->len) {
 
   // }
 
   int a;
   mcu_button *button;
   mo_operational_process *mopp;
-  for (a = 0; a < mo_data->all_ops.count && a < mo_data->options_buttons.count; ++a) {
-    button = mo_data->options_buttons.items[a];
-    mopp = mo_data->all_ops.items[a];
+  for (a = 0; a < mod->all_ops.count && a < mod->options_buttons.count; ++a) {
+    button = mod->options_buttons.items[a];
+    mopp = mod->all_ops.items[a];
 
     MCcall(set_mc_str(button->str, mopp->title));
 
@@ -206,13 +258,13 @@ int mc_mo_update_options_display(modus_operandi_data *mo_data)
     button->node->layout->visible = true;
     MCcall(mca_set_node_requires_rerender(button->node));
   }
-  for (; a < mo_data->options_buttons.count; ++a) {
-    button = mo_data->options_buttons.items[a];
+  for (; a < mod->options_buttons.count; ++a) {
+    button = mod->options_buttons.items[a];
 
     button->node->layout->visible = false;
   }
 
-  MCcall(mca_set_node_requires_rerender(mo_data->node));
+  MCcall(mca_set_node_requires_rerender(mod->node));
 
   return 0;
 }
@@ -220,22 +272,22 @@ int mc_mo_update_options_display(modus_operandi_data *mo_data)
 int mc_mo_load_resources(mc_node *module_node)
 {
   // cube_template
-  modus_operandi_data *mo_data = (modus_operandi_data *)malloc(sizeof(modus_operandi_data));
-  module_node->data = mo_data;
-  mo_data->node = module_node;
+  modus_operandi_data *mod = (modus_operandi_data *)malloc(sizeof(modus_operandi_data));
+  module_node->data = mod;
+  mod->node = module_node;
 
-  mo_data->options_buttons.capacity = mo_data->options_buttons.count = 0U;
-  mo_data->all_ops.capacity = mo_data->all_ops.count = 0U;
-  create_hash_table(64, &mo_data->active_context);
+  mod->options_buttons.capacity = mod->options_buttons.count = 0U;
+  mod->all_ops.capacity = mod->all_ops.count = 0U;
+  create_hash_table(64, &mod->active_context);
 
-  mo_data->render_target.image = NULL;
-  mo_data->render_target.width = module_node->layout->preferred_width;
-  mo_data->render_target.height = module_node->layout->preferred_height;
-  MCcall(mcr_create_texture_resource(mo_data->render_target.width, mo_data->render_target.height,
-                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mo_data->render_target.image));
+  mod->render_target.image = NULL;
+  mod->render_target.width = module_node->layout->preferred_width;
+  mod->render_target.height = module_node->layout->preferred_height;
+  MCcall(mcr_create_texture_resource(mod->render_target.width, mod->render_target.height,
+                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mod->render_target.image));
 
   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
-  while (!mo_data->render_target.image) {
+  while (!mod->render_target.image) {
     // puts("wait");
     usleep(100);
   }
@@ -245,11 +297,11 @@ int mc_mo_load_resources(mc_node *module_node)
 
 int mc_mo_init_ui(mc_node *module_node)
 {
-  modus_operandi_data *mo_data = (modus_operandi_data *)module_node->data;
+  modus_operandi_data *mod = (modus_operandi_data *)module_node->data;
 
-  MCcall(mcu_init_textbox(module_node, &mo_data->search_textbox));
-  mo_data->search_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-  mo_data->search_textbox->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
+  MCcall(mcu_init_textbox(module_node, &mod->search_textbox));
+  mod->search_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  mod->search_textbox->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
 
   char buf[64];
 
@@ -274,12 +326,12 @@ int mc_mo_init_ui(mc_node *module_node)
 
     MCcall(set_mc_str(button->str, "button"));
 
-    MCcall(append_to_collection((void ***)&mo_data->options_buttons.items, &mo_data->options_buttons.capacity,
-                                &mo_data->options_buttons.count, button));
+    MCcall(append_to_collection((void ***)&mod->options_buttons.items, &mod->options_buttons.capacity,
+                                &mod->options_buttons.count, button));
   }
 
   // // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
-  // while (!mo_data->render_target.image) {
+  // while (!mod->render_target.image) {
   //   // puts("wait");
   //   usleep(100);
   // }
@@ -289,7 +341,7 @@ int mc_mo_init_ui(mc_node *module_node)
 
 int mc_mo_load_operations(mc_node *module_node)
 {
-  modus_operandi_data *mo_data = (modus_operandi_data *)module_node->data;
+  modus_operandi_data *mod = (modus_operandi_data *)module_node->data;
 
   // Script an operational process for scripting operational processes
   {
@@ -297,7 +349,7 @@ int mc_mo_load_operations(mc_node *module_node)
     mo_operational_step *step;
 
     script_operational_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
-    script_operational_process->mo_data = mo_data;
+    script_operational_process->mod = mod;
 
     // Create
   }
@@ -308,31 +360,44 @@ int mc_mo_load_operations(mc_node *module_node)
     mo_operational_step *step;
 
     add_renderable_system = (mo_operational_process *)malloc(sizeof(mo_operational_process));
-    add_renderable_system->mo_data = mo_data;
+    add_renderable_system->mod = mod;
 
     // Create the source files
+    const char *const gen_source_name_context_property = "gen-source-name";
     const char *const gen_source_folder_context_property = "gen-source-folder";
     {
       // Obtain the folder to create them in
       add_renderable_system->title = strdup("add-3d-renderable-system");
       step = add_renderable_system->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
+      // Obtain the name of the source module to create
+      step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+      step->message = strdup("Enter the name of the system source files:");
+      step->context_arg = NULL;
+      step->target_context_property = strdup(gen_source_name_context_property);
+      step->next = NULL;
+    }
+    {
+      step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+      step = step->next;
+
       // -- Open Open-Path-Dialog - Seek a folder to store the source
       step->action = MO_OPPA_OPEN_FOLDER_DIALOG;
+      step->message = strdup("Select the folder to create the system source files in:");
       // -- -- Folder to begin dialog with -- should be the src folder of the active project
       step->context_arg = MO_OPPC_ACTIVE_PROJECT_SRC_PATH;
-      step->target_context_property = strdup(gen_source_folder_context_property);
-      add_renderable_system->first->next = NULL;
+      step->target_context_property = strdup(gen_source_name_context_property);
+      step->next = NULL;
     }
     {
       // Generate them
     }
 
-    MCcall(append_to_collection((void ***)&mo_data->all_ops.items, &mo_data->all_ops.capacity, &mo_data->all_ops.count,
+    MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
                                 add_renderable_system));
   }
 
-  MCcall(mc_mo_update_options_display(mo_data));
+  MCcall(mc_mo_update_options_display(mod));
 
   return 0;
 }
@@ -359,8 +424,8 @@ int init_modus_operandi(mc_node *app_root)
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
-  node->layout->render_headless = (void *)&_mc_mo_render_mo_data_headless;
-  node->layout->render_present = (void *)&_mc_mo_render_mo_data_present;
+  node->layout->render_headless = (void *)&_mc_mo_render_mod_headless;
+  node->layout->render_present = (void *)&_mc_mo_render_mod_present;
   node->layout->handle_input_event = (void *)&_mc_mo_handle_input;
 
   // TODO
