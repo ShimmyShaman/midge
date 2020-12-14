@@ -24,9 +24,9 @@ typedef enum mc_app_event_type {
   // -** selected_folder may be NULL if user cancels
   MC_APP_EVENT_FOLDER_DIALOG_REQUESTED,
   // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void*[] { const char *prompt_message, void *invoker_state,
+  // - event_args is void*[] { const char *prompt_message, const char *default_value, void *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *input_text)}
-  // -* prompt_message may be NULL indicating no message
+  // -* prompt_message and default_value may be NULL indicating an empty message and value
   // -** input_text may be NULL if user cancels
   MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED,
   MC_APP_EXCLUSIVE_MAX,

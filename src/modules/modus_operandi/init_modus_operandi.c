@@ -10,6 +10,7 @@
 #include "render/render_common.h"
 
 #include "modules/collections/hash_table.h"
+#include "modules/mc_io/mc_io.h"
 #include "modules/render_utilities/render_util.h"
 #include "modules/ui_elements/ui_elements.h"
 
@@ -25,9 +26,16 @@ typedef enum mo_op_step_action_type {
   MO_OPPA_USER_FUNCTION,
 } mo_op_step_action_type;
 
-typedef enum mo_op_step_context_arg {
+typedef enum mo_op_step_context_arg_type {
   MO_OPPC_NULL = 0,
+  MO_OPPC_CSTR,
   MO_OPPC_ACTIVE_PROJECT_SRC_PATH,
+  MO_OPPC_PROCESS_CONTEXT_PROPERTY,
+} mo_op_step_context_arg_type;
+
+typedef struct mo_op_step_context_arg {
+  mo_op_step_context_arg_type type;
+  char *data;
 } mo_op_step_context_arg;
 
 typedef struct mo_operational_step {
@@ -39,7 +47,12 @@ typedef struct mo_operational_step {
       char *message;
       mo_op_step_context_arg context_arg;
       char *target_context_property;
-    } dialog;
+    } file_dialog;
+    struct {
+      char *message;
+      mo_op_step_context_arg default_text;
+      char *target_context_property;
+    } text_input_dialog;
     struct {
       void *fptr;
     } delegate;
@@ -160,7 +173,8 @@ int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
   printf("step completed:'%s'\n", input_text);
 
   // Set the path to the target context property
-  hash_table_set(mod->active_step->dialog.target_context_property, input_text, &mod->active_process->context);
+  hash_table_set(mod->active_step->text_input_dialog.target_context_property, strdup(input_text),
+                 &mod->active_process->context);
 
   // Move to the next step
   mod->active_step = mod->active_step->next;
@@ -179,12 +193,34 @@ int _mc_mo_dialog_path_selected(void *invoker_state, char *selected_folder)
   }
 
   // Set the path to the target context property
-  hash_table_set(mod->active_step->dialog.target_context_property, strdup(selected_folder),
+  hash_table_set(mod->active_step->file_dialog.target_context_property, strdup(selected_folder),
                  &mod->active_process->context);
 
   // Move to the next step
   mod->active_step = mod->active_step->next;
   MCcall(_mc_mo_activate_active_step(mod));
+
+  return 0;
+}
+
+int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *context_arg, void **result)
+{
+  switch (context_arg->type) {
+  case MO_OPPC_CSTR: {
+    *result = (void *)context_arg->data;
+  } break;
+  case MO_OPPC_PROCESS_CONTEXT_PROPERTY: {
+    *result = hash_table_get((char *)context_arg->data, &mod->active_process->context);
+    if (!*result) {
+      MCerror(9215, "_mc_mo_obtain_context_arg:Process Context Property '%s' does not exist!",
+              (char *)context_arg->data);
+    }
+    printf("MO_OPPC_PROCESS_CONTEXT_PROPERTY:'%s'\n", (char *)*result);
+  } break;
+  case MO_OPPC_ACTIVE_PROJECT_SRC_PATH:
+  default:
+    MCerror(8220, "_mc_mo_obtain_context_arg:Unsupported type>%i", context_arg);
+  }
 
   return 0;
 }
@@ -197,13 +233,13 @@ int _mc_mo_activate_active_step(modus_operandi_data *mod)
 
   switch (mod->active_step->action) {
   case MO_OPPA_TEXT_INPUT_DIALOG: {
-    void **vary = (void **)malloc(sizeof(void *) * 3);
+    void **vary = (void **)malloc(sizeof(void *) * 4);
 
-    // TODO -- make sure memory free is handled (TODO)
     // TODO -- make a define or const of project label
-    vary[0] = mod->active_step->dialog.message;
-    vary[1] = (void *)mod;
-    vary[2] = (void *)&_mc_mo_dialog_input_text_entered;
+    vary[0] = mod->active_step->text_input_dialog.message;
+    MCcall(_mc_mo_obtain_context_arg(mod, &mod->active_step->text_input_dialog.default_text, &vary[1]));
+    vary[2] = (void *)mod;
+    vary[3] = (void *)&_mc_mo_dialog_input_text_entered;
 
     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
   } break;
@@ -231,6 +267,11 @@ int _mc_mo_activate_active_step(modus_operandi_data *mod)
     int (*user_function)(hash_table_t * context) = (int (*)(hash_table_t *))mod->active_step->delegate.fptr;
 
     MCcall(user_function(&mod->active_process->context));
+
+    // Move to the next step -- TODO -- not sure if this is the right move, maybe have user-function return a flag
+    // indicating if it is complete or something
+    mod->active_step = mod->active_step->next;
+    MCcall(_mc_mo_activate_active_step(mod));
 
   } break;
   default:
@@ -361,7 +402,6 @@ int mc_mo_init_ui(mc_node *module_node)
 
 int _user_function_delegate(hash_table_t *context)
 {
-
   const char *const gen_source_name_context_property = "gen-source-name";
   const char *const gen_source_folder_context_property = "gen-source-folder";
 
@@ -369,6 +409,39 @@ int _user_function_delegate(hash_table_t *context)
   char *folder = (char *)hash_table_get(gen_source_folder_context_property, context);
   printf("this is where I would generate source files named '%s.c' and '%s.h' in the folder '%s'\n", name, name,
          folder);
+
+  // Generate the header
+  int n = strlen(name);
+
+  mc_str *code;
+  MCcall(init_mc_str(&code));
+
+  MCcall(append_to_mc_strf(code, "/* %s.h */\n", name));
+  MCcall(append_to_mc_str(code, "\n"));
+
+  MCcall(append_to_mc_str(code, "#ifndef "));
+  MCcall(append_uppercase_to_mc_str(code, name));
+  MCcall(append_to_mc_str(code, "_H"));
+  MCcall(append_to_mc_str(code, "\n"));
+  MCcall(append_to_mc_str(code, "#define "));
+  MCcall(append_uppercase_to_mc_str(code, name));
+  MCcall(append_to_mc_str(code, "_H"));
+  MCcall(append_to_mc_str(code, "\n"));
+
+  MCcall(append_to_mc_str(code, "\n"));
+
+  MCcall(append_to_mc_str(code, "#endif // "));
+  MCcall(append_uppercase_to_mc_str(code, name));
+  MCcall(append_to_mc_str(code, "_H"));
+
+  char path[256];
+  strcpy(path, folder);
+  MCcall(mcf_concat_filepath(path, 256, name));
+  strcat(path, ".h");
+
+  MCcall(save_text_to_file(path, code->text));
+
+  release_mc_str(code, true);
 
   return 0;
 }
@@ -409,9 +482,9 @@ int mc_mo_load_operations(mc_node *module_node)
 
       // Obtain the name of the source module to create
       step->action = MO_OPPA_TEXT_INPUT_DIALOG;
-      step->dialog.message = strdup("Enter the name of the system source files:");
-      step->dialog.context_arg = MO_OPPC_NULL;
-      step->dialog.target_context_property = strdup(gen_source_name_context_property);
+      step->text_input_dialog.message = strdup("Enter the name of the system source files:");
+      step->text_input_dialog.default_text = (mo_op_step_context_arg){MO_OPPC_CSTR, NULL};
+      step->text_input_dialog.target_context_property = strdup(gen_source_name_context_property);
       step->next = NULL;
     }
     {
@@ -421,10 +494,10 @@ int mc_mo_load_operations(mc_node *module_node)
 
       // -- Open Open-Path-Dialog - Seek a folder to store the source
       step->action = MO_OPPA_OPEN_FOLDER_DIALOG;
-      step->dialog.message = strdup("Select the folder to create the system source files in:");
+      step->file_dialog.message = strdup("Select the folder to create the system source files in:");
       // -- -- Folder to begin dialog with -- should be the src folder of the active project
-      step->dialog.context_arg = MO_OPPC_ACTIVE_PROJECT_SRC_PATH;
-      step->dialog.target_context_property = strdup(gen_source_folder_context_property);
+      step->file_dialog.context_arg = (mo_op_step_context_arg){MO_OPPC_ACTIVE_PROJECT_SRC_PATH, NULL}; // TODO
+      step->file_dialog.target_context_property = strdup(gen_source_folder_context_property);
       step->next = NULL;
     }
     {
@@ -438,7 +511,28 @@ int mc_mo_load_operations(mc_node *module_node)
       step->next = NULL;
     }
     {
+      // Confirm the data name
+      step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+      step = step->next;
+
+      // Obtain the name of the source module to create
+      step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+      step->text_input_dialog.message = strdup("Enter the name of the data structure:");
+      step->text_input_dialog.default_text =
+          (mo_op_step_context_arg){MO_OPPC_PROCESS_CONTEXT_PROPERTY, strdup(gen_source_name_context_property)};
+      step->text_input_dialog.target_context_property = strdup(gen_source_name_context_property);
+      step->next = NULL;
     }
+    // {
+    //   // Generate the data
+    //   step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+    //   step = step->next;
+
+    //   // -- Open Open-Path-Dialog - Seek a folder to store the source
+    //   step->action = MO_OPPA_USER_FUNCTION;
+    //   step->delegate.fptr = &_user_function_delegate;
+    //   step->next = NULL;
+    // }
 
     MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
                                 add_renderable_system));

@@ -143,16 +143,20 @@ int _mc_tid_text_input_dialog_requested(void *handler_state, void *event_args)
 
   void **vary = (void **)event_args;
   char *message = (char *)vary[0];
+  char *default_value = (char *)vary[1];
 
   // Set Callback Info
-  tid->callback.state = vary[1];
-  tid->callback.result_delegate = vary[2];
+  tid->callback.state = vary[2];
+  tid->callback.result_delegate = vary[3];
 
   // Reset the textbox
-  MCcall(set_mc_str(tid->textbox->contents, ""));
+  MCcall(set_mc_str(tid->textbox->contents, default_value ? default_value : ""));
 
   // Set the message
   MCcall(set_mc_str(tid->message_textblock->str, message));
+
+  // printf("_mc_tid_text_input_dialog_requested:tc'%s' %p %p '%s'\n", tid->textbox->contents->text,
+  //        tid->textbox->contents->text, default_value, default_value);
 
   // Display
   tid->node->layout->visible = true;
