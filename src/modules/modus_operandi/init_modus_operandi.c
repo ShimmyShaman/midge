@@ -10,6 +10,7 @@
 #include "render/render_common.h"
 
 #include "modules/collections/hash_table.h"
+#include "modules/info_transcription/info_transcription.h"
 #include "modules/mc_io/mc_io.h"
 #include "modules/render_utilities/render_util.h"
 #include "modules/ui_elements/ui_elements.h"
@@ -17,6 +18,9 @@
 // #include "env/environment_definitions.h"
 // #include "render/render_thread.h"
 // #include "ui/ui_definitions.h"
+// TODO -- may not need these after removing user functions
+#include "core/c_parser_lexer.h"
+#include "core/mc_source.h"
 
 typedef enum mo_op_step_action_type {
   MO_OPPA_NULL = 0,
@@ -45,7 +49,7 @@ typedef struct mo_operational_step {
   union {
     struct {
       char *message;
-      mo_op_step_context_arg context_arg;
+      mo_op_step_context_arg initial_folder;
       char *target_context_property;
     } file_dialog;
     struct {
@@ -217,7 +221,14 @@ int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *
     }
     printf("MO_OPPC_PROCESS_CONTEXT_PROPERTY:'%s'\n", (char *)*result);
   } break;
+  // TODO -- implement when theres some way to inform the calling method to free the set cstr when its done with it.
+  // case MO_OPPC_CURRENT_WORKING_DIRECTORY: {
+  //   char buf[256];
+  //   getcwd(buf, 256);
+  //   vary[0] = strdup(buf);
+  // } break;
   case MO_OPPC_ACTIVE_PROJECT_SRC_PATH:
+    puts("ERROR TODO -- MO_OPPC_ACTIVE_PROJECT_SRC_PATH");
   default:
     MCerror(8220, "_mc_mo_obtain_context_arg:Unsupported type>%i", context_arg);
   }
@@ -228,7 +239,8 @@ int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *
 int _mc_mo_activate_active_step(modus_operandi_data *mod)
 {
   if (!mod->active_step) {
-    MCerror(7186, "No further Steps TODO");
+    // MCerror(7186, "No further Steps TODO");
+    return 0;
   }
 
   switch (mod->active_step->action) {
@@ -246,18 +258,10 @@ int _mc_mo_activate_active_step(modus_operandi_data *mod)
   case MO_OPPA_OPEN_FOLDER_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 3);
 
+    puts("WARNING TODO -- MO_OPPA_OPEN_FOLDER_DIALOG-context_arg");
     // TODO -- make sure memory free is handled (TODO)
     // TODO -- make a define or const of project label
-    mc_project_info *project = (mc_project_info *)hash_table_get("project", &mod->active_process->context);
-    if (project) {
-      vary[0] = (void *)strdup(project->path_src);
-    }
-    else {
-      char buf[256];
-      getcwd(buf, 256);
-      vary[0] = strdup(buf);
-    }
-
+    MCcall(_mc_mo_obtain_context_arg(mod, &mod->active_step->file_dialog.initial_folder, &vary[0]));
     vary[1] = (void *)mod;
     vary[2] = (void *)&_mc_mo_dialog_path_selected;
 
@@ -400,10 +404,11 @@ int mc_mo_init_ui(mc_node *module_node)
   return 0;
 }
 
-int _user_function_delegate(hash_table_t *context)
+int _user_function_gen_source_files(hash_table_t *context)
 {
   const char *const gen_source_name_context_property = "gen-source-name";
   const char *const gen_source_folder_context_property = "gen-source-folder";
+  const char *const created_header_path_context_property = "gen-source-header-path";
 
   char *name = (char *)hash_table_get(gen_source_name_context_property, context);
   char *folder = (char *)hash_table_get(gen_source_folder_context_property, context);
@@ -411,8 +416,6 @@ int _user_function_delegate(hash_table_t *context)
          folder);
 
   // Generate the header
-  int n = strlen(name);
-
   mc_str *code;
   MCcall(init_mc_str(&code));
 
@@ -438,10 +441,75 @@ int _user_function_delegate(hash_table_t *context)
   strcpy(path, folder);
   MCcall(mcf_concat_filepath(path, 256, name));
   strcat(path, ".h");
+  hash_table_set(created_header_path_context_property, strdup(path), context);
 
   MCcall(save_text_to_file(path, code->text));
 
   release_mc_str(code, true);
+
+  // Add to the interpreter
+  MCcall(mcs_interpret_file(path));
+
+  return 0;
+}
+
+int _user_function_insert_data_struct(hash_table_t *context)
+{
+  int a;
+
+  // Obtain the source file
+  const char *const created_header_path_context_property = "gen-source-header-path";
+  char *header_path = (char *)hash_table_get(created_header_path_context_property, context);
+
+  mc_app_itp_data *itp;
+  mc_obtain_app_itp_data(&itp);
+
+  mc_source_file_info *source_file = NULL;
+  for (a = itp->source_files.count - 1; a >= 0; --a) {
+    printf("%s<>%s\n", itp->source_files.items[a]->filepath, header_path);
+    if (!strcmp(itp->source_files.items[a]->filepath, header_path)) {
+      source_file = itp->source_files.items[a];
+      break;
+    }
+  }
+
+  if (!source_file) {
+    MCerror(6470, "Couldn't find the created source file");
+  }
+
+  const char *const gen_data_name_context_property = "gen-data-name";
+  char *data_struct_name = (char *)hash_table_get(gen_data_name_context_property, context);
+
+  // Check structure does not already exist -- TODO it was a created file, is this necessary? insert or overwrite or
+  // append???
+  source_definition *sdef = NULL, *d;
+  for (a = 0; a < source_file->definitions.count; ++a) {
+    d = source_file->definitions.items[a];
+    if (d->type != SOURCE_DEFINITION_STRUCTURE)
+      continue;
+    if (!strcmp(d->data.structure_info->name, data_struct_name)) {
+      sdef = d;
+      break;
+    }
+  }
+  if (!sdef) {
+    // Create a new source definition
+    sdef = (source_definition *)malloc(sizeof(source_definition));
+    sdef->type_id = NULL; // TODO -- remove
+    sdef->type = SOURCE_DEFINITION_STRUCTURE;
+    sdef->code = "";
+    sdef->source_file = source_file;
+
+    struct_info *si = sdef->data.structure_info = (struct_info *)malloc(sizeof(struct_info));
+    si->is_defined = true;
+    si->is_union = false;
+    si->name = strdup(data_struct_name);
+    si->source = sdef;
+    si->fields = (field_info_list *)malloc(sizeof(field_info_list));
+    si->fields->alloc = si->fields->count = 0;
+  }
+
+  MCcall(mc_save_source_file_from_updated_info(source_file));
 
   return 0;
 }
@@ -475,6 +543,7 @@ int mc_mo_load_operations(mc_node *module_node)
     // Create the source files
     const char *const gen_source_name_context_property = "gen-source-name";
     const char *const gen_source_folder_context_property = "gen-source-folder";
+    const char *const gen_data_name_context_property = "gen-data-name";
     {
       // Obtain their name
       add_renderable_system->title = strdup("add-3d-renderable-system");
@@ -496,7 +565,8 @@ int mc_mo_load_operations(mc_node *module_node)
       step->action = MO_OPPA_OPEN_FOLDER_DIALOG;
       step->file_dialog.message = strdup("Select the folder to create the system source files in:");
       // -- -- Folder to begin dialog with -- should be the src folder of the active project
-      step->file_dialog.context_arg = (mo_op_step_context_arg){MO_OPPC_ACTIVE_PROJECT_SRC_PATH, NULL}; // TODO
+      step->file_dialog.initial_folder =
+          (mo_op_step_context_arg){MO_OPPC_CSTR, strdup("/home/jason/midge/projects/fs/src")}; // TODO
       step->file_dialog.target_context_property = strdup(gen_source_folder_context_property);
       step->next = NULL;
     }
@@ -507,7 +577,7 @@ int mc_mo_load_operations(mc_node *module_node)
 
       // -- Open Open-Path-Dialog - Seek a folder to store the source
       step->action = MO_OPPA_USER_FUNCTION;
-      step->delegate.fptr = &_user_function_delegate;
+      step->delegate.fptr = &_user_function_gen_source_files;
       step->next = NULL;
     }
     {
@@ -520,7 +590,17 @@ int mc_mo_load_operations(mc_node *module_node)
       step->text_input_dialog.message = strdup("Enter the name of the data structure:");
       step->text_input_dialog.default_text =
           (mo_op_step_context_arg){MO_OPPC_PROCESS_CONTEXT_PROPERTY, strdup(gen_source_name_context_property)};
-      step->text_input_dialog.target_context_property = strdup(gen_source_name_context_property);
+      step->text_input_dialog.target_context_property = strdup(gen_data_name_context_property);
+      step->next = NULL;
+    }
+    {
+      // Generate them
+      step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+      step = step->next;
+
+      // -- Open Open-Path-Dialog - Seek a folder to store the source
+      step->action = MO_OPPA_USER_FUNCTION;
+      step->delegate.fptr = &_user_function_insert_data_struct;
       step->next = NULL;
     }
     // {
@@ -530,7 +610,7 @@ int mc_mo_load_operations(mc_node *module_node)
 
     //   // -- Open Open-Path-Dialog - Seek a folder to store the source
     //   step->action = MO_OPPA_USER_FUNCTION;
-    //   step->delegate.fptr = &_user_function_delegate;
+    //   step->delegate.fptr = &_user_function_gen_source_files;
     //   step->next = NULL;
     // }
 

@@ -119,27 +119,102 @@ int mcf_directory_exists(const char *path, bool *exists)
 
 //   return 0;
 // }
+
+/* TODO -- this just won't work with linux - wont get no extension and will have trouble with '.' in anything but
+ * extension use
+ */
 int mcf_obtain_file_extension(const char *path, char *buf, int max_len)
 {
   int a = 0;
-  char *c = (char *)&path[0];
+  char *c = (char *)path - 1, *s = NULL;
 
-  while (*c != '\0') {
-    if (a) {
-      if (a >= max_len) {
-        MCerror(6825, "File extension was too large");
+  // Move to the end of the string
+  while (*(++c) != '\0')
+    ;
+
+  // Go back to the first decimal or the start or the first slash bracket
+  while (c != path) {
+    --c;
+    --max_len;
+    if (*c == '.') {
+      ++c;
+      if (max_len < 0) {
+        // TODO -- this max_len test might be off by 1
+        MCerror(6825, "File extension was too large for provided buffer");
       }
-
-      buf[a - 1] = *c;
-      ++a;
+      strcpy(buf, c);
+      return 0;
     }
-    else if (*c == '.') {
-      a = 1;
+    else if (*c == '/' || *c == '\\') {
+      break;
     }
-    ++c;
   }
 
-  buf[a - 1] = '\0';
-  // printf("mcf_obtain_file_extension Input:'%s' Output:'%s'\n", path, buf);
+  // There is no extension
+  if (max_len < 1) {
+    MCerror(6826, "File extension was too large for provided buffer");
+  }
+  buf[0] = '\0';
+  return 0;
+}
+
+int mcf_obtain_filename(const char *path, char *buf, int max_len)
+{
+  int a = 0;
+  char *c = (char *)path - 1, *s;
+
+  // Move to the end of the string
+  while (*(++c) != '\0')
+    ;
+  s = c;
+
+  // Go back to the start or the first slash bracket
+  bool ext_found = false;
+  while (c != path) {
+    --c;
+    --max_len;
+    if (!ext_found && *c == '.') {
+      ext_found = true;
+      s = c;
+    }
+    else if (*c == '/' || *c == '\\') {
+      ++c;
+      break;
+    }
+  }
+
+  // Copy
+  if (max_len < s - c + 1) {
+    MCerror(6826, "File extension was too large for provided buffer");
+  }
+  strncpy(buf, c, s - c);
+  return 0;
+}
+
+int mcf_obtain_filename_with_extension(const char *path, char *buf, int max_len)
+{
+  int a = 0;
+  char *c = (char *)path - 1, *s;
+
+  // Move to the end of the string
+  while (*(++c) != '\0')
+    ;
+  s = c;
+
+  // Go back to the start or the first slash bracket
+  while (c != path) {
+    --c;
+    --max_len;
+    if (*c == '/' || *c == '\\') {
+      ++c;
+      break;
+    }
+  }
+
+  // Copy
+  if (max_len < s - c + 1) {
+    MCerror(6826, "File extension was too large for provided buffer");
+  }
+  strcpy(buf, c);
   return 0;
 }

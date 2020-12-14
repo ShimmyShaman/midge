@@ -16,5 +16,7 @@ int mcf_get_parent_directory(char *buf, int buf_size, const char *path);
 int mcf_directory_exists(const char *path, bool *exists);
 
 int mcf_obtain_file_extension(const char *path, char *buf, int max_len);
+int mcf_obtain_filename(const char *path, char *buf, int max_len);
+int mcf_obtain_filename_with_extension(const char *path, char *buf, int max_len);
 
 #endif // MC_FILE_H

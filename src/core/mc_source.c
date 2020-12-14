@@ -4,7 +4,7 @@
 #include <string.h>
 
 // #include <sys/stat.h>
-// #include <unistd.h>
+#include <unistd.h>
 
 #include "midge_error_handling.h"
 
@@ -13,6 +13,25 @@
 #include "core/mc_code_transcription.h"
 
 #include "mc_source.h"
+
+// -------------------------------------------------------------
+int mcdebug_generate_files_from_sf_info(mc_source_file_info *sf)
+{
+  bool is_header = false;
+
+  mc_syntax_node *file_ast = (mc_syntax_node *)calloc(sizeof(mc_syntax_node), 1);
+  file_ast->type = MC_SYNTAX_FILE_ROOT;
+  file_ast->begin.index = 0;
+  file_ast->begin.line = 0;
+  file_ast->begin.col = 0;
+
+  file_ast->children = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+  file_ast->children->alloc = 0;
+  file_ast->children->count = 0;
+
+  return 0;
+}
+// -------------------------------------------------------------
 
 int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field);
 
@@ -320,18 +339,16 @@ int mcs_construct_dependency(function_info *dependent_function, const char *iden
 
 int mcs_determine_code_dependencies(function_info *dependent_function, mc_syntax_node *code_block) { return 0; }
 
-int mcs_register_function_declaration(mc_source_file_info *source_file, mc_syntax_node *function_ast,
-                                      function_info **p_func_info)
+int mcs_register_function_declaration(mc_source_file_info *source_file, mc_syntax_node *function_ast)
 {
   int p;
 
   // Ensure a function info entry exists for the declared function
-  find_function_info(function_ast->function.name->text, p_func_info);
+  function_info *fi;
+  find_function_info(function_ast->function.name->text, &fi);
 
-  function_info *fi = *p_func_info;
   if (!fi) {
     fi = (function_info *)calloc(1, sizeof(function_info));
-    *p_func_info = fi;
     attach_function_info_to_owner(fi);
 
     fi->name = strdup(function_ast->function.name->text);
@@ -392,7 +409,7 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
     fi->source->type = SOURCE_DEFINITION_FUNCTION;
     fi->source->source_file = source_file;
     fi->source->data.func_info = fi;
-    fi->source->code;
+    // TODO -- can't the original code just be posted to it -- instead of having to generate more...
     MCcall(mcs_copy_syntax_node_to_text(function_ast, &fi->source->code));
 
     MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
@@ -402,24 +419,25 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
   return 0;
 }
 
-int mcs_register_struct_declaration(mc_syntax_node *struct_ast, struct_info **p_struct_info)
+int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_node *struct_ast)
 {
   if (!struct_ast->struct_decl.type_name) {
     MCerror(8461, "root-level anonymous external structures not yet supported");
   }
 
-  find_struct_info(struct_ast->struct_decl.type_name->text, p_struct_info);
+  struct_info *si;
+  find_struct_info(struct_ast->struct_decl.type_name->text, &si);
 
-  struct_info *si = *p_struct_info;
   if (!si) {
     si = malloc(sizeof(struct_info));
-    *p_struct_info = si;
     attach_struct_info_to_owner(si);
 
-    mcs_copy_syntax_node_to_text(struct_ast->struct_decl.type_name, &si->name);
+    si->source = NULL;
+    MCcall(mcs_copy_syntax_node_to_text(struct_ast->struct_decl.type_name, &si->name));
     si->is_defined = false;
   }
 
+  bool is_definition = false;
   if (struct_ast->type == MC_SYNTAX_STRUCT_DECL) {
     // Struct
     si->is_union = false;
@@ -430,8 +448,8 @@ int mcs_register_struct_declaration(mc_syntax_node *struct_ast, struct_info **p_
       }
 
       // Define
-      mcs_summarize_type_field_list(struct_ast->struct_decl.fields, &si->fields);
-      si->is_defined = true;
+      MCcall(mcs_summarize_type_field_list(struct_ast->struct_decl.fields, &si->fields));
+      si->is_defined = is_definition = true;
     }
   }
   else if (struct_ast->type == MC_SYNTAX_UNION_DECL) {
@@ -444,12 +462,29 @@ int mcs_register_struct_declaration(mc_syntax_node *struct_ast, struct_info **p_
       }
 
       // Define
-      mcs_summarize_type_field_list(struct_ast->union_decl.fields, &si->fields);
-      si->is_defined = true;
+      MCcall(mcs_summarize_type_field_list(struct_ast->union_decl.fields, &si->fields));
+      si->is_defined = is_definition = true;
     }
   }
   else {
     MCerror(8483, "Not struct or union?");
+  }
+
+  if (is_definition) {
+    // Fill the Source Definition
+    if (si->source) {
+      MCerror(8384, "TODO for '%s'", si->name);
+    }
+
+    si->source = (source_definition *)malloc(sizeof(source_definition));
+    si->source->type = SOURCE_DEFINITION_STRUCTURE;
+    si->source->source_file = source_file;
+    si->source->data.structure_info = si;
+    // TODO -- can't the original code just be posted to it -- instead of having to generate more...
+    MCcall(mcs_copy_syntax_node_to_text(struct_ast, &si->source->code));
+
+    MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
+                                &source_file->definitions.count, si->source));
   }
 
   return 0;
@@ -479,9 +514,8 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // }
     } break;
     case MC_SYNTAX_FUNCTION: {
-      function_info *info;
       // Function Declaration only
-      MCcall(mcs_register_function_declaration(source_file, child, &info));
+      MCcall(mcs_register_function_declaration(source_file, child));
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
       char buf[1024];
@@ -489,8 +523,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       case MC_SYNTAX_UNION_DECL:
       case MC_SYNTAX_STRUCT_DECL: {
         // print_syntax_node(child->type_alias.type_descriptor, 0);
-        struct_info *info;
-        MCcall(mcs_register_struct_declaration(child->type_alias.type_descriptor, &info));
+        MCcall(mcs_register_struct_declaration(source_file, child->type_alias.type_descriptor));
         // MCerror(1151, "TODO");
         // struct_info *info;
         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
@@ -533,7 +566,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
     case MC_SYNTAX_UNION_DECL:
     case MC_SYNTAX_STRUCT_DECL: {
       struct_info *info;
-      MCcall(mcs_register_struct_declaration(child, &info));
+      MCcall(mcs_register_struct_declaration(source_file, child));
       // struct_info *info;
       // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       // info->source->source_file = source_file;
@@ -624,10 +657,29 @@ int mcs_interpret_file(const char *filepath)
   mc_source_file_info *sf = malloc(sizeof(mc_source_file_info));
   sf->definitions.alloc = 0;
   sf->definitions.count = 0;
-  sf->filepath = strdup(filepath);
+  char fullpath[256];
+  if (filepath[0] != '/') {
+    // Given filepath is relative -- convert to absolute
+    getcwd(fullpath, 256);
+    char c = fullpath[strlen(fullpath) - 1];
+    if (c != '\\' && c != '/') {
+      strcat(fullpath, "/");
+    }
+    strcat(fullpath, filepath);
+  }
+  else {
+    strcpy(fullpath, filepath);
+  }
+  sf->filepath = strdup(fullpath);
+  MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
+                              &app_itp_data->source_files.count, sf));
 
   // Obtain function/struct/enum information & dependencies
   MCcall(mcs_process_ast_root_children(sf, file_ast->children));
+
+  // // DEBUG -- FILE GENERATION TEST
+  // MCcall(mcdebug_generate_files_from_sf_info(sf));
+  // // DEBUG
 
   // Generate code (from the AST) with midge insertions integrated (stack call / error tracking)
   {
@@ -642,12 +694,12 @@ int mcs_interpret_file(const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  if (!strcmp("src/modules/dialogs/text_input_dialog.c", filepath)) {
-    // usleep(10000);
-    // printf("\ngen-code:\n%s||\n", code);
-    save_text_to_file("src/temp/todelete.h", code);
-    // MCerror(7704, "TODO");
-  }
+  // if (!strcmp("src/modules/dialogs/text_input_dialog.c", filepath)) {
+  //   // usleep(10000);
+  //   // printf("\ngen-code:\n%s||\n", code);
+  //   save_text_to_file("src/temp/todelete.h", code);
+  //   // MCerror(7704, "TODO");
+  // }
 
   // Send the code to the interpreter
   {

@@ -93,6 +93,7 @@ typedef enum preprocessor_define_type {
   PREPROCESSOR_DEFINE_FUNCTION_LIKE,
 } preprocessor_define_type;
 
+// TODO -- remove this and all uses, remnant of a different interpreter
 typedef struct struct_id {
   char *identifier;
   unsigned short version;

@@ -148,6 +148,7 @@ static int _mcl_find_sequence_in_text_ignoring_empty_text(const char *text, cons
   MCerror(60, "Could not find '%s'>'%s'>'%s'", first, second, third);
 }
 
+// TODO -- delete these arrays - dont' believe they have any use anymore
 const char *_mcl_core_structs[] = {
     // midge_common.h
     "mc_str",
