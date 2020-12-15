@@ -155,13 +155,13 @@ const char *_mcl_core_structs[] = {
 
     // core_definitions.h
     "source_file_type",
-    "source_definition_type",
+    "mc_source_definition_type",
     "node_type",
     "parameter_kind",
     "field_kind",
     "preprocessor_define_type",
     "struct_id",
-    "source_definition",
+    "mc_source_definition",
     "mc_global_data",
     "mc_source_file_info",
     "function_info",

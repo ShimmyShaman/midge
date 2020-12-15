@@ -12,9 +12,102 @@
 #include "modules/info_transcription/info_transcription.h"
 #include "modules/mc_io/mc_file.h"
 
+int _mc_transcribe_sub_type_info(mc_str *str, field_info *sub_type, int indent);
+
 int _mc_transcribe_enum_info(mc_str *str, enumeration_info *enumeration)
 {
   MCerror(7313, "TODO");
+  return 0;
+}
+
+int _mc_transcribe_field_declarator_info_list(mc_str *str, field_declarator_info_list *list)
+{
+  field_declarator_info *di;
+  for (int d = 0; d < list->count; ++d) {
+    di = list->items[d];
+
+    if (d) {
+      MCcall(append_char_to_mc_str(str, ','));
+    }
+    MCcall(append_char_to_mc_str(str, ' '));
+
+    for (int p = 0; p < di->deref_count; ++p)
+      MCcall(append_char_to_mc_str(str, '*'));
+
+    MCcall(append_to_mc_str(str, di->name));
+  }
+  return 0;
+}
+
+int _mc_transcribe_field_info_list(mc_str *str, field_info_list *list, int indent)
+{
+  field_info *fi;
+  for (int f = 0; f < list->count; ++f) {
+    fi = list->items[f];
+
+    for (int i = 0; i < indent; ++i)
+      MCcall(append_to_mc_str(str, "  "));
+    switch (fi->field_type) {
+    case FIELD_KIND_STANDARD: {
+      // Type
+      MCcall(append_to_mc_str(str, fi->field.type_name));
+
+      // Declarators
+      MCcall(_mc_transcribe_field_declarator_info_list(str, fi->field.declarators));
+
+      // Rest
+      MCcall(append_to_mc_str(str, ";\n"));
+    } break;
+    case FIELD_KIND_NESTED_UNION:
+    case FIELD_KIND_NESTED_STRUCT: {
+      MCcall(_mc_transcribe_sub_type_info(str, fi, 1));
+
+      // // Rest
+      // for (int i = 0; i < indent - 1; ++i)
+      //   MCcall(append_to_mc_str(str, "  "));
+      // MCcall(append_to_mc_str(str, "} "));
+
+      // MCcall(_mc_transcribe_field_declarator_info_list(str, fi->sub_type.declarators));
+
+      // // Rest
+      // MCcall(append_to_mc_str(str, ";\n"));
+    } break;
+    default:
+      MCerror(9536, "TODO :%i", fi->field_type);
+    }
+  }
+
+  return 0;
+}
+
+int _mc_transcribe_sub_type_info(mc_str *str, field_info *sub_type, int indent)
+{
+  // Type
+  if (sub_type->field_type == FIELD_KIND_NESTED_UNION) {
+    MCcall(append_to_mc_str(str, "union "));
+  }
+  else if (sub_type->field_type == FIELD_KIND_NESTED_STRUCT) {
+    MCcall(append_to_mc_str(str, "struct "));
+  }
+  else {
+    MCerror(9131, "Not Supported :%i", sub_type->field_type);
+  }
+
+  if (sub_type->sub_type.type_name) {
+    MCcall(append_to_mc_str(str, sub_type->sub_type.type_name));
+    MCcall(append_char_to_mc_str(str, ' '));
+  }
+
+  MCcall(append_to_mc_str(str, " {\n"));
+
+  MCcall(_mc_transcribe_field_info_list(str, sub_type->sub_type.fields, indent + 1));
+
+  for (int i = 0; i < indent; ++i)
+    MCcall(append_to_mc_str(str, "  "));
+  MCcall(append_to_mc_str(str, "}"));
+  MCcall(_mc_transcribe_field_declarator_info_list(str, sub_type->sub_type.declarators));
+
+  MCcall(append_to_mc_str(str, ";\n"));
   return 0;
 }
 
@@ -24,39 +117,7 @@ int _mc_transcribe_structure_info(mc_str *str, struct_info *structure)
   MCcall(append_to_mc_str(str, structure->name));
   MCcall(append_to_mc_str(str, " {\n"));
 
-  field_info *fi;
-  for (int f = 0; f < structure->fields->count; ++f) {
-    fi = structure->fields->items[f];
-
-    MCcall(append_to_mc_str(str, "  "));
-    switch (fi->field_type) {
-    case FIELD_KIND_STANDARD: {
-      // Type
-      MCcall(append_to_mc_str(str, fi->field.type_name));
-
-      // Declarators
-      field_declarator_info *di;
-      for (int d = 0; d < fi->field.declarators->count; ++d) {
-        di = fi->field.declarators->items[d];
-
-        if (d) {
-          MCcall(append_char_to_mc_str(str, ','));
-        }
-        MCcall(append_char_to_mc_str(str, ' '));
-
-        for (int p = 0; p < di->deref_count; ++p)
-          MCcall(append_char_to_mc_str(str, '*'));
-
-        MCcall(append_to_mc_str(str, di->name));
-      }
-
-      // Rest
-      MCcall(append_to_mc_str(str, ";\n"));
-    } break;
-    default:
-      MCerror(9536, "TODO :%i", fi->field_type);
-    }
-  }
+  MCcall(_mc_transcribe_field_info_list(str, structure->fields, 1));
 
   MCcall(append_to_mc_str(str, "} "));
   MCcall(append_to_mc_str(str, structure->name));
@@ -73,14 +134,16 @@ int _mc_transcribe_function_info(mc_str *str, function_info *function)
 
 int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
 {
+  int a, phase = 0;
+
   puts("_mc_generate_header_source");
   puts(source_file->filepath);
   // DEBUG
   // PROTECT CERTAIN SOURCE UNTIL THIS METHOD IS SAFE
-  for (int i = 0;; ++i) {
-    if (source_file->filepath[i] == '\0')
+  for (int a = 0;; ++a) {
+    if (source_file->filepath[a] == '\0')
       break;
-    if (!strncmp(source_file->filepath + i, "midge/src/", 10)) {
+    if (!strncmp(source_file->filepath + a, "midge/src/", 10)) {
       MCerror(7004, "INVALID FUNCTION CALL");
     }
   }
@@ -92,7 +155,7 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
 
   // Generate the preamble
   MCcall(append_to_mc_strf(str, "/* %s.h */\n", filename));
-  MCcall(append_to_mc_str(str, "\n"));
+  MCcall(append_char_to_mc_str(str, '\n'));
 
   // Generate the include guard
   MCcall(append_to_mc_str(str, "#ifndef "));
@@ -102,30 +165,42 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
   MCcall(append_uppercase_to_mc_str(str, filename));
   MCcall(append_to_mc_str(str, "_H\n"));
 
+  // Includes
+  MCcall(append_char_to_mc_str(str, '\n'));
+  mc_include_directive_info *idi;
+  for (a = 0; a < source_file->includes.count; ++a) {
+    idi = source_file->includes.items[a];
+
+    MCcall(append_to_mc_str(str, "#include "));
+    MCcall(append_char_to_mc_str(str, idi->is_system_search ? '<' : '"'));
+    MCcall(append_to_mc_str(str, idi->filepath));
+    MCcall(append_char_to_mc_str(str, idi->is_system_search ? '>' : '"'));
+    MCcall(append_char_to_mc_str(str, '\n'));
+  }
+
   // Write out in order enums > structs > functions
-  int a, phase = 0;
-  source_definition *sd;
+  mc_source_definition *sd;
   while (phase < 4) {
 
     for (a = 0; a < source_file->definitions.count; ++a) {
       sd = source_file->definitions.items[a];
 
       switch (sd->type) {
-      case SOURCE_DEFINITION_ENUMERATION: {
+      case mc_source_definition_ENUMERATION: {
         if (phase == 1) {
           // Write it
           MCcall(append_char_to_mc_str(str, '\n'));
           MCcall(_mc_transcribe_enum_info(str, sd->data.enum_info));
         }
       } break;
-      case SOURCE_DEFINITION_STRUCTURE: {
+      case mc_source_definition_STRUCTURE: {
         if (phase == 2) {
           // Write it
           MCcall(append_char_to_mc_str(str, '\n'));
           MCcall(_mc_transcribe_structure_info(str, sd->data.structure_info));
         }
       } break;
-      case SOURCE_DEFINITION_FUNCTION: {
+      case mc_source_definition_FUNCTION: {
         if (phase == 3) {
           // Write it
           MCcall(append_char_to_mc_str(str, '\n'));

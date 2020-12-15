@@ -204,7 +204,7 @@ void core_display_handle_input(frame_time *elapsed, mc_node_v1 *core_display, mc
         switch (entry->type) {
         case CORE_ENTRY_FUNCTION: {
           // printf("babel\n");
-          // printf("entry->data:%i\n", ((mc_source_definition_v1 *)entry->data)->type);
+          // printf("entry->data:%i\n", ((mc_mc_source_definition_v1 *)entry->data)->type);
           void *vargs[1];
           vargs[0] = (void **)&entry->data;
           load_existing_function_into_code_editor(1, vargs);

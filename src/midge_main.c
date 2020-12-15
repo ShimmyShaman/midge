@@ -5727,8 +5727,8 @@ int register_and_transcribe_syntax_structure(mc_command_hub_v1 *command_hub, mc_
   register_midge_error_tag("register_and_transcribe_syntax_structure()");
 
   // Set Provided Source Path
-  mc_source_definition_v1 *definition = (mc_source_definition_v1 *)malloc(sizeof(mc_source_definition_v1));
-  definition->type = SOURCE_DEFINITION_STRUCTURE;
+  mc_mc_source_definition_v1 *definition = (mc_mc_source_definition_v1 *)malloc(sizeof(mc_mc_source_definition_v1));
+  definition->type = mc_source_definition_STRUCTURE;
   definition->source_file = source_file;
   MCcall(mcs_copy_syntax_node_to_text(struct_ast, &definition->code));
   MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,

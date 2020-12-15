@@ -663,7 +663,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   //   if (event->ctrlDown) {
 
   //     switch (state->source_data->type) {
-  //     case SOURCE_DEFINITION_FUNCTION: {
+  //     case mc_source_definition_FUNCTION: {
   //       // Read the code from the editor
   //       free(state->source_data->code);
   //       read_editor_text_into_cstr(state, &state->source_data->code);
@@ -689,7 +689,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
   //       // event->handled = true;
   //       // break;
   //     }
-  //     case SOURCE_DEFINITION_STRUCTURE: {
+  //     case mc_source_definition_STRUCTURE: {
   //       // Read the code from the editor
   //       define_struct_from_code_editor(state);
   //       event->handled = true;
@@ -970,8 +970,8 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
 
         char *filepath;
         switch (state->source_data->type) {
-        case SOURCE_DEFINITION_STRUCTURE:
-        case SOURCE_DEFINITION_FUNCTION: {
+        case mc_source_definition_STRUCTURE:
+        case mc_source_definition_FUNCTION: {
 
           // Read the code from the editor into the function source
           char *definition;
@@ -1011,7 +1011,7 @@ void code_editor_handle_keyboard_input(frame_time *elapsed, mc_node_v1 *fedit, m
         int *source_type = (int *)malloc(sizeof(int));
         *source_type = (int)state->source_data->type;
         context[0] = (void *)source_type;
-        if (state->source_data->type == SOURCE_DEFINITION_FUNCTION) {
+        if (state->source_data->type == mc_source_definition_FUNCTION) {
           int *context_syntax_node_type = (int *)malloc(sizeof(int));
           *context_syntax_node_type = state->source_data->type;
           context[1] = (void *)context_syntax_node_type;

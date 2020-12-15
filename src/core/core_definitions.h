@@ -40,12 +40,12 @@ typedef enum source_file_type {
   SOURCE_FILE_EXCLUSIVE_MAX = 100,
 } source_file_type;
 
-typedef enum source_definition_type {
-  SOURCE_DEFINITION_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
-  SOURCE_DEFINITION_FUNCTION,
-  SOURCE_DEFINITION_STRUCTURE,
-  SOURCE_DEFINITION_ENUMERATION,
-} source_definition_type;
+typedef enum mc_source_definition_type {
+  mc_source_definition_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
+  mc_source_definition_FUNCTION,
+  mc_source_definition_STRUCTURE,
+  mc_source_definition_ENUMERATION,
+} mc_source_definition_type;
 
 typedef enum node_type {
   NODE_TYPE_NONE = 1,
@@ -105,9 +105,9 @@ struct function_info;
 struct enumeration_info;
 struct field_info_list;
 
-typedef struct source_definition {
+typedef struct mc_source_definition {
   struct_id *type_id;
-  source_definition_type type;
+  mc_source_definition_type type;
   struct mc_source_file_info *source_file;
   union {
     void *p_data;
@@ -116,16 +116,46 @@ typedef struct source_definition {
     struct enumeration_info *enum_info;
   } data;
   char *code;
-} source_definition;
+} mc_source_definition;
+
+typedef struct mc_include_directive_info {
+  bool is_system_search;
+  char *filepath;
+} mc_include_directive_info;
+
+typedef enum mc_source_file_code_segment_type {
+
+} mc_source_file_code_segment_type;
+
+typedef struct mc_source_file_code_segment {
+  mc_source_file_code_segment_type type;
+  union {
+    mc_function_declaration *function_declaration;
+    mc_struct_declaration *struct_declaration;
+    mc_enumeration_declaration *enumeration_declaration;
+    function_info *function;
+    struct_info *structure;
+    enumeration_info *enumeration;
+    mc_include_directive_info *include;
+    mc_define_directive_info *define;
+    // mc_source_comment_info *comment; TODO
+    // mc_pp_directive_info *pp_directive; TODO -- other directives
+  };
+} mc_source_file_code_segment;
 
 typedef struct mc_source_file_info {
   struct_id *type_id;
   char *filepath;
   struct {
-    unsigned int alloc;
+    unsigned int capacity;
     unsigned int count;
-    source_definition **items;
-  } definitions;
+    mc_source_file_code_segment **items;
+  } segments;
+  // struct {
+  //   unsigned int alloc;
+  //   unsigned int count;
+  //   mc_include_directive_info **items;
+  // } includes;
 } mc_source_file_info;
 
 typedef struct enum_member_info {
@@ -143,7 +173,7 @@ typedef struct enumeration_info {
     enum_member_info **items;
   } members;
 
-  source_definition *source;
+  mc_source_definition *source;
 } enumeration_info;
 
 typedef struct preprocess_define_info {
@@ -198,7 +228,7 @@ typedef struct struct_info {
   bool is_union;
   bool is_defined;
 
-  source_definition *source;
+  mc_source_definition *source;
 
   field_info_list *fields;
 } struct_info;
@@ -225,7 +255,7 @@ typedef struct parameter_info {
 struct function_info;
 typedef struct function_info {
   // struct_id *type_id;
-  source_definition *source;
+  mc_source_definition *source;
   bool is_defined;
   char *name;
   // int (**ptr_declaration)(int, void **);
@@ -318,10 +348,10 @@ int remove_from_collection(void ***collection, unsigned int *collection_count, i
 int remove_ptr_from_collection(void ***collection, unsigned int *collection_count, bool return_error_on_failure,
                                void *ptr);
 
-int find_function_info(const char *function_name, function_info **result);
+int find_function_info(const char *name, function_info **result);
 // int find_function_info_by_ptr(void *function_ptr, function_info **result);
-int find_struct_info(const char *function_name, struct_info **structure_info);
-int find_enumeration_info(const char *function_name, enumeration_info **enum_info);
+int find_struct_info(const char *name, struct_info **structure_info);
+int find_enumeration_info(const char *name, enumeration_info **enum_info);
 int find_enum_member_info(const char *name, enumeration_info **result_type, enum_member_info **result);
 
 int release_struct_id(struct_id *ptr);

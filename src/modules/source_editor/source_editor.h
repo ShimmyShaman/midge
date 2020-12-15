@@ -128,7 +128,7 @@ typedef struct mc_se_source_editor {
 
 // source_editor/source_editor.c
 int mc_se_init_source_editor();
-// int mce_activate_source_editor_for_definition(source_definition *definition);
+// int mce_activate_source_editor_for_definition(mc_source_definition *definition);
 
 // // source_editor/source_line.c
 // int mce_init_source_line(mc_node *parent_node, mce_source_line **source_line);

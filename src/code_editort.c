@@ -690,7 +690,7 @@ int code_editor_begin_function_live_debug(mc_code_editor_state_v1 *cestate)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
+  if (cestate->source_data->type != mc_source_definition_FUNCTION) {
     return 0;
   }
 
@@ -830,7 +830,7 @@ int code_editor_evaluate_syntax(mc_code_editor_state_v1 *cestate)
   char *cstr;
   MCcall(read_editor_text_into_cstr(cestate, &cstr));
 
-  if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
+  if (cestate->source_data->type != mc_source_definition_FUNCTION) {
     return 0;
   }
   // printf("cees-1\n");
@@ -890,7 +890,7 @@ int code_editor_toggle_view_v1(mc_code_editor_state_v1 *state)
   mc_command_hub_v1 *command_hub;
   /*mcfuncreplace*/
 
-  if (state->source_data->type != SOURCE_DEFINITION_FUNCTION) {
+  if (state->source_data->type != mc_source_definition_FUNCTION) {
     return 0;
   }
 
@@ -1378,7 +1378,7 @@ int mce_convert_syntax_to_rtf(mc_str *code_rtf, mc_syntax_node *syntax_node)
 int code_editor_load_function(mc_code_editor_state_v1 *cestate, function_info *function)
 {
   register_midge_error_tag("code_editor_load_function()");
-  if (cestate->source_data->type != SOURCE_DEFINITION_FUNCTION) {
+  if (cestate->source_data->type != mc_source_definition_FUNCTION) {
     MCerror(704, "TODO? :%i", cestate->source_data->type);
   }
 

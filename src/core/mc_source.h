@@ -23,7 +23,7 @@
 //   @definition_info is OUT. May be NULL, if not dereference will be set with p-to-function_info/struct_info/enum_info
 //   etc.
 // */
-// int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
+// int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, mc_source_definition *source,
 //                            void **definition_info);
 int mcs_interpret_file(const char *filepath);
 

@@ -299,6 +299,12 @@ void _mc_mo_operational_process_selected(mci_input_event *input_event, mcu_butto
     // TODO -- can't just clear these properties need memory releasing
     hash_table_clear(&mod->active_process->context);
 
+    // Temp -- project context TODO
+    struct_info *si;
+    find_struct_info("fs_world", &si);
+    const char *const project_3d_root_context_property = "project-3d-root";
+    hash_table_set(project_3d_root_context_property, si, &mod->active_process->context);
+
     _mc_mo_activate_active_step(mod);
   }
 }
@@ -440,6 +446,7 @@ int _user_function_gen_source_files(hash_table_t *context)
     source_file = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
     source_file->filepath = strdup(path);
     source_file->definitions.alloc = source_file->definitions.count = 0U;
+    source_file->includes.alloc = source_file->includes.count = 0U;
 
     MCcall(mc_save_source_file_from_updated_info(source_file));
   }
@@ -449,56 +456,103 @@ int _user_function_gen_source_files(hash_table_t *context)
   return 0;
 }
 
-int _user_function_insert_data_struct(hash_table_t *context)
+int _user_util_insert_standard_field_in_struct(struct_info *structure, const char *type_name, unsigned int deref_count,
+                                               const char *field_name)
 {
-  int a;
+  field_info *f;
 
-  // Obtain the source file
-  const char *const created_header_context_property = "gen-source-header-file";
-  mc_source_file_info *header_file = (mc_source_file_info *)hash_table_get(created_header_context_property, context);
+  // TODO -- checking of any kind???
 
-  const char *const gen_data_name_context_property = "gen-data-name";
-  char *data_struct_name = (char *)hash_table_get(gen_data_name_context_property, context);
+  f = (field_info *)malloc(sizeof(field_info));
+  f->field_type = FIELD_KIND_STANDARD;
+  f->field.type_name = strdup(type_name);
+  f->field.declarators = (field_declarator_info_list *)malloc(sizeof(field_declarator_info_list));
+  f->field.declarators->alloc = f->field.declarators->count = 0U;
 
-  // Check structure does not already exist
-  source_definition *sdef = NULL, *d;
-  for (a = 0; a < header_file->definitions.count; ++a) {
-    d = header_file->definitions.items[a];
-    if (d->type != SOURCE_DEFINITION_STRUCTURE)
+  field_declarator_info *d = (field_declarator_info *)malloc(sizeof(field_declarator_info));
+  d->deref_count = deref_count;
+  d->name = strdup(field_name);
+  MCcall(append_to_collection((void ***)&f->field.declarators->items, &f->field.declarators->alloc,
+                              &f->field.declarators->count, d));
+
+  MCcall(append_to_collection((void ***)&structure->fields->items, &structure->fields->alloc, &structure->fields->count,
+                              f));
+
+  return 0;
+}
+
+int _user_util_insert_struct_in_file(mc_source_file_info *source_file, const char *struct_name, bool error_if_exists,
+                                     struct_info **result)
+{
+  mc_source_definition *sdef = NULL, *d;
+  for (int a = 0; a < source_file->definitions.count; ++a) {
+    d = source_file->definitions.items[a];
+    if (d->type != mc_source_definition_STRUCTURE)
       continue;
-    if (!strcmp(d->data.structure_info->name, data_struct_name)) {
+    if (!strcmp(d->data.structure_info->name, struct_name)) {
       sdef = d;
       break;
     }
   }
   if (!sdef) {
-    // Create a new source definition
-    sdef = (source_definition *)malloc(sizeof(source_definition));
+    // -- Create a new source definition
+    sdef = (mc_source_definition *)malloc(sizeof(mc_source_definition));
     sdef->type_id = NULL; // TODO -- remove
-    sdef->type = SOURCE_DEFINITION_STRUCTURE;
+    sdef->type = mc_source_definition_STRUCTURE;
     sdef->code = "";
-    sdef->source_file = header_file;
+    sdef->source_file = source_file;
 
     struct_info *si = sdef->data.structure_info = (struct_info *)malloc(sizeof(struct_info));
     si->is_defined = true;
     si->is_union = false;
-    si->name = strdup(data_struct_name);
+    si->name = strdup(struct_name);
     si->source = sdef;
     si->fields = (field_info_list *)malloc(sizeof(field_info_list));
     si->fields->alloc = si->fields->count = 0;
 
-    MCcall(append_to_collection((void ***)&header_file->definitions.items, &header_file->definitions.alloc,
-                                &header_file->definitions.count, sdef));
+    MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
+                                &source_file->definitions.count, sdef));
   }
 
-  // Integrate
-  MCcall(mc_save_source_file_from_updated_info(header_file));
+  return 0;
+}
+
+int _user_function_insert_data_struct(hash_table_t *context)
+{
+  // Add a struct declaration for the data type
+  // -- Obtain the source file
+  const char *const created_header_context_property = "gen-source-header-file";
+  mc_source_file_info *header_file = (mc_source_file_info *)hash_table_get(created_header_context_property, context);
+
+  const char *const gen_data_name_context_property = "gen-data-name";
+  const char *data_struct_name = (const char *)hash_table_get(gen_data_name_context_property, context);
+
+  const char *const gen_source_name_context_property = "gen-source-name";
+  const char *gen_source_name = (const char *)hash_table_get(gen_source_name_context_property, context);
+
+  // -- Check structure does not already exist
+  struct_info *si;
+  MCcall(_user_util_insert_struct_in_file(header_file, data_struct_name, false, &si));
+
+  // Add a reference to this struct in the projects root 3D display module
+  const char *const project_3d_root_context_property = "project-3d-root";
+  struct_info *project_3d_root_data = (struct_info *)hash_table_get(project_3d_root_context_property, context);
+
+  if (!project_3d_root_data) {
+    MCerror(9517, "TODO no 3d root for project..?");
+  }
+
+  MCcall(_user_util_insert_standard_field_in_struct(project_3d_root_data, data_struct_name, 1, gen_source_name));
+
+  // -- Integrate
+  MCcall(mc_save_source_file_from_updated_info(project_3d_root_data->source->source_file));
 
   return 0;
 }
 
 int mc_mo_load_operations(mc_node *module_node)
 {
+  // TODO -- temp - needs to be more persistable way to load save processes
   modus_operandi_data *mod = (modus_operandi_data *)module_node->data;
 
   // Script an operational process for scripting operational processes

@@ -191,12 +191,12 @@ typedef enum source_file_type {
   SOURCE_FILE_EXCLUSIVE_MAX = 100,
 } source_file_type;
 
-typedef enum source_definition_type {
-  SOURCE_DEFINITION_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
-  SOURCE_DEFINITION_FUNCTION,
-  SOURCE_DEFINITION_STRUCTURE,
-  SOURCE_DEFINITION_ENUMERATION,
-} source_definition_type;
+typedef enum mc_source_definition_type {
+  mc_source_definition_NULL = SOURCE_FILE_EXCLUSIVE_MAX,
+  mc_source_definition_FUNCTION,
+  mc_source_definition_STRUCTURE,
+  mc_source_definition_ENUMERATION,
+} mc_source_definition_type;
 
 #define PROCESS_UNIT_FIELD_COUNT 8
 typedef enum {
@@ -255,8 +255,8 @@ typedef struct mc_script_local_v1 {
   int scope_depth;
 } mc_script_local_v1;
 
-typedef struct mc_source_definition_v1 {
-  source_definition_type type;
+typedef struct mc_mc_source_definition_v1 {
+  mc_source_definition_type type;
   mc_mc_source_file_info_v1 *source_file;
   union {
     void *p_data;
@@ -265,20 +265,20 @@ typedef struct mc_source_definition_v1 {
     mc_enumeration_info_v1 *enum_info;
   } data;
   char *code;
-} mc_source_definition_v1;
+} mc_mc_source_definition_v1;
 
 typedef struct mc_mc_source_file_info_v1 {
   char *filepath;
   struct {
     uint alloc;
     uint count;
-    mc_source_definition_v1 **items;
+    mc_mc_source_definition_v1 **items;
   } definitions;
 } mc_mc_source_file_info_v1;
 
 typedef struct mc_struct_info_v1 {
   mc_struct_id_v1 *struct_id;
-  mc_source_definition_v1 *source;
+  mc_mc_source_definition_v1 *source;
   char *name;
   unsigned int version;
   char *declared_mc_name;
@@ -315,7 +315,7 @@ typedef struct mc_parameter_info_v1 {
 
 typedef struct mc_function_info_v1 {
   mc_struct_id_v1 *struct_id;
-  mc_source_definition_v1 *source;
+  mc_mc_source_definition_v1 *source;
   const char *name;
   unsigned int latest_iteration;
   int (**ptr_declaration)(int, void **);
@@ -338,7 +338,7 @@ typedef struct mc_enum_member_v1 {
 
 typedef struct mc_enumeration_info_v1 {
   mc_struct_id_v1 *struct_id;
-  mc_source_definition_v1 *source;
+  mc_mc_source_definition_v1 *source;
   const char *name;
   unsigned int latest_iteration;
   struct {
@@ -717,7 +717,7 @@ typedef struct mc_code_editor_state_v1 {
     } entries;
   } suggestion_box;
 
-  mc_source_definition_v1 *source_data;
+  mc_mc_source_definition_v1 *source_data;
 
   // mc_cstring_list_v1 *text;
 
@@ -1129,11 +1129,11 @@ int (*transcribe_code_block_ast_to_mc_definition)(mc_syntax_node *function_synta
 int (*mct_transcribe_function_to_mc)(mc_function_info_v1 *func_info, mc_syntax_node *function_ast,
                                      char **mc_transcription);
 
-int (*parse_and_process_function_definition)(mc_source_definition_v1 *source_definition,
+int (*parse_and_process_function_definition)(mc_mc_source_definition_v1 *mc_source_definition,
                                              mc_function_info_v1 **function_definition, bool skip_clint_declaration);
 int (*obtain_function_info_from_definition)(char *function_definition_text,
                                             mc_function_info_v1 **command_hub_function_info);
-int (*parse_struct_definition)(mc_command_hub_v1 *command_hub, mc_source_definition_v1 *code_definition,
+int (*parse_struct_definition)(mc_command_hub_v1 *command_hub, mc_mc_source_definition_v1 *code_definition,
                                mc_struct_info_v1 **structure_info);
 int (*declare_struct_from_info)(mc_command_hub_v1 *command_hub, mc_struct_info_v1 *structure_info);
 

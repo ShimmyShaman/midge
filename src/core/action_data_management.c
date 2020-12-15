@@ -283,7 +283,7 @@ void report_user_action_effect(mc_process_action_database_v1 *pad, uint register
   // printf("pad-Name:%s\n", pad->name);
   // printf("pad-owneruid:%i\n", *(int *)data_unit->context_data[0]);
   if (!strcmp(pad->name, "Code-Editor:User-Key-Type") && pad->owner_uid == 2424) {
-    if (*(int *)data_unit->context_data[0] == SOURCE_DEFINITION_FUNCTION) {
+    if (*(int *)data_unit->context_data[0] == mc_source_definition_FUNCTION) {
       // Obtain the whole word
       char *word;
       code_editor_obtain_whole_word(&word);

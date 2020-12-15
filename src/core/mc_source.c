@@ -405,8 +405,8 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
       MCerror(8384, "TODO for '%s'", fi->name);
     }
 
-    fi->source = (source_definition *)malloc(sizeof(source_definition));
-    fi->source->type = SOURCE_DEFINITION_FUNCTION;
+    fi->source = (mc_source_definition *)malloc(sizeof(mc_source_definition));
+    fi->source->type = mc_source_definition_FUNCTION;
     fi->source->source_file = source_file;
     fi->source->data.func_info = fi;
     // TODO -- can't the original code just be posted to it -- instead of having to generate more...
@@ -476,8 +476,8 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
       MCerror(8384, "TODO for '%s'", si->name);
     }
 
-    si->source = (source_definition *)malloc(sizeof(source_definition));
-    si->source->type = SOURCE_DEFINITION_STRUCTURE;
+    si->source = (mc_source_definition *)malloc(sizeof(mc_source_definition));
+    si->source->type = mc_source_definition_STRUCTURE;
     si->source->source_file = source_file;
     si->source->data.structure_info = si;
     // TODO -- can't the original code just be posted to it -- instead of having to generate more...
@@ -485,6 +485,8 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
 
     MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
                                 &source_file->definitions.count, si->source));
+  } else {
+
   }
 
   return 0;
@@ -606,10 +608,14 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // Assume all ifndefs (for the moment TODO ) to be true
       MCcall(mcs_process_ast_root_children(source_file, child->preprocess_ifndef.groupopt));
     } break;
-    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
-      // Ignore for now
-      // MCerror(1256, "TODO");
-      break;
+    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
+      mc_include_directive_info *incd = (mc_include_directive_info *)malloc(sizeof(mc_include_directive_info));
+      incd->is_system_search = child->include_directive.is_system_header_search;
+      MCcall(mcs_copy_syntax_node_to_text(child->include_directive.filepath, &incd->filepath));
+
+      MCcall(append_to_collection((void ***)&source_file->includes.items, &source_file->includes.alloc,
+                                  &source_file->includes.count, incd));
+    } break;
     default: {
       switch ((mc_token_type)child->type) {
       case MC_TOKEN_PP_KEYWORD_IFDEF:
@@ -655,8 +661,8 @@ int mcs_interpret_file(const char *filepath)
 
   // Set
   mc_source_file_info *sf = malloc(sizeof(mc_source_file_info));
-  sf->definitions.alloc = 0;
-  sf->definitions.count = 0;
+  sf->definitions.alloc = sf->definitions.count = 0U;
+  sf->includes.alloc = sf->includes.count = 0U;
   char fullpath[256];
   if (filepath[0] != '/') {
     // Given filepath is relative -- convert to absolute
@@ -694,12 +700,13 @@ int mcs_interpret_file(const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  if (!strcmp("src/modules/modus_operandi/init_modus_operandi.c", filepath)) {
-    // usleep(10000);
-    // printf("\ngen-code:\n%s||\n", code);
-    save_text_to_file("src/temp/todelete.h", code);
-    // MCerror(7704, "TODO");
-  }
+  puts("TODO -- write todelete even if there is tcc warning..");
+  // if (!strcmp("src/modules/modus_operandi/init_modus_operandi.c", filepath)) {
+  //   // usleep(10000);
+  //   // printf("\ngen-code:\n%s||\n", code);
+  //   save_text_to_file("src/temp/todelete.h", code);
+  //   // MCerror(7704, "TODO");
+  // }
 
   // Send the code to the interpreter
   {
@@ -949,7 +956,7 @@ int mcs_interpret_file(const char *filepath)
 //   return 0;
 // }
 
-// int instantiate_function_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_str
+// int instantiate_function_definition_from_ast(mc_node *definition_owner, mc_source_definition *source, mc_str
 // *file_context,
 //                                              mc_syntax_node *ast, void **definition_info)
 // {
@@ -1010,7 +1017,7 @@ int mcs_interpret_file(const char *filepath)
 //   return 0;
 // }
 
-// int instantiate_struct_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_syntax_node
+// int instantiate_struct_definition_from_ast(mc_node *definition_owner, mc_source_definition *source, mc_syntax_node
 // *ast,
 //                                            void **definition_info)
 // {
@@ -1040,7 +1047,7 @@ int mcs_interpret_file(const char *filepath)
 //   return 0;
 // }
 
-// int instantiate_enum_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_syntax_node *ast,
+// int instantiate_enum_definition_from_ast(mc_node *definition_owner, mc_source_definition *source, mc_syntax_node *ast,
 //                                          void **definition_info)
 // {
 //   // Register enum
@@ -1129,7 +1136,7 @@ int mcs_interpret_file(const char *filepath)
 //   p-to-function_info/struct_info/enum_info etc.
 // */
 // int instantiate_definition(mc_node *definition_owner, mc_str *file_context, char *code, mc_syntax_node *ast,
-//                            source_definition *source, void **definition_info)
+//                            mc_source_definition *source, void **definition_info)
 // {
 //   register_midge_error_tag("instantiate_definition()");
 //   // Compile Code to Syntax
@@ -1142,7 +1149,7 @@ int mcs_interpret_file(const char *filepath)
 
 //   // TODO -- check type hasn't changed with definition
 //   if (!source) {
-//     source = (source_definition *)malloc(sizeof(source_definition));
+//     source = (mc_source_definition *)malloc(sizeof(mc_source_definition));
 //     source->source_file = NULL;
 //   }
 //   source->code = code;
@@ -1151,7 +1158,7 @@ int mcs_interpret_file(const char *filepath)
 
 //   switch (ast->type) {
 //   case MC_SYNTAX_FUNCTION: {
-//     source->type = SOURCE_DEFINITION_FUNCTION;
+//     source->type = mc_source_definition_FUNCTION;
 //     instantiate_function_definition_from_ast(definition_owner, source, file_context, ast, &p_definition_info);
 
 //     function_info *func_info = (function_info *)p_definition_info;
@@ -1159,14 +1166,14 @@ int mcs_interpret_file(const char *filepath)
 //   } break;
 //   case MC_SYNTAX_UNION_DECL:
 //   case MC_SYNTAX_STRUCT_DECL: {
-//     source->type = SOURCE_DEFINITION_STRUCTURE;
+//     source->type = mc_source_definition_STRUCTURE;
 //     instantiate_struct_definition_from_ast(definition_owner, source, ast, &p_definition_info);
 
 //     struct_info *structure_info = (struct_info *)p_definition_info;
 //     structure_info->source = source;
 //   } break;
 //   case MC_SYNTAX_ENUM_DECL: {
-//     source->type = SOURCE_DEFINITION_ENUMERATION;
+//     source->type = mc_source_definition_ENUMERATION;
 //     instantiate_enum_definition_from_ast(definition_owner, source, ast, &p_definition_info);
 
 //     enumeration_info *enum_info = (enumeration_info *)p_definition_info;

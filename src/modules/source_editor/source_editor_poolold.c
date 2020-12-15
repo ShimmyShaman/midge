@@ -97,7 +97,7 @@ int mce_return_source_token_lists_to_editor_pool(mce_source_editor_pool *source_
   return 0;
 }
 
-int mce_activate_source_editor_for_definition(source_definition *definition)
+int mce_activate_source_editor_for_definition(mc_source_definition *definition)
 {
   midge_app_info *global_data;
   mc_obtain_midge_app_info(&global_data);
@@ -105,7 +105,7 @@ int mce_activate_source_editor_for_definition(source_definition *definition)
   mce_source_editor_pool *source_editor_pool = (mce_source_editor_pool *)global_data->ui_state->source_editor_pool;
 
   switch (definition->type) {
-  case SOURCE_DEFINITION_FUNCTION: {
+  case mc_source_definition_FUNCTION: {
     // Determine if an editor already exists with this definition;
     mce_function_editor *function_editor = NULL;
     for (int i = 0; i < source_editor_pool->function_editor.size; ++i) {
