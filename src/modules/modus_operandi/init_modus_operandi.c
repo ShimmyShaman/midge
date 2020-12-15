@@ -455,7 +455,7 @@ int _user_function_insert_data_struct(hash_table_t *context)
 
   // Obtain the source file
   const char *const created_header_context_property = "gen-source-header-file";
-  mc_source_file_info *header_file = (char *)hash_table_get(created_header_context_property, context);
+  mc_source_file_info *header_file = (mc_source_file_info *)hash_table_get(created_header_context_property, context);
 
   const char *const gen_data_name_context_property = "gen-data-name";
   char *data_struct_name = (char *)hash_table_get(gen_data_name_context_property, context);

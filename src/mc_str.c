@@ -340,6 +340,7 @@ int restrict_mc_str(mc_str *str, int len)
   return 0;
 }
 
+// TODO -- non-essential core method in a core file
 int append_uppercase_to_mc_str(mc_str *str, const char *text)
 {
   int len = strlen(text);
@@ -373,6 +374,7 @@ int append_uppercase_to_mc_str(mc_str *str, const char *text)
   return 0;
 }
 
+// TODO -- non-essential core method in a core file
 int append_lowercase_to_mc_str(mc_str *str, const char *text)
 {
   int len = strlen(text);

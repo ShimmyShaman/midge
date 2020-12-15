@@ -106,7 +106,6 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
   int a, phase = 0;
   source_definition *sd;
   while (phase < 4) {
-    MCcall(append_char_to_mc_str(str, '\n'));
 
     for (a = 0; a < source_file->definitions.count; ++a) {
       sd = source_file->definitions.items[a];
@@ -115,18 +114,21 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
       case SOURCE_DEFINITION_ENUMERATION: {
         if (phase == 1) {
           // Write it
+          MCcall(append_char_to_mc_str(str, '\n'));
           MCcall(_mc_transcribe_enum_info(str, sd->data.enum_info));
         }
       } break;
       case SOURCE_DEFINITION_STRUCTURE: {
         if (phase == 2) {
           // Write it
+          MCcall(append_char_to_mc_str(str, '\n'));
           MCcall(_mc_transcribe_structure_info(str, sd->data.structure_info));
         }
       } break;
       case SOURCE_DEFINITION_FUNCTION: {
         if (phase == 3) {
           // Write it
+          MCcall(append_char_to_mc_str(str, '\n'));
           MCcall(_mc_transcribe_function_info(str, sd->data.func_info));
         }
       } break;
