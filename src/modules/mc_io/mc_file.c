@@ -160,7 +160,6 @@ int mcf_obtain_file_extension(const char *path, char *buf, int max_len)
 
 int mcf_obtain_filename(const char *path, char *buf, int max_len)
 {
-  int a = 0;
   char *c = (char *)path - 1, *s;
 
   // Move to the end of the string
@@ -188,12 +187,12 @@ int mcf_obtain_filename(const char *path, char *buf, int max_len)
     MCerror(6826, "File extension was too large for provided buffer");
   }
   strncpy(buf, c, s - c);
+  buf[s - c] = '\0';
   return 0;
 }
 
 int mcf_obtain_filename_with_extension(const char *path, char *buf, int max_len)
 {
-  int a = 0;
   char *c = (char *)path - 1, *s;
 
   // Move to the end of the string

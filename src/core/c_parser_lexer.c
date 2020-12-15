@@ -2825,6 +2825,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
 
   mcs_peek_token_type(ps, false, 1, &token_type);
   switch (token_type) {
+  case MC_TOKEN_INCREMENT_OPERATOR:
   case MC_TOKEN_AMPERSAND_CHARACTER:
   case MC_TOKEN_OPENING_BRACKET:
   case MC_TOKEN_LOGICAL_NOT_OPERATOR:
@@ -3010,6 +3011,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     }
   } break;
   default: {
+    // An error here just requires setting the pattern correctly
     print_parse_error(ps->code, ps->index, "see-below", "");
     MCerror(1569, "MCS:Unsupported-token:%s", get_mc_token_type_name(token_type));
   }

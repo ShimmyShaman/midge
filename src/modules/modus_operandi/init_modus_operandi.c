@@ -174,7 +174,7 @@ int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
     MCerror(8142, "TODO - canceled process section");
   }
 
-  printf("step completed:'%s'\n", input_text);
+  // printf("step completed:'%s'\n", input_text);
 
   // Set the path to the target context property
   hash_table_set(mod->active_step->text_input_dialog.target_context_property, strdup(input_text),
@@ -219,7 +219,7 @@ int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *
       MCerror(9215, "_mc_mo_obtain_context_arg:Process Context Property '%s' does not exist!",
               (char *)context_arg->data);
     }
-    printf("MO_OPPC_PROCESS_CONTEXT_PROPERTY:'%s'\n", (char *)*result);
+    // printf("MO_OPPC_PROCESS_CONTEXT_PROPERTY:'%s'\n", (char *)*result);
   } break;
   // TODO -- implement when theres some way to inform the calling method to free the set cstr when its done with it.
   // case MO_OPPC_CURRENT_WORKING_DIRECTORY: {
@@ -230,7 +230,7 @@ int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *
   case MO_OPPC_ACTIVE_PROJECT_SRC_PATH:
     puts("ERROR TODO -- MO_OPPC_ACTIVE_PROJECT_SRC_PATH");
   default:
-    MCerror(8220, "_mc_mo_obtain_context_arg:Unsupported type>%i", context_arg);
+    MCerror(8220, "_mc_mo_obtain_context_arg:Unsupported type>%i", context_arg->type);
   }
 
   return 0;
@@ -408,47 +408,43 @@ int _user_function_gen_source_files(hash_table_t *context)
 {
   const char *const gen_source_name_context_property = "gen-source-name";
   const char *const gen_source_folder_context_property = "gen-source-folder";
-  const char *const created_header_path_context_property = "gen-source-header-path";
+  const char *const created_header_context_property = "gen-source-header-file";
 
   char *name = (char *)hash_table_get(gen_source_name_context_property, context);
   char *folder = (char *)hash_table_get(gen_source_folder_context_property, context);
   printf("this is where I would generate source files named '%s.c' and '%s.h' in the folder '%s'\n", name, name,
          folder);
 
-  // Generate the header
-  mc_str *code;
-  MCcall(init_mc_str(&code));
-
-  MCcall(append_to_mc_strf(code, "/* %s.h */\n", name));
-  MCcall(append_to_mc_str(code, "\n"));
-
-  MCcall(append_to_mc_str(code, "#ifndef "));
-  MCcall(append_uppercase_to_mc_str(code, name));
-  MCcall(append_to_mc_str(code, "_H"));
-  MCcall(append_to_mc_str(code, "\n"));
-  MCcall(append_to_mc_str(code, "#define "));
-  MCcall(append_uppercase_to_mc_str(code, name));
-  MCcall(append_to_mc_str(code, "_H"));
-  MCcall(append_to_mc_str(code, "\n"));
-
-  MCcall(append_to_mc_str(code, "\n"));
-
-  MCcall(append_to_mc_str(code, "#endif // "));
-  MCcall(append_uppercase_to_mc_str(code, name));
-  MCcall(append_to_mc_str(code, "_H"));
-
   char path[256];
   strcpy(path, folder);
   MCcall(mcf_concat_filepath(path, 256, name));
   strcat(path, ".h");
-  hash_table_set(created_header_path_context_property, strdup(path), context);
 
-  MCcall(save_text_to_file(path, code->text));
+  mc_app_itp_data *itp;
+  mc_obtain_app_itp_data(&itp);
 
-  release_mc_str(code, true);
+  int a;
+  mc_source_file_info *source_file = NULL;
+  for (a = itp->source_files.count - 1; a >= 0; --a) {
+    // printf("%s<>%s\n", itp->source_files.items[a]->filepath, path);
+    if (!strcmp(itp->source_files.items[a]->filepath, path)) {
+      source_file = itp->source_files.items[a];
+      break;
+    }
+  }
+  if (source_file) {
+    puts("WARNING header source file already existed");
+    // MCerror(8438, "TODO");
+  }
+  else {
+    source_file = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
+    source_file->filepath = strdup(path);
+    source_file->definitions.alloc = source_file->definitions.count = 0U;
 
-  // Add to the interpreter
-  MCcall(mcs_interpret_file(path));
+    MCcall(mc_save_source_file_from_updated_info(source_file));
+  }
+
+  hash_table_set(created_header_context_property, (void *)source_file, context);
 
   return 0;
 }
@@ -458,33 +454,16 @@ int _user_function_insert_data_struct(hash_table_t *context)
   int a;
 
   // Obtain the source file
-  const char *const created_header_path_context_property = "gen-source-header-path";
-  char *header_path = (char *)hash_table_get(created_header_path_context_property, context);
-
-  mc_app_itp_data *itp;
-  mc_obtain_app_itp_data(&itp);
-
-  mc_source_file_info *source_file = NULL;
-  for (a = itp->source_files.count - 1; a >= 0; --a) {
-    printf("%s<>%s\n", itp->source_files.items[a]->filepath, header_path);
-    if (!strcmp(itp->source_files.items[a]->filepath, header_path)) {
-      source_file = itp->source_files.items[a];
-      break;
-    }
-  }
-
-  if (!source_file) {
-    MCerror(6470, "Couldn't find the created source file");
-  }
+  const char *const created_header_context_property = "gen-source-header-file";
+  mc_source_file_info *header_file = (char *)hash_table_get(created_header_context_property, context);
 
   const char *const gen_data_name_context_property = "gen-data-name";
   char *data_struct_name = (char *)hash_table_get(gen_data_name_context_property, context);
 
-  // Check structure does not already exist -- TODO it was a created file, is this necessary? insert or overwrite or
-  // append???
+  // Check structure does not already exist
   source_definition *sdef = NULL, *d;
-  for (a = 0; a < source_file->definitions.count; ++a) {
-    d = source_file->definitions.items[a];
+  for (a = 0; a < header_file->definitions.count; ++a) {
+    d = header_file->definitions.items[a];
     if (d->type != SOURCE_DEFINITION_STRUCTURE)
       continue;
     if (!strcmp(d->data.structure_info->name, data_struct_name)) {
@@ -498,7 +477,7 @@ int _user_function_insert_data_struct(hash_table_t *context)
     sdef->type_id = NULL; // TODO -- remove
     sdef->type = SOURCE_DEFINITION_STRUCTURE;
     sdef->code = "";
-    sdef->source_file = source_file;
+    sdef->source_file = header_file;
 
     struct_info *si = sdef->data.structure_info = (struct_info *)malloc(sizeof(struct_info));
     si->is_defined = true;
@@ -507,9 +486,13 @@ int _user_function_insert_data_struct(hash_table_t *context)
     si->source = sdef;
     si->fields = (field_info_list *)malloc(sizeof(field_info_list));
     si->fields->alloc = si->fields->count = 0;
+
+    MCcall(append_to_collection((void ***)&header_file->definitions.items, &header_file->definitions.alloc,
+                                &header_file->definitions.count, sdef));
   }
 
-  MCcall(mc_save_source_file_from_updated_info(source_file));
+  // Integrate
+  MCcall(mc_save_source_file_from_updated_info(header_file));
 
   return 0;
 }
@@ -571,7 +554,7 @@ int mc_mo_load_operations(mc_node *module_node)
       step->next = NULL;
     }
     {
-      // Generate them
+      // Create them
       step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
       step = step->next;
 

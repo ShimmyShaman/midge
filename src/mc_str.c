@@ -58,6 +58,7 @@ void release_mc_str(mc_str *ptr, bool free_char_string_also)
   free(ptr);
 }
 
+// TODO -- this should be faster then append_to_mc_str
 int append_char_to_mc_str(mc_str *str, char c)
 {
   char buf[2];
