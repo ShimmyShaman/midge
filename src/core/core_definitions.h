@@ -105,58 +105,41 @@ struct function_info;
 struct enumeration_info;
 struct field_info_list;
 
-typedef struct mc_source_definition {
-  struct_id *type_id;
-  mc_source_definition_type type;
-  struct mc_source_file_info *source_file;
-  union {
-    void *p_data;
-    struct struct_info *structure_info;
-    struct function_info *func_info;
-    struct enumeration_info *enum_info;
-  } data;
-  char *code;
-} mc_source_definition;
+// typedef struct mc_source_definition {
+//   struct_id *type_id;
+//   mc_source_definition_type type;
+//   struct mc_source_file_info *source_file;
+//   union {
+//     void *p_data;
+//     struct struct_info *structure_info;
+//     struct function_info *func_info;
+//     struct enumeration_info *enum_info;
+//   } data;
+//   char *code;
+// } mc_source_definition;
 
 typedef struct mc_include_directive_info {
   bool is_system_search;
   char *filepath;
 } mc_include_directive_info;
 
+typedef struct mc_define_directive_info {
+  char *statement;
+} mc_define_directive_info;
+
 typedef enum mc_source_file_code_segment_type {
-
+  MC_SOURCE_SEGMENT_NULL = 0,
+  MC_SOURCE_SEGMENT_FUNCTION_DECLARATION,
+  MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION,
+  MC_SOURCE_SEGMENT_ENUMERATION_DECLARATION,
+  MC_SOURCE_SEGMENT_FUNCTION_DEFINITION,
+  MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION,
+  MC_SOURCE_SEGMENT_ENUMERATION_DEFINITION,
+  MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE,
+  MC_SOURCE_SEGMENT_DEFINE_DIRECTIVE,
+  MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT,
+  MC_SOURCE_SEGMENT_MULTI_LINE_COMMENT,
 } mc_source_file_code_segment_type;
-
-typedef struct mc_source_file_code_segment {
-  mc_source_file_code_segment_type type;
-  union {
-    mc_function_declaration *function_declaration;
-    mc_struct_declaration *struct_declaration;
-    mc_enumeration_declaration *enumeration_declaration;
-    function_info *function;
-    struct_info *structure;
-    enumeration_info *enumeration;
-    mc_include_directive_info *include;
-    mc_define_directive_info *define;
-    // mc_source_comment_info *comment; TODO
-    // mc_pp_directive_info *pp_directive; TODO -- other directives
-  };
-} mc_source_file_code_segment;
-
-typedef struct mc_source_file_info {
-  struct_id *type_id;
-  char *filepath;
-  struct {
-    unsigned int capacity;
-    unsigned int count;
-    mc_source_file_code_segment **items;
-  } segments;
-  // struct {
-  //   unsigned int alloc;
-  //   unsigned int count;
-  //   mc_include_directive_info **items;
-  // } includes;
-} mc_source_file_info;
 
 typedef struct enum_member_info {
   struct_id *type_id;
@@ -173,7 +156,7 @@ typedef struct enumeration_info {
     enum_member_info **items;
   } members;
 
-  mc_source_definition *source;
+   struct mc_source_file_info *source;
 } enumeration_info;
 
 typedef struct preprocess_define_info {
@@ -228,7 +211,8 @@ typedef struct struct_info {
   bool is_union;
   bool is_defined;
 
-  mc_source_definition *source;
+  /* The file this structure is defined in */
+  struct mc_source_file_info *source_file;
 
   field_info_list *fields;
 } struct_info;
@@ -252,10 +236,9 @@ typedef struct parameter_info {
   char *name;
 } parameter_info;
 
-struct function_info;
 typedef struct function_info {
   // struct_id *type_id;
-  mc_source_definition *source;
+  struct mc_source_file_info *source;
   bool is_defined;
   char *name;
   // int (**ptr_declaration)(int, void **);
@@ -273,6 +256,30 @@ typedef struct function_info {
   unsigned int nb_dependencies;
   struct function_info **dependencies;
 } function_info;
+
+typedef struct mc_source_file_code_segment {
+  mc_source_file_code_segment_type type;
+  union {
+    void *data;
+    function_info *function;
+    struct_info *structure;
+    enumeration_info *enumeration;
+    mc_include_directive_info *include;
+    mc_define_directive_info *define;
+    // mc_source_comment_info *comment; TODO
+    // mc_pp_directive_info *pp_directive; TODO -- other directives
+  };
+} mc_source_file_code_segment;
+
+typedef struct mc_source_file_info {
+  struct_id *type_id;
+  char *filepath;
+  struct {
+    unsigned int capacity;
+    unsigned int count;
+    mc_source_file_code_segment **items;
+  } segments;
+} mc_source_file_info;
 
 struct mc_node;
 typedef struct mc_node_list {

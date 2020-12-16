@@ -326,8 +326,8 @@ const char *_mcl_core_functions[] = {
     "mcs_append_syntax_node_to_mc_str",
 
     // mc_source
-    "attach_struct_info_to_owner",
-    "attach_function_info_to_owner",
+    "mc_register_struct_info_to_app",
+    "mc_register_function_info_to_app",
     "mcs_summarize_field_declarator_list",
     "mcs_summarize_type_field_list",
     "mcs_register_struct_declaration",
@@ -392,8 +392,8 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_va_end_statement",
     "remove_ptr_from_collection",
     "initialize_parameter_info_from_syntax_node",
-    "attach_struct_info_to_owner",
-    "attach_enumeration_info_to_owner",
+    "mc_register_struct_info_to_app",
+    "mc_register_enumeration_info_to_app",
     "mct_transcribe_function_to_mc",
     "update_or_register_struct_info_from_syntax",
     "register_sub_type_syntax_to_field_info",

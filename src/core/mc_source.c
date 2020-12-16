@@ -9,7 +9,6 @@
 #include "midge_error_handling.h"
 
 #include "core/c_parser_lexer.h"
-#include "core/core_definitions.h"
 #include "core/mc_code_transcription.h"
 
 #include "mc_source.h"
@@ -35,7 +34,7 @@ int mcdebug_generate_files_from_sf_info(mc_source_file_info *sf)
 
 int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field);
 
-int attach_function_info_to_owner(function_info *func_info)
+int mc_register_function_info_to_app(function_info *func_info)
 {
   mc_app_itp_data *app_itp_data;
   mc_obtain_app_itp_data(&app_itp_data);
@@ -46,7 +45,7 @@ int attach_function_info_to_owner(function_info *func_info)
   return 0;
 }
 
-int attach_struct_info_to_owner(struct_info *structure_info)
+int mc_register_struct_info_to_app(struct_info *structure_info)
 {
   mc_app_itp_data *app_itp_data;
   mc_obtain_app_itp_data(&app_itp_data);
@@ -57,13 +56,26 @@ int attach_struct_info_to_owner(struct_info *structure_info)
   return 0;
 }
 
-int attach_enumeration_info_to_owner(enumeration_info *enum_info)
+int mc_register_enumeration_info_to_app(enumeration_info *enum_info)
 {
   mc_app_itp_data *app_itp_data;
   mc_obtain_app_itp_data(&app_itp_data);
 
   append_to_collection((void ***)&app_itp_data->enumerations.items, &app_itp_data->enumerations.alloc,
                        &app_itp_data->enumerations.count, (void *)enum_info);
+
+  return 0;
+}
+
+int mc_append_segment_to_source_file(mc_source_file_info *source_file, mc_source_file_code_segment_type type,
+                                     void *data)
+{
+  mc_source_file_code_segment *segment = (mc_source_file_code_segment *)malloc(sizeof(mc_source_file_code_segment));
+  segment->type = MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE;
+  segment->data = data;
+
+  MCcall(append_to_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
+                              &source_file->segments.count, segment));
 
   return 0;
 }
@@ -349,7 +361,7 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
 
   if (!fi) {
     fi = (function_info *)calloc(1, sizeof(function_info));
-    attach_function_info_to_owner(fi);
+    mc_register_function_info_to_app(fi);
 
     fi->name = strdup(function_ast->function.name->text);
     fi->is_defined = false;
@@ -380,6 +392,10 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
     if (fi->is_defined) {
       MCerror(9443, "Redefinition - TODO check");
     }
+    // Source
+    if (fi->source) {
+      MCerror(8384, "TODO for '%s'", fi->name);
+    }
 
     // puts("1");
     // Reset dependencies
@@ -400,20 +416,11 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
     //   }
     // }
 
-    // Source
-    if (fi->source) {
-      MCerror(8384, "TODO for '%s'", fi->name);
-    }
-
-    fi->source = (mc_source_definition *)malloc(sizeof(mc_source_definition));
-    fi->source->type = mc_source_definition_FUNCTION;
-    fi->source->source_file = source_file;
-    fi->source->data.func_info = fi;
-    // TODO -- can't the original code just be posted to it -- instead of having to generate more...
-    MCcall(mcs_copy_syntax_node_to_text(function_ast, &fi->source->code));
-
-    MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
-                                &source_file->definitions.count, fi->source));
+    fi->source = source_file;
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
+  }
+  else {
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DECLARATION, fi));
   }
 
   return 0;
@@ -430,9 +437,9 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
 
   if (!si) {
     si = malloc(sizeof(struct_info));
-    attach_struct_info_to_owner(si);
+    mc_register_struct_info_to_app(si);
 
-    si->source = NULL;
+    si->source_file = NULL;
     MCcall(mcs_copy_syntax_node_to_text(struct_ast->struct_decl.type_name, &si->name));
     si->is_defined = false;
   }
@@ -472,21 +479,19 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
 
   if (is_definition) {
     // Fill the Source Definition
-    if (si->source) {
+    if (si->source_file) {
       MCerror(8384, "TODO for '%s'", si->name);
     }
 
-    si->source = (mc_source_definition *)malloc(sizeof(mc_source_definition));
-    si->source->type = mc_source_definition_STRUCTURE;
-    si->source->source_file = source_file;
-    si->source->data.structure_info = si;
-    // TODO -- can't the original code just be posted to it -- instead of having to generate more...
-    MCcall(mcs_copy_syntax_node_to_text(struct_ast, &si->source->code));
+    si->source_file = source_file;
 
-    MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
-                                &source_file->definitions.count, si->source));
-  } else {
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
 
+    // // TODO -- can't the original code just be posted to it -- instead of having to generate more...
+    // MCcall(mcs_copy_syntax_node_to_text(struct_ast, &si->source->code));
+  }
+  else {
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION, si));
   }
 
   return 0;
@@ -613,8 +618,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       incd->is_system_search = child->include_directive.is_system_header_search;
       MCcall(mcs_copy_syntax_node_to_text(child->include_directive.filepath, &incd->filepath));
 
-      MCcall(append_to_collection((void ***)&source_file->includes.items, &source_file->includes.alloc,
-                                  &source_file->includes.count, incd));
+      MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE, incd));
     } break;
     default: {
       switch ((mc_token_type)child->type) {
@@ -661,8 +665,7 @@ int mcs_interpret_file(const char *filepath)
 
   // Set
   mc_source_file_info *sf = malloc(sizeof(mc_source_file_info));
-  sf->definitions.alloc = sf->definitions.count = 0U;
-  sf->includes.alloc = sf->includes.count = 0U;
+  sf->segments.capacity = sf->segments.count = 0U;
   char fullpath[256];
   if (filepath[0] != '/') {
     // Given filepath is relative -- convert to absolute
@@ -803,7 +806,7 @@ int mcs_interpret_file(const char *filepath)
 //   if (!structure_info) {
 //     structure_info = (struct_info *)malloc(sizeof(struct_info));
 
-//     attach_struct_info_to_owner(owner, structure_info);
+//     mc_register_struct_info_to_app(owner, structure_info);
 
 //     structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
 //     allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
@@ -865,7 +868,7 @@ int mcs_interpret_file(const char *filepath)
 //   if (!enum_info) {
 //     enum_info = (enumeration_info *)malloc(sizeof(enumeration_info));
 
-//     attach_enumeration_info_to_owner(owner, enum_info);
+//     mc_register_enumeration_info_to_app(owner, enum_info);
 
 //     enum_info->type_id = (struct_id *)malloc(sizeof(struct_id));
 //     allocate_and_copy_cstr(enum_info->type_id->identifier, "enum_info");
@@ -1047,7 +1050,8 @@ int mcs_interpret_file(const char *filepath)
 //   return 0;
 // }
 
-// int instantiate_enum_definition_from_ast(mc_node *definition_owner, mc_source_definition *source, mc_syntax_node *ast,
+// int instantiate_enum_definition_from_ast(mc_node *definition_owner, mc_source_definition *source, mc_syntax_node
+// *ast,
 //                                          void **definition_info)
 // {
 //   // Register enum
@@ -1506,7 +1510,7 @@ int mcs_interpret_file(const char *filepath)
 //   if (!structure_info) {
 //     structure_info = (struct_info *)malloc(sizeof(struct_info));
 
-//     attach_struct_info_to_owner(owner, structure_info);
+//     mc_register_struct_info_to_app(owner, structure_info);
 
 //     structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
 //     allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
@@ -1569,7 +1573,7 @@ int mcs_interpret_file(const char *filepath)
 //     enum_info = (enumeration_info *)malloc(sizeof(enumeration_info));
 
 //     // printf("reed-2\n");
-//     attach_enumeration_info_to_owner(owner, enum_info);
+//     mc_register_enumeration_info_to_app(owner, enum_info);
 //     // printf("reed-3\n");
 
 //     enum_info->type_id = (struct_id *)malloc(sizeof(struct_id));

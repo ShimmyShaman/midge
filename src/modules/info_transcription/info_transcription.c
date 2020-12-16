@@ -132,6 +132,17 @@ int _mc_transcribe_function_info(mc_str *str, function_info *function)
   return 0;
 }
 
+int _mc_transcribe_include_directive_info(mc_str *str, mc_include_directive_info *idi)
+{
+  MCcall(append_to_mc_str(str, "#include "));
+  MCcall(append_char_to_mc_str(str, idi->is_system_search ? '<' : '"'));
+  MCcall(append_to_mc_str(str, idi->filepath));
+  MCcall(append_char_to_mc_str(str, idi->is_system_search ? '>' : '"'));
+  MCcall(append_char_to_mc_str(str, '\n'));
+
+  return 0;
+}
+
 int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
 {
   int a, phase = 0;
@@ -165,53 +176,23 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
   MCcall(append_uppercase_to_mc_str(str, filename));
   MCcall(append_to_mc_str(str, "_H\n"));
 
-  // Includes
-  MCcall(append_char_to_mc_str(str, '\n'));
-  mc_include_directive_info *idi;
-  for (a = 0; a < source_file->includes.count; ++a) {
-    idi = source_file->includes.items[a];
+  mc_source_file_code_segment *seg;
+  for (a = 0; a < source_file->segments.count; ++a) {
+    seg = source_file->segments.items[a];
 
-    MCcall(append_to_mc_str(str, "#include "));
-    MCcall(append_char_to_mc_str(str, idi->is_system_search ? '<' : '"'));
-    MCcall(append_to_mc_str(str, idi->filepath));
-    MCcall(append_char_to_mc_str(str, idi->is_system_search ? '>' : '"'));
-    MCcall(append_char_to_mc_str(str, '\n'));
-  }
-
-  // Write out in order enums > structs > functions
-  mc_source_definition *sd;
-  while (phase < 4) {
-
-    for (a = 0; a < source_file->definitions.count; ++a) {
-      sd = source_file->definitions.items[a];
-
-      switch (sd->type) {
-      case mc_source_definition_ENUMERATION: {
-        if (phase == 1) {
-          // Write it
-          MCcall(append_char_to_mc_str(str, '\n'));
-          MCcall(_mc_transcribe_enum_info(str, sd->data.enum_info));
-        }
-      } break;
-      case mc_source_definition_STRUCTURE: {
-        if (phase == 2) {
-          // Write it
-          MCcall(append_char_to_mc_str(str, '\n'));
-          MCcall(_mc_transcribe_structure_info(str, sd->data.structure_info));
-        }
-      } break;
-      case mc_source_definition_FUNCTION: {
-        if (phase == 3) {
-          // Write it
-          MCcall(append_char_to_mc_str(str, '\n'));
-          MCcall(_mc_transcribe_function_info(str, sd->data.func_info));
-        }
-      } break;
-      default:
-        MCerror(4939, "Unsupported:%i", sd->type);
-      }
+    switch (seg->type) {
+    case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE:
+      MCcall(_mc_transcribe_include_directive_info(str, seg->include));
+      break;
+    case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
+      MCcall(_mc_transcribe_function_info(str, seg->function));
+      break;
+    case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION:
+      MCcall(_mc_transcribe_structure_info(str, seg->structure));
+      break;
+    default:
+      MCerror(9715, "Unsupported Segment Type : %i", seg->type);
     }
-    ++phase;
   }
 
   // End the include guard

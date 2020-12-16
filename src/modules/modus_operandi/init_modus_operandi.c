@@ -445,8 +445,7 @@ int _user_function_gen_source_files(hash_table_t *context)
   else {
     source_file = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
     source_file->filepath = strdup(path);
-    source_file->definitions.alloc = source_file->definitions.count = 0U;
-    source_file->includes.alloc = source_file->includes.count = 0U;
+    source_file->segments.capacity = source_file->segments.count = 0U;
 
     MCcall(mc_save_source_file_from_updated_info(source_file));
   }
@@ -484,34 +483,34 @@ int _user_util_insert_standard_field_in_struct(struct_info *structure, const cha
 int _user_util_insert_struct_in_file(mc_source_file_info *source_file, const char *struct_name, bool error_if_exists,
                                      struct_info **result)
 {
-  mc_source_definition *sdef = NULL, *d;
-  for (int a = 0; a < source_file->definitions.count; ++a) {
-    d = source_file->definitions.items[a];
-    if (d->type != mc_source_definition_STRUCTURE)
-      continue;
-    if (!strcmp(d->data.structure_info->name, struct_name)) {
-      sdef = d;
-      break;
-    }
-  }
-  if (!sdef) {
-    // -- Create a new source definition
-    sdef = (mc_source_definition *)malloc(sizeof(mc_source_definition));
-    sdef->type_id = NULL; // TODO -- remove
-    sdef->type = mc_source_definition_STRUCTURE;
-    sdef->code = "";
-    sdef->source_file = source_file;
+  struct_info *si = NULL;
+  mc_source_file_code_segment *seg = NULL;
 
-    struct_info *si = sdef->data.structure_info = (struct_info *)malloc(sizeof(struct_info));
+  MCcall(find_struct_info(struct_name, &si));
+  if (si) {
+    MCerror(7490, "TODO");
+    // for (int a = 0; a < source_file->segments.count; ++a) {
+    //   d = source_file->segments.items[a];
+    //   if (d->type == MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION && !strcmp(d->structure->name, struct_name)) {
+    //     seg = d;
+    //     break;
+    //   }
+    // }
+  }
+
+  {
+    // Construct an empty structure with the given name and register it globally and to the source file
+    struct_info *si = (struct_info *)malloc(sizeof(struct_info));
     si->is_defined = true;
     si->is_union = false;
     si->name = strdup(struct_name);
-    si->source = sdef;
+    si->source_file = source_file;
     si->fields = (field_info_list *)malloc(sizeof(field_info_list));
     si->fields->alloc = si->fields->count = 0;
 
-    MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
-                                &source_file->definitions.count, sdef));
+    MCcall(mc_register_struct_info_to_app(si));
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION, si));
+    MCcall(mc_save_source_file_from_updated_info(source_file));
   }
 
   return 0;
@@ -544,8 +543,8 @@ int _user_function_insert_data_struct(hash_table_t *context)
 
   MCcall(_user_util_insert_standard_field_in_struct(project_3d_root_data, data_struct_name, 1, gen_source_name));
 
-  // -- Integrate
-  MCcall(mc_save_source_file_from_updated_info(project_3d_root_data->source->source_file));
+  // -- Integrate the update
+  MCcall(mc_save_source_file_from_updated_info(project_3d_root_data->source_file));
 
   return 0;
 }
