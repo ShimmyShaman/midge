@@ -684,7 +684,6 @@ int mcs_interpret_file(const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  puts("TODO -- write todelete even if there is tcc warning..");
   // if (!strcmp("src/modules/modus_operandi/init_modus_operandi.c", filepath)) {
   //   // usleep(10000);
   //   // printf("\ngen-code:\n%s||\n", code);

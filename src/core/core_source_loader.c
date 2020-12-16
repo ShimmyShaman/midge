@@ -582,6 +582,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   TCCInterpState *midge_itp;
   {
     midge_itp = tcci_new();
+    tcci_set_Werror(midge_itp, 1);
 
     // Add Include Paths & tcc symbols
     MCcall(tcci_add_include_path(midge_itp, "/home/jason/midge/src"));
@@ -595,8 +596,6 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     tcci_set_symbol(midge_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
     tcci_set_symbol(midge_itp, "tcci_set_symbol", &tcci_set_symbol);
     tcci_set_symbol(midge_itp, "tcci_get_symbol", &tcci_get_symbol);
-    tcci_set_symbol(midge_itp, "tcci_new", &tcci_new);
-    tcci_set_symbol(midge_itp, "tcci_delete", &tcci_delete);
 
     // Allow obtaining of the midge interpreter from both interpreter states
     // char buf[128];
