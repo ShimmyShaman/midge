@@ -33,31 +33,31 @@ int mc_init_app_itp_data(TCCInterpState *tis)
   // "  __mc_app_itp_data->children->alloc = 0;"
   // "  __mc_app_itp_data->children->count = 0;"
 
-  __mc_app_itp_data->source_files.alloc = 100;
+  __mc_app_itp_data->source_files.alloc = 128;
   __mc_app_itp_data->source_files.count = 0;
   __mc_app_itp_data->source_files.items =
       (mc_source_file_info **)calloc(sizeof(mc_source_file_info *), __mc_app_itp_data->source_files.alloc);
 
-  __mc_app_itp_data->functions.alloc = 100;
+  __mc_app_itp_data->functions.alloc = 1024;
   __mc_app_itp_data->functions.count = 0;
   __mc_app_itp_data->functions.items =
       (function_info **)calloc(sizeof(function_info *), __mc_app_itp_data->functions.alloc);
 
-  __mc_app_itp_data->function_declarations.alloc = 100;
+  __mc_app_itp_data->function_declarations.alloc = 128;
   __mc_app_itp_data->function_declarations.count = 0;
   __mc_app_itp_data->function_declarations.items =
       (function_info **)calloc(sizeof(function_info *), __mc_app_itp_data->function_declarations.alloc);
 
-  __mc_app_itp_data->structs.alloc = 30;
+  __mc_app_itp_data->structs.alloc = 256;
   __mc_app_itp_data->structs.count = 0;
   __mc_app_itp_data->structs.items = (struct_info **)calloc(sizeof(struct_info *), __mc_app_itp_data->structs.alloc);
 
-  __mc_app_itp_data->enumerations.alloc = 20;
+  __mc_app_itp_data->enumerations.alloc = 256;
   __mc_app_itp_data->enumerations.count = 0;
   __mc_app_itp_data->enumerations.items =
       (enumeration_info **)calloc(sizeof(enumeration_info *), __mc_app_itp_data->enumerations.alloc);
 
-  __mc_app_itp_data->preprocess_defines.alloc = 20;
+  __mc_app_itp_data->preprocess_defines.alloc = 256;
   __mc_app_itp_data->preprocess_defines.count = 0;
   __mc_app_itp_data->preprocess_defines.items =
       (preprocess_define_info **)calloc(sizeof(preprocess_define_info *), __mc_app_itp_data->preprocess_defines.alloc);

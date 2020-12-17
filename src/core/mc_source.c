@@ -52,12 +52,29 @@ int mc_append_segment_to_source_file(mc_source_file_info *source_file, mc_source
                                      void *data)
 {
   mc_source_file_code_segment *segment = (mc_source_file_code_segment *)malloc(sizeof(mc_source_file_code_segment));
-  segment->type = MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE;
+  segment->type = type;
   segment->data = data;
 
   MCcall(append_to_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
                               &source_file->segments.count, segment));
 
+  return 0;
+}
+
+int _mc_find_segment_in_source_file(mc_source_file_info *source_file, mc_source_file_code_segment_type type, void *data,
+                                    mc_source_file_code_segment **result)
+{
+  mc_source_file_code_segment *seg;
+  for (int a = 0; a < source_file->segments.count; ++a) {
+    seg = source_file->segments.items[a];
+
+    if (seg->type == type && seg->data == data) {
+      *result = seg;
+      return 0;
+    }
+  }
+
+  *result = NULL;
   return 0;
 }
 
@@ -373,10 +390,17 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
     if (fi->is_defined) {
       MCerror(9443, "Redefinition - TODO check");
     }
+
     // Source
     if (fi->source) {
-      MCerror(8384, "TODO for '%s'", fi->name);
+      if (fi->source != source_file) {
+        MCerror(9484, "Source File Change for '%s'", fi->name);
+      }
     }
+
+    // Attach to the source file
+    fi->source = source_file;
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
 
     // puts("1");
     // Reset dependencies
@@ -396,9 +420,6 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
     //     // mcs_construct_dependency(fi, param->parameter.type_identifier->type_identifier.identifier->text);
     //   }
     // }
-
-    fi->source = source_file;
-    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
   }
   else {
     MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DECLARATION, fi));
@@ -432,7 +453,10 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
 
     if (struct_ast->struct_decl.fields) {
       if (si->is_defined) {
-        MCerror(7471, "Redefinition of '%s' - TODO check", si->name);
+        // TODO -- Actual Redefinition -- For now just check that fields are not different at all
+        printf("WARNING redefinition of struct '%s'\n", si->name);
+        printf("WARNING redefinition of struct '%s'\n", si->name);
+        printf("WARNING redefinition of struct '%s'\n", si->name);
       }
 
       // Define
@@ -460,12 +484,12 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
 
   if (is_definition) {
     // Fill the Source Definition
-    if (si->source_file) {
-      MCerror(8384, "TODO for '%s'", si->name);
+    if (si->source_file && si->source_file != source_file) {
+      MCerror(8384, "Source File Change for '%s' : from %p:'%s' to %p:'%s'", si->name, si->source_file,
+              si->source_file->filepath, source_file, source_file->filepath);
     }
 
     si->source_file = source_file;
-
     MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
 
     // // TODO -- can't the original code just be posted to it -- instead of having to generate more...
@@ -607,8 +631,12 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       case MC_TOKEN_PP_KEYWORD_IFNDEF:
       case MC_TOKEN_PP_KEYWORD_ENDIF:
         MCerror(5313, "TODO");
+      case MC_TOKEN_NEW_LINE: {
+        if (a && children->items[a - 1]->type == MC_TOKEN_NEW_LINE) {
+          MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR, NULL));
+        }
+      } break;
       case MC_TOKEN_SPACE_SEQUENCE:
-      case MC_TOKEN_NEW_LINE:
       case MC_TOKEN_LINE_COMMENT:
       case MC_TOKEN_MULTI_LINE_COMMENT: {
         break;
@@ -628,7 +656,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
  */
 int mcs_interpret_file(const char *filepath)
 {
-  int res;
+  int res, a;
   char *code;
   mc_syntax_node *file_ast;
   mc_app_itp_data *app_itp_data;
@@ -644,9 +672,7 @@ int mcs_interpret_file(const char *filepath)
   MCcall(parse_file_to_syntax_tree(code, &file_ast));
   free(code);
 
-  // Set
-  mc_source_file_info *sf = malloc(sizeof(mc_source_file_info));
-  sf->segments.capacity = sf->segments.count = 0U;
+  // Ensure the full path is written
   char fullpath[256];
   if (filepath[0] != '/') {
     // Given filepath is relative -- convert to absolute
@@ -660,12 +686,75 @@ int mcs_interpret_file(const char *filepath)
   else {
     strcpy(fullpath, filepath);
   }
-  sf->filepath = strdup(fullpath);
-  MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
-                              &app_itp_data->source_files.count, sf));
+
+  // Search for already existing file info
+  mc_source_file_info *sf = NULL, *isf;
+  int nb_before_segs = 0;
+  mc_source_file_code_segment **segs = NULL, *seg, *seg2;
+  for (a = 0; a < app_itp_data->source_files.count; ++a) {
+    isf = app_itp_data->source_files.items[a];
+
+    if (!strcmp(fullpath, isf->filepath)) {
+      // Use this
+      sf = isf;
+      break;
+    }
+  }
+
+  if (sf) {
+    nb_before_segs = sf->segments.count;
+    if (nb_before_segs) {
+      segs = (mc_source_file_code_segment **)malloc(sizeof(mc_source_file_code_segment *) * nb_before_segs);
+      memcpy(segs, sf->segments.items, sizeof(mc_source_file_code_segment *) * nb_before_segs);
+    }
+
+    sf->segments.count = 0U;
+  }
+  else {
+    // Set
+    sf = malloc(sizeof(mc_source_file_info));
+    sf->segments.capacity = sf->segments.count = 0U;
+    sf->filepath = strdup(fullpath);
+    MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
+                                &app_itp_data->source_files.count, sf));
+  }
 
   // Obtain function/struct/enum information & dependencies
   MCcall(mcs_process_ast_root_children(sf, file_ast->children));
+
+  if (nb_before_segs) {
+    for (a = 0; a < nb_before_segs; ++a) {
+      seg = segs[a];
+
+      switch (seg->type) {
+      case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE: {
+        if (seg->include) {
+          if (seg->include->filepath)
+            free(seg->include->filepath);
+          free(seg->include);
+        }
+        free(seg);
+      } break;
+      case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION: {
+        MCcall(_mc_find_segment_in_source_file(sf, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, seg->data, &seg2));
+        if (!seg2) {
+          MCerror(6721, "Unsupported - redefining a structure out of a file");
+        }
+
+        // Just delete the segment
+        free(seg);
+      } break;
+      case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
+      case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
+      case MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION: {
+        // Just delete the segment
+        free(seg);
+      } break;
+      default:
+        MCerror(8707, "Unsupported type : %i", seg->type);
+      }
+    }
+  }
 
   // // DEBUG -- FILE GENERATION TEST
   // MCcall(mcdebug_generate_files_from_sf_info(sf));

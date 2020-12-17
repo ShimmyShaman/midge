@@ -447,6 +447,9 @@ int _user_function_gen_source_files(hash_table_t *context)
     source_file->filepath = strdup(path);
     source_file->segments.capacity = source_file->segments.count = 0U;
 
+    MCcall(append_to_collection((void ***)&itp->source_files.items, &itp->source_files.alloc, &itp->source_files.count,
+                                source_file));
+
     MCcall(mc_save_source_file_from_updated_info(source_file));
   }
 
@@ -509,9 +512,22 @@ int _user_util_insert_struct_in_file(mc_source_file_info *source_file, const cha
     si->fields->alloc = si->fields->count = 0;
 
     MCcall(mc_register_struct_info_to_app(si));
-    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION, si));
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
     MCcall(mc_save_source_file_from_updated_info(source_file));
   }
+
+  return 0;
+}
+
+int _user_set_include_path(mc_source_file_info *source_file, const char *filepath)
+{
+  // Search through the source file segments for the last initial header
+  int i = 0;
+
+  for (; i < source_file->segments.count; ++i) {
+  }
+
+  puts("TODO -- _user_set_include_path");
 
   return 0;
 }
@@ -541,6 +557,7 @@ int _user_function_insert_data_struct(hash_table_t *context)
     MCerror(9517, "TODO no 3d root for project..?");
   }
 
+  MCcall(_user_set_include_path(project_3d_root_data->source_file, header_file->filepath));
   MCcall(_user_util_insert_standard_field_in_struct(project_3d_root_data, data_struct_name, 1, gen_source_name));
 
   // -- Integrate the update

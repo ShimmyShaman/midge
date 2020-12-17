@@ -137,6 +137,7 @@ typedef enum mc_source_file_code_segment_type {
   MC_SOURCE_SEGMENT_ENUMERATION_DEFINITION,
   MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE,
   MC_SOURCE_SEGMENT_DEFINE_DIRECTIVE,
+  MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR,
   MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT,
   MC_SOURCE_SEGMENT_MULTI_LINE_COMMENT,
 } mc_source_file_code_segment_type;
@@ -156,7 +157,7 @@ typedef struct enumeration_info {
     enum_member_info **items;
   } members;
 
-   struct mc_source_file_info *source;
+  struct mc_source_file_info *source;
 } enumeration_info;
 
 typedef struct preprocess_define_info {
@@ -217,6 +218,7 @@ typedef struct struct_info {
   field_info_list *fields;
 } struct_info;
 
+// TODO -- make this more understandable divide into type & declarator maybe
 typedef struct parameter_info {
   struct_id *type_id;
   parameter_kind parameter_type;
