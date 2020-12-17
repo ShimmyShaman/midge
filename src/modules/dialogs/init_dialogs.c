@@ -8,9 +8,11 @@
 int init_dialogs(mc_node *app_root)
 {
   MCcall(mcs_interpret_file("src/modules/dialogs/file_dialog.h"));
+  MCcall(mcs_interpret_file("src/modules/dialogs/folder_dialog.h"));
   MCcall(mcs_interpret_file("src/modules/dialogs/text_input_dialog.h"));
 
   MCcall(mcs_interpret_file("src/modules/dialogs/file_dialog.c"));
+  MCcall(mcs_interpret_file("src/modules/dialogs/folder_dialog.c"));
   MCcall(mcs_interpret_file("src/modules/dialogs/text_input_dialog.c"));
 
   // TODO make an anonymous data register system
@@ -26,6 +28,12 @@ int init_dialogs(mc_node *app_root)
     MCerror(3463, "mc_fd_init_file_dialog");
   }
   MCcall(mc_fd_init_file_dialog(app_root));
+
+  int (*mc_fd_init_folder_dialog)(mc_node *) = tcci_get_symbol(itp_data->interpreter, "mc_fd_init_folder_dialog");
+  if (!mc_fd_init_folder_dialog) {
+    MCerror(3463, "mc_fd_init_folder_dialog");
+  }
+  MCcall(mc_fd_init_folder_dialog(app_root));
 
   int (*mc_tid_init_text_input_dialog)(mc_node *) =
       tcci_get_symbol(itp_data->interpreter, "mc_tid_init_text_input_dialog");

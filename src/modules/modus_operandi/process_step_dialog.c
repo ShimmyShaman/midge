@@ -1,4 +1,4 @@
-/* text_input_dialog.c */
+/* process_step_dialog.c */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,30 +15,11 @@
 #include "modules/mc_io/mc_io.h"
 #include "modules/ui_elements/ui_elements.h"
 
-typedef struct mc_text_input_dialog_data {
-  mc_node *node;
+#include "modules/modus_operandi/process_step_dialog.h"
 
-  render_color shade_color;
-
-  mcu_panel *panel;
-  mcu_textblock *message_textblock;
-  mcu_textbox *textbox;
-
-  // struct {
-  //   unsigned int width, height;
-  //   mcr_texture_image *image;
-  // } render_target;
-
-  struct {
-    void *state;
-    void *result_delegate;
-  } callback;
-
-} mc_text_input_dialog_data;
-
-void mc_tid_render_headless(render_thread_info *render_thread, mc_node *node)
+void _mc_mocsd_render_headless(render_thread_info *render_thread, mc_node *node)
 {
-  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)node->data;
+  mc_process_step_dialog_data *psdd = (mc_process_step_dialog_data *)node->data;
 
   // Children
   for (int a = 0; a < node->children->count; ++a) {
@@ -70,9 +51,9 @@ void mc_tid_render_headless(render_thread_info *render_thread, mc_node *node)
   // mcr_submit_image_render_request(app_info->render_thread, irq);
 }
 
-void mc_tid_render_present(image_render_details *image_render_queue, mc_node *node)
+void _mc_mocsd_render_present(image_render_details *image_render_queue, mc_node *node)
 {
-  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)node->data;
+  mc_process_step_dialog_data *psdd = (mc_process_step_dialog_data *)node->data;
 
   // mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
   //                                        (unsigned int)node->layout->__bounds.y, modata->render_target.width,
@@ -84,18 +65,18 @@ void mc_tid_render_present(image_render_details *image_render_queue, mc_node *no
 
   mcr_issue_render_command_colored_quad(
       image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
-      (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, tid->shade_color);
+      (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, psdd->shade_color);
 
   //   mcr_issue_render_command_colored_quad(
   //       image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
   //       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height,
-  //       tid->background_color);
+  //       psdd->background_color);
 
   // Children
   mca_render_typical_nodes_children_present(image_render_queue, node->children);
 }
 
-void mc_tid_handle_input(mc_node *node, mci_input_event *input_event)
+void _mc_mocsd_handle_input(mc_node *node, mci_input_event *input_event)
 {
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
@@ -104,81 +85,76 @@ void mc_tid_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-int _mc_tid_submit(mc_text_input_dialog_data *tid)
+int _mc_mocsd_submit(mc_process_step_dialog_data *psdd)
 {
   // Activate Callback
   int (*result_delegate)(void *invoker_state, char *selected_folder) =
-      (int (*)(void *, char *))tid->callback.result_delegate;
+      (int (*)(void *, char *))psdd->callback.result_delegate;
   if (result_delegate) {
-    MCcall(result_delegate(tid->callback.state, tid->textbox->contents->text));
+    MCcall(result_delegate(psdd->callback.state, psdd->textbox->contents->text));
   }
-  tid->callback.state = NULL;
-  tid->callback.result_delegate = NULL;
+  psdd->callback.state = NULL;
+  psdd->callback.result_delegate = NULL;
 
   // Wrap Up
-  tid->node->layout->visible = false;
-  MCcall(mca_set_node_requires_rerender(tid->node));
+  psdd->node->layout->visible = false;
+  MCcall(mca_set_node_requires_rerender(psdd->node));
 
   return 0;
 }
 
-void _mc_tid_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
+void _mc_mocsd_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
 {
-  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)textbox->tag;
+  mc_process_step_dialog_data *psdd = (mc_process_step_dialog_data *)textbox->tag;
 
-  _mc_tid_submit(tid);
+  _mc_mocsd_submit(psdd);
 }
 
-void _mc_tid_button_submit(mci_input_event *input_event, mcu_button *button)
+void _mc_mocsd_button_submit(mci_input_event *input_event, mcu_button *button)
 {
-  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)button->tag;
+  mc_process_step_dialog_data *psdd = (mc_process_step_dialog_data *)button->tag;
 
-  // printf("_mc_tid_button_submit:'%s\n", tid->current_directory->text);
-  _mc_tid_submit(tid);
+  // printf("_mc_mocsd_button_submit:'%s\n", psdd->current_directory->text);
+  _mc_mocsd_submit(psdd);
 }
 
-int _mc_tid_text_input_dialog_requested(void *handler_state, void *event_args)
+int mc_mocsd_activate_process_step_dialog(mc_process_step_dialog_data *psdd, char *message, void *callback_state,
+                                          void *callback_delegate)
 {
-  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)handler_state;
-
-  void **vary = (void **)event_args;
-  char *message = (char *)vary[0];
-  char *default_value = (char *)vary[1];
-
   // Set Callback Info
-  tid->callback.state = vary[2];
-  tid->callback.result_delegate = vary[3];
+  psdd->callback.state = callback_state;
+  psdd->callback.result_delegate = callback_delegate;
 
   // Reset the textbox
-  MCcall(set_mc_str(tid->textbox->contents, default_value ? default_value : ""));
+  MCcall(set_mc_str(psdd->textbox->contents, ""));
 
   // Set the message
-  MCcall(set_mc_str(tid->message_textblock->str, message));
+  MCcall(set_mc_str(psdd->message_textblock->str, message));
 
-  // printf("_mc_tid_text_input_dialog_requested:tc'%s' %p %p '%s'\n", tid->textbox->contents->text,
-  //        tid->textbox->contents->text, default_value, default_value);
+  // printf("_mc_mocsd_process_step_dialog_requested:tc'%s' %p %p '%s'\n", psdd->textbox->contents->text,
+  //        psdd->textbox->contents->text, default_value, default_value);
 
   // Display
-  tid->node->layout->visible = true;
+  psdd->node->layout->visible = true;
 
-  MCcall(mca_set_node_requires_rerender(tid->textbox->node));
-  MCcall(mca_set_node_requires_layout_update(tid->message_textblock->node));
+  MCcall(mca_set_node_requires_rerender(psdd->textbox->node));
+  MCcall(mca_set_node_requires_layout_update(psdd->message_textblock->node));
 
-  MCcall(mca_focus_node(tid->textbox->node));
+  MCcall(mca_focus_node(psdd->textbox->node));
 
   return 0;
 }
 
-int _mc_tid_init_data(mc_node *module_node)
+int _mc_mocsd_init_data(mc_node *module_node, mc_process_step_dialog_data **p_data)
 {
-  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)malloc(sizeof(mc_text_input_dialog_data));
-  module_node->data = tid;
-  tid->node = module_node;
+  mc_process_step_dialog_data *psdd = (mc_process_step_dialog_data *)malloc(sizeof(mc_process_step_dialog_data));
+  module_node->data = psdd;
+  psdd->node = module_node;
 
-  tid->shade_color = (render_color){0.13f, 0.12f, 0.17f, 0.8f};
+  psdd->shade_color = (render_color){0.13f, 0.12f, 0.17f, 0.8f};
 
-  tid->callback.state = NULL;
-  tid->callback.result_delegate = NULL;
+  psdd->callback.state = NULL;
+  psdd->callback.result_delegate = NULL;
 
   // mo_data->render_target.image = NULL;
   // mo_data->render_target.width = module_node->layout->preferred_width;
@@ -187,17 +163,18 @@ int _mc_tid_init_data(mc_node *module_node)
   //                             MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mo_data->render_target.image);
 
   //   TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
-  //   while (!tid->render_target.image) {
+  //   while (!psdd->render_target.image) {
   //     // puts("wait");
   //     usleep(100);
   //   }
 
+  *p_data = psdd;
   return 0;
 }
 
-int mc_tid_init_ui(mc_node *module_node)
+int _mc_mocsd_init_ui(mc_node *module_node)
 {
-  mc_text_input_dialog_data *tid = (mc_text_input_dialog_data *)module_node->data;
+  mc_process_step_dialog_data *psdd = (mc_process_step_dialog_data *)module_node->data;
 
   // Locals
   char buf[64];
@@ -205,40 +182,40 @@ int mc_tid_init_ui(mc_node *module_node)
   mcu_button *button;
 
   // Panel
-  MCcall(mcu_init_panel(module_node, &tid->panel));
+  MCcall(mcu_init_panel(module_node, &psdd->panel));
 
-  layout = tid->panel->node->layout;
+  layout = psdd->panel->node->layout;
   layout->padding = (mc_paddingf){40, 40, 40, 40};
   // TODO -- set up extents override so the dialog can adjust to the size of the message
   layout->max_width = 400;
   layout->max_height = 62;
 
-  tid->panel->background_color = (render_color){0.35f, 0.35f, 0.35f, 1.f};
+  psdd->panel->background_color = (render_color){0.35f, 0.35f, 0.35f, 1.f};
 
   // Message Block
-  MCcall(mcu_init_textblock(tid->panel->node, &tid->message_textblock));
+  MCcall(mcu_init_textblock(psdd->panel->node, &psdd->message_textblock));
 
-  layout = tid->message_textblock->node->layout;
+  layout = psdd->message_textblock->node->layout;
   layout->padding = (mc_paddingf){4, 4, 4, 4};
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
   layout->preferred_width = 0.f;
 
-  tid->message_textblock->background_color = COLOR_GRAPE;
+  psdd->message_textblock->background_color = COLOR_GRAPE;
 
   // Textbox
-  MCcall(mcu_init_textbox(tid->panel->node, &tid->textbox));
+  MCcall(mcu_init_textbox(psdd->panel->node, &psdd->textbox));
 
-  layout = tid->textbox->node->layout;
+  layout = psdd->textbox->node->layout;
   layout->preferred_width = 320;
   layout->padding = (mc_paddingf){4, 4, 4, 4};
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
-  tid->textbox->tag = tid;
-  tid->textbox->submit = (void *)_mc_tid_textbox_submit;
+  psdd->textbox->tag = psdd;
+  psdd->textbox->submit = (void *)_mc_mocsd_textbox_submit;
 
   // Complete Button
-  MCcall(mcu_init_button(tid->panel->node, &button));
+  MCcall(mcu_init_button(psdd->panel->node, &button));
 
   layout = button->node->layout;
   layout->preferred_width = 64;
@@ -248,13 +225,13 @@ int mc_tid_init_ui(mc_node *module_node)
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
   MCcall(set_mc_str(button->str, "Enter"));
-  button->tag = tid;
-  button->left_click = (void *)&_mc_tid_button_submit;
+  button->tag = psdd;
+  button->left_click = (void *)&_mc_mocsd_button_submit;
 
   return 0;
 }
 
-int mc_tid_init_text_input_dialog(mc_node *app_root)
+int mc_mocsd_init_process_step_dialog(mc_node *app_root, mc_process_step_dialog_data **p_data)
 {
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
@@ -262,7 +239,7 @@ int mc_tid_init_text_input_dialog(mc_node *app_root)
   // TODO -- get rid of node type
 
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_ABSTRACT, "text-input-dialog", &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_ABSTRACT, "process-step-dialog", &node));
   MCcall(mca_init_node_layout(&node->layout));
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
@@ -275,15 +252,16 @@ int mc_tid_init_text_input_dialog(mc_node *app_root)
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
-  node->layout->render_headless = (void *)&mc_tid_render_headless;
-  node->layout->render_present = (void *)&mc_tid_render_present;
-  node->layout->handle_input_event = (void *)&mc_tid_handle_input;
+  node->layout->render_headless = (void *)&_mc_mocsd_render_headless;
+  node->layout->render_present = (void *)&_mc_mocsd_render_present;
+  node->layout->handle_input_event = (void *)&_mc_mocsd_handle_input;
 
-  MCcall(_mc_tid_init_data(node));
-  MCcall(mc_tid_init_ui(node));
+  MCcall(_mc_mocsd_init_data(node, p_data));
+  MCcall(_mc_mocsd_init_ui(node));
 
-  MCcall(mca_register_event_handler(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, _mc_tid_text_input_dialog_requested,
-                                    node->data));
+  // MCcall(mca_register_event_handler(MC_APP_EVENT_process_step_dialog_REQUESTED,
+  // _mc_mocsd_process_step_dialog_requested,
+  //                                   node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 

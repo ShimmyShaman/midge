@@ -18,11 +18,17 @@ typedef enum mc_app_event_type {
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
   MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED,
   // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void*[] { const char *starting_directory, void *invoker_state,
+  // - event_args is void*[] { const char *dialog_msg, const char *starting_directory, void *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *selected_folder)}
   // -* starting_directory may be NULL indicating use of current-working-directory
   // -** selected_folder may be NULL if user cancels
   MC_APP_EVENT_FOLDER_DIALOG_REQUESTED,
+  // int (*event_handler)(void *handler_state, void *event_args)
+  // - event_args is void*[] { const char *dialog_msg, const char *starting_directory, void *invoker_state,
+  //    int (*invoker_result_delegate)(void *invoker_state, char *filepath)}
+  // -* starting_directory may be NULL indicating use of current-working-directory
+  // -** filepath may be NULL if user cancels
+  MC_APP_EVENT_SAVE_FILE_DIALOG_REQUESTED,
   // int (*event_handler)(void *handler_state, void *event_args)
   // - event_args is void*[] { const char *prompt_message, const char *default_value, void *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *input_text)}

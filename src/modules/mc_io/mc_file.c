@@ -84,7 +84,7 @@ int mcf_get_parent_directory(char *buf, int buf_size, const char *path)
   }
   strncpy(buf, path, n);
   buf[n] = '\0';
-  printf("mcf_get_parent_directory: '%s'\n", buf);
+  // printf("mcf_get_parent_directory: '%s'\n", buf);
   return 0;
 }
 
