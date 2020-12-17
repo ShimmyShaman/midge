@@ -35,6 +35,7 @@ typedef enum mo_op_step_context_arg_type {
   MO_OPPC_CSTR,
   MO_OPPC_ACTIVE_PROJECT_SRC_PATH,
   MO_OPPC_PROCESS_CONTEXT_PROPERTY,
+  MO_OPPC_CURRENT_WORKING_DIRECTORY,
 } mo_op_step_context_arg_type;
 
 typedef struct mo_op_step_context_arg {
@@ -207,11 +208,13 @@ int _mc_mo_dialog_path_selected(void *invoker_state, char *selected_folder)
   return 0;
 }
 
-int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *context_arg, void **result)
+int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *context_arg, bool *requires_mem_free,
+                              void **result)
 {
   switch (context_arg->type) {
   case MO_OPPC_CSTR: {
     *result = (void *)context_arg->data;
+    *requires_mem_free = false;
   } break;
   case MO_OPPC_PROCESS_CONTEXT_PROPERTY: {
     *result = hash_table_get((char *)context_arg->data, &mod->active_process->context);
@@ -219,16 +222,19 @@ int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *
       MCerror(9215, "_mc_mo_obtain_context_arg:Process Context Property '%s' does not exist!",
               (char *)context_arg->data);
     }
+    *requires_mem_free = false;
     // printf("MO_OPPC_PROCESS_CONTEXT_PROPERTY:'%s'\n", (char *)*result);
   } break;
   // TODO -- implement when theres some way to inform the calling method to free the set cstr when its done with it.
-  // case MO_OPPC_CURRENT_WORKING_DIRECTORY: {
-  //   char buf[256];
-  //   getcwd(buf, 256);
-  //   vary[0] = strdup(buf);
-  // } break;
+  case MO_OPPC_CURRENT_WORKING_DIRECTORY: {
+    char buf[256];
+    getcwd(buf, 256);
+    *result = (void *)strdup(buf);
+    *requires_mem_free = true;
+  } break;
   case MO_OPPC_ACTIVE_PROJECT_SRC_PATH:
     puts("ERROR TODO -- MO_OPPC_ACTIVE_PROJECT_SRC_PATH");
+    *requires_mem_free = false;
   default:
     MCerror(8220, "_mc_mo_obtain_context_arg:Unsupported type>%i", context_arg->type);
   }
@@ -243,17 +249,24 @@ int _mc_mo_activate_active_step(modus_operandi_data *mod)
     return 0;
   }
 
+  bool free_ctx_arg;
+
   switch (mod->active_step->action) {
   case MO_OPPA_TEXT_INPUT_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 4);
 
     // TODO -- make a define or const of project label
     vary[0] = mod->active_step->text_input_dialog.message;
-    MCcall(_mc_mo_obtain_context_arg(mod, &mod->active_step->text_input_dialog.default_text, &vary[1]));
+    MCcall(_mc_mo_obtain_context_arg(mod, &mod->active_step->text_input_dialog.default_text, &free_ctx_arg, &vary[1]));
     vary[2] = (void *)mod;
     vary[3] = (void *)&_mc_mo_dialog_input_text_entered;
 
-    MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
+    if (free_ctx_arg) {
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 2, vary[1], vary));
+    }
+    else {
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
+    }
   } break;
   case MO_OPPA_OPEN_FOLDER_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 3);
@@ -261,11 +274,16 @@ int _mc_mo_activate_active_step(modus_operandi_data *mod)
     puts("WARNING TODO -- MO_OPPA_OPEN_FOLDER_DIALOG-context_arg");
     // TODO -- make sure memory free is handled (TODO)
     // TODO -- make a define or const of project label
-    MCcall(_mc_mo_obtain_context_arg(mod, &mod->active_step->file_dialog.initial_folder, &vary[0]));
+    MCcall(_mc_mo_obtain_context_arg(mod, &mod->active_step->file_dialog.initial_folder, &free_ctx_arg, &vary[0]));
     vary[1] = (void *)mod;
     vary[2] = (void *)&_mc_mo_dialog_path_selected;
 
-    MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary[0], vary));
+    if (free_ctx_arg) {
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary[0], vary));
+    }
+    else {
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary));
+    }
   } break;
   case MO_OPPA_USER_FUNCTION: {
     int (*user_function)(hash_table_t * context) = (int (*)(hash_table_t *))mod->active_step->delegate.fptr;
@@ -618,8 +636,7 @@ int mc_mo_load_operations(mc_node *module_node)
       step->action = MO_OPPA_OPEN_FOLDER_DIALOG;
       step->file_dialog.message = strdup("Select the folder to create the system source files in:");
       // -- -- Folder to begin dialog with -- should be the src folder of the active project
-      step->file_dialog.initial_folder =
-          (mo_op_step_context_arg){MO_OPPC_CSTR, strdup("/home/jason/midge/projects/fs/src")}; // TODO
+      step->file_dialog.initial_folder = (mo_op_step_context_arg){MO_OPPC_CURRENT_WORKING_DIRECTORY, NULL}; // TODO
       step->file_dialog.target_context_property = strdup(gen_source_folder_context_property);
       step->next = NULL;
     }
