@@ -129,7 +129,7 @@ int mc_mocsd_activate_process_step_dialog(mc_process_step_dialog_data *psdd, cha
   MCcall(set_mc_str(psdd->textbox->contents, ""));
 
   // Set the message
-  MCcall(set_mc_str(psdd->message_textblock->str, message));
+  MCcall(set_mc_str(psdd->message_textblock->str,  message == NULL ? "" : message));
 
   // printf("_mc_mocsd_process_step_dialog_requested:tc'%s' %p %p '%s'\n", psdd->textbox->contents->text,
   //        psdd->textbox->contents->text, default_value, default_value);

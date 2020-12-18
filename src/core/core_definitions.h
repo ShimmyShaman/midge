@@ -35,6 +35,12 @@ typedef enum mc_app_event_type {
   // -* prompt_message and default_value may be NULL indicating an empty message and value
   // -** input_text may be NULL if user cancels
   MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED,
+  // int (*event_handler)(void *handler_state, void *event_args)
+  // - event_args is void*[] { const char *prompt_message, unsigned int *option_count, const char **options, void *invoker_state,
+  //    int (*invoker_result_delegate)(void *invoker_state, char *selected_option)}
+  // -* prompt_message may be NULL indicating an empty message
+  // -** selected_option may be NULL if user cancels
+  MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED,
   MC_APP_EXCLUSIVE_MAX,
 } mc_app_event_type;
 

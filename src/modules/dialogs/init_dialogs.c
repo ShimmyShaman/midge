@@ -10,10 +10,12 @@ int init_dialogs(mc_node *app_root)
   MCcall(mcs_interpret_file("src/modules/dialogs/file_dialog.h"));
   MCcall(mcs_interpret_file("src/modules/dialogs/folder_dialog.h"));
   MCcall(mcs_interpret_file("src/modules/dialogs/text_input_dialog.h"));
+  MCcall(mcs_interpret_file("src/modules/dialogs/options_dialog.h"));
 
   MCcall(mcs_interpret_file("src/modules/dialogs/file_dialog.c"));
   MCcall(mcs_interpret_file("src/modules/dialogs/folder_dialog.c"));
   MCcall(mcs_interpret_file("src/modules/dialogs/text_input_dialog.c"));
+  MCcall(mcs_interpret_file("src/modules/dialogs/options_dialog.c"));
 
   // TODO make an anonymous data register system
   // function_debug_pool *pool = (function_debug_pool *)malloc(sizeof(function_debug_pool));
@@ -41,6 +43,12 @@ int init_dialogs(mc_node *app_root)
     MCerror(3464, "mc_tid_init_text_input_dialog");
   }
   MCcall(mc_tid_init_text_input_dialog(app_root));
+
+  int (*mc_obd_init_options_dialog)(mc_node *) = tcci_get_symbol(itp_data->interpreter, "mc_obd_init_options_dialog");
+  if (!mc_obd_init_options_dialog) {
+    MCerror(3463, "mc_obd_init_options_dialog");
+  }
+  MCcall(mc_obd_init_options_dialog(app_root));
 
   return 0;
 }

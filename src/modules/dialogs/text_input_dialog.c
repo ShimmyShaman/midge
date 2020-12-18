@@ -153,7 +153,7 @@ int _mc_tid_text_input_dialog_requested(void *handler_state, void *event_args)
   MCcall(set_mc_str(tid->textbox->contents, default_value ? default_value : ""));
 
   // Set the message
-  MCcall(set_mc_str(tid->message_textblock->str, message));
+  MCcall(set_mc_str(tid->message_textblock->str,  message == NULL ? "" : message));
 
   // printf("_mc_tid_text_input_dialog_requested:tc'%s' %p %p '%s'\n", tid->textbox->contents->text,
   //        tid->textbox->contents->text, default_value, default_value);

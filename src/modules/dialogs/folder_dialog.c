@@ -247,7 +247,7 @@ int _mc_fd_on_folder_dialog_request(void *handler_state, void *event_args)
   fd->callback.result_delegate = vary[3];
 
   // Set the message
-  MCcall(set_mc_str(fd->message_textblock->str, message));
+  MCcall(set_mc_str(fd->message_textblock->str,  message == NULL ? "" : message));
 
   // Open The Dialog at the starting path
   fd->mode = MC_FD_MODE_DIRECTORIES_ONLY;
@@ -393,33 +393,6 @@ int mc_fd_init_folder_dialog(mc_node *app_root)
   MCcall(mca_register_event_handler(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, _mc_fd_on_folder_dialog_request, node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
-
-  // Panel
-  // mcu_panel *panel;
-  // mcu_init_panel(app_info->global_node, &panel);
-
-  // panel->node->layout->padding = {300, 400, 800, 60};
-  // panel->background_color = COLOR_GREEN;
-
-  // mcu_set_element_update(panel->element);
-
-  // Text Block
-  // mcu_text_block *text_block;
-  // mcu_init_text_block(app_info->global_node, &text_block);
-
-  // mca_node_layout *layout = text_block->element->layout;
-  // layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
-  // layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-  // layout->padding = {150, 300, 0, 0};
-
-  // set_mc_str(text_block->str, "");
-  // for (int a = 32; a < 128; ++a) {
-  //   char buf[2];
-  //   buf[0] = (char)a;
-  //   buf[1] = '\0';
-  //   append_to_mc_str(text_block->str, buf);
-  // }
-  // text_block->font_color = COLOR_LIGHT_YELLOW;
 
   return 0;
 }

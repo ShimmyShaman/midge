@@ -30,6 +30,7 @@ typedef enum mo_op_step_action_type {
   MO_OPPA_SAVE_FILE_DIALOG,
   MO_OPPA_OPEN_FOLDER_DIALOG,
   MO_OPPA_TEXT_INPUT_DIALOG,
+  MO_OPPA_OPTIONS_DIALOG,
   MO_OPPA_USER_FUNCTION,
 } mo_op_step_action_type;
 
@@ -59,6 +60,11 @@ typedef struct mo_operational_step {
       mo_op_step_context_arg initial_folder;
       char *target_context_property;
     } folder_dialog;
+    struct {
+      char *message;
+      unsigned int option_count;
+      char **options;
+    } options_dialog;
     struct {
       char *message;
       mo_op_step_context_arg initial_folder;
@@ -93,7 +99,7 @@ typedef struct modus_operandi_data {
     mcr_texture_image *image;
   } render_target;
 
-  mc_process_step_dialog_data *create_step_dialog_data;
+  mc_process_step_dialog_data *create_step_dialog;
 
   struct {
     unsigned int capacity, count;
@@ -205,6 +211,31 @@ int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
   return 0;
 }
 
+int _mc_mo_dialog_options_text_selected(void *invoker_state, char *selected_text)
+{
+  modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
+
+  // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
+  if (mod->active_step->action != MO_OPPA_OPTIONS_DIALOG) {
+    MCerror(8220, "TODO - state error");
+  }
+  if (!selected_text) {
+    MCerror(8223, "TODO - canceled process section");
+  }
+
+  // printf("step completed:'%s'\n", input_text);
+
+  // Set the path to the target context property
+  hash_table_set(mod->active_step->text_input_dialog.target_context_property, strdup(selected_text),
+                 &mod->active_process->context);
+
+  // Move to the next step
+  mod->active_step = mod->active_step->next;
+  MCcall(_mc_mo_activate_active_step(mod));
+
+  return 0;
+}
+
 int _mc_mo_dialog_folder_selected(void *invoker_state, char *selected_folder)
 {
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
@@ -304,6 +335,17 @@ int _mc_mo_activate_active_step(modus_operandi_data *mod)
       MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
     }
   } break;
+  case MO_OPPA_OPTIONS_DIALOG: {
+    void **vary = (void **)malloc(sizeof(void *) * 5);
+
+    vary[0] = mod->active_step->text_input_dialog.message;
+    vary[1] = &mod->active_step->options_dialog.option_count;
+    vary[2] = mod->active_step->options_dialog.options;
+    vary[3] = (void *)mod;
+    vary[4] = (void *)&_mc_mo_dialog_options_text_selected;
+
+    MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED, vary, 1, vary));
+  } break;
   case MO_OPPA_OPEN_FOLDER_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 4);
 
@@ -353,9 +395,8 @@ int _mc_mo_activate_active_step(modus_operandi_data *mod)
   case MO_OPPA_CREATE_PROCESS_STEP_DIALOG: {
     // TODO -- unlike the other events which will eventually initiate on the main UI thread
     // -- this is not activated from that position -- figure it out
-    MCcall(mc_mocsd_activate_process_step_dialog(mod->create_step_dialog_data,
-                                                 mod->active_step->process_step_dialog.message, mod,
-                                                 (void *)&_mc_mo_process_step_dialog_result));
+    MCcall(mc_mocsd_activate_process_step_dialog(mod->create_step_dialog, mod->active_step->process_step_dialog.message,
+                                                 mod, (void *)&_mc_mo_process_step_dialog_result));
   } break;
   default:
     MCerror(8305, "Unsupported action:%i", mod->active_step->action);
@@ -708,6 +749,34 @@ int mc_mo_load_operations(mc_node *module_node)
       step->delegate.farg = strdup(ctxprop_file);
     }
 
+    // Options Input
+    const char *const ctxprop_options_dialog = "sep-example-options-dialog";
+    {
+      // Obtain their name
+      step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+      step = step->next;
+
+      // Obtain the name of the source module to create
+      step->action = MO_OPPA_OPTIONS_DIALOG;
+      step->options_dialog.message = strdup("text-input-dialog-example");
+      step->options_dialog.option_count = 3U;
+      step->options_dialog.options = (char **)malloc(sizeof(char *) * step->options_dialog.option_count);
+      step->options_dialog.options[0] = strdup("option A");
+      step->options_dialog.options[1] = strdup("option B");
+      step->options_dialog.options[2] = strdup("option C");
+      step->text_input_dialog.target_context_property = strdup(ctxprop_options_dialog);
+    }
+    {
+      // Generate them
+      step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+      step = step->next;
+
+      // -- Open Open-Path-Dialog - Seek a folder to store the source
+      step->action = MO_OPPA_USER_FUNCTION;
+      step->delegate.fptr = &_user_function_print_result;
+      step->delegate.farg = strdup(ctxprop_options_dialog);
+    }
+
     // Text Input
     const char *const ctxprop_text_input = "sep-example-text-input";
     {
@@ -783,22 +852,21 @@ int mc_mo_load_operations(mc_node *module_node)
       // Obtain the name of the source module to create
       step->action = MO_OPPA_TEXT_INPUT_DIALOG;
       step->text_input_dialog.message = strdup("What is the title of the process:");
-      step->text_input_dialog.default_text = (mo_op_step_context_arg){MO_OPPC_CSTR, NULL};
+      step->text_input_dialog.default_text = (mo_op_step_context_arg){MO_OPPC_CSTR, strdup("custom-op")};
       step->text_input_dialog.target_context_property = strdup(ctxprop_process_title);
     }
-    // {
-    //   // Obtain the folder to create them in
-    //   step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
-    //   step = step->next;
 
-    //   // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //   step->action = MO_OPPA_OPEN_FOLDER_DIALOG;
-    //   step->folder_dialog.message = strdup("Select the folder to create the system source files in:");
-    //   // -- -- Folder to begin dialog with -- should be the src folder of the active project
-    //   step->folder_dialog.initial_folder = (mo_op_step_context_arg){MO_OPPC_CURRENT_WORKING_DIRECTORY, NULL}; // TODO
-    //   step->folder_dialog.target_context_property = strdup(gen_source_folder_context_property);
-    //   step->next = NULL;
-    // }
+    // Folder
+    const char *const ctxprop_folder = "sep-example-folder";
+    {
+      // Generate them
+      step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+      step = step->next;
+
+      // -- Open Open-Path-Dialog - Seek a folder to store the source
+      step->action = MO_OPPA_CREATE_PROCESS_STEP_DIALOG;
+      step->process_step_dialog.message = strdup("make your next step");
+    }
 
     step->next = NULL;
     MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
@@ -931,8 +999,7 @@ int init_modus_operandi_system(mc_node *app_root)
   MCcall(mc_mo_load_operations(node));
 
   // Create Process Step Dialog
-  MCcall(mc_mocsd_init_process_step_dialog(
-      app_root, (mc_process_step_dialog_data **)&((modus_operandi_data *)node->data)->create_step_dialog_data));
+  MCcall(mc_mocsd_init_process_step_dialog(app_root, &((modus_operandi_data *)node->data)->create_step_dialog));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 
