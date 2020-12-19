@@ -11,6 +11,7 @@ int init_ui_elements(mc_node *app_root)
   // MCcall(mcs_interpret_file("src/modules/ui_elements/stack_container.h"));
   MCcall(mcs_interpret_file("src/modules/ui_elements/textblock.h"));
   MCcall(mcs_interpret_file("src/modules/ui_elements/textbox.h"));
+  MCcall(mcs_interpret_file("src/modules/ui_elements/dropdown.h"));
   MCcall(mcs_interpret_file("src/modules/ui_elements/ui_elements.h"));
 
   MCcall(mcs_interpret_file("src/modules/ui_elements/button.c"));
@@ -18,6 +19,7 @@ int init_ui_elements(mc_node *app_root)
   // MCcall(mcs_interpret_file("src/modules/ui_elements/stack_container.c"));
   MCcall(mcs_interpret_file("src/modules/ui_elements/textblock.c"));
   MCcall(mcs_interpret_file("src/modules/ui_elements/textbox.c"));
+  MCcall(mcs_interpret_file("src/modules/ui_elements/dropdown.c"));
 
   return 0;
 }

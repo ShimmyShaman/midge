@@ -224,8 +224,6 @@ int mc_obd_init_options_dialog(mc_node *app_root)
   mc_obtain_midge_app_info(&app_info);
   //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
 
-  // TODO -- get rid of node type
-
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_ABSTRACT, "options-dialog", &node));
   MCcall(mca_init_node_layout(&node->layout));

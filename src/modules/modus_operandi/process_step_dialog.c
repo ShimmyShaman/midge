@@ -91,7 +91,7 @@ int _mc_mocsd_submit(mc_process_step_dialog_data *psdd)
   int (*result_delegate)(void *invoker_state, char *selected_folder) =
       (int (*)(void *, char *))psdd->callback.result_delegate;
   if (result_delegate) {
-    MCcall(result_delegate(psdd->callback.state, psdd->textbox->contents->text));
+    MCcall(result_delegate(psdd->callback.state, "TODO -- 84"));
   }
   psdd->callback.state = NULL;
   psdd->callback.result_delegate = NULL;
@@ -125,22 +125,19 @@ int mc_mocsd_activate_process_step_dialog(mc_process_step_dialog_data *psdd, cha
   psdd->callback.state = callback_state;
   psdd->callback.result_delegate = callback_delegate;
 
-  // Reset the textbox
-  MCcall(set_mc_str(psdd->textbox->contents, ""));
+  // Reset the type dropdown
+  MCcall(set_mc_str(psdd->step_type_dropdown->selected_str, ""));
+  MCcall(mca_set_node_requires_rerender(psdd->step_type_dropdown->node));
 
   // Set the message
-  MCcall(set_mc_str(psdd->message_textblock->str,  message == NULL ? "" : message));
+  MCcall(set_mc_str(psdd->message_textblock->str, message == NULL ? "" : message));
+  MCcall(mca_set_node_requires_rerender(psdd->message_textblock->node));
 
   // printf("_mc_mocsd_process_step_dialog_requested:tc'%s' %p %p '%s'\n", psdd->textbox->contents->text,
   //        psdd->textbox->contents->text, default_value, default_value);
 
   // Display
   psdd->node->layout->visible = true;
-
-  MCcall(mca_set_node_requires_rerender(psdd->textbox->node));
-  MCcall(mca_set_node_requires_layout_update(psdd->message_textblock->node));
-
-  MCcall(mca_focus_node(psdd->textbox->node));
 
   return 0;
 }
@@ -188,7 +185,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout->padding = (mc_paddingf){40, 40, 40, 40};
   // TODO -- set up extents override so the dialog can adjust to the size of the message
   layout->max_width = 400;
-  layout->max_height = 62;
+  layout->max_height = 280;
 
   psdd->panel->background_color = (render_color){0.35f, 0.35f, 0.35f, 1.f};
 
@@ -202,17 +199,19 @@ int _mc_mocsd_init_ui(mc_node *module_node)
 
   psdd->message_textblock->background_color = COLOR_GRAPE;
 
-  // Textbox
-  MCcall(mcu_init_textbox(psdd->panel->node, &psdd->textbox));
+  // Dropdown Button
+  MCcall(mcu_init_dropdown(psdd->panel->node, &psdd->step_type_dropdown));
 
-  layout = psdd->textbox->node->layout;
-  layout->preferred_width = 320;
+  layout = psdd->step_type_dropdown->node->layout;
+  // layout->preferred_width = 64;
   layout->padding = (mc_paddingf){4, 4, 4, 4};
-  layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
-  layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+  // layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+  // layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
-  psdd->textbox->tag = psdd;
-  psdd->textbox->submit = (void *)_mc_mocsd_textbox_submit;
+  psdd->step_type_dropdown->background_color = COLOR_MIDNIGHT_EXPRESS;
+  MCcall(set_mc_str(psdd->step_type_dropdown->selected_str, "(none)"));
+  psdd->step_type_dropdown->tag = psdd;
+  // psdd->step_type_dropdown->selection = (void *)&_mc_mocsd_button_submit;
 
   // Complete Button
   MCcall(mcu_init_button(psdd->panel->node, &button));

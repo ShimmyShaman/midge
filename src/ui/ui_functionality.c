@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "core/midge_app.h"
 #include "env/environment_definitions.h"
 #include "render/render_common.h"
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
-#include "core/midge_app.h"
 
 void mcu_initialize_ui_state(mcu_ui_state **p_ui_state)
 {
@@ -46,18 +46,21 @@ void mcu_initialize_ui_state(mcu_ui_state **p_ui_state)
 void _mcu_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x, int screen_y,
                                                      mc_node_list *layered_hit_list)
 {
+  int a;
+  mc_rectf *b;
+
   if (!node->layout) {
     // A non-visible node
     return;
   }
 
-  if (screen_x < (int)node->layout->__bounds.x || screen_y < (int)node->layout->__bounds.y ||
-      screen_x >= (int)(node->layout->__bounds.x + node->layout->__bounds.width) ||
-      screen_y >= (int)(node->layout->__bounds.y + node->layout->__bounds.height))
+  b = &node->layout->__bounds;
+  if (screen_x < (int)b->x || screen_y < (int)b->y || screen_x >= (int)(b->x + b->width) ||
+      screen_y >= (int)(b->y + b->height))
     return;
 
   if (node->children) {
-    for (int a = node->children->count - 1; a >= 0; --a) {
+    for (a = node->children->count - 1; a >= 0; --a) {
       _mcu_get_interactive_nodes_within_node_at_point(node->children->items[a], screen_x, screen_y, layered_hit_list);
     }
   }
@@ -79,6 +82,30 @@ void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
   (*layered_hit_list)->count = 0;
 
   _mcu_get_interactive_nodes_within_node_at_point(global_data->global_node, screen_x, screen_y, *layered_hit_list);
+
+  // Focused Line Exception
+  // -- Descendant focused items are permitted to have visual states that exceed their bounds (eg. a popup-menu from a
+  //     small button), so the descendant line needs to be checked and ensured
+
+  //  if (global_data->->layout->augmentation.count)
+  // {
+  //   mc_node *acn;
+  //   for (a = 0; a < node->layout->augmentation.count; ++a) {
+  //     acn = node->layout->augmentation.nodes[a];
+  //     b = &acn->layout->__bounds;
+
+  //     if (!acn->layout->visible)
+  //       continue;
+
+  //     if (screen_x < (int)b->x || screen_y < (int)b->y || screen_x >= (int)(b->x + b->width) ||
+  //         screen_y >= (int)(b->y + b->height))
+  //       continue;
+
+  //     // Add
+  //     append_to_collection((void ***)&layered_hit_list->items, &layered_hit_list->alloc, &layered_hit_list->count,
+  //     acn);
+  //   }
+  // }
 
   // printf("mcu_get_interactive_nodes_at_point(%i, %i) : list_count:%i\n", screen_x, screen_y,
   //        (*layered_hit_list)->count);

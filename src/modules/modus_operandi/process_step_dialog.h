@@ -11,7 +11,8 @@ typedef struct mc_process_step_dialog_data {
 
   mcu_panel *panel;
   mcu_textblock *message_textblock;
-  mcu_textbox *textbox;
+  mcu_dropdown *step_type_dropdown;
+  // mcu_textbox *textbox
 
   // struct {
   //   unsigned int width, height;
@@ -31,6 +32,6 @@ typedef struct mc_process_step_dialog_result {
 
 int mc_mocsd_init_process_step_dialog(mc_node *app_root, mc_process_step_dialog_data **p_data);
 int mc_mocsd_activate_process_step_dialog(mc_process_step_dialog_data *psdd, char *message, void *callback_state,
-                                       void *callback_delegate);
+                                          void *callback_delegate);
 
 #endif // PROCESS_STEP_DIALOG_H

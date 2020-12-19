@@ -1001,6 +1001,11 @@ int init_modus_operandi_system(mc_node *app_root)
   // Create Process Step Dialog
   MCcall(mc_mocsd_init_process_step_dialog(app_root, &((modus_operandi_data *)node->data)->create_step_dialog));
 
+  // DEBUG
+  // MCcall(mc_mocsd_activate_process_step_dialog(((modus_operandi_data *)node->data)->create_step_dialog, "message",
+  //                                              node->data, (void *)&_mc_mo_process_step_dialog_result));
+  // DEBUG
+
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 
   return 0;
