@@ -1,7 +1,9 @@
 bin/**
+dep/**
 !dep/cglm
 !dep/tinycc
-dep/**
+!dep/stb**
+!dep/readme.md
 test/**
 res/**
 daily_clarity.md
