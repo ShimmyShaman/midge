@@ -51,6 +51,15 @@ echo Compiling
 # #     -lvulkan \
 # #     -o bin/vulkanexp
 
+TCCCONFIG=dep/tinycc/config.h
+if ! test -f "$TCCCONFIG"; then
+    echo "generating '$TCCCONFIG'..."
+    cd dep/tinycc
+    ./configure
+    cd ../..
+fi
+
+
 gcc -o bin/midge                \
 -Idep/                          \
 dep/tinycc/libtcc.c             \
