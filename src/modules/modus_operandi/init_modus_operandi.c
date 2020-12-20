@@ -11,6 +11,8 @@ int init_modus_operandi(mc_node *app_root)
 {
   // Initialize the process step dialog
   MCcall(mcs_interpret_file("src/modules/modus_operandi/process_step_dialog.h"));
+  MCcall(mcs_interpret_file("src/modules/modus_operandi/modus_operandi.h"));
+
   MCcall(mcs_interpret_file("src/modules/modus_operandi/process_step_dialog.c"));
   MCcall(mcs_interpret_file("src/modules/modus_operandi/modus_operandi.c"));
 

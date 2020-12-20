@@ -116,7 +116,7 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   // Default Settings
   node->layout->min_width = 10;
   node->layout->min_height = 10;
-  node->layout->max_width = 80;
+  // node->layout->max_width = 80;
   node->layout->max_height = 24;
 
   // Control

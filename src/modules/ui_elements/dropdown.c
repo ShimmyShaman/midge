@@ -102,6 +102,7 @@ void _mcu_render_dropdown_present(image_render_details *image_render_queue, mc_n
 
 int _mcu_set_dropdown_extension_panel_visibility(mcu_dropdown *dropdown, bool visibility)
 {
+  // TODO -- maybe excess rerender calls made from this
   dropdown->options_extended = visibility;
 
   MCcall(mca_set_node_requires_rerender(dropdown->node));
@@ -162,8 +163,12 @@ void _mcu_dropdown_on_option_clicked(mci_input_event *input_event, mcu_button *b
 
   set_mc_str(dropdown->selected_str, button->str->text);
 
+  // Propagate
   if (dropdown->selection) {
-    puts("TODO dropdown selection event delegate call TODO");
+    // TODO fptr casting
+    void (*selection_made)(mci_input_event *, mcu_dropdown *) =
+        (void (*)(mci_input_event *, mcu_dropdown *))dropdown->selection;
+    selection_made(input_event, dropdown);
   }
 
   _mcu_set_dropdown_extension_panel_visibility(dropdown, false);
@@ -234,9 +239,11 @@ int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_dropdown)
   for (int a = 0; a < 8; ++a) {
     MCcall(mcu_init_button(dropdown->extension_panel->node, &button));
 
-    button->node->layout->preferred_height = 26;
+    // button->node->layout->preferred_height = 26;
     button->node->layout->padding = (mc_paddingf){2, 2 + (26 + 1) * a, 2, 2};
     button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+
+    button->background_color = COLOR_TRANSPARENT;
     button->tag = dropdown;
     button->left_click = (void *)&_mcu_dropdown_on_option_clicked;
     set_mc_str(button->str, "button option");

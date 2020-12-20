@@ -2,6 +2,8 @@
 #define PROCESS_STEP_DIALOG_H
 
 #include "core/core_definitions.h"
+
+#include "modules/collections/hash_table.h"
 #include "modules/ui_elements/ui_elements.h"
 
 typedef struct mc_process_step_dialog_data {
@@ -12,6 +14,10 @@ typedef struct mc_process_step_dialog_data {
   mcu_panel *panel;
   mcu_textblock *message_textblock;
   mcu_dropdown *step_type_dropdown;
+  mcu_button *previous_button, *finish_button, *next_button;
+  hash_table_t options_panels;
+  mcu_panel *active_options_panel;
+
   // mcu_textbox *textbox
 
   // struct {
