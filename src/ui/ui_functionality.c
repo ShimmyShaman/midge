@@ -49,7 +49,7 @@ void _mcu_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
   int a;
   mc_rectf *b;
 
-  if (!node->layout) {
+  if (!node->layout || !node->layout->visible) {
     // A non-visible node
     return;
   }

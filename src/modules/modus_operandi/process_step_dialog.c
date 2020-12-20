@@ -101,6 +101,10 @@ int _mc_mocsd_submit(mc_process_step_dialog_data *psdd)
 
   // Wrap Up
   psdd->node->layout->visible = false;
+  if (psdd->active_options_panel) {
+    psdd->active_options_panel->node->layout->visible = false;
+    psdd->active_options_panel = NULL;
+  }
   MCcall(mca_set_node_requires_rerender(psdd->node));
 
   return 0;
