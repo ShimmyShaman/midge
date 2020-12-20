@@ -60,6 +60,12 @@ if ! test -f "$TCCCONFIG"; then
 fi
 
 
+BIN=bin
+if ! test -d "$BIN"; then
+    mkdir bin
+fi
+
+
 gcc -o bin/midge                \
 -Idep/                          \
 dep/tinycc/libtcc.c             \
