@@ -2,64 +2,87 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "control/mc_controller.h"
 #include "env/environment_definitions.h"
 
+#include "modules/ui_elements/button.h"
 #include "modules/ui_elements/dropdown.h"
 
-// void __mcu_determine_dropdown_extents(mc_node *node, layout_extent_restraints restraints)
+void _mcu_update_dropdown_extension_layout(mc_node *node, mc_rectf const *available_area)
+{
+  mcu_panel *extension = (mcu_panel *)node->data;
+  mcu_dropdown *dropdown = (mcu_dropdown *)extension->tag;
+
+  int a;
+  mcu_button *button;
+  mc_node *button_node;
+  for (a = 0; a < extension->node->children->count && a < dropdown->options.count; ++a) {
+    button_node = extension->node->children->items[a];
+    button = (mcu_button *)button_node->data;
+
+    button_node->layout->visible = true;
+    set_mc_str(button->str, dropdown->options.items[a]);
+    mca_set_node_requires_rerender(button_node);
+  }
+  extension->node->layout->determined_extents.height = 2 + a * 27 + 2; // TODO...
+  for (; a < extension->node->children->count; ++a) {
+    button_node = extension->node->children->items[a];
+
+    button_node->layout->visible = false;
+  }
+
+  mca_update_typical_node_layout(node, available_area);
+}
+
+// void _mcu_render_dropdown_extension_present(image_render_details *image_render_queue, mc_node *node)
 // {
-//   mcu_dropdown *dropdown = (mcu_dropdown *)node->data;
+//   mcu_panel *panel = (mcu_panel *)node->data;
 
-//   mc_rectf new_bounds = node->layout->__bounds;
+//   printf("rendering EXTENSION: %u %u %u %u\n", (unsigned int)node->layout->__bounds.x,
+//          (unsigned int)node->layout->__bounds.y, (unsigned int)node->layout->__bounds.width,
+//          (unsigned int)node->layout->__bounds.height);
+//   // mcu_dropdown *dropdown = (mcu_dropdown *)node->data;
 
-//   float str_width, str_height;
-//   if (!node->layout->preferred_width || !node->layout->preferred_height)
-//     mcr_determine_text_display_dimensions(dropdown->font, dropdown->str->text, &str_width, &str_height);
+//   // Background
+//   mcr_issue_render_command_colored_quad(
+//       image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
+//       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height,
+//       panel->background_color);
 
-//   // Width
-//   if (node->layout->preferred_width)
-//     new_bounds.width = node->layout->preferred_width;
-//   else
-//     new_bounds.width = str_width;
-
-//   // Height
-//   if (node->layout->preferred_height)
-//     new_bounds.height = node->layout->preferred_height;
-//   else
-//     new_bounds.height = str_height;
-
-//   // Determine if the new bounds is worth setting
-//   if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-//       new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-//     node->layout->__bounds = new_bounds;
-//     mca_set_node_requires_layout_update(node);
-//   }
+//   // // Text
+//   // // printf("renderdropdown- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
+//   // //        (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text, dropdown->font);
+//   // mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
+//   //                               (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text,
+//   dropdown->font,
+//   //                               dropdown->font_color);
 // }
 
-// void __mcu_update_dropdown_layout(mc_node *node,mc_rectf const *available_area
+void _mcu_update_dropdown_node_layout(mc_node *node, mc_rectf const *available_area)
+{
+  // This method or most of its contents may not even be needed TODO
+  // Don't update the child panel layout
+  mca_update_typical_node_layout_partially(node, available_area, true, true, true, true, false);
+
+  // Extension Panel
+  mcu_dropdown *dropdown = (mcu_dropdown *)node->data;
+  if (dropdown->options_extended) {
+    // -- place it below
+    mc_node *ext = dropdown->extension_panel->node;
+    ext->layout->padding.left = node->layout->__bounds.x;
+    ext->layout->padding.top = node->layout->__bounds.y + node->layout->__bounds.height;
+    ext->layout->preferred_width = dropdown->node->layout->__bounds.width;
+  }
+}
+
+// void _mcu_update_dropdown_extension_node_layout(mc_node *extension_node, mc_rectf const *available_area)
 // {
-//   mcu_dropdown *dropdown = (mcu_dropdown *)node->data;
-
-//   mc_rectf new_bounds = node->layout->__bounds;
-//   new_bounds.x = available_area->x + node->layout->padding.left;
-//   new_bounds.y = available_area->y + node->layout->padding.top;
-
-//   // Determine if the new bounds is worth setting
-//   if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-//       new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-//     node->layout->__bounds = new_bounds;
-//     mca_set_node_requires_rerender(node);
-//   }
-
-//   node->layout->__requires_layout_update = false;
-
-//   // Set rerender anyway because text could've changed
-//   mca_set_node_requires_rerender(node);
+//   // Nothing
 // }
 
-void __mcu_render_dropdown_present(image_render_details *image_render_queue, mc_node *node)
+void _mcu_render_dropdown_present(image_render_details *image_render_queue, mc_node *node)
 {
   mcu_dropdown *dropdown = (mcu_dropdown *)node->data;
 
@@ -71,28 +94,44 @@ void __mcu_render_dropdown_present(image_render_details *image_render_queue, mc_
 
   // Text
   // printf("renderdropdown- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, dropdown->str->text, dropdown->font->name);
+  //        (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text, dropdown->font);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                 (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text, dropdown->font,
                                 dropdown->font_color);
+}
 
-  if (dropdown->options_extended) {
-    // Dropdown Extended
-    float box_height = 4 + 4 + dropdown->options.count * 24;
+int _mcu_set_dropdown_extension_panel_visibility(mcu_dropdown *dropdown, bool visibility)
+{
+  dropdown->options_extended = visibility;
 
-    // -- Background
-    mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                          (unsigned int)(node->layout->__bounds.y + node->layout->__bounds.height),
-                                          (unsigned int)node->layout->__bounds.width, box_height,
-                                          dropdown->dropdown_shade);
+  MCcall(mca_set_node_requires_rerender(dropdown->node));
 
-    for (int a = 0; a < dropdown->options.count; ++a) {
-      mcr_issue_render_command_text(
-          image_render_queue, (unsigned int)node->layout->__bounds.x,
-          (unsigned int)(node->layout->__bounds.y + node->layout->__bounds.height + 4 + a * 24),
-          dropdown->selected_str->text, dropdown->font, dropdown->font_color);
+  mc_node *extension_node = dropdown->extension_panel->node;
+  if (visibility) {
+    if (!extension_node->parent) {
+      extension_node->layout->visible = true;
+
+      // Set the appropriately higher z_layer_index
+      mc_node *ancestor = dropdown->node;
+      unsigned int z_layer = ancestor->layout->z_layer_index;
+      while (ancestor->parent) {
+        ancestor = ancestor->parent;
+        z_layer = max(z_layer, ancestor->layout->z_layer_index);
+      }
+      extension_node->layout->z_layer_index = z_layer + 1U;
+
+      // Attach
+      MCcall(mca_attach_to_ancestor_root(ancestor, extension_node));
+      MCcall(mca_focus_node(extension_node));
+      MCcall(mca_set_node_requires_rerender(extension_node));
     }
   }
+  else {
+    extension_node->layout->visible = false;
+    MCcall(mca_detach_from_parent(extension_node));
+  }
+
+  return 0;
 }
 
 void _mcu_dropdown_handle_input_event(mc_node *dropdown_node, mci_input_event *input_event)
@@ -111,10 +150,23 @@ void _mcu_dropdown_handle_input_event(mc_node *dropdown_node, mci_input_event *i
     //   selection(input_event, dropdown);
     // }
 
-    dropdown->options_extended = !dropdown->options_extended;
-    mca_set_node_requires_rerender(dropdown_node);
+    _mcu_set_dropdown_extension_panel_visibility(dropdown, !dropdown->options_extended);
   }
 
+  input_event->handled = true;
+}
+
+void _mcu_dropdown_on_option_clicked(mci_input_event *input_event, mcu_button *button)
+{
+  mcu_dropdown *dropdown = button->tag;
+
+  set_mc_str(dropdown->selected_str, button->str->text);
+
+  if (dropdown->selection) {
+    puts("TODO dropdown selection event delegate call TODO");
+  }
+
+  _mcu_set_dropdown_extension_panel_visibility(dropdown, false);
   input_event->handled = true;
 }
 
@@ -129,9 +181,9 @@ int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_dropdown)
   // Layout
   MCcall(mca_init_node_layout(&node->layout));
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
-  node->layout->update_layout = (void *)&mca_update_typical_node_layout;
+  node->layout->update_layout = (void *)&_mcu_update_dropdown_node_layout;
   node->layout->render_headless = NULL;
-  node->layout->render_present = (void *)&__mcu_render_dropdown_present;
+  node->layout->render_present = (void *)&_mcu_render_dropdown_present;
   node->layout->handle_input_event = (void *)&_mcu_dropdown_handle_input_event;
 
   // Default Settings
@@ -153,12 +205,47 @@ int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_dropdown)
   dropdown->selection = NULL;
 
   MCcall(init_mc_str(&dropdown->selected_str));
-  MCcall(set_mc_str(dropdown->selected_str, "dropdown"));
   dropdown->font = NULL;
   dropdown->font_color = COLOR_GHOST_WHITE;
 
   dropdown->background_color = COLOR_DIM_GRAY;
-  dropdown->dropdown_shade = (render_color){0.35f, 0.35f, 0.35f, 0.95f};
+
+  dropdown->node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
+  dropdown->node->children->count = 0;
+  dropdown->node->children->alloc = 0;
+
+  // -- Panel
+  MCcall(mcu_init_panel(NULL, &dropdown->extension_panel));
+
+  dropdown->extension_panel->background_color = (render_color){0.15f, 0.15f, 0.25f, 0.92f};
+  dropdown->extension_panel->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+  dropdown->extension_panel->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  dropdown->extension_panel->node->layout->max_height = 224;
+  dropdown->extension_panel->tag = dropdown;
+
+  dropdown->extension_panel->node->layout->update_layout = (void *)&_mcu_update_dropdown_extension_layout;
+  // dropdown->extension_panel->node->layout->render_present = (void *)&_mcu_render_dropdown_extension_present;
+
+  // Dropdown Options Buttons
+  // It is assumed the only children of the extension panel are going to be buttons -- update the layout method if this
+  // is ever not so
+  char buf[64];
+  mcu_button *button;
+  for (int a = 0; a < 8; ++a) {
+    MCcall(mcu_init_button(dropdown->extension_panel->node, &button));
+
+    button->node->layout->preferred_height = 26;
+    button->node->layout->padding = (mc_paddingf){2, 2 + (26 + 1) * a, 2, 2};
+    button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    button->tag = dropdown;
+    button->left_click = (void *)&_mcu_dropdown_on_option_clicked;
+    set_mc_str(button->str, "button option");
+
+    sprintf(buf, "dropdown-option-button-%i", a);
+    if (button->node->name)
+      free(button->node->name);
+    button->node->name = strdup(buf);
+  }
 
   // Set to out pointer
   *p_dropdown = dropdown;

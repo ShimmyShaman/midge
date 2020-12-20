@@ -13,9 +13,11 @@ void mc_init_midge_app_info()
 {
   // Instance
   __mc_midge_app_info = malloc(sizeof(midge_app_info));
+  __mc_midge_app_info->ROOT_UID = MIDGE_APP_INFO_ROOT_UID;
 
   mc_obtain_app_itp_data(&__mc_midge_app_info->itp_data);
   __mc_midge_app_info->global_node = __mc_midge_app_info->itp_data->global_node;
+  __mc_midge_app_info->global_node->data = __mc_midge_app_info;
 
   // Hierarchy Mutex
   pthread_mutexattr_init(&__mc_midge_app_info->hierarchy_mutex_attr);

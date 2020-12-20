@@ -133,13 +133,19 @@ int mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_i
 int mca_init_node_layout(mca_node_layout **layout);
 int mca_init_mc_node(node_type type, const char *name, mc_node **node);
 
-// void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints);
 int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints);
 int mca_update_typical_node_layout(mc_node *node, mc_rectf const *available_area);
-// void mca_update_node_layout(mc_node *node,mc_rectf const *available_area;
+int mca_determine_typical_node_extents_partially(mc_node *node, layout_extent_restraints restraints,
+                                                 bool determine_children);
+int mca_update_typical_node_layout_partially(mc_node *node, mc_rectf const *available_area, bool update_x,
+                                             bool update_y, bool update_width, bool update_height,
+                                             bool update_children);
 
 int mca_render_node_list_headless(render_thread_info *render_thread, mc_node_list *node_list);
 int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *node_list);
+
+int mca_attach_to_ancestor_root(mc_node *ancestor, mc_node *node_to_attach);
+int mca_detach_from_parent(mc_node *node);
 
 int mca_set_node_requires_layout_update(mc_node *node);
 /* A recursive function initiating layout update on all members of the node list and THEIR descendents as well */

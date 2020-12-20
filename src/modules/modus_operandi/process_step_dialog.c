@@ -184,10 +184,10 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout = psdd->panel->node->layout;
   layout->padding = (mc_paddingf){40, 40, 40, 40};
   // TODO -- set up extents override so the dialog can adjust to the size of the message
-  layout->max_width = 400;
-  layout->max_height = 280;
+  layout->max_width = 720;
+  layout->max_height = 480;
 
-  psdd->panel->background_color = (render_color){0.35f, 0.35f, 0.35f, 1.f};
+  psdd->panel->background_color = (render_color){0.35f, 0.35f, 0.25f, 1.f};
 
   // Message Block
   MCcall(mcu_init_textblock(psdd->panel->node, &psdd->message_textblock));
@@ -211,6 +211,23 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   psdd->step_type_dropdown->background_color = COLOR_MIDNIGHT_EXPRESS;
   MCcall(set_mc_str(psdd->step_type_dropdown->selected_str, "(none)"));
   psdd->step_type_dropdown->tag = psdd;
+  psdd->step_type_dropdown->extension_panel->node->layout->max_height = 8 + 27 * 5;
+  MCcall(append_to_collection((void ***)&psdd->step_type_dropdown->options.items,
+                              &psdd->step_type_dropdown->options.capacity, &psdd->step_type_dropdown->options.count,
+                              strdup("SAVE_FILE_DIALOG")));
+  MCcall(append_to_collection((void ***)&psdd->step_type_dropdown->options.items,
+                              &psdd->step_type_dropdown->options.capacity, &psdd->step_type_dropdown->options.count,
+                              strdup("OPEN_FOLDER_DIALOG")));
+  MCcall(append_to_collection((void ***)&psdd->step_type_dropdown->options.items,
+                              &psdd->step_type_dropdown->options.capacity, &psdd->step_type_dropdown->options.count,
+                              strdup("TEXT_INPUT_DIALOG")));
+  MCcall(append_to_collection((void ***)&psdd->step_type_dropdown->options.items,
+                              &psdd->step_type_dropdown->options.capacity, &psdd->step_type_dropdown->options.count,
+                              strdup("OPTIONS_DIALOG")));
+  MCcall(append_to_collection((void ***)&psdd->step_type_dropdown->options.items,
+                              &psdd->step_type_dropdown->options.capacity, &psdd->step_type_dropdown->options.count,
+                              strdup("USER_FUNCTION")));
+
   // psdd->step_type_dropdown->selection = (void *)&_mc_mocsd_button_submit;
 
   // Complete Button

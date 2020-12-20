@@ -452,6 +452,10 @@ int midge_run_app()
       // }
     }
 
+    // Update State
+    // -- Reset Disembodied Nodes
+    // app_info->app_front_layer.next_render_count = 0U;
+
     // Handle Input
     if (app_info->input_state_requires_update || app_info->render_thread->input_buffer.event_count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
@@ -473,9 +477,6 @@ int midge_run_app()
       printf("RENDER-THREAD closed unexpectedly! Shutting down...\n");
       break;
     }
-
-    // Update State
-    // TODO ?? -- update registered methods...
 
     // Update Visible Layout
     {
@@ -555,7 +556,8 @@ int midge_run_app()
             child->layout->__requires_rerender) {
           // TODO fptr casting
           // printf("rh-child-type:%i '%s'\n", child->type, child->name);
-          void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+          void (*render_node_headless)(render_thread_info *, mc_node *) =
+              (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
           render_node_headless(app_info->render_thread, child);
         }
       }

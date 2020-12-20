@@ -5,11 +5,13 @@
 
 #include <pthread.h>
 
-#include "core/core_definitions.h"
 #include "control/mc_controller.h"
+#include "core/core_definitions.h"
 #include "platform/mc_xcb.h"
 #include "render/render_thread.h"
 #include "ui/ui_definitions.h"
+
+#define MIDGE_APP_INFO_ROOT_UID 2760025
 
 typedef struct frame_time {
   long frame_secs, frame_nsecs;
@@ -30,6 +32,7 @@ typedef struct event_handler_array {
 } event_handler_array;
 
 typedef struct midge_app_info {
+  unsigned int ROOT_UID;
   mc_app_itp_data *itp_data;
   mc_node *global_node;
 

@@ -8,6 +8,9 @@
 #include "mc_str.h"
 #include "render/render_common.h"
 
+#include "modules/ui_elements/panel.h"
+
+
 typedef struct mcu_dropdown {
   mc_node *node;
 
@@ -27,7 +30,9 @@ typedef struct mcu_dropdown {
   mcr_font_resource *font;
   render_color font_color;
 
-  render_color background_color, dropdown_shade;
+  render_color background_color;
+
+  mcu_panel *extension_panel;
 } mcu_dropdown;
 
 int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_button);

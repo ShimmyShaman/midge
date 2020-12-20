@@ -24,7 +24,7 @@ int mc_init_app_itp_data(TCCInterpState *tis)
   global->children->items = NULL;
 
   __mc_app_itp_data = (mc_app_itp_data *)malloc(sizeof(mc_app_itp_data));
-  global->data = __mc_app_itp_data;
+  global->data = NULL;
   __mc_app_itp_data->global_node = global;
 
   __mc_app_itp_data->interpreter = tis;
