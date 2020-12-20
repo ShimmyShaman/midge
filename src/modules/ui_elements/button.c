@@ -38,7 +38,7 @@
 //   }
 // }
 
-// void __mcu_update_button_layout(mc_node *node, mc_rectf *available_area)
+// void __mcu_update_button_layout(mc_node *node,mc_rectf const *available_area
 // {
 //   mcu_button *button = (mcu_button *)node->data;
 
@@ -70,8 +70,8 @@ void __mcu_render_button_present(image_render_details *image_render_queue, mc_no
                                         (unsigned int)node->layout->__bounds.height, button->background_color);
 
   // Text
-  // printf("renderbutton- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font->resource_uid);
+  // printf("renderbutton- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
+  //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font->name);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
                                 (unsigned int)node->layout->__bounds.y, button->str->text, button->font,
                                 button->font_color);
@@ -103,6 +103,8 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_MCU_BUTTON, "unnamed-button", &node));
 
+  // printf("mcu_init_button->node:%p name:%p '%s'-%i\n", node, node->name, node->name, strlen(node->name));
+
   // Layout
   MCcall(mca_init_node_layout(&node->layout));
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
@@ -112,8 +114,10 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   node->layout->handle_input_event = (void *)&_mcu_button_handle_input_event;
 
   // Default Settings
-  node->layout->preferred_width = 80;
-  node->layout->preferred_height = 24;
+  node->layout->min_width = 10;
+  node->layout->min_height = 10;
+  // node->layout->max_width = 80;
+  node->layout->max_height = 24;
 
   // Control
   mcu_button *button = (mcu_button *)malloc(sizeof(mcu_button)); // TODO -- malloc check

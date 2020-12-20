@@ -15,27 +15,58 @@ void _mcu_determine_textblock_extents(mc_node *node, layout_extent_restraints re
   mc_rectf new_bounds = node->layout->__bounds;
 
   float str_width, str_height;
-  if (!node->layout->preferred_width || !node->layout->preferred_height)
-    mcr_determine_text_display_dimensions(textblock->font, textblock->str->text, &str_width, &str_height);
+  bool text_determined = false;
+
+  const float MAX_EXTENT_VALUE = 100000.f;
+  mca_node_layout *layout = node->layout;
 
   // Width
-  if (node->layout->preferred_width)
-    new_bounds.width = node->layout->preferred_width;
+  if (layout->preferred_width) {
+    // Set to preferred width
+    layout->determined_extents.width = layout->preferred_width;
+  }
   else {
-    new_bounds.width = str_width;
+    mcr_determine_text_display_dimensions(textblock->font, textblock->str->text, &str_width, &str_height);
+    text_determined = true;
+
+    layout->determined_extents.width = str_width;
+
+    // Specified bounds
+    if (layout->min_width && layout->determined_extents.width < layout->min_width) {
+      layout->determined_extents.width = layout->min_width;
+    }
+    if (layout->max_width && layout->determined_extents.width > layout->max_width) {
+      layout->determined_extents.width = layout->max_width;
+    }
+
+    if (layout->determined_extents.width < 0) {
+      layout->determined_extents.width = 0;
+    }
   }
 
   // Height
-  if (node->layout->preferred_height)
-    new_bounds.height = node->layout->preferred_height;
-  else
-    new_bounds.height = str_height;
+  if (layout->preferred_height) {
+    // Set to preferred height
+    layout->determined_extents.height = layout->preferred_height;
+  }
+  else {
+    if (!text_determined) {
+      mcr_determine_text_display_dimensions(textblock->font, textblock->str->text, &str_width, &str_height);
+    }
 
-  // Determine if the new bounds is worth setting
-  if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-      new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-    node->layout->__bounds = new_bounds;
-    mca_set_node_requires_layout_update(node);
+    layout->determined_extents.height = str_height;
+
+    // Specified bounds
+    if (layout->min_height && layout->determined_extents.height < layout->min_height) {
+      layout->determined_extents.height = layout->min_height;
+    }
+    if (layout->max_height && layout->determined_extents.height > layout->max_height) {
+      layout->determined_extents.height = layout->max_height;
+    }
+
+    if (layout->determined_extents.height < 0) {
+      layout->determined_extents.height = 0;
+    }
   }
 }
 
@@ -84,7 +115,7 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
 {
   // Node
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, NULL, &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-textblock", &node));
 
   // Layout
   MCcall(mca_init_node_layout(&node->layout));
@@ -95,8 +126,8 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
   node->layout->handle_input_event = (void *)&_mcu_textblock_handle_input_event;
 
   // Default Settings
-  node->layout->preferred_width = 80;
-  node->layout->preferred_height = 24;
+  node->layout->min_width = 10;
+  node->layout->min_height = 24;
 
   // Control
   mcu_textblock *textblock = (mcu_textblock *)malloc(sizeof(mcu_textblock)); // TODO -- malloc check

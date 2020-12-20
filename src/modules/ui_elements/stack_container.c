@@ -130,7 +130,7 @@
 //   return 0;
 // }
 
-// int _mcu_update_stack_container_node_layout(mc_node *node, mc_rectf *available_area)
+// int _mcu_update_stack_container_node_layout(mc_node *node,mc_rectf const *available_area
 // {
 //   // Data
 //   mcu_stack_container *stack_container = (mcu_stack_container *)node->data;

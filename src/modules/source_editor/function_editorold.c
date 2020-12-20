@@ -44,7 +44,7 @@ void _mce_update_function_editor_visible_source_lines(mce_function_editor *funct
   }
 }
 
-int _mce_update_line_positions(mce_function_editor *fedit, mc_rectf *available_area)
+int _mce_update_line_positions(mce_function_editor *fedit,mc_rectf const *available_area
 {
   int y_index = 0;
 
@@ -94,7 +94,7 @@ void _mce_determine_function_editor_extents(mc_node *node, layout_extent_restrai
   mca_determine_typical_node_extents(node, restraints);
 }
 
-void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
+void _mce_update_function_editor_layout(mc_node *node,mc_rectf const *available_area
 {
   // Clear
   node->layout->__requires_layout_update = false;
@@ -219,7 +219,7 @@ void _mce_update_function_editor_layout(mc_node *node, mc_rectf *available_area)
   // mca_set_node_requires_rerender(node);
 }
 
-void _mce_render_function_editor_headless(mc_node *node)
+void _mce_render_function_editor_headless(render_thread_info *render_thread, mc_node *node)
 {
   // puts("_mce_render_function_editor_headless");
   mce_function_editor *function_editor = (mce_function_editor *)node->data;
@@ -234,8 +234,8 @@ void _mce_render_function_editor_headless(mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-      render_node_headless(child);
+      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      render_node_headless(render_thread, child);
       ++debug_count;
     }
   }

@@ -49,17 +49,16 @@ int set_mc_strn(mc_str *str, const char *src, int len)
   return 0;
 }
 
-int release_mc_str(mc_str *ptr, bool free_char_string_also)
+void release_mc_str(mc_str *ptr, bool free_char_string_also)
 {
   if (ptr->alloc > 0 && free_char_string_also && ptr->text) {
     free(ptr->text);
   }
 
   free(ptr);
-
-  return 0;
 }
 
+// TODO -- this should be faster then append_to_mc_str
 int append_char_to_mc_str(mc_str *str, char c)
 {
   char buf[2];
@@ -267,6 +266,7 @@ int append_to_mc_strf(mc_str *str, const char *fmt, ...)
 int insert_into_mc_str(mc_str *str, const char *text, int index)
 {
   if (index > str->len) {
+    midge_error_print_thread_stack_trace();
     MCerror(4331, "TODO");
   }
 
@@ -336,6 +336,74 @@ int restrict_mc_str(mc_str *str, int len)
 
   str->len = len;
   str->text[len] = '\0';
+
+  return 0;
+}
+
+// TODO -- non-essential core method in a core file
+int append_uppercase_to_mc_str(mc_str *str, const char *text)
+{
+  int len = strlen(text);
+  if (str->len + len + 1 >= str->alloc) {
+    // printf("atc-2\n");
+    unsigned int new_allocated_size = str->alloc + len + 16 + (str->alloc) / 2;
+    // printf("atc-3 : len:%u new_allocated_size:%u\n", str->len, new_allocated_size);
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    // printf("atc-4\n");
+    memcpy(newptr, str->text, sizeof(char) * str->alloc);
+    // printf("atc-5\n");
+    free(str->text);
+    // printf("atc-6\n");
+    str->text = newptr;
+    // printf("atc-7\n");
+    str->alloc = new_allocated_size;
+    // printf("atc-8\n");
+  }
+
+  char c;
+  for (int i = 0; i < len; ++i) {
+    c = text[i];
+    if (c >= 'a' || c <= 'z') {
+      c -= 'a' - 'A';
+    }
+    str->text[str->len + i] = c;
+  }
+  str->len += len;
+  str->text[str->len] = '\0';
+
+  return 0;
+}
+
+// TODO -- non-essential core method in a core file
+int append_lowercase_to_mc_str(mc_str *str, const char *text)
+{
+  int len = strlen(text);
+  if (str->len + len + 1 >= str->alloc) {
+    // printf("atc-2\n");
+    unsigned int new_allocated_size = str->alloc + len + 16 + (str->alloc) / 2;
+    // printf("atc-3 : len:%u new_allocated_size:%u\n", str->len, new_allocated_size);
+    char *newptr = (char *)malloc(sizeof(char) * new_allocated_size);
+    // printf("atc-4\n");
+    memcpy(newptr, str->text, sizeof(char) * str->alloc);
+    // printf("atc-5\n");
+    free(str->text);
+    // printf("atc-6\n");
+    str->text = newptr;
+    // printf("atc-7\n");
+    str->alloc = new_allocated_size;
+    // printf("atc-8\n");
+  }
+
+  char c;
+  for (int i = 0; i < len; ++i) {
+    c = text[i];
+    if (c >= 'A' || c <= 'Z') {
+      c += 'a' - 'A';
+    }
+    str->text[str->len + i] = c;
+  }
+  str->len += len;
+  str->text[str->len] = '\0';
 
   return 0;
 }

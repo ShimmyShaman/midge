@@ -32,7 +32,7 @@ typedef struct welcome_window_data {
 
 } welcome_window_data;
 
-void mc_mww_render_headless(mc_node *node)
+void mc_mww_render_headless(render_thread_info *render_thread, mc_node *node)
 {
   welcome_window_data *wwwata = (welcome_window_data *)node->data;
 
@@ -42,8 +42,8 @@ void mc_mww_render_headless(mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-      render_node_headless(child);
+      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      render_node_headless(render_thread, child);
     }
   }
 

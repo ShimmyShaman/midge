@@ -4,19 +4,18 @@
 #include <string.h>
 
 // #include <sys/stat.h>
-// #include <unistd.h>
+#include <unistd.h>
 
 #include "midge_error_handling.h"
 
 #include "core/c_parser_lexer.h"
-#include "core/core_definitions.h"
 #include "core/mc_code_transcription.h"
 
 #include "mc_source.h"
 
 int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field_info *field);
 
-int attach_function_info_to_owner(function_info *func_info)
+int mc_register_function_info_to_app(function_info *func_info)
 {
   mc_app_itp_data *app_itp_data;
   mc_obtain_app_itp_data(&app_itp_data);
@@ -27,7 +26,7 @@ int attach_function_info_to_owner(function_info *func_info)
   return 0;
 }
 
-int attach_struct_info_to_owner(struct_info *structure_info)
+int mc_register_struct_info_to_app(struct_info *structure_info)
 {
   mc_app_itp_data *app_itp_data;
   mc_obtain_app_itp_data(&app_itp_data);
@@ -38,7 +37,7 @@ int attach_struct_info_to_owner(struct_info *structure_info)
   return 0;
 }
 
-int attach_enumeration_info_to_owner(enumeration_info *enum_info)
+int mc_register_enumeration_info_to_app(enumeration_info *enum_info)
 {
   mc_app_itp_data *app_itp_data;
   mc_obtain_app_itp_data(&app_itp_data);
@@ -46,6 +45,36 @@ int attach_enumeration_info_to_owner(enumeration_info *enum_info)
   append_to_collection((void ***)&app_itp_data->enumerations.items, &app_itp_data->enumerations.alloc,
                        &app_itp_data->enumerations.count, (void *)enum_info);
 
+  return 0;
+}
+
+int mc_append_segment_to_source_file(mc_source_file_info *source_file, mc_source_file_code_segment_type type,
+                                     void *data)
+{
+  mc_source_file_code_segment *segment = (mc_source_file_code_segment *)malloc(sizeof(mc_source_file_code_segment));
+  segment->type = type;
+  segment->data = data;
+
+  MCcall(append_to_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
+                              &source_file->segments.count, segment));
+
+  return 0;
+}
+
+int _mc_find_segment_in_source_file(mc_source_file_info *source_file, mc_source_file_code_segment_type type, void *data,
+                                    mc_source_file_code_segment **result)
+{
+  mc_source_file_code_segment *seg;
+  for (int a = 0; a < source_file->segments.count; ++a) {
+    seg = source_file->segments.items[a];
+
+    if (seg->type == type && seg->data == data) {
+      *result = seg;
+      return 0;
+    }
+  }
+
+  *result = NULL;
   return 0;
 }
 
@@ -320,19 +349,17 @@ int mcs_construct_dependency(function_info *dependent_function, const char *iden
 
 int mcs_determine_code_dependencies(function_info *dependent_function, mc_syntax_node *code_block) { return 0; }
 
-int mcs_register_function_declaration(mc_source_file_info *source_file, mc_syntax_node *function_ast,
-                                      function_info **p_func_info)
+int mcs_register_function_declaration(mc_source_file_info *source_file, mc_syntax_node *function_ast)
 {
   int p;
 
   // Ensure a function info entry exists for the declared function
-  find_function_info(function_ast->function.name->text, p_func_info);
+  function_info *fi;
+  find_function_info(function_ast->function.name->text, &fi);
 
-  function_info *fi = *p_func_info;
   if (!fi) {
     fi = (function_info *)calloc(1, sizeof(function_info));
-    *p_func_info = fi;
-    attach_function_info_to_owner(fi);
+    mc_register_function_info_to_app(fi);
 
     fi->name = strdup(function_ast->function.name->text);
     fi->is_defined = false;
@@ -364,6 +391,17 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
       MCerror(9443, "Redefinition - TODO check");
     }
 
+    // Source
+    if (fi->source) {
+      if (fi->source != source_file) {
+        MCerror(9484, "Source File Change for '%s'", fi->name);
+      }
+    }
+
+    // Attach to the source file
+    fi->source = source_file;
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
+
     // puts("1");
     // Reset dependencies
     // TODO schedule dependencies
@@ -382,56 +420,48 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
     //     // mcs_construct_dependency(fi, param->parameter.type_identifier->type_identifier.identifier->text);
     //   }
     // }
-
-    // Source
-    if (fi->source) {
-      MCerror(8384, "TODO for '%s'", fi->name);
-    }
-
-    fi->source = (source_definition *)malloc(sizeof(source_definition));
-    fi->source->type = SOURCE_DEFINITION_FUNCTION;
-    fi->source->source_file = source_file;
-    fi->source->data.func_info = fi;
-    fi->source->code;
-    MCcall(mcs_copy_syntax_node_to_text(function_ast, &fi->source->code));
-
-    MCcall(append_to_collection((void ***)&source_file->definitions.items, &source_file->definitions.alloc,
-                                &source_file->definitions.count, fi->source));
+  }
+  else {
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DECLARATION, fi));
   }
 
   return 0;
 }
 
-int mcs_register_struct_declaration(mc_syntax_node *struct_ast, struct_info **p_struct_info)
+int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_node *struct_ast)
 {
   if (!struct_ast->struct_decl.type_name) {
     MCerror(8461, "root-level anonymous external structures not yet supported");
   }
 
-  find_struct_info(struct_ast->struct_decl.type_name->text, p_struct_info);
+  struct_info *si;
+  find_struct_info(struct_ast->struct_decl.type_name->text, &si);
 
-  struct_info *si = *p_struct_info;
   if (!si) {
     si = malloc(sizeof(struct_info));
-    *p_struct_info = si;
-    attach_struct_info_to_owner(si);
+    mc_register_struct_info_to_app(si);
 
-    mcs_copy_syntax_node_to_text(struct_ast->struct_decl.type_name, &si->name);
+    si->source_file = NULL;
+    MCcall(mcs_copy_syntax_node_to_text(struct_ast->struct_decl.type_name, &si->name));
     si->is_defined = false;
   }
 
+  bool is_definition = false;
   if (struct_ast->type == MC_SYNTAX_STRUCT_DECL) {
     // Struct
     si->is_union = false;
 
     if (struct_ast->struct_decl.fields) {
       if (si->is_defined) {
-        MCerror(7471, "Redefinition of '%s' - TODO check", si->name);
+        // TODO -- Actual Redefinition -- For now just check that fields are not different at all
+        printf("WARNING redefinition of struct '%s'\n", si->name);
+        printf("WARNING redefinition of struct '%s'\n", si->name);
+        printf("WARNING redefinition of struct '%s'\n", si->name);
       }
 
       // Define
-      mcs_summarize_type_field_list(struct_ast->struct_decl.fields, &si->fields);
-      si->is_defined = true;
+      MCcall(mcs_summarize_type_field_list(struct_ast->struct_decl.fields, &si->fields));
+      si->is_defined = is_definition = true;
     }
   }
   else if (struct_ast->type == MC_SYNTAX_UNION_DECL) {
@@ -444,12 +474,29 @@ int mcs_register_struct_declaration(mc_syntax_node *struct_ast, struct_info **p_
       }
 
       // Define
-      mcs_summarize_type_field_list(struct_ast->union_decl.fields, &si->fields);
-      si->is_defined = true;
+      MCcall(mcs_summarize_type_field_list(struct_ast->union_decl.fields, &si->fields));
+      si->is_defined = is_definition = true;
     }
   }
   else {
     MCerror(8483, "Not struct or union?");
+  }
+
+  if (is_definition) {
+    // Fill the Source Definition
+    if (si->source_file && si->source_file != source_file) {
+      MCerror(8384, "Source File Change for '%s' : from %p:'%s' to %p:'%s'", si->name, si->source_file,
+              si->source_file->filepath, source_file, source_file->filepath);
+    }
+
+    si->source_file = source_file;
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
+
+    // // TODO -- can't the original code just be posted to it -- instead of having to generate more...
+    // MCcall(mcs_copy_syntax_node_to_text(struct_ast, &si->source->code));
+  }
+  else {
+    MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION, si));
   }
 
   return 0;
@@ -479,9 +526,8 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // }
     } break;
     case MC_SYNTAX_FUNCTION: {
-      function_info *info;
       // Function Declaration only
-      MCcall(mcs_register_function_declaration(source_file, child, &info));
+      MCcall(mcs_register_function_declaration(source_file, child));
     } break;
     case MC_SYNTAX_TYPE_ALIAS: {
       char buf[1024];
@@ -489,8 +535,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       case MC_SYNTAX_UNION_DECL:
       case MC_SYNTAX_STRUCT_DECL: {
         // print_syntax_node(child->type_alias.type_descriptor, 0);
-        struct_info *info;
-        MCcall(mcs_register_struct_declaration(child->type_alias.type_descriptor, &info));
+        MCcall(mcs_register_struct_declaration(source_file, child->type_alias.type_descriptor));
         // MCerror(1151, "TODO");
         // struct_info *info;
         // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
@@ -533,7 +578,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
     case MC_SYNTAX_UNION_DECL:
     case MC_SYNTAX_STRUCT_DECL: {
       struct_info *info;
-      MCcall(mcs_register_struct_declaration(child, &info));
+      MCcall(mcs_register_struct_declaration(source_file, child));
       // struct_info *info;
       // instantiate_definition(definitions_owner, NULL, child, NULL, (void **)&info);
       // info->source->source_file = source_file;
@@ -573,18 +618,25 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       // Assume all ifndefs (for the moment TODO ) to be true
       MCcall(mcs_process_ast_root_children(source_file, child->preprocess_ifndef.groupopt));
     } break;
-    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE:
-      // Ignore for now
-      // MCerror(1256, "TODO");
-      break;
+    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
+      mc_include_directive_info *incd = (mc_include_directive_info *)malloc(sizeof(mc_include_directive_info));
+      incd->is_system_search = child->include_directive.is_system_header_search;
+      MCcall(mcs_copy_syntax_node_to_text(child->include_directive.filepath, &incd->filepath));
+
+      MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE, incd));
+    } break;
     default: {
       switch ((mc_token_type)child->type) {
       case MC_TOKEN_PP_KEYWORD_IFDEF:
       case MC_TOKEN_PP_KEYWORD_IFNDEF:
       case MC_TOKEN_PP_KEYWORD_ENDIF:
         MCerror(5313, "TODO");
+      case MC_TOKEN_NEW_LINE: {
+        if (a && children->items[a - 1]->type == MC_TOKEN_NEW_LINE) {
+          MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR, NULL));
+        }
+      } break;
       case MC_TOKEN_SPACE_SEQUENCE:
-      case MC_TOKEN_NEW_LINE:
       case MC_TOKEN_LINE_COMMENT:
       case MC_TOKEN_MULTI_LINE_COMMENT: {
         break;
@@ -604,7 +656,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
  */
 int mcs_interpret_file(const char *filepath)
 {
-  int res;
+  int res, a;
   char *code;
   mc_syntax_node *file_ast;
   mc_app_itp_data *app_itp_data;
@@ -620,14 +672,93 @@ int mcs_interpret_file(const char *filepath)
   MCcall(parse_file_to_syntax_tree(code, &file_ast));
   free(code);
 
-  // Set
-  mc_source_file_info *sf = malloc(sizeof(mc_source_file_info));
-  sf->definitions.alloc = 0;
-  sf->definitions.count = 0;
-  sf->filepath = strdup(filepath);
+  // Ensure the full path is written
+  char fullpath[256];
+  if (filepath[0] != '/') {
+    // Given filepath is relative -- convert to absolute
+    getcwd(fullpath, 256);
+    char c = fullpath[strlen(fullpath) - 1];
+    if (c != '\\' && c != '/') {
+      strcat(fullpath, "/");
+    }
+    strcat(fullpath, filepath);
+  }
+  else {
+    strcpy(fullpath, filepath);
+  }
+
+  // Search for already existing file info
+  mc_source_file_info *sf = NULL, *isf;
+  int nb_before_segs = 0;
+  mc_source_file_code_segment **segs = NULL, *seg, *seg2;
+  for (a = 0; a < app_itp_data->source_files.count; ++a) {
+    isf = app_itp_data->source_files.items[a];
+
+    if (!strcmp(fullpath, isf->filepath)) {
+      // Use this
+      sf = isf;
+      break;
+    }
+  }
+
+  if (sf) {
+    nb_before_segs = sf->segments.count;
+    if (nb_before_segs) {
+      segs = (mc_source_file_code_segment **)malloc(sizeof(mc_source_file_code_segment *) * nb_before_segs);
+      memcpy(segs, sf->segments.items, sizeof(mc_source_file_code_segment *) * nb_before_segs);
+    }
+
+    sf->segments.count = 0U;
+  }
+  else {
+    // Set
+    sf = malloc(sizeof(mc_source_file_info));
+    sf->segments.capacity = sf->segments.count = 0U;
+    sf->filepath = strdup(fullpath);
+    MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
+                                &app_itp_data->source_files.count, sf));
+  }
 
   // Obtain function/struct/enum information & dependencies
   MCcall(mcs_process_ast_root_children(sf, file_ast->children));
+
+  if (nb_before_segs) {
+    for (a = 0; a < nb_before_segs; ++a) {
+      seg = segs[a];
+
+      switch (seg->type) {
+      case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE: {
+        if (seg->include) {
+          if (seg->include->filepath)
+            free(seg->include->filepath);
+          free(seg->include);
+        }
+        free(seg);
+      } break;
+      case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION: {
+        MCcall(_mc_find_segment_in_source_file(sf, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, seg->data, &seg2));
+        if (!seg2) {
+          MCerror(6721, "Unsupported - redefining a structure out of a file");
+        }
+
+        // Just delete the segment
+        free(seg);
+      } break;
+      case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
+      case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
+      case MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION: {
+        // Just delete the segment
+        free(seg);
+      } break;
+      default:
+        MCerror(8707, "Unsupported type : %i", seg->type);
+      }
+    }
+  }
+
+  // // DEBUG -- FILE GENERATION TEST
+  // MCcall(mcdebug_generate_files_from_sf_info(sf));
+  // // DEBUG
 
   // Generate code (from the AST) with midge insertions integrated (stack call / error tracking)
   {
@@ -642,7 +773,7 @@ int mcs_interpret_file(const char *filepath)
     MCcall(mct_transcribe_file_ast(file_ast, &options, &code));
   }
 
-  // if (!strcmp("src/modules/project_explorer/project_explorer_window.c", filepath)) {
+  // if (!strcmp("src/modules/modus_operandi/init_modus_operandi.c", filepath)) {
   //   // usleep(10000);
   //   // printf("\ngen-code:\n%s||\n", code);
   //   save_text_to_file("src/temp/todelete.h", code);
@@ -744,7 +875,7 @@ int mcs_interpret_file(const char *filepath)
 //   if (!structure_info) {
 //     structure_info = (struct_info *)malloc(sizeof(struct_info));
 
-//     attach_struct_info_to_owner(owner, structure_info);
+//     mc_register_struct_info_to_app(owner, structure_info);
 
 //     structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
 //     allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
@@ -806,7 +937,7 @@ int mcs_interpret_file(const char *filepath)
 //   if (!enum_info) {
 //     enum_info = (enumeration_info *)malloc(sizeof(enumeration_info));
 
-//     attach_enumeration_info_to_owner(owner, enum_info);
+//     mc_register_enumeration_info_to_app(owner, enum_info);
 
 //     enum_info->type_id = (struct_id *)malloc(sizeof(struct_id));
 //     allocate_and_copy_cstr(enum_info->type_id->identifier, "enum_info");
@@ -897,7 +1028,7 @@ int mcs_interpret_file(const char *filepath)
 //   return 0;
 // }
 
-// int instantiate_function_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_str
+// int instantiate_function_definition_from_ast(mc_node *definition_owner, mc_source_definition *source, mc_str
 // *file_context,
 //                                              mc_syntax_node *ast, void **definition_info)
 // {
@@ -958,479 +1089,6 @@ int mcs_interpret_file(const char *filepath)
 //   return 0;
 // }
 
-// int instantiate_struct_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_syntax_node
-// *ast,
-//                                            void **definition_info)
-// {
-//   // Register Struct
-//   struct_info *structure_info;
-//   update_or_register_struct_info_from_syntax(definition_owner, ast, &structure_info);
-
-//   // Instantiate Struct
-//   char *mc_transcription;
-//   transcribe_struct_to_mc(structure_info, ast, &mc_transcription);
-
-//   // if (!strcmp(structure_info->name, "render_color"))
-//   //   printf("struct:\n%s||\n", mc_transcription);
-//   // int result = clint_declare(mc_transcription);
-//   int result = 0;
-//   if (result) {
-//     printf("\n\nmc_transcription:\n%s||\n", mc_transcription);
-//     MCerror(7667, "Failed to declare structure");
-//   }
-//   free(mc_transcription);
-
-//   if (definition_info) {
-//     *definition_info = structure_info;
-//   }
-
-//   register_midge_error_tag("instantiate_struct_definition_from_ast(~)");
-//   return 0;
-// }
-
-// int instantiate_enum_definition_from_ast(mc_node *definition_owner, source_definition *source, mc_syntax_node *ast,
-//                                          void **definition_info)
-// {
-//   // Register enum
-//   enumeration_info *enum_info;
-//   update_or_register_enum_info_from_syntax(definition_owner, ast, &enum_info);
-
-//   char buf[256];
-//   sprintf(buf, "enum %s { };", enum_info->mc_declared_name);
-//   int result; // = clint_declare(buf);
-//   MCerror(8359, "progress");
-//   if (result) {
-//     printf("\nmc_declaration:\n%s||\n", buf);
-//     MCerror(691, "Failed to declare enumeration");
-//   }
-
-//   if (definition_info) {
-//     *definition_info = enum_info;
-//   }
-
-//   register_midge_error_tag("instantiate_enum_definition_from_ast(~)");
-//   return 0;
-// }
-
-// int instantiate_define_statement(mc_node *definition_owner, mc_syntax_node *ast, preprocess_define_info **info)
-// {
-//   switch (ast->preprocess_define.statement_type) {
-//   case PREPROCESSOR_DEFINE_REMOVAL: {
-//     *info = (preprocess_define_info *)malloc(sizeof(preprocess_define_info));
-//     (*info)->statement_type = ast->preprocess_define.statement_type;
-//     mcs_copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
-
-//     (*info)->replacement = NULL;
-//   } break;
-//   case PREPROCESSOR_DEFINE_FUNCTION_LIKE: {
-//     // Do nothing...
-//     // char *statement_text;
-//     // mcs_copy_syntax_node_to_text(ast, &statement_text);
-//     // printf("\nfunctionlike:\n%s||\n", statement_text);
-//     // free(statement_text);
-//   } break;
-//   case PREPROCESSOR_DEFINE_REPLACEMENT: {
-//     *info = (preprocess_define_info *)malloc(sizeof(preprocess_define_info));
-//     (*info)->statement_type = ast->preprocess_define.statement_type;
-//     mcs_copy_syntax_node_to_text(ast->preprocess_define.identifier, &(*info)->identifier);
-
-//     mc_str *str;
-//     init_mc_str(&str);
-//     for (int i = 0; i < ast->preprocess_define.replacement_list->count; ++i) {
-//       char *node_text;
-//       mcs_copy_syntax_node_to_text(ast->preprocess_define.replacement_list->items[i], &node_text);
-//       append_to_mc_str(str, node_text);
-//       free(node_text);
-//     }
-
-//     (*info)->replacement = str->text;
-//     release_mc_str(str, false);
-
-//     // printf("define:\n'%s'\n'%s'\n", (*info)->identifier, (*info)->replacement);
-//   } break;
-//   default:
-//     MCerror(830, "TODO :%i", ast->preprocess_define.statement_type);
-//   }
-
-//   // char *statement_text;
-//   // mcs_copy_syntax_node_to_text(ast, &statement_text);
-//   // // printf("\ndefine_declaration:\n%s||\n", statement_text);
-//   // int result; //= clint_declare(statement_text);
-//   // MCerror(9582, "progress");
-//   // if (result) {
-//   //   printf("\ndefine_declaration:\n%s||\n", statement_text);
-//   //   MCerror(691, "Failed to declare define statement");
-//   // }
-//   // free(statement_text);
-
-//   return 0;
-// }
-
-// /*
-//   From code definition: constructs source definition & parses to syntax, registers with hierarchy, and declares the
-//   definition for immediate use.
-//   @definition_owner the node in the hierarchy to attach this definition to.
-//   @code may be NULL only if ast is not, if so it will be generated from the syntax parse.
-//   @ast may be NULL only if code is not, if so it will be parsed from the code.
-//   @source may be NULL, if so it will be created.
-//   @definition_info is OUT. May be NULL, if not dereference will be set with
-//   p-to-function_info/struct_info/enum_info etc.
-// */
-// int instantiate_definition(mc_node *definition_owner, mc_str *file_context, char *code, mc_syntax_node *ast,
-//                            source_definition *source, void **definition_info)
-// {
-//   register_midge_error_tag("instantiate_definition()");
-//   // Compile Code to Syntax
-//   if (!ast) {
-//     parse_definition_to_syntax_tree(code, &ast);
-//   }
-//   else if (!code) {
-//     mcs_copy_syntax_node_to_text(ast, &code);
-//   }
-
-//   // TODO -- check type hasn't changed with definition
-//   if (!source) {
-//     source = (source_definition *)malloc(sizeof(source_definition));
-//     source->source_file = NULL;
-//   }
-//   source->code = code;
-
-//   void *p_definition_info;
-
-//   switch (ast->type) {
-//   case MC_SYNTAX_FUNCTION: {
-//     source->type = SOURCE_DEFINITION_FUNCTION;
-//     instantiate_function_definition_from_ast(definition_owner, source, file_context, ast, &p_definition_info);
-
-//     function_info *func_info = (function_info *)p_definition_info;
-//     func_info->source = source;
-//   } break;
-//   case MC_SYNTAX_UNION_DECL:
-//   case MC_SYNTAX_STRUCT_DECL: {
-//     source->type = SOURCE_DEFINITION_STRUCTURE;
-//     instantiate_struct_definition_from_ast(definition_owner, source, ast, &p_definition_info);
-
-//     struct_info *structure_info = (struct_info *)p_definition_info;
-//     structure_info->source = source;
-//   } break;
-//   case MC_SYNTAX_ENUM_DECL: {
-//     source->type = SOURCE_DEFINITION_ENUMERATION;
-//     instantiate_enum_definition_from_ast(definition_owner, source, ast, &p_definition_info);
-
-//     enumeration_info *enum_info = (enumeration_info *)p_definition_info;
-//     enum_info->source = source;
-//   } break;
-//   default: {
-//     MCerror(325, "instantiate_definition:%i NotYetSupported", ast->type);
-//   }
-//   }
-
-//   source->data.p_data = p_definition_info;
-//   if (definition_info)
-//     *definition_info = p_definition_info;
-
-//   register_midge_error_tag("instantiate_definition(~)");
-//   return 0;
-// }
-
-// int instantiate_ast_children(mc_node *definitions_owner, mc_source_file_info *source_file, mc_str *file_context,
-//                              mc_syntax_node_list *syntax_node_list)
-// {
-//   for (int a = 0; a < syntax_node_list->count; ++a) {
-//     mc_syntax_node *child = syntax_node_list->items[a];
-//     const char *type_name = get_mc_syntax_token_type_name(child->type);
-//     // printf("instantiate_definition[%i]:%s\n", a, type_name);
-//     switch (child->type) {
-//     case MC_SYNTAX_EXTERN_C_BLOCK: {
-//       for (int b = 0; b < child->extern_block.declarations->count; ++b) {
-//         mc_syntax_node *declaration = child->extern_block.declarations->items[b];
-//         switch (declaration->type) {
-//         case MC_SYNTAX_FUNCTION: {
-//           if ((mc_token_type)declaration->function.code_block->type != MC_TOKEN_SEMI_COLON) {
-//             MCerror(565, "Full Function definition in an extern c block ? ? ?");
-//           }
-//           // Function Declaration only
-//           update_or_register_function_info_from_syntax(NULL, declaration, NULL);
-//         } break;
-//         default:
-//           MCerror(572, "TODO : %s", get_mc_syntax_token_type_name(declaration->type));
-//         }
-//       }
-//     } break;
-//     case MC_SYNTAX_FUNCTION: {
-
-//       if ((mc_token_type)child->function.code_block->type == MC_TOKEN_SEMI_COLON) {
-//         // Function Declaration only
-//         // puts(file_context->text);
-//         append_syntax_node_to_file_context(child, file_context);
-
-//         update_or_register_function_info_from_syntax(NULL, child, NULL);
-//         // printf("--fdecl:'%s'\n", child->function.name->text);
-//       }
-//       else {
-//         // Assume to be function definition
-//         function_info *info;
-//         instantiate_definition(definitions_owner, file_context, NULL, child, NULL, (void **)&info);
-//         info->source->source_file = source_file;
-
-//         append_to_collection((void ***)&info->source->source_file->definitions.items,
-//                              &info->source->source_file->definitions.alloc,
-//                              &info->source->source_file->definitions.count, info->source);
-//         // printf("--defined:'%s'\n", child->function.name->text);
-//       }
-//     } break;
-//     case MC_SYNTAX_TYPE_ALIAS: {
-//       MCerror(9821, "TODO");
-//       char buf[1024];
-//       switch (child->type_alias.type_descriptor->type) {
-//       case MC_SYNTAX_UNION_DECL:
-//       case MC_SYNTAX_STRUCT_DECL: {
-//         struct_info *info;
-//         instantiate_definition(definitions_owner, file_context, NULL, child->type_alias.type_descriptor, NULL,
-//                                (void **)&info);
-//         info->source->source_file = source_file;
-//         append_to_collection((void ***)&info->source->source_file->definitions.items,
-//                              &info->source->source_file->definitions.alloc,
-//                              &info->source->source_file->definitions.count, info->source);
-//         // printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->struct_decl.type_name->text);
-//         // sprintf(buf,
-//         //         "#ifndef %s\n"
-//         //         // "#undef %s\n"
-//         //         "#define %s struct %s\n"
-//         //         "#endif\n",
-//         //         info->name, info->name, info->mc_declared_name);
-//         // clint_process(buf);
-//       } break;
-//       case MC_SYNTAX_ENUM_DECL: {
-//         enumeration_info *info;
-//         instantiate_definition(definitions_owner, file_context, NULL, child->type_alias.type_descriptor, NULL,
-//                                (void **)&info);
-//         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-0");
-//         info->source->source_file = source_file;
-//         append_to_collection((void ***)&info->source->source_file->definitions.items,
-//                              &info->source->source_file->definitions.alloc,
-//                              &info->source->source_file->definitions.count, info->source);
-//         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-1");
-//         // printf("--defined: enum '%s'\n", child->type_alias.type_descriptor->enumeration.name->text);
-//         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-2");
-//         // sprintf(buf,
-//         //         "#ifndef %s\n"
-//         //         // "#undef %s\n"
-//         //         "#define %s enum %s\n"
-//         //         "#endif\n",
-//         //         info->name, info->name, info->mc_declared_name);
-//         // register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-3");
-//         // clint_process(buf);
-//         register_midge_error_tag("instantiate_all_definitions_from_file-TA-E-4");
-//       } break;
-//       default:
-//         print_syntax_node(child->type_alias.type_descriptor, 0);
-//         MCerror(668, "Unhandled type_alias-descriptor-syntax-type:%s",
-//                 get_mc_syntax_token_type_name(child->type_alias.type_descriptor->type));
-//         break;
-//       }
-//     } break;
-//     case MC_SYNTAX_STRUCT_DECL: {
-//       MCerror(9691, "TODO");
-//       struct_info *info;
-//       instantiate_definition(definitions_owner, file_context, NULL, child, NULL, (void **)&info);
-//       info->source->source_file = source_file;
-//       append_to_collection((void ***)&info->source->source_file->definitions.items,
-//                            &info->source->source_file->definitions.alloc,
-//                            &info->source->source_file->definitions.count, info->source);
-//       // printf("--declared: struct '%s'\n", child->struct_decl.type_name->text);
-//     } break;
-//     case MC_SYNTAX_ENUM_DECL: {
-//       MCerror(9781, "TODO");
-//       enumeration_info *info;
-//       instantiate_definition(definitions_owner, file_context, NULL, child, NULL, (void **)&info);
-//       info->source->source_file = source_file;
-//       append_to_collection((void ***)&info->source->source_file->definitions.items,
-//                            &info->source->source_file->definitions.alloc,
-//                            &info->source->source_file->definitions.count, info->source);
-//       // printf("--declared: enum '%s'\n", child->enumeration.name->text);
-//     } break;
-//     case MC_SYNTAX_PP_DIRECTIVE_DEFINE: {
-//       append_syntax_node_to_file_context(child, file_context);
-
-//       preprocess_define_info *info;
-//       instantiate_define_statement(definitions_owner, child, &info);
-
-//       // switch (info->statement_type) {
-//       // case PREPROCESSOR_DEFINE_REMOVAL: {
-
-//       // } break;
-
-//       // default:
-//       //   MCerror(887, "TODO :%i", info->statement_type);
-//       // }
-//     } break;
-//     // TODO
-//     case MC_SYNTAX_PP_DIRECTIVE_IFNDEF: {
-//       // char *identifier;
-//       // mcs_copy_syntax_node_to_text(child->preprocess_ifndef.identifier, &identifier);
-//       // char buf[1024];
-//       // int is_defined;
-//       // sprintf(buf,
-//       //         "#ifndef %s\n"
-//       //         "*((int *)%p) = 222;\n"
-//       //         "#else\n"
-//       //         "*((int *)%p) = 111;\n"
-//       //         "#endif\n",
-//       //         identifier, &is_defined, &is_defined);
-//       // MCerror(8383, "progress");
-//       // // clint_process(buf);
-//       // if (is_defined == 222) {
-//       // Assume it is not defined
-//       instantiate_ast_children(definitions_owner, source_file, file_context, child->preprocess_ifndef.groupopt);
-//       // }
-//       // else if (is_defined == 111) {
-//       //   // Do Nothing
-//       //   // printf("'%s' was already defined\n", identifier);
-//       // }
-//       // else {
-//       //   MCerror(950, "All did not go to plan");
-//       // }
-//       // free(identifier);
-//     } break;
-//     case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
-//       MCerror(1028, "TODO");
-//     } break;
-//     case MC_TOKEN_PP_KEYWORD_ENDIF:
-//       break;
-//     default: {
-//       switch ((mc_token_type)child->type) {
-//       case MC_TOKEN_SPACE_SEQUENCE:
-//       case MC_TOKEN_NEW_LINE:
-//       case MC_TOKEN_LINE_COMMENT:
-//       case MC_TOKEN_MULTI_LINE_COMMENT: {
-//         break;
-//       }
-//       default: {
-//         print_syntax_node(child, 0);
-//         MCerror(576, "Unhandled root-syntax-type:%s", get_mc_syntax_token_type_name(child->type));
-//       }
-//       }
-//     }
-//     }
-//   }
-
-//   return 0;
-// }
-
-// int instantiate_definitions_from_cached_file(mc_node *definitions_owner, char *filepath, char *cached_file_name,
-//                                              mc_source_file_info **source_file)
-// {
-
-//   MCerror(1030, "TODO %s", cached_file_name);
-//   // Parse all definitions
-//   // mc_source_file_info *lv_source_file;
-//   // mc_init_source_file_info(definitions_owner, filepath, &lv_source_file);
-//   // if (source_file) {
-//   //   *source_file = lv_source_file;
-//   // }
-//   char *cache_text;
-//   read_file_text(filepath, &cache_text);
-
-//   return 0;
-// }
-
-// int mcl_determine_cached_file_name(const char *input, char **output)
-// {
-//   mc_str *str;
-//   init_mc_str(&str);
-//   set_mc_str(str, "bin/cached/");
-
-//   int fni = 0;
-//   fni += 11;
-//   for (int k = 0; k < 256; ++k) {
-//     if (input[k] == '/') {
-//       append_char_to_mc_str(str, '_');
-//     }
-//     else {
-//       if (input[k] == '\0') {
-//         break;
-//       }
-//       append_char_to_mc_str(str, input[k]);
-//     }
-//   }
-
-//   *output = str->text;
-//   release_mc_str(str, false);
-
-//   return 0;
-// }
-
-// int attempt_instantiate_all_definitions_from_cached_file(mc_node *definitions_owner, char *filepath,
-//                                                          mc_source_file_info **source_file, bool *used_cached_file)
-// {
-//   char *cached_file_name;
-//   mcl_determine_cached_file_name(filepath, &cached_file_name);
-
-//   // Compare modified times and process new source or use cache
-//   *used_cached_file = false;
-//   if (access(cached_file_name, F_OK) != -1) {
-
-//     struct stat src_attrib;
-//     stat(filepath, &src_attrib);
-
-//     struct stat cch_attrib;
-//     stat(cached_file_name, &cch_attrib);
-
-//     *used_cached_file = (src_attrib.st_mtime < cch_attrib.st_mtime);
-//   }
-//   // if (!strcmp(filepath, "src/m_threads.h")) {
-//   //   *used_cached_file = true;
-//   // }
-//   // printf("'%s'\n", filepath);
-//   if (!*used_cached_file) {
-//     free(cached_file_name);
-//     return 0;
-//   }
-
-//   instantiate_definitions_from_cached_file(definitions_owner, filepath, cached_file_name, source_file);
-
-//   return 0;
-// }
-
-// int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath, mc_source_file_info
-// **source_file)
-// {
-//   printf("instantiate file:'%s'\n", filepath);
-//   // bool used_cache_file;
-//   // attempt_instantiate_all_definitions_from_cached_file(definitions_owner, filepath, source_file,
-//   &used_cache_file);
-//   // if (used_cache_file) {
-//   //   return 0;
-//   // }
-
-//   char *file_text;
-//   read_file_text(filepath, &file_text);
-
-//   mc_syntax_node *syntax_node;
-//   parse_file_to_syntax_tree(file_text, &syntax_node);
-
-//   // Parse all definitions
-//   mc_source_file_info *lv_source_file;
-//   mc_init_source_file_info(definitions_owner, filepath, &lv_source_file);
-//   if (source_file) {
-//     *source_file = lv_source_file;
-//   }
-
-//   mc_str *file_context;
-//   init_mc_str(&file_context);
-//   instantiate_ast_children(definitions_owner, lv_source_file, file_context, syntax_node->children);
-
-//   release_mc_str(file_context, true);
-//   // int *p = 0;
-//   // printf("about\n");
-//   // printf("%i\n", *p);
-//   // printf("end\n");
-
-//   register_midge_error_tag("instantiate_all_definitions_from_file(~)");
-//   return 0;
-// }
-
 // int register_external_struct_declaration(mc_node *owner, mc_syntax_node *struct_ast)
 // {
 //   if (!struct_ast->struct_decl.type_name) {
@@ -1447,7 +1105,7 @@ int mcs_interpret_file(const char *filepath)
 //   if (!structure_info) {
 //     structure_info = (struct_info *)malloc(sizeof(struct_info));
 
-//     attach_struct_info_to_owner(owner, structure_info);
+//     mc_register_struct_info_to_app(owner, structure_info);
 
 //     structure_info->type_id = (struct_id *)malloc(sizeof(struct_id));
 //     allocate_and_copy_cstr(structure_info->type_id->identifier, "struct_info");
@@ -1510,7 +1168,7 @@ int mcs_interpret_file(const char *filepath)
 //     enum_info = (enumeration_info *)malloc(sizeof(enumeration_info));
 
 //     // printf("reed-2\n");
-//     attach_enumeration_info_to_owner(owner, enum_info);
+//     mc_register_enumeration_info_to_app(owner, enum_info);
 //     // printf("reed-3\n");
 
 //     enum_info->type_id = (struct_id *)malloc(sizeof(struct_id));

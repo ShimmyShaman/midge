@@ -136,18 +136,18 @@ void mc_hv_add_file_to_hierarchy_state(mc_hv_hierarchy_view_state *hv_state, mc_
   for (int i = 0; i < source_file->definitions.count; ++i) {
     mc_hv_source_path_state *sps = (mc_hv_source_path_state *)malloc(sizeof(mc_hv_source_path_state));
     sps->collapsed = true;
-    source_definition *definition = source_file->definitions.items[i];
+    mc_source_definition *definition = source_file->definitions.items[i];
     sps->data = definition;
     switch (definition->type) {
-    case SOURCE_DEFINITION_STRUCTURE: {
+    case mc_source_definition_STRUCTURE: {
       sps->item_type = MC_HV_HIERARCHICAL_STRUCT_DEFINITION;
       sps->item_name = strdup(definition->data.structure_info->name);
     } break;
-    case SOURCE_DEFINITION_FUNCTION: {
+    case mc_source_definition_FUNCTION: {
       sps->item_type = MC_HV_HIERARCHICAL_FUNCTION_DEFINITION;
       sps->item_name = strdup(definition->data.func_info->name);
     } break;
-    case SOURCE_DEFINITION_ENUMERATION: {
+    case mc_source_definition_ENUMERATION: {
       sps->item_type = MC_HV_HIERARCHICAL_ENUM_DEFINITION;
       sps->item_name = strdup(definition->data.enum_info->name);
     } break;
@@ -253,7 +253,7 @@ void __mc_hv_text_line_left_click_handler(mci_input_event *input_event, mcu_butt
     break;
   case MC_HV_HIERARCHICAL_FUNCTION_DEFINITION: {
     // Activate the code editor with the function
-    source_definition *definition = (source_definition *)sp_state->data;
+    mc_source_definition *definition = (mc_source_definition *)sp_state->data;
 
     mce_activate_source_editor_for_definition(definition);
   } break;
@@ -271,7 +271,7 @@ void __mc_hv_text_line_left_click_handler(mci_input_event *input_event, mcu_butt
   // printf("sp_state->collapsed:%i\n", sp_state->collapsed);
 }
 
-void _mc_hv_update_hierarchy_viewer_layout(mc_node *node, mc_rectf *available_area)
+void _mc_hv_update_hierarchy_viewer_layout(mc_node *node,mc_rectf const *available_area
 {
   mc_global_data *global_data;
   obtain_midge_global_root(&global_data);

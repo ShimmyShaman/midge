@@ -33,8 +33,14 @@ void destroy_hash_table(hash_table_t *hash_table)
   free(hash_table->hashes);
 }
 
+void hash_table_clear(hash_table_t *hash_table)
+{
+  memset(hash_table->entries, 0, sizeof(hash_table_entry_t) * hash_table->capacity);
+  hash_table->n = 0;
+}
+
 /* Insert with quadratic probing */
-int hash_table_change_value(unsigned long hash, long value, hash_table_t *hash_table)
+int hash_table_change_value(unsigned long hash, void *value, hash_table_t *hash_table)
 {
   /* Insert value */
   size_t start_index = hash % hash_table->capacity;
@@ -63,7 +69,7 @@ int hash_table_change_value(unsigned long hash, long value, hash_table_t *hash_t
   return HASH_TABLE_SUCCESS;
 }
 
-int hash_table_insert(unsigned long hash, long value, hash_table_t *hash_table)
+int hash_table_insert(unsigned long hash, void *value, hash_table_t *hash_table)
 {
   int ret = hash_table_change_value(hash, value, hash_table);
   if (ret == HASH_TABLE_SUCCESS) {
@@ -162,14 +168,14 @@ int hash_table_exists(const char *name, hash_table_t *hash_table)
   return res != NULL;
 }
 
-void hash_table_set(const char *name, size_t val, hash_table_t *hash_table)
+void hash_table_set(const char *name, void *val, hash_table_t *hash_table)
 {
   /* Hash name */
   unsigned long hash = hash_djb2((const unsigned char *)name);
 
   hash_table_entry_t *entry = hash_table_find(hash, hash_table);
   if (entry) {
-    entry->value = (long)val;
+    entry->value = val;
     return;
   }
 
@@ -179,15 +185,15 @@ void hash_table_set(const char *name, size_t val, hash_table_t *hash_table)
   long ht_insert;
   do {
     hash_table_maybe_grow(hash_table->n + 1, hash_table);
-    ht_insert = hash_table_insert(hash, (long)val, hash_table);
+    ht_insert = hash_table_insert(hash, val, hash_table);
   } while (ht_insert != HASH_TABLE_SUCCESS);
 }
 
-long hash_table_get(const char *name, hash_table_t *hash_table)
+void *hash_table_get(const char *name, hash_table_t *hash_table)
 {
   unsigned long hash = hash_djb2((const unsigned char *)name);
   hash_table_entry_t *ret = hash_table_find(hash, hash_table);
-  return ret->value;
+  return ret ? ret->value : NULL;
 }
 
 // /* Some 'test' code for remove */

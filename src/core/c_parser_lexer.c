@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 #include "midge_error_handling.h"
@@ -2098,7 +2099,7 @@ int mcs_parse_token(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **
   // Adjust parsing state line & column
   switch (type) {
   case MC_TOKEN_TAB_SEQUENCE: {
-    MCerror(72, "ERR-unhandled-token:%s:%s", get_mc_token_type_name(type), text);
+    MCerror(2172, "ERR-unhandled-token:%s:%s", get_mc_token_type_name(type), text);
   } break;
   case MC_TOKEN_NEW_LINE: {
     ++ps->line;
@@ -2825,6 +2826,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
 
   mcs_peek_token_type(ps, false, 1, &token_type);
   switch (token_type) {
+  case MC_TOKEN_INCREMENT_OPERATOR:
   case MC_TOKEN_AMPERSAND_CHARACTER:
   case MC_TOKEN_OPENING_BRACKET:
   case MC_TOKEN_LOGICAL_NOT_OPERATOR:
@@ -3010,6 +3012,7 @@ int mcs_parse_expression_beginning_with_bracket(parsing_state *ps, mc_syntax_nod
     }
   } break;
   default: {
+    // An error here just requires setting the pattern correctly
     print_parse_error(ps->code, ps->index, "see-below", "");
     MCerror(1569, "MCS:Unsupported-token:%s", get_mc_token_type_name(token_type));
   }
@@ -3144,6 +3147,12 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
     while (token0 == MC_TOKEN_STAR_CHARACTER) {
       mcs_peek_token_type(ps, false, peek++, &token0);
     }
+    while (token0 == MC_TOKEN_CONST_KEYWORD) {
+      mcs_peek_token_type(ps, false, peek++, &token0);
+      while (token0 == MC_TOKEN_STAR_CHARACTER) {
+        mcs_peek_token_type(ps, false, peek++, &token0);
+      }
+    }
 
     switch (token0) {
     case MC_TOKEN_IDENTIFIER: {
@@ -3154,6 +3163,7 @@ int mcs_parse_local_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
       // printf("parse_fptrdec:'%s'\n", declarator->fptr_declarator.name->text);
     } break;
     default:
+      print_parse_error(ps->code, ps->index, "mcs_parse_local_declaration", "see-below");
       MCerror(2993, "NotSupported:'%s'", get_mc_syntax_token_type_name(token0));
     }
 
@@ -4014,6 +4024,7 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   // Conditional
   mcs_peek_token_type(ps, false, 0, &token0);
   switch (token0) {
+  case MC_TOKEN_STAR_CHARACTER:
   case MC_TOKEN_LOGICAL_NOT_OPERATOR:
   case MC_TOKEN_IDENTIFIER: {
     mcs_parse_expression_conditional(ps, statement, &statement->for_statement.conditional);
@@ -4038,7 +4049,7 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   case MC_TOKEN_IDENTIFIER:
   case MC_TOKEN_INCREMENT_OPERATOR:
   case MC_TOKEN_DECREMENT_OPERATOR: {
-    mcs_parse_expression(ps, statement, &statement->for_statement.fix_expression);
+    MCcall(mcs_parse_expression(ps, statement, &statement->for_statement.fix_expression));
   } break;
   default: {
     print_parse_error(ps->code, ps->index, "see-below", "");
@@ -4046,6 +4057,11 @@ int mcs_parse_for_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax
   }
   }
   mcs_parse_through_supernumerary_tokens(ps, statement);
+
+  mcs_peek_token_type(ps, false, 0, &token0);
+  if (token0 == MC_TOKEN_COMMA) {
+    MCerror(4052, "Using comma as a seperator not yet supported: Not sure it's good too.");
+  }
 
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_CLOSING_BRACKET, NULL));
   mcs_parse_through_supernumerary_tokens(ps, statement);
@@ -4394,11 +4410,14 @@ int mcs_parse_statement(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
   mc_token_type token0;
   mcs_peek_token_type(ps, false, 0, &token0);
   switch (token0) {
+  case MC_TOKEN_SEMI_COLON: {
+    MCcall(mcs_parse_through_token(ps, parent, MC_TOKEN_SEMI_COLON, additional_destination));
+  } break;
   case MC_TOKEN_CURLY_OPENING_BRACKET: {
     MCcall(mcs_parse_code_block(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_FOR_KEYWORD: {
-    mcs_parse_for_statement(ps, parent, additional_destination);
+    MCcall(mcs_parse_for_statement(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_IF_KEYWORD: {
     mcs_parse_if_statement(ps, parent, additional_destination);
@@ -4623,6 +4642,107 @@ int mcs_parse_function_definition_header(parsing_state *ps, mc_syntax_node *func
   return 0;
 }
 
+int mcs_parse_pp_include(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
+{
+  mc_syntax_node *include_directive, *dummy_result;
+  MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_INCLUDE, NULL, parent, &include_directive));
+  if (additional_destination) {
+    *additional_destination = include_directive;
+  }
+
+  // Temporary -- just parse the rest of the line
+  MCcall(mcs_parse_through_token(ps, include_directive, MC_TOKEN_PP_KEYWORD_INCLUDE, NULL));
+  MCcall(mcs_parse_through_supernumerary_tokens(ps, include_directive));
+
+  mc_token_type token_type;
+  MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
+  switch (token_type) {
+  case MC_TOKEN_ARROW_OPENING_BRACKET: {
+    MCcall(mcs_parse_through_token(ps, include_directive, token_type, NULL));
+    include_directive->include_directive.is_system_header_search = true;
+  } break;
+  case MC_TOKEN_STRING_LITERAL: {
+    ++ps->index;
+    ps->col += 1;
+
+    char *text = strdup("\"");
+    MCcall(mcs_construct_syntax_node(ps, MC_TOKEN_PP_QUOTATION_CHARACTER, text, include_directive, &dummy_result));
+  } break;
+  default:
+    MCerror(4798, "Unsupported include wrap-type '%s'", get_mc_syntax_token_type_name(token_type));
+  }
+
+  // Obtain the filepath
+  int s = ps->index;
+  char c = 1;
+  while (c) {
+    c = ps->code[ps->index];
+    switch (c) {
+    case '\n':
+      MCerror(4810, "Unexpected newline character in #include parse");
+    case '\0':
+      MCerror(4812, "Unexpected end-of-file in #include parse");
+    case '"': {
+      if (include_directive->include_directive.is_system_header_search) {
+        MCerror(4815, "Unexpected close-quote in system header #include directive");
+      }
+      c = 0;
+    } break;
+    case '>': {
+      if (!include_directive->include_directive.is_system_header_search) {
+        MCerror(4824, "Unexpected close-arrow-bracket in relative header #include directive");
+      }
+      c = 0;
+    } break;
+    case '_':
+    case '-':
+    case '~':
+    case '$':
+    case '!':
+    case '/':
+    case '\\':
+    case '.': {
+      // Okay
+      ++ps->index;
+      continue;
+    }
+    default: {
+      if (isalnum(c)) {
+        ++ps->index;
+        continue;
+      }
+      MCerror(4837, "unexpected char in include filepath parse: '%c'", c);
+    }
+    }
+  }
+
+  // Update ps data
+  ps->col += ps->index - s;
+
+  char *text = strndup(ps->code + s, ps->index - s);
+  MCcall(mcs_construct_syntax_node(ps, MC_TOKEN_PP_INCLUDE_FILENAME, text, include_directive,
+                                   &include_directive->include_directive.filepath));
+
+  if (include_directive->include_directive.is_system_header_search) {
+    MCcall(mcs_parse_through_token(ps, include_directive, MC_TOKEN_ARROW_CLOSING_BRACKET, NULL));
+  }
+  else {
+    if (ps->code[ps->index] != '"') {
+      MCerror(4728, "Expected Closing Quotation in non-implemention-defined include directive");
+    }
+
+    char *text = strdup("\"");
+
+    ++ps->index;
+    ps->col += 1;
+    MCcall(mcs_construct_syntax_node(ps, MC_TOKEN_PP_QUOTATION_CHARACTER, text, include_directive, &dummy_result));
+  }
+
+  MCcall(mcs_parse_through_token(ps, include_directive, MC_TOKEN_NEW_LINE, NULL));
+
+  return 0;
+}
+
 int mcs_parse_pp_ifndef(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
   mc_token_type token_type;
@@ -4638,7 +4758,7 @@ int mcs_parse_pp_ifndef(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
   MCcall(mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL));
   MCcall(mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_IDENTIFIER,
                                  &ifndef_directive->preprocess_ifndef.identifier));
-  mcs_peek_token_type(ps, true, 0, &token_type);
+  MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
   if (token_type == MC_TOKEN_SPACE_SEQUENCE)
     MCcall(mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_SPACE_SEQUENCE, NULL));
   MCcall(mcs_parse_through_token(ps, ifndef_directive, MC_TOKEN_NEW_LINE, NULL));
@@ -4654,9 +4774,9 @@ int mcs_parse_pp_ifndef(parsing_state *ps, mc_syntax_node *parent, mc_syntax_nod
     mc_syntax_node *group_option;
     MCcall(mcs_parse_root_statement(ps, ifndef_directive, &group_option));
 
-    append_to_collection((void ***)&ifndef_directive->preprocess_ifndef.groupopt->items,
-                         &ifndef_directive->preprocess_ifndef.groupopt->alloc,
-                         &ifndef_directive->preprocess_ifndef.groupopt->count, group_option);
+    MCcall(append_to_collection((void ***)&ifndef_directive->preprocess_ifndef.groupopt->items,
+                                &ifndef_directive->preprocess_ifndef.groupopt->alloc,
+                                &ifndef_directive->preprocess_ifndef.groupopt->count, group_option));
 
     mcs_parse_through_supernumerary_tokens(ps, ifndef_directive);
   }
@@ -4757,35 +4877,17 @@ int mcs_parse_preprocessor_directive(parsing_state *ps, mc_syntax_node *parent, 
     MCcall(mcs_parse_through_token(ps, parent, MC_TOKEN_PP_KEYWORD_ENDIF, additional_destination));
   } break;
   case MC_TOKEN_PP_KEYWORD_IFDEF: {
-    mcs_parse_pp_ifdef(ps, parent, additional_destination);
+    MCcall(mcs_parse_pp_ifdef(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_PP_KEYWORD_IFNDEF: {
-    mcs_parse_pp_ifndef(ps, parent, additional_destination);
+    MCcall(mcs_parse_pp_ifndef(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_PP_KEYWORD_INCLUDE: {
-    mc_syntax_node *include_directive;
-    mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_INCLUDE, NULL, parent, &include_directive);
-    if (additional_destination) {
-      *additional_destination = include_directive;
-    }
-
-    // Temporary -- just parse the rest of the line
-    MCcall(mcs_parse_through_token(ps, include_directive, MC_TOKEN_PP_KEYWORD_INCLUDE, NULL));
-    while (1) {
-      mcs_peek_token_type(ps, true, 0, &token_type);
-      if (token_type == MC_TOKEN_NEW_LINE) {
-        MCcall(mcs_parse_through_token(ps, include_directive, token_type, NULL));
-        break;
-      }
-      if (token_type == MC_TOKEN_NULL_CHARACTER)
-        break;
-
-      MCcall(mcs_parse_through_token(ps, include_directive, token_type, NULL));
-    }
+    MCcall(mcs_parse_pp_include(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_PP_KEYWORD_DEFINE: {
     mc_syntax_node *define_directive;
-    mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_DEFINE, NULL, parent, &define_directive);
+    MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_PP_DIRECTIVE_DEFINE, NULL, parent, &define_directive));
     if (additional_destination) {
       *additional_destination = define_directive;
     }

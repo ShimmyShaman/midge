@@ -122,7 +122,7 @@
 //   // project->requires_update = true;
 // }
 
-// void mca_render_project_headless(mc_node *project_node)
+// void mca_render_project_headless(render_thread_info *render_thread, mc_node *project_node)
 // {
 //   visual_project_data *project = (visual_project_data *)project_node->data;
 

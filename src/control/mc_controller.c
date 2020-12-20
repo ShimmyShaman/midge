@@ -1,5 +1,6 @@
 /* mc_controller.c */
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "core/core_definitions.h"
@@ -55,14 +56,17 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
   // printf("mouse_event nhl:%i\n", node_hit_list->count);
   for (int a = 0; a < node_hit_list->count && !input_event.handled; ++a) {
     mc_node *node = node_hit_list->items[a];
-    if (node->layout && node->layout->handle_input_event) {
+    if (node->layout && node->layout->visible && node->layout->handle_input_event) {
       // TODO fptr casting
       void (*handle_input_event)(mc_node *, mci_input_event *) =
           (void (*)(mc_node *, mci_input_event *))node->layout->handle_input_event; // TODO add type of mouse event
       handle_input_event(node, &input_event);
+
+      // printf("mouse_event handled by node: %s%s%s->%s\n",
+      //        (node->parent && node->parent->parent) ? node->parent->parent->name : "",
+      //        (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "", node->name);
     }
   }
-  // printf("mouse_event handled:%i\n", input_event.handled);
 }
 
 void mcc_issue_keyboard_event(window_input_event_type event_type, int button_code)

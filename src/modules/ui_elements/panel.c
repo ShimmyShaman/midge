@@ -59,7 +59,9 @@ int mcu_init_panel(mc_node *parent, mcu_panel **p_panel)
   // Set to out pointer
   *p_panel = panel;
 
-  MCcall(mca_attach_node_to_hierarchy(parent, node));
+  if (parent) {
+    MCcall(mca_attach_node_to_hierarchy(parent, node));
+  }
 
   return 0;
 }

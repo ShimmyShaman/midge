@@ -293,7 +293,7 @@ int _mcm_pjxp_update_entries_display(project_explorer_data *pjxp)
   return 0;
 }
 
-int _mcm_pjxp_update_node_layout(mc_node *node, mc_rectf *available_area)
+int _mcm_pjxp_update_node_layout(mc_node *node, mc_rectf const *available_area)
 {
   // pjxp
   project_explorer_data *pjxp = (project_explorer_data *)node->data;
@@ -306,7 +306,7 @@ int _mcm_pjxp_update_node_layout(mc_node *node, mc_rectf *available_area)
   return 0;
 }
 
-void _mcm_pjxp_render_headless(mc_node *node)
+void _mcm_pjxp_render_headless(render_thread_info *render_thread, mc_node *node)
 {
   // Toggle
   node->layout->__requires_rerender = false;
@@ -320,8 +320,9 @@ void _mcm_pjxp_render_headless(mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-      render_node_headless(child);
+      void (*render_node_headless)(render_thread_info *, mc_node *) =
+          (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      render_node_headless(render_thread, child);
     }
   }
 
@@ -449,7 +450,7 @@ void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock 
       hash_table_remove(entry->hash, &pjxp->collapsed_entries);
     }
     else {
-      int res = hash_table_insert(entry->hash, 1, &pjxp->collapsed_entries);
+      int res = hash_table_insert(entry->hash, NULL, &pjxp->collapsed_entries);
       if (res) {
         MCVerror(8530, "TODO?");
       }
@@ -459,8 +460,9 @@ void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock 
   } break;
   case PJXP_ENTRY_HEADER:
   case PJXP_ENTRY_SOURCE: {
-    mca_fire_event(MC_APP_EVENT_FILE_OPEN_REQUESTED, entry->path->text);
-    printf("MC_APP_EVENT_FILE_OPEN_REQUESTED:'%s' NOT YET HANDLED\n", entry->path->text);
+    char *path = strdup(entry->path->text);
+    // printf("path %p created\n", path);
+    mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED, path, 1, path);
   } break;
   default:
     puts("NotYetImplemented - a means to open the file requested");
@@ -477,6 +479,12 @@ int _mcm_pjxp_init_ui(mc_node *pjxp_node)
   for (int a = 0; a < initial_entry_count; ++a) {
     mcu_textblock *tb;
     MCcall(mcu_init_textblock(pjxp_node, &tb));
+
+    if (tb->node->name)
+      free(tb->node->name);
+    char tb_name[64];
+    sprintf(tb_name, "textblock-entry-%i", a);
+    tb->node->name = strdup(tb_name);
 
     tb->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
     tb->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
@@ -542,13 +550,13 @@ int mcm_init_project_explorer(mc_node *app_root)
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
   node->children->alloc = 0;
-  node->layout->preferred_width = 240;
-  node->layout->preferred_height = 420;
+  node->layout->preferred_width = 299;
+  node->layout->preferred_height = 440;
 
   node->layout->visible = false;
 
-  node->layout->padding.left = 4;
-  node->layout->padding.top = 4;
+  node->layout->padding.left = 1;
+  node->layout->padding.top = 1;
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 

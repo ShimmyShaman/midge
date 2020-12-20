@@ -51,7 +51,7 @@ void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 // void mcu_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);
 
 // Render
-// void mcu_render_element_headless(mc_node *element_node);
+// void mcu_render_element_headless(render_thread_info *render_thread, mc_node *element_node);
 // void mcu_render_element_present(image_render_details *image_render_queue, mc_node *element_node);
 
 // Control Initialization

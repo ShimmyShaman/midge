@@ -13,18 +13,13 @@ processes can be used for guidance and prediction of future user behaviour throu
 repeatable tasks and workflows. This reduces mechanical and cognitive expense to the
 developer to increase productivity.
 
-#### Interface for AI collaboration
-
-Providing the interactive means to develop in collaboration with increasingly useful
-data science ('2.0') functions to produce software faster.
-
 #### Dynamic recompilation
-  
+
 Utilizing [TinyCC](https://bellard.org/tcc/tcc-doc.html) to enable dynamic
 interpretation and quicker readjustments of projects.
 
 #### Maximal configuration of development environment
-  
+
 The development environment itself (as much as possible) is run inside the same 
 process used to develop projects. Utilizing the dynamic recompilation allows
 reconfiguration by the developer however it may serve best. This allows editing

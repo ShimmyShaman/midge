@@ -39,7 +39,7 @@ void _mce_determine_function_debug_extents(mc_node *node, layout_extent_restrain
   //   }
 }
 
-void _mce_update_function_debug_layout(mc_node *node, mc_rectf *available_area)
+void _mce_update_function_debug_layout(mc_node *node,mc_rectf const *available_area
 {
   // printf("function_debug\n");
   mca_update_typical_node_layout(node, available_area);
@@ -73,7 +73,7 @@ void _mce_update_function_debug_layout(mc_node *node, mc_rectf *available_area)
   //   mca_set_node_requires_rerender(node);
 }
 
-void _mce_render_function_debug_headless(mc_node *node)
+void _mce_render_function_debug_headless(render_thread_info *render_thread, mc_node *node)
 {
   mce_function_debug *function_debug = (mce_function_debug *)node->data;
 
@@ -87,8 +87,8 @@ void _mce_render_function_debug_headless(mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-      render_node_headless(child);
+      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      render_node_headless(render_thread, child);
       ++debug_count;
     }
   }

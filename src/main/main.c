@@ -451,6 +451,7 @@ int main(int argc, const char *const *argv)
 
   // Initialize the interpreter
   TCCInterpState *loader_itp = tcci_new();
+  tcci_set_Werror(loader_itp, 1);
 
   // Add Include Paths
   MCcall(tcci_add_include_path(loader_itp, "/home/jason/midge/src"));
@@ -466,6 +467,7 @@ int main(int argc, const char *const *argv)
   tcci_set_symbol(loader_itp, "tcci_get_symbol", &tcci_get_symbol);
   tcci_set_symbol(loader_itp, "tcci_new", &tcci_new);
   tcci_set_symbol(loader_itp, "tcci_delete", &tcci_delete);
+  tcci_set_symbol(loader_itp, "tcci_set_Werror", &tcci_set_Werror);
 
   tcci_define_symbol(loader_itp, "MC_TEMP_SOURCE_LOAD", "1");
 
@@ -479,10 +481,7 @@ int main(int argc, const char *const *argv)
   const char *initial_compile_list[] = {
       "src/main/platform_prereq.c",
       "dep/tinycc/lib/va_list.c", // TODO -- this
-      "src/midge_error_handling.c",
-      "src/core/mc_app_itp_data.c",
-      "src/mc_str.c",
-      "src/core/core_source_loader.c",
+      "src/midge_error_handling.c", "src/core/mc_app_itp_data.c", "src/mc_str.c", "src/core/core_source_loader.c",
   };
 
   // TODO -- remember why I split them up into 2 compiles -- maybe comment it for next time

@@ -54,11 +54,11 @@ typedef struct mca_node_layout {
   // Functional Delegates
   // void (*determine_node_layout_extents)(mc_node *, layout_extent_restraints)
   void *determine_layout_extents;
-  // void (*update_node_layout)(mc_node *, const mc_rectf *)
+  // void (*update_node_layout)(mc_node *, mc_rectf const *)
   void *update_layout;
   // void (*render_node_headless)(mc_node *)
   void *render_headless;
-  // void (*render_node_presentation)(const image_render_details *, mc_node *)
+  // void (*render_node_presentation)(image_render_details *, mc_node *)
   void *render_present;
 
   // Application Set Fields
@@ -133,13 +133,19 @@ int mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_i
 int mca_init_node_layout(mca_node_layout **layout);
 int mca_init_mc_node(node_type type, const char *name, mc_node **node);
 
-// void mca_update_node_layout_extents(mc_node *node, layout_extent_restraints restraints);
 int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints);
-int mca_update_typical_node_layout(mc_node *node, mc_rectf *available_area);
-// void mca_update_node_layout(mc_node *node, mc_rectf *available_area);
+int mca_update_typical_node_layout(mc_node *node, mc_rectf const *available_area);
+int mca_determine_typical_node_extents_partially(mc_node *node, layout_extent_restraints restraints,
+                                                 bool determine_children);
+int mca_update_typical_node_layout_partially(mc_node *node, mc_rectf const *available_area, bool update_x,
+                                             bool update_y, bool update_width, bool update_height,
+                                             bool update_children);
 
-int mca_render_node_list_headless(mc_node_list *node_list);
+int mca_render_node_list_headless(render_thread_info *render_thread, mc_node_list *node_list);
 int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *node_list);
+
+int mca_attach_to_ancestor_root(mc_node *ancestor, mc_node *node_to_attach);
+int mca_detach_from_parent(mc_node *node);
 
 int mca_set_node_requires_layout_update(mc_node *node);
 /* A recursive function initiating layout update on all members of the node list and THEIR descendents as well */
@@ -153,6 +159,7 @@ int mca_obtain_focused_node(mc_node **node);
 
 int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state);
 int mca_fire_event(mc_app_event_type event_type, void *event_arg);
+int mca_fire_event_and_release_data(mc_app_event_type event_type, void *event_arg, int release_count, ...);
 int mca_register_loaded_project(mc_project_info *project);
 
 // util.c
@@ -167,7 +174,7 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
 void mca_init_visual_project_management();
 void mca_create_new_visual_project(const char *project_name);
 void mca_update_visual_project(mc_node *project_node);
-void mca_render_project_headless(mc_node *visual_project);
+void mca_render_project_headless(render_thread_info *render_thread, mc_node *visual_project);
 void mca_render_project_present(image_render_details *image_render_queue, mc_node *visual_project);
 
 // global_context_menu.c

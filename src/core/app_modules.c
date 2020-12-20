@@ -59,7 +59,10 @@ int mca_load_modules()
   const char *module_directories[] = {
       "mc_io",
       "collections",
+      "info_transcription",
+      "render_utilities",
       "ui_elements",
+      "dialogs",
       "obj_loader",
       "welcome_window",
       "modus_operandi",
@@ -128,35 +131,44 @@ int _mca_load_project(const char *base_path, const char *project_name)
   project->path_src = strdup(buf);
 
   // Load the source
-  // TODO - hard problem ( have to load headers than .c files but do it in order)
-  // DIR *dir;
-  // struct dirent *ent;
-  // if ((dir = opendir(buf)) != NULL) {
-  //   /* print all the files and directories within directory */
-  //   while ((ent = readdir(dir)) != NULL) {
-  //     printf("%s\n", ent->d_name);
-  //   }
-  //   closedir(dir);
-  // }
-  // else {
-  //   /* could not open directory */
-  //   perror("");
-  //   // return EXIT_FAILURE;
-  // }
+  // Find the build list
+  char *bltxt;
+  sprintf(buf, "%s/.proj/build_list", project->path);
+  MCcall(read_file_text(buf, &bltxt));
+  // puts(bltxt);
 
-  // TEMP
+  // Parse each file in the build list
+  char *c = &bltxt[0], *s;
+  for (; *c != '\0'; ++c) {
+    sprintf(buf, "%s/", project->path_src);
+    s = &buf[0] + strlen(buf);
+    for (; *c != '\0' && *c != '\n'; ++c) {
+      *s = *c;
+      ++s;
+    }
+    *s = '\0';
+    // if (access(buf, F_OK) == -1) {
+    //   MCerror(1998,
+    //           "Loading project='%s'. Could not find This could not be accessed for project_name='%s'",
+    //           project_name);
+    // }
+    MCcall(mcs_interpret_file(buf));
+  }
+  free(bltxt);
+
+  // MCerror(5252, "TODO");
 
   // Temporary fixup - source load
   // Load main_init.h && main_init.c
-  sprintf(buf, "%s/app/initialize_%s.h", project->path_src, project_name);
-  if (access(buf, F_OK) == -1) {
-    MCerror(1998,
-            "Within each projects src folder there must be a file in a folder named 'app' named "
-            "'initialize_{project_name}.h' : This could not be accessed for project_name='%s'",
-            project_name);
-  }
-  MCcall(mcs_interpret_file(buf));
+  // sprintf(buf, "%s/app/initialize_%s.h", project->path_src, project_name);
+  // if (access(buf, F_OK) == -1) {
+  //   MCerror(1998,
+  //           "Within each projects src folder there must be a file in a folder named 'app' named "
+  //           "'initialize_{project_name}.h' : This could not be accessed for project_name='%s'",
+  //           project_name);
+  // }
 
+  // Check
   sprintf(buf, "%s/app/initialize_%s.c", project->path_src, project_name);
   if (access(buf, F_OK) == -1) {
     MCerror(1999,
@@ -164,7 +176,6 @@ int _mca_load_project(const char *base_path, const char *project_name)
             "'initialize_{project_name}.c' : This could not be accessed for project_name='%s'",
             project_name);
   }
-  MCcall(mcs_interpret_file(buf));
 
   sprintf(buf, "initialize_%s", project_name);
   int (*initialize_project)(mc_node *) = tcci_get_symbol(app_info->itp_data->interpreter, buf);

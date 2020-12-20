@@ -5,6 +5,7 @@
 
 // #include <stddef.h>
 
+#include "core/core_definitions.h"
 // #include "core/c_parser_lexer.h"
 #include "tinycc/libtccinterp.h"
 
@@ -13,6 +14,11 @@
 // int instantiate_all_definitions_from_file(mc_node *definitions_owner, char *filepath,
 //                                           mc_source_file_info **source_file);
 
+int mc_register_function_info_to_app(function_info *func_info);
+int mc_register_struct_info_to_app(struct_info *structure_info);
+int mc_register_enumeration_info_to_app(enumeration_info *enum_info);
+int mc_append_segment_to_source_file(mc_source_file_info *source_file, mc_source_file_code_segment_type type,
+                                     void *data);
 // /*
 //   From code definition: constructs source definition & parses to syntax, registers with hierarchy, and declares the
 //   definition for immediate use.
@@ -23,7 +29,7 @@
 //   @definition_info is OUT. May be NULL, if not dereference will be set with p-to-function_info/struct_info/enum_info
 //   etc.
 // */
-// int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, source_definition *source,
+// int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, mc_source_definition *source,
 //                            void **definition_info);
 int mcs_interpret_file(const char *filepath);
 

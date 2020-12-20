@@ -86,7 +86,7 @@ void create_wvp_matrix(mystery_hut *mh_data, mat4 **out_wvp)
   // printf("(&copy_buffer->vpc_desc_buffer_info)[0].offset=%lu\n", (&copy_buffer.vpc_desc_buffer_info)[0].offset);
 }
 
-void _myh_render_mh_data_headless(mc_node *node)
+void _myh_render_mh_data_headless(render_thread_info *render_thread, mc_node *node)
 {
   mystery_hut *mh_data = (mystery_hut *)node->data;
 
@@ -96,8 +96,8 @@ void _myh_render_mh_data_headless(mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(mc_node *) = (void (*)(mc_node *))child->layout->render_headless;
-      render_node_headless(child);
+      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      render_node_headless(render_thread, child);
     }
   }
 

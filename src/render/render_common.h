@@ -340,7 +340,7 @@ typedef struct render_thread_info {
 
 // extern "C" {
 
-int mcr_obtain_image_render_request(render_thread_info *image_render_queue, image_render_details **p_request);
+int mcr_obtain_image_render_request(render_thread_info *render_thread, image_render_details **p_request);
 int mcr_submit_image_render_request(render_thread_info *render_thread, image_render_details *request);
 int mcr_obtain_element_render_command(image_render_details *image_queue, element_render_command **p_command);
 int mcr_obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
@@ -350,7 +350,11 @@ int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_ima
 int mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
 int mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                              mcr_font_resource **font);
-int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_resource);
+int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_program);
+int mcr_load_index_buffer(unsigned int *indices, unsigned int index_count, bool release_original_data_on_creation,
+                          mcr_index_buffer **p_index_buffer);
+int mcr_load_vertex_buffer(float *vertices, unsigned int vertex_count, bool release_original_data_on_creation,
+                           mcr_vertex_buffer **p_vertex_buffer);
 
 int mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
                                           float *text_height);

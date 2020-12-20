@@ -148,19 +148,20 @@ static int _mcl_find_sequence_in_text_ignoring_empty_text(const char *text, cons
   MCerror(60, "Could not find '%s'>'%s'>'%s'", first, second, third);
 }
 
+// TODO -- delete these arrays - dont' believe they have any use anymore
 const char *_mcl_core_structs[] = {
     // midge_common.h
     "mc_str",
 
     // core_definitions.h
     "source_file_type",
-    "source_definition_type",
+    "mc_source_definition_type",
     "node_type",
     "parameter_kind",
     "field_kind",
     "preprocessor_define_type",
     "struct_id",
-    "source_definition",
+    "mc_source_definition",
     "mc_global_data",
     "mc_source_file_info",
     "function_info",
@@ -325,8 +326,8 @@ const char *_mcl_core_functions[] = {
     "mcs_append_syntax_node_to_mc_str",
 
     // mc_source
-    "attach_struct_info_to_owner",
-    "attach_function_info_to_owner",
+    "mc_register_struct_info_to_app",
+    "mc_register_function_info_to_app",
     "mcs_summarize_field_declarator_list",
     "mcs_summarize_type_field_list",
     "mcs_register_struct_declaration",
@@ -391,8 +392,8 @@ const char *_mcl_core_functions[] = {
     "mcs_parse_va_end_statement",
     "remove_ptr_from_collection",
     "initialize_parameter_info_from_syntax_node",
-    "attach_struct_info_to_owner",
-    "attach_enumeration_info_to_owner",
+    "mc_register_struct_info_to_app",
+    "mc_register_enumeration_info_to_app",
     "mct_transcribe_function_to_mc",
     "update_or_register_struct_info_from_syntax",
     "register_sub_type_syntax_to_field_info",
@@ -581,6 +582,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   TCCInterpState *midge_itp;
   {
     midge_itp = tcci_new();
+    tcci_set_Werror(midge_itp, 1);
 
     // Add Include Paths & tcc symbols
     MCcall(tcci_add_include_path(midge_itp, "/home/jason/midge/src"));
@@ -594,8 +596,6 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     tcci_set_symbol(midge_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
     tcci_set_symbol(midge_itp, "tcci_set_symbol", &tcci_set_symbol);
     tcci_set_symbol(midge_itp, "tcci_get_symbol", &tcci_get_symbol);
-    tcci_set_symbol(midge_itp, "tcci_new", &tcci_new);
-    tcci_set_symbol(midge_itp, "tcci_delete", &tcci_delete);
 
     // Allow obtaining of the midge interpreter from both interpreter states
     // char buf[128];

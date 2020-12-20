@@ -59,10 +59,10 @@ size_t save_text_to_file(char *filepath, char *text)
 }
 
 // [_mc_iteration=4]
-void save_source_to_file(mc_source_definition_v1 *source_definition)
+void save_source_to_file(mc_mc_source_definition_v1 *mc_source_definition)
 {
   // printf("sftf-0\n");
-  if (!source_definition->source_file) {
+  if (!mc_source_definition->source_file) {
     // ERR(ERROR_ARGUMENT, "function has no source file to save to.");
     printf("TODO ERROR HANDLING\n");
     return;
@@ -78,16 +78,16 @@ void save_source_to_file(mc_source_definition_v1 *source_definition)
   append_to_mc_strf(
       save_text,
       "/* %s\n   Copyright 2020, Adam Rasburn, All Rights Reserved.\n*/\n\n#include \"core/midge_core.h\"\n\n\n",
-      source_definition->source_file->filepath);
+      mc_source_definition->source_file->filepath);
 
   register_midge_error_tag("save_function_to_file-4");
-  for (int i = 0; i < source_definition->source_file->definitions.count; ++i) {
-    mc_source_definition_v1 *definition = source_definition->source_file->definitions.items[i];
+  for (int i = 0; i < mc_source_definition->source_file->definitions.count; ++i) {
+    mc_mc_source_definition_v1 *definition = mc_source_definition->source_file->definitions.items[i];
     switch (definition->type) {
-    case SOURCE_DEFINITION_FUNCTION: {
+    case mc_source_definition_FUNCTION: {
       append_to_mc_str(save_text, definition->code);
     } break;
-    case SOURCE_DEFINITION_STRUCTURE: {
+    case mc_source_definition_STRUCTURE: {
       printf("sftf-struct:\n%s||\n", definition->code);
       append_to_mc_str(save_text, definition->code);
     } break;
@@ -103,15 +103,15 @@ void save_source_to_file(mc_source_definition_v1 *source_definition)
   // printf("filepath:'%s'\n", function->source->source_file->filepath);
   // printf("save_text:\n%s||\n", save_text->text);
   // printf("sftf-0\n");
-  size_t written = save_text_to_file(source_definition->source_file->filepath, save_text->text);
+  size_t written = save_text_to_file(mc_source_definition->source_file->filepath, save_text->text);
 
   release_mc_str(save_text, true);
 
   if (written) {
-    printf("saved function to file '%s' (%zu bytes)\n", source_definition->source_file->filepath, written);
+    printf("saved function to file '%s' (%zu bytes)\n", mc_source_definition->source_file->filepath, written);
   }
   else {
-    printf("could not save function to file '%s'\n", source_definition->source_file->filepath);
+    printf("could not save function to file '%s'\n", mc_source_definition->source_file->filepath);
   }
   // simpincel
 }
