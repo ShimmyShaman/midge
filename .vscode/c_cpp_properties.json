@@ -2,22 +2,22 @@
     "configurations": [
         {
             "name": "Linux",
-            "defines": ["VK_USE_PLATFORM_XCB_KHR"],
+            "defines": [
+                "VK_USE_PLATFORM_XCB_KHR"
+            ],
             "compilerPath": "/usr/bin/gcc",
             "includePath": [
-                "/home/jason/midge/src",
-                "/home/jason/cling/inst/include",
+                "src",
                 "/usr/include",
                 "/usr/include/x86_64-linux-gnu",
-                "/home/jason/midge/dep/cglm/include",
-                "/home/jason/midge/dep",
-                "/home/jason/midge/dep/glslang",
-                "/home/jason/midge/dep/stb"
+                "dep/cglm/include",
+                "dep",
+                "dep/glslang",
+                "dep/stb"
             ],
             "cStandard": "c11",
             "cppStandard": "c++17",
             "intelliSenseMode": "gcc-x64"
-
         }
     ],
     "version": 4
