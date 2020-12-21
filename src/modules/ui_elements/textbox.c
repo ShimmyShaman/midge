@@ -128,17 +128,19 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
           break;
         }
       }
+      else {
+        char c[2];
+        int res = get_key_input_code_char((input_event->input_state->shift_function & BUTTON_STATE_DOWN),
+                                          input_event->button_code, &c[0]);
+        c[1] = '\0';
 
-      char c[2];
-      int res = get_key_input_code_char((input_event->input_state->shift_function & BUTTON_STATE_DOWN),
-                                        input_event->button_code, &c[0]);
-      c[1] = '\0';
-
-      if (!res) {
-        insert_into_mc_str(textbox->contents, c, textbox->cursor.col);
-        ++textbox->cursor.col;
+        if (!res) {
+          insert_into_mc_str(textbox->contents, c, textbox->cursor.col);
+          ++textbox->cursor.col;
+        }
       }
-    } break;
+      break;
+    }
     }
 
     // Rerender in all cases
