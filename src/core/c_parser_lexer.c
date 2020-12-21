@@ -2171,6 +2171,7 @@ int mcs_parse_dereference_sequence(parsing_state *ps, mc_syntax_node *parent, mc
     mc_token_type token0;
     mcs_peek_token_type(ps, false, 0, &token0);
     if (token0 == MC_TOKEN_CONST_KEYWORD) {
+      mcs_parse_through_supernumerary_tokens(ps, sequence);
       MCcall(mcs_parse_through_token(ps, sequence, MC_TOKEN_CONST_KEYWORD, NULL));
       mcs_peek_token_type(ps, false, 0, &token0);
     }
@@ -2196,7 +2197,7 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
   mc_token_type token_type;
   mcs_peek_token_type(ps, false, 0, &token_type);
   if (token_type == MC_TOKEN_STAR_CHARACTER) {
-    mcs_parse_dereference_sequence(ps, fp_decl, &fp_decl->fptr_declarator.return_type_dereference);
+    MCcall(mcs_parse_dereference_sequence(ps, fp_decl, &fp_decl->fptr_declarator.return_type_dereference));
     mcs_parse_through_supernumerary_tokens(ps, fp_decl);
   }
   else {
@@ -2208,7 +2209,7 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
 
   mcs_peek_token_type(ps, false, 0, &token_type);
   if (token_type == MC_TOKEN_STAR_CHARACTER) {
-    mcs_parse_dereference_sequence(ps, fp_decl, &fp_decl->fptr_declarator.fp_dereference);
+    MCcall(mcs_parse_dereference_sequence(ps, fp_decl, &fp_decl->fptr_declarator.fp_dereference));
     mcs_parse_through_supernumerary_tokens(ps, fp_decl);
   }
   else {
@@ -2334,7 +2335,7 @@ int mcs_parse_parameter_declaration(parsing_state *ps, bool allow_name_skip, mc_
 
     mcs_peek_token_type(ps, false, 0, &token_type);
     if (token_type == MC_TOKEN_STAR_CHARACTER) {
-      mcs_parse_dereference_sequence(ps, parameter_decl, &parameter_decl->parameter.type_dereference);
+      MCcall(mcs_parse_dereference_sequence(ps, parameter_decl, &parameter_decl->parameter.type_dereference));
       mcs_parse_through_supernumerary_tokens(ps, parameter_decl);
     }
     else {
@@ -2736,7 +2737,7 @@ int mcs_parse_cast_expression(parsing_state *ps, mc_syntax_node *parent, bool is
 
     mcs_peek_token_type(ps, false, 0, &token_type);
     if (token_type == MC_TOKEN_STAR_CHARACTER) {
-      mcs_parse_dereference_sequence(ps, cast_expression, &cast_expression->cast_expression.type_dereference);
+      MCcall(mcs_parse_dereference_sequence(ps, cast_expression, &cast_expression->cast_expression.type_dereference));
       mcs_parse_through_supernumerary_tokens(ps, cast_expression);
     }
     else {
@@ -3034,7 +3035,8 @@ int mcs_parse_variable_declarator(parsing_state *ps, mc_syntax_node *parent, boo
   mc_token_type token_type;
   mcs_peek_token_type(ps, false, 0, &token_type);
   if (token_type == MC_TOKEN_STAR_CHARACTER) {
-    mcs_parse_dereference_sequence(ps, variable_declarator, &variable_declarator->variable_declarator.type_dereference);
+    MCcall(mcs_parse_dereference_sequence(ps, variable_declarator,
+                                          &variable_declarator->variable_declarator.type_dereference));
     mcs_parse_through_supernumerary_tokens(ps, variable_declarator);
   }
   else {
@@ -3286,7 +3288,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
     mcs_construct_syntax_node(ps, MC_SYNTAX_DEREFERENCE_EXPRESSION, NULL, NULL, &left);
 
-    mcs_parse_dereference_sequence(ps, left, &left->dereference_expression.deref_sequence);
+    MCcall(mcs_parse_dereference_sequence(ps, left, &left->dereference_expression.deref_sequence));
 
     mcs_parse_through_supernumerary_tokens(ps, left);
 
@@ -3343,7 +3345,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
     mcs_peek_token_type(ps, false, 0, &token0);
     if (token0 == MC_TOKEN_STAR_CHARACTER) {
-      mcs_parse_dereference_sequence(ps, left, &left->sizeof_expression.type_dereference);
+      MCcall(mcs_parse_dereference_sequence(ps, left, &left->sizeof_expression.type_dereference));
       mcs_parse_through_supernumerary_tokens(ps, left);
     }
     else {
@@ -3374,7 +3376,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
 
     mcs_peek_token_type(ps, false, 0, &token0);
     if (token0 == MC_TOKEN_STAR_CHARACTER) {
-      mcs_parse_dereference_sequence(ps, left, &left->offsetof_expression.type_dereference);
+      MCcall(mcs_parse_dereference_sequence(ps, left, &left->offsetof_expression.type_dereference));
       mcs_parse_through_supernumerary_tokens(ps, left);
     }
     else {
@@ -3415,7 +3417,7 @@ int _mcs_parse_expression(parsing_state *ps, int allowable_precedence, mc_syntax
     mc_token_type token1;
     mcs_peek_token_type(ps, false, 0, &token1);
     if (token1 == MC_TOKEN_STAR_CHARACTER) {
-      mcs_parse_dereference_sequence(ps, left, &left->va_arg_expression.type_dereference);
+      MCcall(mcs_parse_dereference_sequence(ps, left, &left->va_arg_expression.type_dereference));
       mcs_parse_through_supernumerary_tokens(ps, left);
     }
     else {
@@ -4600,7 +4602,7 @@ int mcs_parse_function_definition_header(parsing_state *ps, mc_syntax_node *func
 
   mcs_peek_token_type(ps, false, 0, &token0);
   if (token0 == MC_TOKEN_STAR_CHARACTER) {
-    mcs_parse_dereference_sequence(ps, function, &function->function.return_type_dereference);
+    MCcall(mcs_parse_dereference_sequence(ps, function, &function->function.return_type_dereference));
     mcs_parse_through_supernumerary_tokens(ps, function);
   }
   else {
@@ -5087,7 +5089,7 @@ int mcs_parse_field_declarator(parsing_state *ps, mc_syntax_node *parent, mc_syn
   mc_token_type token_type;
   mcs_peek_token_type(ps, false, 0, &token_type);
   if (token_type == MC_TOKEN_STAR_CHARACTER) {
-    mcs_parse_dereference_sequence(ps, declarator, &declarator->field_declarator.type_dereference);
+    MCcall(mcs_parse_dereference_sequence(ps, declarator, &declarator->field_declarator.type_dereference));
     mcs_parse_through_supernumerary_tokens(ps, declarator);
   }
   else {

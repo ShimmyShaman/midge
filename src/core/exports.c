@@ -97,7 +97,7 @@ void export_node_to_application(mc_node_v1 *node, char *directory_path)
   char *clargs[5];
   const char *command = "/home/jason/cling/inst/bin/clang";
   allocate_and_copy_cstr(clargs[0], "clang");
-  allocate_and_copy_cstr(clargs[1], "/home/jason/midge/test/main.c");
+  allocate_and_copy_cstr(clargs[1], "test/main.c");
   allocate_and_copy_cstr(clargs[2], "-o");
   clargs[3] = output_path->text;
   clargs[4] = NULL;

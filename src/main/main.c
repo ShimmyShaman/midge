@@ -454,8 +454,8 @@ int main(int argc, const char *const *argv)
   tcci_set_Werror(loader_itp, 1);
 
   // Add Include Paths
-  MCcall(tcci_add_include_path(loader_itp, "/home/jason/midge/src"));
-  MCcall(tcci_add_include_path(loader_itp, "/home/jason/midge/dep"));
+  MCcall(tcci_add_include_path(loader_itp, "src"));
+  MCcall(tcci_add_include_path(loader_itp, "dep"));
 
   tcci_set_symbol(loader_itp, "tcci_add_include_path", &tcci_add_include_path);
   tcci_set_symbol(loader_itp, "tcci_add_library", &tcci_add_library);

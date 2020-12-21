@@ -585,8 +585,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     tcci_set_Werror(midge_itp, 1);
 
     // Add Include Paths & tcc symbols
-    MCcall(tcci_add_include_path(midge_itp, "/home/jason/midge/src"));
-    MCcall(tcci_add_include_path(midge_itp, "/home/jason/midge/dep"));
+    MCcall(tcci_add_include_path(midge_itp, "src"));
+    MCcall(tcci_add_include_path(midge_itp, "dep"));
 
     tcci_set_symbol(midge_itp, "tcci_add_include_path", &tcci_add_include_path);
     tcci_set_symbol(midge_itp, "tcci_add_library", &tcci_add_library);

@@ -1155,7 +1155,7 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
     return VK_ERROR_UNKNOWN;
   }
 
-  const char *wd = "/home/jason/midge/dep/glslang/bin/";
+  const char *wd = "dep/glslang/bin/";
   char execOutput[1024];
   strcpy(execOutput, wd);
   strcat(execOutput, "shader.");
@@ -1173,7 +1173,7 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   // printf("%s written\n", shaderFile);
 
   // Execute the SPIRV gen
-  char *exePath = strdup("/home/jason/midge/dep/glslang/bin/glslangValidator");
+  char *exePath = strdup("dep/glslang/bin/glslangValidator");
   char *arg_V = strdup("-V");
   char *arg_H = strdup("-H");
 
@@ -1236,10 +1236,10 @@ VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader
   // printf("->%s: sizeof=4*%u\n", shaderFile, *spirv_size);
 
   // TEST READ
-  // fp = fopen("/home/jason/midge/test.spv", "w");
+  // fp = fopen("test.spv", "w");
   // if (!fp)
   // {
-  //   printf("GLSLtoSPV: couldn't open file: %s", "/home/jason/midge/test.spv");
+  //   printf("GLSLtoSPV: couldn't open file: %s", "test.spv");
   //   return VK_ERROR_UNKNOWN;
   // }
   // printf("test.spv opened: ");

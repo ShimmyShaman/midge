@@ -5647,7 +5647,7 @@ int init_process_matrix(mc_command_hub_v1 *command_hub)
   {
     // read_file_text(MODULE_FILEPATH, &module_list_text);
     void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/process_matrix.c";
+    const char *filepath = "src/process_matrix.c";
     mc_vargs[0] = &filepath;
     void *p_mc_vargs_1 = &input;
     mc_vargs[1] = &p_mc_vargs_1;
@@ -6075,7 +6075,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     // read_file_text(MODULE_FILEPATH, &module_list_text);
     void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/mc_parser_lexer.c";
+    const char *filepath = "src/mc_parser_lexer.c";
     mc_vargs[0] = &filepath;
     void *p_mc_vargs_1 = &input;
     mc_vargs[1] = &p_mc_vargs_1;
@@ -6096,7 +6096,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     // read_file_text(MODULE_FILEPATH, &module_list_text);
     void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/mc_code_transcriber.c";
+    const char *filepath = "src/mc_code_transcriber.c";
     mc_vargs[0] = &filepath;
     void *p_mc_vargs_1 = &input;
     mc_vargs[1] = &p_mc_vargs_1;
@@ -6116,7 +6116,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     // read_file_text(MODULE_FILEPATH, &module_list_text);
     void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/midge_core_functions.c";
+    const char *filepath = "src/midge_core_functions.c";
     mc_vargs[0] = &filepath;
     void *p_mc_vargs_1 = &input;
     mc_vargs[1] = &p_mc_vargs_1;
@@ -6134,7 +6134,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // MCcall(parse_and_process_mc_file(command_hub, "src/process_monitor.c"));
   {
     void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/process_monitor.c";
+    const char *filepath = "src/process_monitor.c";
     mc_vargs[0] = &filepath;
     void *p_mc_vargs_1 = &input;
     mc_vargs[1] = &p_mc_vargs_1;
@@ -6149,7 +6149,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   // code_editor.c
   {
     void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/code_editort.c";
+    const char *filepath = "src/code_editort.c";
     mc_vargs[0] = &filepath;
     void *p_mc_vargs_1 = &input;
     mc_vargs[1] = &p_mc_vargs_1;
@@ -6217,7 +6217,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
   {
     // read_file_text(MODULE_FILEPATH, &module_list_text);
     void *mc_vargs[2];
-    const char *filepath = "/home/jason/midge/src/midge_core_ui.c";
+    const char *filepath = "src/midge_core_ui.c";
     mc_vargs[0] = &filepath;
     void *p_mc_vargs_1 = &input;
     mc_vargs[1] = &p_mc_vargs_1;

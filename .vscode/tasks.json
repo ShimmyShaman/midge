@@ -6,7 +6,7 @@
         {
             "type": "shell",
             "label": "run.sh",
-            "command": "/home/jason/midge/run.sh",
+            "command": "./run.sh",
             "args": [],
             "options": {},
             "problemMatcher": [],

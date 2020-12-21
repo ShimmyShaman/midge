@@ -162,9 +162,9 @@ int _midge_run()
 
   //   // Include Paths
   //   // clint->AddIncludePath("/usr/include");
-  //   clint->AddIncludePath("/home/jason/midge/dep/cglm/include");
-  //   clint->AddIncludePath("/home/jason/midge/dep/stb");
-  //   // clint->AddIncludePath("/home/jason/midge/dep/glslang");
+  //   clint->AddIncludePath("dep/cglm/include");
+  //   clint->AddIncludePath("dep/stb");
+  //   // clint->AddIncludePath("dep/glslang");
   //   // clint->process("#include <vulkan/vulkan_xcb.h>\n");
   //   // clint->process("#include \"vulkan_core.h\"\n");
 
@@ -194,9 +194,9 @@ int _midge_run()
 
   //   // Load non-MC App source
   //   printf("<AppSourceLoading>\n");
-  // clint->loadFile("/home/jason/midge/src/midge_error_handling.h");
-  // mcc_interpret_file_on_disk("/home/jason/midge/src/midge_error_handling.h");
-  //   clint->loadFile("/home/jason/midge/src/core/core_source_loader.c");
+  // clint->loadFile("src/midge_error_handling.h");
+  // mcc_interpret_file_on_disk("src/midge_error_handling.h");
+  //   clint->loadFile("src/core/core_source_loader.c");
 
   //   struct timespec library_base_complete_time;
   //   clock_gettime(CLOCK_REALTIME, &library_base_complete_time);
@@ -204,9 +204,9 @@ int _midge_run()
   //          library_base_complete_time.tv_sec - app_begin_time.tv_sec +
   //              1e-9 * (library_base_complete_time.tv_nsec - app_begin_time.tv_nsec));
 
-  if (mcc_interpret_file_on_disk("/home/jason/midge/src/midge_error_handling.h"))
+  if (mcc_interpret_file_on_disk("src/midge_error_handling.h"))
     goto error_exit;
-  if (mcc_interpret_file_on_disk("/home/jason/midge/src/core/core_source_loader.c"))
+  if (mcc_interpret_file_on_disk("src/core/core_source_loader.c"))
     goto error_exit;
 
   struct timespec error_handling_read_time;

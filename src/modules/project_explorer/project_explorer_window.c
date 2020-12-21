@@ -174,7 +174,7 @@ int _mcm_pjxp_update_entries_display_from_subdirectory(project_explorer_data *pj
   int len;
   unsigned long h;
 
-  // directory = "/home/jason/midge/projects/cube";
+  // directory = "projects/cube";
   // printf("_mcm_pjxp_update_entries_display_from_subdirectory: utilized:%u count:%u\n", pjxp->textblocks.utilized,
   //        pjxp->textblocks.count);
   DIR *dir;

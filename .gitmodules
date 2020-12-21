@@ -4,6 +4,3 @@
 [submodule "dep/tinycc"]
 	path = dep/tinycc
 	url = https://github.com/ShimmyShaman/tinycc.git
-[submodule "projects/fsc"]
-	path = projects/fsc
-	url = https://github.com/ShimmyShaman/fsc.git
