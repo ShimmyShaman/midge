@@ -130,6 +130,11 @@ int _mca_load_project(const char *base_path, const char *project_name)
   strcat(buf, "/src");
   project->path_src = strdup(buf);
 
+  // Check
+  if (access(project->path, F_OK) == -1) {
+    MCerror(2135, "Cannot Find project folder '%s' for project '%s'", project->path, project_name);
+  }
+
   // Load the source
   // Find the build list
   char *bltxt;
