@@ -1,13 +1,45 @@
 // #include "core/core_definitions.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <ctype.h>
 
 #include "core/c_parser_lexer.h"
 #include "env/environment_definitions.h"
+
+/*
+ * Obtains the latest index of an array which doubles in allocation every time it reaches a count equal to a power of
+ * two.
+ * @ptr_data will return the pointer to the location in the array of the count-1 item
+ */
+int mc_grow_array(void **ary, unsigned int *ptr_count, size_t item_allocation_size, void **ptr_data)
+{
+  unsigned int count = *ptr_count, alloc;
+  void *pa = *ary;
+
+  /* every power of two we double array size */
+  if ((count & (count - 1)) == 0) {
+    if (!count) {
+      pa = NULL;
+      alloc = 1;
+    }
+    else
+      alloc = count * 2;
+    pa = realloc(pa, alloc * sizeof(item_allocation_size));
+    if (!pa) {
+      MCerror(9727, "reallocation error");
+    }
+    *ary = pa;
+  }
+
+  if (ptr_data)
+    *ptr_data = (void *)((unsigned char *)pa + item_allocation_size * count);
+  *ptr_count = count + 1;
+
+  return 0;
+}
 
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
 // @optional_item_allocation_size must be non-zero, the size of each item to allocate.
@@ -28,7 +60,7 @@ int reallocate_array(void **array, unsigned int *current_allocation, unsigned in
   printf("reallocate array size %i->%i\n", *current_allocation, realloc_amount);
   void *new_array = (void **)malloc(item_allocation_size * realloc_amount);
   if (new_array == NULL) {
-    MCerror(32, "append_to_array malloc error");
+    MCerror(32, "apaend_to_array malloc error");
   }
 
   if (*current_allocation) {
@@ -63,7 +95,7 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
   // printf("reallocate collection size %i->%i\n", *current_allocation, realloc_amount);
   void **new_collection = (void **)malloc(sizeof(void *) * realloc_amount);
   if (new_collection == NULL) {
-    MCerror(32, "append_to_collection malloc error");
+    MCerror(32, "apaend_to_collection malloc error");
   }
 
   if (*current_allocation) {

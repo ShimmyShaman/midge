@@ -284,7 +284,7 @@ int _mc_on_save_file_dialog_request(void *handler_state, void *event_args)
   fd->callback.result_delegate = vary[3];
 
   // Set the message
-  MCcall(set_mc_str(fd->message_textblock->str,  message == NULL ? "" : message));
+  MCcall(set_mc_str(fd->message_textblock->str, message == NULL ? "" : message));
 
   // TODO -- set starting filename
   fd->specified_path_set_from_folder_item = false;
@@ -395,6 +395,7 @@ int _mc_init_file_dialog_ui(mc_node *module_node)
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
+  fd->input_textbox->tag = fd;
   fd->input_textbox->submit = (void *)&_mc_file_dialog_textbox_submit;
 
   // Open Button
