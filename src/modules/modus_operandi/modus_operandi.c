@@ -80,6 +80,8 @@ typedef struct modus_operandi_data {
 
 // Forward Declaration
 int _mc_mo_activate_next_stack_step(modus_operandi_data *mod);
+int _mc_mo_begin_op_process(mo_operational_process *process, void *args);
+int _mc_mo_update_options_display(modus_operandi_data *mod);
 
 void _mc_mo_render_mod_headless(render_thread_info *render_thread, mc_node *node)
 {
@@ -146,30 +148,32 @@ void _mc_mo_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-int _mc_mo_process_step_dialog_result(void *invoker_state, mc_process_step_dialog_result result) { return 0; }
+int _mc_mo_process_step_dialog_result(void *invoker_state, mc_process_step_dialog_result result)
+{
+  MCerror(8157, "TODO");
+  return 0;
+}
 
 int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
 {
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
 
-  MCerror(8157, "TODO");
-  // // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
-  // if (mod->active_step->action != MO_OPPA_TEXT_INPUT_DIALOG) {
-  //   MCerror(8140, "TODO - state error");
-  // }
-  // if (!input_text) {
-  //   MCerror(8142, "TODO - canceled process section");
-  // }
+  mo_operational_step *step = mod->stack.steps[mod->stack.index];
+  hash_table_t *context = &mod->stack.context_maps[mod->stack.index];
 
-  // // printf("step completed:'%s'\n", input_text);
+  // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
+  if (step->action != MO_OPPA_TEXT_INPUT_DIALOG) {
+    MCerror(8140, "TODO - state error");
+  }
+  if (!input_text) {
+    MCerror(8142, "TODO - canceled process section");
+  }
 
-  // // Set the path to the target context property
-  // hash_table_set(mod->active_step->text_input_dialog.target_context_property, strdup(input_text),
-  //                &mod->active_process->context);
+  // Set the path to the target context property
+  hash_table_set(step->folder_dialog.target_context_property, strdup(input_text), context);
 
-  // // Move to the next step
-  // mod->active_step = mod->active_step->next;
-  // MCcall(_mc_mo_activate_next_stack_step(mod));
+  // Move to the next step
+  MCcall(_mc_mo_activate_next_stack_step(mod));
 
   return 0;
 }
@@ -194,7 +198,6 @@ int _mc_mo_dialog_options_text_selected(void *invoker_state, char *selected_text
   //                &mod->active_process->context);
 
   // // Move to the next step
-  // mod->active_step = mod->active_step->next;
   // MCcall(_mc_mo_activate_next_stack_step(mod));
 
   return 0;
@@ -215,7 +218,6 @@ int _mc_mo_dialog_folder_selected(void *invoker_state, char *selected_folder)
   //                &mod->active_process->context);
 
   // // Move to the next step
-  // mod->active_step = mod->active_step->next;
   // MCcall(_mc_mo_activate_next_stack_step(mod));
 
   return 0;
@@ -229,7 +231,7 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
   hash_table_t *context = &mod->stack.context_maps[mod->stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
-  if (step->action != MO_OPPA_SAVE_FILE_DIALOG) {
+  if (step->action != MO_OPPA_FILE_DIALOG) {
     MCerror(8141, "TODO - state error");
   }
 
@@ -237,7 +239,6 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
   hash_table_set(step->folder_dialog.target_context_property, strdup(selected_path), context);
 
   // Move to the next step
-  mod->stack.steps[mod->stack.index] = step->next;
   MCcall(_mc_mo_activate_next_stack_step(mod));
 
   return 0;
@@ -280,7 +281,66 @@ int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *
 
 int _mc_mo_return_from_stack_process(modus_operandi_data *mod)
 {
-  MCerror(6283, "TODO");
+  int a, sidx;
+  mo_operational_process *op;
+  mo_operational_process_parameter *op_param;
+  hash_table_t *ctx;
+  void *pv;
+
+  // Update the process stack info
+  --mod->stack.index;
+  sidx = mod->stack.index;
+
+  if (sidx < 0) {
+    // Stack is empty
+    return 0;
+  }
+
+  op_param = mod->stack.argument_subprocesses[sidx];
+  ctx = &mod->stack.context_maps[sidx];
+  if (op_param) {
+    // Obtain the parameter from the previous stack context
+    pv = hash_table_get(op_param->name, &mod->stack.context_maps[sidx + 1]);
+
+    if (!pv) {
+      MCerror(5294, "subprocess param '%s' was not retrieved");
+    }
+
+    // Set it to the now-current context
+    hash_table_set(op_param->name, pv, ctx);
+
+    // Clear
+    mod->stack.argument_subprocesses[sidx] = NULL;
+  }
+
+  if (mod->stack.steps[sidx]) {
+    // Simply move onto the next step
+    MCcall(_mc_mo_activate_next_stack_step(mod));
+    return 0;
+  }
+
+  // Process is still in argument-collection phase
+  // Ensure all arguments have been obtained
+  op = mod->stack.processes[sidx];
+  for (a = 0; a < op->nb_parameters; ++a) {
+    op_param = &op->parameters[a];
+
+    if (hash_table_exists(op_param->name, ctx))
+      continue;
+
+    if (!op_param->obtain_value_subprocess) {
+      MCerror(9418, "A means should be provided to obtain the value for parameter '%s'", op_param->name);
+    }
+
+    // Activate the subprocess to obtain the argument value
+    mod->stack.argument_subprocesses[sidx] = op_param;
+    MCcall(_mc_mo_begin_op_process(op_param->obtain_value_subprocess, NULL));
+    return 0;
+  }
+
+  // Continue on to the first step
+  MCcall(_mc_mo_activate_next_stack_step(mod));
+
   return 0;
 }
 
@@ -307,21 +367,22 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
 
   bool free_ctx_arg;
   switch (step->action) {
-  // case MO_OPPA_TEXT_INPUT_DIALOG: {
-  //   void **vary = (void **)malloc(sizeof(void *) * 4);
+  case MO_OPPA_TEXT_INPUT_DIALOG: {
+    void **vary = (void **)malloc(sizeof(void *) * 4);
 
-  //   // TODO -- make a define or const of project label
-  //   vary[0] = mod->active_step->text_input_dialog.message;
-  //   MCcall(_mc_mo_obtain_context_arg(mod, &mod->active_step->text_input_dialog.default_text, &free_ctx_arg,
-  //   &vary[1])); vary[2] = (void *)mod; vary[3] = (void *)&_mc_mo_dialog_input_text_entered;
+    // TODO -- make a define or const of project label
+    vary[0] = step->text_input_dialog.message;
+    MCcall(_mc_mo_obtain_context_arg(mod, &step->text_input_dialog.default_text, &free_ctx_arg, &vary[1]));
+    vary[2] = (void *)mod;
+    vary[3] = (void *)&_mc_mo_dialog_input_text_entered;
 
-  //   if (free_ctx_arg) {
-  //     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 2, vary[1], vary));
-  //   }
-  //   else {
-  //     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
-  //   }
-  // } break;
+    if (free_ctx_arg) {
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 2, vary[1], vary));
+    }
+    else {
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
+    }
+  } break;
   // case MO_OPPA_OPTIONS_DIALOG: {
   //   void **vary = (void **)malloc(sizeof(void *) * 5);
 
@@ -333,25 +394,25 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
 
   //   MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED, vary, 1, vary));
   // } break;
-  // case MO_OPPA_OPEN_FOLDER_DIALOG: {
-  //   void **vary = (void **)malloc(sizeof(void *) * 4);
+  case MO_OPPA_OPEN_FOLDER_DIALOG: {
+    void **vary = (void **)malloc(sizeof(void *) * 4);
 
-  //   puts("WARNING TODO -- MO_OPPA_OPEN_FOLDER_DIALOG-context_arg");
-  //   // TODO -- make sure memory free is handled (TODO)
-  //   // TODO -- make a define or const of project label
-  //   vary[0] = (void *)mod->active_step->folder_dialog.message;
-  //   MCcall(_mc_mo_obtain_context_arg(mod, &mod->active_step->folder_dialog.initial_folder, &free_ctx_arg, &vary[1]));
-  //   vary[2] = (void *)mod;
-  //   vary[3] = (void *)&_mc_mo_dialog_folder_selected;
+    puts("WARNING TODO -- MO_OPPA_OPEN_FOLDER_DIALOG-context_arg");
+    // TODO -- make sure memory free is handled (TODO)
+    // TODO -- make a define or const of project label
+    vary[0] = (void *)step->folder_dialog.message;
+    MCcall(_mc_mo_obtain_context_arg(mod, &step->folder_dialog.initial_folder, &free_ctx_arg, &vary[1]));
+    vary[2] = (void *)mod;
+    vary[3] = (void *)&_mc_mo_dialog_folder_selected;
 
-  //   if (free_ctx_arg) {
-  //     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary[1], vary));
-  //   }
-  //   else {
-  //     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary));
-  //   }
-  // } break;
-  case MO_OPPA_SAVE_FILE_DIALOG: {
+    if (free_ctx_arg) {
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary[1], vary));
+    }
+    else {
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary));
+    }
+  } break;
+  case MO_OPPA_FILE_DIALOG: {
     vary = (void **)malloc(sizeof(void *) * 4);
 
     // Construct the default filename -- TODO
@@ -361,24 +422,23 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
     vary[3] = (void *)&_mc_mo_dialog_filepath_selected;
 
     if (free_ctx_arg) {
-      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_SAVE_FILE_DIALOG_REQUESTED, vary, 2, vary[1], vary));
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FILE_DIALOG_REQUESTED, vary, 2, vary[1], vary));
     }
     else {
-      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_SAVE_FILE_DIALOG_REQUESTED, vary, 2, vary));
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FILE_DIALOG_REQUESTED, vary, 2, vary));
     }
   } break;
-  // case MO_OPPA_USER_FUNCTION: {
-  //   int (*user_function)(modus_operandi_data * context, void *farg) =
-  //       (int (*)(modus_operandi_data *, void *))mod->active_step->delegate.fptr;
+  case MO_OPPA_USER_FUNCTION: {
+    int (*user_function)(modus_operandi_data * context, void *farg) =
+        (int (*)(modus_operandi_data *, void *))step->delegate.fptr;
 
-  //   MCcall(user_function(mod, mod->active_step->delegate.farg));
+    MCcall(user_function(mod, step->delegate.farg));
 
-  //   // Move to the next step -- TODO -- not sure if this is the right move, maybe have user-function return a flag
-  //   // indicating if it is complete or something
-  //   mod->active_step = mod->active_step->next;
-  //   MCcall(_mc_mo_activate_next_stack_step(mod));
+    // Move to the next step -- TODO -- not sure if this is the right move, maybe have user-function return a flag
+    // indicating if it is complete or something
+    MCcall(_mc_mo_activate_next_stack_step(mod));
 
-  // } break;
+  } break;
   // case MO_OPPA_CREATE_PROCESS_STEP_DIALOG: {
   //   // TODO -- unlike the other events which will eventually initiate on the main UI thread
   //   // -- this is not activated from that position -- figure it out
@@ -413,16 +473,17 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
   mod->stack.argument_subprocesses[sidx] = NULL;
   mod->stack.steps[sidx] = NULL;
 
-  // Attempt to set arguments to begin the process
+  // Set all arguments
+  if (args) {
+    MCerror(6532, "Active process to fill parameter from args");
+  }
+
+  // Attempt to obtain non-provided arguments before beginning the process
   for (a = 0; a < process->nb_parameters; ++a) {
     pp = &process->parameters[a];
 
     if (!pp->obtain_value_subprocess) {
       MCerror(9418, "A means should be provided to obtain the value for parameter '%s'", pp->name);
-    }
-
-    if (args) {
-      MCerror(6532, "Active process to fill parameter from args");
     }
 
     // Activate the subprocess to obtain the argument value
@@ -461,126 +522,6 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
   // find_struct_info("fs_world", &si);
   // const char *const project_3d_root_context_property = "project-3d-root";
   // hash_table_set(project_3d_root_context_property, si, &mod->active_process->context);
-
-  return 0;
-}
-
-void _mc_mo_operational_process_selected(mci_input_event *input_event, mcu_button *button)
-{
-  if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
-    mo_operational_process *mopp = (mo_operational_process *)button->tag;
-
-    _mc_mo_begin_op_process(mopp, NULL);
-  }
-}
-
-int mc_mo_update_options_display(modus_operandi_data *mod)
-{
-  // Order according to search text match score
-  // if(!mod->search_textbox->contents->len) {
-
-  // }
-
-  int a;
-  mcu_button *button;
-  mo_operational_process *mopp;
-  for (a = 0; a < mod->all_ops.count && a < mod->options_buttons.count; ++a) {
-    button = mod->options_buttons.items[a];
-    mopp = mod->all_ops.items[a];
-
-    MCcall(set_mc_str(button->str, mopp->name));
-
-    button->tag = mopp;
-
-    button->node->layout->visible = true;
-    MCcall(mca_set_node_requires_rerender(button->node));
-  }
-  for (; a < mod->options_buttons.count; ++a) {
-    button = mod->options_buttons.items[a];
-
-    button->node->layout->visible = false;
-  }
-
-  MCcall(mca_set_node_requires_rerender(mod->node));
-
-  return 0;
-}
-
-int mc_mo_load_resources(mc_node *module_node)
-{
-  int a;
-
-  // Initialize
-  modus_operandi_data *mod = (modus_operandi_data *)malloc(sizeof(modus_operandi_data));
-  module_node->data = mod;
-  mod->node = module_node;
-
-  mod->options_buttons.capacity = mod->options_buttons.count = 0U;
-  mod->all_ops.capacity = mod->all_ops.count = 0U;
-
-  mod->stack.index = 0;
-  for (a = 0; a < MO_OP_PROCESS_STACK_SIZE; ++a) {
-    create_hash_table(8, &mod->stack.context_maps[a]);
-    mod->stack.processes[a] = NULL;
-    mod->stack.steps[a] = NULL;
-    mod->stack.argument_subprocesses[a] = NULL;
-  }
-
-  mod->render_target.image = NULL;
-  mod->render_target.width = module_node->layout->preferred_width;
-  mod->render_target.height = module_node->layout->preferred_height;
-  MCcall(mcr_create_texture_resource(mod->render_target.width, mod->render_target.height,
-                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mod->render_target.image));
-
-  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
-  while (!mod->render_target.image) {
-    // puts("wait");
-    usleep(100);
-  }
-
-  return 0;
-}
-
-int mc_mo_init_ui(mc_node *module_node)
-{
-  modus_operandi_data *mod = (modus_operandi_data *)module_node->data;
-
-  MCcall(mcu_init_textbox(module_node, &mod->search_textbox));
-  mod->search_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-  mod->search_textbox->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
-
-  char buf[64];
-
-  // unsigned int y = (unsigned int)(24 + 8 + 4);
-  for (int a = 0; a < 12; ++a) {
-    mcu_button *button;
-    MCcall(mcu_init_button(module_node, &button));
-
-    if (button->node->name) {
-      free(button->node->name);
-      button->node->name = NULL;
-    }
-    sprintf(buf, "mo-options-button-%i", a);
-    button->node->name = strdup(buf);
-
-    button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-    button->node->layout->padding = (mc_paddingf){6, 24 + 8 + a * 27, 6, 0};
-    button->node->layout->max_width = 0U;
-    button->node->layout->visible = false;
-
-    button->left_click = (void *)&_mc_mo_operational_process_selected;
-
-    MCcall(set_mc_str(button->str, "button"));
-
-    MCcall(append_to_collection((void ***)&mod->options_buttons.items, &mod->options_buttons.capacity,
-                                &mod->options_buttons.count, button));
-  }
-
-  // // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
-  // while (!mod->render_target.image) {
-  //   // puts("wait");
-  //   usleep(100);
-  // }
 
   return 0;
 }
@@ -770,11 +711,15 @@ int _user_function_print_result(modus_operandi_data *mod, void *farg)
 
 int _user_function_add_struct(modus_operandi_data *mod, void *farg)
 {
-  // char *ctx_arg = (char *)farg;
-  // char *ctx_result = hash_table_get(ctx_arg, &mod->active_process->context);
+  int sidx = mod->stack.index;
+  mo_operational_process *op = mod->stack.processes[sidx];
+  hash_table_t *ctx = &mod->stack.context_maps[sidx];
+
+  char *filepath = (char *)hash_table_get("header-path", ctx);
+  char *struct_name = (char *)hash_table_get("struct-name", ctx);
 
   // printf("Step Example Result: '%s'\n", ctx_result);
-  puts("THIS is where i'd create the struct");
+  printf("THIS is where i'd create the struct '%s' in the file '%s'\n", struct_name, filepath);
 
   return 0;
 }
@@ -808,22 +753,22 @@ int mc_mo_load_operations(mc_node *module_node)
 
         sub_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
         sub_process->mod = mod;
-        sub_process->name = strdup("define-struct-sub_process_header-path");
+        sub_process->name = strdup("define-struct::header-path");
         sub_process->nb_parameters = 0;
 
         // Save-File
-        const char *const ctxprop_file = "header-path";
+        const char *const ctxpropid = "header-path";
         {
           // Obtain their name
           step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
           // Obtain the name of the source module to create
-          step->action = MO_OPPA_SAVE_FILE_DIALOG;
+          step->action = MO_OPPA_FILE_DIALOG;
           step->file_dialog.message = strdup("Choose or create a header file");
           step->file_dialog.initial_filename = strdup("header.h");
           step->folder_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
           step->folder_dialog.initial_folder.data = NULL;
-          step->text_input_dialog.target_context_property = strdup(ctxprop_file);
+          step->text_input_dialog.target_context_property = strdup(ctxpropid);
         }
 
         step->next = NULL;
@@ -833,7 +778,32 @@ int mc_mo_load_operations(mc_node *module_node)
       MCcall(mc_grow_array((void **)&define_struct_process->parameters, &define_struct_process->nb_parameters,
                            sizeof(mo_operational_process_parameter), (void **)&op_param));
       op_param->name = strdup("struct-name");
-      op_param->obtain_value_subprocess = NULL;
+      {
+        // Obtain header-path process
+        mo_operational_process *sub_process;
+
+        sub_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
+        sub_process->mod = mod;
+        sub_process->name = strdup("define-struct::struct-name");
+        sub_process->nb_parameters = 0;
+
+        // Save-File
+        const char *const ctxpropid = "struct-name";
+        {
+          // Obtain their name
+          step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+
+          // Obtain the name of the source module to create
+          step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+          step->text_input_dialog.message = strdup("Specify the struct name");
+          step->text_input_dialog.default_text.type = MO_OPPC_CSTR;
+          step->text_input_dialog.default_text.data = NULL;
+          step->text_input_dialog.target_context_property = strdup(ctxpropid);
+        }
+
+        step->next = NULL;
+        op_param->obtain_value_subprocess = sub_process;
+      }
     }
 
     {
@@ -844,6 +814,8 @@ int mc_mo_load_operations(mc_node *module_node)
       step->action = MO_OPPA_USER_FUNCTION;
       step->delegate.fptr = &_user_function_add_struct;
       step->delegate.farg = NULL;
+
+      step->next = NULL;
     }
     // // Save-File
     // const char *const ctxprop_file = "sep-example-file";
@@ -852,7 +824,7 @@ int mc_mo_load_operations(mc_node *module_node)
     //   step = steps_example_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
     //   // Obtain the name of the source module to create
-    //   step->action = MO_OPPA_SAVE_FILE_DIALOG;
+    //   step->action = MO_OPPA_FILE_DIALOG;
     //   step->file_dialog.message = strdup("save-file-dialog-example");
     //   step->file_dialog.initial_filename = strdup("example_file.txt");
     //   step->folder_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
@@ -882,7 +854,7 @@ int mc_mo_load_operations(mc_node *module_node)
   //     step = steps_example_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
   //     // Obtain the name of the source module to create
-  //     step->action = MO_OPPA_SAVE_FILE_DIALOG;
+  //     step->action = MO_OPPA_FILE_DIALOG;
   //     step->file_dialog.message = strdup("save-file-dialog-example");
   //     step->file_dialog.initial_filename = strdup("example_file.txt");
   //     step->folder_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
@@ -1108,7 +1080,127 @@ int mc_mo_load_operations(mc_node *module_node)
   //                               add_renderable_system));
   // }
 
-  MCcall(mc_mo_update_options_display(mod));
+  MCcall(_mc_mo_update_options_display(mod));
+
+  return 0;
+}
+
+void _mc_mo_operational_process_selected(mci_input_event *input_event, mcu_button *button)
+{
+  if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+    mo_operational_process *mopp = (mo_operational_process *)button->tag;
+
+    _mc_mo_begin_op_process(mopp, NULL);
+  }
+}
+
+int _mc_mo_update_options_display(modus_operandi_data *mod)
+{
+  // Order according to search text match score
+  // if(!mod->search_textbox->contents->len) {
+
+  // }
+
+  int a;
+  mcu_button *button;
+  mo_operational_process *mopp;
+  for (a = 0; a < mod->all_ops.count && a < mod->options_buttons.count; ++a) {
+    button = mod->options_buttons.items[a];
+    mopp = mod->all_ops.items[a];
+
+    MCcall(set_mc_str(button->str, mopp->name));
+
+    button->tag = mopp;
+
+    button->node->layout->visible = true;
+    MCcall(mca_set_node_requires_rerender(button->node));
+  }
+  for (; a < mod->options_buttons.count; ++a) {
+    button = mod->options_buttons.items[a];
+
+    button->node->layout->visible = false;
+  }
+
+  MCcall(mca_set_node_requires_rerender(mod->node));
+
+  return 0;
+}
+
+int mc_mo_load_resources(mc_node *module_node)
+{
+  int a;
+
+  // Initialize
+  modus_operandi_data *mod = (modus_operandi_data *)malloc(sizeof(modus_operandi_data));
+  module_node->data = mod;
+  mod->node = module_node;
+
+  mod->options_buttons.capacity = mod->options_buttons.count = 0U;
+  mod->all_ops.capacity = mod->all_ops.count = 0U;
+
+  mod->stack.index = -1;
+  for (a = 0; a < MO_OP_PROCESS_STACK_SIZE; ++a) {
+    create_hash_table(8, &mod->stack.context_maps[a]);
+    mod->stack.processes[a] = NULL;
+    mod->stack.steps[a] = NULL;
+    mod->stack.argument_subprocesses[a] = NULL;
+  }
+
+  mod->render_target.image = NULL;
+  mod->render_target.width = module_node->layout->preferred_width;
+  mod->render_target.height = module_node->layout->preferred_height;
+  MCcall(mcr_create_texture_resource(mod->render_target.width, mod->render_target.height,
+                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mod->render_target.image));
+
+  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
+  while (!mod->render_target.image) {
+    // puts("wait");
+    usleep(100);
+  }
+
+  return 0;
+}
+
+int mc_mo_init_ui(mc_node *module_node)
+{
+  modus_operandi_data *mod = (modus_operandi_data *)module_node->data;
+
+  MCcall(mcu_init_textbox(module_node, &mod->search_textbox));
+  mod->search_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  mod->search_textbox->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
+
+  char buf[64];
+
+  // unsigned int y = (unsigned int)(24 + 8 + 4);
+  for (int a = 0; a < 12; ++a) {
+    mcu_button *button;
+    MCcall(mcu_init_button(module_node, &button));
+
+    if (button->node->name) {
+      free(button->node->name);
+      button->node->name = NULL;
+    }
+    sprintf(buf, "mo-options-button-%i", a);
+    button->node->name = strdup(buf);
+
+    button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    button->node->layout->padding = (mc_paddingf){6, 24 + 8 + a * 27, 6, 0};
+    button->node->layout->max_width = 0U;
+    button->node->layout->visible = false;
+
+    button->left_click = (void *)&_mc_mo_operational_process_selected;
+
+    MCcall(set_mc_str(button->str, "button"));
+
+    MCcall(append_to_collection((void ***)&mod->options_buttons.items, &mod->options_buttons.capacity,
+                                &mod->options_buttons.count, button));
+  }
+
+  // // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
+  // while (!mod->render_target.image) {
+  //   // puts("wait");
+  //   usleep(100);
+  // }
 
   return 0;
 }

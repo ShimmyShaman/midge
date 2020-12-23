@@ -28,7 +28,7 @@ typedef enum mc_app_event_type {
   //    int (*invoker_result_delegate)(void *invoker_state, char *filepath)}
   // -* starting_directory may be NULL indicating use of current-working-directory
   // -** filepath may be NULL if user cancels
-  MC_APP_EVENT_SAVE_FILE_DIALOG_REQUESTED,
+  MC_APP_EVENT_FILE_DIALOG_REQUESTED,
   // int (*event_handler)(void *handler_state, void *event_args)
   // - event_args is void*[] { const char *prompt_message, const char *default_value, void *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *input_text)}

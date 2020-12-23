@@ -444,7 +444,7 @@ int mc_fd_init_file_dialog(mc_node *app_root)
   MCcall(_mc_init_file_dialog_ui(node));
 
   MCcall(
-      mca_register_event_handler(MC_APP_EVENT_SAVE_FILE_DIALOG_REQUESTED, _mc_on_save_file_dialog_request, node->data));
+      mca_register_event_handler(MC_APP_EVENT_FILE_DIALOG_REQUESTED, _mc_on_save_file_dialog_request, node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 
