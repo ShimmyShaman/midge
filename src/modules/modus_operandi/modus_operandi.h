@@ -13,6 +13,7 @@ typedef enum mo_op_step_action_type {
 
 typedef enum mo_op_step_context_arg_type {
   MO_OPPC_NULL = 0,
+  MO_OPPC_DELEGATE,
   MO_OPPC_CSTR,
   MO_OPPC_ACTIVE_PROJECT_SRC_PATH,
   MO_OPPC_PROCESS_CONTEXT_PROPERTY,

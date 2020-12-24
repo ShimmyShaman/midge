@@ -27,7 +27,7 @@ int mc_grow_array(void **ary, unsigned int *ptr_count, size_t item_allocation_si
     }
     else
       alloc = count * 2;
-    pa = realloc(pa, alloc * sizeof(item_allocation_size));
+    pa = realloc(pa, alloc * item_allocation_size);
     if (!pa) {
       MCerror(9727, "reallocation error");
     }
