@@ -75,7 +75,7 @@ void register_midge_error_tag(const char *fmt, ...)
 
   int index = MIDGE_ERROR_TAG_INDEX % MIDGE_ERROR_TAG_MAX_SIZE;
   char *str = MIDGE_ERROR_TAG[index];
-  uint *str_alloc = &MIDGE_ERROR_TAG_STR_LEN[index];
+  unsigned int *str_alloc = &MIDGE_ERROR_TAG_STR_LEN[index];
   ++MIDGE_ERROR_TAG_INDEX; // = (MIDGE_ERROR_TAG_INDEX + 1) % MIDGE_ERROR_TAG_MAX_SIZE;
 
   int si = 0;

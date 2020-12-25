@@ -349,7 +349,7 @@ typedef struct mc_app_itp_data {
 
 typedef struct mc_project_info {
   char *name;
-  char *path, *path_src;
+  char *path, *path_src, *path_mprj_data;
 
   mc_node *root_node;
 } mc_project_info;

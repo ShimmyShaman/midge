@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <dirent.h>
 #include <unistd.h>
 
 #include "core/midge_app.h"
@@ -16,7 +17,8 @@
 #include "modules/render_utilities/render_util.h"
 #include "modules/ui_elements/ui_elements.h"
 
-#include "modules/modus_operandi/modus_operandi.h"
+#include "modules/modus_operandi/mo_serialization.h"
+#include "modules/modus_operandi/mo_types.h"
 #include "modules/modus_operandi/process_step_dialog.h"
 
 // #include "env/environment_definitions.h"
@@ -25,25 +27,6 @@
 // TODO -- may not need these after removing user functions
 #include "core/c_parser_lexer.h"
 #include "core/mc_source.h"
-
-#define MO_OP_PROCESS_STACK_SIZE 16
-
-struct mo_operational_process;
-typedef struct mo_operational_process_parameter {
-  char *name;
-  struct mo_operational_process *obtain_value_subprocess;
-} mo_operational_process_parameter;
-
-struct modus_operandi_data;
-typedef struct mo_operational_process {
-  struct modus_operandi_data *mod;
-  char *name;
-
-  int nb_parameters;
-  mo_operational_process_parameter *parameters;
-
-  mo_operational_step *first;
-} mo_operational_process;
 
 typedef struct modus_operandi_data {
   mc_node *node;
@@ -55,15 +38,7 @@ typedef struct modus_operandi_data {
 
   mc_process_step_dialog_data *create_step_dialog;
 
-  struct {
-    int index;
-
-    hash_table_t context_maps[MO_OP_PROCESS_STACK_SIZE];
-    mo_operational_process *processes[MO_OP_PROCESS_STACK_SIZE];
-    mo_operational_step *steps[MO_OP_PROCESS_STACK_SIZE];
-    mo_operational_process_parameter *argument_subprocesses[MO_OP_PROCESS_STACK_SIZE];
-
-  } stack;
+  mc_mo_process_stack process_stack;
 
   struct {
     unsigned int capacity, count;
@@ -79,7 +54,7 @@ typedef struct modus_operandi_data {
 } modus_operandi_data;
 
 // Forward Declaration
-int _mc_mo_activate_next_stack_step(modus_operandi_data *mod);
+int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack);
 int _mc_mo_begin_op_process(mo_operational_process *process, void *args);
 int _mc_mo_update_options_display(modus_operandi_data *mod);
 
@@ -158,8 +133,8 @@ int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
 {
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
 
-  mo_operational_step *step = mod->stack.steps[mod->stack.index];
-  hash_table_t *context = &mod->stack.context_maps[mod->stack.index];
+  mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
+  hash_table_t *context = &mod->process_stack.context_maps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
   if (step->action != MO_OPPA_TEXT_INPUT_DIALOG) {
@@ -173,7 +148,7 @@ int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
   hash_table_set(step->folder_dialog.target_context_property, strdup(input_text), context);
 
   // Move to the next step
-  MCcall(_mc_mo_activate_next_stack_step(mod));
+  MCcall(_mc_mo_activate_next_stack_step(&mod->process_stack));
 
   return 0;
 }
@@ -227,8 +202,8 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
 {
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
 
-  mo_operational_step *step = mod->stack.steps[mod->stack.index];
-  hash_table_t *context = &mod->stack.context_maps[mod->stack.index];
+  mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
+  hash_table_t *context = &mod->process_stack.context_maps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
   if (step->action != MO_OPPA_FILE_DIALOG) {
@@ -239,13 +214,12 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
   hash_table_set(step->folder_dialog.target_context_property, strdup(selected_path), context);
 
   // Move to the next step
-  MCcall(_mc_mo_activate_next_stack_step(mod));
+  MCcall(_mc_mo_activate_next_stack_step(&mod->process_stack));
 
   return 0;
 }
 
-int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *context_arg, bool *requires_mem_free,
-                              void **result)
+int _mc_mo_obtain_context_arg(mo_op_step_context_arg *context_arg, bool *requires_mem_free, void **result)
 {
   switch (context_arg->type) {
   case MO_OPPC_CSTR: {
@@ -279,7 +253,7 @@ int _mc_mo_obtain_context_arg(modus_operandi_data *mod, mo_op_step_context_arg *
   return 0;
 }
 
-int _mc_mo_return_from_stack_process(modus_operandi_data *mod)
+int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
 {
   int a, sidx;
   mo_operational_process *op;
@@ -287,20 +261,20 @@ int _mc_mo_return_from_stack_process(modus_operandi_data *mod)
   hash_table_t *ctx;
   void *pv;
 
-  // Update the process stack info
-  --mod->stack.index;
-  sidx = mod->stack.index;
+  // Update the process process_stack info
+  --process_stack->index;
+  sidx = process_stack->index;
 
   if (sidx < 0) {
-    // Stack is empty
+    // process_stack is empty
     return 0;
   }
 
-  op_param = mod->stack.argument_subprocesses[sidx];
-  ctx = &mod->stack.context_maps[sidx];
+  op_param = process_stack->argument_subprocesses[sidx];
+  ctx = &process_stack->context_maps[sidx];
   if (op_param) {
-    // Obtain the parameter from the previous stack context
-    pv = hash_table_get(op_param->name, &mod->stack.context_maps[sidx + 1]);
+    // Obtain the parameter from the previous process_stack context
+    pv = hash_table_get(op_param->name, &process_stack->context_maps[sidx + 1]);
 
     if (!pv) {
       MCerror(5294, "subprocess param '%s' was not retrieved");
@@ -310,18 +284,18 @@ int _mc_mo_return_from_stack_process(modus_operandi_data *mod)
     hash_table_set(op_param->name, pv, ctx);
 
     // Clear
-    mod->stack.argument_subprocesses[sidx] = NULL;
+    process_stack->argument_subprocesses[sidx] = NULL;
   }
 
-  if (mod->stack.steps[sidx]) {
+  if (process_stack->steps[sidx]) {
     // Simply move onto the next step
-    MCcall(_mc_mo_activate_next_stack_step(mod));
+    MCcall(_mc_mo_activate_next_stack_step(process_stack));
     return 0;
   }
 
   // Process is still in argument-collection phase
   // Ensure all arguments have been obtained
-  op = mod->stack.processes[sidx];
+  op = process_stack->processes[sidx];
   for (a = 0; a < op->nb_parameters; ++a) {
     op_param = &op->parameters[a];
 
@@ -333,36 +307,36 @@ int _mc_mo_return_from_stack_process(modus_operandi_data *mod)
     }
 
     // Activate the subprocess to obtain the argument value
-    mod->stack.argument_subprocesses[sidx] = op_param;
+    process_stack->argument_subprocesses[sidx] = op_param;
     MCcall(_mc_mo_begin_op_process(op_param->obtain_value_subprocess, NULL));
     return 0;
   }
 
   // Continue on to the first step
-  MCcall(_mc_mo_activate_next_stack_step(mod));
+  MCcall(_mc_mo_activate_next_stack_step(process_stack));
 
   return 0;
 }
 
-int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
+int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
 {
   void **vary;
-  int sidx = mod->stack.index;
-  mo_operational_step *step = mod->stack.steps[sidx];
+  int sidx = process_stack->index;
+  mo_operational_step *step = process_stack->steps[sidx];
 
   if (!step) {
     // First step
-    step = mod->stack.steps[sidx] = mod->stack.processes[sidx]->first;
+    step = process_stack->steps[sidx] = process_stack->processes[sidx]->first;
   }
   else {
     if (!step->next) {
       // No Next step
-      MCcall(_mc_mo_return_from_stack_process(mod));
+      MCcall(_mc_mo_return_from_stack_process(process_stack));
       return 0;
     }
 
     // Continue onto next linked step
-    step = mod->stack.steps[sidx] = step->next;
+    step = process_stack->steps[sidx] = step->next;
   }
 
   bool free_ctx_arg;
@@ -372,8 +346,8 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
 
     // TODO -- make a define or const of project label
     vary[0] = step->text_input_dialog.message;
-    MCcall(_mc_mo_obtain_context_arg(mod, &step->text_input_dialog.default_text, &free_ctx_arg, &vary[1]));
-    vary[2] = (void *)mod;
+    MCcall(_mc_mo_obtain_context_arg(&step->text_input_dialog.default_text, &free_ctx_arg, &vary[1]));
+    vary[2] = (void *)process_stack->state_arg;
     vary[3] = (void *)&_mc_mo_dialog_input_text_entered;
 
     if (free_ctx_arg) {
@@ -386,10 +360,10 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
   // case MO_OPPA_OPTIONS_DIALOG: {
   //   void **vary = (void **)malloc(sizeof(void *) * 5);
 
-  //   vary[0] = mod->active_step->text_input_dialog.message;
-  //   vary[1] = &mod->active_step->options_dialog.option_count;
-  //   vary[2] = mod->active_step->options_dialog.options;
-  //   vary[3] = (void *)mod;
+  //   vary[0] = process_stack->active_step->text_input_dialog.message;
+  //   vary[1] = &process_stack->active_step->options_dialog.option_count;
+  //   vary[2] = process_stack->active_step->options_dialog.options;
+  //   vary[3] = (void *)process_stack;
   //   vary[4] = (void *)&_mc_mo_dialog_options_text_selected;
 
   //   MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED, vary, 1, vary));
@@ -401,8 +375,8 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
     // TODO -- make sure memory free is handled (TODO)
     // TODO -- make a define or const of project label
     vary[0] = (void *)step->folder_dialog.message;
-    MCcall(_mc_mo_obtain_context_arg(mod, &step->folder_dialog.initial_folder, &free_ctx_arg, &vary[1]));
-    vary[2] = (void *)mod;
+    MCcall(_mc_mo_obtain_context_arg(&step->folder_dialog.initial_folder, &free_ctx_arg, &vary[1]));
+    vary[2] = (void *)process_stack->state_arg;
     vary[3] = (void *)&_mc_mo_dialog_folder_selected;
 
     if (free_ctx_arg) {
@@ -417,8 +391,8 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
 
     // Construct the default filename -- TODO
     vary[0] = (void *)step->file_dialog.message;
-    MCcall(_mc_mo_obtain_context_arg(mod, &step->file_dialog.initial_folder, &free_ctx_arg, &vary[1]));
-    vary[2] = (void *)mod;
+    MCcall(_mc_mo_obtain_context_arg(&step->file_dialog.initial_folder, &free_ctx_arg, &vary[1]));
+    vary[2] = (void *)process_stack->state_arg;
     vary[3] = (void *)&_mc_mo_dialog_filepath_selected;
 
     if (free_ctx_arg) {
@@ -429,14 +403,14 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
     }
   } break;
   case MO_OPPA_USER_FUNCTION: {
-    int (*user_function)(modus_operandi_data * context, void *farg) =
-        (int (*)(modus_operandi_data *, void *))step->delegate.fptr;
+    int (*user_function)(mc_mo_process_stack * context, void *farg) =
+        (int (*)(mc_mo_process_stack *, void *))step->delegate.fptr;
 
-    MCcall(user_function(mod, step->delegate.farg));
+    MCcall(user_function(process_stack, step->delegate.farg));
 
     // Move to the next step -- TODO -- not sure if this is the right move, maybe have user-function return a flag
     // indicating if it is complete or something
-    MCcall(_mc_mo_activate_next_stack_step(mod));
+    MCcall(_mc_mo_activate_next_stack_step(process_stack));
 
   } break;
   // case MO_OPPA_CREATE_PROCESS_STEP_DIALOG: {
@@ -455,23 +429,23 @@ int _mc_mo_activate_next_stack_step(modus_operandi_data *mod)
 
 int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
 {
-  modus_operandi_data *mod = process->mod;
+  mc_mo_process_stack *process_stack = process->stack;
   hash_table_t *ctx;
   mo_operational_process_parameter *pp;
   int a, sidx;
   mo_operational_step *step;
 
-  // Increment the process stack
-  sidx = ++mod->stack.index;
+  // Increment the process process_stack
+  sidx = ++process_stack->index;
   if (sidx >= MO_OP_PROCESS_STACK_SIZE) {
-    MCerror(5385, "modus operandi exceeded stack capacity");
+    MCerror(5385, "modus operandi exceeded process_stack capacity");
   }
 
-  // Set the process stack info
-  mod->stack.processes[sidx] = process;
-  hash_table_clear(&mod->stack.context_maps[sidx]);
-  mod->stack.argument_subprocesses[sidx] = NULL;
-  mod->stack.steps[sidx] = NULL;
+  // Set the process process_stack info
+  process_stack->processes[sidx] = process;
+  hash_table_clear(&process_stack->context_maps[sidx]);
+  process_stack->argument_subprocesses[sidx] = NULL;
+  process_stack->steps[sidx] = NULL;
 
   // Set all arguments
   if (args) {
@@ -487,12 +461,12 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
     }
 
     // Activate the subprocess to obtain the argument value
-    mod->stack.argument_subprocesses[sidx] = pp;
+    process_stack->argument_subprocesses[sidx] = pp;
     MCcall(_mc_mo_begin_op_process(pp->obtain_value_subprocess, NULL));
     return 0;
   }
 
-  _mc_mo_activate_next_stack_step(mod);
+  _mc_mo_activate_next_stack_step(process_stack);
 
   // TODO Trash
   // Ensure all parameters have value
@@ -505,7 +479,7 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
   //     :Decrement active tier on context map
   // :execute process.first
 
-  // Increment the stack index
+  // Increment the process_stack index
 
   // mod->active_process = mopp;
   // mod->active_step = NULL;
@@ -709,11 +683,11 @@ int _user_function_print_result(modus_operandi_data *mod, void *farg)
   return 0;
 }
 
-int _user_function_add_struct(modus_operandi_data *mod, void *farg)
+int _user_function_add_struct(mc_mo_process_stack *process_stack, void *farg)
 {
-  int sidx = mod->stack.index;
-  mo_operational_process *op = mod->stack.processes[sidx];
-  hash_table_t *ctx = &mod->stack.context_maps[sidx];
+  int sidx = process_stack->index;
+  mo_operational_process *op = process_stack->processes[sidx];
+  hash_table_t *ctx = &process_stack->context_maps[sidx];
 
   char *filepath = (char *)hash_table_get("header-path", ctx);
   char *struct_name = (char *)hash_table_get("struct-name", ctx);
@@ -737,97 +711,97 @@ int _context_delegate_set_default_data_name(modus_operandi_data *mod)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int mc_mo_load_operations(mc_node *module_node)
+int _mc_mo_load_operations(mc_node *module_node)
 {
   // TODO -- temp - needs to be more persistable way to load save processes
   modus_operandi_data *mod = (modus_operandi_data *)module_node->data;
 
-  // Define Struct Process
-  mo_operational_step *step;
-  mo_operational_process_parameter *op_param;
+  // // Define Struct Process
+  // mo_operational_step *step;
+  // mo_operational_process_parameter *op_param;
 
-  mo_operational_process *define_struct_process;
-  {
-    define_struct_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
-    define_struct_process->mod = mod;
-    define_struct_process->name = strdup("define-struct");
-    define_struct_process->nb_parameters = 0;
-    {
-      MCcall(mc_grow_array((void **)&define_struct_process->parameters, &define_struct_process->nb_parameters,
-                           sizeof(mo_operational_process_parameter), (void **)&op_param));
-      op_param->name = strdup("header-path");
-      {
-        // Obtain process
-        mo_operational_process *sub_process;
+  // mo_operational_process *define_struct_process;
+  // {
+  //   define_struct_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
+  //   define_struct_process->stack = &mod->process_stack;
+  //   define_struct_process->name = strdup("define-struct");
+  //   define_struct_process->nb_parameters = 0;
+  //   {
+  //     MCcall(mc_grow_array((void **)&define_struct_process->parameters, &define_struct_process->nb_parameters,
+  //                          sizeof(mo_operational_process_parameter), (void **)&op_param));
+  //     op_param->name = strdup("header-path");
+  //     {
+  //       // Obtain process
+  //       mo_operational_process *sub_process;
 
-        sub_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
-        sub_process->mod = mod;
-        sub_process->name = strdup("define-struct::header-path");
-        sub_process->nb_parameters = 0;
+  //       sub_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
+  //       sub_process->stack = &mod->process_stack;
+  //       sub_process->name = strdup("define-struct::header-path");
+  //       sub_process->nb_parameters = 0;
 
-        // Save-File
-        const char *const ctxpropid = "header-path";
-        {
-          // Obtain their name
-          step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+  //       // Save-File
+  //       const char *const ctxpropid = "header-path";
+  //       {
+  //         // Obtain their name
+  //         step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
-          // Obtain the name of the source module to create
-          step->action = MO_OPPA_FILE_DIALOG;
-          step->file_dialog.message = strdup("Choose or create a header file");
-          step->file_dialog.initial_filename = strdup("header.h");
-          step->folder_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
-          step->folder_dialog.initial_folder.data = NULL;
-          step->text_input_dialog.target_context_property = strdup(ctxpropid);
-        }
+  //         // Obtain the name of the source module to create
+  //         step->action = MO_OPPA_FILE_DIALOG;
+  //         step->file_dialog.message = strdup("Choose or create a header file");
+  //         step->file_dialog.initial_filename = strdup("header.h");
+  //         step->file_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
+  //         step->file_dialog.initial_folder.data = NULL;
+  //         step->file_dialog.target_context_property = strdup(ctxpropid);
+  //       }
 
-        step->next = NULL;
-        op_param->obtain_value_subprocess = sub_process;
-      }
+  //       step->next = NULL;
+  //       op_param->obtain_value_subprocess = sub_process;
+  //     }
 
-      MCcall(mc_grow_array((void **)&define_struct_process->parameters, &define_struct_process->nb_parameters,
-                           sizeof(mo_operational_process_parameter), (void **)&op_param));
-      op_param->name = strdup("struct-name");
-      {
-        // Obtain process
-        mo_operational_process *sub_process;
+  //     MCcall(mc_grow_array((void **)&define_struct_process->parameters, &define_struct_process->nb_parameters,
+  //                          sizeof(mo_operational_process_parameter), (void **)&op_param));
+  //     op_param->name = strdup("struct-name");
+  //     {
+  //       // Obtain process
+  //       mo_operational_process *sub_process;
 
-        sub_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
-        sub_process->mod = mod;
-        sub_process->name = strdup("define-struct::struct-name");
-        sub_process->nb_parameters = 0;
+  //       sub_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
+  //       sub_process->stack = &mod->process_stack;
+  //       sub_process->name = strdup("define-struct::struct-name");
+  //       sub_process->nb_parameters = 0;
 
-        const char *const ctxpropid = "struct-name";
-        {
-          // Obtain their name
-          step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+  //       const char *const ctxpropid = "struct-name";
+  //       {
+  //         // Obtain their name
+  //         step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
-          // Obtain the name of the source module to create
-          step->action = MO_OPPA_TEXT_INPUT_DIALOG;
-          step->text_input_dialog.message = strdup("Specify the struct name");
-          step->text_input_dialog.default_text.type = MO_OPPC_CSTR;
-          step->text_input_dialog.default_text.data = NULL;
-          step->text_input_dialog.target_context_property = strdup(ctxpropid);
-        }
+  //         // Obtain the name of the source module to create
+  //         step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+  //         step->text_input_dialog.message = strdup("Specify the struct name");
+  //         step->text_input_dialog.default_text.type = MO_OPPC_CSTR;
+  //         step->text_input_dialog.default_text.data = NULL;
+  //         step->text_input_dialog.target_context_property = strdup(ctxpropid);
+  //       }
 
-        step->next = NULL;
-        op_param->obtain_value_subprocess = sub_process;
-      }
-    }
+  //       step->next = NULL;
+  //       op_param->obtain_value_subprocess = sub_process;
+  //     }
+  //   }
 
-    {
-      // Generate them
-      step = define_struct_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
+  //   {
+  //     // Generate them
+  //     step = define_struct_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
-      // -- Open Open-Path-Dialog - Seek a folder to store the source
-      step->action = MO_OPPA_USER_FUNCTION;
-      step->delegate.fptr = &_user_function_add_struct;
-      step->delegate.farg = NULL;
-    }
+  //     // -- Open Open-Path-Dialog - Seek a folder to store the source
+  //     step->action = MO_OPPA_USER_FUNCTION;
+  //     step->delegate.fptr = &_user_function_add_struct;
+  //     step->delegate.farg = NULL;
+  //   }
 
-    step->next = NULL;
-    MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
-                                define_struct_process));
-  }
+  //   step->next = NULL;
+  //   MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
+  //                               define_struct_process));
+  // }
 
   // Add Render System Process
   {
@@ -1154,6 +1128,51 @@ int _mc_mo_update_options_display(modus_operandi_data *mod)
   return 0;
 }
 
+int _mc_mo_project_loaded(void *handler_state, void *event_args)
+{
+  modus_operandi_data *mod = (modus_operandi_data *)handler_state;
+  mc_project_info *project = (mc_project_info *)event_args;
+
+  // Load project specific mo's
+  char modir[256], buf[256];
+  strcpy(modir, project->path_mprj_data);
+  MCcall(mcf_concat_filepath(modir, 256, "mo"));
+
+  // Each file exists as a process
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir(modir)) != NULL) {
+    /* print all the files and directories within directory */
+    while ((ent = readdir(dir)) != NULL) {
+      // Ignore the . / .. entries
+      if (!strncmp(ent->d_name, ".", 1))
+        continue;
+
+      // Read the file
+      sprintf(buf, "%s/%s", modir, ent->d_name);
+      char *file_text;
+      MCcall(read_file_text(buf, &file_text));
+
+      // Parse the process
+      mo_operational_process *process;
+      MCcall(mc_mo_parse_serialized_process(&mod->process_stack, file_text, &process));
+      free(file_text);
+
+      // Attach the process to the system
+      MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count, process));
+    }
+    closedir(dir);
+  }
+  else {
+    /* could not open directory */
+    perror("could not open directory");
+    MCerror(7918, "Could not open directory '%s'", modir);
+    // return EXIT_FAILURE;
+  }
+
+  return 0;
+}
+
 int mc_mo_load_resources(mc_node *module_node)
 {
   int a;
@@ -1166,12 +1185,13 @@ int mc_mo_load_resources(mc_node *module_node)
   mod->options_buttons.capacity = mod->options_buttons.count = 0U;
   mod->all_ops.capacity = mod->all_ops.count = 0U;
 
-  mod->stack.index = -1;
+  mod->process_stack.index = -1;
+  mod->process_stack.state_arg = (void *)mod;
   for (a = 0; a < MO_OP_PROCESS_STACK_SIZE; ++a) {
-    create_hash_table(8, &mod->stack.context_maps[a]);
-    mod->stack.processes[a] = NULL;
-    mod->stack.steps[a] = NULL;
-    mod->stack.argument_subprocesses[a] = NULL;
+    create_hash_table(8, &mod->process_stack.context_maps[a]);
+    mod->process_stack.processes[a] = NULL;
+    mod->process_stack.steps[a] = NULL;
+    mod->process_stack.argument_subprocesses[a] = NULL;
   }
 
   mod->render_target.image = NULL;
@@ -1267,10 +1287,14 @@ int init_modus_operandi_system(mc_node *app_root)
 
   MCcall(mc_mo_init_ui(node));
 
-  MCcall(mc_mo_load_operations(node));
+  MCcall(_mc_mo_load_operations(node));
 
   // Create Process Step Dialog
   MCcall(mc_mocsd_init_process_step_dialog(app_root, &((modus_operandi_data *)node->data)->create_step_dialog));
+
+  // Event Registers
+  MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_LOADED, &_mc_mo_project_loaded, node->data));
+  // TODO -- register for project closed/shutdown
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 

@@ -1,5 +1,11 @@
-#ifndef MODUS_OPERANDI_H
-#define MODUS_OPERANDI_H
+#ifndef MO_TYPES_H
+#define MO_TYPES_H
+
+#include "core/core_definitions.h"
+
+#include "modules/collections/hash_table.h"
+
+#define MO_OP_PROCESS_STACK_SIZE 16
 
 typedef enum mo_op_step_action_type {
   MO_OPPA_NULL = 0,
@@ -61,4 +67,33 @@ typedef struct mo_operational_step {
   };
 } mo_operational_step;
 
-#endif // MODUS_OPERANDI_H
+struct mo_operational_process;
+typedef struct mo_operational_process_parameter {
+  char *name;
+  struct mo_operational_process *obtain_value_subprocess;
+} mo_operational_process_parameter;
+
+struct mc_mo_process_stack;
+
+typedef struct mo_operational_process {
+  struct mc_mo_process_stack *stack;
+
+  char *name;
+
+  int nb_parameters;
+  mo_operational_process_parameter *parameters;
+
+  mo_operational_step *first;
+} mo_operational_process;
+
+typedef struct mc_mo_process_stack {
+  int index;
+  void *state_arg;
+
+  hash_table_t context_maps[MO_OP_PROCESS_STACK_SIZE];
+  mo_operational_process *processes[MO_OP_PROCESS_STACK_SIZE];
+  mo_operational_step *steps[MO_OP_PROCESS_STACK_SIZE];
+  mo_operational_process_parameter *argument_subprocesses[MO_OP_PROCESS_STACK_SIZE];
+} mc_mo_process_stack;
+
+#endif // MO_TYPES_H

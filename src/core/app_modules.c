@@ -127,18 +127,26 @@ int _mca_load_project(const char *base_path, const char *project_name)
   project->name = strdup(project_name);
   sprintf(buf, "%s/%s", base_path, project_name);
   project->path = strdup(buf);
+
+  // Sub-Folders
   strcat(buf, "/src");
   project->path_src = strdup(buf);
+  sprintf(buf, "%s/%s", project->path, ".mprj");
+  project->path_mprj_data = strdup(buf);
 
   // Check
   if (access(project->path, F_OK) == -1) {
-    MCerror(2135, "Cannot Find project folder '%s' for project '%s'", project->path, project_name);
+    MCerror(2135, "Cannot find folder '%s' for project '%s'", project->path, project_name);
+  }
+  if (access(project->path_mprj_data, F_OK) == -1) {
+    // puts("Cannot find midge-config for project '%s'. Creating it...", project_name);
+    MCerror(2137, "Cannot find midge-config-folder '%s' for project '%s'", project->path_mprj_data, project_name);
   }
 
   // Load the source
   // Find the build list
   char *bltxt;
-  sprintf(buf, "%s/.proj/build_list", project->path);
+  sprintf(buf, "%s/build_list", project->path_mprj_data);
   MCcall(read_file_text(buf, &bltxt));
   // puts(bltxt);
 

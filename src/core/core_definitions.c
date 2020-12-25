@@ -25,6 +25,10 @@ int mc_throw_delayed_error(int error_no, const char *error_message, int year, in
   return 0;
 }
 
+/*
+ * Opens the given filepath, allocates memory and reads the file text.
+ * @*output must be freed by the user of this function.
+ */
 int read_file_text(const char *filepath, char **output)
 {
   // printf("rft-0\n");

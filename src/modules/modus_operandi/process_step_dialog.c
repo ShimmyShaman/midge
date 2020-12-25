@@ -15,7 +15,7 @@
 #include "modules/mc_io/mc_io.h"
 #include "modules/ui_elements/ui_elements.h"
 
-#include "modules/modus_operandi/modus_operandi.h"
+#include "modules/modus_operandi/mo_types.h"
 #include "modules/modus_operandi/process_step_dialog.h"
 
 void _mc_mocsd_render_headless(render_thread_info *render_thread, mc_node *node)
