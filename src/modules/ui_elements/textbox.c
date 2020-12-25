@@ -117,15 +117,30 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
       }
     } break;
     default: {
-      char c[2];
-      int res = get_key_input_code_char((input_event->input_state->shift_function & BUTTON_STATE_DOWN),
-                                        input_event->button_code, &c[0]);
-      c[1] = '\0';
-      if (!res) {
-        insert_into_mc_str(textbox->contents, c, textbox->cursor.col);
-        ++textbox->cursor.col;
+      if (input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) {
+        switch (input_event->button_code) {
+        // case KEY_CODE_A: {
+        //   // Can't select at the moment so just wipe everything out
+        //   set_mc_str(textbox->contents, "");
+
+        // } break;
+        default:
+          break;
+        }
       }
-    } break;
+      else {
+        char c[2];
+        int res = get_key_input_code_char((input_event->input_state->shift_function & BUTTON_STATE_DOWN),
+                                          input_event->button_code, &c[0]);
+        c[1] = '\0';
+
+        if (!res) {
+          insert_into_mc_str(textbox->contents, c, textbox->cursor.col);
+          ++textbox->cursor.col;
+        }
+      }
+      break;
+    }
     }
 
     // Rerender in all cases
