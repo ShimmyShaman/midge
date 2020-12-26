@@ -1,11 +1,12 @@
 /* mc_xcb.c */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <unistd.h>
 
 #include <vulkan/vulkan.h>
-
 
 #include "platform/mc_xcb.h"
 
@@ -317,6 +318,7 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
 
 int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buffer)
 {
+  xcb_generic_event_t *event;
   while (true) {
     // printf("mxcb_update_window:mxcb_window_info *=%p", p_wnfo);
     // int xce = xcb_connection_has_error(p_wnfo->connection);
@@ -324,13 +326,15 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
     //   printf("XCB_CONNECTION_ERROR:U:%i\n", xce);
     //   return xce;
     // }
-    xcb_generic_event_t *event = xcb_poll_for_event(p_wnfo->connection);
+    event = xcb_poll_for_event(p_wnfo->connection);
 
     // if there is no event, event will be NULL
     // need to check for event == NULL to prevent segfault
     if (!event)
       return 0;
 
+  // XCB Auto-Repeat falloff
+  xcb_auto_repeat_loc:
     // printf("xcb_full_sequence:%u\n", event->full_sequence);
     // printf("xcb_pad:%u,%u,%u,%u,%u,%u,%u\n", event->pad[0], event->pad[1], event->pad[2], event->pad[3],
     // event->pad[4],
@@ -364,6 +368,9 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
     } break;
     case XCB_KEY_PRESS: {
       pthread_mutex_lock(&input_buffer->mutex);
+      // xcb_button_press_event_t *rev = (xcb_button_press_event_t *)event;
+      // printf("XCB_KEY_PRESS->time:%u\n", rev->time);
+
       if (input_buffer->event_count < MAX_QUEUED_KEY_EVENTS) {
         input_buffer->events[input_buffer->event_count].type = INPUT_EVENT_KEY_PRESS;
         input_buffer->events[input_buffer->event_count++].detail.keyboard.key = (mc_key_code)event->pad0;
@@ -371,22 +378,36 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
       pthread_mutex_unlock(&input_buffer->mutex);
     } break;
     case XCB_KEY_RELEASE: {
-      pthread_mutex_lock(&input_buffer->mutex);
+      // Yes, it's pretty bad. I don't know what else to do.
+      // Immediate polling after sometimes doesn't return the consecutive event despite time being listed the same.
+      usleep(1);
 
-      // xcb_key_press_event_t *kpet = (xcb_key_press_event_t *)event;
-      // printf("KeyRelease:\n"
-      //        " -- response_type:%u  detail:%i  sequence:%u  time:%u\n"
-      //        " -- root:%u  event:%u  child:%u  root_x:%i  root_y:%i\n"
-      //        " -- event_x:%i  event_y:%i  state:%u  same_screen:%u\n"
-      //        " -- pad0:%u\n",
-      //        kpet->response_type, kpet->detail, kpet->sequence, kpet->time, kpet->root, event, kpet->child,
-      //        kpet->root_x, kpet->root_y, kpet->event_x, kpet->event_y, kpet->state, kpet->same_screen, kpet->pad0);
+      xcb_button_release_event_t *rev = (xcb_button_release_event_t *)event;
+      xcb_button_press_event_t *nev = (xcb_button_press_event_t *)xcb_poll_for_event(p_wnfo->connection);
+
+      if (nev && (nev->response_type & ~0x80) == XCB_KEY_PRESS && nev->time == rev->time && nev->pad0 == rev->pad0) {
+        // Ignore auto-repeat events
+        // puts("ignored auto-repeat");
+        continue;
+      }
+
+      // if (nev) {
+      //   printf("nev exists %u<>%u\n", nev->time, rev->time);
+      // }
+      // printf("XCB_KEY_RELEASE->time:%u\n", rev->time);
+
+      pthread_mutex_lock(&input_buffer->mutex);
 
       if (input_buffer->event_count < MAX_QUEUED_KEY_EVENTS) {
         input_buffer->events[input_buffer->event_count].type = INPUT_EVENT_KEY_RELEASE;
         input_buffer->events[input_buffer->event_count++].detail.keyboard.key = (mc_key_code)event->pad0;
       }
       pthread_mutex_unlock(&input_buffer->mutex);
+
+      if (nev) {
+        event = (xcb_generic_event_t *)nev;
+        goto xcb_auto_repeat_loc;
+      }
     } break;
     case XCB_BUTTON_PRESS: {
       xcb_button_press_event_t *press = (xcb_button_press_event_t *)event;
