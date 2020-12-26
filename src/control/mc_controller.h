@@ -20,6 +20,8 @@ typedef struct mci_input_state {
   // Uses mci_button_state flags (but because of how C handles flags it has to be an int)
   int alt_function, shift_function, ctrl_function;
 
+  int *kb_states;
+
   struct {
     // Cursor location
     int x, y;
@@ -41,6 +43,7 @@ typedef struct mci_input_event {
 } mci_input_event;
 
 int mcc_initialize_input_state();
+int mcc_input_state_activate_kb_state_tracking();
 void mcc_update_xcb_input();
 
 #endif // MC_CONTROLLER_H
