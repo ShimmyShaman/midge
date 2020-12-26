@@ -210,8 +210,11 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
     MCerror(8141, "TODO - state error");
   }
 
+  printf("here %p\n", step->file_dialog.target_context_property);
+  printf("here:'%s'\n", step->file_dialog.target_context_property);
+
   // Set the path to the target context property
-  hash_table_set(step->folder_dialog.target_context_property, strdup(selected_path), context);
+  hash_table_set(step->file_dialog.target_context_property, strdup(selected_path), context);
 
   // Move to the next step
   MCcall(_mc_mo_activate_next_stack_step(&mod->process_stack));
@@ -402,7 +405,7 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
       MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FILE_DIALOG_REQUESTED, vary, 2, vary));
     }
   } break;
-  case MO_OPPA_USER_FUNCTION: {
+  case MO_OPPA_DELEGATE_FUNCTION: {
     int (*user_function)(mc_mo_process_stack * context, void *farg) =
         (int (*)(mc_mo_process_stack *, void *))step->delegate.fptr;
 
@@ -793,7 +796,7 @@ int _mc_mo_load_operations(mc_node *module_node)
   //     step = define_struct_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
   //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-  //     step->action = MO_OPPA_USER_FUNCTION;
+  //     step->action = MO_OPPA_DELEGATE_FUNCTION;
   //     step->delegate.fptr = &_user_function_add_struct;
   //     step->delegate.farg = NULL;
   //   }
@@ -900,7 +903,7 @@ int _mc_mo_load_operations(mc_node *module_node)
       //   //   step = add_render_system_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
       //   //   // -- Open Open-Path-Dialog - Seek a folder to store the source
-      //   //   step->action = MO_OPPA_USER_FUNCTION;
+      //   //   step->action = MO_OPPA_DELEGATE_FUNCTION;
       //   //   step->delegate.fptr = &_user_function_add_struct;
       //   //   step->delegate.farg = NULL;
       //   // }
@@ -940,7 +943,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_USER_FUNCTION;
+    //     step->action = MO_OPPA_DELEGATE_FUNCTION;
     //     step->delegate.fptr = &_user_function_print_result;
     //     step->delegate.farg = strdup(ctxprop_file);
     //   }
@@ -968,7 +971,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_USER_FUNCTION;
+    //     step->action = MO_OPPA_DELEGATE_FUNCTION;
     //     step->delegate.fptr = &_user_function_print_result;
     //     step->delegate.farg = strdup(ctxprop_options_dialog);
     //   }
@@ -992,7 +995,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_USER_FUNCTION;
+    //     step->action = MO_OPPA_DELEGATE_FUNCTION;
     //     step->delegate.fptr = &_user_function_print_result;
     //     step->delegate.farg = strdup(ctxprop_text_input);
     //   }
@@ -1017,7 +1020,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_USER_FUNCTION;
+    //     step->action = MO_OPPA_DELEGATE_FUNCTION;
     //     step->delegate.fptr = &_user_function_print_result;
     //     step->delegate.farg = strdup(ctxprop_folder);
     //   }
@@ -1160,6 +1163,8 @@ int _mc_mo_project_loaded(void *handler_state, void *event_args)
 
       // Attach the process to the system
       MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count, process));
+
+      MCcall(_mc_mo_update_options_display(mod));
     }
     closedir(dir);
   }

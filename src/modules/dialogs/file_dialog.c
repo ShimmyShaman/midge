@@ -160,19 +160,22 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
   int len;
   mcu_button *button;
 
-  DIR *dir;
-  struct dirent *ent;
-  if ((dir = opendir(starting_directory)) != NULL) {
-    if (starting_directory) {
-      MCcall(set_mc_str(fd->current_directory, starting_directory));
-    }
-    else {
+  if (starting_directory) {
+    MCcall(set_mc_str(fd->current_directory, starting_directory));
+  }
+  else {
+    if (fd->current_directory->len == 0) {
       if (!getcwd(path, 256)) {
         MCerror(9135, "Current Working Directory too large for this pretty big buffer");
       }
       MCcall(set_mc_str(fd->current_directory, path));
     }
-    // printf("_mc_fd_open_directory:'%s'\n", fd->current_directory->text);
+  }
+
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir(fd->current_directory->text)) != NULL) {
+    printf("_mc_fd_open_directory:'%s'\n", fd->current_directory->text);
 
     /* print all the files and directories within directory */
     while ((ent = readdir(dir)) != NULL && fd->displayed_items.utilized < fd->displayed_items.count) {
@@ -181,7 +184,7 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
         continue;
 
       // Create the full path of the entry
-      strcpy(path, starting_directory);
+      strcpy(path, fd->current_directory->text);
       len = strlen(path);
       if (path[len - 1] != '\\' && path[len - 1] != '/') {
         strcat(path, "/");
@@ -210,7 +213,7 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
   else {
     /* could not open directory */
     perror("");
-    MCerror(8528, "Could not open directory '%s'", starting_directory);
+    MCerror(8528, "Could not open directory '%s'", fd->current_directory->text);
   }
 
   for (int a = fd->displayed_items.utilized; a < fd->displayed_items.count; ++a) {
@@ -443,8 +446,7 @@ int mc_fd_init_file_dialog(mc_node *app_root)
   MCcall(_mc_init_file_dialog_data(node));
   MCcall(_mc_init_file_dialog_ui(node));
 
-  MCcall(
-      mca_register_event_handler(MC_APP_EVENT_FILE_DIALOG_REQUESTED, _mc_on_save_file_dialog_request, node->data));
+  MCcall(mca_register_event_handler(MC_APP_EVENT_FILE_DIALOG_REQUESTED, _mc_on_save_file_dialog_request, node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 

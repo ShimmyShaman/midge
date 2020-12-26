@@ -652,6 +652,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
   return 0;
 }
 
+
 /* interpret file to the global interpreter and process for midge.
  */
 int mcs_interpret_file(const char *filepath)

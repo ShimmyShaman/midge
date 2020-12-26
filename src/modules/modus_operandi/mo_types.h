@@ -14,7 +14,7 @@ typedef enum mo_op_step_action_type {
   MO_OPPA_OPEN_FOLDER_DIALOG,
   MO_OPPA_TEXT_INPUT_DIALOG,
   MO_OPPA_OPTIONS_DIALOG,
-  MO_OPPA_USER_FUNCTION,
+  MO_OPPA_DELEGATE_FUNCTION,
 } mo_op_step_action_type;
 
 typedef enum mo_op_step_context_arg_type {
@@ -52,7 +52,7 @@ typedef struct mo_operational_step {
     struct {
       char *message;
       mo_op_step_context_arg initial_folder;
-      char *initial_filename;
+      mo_op_step_context_arg initial_filename;
       char *target_context_property;
     } file_dialog;
     struct {
