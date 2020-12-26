@@ -59,7 +59,6 @@ int mca_load_modules()
   const char *module_directories[] = {
       "mc_io",
       "collections",
-      "info_transcription",
       "render_utilities",
       "ui_elements",
       "dialogs",
@@ -124,6 +123,8 @@ int _mca_load_project(const char *base_path, const char *project_name)
 
   char buf[512];
   mc_project_info *project = malloc(sizeof(mc_project_info));
+  project->source_files.capacity = project->source_files.count = 0U;
+
   project->name = strdup(project_name);
   sprintf(buf, "%s/%s", base_path, project_name);
   project->path = strdup(buf);
@@ -165,7 +166,11 @@ int _mca_load_project(const char *base_path, const char *project_name)
     //           "Loading project='%s'. Could not find This could not be accessed for project_name='%s'",
     //           project_name);
     // }
-    MCcall(mcs_interpret_file(buf));
+    mc_source_file_info *sf;
+    MCcall(mcs_interpret_source_file(buf, &sf));
+
+    MCcall(append_to_collection((void ***)&project->source_files.items, &project->source_files.capacity,
+                                &project->source_files.count, sf));
   }
   free(bltxt);
 
@@ -209,6 +214,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
   project->root_node = project_root;
   MCcall(mca_register_loaded_project(project));
 
+  app_info->projects.active = project;
   // MCcall(mcs_interpret_file(buf));
 
   // // Initialize the module

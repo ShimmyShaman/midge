@@ -12,7 +12,7 @@
 #include "env/environment_definitions.h"
 
 #include "modules/collections/hash_table.h"
-#include "modules/mc_io/mc_io.h"
+#include "modules/mc_io/mc_file.h"
 #include "modules/project_explorer/project_explorer_window.h"
 #include "modules/ui_elements/ui_elements.h"
 

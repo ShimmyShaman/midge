@@ -62,6 +62,7 @@ typedef struct midge_app_info {
   } event_handlers;
 
   struct {
+    mc_project_info *active;
     mc_project_info *items;
     unsigned int capacity, count;
   } projects;

@@ -36,7 +36,8 @@ typedef enum mc_app_event_type {
   // -** input_text may be NULL if user cancels
   MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED,
   // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void*[] { const char *prompt_message, unsigned int *option_count, const char **options, void *invoker_state,
+  // - event_args is void*[] { const char *prompt_message, unsigned int *option_count, const char **options, void
+  // *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *selected_option)}
   // -* prompt_message may be NULL indicating an empty message
   // -** selected_option may be NULL if user cancels
@@ -350,6 +351,11 @@ typedef struct mc_app_itp_data {
 typedef struct mc_project_info {
   char *name;
   char *path, *path_src, *path_mprj_data;
+
+  struct {
+    unsigned int capacity, count;
+    mc_source_file_info *items;
+  } source_files;
 
   mc_node *root_node;
 } mc_project_info;

@@ -9,7 +9,6 @@
 
 #include "mc_str.h"
 
-#include "modules/mc_io/mc_io.h"
 
 int mcf_concat_filepath(char *buf, int buf_size, const char *appendage)
 {
@@ -106,6 +105,28 @@ int mcf_directory_exists(const char *path, bool *exists)
 
   fprintf(stderr, "stat failed!\n %s\n", strerror(errno));
   return 33;
+}
+
+int mcf_obtain_full_path(const char *relative_path, char *dest, int max_len)
+{
+  if (relative_path[0] == '/') {
+    strcpy(dest, relative_path);
+    return 0;
+  }
+
+  // Given filepath is relative -- convert to absolute
+  if (!getcwd(dest, max_len)) {
+    MCerror(6120, "getcwd failed");
+  }
+  int n = strlen(dest);
+
+  if (n + strlen(relative_path) >= max_len) {
+    MCerror(6133, "full path exceeds buffer bounds");
+  }
+
+  MCcall(mcf_concat_filepath(dest, max_len, relative_path));
+
+  return 0;
 }
 
 // int mcf_create_directory(const char *path, const char *directory_name)

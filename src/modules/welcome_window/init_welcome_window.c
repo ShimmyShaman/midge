@@ -11,8 +11,8 @@
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
-#include "modules/mc_io/mc_io.h"
 #include "modules/ui_elements/ui_elements.h"
+#include "modules/mc_io/mc_projects.h"
 
 // #include "env/environment_definitions.h"
 // #include "render/render_thread.h"

@@ -12,8 +12,7 @@
 #include "render/render_common.h"
 
 #include "modules/collections/hash_table.h"
-#include "modules/info_transcription/info_transcription.h"
-#include "modules/mc_io/mc_io.h"
+#include "modules/mc_io/mc_file.h"
 #include "modules/render_utilities/render_util.h"
 #include "modules/ui_elements/ui_elements.h"
 

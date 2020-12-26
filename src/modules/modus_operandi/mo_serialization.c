@@ -7,6 +7,7 @@
 #include <ctype.h>
 
 #include "core/mc_source.h"
+#include "core/midge_app.h"
 #include "env/environment_definitions.h"
 #include "mc_str.h"
 #include "midge_error_handling.h"
@@ -214,7 +215,6 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
   }
 
   char *fcode = strndup(*str, c - *str);
-  // printf("fcode:\n%s||", fcode);
 
   char del_func_name[64];
   sprintf(del_func_name, "mo_delegate_function_%i", 4312);
@@ -229,8 +229,11 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
   MCcall(append_to_mc_str(fc, "#include \"midge_error_handling.h\"\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_str(fc, "#include \"modules/modus_operandi/mo_types.h\"\n"));
+  MCcall(append_to_mc_str(fc, "#include \"modules/mc_io/mc_source_manipulation.h\"\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_strf(fc, "int %s() {\n", del_func_name));
+  // MCcall(append_to_mc_str(fc, "  midge_app_info *midge_app_info;\n"));
+  // MCcall(append_to_mc_str(fc, "  mc_obtain_midge_app_info(&midge_app_info);\n"));
   MCcall(append_to_mc_strf(fc, "  mc_mo_process_stack *process_stack = (mc_mo_process_stack *)%p;\n", process_stack));
   MCcall(append_to_mc_str(fc, "  hash_table_t *context = &process_stack->context_maps[process_stack->index];\n"));
 
@@ -244,6 +247,7 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
   mc_app_itp_data *app_itp_data;
   MCcall(mc_obtain_app_itp_data(&app_itp_data));
 
+  // printf("modus_operandi_delegate_function:\n%s||", fc->text);
   // -- Send the code to the interpreter
   {
     int mc_res = tcci_add_string(app_itp_data->interpreter, "modus_operandi_delegate_function", fc->text);

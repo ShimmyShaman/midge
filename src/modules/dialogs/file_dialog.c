@@ -12,8 +12,8 @@
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
-#include "modules/mc_io/mc_io.h"
 #include "modules/ui_elements/ui_elements.h"
+#include "modules/mc_io/mc_file.h"
 
 // #include "env/environment_definitions.h"
 // #include "render/render_thread.h"
@@ -274,7 +274,7 @@ void _mc_file_dialog_item_selected(mci_input_event *input_event, mcu_button *but
   }
 }
 
-int _mc_on_save_file_dialog_request(void *handler_state, void *event_args)
+int _mc_file_dialog_requested(void *handler_state, void *event_args)
 {
   mc_file_dialog_data *fd = (mc_file_dialog_data *)handler_state;
 
@@ -298,6 +298,7 @@ int _mc_on_save_file_dialog_request(void *handler_state, void *event_args)
 
   // Display
   fd->node->layout->visible = true;
+  MCcall(mca_focus_node(fd->input_textbox->node));
 
   return 0;
 }
@@ -446,7 +447,7 @@ int mc_fd_init_file_dialog(mc_node *app_root)
   MCcall(_mc_init_file_dialog_data(node));
   MCcall(_mc_init_file_dialog_ui(node));
 
-  MCcall(mca_register_event_handler(MC_APP_EVENT_FILE_DIALOG_REQUESTED, _mc_on_save_file_dialog_request, node->data));
+  MCcall(mca_register_event_handler(MC_APP_EVENT_FILE_DIALOG_REQUESTED, _mc_file_dialog_requested, node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 

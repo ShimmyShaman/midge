@@ -48,6 +48,7 @@ void mc_init_midge_app_info()
   }
 
   // Projects
+  __mc_midge_app_info->projects.active = NULL;
   __mc_midge_app_info->projects.capacity = 0U;
   __mc_midge_app_info->projects.count = 0U;
 }

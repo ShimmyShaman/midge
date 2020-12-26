@@ -652,10 +652,9 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
   return 0;
 }
 
-
 /* interpret file to the global interpreter and process for midge.
  */
-int mcs_interpret_file(const char *filepath)
+int mcs_interpret_source_file(const char *filepath, mc_source_file_info **source_file)
 {
   int res, a;
   char *code;
@@ -798,6 +797,16 @@ int mcs_interpret_file(const char *filepath)
   free(code);
   MCcall(release_syntax_node(file_ast));
   free(file_ast);
+
+  if (source_file)
+    *source_file = sf;
+
+  return 0;
+}
+
+int mcs_interpret_file(const char *filepath)
+{
+  MCcall(mcs_interpret_source_file(filepath, NULL));
 
   return 0;
 }

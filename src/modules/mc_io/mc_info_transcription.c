@@ -9,7 +9,7 @@
 #include "mc_str.h"
 #include "midge_error_handling.h"
 
-#include "modules/info_transcription/info_transcription.h"
+#include "modules/mc_io/mc_info_transcription.h"
 #include "modules/mc_io/mc_file.h"
 
 int _mc_transcribe_sub_type_info(mc_str *str, field_info *sub_type, int indent);
@@ -226,7 +226,7 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
       MCcall(_mc_transcribe_include_directive_info(str, seg->include));
       break;
     case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
-    MCcall(append_char_to_mc_str(str, '\n'));
+      MCcall(append_char_to_mc_str(str, '\n'));
       break;
     case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
       MCcall(_mc_transcribe_function_info(str, seg->function));
