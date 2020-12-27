@@ -331,3 +331,16 @@ int mcr_issue_render_command_textured_quad(image_render_details *image_render_qu
 
   return 0;
 }
+// Ensure this function is accessed within a thread mutex lock of the @image_render_queue
+int mcr_issue_render_command_render_program(image_render_details *image_render_queue, mcr_render_program *program,
+                                            mcr_render_program_data *program_data)
+{
+  element_render_command *render_cmd;
+  mcr_obtain_element_render_command(image_render_queue, &render_cmd);
+
+  render_cmd->type = RENDER_COMMAND_PROGRAM;
+  render_cmd->render_program.program = program;
+  render_cmd->render_program.data = program_data;
+
+  return 0;
+}

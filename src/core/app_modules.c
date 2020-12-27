@@ -158,6 +158,9 @@ int _mca_load_project(const char *base_path, const char *project_name)
     //           project_name);
     // }
     MCcall(mcs_interpret_file(buf));
+
+    if (*c == '\0')
+      break;
   }
   free(bltxt);
 
