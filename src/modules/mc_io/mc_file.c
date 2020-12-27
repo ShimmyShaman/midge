@@ -142,7 +142,7 @@ int mcf_obtain_full_path(const char *relative_path, char *dest, int max_len)
 // }
 
 /* TODO -- this just won't work with linux - wont get no extension and will have trouble with '.' in anything but
- * extension use
+ * extension use **think I fixed this but forgot to remove the TODO?
  */
 int mcf_obtain_file_extension(const char *path, char *buf, int max_len)
 {

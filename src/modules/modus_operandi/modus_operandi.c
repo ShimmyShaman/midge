@@ -209,8 +209,8 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
     MCerror(8141, "TODO - state error");
   }
 
-  printf("here %p\n", step->file_dialog.target_context_property);
-  printf("here:'%s'\n", step->file_dialog.target_context_property);
+  // printf("here %p\n", step->file_dialog.target_context_property);
+  // printf("here:'%s'\n", step->file_dialog.target_context_property);
 
   // Set the path to the target context property
   hash_table_set(step->file_dialog.target_context_property, strdup(selected_path), context);

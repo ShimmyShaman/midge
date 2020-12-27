@@ -435,6 +435,12 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
   }
 
   struct_info *si;
+  int a, b;
+  bool is_definition;
+  field_info *f;
+  mc_syntax_node *sf;
+
+  // Obtain the struct info
   find_struct_info(struct_ast->struct_decl.type_name->text, &si);
 
   if (!si) {
@@ -446,17 +452,38 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
     si->is_defined = false;
   }
 
-  bool is_definition = false;
+  is_definition = false;
   if (struct_ast->type == MC_SYNTAX_STRUCT_DECL) {
     // Struct
     si->is_union = false;
 
     if (struct_ast->struct_decl.fields) {
       if (si->is_defined) {
-        // TODO -- Actual Redefinition -- For now just check that fields are not different at all
-        printf("WARNING redefinition of struct '%s'\n", si->name);
-        printf("WARNING redefinition of struct '%s'\n", si->name);
-        printf("WARNING redefinition of struct '%s'\n", si->name);
+        bool redef = false;
+        if (si->fields->count == struct_ast->struct_decl.fields->count)
+          redef = true;
+
+        for (a = 0; !redef && a < si->fields->count; ++a) {
+          f = si->fields->items[a];
+          sf = struct_ast->struct_decl.fields->items[a];
+
+          if (f->field_type == FIELD_KIND_NESTED_STRUCT && sf->type != MC_SYNTAX_STRUCT_DECL)
+            redef = true;
+          if (f->field_type == FIELD_KIND_NESTED_UNION && sf->type != MC_SYNTAX_UNION_DECL)
+            redef = true;
+          if (f->field_type == FIELD_KIND_STANDARD) {
+            if (sf->type != MC_SYNTAX_FIELD_DECLARATION)
+              redef = true;
+            // if(!redef && sf->field.type_identifier)
+            redef = true;
+          }
+        }
+        if (redef) {
+          // TODO -- Actual Redefinition -- For now just check that fields are not different at all
+          printf("WARNING redefinition of struct '%s' TODO handle\n", si->name);
+          printf("WARNING redefinition of struct '%s' TODO handle\n", si->name);
+          printf("WARNING redefinition of struct '%s' TODO handle\n", si->name);
+        }
       }
 
       // Define

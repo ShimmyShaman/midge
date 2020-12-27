@@ -223,18 +223,21 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
   mc_str *fc;
   MCcall(init_mc_str(&fc));
 
+  MCcall(append_to_mc_str(fc, "#include <stdlib.h>\n"));
   MCcall(append_to_mc_str(fc, "#include <stdio.h>\n"));
   MCcall(append_to_mc_str(fc, "#include <string.h>\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_str(fc, "#include \"midge_error_handling.h\"\n"));
+  MCcall(append_to_mc_str(fc, "#include \"core/midge_app.h\"\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_str(fc, "#include \"modules/modus_operandi/mo_types.h\"\n"));
-  MCcall(append_to_mc_str(fc, "#include \"modules/mc_io/mc_source_manipulation.h\"\n"));
+  MCcall(append_to_mc_str(fc, "#include \"modules/mc_io/mc_source_extensions.h\"\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_strf(fc, "int %s() {\n", del_func_name));
-  // MCcall(append_to_mc_str(fc, "  midge_app_info *midge_app_info;\n"));
-  // MCcall(append_to_mc_str(fc, "  mc_obtain_midge_app_info(&midge_app_info);\n"));
+  MCcall(append_to_mc_str(fc, "  midge_app_info *midge_app_info;\n"));
+  MCcall(append_to_mc_str(fc, "  mc_obtain_midge_app_info(&midge_app_info);\n"));
   MCcall(append_to_mc_strf(fc, "  mc_mo_process_stack *process_stack = (mc_mo_process_stack *)%p;\n", process_stack));
+  // MCcall(append_to_mc_strf(fc, "  modus_operandi_data *modus_operandi = (modus_operandi_data *)%p;\n", process_stack->state_arg));
   MCcall(append_to_mc_str(fc, "  hash_table_t *context = &process_stack->context_maps[process_stack->index];\n"));
 
   MCcall(append_char_to_mc_str(fc, '\n'));

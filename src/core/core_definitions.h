@@ -7,6 +7,11 @@
 
 #include "tinycc/libtccinterp.h"
 
+typedef enum mc_source_entity_focus_options {
+  MC_SRC_FOC_ENT_NONE = 0,
+  MC_SRC_FOC_ENT_REFACTOR_RENAME = 1 << 0,
+} mc_source_entity_focus_options;
+
 // TODO -- identify & document the parameters that need releasing by the event handler functions
 typedef enum mc_app_event_type {
   MC_APP_EVENT_NULL = 0,
@@ -16,7 +21,10 @@ typedef enum mc_app_event_type {
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is NULL}
   MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED,
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
-  MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED,
+  MC_APP_EVENT_SOURCE_FILE_OPEN_REQ,
+  // int (*event_handler)(void *handler_state, void *event_args)
+  // - event_args is void *[] { const char *entity_name, mc_source_entity_focus_options *options}
+  MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ,
   // int (*event_handler)(void *handler_state, void *event_args)
   // - event_args is void*[] { const char *dialog_msg, const char *starting_directory, void *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *selected_folder)}

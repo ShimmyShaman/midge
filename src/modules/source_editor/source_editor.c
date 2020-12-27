@@ -66,6 +66,38 @@ int _mc_se_handle_source_file_open_request(void *handler_state, void *event_args
   return 0;
 }
 
+int _mc_se_handle_source_focus_entity_request(void *handler_state, void *event_args)
+{
+  // Data
+  mc_se_source_editor *se = (mc_se_source_editor *)handler_state;
+  void **evargs = (void **)event_args;
+  const char *entity_name = (const char *)evargs[0];
+  mc_source_entity_focus_options options = *(mc_source_entity_focus_options *)evargs[1];
+
+  mc_source_file_info *sf;
+  struct_info *si;
+
+  // Find the entity
+  MCcall(find_struct_info(entity_name, &si));
+  if (si) {
+    sf = si->source_file;
+  }
+  else {
+    MCerror(8428, "TODO");
+  }
+  if (!sf) {
+    MCerror(4191, "TODO");
+  }
+
+  // Get the source file
+  printf("SE_OPEN:'%s'\n", sf->filepath);
+  printf("SE_FOCUS:'struct %s {'\n", si->name);
+
+  se->node->layout->visible = true;
+  MCcall(mca_focus_node(se->node));
+  return 0;
+}
+
 int _mc_se_load_resources(mc_node *node)
 {
   // Data
@@ -123,7 +155,9 @@ int mc_se_init_source_editor()
   MCcall(_mc_se_init_data(node));
 
   // Event Registers
-  MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED, &_mc_se_handle_source_file_open_request,
+  MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, &_mc_se_handle_source_file_open_request,
+                                    node->data));
+  MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ, &_mc_se_handle_source_focus_entity_request,
                                     node->data));
 
   // Graphical resources
