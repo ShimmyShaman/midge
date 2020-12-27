@@ -2,11 +2,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <unistd.h>
 
 #include "control/mc_controller.h"
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
 
+#include "modules/mc_io/mc_file.h"
 #include "modules/render_utilities/render_util.h"
 #include "modules/source_editor/source_editor.h"
 
@@ -25,6 +29,9 @@ void _mc_se_render_headless(render_thread_info *render_thread, mc_node *node)
           (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
       render_node_headless(render_thread, child);
     }
+  }
+
+  if (se->tab_index.requires_rerender) {
   }
 }
 
@@ -53,20 +60,74 @@ void _mc_se_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
+int _mc_load_focused_editing_source(mc_se_source_editor *se) { return 0; }
+
+int _mc_se_open_filepath(mc_se_source_editor *se, const char *filepath)
+{
+  mc_app_itp_data *app_itp;
+  mc_obtain_app_itp_data(&app_itp);
+
+  int a;
+  mc_se_editing_source_file *esf, *xesf;
+  mc_source_file_info *sf;
+  char fp[256];
+
+  // Obtain the completed esf for the filepath
+  MCcall(mcf_obtain_full_path(filepath, fp, 256));
+
+  puts(fp);
+  xesf = se->source_files.items + se->source_files.size;
+  for (esf = se->source_files.items; esf < xesf; ++esf) {
+    if (!esf->sf)
+      break;
+    if (!strcmp(esf->sf->filepath, fp))
+      break;
+  }
+  puts("bb");
+  if (esf == xesf) {
+    MCerror(9528, "TODO resize array and set sf");
+  }
+  if (!esf->sf) {
+    // Find and set the source file
+    for (a = 0; a < app_itp->source_files.count; ++a) {
+      sf = app_itp->source_files.items[a];
+      if (!strcmp(sf->filepath, fp)) {
+        esf->sf = sf;
+        esf->scroll_offset = 0;
+        break;
+      }
+    }
+    if (!esf->sf) {
+      MCerror(4728, "couldn't find source file for path TODO");
+    }
+    ++se->source_files.used;
+  }
+  puts("cc");
+  // Open
+  se->source_files.focus = esf;
+  MCcall(_mc_load_focused_editing_source(se));
+
+  puts("dd");
+  // Update Tabs
+  se->tab_index.requires_rerender = true;
+
+  return 0;
+}
+
 int _mc_se_handle_source_file_open_request(void *handler_state, void *event_args)
 {
   // Data
   mc_se_source_editor *se = (mc_se_source_editor *)handler_state;
   const char *filepath = (const char *)event_args;
 
-  printf("SE_OPEN:'%s'\n", filepath);
+  MCcall(_mc_se_open_filepath(se, filepath));
 
   se->node->layout->visible = true;
   MCcall(mca_focus_node(se->node));
   return 0;
 }
 
-int _mc_se_handle_source_focus_entity_request(void *handler_state, void *event_args)
+int _mc_se_handle_source_entity_focus_request(void *handler_state, void *event_args)
 {
   // Data
   mc_se_source_editor *se = (mc_se_source_editor *)handler_state;
@@ -103,11 +164,19 @@ int _mc_se_load_resources(mc_node *node)
   // Data
   mc_se_source_editor *se = (mc_se_source_editor *)node->data;
 
+  se->tab_index.height = 30;
+  se->tab_index.width = 1200;
+  se->tab_index.requires_rerender = true;
+
+  se->tab_index.image = NULL;
+  MCcall(mcr_create_texture_resource(se->tab_index.width, se->tab_index.height, MVK_IMAGE_USAGE_RENDER_TARGET_2D,
+                                     &se->tab_index.image));
+
   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
-  // while (!mh_data->cube.render_data.input_buffers[1]) {
-  //   // puts("wait");
-  //   usleep(100);
-  // }
+  while (!se->tab_index.image) {
+    // puts("wait");
+    usleep(100);
+  }
   return 0;
 }
 
@@ -116,6 +185,12 @@ int _mc_se_init_data(mc_node *node)
   mc_se_source_editor *se = (mc_se_source_editor *)malloc(sizeof(mc_se_source_editor));
   node->data = (void *)se;
   se->node = node;
+
+  se->source_files.size = 16U;
+  se->source_files.items =
+      (mc_se_editing_source_file *)calloc(se->source_files.size, sizeof(mc_se_editing_source_file));
+  se->source_files.used = 0U;
+  se->source_files.focus = NULL;
 
   se->background_color = COLOR_NEARLY_BLACK;
   se->border_color = COLOR_GRAY;
@@ -150,14 +225,14 @@ int mc_se_init_source_editor()
 
   // TODO
   node->layout->visible = false;
-  //
+
   // Source Editor Data
   MCcall(_mc_se_init_data(node));
 
   // Event Registers
   MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, &_mc_se_handle_source_file_open_request,
                                     node->data));
-  MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ, &_mc_se_handle_source_focus_entity_request,
+  MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ, &_mc_se_handle_source_entity_focus_request,
                                     node->data));
 
   // Graphical resources

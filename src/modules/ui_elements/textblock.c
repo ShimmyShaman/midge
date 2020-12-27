@@ -136,7 +136,7 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
 
   // printf("mcu-ib-3\n");
   textblock->tag = NULL;
-  textblock->left_click = NULL;
+  textblock->left_click = NULL; // TODO -- remove this textblocks shouldn't be able to be clicked? they're not buttons
 
   MCcall(init_mc_str(&textblock->str));
   MCcall(set_mc_str(textblock->str, "textblock"));

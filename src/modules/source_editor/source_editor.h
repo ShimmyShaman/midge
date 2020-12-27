@@ -47,10 +47,28 @@
 //   } render_target;
 // } mce_source_line;
 
+typedef struct mc_se_editing_source_file {
+  mc_source_file_info *sf;
+
+  int scroll_offset;
+} mc_se_editing_source_file;
+
 // struct mce_source_editor_pool;
 // struct mce_source_editor_pool *source_editor_pool;
 typedef struct mc_se_source_editor {
   mc_node *node;
+
+  struct {
+    unsigned int size, used;
+    mc_se_editing_source_file *items;
+    mc_se_editing_source_file *focus;
+  } source_files;
+
+  struct {
+    unsigned int width, height;
+    mcr_texture_image *image;
+    bool requires_rerender;
+  } tab_index;
 
   // struct {
   //   struct {
