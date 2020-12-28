@@ -62,15 +62,17 @@ int _mc_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *n
   mc_source_editor_line *rln;
 
   // For each visible line
-  unsigned int top = (int)(node->layout->__bounds.y + se->border.size + se->content_padding.top + se->tab_index.height);
+  unsigned int top = (int)(node->layout->__bounds.y + se->border.size + se->content_padding.top + se->tab_index.height -
+                           esf->scroll_offset % MC_SE_LINE_STRIDE);
   unsigned int bottom =
-      (int)(node->layout->__bounds.y + node->layout->__bounds.height - se->border.size - se->content_padding.bottom);
+      (int)(node->layout->__bounds.y + node->layout->__bounds.height - se->border.size - se->content_padding.bottom -
+            MC_SE_LINE_STRIDE /* TODO -- render partial bottom line sometime */);
   unsigned int y;
 
   char *str;
   int li = (esf->scroll_offset) / MC_SE_LINE_STRIDE, ri = 0;
 
-  for (y = top + esf->scroll_offset % MC_SE_LINE_STRIDE; y < bottom; y += MC_SE_LINE_STRIDE) {
+  for (y = top; y < bottom; y += MC_SE_LINE_STRIDE) {
     if (li >= esf->lines.count)
       break;
 
@@ -161,12 +163,39 @@ void _mc_se_handle_input(mc_node *node, mci_input_event *input_event)
   // Data
   mc_source_editor *se = (mc_source_editor *)node->data;
 
-  // printf("_mco_handle_input\n");
-  input_event->handled = true;
-  if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
-    input_event->handled = true;
+  switch (input_event->type) {
+  case INPUT_EVENT_MOUSE_PRESS:
+  case INPUT_EVENT_MOUSE_RELEASE: {
+    printf("button_code:%i\n", input_event->button_code);
+    switch (input_event->button_code) {
+    case MOUSE_BUTTON_SCROLL_DOWN: {
+      if (se->source_files.focus) {
+        se->source_files.focus->scroll_offset =
+            min(se->source_files.focus->scroll_offset + 11, (se->source_files.focus->lines.count - 4) * MC_SE_LINE_STRIDE);
+        mca_set_node_requires_rerender(node);
+      }
+    } break;
+    case MOUSE_BUTTON_SCROLL_UP: {
+      if (se->source_files.focus) {
+        se->source_files.focus->scroll_offset = max(0, se->source_files.focus->scroll_offset - 11);
+
+        mca_set_node_requires_rerender(node);
+      }
+    } break;
+    default:
+      break;
+    }
     mca_focus_node(node);
+
+  } break;
+  case INPUT_EVENT_KEY_PRESS:
+  case INPUT_EVENT_KEY_RELEASE: {
+  } break;
+  default:
+    break;
   }
+
+  input_event->handled = true;
 }
 
 int _mc_load_focused_editing_source(mc_source_editor *se)
