@@ -326,6 +326,42 @@ int mca_render_presentation()
   return 0;
 }
 
+void _add_timespecs(struct timespec *time, struct timespec *amount, struct timespec *outTime)
+{
+  outTime->tv_sec = time->tv_sec + amount->tv_sec;
+  outTime->tv_nsec = time->tv_nsec + amount->tv_nsec;
+  if (outTime->tv_nsec >= 1000000000) {
+    ++outTime->tv_sec;
+    outTime->tv_nsec -= 1000000000;
+  }
+}
+
+int mca_register_update_timer(unsigned int usecs_period, bool reset_timer_on_update, void *callback_state,
+                              int (*update_callback)(frame_time *, void *))
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  mc_update_timer *callback_timer = (mc_update_timer *)malloc(sizeof(mc_update_timer));
+
+  clock_gettime(CLOCK_REALTIME, &callback_timer->next_update);
+  callback_timer->period.tv_sec = usecs_period / 1000000;
+  callback_timer->period.tv_nsec = (usecs_period % 1000000) * 1000;
+  _add_timespecs(&callback_timer->next_update, &callback_timer->period, &callback_timer->next_update);
+
+  callback_timer->reset_timer_on_update = reset_timer_on_update;
+  callback_timer->update_delegate = update_callback;
+  callback_timer->state = callback_state;
+
+  MCcall(append_to_collection((void ***)&app_info->update_timers.items, &app_info->update_timers.alloc,
+                              &app_info->update_timers.count, callback_timer));
+  // printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
+  // printf("callback_timer ic=%p\n", app_info->update_timers.callbacks[0]);
+
+  //   register_midge_error_tag("mca_register_update_timer(~)");
+  return 0;
+}
+
 int midge_run_app()
 {
   printf("midge_run_app()\n");
@@ -346,7 +382,8 @@ int midge_run_app()
 
   app_info->elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
   frame_time *elapsed = app_info->elapsed;
-  int ui = 0;
+  int ui = 0, mc_ires;
+  mc_update_timer *timer;
   while (1) {
     if (app_info->render_thread->thread_info->has_concluded) {
       printf("Render Thread Aborted abnormally.\nShutting down...\n");
@@ -380,63 +417,51 @@ int midge_run_app()
       }
       elapsed->app_secsf = (float)elapsed->app_secs + 1e-9 * elapsed->app_nsecs;
 
-      // Logic Update
-      const int ONE_MS_IN_NS = 1000000;
-      const int FIFTY_PER_SEC = 20 * ONE_MS_IN_NS;
-      if (1e9 * (current_frametime.tv_sec - logic_update_frametime.tv_sec) + current_frametime.tv_nsec -
-              logic_update_frametime.tv_nsec >
-          FIFTY_PER_SEC) {
-        logic_update_due = true;
-        // printf("global_root_node->layout->__requires_rerender = %i\n",
-        // global_root_node->layout->__requires_rerender);
+      // // Logic Update
+      // const int ONE_MS_IN_NS = 1000000;
+      // const int FIFTY_PER_SEC = 20 * ONE_MS_IN_NS;
+      // if (1e9 * (current_frametime.tv_sec - logic_update_frametime.tv_sec) + current_frametime.tv_nsec -
+      //         logic_update_frametime.tv_nsec >
+      //     FIFTY_PER_SEC) {
+      //   logic_update_due = true;
+      //   // printf("global_root_node->layout->__requires_rerender = %i\n",
+      //   // global_root_node->layout->__requires_rerender);
 
-        logic_update_frametime.tv_nsec += FIFTY_PER_SEC;
-        if (logic_update_frametime.tv_nsec > 1000 * ONE_MS_IN_NS) {
-          logic_update_frametime.tv_nsec -= 1000 * ONE_MS_IN_NS;
-          ++logic_update_frametime.tv_sec;
-        }
-      }
+      //   logic_update_frametime.tv_nsec += FIFTY_PER_SEC;
+      //   if (logic_update_frametime.tv_nsec > 1000 * ONE_MS_IN_NS) {
+      //     logic_update_frametime.tv_nsec -= 1000 * ONE_MS_IN_NS;
+      //     ++logic_update_frametime.tv_sec;
+      //   }
+      // }
 
       // Update Timers
       bool exit_gracefully = false;
-      // for (int i = 0; i < !exit_gracefully &&
-      // app_info->update_timers.count; ++i) {
-      //   update_callback_timer *timer =
-      //   app_info->update_timers.callbacks[i];
+      for (int i = 0; i < !exit_gracefully && app_info->update_timers.count; ++i) {
+        timer = app_info->update_timers.items[i];
 
-      //   if (!timer->update_delegate || !(*timer->update_delegate)) {
-      //     continue;
-      //   }
+        if (current_frametime.tv_sec < timer->next_update.tv_sec ||
+            (current_frametime.tv_sec == timer->next_update.tv_sec &&
+             current_frametime.tv_nsec < timer->next_update.tv_nsec)) {
+          continue;
+        }
 
-      //   // if (logic_update_due) {
-      //   //   printf("%p::%ld<>%ld\n", timer->update_delegate,
-      //   timer->next_update.tv_sec, current_frametime.tv_sec);
-      //   // }
-      //   if (current_frametime.tv_sec > timer->next_update.tv_sec ||
-      //       (current_frametime.tv_sec == timer->next_update.tv_sec &&
-      //        current_frametime.tv_nsec >= timer->next_update.tv_nsec)) {
-      //     // Update
-      //     {
-      //       void *vargs[2];
-      //       vargs[0] = (void *)&elapsed;
-      //       vargs[1] = (void *)&timer->state;
-      //       int mc_res = (*timer->update_delegate)(2, vargs);
-      //       if (mc_res) {
-      //         printf("--timer->update_delegate(2, vargs):%i\n", mc_res);
-      //         printf("Ending execution...\n");
-      //         exit_gracefully = true;
-      //         break;
-      //       }
-      //     }
+        // Invoke the timer
+        //   // update_callback = (int (*)(frame_time *, void *))timer->update_delegate;
+        // printf("timerupdatedelegate:%p\n", timer->update_delegate);
+        // void *p = timer->update_delegate;
+        mc_ires = timer->update_delegate(elapsed, timer->state);
+        if (mc_ires) {
+          printf("--timer->update_delegate(elapsed, timer->state):%i\n", mc_ires);
+          printf("Ending execution...\n");
+          exit_gracefully = true;
+          break;
+        }
 
-      //     if (timer->reset_timer_on_update)
-      //       increment_time_spec(&current_frametime, &timer->period,
-      //       &timer->next_update);
-      //     else
-      //       increment_time_spec(&timer->next_update, &timer->period,
-      //       &timer->next_update);
-      //   }
-      // }
+        //   if (timer->reset_timer_on_update)
+        //     _add_timespecs(&current_frametime, &timer->period, &timer->next_update);
+        //   else
+        //     _add_timespecs(&timer->next_update, &timer->period, &timer->next_update);
+      }
       if (exit_gracefully) {
         break;
       }
@@ -453,8 +478,6 @@ int midge_run_app()
     }
 
     // Update State
-    // -- Reset Disembodied Nodes
-    // app_info->app_front_layer.next_render_count = 0U;
 
     // Handle Input
     if (app_info->input_state_requires_update || app_info->render_thread->input_buffer.event_count) {
@@ -570,9 +593,9 @@ int midge_run_app()
       // puts("rerender-unlock");
 
       // Release lock and allow rendering
-      clock_gettime(CLOCK_REALTIME, &debug_end_time);
-      printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
-                                           1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+      // clock_gettime(CLOCK_REALTIME, &debug_end_time);
+      // printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+      //                                      1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
     }
   }
 

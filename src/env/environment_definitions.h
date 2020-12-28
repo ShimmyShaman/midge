@@ -162,6 +162,10 @@ int mca_fire_event(mc_app_event_type event_type, void *event_arg);
 int mca_fire_event_and_release_data(mc_app_event_type event_type, void *event_arg, int release_count, ...);
 int mca_register_loaded_project(mc_project_info *project);
 
+// /* Implemented in midge_app.c */
+// int mca_register_update_timer(unsigned int usecs_period, bool reset_timer_on_update, void *callback_state,
+//                               int (*update_callback)(frame_time *, void *));
+
 // util.c
 int reallocate_array(void **array, unsigned int *current_allocation, unsigned int desired_allocation,
                      size_t item_allocation_size);
