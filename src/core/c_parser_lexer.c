@@ -1358,6 +1358,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
   case '/': {
     int s = *index;
     switch (code[s + 1]) {
+    case '=': {
+      *token_type = MC_TOKEN_DIVIDE_AND_ASSIGN_OPERATOR;
+      if (text) {
+        *text = strdup("/=");
+      }
+      *index += 2;
+    } break;
     case '/': {
       *token_type = MC_TOKEN_LINE_COMMENT;
       while (1) {

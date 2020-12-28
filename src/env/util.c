@@ -44,7 +44,7 @@ int mc_grow_array(void **ary, unsigned int *ptr_count, size_t item_allocation_si
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
 // @optional_item_allocation_size must be non-zero, the size of each item to allocate.
 int reallocate_array(void **array, unsigned int *current_allocation, unsigned int desired_allocation,
-                     size_t item_allocation_size)
+                     size_t item_allocation_size, bool newmem_set_zero)
 {
   unsigned int realloc_amount;
   if (desired_allocation) {
@@ -57,7 +57,7 @@ int reallocate_array(void **array, unsigned int *current_allocation, unsigned in
   else
     realloc_amount = *current_allocation + 4 + *current_allocation / 3;
 
-  printf("reallocate array size %i->%i\n", *current_allocation, realloc_amount);
+  // printf("reallocate array size %i->%i\n", *current_allocation, realloc_amount);
   void *new_array = (void **)malloc(item_allocation_size * realloc_amount);
   if (new_array == NULL) {
     MCerror(32, "apaend_to_array malloc error");
@@ -67,9 +67,16 @@ int reallocate_array(void **array, unsigned int *current_allocation, unsigned in
     memcpy(new_array, *array, *current_allocation * item_allocation_size);
     free(*array);
   }
+  if (newmem_set_zero) {
+    // printf("memsetting %p zero from %p for %lu bytes\n", new_array,
+    //        (unsigned char *)new_array + (*current_allocation * sizeof(item_allocation_size)),
+    //        (realloc_amount - *current_allocation) * item_allocation_size));
+    memset((unsigned char *)new_array + (*current_allocation * item_allocation_size), 0,
+           (realloc_amount - *current_allocation) * item_allocation_size);
+  }
 
-  printf("Expanded array capacity from %u to %u items, each with size=%lu\n", *current_allocation, realloc_amount,
-         item_allocation_size);
+  // printf("Expanded array capacity from %u to %u items, each with size=%lu\n", *current_allocation, realloc_amount,
+  //        item_allocation_size);
 
   *array = new_array;
   *current_allocation = realloc_amount;

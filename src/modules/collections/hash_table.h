@@ -27,7 +27,7 @@ typedef struct hash_table_t {
 
 // extern "C" {
 unsigned long hash_djb2(const unsigned char *str);
-void create_hash_table(size_t start_capacity, hash_table_t *hash_table);
+int create_hash_table(size_t start_capacity, hash_table_t *hash_table);
 void destroy_hash_table(hash_table_t *hash_table);
 void hash_table_clear(hash_table_t *hash_table);
 int hash_table_change_value(unsigned long hash, void *value, hash_table_t *hash_table);

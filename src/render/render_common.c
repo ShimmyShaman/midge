@@ -41,14 +41,14 @@ int mcr_submit_image_render_request(render_thread_info *render_thread, image_ren
   pthread_mutex_lock(&render_thread->image_queue->mutex);
 
   // printf("sirr-0\n");
-  int res = append_to_collection((void ***)&render_thread->image_queue->items, &render_thread->image_queue->alloc,
-                                 &render_thread->image_queue->count, request);
+  MCcall(append_to_collection((void ***)&render_thread->image_queue->items, &render_thread->image_queue->alloc,
+                              &render_thread->image_queue->count, request));
 
   // printf("sirr-1\n");
   // printf("sirr %u\n", render_thread->image_queue->count);
   pthread_mutex_unlock(&render_thread->image_queue->mutex);
 
-  return res;
+  return 0;
 }
 
 int mcr_obtain_element_render_command(image_render_details *image_queue, element_render_command **p_command)

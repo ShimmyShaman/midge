@@ -17,14 +17,17 @@ unsigned long hash_djb2(const unsigned char *str)
   return hash;
 }
 
-void create_hash_table(size_t start_capacity, hash_table_t *hash_table)
+int create_hash_table(size_t start_capacity, hash_table_t *hash_table)
 {
+  // TODO alloc check
   if (start_capacity < 1)
     start_capacity = HASH_TABLE_DEFAULT_SIZE;
   hash_table->hashes = (unsigned long *)malloc(start_capacity * sizeof(unsigned long));
   hash_table->entries = (hash_table_entry_t *)calloc(start_capacity, sizeof(hash_table_entry_t));
   hash_table->capacity = start_capacity;
   hash_table->n = 0;
+
+  return 0;
 }
 
 void destroy_hash_table(hash_table_t *hash_table)

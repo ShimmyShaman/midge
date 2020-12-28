@@ -105,10 +105,10 @@ void _mcu_textblock_handle_input_event(mc_node *textblock_node, mci_input_event 
       void (*left_click)(mci_input_event *, mcu_textblock *) =
           (void (*)(mci_input_event *, mcu_textblock *))textblock->left_click;
       left_click(input_event, textblock);
+
+      input_event->handled = true;
     }
   }
-
-  input_event->handled = true;
 }
 
 int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)

@@ -1192,7 +1192,7 @@ int mc_mo_load_resources(mc_node *module_node)
   mod->process_stack.index = -1;
   mod->process_stack.state_arg = (void *)mod;
   for (a = 0; a < MO_OP_PROCESS_STACK_SIZE; ++a) {
-    create_hash_table(8, &mod->process_stack.context_maps[a]);
+    MCcall(create_hash_table(8, &mod->process_stack.context_maps[a]));
     mod->process_stack.processes[a] = NULL;
     mod->process_stack.steps[a] = NULL;
     mod->process_stack.argument_subprocesses[a] = NULL;

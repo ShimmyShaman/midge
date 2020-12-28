@@ -414,10 +414,10 @@ void _mcm_pjxp_handle_input(mc_node *node, mci_input_event *input_event)
 
     int relative_y = input_event->input_state->mouse.y - node->layout->__bounds.y - 4;
     if (relative_y >= 0) {
-      int relative_index = relative_y / MCM_PJXP_ENTRY_HEIGHT;
+      relative_y /= MCM_PJXP_ENTRY_HEIGHT;
 
-      if (relative_index < pjxp->textblocks.count) {
-        mcu_textblock *tb = (mcu_textblock *)pjxp->textblocks.items[relative_index]->node->data;
+      if (relative_y < pjxp->textblocks.utilized) {
+        mcu_textblock *tb = (mcu_textblock *)pjxp->textblocks.items[relative_y]->node->data;
         _mcm_pjxp_activate_entry(pjxp, (mcm_pjxp_entry *)tb->tag);
       }
     }
@@ -537,7 +537,7 @@ int _mcm_pjxp_init_data(mc_node *root)
   pjxp->projects.capacity = pjxp->projects.count = 0;
   pjxp->textblocks.capacity = pjxp->textblocks.count = pjxp->textblocks.utilized = 0;
 
-  create_hash_table(256, &pjxp->collapsed_entries);
+  MCcall(create_hash_table(256, &pjxp->collapsed_entries));
   pjxp->scroll_offset.entry_hash = 0LU;
   pjxp->scroll_offset.rough_position = 0;
 
