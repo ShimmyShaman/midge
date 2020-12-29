@@ -93,7 +93,7 @@ int mcf_directory_exists(const char *path, bool *exists)
 
   puts(path);
   int res = stat(path, &stats);
-  printf("res = %i\n", res);
+  // printf("res = %i\n", res);
   if (!res) {
     *exists = S_ISDIR(stats.st_mode) ? true : false;
     return 0;

@@ -1168,9 +1168,11 @@ int _mc_mo_project_loaded(void *handler_state, void *event_args)
     closedir(dir);
   }
   else {
-    /* could not open directory */
-    perror("could not open directory");
-    MCerror(7918, "Could not open directory '%s'", modir);
+    // Directory doesn't exist
+    // -- there are no MOs for this project
+    
+    // perror("could not open directory");
+    // MCerror(7918, "Could not open directory '%s'", modir);
     // return EXIT_FAILURE;
   }
 
