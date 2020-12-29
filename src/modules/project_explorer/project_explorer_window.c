@@ -397,6 +397,23 @@ int _mcm_pjxp_activate_entry(project_explorer_data *pjxp, mcm_pjxp_entry *entry)
     // printf("path %p created\n", path);
     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, path, 1, path));
   } break;
+  case PJXP_ENTRY_UNKNOWN: {
+    char buf[8];
+    MCcall(mcf_obtain_file_extension(entry->path->text, buf, 8));
+    if (!strcmp(buf, "vert") || !strcmp(buf, "frag") || !strcmp(buf, "md")) {
+      char *path = strdup(entry->path->text);
+      // printf("path %p created\n", path);
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, path, 1, path));
+    }
+    else if (!strcmp(buf, "png")) {
+      char buf[256];
+      sprintf(buf, "gimp %s", entry->path->text);
+      system(buf);
+    }
+    else {
+      puts("NotYetImplemented - a means to open the file requested");
+    }
+  } break;
   default:
     puts("NotYetImplemented - a means to open the file requested");
     break;

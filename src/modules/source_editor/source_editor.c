@@ -300,11 +300,6 @@ int _mc_se_open_filepath(mc_source_editor *se, const char *filepath)
   // se->tab_index.requires_rerender = true;
   // MCcall(mca_set_node_requires_rerender(se->node));
 
-  // Just Open in VS code
-  char buf[256];
-  sprintf(buf, "code --file-uri %s", filepath);
-  system(buf);
-
   return 0;
 }
 
@@ -314,7 +309,12 @@ int _mc_se_handle_source_file_open_request(void *handler_state, void *event_args
   mc_source_editor *se = (mc_source_editor *)handler_state;
   const char *filepath = (const char *)event_args;
 
-  MCcall(_mc_se_open_filepath(se, filepath));
+  // MCcall(_mc_se_open_filepath(se, filepath));
+
+  // Just Open in VS code
+  char buf[256];
+  sprintf(buf, "code --goto %s", filepath);
+  system(buf);
 
   // se->node->layout->visible = true;
   // MCcall(mca_focus_node(se->node));
