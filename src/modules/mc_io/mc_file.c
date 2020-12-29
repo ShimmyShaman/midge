@@ -91,7 +91,7 @@ int mcf_directory_exists(const char *path, bool *exists)
 {
   struct stat stats;
 
-  puts(path);
+  // puts(path);
   int res = stat(path, &stats);
   // printf("res = %i\n", res);
   if (!res) {

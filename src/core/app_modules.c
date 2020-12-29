@@ -182,16 +182,16 @@ int _mca_load_project(const char *base_path, const char *project_name)
   // if (access(buf, F_OK) == -1) {
   //   MCerror(1998,
   //           "Within each projects src folder there must be a file in a folder named 'app' named "
-  //           "'initialize_{project_name}.h' : This could not be accessed for project_name='%s'",
+  //           "'{project_name}.h' : This could not be accessed for project_name='%s'",
   //           project_name);
   // }
 
   // Check
-  sprintf(buf, "%s/app/initialize_%s.c", project->path_src, project_name);
+  sprintf(buf, "%s/app/%s.c", project->path_src, project_name);
   if (access(buf, F_OK) == -1) {
     MCerror(1999,
             "Within each projects src folder there must be a file in a folder named 'app' named "
-            "'initialize_{project_name}.c' : This could not be accessed for project_name='%s'",
+            "'{project_name}.c' : This could not be accessed for project_name='%s'",
             project_name);
   }
 
@@ -199,7 +199,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
   int (*initialize_project)(mc_node *) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
   if (!initialize_project) {
     MCerror(1999,
-            "Within the projects src/app/initialize_{project_name}.c file there must be a function "
+            "Within the projects src/app/{project_name}.c file there must be a function "
             "with the signature 'int %s(mc_node *)' : This could not be accessed for project_name='%s'",
             buf, project_name);
   }

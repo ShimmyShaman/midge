@@ -133,6 +133,9 @@ int _mc_insert_segment_get_priority(mc_source_file_code_segment_type type, int *
   case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION:
     *priority = 5;
     return 0;
+  case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
+    *priority = 8;
+    return 0;
   case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
   case MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT:
   case MC_SOURCE_SEGMENT_MULTI_LINE_COMMENT:

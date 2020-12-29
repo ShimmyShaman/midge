@@ -17,24 +17,24 @@
 #include "modules/mc_io/mc_file.h"
 #include "modules/mc_io/mc_projects.h"
 
-int _mc_construct_project_initialize_header(const char *subdir, const char *project_name)
+int _mc_construct_project_file_header(const char *subdir, const char *project_name)
 {
   mc_str *str;
   MCcall(init_mc_str(&str));
 
   // Preamble
-  MCcall(append_to_mc_strf(str, "/* initialize_%s.h */\n", project_name));
+  MCcall(append_to_mc_strf(str, "/* %s.h */\n", project_name));
 
   // Include Guard
   MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_str(str, "#ifndef INITIALIZE_"));
+  MCcall(append_to_mc_str(str, "#ifndef "));
   char *c = (char *)&project_name[0];
   while (*c) {
     MCcall(append_char_to_mc_str(str, toupper(*c)));
     ++c;
   }
   MCcall(append_to_mc_str(str, "_H\n"
-                               "#define INITIALIZE_"));
+                               "#define "));
   c = (char *)project_name;
   while (*c) {
     MCcall(append_char_to_mc_str(str, toupper(*c)));
@@ -60,7 +60,7 @@ int _mc_construct_project_initialize_header(const char *subdir, const char *proj
   MCcall(append_to_mc_strf(str, "int initialize_%s(mc_node *app_root);\n", project_name));
 
   // #Endif
-  MCcall(append_to_mc_str(str, "\n#endif // INITIALIZE_"));
+  MCcall(append_to_mc_str(str, "\n#endif // "));
   c = (char *)project_name;
   while (*c) {
     MCcall(append_char_to_mc_str(str, toupper(*c)));
@@ -70,7 +70,7 @@ int _mc_construct_project_initialize_header(const char *subdir, const char *proj
 
   // Write the file
   char path[256];
-  sprintf(path, "%s/initialize_%s.h", subdir, project_name);
+  sprintf(path, "%s/%s.h", subdir, project_name);
   MCcall(save_text_to_file(path, str->text));
 
   // Cleanup & return
@@ -78,13 +78,13 @@ int _mc_construct_project_initialize_header(const char *subdir, const char *proj
   return 0;
 }
 
-int _mc_construct_project_initialize_source(const char *subdir, const char *project_name)
+int _mc_construct_project_file_source(const char *subdir, const char *project_name)
 {
   mc_str *str;
   MCcall(init_mc_str(&str));
 
   // Preamble
-  MCcall(append_to_mc_strf(str, "/* initialize_%s.c */\n", project_name));
+  MCcall(append_to_mc_strf(str, "/* %s.c */\n", project_name));
 
   // Base System Includes
   MCcall(append_to_mc_str(str, "\n"));
@@ -97,7 +97,7 @@ int _mc_construct_project_initialize_source(const char *subdir, const char *proj
 
   // Initialize Header
   MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_strf(str, "#include \"../projects/%s/src/app/initialize_%s.h\"\n", project_name, project_name));
+  MCcall(append_to_mc_strf(str, "#include \"../projects/%s/src/app/%s.h\"\n", project_name, project_name));
 
   // Basic Render Function
   MCcall(append_to_mc_str(str, "\n"));
@@ -144,7 +144,7 @@ int _mc_construct_project_initialize_source(const char *subdir, const char *proj
 
   // Write the file
   char path[256];
-  sprintf(path, "%s/initialize_%s.c", subdir, project_name);
+  sprintf(path, "%s/%s.c", subdir, project_name);
   MCcall(save_text_to_file(path, str->text));
 
   // Cleanup & return
@@ -164,8 +164,8 @@ int _mc_construct_mprj_directory(const char *project_directory, const char *proj
   }
 
   sprintf(buf,
-          "app/initialize_%s.h\n"
-          "app/initialize_%s.c\n",
+          "app/%s.h\n"
+          "app/%s.c\n",
           project_name, project_name);
   MCcall(mcf_concat_filepath(path, 256, "build_list"));
   MCcall(save_text_to_file(path, buf));
@@ -217,10 +217,10 @@ int mcf_create_project_file_structure(const char *parent_directory, const char *
   // _mc_construct_project_main_source_file(subdir, project_name);
 
   // Make the initialize.h file
-  _mc_construct_project_initialize_header(path, project_name);
+  _mc_construct_project_file_header(path, project_name);
 
   // Make the initialize.c file
-  _mc_construct_project_initialize_source(path, project_name);
+  _mc_construct_project_file_source(path, project_name);
 
   return 0;
 }

@@ -7,6 +7,8 @@ dep/**
 test/**
 res/**
 !res/font**
+!res/mo/
+!res/mo/**
 daily_clarity.md
 mcmd.txt
 **.spv

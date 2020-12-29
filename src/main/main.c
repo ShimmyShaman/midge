@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -445,6 +446,25 @@ int main(int argc, const char *const *argv)
 {
   int res = 0;
   struct timespec app_begin_time;
+
+  // DEBUG
+  {
+    struct stat stats;
+
+    const char *dirdel = "projects/tetris";
+    res = stat(dirdel, &stats);
+    if (!res && S_ISDIR(stats.st_mode)) {
+      char db[256];
+      sprintf(db, "rm -rf %s", dirdel);
+      system(db);
+      printf("DEBUG removed '%s'\n", dirdel);
+      if (res) {
+        printf("DEBUG rmdir:%i\n", res);
+        return 0;
+      }
+    }
+  }
+  // DEBUG
 
   // Begin
   clock_gettime(CLOCK_REALTIME, &app_begin_time);

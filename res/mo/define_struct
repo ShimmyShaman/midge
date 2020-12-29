@@ -1,0 +1,74 @@
+define-struct
+param {
+  name=header-path
+  obtain=obtain-header-path
+    > FILE_DIALOG {
+      message=Choose or create a header file
+      initial_filename={CSTR:<header>}
+      initial_folder={CSTR:NULL}
+      target_context_property=header-path
+    }
+}
+> FUNCTION {
+    // Parameters would be (modus_operandi_data *modus_operandi, project, process, context)
+
+    // Obtain parameter values
+    char *header_path = (char *)hash_table_get("header-path", context);
+
+    printf("header path was: '%s'\n", header_path);
+    char buf[64];
+
+    // Create or obtain source file info for path
+    mc_source_file_info *header_file;
+    MCcall(mcs_obtain_source_file_info(header_path, true, &header_file));
+    
+    // Add struct declaration to the file
+    source_entity_info ei;
+    while(1) {
+      sprintf(buf, "data_%u", midge_app_info->uid_index++);
+      MCcall(find_source_entity_info(&ei, buf));
+      if(!ei.type)
+        break;
+    }
+    MCcall(mcs_insert_struct_declaration(header_file, buf));
+
+    // Open the file in the source editor scrolled to the struct and begin refactoring the name
+    void **args = (void **)malloc(sizeof(void *) * 2);
+    args[0] = (void *)strdup(buf);
+    mc_source_entity_focus_options *options = (mc_source_entity_focus_options *)malloc(sizeof(mc_source_entity_focus_options));
+    *options = MC_SRC_FOC_ENT_REFACTOR_RENAME;
+    args[1] = (void *)options;
+    MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ, args, 3, args[0], args[1], args));
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // mc_project_info *project = midge_app_info->active_project;
+
+    
+
+    // mcf_obtain_directory(dir, header_path);
+    // mcf_obtain_filename(header_name, header_path);
+
+    // mc_get_source_file_from_path(project, header_path, &source_file);
+    // if(!source_file) {
+      // mc_create_source_file(project, header_path);
+    // }
+    
+    // mc_add_struct_declaration(source_file, "temp_struct_name", PLACEMENT_APPEND);
+
+    // fire event load source editor with source_file
+
+    // Set Selection for refactoring the temp struct name
+}

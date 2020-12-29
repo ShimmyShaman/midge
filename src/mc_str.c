@@ -363,6 +363,7 @@ int append_uppercase_to_mc_str(mc_str *str, const char *text)
   char c;
   for (int i = 0; i < len; ++i) {
     c = text[i];
+    // printf("%c-%i:", c, c); TODO -- strange bug when using the '_' character
     if (c >= 'a' || c <= 'z') {
       c -= 'a' - 'A';
     }

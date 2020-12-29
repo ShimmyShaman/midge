@@ -1130,19 +1130,11 @@ int _mc_mo_update_options_display(modus_operandi_data *mod)
   return 0;
 }
 
-int _mc_mo_project_loaded(void *handler_state, void *event_args)
+int _mc_mo_parse_directory_for_mop_files(modus_operandi_data *mod, const char *modir)
 {
-  modus_operandi_data *mod = (modus_operandi_data *)handler_state;
-  mc_project_info *project = (mc_project_info *)event_args;
-
-  // Load project specific mo's
-  char modir[256], buf[256];
-  strcpy(modir, project->path_mprj_data);
-  MCcall(mcf_concat_filepath(modir, 256, "mo"));
-
-  // Each file exists as a process
   DIR *dir;
   struct dirent *ent;
+  char buf[256];
   if ((dir = opendir(modir)) != NULL) {
     /* print all the files and directories within directory */
     while ((ent = readdir(dir)) != NULL) {
@@ -1170,11 +1162,27 @@ int _mc_mo_project_loaded(void *handler_state, void *event_args)
   else {
     // Directory doesn't exist
     // -- there are no MOs for this project
-    
+
     // perror("could not open directory");
     // MCerror(7918, "Could not open directory '%s'", modir);
     // return EXIT_FAILURE;
   }
+
+  return 0;
+}
+
+int _mc_mo_project_loaded(void *handler_state, void *event_args)
+{
+  modus_operandi_data *mod = (modus_operandi_data *)handler_state;
+  mc_project_info *project = (mc_project_info *)event_args;
+
+  // Load project specific mo's
+  char modir[256];
+  strcpy(modir, project->path_mprj_data);
+  MCcall(mcf_concat_filepath(modir, 256, "mo"));
+
+  // Each file exists as a process
+  MCcall(_mc_mo_parse_directory_for_mop_files(mod, modir));
 
   return 0;
 }
@@ -1205,6 +1213,13 @@ int mc_mo_load_resources(mc_node *module_node)
   mod->render_target.height = module_node->layout->preferred_height;
   MCcall(mcr_create_texture_resource(mod->render_target.width, mod->render_target.height,
                                      MVK_IMAGE_USAGE_RENDER_TARGET_2D, &mod->render_target.image));
+
+  const char *global_mop_directory = "res/mo";
+  mcf_directory_exists(global_mop_directory, (bool *)&a);
+  if (!a) {
+    MCerror(4827, "couldn't find it");
+  }
+  MCcall(_mc_mo_parse_directory_for_mop_files(mod, global_mop_directory));
 
   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   while (!mod->render_target.image) {
