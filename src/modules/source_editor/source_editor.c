@@ -166,12 +166,11 @@ void _mc_se_handle_input(mc_node *node, mci_input_event *input_event)
   switch (input_event->type) {
   case INPUT_EVENT_MOUSE_PRESS:
   case INPUT_EVENT_MOUSE_RELEASE: {
-    printf("button_code:%i\n", input_event->button_code);
     switch (input_event->button_code) {
     case MOUSE_BUTTON_SCROLL_DOWN: {
       if (se->source_files.focus) {
-        se->source_files.focus->scroll_offset =
-            min(se->source_files.focus->scroll_offset + 11, (se->source_files.focus->lines.count - 4) * MC_SE_LINE_STRIDE);
+        se->source_files.focus->scroll_offset = min(se->source_files.focus->scroll_offset + 11,
+                                                    (se->source_files.focus->lines.count - 4) * MC_SE_LINE_STRIDE);
         mca_set_node_requires_rerender(node);
       }
     } break;
@@ -256,50 +255,55 @@ int _mc_load_focused_editing_source(mc_source_editor *se)
 
 int _mc_se_open_filepath(mc_source_editor *se, const char *filepath)
 {
-  mc_app_itp_data *app_itp;
-  mc_obtain_app_itp_data(&app_itp);
+  // mc_app_itp_data *app_itp;
+  // mc_obtain_app_itp_data(&app_itp);
 
-  int a;
-  mc_source_editor_file *esf, *xesf;
-  mc_source_file_info *sf;
-  char fp[256];
+  // int a;
+  // mc_source_editor_file *esf, *xesf;
+  // mc_source_file_info *sf;
+  // char fp[256];
 
-  // Obtain the completed esf for the filepath
-  MCcall(mcf_obtain_full_path(filepath, fp, 256));
+  // // Obtain the completed esf for the filepath
+  // MCcall(mcf_obtain_full_path(filepath, fp, 256));
 
-  xesf = se->source_files.items + se->source_files.size;
-  for (esf = se->source_files.items; esf < xesf; ++esf) {
-    if (!esf->sf)
-      break;
-    if (!strcmp(esf->sf->filepath, fp))
-      break;
-  }
-  if (esf == xesf) {
-    MCerror(9528, "TODO resize array and set sf");
-  }
-  if (!esf->sf) {
-    // Find and set the source file
-    for (a = 0; a < app_itp->source_files.count; ++a) {
-      sf = app_itp->source_files.items[a];
-      if (!strcmp(sf->filepath, fp)) {
-        esf->sf = sf;
-        esf->scroll_offset = 0;
-        break;
-      }
-    }
-    if (!esf->sf) {
-      MCerror(4728, "couldn't find source file for path TODO");
-    }
-    ++se->source_files.used;
-  }
+  // xesf = se->source_files.items + se->source_files.size;
+  // for (esf = se->source_files.items; esf < xesf; ++esf) {
+  //   if (!esf->sf)
+  //     break;
+  //   if (!strcmp(esf->sf->filepath, fp))
+  //     break;
+  // }
+  // if (esf == xesf) {
+  //   MCerror(9528, "TODO resize array and set sf");
+  // }
+  // if (!esf->sf) {
+  //   // Find and set the source file
+  //   for (a = 0; a < app_itp->source_files.count; ++a) {
+  //     sf = app_itp->source_files.items[a];
+  //     if (!strcmp(sf->filepath, fp)) {
+  //       esf->sf = sf;
+  //       esf->scroll_offset = 0;
+  //       break;
+  //     }
+  //   }
+  //   if (!esf->sf) {
+  //     MCerror(4728, "couldn't find source file for path TODO");
+  //   }
+  //   ++se->source_files.used;
+  // }
 
-  // Open
-  se->source_files.focus = esf;
-  MCcall(_mc_load_focused_editing_source(se));
+  // // Open
+  // se->source_files.focus = esf;
+  // MCcall(_mc_load_focused_editing_source(se));
 
-  // Update Tabs
-  se->tab_index.requires_rerender = true;
-  MCcall(mca_set_node_requires_rerender(se->node));
+  // // // Update Tabs
+  // se->tab_index.requires_rerender = true;
+  // MCcall(mca_set_node_requires_rerender(se->node));
+
+  // Just Open in VS code
+  char buf[256];
+  sprintf(buf, "code --file-uri %s", filepath);
+  system(buf);
 
   return 0;
 }
@@ -312,9 +316,130 @@ int _mc_se_handle_source_file_open_request(void *handler_state, void *event_args
 
   MCcall(_mc_se_open_filepath(se, filepath));
 
-  se->node->layout->visible = true;
-  MCcall(mca_focus_node(se->node));
+  // se->node->layout->visible = true;
+  // MCcall(mca_focus_node(se->node));
   return 0;
+}
+
+int _mc_se_find_in_file_on_disk(const char *filepath, const char *text, int *line, int *col)
+{
+  char *ft;
+  read_file_text(filepath, &ft);
+
+  bool set = false;
+  const char *c, *s, *t, *f;
+  *line = 0;
+
+  size_t n = strlen(text);
+  c = ft;
+  s = c;
+  while (*c != '\0') {
+    if (*c == *text) {
+      if (!strncmp(c, text, n)) {
+        set = true;
+        *col = c - s;
+        break;
+      }
+    }
+    else if (*c == '\n') {
+      ++*line;
+      s = c;
+    }
+    ++c;
+  }
+  // t = text;
+
+  // while (!set && *c != '\0') {
+  // if (*c == *t) {
+  //   *col = c - s;
+  //   while (1) {
+  //     if(*c != *t) {
+  //       if(*c == ' ')
+  //       break;
+  //     }
+  //     if (*c == '\n') {
+  //       ++*line;
+  //       s = c;
+  //     }
+  //     ++c;
+  //     ++t;
+  //   }
+
+  //   if (*t == '\0') {
+  //     set = true;
+  //     break;
+  //   }
+  //   t = text;
+  // }
+  // else {
+  //   if (*c == '\n') {
+  //     ++*line;
+  //     s = c;
+  //   }
+  //   ++c;
+  // }
+  // }
+
+  free(ft);
+
+  if (!set) {
+    *line = 0;
+    *col = 0;
+  }
+  // printf("'%s' %s found : %i %i\n", text, set ? "was" : "wasn't", *line, *col);
+  return 0;
+}
+
+/*
+ * Sets line = -1 if text cannot be found.
+ */
+void _mc_se_find_in_focused_file(mc_source_editor *se, const char *text, int *line, int *col)
+{
+  if (!se->source_files.focus || *text == '\0') {
+    *line = *col = -1;
+    puts("notfound");
+    return;
+  }
+
+  // Find the line and col
+  const char *c, *t, *p;
+  t = text;
+  mc_str *str = se->source_files.focus->lines.items;
+  mc_str *xstr = se->source_files.focus->lines.items + se->source_files.focus->lines.count;
+  while (str < xstr) {
+    c = str->text;
+    puts(c);
+    while (*c != '\0') {
+      if (*c == *t) {
+        printf("c:'%s' t:'%s'\n", c, t);
+        while (*c == *t) {
+          ++c;
+          ++t;
+          if (*c == '\0') {
+            puts("breaking;");
+            t = text;
+            break;
+          }
+        }
+        if (t != '\0')
+          continue;
+
+        // Match!
+        printf("found! from %s\n", str->text);
+        *line = str - se->source_files.focus->lines.items;
+        *col = c - p;
+        return;
+      }
+      else if (*c == '\n') {
+        p = c;
+      }
+      ++c;
+    }
+    ++str;
+  }
+
+  puts("notfound");
+  *line = *col = -1;
 }
 
 int _mc_se_handle_source_entity_focus_request(void *handler_state, void *event_args)
@@ -327,6 +452,7 @@ int _mc_se_handle_source_entity_focus_request(void *handler_state, void *event_a
 
   mc_source_file_info *sf;
   struct_info *si;
+  char buf[256];
 
   // Find the entity
   MCcall(find_struct_info(entity_name, &si));
@@ -340,12 +466,34 @@ int _mc_se_handle_source_entity_focus_request(void *handler_state, void *event_a
     MCerror(4191, "TODO");
   }
 
-  // Get the source file
-  MCcall(_mc_se_open_filepath(se, sf->filepath));
-  printf("SE_FOCUS:'struct %s {'\n", si->name);
+  // Open the source file
+  // MCcall(_mc_se_open_filepath(se, sf->filepath));
 
-  se->node->layout->visible = true;
-  MCcall(mca_focus_node(se->node));
+  // if (!se->source_files.focus) {
+  //   MCerror(8582, "TODO");
+  // }
+  if (options & MC_SRC_FOC_ENT_REFACTOR_RENAME) {
+    //  Begin Refactor-Rename of specified entity
+    if (si) {
+      int line, col;
+      sprintf(buf, "struct %s {", si->name);
+      _mc_se_find_in_file_on_disk(sf->filepath, buf, &line, &col);
+
+      if (line >= 0) {
+        // Just Open in VS code
+        sprintf(buf, "code --goto %s:%i:%i", sf->filepath, line + 1, col);
+      }
+      else {
+        sprintf(buf, "code --file-uri %s", sf->filepath);
+      }
+
+      // Just Open in VS code
+      system(buf);
+    }
+  }
+
+  // se->node->layout->visible = true;
+  // MCcall(mca_focus_node(se->node));
   return 0;
 }
 
