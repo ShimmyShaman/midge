@@ -183,7 +183,7 @@ int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
       declarator->deref_count = 0;
     }
 
-    declarator->is_array = (declarator_syntax->field_declarator.array_size ? true : false);
+    declarator->is_array = (declarator_syntax->field_declarator.array_dimensions->count ? true : false);
 
     append_to_collection((void ***)&(*field_declarators_list)->items, &(*field_declarators_list)->alloc,
                          &(*field_declarators_list)->count, declarator);

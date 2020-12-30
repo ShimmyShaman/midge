@@ -56,7 +56,7 @@ int _mc_construct_project_file_header(const char *subdir, const char *project_na
 
   // Function Declaration
   MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_strf(str, "/* %s-Initiation */\n", project_name));
+  MCcall(append_to_mc_strf(str, "/* %s-Initialization */\n", project_name));
   MCcall(append_to_mc_strf(str, "int initialize_%s(mc_node *app_root);\n", project_name));
 
   // #Endif

@@ -405,7 +405,7 @@ int _mcm_pjxp_activate_entry(project_explorer_data *pjxp, mcm_pjxp_entry *entry)
       // printf("path %p created\n", path);
       MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, path, 1, path));
     }
-    else if (!strcmp(buf, "png")) {
+    else if (!strcmp(buf, "png") || !strcmp(buf, "jpeg") || !strcmp(buf, "jpg")) {
       char buf[256];
       sprintf(buf, "gimp %s", entry->path->text);
       system(buf);

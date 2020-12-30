@@ -283,7 +283,7 @@ struct mc_syntax_node {
         struct {
           mc_syntax_node *type_dereference;
           mc_syntax_node *name;
-          mc_syntax_node *array_size;
+          mc_syntax_node_list *array_dimensions;
           mc_syntax_node *function_pointer;
         } field_declarator;
         struct {

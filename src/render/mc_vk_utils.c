@@ -628,6 +628,8 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
   VkDeviceSize imageSize = texWidth * texHeight * 4;
 
   if (!pixels) {
+    printf("Probably couldn't find filepath='%s'\nstbi_load(\"%s\", %i, %i, %i, STBI_rgb_alpha)\n", filepath, filepath,
+           texWidth, texHeight, texChannels);
     return VK_ERROR_UNKNOWN;
   }
 
