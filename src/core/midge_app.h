@@ -19,6 +19,15 @@ typedef struct frame_time {
   float frame_secsf, app_secsf;
 } frame_time;
 
+typedef struct mc_update_timer {
+  struct timespec next_update;
+  struct timespec period;
+  bool reset_timer_on_update;
+  int (*update_delegate)(frame_time *, void *);
+  // void *update_delegate;
+  void *state;
+} mc_update_timer;
+
 typedef struct event_handler_info {
   void *delegate;
   void *state;
@@ -60,9 +69,12 @@ typedef struct midge_app_info {
 
   struct {
     unsigned int alloc, count;
+    mc_update_timer **items;
+  } update_timers;
+  struct {
+    unsigned int alloc, count;
     event_handler_array **items;
   } event_handlers;
-
   struct {
     mc_project_info *active;
     mc_project_info *items;
@@ -75,6 +87,9 @@ typedef struct midge_app_info {
 int midge_initialize_app(struct timespec *app_begin_time);
 int midge_run_app();
 void midge_cleanup_app();
+
+int mca_register_update_timer(unsigned int usecs_period, bool reset_timer_on_update, void *callback_state,
+                              int (*update_callback)(frame_time *, void *));
 
 void mc_obtain_midge_app_info(midge_app_info **p_app_info);
 void mc_destroy_midge_app_info();

@@ -28,11 +28,17 @@ void mc_init_midge_app_info()
 
   __mc_midge_app_info->_exit_requested = false;
 
+  // Update timers
+  __mc_midge_app_info->update_timers.alloc = 8U;
+  __mc_midge_app_info->update_timers.count = 0U;
+  __mc_midge_app_info->update_timers.items =
+      (mc_update_timer **)malloc(sizeof(mc_update_timer *) * __mc_midge_app_info->update_timers.alloc);
+
   // Event Handlers
   // TODO -- if any non-MCApp Events are to be added or .. making an event handler array for each seems wrong
   // Maybe make a linked-list / binary or hash search system in the future. Not too high priority but not optimal...
   __mc_midge_app_info->event_handlers.alloc = (unsigned int)MC_APP_EXCLUSIVE_MAX;
-  __mc_midge_app_info->event_handlers.count = 0;
+  __mc_midge_app_info->event_handlers.count = 0U;
   __mc_midge_app_info->event_handlers.items =
       (event_handler_array **)malloc(sizeof(event_handler_array *) * __mc_midge_app_info->event_handlers.alloc);
   __mc_midge_app_info->event_handlers.items[0] = NULL;
@@ -56,6 +62,8 @@ void mc_init_midge_app_info()
 
 void mc_destroy_midge_app_info()
 {
+  int a, b;
+
   // Projects
   if (__mc_midge_app_info->projects.capacity) {
     free(__mc_midge_app_info->projects.items);
@@ -63,11 +71,17 @@ void mc_destroy_midge_app_info()
     // TODO -- free the projects also?? -- how to handle app close ...??
   }
 
+  // Update timers
+  for (a = 0; a < __mc_midge_app_info->update_timers.count; ++a) {
+    free(__mc_midge_app_info->update_timers.items[a]);
+  }
+  free(__mc_midge_app_info->update_timers.items);
+
   // Event Handlers
   event_handler_array *eha;
-  for (int a = 1; a < MC_APP_EXCLUSIVE_MAX; ++a) {
+  for (a = 1; a < MC_APP_EXCLUSIVE_MAX; ++a) {
     eha = __mc_midge_app_info->event_handlers.items[a];
-    for (int b = 0; b < eha->count; ++b) {
+    for (b = 0; b < eha->count; ++b) {
       free(eha->handlers[b]);
     }
     free(eha);

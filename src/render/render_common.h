@@ -365,6 +365,8 @@ int mcr_issue_render_command_colored_quad(image_render_details *image_render_que
                                           unsigned int width, unsigned int height, render_color color);
 int mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                            unsigned int width, unsigned int height, mcr_texture_image *texture);
+int mcr_issue_render_command_render_program(image_render_details *image_render_queue, mcr_render_program *program,
+                                            mcr_render_program_data *program_data);
 // }
 
 #endif // MC_RENDER_COMMON_H

@@ -166,11 +166,15 @@ int _mca_load_project(const char *base_path, const char *project_name)
     //           "Loading project='%s'. Could not find This could not be accessed for project_name='%s'",
     //           project_name);
     // }
+    
     mc_source_file_info *sf;
     MCcall(mcs_interpret_source_file(buf, &sf));
 
     MCcall(append_to_collection((void ***)&project->source_files.items, &project->source_files.capacity,
                                 &project->source_files.count, sf));
+
+    if (*c == '\0')
+      break;
   }
   free(bltxt);
 

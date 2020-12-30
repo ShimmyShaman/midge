@@ -22,10 +22,21 @@ int mcc_initialize_input_state()
   input_state->alt_function = BUTTON_STATE_UP;
   input_state->ctrl_function = BUTTON_STATE_UP;
   input_state->shift_function = BUTTON_STATE_UP;
+  global_data->input_state->kb_states = NULL;
 
   return 0;
 }
 
+int mcc_input_state_activate_kb_state_tracking()
+{
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  mci_input_state *input_state = (mci_input_state *)malloc(sizeof(mci_input_state));
+  global_data->input_state->kb_states = calloc(sizeof(int), 128);
+
+  return 0;
+}
 // typedef enum mci_mouse_event_type {
 //   MOUSE_EVENT_NONE = 0,
 //   MOUSE_EVENT_LEFT_DOWN,
@@ -96,6 +107,12 @@ void mcc_issue_keyboard_event(window_input_event_type event_type, int button_cod
     }
 
     focused_node = focused_node->parent;
+
+    // printf("keyboard_event delegated to node: %s%s%s%s%s\n",
+    //        (focused_node->parent && focused_node->parent->parent) ? focused_node->parent->parent->name : "",
+    //        (focused_node->parent && focused_node->parent->parent) ? "->" : "",
+    //        focused_node->parent ? focused_node->parent->name : "", focused_node->parent ? "->" : "",
+    //        focused_node->name);
   }
 }
 
@@ -218,6 +235,14 @@ void mcc_handle_xcb_input()
         // Set input event for controls to handle
         // input_event->type = xcb_input->type;
         // input_event->detail = xcb_input->detail;
+        if (input_state->kb_states) {
+          if (xcb_input->type == INPUT_EVENT_KEY_PRESS) {
+            input_state->kb_states[(int)xcb_input->detail.keyboard.key] = (int)BUTTON_STATE_DOWN | BUTTON_STATE_PRESSED;
+          }
+          else if (xcb_input->type == INPUT_EVENT_KEY_RELEASE) {
+            input_state->kb_states[(int)xcb_input->detail.keyboard.key] = BUTTON_STATE_UP | BUTTON_STATE_RELEASED;
+          }
+        }
 
         // Exit when pressing F4 or Ctrl-Shift-W
         if (xcb_input->detail.keyboard.key == KEY_CODE_F4 /*||
@@ -306,6 +331,14 @@ void mcc_update_xcb_input()
   input_state->shift_function &= ~BUTTON_STATE_PRESSED;
   input_state->shift_function &= ~BUTTON_STATE_RELEASED;
   global_data->input_state_requires_update = false;
+
+  if (input_state->kb_states) {
+    // TODO -- I think this is ugly, may be a better method than this for performance in the future
+    for (int a = 0; a < 128; ++a) {
+      input_state->kb_states[a] &= ~BUTTON_STATE_PRESSED;
+      input_state->kb_states[a] &= ~BUTTON_STATE_RELEASED;
+    }
+  }
 
   // Handle new input
   if (global_data->render_thread->input_buffer.event_count > 0) {

@@ -10,10 +10,10 @@
 
 // #include "m_threads.h"
 #include "core/core_definitions.h"
+#include "core/midge_app.h"
 #include "env/environment_definitions.h"
 #include "render/mc_vk_utils.h"
 #include "render/render_thread.h"
-#include "core/midge_app.h"
 
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue)
 {
@@ -685,6 +685,7 @@ VkResult mrt_render_render_program(vk_render_state *p_vkrs, VkCommandBuffer comm
   // Queue Buffer and Descriptor Writes
   VkWriteDescriptorSet writes[render_prog->layout_binding_count];
   VkDescriptorBufferInfo buffer_infos[render_prog->layout_binding_count];
+  VkDescriptorImageInfo image_sampler_infos[render_prog->layout_binding_count];
   int buffer_info_index = 0;
   int write_index = 0;
 
@@ -692,10 +693,10 @@ VkResult mrt_render_render_program(vk_render_state *p_vkrs, VkCommandBuffer comm
     switch (render_prog->layout_bindings[i].type) {
     case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
       mcr_texture_image *image_sampler = (mcr_texture_image *)cmd->render_program.data->input_buffers[i];
-      VkDescriptorImageInfo image_sampler_info = {};
-      image_sampler_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      image_sampler_info.imageView = image_sampler->view;
-      image_sampler_info.sampler = image_sampler->sampler;
+      VkDescriptorImageInfo *image_sampler_info = &image_sampler_infos[i];
+      image_sampler_info->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      image_sampler_info->imageView = image_sampler->view;
+      image_sampler_info->sampler = image_sampler->sampler;
 
       // Element Fragment Shader Combined Image Sampler
       VkWriteDescriptorSet *write = &writes[i];
@@ -704,7 +705,7 @@ VkResult mrt_render_render_program(vk_render_state *p_vkrs, VkCommandBuffer comm
       write->dstSet = desc_set;
       write->descriptorCount = 1;
       write->descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-      write->pImageInfo = &image_sampler_info;
+      write->pImageInfo = image_sampler_info;
       write->dstArrayElement = 0;
       write->dstBinding = i;
     } break;
