@@ -920,7 +920,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //   steps_example_process = (mo_operational_process *)malloc(sizeof(mo_operational_process));
     //   steps_example_process->mod = mod;
     //   steps_example_process->name = strdup("steps-example-process");
-    //   create_hash_table(64, &steps_example_process->context);
+    //   init_hash_table(64, &steps_example_process->context);
 
     //   // Save-File
     //   const char *const ctxprop_file = "sep-example-file";
@@ -1171,6 +1171,83 @@ int _mc_mo_parse_directory_for_mop_files(modus_operandi_data *mod, const char *m
   return 0;
 }
 
+int _mc_mo_project_created(void *handler_state, void *event_args)
+{
+  // Parameters
+  void **evargs = (void **)event_args;
+  const char *project_dir = (const char *)evargs[0];
+  const char *project_name = (const char *)evargs[1];
+
+  char modir[256], buf[256], fnb[64];
+  const char *property_name;
+
+  // Create the mo dir
+  strcpy(modir, project_dir);
+  MCcall(mcf_concat_filepath(modir, 256, ".mprj/mo"));
+  MCcall(mcf_ensure_directory_exists(modir));
+
+  // Create the context file and its initial data
+  mc_str *str;
+  MCcall(init_mc_str(&str));
+
+  // Project info context
+  MCcall(append_to_mc_strf(str, "%s=%s\n", "project-name", project_name));
+  MCcall(append_to_mc_strf(str, "%s=%s\n", "project-dir", project_dir));
+
+  strcpy(buf, project_dir);
+  MCcall(mcf_concat_filepath(buf, 256, "src"));
+  MCcall(mcf_concat_filepath(buf, 256, "app"));
+  MCcall(mcf_concat_filepath(buf, 256, project_name));
+  strcat(buf, ".c");
+  MCcall(append_to_mc_strf(str, "%s=%s\n", "project-init-source-filepath", buf));
+
+  strcpy(buf, project_dir);
+  MCcall(mcf_concat_filepath(buf, 256, "src"));
+  MCcall(mcf_concat_filepath(buf, 256, "app"));
+  MCcall(mcf_concat_filepath(buf, 256, project_name));
+  strcat(buf, ".h");
+  MCcall(append_to_mc_strf(str, "%s=%s\n", "project-init-header-filepath", buf));
+
+  MCcall(mcf_concat_filepath(modir, 256, "context"));
+  MCcall(save_text_to_file(modir, str->text));
+
+  release_mc_str(str, true);
+
+  return 0;
+}
+
+int _mc_mo_load_project_context(modus_operandi_data *mod, mc_project_info *project)
+{
+  char path[256];
+  strcpy(path, project->path_mprj_data);
+  MCcall(mcf_concat_filepath(path, 256, "mo/context"));
+
+  bool exists;
+  MCcall(mcf_file_exists(path, &exists));
+  if (!exists) {
+    MCerror(8527, "TODO");
+  }
+
+  // Obtain the project context
+  hash_table_t *project_context = (hash_table_t *)hash_table_get(project->name, &mod->process_stack.project_contexts);
+  if (!project_context) {
+    // Create it
+    hash_table_t *project_context = (hash_table_t *)malloc(sizeof(hash_table_t));
+    MCcall(init_hash_table(32, project_context));
+    hash_table_set(project->name, (void *)project_context, &mod->process_stack.project_contexts);
+  }
+
+  // Load it into the project context
+  char *ft;
+  MCcall(read_file_text(path, &ft));
+
+  MCcall(mc_mo_parse_context_file(project_context, ft));
+
+  free(ft);
+
+  return 0;
+}
+
 int _mc_mo_project_loaded(void *handler_state, void *event_args)
 {
   modus_operandi_data *mod = (modus_operandi_data *)handler_state;
@@ -1183,6 +1260,17 @@ int _mc_mo_project_loaded(void *handler_state, void *event_args)
 
   // Each file exists as a process
   MCcall(_mc_mo_parse_directory_for_mop_files(mod, modir));
+
+  // Set Global Context
+  // TODO -- one day optimize this by not creating/freeing strings every time contexts change
+  char *value = (char *)hash_table_get("active-project", &mod->process_stack.global_context);
+  if (value) {
+    free(value);
+  }
+  hash_table_set("active-project", strdup(project->name), &mod->process_stack.global_context);
+
+  // Load project context
+  _mc_mo_load_project_context(mod, project);
 
   return 0;
 }
@@ -1201,8 +1289,10 @@ int mc_mo_load_resources(mc_node *module_node)
 
   mod->process_stack.index = -1;
   mod->process_stack.state_arg = (void *)mod;
+  MCcall(init_hash_table(64, &mod->process_stack.global_context));
+  MCcall(init_hash_table(4, &mod->process_stack.project_contexts));
   for (a = 0; a < MO_OP_PROCESS_STACK_SIZE; ++a) {
-    MCcall(create_hash_table(8, &mod->process_stack.context_maps[a]));
+    MCcall(init_hash_table(8, &mod->process_stack.context_maps[a]));
     mod->process_stack.processes[a] = NULL;
     mod->process_stack.steps[a] = NULL;
     mod->process_stack.argument_subprocesses[a] = NULL;
@@ -1314,6 +1404,7 @@ int init_modus_operandi_system(mc_node *app_root)
   MCcall(mc_mocsd_init_process_step_dialog(app_root, &((modus_operandi_data *)node->data)->create_step_dialog));
 
   // Event Registers
+  MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_STRUCTURE_CREATION, &_mc_mo_project_created, node->data));
   MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_LOADED, &_mc_mo_project_loaded, node->data));
   // TODO -- register for project closed/shutdown
 

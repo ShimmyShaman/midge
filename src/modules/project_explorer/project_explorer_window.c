@@ -554,7 +554,7 @@ int _mcm_pjxp_init_data(mc_node *root)
   pjxp->projects.capacity = pjxp->projects.count = 0;
   pjxp->textblocks.capacity = pjxp->textblocks.count = pjxp->textblocks.utilized = 0;
 
-  MCcall(create_hash_table(256, &pjxp->collapsed_entries));
+  MCcall(init_hash_table(256, &pjxp->collapsed_entries));
   pjxp->scroll_offset.entry_hash = 0LU;
   pjxp->scroll_offset.rough_position = 0;
 

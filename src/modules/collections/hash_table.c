@@ -17,7 +17,7 @@ unsigned long hash_djb2(const unsigned char *str)
   return hash;
 }
 
-int create_hash_table(size_t start_capacity, hash_table_t *hash_table)
+int init_hash_table(size_t start_capacity, hash_table_t *hash_table)
 {
   // TODO alloc check
   if (start_capacity < 1)
@@ -147,7 +147,7 @@ void hash_table_maybe_grow(size_t new_n, hash_table_t *hash_table)
     return;
   }
   new_capacity = 2 * ((2 * hash_table->capacity) > new_n ? hash_table->capacity : new_n);
-  /* Create a new hash table. We're not calling create_hash_table because we want to realloc the hash array */
+  /* Create a new hash table. We're not calling init_hash_table because we want to realloc the hash array */
   new_hash_table.hashes = hash_table->hashes =
       (unsigned long *)realloc((void *)hash_table->hashes, sizeof(unsigned long) * new_capacity);
   new_hash_table.entries = (hash_table_entry_t *)calloc(new_capacity, sizeof(hash_table_entry_t));

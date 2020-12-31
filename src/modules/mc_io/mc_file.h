@@ -14,6 +14,12 @@ int mcf_restrict_parent_directory_str(mc_str *path);
  */
 int mcf_get_parent_directory(char *buf, int buf_size, const char *path);
 int mcf_directory_exists(const char *path, bool *exists);
+int mcf_file_exists(const char *path, bool *exists);
+
+/*
+ * Ensures a directory (and all its parent directories) exists, creating them if necessary.
+ */
+int mcf_ensure_directory_exists(const char *path);
 
 int mcf_obtain_full_path(const char *relative_path, char *dest, int max_len);
 

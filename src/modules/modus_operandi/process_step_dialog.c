@@ -181,7 +181,7 @@ int _mc_mocsd_init_data(mc_node *module_node, mc_process_step_dialog_data **p_da
   psdd->callback.state = NULL;
   psdd->callback.result_delegate = NULL;
 
-  MCcall(create_hash_table(12, &psdd->options_panels));
+  MCcall(init_hash_table(12, &psdd->options_panels));
   psdd->active_options_panel = NULL;
 
   // mo_data->render_target.image = NULL;

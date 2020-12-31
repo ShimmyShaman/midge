@@ -1,5 +1,6 @@
 /* mc_projects.c */
 
+#include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,6 +13,7 @@
 #include "midge_error_handling.h"
 
 #include "core/core_definitions.h"
+#include "env/environment_definitions.h"
 #include "mc_str.h"
 
 #include "modules/mc_io/mc_file.h"
@@ -170,6 +172,12 @@ int _mc_construct_mprj_directory(const char *project_directory, const char *proj
   MCcall(mcf_concat_filepath(path, 256, "build_list"));
   MCcall(save_text_to_file(path, buf));
 
+  void **vargs = (void *)malloc(sizeof(void *) * 2);
+  vargs[0] = strdup(project_directory);
+  vargs[1] = strdup(project_name);
+  MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_PROJECT_STRUCTURE_CREATION, (void *)vargs, 3, vargs[0], vargs[1],
+                                         vargs));
+
   return 0;
 }
 
@@ -186,7 +194,7 @@ int mcf_create_project_file_structure(const char *parent_directory, const char *
   char path[256];
 
   strcpy(path, parent_directory);
-  mcf_concat_filepath(path, 256, project_name);
+  MCcall(mcf_concat_filepath(path, 256, project_name));
   MCcall(mcf_directory_exists(path, &exists));
   if (exists) {
     // Do nothing more
@@ -202,13 +210,13 @@ int mcf_create_project_file_structure(const char *parent_directory, const char *
   MCcall(_mc_construct_mprj_directory(path, project_name));
 
   // Make the src directory
-  mcf_concat_filepath(path, 256, "src");
+  MCcall(mcf_concat_filepath(path, 256, "src"));
   if (mkdir(path, 0700)) {
     MCerror(5444, "TODO - error handling");
   }
 
   // Make the app sub-src-directory
-  mcf_concat_filepath(path, 256, "app");
+  MCcall(mcf_concat_filepath(path, 256, "app"));
   if (mkdir(path, 0700)) {
     MCerror(5441, "TODO - error handling");
   }
@@ -217,10 +225,10 @@ int mcf_create_project_file_structure(const char *parent_directory, const char *
   // _mc_construct_project_main_source_file(subdir, project_name);
 
   // Make the initialize.h file
-  _mc_construct_project_file_header(path, project_name);
+  MCcall(_mc_construct_project_file_header(path, project_name));
 
   // Make the initialize.c file
-  _mc_construct_project_file_source(path, project_name);
+  MCcall(_mc_construct_project_file_source(path, project_name));
 
   return 0;
 }

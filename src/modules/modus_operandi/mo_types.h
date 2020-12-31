@@ -10,6 +10,7 @@
 typedef enum mo_op_step_action_type {
   MO_OPPA_NULL = 0,
   MO_OPPA_CREATE_PROCESS_STEP_DIALOG,
+  MO_OPPA_MESSAGE_BOX,
   MO_OPPA_FILE_DIALOG,
   MO_OPPA_OPEN_FOLDER_DIALOG,
   MO_OPPA_TEXT_INPUT_DIALOG,
@@ -36,6 +37,9 @@ typedef struct mo_operational_step {
 
   mo_op_step_action_type action;
   union {
+    struct {
+      char *message;
+    } message_box_dialog;
     struct {
       char *message;
     } process_step_dialog;
@@ -90,6 +94,8 @@ typedef struct mc_mo_process_stack {
   int index;
   void *state_arg;
 
+  hash_table_t global_context;
+  hash_table_t project_contexts;
   hash_table_t context_maps[MO_OP_PROCESS_STACK_SIZE];
   mo_operational_process *processes[MO_OP_PROCESS_STACK_SIZE];
   mo_operational_step *steps[MO_OP_PROCESS_STACK_SIZE];

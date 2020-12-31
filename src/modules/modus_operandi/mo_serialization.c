@@ -50,7 +50,7 @@ int mc_mo_parse_past(const char **str, const char *expect)
 }
 
 /*
- * Parses the rest of the line into dest, and advances str past the end-line character ('\n')
+ * Parses the rest of the line into dest, and advances str past the new-line character
  * Error if permit_end_of_file is false and end-of-file occurs or size limit equals or exceeds MC_MO_EOL_BUF_SIZE.
  */
 int mc_mo_parse_line(char *dest, const char **str, bool permit_end_of_file)
@@ -80,7 +80,7 @@ int mc_mo_parse_line(char *dest, const char **str, bool permit_end_of_file)
 }
 
 /*
- * Parses the rest of the line using the format _property_name=a value_ past the end-line character ('\n')
+ * Parses the rest of the line using the format _property_name=a value_ past the new-line character
  * @dest_prop_name should be a buffer of size at least 64.
  * Error if end-of-file occurs or size limit equals or dest_prop_name exceeds 64 chars, or dest_value exceeds
  * MC_MO_EOL_BUF_SIZE.
@@ -237,7 +237,8 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
   MCcall(append_to_mc_str(fc, "  midge_app_info *midge_app_info;\n"));
   MCcall(append_to_mc_str(fc, "  mc_obtain_midge_app_info(&midge_app_info);\n"));
   MCcall(append_to_mc_strf(fc, "  mc_mo_process_stack *process_stack = (mc_mo_process_stack *)%p;\n", process_stack));
-  // MCcall(append_to_mc_strf(fc, "  modus_operandi_data *modus_operandi = (modus_operandi_data *)%p;\n", process_stack->state_arg));
+  // MCcall(append_to_mc_strf(fc, "  modus_operandi_data *modus_operandi = (modus_operandi_data *)%p;\n",
+  // process_stack->state_arg));
   MCcall(append_to_mc_str(fc, "  hash_table_t *context = &process_stack->context_maps[process_stack->index];\n"));
 
   MCcall(append_char_to_mc_str(fc, '\n'));
@@ -375,20 +376,74 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     MCcall(mc_mo_parse_past_empty_space(&s));
     MCcall(mc_mo_parse_past(&s, "}"));
   }
-  else {
-    MCerror(4933, "Unhandled type %.18s...", s);
-  }
+  else if (!strncmp(s, "MESSAGE_BOX", 11)) {
+    s += 11;
+    step->action = MO_OPPA_MESSAGE_BOX;
 
-  // c = s;
-  // while (*c != ' ' && *c != '{') {
-  //   if (*c == '\0' || *c == '\n') {
-  //     MCerror(6897, "Unexpected end-of-file or new-line");
-  //   }
-  //   ++c;
-  // }
-  // if(c - s >= 63) {
-  //   MCerror(2938, "incorrect type name '%.20s...'", s);
-  // }
+    MCcall(mc_mo_parse_past_empty_space(&s));
+    MCcall(mc_mo_parse_past(&s, "{"));
+    MCcall(mc_mo_parse_past(&s, "\n"));
+    MCcall(mc_mo_parse_past_empty_space(&s));
+
+    while (*s != '}') {
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+
+      if (!strcmp(prop_name, "message")) {
+        step->message_box_dialog.message = strdup(prop_value);
+      }
+      else {
+        MCerror(7946, "unhandled property name:'%s'", prop_name);
+      }
+
+      MCcall(mc_mo_parse_past_empty_space(&s));
+    }
+    MCcall(mc_mo_parse_past(&s, "}"));
+  }
+  else if (!strncmp(s, "OPTIONS_DIALOG", 14)) {
+    s += 14;
+    step->action = MO_OPPA_OPTIONS_DIALOG;
+
+    MCcall(mc_mo_parse_past_empty_space(&s));
+    MCcall(mc_mo_parse_past(&s, "{"));
+    MCcall(mc_mo_parse_past(&s, "\n"));
+    MCcall(mc_mo_parse_past_empty_space(&s));
+
+    while (*s != '}') {
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+
+      if (!strcmp(prop_name, "message")) {
+        step->options_dialog.message = strdup(prop_value);
+      }
+      else if (!strcmp(prop_name, "options")) {
+        step->options_dialog.option_count = atoi(prop_value);
+        if (step->options_dialog.option_count < 0 || step->options_dialog.option_count > 5) {
+          MCerror(8427, "Invalid number : %i", step->options_dialog.option_count);
+        }
+        step->options_dialog.options = (char **)malloc(sizeof(char *) * step->options_dialog.option_count);
+        for (int i = 0; i < step->options_dialog.option_count; ++i) {
+          MCcall(mc_mo_parse_past_empty_space(&s));
+          c = s;
+          while (*s != '\n') {
+            if (*s == '\0') {
+              MCerror(8471, "TODO");
+            }
+            ++s;
+          }
+          step->options_dialog.options[i] = strndup(c, s - c);
+          MCcall(mc_mo_parse_past(&s, "\n"));
+        }
+      }
+      else if (!strcmp(prop_name, "target_context_property")) {
+        step->file_dialog.target_context_property = strdup(prop_value);
+      }
+      else {
+        MCerror(7946, "unhandled property name:'%s'", prop_name);
+      }
+
+      MCcall(mc_mo_parse_past_empty_space(&s));
+    }
+    MCcall(mc_mo_parse_past(&s, "}"));
+  }
 
   // Append the step to the process
   mo_operational_step *latest = process->first;
@@ -465,6 +520,27 @@ int mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const cha
 {
   const char *s = serialization;
   MCcall(_mc_mo_parse_serialized_process(process_stack, &s, p_process));
+
+  return 0;
+}
+
+int mc_mo_parse_context_file(hash_table_t *context, const char *serialization)
+{
+  char buf[MC_MO_EOL_BUF_SIZE];
+  char prop_name[64];
+  const char *c = serialization;
+
+  while (*c != '\0') {
+    MCcall(mc_mo_parse_past_empty_space(&c));
+    MCcall(_mc_mo_parse_property_line(prop_name, buf, &c));
+
+    if (strlen(prop_name) == 0) {
+      MCerror(8572, "Property name should exist");
+    }
+
+    // Set the context property
+    hash_table_set(prop_name, (void *)strdup(buf), context);
+  }
 
   return 0;
 }

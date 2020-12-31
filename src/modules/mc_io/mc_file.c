@@ -9,6 +9,7 @@
 
 #include "mc_str.h"
 
+#include "modules/mc_io/mc_file.h"
 
 int mcf_concat_filepath(char *buf, int buf_size, const char *appendage)
 {
@@ -105,6 +106,57 @@ int mcf_directory_exists(const char *path, bool *exists)
 
   fprintf(stderr, "stat failed!\n %s\n", strerror(errno));
   return 33;
+}
+
+int mcf_file_exists(const char *path, bool *exists)
+{
+  struct stat stats;
+
+  // puts(path);
+  int res = stat(path, &stats);
+  // printf("res = %i\n", res);
+  if (!res) {
+    *exists = S_ISDIR(stats.st_mode) ? false : true;
+    return 0;
+  }
+  else if (res == -1) {
+    *exists = false;
+    return 0;
+  }
+
+  fprintf(stderr, "stat failed!\n %s\n", strerror(errno));
+  return 33;
+}
+
+int mcf_ensure_directory_exists(const char *path)
+{
+  const char *c, *s;
+  bool exists;
+  mc_str *str;
+  MCcall(init_mc_str(&str));
+  MCcall(set_mc_str(str, path));
+
+  // Ensure each parent directory exists
+  s = path;
+  while (*s != '\0') {
+    if (*s == '/' || *s == '\\')
+      ++s;
+    c = s;
+    while (*c != '/' && *c != '\\' && *c != '\0')
+      ++c;
+
+    MCcall(set_mc_strn(str, path, c - path));
+
+    MCcall(mcf_directory_exists(str->text, &exists));
+    if (!exists) {
+      mkdir(str->text, 0700);
+    }
+    s = c;
+  }
+
+  release_mc_str(str, true);
+
+  return 0;
 }
 
 int mcf_obtain_full_path(const char *relative_path, char *dest, int max_len)

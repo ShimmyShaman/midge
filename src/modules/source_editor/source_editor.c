@@ -507,7 +507,7 @@ int _mc_se_load_resources(mc_node *node)
   se->tab_index.requires_rerender = true;
 
   // Lines Images
-  MCcall(create_hash_table(64, &se->line_images.cache));
+  MCcall(init_hash_table(64, &se->line_images.cache));
   se->line_images.lines_size = 64;
   se->line_images.lines = (mc_source_editor_line *)calloc(se->line_images.lines_size, sizeof(mc_source_editor_line));
   for (int a = 0; a < se->line_images.lines_size; ++a) {
