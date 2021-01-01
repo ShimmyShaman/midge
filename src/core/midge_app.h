@@ -48,7 +48,7 @@ typedef struct midge_app_info {
   struct timespec *app_begin_time;
   bool _exit_requested;
 
-  unsigned int uid_index;
+  unsigned int uid_counter;
 
   render_thread_info *render_thread;
   frame_time *elapsed;

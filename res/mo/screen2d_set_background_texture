@@ -14,18 +14,6 @@ param {
     }
 }
 param {
-  name=project-resource-load-function
-  obtain=obtain-project-resource-load-function
-    > OPTIONS_DIALOG {
-      message=what function would loading of the texture occur in?
-      options=3
-      automatic creation of a project-resource-load-function
-      set existing function
-      create new function
-      target_context_property=header-path
-  }
-}
-param {
   name=project-data
   obtain=obtain-project-data
     > MESSAGE_BOX {
@@ -37,22 +25,27 @@ param {
   obtain=obtain-texture-filepath
     > FILE_DIALOG {
       message=Select the texture file
-      initial_filename={CSTR:<header>}
+      initial_filename={CSTR:NULL}
       initial_folder={CSTR:NULL}
-      target_context_property=header-path
+      target_context_property=texture-filepath
     }
 }
 > FUNCTION {
+    const char *texfp;
+    mc_mo_get_context_value(process_stack, "texture-filepath", true, (void **)&texfp);
+    printf("texture-filepath:%s\n", texfp);
+   
     // Obtain parameter values
-    char *project_resource_load_function = (char *)hash_table_get("project-resource-load-function", context);
-    if (project_resource_load_function)
-      return 0;
+    // char *project_resource_load_function = (char *)hash_table_get("project-resource-load-function", context);
+    // if (project_resource_load_function)
+    //  return 0;
 
     puts("NotYetImplemented");
     puts("- activate a CONFIRM_DENY_DIALOG to create a load_resources function");
     puts("  - if(confirm): create load_resources in 'project-init-source-file
     ' & call it in the project-initialize-function");
     puts("  - else FAIL (for now...)");
+    return 7;
 }
 > FUNCTION {
     puts("NotYetImplemented");

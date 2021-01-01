@@ -25,7 +25,7 @@ param {
     // Add struct declaration to the file
     source_entity_info ei;
     while(1) {
-      sprintf(buf, "data_%u", midge_app_info->uid_index++);
+      sprintf(buf, "data_%u", midge_app_info->uid_counter++);
       MCcall(find_source_entity_info(&ei, buf));
       if(!ei.type)
         break;

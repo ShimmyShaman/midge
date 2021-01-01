@@ -147,7 +147,7 @@ void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 //   // else {
 //   // }
 //   // // pthread_mutex_lock(&global_data->uid_counter.mutex);
-//   // // node->uid = global_data->uid_counter.uid_index++;
+//   // // node->uid = global_data->uid_counter.uid_counter++;
 //   // // pthread_mutex_unlock(&global_data->uid_counter.mutex);
 
 //   // UI Element

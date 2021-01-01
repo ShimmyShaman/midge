@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 
+#include "core/c_parser_lexer.h"
 #include "core/mc_source.h"
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
@@ -39,6 +40,7 @@ int mc_mo_parse_past(const char **str, const char *expect)
     }
 
     if (*c != *expect) {
+      MCcall(print_parse_error(*str, c - *str, "mc_mo_parse_past", ""));
       MCerror(3735, "expected:'%c' got:'%c'", *expect, *c);
     }
     ++expect;
@@ -171,6 +173,9 @@ int mc_mo_parse_serialized_process_parameter(mc_mo_process_stack *pstack, mo_ope
 
 int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, const char **str)
 {
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
   const char *c = *str;
 
   // Read the delegate code
@@ -217,7 +222,7 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
   char *fcode = strndup(*str, c - *str);
 
   char del_func_name[64];
-  sprintf(del_func_name, "mo_delegate_function_%i", 4312);
+  sprintf(del_func_name, "mo_delegate_function_%u", app_info->uid_counter++);
 
   // Form the delegate function
   mc_str *fc;
@@ -434,7 +439,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
         }
       }
       else if (!strcmp(prop_name, "target_context_property")) {
-        step->file_dialog.target_context_property = strdup(prop_value);
+        step->options_dialog.target_context_property = strdup(prop_value);
       }
       else {
         MCerror(7946, "unhandled property name:'%s'", prop_name);
@@ -476,6 +481,7 @@ int mc_mo_serialize_process(mo_operational_process *process, const char **serial
 int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const char **serialization,
                                     mo_operational_process **p_process)
 {
+  puts("parsing process");
   const char *s = *serialization;
   char buf[MC_MO_EOL_BUF_SIZE];
 
@@ -488,17 +494,21 @@ int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const ch
   MCcall(mc_mo_parse_line(buf, &s, false));
   p->name = strdup(buf);
 
-  mo_operational_step *step = NULL;
   int loop = 1;
   while (loop) {
     MCcall(mc_mo_parse_past_empty_space(&s));
 
     switch (*s) {
     case 'p': {
+      puts("parsing parameter");
       MCcall(mc_mo_parse_serialized_process_parameter(process_stack, p, &s));
+      puts("end parameter");
     } break;
     case '>': {
+      puts("parsing step");
       MCcall(mc_mo_parse_serialized_process_step(process_stack, p, &s));
+      printf("end step: first=%p > %p > %p\n", p->first, p->first ? p->first->next : NULL,
+             p->first && p->first->next ? p->first->next->next : NULL);
     } break;
     case '}':
     case '\0':
@@ -512,6 +522,7 @@ int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const ch
 
   *serialization = s;
   *p_process = p;
+  puts("end process");
   return 0;
 }
 
@@ -539,6 +550,7 @@ int mc_mo_parse_context_file(hash_table_t *context, const char *serialization)
     }
 
     // Set the context property
+    // printf("%p setting %s='%s'\n", context, prop_name, buf);
     hash_table_set(prop_name, (void *)strdup(buf), context);
   }
 

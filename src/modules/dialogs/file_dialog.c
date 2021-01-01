@@ -175,7 +175,7 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
   DIR *dir;
   struct dirent *ent;
   if ((dir = opendir(fd->current_directory->text)) != NULL) {
-    printf("_mc_fd_open_directory:'%s'\n", fd->current_directory->text);
+    // printf("_mc_fd_open_directory:'%s'\n", fd->current_directory->text);
 
     /* print all the files and directories within directory */
     while ((ent = readdir(dir)) != NULL && fd->displayed_items.utilized < fd->displayed_items.count) {

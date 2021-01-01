@@ -18,6 +18,7 @@
 
 #include "modules/modus_operandi/mo_serialization.h"
 #include "modules/modus_operandi/mo_types.h"
+#include "modules/modus_operandi/mo_util.h"
 #include "modules/modus_operandi/process_step_dialog.h"
 
 // #include "env/environment_definitions.h"
@@ -156,23 +157,24 @@ int _mc_mo_dialog_options_text_selected(void *invoker_state, char *selected_text
 {
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
 
-  MCerror(8158, "TODO");
-  // // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
-  // if (mod->active_step->action != MO_OPPA_OPTIONS_DIALOG) {
-  //   MCerror(8220, "TODO - state error");
-  // }
-  // if (!selected_text) {
-  //   MCerror(8223, "TODO - canceled process section");
-  // }
+  mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
+  hash_table_t *ctx = &mod->process_stack.context_maps[mod->process_stack.index];
 
-  // // printf("step completed:'%s'\n", input_text);
+  // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
+  if (step->action != MO_OPPA_OPTIONS_DIALOG) {
+    MCerror(8220, "TODO - state error %i", step->action);
+  }
+  if (!selected_text) {
+    MCerror(8223, "TODO - canceled process section");
+  }
 
-  // // Set the path to the target context property
-  // hash_table_set(mod->active_step->text_input_dialog.target_context_property, strdup(selected_text),
-  //                &mod->active_process->context);
+  printf("step completed:'%s' %p \n", selected_text, step->options_dialog.target_context_property);
 
-  // // Move to the next step
-  // MCcall(_mc_mo_activate_next_stack_step(mod));
+  // Set the selected option to the target context property
+  hash_table_set(step->options_dialog.target_context_property, strdup(selected_text), ctx);
+
+  // Move to the next step
+  MCcall(_mc_mo_activate_next_stack_step(&mod->process_stack));
 
   return 0;
 }
@@ -210,7 +212,7 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
   }
 
   // printf("here %p\n", step->file_dialog.target_context_property);
-  // printf("here:'%s'\n", step->file_dialog.target_context_property);
+  // printf("_mc_mo_dialog_filepath_selected:'%s'='%s'\n", step->file_dialog.target_context_property, selected_path);
 
   // Set the path to the target context property
   hash_table_set(step->file_dialog.target_context_property, strdup(selected_path), context);
@@ -258,14 +260,16 @@ int _mc_mo_obtain_context_arg(mo_op_step_context_arg *context_arg, bool *require
 int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
 {
   int a, sidx;
+  bool e;
   mo_operational_process *op;
   mo_operational_process_parameter *op_param;
-  hash_table_t *ctx;
+  hash_table_t *ctx, *ctxb;
   void *pv;
 
   // Update the process process_stack info
   --process_stack->index;
   sidx = process_stack->index;
+  // printf("process_stack->index reduced to %i\n", process_stack->index);
 
   if (sidx < 0) {
     // process_stack is empty
@@ -279,8 +283,10 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
     pv = hash_table_get(op_param->name, &process_stack->context_maps[sidx + 1]);
 
     if (!pv) {
-      MCerror(5294, "subprocess param '%s' was not retrieved");
+      MCerror(5294, "subprocess param '%s' was not retrieved", op_param->name);
     }
+
+    printf("previous sequence was op_param subprocess: setting '%s' with '%s'\n", op_param->name, (const char *)pv);
 
     // Set it to the now-current context
     hash_table_set(op_param->name, pv, ctx);
@@ -291,6 +297,7 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
 
   if (process_stack->steps[sidx]) {
     // Simply move onto the next step
+    puts("continuing onto next step");
     MCcall(_mc_mo_activate_next_stack_step(process_stack));
     return 0;
   }
@@ -298,10 +305,13 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
   // Process is still in argument-collection phase
   // Ensure all arguments have been obtained
   op = process_stack->processes[sidx];
+
   for (a = 0; a < op->nb_parameters; ++a) {
     op_param = &op->parameters[a];
 
-    if (hash_table_exists(op_param->name, ctx))
+    // Find in context tree
+    MCcall(mc_mo_get_context_value(process_stack, op_param->name, true, &pv));
+    if (pv)
       continue;
 
     if (!op_param->obtain_value_subprocess) {
@@ -309,12 +319,14 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
     }
 
     // Activate the subprocess to obtain the argument value
+    // printf("activating subprocess to get param value for '%s'\n", op_param->name);
     process_stack->argument_subprocesses[sidx] = op_param;
     MCcall(_mc_mo_begin_op_process(op_param->obtain_value_subprocess, NULL));
     return 0;
   }
 
   // Continue on to the first step
+  // puts("continuing onto first step");
   MCcall(_mc_mo_activate_next_stack_step(process_stack));
 
   return 0;
@@ -324,21 +336,25 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
 {
   void **vary;
   int sidx = process_stack->index;
+  // printf("activate-step: %i\n", sidx);
   mo_operational_step *step = process_stack->steps[sidx];
 
   if (!step) {
     // First step
     step = process_stack->steps[sidx] = process_stack->processes[sidx]->first;
+    // printf("first step:%i %p\n", step->action, step);
   }
   else {
     if (!step->next) {
       // No Next step
+      // puts("No Next step\n");
       MCcall(_mc_mo_return_from_stack_process(process_stack));
       return 0;
     }
 
     // Continue onto next linked step
     step = process_stack->steps[sidx] = step->next;
+    // printf("next step:%i\n", step->action);
   }
 
   bool free_ctx_arg;
@@ -359,17 +375,17 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
       MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
     }
   } break;
-  // case MO_OPPA_OPTIONS_DIALOG: {
-  //   void **vary = (void **)malloc(sizeof(void *) * 5);
+  case MO_OPPA_OPTIONS_DIALOG: {
+    void **vary = (void **)malloc(sizeof(void *) * 5);
 
-  //   vary[0] = process_stack->active_step->text_input_dialog.message;
-  //   vary[1] = &process_stack->active_step->options_dialog.option_count;
-  //   vary[2] = process_stack->active_step->options_dialog.options;
-  //   vary[3] = (void *)process_stack;
-  //   vary[4] = (void *)&_mc_mo_dialog_options_text_selected;
+    vary[0] = step->options_dialog.message;
+    vary[1] = &step->options_dialog.option_count;
+    vary[2] = step->options_dialog.options;
+    vary[3] = (void *)process_stack->state_arg;
+    vary[4] = (void *)&_mc_mo_dialog_options_text_selected;
 
-  //   MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED, vary, 1, vary));
-  // } break;
+    MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED, vary, 1, vary));
+  } break;
   case MO_OPPA_OPEN_FOLDER_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 4);
 
@@ -433,9 +449,10 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
 {
   mc_mo_process_stack *process_stack = process->stack;
   hash_table_t *ctx;
-  mo_operational_process_parameter *pp;
+  mo_operational_process_parameter *op_param;
   int a, sidx;
   mo_operational_step *step;
+  void *pv;
 
   // Increment the process process_stack
   sidx = ++process_stack->index;
@@ -444,6 +461,7 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
   }
 
   // Set the process process_stack info
+  // TODO -- ENSURE MEMORY IS EITHER NOT NECESSARY TO FREE OR IS ALWAYS FREED WHEN hash_table_clear-ing
   process_stack->processes[sidx] = process;
   hash_table_clear(&process_stack->context_maps[sidx]);
   process_stack->argument_subprocesses[sidx] = NULL;
@@ -456,19 +474,24 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
 
   // Attempt to obtain non-provided arguments before beginning the process
   for (a = 0; a < process->nb_parameters; ++a) {
-    pp = &process->parameters[a];
+    op_param = &process->parameters[a];
 
-    if (!pp->obtain_value_subprocess) {
-      MCerror(9418, "A means should be provided to obtain the value for parameter '%s'", pp->name);
+    // Find in context tree
+    MCcall(mc_mo_get_context_value(process_stack, op_param->name, true, &pv));
+    if (pv)
+      continue;
+
+    if (!op_param->obtain_value_subprocess) {
+      MCerror(9418, "A means should be provided to obtain the value for parameter '%s'", op_param->name);
     }
 
     // Activate the subprocess to obtain the argument value
-    process_stack->argument_subprocesses[sidx] = pp;
-    MCcall(_mc_mo_begin_op_process(pp->obtain_value_subprocess, NULL));
+    process_stack->argument_subprocesses[sidx] = op_param;
+    MCcall(_mc_mo_begin_op_process(op_param->obtain_value_subprocess, NULL));
     return 0;
   }
 
-  _mc_mo_activate_next_stack_step(process_stack);
+  MCcall(_mc_mo_activate_next_stack_step(process_stack));
 
   // TODO Trash
   // Ensure all parameters have value
@@ -1142,6 +1165,10 @@ int _mc_mo_parse_directory_for_mop_files(modus_operandi_data *mod, const char *m
       if (!strncmp(ent->d_name, ".", 1))
         continue;
 
+      // Ignore the context data file
+      if (!strcmp(ent->d_name, "context"))
+        continue;
+
       // Read the file
       sprintf(buf, "%s/%s", modir, ent->d_name);
       char *file_text;
@@ -1149,6 +1176,7 @@ int _mc_mo_parse_directory_for_mop_files(modus_operandi_data *mod, const char *m
 
       // Parse the process
       mo_operational_process *process;
+      puts(ent->d_name);
       MCcall(mc_mo_parse_serialized_process(&mod->process_stack, file_text, &process));
       free(file_text);
 
@@ -1193,6 +1221,7 @@ int _mc_mo_project_created(void *handler_state, void *event_args)
   // Project info context
   MCcall(append_to_mc_strf(str, "%s=%s\n", "project-name", project_name));
   MCcall(append_to_mc_strf(str, "%s=%s\n", "project-dir", project_dir));
+  MCcall(append_to_mc_strf(str, "%s=%s_data\n", "project-data", project_name));
 
   strcpy(buf, project_dir);
   MCcall(mcf_concat_filepath(buf, 256, "src"));
@@ -1232,7 +1261,7 @@ int _mc_mo_load_project_context(modus_operandi_data *mod, mc_project_info *proje
   hash_table_t *project_context = (hash_table_t *)hash_table_get(project->name, &mod->process_stack.project_contexts);
   if (!project_context) {
     // Create it
-    hash_table_t *project_context = (hash_table_t *)malloc(sizeof(hash_table_t));
+    project_context = (hash_table_t *)malloc(sizeof(hash_table_t));
     MCcall(init_hash_table(32, project_context));
     hash_table_set(project->name, (void *)project_context, &mod->process_stack.project_contexts);
   }
@@ -1263,11 +1292,11 @@ int _mc_mo_project_loaded(void *handler_state, void *event_args)
 
   // Set Global Context
   // TODO -- one day optimize this by not creating/freeing strings every time contexts change
-  char *value = (char *)hash_table_get("active-project", &mod->process_stack.global_context);
+  char *value = (char *)hash_table_get("key-project", &mod->process_stack.global_context);
   if (value) {
     free(value);
   }
-  hash_table_set("active-project", strdup(project->name), &mod->process_stack.global_context);
+  hash_table_set("key-project", strdup(project->name), &mod->process_stack.global_context);
 
   // Load project context
   _mc_mo_load_project_context(mod, project);

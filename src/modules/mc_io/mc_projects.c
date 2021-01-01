@@ -1,8 +1,8 @@
 /* mc_projects.c */
 
-#include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <ctype.h>
@@ -18,6 +18,9 @@
 
 #include "modules/mc_io/mc_file.h"
 #include "modules/mc_io/mc_projects.h"
+
+// TODO -- if filenames/ func/struct names change in this file -- _mc_mo_project_created in modus_operandi.c is also
+// dependent on them
 
 int _mc_construct_project_file_header(const char *subdir, const char *project_name)
 {

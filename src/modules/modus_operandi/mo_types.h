@@ -52,6 +52,7 @@ typedef struct mo_operational_step {
       char *message;
       unsigned int option_count;
       char **options;
+      char *target_context_property;
     } options_dialog;
     struct {
       char *message;
@@ -101,5 +102,7 @@ typedef struct mc_mo_process_stack {
   mo_operational_step *steps[MO_OP_PROCESS_STACK_SIZE];
   mo_operational_process_parameter *argument_subprocesses[MO_OP_PROCESS_STACK_SIZE];
 } mc_mo_process_stack;
+
+int mc_mo_get_context_value(mc_mo_process_stack *process_stack, const char *name, bool search_stack, void **result);
 
 #endif // MO_TYPES_H
