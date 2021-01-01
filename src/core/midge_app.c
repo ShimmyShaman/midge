@@ -55,21 +55,21 @@ int begin_render_thread()
   // printf("app_info->render_thread = %p\n", app_info->render_thread);
   app_info->render_thread->render_thread_initialized = false;
   {
+    MCcall(pthread_mutex_init(&app_info->render_thread->command_list_mutex, NULL));
+
     // Resource Queue
     app_info->render_thread->resource_queue = (resource_queue *)malloc(sizeof(resource_queue));
-    MCcall(pthread_mutex_init(&app_info->render_thread->resource_queue->mutex, NULL));
     app_info->render_thread->resource_queue->count = 0;
     app_info->render_thread->resource_queue->allocated = 0;
 
     // Render Queue
     app_info->render_thread->image_queue = (image_render_list *)malloc(sizeof(image_render_list));
-    MCcall(pthread_mutex_init(&app_info->render_thread->image_queue->mutex, NULL));
     app_info->render_thread->image_queue->count = 0;
     app_info->render_thread->image_queue->alloc = 0;
 
     // Render Request Object Pool
     app_info->render_thread->render_request_object_pool = (image_render_list *)malloc(sizeof(image_render_list));
-    MCcall(pthread_mutex_init(&app_info->render_thread->render_request_object_pool->mutex, NULL));
+    MCcall(pthread_mutex_init(&app_info->render_thread->render_request_object_pool_mutex, NULL));
     app_info->render_thread->render_request_object_pool->count = 0;
     app_info->render_thread->render_request_object_pool->alloc = 0;
 
@@ -593,9 +593,9 @@ int midge_run_app()
       // puts("rerender-unlock");
 
       // Release lock and allow rendering
-      // clock_gettime(CLOCK_REALTIME, &debug_end_time);
-      // printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
-      //                                      1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+      clock_gettime(CLOCK_REALTIME, &debug_end_time);
+      printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+                                           1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
     }
   }
 
@@ -618,8 +618,7 @@ void midge_cleanup_app()
   end_mthread(app_info->render_thread->thread_info);
 
   // Destroy render thread resources
-  pthread_mutex_destroy(&app_info->render_thread->resource_queue->mutex);
-  pthread_mutex_destroy(&app_info->render_thread->image_queue->mutex);
+  pthread_mutex_destroy(&app_info->render_thread->command_list_mutex);
   pthread_mutex_destroy(&app_info->render_thread->input_buffer.mutex);
 
   free(app_info->render_thread);
