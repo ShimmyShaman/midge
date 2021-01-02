@@ -171,11 +171,9 @@ int mc_mo_parse_serialized_process_parameter(mc_mo_process_stack *pstack, mo_ope
   return 0;
 }
 
-int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, const char **str)
+int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, mo_operational_process *process, void **fptr,
+                              const char **str)
 {
-  midge_app_info *app_info;
-  mc_obtain_midge_app_info(&app_info);
-
   const char *c = *str;
 
   // Read the delegate code
@@ -183,11 +181,29 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
   while (bcount) {
     switch (*c) {
     case '"': {
-      while (1) {
+      while (*c != '\0') {
         ++c;
         if (*c == '"' && *(c - 1) != '\\') {
           ++c;
           break;
+        }
+      }
+    } break;
+    case '/': {
+      // Comment Exceptions
+      ++c;
+      if (*c == '/') {
+        while (*c != '\0' && *c != '\n')
+          ++c;
+      }
+      else if (*c == '*') {
+        ++c;
+        while (*c != '\0') {
+          if (*c == '*' && *(c + 1) == '/') {
+            c += 2;
+            break;
+          }
+          ++c;
         }
       }
     } break;
@@ -197,6 +213,7 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
         ++c;
       ++c;
       if (*c != '\'') {
+        print_parse_error(*str, c - *str, "mc_mo_parse_delegate_code", "");
         MCerror(7672, "unexpected");
       }
       ++c;
@@ -222,7 +239,36 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, void **fptr, c
   char *fcode = strndup(*str, c - *str);
 
   char del_func_name[64];
-  sprintf(del_func_name, "mo_delegate_function_%u", app_info->uid_counter++);
+  {
+    // Delegate Naming
+    int step_count = 0;
+    mo_operational_step *step = process->first;
+    if (step) {
+      ++step_count;
+      while (step->next) {
+        ++step_count;
+        step = step->next;
+      }
+    }
+
+    strcpy(del_func_name, "mo_del_");
+    char *fn = del_func_name + 7;
+    if (strlen(process->name) + 7 + 4 + 1 > 64) {
+      MCerror(8427, "process name was too large:'%s'", process->name);
+    }
+
+    const char *d = process->name;
+    while (*d != '\0') {
+      if (isalpha(*d) || (d > process->name && isdigit(*d)))
+        *fn = *d;
+      else
+        *fn = '_';
+      ++fn;
+      ++d;
+      continue;
+    }
+    sprintf(fn, "_%i", step_count);
+  }
 
   // Form the delegate function
   mc_str *fc;
@@ -376,7 +422,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     MCcall(mc_mo_parse_past(&s, "{"));
     MCcall(mc_mo_parse_past(&s, "\n"));
 
-    MCcall(mc_mo_parse_delegate_code(pstack, &step->delegate.fptr, &s));
+    MCcall(mc_mo_parse_delegate_code(pstack, process, &step->delegate.fptr, &s));
 
     MCcall(mc_mo_parse_past_empty_space(&s));
     MCcall(mc_mo_parse_past(&s, "}"));
@@ -481,7 +527,7 @@ int mc_mo_serialize_process(mo_operational_process *process, const char **serial
 int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const char **serialization,
                                     mo_operational_process **p_process)
 {
-  puts("parsing process");
+  // puts("parsing process");
   const char *s = *serialization;
   char buf[MC_MO_EOL_BUF_SIZE];
 
@@ -500,15 +546,15 @@ int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const ch
 
     switch (*s) {
     case 'p': {
-      puts("parsing parameter");
+      // puts("parsing parameter");
       MCcall(mc_mo_parse_serialized_process_parameter(process_stack, p, &s));
-      puts("end parameter");
+      // puts("end parameter");
     } break;
     case '>': {
-      puts("parsing step");
+      // puts("parsing step");
       MCcall(mc_mo_parse_serialized_process_step(process_stack, p, &s));
-      printf("end step: first=%p > %p > %p\n", p->first, p->first ? p->first->next : NULL,
-             p->first && p->first->next ? p->first->next->next : NULL);
+      // printf("end step: first=%p > %p > %p\n", p->first, p->first ? p->first->next : NULL,
+      //        p->first && p->first->next ? p->first->next->next : NULL);
     } break;
     case '}':
     case '\0':
@@ -522,7 +568,7 @@ int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const ch
 
   *serialization = s;
   *p_process = p;
-  puts("end process");
+  // puts("end process");
   return 0;
 }
 

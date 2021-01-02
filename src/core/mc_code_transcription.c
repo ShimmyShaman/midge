@@ -314,7 +314,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
                 MCerror(224, "uh oh, what do we do now...? %s", ptfield->field.type_name);
               }
 
-              _determine_type_of_expression_subsearch(primary_type_info->fields,
+              _determine_type_of_expression_subsearch(&primary_type_info->fields,
                                                       expression->member_access_expression.identifier, result);
 
               if (!result->type_name) {
@@ -333,7 +333,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
               // printf("parent_struct_info:%s\n", parent_struct_info->name);
               // printf("panda\n");
               // print_syntax_node(expression, 0);
-              _determine_type_of_expression_subsearch(primary_type_info->fields,
+              _determine_type_of_expression_subsearch(&primary_type_info->fields,
                                                       expression->member_access_expression.identifier, result);
               if (!result->type_name) {
                 print_syntax_node(expression, 0);
@@ -512,7 +512,7 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     // printf("parent_struct_info:%s\n", parent_struct_info->name);
     // printf("panda\n");
     // print_syntax_node(expression, 0);
-    _determine_type_of_expression_subsearch(parent_struct_info->fields, expression->member_access_expression.identifier,
+    _determine_type_of_expression_subsearch(&parent_struct_info->fields, expression->member_access_expression.identifier,
                                             result);
     if (!result->type_name) {
       print_syntax_node(expression, 0);

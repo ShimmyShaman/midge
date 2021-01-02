@@ -85,7 +85,7 @@ typedef struct mo_operational_process {
 
   char *name;
 
-  int nb_parameters;
+  unsigned int nb_parameters;
   mo_operational_process_parameter *parameters;
 
   mo_operational_step *first;

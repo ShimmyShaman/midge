@@ -19,6 +19,11 @@ int find_source_entity_info(source_entity_info *dest, const char *name);
 int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_source_file_info **source_file);
 int mc_insert_segment_judiciously_in_source_file(mc_source_file_info *source_file,
                                                  mc_source_file_code_segment_type type, void *data);
-int mcs_insert_struct_declaration(mc_source_file_info *source_file, const char *name);
+                                                 
+int mcs_construct_struct_declaration(mc_source_file_info *source_file, const char *name);
 
+int mcs_construct_function_definition(mc_source_file_info *source_file, const char *name, const char *return_type_name,
+                                      unsigned int return_type_deref, int parameter_count, const char **parameters,
+                                      const char *code);
+int mcs_attach_code_to_function(function_info *fi, const char *code);
 #endif // mc_source_extensions_H

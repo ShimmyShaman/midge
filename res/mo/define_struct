@@ -30,7 +30,7 @@ param {
       if(!ei.type)
         break;
     }
-    MCcall(mcs_insert_struct_declaration(header_file, buf));
+    MCcall(mcs_construct_struct_declaration(header_file, buf));
 
     // Open the file in the source editor scrolled to the struct and begin refactoring the name
     void **args = (void **)malloc(sizeof(void *) * 2);

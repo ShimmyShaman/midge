@@ -341,12 +341,11 @@ int release_field_info(field_info *field)
   if (!field)
     return 0;
 
-  release_struct_id(field->type_id);
   switch (field->field_type) {
   case FIELD_KIND_STANDARD: {
-    if (field->field.type_name)
-      free(field->field.type_name);
-    if (field->field.declarators)
+    if (field->std.type_name)
+      free(field->std.type_name);
+    if (field->field.declarators->field.declarators)
       release_field_declarator_info_list(field->field.declarators);
   } break;
   // case FIELD_KIND_NESTED_UNION: {
@@ -375,35 +374,35 @@ int release_field_info_list(field_info_list *field_list)
   return 0;
 }
 
-int release_parameter_info(parameter_info *ptr)
+int release_parameter_info(parameter_info *param)
 {
-  if (!ptr)
+  if (!param)
     return 0;
 
-  switch (ptr->parameter_type) {
+  switch (param->parameter_type) {
   case PARAMETER_KIND_STANDARD: {
-    if (ptr->type_name) {
-      free(ptr->type_name);
+    if (param->type_name) {
+      free(param->type_name);
     }
   } break;
   case PARAMETER_KIND_VARIABLE_ARGS:
     break;
   case PARAMETER_KIND_FUNCTION_POINTER: {
-    if (ptr->return_type) {
-      free(ptr->return_type);
+    if (param->fptr.return_type) {
+      free(param->fptr.return_type);
     }
   } break;
   default:
-    MCerror(341, "Update for type:%i", ptr->parameter_type);
+    MCerror(341, "Update for type:%i", param->parameter_type);
   }
 
-  if (ptr->name) {
-    free(ptr->name);
+  if (param->name) {
+    free(param->name);
   }
-  if (ptr->type_id) {
-    release_struct_id(ptr->type_id);
+  if (param->type_id) {
+    release_struct_id(param->type_id);
   }
-  free(ptr);
+  free(param);
 
   return 0;
 }

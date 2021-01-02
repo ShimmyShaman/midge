@@ -141,6 +141,9 @@ int _mc_insert_segment_get_priority(mc_source_file_code_segment_type type, int *
   case MC_SOURCE_SEGMENT_MULTI_LINE_COMMENT:
     *priority = -1;
     return 0;
+  case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
+    *priority = 12;
+    return 0;
   default: {
     MCerror(7824, "TODO :%i", type);
   }
@@ -198,7 +201,7 @@ int mc_insert_segment_judiciously_in_source_file(mc_source_file_info *source_fil
   return 0;
 }
 
-int mcs_insert_struct_declaration(mc_source_file_info *source_file, const char *name)
+int mcs_construct_struct_declaration(mc_source_file_info *source_file, const char *name)
 {
   struct_info *si = NULL;
   mc_source_file_code_segment *seg = NULL;
@@ -229,6 +232,140 @@ int mcs_insert_struct_declaration(mc_source_file_info *source_file, const char *
     MCcall(mc_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
     MCcall(mc_save_source_file_from_updated_info(source_file));
   }
+
+  return 0;
+}
+
+int mcs_append_field_to_struct(struct_info *si, const char *type_name, unsigned int type_deref_count,
+                               const char *field_name)
+{
+  field_info *f = (field_info *)malloc(sizeof(field_info *));
+  f->field_type = FIELD_KIND_STANDARD;
+  f->field.type_name = strdup(type_name);
+  f->field.declarators.count = 0U;
+  f->field.declarators.alloc = 0U;
+
+  field_declarator_info *fdecl = (field_declarator_info *)malloc(sizeof(field_declarator_info));
+  fdecl->is_array = false;
+  fdecl->deref_count = type_deref_count;
+  fdecl->name = field_name;
+  MCcall(append_to_collection((void ***)&f->field.declarators.items, &f->field.declarators.alloc,
+                              &f->field.declarators.count, fdecl));
+
+  MCcall(append_to_collection((void ***)&si->fields.items, &si->fields.alloc, &si->fields.count, f));
+
+  return 0;
+}
+
+int mcs_construct_function_definition(mc_source_file_info *source_file, const char *name, const char *return_type_name,
+                                      unsigned int return_type_deref, int parameter_count, const char **parameters,
+                                      const char *code)
+{
+  source_entity_info sei;
+  function_info *fi;
+
+  MCcall(find_source_entity_info(&sei, name));
+  if (sei.type) {
+    MCerror(4592, "Another symbol already possesses this name");
+  }
+
+  fi = (function_info *)calloc(1, sizeof(function_info));
+  fi->name = strdup(name);
+  fi->is_defined = true;
+  fi->source = source_file;
+  fi->return_type.name = strdup(return_type_name);
+  fi->return_type.deref_count = return_type_deref;
+
+  fi->parameter_count = parameter_count;
+  fi->parameters = (parameter_info *)malloc(sizeof(parameter_info) * fi->parameter_count);
+  for (int a = 0; a < parameter_count; ++a) {
+    // TODO -- non-standard parameters (fptrs etc)
+    const char *c = parameters[a], *s;
+
+    parameter_info *p = fi->parameters + a;
+    p->parameter_type = PARAMETER_KIND_STANDARD;
+
+    // Type
+    s = c;
+    while (*c != ' ') {
+      if (*c == '\0') {
+        MCerror(8427, "TODO");
+      }
+      ++c;
+    }
+    p->type_name = strndup(s, c - s);
+    ++c;
+
+    // Deref
+    p->type_deref_count = 0U;
+    while (*c == '*') {
+      if (*c == '\0') {
+        MCerror(8447, "TODO");
+      }
+      ++c;
+      ++p->type_deref_count;
+    }
+
+    s = c;
+    while (*c != '\0') {
+      ++c;
+    }
+    p->name = strndup(s, c - s);
+  }
+
+  fi->nb_dependents = 0;
+  fi->nb_dependencies = 0;
+
+  fi->code = strdup(code);
+
+  MCcall(mc_register_function_info_to_app(fi));
+  MCcall(mc_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
+  MCcall(mc_save_source_file_from_updated_info(source_file));
+
+  return 0;
+}
+
+int mcs_attach_code_to_function(function_info *fi, const char *code)
+{
+  // Find the final return and insert code before that
+  if (!strcmp(fi->return_type.name, "void") && !fi->return_type.deref_count) {
+    MCerror(9482, "TODO");
+  }
+
+  // Move to the end -- obtain the position of the last return
+  int fic_len, clen;
+  const char *c = fi->code, *s = NULL;
+  while (*c != '\0') {
+    if (*c == 'r' && !strncmp(c, "return ", 7))
+      s = c;
+    ++c;
+  }
+  fic_len = c - fi->code;
+
+  if (!s) {
+    MCerror(7592, "TODO");
+  }
+  c = s;
+
+  --c;
+  if (*c != ';' && *c != '}') {
+    while (*c == ' ' || *c == '\t')
+      --c;
+    ++c;
+  }
+
+  clen = strlen(code);
+  char *nc = (char *)malloc(sizeof(char) * (fic_len + clen + 1));
+  strncpy(nc, fi->code, c - fi->code);
+  strcpy(nc + (c - fi->code), code);
+  strcpy(nc + (c - fi->code) + clen, c);
+
+  free(fi->code);
+  fi->code = nc;
+
+  printf("check:\n%s||\n", nc);
+
+  MCcall(mc_save_source_file_from_updated_info(fi->source));
 
   return 0;
 }

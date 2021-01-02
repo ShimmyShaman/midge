@@ -4,8 +4,11 @@
 #define CORE_DEFINITIONS_H
 
 #include <stdbool.h>
+#include <time.h>
 
 #include "tinycc/libtccinterp.h"
+
+// TODO seperate node and event stuff from source stuff
 
 typedef enum mc_source_entity_focus_options {
   MC_SRC_FOC_ENT_NONE = 0,
@@ -192,7 +195,6 @@ typedef struct preprocess_define_info {
 
 typedef struct field_declarator_info {
   unsigned int deref_count;
-  bool is_array;
   union {
     char *name;
     struct {
@@ -200,6 +202,10 @@ typedef struct field_declarator_info {
       unsigned int fp_deref_count;
     } function_pointer;
   };
+
+  // Will be NULL if declarator is not an array; Otherwise, first value will be the array size, the array will dimension
+  // size listings will commence at array_dimensions[1]
+  unsigned int *array_dimensions;
 } field_declarator_info;
 
 typedef struct field_declarator_info_list {
@@ -208,22 +214,20 @@ typedef struct field_declarator_info_list {
 } field_declarator_info_list;
 
 typedef struct field_info {
-  struct_id *type_id;
   field_kind field_type;
 
   union {
     struct {
       char *type_name;
-      struct struct_info *type_info;
-      field_declarator_info_list *declarators;
-    } field;
+    } std;
     struct {
       bool is_union, is_anonymous;
       char *type_name;
       struct field_info_list *fields;
-      field_declarator_info_list *declarators;
     } sub_type;
   };
+
+  field_declarator_info_list *declarators;
 } field_info;
 
 typedef struct field_info_list {
@@ -249,14 +253,13 @@ typedef struct parameter_info {
   union {
     struct {
       char *type_name;
-      unsigned int type_version;
     };
     struct {
       char *return_type;
       unsigned int return_deref_count;
       char *fptr_name;
       // parameter_info_list *parameters;//TODO
-    };
+    } fptr;
   };
   unsigned int type_deref_count;
   char *name;
@@ -272,7 +275,7 @@ typedef struct function_info {
     char *name;
     unsigned int deref_count;
   } return_type;
-  // char *code;
+  char *code;
   unsigned int parameter_count;
   parameter_info **parameters;
   // int variable_parameter_begin_index;
@@ -297,14 +300,17 @@ typedef struct mc_source_file_code_segment {
   };
 } mc_source_file_code_segment;
 
+typedef struct mc_source_file_code_segment_list {
+  unsigned int capacity;
+  unsigned int count;
+  mc_source_file_code_segment **items;
+} mc_source_file_code_segment_list;
+
 typedef struct mc_source_file_info {
   struct_id *type_id;
+  struct timespec file_update;
   char *filepath;
-  struct {
-    unsigned int capacity;
-    unsigned int count;
-    mc_source_file_code_segment **items;
-  } segments;
+  mc_source_file_code_segment_list segments;
 } mc_source_file_info;
 
 struct mc_node;
