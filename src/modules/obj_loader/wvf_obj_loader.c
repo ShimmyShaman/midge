@@ -1,7 +1,7 @@
 /* wvf_obj_loader.c */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <ctype.h>
@@ -655,8 +655,8 @@ _wvf_obj_vertex_index_list wvf_obj_parse_raw_triple(const char **token)
 }
 
 int wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info *fli,
-                                       _wvf_obj_vertex_index_list *vertex_indices, float *vertex_data, int *vi,
-                                       unsigned int *index_data, int *ii)
+                                      _wvf_obj_vertex_index_list *vertex_indices, float *vertex_data, int *vi,
+                                      unsigned int *index_data, int *ii)
 {
   // Position
   _wvf_obj_cmd cmd = fli->cmds[fli->v_cmd_begin + vertex_indices->v_idx];
@@ -710,7 +710,7 @@ int wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info 
 }
 
 int _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsigned int *vertex_count,
-                                   unsigned int **indices, unsigned int *index_count)
+                                  unsigned int **indices, unsigned int *index_count)
 {
   // TODO -- one day, maybe use https://github.com/thisistherk/fast_obj/blob/master/fast_obj.h
   char *file_text;
@@ -796,24 +796,22 @@ int mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buff
   _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
 
   // Construct the model and load its resources
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+  MCcall(mcr_load_vertex_buffer(vertices, vertex_count, false /* TODO toggle to true? */, vertex_buffer));
+  // resource_command *command;
+  // mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  // command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
+  // command->p_resource = (void *)vertex_buffer;
+  // command->load_mesh.p_data = vertices;
+  // command->load_mesh.data_count = vertex_count;
+  // command->load_mesh.release_original_data_on_copy = false; // TODO -- toggle to true?
 
-  resource_command *command;
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
-  command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
-  command->p_resource = (void *)vertex_buffer;
-  command->load_mesh.p_data = vertices;
-  command->load_mesh.data_count = vertex_count;
-  command->load_mesh.release_original_data_on_copy = false; // TODO -- toggle to true?
-
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
-  command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
-  command->p_resource = (void *)index_buffer;
-  command->load_indices.p_data = indices;
-  command->load_indices.data_count = index_count;
-  command->load_indices.release_original_data_on_copy = false; // TODO -- toggle to true?
-
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+  MCcall(mcr_load_index_buffer(indices, index_count, false /* TODO toggle to true? */, index_buffer));
+  // mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  // command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
+  // command->p_resource = (void *)index_buffer;
+  // command->load_indices.p_data = indices;
+  // command->load_indices.data_count = index_count;
+  // command->load_indices.release_original_data_on_copy = false; // TODO -- toggle to true?
 
   return 0;
 }

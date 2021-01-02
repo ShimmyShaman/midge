@@ -69,7 +69,7 @@ int begin_render_thread()
 
     // Render Request Object Pool
     app_info->render_thread->render_request_object_pool = (image_render_list *)malloc(sizeof(image_render_list));
-    MCcall(pthread_mutex_init(&app_info->render_thread->render_request_object_pool_mutex, NULL));
+    MCcall(pthread_mutex_init(&app_info->render_thread->request_object_pool_mutex, NULL));
     app_info->render_thread->render_request_object_pool->count = 0;
     app_info->render_thread->render_request_object_pool->alloc = 0;
 

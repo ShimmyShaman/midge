@@ -13,7 +13,7 @@
 int mcr_obtain_image_render_request(render_thread_info *render_thread, image_render_details **p_request)
 {
   image_render_details *render_request;
-  pthread_mutex_lock(&render_thread->render_request_object_pool->mutex);
+  pthread_mutex_lock(&render_thread->request_object_pool_mutex);
   if (render_thread->render_request_object_pool->count) {
     render_request =
         render_thread->render_request_object_pool->items[render_thread->render_request_object_pool->count - 1];
@@ -26,7 +26,7 @@ int mcr_obtain_image_render_request(render_thread_info *render_thread, image_ren
     render_request->commands_allocated = 0;
     // printf("render_requestn=%p\n", render_request);
   }
-  pthread_mutex_unlock(&render_thread->render_request_object_pool->mutex);
+  pthread_mutex_unlock(&render_thread->request_object_pool_mutex);
 
   render_request->command_count = 0;
 
@@ -38,7 +38,7 @@ int mcr_obtain_image_render_request(render_thread_info *render_thread, image_ren
 int mcr_submit_image_render_request(render_thread_info *render_thread, image_render_details *request)
 {
   // printf("mcr_submit_image_render_request\n");
-  pthread_mutex_lock(&render_thread->image_queue->mutex);
+  pthread_mutex_lock(&render_thread->command_list_mutex);
 
   // printf("sirr-0\n");
   int res = append_to_collection((void ***)&render_thread->image_queue->items, &render_thread->image_queue->alloc,
@@ -46,7 +46,7 @@ int mcr_submit_image_render_request(render_thread_info *render_thread, image_ren
 
   // printf("sirr-1\n");
   // printf("sirr %u\n", render_thread->image_queue->count);
-  pthread_mutex_unlock(&render_thread->image_queue->mutex);
+  pthread_mutex_unlock(&render_thread->command_list_mutex);
 
   return res;
 }
@@ -74,33 +74,77 @@ int mcr_obtain_element_render_command(image_render_details *image_queue, element
   return 0;
 }
 
-int mcr_obtain_resource_command(resource_queue *queue, resource_command **p_command)
+int mcr_obtain_resource_command(resource_command **p_request)
 {
-  // MCcall(obtain_item_from_collection((void **)resource_queue->commands, &resource_queue->allocated,
-  // &resource_queue->count,
-  //                                    sizeof(resource_command), (void **)p_command));
-  // printf("orc-0\n %p", queue);
-  if (queue->allocated < queue->count + 1) {
-    // printf("orc-1\n");
-    int new_allocated = (queue->count + 1) + 4 + (queue->count + 1) / 4;
-    // printf("orc-2 \n");
-    resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
-    // printf("orc-3\n");
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
+  render_thread_info *rt = global_data->render_thread;
 
-    if (queue->allocated) {
-      memcpy(new_ary, queue->commands, sizeof(resource_command) * queue->count);
-      free(queue->commands);
-    }
-    // printf("orc-4\n");
-    queue->commands = new_ary;
-    queue->allocated = new_allocated;
+  resource_command *cmd;
+  pthread_mutex_lock(&rt->request_object_pool_mutex);
+  if (rt->resource_request_object_pool) {
+    cmd = rt->resource_request_object_pool->items[rt->resource_request_object_pool->count - 1];
+    --rt->resource_request_object_pool->count;
+    // printf("resource_commandu=%p %u\n", resource_command, rt->resource_command_object_pool->count);
   }
-  // printf("orc-5\n");
+  else {
+    // Construct another
+    cmd = (resource_command *)malloc(sizeof(resource_command));
+  }
+  pthread_mutex_unlock(&rt->request_object_pool_mutex);
 
-  *p_command = &queue->commands[queue->count++];
+  *p_request = cmd;
 
   return 0;
 }
+
+int mcr_submit_resource_command(resource_command *cmd)
+{
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
+  render_thread_info *rt = global_data->render_thread;
+
+  // printf("mcr_submit_image_render_request\n");
+  pthread_mutex_lock(&rt->command_list_mutex);
+
+  // printf("sirr-0\n");
+  int res = append_to_collection((void ***)&rt->resource_queue->items, &rt->resource_queue->alloc,
+                                 &rt->resource_queue->count, cmd);
+
+  // printf("sirr-1\n");
+  // printf("sirr %u\n", rt->image_queue->count);
+  pthread_mutex_unlock(&rt->command_list_mutex);
+
+  return 0;
+}
+
+// int mcr_obtain_resource_command(resource_queue *queue, resource_command **p_command)
+// {
+//   // MCcall(obtain_item_from_collection((void **)resource_queue->commands, &resource_queue->allocated,
+//   // &resource_queue->count,
+//   //                                    sizeof(resource_command), (void **)p_command));
+//   // printf("orc-0\n %p", queue);
+//   if (queue->allocated < queue->count + 1) {
+//     // printf("orc-1\n");
+//     int new_allocated = (queue->count + 1) + 4 + (queue->count + 1) / 4;
+//     // printf("orc-2 \n");
+//     resource_command *new_ary = (resource_command *)malloc(sizeof(resource_command) * new_allocated);
+//     // printf("orc-3\n");
+
+//     if (queue->allocated) {
+//       memcpy(new_ary, queue->commands, sizeof(resource_command) * queue->count);
+//       free(queue->commands);
+//     }
+//     // printf("orc-4\n");
+//     queue->commands = new_ary;
+//     queue->allocated = new_allocated;
+//   }
+//   // printf("orc-5\n");
+
+//   *p_command = &queue->commands[queue->count++];
+
+//   return 0;
+// }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
 int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
@@ -108,20 +152,15 @@ int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_ima
 {
   *p_resource = NULL;
 
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  MCcall(pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex));
-
   resource_command *command;
-  MCcall(mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command));
+  MCcall(mcr_obtain_resource_command(&command));
   command->type = RESOURCE_COMMAND_CREATE_TEXTURE;
   command->p_resource = (void *)p_resource;
   command->create_texture.width = width;
   command->create_texture.height = height;
   command->create_texture.image_usage = image_usage;
 
-  MCcall(pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex));
+  MCcall(mcr_submit_resource_command(command));
 
   return 0;
 }
@@ -131,38 +170,32 @@ int mcr_load_texture_resource(const char *path, mcr_texture_image **p_resource)
 {
   *p_resource = NULL;
 
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
-
   resource_command *command;
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  MCcall(mcr_obtain_resource_command(&command));
   command->type = RESOURCE_COMMAND_LOAD_TEXTURE;
   command->p_resource = (void *)p_resource;
   command->load_texture.path = path; // strdup(path);
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+  MCcall(mcr_submit_resource_command(command));
 
   return 0;
 }
 
 // Ensure this function is accessed within a thread mutex lock of the @resource_queue
-int mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
-                             mcr_font_resource **p_resource)
+int mcr_obtain_font_resource(const char *font_path, float font_height, mcr_font_resource **p_resource)
 {
   *p_resource = NULL;
 
-  pthread_mutex_lock(&resource_queue->mutex);
   // printf("mcr_obtain_font_resource-font_height:%f\n", font_height);
   resource_command *command;
-  mcr_obtain_resource_command(resource_queue, &command);
+  MCcall(mcr_obtain_resource_command(&command));
   command->type = RESOURCE_COMMAND_LOAD_FONT;
   command->p_resource = (void *)p_resource;
   command->font.height = font_height;
   command->font.path = font_path;
   // printf("hrc-resource_cmd->font.height:%f\n", command->font.height);
-  pthread_mutex_unlock(&resource_queue->mutex);
+
+  MCcall(mcr_submit_resource_command(command));
 
   return 0;
 }
@@ -171,13 +204,8 @@ int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_r
 {
   *p_resource = NULL;
 
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
-
   resource_command *command;
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  MCcall(mcr_obtain_resource_command(&command));
   command->type = RESOURCE_COMMAND_CREATE_RENDER_PROGRAM;
   command->p_resource = (void *)p_resource;
 
@@ -215,7 +243,7 @@ int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_r
   memcpy(rpci->input_bindings, create_info->input_bindings,
          sizeof(mcr_input_binding) * create_info->input_binding_count);
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+  MCcall(mcr_submit_resource_command(command));
 
   return 0;
 }
@@ -225,20 +253,15 @@ int mcr_load_index_buffer(unsigned int *indices, unsigned int index_count, bool 
 {
   *p_index_buffer = NULL;
 
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
-
   resource_command *command;
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  MCcall(mcr_obtain_resource_command(&command));
   command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
   command->p_resource = (void *)p_index_buffer;
   command->load_indices.p_data = indices;
   command->load_indices.data_count = index_count;
   command->load_indices.release_original_data_on_copy = release_original_data_on_creation; // TODO -- toggle to true?
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+  MCcall(mcr_submit_resource_command(command));
 
   return 0;
 }
@@ -248,20 +271,15 @@ int mcr_load_vertex_buffer(float *vertices, unsigned int vertex_count, bool rele
 {
   *p_vertex_buffer = NULL;
 
-  midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
-
-  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
-
   resource_command *command;
-  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  MCcall(mcr_obtain_resource_command(&command));
   command->type = RESOURCE_COMMAND_LOAD_VERTEX_BUFFER;
   command->p_resource = (void *)p_vertex_buffer;
   command->load_mesh.p_data = vertices;
   command->load_mesh.data_count = vertex_count;
   command->load_mesh.release_original_data_on_copy = release_original_data_on_creation; // TODO -- toggle to true?
 
-  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+  MCcall(mcr_submit_resource_command(command));
 
   return 0;
 }

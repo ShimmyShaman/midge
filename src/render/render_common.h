@@ -300,15 +300,12 @@ typedef struct resource_command {
   };
 } resource_command;
 
-typedef struct resource_queue {
-  pthread_mutex_t mutex;
-  unsigned int count;
-  unsigned int allocated;
-  resource_command *commands;
-} resource_queue;
+typedef struct resource_command_list {
+  unsigned int alloc, count;
+  resource_command **items;
+} resource_command_list;
 
 typedef struct image_render_list {
-  pthread_mutex_t mutex;
   unsigned int alloc, count;
   image_render_details **items;
 
@@ -321,10 +318,10 @@ typedef struct loaded_font_list {
 } loaded_font_list;
 
 typedef struct render_thread_info {
+  pthread_mutex_t command_list_mutex, request_object_pool_mutex;
   mthread_info *thread_info;
-  image_render_list *image_queue;
-  image_render_list *render_request_object_pool;
-  resource_queue *resource_queue;
+  image_render_list *image_queue, *render_request_object_pool;
+  resource_command_list *resource_queue, *resource_request_object_pool;
   // ptr reference only no need to release
   loaded_font_list *loaded_fonts;
   bool render_thread_initialized;
@@ -343,12 +340,13 @@ typedef struct render_thread_info {
 int mcr_obtain_image_render_request(render_thread_info *render_thread, image_render_details **p_request);
 int mcr_submit_image_render_request(render_thread_info *render_thread, image_render_details *request);
 int mcr_obtain_element_render_command(image_render_details *image_queue, element_render_command **p_command);
-int mcr_obtain_resource_command(resource_queue *resource_queue, resource_command **p_command);
+
+int mcr_obtain_resource_command(resource_command **p_command);
 
 int mcr_create_texture_resource(unsigned int width, unsigned int height, mvk_image_sampler_usage image_usage,
                                 mcr_texture_image **p_texture);
 int mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
-int mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
+int mcr_obtain_font_resource(const char *font_path, float font_height,
                              mcr_font_resource **font);
 int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_program);
 int mcr_load_index_buffer(unsigned int *indices, unsigned int index_count, bool release_original_data_on_creation,
