@@ -140,16 +140,14 @@ int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_
 }
 
 int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
-                                        field_declarator_info_list **field_declarators_list)
+                                        field_declarator_info_list *field_declarators_list)
 {
   if (!syntax_declarators) {
-    *field_declarators_list = NULL;
+    field_declarators_list->count = 0;
     return 0;
   }
 
-  *field_declarators_list = (field_declarator_info_list *)malloc(sizeof(field_declarator_info_list));
-  (*field_declarators_list)->alloc = 0;
-  (*field_declarators_list)->count = 0;
+  field_declarators_list->count = 0;
 
   for (int d = 0; d < syntax_declarators->count; ++d) {
     mc_syntax_node *declarator_syntax = syntax_declarators->items[d];
@@ -181,10 +179,17 @@ int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
       declarator->deref_count = 0;
     }
 
-    declarator->is_array = (declarator_syntax->field_declarator.array_dimensions->count ? true : false);
+    mc_syntax_node_list *array_dimensions = declarator_syntax->field_declarator.array_dimensions;
+    declarator->array.dimension_count = array_dimensions->count;
+    if (declarator->array.dimension_count) {
+      declarator->array.dimensions = (char **)malloc(sizeof(char *) * array_dimensions->count);
 
-    append_to_collection((void ***)&(*field_declarators_list)->items, &(*field_declarators_list)->alloc,
-                         &(*field_declarators_list)->count, declarator);
+      for (int a = 0; a < array_dimensions->count; ++a)
+        MCcall(mcs_copy_syntax_node_to_text(array_dimensions->items[a], &declarator->array.dimensions[a]));
+    }
+
+    append_to_collection((void ***)&field_declarators_list->items, &field_declarators_list->alloc,
+                         &field_declarators_list->count, declarator);
   }
   // case FIELD_KIND_FUNCTION_POINTER: {
   //   field->field_type = FIELD_KIND_FUNCTION_POINTER;
@@ -205,23 +210,25 @@ int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
 
 int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_info_list *field_list)
 {
-  field_list->alloc = 0;
   field_list->count = 0;
 
   for (int i = 0; i < field_syntax_list->count; ++i) {
     mc_syntax_node *field_syntax = field_syntax_list->items[i];
 
     field_info *field = (field_info *)malloc(sizeof(field_info));
+    field->declarators.alloc = 0U;
+    field->declarators.count = 0U;
 
-    register_midge_error_tag("mcs_summarize_type_field_list-2a");
+    register_midge_error_tag("mcs_summarize_type_field_list-2");
     switch (field_syntax->type) {
     case MC_SYNTAX_FIELD_DECLARATION: {
       switch (field_syntax->field.type) {
       case FIELD_KIND_STANDARD: {
         field->field_type = FIELD_KIND_STANDARD;
-        mcs_copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->field.type_name);
+        register_midge_error_tag("mcs_summarize_type_field_list-2b");
+        MCcall(mcs_copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->std.type_name));
 
-        mcs_summarize_field_declarator_list(field_syntax->field.declarators, &field->field.declarators);
+        MCcall(mcs_summarize_field_declarator_list(field_syntax->field.declarators, &field->declarators));
       } break;
       default: {
         MCerror(302, "NotSupported:%i", field_syntax->field.type);
@@ -229,6 +236,7 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
       }
     } break;
     case MC_SYNTAX_NESTED_TYPE_DECLARATION: {
+      register_midge_error_tag("mcs_summarize_type_field_list-2d");
       if (field_syntax->nested_type.declaration->type == MC_SYNTAX_UNION_DECL) {
         field->field_type = FIELD_KIND_NESTED_UNION;
       }
@@ -238,14 +246,20 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
       else {
         MCerror(328, "Not Supported");
       }
+      register_midge_error_tag("mcs_summarize_type_field_list-2e");
 
       // allocate_and_copy_cstr(field->name, field_syntax->nested_type.name->text);
-      register_sub_type_syntax_to_field_info(field_syntax->nested_type.declaration, field);
+      // printf("field_syntax:%p\n", field_syntax->nested_type.declaration);
+      field->sub_type.fields = (field_info_list *)malloc(sizeof(field_info_list));
+      field->sub_type.fields->alloc = 0U;
+      field->sub_type.fields->count = 0U;
+      MCcall(register_sub_type_syntax_to_field_info(field_syntax->nested_type.declaration, field));
 
+      register_midge_error_tag("mcs_summarize_type_field_list-2f");
       if (field_syntax->nested_type.declarators) {
         field->sub_type.is_anonymous = false;
 
-        mcs_summarize_field_declarator_list(field_syntax->nested_type.declarators, &field->sub_type.declarators);
+        MCcall(mcs_summarize_field_declarator_list(field_syntax->nested_type.declarators, &field->declarators));
       }
       else {
         field->sub_type.is_anonymous = !field->sub_type.type_name;
@@ -255,6 +269,7 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
       MCerror(317, "NotSupported:%s", get_mc_syntax_token_type_name(field_syntax->type));
     }
     }
+    register_midge_error_tag("mcs_summarize_type_field_list-3");
 
     append_to_collection((void ***)&field_list->items, &field_list->alloc, &field_list->count, field);
   }
@@ -293,7 +308,7 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
       MCerror(298, "Unexpected?");
     }
 
-    mcs_summarize_type_field_list(subtype_syntax->union_decl.fields, &field->sub_type.fields);
+    MCcall(mcs_summarize_type_field_list(subtype_syntax->union_decl.fields, field->sub_type.fields));
   }
   else if (subtype_syntax->type == MC_SYNTAX_STRUCT_DECL) {
     field->sub_type.is_union = false;
@@ -309,7 +324,7 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
       MCerror(396, "Unexpected?");
     }
 
-    mcs_summarize_type_field_list(subtype_syntax->struct_decl.fields, &field->sub_type.fields);
+    MCcall(mcs_summarize_type_field_list(subtype_syntax->struct_decl.fields, field->sub_type.fields));
   }
   else {
     MCerror(283, "NotSupported:%s", get_mc_syntax_token_type_name(subtype_syntax->type));
@@ -350,13 +365,13 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
 
   if (!fi) {
     fi = (function_info *)calloc(1, sizeof(function_info));
-    mc_register_function_info_to_app(fi);
+    MCcall(mc_register_function_info_to_app(fi));
 
     fi->name = strdup(function_ast->function.name->text);
     fi->is_defined = false;
 
     // Return-type & Parameters
-    mcs_copy_syntax_node_to_text(function_ast->function.return_type_identifier, &fi->return_type.name);
+    MCcall(mcs_copy_syntax_node_to_text(function_ast->function.return_type_identifier, &fi->return_type.name));
     if (function_ast->function.return_type_dereference) {
       fi->return_type.deref_count = function_ast->function.return_type_dereference->dereference_sequence.count;
     }
@@ -364,10 +379,14 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
       fi->return_type.deref_count = 0;
     }
 
-    fi->parameter_count = function_ast->function.parameters->count;
-    fi->parameters = (parameter_info *)malloc(sizeof(parameter_info) * fi->parameter_count);
-    for (p = 0; p < fi->parameter_count; ++p) {
-      initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &fi->parameters[p]);
+    // fi->parameter_count = function_ast->function.parameters->count;
+    // fi->parameters = (parameter_info **)malloc(sizeof(parameter_info *) * fi->parameter_count);
+    for (p = 0; p < function_ast->function.parameters->count; ++p) {
+      parameter_info *pi = (parameter_info *)malloc(sizeof(parameter_info));
+
+      MCcall(initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], pi));
+
+      MCcall(append_to_collection((void ***)&fi->parameters.items, &fi->parameters.alloc, &fi->parameters.count, pi));
     }
   }
   else {
@@ -381,7 +400,7 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
 
       // TODO
       // Just make sure the parameter counts are even for now
-      if (fi->parameter_count != function_ast->function.parameters->count) {
+      if (fi->parameters.count != function_ast->function.parameters->count) {
         MCerror(6873, "TODO");
       }
     }
@@ -442,12 +461,15 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
   find_struct_info(struct_ast->struct_decl.type_name->text, &si);
 
   if (!si) {
-    si = malloc(sizeof(struct_info));
-    mc_register_struct_info_to_app(si);
+    si = (struct_info *)malloc(sizeof(struct_info));
+    si->name = strdup(struct_ast->struct_decl.type_name->text);
+    si->fields.alloc = 0U;
+    si->fields.count = 0U;
 
     si->source_file = NULL;
-    MCcall(mcs_copy_syntax_node_to_text(struct_ast->struct_decl.type_name, &si->name));
     si->is_defined = false;
+
+    mc_register_struct_info_to_app(si);
   }
 
   is_definition = false;

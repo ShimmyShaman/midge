@@ -103,6 +103,4 @@ typedef struct mc_mo_process_stack {
   mo_operational_process_parameter *argument_subprocesses[MO_OP_PROCESS_STACK_SIZE];
 } mc_mo_process_stack;
 
-int mc_mo_get_context_value(mc_mo_process_stack *process_stack, const char *name, bool search_stack, void **result);
-
 #endif // MO_TYPES_H

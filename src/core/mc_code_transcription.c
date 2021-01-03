@@ -223,14 +223,14 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
 
       switch (ptfield->field_type) {
       case FIELD_KIND_STANDARD: {
-        for (int g = 0; g < ptfield->field.declarators->count; ++g) {
+        for (int g = 0; g < ptfield->declarators.count; ++g) {
           // printf("p:%s<>%s\n", identifier_name, ptfield->field.declarators->items[g]->name);
-          if (!strcmp(identifier_name, ptfield->field.declarators->items[g]->name)) {
+          if (!strcmp(identifier_name, ptfield->declarators.items[g]->name)) {
             // Found!
-            result->is_array = ptfield->field.declarators->items[g]->is_array;
+            result->is_array = ptfield->declarators.items[g]->array.dimension_count;
             result->is_fptr = false;
-            result->type_name = strdup(ptfield->field.type_name);
-            result->deref_count = ptfield->field.declarators->items[g]->deref_count;
+            result->type_name = strdup(ptfield->std.type_name);
+            result->deref_count = ptfield->declarators.items[g]->deref_count;
             return 0;
           }
         }
@@ -289,29 +289,29 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
       switch (ptfield->field_type) {
       case FIELD_KIND_STANDARD: {
         // printf("standard-ptfield:%s\n", ptfield->field.declarators->items[0]->name);
-        for (int g = 0; g < ptfield->field.declarators->count; ++g) {
-          if (!strcmp(primary_name, ptfield->field.declarators->items[g]->name)) {
+        for (int g = 0; g < ptfield->declarators.count; ++g) {
+          if (!strcmp(primary_name, ptfield->declarators.items[g]->name)) {
             // Found!
             switch (expression->member_access_expression.identifier->type) {
             case MC_TOKEN_IDENTIFIER: {
               // This is the type
               struct_info *primary_type_info;
-              find_struct_info(ptfield->field.type_name, &primary_type_info);
-              if (ptfield->field.declarators->items[g]->deref_count == 1 &&
+              find_struct_info(ptfield->std.type_name, &primary_type_info);
+              if (ptfield->declarators.items[g]->deref_count == 1 &&
                   (mc_token_type)expression->member_access_expression.access_operator->type !=
                       MC_TOKEN_POINTER_OPERATOR) {
                 MCerror(8311, "TODO");
               }
-              else if (ptfield->field.declarators->items[g]->deref_count == 0 &&
+              else if (ptfield->declarators.items[g]->deref_count == 0 &&
                        (mc_token_type)expression->member_access_expression.access_operator->type !=
                            MC_TOKEN_DECIMAL_POINT) {
                 MCerror(218, "TODO");
               }
-              else if (ptfield->field.declarators->items[g]->deref_count > 1) {
+              else if (ptfield->declarators.items[g]->deref_count > 1) {
                 MCerror(221, "TODO");
               }
               if (!primary_type_info) {
-                MCerror(224, "uh oh, what do we do now...? %s", ptfield->field.type_name);
+                MCerror(224, "uh oh, what do we do now...? %s", ptfield->std.type_name);
               }
 
               _determine_type_of_expression_subsearch(&primary_type_info->fields,
@@ -325,7 +325,7 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
             }
             case MC_SYNTAX_MEMBER_ACCESS_EXPRESSION: {
               struct_info *primary_type_info;
-              find_struct_info(ptfield->field.type_name, &primary_type_info);
+              find_struct_info(ptfield->std.type_name, &primary_type_info);
               if (!primary_type_info) {
                 MCerror(6393, "uh oh, what do we do now...?");
               }
@@ -374,14 +374,14 @@ int _determine_type_of_expression_subsearch(field_info_list *parent_type_fields,
           break;
         }
 
-        if (!ptfield->sub_type.declarators || !ptfield->sub_type.declarators->count) {
+        if (!ptfield->declarators.count) {
           MCerror(232, "Mislabled subtype");
         }
 
         // Search declarators to pin as the sub-type
         bool found = false;
-        for (int g = 0; g < ptfield->sub_type.declarators->count; ++g) {
-          if (!strcmp(primary_name, ptfield->sub_type.declarators->items[g]->name)) {
+        for (int g = 0; g < ptfield->declarators.count; ++g) {
+          if (!strcmp(primary_name, ptfield->declarators.items[g]->name)) {
             found = true;
             break;
           }
@@ -512,8 +512,8 @@ int determine_type_of_expression(mct_transcription_state *ts, mc_syntax_node *ex
     // printf("parent_struct_info:%s\n", parent_struct_info->name);
     // printf("panda\n");
     // print_syntax_node(expression, 0);
-    _determine_type_of_expression_subsearch(&parent_struct_info->fields, expression->member_access_expression.identifier,
-                                            result);
+    _determine_type_of_expression_subsearch(&parent_struct_info->fields,
+                                            expression->member_access_expression.identifier, result);
     if (!result->type_name) {
       print_syntax_node(expression, 0);
       MCerror(7470, "couldn't obtain result for expression");

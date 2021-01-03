@@ -282,6 +282,7 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, mo_operational
   MCcall(append_to_mc_str(fc, "#include \"core/midge_app.h\"\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_str(fc, "#include \"modules/modus_operandi/mo_types.h\"\n"));
+  MCcall(append_to_mc_str(fc, "#include \"modules/modus_operandi/mo_util.h\"\n"));
   MCcall(append_to_mc_str(fc, "#include \"modules/mc_io/mc_source_extensions.h\"\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_strf(fc, "int %s() {\n", del_func_name));
@@ -596,8 +597,12 @@ int mc_mo_parse_context_file(hash_table_t *context, const char *serialization)
     }
 
     // Set the context property
-    // printf("%p setting %s='%s'\n", context, prop_name, buf);
-    hash_table_set(prop_name, (void *)strdup(buf), context);
+    mc_str *str = (mc_str *)hash_table_get(prop_name, context);
+    if (!str) {
+      MCcall(init_mc_str(&str));
+      hash_table_set(prop_name, (void *)str, context);
+    }
+    MCcall(set_mc_str(str, buf));
   }
 
   return 0;

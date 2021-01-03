@@ -203,9 +203,13 @@ typedef struct field_declarator_info {
     } function_pointer;
   };
 
-  // Will be NULL if declarator is not an array; Otherwise, first value will be the array size, the array will dimension
-  // size listings will commence at array_dimensions[1]
-  unsigned int *array_dimensions;
+  /* Will be NULL if declarator is not an array; Otherwise, first value will be the array size, the array will dimension
+   * size listings will commence at array_dimensions[1]
+   */
+  struct {
+    unsigned int dimension_count;
+    char **dimensions;
+  } array;
 } field_declarator_info;
 
 typedef struct field_declarator_info_list {
@@ -227,7 +231,7 @@ typedef struct field_info {
     } sub_type;
   };
 
-  field_declarator_info_list *declarators;
+  field_declarator_info_list declarators;
 } field_info;
 
 typedef struct field_info_list {
@@ -243,7 +247,7 @@ typedef struct struct_info {
   /* The file this structure is defined in */
   struct mc_source_file_info *source_file;
 
-  field_info_list *fields;
+  field_info_list fields;
 } struct_info;
 
 // TODO -- make this more understandable divide into type & declarator maybe
@@ -276,8 +280,10 @@ typedef struct function_info {
     unsigned int deref_count;
   } return_type;
   char *code;
-  unsigned int parameter_count;
-  parameter_info **parameters;
+  struct {
+    unsigned int alloc, count;
+    parameter_info **items;
+  } parameters;
   // int variable_parameter_begin_index;
 
   unsigned int nb_dependents;

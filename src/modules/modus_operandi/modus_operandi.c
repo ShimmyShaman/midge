@@ -134,7 +134,6 @@ int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
 
   mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
-  hash_table_t *context = &mod->process_stack.context_maps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
   if (step->action != MO_OPPA_TEXT_INPUT_DIALOG) {
@@ -145,7 +144,7 @@ int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
   }
 
   // Set the path to the target context property
-  hash_table_set(step->folder_dialog.target_context_property, strdup(input_text), context);
+  MCcall(mc_mo_set_top_context_cstr(&mod->process_stack, step->folder_dialog.target_context_property, input_text));
 
   // Move to the next step
   MCcall(_mc_mo_activate_next_stack_step(&mod->process_stack));
@@ -158,7 +157,6 @@ int _mc_mo_dialog_options_text_selected(void *invoker_state, char *selected_text
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
 
   mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
-  hash_table_t *ctx = &mod->process_stack.context_maps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
   if (step->action != MO_OPPA_OPTIONS_DIALOG) {
@@ -171,7 +169,7 @@ int _mc_mo_dialog_options_text_selected(void *invoker_state, char *selected_text
   printf("step completed:'%s' %p \n", selected_text, step->options_dialog.target_context_property);
 
   // Set the selected option to the target context property
-  hash_table_set(step->options_dialog.target_context_property, strdup(selected_text), ctx);
+  MCcall(mc_mo_set_top_context_cstr(&mod->process_stack, step->options_dialog.target_context_property, selected_text));
 
   // Move to the next step
   MCcall(_mc_mo_activate_next_stack_step(&mod->process_stack));
@@ -182,19 +180,18 @@ int _mc_mo_dialog_options_text_selected(void *invoker_state, char *selected_text
 int _mc_mo_dialog_folder_selected(void *invoker_state, char *selected_folder)
 {
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
+  mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
 
-  MCerror(8159, "TODO");
-  // // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
-  // if (mod->active_step->action != MO_OPPA_OPEN_FOLDER_DIALOG) {
-  //   MCerror(8214, "TODO - state error");
-  // }
+  // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
+  if (step->action != MO_OPPA_OPEN_FOLDER_DIALOG) {
+    MCerror(8214, "TODO - state error");
+  }
 
-  // // Set the path to the target context property
-  // hash_table_set(mod->active_step->folder_dialog.target_context_property, strdup(selected_folder),
-  //                &mod->active_process->context);
+  // Set the path to the target context property
+  MCcall(mc_mo_set_top_context_cstr(&mod->process_stack, step->folder_dialog.target_context_property, selected_folder));
 
-  // // Move to the next step
-  // MCcall(_mc_mo_activate_next_stack_step(mod));
+  // Move to the next step
+  MCcall(_mc_mo_activate_next_stack_step(&mod->process_stack));
 
   return 0;
 }
@@ -204,7 +201,6 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
   modus_operandi_data *mod = (modus_operandi_data *)invoker_state;
 
   mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
-  hash_table_t *context = &mod->process_stack.context_maps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
   if (step->action != MO_OPPA_FILE_DIALOG) {
@@ -215,7 +211,7 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
   // printf("_mc_mo_dialog_filepath_selected:'%s'='%s'\n", step->file_dialog.target_context_property, selected_path);
 
   // Set the path to the target context property
-  hash_table_set(step->file_dialog.target_context_property, strdup(selected_path), context);
+  MCcall(mc_mo_set_top_context_cstr(&mod->process_stack, step->file_dialog.target_context_property, selected_path));
 
   // Move to the next step
   MCcall(_mc_mo_activate_next_stack_step(&mod->process_stack));
@@ -264,7 +260,7 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
   mo_operational_process *op;
   mo_operational_process_parameter *op_param;
   hash_table_t *ctx, *ctxb;
-  void *pv;
+  const char *pv;
 
   // Update the process process_stack info
   --process_stack->index;
@@ -280,16 +276,19 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
   ctx = &process_stack->context_maps[sidx];
   if (op_param) {
     // Obtain the parameter from the previous process_stack context
-    pv = hash_table_get(op_param->name, &process_stack->context_maps[sidx + 1]);
+    MCcall(mc_mo_get_specific_context_cstr(&process_stack->context_maps[sidx + 1], op_param->name, &pv));
 
     if (!pv) {
       MCerror(5294, "subprocess param '%s' was not retrieved", op_param->name);
     }
 
-    printf("previous sequence was op_param subprocess: setting '%s' with '%s'\n", op_param->name, (const char *)pv);
+    printf("previous sequence was op_param subprocess: setting '%s' with '%s'\n", op_param->name, pv);
 
     // Set it to the now-current context
-    hash_table_set(op_param->name, pv, ctx);
+    MCcall(mc_mo_set_top_context_cstr(process_stack, op_param->name, pv));
+
+    MCcall(mc_mo_get_specific_context_cstr(&process_stack->context_maps[sidx], op_param->name, &pv));
+    // printf("got '%s' using '%s' from %p\n", pv, op_param->name, &process_stack->context_maps[sidx]);
 
     // Clear
     process_stack->argument_subprocesses[sidx] = NULL;
@@ -310,7 +309,7 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
     op_param = &op->parameters[a];
 
     // Find in context tree
-    MCcall(mc_mo_get_context_value(process_stack, op_param->name, true, &pv));
+    MCcall(mc_mo_get_context_cstr(process_stack, op_param->name, true, &pv));
     if (pv)
       continue;
 
@@ -319,7 +318,7 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
     }
 
     // Activate the subprocess to obtain the argument value
-    // printf("activating subprocess to get param value for '%s'\n", op_param->name);
+    printf("activating subprocess to get param value for '%s'\n", op_param->name);
     process_stack->argument_subprocesses[sidx] = op_param;
     MCcall(_mc_mo_begin_op_process(op_param->obtain_value_subprocess, NULL));
     return 0;
@@ -445,6 +444,17 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
   return 0;
 }
 
+int mc_mo_clear_top_context(mc_mo_process_stack *process_stack)
+{
+  hash_table_t *ctx = &process_stack->context_maps[process_stack->index];
+
+  hash_table_clear(ctx);
+
+  puts("WARNING TODO 4827 -- clearing hashtable without freeing mc_strs");
+
+  return 0;
+}
+
 int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
 {
   mc_mo_process_stack *process_stack = process->stack;
@@ -452,7 +462,7 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
   mo_operational_process_parameter *op_param;
   int a, sidx;
   mo_operational_step *step;
-  void *pv;
+  const char *pv;
 
   // Increment the process process_stack
   sidx = ++process_stack->index;
@@ -461,9 +471,8 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
   }
 
   // Set the process process_stack info
-  // TODO -- ENSURE MEMORY IS EITHER NOT NECESSARY TO FREE OR IS ALWAYS FREED WHEN hash_table_clear-ing
   process_stack->processes[sidx] = process;
-  hash_table_clear(&process_stack->context_maps[sidx]);
+  MCcall(mc_mo_clear_top_context(process_stack));
   process_stack->argument_subprocesses[sidx] = NULL;
   process_stack->steps[sidx] = NULL;
 
@@ -477,7 +486,7 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
     op_param = &process->parameters[a];
 
     // Find in context tree
-    MCcall(mc_mo_get_context_value(process_stack, op_param->name, true, &pv));
+    MCcall(mc_mo_get_context_cstr(process_stack, op_param->name, true, &pv));
     if (pv)
       continue;
 
@@ -493,245 +502,9 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
 
   MCcall(_mc_mo_activate_next_stack_step(process_stack));
 
-  // TODO Trash
-  // Ensure all parameters have value
-  // :foreach parameter in process.parameters
-  //   :if mod.context[active][parameter.name] == NULL
-  //     :Attempt to obtain deeper context value
-  //       etc.
-  //     :Increment active tier on context map
-  //     :Activate parameter.obtain_value_subprocess
-  //     :Decrement active tier on context map
-  // :execute process.first
-
-  // Increment the process_stack index
-
-  // mod->active_process = mopp;
-  // mod->active_step = NULL;
-
-  // // Increment the context
-  // ++mod->context.stack_index;
-
-  // // Reset the context
-  // // TODO -- can't just clear these properties need memory releasing
-  // hash_table_clear(&mod->active_process->context);
-
-  // // Temp -- project context TODO
-  // struct_info *si;
-  // find_struct_info("fs_world", &si);
-  // const char *const project_3d_root_context_property = "project-3d-root";
-  // hash_table_set(project_3d_root_context_property, si, &mod->active_process->context);
-
   return 0;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////User Functions//////////////////////////////////////////////////
-///////////////////////////////////////temp-storage////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-int _user_function_gen_source_files(modus_operandi_data *mod, void *farg)
-{
-  MCerror(7553, "TODO");
-  // const char *const gen_source_name_context_property = "gen-source-name";
-  // const char *const gen_source_folder_context_property = "gen-source-folder";
-  // const char *const created_header_context_property = "gen-source-header-file";
-
-  // char *name = (char *)hash_table_get(gen_source_name_context_property, &mod->active_process->context);
-  // char *folder = (char *)hash_table_get(gen_source_folder_context_property, &mod->active_process->context);
-  // printf("this is where I would generate source files named '%s.c' and '%s.h' in the folder '%s'\n", name, name,
-  //        folder);
-
-  // char path[256];
-  // strcpy(path, folder);
-  // MCcall(mcf_concat_filepath(path, 256, name));
-  // strcat(path, ".h");
-
-  // mc_app_itp_data *itp;
-  // mc_obtain_app_itp_data(&itp);
-
-  // int a;
-  // mc_source_file_info *source_file = NULL;
-  // for (a = itp->source_files.count - 1; a >= 0; --a) {
-  //   // printf("%s<>%s\n", itp->source_files.items[a]->filepath, path);
-  //   if (!strcmp(itp->source_files.items[a]->filepath, path)) {
-  //     source_file = itp->source_files.items[a];
-  //     break;
-  //   }
-  // }
-  // if (source_file) {
-  //   puts("WARNING header source file already existed");
-  //   // MCerror(8438, "TODO");
-  // }
-  // else {
-  //   source_file = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
-  //   source_file->filepath = strdup(path);
-  //   source_file->segments.capacity = source_file->segments.count = 0U;
-
-  //   MCcall(append_to_collection((void ***)&itp->source_files.items, &itp->source_files.alloc,
-  //   &itp->source_files.count,
-  //                               source_file));
-
-  //   MCcall(mc_save_source_file_from_updated_info(source_file));
-  // }
-
-  // hash_table_set(created_header_context_property, (void *)source_file, &mod->active_process->context);
-
-  return 0;
-}
-
-int _user_util_insert_standard_field_in_struct(struct_info *structure, const char *type_name, unsigned int deref_count,
-                                               const char *field_name)
-{
-  MCerror(7553, "TODO");
-  // field_info *f;
-
-  // // TODO -- checking of any kind???
-
-  // f = (field_info *)malloc(sizeof(field_info));
-  // f->field_type = FIELD_KIND_STANDARD;
-  // f->field.type_name = strdup(type_name);
-  // f->field.declarators = (field_declarator_info_list *)malloc(sizeof(field_declarator_info_list));
-  // f->field.declarators->alloc = f->field.declarators->count = 0U;
-
-  // field_declarator_info *d = (field_declarator_info *)malloc(sizeof(field_declarator_info));
-  // d->deref_count = deref_count;
-  // d->name = strdup(field_name);
-  // MCcall(append_to_collection((void ***)&f->field.declarators->items, &f->field.declarators->alloc,
-  //                             &f->field.declarators->count, d));
-
-  // MCcall(append_to_collection((void ***)&structure->fields->items, &structure->fields->alloc,
-  // &structure->fields->count,
-  //                             f));
-
-  return 0;
-}
-
-int _user_util_insert_struct_in_file(mc_source_file_info *source_file, const char *struct_name, bool error_if_exists,
-                                     struct_info **result)
-{
-  MCerror(7553, "TODO");
-  // struct_info *si = NULL;
-  // mc_source_file_code_segment *seg = NULL;
-
-  // MCcall(find_struct_info(struct_name, &si));
-  // if (si) {
-  //   MCerror(7490, "TODO");
-  //   // for (int a = 0; a < source_file->segments.count; ++a) {
-  //   //   d = source_file->segments.items[a];
-  //   //   if (d->type == MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION && !strcmp(d->structure->name, struct_name)) {
-  //   //     seg = d;
-  //   //     break;
-  //   //   }
-  //   // }
-  // }
-
-  // {
-  //   // Construct an empty structure with the given name and register it globally and to the source file
-  //   struct_info *si = (struct_info *)malloc(sizeof(struct_info));
-  //   si->is_defined = true;
-  //   si->is_union = false;
-  //   si->name = strdup(struct_name);
-  //   si->source_file = source_file;
-  //   si->fields = (field_info_list *)malloc(sizeof(field_info_list));
-  //   si->fields->alloc = si->fields->count = 0;
-
-  //   MCcall(mc_register_struct_info_to_app(si));
-  //   MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
-  //   MCcall(mc_save_source_file_from_updated_info(source_file));
-  // }
-
-  return 0;
-}
-
-int _user_set_include_path(mc_source_file_info *source_file, const char *filepath)
-{
-  MCerror(7553, "TODO");
-  // // Search through the source file segments for the last initial header
-  // int i = 0;
-
-  // for (; i < source_file->segments.count; ++i) {
-  // }
-
-  // puts("TODO -- _user_set_include_path");
-
-  return 0;
-}
-
-int _user_function_insert_data_struct(modus_operandi_data *mod, void *farg)
-{
-  MCerror(7553, "TODO");
-  // // Add a struct declaration for the data type
-  // // -- Obtain the source file
-  // const char *const created_header_context_property = "gen-source-header-file";
-  // mc_source_file_info *header_file =
-  //     (mc_source_file_info *)hash_table_get(created_header_context_property, &mod->active_process->context);
-
-  // const char *const gen_data_name_context_property = "gen-data-name";
-  // const char *data_struct_name =
-  //     (const char *)hash_table_get(gen_data_name_context_property, &mod->active_process->context);
-
-  // const char *const gen_source_name_context_property = "gen-source-name";
-  // const char *gen_source_name =
-  //     (const char *)hash_table_get(gen_source_name_context_property, &mod->active_process->context);
-
-  // // -- Check structure does not already exist
-  // struct_info *si;
-  // MCcall(_user_util_insert_struct_in_file(header_file, data_struct_name, false, &si));
-
-  // // Add a reference to this struct in the projects root 3D display module
-  // const char *const project_3d_root_context_property = "project-3d-root";
-  // struct_info *project_3d_root_data =
-  //     (struct_info *)hash_table_get(project_3d_root_context_property, &mod->active_process->context);
-
-  // if (!project_3d_root_data) {
-  //   MCerror(9517, "TODO no 3d root for project..?");
-  // }
-
-  // MCcall(_user_set_include_path(project_3d_root_data->source_file, header_file->filepath));
-  // MCcall(_user_util_insert_standard_field_in_struct(project_3d_root_data, data_struct_name, 1, gen_source_name));
-
-  // // -- Integrate the update
-  // MCcall(mc_save_source_file_from_updated_info(project_3d_root_data->source_file));
-
-  return 0;
-}
-
-int _user_function_print_result(modus_operandi_data *mod, void *farg)
-{
-  MCerror(7553, "TODO");
-  // char *ctx_arg = (char *)farg;
-  // char *ctx_result = hash_table_get(ctx_arg, &mod->active_process->context);
-
-  // printf("Step Example Result: '%s'\n", ctx_result);
-
-  return 0;
-}
-
-int _user_function_add_struct(mc_mo_process_stack *process_stack, void *farg)
-{
-  int sidx = process_stack->index;
-  mo_operational_process *op = process_stack->processes[sidx];
-  hash_table_t *ctx = &process_stack->context_maps[sidx];
-
-  char *filepath = (char *)hash_table_get("header-path", ctx);
-  char *struct_name = (char *)hash_table_get("struct-name", ctx);
-
-  // printf("Step Example Result: '%s'\n", ctx_result);
-  printf("THIS is where i'd create the struct '%s' in the file '%s' -- But Not yet...\n", struct_name, filepath);
-
-  return 0;
-}
-
-int _context_delegate_set_default_data_name(modus_operandi_data *mod)
-{
-  MCerror(4729, "TODO");
-
-  // use this to return system_name + "_data" to the get context property somehow
-
-  return 0;
-}
-///////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1292,11 +1065,11 @@ int _mc_mo_project_loaded(void *handler_state, void *event_args)
 
   // Set Global Context
   // TODO -- one day optimize this by not creating/freeing strings every time contexts change
-  char *value = (char *)hash_table_get("key-project", &mod->process_stack.global_context);
-  if (value) {
-    free(value);
-  }
-  hash_table_set("key-project", strdup(project->name), &mod->process_stack.global_context);
+  // char *value = (char *)hash_table_get("key-project", &mod->process_stack.global_context);
+  // if (value) {
+  //   free(value);
+  // }
+  // hash_table_set("key-project", strdup(project->name), &mod->process_stack.global_context);
 
   // Load project context
   _mc_mo_load_project_context(mod, project);

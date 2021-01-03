@@ -13,7 +13,8 @@ param {
     // Parameters would be (modus_operandi_data *modus_operandi, project, process, context)
 
     // Obtain parameter values
-    char *header_path = (char *)hash_table_get("header-path", context);
+    const char *header_path;
+    MCcall(mc_mo_get_context_cstr(process_stack, "header-path", true, &header_path));
 
     printf("header path was: '%s'\n", header_path);
     char buf[64];

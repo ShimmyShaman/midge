@@ -225,8 +225,8 @@ int mcs_construct_struct_declaration(mc_source_file_info *source_file, const cha
     si->is_union = false;
     si->name = strdup(name);
     si->source_file = source_file;
-    si->fields = (field_info_list *)malloc(sizeof(field_info_list));
-    si->fields->alloc = si->fields->count = 0;
+    si->fields.alloc = 0U;
+    si->fields.count = 0U;
 
     MCcall(mc_register_struct_info_to_app(si));
     MCcall(mc_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
@@ -239,21 +239,25 @@ int mcs_construct_struct_declaration(mc_source_file_info *source_file, const cha
 int mcs_append_field_to_struct(struct_info *si, const char *type_name, unsigned int type_deref_count,
                                const char *field_name)
 {
+  puts("a");
   field_info *f = (field_info *)malloc(sizeof(field_info *));
   f->field_type = FIELD_KIND_STANDARD;
-  f->field.type_name = strdup(type_name);
-  f->field.declarators.count = 0U;
-  f->field.declarators.alloc = 0U;
+  f->std.type_name = strdup(type_name);
+  f->declarators.count = 0U;
+  f->declarators.alloc = 0U;
 
+  puts("b");
   field_declarator_info *fdecl = (field_declarator_info *)malloc(sizeof(field_declarator_info));
-  fdecl->is_array = false;
+  fdecl->array.dimension_count = 0;
   fdecl->deref_count = type_deref_count;
-  fdecl->name = field_name;
-  MCcall(append_to_collection((void ***)&f->field.declarators.items, &f->field.declarators.alloc,
-                              &f->field.declarators.count, fdecl));
+  fdecl->name = strdup(field_name);
+  puts("c");
+  MCcall(append_to_collection((void ***)&f->declarators.items, &f->declarators.alloc, &f->declarators.count, fdecl));
 
+  puts("d");
   MCcall(append_to_collection((void ***)&si->fields.items, &si->fields.alloc, &si->fields.count, f));
 
+  puts("e");
   return 0;
 }
 
@@ -276,13 +280,16 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
   fi->return_type.name = strdup(return_type_name);
   fi->return_type.deref_count = return_type_deref;
 
-  fi->parameter_count = parameter_count;
-  fi->parameters = (parameter_info *)malloc(sizeof(parameter_info) * fi->parameter_count);
+  fi->parameters.alloc = 0U;
+  fi->parameters.count = 0U;
+  parameter_info *pp = calloc(parameter_count, sizeof(parameter_info));
   for (int a = 0; a < parameter_count; ++a) {
     // TODO -- non-standard parameters (fptrs etc)
     const char *c = parameters[a], *s;
 
-    parameter_info *p = fi->parameters + a;
+    parameter_info *p = &pp[a];
+    MCcall(append_to_collection((void ***)&fi->parameters.items, &fi->parameters.alloc, &fi->parameters.count, p));
+
     p->parameter_type = PARAMETER_KIND_STANDARD;
 
     // Type

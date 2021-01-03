@@ -50,10 +50,10 @@ int _mc_transcribe_field_info_list(mc_str *str, field_info_list *list, int inden
     switch (fi->field_type) {
     case FIELD_KIND_STANDARD: {
       // Type
-      MCcall(append_to_mc_str(str, fi->field.type_name));
+      MCcall(append_to_mc_str(str, fi->std.type_name));
 
       // Declarators
-      MCcall(_mc_transcribe_field_declarator_info_list(str, fi->field.declarators));
+      MCcall(_mc_transcribe_field_declarator_info_list(str, &fi->declarators));
 
       // Rest
       MCcall(append_to_mc_str(str, ";\n"));
@@ -105,7 +105,7 @@ int _mc_transcribe_sub_type_info(mc_str *str, field_info *sub_type, int indent)
   for (int i = 0; i < indent; ++i)
     MCcall(append_to_mc_str(str, "  "));
   MCcall(append_to_mc_str(str, "}"));
-  MCcall(_mc_transcribe_field_declarator_info_list(str, sub_type->sub_type.declarators));
+  MCcall(_mc_transcribe_field_declarator_info_list(str, &sub_type->declarators));
 
   MCcall(append_to_mc_str(str, ";\n"));
   return 0;
@@ -117,7 +117,7 @@ int _mc_transcribe_structure_info(mc_str *str, struct_info *structure)
   MCcall(append_to_mc_str(str, structure->name));
   MCcall(append_to_mc_str(str, " {\n"));
 
-  MCcall(_mc_transcribe_field_info_list(str, structure->fields, 1));
+  MCcall(_mc_transcribe_field_info_list(str, &structure->fields, 1));
 
   MCcall(append_to_mc_str(str, "} "));
   MCcall(append_to_mc_str(str, structure->name));
@@ -140,8 +140,8 @@ int _mc_transcribe_function_header(mc_str *str, function_info *function)
   MCcall(append_char_to_mc_str(str, '('));
 
   // printf("parameter_count:%u\n", function->parameter_count);
-  for (int a = 0; a < function->parameter_count; ++a) {
-    p = function->parameters + a;
+  for (int a = 0; a < function->parameters.count; ++a) {
+    p = function->parameters.items[a];
 
     // printf("--parameter:%p %s\n", p, p ? p->name : "(null)");
 

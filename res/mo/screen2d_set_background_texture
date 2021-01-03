@@ -22,15 +22,15 @@ param {
 }
 param {
   name=tex-field-name
-  obtain=delegate
+  obtain=set-tex-field-name
     > FUNCTION {
-      MCcall(mc_mo_set_context_value(process_stack, "tex-field-name", "tex_background"));
+      MCcall(mc_mo_set_top_context_cstr(process_stack, "tex-field-name", "tex_background"));
     }
 }
 > FUNCTION {
   const char *data_name, *tex_fn;
-  MCcall(mc_mo_get_context_value(process_stack, "project-data", true, (void **)&data_name));
-  MCcall(mc_mo_get_context_value(process_stack, "tex-field-name", true, (void **)&tex_fn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_fn));
 
   // Get the data struct
   struct_info *si = NULL;
@@ -49,15 +49,15 @@ param {
   function_info *fi;
   const char *lrcn, *data_name;
 
-  MCcall(mc_mo_get_context_value(process_stack, "project-data", true, (void **)&data_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
 
   puts("bb");
-  MCcall(mc_mo_get_context_value(process_stack, "project-load-resources-function", true, (void **)&lrcn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-load-resources-function", true, &lrcn));
   if(!lrcn) {
   puts("cc");
     // Create the function
     // -- Obtain the project name
-    MCcall(mc_mo_get_context_value(process_stack, "project-name", true, (void **)&lrcn));
+    MCcall(mc_mo_get_context_cstr(process_stack, "project-name", true, &lrcn));
     if(!lrcn) {
       puts("Error - require project-name context to initailize the load_resources function");
       return 8;
@@ -70,7 +70,7 @@ param {
 
     // -- Obtain the init source file name
     const char *init_source_filepath;
-    MCcall(mc_mo_get_context_value(process_stack, "project-init-source-filepath", true, (void **)&init_source_filepath));
+    MCcall(mc_mo_get_context_cstr(process_stack, "project-init-source-filepath", true, &init_source_filepath));
     if(!init_source_filepath) {
       return 9;
     }
@@ -105,11 +105,11 @@ param {
 
   // Get the field name
   const char *tex_fn;
-  MCcall(mc_mo_get_context_value(process_stack, "tex-field-name", true, (void **)&tex_fn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_fn));
 
   // Generate the code
   const char *texfp;
-  MCcall(mc_mo_get_context_value(process_stack, "texture-filepath", true, (void **)&texfp));
+  MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &texfp));
   sprintf(buf, "MCcall(mcr_load_texture_resource(\"%s\", &data->%s));\n", texfp, tex_fn);
 
   // Insert inside the load resources function
@@ -145,7 +145,7 @@ param {
 }
 > FUNCTION {
     const char *texfp;
-    mc_mo_get_context_value(process_stack, "texture-filepath", true, (void **)&texfp);
+    MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &texfp));
     printf("texture-filepath:%s\n", texfp);
 }
 > FUNCTION {

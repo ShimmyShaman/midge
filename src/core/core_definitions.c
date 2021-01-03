@@ -321,21 +321,6 @@ int release_field_declarator_info(field_declarator_info *declarator)
   return 0;
 }
 
-int release_field_declarator_info_list(field_declarator_info_list *declarator_list)
-{
-  if (declarator_list) {
-    if (declarator_list->items && declarator_list->alloc) {
-      for (int i = 0; i < declarator_list->count; ++i) {
-        release_field_declarator_info(declarator_list->items[i]);
-      }
-      free(declarator_list->items);
-    }
-    free(declarator_list);
-  }
-
-  return 0;
-}
-
 int release_field_info(field_info *field)
 {
   if (!field)
@@ -345,8 +330,13 @@ int release_field_info(field_info *field)
   case FIELD_KIND_STANDARD: {
     if (field->std.type_name)
       free(field->std.type_name);
-    if (field->field.declarators->field.declarators)
-      release_field_declarator_info_list(field->field.declarators);
+
+    if (field->declarators.items && field->declarators.alloc) {
+      for (int i = 0; i < field->declarators.count; ++i) {
+        release_field_declarator_info(field->declarators.items[i]);
+      }
+      free(field->declarators.items);
+    }
   } break;
   // case FIELD_KIND_NESTED_UNION: {
 
