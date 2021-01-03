@@ -88,7 +88,7 @@ int mc_mo_set_specific_context_cstr(hash_table_t *context, const char *name, con
 {
   mc_str *str;
 
-  printf("setting '%s' to %p\n", name, context);
+  // printf("setting '%s' to %p\n", name, context);
 
   str = (mc_str *)hash_table_get(name, context);
   if (!str) {

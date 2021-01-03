@@ -181,9 +181,9 @@ int _mc_transcribe_function_info(mc_str *str, function_info *function)
 
   MCcall(_mc_transcribe_function_header(str, function));
 
-  MCcall(append_to_mc_str(str, " {"));
+  MCcall(append_char_to_mc_str(str, ' '));
   MCcall(append_to_mc_str(str, function->code));
-  MCcall(append_to_mc_str(str, "}"));
+  MCcall(append_char_to_mc_str(str, '\n'));
 
   return 0;
 }

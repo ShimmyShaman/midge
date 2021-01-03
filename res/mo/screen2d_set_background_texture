@@ -40,7 +40,7 @@ param {
   }
 
   // Insert the texture field into the data
-  MCcall(mcs_append_field_to_struct(si, "mcr_texture_resource", 1, tex_fn));
+  MCcall(mcs_append_field_to_struct(si, "mcr_texture_image", 1, tex_fn));
 }
 > FUNCTION {
   puts("aa");
@@ -151,6 +151,6 @@ param {
 > FUNCTION {
     puts("NotYetImplemented");
     puts("- ensure the header references render/common.h");
-    puts("- insert a field 'mcr_texture_resource *bg_texture' into project-data");
+    puts("- insert a field 'mcr_texture_image *bg_texture' into project-data");
     puts("- insert a call to issue texture resource into the project-resource-load-function");
 }

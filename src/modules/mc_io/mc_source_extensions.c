@@ -52,6 +52,7 @@ int find_source_entity_info(source_entity_info *dest, const char *name)
       else
         dest->type = MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION;
       dest->st_info = si;
+      // printf("struct type '%s'\n", name);
       return 0;
     }
   }
@@ -70,6 +71,7 @@ int find_source_entity_info(source_entity_info *dest, const char *name)
   }
 
   // Nothing Found
+  // printf("no type found for '%s'\n", name);
   memset(dest, 0, sizeof(source_entity_info));
 
   return 0;
@@ -236,28 +238,56 @@ int mcs_construct_struct_declaration(mc_source_file_info *source_file, const cha
   return 0;
 }
 
+int mcs_ensure_header_include_for_type(mc_source_file_info *sf, const char *type_name)
+{
+  printf("mcs_ensure_header_include_for_type:'%s'\n", type_name);
+
+  source_entity_info sei;
+  find_source_entity_info(&sei, type_name);
+
+  if (!sei.type) {
+    // Can't do anything more, just yet...
+    // TODO -- std::types
+    return 0;
+  }
+
+  switch (sei.type) {
+  case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION: {
+    MCerror(2748, "PROGRESS");
+  } break;
+  default: {
+    MCerror(9587, "TODO %i", sei.type);
+  }
+  }
+
+  return 0;
+}
+
 int mcs_append_field_to_struct(struct_info *si, const char *type_name, unsigned int type_deref_count,
                                const char *field_name)
 {
-  puts("a");
+  // puts("a");
   field_info *f = (field_info *)malloc(sizeof(field_info *));
   f->field_type = FIELD_KIND_STANDARD;
   f->std.type_name = strdup(type_name);
   f->declarators.count = 0U;
   f->declarators.alloc = 0U;
 
-  puts("b");
+  // puts("b");
   field_declarator_info *fdecl = (field_declarator_info *)malloc(sizeof(field_declarator_info));
   fdecl->array.dimension_count = 0;
   fdecl->deref_count = type_deref_count;
   fdecl->name = strdup(field_name);
-  puts("c");
+  // puts("c");
   MCcall(append_to_collection((void ***)&f->declarators.items, &f->declarators.alloc, &f->declarators.count, fdecl));
 
-  puts("d");
+  // puts("d");
   MCcall(append_to_collection((void ***)&si->fields.items, &si->fields.alloc, &si->fields.count, f));
 
-  puts("e");
+  MCcall(mcs_ensure_header_include_for_type(si->source_file, type_name));
+
+  // puts("e");
+  MCcall(mc_save_source_file_from_updated_info(si->source_file));
   return 0;
 }
 
