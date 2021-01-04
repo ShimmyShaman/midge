@@ -92,8 +92,11 @@ int _mc_construct_project_file_source(const char *subdir, const char *project_na
   MCcall(append_to_mc_strf(str, "/* %s.c */\n", project_name));
 
   // Base System Includes
+  // TODO -- I dream one-day of only including the stuff that needs including, till then
   MCcall(append_to_mc_str(str, "\n"));
   MCcall(append_to_mc_str(str, "#include <stdlib.h>\n"));
+  MCcall(append_to_mc_str(str, "#include <stdio.h>\n"));
+  MCcall(append_to_mc_str(str, "#include <string.h>\n"));
 
   // Midge Includes
   MCcall(append_to_mc_str(str, "\n"));

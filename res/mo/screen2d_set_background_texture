@@ -81,7 +81,7 @@ param {
   puts("ee");
     
     // -- Insert a somewhat empty function into the source file
-    strcpy(buf, "  return 0;");
+    strcpy(buf, "{ return 0; }");
 
     // -- Ensure new function doesn't exist
     MCcall(find_function_info(lrcn, &fi));

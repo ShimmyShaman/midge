@@ -138,6 +138,9 @@ int _mc_insert_segment_get_priority(mc_source_file_code_segment_type type, int *
   case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
     *priority = 8;
     return 0;
+  case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE:
+    *priority = 1;
+    return 0;
   case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
   case MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT:
   case MC_SOURCE_SEGMENT_MULTI_LINE_COMMENT:
@@ -159,9 +162,9 @@ int mc_insert_segment_judiciously_in_source_file(mc_source_file_info *source_fil
   mc_source_file_code_segment *nlseg = (mc_source_file_code_segment *)malloc(sizeof(mc_source_file_code_segment));
   nlseg->type = MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR;
   nlseg->data = NULL;
-  mc_source_file_code_segment *segment = (mc_source_file_code_segment *)malloc(sizeof(mc_source_file_code_segment));
-  segment->type = type;
-  segment->data = data;
+  mc_source_file_code_segment *ins_seg = (mc_source_file_code_segment *)malloc(sizeof(mc_source_file_code_segment));
+  ins_seg->type = type;
+  ins_seg->data = data;
 
   // Find the best place for it according to order:
   // {.h}
@@ -177,25 +180,27 @@ int mc_insert_segment_judiciously_in_source_file(mc_source_file_info *source_fil
   // MCcall(mcf_obtain_file_extension(source_file->filepath, buf, 8));
   mc_source_file_code_segment *seg;
   int priority, sp, a;
-  MCcall(_mc_insert_segment_get_priority(type, &sp));
+  bool inserted = false;
+  MCcall(_mc_insert_segment_get_priority(type, &priority));
 
   for (a = source_file->segments.count - 1; a >= 0; --a) {
     seg = source_file->segments.items[a];
 
     MCcall(_mc_insert_segment_get_priority(seg->type, &sp));
+    // printf("seg:%i p:%i\n", seg->type, sp);
     if (sp > 0 && sp < priority) {
       // Heres a good place
       MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
-                                  &source_file->segments.count, a + 1, nlseg));
+                                  &source_file->segments.count, a + 1, ins_seg));
       MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
-                                  &source_file->segments.count, a + 2, segment));
-      a = 800;
+                                  &source_file->segments.count, a + 2, nlseg));
+      inserted = true;
       break;
     }
   }
-  if (a != 800) {
+  if (!inserted) {
     MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
-                                &source_file->segments.count, 0, segment));
+                                &source_file->segments.count, 0, ins_seg));
     MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
                                 &source_file->segments.count, 1, nlseg));
   }
@@ -251,9 +256,70 @@ int mcs_ensure_header_include_for_type(mc_source_file_info *sf, const char *type
     return 0;
   }
 
+  int a, n, m;
+  char ext[8], *c, cwd[256];
+  mc_source_file_info *type_sf;
+  mc_source_file_code_segment *seg;
   switch (sei.type) {
   case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION: {
-    MCerror(2748, "PROGRESS");
+    // Obtain the file it was declared with
+    type_sf = sei.st_info->source_file;
+    printf("Looking for:%s\n", type_sf->filepath);
+
+    // Ensure it is a header - for now
+    MCcall(mcf_obtain_file_extension(type_sf->filepath, ext, 8));
+    if (strcmp(ext, "h")) {
+      MCerror(7529, "'%s' is not a header file for struct declaration '%s'", type_sf->filepath, type_name);
+    }
+    n = strlen(type_sf->filepath);
+
+    // Search for it
+    bool included_already = false;
+    for (a = 0; a < sf->segments.count; ++a) {
+      seg = sf->segments.items[a];
+      if (seg->type == MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE) {
+        m = strlen(seg->include->filepath);
+        c = type_sf->filepath + (n - m);
+
+        // Ends-with
+        if (!strcmp(c, seg->include->filepath)) {
+          printf("'%s' already included\n", seg->include->filepath);
+          included_already = true;
+          break;
+        }
+      }
+    }
+    if (included_already) {
+      break;
+    }
+
+    // Add an include segment
+    // -- Subtract the cwd
+    if (!getcwd(cwd, 256)) {
+      MCerror(7912, "CWD FAILED TODO");
+    }
+    printf("cwd:'%s'\n", cwd);
+    m = strlen(cwd);
+    if (strncmp(cwd, type_sf->filepath, m)) {
+      MCerror(4728, "TODO '%s' isn't part of '%s'", cwd, type_sf->filepath);
+    }
+    c = type_sf->filepath + m;
+    if (*c == '/' || *c == '\\')
+      ++c;
+
+    // Include Paths
+    // -- Find the longest matching fit within the include paths
+    // TODO ???
+    // if(!strncmp("src/modules/", c, 12))
+    //   c+= 12;
+    // else
+    if (!strncmp("src/", c, 4))
+      c += 4;
+
+    mc_include_directive_info *idi = (mc_include_directive_info *)malloc(sizeof(mc_include_directive_info));
+    idi->filepath = strdup(c);
+    idi->is_system_search = false; // TODO
+    MCcall(mc_insert_segment_judiciously_in_source_file(sf, MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE, idi));
   } break;
   default: {
     MCerror(9587, "TODO %i", sei.type);
