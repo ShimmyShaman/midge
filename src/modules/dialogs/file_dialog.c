@@ -12,8 +12,8 @@
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
-#include "modules/mc_io/mc_io.h"
 #include "modules/ui_elements/ui_elements.h"
+#include "modules/mc_io/mc_file.h"
 
 // #include "env/environment_definitions.h"
 // #include "render/render_thread.h"
@@ -160,18 +160,21 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
   int len;
   mcu_button *button;
 
-  DIR *dir;
-  struct dirent *ent;
-  if ((dir = opendir(starting_directory)) != NULL) {
-    if (starting_directory) {
-      MCcall(set_mc_str(fd->current_directory, starting_directory));
-    }
-    else {
+  if (starting_directory) {
+    MCcall(set_mc_str(fd->current_directory, starting_directory));
+  }
+  else {
+    if (fd->current_directory->len == 0) {
       if (!getcwd(path, 256)) {
         MCerror(9135, "Current Working Directory too large for this pretty big buffer");
       }
       MCcall(set_mc_str(fd->current_directory, path));
     }
+  }
+
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir(fd->current_directory->text)) != NULL) {
     // printf("_mc_fd_open_directory:'%s'\n", fd->current_directory->text);
 
     /* print all the files and directories within directory */
@@ -181,7 +184,7 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
         continue;
 
       // Create the full path of the entry
-      strcpy(path, starting_directory);
+      strcpy(path, fd->current_directory->text);
       len = strlen(path);
       if (path[len - 1] != '\\' && path[len - 1] != '/') {
         strcat(path, "/");
@@ -210,7 +213,7 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
   else {
     /* could not open directory */
     perror("");
-    MCerror(8528, "Could not open directory '%s'", starting_directory);
+    MCerror(8528, "Could not open directory '%s'", fd->current_directory->text);
   }
 
   for (int a = fd->displayed_items.utilized; a < fd->displayed_items.count; ++a) {
@@ -271,7 +274,7 @@ void _mc_file_dialog_item_selected(mci_input_event *input_event, mcu_button *but
   }
 }
 
-int _mc_on_save_file_dialog_request(void *handler_state, void *event_args)
+int _mc_file_dialog_requested(void *handler_state, void *event_args)
 {
   mc_file_dialog_data *fd = (mc_file_dialog_data *)handler_state;
 
@@ -284,7 +287,7 @@ int _mc_on_save_file_dialog_request(void *handler_state, void *event_args)
   fd->callback.result_delegate = vary[3];
 
   // Set the message
-  MCcall(set_mc_str(fd->message_textblock->str,  message == NULL ? "" : message));
+  MCcall(set_mc_str(fd->message_textblock->str, message == NULL ? "" : message));
 
   // TODO -- set starting filename
   fd->specified_path_set_from_folder_item = false;
@@ -295,6 +298,7 @@ int _mc_on_save_file_dialog_request(void *handler_state, void *event_args)
 
   // Display
   fd->node->layout->visible = true;
+  MCcall(mca_focus_node(fd->input_textbox->node));
 
   return 0;
 }
@@ -395,6 +399,7 @@ int _mc_init_file_dialog_ui(mc_node *module_node)
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
+  fd->input_textbox->tag = fd;
   fd->input_textbox->submit = (void *)&_mc_file_dialog_textbox_submit;
 
   // Open Button
@@ -442,8 +447,7 @@ int mc_fd_init_file_dialog(mc_node *app_root)
   MCcall(_mc_init_file_dialog_data(node));
   MCcall(_mc_init_file_dialog_ui(node));
 
-  MCcall(
-      mca_register_event_handler(MC_APP_EVENT_SAVE_FILE_DIALOG_REQUESTED, _mc_on_save_file_dialog_request, node->data));
+  MCcall(mca_register_event_handler(MC_APP_EVENT_FILE_DIALOG_REQUESTED, _mc_file_dialog_requested, node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 

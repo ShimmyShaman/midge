@@ -891,6 +891,22 @@ int mca_set_node_requires_rerender(mc_node *node)
   return 0;
 }
 
+int mca_render_typical_nodes_children_headless(render_thread_info *render_thread, mc_node_list *children)
+{
+  mc_node *child;
+  for (int a = 0; a < children->count; ++a) {
+    child = children->items[a];
+    if (child->layout && child->layout->visible && child->layout->render_headless &&
+        child->layout->__requires_rerender) {
+      // TODO fptr casting
+      void (*render_node_headless)(render_thread_info *, mc_node *) =
+          (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      render_node_headless(render_thread, child);
+    }
+  }
+  return 0;
+}
+
 int mca_render_typical_nodes_children_present(image_render_details *image_render_queue, mc_node_list *children)
 {
   mc_node *child;
@@ -1019,7 +1035,7 @@ int mca_fire_event_and_release_data(mc_app_event_type event_type, void *event_ar
   MCcall(mca_fire_event(event_type, event_arg));
 
   if (release_count) {
-    puts("TODO -- mca_fire_event_and_release_data va_arg fix");
+    puts("TODO -- mca_fire_event_and_release_data va_arg/va_list fix");
     // TODO -- make this work
     // va_list ptrs_list;
     // va_start(ptrs_list, release_count);

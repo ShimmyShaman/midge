@@ -75,7 +75,7 @@ void register_midge_error_tag(const char *fmt, ...)
 
   int index = MIDGE_ERROR_TAG_INDEX % MIDGE_ERROR_TAG_MAX_SIZE;
   char *str = MIDGE_ERROR_TAG[index];
-  uint *str_alloc = &MIDGE_ERROR_TAG_STR_LEN[index];
+  unsigned int *str_alloc = &MIDGE_ERROR_TAG_STR_LEN[index];
   ++MIDGE_ERROR_TAG_INDEX; // = (MIDGE_ERROR_TAG_INDEX + 1) % MIDGE_ERROR_TAG_MAX_SIZE;
 
   int si = 0;
@@ -369,7 +369,7 @@ void midge_error_print_thread_stack_trace()
   printf("\nThread-Id:%lu\n", threades->thread_id);
 
   for (int i = 0; i <= threades->stack_index; ++i) {
-    printf("[%i]@%s :(file='%s:%i')\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
+    printf("[%i]%s :(file='%s:%i')\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
            threades->stack[i].line);
   }
 }

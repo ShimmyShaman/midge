@@ -152,6 +152,7 @@ int mca_set_node_requires_layout_update(mc_node *node);
 int mca_set_descendents_require_layout_update(mc_node_list *node_descendents_list);
 int mca_set_node_requires_rerender(mc_node *node);
 
+int mca_render_typical_nodes_children_headless(render_thread_info *render_thread, mc_node_list *children);
 int mca_render_typical_nodes_children_present(image_render_details *image_render_queue, mc_node_list *children);
 
 int mca_focus_node(mc_node *node);
@@ -167,8 +168,10 @@ int mca_register_loaded_project(mc_project_info *project);
 //                               int (*update_callback)(frame_time *, void *));
 
 // util.c
+/* Adds to an array which doubles in size every time it reaches a count equal to a power of two */
+int mc_grow_array(void **ary, unsigned int *ptr_count, size_t item_allocation_size, void **ptr_data);
 int reallocate_array(void **array, unsigned int *current_allocation, unsigned int desired_allocation,
-                     size_t item_allocation_size);
+                     size_t item_allocation_size, bool newmem_set_zero);
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
 // @optional_item_allocation_size may be zero indicating no memory shall be assigned to the later allocation sizes.
 int reallocate_collection(void ***collection, unsigned int *current_allocation, unsigned int desired_allocation,

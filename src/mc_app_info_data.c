@@ -14,6 +14,7 @@ void mc_init_midge_app_info()
   // Instance
   __mc_midge_app_info = malloc(sizeof(midge_app_info));
   __mc_midge_app_info->ROOT_UID = MIDGE_APP_INFO_ROOT_UID;
+  __mc_midge_app_info->uid_counter = 100U;
 
   mc_obtain_app_itp_data(&__mc_midge_app_info->itp_data);
   __mc_midge_app_info->global_node = __mc_midge_app_info->itp_data->global_node;
@@ -54,6 +55,7 @@ void mc_init_midge_app_info()
   }
 
   // Projects
+  __mc_midge_app_info->projects.active = NULL;
   __mc_midge_app_info->projects.capacity = 0U;
   __mc_midge_app_info->projects.count = 0U;
 }

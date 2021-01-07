@@ -53,8 +53,9 @@ void _mcu_get_interactive_nodes_within_node_at_point(mc_node *node, int screen_x
     // A non-visible node
     return;
   }
-
   b = &node->layout->__bounds;
+  // printf("%s (%i %i) %i %i %i %i\n", node->name, screen_x, screen_y, (int)b->x, (int)b->y, (int)(b->x + b->width),
+  //        (int)(b->y + b->height));
   if (screen_x < (int)b->x || screen_y < (int)b->y || screen_x >= (int)(b->x + b->width) ||
       screen_y >= (int)(b->y + b->height))
     return;
@@ -146,7 +147,7 @@ void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list
 //   // else {
 //   // }
 //   // // pthread_mutex_lock(&global_data->uid_counter.mutex);
-//   // // node->uid = global_data->uid_counter.uid_index++;
+//   // // node->uid = global_data->uid_counter.uid_counter++;
 //   // // pthread_mutex_unlock(&global_data->uid_counter.mutex);
 
 //   // UI Element

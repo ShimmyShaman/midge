@@ -5,6 +5,8 @@
 #include "mc_str.h"
 #include "render/render_common.h"
 
+#include "modules/collections/hash_table.h"
+
 // typedef enum mce_source_token_type {
 //   MCE_SE_NULL = 0,
 //   MCE_SE_UNPROCESSED_TEXT,
@@ -47,10 +49,57 @@
 //   } render_target;
 // } mce_source_line;
 
+typedef struct mc_source_editor_file {
+  mc_source_file_info *sf;
+
+  int scroll_offset;
+  struct {
+    int count, size;
+    mc_str *items;
+  } lines;
+} mc_source_editor_file;
+
+typedef struct mc_source_editor_line {
+  bool active;
+  unsigned int draw_offset_y;
+  unsigned int width, height;
+  mcr_texture_image *image;
+} mc_source_editor_line;
+
+typedef struct mc_source_editor_line_group {
+  hash_table_t cache;
+  int lines_size;
+  mc_source_editor_line *lines;
+
+} mc_source_editor_line_group;
+
 // struct mce_source_editor_pool;
 // struct mce_source_editor_pool *source_editor_pool;
-typedef struct mc_se_source_editor {
+typedef struct mc_source_editor {
   mc_node *node;
+
+  struct {
+    unsigned int size, used;
+    mc_source_editor_file *items;
+    mc_source_editor_file *focus;
+  } source_files;
+
+  struct {
+    unsigned int width, height;
+    mcr_texture_image *image;
+    bool requires_rerender;
+  } tab_index;
+
+  struct {
+    unsigned int left, top, bottom;
+  } content_padding;
+
+  struct {
+    render_color color;
+    unsigned int size;
+  } border;
+
+  mc_source_editor_line_group line_images;
 
   // struct {
   //   struct {
@@ -65,7 +114,6 @@ typedef struct mc_se_source_editor {
   // } pool;
 
   render_color background_color;
-  render_color border_color;
   // struct {
   //   render_color color;
   //   unsigned int thickness;
@@ -103,7 +151,7 @@ typedef struct mc_se_source_editor {
   //   int line, col;
   // } selection;
 
-} mc_se_source_editor;
+} mc_source_editor;
 
 // typedef struct mce_source_editor_pool {
 //   unsigned int max_instance_count;

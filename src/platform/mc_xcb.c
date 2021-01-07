@@ -340,6 +340,7 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
     // event->pad[4],
     //        event->pad[5], event->pad[6]);
     // printf("xcb_sequence:%u\n", event->sequence);
+    // printf("xcb_response_type:%u\n", event->response_type);
 
     switch (event->response_type & ~0x80) {
     case XCB_CLIENT_MESSAGE:

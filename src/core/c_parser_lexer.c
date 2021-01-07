@@ -715,7 +715,9 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
   case MC_SYNTAX_FIELD_DECLARATOR: {
     syntax_node->field_declarator.type_dereference = NULL;
     syntax_node->field_declarator.name = NULL;
-    syntax_node->field_declarator.array_size = NULL;
+    syntax_node->field_declarator.array_dimensions = (mc_syntax_node_list *)malloc(sizeof(mc_syntax_node_list));
+    syntax_node->field_declarator.array_dimensions->alloc = 0;
+    syntax_node->field_declarator.array_dimensions->count = 0;
     syntax_node->field_declarator.function_pointer = NULL;
   } break;
   case MC_SYNTAX_FUNCTION_POINTER_DECLARATOR: {
@@ -897,22 +899,20 @@ int mcs_construct_syntax_node(parsing_state *ps, mc_syntax_node_type node_type, 
 }
 
 // TODO -- inline this method
-int release_syntax_node_list(mc_syntax_node_list *list, bool release_items)
+void release_syntax_node_list(mc_syntax_node_list *list, bool release_items)
 {
   if (!list)
-    return 0;
+    return;
 
   if (list->alloc) {
     for (int i = 0; release_items && i < list->count; ++i) {
-      MCcall(release_syntax_node(list->items[i]));
+      release_syntax_node(list->items[i]);
     }
 
     free(list->items);
   }
 
   free(list);
-
-  return 0;
 }
 
 int release_syntax_node(mc_syntax_node *sn)
@@ -935,7 +935,7 @@ int release_syntax_node(mc_syntax_node *sn)
   // Release all created lists (but not their items which were released with children above)
   switch (sn->type) {
   case MC_SYNTAX_FUNCTION: {
-    MCcall(release_syntax_node_list(sn->function.parameters, false));
+    release_syntax_node_list(sn->function.parameters, false);
   } break;
   case MC_SYNTAX_STRUCT_DECL: {
     release_syntax_node_list(sn->struct_decl.fields, false);
@@ -979,9 +979,11 @@ int release_syntax_node(mc_syntax_node *sn)
   case MC_SYNTAX_INITIALIZER_EXPRESSION: {
     release_syntax_node_list(sn->initializer_expression.list, false);
   } break;
+  case MC_SYNTAX_FIELD_DECLARATOR: {
+    release_syntax_node_list(sn->field_declarator.array_dimensions, false);
+  } break;
   case MC_SYNTAX_FILE_ROOT:
   case MC_SYNTAX_TYPE_IDENTIFIER:
-  case MC_SYNTAX_FIELD_DECLARATOR:
   case MC_SYNTAX_DEREFERENCE_SEQUENCE:
   case MC_SYNTAX_TYPE_ALIAS:
   case MC_SYNTAX_PARAMETER_DECLARATION:
@@ -1358,6 +1360,13 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
   case '/': {
     int s = *index;
     switch (code[s + 1]) {
+    case '=': {
+      *token_type = MC_TOKEN_DIVIDE_AND_ASSIGN_OPERATOR;
+      if (text) {
+        *text = strdup("/=");
+      }
+      *index += 2;
+    } break;
     case '/': {
       *token_type = MC_TOKEN_LINE_COMMENT;
       while (1) {
@@ -2019,7 +2028,7 @@ int _mcs_parse_token(char *code, int *index, mc_token_type *token_type, char **t
   return 0;
 }
 
-int mcs_is_supernumerary_token(mc_token_type token_type, bool *is_supernumerary_token)
+void mcs_is_supernumerary_token(mc_token_type token_type, bool *is_supernumerary_token)
 {
   switch (token_type) {
   case MC_TOKEN_MULTI_LINE_COMMENT:
@@ -2036,8 +2045,6 @@ int mcs_is_supernumerary_token(mc_token_type token_type, bool *is_supernumerary_
 
   // printf("issupernum: %s = %s\n", get_mc_token_type_name(token_type), (*is_supernumerary_token) ? "is!" : "is
   // not!");
-
-  return 0;
 }
 
 int mcs_peek_token_type(parsing_state *ps, bool include_supernumerary_tokens, int tokens_ahead,
@@ -2268,7 +2275,7 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
       MCerror(2235, "Initializer not permitted here");
     }
 
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, fp_decl));
+    mcs_parse_through_supernumerary_tokens(ps, fp_decl);
 
     mc_syntax_node *assignment_initializer;
     MCcall(mcs_construct_syntax_node(ps, MC_SYNTAX_VARIABLE_ASSIGNMENT_INITIALIZER, NULL, fp_decl,
@@ -2276,7 +2283,7 @@ int mcs_parse_function_pointer_declarator(parsing_state *ps, mc_syntax_node *par
     fp_decl->fptr_declarator.initializer = assignment_initializer;
 
     MCcall(mcs_parse_through_token(ps, assignment_initializer, MC_TOKEN_ASSIGNMENT_OPERATOR, NULL));
-    MCcall(mcs_parse_through_supernumerary_tokens(ps, assignment_initializer));
+    mcs_parse_through_supernumerary_tokens(ps, assignment_initializer);
 
     MCcall(mcs_parse_expression(ps, assignment_initializer,
                                 &assignment_initializer->variable_assignment_initializer.value_expression));
@@ -4654,7 +4661,7 @@ int mcs_parse_pp_include(parsing_state *ps, mc_syntax_node *parent, mc_syntax_no
 
   // Temporary -- just parse the rest of the line
   MCcall(mcs_parse_through_token(ps, include_directive, MC_TOKEN_PP_KEYWORD_INCLUDE, NULL));
-  MCcall(mcs_parse_through_supernumerary_tokens(ps, include_directive));
+  mcs_parse_through_supernumerary_tokens(ps, include_directive);
 
   mc_token_type token_type;
   MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
@@ -5099,9 +5106,8 @@ int mcs_parse_field_declarator(parsing_state *ps, mc_syntax_node *parent, mc_syn
   mcs_peek_token_type(ps, true, 0, &token_type);
   if (token_type == MC_TOKEN_OPENING_BRACKET) {
     declarator->field_declarator.name = NULL;
-    declarator->field_declarator.array_size = NULL;
 
-    //   // It's a function pointer!
+    // It's a function pointer!
     MCcall(mcs_parse_function_pointer_declarator(ps, declarator, false, false,
                                                  &declarator->field_declarator.function_pointer));
   }
@@ -5110,23 +5116,29 @@ int mcs_parse_field_declarator(parsing_state *ps, mc_syntax_node *parent, mc_syn
 
     MCcall(mcs_parse_through_token(ps, declarator, MC_TOKEN_IDENTIFIER, &declarator->field_declarator.name));
 
-    mcs_peek_token_type(ps, false, 0, &token_type);
+    MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
     if (token_type == MC_TOKEN_SQUARE_OPENING_BRACKET) {
-      // Is an array declaration
-      MCcall(mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_OPENING_BRACKET, NULL));
-      mcs_parse_through_supernumerary_tokens(ps, declarator);
+      while (token_type == MC_TOKEN_SQUARE_OPENING_BRACKET) {
+        // Is an array declaration
+        mcs_parse_through_supernumerary_tokens(ps, declarator);
+        MCcall(mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_OPENING_BRACKET, NULL));
+        mcs_parse_through_supernumerary_tokens(ps, declarator);
 
-      mcs_peek_token_type(ps, true, 0, &token_type);
-      if (token_type != MC_TOKEN_NUMERIC_LITERAL && token_type != MC_TOKEN_IDENTIFIER) {
-        MCerror(3994, "Unexpected token: Expected numeric expression");
+        MCcall(mcs_peek_token_type(ps, true, 0, &token_type));
+        if (token_type != MC_TOKEN_NUMERIC_LITERAL && token_type != MC_TOKEN_IDENTIFIER) {
+          MCerror(3994, "Unexpected token: Expected numeric expression");
+        }
+
+        mc_syntax_node *dimension_size;
+        MCcall(mcs_parse_through_token(ps, declarator, token_type, &dimension_size));
+        MCcall(append_to_collection((void ***)&declarator->field_declarator.array_dimensions->items,
+                                    &declarator->field_declarator.array_dimensions->alloc,
+                                    &declarator->field_declarator.array_dimensions->count, dimension_size));
+
+        mcs_parse_through_supernumerary_tokens(ps, declarator);
+        MCcall(mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_CLOSING_BRACKET, NULL));
+        MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
       }
-
-      MCcall(mcs_parse_through_token(ps, declarator, token_type, &declarator->field_declarator.array_size));
-      mcs_parse_through_supernumerary_tokens(ps, declarator);
-      MCcall(mcs_parse_through_token(ps, declarator, MC_TOKEN_SQUARE_CLOSING_BRACKET, NULL));
-    }
-    else {
-      declarator->field_declarator.array_size = NULL;
     }
   }
 
@@ -5135,15 +5147,14 @@ int mcs_parse_field_declarator(parsing_state *ps, mc_syntax_node *parent, mc_syn
 
 int mcs_parse_field_declarators(parsing_state *ps, mc_syntax_node *field_decl, mc_syntax_node_list *declarators_list)
 {
-
   while (1) {
     mc_syntax_node *declarator;
     MCcall(mcs_parse_field_declarator(ps, field_decl, &declarator));
 
-    append_to_collection((void ***)&declarators_list->items, &declarators_list->alloc, &declarators_list->count,
-                         declarator);
+    MCcall(append_to_collection((void ***)&declarators_list->items, &declarators_list->alloc, &declarators_list->count,
+                                declarator));
     mc_token_type token_type;
-    mcs_peek_token_type(ps, false, 0, &token_type);
+    MCcall(mcs_peek_token_type(ps, false, 0, &token_type));
     if (token_type == MC_TOKEN_SEMI_COLON) {
       break;
     }
@@ -5158,7 +5169,6 @@ int mcs_parse_field_declarators(parsing_state *ps, mc_syntax_node *field_decl, m
 
 int mcs_parse_field_declaration(parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination)
 {
-  register_midge_error_tag("mcs_parse_field_declaration()");
   mc_syntax_node *field_decl;
   mcs_construct_syntax_node(ps, MC_SYNTAX_FIELD_DECLARATION, NULL, parent, &field_decl);
   if (additional_destination) {
@@ -5180,9 +5190,7 @@ int mcs_parse_field_declaration(parsing_state *ps, mc_syntax_node *parent, mc_sy
   field_decl->field.declarators->count = 0;
 
   MCcall(mcs_parse_field_declarators(ps, field_decl, field_decl->field.declarators));
-  // }
 
-  register_midge_error_tag("mcs_parse_field_declaration(~)");
   return 0;
 }
 
@@ -5213,9 +5221,9 @@ int mcs_parse_struct_declaration_list(parsing_state *ps, mc_syntax_node *parent,
     case MC_TOKEN_SIGNED_KEYWORD:
     case MC_TOKEN_UNSIGNED_KEYWORD: {
       mc_syntax_node *field_declaration;
-      mcs_parse_field_declaration(ps, parent, &field_declaration);
+      MCcall(mcs_parse_field_declaration(ps, parent, &field_declaration));
 
-      append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, field_declaration);
+      MCcall(append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, field_declaration));
 
       mcs_parse_through_supernumerary_tokens(ps, parent);
       MCcall(mcs_parse_through_token(ps, parent, MC_TOKEN_SEMI_COLON, NULL));
@@ -5253,9 +5261,9 @@ int mcs_parse_struct_declaration_list(parsing_state *ps, mc_syntax_node *parent,
       // Parse appropriately
       if (type_specifier) {
         mc_syntax_node *field_declaration;
-        mcs_parse_field_declaration(ps, parent, &field_declaration);
+        MCcall(mcs_parse_field_declaration(ps, parent, &field_declaration));
 
-        append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, field_declaration);
+        MCcall(append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, field_declaration));
 
         mcs_parse_through_supernumerary_tokens(ps, parent);
         MCcall(mcs_parse_through_token(ps, parent, MC_TOKEN_SEMI_COLON, NULL));
@@ -5263,9 +5271,9 @@ int mcs_parse_struct_declaration_list(parsing_state *ps, mc_syntax_node *parent,
       else {
         mc_syntax_node *nested_declaration;
         mcs_construct_syntax_node(ps, MC_SYNTAX_NESTED_TYPE_DECLARATION, NULL, parent, &nested_declaration);
-        append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, nested_declaration);
+        MCcall(append_to_collection((void ***)&fields->items, &fields->alloc, &fields->count, nested_declaration));
 
-        mcs_parse_type_declaration(ps, nested_declaration, &nested_declaration->nested_type.declaration);
+        MCcall(mcs_parse_type_declaration(ps, nested_declaration, &nested_declaration->nested_type.declaration));
         mcs_parse_through_supernumerary_tokens(ps, parent);
 
         mcs_peek_token_type(ps, false, 0, &token_type);
@@ -5342,10 +5350,10 @@ int mcs_parse_type_declaration(parsing_state *ps, mc_syntax_node *parent, mc_syn
     mcs_parse_through_supernumerary_tokens(ps, type_definition);
 
     if (is_struct) {
-      mcs_parse_struct_declaration_list(ps, type_definition, &type_definition->struct_decl.fields);
+      MCcall(mcs_parse_struct_declaration_list(ps, type_definition, &type_definition->struct_decl.fields));
     }
     else {
-      mcs_parse_struct_declaration_list(ps, type_definition, &type_definition->union_decl.fields);
+      MCcall(mcs_parse_struct_declaration_list(ps, type_definition, &type_definition->union_decl.fields));
     }
 
     MCcall(mcs_parse_through_token(ps, type_definition, MC_TOKEN_CURLY_CLOSING_BRACKET, NULL));
@@ -5390,18 +5398,20 @@ int mcs_parse_type_alias_definition(parsing_state *ps, mc_syntax_node *parent, m
     switch (token_type) {
     case MC_TOKEN_CURLY_OPENING_BRACKET: {
       // Requires type alias definition
-      mcs_parse_type_declaration(ps, type_alias_definition, &type_alias_definition->type_alias.type_descriptor);
+      MCcall(mcs_parse_type_declaration(ps, type_alias_definition, &type_alias_definition->type_alias.type_descriptor));
     } break;
     case MC_TOKEN_IDENTIFIER: {
       mcs_peek_token_type(ps, false, 2, &token_type);
       switch (token_type) {
       case MC_TOKEN_CURLY_OPENING_BRACKET: {
         // Type Definition & Struct definition
-        mcs_parse_type_declaration(ps, type_alias_definition, &type_alias_definition->type_alias.type_descriptor);
+        MCcall(
+            mcs_parse_type_declaration(ps, type_alias_definition, &type_alias_definition->type_alias.type_descriptor));
       } break;
       case MC_TOKEN_IDENTIFIER: {
         // Type Definition only
-        mcs_parse_type_declaration(ps, type_alias_definition, &type_alias_definition->type_alias.type_descriptor);
+        MCcall(
+            mcs_parse_type_declaration(ps, type_alias_definition, &type_alias_definition->type_alias.type_descriptor));
       } break;
       default: {
         print_parse_error(ps->code, ps->index, "see-below", "");
@@ -5523,7 +5533,7 @@ int mcs_parse_extern_c_block(parsing_state *ps, mc_syntax_node *parent, mc_synta
 
       mc_syntax_node *declaration;
       MCcall(mcs_parse_function_definition(ps, extern_block, &declaration));
-      MCcall(mcs_parse_through_supernumerary_tokens(ps, extern_block));
+      mcs_parse_through_supernumerary_tokens(ps, extern_block);
 
       append_to_collection((void ***)&extern_block->extern_block.declarations->items,
                            &extern_block->extern_block.declarations->alloc,
@@ -5607,12 +5617,12 @@ int mcs_parse_root_statement(parsing_state *ps, mc_syntax_node *parent, mc_synta
     MCcall(mcs_parse_preprocessor_directive(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_TYPEDEF_KEYWORD: {
-    mcs_parse_type_alias_definition(ps, parent, additional_destination);
+    MCcall(mcs_parse_type_alias_definition(ps, parent, additional_destination));
   } break;
   case MC_TOKEN_UNION_KEYWORD:
   case MC_TOKEN_STRUCT_KEYWORD: {
     mc_syntax_node *declaration;
-    mcs_parse_type_declaration(ps, parent, &declaration);
+    MCcall(mcs_parse_type_declaration(ps, parent, &declaration));
     if (additional_destination) {
       *additional_destination = declaration;
     }

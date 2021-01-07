@@ -12,10 +12,9 @@
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
-#include "modules/mc_io/mc_io.h"
 #include "modules/ui_elements/ui_elements.h"
 
-#include "modules/modus_operandi/modus_operandi.h"
+#include "modules/modus_operandi/mo_types.h"
 #include "modules/modus_operandi/process_step_dialog.h"
 
 void _mc_mocsd_render_headless(render_thread_info *render_thread, mc_node *node)
@@ -182,7 +181,7 @@ int _mc_mocsd_init_data(mc_node *module_node, mc_process_step_dialog_data **p_da
   psdd->callback.state = NULL;
   psdd->callback.result_delegate = NULL;
 
-  create_hash_table(12, &psdd->options_panels);
+  MCcall(init_hash_table(12, &psdd->options_panels));
   psdd->active_options_panel = NULL;
 
   // mo_data->render_target.image = NULL;

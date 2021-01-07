@@ -734,7 +734,7 @@ int tinyobj_parse_obj(const char *file_name, tinyobj_obj **obj)
 
   commands = (Command *)malloc(sizeof(Command) * num_lines);
 
-  create_hash_table(10, &material_table);
+  MCcall(init_hash_table(10, &material_table));
 
   /* 2. parse each line */
   {

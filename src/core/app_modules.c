@@ -59,7 +59,6 @@ int mca_load_modules()
   const char *module_directories[] = {
       "mc_io",
       "collections",
-      "info_transcription",
       "render_utilities",
       "ui_elements",
       "dialogs",
@@ -124,21 +123,31 @@ int _mca_load_project(const char *base_path, const char *project_name)
 
   char buf[512];
   mc_project_info *project = malloc(sizeof(mc_project_info));
+  project->source_files.capacity = project->source_files.count = 0U;
+
   project->name = strdup(project_name);
   sprintf(buf, "%s/%s", base_path, project_name);
   project->path = strdup(buf);
+
+  // Sub-Folders
   strcat(buf, "/src");
   project->path_src = strdup(buf);
+  sprintf(buf, "%s/%s", project->path, ".mprj");
+  project->path_mprj_data = strdup(buf);
 
   // Check
   if (access(project->path, F_OK) == -1) {
-    MCerror(2135, "Cannot Find project folder '%s' for project '%s'", project->path, project_name);
+    MCerror(2135, "Cannot find folder '%s' for project '%s'", project->path, project_name);
+  }
+  if (access(project->path_mprj_data, F_OK) == -1) {
+    // puts("Cannot find midge-config for project '%s'. Creating it...", project_name);
+    MCerror(2137, "Cannot find midge-config-folder '%s' for project '%s'", project->path_mprj_data, project_name);
   }
 
   // Load the source
   // Find the build list
   char *bltxt;
-  sprintf(buf, "%s/.proj/build_list", project->path);
+  sprintf(buf, "%s/build_list", project->path_mprj_data);
   MCcall(read_file_text(buf, &bltxt));
   // puts(bltxt);
 
@@ -157,7 +166,12 @@ int _mca_load_project(const char *base_path, const char *project_name)
     //           "Loading project='%s'. Could not find This could not be accessed for project_name='%s'",
     //           project_name);
     // }
-    MCcall(mcs_interpret_file(buf));
+    
+    mc_source_file_info *sf;
+    MCcall(mcs_interpret_source_file(buf, &sf));
+
+    MCcall(append_to_collection((void ***)&project->source_files.items, &project->source_files.capacity,
+                                &project->source_files.count, sf));
 
     if (*c == '\0')
       break;
@@ -172,16 +186,16 @@ int _mca_load_project(const char *base_path, const char *project_name)
   // if (access(buf, F_OK) == -1) {
   //   MCerror(1998,
   //           "Within each projects src folder there must be a file in a folder named 'app' named "
-  //           "'initialize_{project_name}.h' : This could not be accessed for project_name='%s'",
+  //           "'{project_name}.h' : This could not be accessed for project_name='%s'",
   //           project_name);
   // }
 
   // Check
-  sprintf(buf, "%s/app/initialize_%s.c", project->path_src, project_name);
+  sprintf(buf, "%s/app/%s.c", project->path_src, project_name);
   if (access(buf, F_OK) == -1) {
     MCerror(1999,
             "Within each projects src folder there must be a file in a folder named 'app' named "
-            "'initialize_{project_name}.c' : This could not be accessed for project_name='%s'",
+            "'{project_name}.c' : This could not be accessed for project_name='%s'",
             project_name);
   }
 
@@ -189,7 +203,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
   int (*initialize_project)(mc_node *) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
   if (!initialize_project) {
     MCerror(1999,
-            "Within the projects src/app/initialize_{project_name}.c file there must be a function "
+            "Within the projects src/app/{project_name}.c file there must be a function "
             "with the signature 'int %s(mc_node *)' : This could not be accessed for project_name='%s'",
             buf, project_name);
   }
@@ -204,6 +218,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
   project->root_node = project_root;
   MCcall(mca_register_loaded_project(project));
 
+  app_info->projects.active = project;
   // MCcall(mcs_interpret_file(buf));
 
   // // Initialize the module

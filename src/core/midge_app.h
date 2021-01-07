@@ -48,6 +48,8 @@ typedef struct midge_app_info {
   struct timespec *app_begin_time;
   bool _exit_requested;
 
+  unsigned int uid_counter;
+
   render_thread_info *render_thread;
   frame_time *elapsed;
 
@@ -74,6 +76,7 @@ typedef struct midge_app_info {
     event_handler_array **items;
   } event_handlers;
   struct {
+    mc_project_info *active;
     mc_project_info *items;
     unsigned int capacity, count;
   } projects;

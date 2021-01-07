@@ -78,80 +78,76 @@ int _mc_find_segment_in_source_file(mc_source_file_info *source_file, mc_source_
   return 0;
 }
 
-int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_node,
-                                               parameter_info **initialized_parameter)
+int initialize_parameter_info_from_syntax_node(mc_syntax_node *parameter_syntax_node, parameter_info *param_to_init)
 {
-  parameter_info *parameter = (parameter_info *)calloc(sizeof(parameter_info), 1);
-  parameter->type_id = (struct_id *)malloc(sizeof(struct_id));
-  parameter->type_id->identifier = strdup("parameter_info");
-  parameter->type_id->version = 1U;
+  param_to_init->type_id = (struct_id *)malloc(sizeof(struct_id));
+  param_to_init->type_id->identifier = strdup("parameter_info");
+  param_to_init->type_id->version = 1U;
 
   switch (parameter_syntax_node->parameter.type) {
   case PARAMETER_KIND_STANDARD: {
     register_midge_error_tag("initialize_parameter_info_from_syntax_node-STANDARD");
-    parameter->parameter_type = PARAMETER_KIND_STANDARD;
+    param_to_init->parameter_type = PARAMETER_KIND_STANDARD;
 
     // Name
-    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&parameter->name);
+    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.name, (char **)&param_to_init->name);
 
     // Type
-    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->type_name);
+    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&param_to_init->type_name);
     if (parameter_syntax_node->parameter.type_dereference) {
-      parameter->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
+      param_to_init->type_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
     }
     else {
-      parameter->type_deref_count = 0;
+      param_to_init->type_deref_count = 0;
     }
 
   } break;
   case PARAMETER_KIND_FUNCTION_POINTER: {
     register_midge_error_tag("initialize_parameter_info_from_syntax_node-FUNCTION_POINTER");
-    parameter->parameter_type = PARAMETER_KIND_FUNCTION_POINTER;
+    param_to_init->parameter_type = PARAMETER_KIND_FUNCTION_POINTER;
 
     // Name
     mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.function_pointer->fptr_declarator.name,
-                                 &parameter->name);
+                                 &param_to_init->name);
 
     // Type
-    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier, (char **)&parameter->return_type);
+    mcs_copy_syntax_node_to_text(parameter_syntax_node->parameter.type_identifier,
+                                 (char **)&param_to_init->fptr.return_type);
     if (parameter_syntax_node->parameter.type_dereference) {
-      parameter->return_deref_count = parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
+      param_to_init->fptr.return_deref_count =
+          parameter_syntax_node->parameter.type_dereference->dereference_sequence.count;
     }
     else {
-      parameter->return_deref_count = 0;
+      param_to_init->fptr.return_deref_count = 0;
     }
 
     // print_syntax_node(parameter_syntax_node, 0);
   } break;
   case PARAMETER_KIND_VARIABLE_ARGS: {
     register_midge_error_tag("initialize_parameter_info_from_syntax_node-VARIABLE_ARGS");
-    parameter->parameter_type = PARAMETER_KIND_VARIABLE_ARGS;
+    param_to_init->parameter_type = PARAMETER_KIND_VARIABLE_ARGS;
 
-    parameter->type_name = NULL;
-    parameter->type_version = 0;
-    parameter->type_deref_count = 0;
-    parameter->name = NULL;
+    param_to_init->type_name = NULL;
+    param_to_init->type_deref_count = 0;
+    param_to_init->name = NULL;
 
   } break;
   default:
     MCerror(125, "NotSupported:%i", parameter_syntax_node->parameter.type);
   }
 
-  *initialized_parameter = parameter;
   return 0;
 }
 
 int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
-                                        field_declarator_info_list **field_declarators_list)
+                                        field_declarator_info_list *field_declarators_list)
 {
   if (!syntax_declarators) {
-    *field_declarators_list = NULL;
+    field_declarators_list->count = 0;
     return 0;
   }
 
-  *field_declarators_list = (field_declarator_info_list *)malloc(sizeof(field_declarator_info_list));
-  (*field_declarators_list)->alloc = 0;
-  (*field_declarators_list)->count = 0;
+  field_declarators_list->count = 0;
 
   for (int d = 0; d < syntax_declarators->count; ++d) {
     mc_syntax_node *declarator_syntax = syntax_declarators->items[d];
@@ -183,10 +179,17 @@ int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
       declarator->deref_count = 0;
     }
 
-    declarator->is_array = (declarator_syntax->field_declarator.array_size ? true : false);
+    mc_syntax_node_list *array_dimensions = declarator_syntax->field_declarator.array_dimensions;
+    declarator->array.dimension_count = array_dimensions->count;
+    if (declarator->array.dimension_count) {
+      declarator->array.dimensions = (char **)malloc(sizeof(char *) * array_dimensions->count);
 
-    append_to_collection((void ***)&(*field_declarators_list)->items, &(*field_declarators_list)->alloc,
-                         &(*field_declarators_list)->count, declarator);
+      for (int a = 0; a < array_dimensions->count; ++a)
+        MCcall(mcs_copy_syntax_node_to_text(array_dimensions->items[a], &declarator->array.dimensions[a]));
+    }
+
+    append_to_collection((void ***)&field_declarators_list->items, &field_declarators_list->alloc,
+                         &field_declarators_list->count, declarator);
   }
   // case FIELD_KIND_FUNCTION_POINTER: {
   //   field->field_type = FIELD_KIND_FUNCTION_POINTER;
@@ -205,29 +208,27 @@ int mcs_summarize_field_declarator_list(mc_syntax_node_list *syntax_declarators,
   return 0;
 }
 
-int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_info_list **field_list)
+int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_info_list *field_list)
 {
-  (*field_list) = (field_info_list *)malloc(sizeof(field_info_list));
-  (*field_list)->alloc = 0;
-  (*field_list)->count = 0;
+  field_list->count = 0;
 
   for (int i = 0; i < field_syntax_list->count; ++i) {
     mc_syntax_node *field_syntax = field_syntax_list->items[i];
 
     field_info *field = (field_info *)malloc(sizeof(field_info));
-    field->type_id = (struct_id *)malloc(sizeof(struct_id));
-    field->type_id->identifier = strdup("field_info");
-    field->type_id->version = 1U;
+    field->declarators.alloc = 0U;
+    field->declarators.count = 0U;
 
-    register_midge_error_tag("mcs_summarize_type_field_list-2a");
+    register_midge_error_tag("mcs_summarize_type_field_list-2");
     switch (field_syntax->type) {
     case MC_SYNTAX_FIELD_DECLARATION: {
       switch (field_syntax->field.type) {
       case FIELD_KIND_STANDARD: {
         field->field_type = FIELD_KIND_STANDARD;
-        mcs_copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->field.type_name);
+        register_midge_error_tag("mcs_summarize_type_field_list-2b");
+        MCcall(mcs_copy_syntax_node_to_text(field_syntax->field.type_identifier, &field->std.type_name));
 
-        mcs_summarize_field_declarator_list(field_syntax->field.declarators, &field->field.declarators);
+        MCcall(mcs_summarize_field_declarator_list(field_syntax->field.declarators, &field->declarators));
       } break;
       default: {
         MCerror(302, "NotSupported:%i", field_syntax->field.type);
@@ -235,6 +236,7 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
       }
     } break;
     case MC_SYNTAX_NESTED_TYPE_DECLARATION: {
+      register_midge_error_tag("mcs_summarize_type_field_list-2d");
       if (field_syntax->nested_type.declaration->type == MC_SYNTAX_UNION_DECL) {
         field->field_type = FIELD_KIND_NESTED_UNION;
       }
@@ -244,14 +246,20 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
       else {
         MCerror(328, "Not Supported");
       }
+      register_midge_error_tag("mcs_summarize_type_field_list-2e");
 
       // allocate_and_copy_cstr(field->name, field_syntax->nested_type.name->text);
-      register_sub_type_syntax_to_field_info(field_syntax->nested_type.declaration, field);
+      // printf("field_syntax:%p\n", field_syntax->nested_type.declaration);
+      field->sub_type.fields = (field_info_list *)malloc(sizeof(field_info_list));
+      field->sub_type.fields->alloc = 0U;
+      field->sub_type.fields->count = 0U;
+      MCcall(register_sub_type_syntax_to_field_info(field_syntax->nested_type.declaration, field));
 
+      register_midge_error_tag("mcs_summarize_type_field_list-2f");
       if (field_syntax->nested_type.declarators) {
         field->sub_type.is_anonymous = false;
 
-        mcs_summarize_field_declarator_list(field_syntax->nested_type.declarators, &field->sub_type.declarators);
+        MCcall(mcs_summarize_field_declarator_list(field_syntax->nested_type.declarators, &field->declarators));
       }
       else {
         field->sub_type.is_anonymous = !field->sub_type.type_name;
@@ -261,11 +269,9 @@ int mcs_summarize_type_field_list(mc_syntax_node_list *field_syntax_list, field_
       MCerror(317, "NotSupported:%s", get_mc_syntax_token_type_name(field_syntax->type));
     }
     }
+    register_midge_error_tag("mcs_summarize_type_field_list-3");
 
-    register_midge_error_tag("mcs_summarize_type_field_list-2d");
-
-    append_to_collection((void ***)&(*field_list)->items, &(*field_list)->alloc, &(*field_list)->count, field);
-    register_midge_error_tag("mcs_summarize_type_field_list-2e");
+    append_to_collection((void ***)&field_list->items, &field_list->alloc, &field_list->count, field);
   }
 
   return 0;
@@ -302,7 +308,7 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
       MCerror(298, "Unexpected?");
     }
 
-    mcs_summarize_type_field_list(subtype_syntax->union_decl.fields, &field->sub_type.fields);
+    MCcall(mcs_summarize_type_field_list(subtype_syntax->union_decl.fields, field->sub_type.fields));
   }
   else if (subtype_syntax->type == MC_SYNTAX_STRUCT_DECL) {
     field->sub_type.is_union = false;
@@ -318,7 +324,7 @@ int register_sub_type_syntax_to_field_info(mc_syntax_node *subtype_syntax, field
       MCerror(396, "Unexpected?");
     }
 
-    mcs_summarize_type_field_list(subtype_syntax->struct_decl.fields, &field->sub_type.fields);
+    MCcall(mcs_summarize_type_field_list(subtype_syntax->struct_decl.fields, field->sub_type.fields));
   }
   else {
     MCerror(283, "NotSupported:%s", get_mc_syntax_token_type_name(subtype_syntax->type));
@@ -359,13 +365,13 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
 
   if (!fi) {
     fi = (function_info *)calloc(1, sizeof(function_info));
-    mc_register_function_info_to_app(fi);
+    MCcall(mc_register_function_info_to_app(fi));
 
     fi->name = strdup(function_ast->function.name->text);
     fi->is_defined = false;
 
     // Return-type & Parameters
-    mcs_copy_syntax_node_to_text(function_ast->function.return_type_identifier, &fi->return_type.name);
+    MCcall(mcs_copy_syntax_node_to_text(function_ast->function.return_type_identifier, &fi->return_type.name));
     if (function_ast->function.return_type_dereference) {
       fi->return_type.deref_count = function_ast->function.return_type_dereference->dereference_sequence.count;
     }
@@ -373,12 +379,14 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
       fi->return_type.deref_count = 0;
     }
 
-    fi->parameter_count = function_ast->function.parameters->count;
-    fi->parameters = (parameter_info **)malloc(sizeof(parameter_info *) * fi->parameter_count);
-    for (p = 0; p < fi->parameter_count; ++p) {
-      parameter_info *parameter;
-      initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], &parameter);
-      fi->parameters[p] = parameter;
+    // fi->parameter_count = function_ast->function.parameters->count;
+    // fi->parameters = (parameter_info **)malloc(sizeof(parameter_info *) * fi->parameter_count);
+    for (p = 0; p < function_ast->function.parameters->count; ++p) {
+      parameter_info *pi = (parameter_info *)malloc(sizeof(parameter_info));
+
+      MCcall(initialize_parameter_info_from_syntax_node(function_ast->function.parameters->items[p], pi));
+
+      MCcall(append_to_collection((void ***)&fi->parameters.items, &fi->parameters.alloc, &fi->parameters.count, pi));
     }
   }
   else {
@@ -388,7 +396,13 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
   // puts("bbb");
   if (function_ast->function.code_block) {
     if (fi->is_defined) {
-      MCerror(9443, "Redefinition - TODO check");
+      puts("Redefinition - TODO check");
+
+      // TODO
+      // Just make sure the parameter counts are even for now
+      if (fi->parameters.count != function_ast->function.parameters->count) {
+        MCerror(6873, "TODO");
+      }
     }
 
     // Source
@@ -401,6 +415,9 @@ int mcs_register_function_declaration(mc_source_file_info *source_file, mc_synta
     // Attach to the source file
     fi->source = source_file;
     MCcall(mc_append_segment_to_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
+
+    fi->is_defined = true;
+    MCcall(mcs_copy_syntax_node_to_text(function_ast->function.code_block, &fi->code));
 
     // puts("1");
     // Reset dependencies
@@ -435,28 +452,58 @@ int mcs_register_struct_declaration(mc_source_file_info *source_file, mc_syntax_
   }
 
   struct_info *si;
+  int a, b;
+  bool is_definition;
+  field_info *f;
+  mc_syntax_node *sf;
+
+  // Obtain the struct info
   find_struct_info(struct_ast->struct_decl.type_name->text, &si);
 
   if (!si) {
-    si = malloc(sizeof(struct_info));
-    mc_register_struct_info_to_app(si);
+    si = (struct_info *)malloc(sizeof(struct_info));
+    si->name = strdup(struct_ast->struct_decl.type_name->text);
+    si->fields.alloc = 0U;
+    si->fields.count = 0U;
 
     si->source_file = NULL;
-    MCcall(mcs_copy_syntax_node_to_text(struct_ast->struct_decl.type_name, &si->name));
     si->is_defined = false;
+
+    mc_register_struct_info_to_app(si);
   }
 
-  bool is_definition = false;
+  is_definition = false;
   if (struct_ast->type == MC_SYNTAX_STRUCT_DECL) {
     // Struct
     si->is_union = false;
 
     if (struct_ast->struct_decl.fields) {
       if (si->is_defined) {
-        // TODO -- Actual Redefinition -- For now just check that fields are not different at all
-        printf("WARNING redefinition of struct '%s'\n", si->name);
-        printf("WARNING redefinition of struct '%s'\n", si->name);
-        printf("WARNING redefinition of struct '%s'\n", si->name);
+        bool redef = false;
+        if (si->fields.count == struct_ast->struct_decl.fields->count)
+          redef = true;
+
+        for (a = 0; !redef && a < si->fields.count; ++a) {
+          f = si->fields.items[a];
+          sf = struct_ast->struct_decl.fields->items[a];
+
+          if (f->field_type == FIELD_KIND_NESTED_STRUCT && sf->type != MC_SYNTAX_STRUCT_DECL)
+            redef = true;
+          if (f->field_type == FIELD_KIND_NESTED_UNION && sf->type != MC_SYNTAX_UNION_DECL)
+            redef = true;
+          if (f->field_type == FIELD_KIND_STANDARD) {
+            if (sf->type != MC_SYNTAX_FIELD_DECLARATION)
+              redef = true;
+            // if(!redef && sf->field.type_identifier)
+            redef = true;
+          }
+        }
+        if (redef) {
+          // TODO -- Actual Redefinition -- For now just check that fields are not different at all
+          printf("WARNING redefinition of struct '%s' TODO handle\n", si->name);
+          printf("WARNING redefinition of struct '%s' TODO handle\n", si->name);
+          printf("WARNING redefinition of struct '%s' TODO handle\n", si->name);
+        }
       }
 
       // Define
@@ -570,7 +617,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       } break;
       default:
         print_syntax_node(child->type_alias.type_descriptor, 0);
-        MCerror(1185, "Unhandled type_alias-descriptor-syntax-type:%s",
+        MCerror(3547, "Unhandled type_alias-descriptor-syntax-type:%s",
                 get_mc_syntax_token_type_name(child->type_alias.type_descriptor->type));
         break;
       }
@@ -654,7 +701,7 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
 
 /* interpret file to the global interpreter and process for midge.
  */
-int mcs_interpret_file(const char *filepath)
+int mcs_interpret_source_file(const char *filepath, mc_source_file_info **source_file)
 {
   int res, a;
   char *code;
@@ -746,8 +793,10 @@ int mcs_interpret_file(const char *filepath)
       } break;
       case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
       case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
+      case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
       case MC_SOURCE_SEGMENT_STRUCTURE_DECLARATION: {
         // Just delete the segment
+        // TODO -- this probably isn't right
         free(seg);
       } break;
       default:
@@ -797,6 +846,16 @@ int mcs_interpret_file(const char *filepath)
   free(code);
   MCcall(release_syntax_node(file_ast));
   free(file_ast);
+
+  if (source_file)
+    *source_file = sf;
+
+  return 0;
+}
+
+int mcs_interpret_file(const char *filepath)
+{
+  MCcall(mcs_interpret_source_file(filepath, NULL));
 
   return 0;
 }

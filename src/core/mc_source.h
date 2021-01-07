@@ -32,5 +32,6 @@ int mc_append_segment_to_source_file(mc_source_file_info *source_file, mc_source
 // int instantiate_definition(mc_node *definition_owner, char *code, mc_syntax_node *ast, mc_source_definition *source,
 //                            void **definition_info);
 int mcs_interpret_file(const char *filepath);
+int mcs_interpret_source_file(const char *filepath, mc_source_file_info **source_file);
 
 #endif // MC_SOURCE_H

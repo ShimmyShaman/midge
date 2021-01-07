@@ -9,9 +9,10 @@
 
 #include "core/app_modules.h"
 #include "core/midge_app.h"
+#include "midge_error_handling.h"
 #include "render/render_common.h"
 
-#include "modules/mc_io/mc_io.h"
+#include "modules/mc_io/mc_projects.h"
 #include "modules/ui_elements/ui_elements.h"
 
 // #include "env/environment_definitions.h"
@@ -42,7 +43,8 @@ void mc_mww_render_headless(render_thread_info *render_thread, mc_node *node)
     if (child->layout && child->layout->visible && child->layout->render_headless &&
         child->layout->__requires_rerender) {
       // TODO fptr casting
-      void (*render_node_headless)(render_thread_info *, mc_node *) = (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
+      void (*render_node_headless)(render_thread_info *, mc_node *) =
+          (void (*)(render_thread_info *, mc_node *))child->layout->render_headless;
       render_node_headless(render_thread, child);
     }
   }
@@ -132,7 +134,9 @@ void _mc_mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
 
   // Clear to create the project
   // -- create the project folder
-  mcf_create_project(buf, textbox->contents->text);
+  if (mcf_create_project_file_structure(buf, textbox->contents->text)) {
+    MCVerror(5928, "TODO");
+  }
 
   // Load the created project
   // TODO -- maybe include create_project in the async call too .. maybe it takes too long?? not a priority

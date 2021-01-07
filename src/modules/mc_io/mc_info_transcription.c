@@ -9,8 +9,8 @@
 #include "mc_str.h"
 #include "midge_error_handling.h"
 
-#include "modules/info_transcription/info_transcription.h"
 #include "modules/mc_io/mc_file.h"
+#include "modules/mc_io/mc_info_transcription.h"
 
 int _mc_transcribe_sub_type_info(mc_str *str, field_info *sub_type, int indent);
 
@@ -50,10 +50,10 @@ int _mc_transcribe_field_info_list(mc_str *str, field_info_list *list, int inden
     switch (fi->field_type) {
     case FIELD_KIND_STANDARD: {
       // Type
-      MCcall(append_to_mc_str(str, fi->field.type_name));
+      MCcall(append_to_mc_str(str, fi->std.type_name));
 
       // Declarators
-      MCcall(_mc_transcribe_field_declarator_info_list(str, fi->field.declarators));
+      MCcall(_mc_transcribe_field_declarator_info_list(str, &fi->declarators));
 
       // Rest
       MCcall(append_to_mc_str(str, ";\n"));
@@ -105,7 +105,7 @@ int _mc_transcribe_sub_type_info(mc_str *str, field_info *sub_type, int indent)
   for (int i = 0; i < indent; ++i)
     MCcall(append_to_mc_str(str, "  "));
   MCcall(append_to_mc_str(str, "}"));
-  MCcall(_mc_transcribe_field_declarator_info_list(str, sub_type->sub_type.declarators));
+  MCcall(_mc_transcribe_field_declarator_info_list(str, &sub_type->declarators));
 
   MCcall(append_to_mc_str(str, ";\n"));
   return 0;
@@ -117,7 +117,7 @@ int _mc_transcribe_structure_info(mc_str *str, struct_info *structure)
   MCcall(append_to_mc_str(str, structure->name));
   MCcall(append_to_mc_str(str, " {\n"));
 
-  MCcall(_mc_transcribe_field_info_list(str, structure->fields, 1));
+  MCcall(_mc_transcribe_field_info_list(str, &structure->fields, 1));
 
   MCcall(append_to_mc_str(str, "} "));
   MCcall(append_to_mc_str(str, structure->name));
@@ -126,7 +126,7 @@ int _mc_transcribe_structure_info(mc_str *str, struct_info *structure)
   return 0;
 }
 
-int _mc_transcribe_function_declaration(mc_str *str, function_info *function)
+int _mc_transcribe_function_header(mc_str *str, function_info *function)
 {
   int a, b;
   parameter_info *p;
@@ -138,8 +138,12 @@ int _mc_transcribe_function_declaration(mc_str *str, function_info *function)
 
   MCcall(append_to_mc_str(str, function->name));
   MCcall(append_char_to_mc_str(str, '('));
-  for (a = 0; a < function->parameter_count; ++a) {
-    p = function->parameters[a];
+
+  // printf("parameter_count:%u\n", function->parameter_count);
+  for (int a = 0; a < function->parameters.count; ++a) {
+    p = function->parameters.items[a];
+
+    // printf("--parameter:%p %s\n", p, p ? p->name : "(null)");
 
     if (a) {
       MCcall(append_to_mc_str(str, ", "));
@@ -157,14 +161,30 @@ int _mc_transcribe_function_declaration(mc_str *str, function_info *function)
       MCerror(9650, "TODO parameter_type=%i", p->parameter_type);
     }
   }
-  MCcall(append_to_mc_str(str, ");\n"));
+  MCcall(append_to_mc_str(str, ")"));
+
+  return 0;
+}
+
+int _mc_transcribe_function_declaration(mc_str *str, function_info *function)
+{
+  MCcall(_mc_transcribe_function_header(str, function));
+  MCcall(append_to_mc_str(str, ";\n"));
 
   return 0;
 }
 
 int _mc_transcribe_function_info(mc_str *str, function_info *function)
 {
-  MCerror(7315, "TODO");
+  printf("_mc_transcribe_function_info: function:%p (%s) code:%p\n", function, function ? function->name : "(null)",
+         function ? function->code : NULL);
+
+  MCcall(_mc_transcribe_function_header(str, function));
+
+  MCcall(append_char_to_mc_str(str, ' '));
+  MCcall(append_to_mc_str(str, function->code));
+  MCcall(append_char_to_mc_str(str, '\n'));
+
   return 0;
 }
 
@@ -184,12 +204,40 @@ int _mc_transcribe_include_directive_info(mc_str *str, mc_include_directive_info
   return 0;
 }
 
+int _mc_transcribe_segment_list(mc_str *str, mc_source_file_code_segment_list *segments)
+{
+  for (int a = 0; a < segments->count; ++a) {
+    mc_source_file_code_segment *seg = segments->items[a];
+    switch (seg->type) {
+    case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE:
+      MCcall(_mc_transcribe_include_directive_info(str, seg->include));
+      break;
+    case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
+      MCcall(append_char_to_mc_str(str, '\n'));
+      break;
+    case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
+      MCcall(_mc_transcribe_function_info(str, seg->function));
+      break;
+    case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
+      MCcall(_mc_transcribe_function_declaration(str, seg->function));
+      break;
+    case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION:
+      MCcall(_mc_transcribe_structure_info(str, seg->structure));
+      break;
+    default:
+      MCerror(6458, "Unsupported Segment Type : %i", seg->type);
+    }
+  }
+
+  return 0;
+}
+
 int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
 {
   int a, phase = 0;
 
-  puts("_mc_generate_header_source");
-  puts(source_file->filepath);
+  // puts("_mc_generate_header_source");
+  // puts(source_file->filepath);
   // DEBUG
   // PROTECT CERTAIN SOURCE UNTIL THIS METHOD IS SAFE
   for (int a = 0;; ++a) {
@@ -217,30 +265,7 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
   MCcall(append_uppercase_to_mc_str(str, filename));
   MCcall(append_to_mc_str(str, "_H\n"));
 
-  mc_source_file_code_segment *seg;
-  for (a = 0; a < source_file->segments.count; ++a) {
-    seg = source_file->segments.items[a];
-
-    switch (seg->type) {
-    case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE:
-      MCcall(_mc_transcribe_include_directive_info(str, seg->include));
-      break;
-    case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
-    MCcall(append_char_to_mc_str(str, '\n'));
-      break;
-    case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
-      MCcall(_mc_transcribe_function_info(str, seg->function));
-      break;
-    case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
-      MCcall(_mc_transcribe_function_declaration(str, seg->function));
-      break;
-    case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION:
-      MCcall(_mc_transcribe_structure_info(str, seg->structure));
-      break;
-    default:
-      MCerror(9715, "Unsupported Segment Type : %i", seg->type);
-    }
-  }
+  MCcall(_mc_transcribe_segment_list(str, &source_file->segments));
 
   // End the include guard
   MCcall(append_char_to_mc_str(str, '\n'));
@@ -252,13 +277,37 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
   MCcall(save_text_to_file(source_file->filepath, str->text));
   release_mc_str(str, true);
 
-  puts("END_mc_generate_header_source");
+  // puts("END_mc_generate_header_source");
   return 0;
 }
 
 int _mc_generate_c_source(mc_source_file_info *source_file, mc_str *str)
 {
-  MCerror(1185, "TODO");
+  // DEBUG
+  // PROTECT CERTAIN SOURCE UNTIL THIS METHOD IS SAFE
+  for (int a = 0;; ++a) {
+    if (source_file->filepath[a] == '\0')
+      break;
+    if (!strncmp(source_file->filepath + a, "midge/src/", 10)) {
+      MCerror(7004, "INVALID FUNCTION CALL");
+    }
+  }
+  // DEBUG
+
+  // Extract the name
+  char filename[64];
+  MCcall(mcf_obtain_filename(source_file->filepath, filename, 64));
+
+  // Generate the preamble
+  MCcall(append_to_mc_strf(str, "/* %s.c */\n", filename));
+  MCcall(append_char_to_mc_str(str, '\n'));
+
+  MCcall(_mc_transcribe_segment_list(str, &source_file->segments));
+
+  // Save to file
+  MCcall(save_text_to_file(source_file->filepath, str->text));
+  release_mc_str(str, true);
+
   return 0;
 }
 

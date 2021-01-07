@@ -1,7 +1,7 @@
 // #include "core/core_definitions.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <ctype.h>
@@ -9,10 +9,42 @@
 #include "core/c_parser_lexer.h"
 #include "env/environment_definitions.h"
 
+/*
+ * Obtains the latest index of an array which doubles in allocation every time it reaches a count equal to a power of
+ * two.
+ * @ptr_data will return the pointer to the location in the array of the count-1 item
+ */
+int mc_grow_array(void **ary, unsigned int *ptr_count, size_t item_allocation_size, void **ptr_data)
+{
+  unsigned int count = *ptr_count, alloc;
+  void *pa = *ary;
+
+  /* every power of two we double array size */
+  if ((count & (count - 1)) == 0) {
+    if (!count) {
+      pa = NULL;
+      alloc = 1;
+    }
+    else
+      alloc = count * 2;
+    pa = realloc(pa, alloc * item_allocation_size);
+    if (!pa) {
+      MCerror(9727, "reallocation error");
+    }
+    *ary = pa;
+  }
+
+  if (ptr_data)
+    *ptr_data = (void *)((unsigned char *)pa + item_allocation_size * count);
+  *ptr_count = count + 1;
+
+  return 0;
+}
+
 // @desired_allocation may be zero indicating the reallocate amount will be expanded by a 'reasonable' amount.
 // @optional_item_allocation_size must be non-zero, the size of each item to allocate.
 int reallocate_array(void **array, unsigned int *current_allocation, unsigned int desired_allocation,
-                     size_t item_allocation_size)
+                     size_t item_allocation_size, bool newmem_set_zero)
 {
   unsigned int realloc_amount;
   if (desired_allocation) {
@@ -25,19 +57,26 @@ int reallocate_array(void **array, unsigned int *current_allocation, unsigned in
   else
     realloc_amount = *current_allocation + 4 + *current_allocation / 3;
 
-  printf("reallocate array size %i->%i\n", *current_allocation, realloc_amount);
+  // printf("reallocate array size %i->%i\n", *current_allocation, realloc_amount);
   void *new_array = (void **)malloc(item_allocation_size * realloc_amount);
   if (new_array == NULL) {
-    MCerror(32, "append_to_array malloc error");
+    MCerror(32, "apaend_to_array malloc error");
   }
 
   if (*current_allocation) {
     memcpy(new_array, *array, *current_allocation * item_allocation_size);
     free(*array);
   }
+  if (newmem_set_zero) {
+    // printf("memsetting %p zero from %p for %lu bytes\n", new_array,
+    //        (unsigned char *)new_array + (*current_allocation * sizeof(item_allocation_size)),
+    //        (realloc_amount - *current_allocation) * item_allocation_size));
+    memset((unsigned char *)new_array + (*current_allocation * item_allocation_size), 0,
+           (realloc_amount - *current_allocation) * item_allocation_size);
+  }
 
-  printf("Expanded array capacity from %u to %u items, each with size=%lu\n", *current_allocation, realloc_amount,
-         item_allocation_size);
+  // printf("Expanded array capacity from %u to %u items, each with size=%lu\n", *current_allocation, realloc_amount,
+  //        item_allocation_size);
 
   *array = new_array;
   *current_allocation = realloc_amount;
@@ -63,7 +102,7 @@ int reallocate_collection(void ***collection, unsigned int *current_allocation, 
   // printf("reallocate collection size %i->%i\n", *current_allocation, realloc_amount);
   void **new_collection = (void **)malloc(sizeof(void *) * realloc_amount);
   if (new_collection == NULL) {
-    MCerror(32, "append_to_collection malloc error");
+    MCerror(32, "apaend_to_collection malloc error");
   }
 
   if (*current_allocation) {

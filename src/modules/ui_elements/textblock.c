@@ -105,10 +105,10 @@ void _mcu_textblock_handle_input_event(mc_node *textblock_node, mci_input_event 
       void (*left_click)(mci_input_event *, mcu_textblock *) =
           (void (*)(mci_input_event *, mcu_textblock *))textblock->left_click;
       left_click(input_event, textblock);
+
+      input_event->handled = true;
     }
   }
-
-  input_event->handled = true;
 }
 
 int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
@@ -136,7 +136,7 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
 
   // printf("mcu-ib-3\n");
   textblock->tag = NULL;
-  textblock->left_click = NULL;
+  textblock->left_click = NULL; // TODO -- remove this textblocks shouldn't be able to be clicked? they're not buttons
 
   MCcall(init_mc_str(&textblock->str));
   MCcall(set_mc_str(textblock->str, "textblock"));

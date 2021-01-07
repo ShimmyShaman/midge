@@ -12,11 +12,11 @@
 #include "env/environment_definitions.h"
 
 #include "modules/collections/hash_table.h"
-#include "modules/mc_io/mc_io.h"
+#include "modules/mc_io/mc_file.h"
 #include "modules/project_explorer/project_explorer_window.h"
 #include "modules/ui_elements/ui_elements.h"
 
-#define MCM_PJXP_ENTRY_HEIGHT 12
+#define MCM_PJXP_ENTRY_HEIGHT 24
 #define MCM_PJXP_ENTRY_INDENT 10
 
 typedef enum mcm_pjxp_entry_type {
@@ -301,6 +301,9 @@ int _mcm_pjxp_update_node_layout(mc_node *node, mc_rectf const *available_area)
   MCcall(_mcm_pjxp_update_entries_display(pjxp));
   MCcall(mca_set_node_requires_rerender(node));
 
+  // printf("available_area; %i %i %i %i  {children_count=%i}\n", (int)available_area->x, (int)available_area->y,
+  //        (int)(available_area->x + available_area->width), (int)(available_area->y + available_area->height),
+  //        node->children->count);
   MCcall(mca_update_typical_node_layout(node, available_area));
 
   return 0;
@@ -370,12 +373,80 @@ void _mcm_pjxp_render_present(image_render_details *image_render_queue, mc_node 
                                          pjxp->render_target.height, pjxp->render_target.image);
 }
 
+int _mcm_pjxp_activate_entry(project_explorer_data *pjxp, mcm_pjxp_entry *entry)
+{
+  switch (entry->type) {
+  case PJXP_ENTRY_PROJECT:
+  case PJXP_ENTRY_DIRECTORY: {
+    // Toggle the collapse
+    if (hash_table_find(entry->hash, &pjxp->collapsed_entries) != NULL) {
+      hash_table_remove(entry->hash, &pjxp->collapsed_entries);
+    }
+    else {
+      int res = hash_table_insert(entry->hash, NULL, &pjxp->collapsed_entries);
+      if (res) {
+        MCerror(8530, "TODO?");
+      }
+    }
+
+    mca_set_node_requires_layout_update(pjxp->node);
+  } break;
+  case PJXP_ENTRY_HEADER:
+  case PJXP_ENTRY_SOURCE: {
+    char *path = strdup(entry->path->text);
+    // printf("path %p created\n", path);
+    MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, path, 1, path));
+  } break;
+  case PJXP_ENTRY_UNKNOWN: {
+    char buf[8];
+    MCcall(mcf_obtain_file_extension(entry->path->text, buf, 8));
+    if (!strcmp(buf, "vert") || !strcmp(buf, "frag") || !strcmp(buf, "md")) {
+      char *path = strdup(entry->path->text);
+      // printf("path %p created\n", path);
+      MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, path, 1, path));
+    }
+    else if (!strcmp(buf, "png") || !strcmp(buf, "jpeg") || !strcmp(buf, "jpg")) {
+      char buf[256];
+      sprintf(buf, "gimp %s", entry->path->text);
+      system(buf);
+    }
+    else {
+      puts("NotYetImplemented - a means to open the file requested");
+    }
+  } break;
+  default:
+    puts("NotYetImplemented - a means to open the file requested");
+    break;
+  }
+
+  return 0;
+}
+
 void _mcm_pjxp_handle_input(mc_node *node, mci_input_event *input_event)
 {
   // pjxp
   project_explorer_data *pjxp = (project_explorer_data *)node->data;
 
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+
+    int relative_y = input_event->input_state->mouse.y - node->layout->__bounds.y - 4;
+    if (relative_y >= 0) {
+      relative_y /= MCM_PJXP_ENTRY_HEIGHT;
+
+      if (relative_y < pjxp->textblocks.utilized) {
+        mcu_textblock *tb = (mcu_textblock *)pjxp->textblocks.items[relative_y]->node->data;
+        _mcm_pjxp_activate_entry(pjxp, (mcm_pjxp_entry *)tb->tag);
+      }
+    }
+
+    // printf("click was at %u %u\n", input_event->input_state->mouse.x, input_event->input_state->mouse.y);
+    // mc_rectf *b = &pjxp->textblocks.items[3]->node->layout->__bounds;
+    // printf("item 4 is %.2f %.2f %.2f %.2f\n", b->x, b->y, b->width, b->height);
+    // b = &pjxp->textblocks.items[4]->node->layout->__bounds;
+    // printf("item 5 is %.2f %.2f %.2f %.2f\n", b->x, b->y, b->width, b->height);
+    // b = &pjxp->textblocks.items[5]->node->layout->__bounds;
+    // printf("item 6 is %.2f %.2f %.2f %.2f\n", b->x, b->y, b->width, b->height);
+
     // printf("obb\n");
     // if (input_event->button_code == MOUSE_BUTTON_LEFT) {
 
@@ -405,7 +476,7 @@ void _mcm_pjxp_handle_input(mc_node *node, mci_input_event *input_event)
     // }
 
     // mca_focus_node(node);
-    input_event->handled = true;
+    // input_event->handled = true;
   }
 }
 
@@ -431,51 +502,12 @@ int _mcm_pjxp_project_loaded(void *handler_state, void *event_args)
   return 0;
 }
 
-void _mcm_pjxp_textblock_left_click(mci_input_event *input_event, mcu_textblock *textblock)
-{
-  if (!textblock->tag) {
-    MCVerror(7389, "_mcm_pjxp_textblock_left_click missing tag");
-  }
-
-  // Obtain Attached Data
-  project_explorer_data *pjxp = (project_explorer_data *)textblock->node->parent->data;
-  mcm_pjxp_entry *entry = (mcm_pjxp_entry *)textblock->tag;
-
-  // printf("LEFT-CLICK-PROJECT_EXPLORER-ITEM:'%s'\n", entry->path->text);
-  switch (entry->type) {
-  case PJXP_ENTRY_PROJECT:
-  case PJXP_ENTRY_DIRECTORY: {
-    // Toggle the collapse
-    if (hash_table_find(entry->hash, &pjxp->collapsed_entries) != NULL) {
-      hash_table_remove(entry->hash, &pjxp->collapsed_entries);
-    }
-    else {
-      int res = hash_table_insert(entry->hash, NULL, &pjxp->collapsed_entries);
-      if (res) {
-        MCVerror(8530, "TODO?");
-      }
-    }
-
-    mca_set_node_requires_layout_update(pjxp->node);
-  } break;
-  case PJXP_ENTRY_HEADER:
-  case PJXP_ENTRY_SOURCE: {
-    char *path = strdup(entry->path->text);
-    // printf("path %p created\n", path);
-    mca_fire_event_and_release_data(MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED, path, 1, path);
-  } break;
-  default:
-    puts("NotYetImplemented - a means to open the file requested");
-    break;
-  }
-}
-
 int _mcm_pjxp_init_ui(mc_node *pjxp_node)
 {
   project_explorer_data *pjxp = (project_explorer_data *)pjxp_node->data;
 
   // Textblocks
-  int initial_entry_count = pjxp_node->layout->preferred_width / MCM_PJXP_ENTRY_HEIGHT;
+  int initial_entry_count = pjxp_node->layout->preferred_height / MCM_PJXP_ENTRY_HEIGHT;
   for (int a = 0; a < initial_entry_count; ++a) {
     mcu_textblock *tb;
     MCcall(mcu_init_textblock(pjxp_node, &tb));
@@ -489,14 +521,14 @@ int _mcm_pjxp_init_ui(mc_node *pjxp_node)
     tb->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
     tb->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
     tb->node->layout->padding.left = 6;
-    tb->node->layout->padding.top = 4 + a * 24;
+    tb->node->layout->padding.top = 4 + a * MCM_PJXP_ENTRY_HEIGHT;
 
     tb->background_color = COLOR_TRANSPARENT;
     tb->font_color = COLOR_BLACK;
 
     MCcall(set_mc_str(tb->str, "(null)"));
 
-    tb->left_click = (void *)&_mcm_pjxp_textblock_left_click;
+    // tb->left_click = (void *)&_mcm_pjxp_textblock_left_click;
     mcm_pjxp_entry *ent = tb->tag = (void *)malloc(sizeof(mcm_pjxp_entry));
     MCcall(init_mc_str(&ent->path));
     MCcall(init_mc_str(&ent->name)); // TODO -- think this is still a redundant field - probably some others are too
@@ -522,7 +554,7 @@ int _mcm_pjxp_init_data(mc_node *root)
   pjxp->projects.capacity = pjxp->projects.count = 0;
   pjxp->textblocks.capacity = pjxp->textblocks.count = pjxp->textblocks.utilized = 0;
 
-  create_hash_table(256, &pjxp->collapsed_entries);
+  MCcall(init_hash_table(256, &pjxp->collapsed_entries));
   pjxp->scroll_offset.entry_hash = 0LU;
   pjxp->scroll_offset.rough_position = 0;
 

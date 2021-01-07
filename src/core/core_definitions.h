@@ -4,19 +4,33 @@
 #define CORE_DEFINITIONS_H
 
 #include <stdbool.h>
+#include <time.h>
 
 #include "tinycc/libtccinterp.h"
+
+// TODO seperate node and event stuff from source stuff
+
+typedef enum mc_source_entity_focus_options {
+  MC_SRC_FOC_ENT_NONE = 0,
+  MC_SRC_FOC_ENT_REFACTOR_RENAME = 1 << 0,
+} mc_source_entity_focus_options;
 
 // TODO -- identify & document the parameters that need releasing by the event handler functions
 typedef enum mc_app_event_type {
   MC_APP_EVENT_NULL = 0,
   MC_APP_EVENT_POST_INITIALIZATION,
-  // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_project_info *project}
-  MC_APP_EVENT_PROJECT_LOADED,
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is NULL}
   MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED,
+  // int (*event_handler)(void *handler_state, void *event_args)
+  // - event_args is void *[] { const char *project_directory, const char *project_name }
+  MC_APP_EVENT_PROJECT_STRUCTURE_CREATION,
+  // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_project_info *project}
+  MC_APP_EVENT_PROJECT_LOADED,
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
-  MC_APP_EVENT_SOURCE_FILE_OPEN_REQUESTED,
+  MC_APP_EVENT_SOURCE_FILE_OPEN_REQ,
+  // int (*event_handler)(void *handler_state, void *event_args)
+  // - event_args is void *[] { const char *entity_name, mc_source_entity_focus_options *options}
+  MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ,
   // int (*event_handler)(void *handler_state, void *event_args)
   // - event_args is void*[] { const char *dialog_msg, const char *starting_directory, void *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *selected_folder)}
@@ -28,7 +42,7 @@ typedef enum mc_app_event_type {
   //    int (*invoker_result_delegate)(void *invoker_state, char *filepath)}
   // -* starting_directory may be NULL indicating use of current-working-directory
   // -** filepath may be NULL if user cancels
-  MC_APP_EVENT_SAVE_FILE_DIALOG_REQUESTED,
+  MC_APP_EVENT_FILE_DIALOG_REQUESTED,
   // int (*event_handler)(void *handler_state, void *event_args)
   // - event_args is void*[] { const char *prompt_message, const char *default_value, void *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *input_text)}
@@ -36,7 +50,8 @@ typedef enum mc_app_event_type {
   // -** input_text may be NULL if user cancels
   MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED,
   // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void*[] { const char *prompt_message, unsigned int *option_count, const char **options, void *invoker_state,
+  // - event_args is void*[] { const char *prompt_message, unsigned int *option_count, const char **options, void
+  // *invoker_state,
   //    int (*invoker_result_delegate)(void *invoker_state, char *selected_option)}
   // -* prompt_message may be NULL indicating an empty message
   // -** selected_option may be NULL if user cancels
@@ -180,7 +195,6 @@ typedef struct preprocess_define_info {
 
 typedef struct field_declarator_info {
   unsigned int deref_count;
-  bool is_array;
   union {
     char *name;
     struct {
@@ -188,6 +202,14 @@ typedef struct field_declarator_info {
       unsigned int fp_deref_count;
     } function_pointer;
   };
+
+  /* Will be NULL if declarator is not an array; Otherwise, first value will be the array size, the array will dimension
+   * size listings will commence at array_dimensions[1]
+   */
+  struct {
+    unsigned int dimension_count;
+    char **dimensions;
+  } array;
 } field_declarator_info;
 
 typedef struct field_declarator_info_list {
@@ -196,22 +218,20 @@ typedef struct field_declarator_info_list {
 } field_declarator_info_list;
 
 typedef struct field_info {
-  struct_id *type_id;
   field_kind field_type;
 
   union {
     struct {
       char *type_name;
-      struct struct_info *type_info;
-      field_declarator_info_list *declarators;
-    } field;
+    } std;
     struct {
       bool is_union, is_anonymous;
       char *type_name;
       struct field_info_list *fields;
-      field_declarator_info_list *declarators;
     } sub_type;
   };
+
+  field_declarator_info_list declarators;
 } field_info;
 
 typedef struct field_info_list {
@@ -227,7 +247,7 @@ typedef struct struct_info {
   /* The file this structure is defined in */
   struct mc_source_file_info *source_file;
 
-  field_info_list *fields;
+  field_info_list fields;
 } struct_info;
 
 // TODO -- make this more understandable divide into type & declarator maybe
@@ -237,14 +257,13 @@ typedef struct parameter_info {
   union {
     struct {
       char *type_name;
-      unsigned int type_version;
     };
     struct {
       char *return_type;
       unsigned int return_deref_count;
       char *fptr_name;
       // parameter_info_list *parameters;//TODO
-    };
+    } fptr;
   };
   unsigned int type_deref_count;
   char *name;
@@ -260,9 +279,11 @@ typedef struct function_info {
     char *name;
     unsigned int deref_count;
   } return_type;
-  // char *code;
-  unsigned int parameter_count;
-  parameter_info **parameters;
+  char *code;
+  struct {
+    unsigned int alloc, count;
+    parameter_info **items;
+  } parameters;
   // int variable_parameter_begin_index;
 
   unsigned int nb_dependents;
@@ -285,14 +306,17 @@ typedef struct mc_source_file_code_segment {
   };
 } mc_source_file_code_segment;
 
+typedef struct mc_source_file_code_segment_list {
+  unsigned int capacity;
+  unsigned int count;
+  mc_source_file_code_segment **items;
+} mc_source_file_code_segment_list;
+
 typedef struct mc_source_file_info {
   struct_id *type_id;
+  struct timespec file_update;
   char *filepath;
-  struct {
-    unsigned int capacity;
-    unsigned int count;
-    mc_source_file_code_segment **items;
-  } segments;
+  mc_source_file_code_segment_list segments;
 } mc_source_file_info;
 
 struct mc_node;
@@ -349,7 +373,12 @@ typedef struct mc_app_itp_data {
 
 typedef struct mc_project_info {
   char *name;
-  char *path, *path_src;
+  char *path, *path_src, *path_mprj_data;
+
+  struct {
+    unsigned int capacity, count;
+    mc_source_file_info *items;
+  } source_files;
 
   mc_node *root_node;
 } mc_project_info;
