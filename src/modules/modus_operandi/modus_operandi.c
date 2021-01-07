@@ -138,7 +138,7 @@ int _mc_mo_dialog_input_text_entered(void *invoker_state, char *input_text)
   mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
-  if (step->action != MO_OPPA_TEXT_INPUT_DIALOG) {
+  if (step->action != MO_STEP_TEXT_INPUT_DIALOG) {
     MCerror(8140, "TODO - state error");
   }
   if (!input_text) {
@@ -161,7 +161,7 @@ int _mc_mo_dialog_options_text_selected(void *invoker_state, char *selected_text
   mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
-  if (step->action != MO_OPPA_OPTIONS_DIALOG) {
+  if (step->action != MO_STEP_OPTIONS_DIALOG) {
     MCerror(8220, "TODO - state error %i", step->action);
   }
   if (!selected_text) {
@@ -185,7 +185,7 @@ int _mc_mo_dialog_folder_selected(void *invoker_state, char *selected_folder)
   mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
-  if (step->action != MO_OPPA_OPEN_FOLDER_DIALOG) {
+  if (step->action != MO_STEP_OPEN_FOLDER_DIALOG) {
     MCerror(8214, "TODO - state error");
   }
 
@@ -205,7 +205,7 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
   mo_operational_step *step = mod->process_stack.steps[mod->process_stack.index];
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
-  if (step->action != MO_OPPA_FILE_DIALOG) {
+  if (step->action != MO_STEP_FILE_DIALOG) {
     MCerror(8141, "TODO - state error");
   }
 
@@ -224,11 +224,11 @@ int _mc_mo_dialog_filepath_selected(void *invoker_state, char *selected_path)
 int _mc_mo_obtain_context_arg(mo_op_step_context_arg *context_arg, bool *requires_mem_free, void **result)
 {
   switch (context_arg->type) {
-  case MO_OPPC_CSTR: {
+  case MO_STEP_CTXARG_CSTR: {
     *result = (void *)context_arg->data;
     *requires_mem_free = false;
   } break;
-  case MO_OPPC_PROCESS_CONTEXT_PROPERTY: {
+  case MO_STEP_CTXARG_PROCESS_CONTEXT_PROPERTY: {
     MCerror(8162, "TODO");
     // *result = hash_table_get((char *)context_arg->data, &mod->active_process->context);
     // if (!*result) {
@@ -236,17 +236,17 @@ int _mc_mo_obtain_context_arg(mo_op_step_context_arg *context_arg, bool *require
     //           (char *)context_arg->data);
     // }
     // *requires_mem_free = false;
-    // // printf("MO_OPPC_PROCESS_CONTEXT_PROPERTY:'%s'\n", (char *)*result);
+    // // printf("MO_STEP_CTXARG_PROCESS_CONTEXT_PROPERTY:'%s'\n", (char *)*result);
   } break;
   // TODO -- implement when theres some way to inform the calling method to free the set cstr when its done with it.
-  case MO_OPPC_CURRENT_WORKING_DIRECTORY: {
+  case MO_STEP_CTXARG_CURRENT_WORKING_DIRECTORY: {
     char buf[256];
     getcwd(buf, 256);
     *result = (void *)strdup(buf);
     *requires_mem_free = true;
   } break;
-  case MO_OPPC_ACTIVE_PROJECT_SRC_PATH:
-    puts("ERROR TODO -- MO_OPPC_ACTIVE_PROJECT_SRC_PATH");
+  case MO_STEP_CTXARG_ACTIVE_PROJECT_SRC_PATH:
+    puts("ERROR TODO -- MO_STEP_CTXARG_ACTIVE_PROJECT_SRC_PATH");
     *requires_mem_free = false;
   default:
     MCerror(8220, "_mc_mo_obtain_context_arg:Unsupported type>%i", context_arg->type);
@@ -360,7 +360,7 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
 
   bool free_ctx_arg;
   switch (step->action) {
-  case MO_OPPA_TEXT_INPUT_DIALOG: {
+  case MO_STEP_TEXT_INPUT_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 4);
 
     // TODO -- make a define or const of project label
@@ -376,7 +376,7 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
       MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED, vary, 1, vary));
     }
   } break;
-  case MO_OPPA_OPTIONS_DIALOG: {
+  case MO_STEP_OPTIONS_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 5);
 
     vary[0] = step->options_dialog.message;
@@ -387,10 +387,10 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
 
     MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED, vary, 1, vary));
   } break;
-  case MO_OPPA_OPEN_FOLDER_DIALOG: {
+  case MO_STEP_OPEN_FOLDER_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 4);
 
-    puts("WARNING TODO -- MO_OPPA_OPEN_FOLDER_DIALOG-context_arg");
+    puts("WARNING TODO -- MO_STEP_OPEN_FOLDER_DIALOG-context_arg");
     // TODO -- make sure memory free is handled (TODO)
     // TODO -- make a define or const of project label
     vary[0] = (void *)step->folder_dialog.message;
@@ -405,7 +405,7 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
       MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FOLDER_DIALOG_REQUESTED, vary, 2, vary));
     }
   } break;
-  case MO_OPPA_FILE_DIALOG: {
+  case MO_STEP_FILE_DIALOG: {
     vary = (void **)malloc(sizeof(void *) * 4);
 
     // Construct the default filename -- TODO
@@ -421,7 +421,7 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
       MCcall(mca_fire_event_and_release_data(MC_APP_EVENT_FILE_DIALOG_REQUESTED, vary, 2, vary));
     }
   } break;
-  case MO_OPPA_DELEGATE_FUNCTION: {
+  case MO_STEP_DELEGATE_FUNCTION: {
     int (*user_function)(mc_mo_process_stack * context, void *farg) =
         (int (*)(mc_mo_process_stack *, void *))step->delegate.fptr;
 
@@ -432,7 +432,7 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
     MCcall(_mc_mo_activate_next_stack_step(process_stack));
 
   } break;
-  // case MO_OPPA_CREATE_PROCESS_STEP_DIALOG: {
+  // case MO_STEP_CREATE_PROCESS_STEP_DIALOG: {
   //   // TODO -- unlike the other events which will eventually initiate on the main UI thread
   //   // -- this is not activated from that position -- figure it out
   //   MCcall(mc_mocsd_activate_process_step_dialog(mod->create_step_dialog,
@@ -546,10 +546,10 @@ int _mc_mo_load_operations(mc_node *module_node)
   //         step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
   //         // Obtain the name of the source module to create
-  //         step->action = MO_OPPA_FILE_DIALOG;
+  //         step->action = MO_STEP_FILE_DIALOG;
   //         step->file_dialog.message = strdup("Choose or create a header file");
   //         step->file_dialog.initial_filename = strdup("header.h");
-  //         step->file_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
+  //         step->file_dialog.initial_folder.type = MO_STEP_CTXARG_CURRENT_WORKING_DIRECTORY;
   //         step->file_dialog.initial_folder.data = NULL;
   //         step->file_dialog.target_context_property = strdup(ctxpropid);
   //       }
@@ -576,9 +576,9 @@ int _mc_mo_load_operations(mc_node *module_node)
   //         step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
   //         // Obtain the name of the source module to create
-  //         step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+  //         step->action = MO_STEP_TEXT_INPUT_DIALOG;
   //         step->text_input_dialog.message = strdup("Specify the struct name");
-  //         step->text_input_dialog.default_text.type = MO_OPPC_CSTR;
+  //         step->text_input_dialog.default_text.type = MO_STEP_CTXARG_CSTR;
   //         step->text_input_dialog.default_text.data = NULL;
   //         step->text_input_dialog.target_context_property = strdup(ctxpropid);
   //       }
@@ -593,7 +593,7 @@ int _mc_mo_load_operations(mc_node *module_node)
   //     step = define_struct_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
   //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-  //     step->action = MO_OPPA_DELEGATE_FUNCTION;
+  //     step->action = MO_STEP_DELEGATE_FUNCTION;
   //     step->delegate.fptr = &_user_function_add_struct;
   //     step->delegate.farg = NULL;
   //   }
@@ -633,8 +633,8 @@ int _mc_mo_load_operations(mc_node *module_node)
       //         step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
       //         // Obtain the name of the source module to create
-      //         step->action = MO_OPPA_OPEN_FOLDER_DIALOG;
-      //         step->folder_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
+      //         step->action = MO_STEP_OPEN_FOLDER_DIALOG;
+      //         step->folder_dialog.initial_folder.type = MO_STEP_CTXARG_CURRENT_WORKING_DIRECTORY;
       //         step->folder_dialog.initial_folder.data = NULL;
       //         step->folder_dialog.message = strdup("Set Source Folder");
       //         step->folder_dialog.target_context_property = strdup(ctxpropid);
@@ -663,9 +663,9 @@ int _mc_mo_load_operations(mc_node *module_node)
       //         step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
       //         // Obtain the name of the source module to create
-      //         step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+      //         step->action = MO_STEP_TEXT_INPUT_DIALOG;
       //         step->text_input_dialog.message = strdup("Please Specify Source Name");
-      //         step->text_input_dialog.default_text.type = MO_OPPC_CSTR;
+      //         step->text_input_dialog.default_text.type = MO_STEP_CTXARG_CSTR;
       //         step->text_input_dialog.default_text.data = NULL;
       //         step->text_input_dialog.target_context_property = strdup(ctxpropid);
       //       }
@@ -680,10 +680,10 @@ int _mc_mo_load_operations(mc_node *module_node)
       //     // Obtain the data name
       //     step = add_render_system_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
-      //     step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+      //     step->action = MO_STEP_TEXT_INPUT_DIALOG;
       //     step->text_input_dialog.message = strdup("Name of the Data Struct");
       //     step->text_input_dialog.default_text =
-      //         (mo_op_step_context_arg){MO_OPPC_DELEGATE, (char *)&_context_delegate_set_default_data_name};
+      //         (mo_op_step_context_arg){MO_STEP_CTXARG_DELEGATE, (char *)&_context_delegate_set_default_data_name};
       //     step->text_input_dialog.target_context_property = strdup(ctxprop_data_name);
       //   }
 
@@ -692,7 +692,7 @@ int _mc_mo_load_operations(mc_node *module_node)
       //   //   step->next = (mo_operational_step *)malloc(sizeof(mo_operational_step));
       //   //   step = step->next;
 
-      //   //   step->action = MO_OPPA_
+      //   //   step->action = MO_STEP_
       //   // }
 
       //   // {
@@ -700,7 +700,7 @@ int _mc_mo_load_operations(mc_node *module_node)
       //   //   step = add_render_system_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
       //   //   // -- Open Open-Path-Dialog - Seek a folder to store the source
-      //   //   step->action = MO_OPPA_DELEGATE_FUNCTION;
+      //   //   step->action = MO_STEP_DELEGATE_FUNCTION;
       //   //   step->delegate.fptr = &_user_function_add_struct;
       //   //   step->delegate.farg = NULL;
       //   // }
@@ -727,10 +727,10 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = steps_example_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
     //     // Obtain the name of the source module to create
-    //     step->action = MO_OPPA_FILE_DIALOG;
+    //     step->action = MO_STEP_FILE_DIALOG;
     //     step->file_dialog.message = strdup("save-file-dialog-example");
     //     step->file_dialog.initial_filename = strdup("example_file.txt");
-    //     step->folder_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
+    //     step->folder_dialog.initial_folder.type = MO_STEP_CTXARG_CURRENT_WORKING_DIRECTORY;
     //     step->folder_dialog.initial_folder.data = NULL;
     //     step->text_input_dialog.target_context_property = strdup(ctxprop_file);
     //   }
@@ -740,7 +740,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_DELEGATE_FUNCTION;
+    //     step->action = MO_STEP_DELEGATE_FUNCTION;
     //     step->delegate.fptr = &_user_function_print_result;
     //     step->delegate.farg = strdup(ctxprop_file);
     //   }
@@ -753,7 +753,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // Obtain the name of the source module to create
-    //     step->action = MO_OPPA_OPTIONS_DIALOG;
+    //     step->action = MO_STEP_OPTIONS_DIALOG;
     //     step->options_dialog.message = strdup("text-input-dialog-example");
     //     step->options_dialog.option_count = 3U;
     //     step->options_dialog.options = (char **)malloc(sizeof(char *) * step->options_dialog.option_count);
@@ -768,7 +768,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_DELEGATE_FUNCTION;
+    //     step->action = MO_STEP_DELEGATE_FUNCTION;
     //     step->delegate.fptr = &_user_function_print_result;
     //     step->delegate.farg = strdup(ctxprop_options_dialog);
     //   }
@@ -781,9 +781,9 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // Obtain the name of the source module to create
-    //     step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+    //     step->action = MO_STEP_TEXT_INPUT_DIALOG;
     //     step->text_input_dialog.message = strdup("text-input-dialog-example");
-    //     step->text_input_dialog.default_text = (mo_op_step_context_arg){MO_OPPC_CSTR, "first example"};
+    //     step->text_input_dialog.default_text = (mo_op_step_context_arg){MO_STEP_CTXARG_CSTR, "first example"};
     //     step->text_input_dialog.target_context_property = strdup(ctxprop_text_input);
     //   }
     //   {
@@ -792,7 +792,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_DELEGATE_FUNCTION;
+    //     step->action = MO_STEP_DELEGATE_FUNCTION;
     //     step->delegate.fptr = &_user_function_print_result;
     //     step->delegate.farg = strdup(ctxprop_text_input);
     //   }
@@ -805,8 +805,8 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_OPEN_FOLDER_DIALOG;
-    //     step->folder_dialog.initial_folder.type = MO_OPPC_CURRENT_WORKING_DIRECTORY;
+    //     step->action = MO_STEP_OPEN_FOLDER_DIALOG;
+    //     step->folder_dialog.initial_folder.type = MO_STEP_CTXARG_CURRENT_WORKING_DIRECTORY;
     //     step->folder_dialog.initial_folder.data = NULL;
     //     step->folder_dialog.message = strdup("folder-dialog-example");
     //     step->folder_dialog.target_context_property = strdup(ctxprop_folder);
@@ -817,7 +817,7 @@ int _mc_mo_load_operations(mc_node *module_node)
     //     step = step->next;
 
     //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-    //     step->action = MO_OPPA_DELEGATE_FUNCTION;
+    //     step->action = MO_STEP_DELEGATE_FUNCTION;
     //     step->delegate.fptr = &_user_function_print_result;
     //     step->delegate.farg = strdup(ctxprop_folder);
     //   }
@@ -855,9 +855,9 @@ int _mc_mo_load_operations(mc_node *module_node)
   //         step = sub_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
   //         // Obtain the name of the source module to create
-  //         step->action = MO_OPPA_TEXT_INPUT_DIALOG;
+  //         step->action = MO_STEP_TEXT_INPUT_DIALOG;
   //         step->text_input_dialog.message = strdup("The name of the process");
-  //         step->text_input_dialog.default_text.type = MO_OPPC_CSTR;
+  //         step->text_input_dialog.default_text.type = MO_STEP_CTXARG_CSTR;
   //         step->text_input_dialog.default_text.data = NULL;
   //         step->text_input_dialog.target_context_property = strdup(ctxpropid);
   //       }
@@ -873,7 +873,7 @@ int _mc_mo_load_operations(mc_node *module_node)
   //     step = create_op_process->first = (mo_operational_step *)malloc(sizeof(mo_operational_step));
 
   //     // -- Open Open-Path-Dialog - Seek a folder to store the source
-  //     step->action = MO_OPPA_CREATE_PROCESS_STEP_DIALOG;
+  //     step->action = MO_STEP_CREATE_PROCESS_STEP_DIALOG;
   //     step->process_step_dialog.message = strdup("Design the first step");
   //   }
 

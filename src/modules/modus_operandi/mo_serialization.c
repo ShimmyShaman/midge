@@ -342,7 +342,7 @@ int mc_mo_parse_context_arg(const char *str, mo_op_step_context_arg *dest)
   }
 
   if (!strncmp(str, "CSTR", c - str)) {
-    dest->type = MO_OPPC_CSTR;
+    dest->type = MO_STEP_CTXARG_CSTR;
 
     str = c + 1;
     while (*c != '}') {
@@ -385,7 +385,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
   // Type
   if (!strncmp(s, "FILE_DIALOG", 11)) {
     s += 11;
-    step->action = MO_OPPA_FILE_DIALOG;
+    step->action = MO_STEP_FILE_DIALOG;
 
     MCcall(mc_mo_parse_past_empty_space(&s));
     MCcall(mc_mo_parse_past(&s, "{"));
@@ -417,7 +417,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
   }
   else if (!strncmp(s, "FUNCTION", 8)) {
     s += 8;
-    step->action = MO_OPPA_DELEGATE_FUNCTION;
+    step->action = MO_STEP_DELEGATE_FUNCTION;
 
     MCcall(mc_mo_parse_past_empty_space(&s));
     MCcall(mc_mo_parse_past(&s, "{"));
@@ -430,7 +430,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
   }
   else if (!strncmp(s, "MESSAGE_BOX", 11)) {
     s += 11;
-    step->action = MO_OPPA_MESSAGE_BOX;
+    step->action = MO_STEP_MESSAGE_BOX;
 
     MCcall(mc_mo_parse_past_empty_space(&s));
     MCcall(mc_mo_parse_past(&s, "{"));
@@ -453,7 +453,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
   }
   else if (!strncmp(s, "OPTIONS_DIALOG", 14)) {
     s += 14;
-    step->action = MO_OPPA_OPTIONS_DIALOG;
+    step->action = MO_STEP_OPTIONS_DIALOG;
 
     MCcall(mc_mo_parse_past_empty_space(&s));
     MCcall(mc_mo_parse_past(&s, "{"));

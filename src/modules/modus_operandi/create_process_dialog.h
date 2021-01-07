@@ -4,7 +4,14 @@
 #include "core/core_definitions.h"
 
 #include "modules/collections/hash_table.h"
+#include "modules/modus_operandi/mo_types.h"
 #include "modules/ui_elements/ui_elements.h"
+
+typedef struct mc_mo_cpd_step_data {
+  mo_op_step_action_type type;
+
+    
+} mc_mo_cpd_step_data;
 
 typedef struct mc_create_process_dialog_data {
   mc_node *node;
@@ -24,6 +31,11 @@ typedef struct mc_create_process_dialog_data {
   //   unsigned int width, height;
   //   mcr_texture_image *image;
   // } render_target;
+
+  struct {
+    unsigned int size;
+    mc_mo_cpd_step_data *ary;
+  } cells;
 
   struct {
     void *state;
