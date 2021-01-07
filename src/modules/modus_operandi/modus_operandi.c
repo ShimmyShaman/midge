@@ -16,6 +16,7 @@
 #include "modules/render_utilities/render_util.h"
 #include "modules/ui_elements/ui_elements.h"
 
+#include "modules/modus_operandi/create_process_dialog.h"
 #include "modules/modus_operandi/mo_serialization.h"
 #include "modules/modus_operandi/mo_types.h"
 #include "modules/modus_operandi/mo_util.h"
@@ -36,6 +37,7 @@ typedef struct modus_operandi_data {
     mcr_texture_image *image;
   } render_target;
 
+  mc_create_process_dialog_data *create_process_dialog;
   mc_process_step_dialog_data *create_step_dialog;
 
   mc_mo_process_stack process_stack;
@@ -885,12 +887,30 @@ int _mc_mo_load_operations(mc_node *module_node)
   return 0;
 }
 
+void _mc_mod_create_process_completed(void *invoker_state, void *created_process)
+{
+  // Do nothing
+  return;
+}
+
+void _mc_mo_create_process_clicked(mci_input_event *input_event, mcu_button *button)
+{
+  if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+    modus_operandi_data *mod = (modus_operandi_data *)button->tag;
+    mc_mo_activate_create_process_dialog(mod->create_process_dialog, mod, &_mc_mod_create_process_completed);
+
+    input_event->handled = true;
+  }
+}
+
 void _mc_mo_operational_process_selected(mci_input_event *input_event, mcu_button *button)
 {
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
     mo_operational_process *mopp = (mo_operational_process *)button->tag;
 
     _mc_mo_begin_op_process(mopp, NULL);
+
+    input_event->handled = true;
   }
 }
 
@@ -1010,6 +1030,8 @@ int _mc_mo_project_created(void *handler_state, void *event_args)
   strcat(buf, ".h");
   MCcall(append_to_mc_strf(str, "%s=%s\n", "project-init-header-filepath", buf));
 
+  MCcall(append_to_mc_strf(str, "%s=initialize_%s\n", "project-init-function-name", project_name));
+
   MCcall(mcf_concat_filepath(modir, 256, "context"));
   MCcall(save_text_to_file(modir, str->text));
 
@@ -1128,13 +1150,13 @@ int mc_mo_init_ui(mc_node *module_node)
 
   MCcall(mcu_init_textbox(module_node, &mod->search_textbox));
   mod->search_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-  mod->search_textbox->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
+  mod->search_textbox->node->layout->padding = (mc_paddingf){6, 2, 42, 2};
 
   char buf[64];
+  mcu_button *button;
 
   // unsigned int y = (unsigned int)(24 + 8 + 4);
   for (int a = 0; a < 12; ++a) {
-    mcu_button *button;
     MCcall(mcu_init_button(module_node, &button));
 
     if (button->node->name) {
@@ -1156,6 +1178,25 @@ int mc_mo_init_ui(mc_node *module_node)
     MCcall(append_to_collection((void ***)&mod->options_buttons.items, &mod->options_buttons.capacity,
                                 &mod->options_buttons.count, button));
   }
+
+  // Add process button
+  MCcall(mcu_init_button(module_node, &button));
+
+  if (button->node->name) {
+    free(button->node->name);
+    button->node->name = NULL;
+  }
+  button->node->name = strdup("mo-create-process-button");
+
+  button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+  button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  button->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
+  button->node->layout->max_width = 32U;
+  button->tag = mod;
+
+  button->left_click = (void *)&_mc_mo_create_process_clicked;
+
+  MCcall(set_mc_str(button->str, "+"));
 
   // // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   // while (!mod->render_target.image) {
@@ -1197,13 +1238,15 @@ int init_modus_operandi_system(mc_node *app_root)
   // TODO
 
   MCcall(mc_mo_load_resources(node));
+  modus_operandi_data *mod = (modus_operandi_data *)node->data;
 
   MCcall(mc_mo_init_ui(node));
 
   MCcall(_mc_mo_load_operations(node));
 
   // Create Process Step Dialog
-  MCcall(mc_mocsd_init_process_step_dialog(app_root, &((modus_operandi_data *)node->data)->create_step_dialog));
+  MCcall(mc_mo_init_create_process_dialog(app_root, &mod->create_process_dialog));
+  MCcall(mc_mocsd_init_process_step_dialog(app_root, &mod->create_step_dialog));
 
   // Event Registers
   MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_STRUCTURE_CREATION, &_mc_mo_project_created, node->data));

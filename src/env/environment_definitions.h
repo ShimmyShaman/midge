@@ -152,6 +152,7 @@ int mca_set_node_requires_layout_update(mc_node *node);
 int mca_set_descendents_require_layout_update(mc_node_list *node_descendents_list);
 int mca_set_node_requires_rerender(mc_node *node);
 
+int mca_render_typical_nodes_children_headless(render_thread_info *render_thread, mc_node_list *children);
 int mca_render_typical_nodes_children_present(image_render_details *image_render_queue, mc_node_list *children);
 
 int mca_focus_node(mc_node *node);

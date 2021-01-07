@@ -43,18 +43,15 @@ param {
   MCcall(mcs_append_field_to_struct(si, "mcr_texture_image", 1, tex_fn));
 }
 > FUNCTION {
-  puts("aa");
   // Check if a load-resources function exists, and if not, create it
   char lrcn_buf[64], buf[512];
-  function_info *fi;
-  const char *lrcn, *data_name;
+  function_info *fi, *init_fi;
+  const char *lrcn, *data_name, *init_function_name;
 
   MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
 
-  puts("bb");
   MCcall(mc_mo_get_context_cstr(process_stack, "project-load-resources-function", true, &lrcn));
   if(!lrcn) {
-  puts("cc");
     // Create the function
     // -- Obtain the project name
     MCcall(mc_mo_get_context_cstr(process_stack, "project-name", true, &lrcn));
@@ -62,7 +59,6 @@ param {
       puts("Error - require project-name context to initailize the load_resources function");
       return 8;
     }
-  puts("dd");
 
     // -- Make the function name
     sprintf(lrcn_buf, "_%s_load_resources", lrcn);
@@ -78,7 +74,6 @@ param {
     MCcall(mcs_obtain_source_file_info(init_source_filepath, true, &init_source_file));
     if(!init_source_file)
       return 10;
-  puts("ee");
     
     // -- Insert a somewhat empty function into the source file
     strcpy(buf, "{ return 0; }");
@@ -93,8 +88,17 @@ param {
     sprintf(param, "%s *data", data_name);
     char *pparam = param;
     MCcall(mcs_construct_function_definition(init_source_file, lrcn, "int", 0, 1, &pparam, buf));
+
+    // Make a call to this created function inside the initialize function
+    MCcall(mc_mo_get_context_cstr(process_stack, "project-init-function-name", true, &init_function_name));
+    MCcall(find_function_info(init_function_name, &init_fi));
+    if(!init_fi)
+      return 14;
+
+    // TODO -- obtain the local data variable name
+    sprintf(buf, "\n  MCcall(%s(data));\n", lrcn);
+    MCcall(mcs_attach_code_to_function(init_fi, buf));
   }
-  puts("ff");
 
   // Get the function
   MCcall(find_function_info(lrcn, &fi));
@@ -116,9 +120,7 @@ param {
   MCcall(mcs_attach_code_to_function(fi, buf));
 
 
-
-
-  printf("code-insert:%s\n", buf);
+  // printf("code-insert:%s\n", buf);
    
     // Obtain parameter values
     // char *project_resource_load_function = (char *)hash_table_get("project-resource-load-function", context);
@@ -128,7 +130,7 @@ param {
 
     // puts("NotYetImplemented");
     // puts("- activate a CONFIRM_DENY_DIALOG to create a load_resources function");
-    // puts("  - if(confirm): create load_resources in 'project-init-source-file
+    // puts("  - if(confirm): create load_resources in 'project-init-source-file'");
     // ' & call it in the project-initialize-function");
     // puts("  - else FAIL (for now...)");
     // return 7;
