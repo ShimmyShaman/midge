@@ -13,7 +13,7 @@ typedef struct mc_mo_cpd_step_data {
   mcu_panel *panel;
   mcu_dropdown *dropdown;
   mcu_textbox *textbox;
-  mcu_textblock *textblock, *textblock2;
+  mcu_textblock **textblocks;
   mcu_button *continue_button;
 } mc_mo_cpd_step_data;
 

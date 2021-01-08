@@ -166,7 +166,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
     //           "Loading project='%s'. Could not find This could not be accessed for project_name='%s'",
     //           project_name);
     // }
-    
+
     mc_source_file_info *sf;
     MCcall(mcs_interpret_source_file(buf, &sf));
 
@@ -283,8 +283,14 @@ int mca_load_project_async(const char *project_parent_dir, char *project_name)
 
 int mca_load_previously_open_projects()
 {
+  const char *opl_filepath = "projects/open_project_list";
+  if (access(opl_filepath, F_OK) == -1) {
+    // Create it
+    MCcall(save_text_to_file(opl_filepath, ""));
+  }
+
   char *open_list_text;
-  read_file_text("projects/open_project_list", &open_list_text);
+  MCcall(read_file_text(opl_filepath, &open_list_text));
 
   printf("open_list_text:'%s'\n", open_list_text);
 

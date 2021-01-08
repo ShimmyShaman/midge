@@ -22,6 +22,8 @@
 #define MO_STEP_UNDESIGNATED 1001
 #define MO_STEP_CONTEXT_PARAMETER 1002
 
+#define MO_CPD_CELL_TEXTBLOCK_COUNT 3
+
 void _mc_mo_cpd_render_headless(render_thread_info *render_thread, mc_node *node)
 {
   mc_create_process_dialog_data *cpd = (mc_create_process_dialog_data *)node->data;
@@ -128,6 +130,8 @@ void _mc_mo_cpd_cancel_clicked(mci_input_event *input_event, mcu_button *button)
 
 int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
 {
+  int a;
+
   // Set type & visibility
   cell->type = type;
 
@@ -136,8 +140,8 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
 
   cell->dropdown->node->layout->visible = false;
   cell->textbox->node->layout->visible = false;
-  cell->textblock->node->layout->visible = false;
-  cell->textblock2->node->layout->visible = false;
+  for (a = 0; a < MO_CPD_CELL_TEXTBLOCK_COUNT; ++a)
+    cell->textblocks[a]->node->layout->visible = false;
 
   switch (type) {
   case MO_STEP_ABSTRACT_TITLE: {
@@ -158,7 +162,6 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     MCcall(mca_set_node_requires_layout_update(cell->textbox->node));
   } break;
   case MO_STEP_UNDESIGNATED: {
-    puts("undesignated");
     layout->preferred_width = 240;
     layout->preferred_height = 60;
 
@@ -182,17 +185,17 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     cell->panel->background_color = (render_color){0.04f, 0.24f, 0.06f, 1.f};
 
     // Title
-    MCcall(set_mc_str(cell->textblock->str, "Context Parameter"));
+    MCcall(set_mc_str(cell->textblocks[0]->str, "Context Parameter"));
 
-    layout = cell->textblock->node->layout;
+    layout = cell->textblocks[0]->node->layout;
     layout->visible = true;
     layout->padding = (mc_paddingf){4, 4, 4, 4};
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
 
     // Param Label
-    MCcall(set_mc_str(cell->textblock2->str, "name:"));
+    MCcall(set_mc_str(cell->textblocks[1]->str, "name:"));
 
-    layout = cell->textblock2->node->layout;
+    layout = cell->textblocks[1]->node->layout;
     layout->visible = true;
     layout->padding = (mc_paddingf){4, 28, 4, 4};
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
@@ -206,8 +209,8 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     layout->padding = (mc_paddingf){42, 28, 4, 4};
 
     // Layout Updates
-    MCcall(mca_set_node_requires_layout_update(cell->textblock->node));
-    MCcall(mca_set_node_requires_layout_update(cell->textblock2->node));
+    MCcall(mca_set_node_requires_layout_update(cell->textblocks[0]->node));
+    MCcall(mca_set_node_requires_layout_update(cell->textblocks[1]->node));
     MCcall(mca_set_node_requires_layout_update(cell->textbox->node));
   } break;
   default:
@@ -329,7 +332,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
   mc_create_process_dialog_data *cpd = (mc_create_process_dialog_data *)module_node->data;
 
   // Locals
-  int a;
+  int a, b;
   char buf[64];
   mca_node_layout *layout;
   mcu_panel *panel;
@@ -375,21 +378,16 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
-    MCcall(mcu_init_textblock(panel->node, &cell->textblock));
-    textblock = cell->textblock;
+    cell->textblocks = (mcu_textblock **)malloc(sizeof(mcu_textblock *) * MO_CPD_CELL_TEXTBLOCK_COUNT);
+    for (b = 0; b < MO_CPD_CELL_TEXTBLOCK_COUNT; ++b) {
+      MCcall(mcu_init_textblock(panel->node, &textblock));
+      cell->textblocks[b] = textblock;
 
-    layout = textblock->node->layout;
-    layout->padding = (mc_paddingf){4, 4, 4, 4};
-    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-
-    MCcall(mcu_init_textblock(panel->node, &cell->textblock2));
-    textblock = cell->textblock2;
-
-    layout = textblock->node->layout;
-    layout->padding = (mc_paddingf){4, 4, 4, 4};
-    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+      layout = textblock->node->layout;
+      layout->padding = (mc_paddingf){4, 4, 4, 4};
+      layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+      layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    }
 
     MCcall(mcu_init_textbox(panel->node, &cell->textbox));
     textbox = cell->textbox;
