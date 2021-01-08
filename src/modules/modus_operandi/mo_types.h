@@ -9,7 +9,6 @@
 
 typedef enum mo_op_step_action_type {
   MO_STEP_NULL = 0,
-  MO_STEP_ABSTRACT_TITLE,
   MO_STEP_CREATE_PROCESS_STEP_DIALOG,
   MO_STEP_MESSAGE_BOX,
   MO_STEP_FILE_DIALOG,

@@ -10,7 +10,11 @@
 typedef struct mc_mo_cpd_step_data {
   mo_op_step_action_type type;
 
-    
+  mcu_panel *panel;
+  mcu_dropdown *dropdown;
+  mcu_textbox *textbox;
+  mcu_textblock *textblock, *textblock2;
+  mcu_button *continue_button;
 } mc_mo_cpd_step_data;
 
 typedef struct mc_create_process_dialog_data {

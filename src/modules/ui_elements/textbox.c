@@ -95,6 +95,7 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
     case KEY_CODE_BACKSPACE: {
       if (input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) {
         restrict_mc_str(textbox->contents, 0);
+        textbox->cursor.col = 0;
       }
       else if (textbox->cursor.col > 0) {
         remove_from_mc_str(textbox->contents, textbox->cursor.col - 1, 1);
