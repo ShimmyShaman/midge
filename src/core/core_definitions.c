@@ -60,7 +60,7 @@ int read_file_text(const char *filepath, char **output)
   return 0;
 }
 
-int save_text_to_file(char *filepath, char *text)
+int save_text_to_file(const char *filepath, char *text)
 {
   FILE *f = fopen(filepath, "w");
   if (f == NULL) {

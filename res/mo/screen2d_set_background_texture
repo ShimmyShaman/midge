@@ -1,33 +1,34 @@
 Screen2D: Set Background Texture
-param {
-  name=project-init-source-filepath
-  obtain=required-context
-    > MESSAGE_BOX {
-      message=NotYetImplemented
+> PARAM {
+  key=texture-filepath
+  obtain=obtain-texture-filepath
+    > FILE_DIALOG {
+      message=Select the texture file
+      initial_filename={CSTR:NULL}
+      initial_folder={CSTR:NULL}
+      target_context_property=texture-filepath
     }
 }
-param {
-  name=project-init-header-filepath
-  obtain=required-context
-    > MESSAGE_BOX {
-      message=NotYetImplemented
-    }
-}
-param {
-  name=project-data
+> PARAM {
+  key=project-data
   obtain=obtain-project-data
-    > MESSAGE_BOX {
-      message=NotYetImplemented
+    > SYMBOL_DIALOG {
+      message=Select the project data type
+      symbol_type=struct
+      target_result_type=name
+      target_context_property=project-data
     }
 }
-param {
-  name=tex-field-name
+> PARAM {
+  key=tex-field-name
   obtain=set-tex-field-name
     > FUNCTION {
+      puts("holla");
       MCcall(mc_mo_set_top_context_cstr(process_stack, "tex-field-name", "tex_background"));
     }
 }
 > FUNCTION {
+      puts("doppa");
   const char *data_name, *tex_fn;
   MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
   MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_fn));
@@ -41,6 +42,20 @@ param {
 
   // Insert the texture field into the data
   MCcall(mcs_append_field_to_struct(si, "mcr_texture_image", 1, tex_fn));
+}
+> PARAM {
+  key=project-init-source-filepath
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
+}
+> PARAM {
+  key=project-init-header-filepath
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
 }
 > FUNCTION {
   // Check if a load-resources function exists, and if not, create it
@@ -105,7 +120,7 @@ param {
   if(!fi)
     return 12;
 
-  // TODO get the data param name
+  // TODO get the data > PARAM name
 
   // Get the field name
   const char *tex_fn;
@@ -135,8 +150,8 @@ param {
     // puts("  - else FAIL (for now...)");
     // return 7;
 }
-param {
-  name=texture-filepath
+> PARAM {
+  key=texture-filepath
   obtain=obtain-texture-filepath
     > FILE_DIALOG {
       message=Select the texture file

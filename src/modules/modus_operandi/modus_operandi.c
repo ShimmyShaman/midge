@@ -260,7 +260,6 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
   int a, sidx;
   bool e;
   mo_operational_process *op;
-  mo_operational_process_parameter *op_param;
   hash_table_t *ctx, *ctxb;
   const char *pv;
 
@@ -274,60 +273,25 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
     return 0;
   }
 
-  op_param = process_stack->argument_subprocesses[sidx];
-  ctx = &process_stack->context_maps[sidx];
-  if (op_param) {
+  mo_operational_step *step = process_stack->steps[sidx];
+  if (step && step->action == MO_STEP_CONTEXT_PARAMETER) {
     // Obtain the parameter from the previous process_stack context
-    MCcall(mc_mo_get_specific_context_cstr(&process_stack->context_maps[sidx + 1], op_param->name, &pv));
+    MCcall(mc_mo_get_specific_context_cstr(&process_stack->context_maps[sidx + 1], step->context_parameter.key, &pv));
 
     if (!pv) {
-      MCerror(5294, "subprocess param '%s' was not retrieved", op_param->name);
+      MCerror(5294, "subprocess param '%s' was not retrieved", step->context_parameter.key);
     }
 
-    printf("previous sequence was op_param subprocess: setting '%s' with '%s'\n", op_param->name, pv);
+    // printf("previous sequence was op_param subprocess: setting '%s' with '%s'\n", step->context_parameter.key, pv);
 
     // Set it to the now-current context
-    MCcall(mc_mo_set_top_context_cstr(process_stack, op_param->name, pv));
+    MCcall(mc_mo_set_top_context_cstr(process_stack, step->context_parameter.key, pv));
 
-    MCcall(mc_mo_get_specific_context_cstr(&process_stack->context_maps[sidx], op_param->name, &pv));
-    // printf("got '%s' using '%s' from %p\n", pv, op_param->name, &process_stack->context_maps[sidx]);
-
-    // Clear
-    process_stack->argument_subprocesses[sidx] = NULL;
-  }
-
-  if (process_stack->steps[sidx]) {
-    // Simply move onto the next step
-    puts("continuing onto next step");
-    MCcall(_mc_mo_activate_next_stack_step(process_stack));
-    return 0;
-  }
-
-  // Process is still in argument-collection phase
-  // Ensure all arguments have been obtained
-  op = process_stack->processes[sidx];
-
-  for (a = 0; a < op->nb_parameters; ++a) {
-    op_param = &op->parameters[a];
-
-    // Find in context tree
-    MCcall(mc_mo_get_context_cstr(process_stack, op_param->name, true, &pv));
-    if (pv)
-      continue;
-
-    if (!op_param->obtain_value_subprocess) {
-      MCerror(9418, "A means should be provided to obtain the value for parameter '%s'", op_param->name);
-    }
-
-    // Activate the subprocess to obtain the argument value
-    printf("activating subprocess to get param value for '%s'\n", op_param->name);
-    process_stack->argument_subprocesses[sidx] = op_param;
-    MCcall(_mc_mo_begin_op_process(op_param->obtain_value_subprocess, NULL));
-    return 0;
+    // MCcall(mc_mo_get_specific_context_cstr(&process_stack->context_maps[sidx], step->context_parameter.key, &pv));
+    // printf("got '%s' using '%s' from %p\n", pv, step->context_parameter.key, &process_stack->context_maps[sidx]);
   }
 
   // Continue on to the first step
-  // puts("continuing onto first step");
   MCcall(_mc_mo_activate_next_stack_step(process_stack));
 
   return 0;
@@ -335,6 +299,7 @@ int _mc_mo_return_from_stack_process(mc_mo_process_stack *process_stack)
 
 int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
 {
+  const char *str;
   void **vary;
   int sidx = process_stack->index;
   // printf("activate-step: %i\n", sidx);
@@ -360,6 +325,24 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
 
   bool free_ctx_arg;
   switch (step->action) {
+  case MO_STEP_CONTEXT_PARAMETER: {
+    // printf("MO_STEP_CONTEXT_PARAMETER : '%s'\n", step->context_parameter.key);
+    // Ensure the context value exists for the parameter
+    // Find in context tree
+    MCcall(mc_mo_get_context_cstr(process_stack, step->context_parameter.key, true, &str));
+    if (str) {
+      MCcall(_mc_mo_activate_next_stack_step(process_stack));
+      break;
+    }
+
+    if (!step->context_parameter.obtain_value_subprocess) {
+      MCerror(8774, "A means should be provided to obtain the value for parameter '%s'", step->context_parameter.key);
+    }
+
+    // Activate the subprocess to obtain the argument value
+    // printf("activating subprocess to get param value for '%s'\n", step->context_parameter.key);
+    MCcall(_mc_mo_begin_op_process(step->context_parameter.obtain_value_subprocess, NULL));
+  } break;
   case MO_STEP_TEXT_INPUT_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 4);
 
@@ -461,7 +444,6 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
 {
   mc_mo_process_stack *process_stack = process->stack;
   hash_table_t *ctx;
-  mo_operational_process_parameter *op_param;
   int a, sidx;
   mo_operational_step *step;
   const char *pv;
@@ -475,31 +457,11 @@ int _mc_mo_begin_op_process(mo_operational_process *process, void *args)
   // Set the process process_stack info
   process_stack->processes[sidx] = process;
   MCcall(mc_mo_clear_top_context(process_stack));
-  process_stack->argument_subprocesses[sidx] = NULL;
   process_stack->steps[sidx] = NULL;
 
   // Set all arguments
   if (args) {
-    MCerror(6532, "Active process to fill parameter from args");
-  }
-
-  // Attempt to obtain non-provided arguments before beginning the process
-  for (a = 0; a < process->nb_parameters; ++a) {
-    op_param = &process->parameters[a];
-
-    // Find in context tree
-    MCcall(mc_mo_get_context_cstr(process_stack, op_param->name, true, &pv));
-    if (pv)
-      continue;
-
-    if (!op_param->obtain_value_subprocess) {
-      MCerror(9418, "A means should be provided to obtain the value for parameter '%s'", op_param->name);
-    }
-
-    // Activate the subprocess to obtain the argument value
-    process_stack->argument_subprocesses[sidx] = op_param;
-    MCcall(_mc_mo_begin_op_process(op_param->obtain_value_subprocess, NULL));
-    return 0;
+    MCerror(6532, "TODO process to fill parameters from args");
   }
 
   MCcall(_mc_mo_activate_next_stack_step(process_stack));
@@ -1119,7 +1081,6 @@ int mc_mo_load_resources(mc_node *module_node)
     MCcall(init_hash_table(8, &mod->process_stack.context_maps[a]));
     mod->process_stack.processes[a] = NULL;
     mod->process_stack.steps[a] = NULL;
-    mod->process_stack.argument_subprocesses[a] = NULL;
   }
 
   mod->render_target.image = NULL;

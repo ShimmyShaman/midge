@@ -132,44 +132,45 @@ int _mc_mo_parse_property_line(char *dest_prop_name, char *dest_value, const cha
   return 0;
 }
 
-int mc_mo_parse_serialized_process_parameter(mc_mo_process_stack *pstack, mo_operational_process *process,
-                                             const char **serialization)
-{
-  const char *s = *serialization;
+// int mc_mo_parse_serialized_process_parameter(mc_mo_process_stack *pstack, mo_operational_process *process,
+//                                              const char **serialization)
+// {
+//   const char *s = *serialization;
 
-  char buf[MC_MO_EOL_BUF_SIZE];
-  char prop_name[64];
+//   char buf[MC_MO_EOL_BUF_SIZE];
+//   char prop_name[64];
 
-  // Init
-  mo_operational_process_parameter *param;
-  MCcall(mc_grow_array((void **)&process->parameters, &process->nb_parameters, sizeof(mo_operational_process_parameter),
-                       (void **)&param));
+//   // Init
+//   mo_operational_process_parameter *param;
+//   MCcall(mc_grow_array((void **)&process->parameters, &process->nb_parameters,
+//   sizeof(mo_operational_process_parameter),
+//                        (void **)&param));
 
-  // Preamble
-  MCcall(mc_mo_parse_past(&s, "param"));
-  MCcall(mc_mo_parse_past_empty_space(&s));
-  MCcall(mc_mo_parse_past(&s, "{"));
-  MCcall(mc_mo_parse_past_empty_space(&s));
+//   // Preamble
+//   MCcall(mc_mo_parse_past(&s, "param"));
+//   MCcall(mc_mo_parse_past_empty_space(&s));
+//   MCcall(mc_mo_parse_past(&s, "{"));
+//   MCcall(mc_mo_parse_past_empty_space(&s));
 
-  // Name
-  MCcall(_mc_mo_parse_property_line(prop_name, buf, &s));
-  if (strcmp(prop_name, "name")) {
-    MCerror(3883, "process parameters are to begin with name={$param-name$}");
-  }
-  param->name = strdup(buf);
-  MCcall(mc_mo_parse_past_empty_space(&s));
+//   // Name
+//   MCcall(_mc_mo_parse_property_line(prop_name, buf, &s));
+//   if (strcmp(prop_name, "name")) {
+//     MCerror(3883, "process parameters are to begin with name={$param-name$}");
+//   }
+//   param->name = strdup(buf);
+//   MCcall(mc_mo_parse_past_empty_space(&s));
 
-  // Obtain Sub-process
-  MCcall(mc_mo_parse_past(&s, "obtain="));
-  MCcall(_mc_mo_parse_serialized_process(pstack, &s, &param->obtain_value_subprocess));
+//   // Obtain Sub-process
+//   MCcall(mc_mo_parse_past(&s, "obtain="));
+//   MCcall(_mc_mo_parse_serialized_process(pstack, &s, &param->obtain_value_subprocess));
 
-  // Postamble
-  MCcall(mc_mo_parse_past_empty_space(&s));
-  MCcall(mc_mo_parse_past(&s, "}"));
+//   // Postamble
+//   MCcall(mc_mo_parse_past_empty_space(&s));
+//   MCcall(mc_mo_parse_past(&s, "}"));
 
-  *serialization = s;
-  return 0;
-}
+//   *serialization = s;
+//   return 0;
+// }
 
 int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, mo_operational_process *process, void **fptr,
                               const char **str)
@@ -383,7 +384,31 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
   step->next = NULL;
 
   // Type
-  if (!strncmp(s, "FILE_DIALOG", 11)) {
+  if (!strncmp(s, "PARAM", 5)) {
+    s += 5;
+    step->action = MO_STEP_CONTEXT_PARAMETER;
+
+    MCcall(mc_mo_parse_past_empty_space(&s));
+    MCcall(mc_mo_parse_past(&s, "{"));
+    MCcall(mc_mo_parse_past(&s, "\n"));
+    MCcall(mc_mo_parse_past_empty_space(&s));
+
+    // Name
+    MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+    if (strcmp(prop_name, "key")) {
+      MCerror(3883, "process context parameters are to begin with key={$context-param-key$} instead:'%.20s...'", s);
+    }
+    step->context_parameter.key = strdup(prop_value);
+    MCcall(mc_mo_parse_past_empty_space(&s));
+
+    // Obtain Sub-process
+    MCcall(mc_mo_parse_past(&s, "obtain="));
+    MCcall(_mc_mo_parse_serialized_process(pstack, &s, &step->context_parameter.obtain_value_subprocess));
+
+    MCcall(mc_mo_parse_past_empty_space(&s));
+    MCcall(mc_mo_parse_past(&s, "}"));
+  }
+  else if (!strncmp(s, "FILE_DIALOG", 11)) {
     s += 11;
     step->action = MO_STEP_FILE_DIALOG;
 
@@ -444,7 +469,39 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
         step->message_box_dialog.message = strdup(prop_value);
       }
       else {
-        MCerror(7946, "unhandled property name:'%s'", prop_name);
+        MCerror(8472, "unhandled property name:'%s'", prop_name);
+      }
+
+      MCcall(mc_mo_parse_past_empty_space(&s));
+    }
+    MCcall(mc_mo_parse_past(&s, "}"));
+  }
+  else if (!strncmp(s, "SYMBOL_DIALOG", 13)) {
+    s += 13;
+    step->action = MO_STEP_SYMBOL_DIALOG;
+
+    MCcall(mc_mo_parse_past_empty_space(&s));
+    MCcall(mc_mo_parse_past(&s, "{"));
+    MCcall(mc_mo_parse_past(&s, "\n"));
+    MCcall(mc_mo_parse_past_empty_space(&s));
+
+    while (*s != '}') {
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+
+      if (!strcmp(prop_name, "message")) {
+        step->symbol_dialog.message = strdup(prop_value);
+      }
+      else if (!strcmp(prop_name, "symbol_type")) {
+        step->symbol_dialog.symbol_type = strdup(prop_value);
+      }
+      else if (!strcmp(prop_name, "target_result_type")) {
+        step->symbol_dialog.target_result_type = strdup(prop_value);
+      }
+      else if (!strcmp(prop_name, "target_context_property")) {
+        step->symbol_dialog.target_context_property = strdup(prop_value);
+      }
+      else {
+        MCerror(6669, "unhandled property name:'%s'", prop_name);
       }
 
       MCcall(mc_mo_parse_past_empty_space(&s));
@@ -496,6 +553,9 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     }
     MCcall(mc_mo_parse_past(&s, "}"));
   }
+  else {
+    MCerror(6421, "Unrecognised step type : '%.13s...'", s);
+  }
 
   // Append the step to the process
   mo_operational_step *latest = process->first;
@@ -534,7 +594,6 @@ int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const ch
 
   mo_operational_process *p = (mo_operational_process *)malloc(sizeof(mo_operational_process));
   p->stack = process_stack;
-  p->nb_parameters = 0U;
   p->first = NULL;
 
   // Process Name
@@ -546,11 +605,6 @@ int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const ch
     MCcall(mc_mo_parse_past_empty_space(&s));
 
     switch (*s) {
-    case 'p': {
-      // puts("parsing parameter");
-      MCcall(mc_mo_parse_serialized_process_parameter(process_stack, p, &s));
-      // puts("end parameter");
-    } break;
     case '>': {
       // puts("parsing step");
       MCcall(mc_mo_parse_serialized_process_step(process_stack, p, &s));

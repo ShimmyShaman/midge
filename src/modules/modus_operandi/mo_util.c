@@ -51,7 +51,7 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name,
   mc_obtain_midge_app_info(&app_info);
 
   if (!app_info->projects.active) {
-    puts("TODO 5828 Set an active project to appinfo");
+    MCerror(5828, "TODO Set an active project to appinfo");
   }
 
   ctx = (hash_table_t *)hash_table_get(app_info->projects.active->name, &process_stack->project_contexts);

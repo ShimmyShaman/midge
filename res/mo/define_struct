@@ -1,6 +1,6 @@
 define-struct
-param {
-  name=header-path
+> PARAM {
+  key=header-path
   obtain=obtain-header-path
     > FILE_DIALOG {
       message=Choose or create a header file

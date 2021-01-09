@@ -120,11 +120,12 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
     default: {
       if (input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) {
         switch (input_event->button_code) {
-        // case KEY_CODE_A: {
-        //   // Can't select at the moment so just wipe everything out
-        //   set_mc_str(textbox->contents, "");
+        case KEY_CODE_A: {
+          // Can't select at the moment so just wipe everything out
+          set_mc_str(textbox->contents, "");
+          textbox->cursor.col = 0;
 
-        // } break;
+        } break;
         default:
           break;
         }
