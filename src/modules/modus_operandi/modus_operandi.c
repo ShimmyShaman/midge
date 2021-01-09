@@ -1049,7 +1049,7 @@ int _mc_mo_load_project_context(modus_operandi_data *mod, mc_project_info *proje
   bool exists;
   MCcall(mcf_file_exists(path, &exists));
   if (!exists) {
-    MCerror(8527, "TODO");
+    MCerror(8527, "TODO Later: No mo/context file exists for project %s", project->name);
   }
 
   // Obtain the project context
