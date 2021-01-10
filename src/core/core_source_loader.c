@@ -181,7 +181,7 @@ const char *_mcl_core_structs[] = {
     "mc_syntax_node_type",
     "mc_token_type",
     "mc_syntax_node_list",
-    "parsing_state",
+    "mcs_parsing_state",
 
     // mc_code_transcription.c
     "mct_transcription_scope_variable",
@@ -339,7 +339,7 @@ const char *_mcl_core_functions[] = {
     "mcs_register_struct_declaration",
     "mcs_register_struct_definition",
 
-    "parse_file_to_syntax_tree",
+    "mcs_parse_file_to_syntax_tree",
     "mc_init_source_file_info",
     "release_struct_id",
     "release_syntax_node",
@@ -398,7 +398,7 @@ const char *_mcl_core_functions[] = {
     "update_or_register_struct_info_from_syntax",
     "register_sub_type_syntax_to_field_info",
     "transcribe_struct_to_mc",
-    "parse_definition_to_syntax_tree",
+    "mcs_parse_definition_to_syntax_tree",
 
     // "METHOD_HERE",
 

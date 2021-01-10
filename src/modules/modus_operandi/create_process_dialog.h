@@ -14,7 +14,17 @@ typedef struct mc_mo_cpd_step_data {
   mcu_dropdown *dropdown;
   mcu_textbox *textbox;
   mcu_textblock **textblocks;
-  mcu_button *continue_button;
+  mcu_button *continue_button, *delegate_button;
+
+  union {
+    struct {
+      struct mc_mo_cpd_step_data *initial_step;
+    } process_title;
+    struct {
+      struct mc_mo_cpd_step_data *next, *delegate;
+    } context_parameter;
+  };
+
 } mc_mo_cpd_step_data;
 
 typedef struct mc_create_process_dialog_data {

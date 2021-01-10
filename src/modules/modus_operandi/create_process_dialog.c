@@ -18,7 +18,7 @@
 #include "modules/modus_operandi/create_process_dialog.h"
 #include "modules/modus_operandi/mo_types.h"
 
-#define MO_STEP_ABSTRACT_TITLE 1000
+#define MO_STEP_PROCESS_TITLE 1000
 #define MO_STEP_UNDESIGNATED 1001
 #define MO_STEP_CONTEXT_PARAMETER 1002
 
@@ -139,12 +139,13 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
   layout->visible = true;
 
   cell->dropdown->node->layout->visible = false;
+  cell->delegate_button->node->layout->visible = false;
   cell->textbox->node->layout->visible = false;
   for (a = 0; a < MO_CPD_CELL_TEXTBLOCK_COUNT; ++a)
     cell->textblocks[a]->node->layout->visible = false;
 
   switch (type) {
-  case MO_STEP_ABSTRACT_TITLE: {
+  case MO_STEP_PROCESS_TITLE: {
     layout->preferred_width = 240;
     layout->preferred_height = 60;
 
@@ -180,7 +181,7 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
   } break;
   case MO_STEP_CONTEXT_PARAMETER: {
     layout->preferred_width = 320;
-    layout->preferred_height = 72;
+    layout->preferred_height = 96;
 
     cell->panel->background_color = (render_color){0.04f, 0.24f, 0.06f, 1.f};
 
@@ -193,7 +194,7 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
 
     // Param Label
-    MCcall(set_mc_str(cell->textblocks[1]->str, "name:"));
+    MCcall(set_mc_str(cell->textblocks[1]->str, "key:"));
 
     layout = cell->textblocks[1]->node->layout;
     layout->visible = true;
@@ -208,9 +209,16 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     layout->visible = true;
     layout->padding = (mc_paddingf){42, 28, 4, 4};
 
+    // Obtain Delegate
+    layout = cell->delegate_button->node->layout;
+    layout->visible = true;
+    layout->padding = (mc_paddingf){4, 56, 4, 4};
+
     // Layout Updates
     MCcall(mca_set_node_requires_layout_update(cell->textblocks[0]->node));
     MCcall(mca_set_node_requires_layout_update(cell->textblocks[1]->node));
+    MCcall(mca_set_node_requires_layout_update(cell->textblocks[2]->node));
+    MCcall(mca_set_node_requires_layout_update(cell->delegate_button->node));
     MCcall(mca_set_node_requires_layout_update(cell->textbox->node));
   } break;
   default:
@@ -221,8 +229,10 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
   return 0;
 }
 
-int _mc_mo_cpd_create_new_cell(mc_create_process_dialog_data *cpd, mo_op_step_action_type type, float offX, float offY)
+int _mc_mo_cpd_create_new_cell(mc_create_process_dialog_data *cpd, mo_op_step_action_type type, float offX, float offY,
+                               mc_mo_cpd_step_data **dest)
 {
+  mc_mo_cpd_step_data *cell;
   // Obtain the new cell ptr
   int a;
   for (a = 0; a < cpd->cells.size; ++a) {
@@ -232,12 +242,15 @@ int _mc_mo_cpd_create_new_cell(mc_create_process_dialog_data *cpd, mo_op_step_ac
   if (a >= cpd->cells.size) {
     MCerror(7293, "TODO Cells size too big");
   }
-  mc_mo_cpd_step_data *cell = &cpd->cells.ary[a];
+  cell = &cpd->cells.ary[a];
 
   printf("new cell @ %p\n", cell);
   cell->panel->node->layout->padding = (mc_paddingf){offX, offY, 0, 0};
 
   MCcall(_mc_mo_cpd_set_cell(cell, type));
+
+  if (dest)
+    *dest = cell;
 
   return 0;
 }
@@ -255,19 +268,40 @@ void _mc_mo_cpd_cell_dropdown_selection(mci_input_event *input_event, mcu_dropdo
   }
 }
 
+void _mc_mo_cpd_cell_delegate_clicked(mci_input_event *input_event, mcu_button *button)
+{
+  mc_mo_cpd_step_data *cell = button->tag;
+  mc_create_process_dialog_data *cpd = (mc_create_process_dialog_data *)cell->panel->node->parent->parent->data;
+  mca_node_layout *layout = cell->panel->node->layout;
+
+  switch (cell->type) {
+  case MO_STEP_CONTEXT_PARAMETER: {
+    _mc_mo_cpd_create_new_cell(cpd, MO_STEP_PROCESS_TITLE, layout->padding.left + layout->__bounds.width + 20.f,
+                               layout->padding.top + 48.f, &cell->context_parameter.delegate);
+    cell->continue_button->node->layout->visible = false;
+  } break;
+  default:
+    printf("6728 TODO : %i\n", cell->type);
+    return;
+  }
+}
+
 void _mc_mo_cpd_cell_continue_clicked(mci_input_event *input_event, mcu_button *button)
 {
   mc_mo_cpd_step_data *cell = button->tag;
   mc_create_process_dialog_data *cpd = (mc_create_process_dialog_data *)cell->panel->node->parent->parent->data;
-  mca_node_layout *layout;
+  mca_node_layout *layout = cell->panel->node->layout;
 
   switch (cell->type) {
-  case MO_STEP_ABSTRACT_TITLE:
-  case MO_STEP_CONTEXT_PARAMETER: {
-    // Create a new cell below
-    mca_node_layout *layout = cell->panel->node->layout;
+  case MO_STEP_PROCESS_TITLE: {
     _mc_mo_cpd_create_new_cell(cpd, MO_STEP_UNDESIGNATED, layout->padding.left,
-                               layout->padding.top + layout->__bounds.height + 48.f);
+                               layout->padding.top + layout->__bounds.height + 48.f, &cell->process_title.initial_step);
+    cell->continue_button->node->layout->visible = false;
+  } break;
+  case MO_STEP_CONTEXT_PARAMETER: {
+    _mc_mo_cpd_create_new_cell(cpd, MO_STEP_UNDESIGNATED, layout->padding.left,
+                               layout->padding.top + layout->__bounds.height + 48.f, &cell->context_parameter.next);
+    cell->continue_button->node->layout->visible = false;
   } break;
   default:
     printf("6728 TODO : %i\n", cell->type);
@@ -283,7 +317,7 @@ int mc_mo_activate_create_process_dialog(mc_create_process_dialog_data *cpd, voi
   cpd->callback.result_delegate = callback_delegate;
 
   // Initial cell
-  MCcall(_mc_mo_cpd_create_new_cell(cpd, MO_STEP_ABSTRACT_TITLE, 50.f, 50.f));
+  MCcall(_mc_mo_cpd_create_new_cell(cpd, MO_STEP_PROCESS_TITLE, 50.f, 50.f, NULL));
 
   // Display
   // puts("mc_mo_activate_create_process_dialog");
@@ -383,6 +417,8 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
       MCcall(mcu_init_textblock(panel->node, &textblock));
       cell->textblocks[b] = textblock;
 
+      textblock->background_color.a = 0.f;
+
       layout = textblock->node->layout;
       layout->padding = (mc_paddingf){4, 4, 4, 4};
       layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
@@ -396,6 +432,20 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
     layout->padding = (mc_paddingf){4, 4, 4, 4};
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+
+    MCcall(mcu_init_button(panel->node, &cell->delegate_button));
+    button = cell->delegate_button;
+
+    layout = button->node->layout;
+    layout->preferred_width = 60;
+    layout->preferred_height = 16;
+    layout->padding = (mc_paddingf){4, 4, 4, 0};
+    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+
+    MCcall(set_mc_str(button->str, "obtain->"));
+    button->tag = cell;
+    button->left_click = (void *)&_mc_mo_cpd_cell_delegate_clicked;
 
     MCcall(mcu_init_button(panel->node, &cell->continue_button));
     button = cell->continue_button;

@@ -1204,7 +1204,7 @@ int _mce_set_definition_to_function_editor(mce_function_editor *function_editor,
   // TODO -- queue up an asynchronous semantic highlighting and information keepsake parsing of the text
 
   // // Parse
-  // int result = parse_definition_to_syntax_tree(function->source->code, &function_editor->code.syntax);
+  // int result = mcs_parse_definition_to_syntax_tree(function->source->code, &function_editor->code.syntax);
   // if (result) {
   //   // printf("cees-4\n");
   //   printf("PARSE_ERROR:8154\n");

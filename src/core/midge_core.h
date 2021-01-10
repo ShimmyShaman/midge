@@ -1123,7 +1123,7 @@ typedef struct mc_syntax_node {
 } mc_syntax_node;
 int (*parse_mc_to_syntax_tree)(char *mcode, mc_syntax_node **function_block_ast, bool allow_imperfect_parse);
 int (*parse_mc_file_to_syntax_tree)(char *code, mc_syntax_node **file_ast);
-int (*parse_definition_to_syntax_tree)(char *code, mc_syntax_node **file_ast);
+int (*mcs_parse_definition_to_syntax_tree)(char *code, mc_syntax_node **file_ast);
 int (*mcs_copy_syntax_node_to_text)(mc_syntax_node *syntax_node, char **output);
 int (*transcribe_code_block_ast_to_mc_definition)(mc_syntax_node *function_syntax, char **output);
 int (*mct_transcribe_function_to_mc)(mc_function_info_v1 *func_info, mc_syntax_node *function_ast,

@@ -559,7 +559,7 @@ void _mce_transcribe_syntax_to_function_debug_display(mc_syntax_node *syntax_nod
 void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function_info *function)
 {
   mc_syntax_node *function_syntax;
-  int result = parse_definition_to_syntax_tree(function->source->code, &function_syntax);
+  int result = mcs_parse_definition_to_syntax_tree(function->source->code, &function_syntax);
   if (result) {
     // printf("cees-4\n");
     printf("PARSE_ERROR:8154\n");

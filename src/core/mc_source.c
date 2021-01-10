@@ -716,7 +716,7 @@ int mcs_interpret_source_file(const char *filepath, mc_source_file_info **source
   MCcall(read_file_text(filepath, &code));
 
   // Parse the file into an AST
-  MCcall(parse_file_to_syntax_tree(code, &file_ast));
+  MCcall(mcs_parse_file_to_syntax_tree(code, &file_ast));
   free(code);
 
   // Ensure the full path is written
@@ -1483,7 +1483,7 @@ int mcs_interpret_file(const char *filepath)
 //   read_file_text(filepath, &file_text);
 
 //   mc_syntax_node *syntax_node;
-//   parse_file_to_syntax_tree(file_text, &syntax_node);
+//   mcs_parse_file_to_syntax_tree(file_text, &syntax_node);
 
 //   // Parse all definitions
 //   mc_source_file_info *lv_source_file;
