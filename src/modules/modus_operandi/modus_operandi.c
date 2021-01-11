@@ -1023,13 +1023,15 @@ int _mc_mo_load_project_context(modus_operandi_data *mod, mc_project_info *proje
     hash_table_set(project->name, (void *)project_context, &mod->process_stack.project_contexts);
   }
 
-  // Load it into the project context
+  // Load persisted context into the project context
   char *ft;
   MCcall(read_file_text(path, &ft));
-
   MCcall(mc_mo_parse_context_file(project_context, ft));
-
   free(ft);
+
+  // Set ptr data
+  printf("setting %p to ptr_project_node\n", project->root_node);
+  MCcall(mc_mo_set_specific_context_ptr(project_context, "project-node", project->root_node));
 
   return 0;
 }
@@ -1056,7 +1058,7 @@ int _mc_mo_project_loaded(void *handler_state, void *event_args)
   // hash_table_set("key-project", strdup(project->name), &mod->process_stack.global_context);
 
   // Load project context
-  _mc_mo_load_project_context(mod, project);
+  MCcall(_mc_mo_load_project_context(mod, project));
 
   return 0;
 }

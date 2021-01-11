@@ -146,9 +146,13 @@ int _mc_construct_project_file_source(const char *subdir, const char *project_na
                         "  app_root->data = data;\n"
                         "  data->app_root = app_root;\n"
                         "\n"
+                        "  puts(\"\\nDEBUG\");\n"
+                        "  printf(\"app_root=%%p %s_data=%%p\\n\", app_root, data);\n"
+                        "  puts(\"DEBUG\\n\");\n"
+                        "\n"
                         "  return 0;\n"
                         "}",
-                        project_name, project_name, project_name, project_name, project_name));
+                        project_name, project_name, project_name, project_name, project_name, project_name));
 
   // Write the file
   char path[256];

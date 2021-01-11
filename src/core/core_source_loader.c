@@ -596,6 +596,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     tcci_set_symbol(midge_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
     tcci_set_symbol(midge_itp, "tcci_set_symbol", &tcci_set_symbol);
     tcci_set_symbol(midge_itp, "tcci_get_symbol", &tcci_get_symbol);
+    tcci_set_symbol(midge_itp, "tcci_execute_single_use_code", &tcci_execute_single_use_code);
 
     // Allow obtaining of the midge interpreter from both interpreter states
     // char buf[128];

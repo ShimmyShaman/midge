@@ -488,6 +488,7 @@ int main(int argc, const char *const *argv)
   tcci_set_symbol(loader_itp, "tcci_new", &tcci_new);
   tcci_set_symbol(loader_itp, "tcci_delete", &tcci_delete);
   tcci_set_symbol(loader_itp, "tcci_set_Werror", &tcci_set_Werror);
+  tcci_set_symbol(loader_itp, "tcci_execute_single_use_code", &tcci_execute_single_use_code);
 
   tcci_define_symbol(loader_itp, "MC_TEMP_SOURCE_LOAD", "1");
 

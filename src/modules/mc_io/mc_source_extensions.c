@@ -6,6 +6,8 @@
 
 #include <unistd.h>
 
+#include "tinycc/libtccinterp.h"
+
 #include "core/mc_source.h"
 #include "core/midge_app.h"
 #include "midge_error_handling.h"
@@ -354,6 +356,55 @@ int mcs_append_field_to_struct(struct_info *si, const char *type_name, unsigned 
 
   // puts("e");
   MCcall(mc_save_source_file_from_updated_info(si->source_file));
+  return 0;
+}
+
+int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name, unsigned int type_deref_count,
+                                         const char *field_name, void **data)
+{
+  char nme[64], inc[256], buf[512];
+  size_t before_size;
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  sprintf(nme, "mcs_append_field_to_struct_and_remap_%u", app_info->uid_counter++);
+  strcpy(inc, "\"");
+  strcat(inc, si->source_file->filepath);
+  strcat(inc, "\",<stdio.h>");
+
+  sprintf(buf, "  printf(\"aaa=%%lu\\n\", sizeof(tetris_data));\n  *((size_t *)%p) = sizeof(%s);\n  puts(\"bbb\");\n", &before_size, si->name);
+  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, inc, buf));
+
+  printf("structure %s had a size of %lu\n", si->name, before_size);
+
+  // puts("a");
+  field_info *f = (field_info *)malloc(sizeof(field_info *));
+  f->field_type = FIELD_KIND_STANDARD;
+  f->std.type_name = strdup(type_name);
+  f->declarators.count = 0U;
+  f->declarators.alloc = 0U;
+
+  // puts("b");
+  field_declarator_info *fdecl = (field_declarator_info *)malloc(sizeof(field_declarator_info));
+  fdecl->array.dimension_count = 0;
+  fdecl->deref_count = type_deref_count;
+  fdecl->name = strdup(field_name);
+  // puts("c");
+  MCcall(append_to_collection((void ***)&f->declarators.items, &f->declarators.alloc, &f->declarators.count, fdecl));
+
+  // puts("d");
+  // WARNING If its ever changed from appending to insertion need to update the remapping also
+  MCcall(append_to_collection((void ***)&si->fields.items, &si->fields.alloc, &si->fields.count, f));
+
+  MCcall(mcs_ensure_header_include_for_type(si->source_file, type_name));
+
+  // puts("e");
+  MCcall(mc_save_source_file_from_updated_info(si->source_file));
+
+  // void *t = *data;
+
+  // free(t);
+
   return 0;
 }
 

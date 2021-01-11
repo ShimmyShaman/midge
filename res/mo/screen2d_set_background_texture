@@ -16,6 +16,13 @@ Screen2D: Set Background Texture
       MCcall(mc_mo_set_top_context_cstr(process_stack, "tex-field-name", "tex_background"));
     }
 }
+> PARAM {
+  key=project-node
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
+}
 > FUNCTION {
   const char *data_name, *tex_fn;
   MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
@@ -28,8 +35,15 @@ Screen2D: Set Background Texture
     MCerror(7563, "TODO");
   }
 
+  // Obtain the current project data
+  mc_node *app_node;
+  MCcall(mc_mo_get_context_ptr(process_stack, "project-node", true, (void **)&app_node));
+
+  printf("app_node=%p  ->data=%p\n", app_node, app_node->data);
+
   // Insert the texture field into the data
-  MCcall(mcs_append_field_to_struct(si, "mcr_texture_image", 1, tex_fn));
+  MCcall(mcs_append_field_to_struct_and_remap(si, "mcr_texture_image", 1, tex_fn, &app_node->data));
+  // MCcall(mcs_append_field_to_struct(si, "mcr_texture_image", 1, tex_fn));
 }
 > PARAM {
   key=project-init-source-filepath
@@ -146,9 +160,11 @@ Screen2D: Set Background Texture
   MCcall(mcs_attach_code_to_function(fi, buf));
 }
 > FUNCTION {
-    const char *texfp;
-    MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &texfp));
-    printf("texture-filepath:%s\n", texfp);
+
+    // Generate and execute a script that will load the texture resource
+    //const char *texfp;
+    //MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &texfp));
+    //printf("texture-filepath:%s\n", texfp);
 }
 > FUNCTION {
     puts("NotYetImplemented");
