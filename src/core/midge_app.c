@@ -394,7 +394,7 @@ int midge_run_app()
     bool logic_update_due = false;
     {
       // TODO DEBUG
-      // usleep(10000);
+      usleep(100);
 
       long ms;  // Milliseconds
       time_t s; // Seconds

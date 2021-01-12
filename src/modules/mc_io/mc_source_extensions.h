@@ -25,7 +25,7 @@ int mcs_append_field_to_struct(struct_info *si, const char *type_name, unsigned 
                                const char *field_name);
 
 int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name, unsigned int type_deref_count,
-                                         const char *field_name, void **data);
+                                         const char *field_name, void **data, void **p_field);
 
 int mcs_construct_function_definition(mc_source_file_info *source_file, const char *name, const char *return_type_name,
                                       unsigned int return_type_deref, int parameter_count, const char **parameters,

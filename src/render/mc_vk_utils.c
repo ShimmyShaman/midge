@@ -621,6 +621,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
 
 VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, mcr_texture_image **p_resource)
 {
+  puts("mvk_load_texture_from_file");
   VkResult res;
 
   int texWidth, texHeight, texChannels;

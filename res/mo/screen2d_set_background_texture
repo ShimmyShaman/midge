@@ -23,10 +23,21 @@ Screen2D: Set Background Texture
       message=NotYetImplemented
     }
 }
+> PARAM {
+  key=texture-filepath
+  obtain=obtain-texture-filepath
+    > FILE_DIALOG {
+      message=Select the texture file
+      initial_filename={CSTR:NULL}
+      initial_folder={CSTR:NULL}
+      target_context_property=texture-filepath
+    }
+}
 > FUNCTION {
-  const char *data_name, *tex_fn;
+  const char *data_name, *tex_fn, *tex_filepath;
   MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
   MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_fn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &tex_filepath));
 
   // Get the data struct
   struct_info *si = NULL;
@@ -42,8 +53,15 @@ Screen2D: Set Background Texture
   printf("app_node=%p  ->data=%p\n", app_node, app_node->data);
 
   // Insert the texture field into the data
-  MCcall(mcs_append_field_to_struct_and_remap(si, "mcr_texture_image", 1, tex_fn, &app_node->data));
-  // MCcall(mcs_append_field_to_struct(si, "mcr_texture_image", 1, tex_fn));
+  mcr_texture_image **p_new_field;
+  MCcall(mcs_append_field_to_struct_and_remap(si, "mcr_texture_image", 1, tex_fn, &app_node->data, (void **)&p_new_field));
+  *p_new_field = NULL;
+  MCcall(mcr_load_texture_resource(tex_filepath, p_new_field));
+  while (!*p_new_field) {
+   // puts("wait");
+   usleep(100);
+  }
+  // printf("loaded: %p\n", *p_new_field);
 }
 > PARAM {
   key=project-init-source-filepath
@@ -69,67 +87,56 @@ Screen2D: Set Background Texture
       function_info *fi, *init_fi;
       char param[64];
 
-      MCcall(mc_mo_get_context_cstr(process_stack, "project-load-resources-function", true, &lrcn));
+      // Create the function
+      // -- Obtain the project name
+      MCcall(mc_mo_get_context_cstr(process_stack, "project-name", true, &lrcn));
       if(!lrcn) {
-        // Create the function
-        // -- Obtain the project name
-        MCcall(mc_mo_get_context_cstr(process_stack, "project-name", true, &lrcn));
-        if(!lrcn) {
-          puts("Error - require project-name context to initailize the load_resources function");
-          return 8;
-        }
-
-        // -- Make the function name
-        sprintf(lrcn_buf, "_%s_load_resources", lrcn);
-        lrcn = lrcn_buf;
-
-        // -- Obtain the init source file name
-        const char *init_source_filepath;
-        MCcall(mc_mo_get_context_cstr(process_stack, "project-init-source-filepath", true, &init_source_filepath));
-        if(!init_source_filepath) {
-          return 9;
-        }
-        mc_source_file_info *init_source_file;
-        MCcall(mcs_obtain_source_file_info(init_source_filepath, true, &init_source_file));
-        if(!init_source_file)
-          return 10;
-        
-        // -- Insert a somewhat empty function into the source file
-        strcpy(buf, "{ return 0; }");
-
-        // -- Ensure new function doesn't exist
-        MCcall(find_function_info(lrcn, &fi));
-        if(fi)
-          return 11;
-
-        // -- Create the new resources-load function
-        MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
-        sprintf(param, "%s *data", data_name);
-        char *pparam = param;
-        MCcall(mcs_construct_function_definition(init_source_file, lrcn, "int", 0, 1, &pparam, buf));
-
-        // Make a call to this created function inside the initialize function
-        MCcall(mc_mo_get_context_cstr(process_stack, "project-init-function-name", true, &init_function_name));
-        MCcall(find_function_info(init_function_name, &init_fi));
-        if(!init_fi)
-          return 14;
-
-        // TODO -- obtain the local data variable name
-        sprintf(buf, "\n  MCcall(%s(data));\n", lrcn);
-        MCcall(mcs_attach_code_to_function(init_fi, buf));
+        puts("Error - require project-name context to initailize the load_resources function");
+        return 8;
       }
 
+      // -- Make the function name
+      sprintf(lrcn_buf, "_%s_load_resources", lrcn);
+      lrcn = lrcn_buf;
+
+      // -- Obtain the init source file name
+      const char *init_source_filepath;
+      MCcall(mc_mo_get_context_cstr(process_stack, "project-init-source-filepath", true, &init_source_filepath));
+      if(!init_source_filepath) {
+        return 9;
+      }
+      mc_source_file_info *init_source_file;
+      MCcall(mcs_obtain_source_file_info(init_source_filepath, true, &init_source_file));
+      if(!init_source_file)
+        return 10;
+      
+      // -- Insert a somewhat empty function into the source file
+      strcpy(buf, "{ return 0; }");
+
+      // -- Ensure new function doesn't exist
+      MCcall(find_function_info(lrcn, &fi));
+      if(fi)
+        return 11;
+
+      // -- Create the new resources-load function
+      MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+      sprintf(param, "%s *data", data_name);
+      char *pparam = param;
+      puts(param);
+      MCcall(mcs_construct_function_definition(init_source_file, lrcn, "int", 0, 1, &pparam, buf));
+      puts("after construct function definition");
+
+      // Make a call to this created function inside the initialize function
+      MCcall(mc_mo_get_context_cstr(process_stack, "project-init-function-name", true, &init_function_name));
+      MCcall(find_function_info(init_function_name, &init_fi));
+      if(!init_fi)
+        return 14;
+
+      // TODO -- obtain the local data variable name
+      sprintf(buf, "\n  MCcall(%s(data));\n", lrcn);
+      MCcall(mcs_attach_code_to_function(init_fi, buf));
+
       MCcall(mc_mo_set_top_context_cstr(process_stack, "project-load-resources-function", lrcn));
-    }
-}
-> PARAM {
-  key=texture-filepath
-  obtain=obtain-texture-filepath
-    > FILE_DIALOG {
-      message=Select the texture file
-      initial_filename={CSTR:NULL}
-      initial_folder={CSTR:NULL}
-      target_context_property=texture-filepath
     }
 }
 > FUNCTION {

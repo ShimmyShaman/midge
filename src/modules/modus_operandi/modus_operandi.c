@@ -405,6 +405,7 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
     }
   } break;
   case MO_STEP_DELEGATE_FUNCTION: {
+
     int (*user_function)(mc_mo_process_stack * context, void *farg) =
         (int (*)(mc_mo_process_stack *, void *))step->delegate.fptr;
 

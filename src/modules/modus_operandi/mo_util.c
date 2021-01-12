@@ -23,9 +23,11 @@ int mc_mo_get_specific_context_cstr(hash_table_t *context, const char *name, con
 
 int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name, bool search_stack, const char **result)
 {
+  // printf("mc_mo_get_context_cstr:'%s'\n", name);
   mc_str *str;
   hash_table_t *ctx = &process_stack->context_maps[process_stack->index];
 
+    // printf("mc_mo_get_context_cstr:ctx0=%p\n", ctx);
   str = (mc_str *)hash_table_get(name, ctx);
 
   if (str) {
@@ -34,14 +36,17 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name,
   }
   if (!search_stack) {
     *result = NULL;
+    // printf("mc_mo_get_context_cstr:result=NULL\n");
     return 0;
   }
 
   --ctx;
   for (; ctx >= process_stack->context_maps; --ctx) {
+    // printf("mc_mo_get_context_cstr:ctx1=%p\n", ctx);
     str = (mc_str *)hash_table_get(name, ctx);
     if (str) {
       *result = str->text;
+      // printf("mc_mo_get_context_cstr:result=%s\n", str->text);
       return 0;
     }
   }
@@ -62,6 +67,7 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name,
   str = (mc_str *)hash_table_get(name, ctx);
   if (str) {
     *result = str->text;
+    // printf("mc_mo_get_context_cstr:result=%s\n", str->text);
     return 0;
   }
 
@@ -69,11 +75,13 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name,
   str = (mc_str *)hash_table_get(name, &process_stack->global_context);
   if (str) {
     *result = str->text;
+    // printf("mc_mo_get_context_cstr:result=%s\n", str->text);
     return 0;
   }
 
   // No Result
   *result = NULL;
+  // printf("mc_mo_get_context_cstr:result=NULL\n");
   return 0;
 }
 

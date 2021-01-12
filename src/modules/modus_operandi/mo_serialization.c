@@ -279,6 +279,9 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, mo_operational
   MCcall(append_to_mc_str(fc, "#include <stdio.h>\n"));
   MCcall(append_to_mc_str(fc, "#include <string.h>\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
+  MCcall(append_to_mc_str(fc, "#include <unistd.h>\n"));
+  MCcall(append_to_mc_str(fc, "#include <pthread.h>\n"));
+  MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_str(fc, "#include \"midge_error_handling.h\"\n"));
   MCcall(append_to_mc_str(fc, "#include \"core/midge_app.h\"\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));

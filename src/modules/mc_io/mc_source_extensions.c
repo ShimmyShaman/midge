@@ -19,6 +19,7 @@
 
 int find_source_entity_info(source_entity_info *dest, const char *name)
 {
+  // puts("find_source_entity_info");
   mc_app_itp_data *app_itp_data;
   mc_obtain_app_itp_data(&app_itp_data);
 
@@ -32,6 +33,7 @@ int find_source_entity_info(source_entity_info *dest, const char *name)
       else
         dest->type = MC_SOURCE_SEGMENT_FUNCTION_DECLARATION;
       dest->fu_info = fi;
+      // puts("--function");
       return 0;
     }
   }
@@ -41,6 +43,7 @@ int find_source_entity_info(source_entity_info *dest, const char *name)
     if (!strcmp(name, fi->name)) {
       dest->type = MC_SOURCE_SEGMENT_FUNCTION_DECLARATION;
       dest->fu_info = fi;
+      // puts("--funcdecl");
       return 0;
     }
   }
@@ -68,6 +71,7 @@ int find_source_entity_info(source_entity_info *dest, const char *name)
       else
         dest->type = MC_SOURCE_SEGMENT_ENUMERATION_DECLARATION;
       dest->en_info = ei;
+      // puts("--enum");
       return 0;
     }
   }
@@ -247,7 +251,7 @@ int mcs_construct_struct_declaration(mc_source_file_info *source_file, const cha
 
 int mcs_ensure_header_include_for_type(mc_source_file_info *sf, const char *type_name)
 {
-  printf("mcs_ensure_header_include_for_type:'%s'\n", type_name);
+  // printf("mcs_ensure_header_include_for_type:'%s'\n", type_name);
 
   source_entity_info sei;
   find_source_entity_info(&sei, type_name);
@@ -360,10 +364,11 @@ int mcs_append_field_to_struct(struct_info *si, const char *type_name, unsigned 
 }
 
 int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name, unsigned int type_deref_count,
-                                         const char *field_name, void **data)
+                                         const char *field_name, void **data, void **p_field)
 {
+  // TODO -- ideally the struct_info would have this information
   char nme[64], inc[256], buf[512];
-  size_t before_size;
+  size_t before_size, after_size;
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
@@ -372,10 +377,13 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
   strcat(inc, si->source_file->filepath);
   strcat(inc, "\",<stdio.h>");
 
-  sprintf(buf, "  printf(\"aaa=%%lu\\n\", sizeof(tetris_data));\n  *((size_t *)%p) = sizeof(%s);\n  puts(\"bbb\");\n", &before_size, si->name);
-  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, inc, buf));
+  sprintf(buf,
+          "  printf(\"aaa=%%lu\\n\", sizeof(tetris_data));\n  *((size_t *)vargs) = sizeof(%s);\n  puts(\"bbb\");\n  "
+          "return NULL;",
+          si->name);
+  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, inc, buf, &before_size, NULL));
 
-  printf("structure %s had a size of %lu\n", si->name, before_size);
+  printf("structure %s had a size before of %lu\n", si->name, before_size);
 
   // puts("a");
   field_info *f = (field_info *)malloc(sizeof(field_info *));
@@ -401,9 +409,29 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
   // puts("e");
   MCcall(mc_save_source_file_from_updated_info(si->source_file));
 
-  // void *t = *data;
+  sprintf(nme, "mcs_append_field_to_struct_and_remap_%u", app_info->uid_counter++);
+  strcpy(inc, "\"");
+  strcat(inc, si->source_file->filepath);
+  strcat(inc, "\",<stdio.h>");
 
-  // free(t);
+  sprintf(buf,
+          "  printf(\"aaa=%%lu\\n\", sizeof(tetris_data));\n  *((size_t *)vargs) = sizeof(%s);\n  puts(\"bbb\");\n  "
+          "return NULL;",
+          si->name);
+  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, inc, buf, &after_size, NULL));
+
+  printf("structure %s had a size after of %lu\n", si->name, after_size);
+
+  // Remap the data
+  void *new_data = (void *)malloc(after_size);
+  memcpy(new_data, *data, before_size);
+
+  printf("replacing data at %p with data at %p\n", *data, new_data);
+  void *t = *data;
+  *data = new_data;
+  free(t);
+
+  *p_field = (void *)((unsigned char *)*data + before_size);
 
   return 0;
 }
@@ -412,13 +440,19 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
                                       unsigned int return_type_deref, int parameter_count, const char **parameters,
                                       const char *code)
 {
+  puts("mcs_construct_function_definition");
   source_entity_info sei;
   function_info *fi;
+  parameter_info *pp;
 
   MCcall(find_source_entity_info(&sei, name));
   if (sei.type) {
     MCerror(4592, "Another symbol already possesses this name");
   }
+  puts("ba");
+
+  printf("name'%s'\n", name);
+  printf("return_type_name'%s'\n", return_type_name);
 
   fi = (function_info *)calloc(1, sizeof(function_info));
   fi->name = strdup(name);
@@ -426,10 +460,13 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
   fi->source = source_file;
   fi->return_type.name = strdup(return_type_name);
   fi->return_type.deref_count = return_type_deref;
+  fi->code = NULL;
 
   fi->parameters.alloc = 0U;
   fi->parameters.count = 0U;
-  parameter_info *pp = calloc(parameter_count, sizeof(parameter_info));
+  if (parameter_count) {
+    pp = calloc(parameter_count, sizeof(parameter_info));
+  }
   for (int a = 0; a < parameter_count; ++a) {
     // TODO -- non-standard parameters (fptrs etc)
     const char *c = parameters[a], *s;
@@ -440,6 +477,7 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
     p->parameter_type = PARAMETER_KIND_STANDARD;
 
     // Type
+    // printf("0:'%s'\n", s);
     s = c;
     while (*c != ' ') {
       if (*c == '\0') {
@@ -451,6 +489,7 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
     ++c;
 
     // Deref
+    // printf("1:'%s'\n", c);
     p->type_deref_count = 0U;
     while (*c == '*') {
       if (*c == '\0') {
@@ -460,11 +499,13 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
       ++p->type_deref_count;
     }
 
+    // printf("2:'%s'\n", c);
     s = c;
     while (*c != '\0') {
       ++c;
     }
     p->name = strndup(s, c - s);
+    // printf("3:'%s'\n", p->name);
   }
 
   fi->nb_dependents = 0;
