@@ -978,6 +978,7 @@ int _mc_mo_project_created(void *handler_state, void *event_args)
   MCcall(append_to_mc_strf(str, "%s=%s\n", "project-name", project_name));
   MCcall(append_to_mc_strf(str, "%s=%s\n", "project-dir", project_dir));
   MCcall(append_to_mc_strf(str, "%s=%s_data\n", "project-data", project_name));
+  MCcall(append_to_mc_strf(str, "%s=_%s_render_present\n", "project-render-function-name", project_name));
 
   strcpy(buf, project_dir);
   MCcall(mcf_concat_filepath(buf, 256, "src"));

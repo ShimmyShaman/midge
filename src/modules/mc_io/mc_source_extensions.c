@@ -522,38 +522,61 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
 
 int mcs_attach_code_to_function(function_info *fi, const char *code)
 {
-  // Find the final return and insert code before that
-  if (!strcmp(fi->return_type.name, "void") && !fi->return_type.deref_count) {
-    MCerror(9482, "TODO");
-  }
-
-  // Move to the end -- obtain the position of the last return
   int fic_len, clen;
-  const char *c = fi->code, *s = NULL;
-  while (*c != '\0') {
-    if (*c == 'r' && !strncmp(c, "return ", 7))
-      s = c;
-    ++c;
-  }
-  fic_len = c - fi->code;
-
-  if (!s) {
-    MCerror(7592, "TODO");
-  }
-  c = s;
-
-  --c;
-  if (*c != ';' && *c != '}') {
-    while (*c == ' ' || *c == '\t')
-      --c;
-    ++c;
-  }
-
   clen = strlen(code);
-  char *nc = (char *)malloc(sizeof(char) * (fic_len + clen + 1));
-  strncpy(nc, fi->code, c - fi->code);
-  strcpy(nc + (c - fi->code), code);
-  strcpy(nc + (c - fi->code) + clen, c);
+  char *nc;
+  if (!strcmp(fi->return_type.name, "void") && !fi->return_type.deref_count) {
+    // Just attach to the end before the curly bracket
+    const char *c = fi->code, *s = NULL;
+    while (*c != '\0') {
+      ++c;
+    }
+    fic_len = c - fi->code - 1;
+
+    --c;
+    while (*c != '}') {
+      while (*c == ' ' || *c == '\t')
+        --c;
+    }
+    --c;
+
+    // while (*c == ' ' || *c == '\t')
+    //   --c;
+
+    nc = (char *)malloc(sizeof(char) * (fic_len + clen + 1));
+    strncpy(nc, fi->code, c - fi->code);
+    strcpy(nc + (c - fi->code), code);
+    strcpy(nc + (c - fi->code) + clen, c);
+  }
+  else {
+
+    // Find the final return and insert code before that
+    // Move to the end -- obtain the position of the last return
+    const char *c = fi->code, *s = NULL;
+    while (*c != '\0') {
+      if (*c == 'r' && !strncmp(c, "return ", 7))
+        s = c;
+      ++c;
+    }
+    fic_len = c - fi->code;
+
+    if (!s) {
+      MCerror(7592, "TODO");
+    }
+    c = s;
+
+    --c;
+    if (*c != ';' && *c != '}') {
+      while (*c == ' ' || *c == '\t')
+        --c;
+      ++c;
+    }
+
+    nc = (char *)malloc(sizeof(char) * (fic_len + clen + 1));
+    strncpy(nc, fi->code, c - fi->code);
+    strcpy(nc + (c - fi->code), code);
+    strcpy(nc + (c - fi->code) + clen, c);
+  }
 
   free(fi->code);
   fi->code = nc;

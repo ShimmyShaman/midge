@@ -166,16 +166,56 @@ Screen2D: Set Background Texture
   // Insert inside the load resources function
   MCcall(mcs_attach_code_to_function(fi, buf));
 }
-> FUNCTION {
-
-    // Generate and execute a script that will load the texture resource
-    //const char *texfp;
-    //MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &texfp));
-    //printf("texture-filepath:%s\n", texfp);
+> PARAM {
+  key=project-render-function-name
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
 }
 > FUNCTION {
-    puts("NotYetImplemented");
-    puts("- ensure the header references render/common.h");
-    puts("- insert a field 'mcr_texture_image *bg_texture' into project-data");
-    puts("- insert a call to issue texture resource into the project-resource-load-function");
+  char buf[512];
+  const char *render_fn, *data_name, *tex_fn;
+  function_info *fi;
+
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-render-function-name", true, &render_fn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_fn));
+
+  // Get the function
+  MCcall(find_function_info(render_fn, &fi));
+  if(!fi)
+    return 15;
+
+  sprintf(buf, "\n"
+  "  puts(\"new-function!\");\n"
+  "  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x + 425U,\n"
+  "                                         10, 590, 880, %s->%s);\n", "data", tex_fn);
+
+  // Insert inside the load resources function
+  MCcall(mcs_attach_code_to_function(fi, buf));
+}
+> FUNCTION {
+  // Update the node layout to use the new function
+  // -- Obtain the current project data
+  mc_app_itp_data *itp_data;
+  mc_node *app_node;
+  char buf[256];
+  const char *render_fn;
+  void *p_render_fn;
+
+  MCcall(mc_mo_get_context_ptr(process_stack, "project-node", true, (void **)&app_node));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-render-function-name", true, &render_fn));
+  
+  mc_obtain_app_itp_data(&itp_data);
+
+  p_render_fn = tcci_get_symbol(itp_data->interpreter, render_fn);
+  if(!p_render_fn) {
+    return 214;
+  }
+
+  sprintf(buf, "((mc_node *)%p)->layout->render_present = (void *)%p;\n  return NULL;", app_node, p_render_fn);
+
+  MCcall(tcci_execute_single_use_code(itp_data->interpreter, "screen2d-set-bg-texture",
+                                  "\"core/core_definitions.h\",\"env/environment_definitions.h\"", buf, NULL, NULL));
 }
