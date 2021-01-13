@@ -4039,7 +4039,7 @@ int mcs_parse_for_statement(mcs_parsing_state *ps, mc_syntax_node *parent, mc_sy
   case MC_TOKEN_STAR_CHARACTER:
   case MC_TOKEN_LOGICAL_NOT_OPERATOR:
   case MC_TOKEN_IDENTIFIER: {
-    mcs_parse_expression_conditional(ps, statement, &statement->for_statement.conditional);
+    MCcall(mcs_parse_expression_conditional(ps, statement, &statement->for_statement.conditional));
   } break;
   case MC_TOKEN_SEMI_COLON: {
     statement->for_statement.conditional = NULL;
@@ -4122,7 +4122,7 @@ int mcs_parse_while_statement(mcs_parsing_state *ps, mc_syntax_node *parent, mc_
 
     MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_OPENING_BRACKET, NULL));
     mcs_parse_through_supernumerary_tokens(ps, statement);
-    mcs_parse_expression_conditional(ps, statement, &statement->while_statement.conditional);
+    MCcall(mcs_parse_expression_conditional(ps, statement, &statement->while_statement.conditional));
     mcs_parse_through_supernumerary_tokens(ps, statement);
     MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_CLOSING_BRACKET, NULL));
 
@@ -4137,7 +4137,7 @@ int mcs_parse_while_statement(mcs_parsing_state *ps, mc_syntax_node *parent, mc_
 
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_OPENING_BRACKET, NULL));
   mcs_parse_through_supernumerary_tokens(ps, statement);
-  mcs_parse_expression_conditional(ps, statement, &statement->while_statement.conditional);
+  MCcall(mcs_parse_expression_conditional(ps, statement, &statement->while_statement.conditional));
   mcs_parse_through_supernumerary_tokens(ps, statement);
   MCcall(mcs_parse_through_token(ps, statement, MC_TOKEN_CLOSING_BRACKET, NULL));
 

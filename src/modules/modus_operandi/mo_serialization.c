@@ -371,6 +371,66 @@ int mc_mo_parse_context_arg(const char *str, mo_op_step_context_arg *dest)
   return 0;
 }
 
+int _mc_mo_parse_serialized_parameter_step(mc_mo_process_stack *pstack, mo_operational_step *step,
+                                           const char **serialization)
+{
+  char prop_name[64], prop_value[MC_MO_EOL_BUF_SIZE];
+  const char *s = *serialization;
+
+  s += 5;
+  step->action = MO_STEP_CONTEXT_PARAMETER;
+
+  MCcall(mc_mo_parse_past_empty_space(&s));
+  MCcall(mc_mo_parse_past(&s, "{"));
+  MCcall(mc_mo_parse_past(&s, "\n"));
+  MCcall(mc_mo_parse_past_empty_space(&s));
+
+  // Name
+  MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+  if (strcmp(prop_name, "key")) {
+    MCerror(3883, "process context parameters are to begin with key={$context-param-key$} instead:'%.20s...'", s);
+  }
+  step->context_parameter.key = strdup(prop_value);
+  MCcall(mc_mo_parse_past_empty_space(&s));
+
+  if (*s == 'u' && !strncmp(s, "unset", 5)) {
+    step->context_parameter.presence = MO_STEP_CTXP_PRESENCE_EMPTY_OBTAIN;
+
+    MCcall(mc_mo_parse_past(&s, "unset"));
+    MCcall(mc_mo_parse_past_empty_space(&s));
+
+    // Obtain Sub-process
+    MCcall(mc_mo_parse_past(&s, "obtain="));
+    MCcall(_mc_mo_parse_serialized_process(pstack, &s, &step->context_parameter.obtain_value_subprocess));
+
+    MCcall(mc_mo_parse_past_empty_space(&s));
+    MCcall(mc_mo_parse_past(&s, "}"));
+  }
+  else if (*s == 'd' && !strncmp(s, "default", 7)) {
+    step->context_parameter.presence = MO_STEP_CTXP_PRESENCE_DEFAULT_AVAILABLE;
+
+    MCerror(7582, "TODO");
+  }
+  else if (*s == 'o' && !strncmp(s, "obtain", 6)) {
+    step->context_parameter.presence = MO_STEP_CTXP_PRESENCE_OBTAIN_AVAILABLE;
+
+    // Obtain Sub-process
+    MCcall(mc_mo_parse_past(&s, "obtain="));
+    MCcall(_mc_mo_parse_serialized_process(pstack, &s, &step->context_parameter.obtain_value_subprocess));
+
+    MCcall(mc_mo_parse_past_empty_space(&s));
+    MCcall(mc_mo_parse_past(&s, "}"));
+  }
+  else {
+    step->context_parameter.presence = MO_STEP_CTXP_PRESENCE_REQUIRED;
+
+    MCerror(4252, "TODO");
+  }
+
+  *serialization = s;
+  return 0;
+}
+
 int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operational_process *process,
                                         const char **serialization)
 {
@@ -388,28 +448,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
 
   // Type
   if (!strncmp(s, "PARAM", 5)) {
-    s += 5;
-    step->action = MO_STEP_CONTEXT_PARAMETER;
-
-    MCcall(mc_mo_parse_past_empty_space(&s));
-    MCcall(mc_mo_parse_past(&s, "{"));
-    MCcall(mc_mo_parse_past(&s, "\n"));
-    MCcall(mc_mo_parse_past_empty_space(&s));
-
-    // Name
-    MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
-    if (strcmp(prop_name, "key")) {
-      MCerror(3883, "process context parameters are to begin with key={$context-param-key$} instead:'%.20s...'", s);
-    }
-    step->context_parameter.key = strdup(prop_value);
-    MCcall(mc_mo_parse_past_empty_space(&s));
-
-    // Obtain Sub-process
-    MCcall(mc_mo_parse_past(&s, "obtain="));
-    MCcall(_mc_mo_parse_serialized_process(pstack, &s, &step->context_parameter.obtain_value_subprocess));
-
-    MCcall(mc_mo_parse_past_empty_space(&s));
-    MCcall(mc_mo_parse_past(&s, "}"));
+    MCcall(_mc_mo_parse_serialized_parameter_step(pstack, step, &s));
   }
   else if (!strncmp(s, "FILE_DIALOG", 11)) {
     s += 11;
@@ -556,6 +595,35 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     }
     MCcall(mc_mo_parse_past(&s, "}"));
   }
+  else if (!strncmp(s, "TEXT_INPUT", 10)) {
+    s += 10;
+    step->action = MO_STEP_TEXT_INPUT_DIALOG;
+
+    MCcall(mc_mo_parse_past_empty_space(&s));
+    MCcall(mc_mo_parse_past(&s, "{"));
+    MCcall(mc_mo_parse_past(&s, "\n"));
+    MCcall(mc_mo_parse_past_empty_space(&s));
+
+    while (*s != '}') {
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+
+      step->text_input_dialog.default_text.type = MO_STEP_CTXARG_CSTR;
+      step->text_input_dialog.default_text.data = "";
+
+      if (!strcmp(prop_name, "message")) {
+        step->text_input_dialog.message = strdup(prop_value);
+      }
+      else if (!strcmp(prop_name, "target_context_property")) {
+        step->text_input_dialog.target_context_property = strdup(prop_value);
+      }
+      else {
+        MCerror(6984, "unhandled property name:'%s'", prop_name);
+      }
+
+      MCcall(mc_mo_parse_past_empty_space(&s));
+    }
+    MCcall(mc_mo_parse_past(&s, "}"));
+  }
   else {
     MCerror(6421, "Unrecognised step type : '%.13s...'", s);
   }
@@ -620,7 +688,7 @@ int _mc_mo_parse_serialized_process(mc_mo_process_stack *process_stack, const ch
       // End
       break;
     default:
-      MCerror(8137, "Unexpected char sequence beginning '%.20s'", s);
+      MCerror(8137, "Unexpected char sequence beginning '%.30s'", s);
     }
   }
 

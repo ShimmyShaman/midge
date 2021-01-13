@@ -161,7 +161,13 @@ Screen2D: Set Background Texture
   // Generate the code
   const char *texfp;
   MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &texfp));
-  sprintf(buf, "MCcall(mcr_load_texture_resource(\"%s\", &data->%s));\n", texfp, tex_fn);
+  sprintf(buf, "\n"
+               "  data->%s = NULL;\n"
+               "  MCcall(mcr_load_texture_resource(\"%s\", &data->%s));\n"
+               "  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??\n"
+               "  while(!data->%s) {\n"
+               "    usleep(100);\n"
+               "  }\n", texfp, tex_fn);
 
   // Insert inside the load resources function
   MCcall(mcs_attach_code_to_function(fi, buf));

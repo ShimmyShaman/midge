@@ -1,0 +1,68 @@
+add-update-timer
+> PARAM {
+  key=project-update-function-name
+  unset
+  obtain=obtain-project-update-function-name
+    > TEXT_INPUT {
+      message=Set the update function name
+      target_context_property=project-update-function-name
+    }
+}
+> PARAM {
+  key=project-init-source-filepath
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
+}
+> FUNCTION {
+  // Create the update function
+  const char *update_func_name, *init_source_filepath, *data_name;
+  mc_source_file_info *init_source_file;
+  function_info *fi;
+  char buf[256];
+
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-update-function-name", true, &update_func_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-init-source-filepath", true, &init_source_filepath));
+
+  MCcall(find_function_info(update_func_name, &fi));  
+  if(fi) {
+    return 88;
+  }
+
+  MCcall(mcs_obtain_source_file_info(init_source_filepath, true, &init_source_file));
+  if(!init_source_file)
+    return 89;
+      
+  // -- Insert a somewhat empty function into the source file
+  sprintf(buf, "{\n"
+               "  %s *data = (%s *)callback_state;\n"
+               "\n"
+               "  return 0;\n"
+               "}", data_name, data_name);
+
+  // -- Create the new resources-load function
+  char *params[2];
+  params[0] = "frame_time *ft";
+  params[1] = "void *callback_state";
+  //puts(param);
+  MCcall(mcs_construct_function_definition(init_source_file, update_func_name, "int", 0, 2, params, buf));
+  //puts("after construct function definition");
+}
+> FUNCTION {
+  // Register the update function in the initialize function
+  const char *init_func_name, *update_func_name;
+  function_info *init_fi;
+  char buf[256];
+
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-init-function-name", true, &init_func_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-update-function-name", true, &update_func_name));
+
+  MCcall(find_function_info(init_func_name, &init_fi));
+  if(!init_fi)
+    return 14;
+  // TODO -- obtain the local data variable name
+  sprintf(buf, "\n  MCcall(mca_register_update_timer(0, true, %s, &%s));\n", "data", update_func_name);
+  MCcall(mcs_attach_code_to_function(init_fi, buf));
+}

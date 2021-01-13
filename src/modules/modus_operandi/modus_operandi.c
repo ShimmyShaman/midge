@@ -162,7 +162,7 @@ int _mc_mo_dialog_options_text_selected(void *invoker_state, char *selected_text
 
   // printf("_mc_mo_dialog_folder_selected:'%s'\n", selected_folder);
   if (step->action != MO_STEP_OPTIONS_DIALOG) {
-    MCerror(8220, "TODO - state error %i", step->action);
+    MCerror(5960, "TODO - state error %i", step->action);
   }
   if (!selected_text) {
     MCerror(8223, "TODO - canceled process section");
@@ -249,7 +249,7 @@ int _mc_mo_obtain_context_arg(mo_op_step_context_arg *context_arg, bool *require
     puts("ERROR TODO -- MO_STEP_CTXARG_ACTIVE_PROJECT_SRC_PATH");
     *requires_mem_free = false;
   default:
-    MCerror(8220, "_mc_mo_obtain_context_arg:Unsupported type>%i", context_arg->type);
+    MCerror(8227, "_mc_mo_obtain_context_arg:Unsupported type>%i", context_arg->type);
   }
 
   return 0;
@@ -331,17 +331,28 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
     // Find in context tree
     MCcall(mc_mo_get_context_cstr(process_stack, step->context_parameter.key, true, &str));
     if (str) {
+      if (step->context_parameter.presence == MO_STEP_CTXP_PRESENCE_EMPTY_OBTAIN) {
+        MCerror(8582, "TODO -- context parameter must not be set...");
+      }
+
       MCcall(_mc_mo_activate_next_stack_step(process_stack));
       break;
     }
 
-    if (!step->context_parameter.obtain_value_subprocess) {
-      MCerror(8774, "A means should be provided to obtain the value for parameter '%s'", step->context_parameter.key);
-    }
+    switch (step->context_parameter.presence) {
+    case MO_STEP_CTXP_PRESENCE_EMPTY_OBTAIN:
+    case MO_STEP_CTXP_PRESENCE_OBTAIN_AVAILABLE: {
+      if (!step->context_parameter.obtain_value_subprocess) {
+        MCerror(8774, "A means should be provided to obtain the value for parameter '%s'", step->context_parameter.key);
+      }
 
-    // Activate the subprocess to obtain the argument value
-    // printf("activating subprocess to get param value for '%s'\n", step->context_parameter.key);
-    MCcall(_mc_mo_begin_op_process(step->context_parameter.obtain_value_subprocess, NULL));
+      // Activate the subprocess to obtain the argument value
+      // printf("activating subprocess to get param value for '%s'\n", step->context_parameter.key);
+      MCcall(_mc_mo_begin_op_process(step->context_parameter.obtain_value_subprocess, NULL));
+    } break;
+    default:
+      MCerror(8572, "TODO : %i", step->context_parameter.presence);
+    }
   } break;
   case MO_STEP_TEXT_INPUT_DIALOG: {
     void **vary = (void **)malloc(sizeof(void *) * 4);
@@ -932,7 +943,7 @@ int _mc_mo_parse_directory_for_mop_files(modus_operandi_data *mod, const char *m
 
       // Parse the process
       mo_operational_process *process;
-      puts(ent->d_name);
+      printf("interpreting mo process...'%s'\n", ent->d_name);
       MCcall(mc_mo_parse_serialized_process(&mod->process_stack, file_text, &process));
       free(file_text);
 

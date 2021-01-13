@@ -448,7 +448,7 @@ int main(int argc, const char *const *argv)
   struct timespec app_begin_time;
 
   // DEBUG
-  if(0)
+  if(1)
   {
     struct stat stats;
 

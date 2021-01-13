@@ -29,6 +29,15 @@ typedef enum mo_op_step_context_arg_type {
   MO_STEP_CTXARG_CURRENT_WORKING_DIRECTORY,
 } mo_op_step_context_arg_type;
 
+typedef enum mo_op_step_context_parameter_presence_type {
+  MO_STEP_CTXP_PRESENCE_NULL = 0,
+  MO_STEP_CTXP_PRESENCE_REQUIRED,
+  MO_STEP_CTXP_PRESENCE_EMPTY_OBTAIN,
+  MO_STEP_CTXP_PRESENCE_EMPTY_DEFAULT,
+  MO_STEP_CTXP_PRESENCE_DEFAULT_AVAILABLE,
+  MO_STEP_CTXP_PRESENCE_OBTAIN_AVAILABLE,
+} mo_op_step_context_parameter_presence_type;
+
 typedef struct mo_op_step_context_arg {
   mo_op_step_context_arg_type type;
   char *data;
@@ -42,6 +51,7 @@ typedef struct mo_operational_step {
   union {
     struct {
       char *key;
+      mo_op_step_context_parameter_presence_type presence;
       struct mo_operational_process *obtain_value_subprocess;
     } context_parameter;
     struct {
