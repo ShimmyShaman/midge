@@ -3,6 +3,7 @@
 
 #include "core/core_definitions.h"
 
-int mc_save_source_file_from_updated_info(mc_source_file_info *source_file);
+int mc_redefine_function(function_info *function);
+int mc_redefine_structure(struct_info *structure);
 
 #endif // INFO_TRANSCRIPTION_H

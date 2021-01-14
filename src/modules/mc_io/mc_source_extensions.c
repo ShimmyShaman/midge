@@ -118,14 +118,15 @@ int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_
       MCcall(mcs_interpret_source_file(full_path, &sf));
     }
     else {
-      sf = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
-      sf->filepath = strdup(path);
-      sf->segments.capacity = sf->segments.count = 0U;
+      MCerror(5883, "PROGRESS");
+      // sf = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
+      // sf->filepath = strdup(path);
+      // sf->segments.capacity = sf->segments.count = 0U;
 
-      // Register & persist
-      MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
-                                  &app_itp_data->source_files.count, sf));
-      MCcall(mc_save_source_file_from_updated_info(sf));
+      // // Register & persist
+      // MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
+      //                             &app_itp_data->source_files.count, sf));
+      // MCcall(mc_save_source_file_from_updated_info(sf));
     }
   }
 
@@ -243,7 +244,8 @@ int mcs_construct_struct_declaration(mc_source_file_info *source_file, const cha
 
     MCcall(mc_register_struct_info_to_app(si));
     MCcall(mc_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
-    MCcall(mc_save_source_file_from_updated_info(source_file));
+
+    MCcall(mc_redefine_structure(si));
   }
 
   return 0;
@@ -359,7 +361,7 @@ int mcs_append_field_to_struct(struct_info *si, const char *type_name, unsigned 
   MCcall(mcs_ensure_header_include_for_type(si->source_file, type_name));
 
   // puts("e");
-  MCcall(mc_save_source_file_from_updated_info(si->source_file));
+  MCcall(mc_redefine_structure(si));
   return 0;
 }
 
@@ -407,7 +409,7 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
   MCcall(mcs_ensure_header_include_for_type(si->source_file, type_name));
 
   // puts("e");
-  MCcall(mc_save_source_file_from_updated_info(si->source_file));
+  MCcall(mc_redefine_structure(si));
 
   sprintf(nme, "mcs_append_field_to_struct_and_remap_%u", app_info->uid_counter++);
   strcpy(inc, "\"");
@@ -515,7 +517,7 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
 
   MCcall(mc_register_function_info_to_app(fi));
   MCcall(mc_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
-  MCcall(mc_save_source_file_from_updated_info(source_file));
+  MCcall(mc_redefine_function(fi));
 
   return 0;
 }
@@ -583,7 +585,7 @@ int mcs_attach_code_to_function(function_info *fi, const char *code)
 
   printf("check:\n%s||\n", nc);
 
-  MCcall(mc_save_source_file_from_updated_info(fi->source));
+  MCcall(mc_redefine_function(fi));
 
   return 0;
 }

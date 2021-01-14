@@ -142,10 +142,12 @@ Screen2D: Set Background Texture
 > FUNCTION {
   char lrcn_buf[64], buf[512];
   function_info *fi, *init_fi;
-  const char *lrcn, *data_name;
+  const char *lrcn, *data_name, *tex_field_name, *tex_file_path;
 
   MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
   MCcall(mc_mo_get_context_cstr(process_stack, "project-load-resources-function", true, &lrcn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_field_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &tex_file_path));
 
   // Get the function
   MCcall(find_function_info(lrcn, &fi));
@@ -154,20 +156,14 @@ Screen2D: Set Background Texture
 
   // TODO get the data > PARAM name
 
-  // Get the field name
-  const char *tex_fn;
-  MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_fn));
-
   // Generate the code
-  const char *texfp;
-  MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &texfp));
   sprintf(buf, "\n"
                "  data->%s = NULL;\n"
                "  MCcall(mcr_load_texture_resource(\"%s\", &data->%s));\n"
                "  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??\n"
                "  while(!data->%s) {\n"
                "    usleep(100);\n"
-               "  }\n", texfp, tex_fn);
+               "  }\n", tex_field_name, tex_file_path, tex_field_name, tex_field_name);
 
   // Insert inside the load resources function
   MCcall(mcs_attach_code_to_function(fi, buf));
@@ -193,6 +189,7 @@ Screen2D: Set Background Texture
   if(!fi)
     return 15;
 
+  // TODO present options (resize application, stretch texture, center it(node or by plain math))
   sprintf(buf, "\n"
   "  puts(\"new-function!\");\n"
   "  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x + 425U,\n"

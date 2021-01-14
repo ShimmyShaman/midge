@@ -6,6 +6,7 @@
 
 #include "core/core_definitions.h"
 #include "core/mc_source.h"
+#include "core/midge_app.h"
 #include "mc_str.h"
 #include "midge_error_handling.h"
 
@@ -273,10 +274,6 @@ int _mc_generate_header_source(mc_source_file_info *source_file, mc_str *str)
   MCcall(append_uppercase_to_mc_str(str, filename));
   MCcall(append_to_mc_str(str, "_H"));
 
-  // Save to file
-  MCcall(save_text_to_file(source_file->filepath, str->text));
-  release_mc_str(str, true);
-
   // puts("END_mc_generate_header_source");
   return 0;
 }
@@ -304,36 +301,134 @@ int _mc_generate_c_source(mc_source_file_info *source_file, mc_str *str)
 
   MCcall(_mc_transcribe_segment_list(str, &source_file->segments));
 
-  // Save to file
-  MCcall(save_text_to_file(source_file->filepath, str->text));
+  return 0;
+}
+
+int mc_redefine_function(function_info *function)
+{
+  puts("aaa");
+  printf("function:%p\n", function);
+  printf("function->source:%p\n", function->source);
+  printf("function->source->segments:%i\n", function->source->segments.count);
+  int a;
+  mc_str *str;
+
+  MCcall(init_mc_str(&str));
+
+  mc_source_file_code_segment_list *sl = &function->source->segments;
+  for (a = 0; a < sl->count; ++a) {
+    mc_source_file_code_segment *seg = sl->items[a];
+    switch (seg->type) {
+    case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE:
+      MCcall(_mc_transcribe_include_directive_info(str, seg->include));
+      break;
+    case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
+      MCcall(append_char_to_mc_str(str, '\n'));
+      break;
+    case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION: {
+      if (!strcmp(seg->function->name, function->name)) {
+        MCcall(_mc_transcribe_function_info(str, function));
+      }
+    } break;
+    case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
+    case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION:
+      // Do Nothing
+      break;
+    default:
+      MCerror(5624, "Unsupported Segment Type : %i", seg->type);
+    }
+  }
+
+  printf("redeffunc-check:\n%s||\n", str->text);
+
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  char tempfn[128];
+  sprintf(tempfn, "%s::%s", function->source->filepath, function->name);
+  MCcall(tcci_add_string(app_info->itp_data->interpreter, tempfn, str->text));
+
   release_mc_str(str, true);
 
   return 0;
 }
 
-int mc_save_source_file_from_updated_info(mc_source_file_info *source_file)
+int mc_redefine_structure(struct_info *structure)
 {
   // Can only handle .h & .c files atm
-  int n = strlen(source_file->filepath);
-  if (source_file->filepath[n - 2] != '.') {
-    MCerror(9814, "TODO -- Filetype error? '%s'", source_file->filepath);
+  int n = strlen(structure->source_file->filepath);
+  if (structure->source_file->filepath[n - 2] != '.') {
+    MCerror(9814, "TODO -- Filetype error? '%s'", structure->source_file->filepath);
   }
 
   // Generate the source file text & persist it to disk
   mc_str *str;
   MCcall(init_mc_str(&str));
-  if (source_file->filepath[n - 1] == 'h') {
-    MCcall(_mc_generate_header_source(source_file, str));
-  }
-  else if (source_file->filepath[n - 1] == 'c') {
-    MCcall(_mc_generate_c_source(source_file, str));
+  if (structure->source_file->filepath[n - 1] == 'h') {
+    MCcall(_mc_generate_header_source(structure->source_file, str));
   }
   else {
-    MCerror(9815, "TODO -- Filetype error? '%s'", source_file->filepath);
+    MCerror(9815, "TODO -- Filetype error? '%s'", structure->source_file->filepath);
   }
 
-  // Reinterpret the file
-  MCcall(mcs_interpret_file(source_file->filepath));
+  // Save to file
+  MCcall(save_text_to_file(structure->source_file->filepath, str->text));
+  release_mc_str(str, true);
+
+  // TODO -- header dependencies
+
+  // mc_source_file_code_segment_list *sl = &structure->source_file->segments;
+  // for (a = 0; a < sl->count; ++a) {
+  //   mc_source_file_code_segment *seg = sl->items[a];
+  //   switch (seg->type) {
+  //   case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE:
+  //     MCcall(_mc_transcribe_include_directive_info(str, seg->include));
+  //     break;
+  //   case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
+  //     MCcall(append_char_to_mc_str(str, '\n'));
+  //     break;
+  //   case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
+  //   case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
+  //     // Do Nothing
+  //     break;
+  //   case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION: {
+  //     if (!strcmp(seg->structure->name, structure->name)) {
+  //       MCcall(_mc_transcribe_structure_info(str, structure));
+  //     }
+  //   } break;
+  //   default:
+  //     MCerror(5624, "Unsupported Segment Type : %i", seg->type);
+  //   }
+  // }
+
+  // MCerror(8582, "Progress");
 
   return 0;
 }
+
+// int mc_save_source_file_from_updated_info(mc_source_file_info *source_file)
+// {
+//   // Can only handle .h & .c files atm
+//   int n = strlen(source_file->filepath);
+//   if (source_file->filepath[n - 2] != '.') {
+//     MCerror(9814, "TODO -- Filetype error? '%s'", source_file->filepath);
+//   }
+
+//   // Generate the source file text & persist it to disk
+//   mc_str *str;
+//   MCcall(init_mc_str(&str));
+//   if (source_file->filepath[n - 1] == 'h') {
+//     MCcall(_mc_generate_header_source(source_file, str));
+//   }
+//   else if (source_file->filepath[n - 1] == 'c') {
+//     MCcall(_mc_generate_c_source(source_file, str));
+//   }
+//   else {
+//     MCerror(9815, "TODO -- Filetype error? '%s'", source_file->filepath);
+//   }
+
+//   // Reinterpret the file
+//   MCcall(mcs_interpret_file(source_file->filepath));
+
+//   return 0;
+// }
