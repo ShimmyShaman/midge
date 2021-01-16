@@ -1230,7 +1230,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
     VK_CHECK((VkResult)wures, "mxcb_update_window");
   }
-  printf("Leaving Render-Thread loop...\n--total_frame_updates = %i\n", vkrs->presentation_updates);
+  printf("Leaving Render-Thread loop...\n--total_rendered_frames = %i\n", vkrs->presentation_updates);
   return VK_SUCCESS;
 }
 
