@@ -136,6 +136,37 @@ int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_
   return 0;
 }
 
+int mc_save_source_file_info_to_disk(mc_source_file_info *source_file)
+{
+  // Can only handle .h & .c files atm
+  int n = strlen(source_file->filepath);
+  if (source_file->filepath[n - 2] != '.') {
+    MCerror(9814, "TODO -- Filetype error? '%s'", source_file->filepath);
+  }
+
+  // Generate the source file text & persist it to disk
+  mc_str *str;
+  MCcall(init_mc_str(&str));
+  if (source_file->filepath[n - 1] == 'h') {
+    MCcall(mc_generate_header_source(source_file, str));
+  }
+  else if (source_file->filepath[n - 1] == 'c') {
+    MCcall(mc_generate_c_source(source_file, str));
+  }
+  else {
+    MCerror(9815, "TODO -- Filetype error? '%s'", source_file->filepath);
+  }
+
+  MCcall(save_text_to_file(source_file->filepath, str->text));
+
+  release_mc_str(str, true);
+
+  // Reinterpret the file
+  // MCcall(mcs_interpret_file(source_file->filepath));
+
+  return 0;
+}
+
 int _mc_insert_segment_get_priority(mc_source_file_code_segment_type type, int *priority)
 {
   switch (type) {
@@ -163,8 +194,8 @@ int _mc_insert_segment_get_priority(mc_source_file_code_segment_type type, int *
   return 0;
 }
 
-int mc_insert_segment_judiciously_in_source_file(mc_source_file_info *source_file,
-                                                 mc_source_file_code_segment_type type, void *data)
+int mcs_insert_segment_judiciously_in_source_file(mc_source_file_info *source_file,
+                                                  mc_source_file_code_segment_type type, void *data)
 {
   mc_source_file_code_segment *nlseg = (mc_source_file_code_segment *)malloc(sizeof(mc_source_file_code_segment));
   nlseg->type = MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR;
@@ -197,6 +228,8 @@ int mc_insert_segment_judiciously_in_source_file(mc_source_file_info *source_fil
     // printf("seg:%i p:%i\n", seg->type, sp);
     if (sp > 0 && sp < priority) {
       // Heres a good place
+      printf("inserted segment at index %i\n", a);
+
       MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
                                   &source_file->segments.count, a + 1, ins_seg));
       MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
@@ -206,11 +239,14 @@ int mc_insert_segment_judiciously_in_source_file(mc_source_file_info *source_fil
     }
   }
   if (!inserted) {
+    printf("inserted segment at index 0\n");
     MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
                                 &source_file->segments.count, 0, ins_seg));
     MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
                                 &source_file->segments.count, 1, nlseg));
   }
+
+  MCcall(mc_save_source_file_info_to_disk(source_file));
 
   return 0;
 }
@@ -243,7 +279,7 @@ int mcs_construct_struct_declaration(mc_source_file_info *source_file, const cha
     si->fields.count = 0U;
 
     MCcall(mc_register_struct_info_to_app(si));
-    MCcall(mc_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
+    MCcall(mcs_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION, si));
 
     MCcall(mc_redefine_structure(si));
   }
@@ -327,7 +363,7 @@ int mcs_ensure_header_include_for_type(mc_source_file_info *sf, const char *type
     mc_include_directive_info *idi = (mc_include_directive_info *)malloc(sizeof(mc_include_directive_info));
     idi->filepath = strdup(c);
     idi->is_system_search = false; // TODO
-    MCcall(mc_insert_segment_judiciously_in_source_file(sf, MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE, idi));
+    MCcall(mcs_insert_segment_judiciously_in_source_file(sf, MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE, idi));
   } break;
   default: {
     MCerror(9587, "TODO %i", sei.type);
@@ -369,21 +405,22 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
                                          const char *field_name, void **data, void **p_field)
 {
   // TODO -- ideally the struct_info would have this information
-  char nme[64], inc[256], buf[512];
+  char nme[64], buf[512];
   size_t before_size, after_size;
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
+  const char *su_includes[] = {
+      "#include <stdio.h>",
+  };
+
   sprintf(nme, "mcs_append_field_to_struct_and_remap_%u", app_info->uid_counter++);
-  strcpy(inc, "\"");
-  strcat(inc, si->source_file->filepath);
-  strcat(inc, "\",<stdio.h>");
 
   sprintf(buf,
           "  printf(\"aaa=%%lu\\n\", sizeof(tetris_data));\n  *((size_t *)vargs) = sizeof(%s);\n  puts(\"bbb\");\n  "
           "return NULL;",
           si->name);
-  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, inc, buf, &before_size, NULL));
+  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, 1, su_includes, buf, &before_size, NULL));
 
   printf("structure %s had a size before of %lu\n", si->name, before_size);
 
@@ -412,15 +449,12 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
   MCcall(mc_redefine_structure(si));
 
   sprintf(nme, "mcs_append_field_to_struct_and_remap_%u", app_info->uid_counter++);
-  strcpy(inc, "\"");
-  strcat(inc, si->source_file->filepath);
-  strcat(inc, "\",<stdio.h>");
 
   sprintf(buf,
           "  printf(\"aaa=%%lu\\n\", sizeof(tetris_data));\n  *((size_t *)vargs) = sizeof(%s);\n  puts(\"bbb\");\n  "
           "return NULL;",
           si->name);
-  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, inc, buf, &after_size, NULL));
+  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, 1, su_includes, buf, &after_size, NULL));
 
   printf("structure %s had a size after of %lu\n", si->name, after_size);
 
@@ -451,7 +485,6 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
   if (sei.type) {
     MCerror(4592, "Another symbol already possesses this name");
   }
-  puts("ba");
 
   printf("name'%s'\n", name);
   printf("return_type_name'%s'\n", return_type_name);
@@ -516,7 +549,9 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
   fi->code = strdup(code);
 
   MCcall(mc_register_function_info_to_app(fi));
-  MCcall(mc_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
+  printf("constfd:%i\n", source_file->segments.count);
+  MCcall(mcs_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
+  printf("constfd:%i\n", source_file->segments.count);
   MCcall(mc_redefine_function(fi));
 
   return 0;
@@ -583,9 +618,88 @@ int mcs_attach_code_to_function(function_info *fi, const char *code)
   free(fi->code);
   fi->code = nc;
 
-  printf("check:\n%s||\n", nc);
+  // printf("check:\n%s||\n", nc);
 
+  // Save the source file info and define the function
+  MCcall(mc_save_source_file_info_to_disk(fi->source));
   MCcall(mc_redefine_function(fi));
+
+  return 0;
+}
+int mc_redefine_function(function_info *function)
+{
+  printf("function:%p\n", function);
+  printf("function->source:%p\n", function->source);
+  printf("function->source->segments:%i\n", function->source->segments.count);
+  int a, b, c;
+  mc_str *str;
+  MCcall(init_mc_str(&str));
+
+  MCcall(mc_transcribe_specific_function_source(str, function));
+
+  printf("mc_redefine_function-gen:\n%s||\n", str->text);
+
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  char tempfn[128];
+  sprintf(tempfn, "%s::%s", function->source->filepath, function->name);
+  MCcall(tcci_add_string(app_info->itp_data->interpreter, tempfn, str->text));
+
+  release_mc_str(str, true);
+
+  return 0;
+}
+
+int mc_redefine_structure(struct_info *structure)
+{
+  // Can only handle .h & .c files atm
+  int n = strlen(structure->source_file->filepath);
+  if (structure->source_file->filepath[n - 2] != '.') {
+    MCerror(9814, "TODO -- Filetype error? '%s'", structure->source_file->filepath);
+  }
+
+  // Generate the source file text & persist it to disk
+  mc_str *str;
+  MCcall(init_mc_str(&str));
+  if (structure->source_file->filepath[n - 1] == 'h') {
+    MCcall(mc_generate_header_source(structure->source_file, str));
+  }
+  else {
+    MCerror(9815, "TODO -- Filetype error? '%s'", structure->source_file->filepath);
+  }
+
+  // Save to file
+  MCcall(save_text_to_file(structure->source_file->filepath, str->text));
+  release_mc_str(str, true);
+
+  // TODO -- header dependencies
+
+  // mc_source_file_code_segment_list *sl = &structure->source_file->segments;
+  // for (a = 0; a < sl->count; ++a) {
+  //   mc_source_file_code_segment *seg = sl->items[a];
+  //   switch (seg->type) {
+  //   case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE:
+  //     MCcall(_mc_transcribe_include_directive_info(str, seg->include));
+  //     break;
+  //   case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
+  //     MCcall(append_char_to_mc_str(str, '\n'));
+  //     break;
+  //   case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
+  //   case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
+  //     // Do Nothing
+  //     break;
+  //   case MC_SOURCE_SEGMENT_STRUCTURE_DEFINITION: {
+  //     if (!strcmp(seg->structure->name, structure->name)) {
+  //       MCcall(_mc_transcribe_structure_info(str, structure));
+  //     }
+  //   } break;
+  //   default:
+  //     MCerror(5624, "Unsupported Segment Type : %i", seg->type);
+  //   }
+  // }
+
+  // MCerror(8582, "Progress");
 
   return 0;
 }

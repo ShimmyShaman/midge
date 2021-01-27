@@ -108,7 +108,7 @@ int insert_in_collection(void ***collection, unsigned int *collection_capacity, 
 {
   if (*collection_count + 1 > *collection_capacity) {
     unsigned int recapacity_amount = *collection_capacity + 8 + *collection_capacity / 3;
-    // printf("recapacity collection size %i->%i\n", *collection_capacity, recapacity_amount);
+    printf("recapacity collection size %i->%i\n", *collection_capacity, recapacity_amount);
     void **new_collection = (void **)malloc(sizeof(void *) * recapacity_amount);
     if (new_collection == NULL) {
       MCerror(57, "append_to_collection malloc error");
@@ -128,6 +128,7 @@ int insert_in_collection(void ***collection, unsigned int *collection_capacity, 
   }
   (*collection)[insertion_index] = item;
   ++*collection_count;
+  printf("++collectioncount : %i\n", *collection_count);
   return 0;
 }
 

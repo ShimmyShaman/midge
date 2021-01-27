@@ -520,7 +520,7 @@ int main(int argc, const char *const *argv)
   // // DEBUG
 
   // DEBUG
-  if (1) {
+  if (0) {
     struct stat stats;
 
     const char *dirdel = "projects/tetris";

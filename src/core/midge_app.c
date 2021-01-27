@@ -337,9 +337,11 @@ void _add_timespecs(struct timespec *time, struct timespec *amount, struct times
   }
 }
 
-int mca_register_update_timer(unsigned int usecs_period, bool reset_timer_on_update, void *callback_state,
+int mca_register_update_timer(long usecs_period, bool reset_timer_on_update, void *callback_state,
                               int (*update_callback)(frame_time *, void *))
 {
+  printf("mca_register_update_timer: %u %u %p %p\n", usecs_period, reset_timer_on_update, callback_state,
+         update_callback);
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
@@ -356,8 +358,8 @@ int mca_register_update_timer(unsigned int usecs_period, bool reset_timer_on_upd
 
   MCcall(append_to_collection((void ***)&app_info->update_timers.items, &app_info->update_timers.alloc,
                               &app_info->update_timers.count, callback_timer));
-  // printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
-  // printf("callback_timer ic=%p\n", app_info->update_timers.callbacks[0]);
+  // printf("callback_timer=%p tv-sec=%li -nsec=%li\n", update_callback, callback_timer->next_update.tv_sec,
+  //        callback_timer->next_update.tv_nsec);
 
   //   register_midge_error_tag("mca_register_update_timer(~)");
   return 0;
@@ -448,7 +450,7 @@ int midge_run_app()
 
         // Invoke the timer
         //   // update_callback = (int (*)(frame_time *, void *))timer->update_delegate;
-        // printf("timerupdatedelegate:%p\n", timer->update_delegate);
+        printf("timerupdatedelegate:%p\n", timer->update_delegate);
         // void *p = timer->update_delegate;
         mc_ires = timer->update_delegate(elapsed, timer->state);
         if (mc_ires) {

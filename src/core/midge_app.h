@@ -88,7 +88,7 @@ int midge_initialize_app(struct timespec *app_begin_time);
 int midge_run_app();
 void midge_cleanup_app();
 
-int mca_register_update_timer(unsigned int usecs_period, bool reset_timer_on_update, void *callback_state,
+int mca_register_update_timer(long usecs_period, bool reset_timer_on_update, void *callback_state,
                               int (*update_callback)(frame_time *, void *));
 
 void mc_obtain_midge_app_info(midge_app_info **p_app_info);

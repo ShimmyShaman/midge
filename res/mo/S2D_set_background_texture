@@ -219,6 +219,9 @@ Screen2D: Set Background Texture
 
   sprintf(buf, "((mc_node *)%p)->layout->render_present = (void *)%p;\n  return NULL;", app_node, p_render_fn);
 
-  MCcall(tcci_execute_single_use_code(itp_data->interpreter, "screen2d-set-bg-texture",
-                                  "\"core/core_definitions.h\",\"env/environment_definitions.h\"", buf, NULL, NULL));
+  const char *sut[] = {
+    "#include \"core/core_definitions.h\"",
+    "#include \"env/environment_definitions.h\"",
+  };
+  MCcall(tcci_execute_single_use_code(itp_data->interpreter, "screen2d-set-bg-texture", 2, sut, buf, NULL, NULL));
 }

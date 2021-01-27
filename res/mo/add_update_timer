@@ -16,6 +16,7 @@ add-update-timer
     }
 }
 > FUNCTION {
+  puts("begin::add_update_timer");
   // Create the update function
   const char *update_func_name, *init_source_filepath, *data_name;
   mc_source_file_info *init_source_file;
@@ -39,22 +40,22 @@ add-update-timer
   sprintf(buf, "{\n"
                "  %s *data = (%s *)callback_state;\n"
                "\n"
+               "  puts(\"hello ma\");\n"
                "  return 0;\n"
                "}", data_name, data_name);
 
-  // -- Create the new resources-load function
+  // -- Create the new function
   char *params[2];
   params[0] = "frame_time *ft";
   params[1] = "void *callback_state";
-  //puts(param);
   MCcall(mcs_construct_function_definition(init_source_file, update_func_name, "int", 0, 2, params, buf));
-  //puts("after construct function definition");
 }
 > FUNCTION {
   // Register the update function in the initialize function
   const char *init_func_name, *update_func_name;
   function_info *init_fi;
-  char buf[256];
+  char buf[512];
+  mc_node *app_node;
 
   MCcall(mc_mo_get_context_cstr(process_stack, "project-init-function-name", true, &init_func_name));
   MCcall(mc_mo_get_context_cstr(process_stack, "project-update-function-name", true, &update_func_name));
@@ -63,6 +64,20 @@ add-update-timer
   if(!init_fi)
     return 14;
   // TODO -- obtain the local data variable name
-  sprintf(buf, "\n  MCcall(mca_register_update_timer(0, true, %s, &%s));\n", "data", update_func_name);
+  sprintf(buf, "\n  mca_register_update_timer(0, true, %s, &%s);\n", "data", update_func_name);
   MCcall(mcs_attach_code_to_function(init_fi, buf));
+
+  // Because initialize has already been called, make a seperate scripted call to register the
+  // method for this session
+  char fd[256];
+  sprintf(fd, "extern int %s(frame_time *ft, void *callback_state);", update_func_name);
+  const char *sut[] = {
+      "#include <stdio.h>",
+      "#include \"core/midge_app.h\"",
+      fd,
+  };
+  void *update_func_addr = tcci_get_symbol(midge_app_info->itp_data->interpreter, update_func_name);
+  MCcall(mc_mo_get_context_ptr(process_stack, "project-node", true, (void **)&app_node));
+  sprintf(buf, "\n  mca_register_update_timer(0L, true, vargs, (int (*)(frame_time *, void *))%p);\n  puts(\"sus-registered\");\n  return NULL;\n", update_func_addr);
+  MCcall(tcci_execute_single_use_code(midge_app_info->itp_data->interpreter, "MO:add_update_timer", 3, sut, buf, app_node->data, NULL));
 }
