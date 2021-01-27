@@ -225,6 +225,9 @@ int midge_initialize_app(struct timespec *app_begin_time)
   // Asynchronously begin the render thread containing vulkan and xcb
   MCcall(begin_render_thread());
 
+  // // Set properties
+  // usleep(10000000);
+
   // Complete Initialization of the global root node
   MCcall(mca_init_node_layout(&app_info->global_node->layout));
   app_info->global_node->layout->__requires_rerender = true;
@@ -243,9 +246,9 @@ int midge_initialize_app(struct timespec *app_begin_time)
   int count = 0;
   while (!app_info->render_thread->render_thread_initialized || app_info->render_thread->resource_queue->count) {
     waited = !app_info->render_thread->render_thread_initialized;
-    usleep(1);
+    usleep(1000);
     ++count;
-    if (count % 100000 == 0) {
+    if (count > 2999 && count % 1000 == 0) {
       printf("app_info->render_thread = %p %i %u\n", app_info->render_thread,
              app_info->render_thread->render_thread_initialized, app_info->render_thread->resource_queue->count);
     }
@@ -263,8 +266,6 @@ int midge_initialize_app(struct timespec *app_begin_time)
   //   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   //   usleep(10);
   // }
-
-  // Set properties
 
   // Completed
   struct timespec load_complete_frametime;

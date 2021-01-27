@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 #include "tinycc/libtccinterp.h"
+#include "tinycc/tests/itptest.c"
+#include "tinycc/tests/itptest.h"
 
 // typedef struct mc_compiler_index {
 //   unsigned int dyn_statement_invoke_uid;
@@ -409,8 +411,8 @@
 //   return tcci_add_files(loader_itp, files, nb_files);
 // }
 
-// void *mcc_set_global_symbol(const char *symbol_name, void *ptr) { return tcci_set_symbol(loader_itp, symbol_name,
-// ptr);
+// void *mcc_set_global_symbol(const char *symbol_name, void *ptr) { return tcci_set_global_symbol(loader_itp,
+// symbol_name, ptr);
 // }
 
 // void *mcc_get_global_symbol(const char *symbol_name) { return tcci_get_symbol(loader_itp, symbol_name); }
@@ -442,14 +444,83 @@
     }                                                              \
   }
 
+// int _convert(void) { return 3; }
+
+// void *_getfptr(void) { return (void *)&_convert; }
+int debugstuff(TCCInterpState *itp)
+{
+  itp->debug_verbose = 1;
+  //   tcci_add_string(itp, "off.c", buf);
+  const char *fp = "src/temp/doit.c";
+  tcci_add_files(itp, &fp, 1);
+  int (*doit)(void) = (int (*)(void))tcci_get_symbol(itp, "doit");
+  doit();
+
+  // char buf[2050];
+  // // sprintf(buf, "int dope(void) { return 4; }\n");
+  // //              tcci_add_string(itp, "nb1.c", buf);
+  // sprintf(buf, "#include <stdio.h>\n"
+  //              "\n"
+  //              "int dope(void);\n"
+  //              "\n"
+  //              "int doit(void)\n"
+  //              "{\n"
+  //              "puts(\"bbb\");\n"
+  //             //  "float fov = glm_rad(45.0f);\n"
+  //              "printf(\"bbb:%%i\\n\", dope());\n"
+  //              "return 0;"
+  //              "};\n");
+  // tcci_add_string(itp, "nb2.c", buf);
+  // doit();
+
+  return 0;
+};
+
+void dbht(void)
+{
+  hash_table_t ht;
+  init_hash_table(10, &ht);
+
+  const char *words[] = {
+      "one",    "two",  "three",  "four",   "five", "six",   "seven", "eight", "onde",   "f",    "ef",     "fotteur",
+      "fivebb", "siwx", "sedven", "eigqht", "onfe", "twefo", "efef",  "te",    "fivhhe", "esix", "sevxen", "w",
+  };
+
+  for (int a = 0; a < 9; ++a) {
+    hash_table_set_by_hash(hash_djb2(words[a]), (void *)words[a], &ht);
+
+    printf("a:%i -", a);
+    for (int a = 0; a < ht.n; ++a) {
+      printf("HT:%lu ", ht.hashes[a]);
+    }
+    puts("");
+  }
+
+  for (int a = 0; a < ht.n; ++a) {
+    printf("HT:%lu\n", ht.hashes[a]);
+  }
+
+  exit(0);
+}
+
 int main(int argc, const char *const *argv)
 {
   int res = 0;
   struct timespec app_begin_time;
 
+  // // DEBUG
+  // dbht();
+  // // printf("res=%i\n", doit(3));
+  // test_itp();
+
+  // // printf("sizeof(unsigned long)=%zu\n"
+  // //        "sizeof(void *)=%zu\n",
+  // //        sizeof(unsigned long), sizeof(void *));
+  // return 0;
+  // // DEBUG
+
   // DEBUG
-  if(1)
-  {
+  if (1) {
     struct stat stats;
 
     const char *dirdel = "projects/tetris";
@@ -478,27 +549,30 @@ int main(int argc, const char *const *argv)
   MCcall(tcci_add_include_path(loader_itp, "src"));
   MCcall(tcci_add_include_path(loader_itp, "dep"));
 
-  tcci_set_symbol(loader_itp, "tcci_add_include_path", &tcci_add_include_path);
-  tcci_set_symbol(loader_itp, "tcci_add_library", &tcci_add_library);
-  tcci_set_symbol(loader_itp, "tcci_add_files", &tcci_add_files);
-  tcci_set_symbol(loader_itp, "tcci_add_string", &tcci_add_string);
-  tcci_set_symbol(loader_itp, "tcci_define_symbol", &tcci_define_symbol);
-  tcci_set_symbol(loader_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
-  tcci_set_symbol(loader_itp, "tcci_set_symbol", &tcci_set_symbol);
-  tcci_set_symbol(loader_itp, "tcci_get_symbol", &tcci_get_symbol);
-  tcci_set_symbol(loader_itp, "tcci_new", &tcci_new);
-  tcci_set_symbol(loader_itp, "tcci_delete", &tcci_delete);
-  tcci_set_symbol(loader_itp, "tcci_set_Werror", &tcci_set_Werror);
-  tcci_set_symbol(loader_itp, "tcci_execute_single_use_code", &tcci_execute_single_use_code);
+  tcci_set_global_symbol(loader_itp, "tcci_add_include_path", &tcci_add_include_path);
+  tcci_set_global_symbol(loader_itp, "tcci_add_library", &tcci_add_library);
+  tcci_set_global_symbol(loader_itp, "tcci_add_files", &tcci_add_files);
+  tcci_set_global_symbol(loader_itp, "tcci_add_string", &tcci_add_string);
+  tcci_set_global_symbol(loader_itp, "tcci_define_symbol", &tcci_define_symbol);
+  tcci_set_global_symbol(loader_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
+  tcci_set_global_symbol(loader_itp, "tcci_set_global_symbol", &tcci_set_global_symbol);
+  tcci_set_global_symbol(loader_itp, "tcci_get_symbol", &tcci_get_symbol);
+  tcci_set_global_symbol(loader_itp, "tcci_new", &tcci_new);
+  tcci_set_global_symbol(loader_itp, "tcci_delete", &tcci_delete);
+  tcci_set_global_symbol(loader_itp, "tcci_set_Werror", &tcci_set_Werror);
+  tcci_set_global_symbol(loader_itp, "tcci_execute_single_use_code", &tcci_execute_single_use_code);
 
   tcci_define_symbol(loader_itp, "MC_TEMP_SOURCE_LOAD", "1");
 
-  // tcci_set_symbol(loader_itp, "mcc_interpret_and_execute_single_use_code",
-  // &mcc_interpret_and_execute_single_use_code); tcci_set_symbol(loader_itp, "mcc_interpret_file_contents",
-  // &mcc_interpret_file_contents); tcci_set_symbol(loader_itp, "mcc_interpret_file_on_disk",
-  // &mcc_interpret_file_on_disk); tcci_set_symbol(loader_itp, "mcc_interpret_files_in_block",
-  // &mcc_interpret_files_in_block); tcci_set_symbol(loader_itp, "mcc_set_global_symbol", &mcc_set_global_symbol);
-  // tcci_set_symbol(loader_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
+  // debugstuff(loader_itp);
+  // return 0;
+
+  // tcci_set_global_symbol(loader_itp, "mcc_interpret_and_execute_single_use_code",
+  // &mcc_interpret_and_execute_single_use_code); tcci_set_global_symbol(loader_itp, "mcc_interpret_file_contents",
+  // &mcc_interpret_file_contents); tcci_set_global_symbol(loader_itp, "mcc_interpret_file_on_disk",
+  // &mcc_interpret_file_on_disk); tcci_set_global_symbol(loader_itp, "mcc_interpret_files_in_block",
+  // &mcc_interpret_files_in_block); tcci_set_global_symbol(loader_itp, "mcc_set_global_symbol",
+  // &mcc_set_global_symbol); tcci_set_global_symbol(loader_itp, "mcc_get_global_symbol", &mcc_get_global_symbol);
 
   const char *initial_compile_list[] = {
       "src/main/platform_prereq.c",
@@ -509,6 +583,7 @@ int main(int argc, const char *const *argv)
   // TODO -- remember why I split them up into 2 compiles -- maybe comment it for next time
   int initial_source_count = sizeof(initial_compile_list) / sizeof(const char *);
   MCcall(tcci_add_files(loader_itp, initial_compile_list, initial_source_count - 2));
+  // loader_itp->debug_verbose = 1;
   MCcall(tcci_add_files(loader_itp, initial_compile_list + initial_source_count - 2, 2));
 
   // Test Platform

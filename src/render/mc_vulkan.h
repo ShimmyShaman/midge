@@ -126,11 +126,11 @@ typedef struct vk_render_state {
     VkImageView view;
   } headless;
 
-  mat4s Projection;
-  mat4s View;
-  mat4s Model;
-  mat4s Clip;
-  mat4s MVP;
+  // mat4s Projection;
+  // mat4s View;
+  // mat4s Model;
+  // mat4s Clip;
+  // mat4s MVP;
 
   // struct {
   //   VkBuffer buf;
