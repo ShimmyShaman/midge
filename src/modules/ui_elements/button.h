@@ -13,7 +13,7 @@ typedef struct mcu_button {
 
   void *tag;
 
-  // void (*left_click)(mci_input_event *, mcu_button *); (TODO why can't I declare this with TCC??)
+  // int (*left_click)(mci_input_event *, mcu_button *); (TODO why can't I declare this with TCC??)
   void *left_click;
 
   mc_str *str;

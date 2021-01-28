@@ -88,8 +88,10 @@ void _mcu_button_handle_input_event(mc_node *button_node, mci_input_event *input
       // printf("_mcu_button_handle_input_event-2\n");
       // Fire left-click
       // TODO fptr casting
+      // TODO int this delegate for error handling
       void (*left_click)(mci_input_event *, mcu_button *) =
           (void (*)(mci_input_event *, mcu_button *))button->left_click;
+      // TODO -- MCcall(below) - have to make handle input event int
       left_click(input_event, button);
     }
   }

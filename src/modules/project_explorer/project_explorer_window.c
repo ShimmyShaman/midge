@@ -429,14 +429,24 @@ void _mcm_pjxp_handle_input(mc_node *node, mci_input_event *input_event)
 
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
 
-    int relative_y = input_event->input_state->mouse.y - node->layout->__bounds.y - 4;
-    if (relative_y >= 0) {
-      relative_y /= MCM_PJXP_ENTRY_HEIGHT;
+    switch (input_event->button_code) {
+    case MOUSE_BUTTON_SCROLL_DOWN:
+      break;
+    case MOUSE_BUTTON_SCROLL_UP:
+      break;
+    case MOUSE_BUTTON_LEFT: {
+      int relative_y = input_event->input_state->mouse.y - node->layout->__bounds.y - 4;
+      if (relative_y >= 0) {
+        relative_y /= MCM_PJXP_ENTRY_HEIGHT;
 
-      if (relative_y < pjxp->textblocks.utilized) {
-        mcu_textblock *tb = (mcu_textblock *)pjxp->textblocks.items[relative_y]->node->data;
-        _mcm_pjxp_activate_entry(pjxp, (mcm_pjxp_entry *)tb->tag);
+        if (relative_y < pjxp->textblocks.utilized) {
+          mcu_textblock *tb = (mcu_textblock *)pjxp->textblocks.items[relative_y]->node->data;
+          _mcm_pjxp_activate_entry(pjxp, (mcm_pjxp_entry *)tb->tag);
+        }
       }
+    } break;
+    default:
+      break;
     }
 
     // printf("click was at %u %u\n", input_event->input_state->mouse.x, input_event->input_state->mouse.y);

@@ -141,7 +141,10 @@ int _mca_load_project(const char *base_path, const char *project_name)
   }
   if (access(project->path_mprj_data, F_OK) == -1) {
     // puts("Cannot find midge-config for project '%s'. Creating it...", project_name);
-    MCerror(2137, "Cannot find midge-config-folder '%s' for project '%s'", project->path_mprj_data, project_name);
+    MCerror(2137,
+            "Cannot find midge-config-folder '%s' for project '%s'\n TODO find a way to create it, atm requires "
+            "build_list to be appropriately set also TODO",
+            project->path_mprj_data, project_name);
   }
 
   // Load the source
