@@ -133,7 +133,7 @@ Screen2D: Set Background Texture
         return 14;
 
       // TODO -- obtain the local data variable name
-      sprintf(buf, "\n  MCcall(%s(data));\n", lrcn);
+      sprintf(buf, "\n  %s(data);\n", lrcn);
       MCcall(mcs_attach_code_to_function(init_fi, buf));
 
       MCcall(mc_mo_set_top_context_cstr(process_stack, "project-load-resources-function", lrcn));
@@ -159,13 +159,14 @@ Screen2D: Set Background Texture
   // Generate the code
   sprintf(buf, "\n"
                "  data->%s = NULL;\n"
-               "  MCcall(mcr_load_texture_resource(\"%s\", &data->%s));\n"
+               "  mcr_load_texture_resource(\"%s\", &data->%s);\n"
                "  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??\n"
                "  while(!data->%s) {\n"
                "    usleep(100);\n"
                "  }\n", tex_field_name, tex_file_path, tex_field_name, tex_field_name);
 
   // Insert inside the load resources function
+  MCcall(mcs_add_include_to_source_file(fi->source, "<unistd.h>"));
   MCcall(mcs_attach_code_to_function(fi, buf));
 }
 > PARAM {

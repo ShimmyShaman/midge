@@ -405,13 +405,15 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
                                          const char *field_name, void **data, void **p_field)
 {
   // TODO -- ideally the struct_info would have this information
-  char nme[64], buf[512];
+  char nme[64], inc[128], buf[512];
   size_t before_size, after_size;
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
+  sprintf(inc, "#include \"%s\"", si->source_file->filepath);
   const char *su_includes[] = {
       "#include <stdio.h>",
+      inc,
   };
 
   sprintf(nme, "mcs_append_field_to_struct_and_remap_%u", app_info->uid_counter++);
@@ -420,7 +422,7 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
           "  printf(\"aaa=%%lu\\n\", sizeof(tetris_data));\n  *((size_t *)vargs) = sizeof(%s);\n  puts(\"bbb\");\n  "
           "return NULL;",
           si->name);
-  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, 1, su_includes, buf, &before_size, NULL));
+  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, 2, su_includes, buf, &before_size, NULL));
 
   printf("structure %s had a size before of %lu\n", si->name, before_size);
 
@@ -454,7 +456,7 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
           "  printf(\"aaa=%%lu\\n\", sizeof(tetris_data));\n  *((size_t *)vargs) = sizeof(%s);\n  puts(\"bbb\");\n  "
           "return NULL;",
           si->name);
-  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, 1, su_includes, buf, &after_size, NULL));
+  MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, 2, su_includes, buf, &after_size, NULL));
 
   printf("structure %s had a size after of %lu\n", si->name, after_size);
 
@@ -626,6 +628,33 @@ int mcs_attach_code_to_function(function_info *fi, const char *code)
 
   return 0;
 }
+
+int mcs_add_include_to_source_file(mc_source_file_info *source_file, const char *include_stanza)
+{
+  // Ensure it isn't already included
+  mc_source_file_code_segment *seg;
+  for (int a = 0; a < source_file->segments.count; ++a) {
+    seg = source_file->segments.items[a];
+
+    if (seg->type != MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE)
+      continue;
+    if (seg->include->is_system_search != include_stanza[0] == '<')
+      continue;
+    if (strncmp(seg->include->filepath, include_stanza + 1, strlen(seg->include->filepath)))
+      continue;
+
+    return 0;
+  }
+
+  mc_include_directive_info *idi = (mc_include_directive_info *)malloc(sizeof(mc_include_directive_info));
+  idi->filepath = strndup(include_stanza + 1, strlen(include_stanza) - 2);
+  idi->is_system_search = (include_stanza[0] == '<');
+
+  MCcall(mcs_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE, idi));
+
+  return 0;
+}
+
 int mc_redefine_function(function_info *function)
 {
   printf("function:%p\n", function);

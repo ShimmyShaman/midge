@@ -340,8 +340,9 @@ void _add_timespecs(struct timespec *time, struct timespec *amount, struct times
 int mca_register_update_timer(long usecs_period, bool reset_timer_on_update, void *callback_state,
                               int (*update_callback)(frame_time *, void *))
 {
-  printf("mca_register_update_timer: %u %u %p %p\n", usecs_period, reset_timer_on_update, callback_state,
-         update_callback);
+  // printf("mca_register_update_timer: %u %u %p fptr=%p\n", usecs_period, reset_timer_on_update, callback_state,
+  //        update_callback);
+  //  usleep(100000);
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
@@ -450,7 +451,7 @@ int midge_run_app()
 
         // Invoke the timer
         //   // update_callback = (int (*)(frame_time *, void *))timer->update_delegate;
-        printf("timerupdatedelegate:%p\n", timer->update_delegate);
+        // printf("timerupdatedelegate:%p\n", timer->update_delegate);
         // void *p = timer->update_delegate;
         mc_ires = timer->update_delegate(elapsed, timer->state);
         if (mc_ires) {

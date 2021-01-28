@@ -40,7 +40,6 @@ add-update-timer
   sprintf(buf, "{\n"
                "  %s *data = (%s *)callback_state;\n"
                "\n"
-               "  puts(\"hello ma\");\n"
                "  return 0;\n"
                "}", data_name, data_name);
 

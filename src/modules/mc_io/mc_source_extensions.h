@@ -23,6 +23,9 @@ int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_
 int mcs_insert_segment_judiciously_in_source_file(mc_source_file_info *source_file,
                                                   mc_source_file_code_segment_type type, void *data);
 
+                                                  // Source Manipulation
+                                                  int mcs_add_include_to_source_file(mc_source_file_info *source_file, const char *include_stanza);
+
 // Struct Manipulation
 int mcs_construct_struct_declaration(mc_source_file_info *source_file, const char *name);
 int mcs_append_field_to_struct(struct_info *si, const char *type_name, unsigned int type_deref_count,
