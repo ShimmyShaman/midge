@@ -23,9 +23,11 @@ int mc_mo_get_specific_context_cstr(hash_table_t *context, const char *name, con
 
 int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name, bool search_stack, const char **result)
 {
+  // printf("mc_mo_get_context_cstr:'%s'\n", name);
   mc_str *str;
   hash_table_t *ctx = &process_stack->context_maps[process_stack->index];
 
+    // printf("mc_mo_get_context_cstr:ctx0=%p\n", ctx);
   str = (mc_str *)hash_table_get(name, ctx);
 
   if (str) {
@@ -34,14 +36,17 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name,
   }
   if (!search_stack) {
     *result = NULL;
+    // printf("mc_mo_get_context_cstr:result=NULL\n");
     return 0;
   }
 
   --ctx;
   for (; ctx >= process_stack->context_maps; --ctx) {
+    // printf("mc_mo_get_context_cstr:ctx1=%p\n", ctx);
     str = (mc_str *)hash_table_get(name, ctx);
     if (str) {
       *result = str->text;
+      // printf("mc_mo_get_context_cstr:result=%s\n", str->text);
       return 0;
     }
   }
@@ -51,7 +56,7 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name,
   mc_obtain_midge_app_info(&app_info);
 
   if (!app_info->projects.active) {
-    puts("TODO 5828 Set an active project to appinfo");
+    MCerror(5828, "TODO Set an active project to appinfo");
   }
 
   ctx = (hash_table_t *)hash_table_get(app_info->projects.active->name, &process_stack->project_contexts);
@@ -62,6 +67,7 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name,
   str = (mc_str *)hash_table_get(name, ctx);
   if (str) {
     *result = str->text;
+    // printf("mc_mo_get_context_cstr:result=%s\n", str->text);
     return 0;
   }
 
@@ -69,18 +75,13 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *name,
   str = (mc_str *)hash_table_get(name, &process_stack->global_context);
   if (str) {
     *result = str->text;
+    // printf("mc_mo_get_context_cstr:result=%s\n", str->text);
     return 0;
   }
 
   // No Result
   *result = NULL;
-  return 0;
-}
-
-int mc_mo_set_top_context_cstr(mc_mo_process_stack *process_stack, const char *name, const char *value)
-{
-  MCcall(mc_mo_set_specific_context_cstr(&process_stack->context_maps[process_stack->index], name, value));
-
+  // printf("mc_mo_get_context_cstr:result=NULL\n");
   return 0;
 }
 
@@ -98,6 +99,84 @@ int mc_mo_set_specific_context_cstr(hash_table_t *context, const char *name, con
   }
 
   MCcall(set_mc_str(str, value));
+
+  return 0;
+}
+
+int mc_mo_set_top_context_cstr(mc_mo_process_stack *process_stack, const char *name, const char *value)
+{
+  MCcall(mc_mo_set_specific_context_cstr(&process_stack->context_maps[process_stack->index], name, value));
+
+  return 0;
+}
+
+int mc_mo_get_specific_context_ptr(hash_table_t *context, const char *name, void **result)
+{
+  *result = hash_table_get(name, context);
+
+  return 0;
+}
+
+int mc_mo_get_context_ptr(mc_mo_process_stack *process_stack, const char *name, bool search_stack, void **result)
+{
+  // Search in the current context statck
+  hash_table_t *ctx = &process_stack->context_maps[process_stack->index];
+
+  void *vp = hash_table_get(name, ctx);
+
+  if (vp) {
+    *result = vp;
+    return 0;
+  }
+  if (!search_stack) {
+    *result = NULL;
+    return 0;
+  }
+
+  // Search in the process stack context
+  --ctx;
+  for (; ctx >= process_stack->context_maps; --ctx) {
+    vp = hash_table_get(name, ctx);
+    if (vp) {
+      *result = vp;
+      return 0;
+    }
+  }
+
+  // Search in the active project context
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  if (!app_info->projects.active) {
+    MCerror(5828, "TODO Set an active project to appinfo");
+  }
+
+  ctx = (hash_table_t *)hash_table_get(app_info->projects.active->name, &process_stack->project_contexts);
+  if (!ctx) {
+    printf("TODO 5982, Why is there no context for project:'%s'?\n", app_info->projects.active->name);
+  }
+
+  vp = hash_table_get(name, ctx);
+  if (vp) {
+    *result = vp;
+    return 0;
+  }
+
+  // Search in the global context & return no matter the result
+  *result = hash_table_get(name, &process_stack->global_context);
+  return 0;
+}
+
+int mc_mo_set_specific_context_ptr(hash_table_t *context, const char *name, void *value)
+{
+  hash_table_set(name, value, context);
+
+  return 0;
+}
+
+int mc_mo_set_top_context_ptr(mc_mo_process_stack *process_stack, const char *name, void *value)
+{
+  MCcall(mc_mo_set_specific_context_ptr(&process_stack->context_maps[process_stack->index], name, value));
 
   return 0;
 }

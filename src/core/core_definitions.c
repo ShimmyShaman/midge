@@ -60,7 +60,7 @@ int read_file_text(const char *filepath, char **output)
   return 0;
 }
 
-int save_text_to_file(char *filepath, char *text)
+int save_text_to_file(const char *filepath, char *text)
 {
   FILE *f = fopen(filepath, "w");
   if (f == NULL) {
@@ -128,6 +128,7 @@ int insert_in_collection(void ***collection, unsigned int *collection_capacity, 
   }
   (*collection)[insertion_index] = item;
   ++*collection_count;
+  // printf("++collectioncount : %i\n", *collection_count);
   return 0;
 }
 

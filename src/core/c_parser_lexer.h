@@ -128,7 +128,6 @@ typedef enum mc_syntax_node_type {
   MC_SYNTAX_ENUM_DECL_MEMBER,
   MC_SYNTAX_NESTED_TYPE_DECLARATION,
   MC_SYNTAX_CODE_BLOCK,
-  MC_SYNTAX_STATEMENT_LIST,
   MC_SYNTAX_FOR_STATEMENT,
   MC_SYNTAX_WHILE_STATEMENT,
   MC_SYNTAX_IF_STATEMENT,
@@ -303,10 +302,7 @@ struct mc_syntax_node {
           mc_syntax_node *type_identifier;
         } modified_type;
         struct {
-          mc_syntax_node_list *statements;
-        } statement_list;
-        struct {
-          mc_syntax_node *statement_list;
+          mc_syntax_node_list *statement_list;
         } code_block;
         struct {
           mc_syntax_node *initialization;
@@ -342,7 +338,7 @@ struct mc_syntax_node {
         } label_statement;
         struct {
           mc_syntax_node_list *labels;
-          mc_syntax_node *statement_list;
+          mc_syntax_node_list *statement_list;
         } switch_section;
         struct {
           mc_syntax_node *constant;
@@ -482,12 +478,22 @@ struct mc_syntax_node {
   };
 };
 
+struct mcs_parsing_state;
+
 int print_parse_error(const char *text, int index, const char *const function_name, const char *section_id);
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
 int mcs_append_syntax_node_to_mc_str(mc_str *str, mc_syntax_node *syntax_node);
 int mcs_copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);
-int parse_definition_to_syntax_tree(char *code, mc_syntax_node **ast);
-int parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast);
+
+/* @ps may be NULL
+ */
+int mcs_construct_syntax_node(struct mcs_parsing_state *ps, mc_syntax_node_type node_type,
+                              char *mc_token_primitive_text, mc_syntax_node *parent, mc_syntax_node **result);
+
+int mcs_parse_definition_to_syntax_tree(const char *code, mc_syntax_node **ast);
+int mcs_parse_singular_statement(const char *statement, mc_syntax_node **destination);
+int mcs_parse_code_block_to_syntax_tree(char *code, mc_syntax_node **ast);
+int mcs_parse_file_to_syntax_tree(char *code, mc_syntax_node **file_ast);
 const char *get_mc_syntax_token_type_name(mc_syntax_node_type type);
 int release_syntax_node(mc_syntax_node *syntax_node);
 int mcs_append_syntax_node_to_mc_str(mc_str *str, mc_syntax_node *syntax_node);

@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include "stb/stb_truetype.h"
 
 #include "cglm/include/cglm/cglm.h"
@@ -12,6 +14,7 @@
 #include "core/core_definitions.h"
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
+#include "midge_error_handling.h"
 #include "render/mc_vk_utils.h"
 #include "render/render_thread.h"
 
@@ -1171,6 +1174,28 @@ VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_
   return VK_SUCCESS;
 }
 
+void *input_thread_loop(void *state)
+{
+  mthread_info *thr = *(mthread_info **)((void **)state)[0];
+  mxcb_window_info *winfo = (mxcb_window_info *)((void **)state)[1];
+  window_input_buffer *wib = (window_input_buffer *)((void **)state)[2];
+
+  int wures;
+  while (!thr->should_exit) {
+    // Update Window
+    if (mxcb_update_window(winfo, wib)) {
+      puts("ERR 5267 mxcb_update_window(winfo, wib)\n");
+      break;
+    }
+
+    usleep(100);
+  }
+
+  puts("Leaving Input Thread");
+  thr->has_concluded = true;
+  return NULL;
+}
+
 VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state *vkrs)
 {
   // printf("mrt-rul-0\n");
@@ -1197,6 +1222,14 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   rt_render_queue.alloc = 0;
   rt_render_queue.count = 0;
 
+  // Begin the input thread
+  mthread_info *input_thr;
+  void *itargs[3];
+  itargs[0] = (void *)&input_thr;
+  itargs[1] = (void *)vkrs->xcb_winfo;
+  itargs[2] = (void *)&render_thread->input_buffer;
+  MCcall(begin_mthread(&input_thread_loop, &input_thr, itargs));
+
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
   while (!thr->should_exit && !vkrs->xcb_winfo->input_requests_exit) {
@@ -1205,6 +1238,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     // usleep(1000);
 
     // Resource Commands
+    // usleep(700000);
+    // printf("render_thread->resource_queue->count=%u\n", render_thread->resource_queue->count);
     pthread_mutex_lock(&render_thread->resource_queue->mutex);
     if (render_thread->resource_queue->count) {
       // printf("Vulkan entered resources!\n");
@@ -1226,11 +1261,13 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
       mrt_process_render_queues(render_thread, vkrs, &rt_render_queue);
     }
 
-    // Update Window
-    wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
-    VK_CHECK((VkResult)wures, "mxcb_update_window");
+    // TODO
+    usleep(100);
   }
+  
+  end_mthread(input_thr);
   printf("Leaving Render-Thread loop...\n--total_rendered_frames = %i\n", vkrs->presentation_updates);
+  
   return VK_SUCCESS;
 }
 

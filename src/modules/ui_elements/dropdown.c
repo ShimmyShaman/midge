@@ -225,6 +225,7 @@ int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_dropdown)
   dropdown->extension_panel->background_color = (render_color){0.15f, 0.15f, 0.25f, 0.92f};
   dropdown->extension_panel->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
   dropdown->extension_panel->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  dropdown->extension_panel->node->layout->min_height = 18;
   dropdown->extension_panel->node->layout->max_height = 224;
   dropdown->extension_panel->tag = dropdown;
 

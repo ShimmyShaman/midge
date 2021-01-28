@@ -676,6 +676,7 @@ VkResult mvk_init_headless_image(vk_render_state *p_vkrs)
   VkMemoryAllocateInfo memAlloc = {};
   memAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   memAlloc.allocationSize = memReqs.size;
+  // printf("memAlloc.allocationSize %zu\n", memAlloc.allocationSize);
   memAlloc.memoryTypeIndex =
       mvk_get_physical_memory_type_index(p_vkrs, memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
   res = vkAllocateMemory(p_vkrs->device, &memAlloc, NULL, &p_vkrs->headless.memory);
@@ -726,30 +727,6 @@ bool mvk_get_properties_memory_type_index(vk_render_state *p_vkrs, uint32_t type
 VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
 {
   VkResult res;
-
-  // TODO DON"T NEED THIS CODE???
-  // TODO DON"T NEED THIS CODE???
-  float fov = glm_rad(45.0f);
-
-  if (p_vkrs->window_width > p_vkrs->window_height) {
-    fov *= (float)p_vkrs->window_height / (float)p_vkrs->window_width;
-  }
-
-  glm_ortho_default((float)p_vkrs->window_width / p_vkrs->window_height, (vec4 *)&p_vkrs->Projection);
-
-  glm_lookat((vec3){0, 0, -10}, (vec3){0, 0, 0}, (vec3){0, -1, 0}, (vec4 *)&p_vkrs->View);
-
-  glm_mat4_copy(GLM_MAT4_IDENTITY, (vec4 *)&p_vkrs->Model);
-
-  // Vulkan clip space has inverted Y and half Z.
-  mat4 clip = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f};
-  glm_mat4_copy(clip, (vec4 *)&p_vkrs->Clip);
-
-  glm_mat4_mul((vec4 *)&p_vkrs->View, (vec4 *)&p_vkrs->Model, (vec4 *)&p_vkrs->MVP);
-  glm_mat4_mul((vec4 *)&p_vkrs->Projection, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
-  glm_mat4_mul((vec4 *)&p_vkrs->Clip, (vec4 *)&p_vkrs->MVP, (vec4 *)&p_vkrs->MVP);
-  // TODO DON"T NEED THIS CODE???
-  // TODO DON"T NEED THIS CODE???
 
   // /* VULKAN_KEY_START */
   // VkBufferCreateInfo buf_info = {};
@@ -817,7 +794,6 @@ VkResult mvk_init_uniform_buffer(vk_render_state *p_vkrs)
   // VK_CHECK(res, "vkBindBufferMemory");
 
   // p_vkrs->render_data_buffer.frame_utilized_amount = 0;
-
   p_vkrs->render_data_buffer.dynamic_buffers.size = 0;
   p_vkrs->render_data_buffer.dynamic_buffers.activated = 0;
   p_vkrs->render_data_buffer.dynamic_buffers.min_memory_allocation = 32768;
@@ -1047,8 +1023,8 @@ VkResult mvk_init_offscreen_renderpass_3d(vk_render_state *p_vkrs)
   VkAttachmentDescription attachment_descriptions[2];
   attachment_descriptions[0] = color_attachment;
   attachment_descriptions[1] = depth_attachment;
-  printf("mvk_init_offscreen_renderpass:color_attachment:%i depth_attachment:%i\n", color_attachment.format,
-         depth_attachment.format);
+  // printf("mvk_init_offscreen_renderpass:color_attachment:%i depth_attachment:%i\n", color_attachment.format,
+  //        depth_attachment.format);
 
   VkRenderPassCreateInfo rp_info = {};
   rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -2336,8 +2312,8 @@ VkResult mvk_init_mesh_render_prog(vk_render_state *p_vkrs)
     depthStencil.minDepthBounds = 0.0f; // Optional
     depthStencil.maxDepthBounds = 1.0f; // Optional
     depthStencil.stencilTestEnable = VK_FALSE;
-    // depthStencil.front = {}; // Optional - have to comment because of tcc bug TODO - should already be initialized to 0
-    // depthStencil.back = {};  // Optional
+    // depthStencil.front = {}; // Optional - have to comment because of tcc bug TODO - should already be initialized to
+    // 0 depthStencil.back = {};  // Optional
 
     VkGraphicsPipelineCreateInfo pipelineInfo = {};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

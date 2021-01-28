@@ -20,6 +20,7 @@ unsigned long hash_djb2(const unsigned char *str)
 int init_hash_table(size_t start_capacity, hash_table_t *hash_table)
 {
   // TODO alloc check
+  start_capacity += 13;
   if (start_capacity < 1)
     start_capacity = HASH_TABLE_DEFAULT_SIZE;
   hash_table->hashes = (unsigned long *)malloc(start_capacity * sizeof(unsigned long));
@@ -121,6 +122,13 @@ int hash_table_remove(unsigned long hash, hash_table_t *hash_table)
     memset(entry, 0, sizeof(hash_table_entry_t));
   }
 
+  for (int a = 0; a < hash_table->n; ++a) {
+    if (hash_table->hashes[a] == hash) {
+      hash_table->hashes[a] = hash_table->hashes[hash_table->n - 1];
+      break;
+    }
+  }
+
   --hash_table->n;
   return HASH_TABLE_SUCCESS;
 }
@@ -155,7 +163,7 @@ void hash_table_maybe_grow(size_t new_n, hash_table_t *hash_table)
   new_hash_table.n = hash_table->n;
 
   /* Rehash */
-  for (i = 0; i < hash_table->capacity; i++) {
+  for (i = 0; i < hash_table->n; i++) {
     hash_table_entry_t *entry = hash_table_find(hash_table->hashes[i], hash_table);
     hash_table_change_value(hash_table->hashes[i], entry->value, &new_hash_table);
   }
@@ -186,15 +194,54 @@ void hash_table_set(const char *name, void *val, hash_table_t *hash_table)
    * Grow until the element has been added
    */
   long ht_insert;
+  size_t nex = hash_table->n;
+  size_t inc = 1;
   do {
-    hash_table_maybe_grow(hash_table->n + 1, hash_table);
+    nex += inc;
+    ++inc;
+    hash_table_maybe_grow(nex, hash_table);
     ht_insert = hash_table_insert(hash, val, hash_table);
+    ++nex;
+  } while (ht_insert != HASH_TABLE_SUCCESS);
+}
+
+void hash_table_set_by_hash(unsigned long hash, void *val, hash_table_t *hash_table)
+{
+  hash_table_entry_t *entry = hash_table_find(hash, hash_table);
+  if (entry) {
+    entry->value = val;
+    return;
+  }
+
+  /* Expand if necessary
+   * Grow until the element has been added
+   */
+  long ht_insert;
+  size_t nex = hash_table->n;
+  size_t inc = 1;
+  do {
+    nex += inc;
+    ++inc;
+    // printf("nex:%li n:%li cap:%li\n", nex, hash_table->n, hash_table->capacity);
+    hash_table_maybe_grow(nex, hash_table);
+    // printf("n:%li cap:%li\n", hash_table->n, hash_table->capacity);
+    // usleep(10000);
+    ht_insert = hash_table_insert(hash, val, hash_table);
+    // if (ht_insert != HASH_TABLE_SUCCESS)
+    //   exit(88);
+    // return;
   } while (ht_insert != HASH_TABLE_SUCCESS);
 }
 
 void *hash_table_get(const char *name, hash_table_t *hash_table)
 {
   unsigned long hash = hash_djb2((const unsigned char *)name);
+  hash_table_entry_t *ret = hash_table_find(hash, hash_table);
+  return ret ? ret->value : NULL;
+}
+
+void *hash_table_get_by_hash(unsigned long hash, hash_table_t *hash_table)
+{
   hash_table_entry_t *ret = hash_table_find(hash, hash_table);
   return ret ? ret->value : NULL;
 }

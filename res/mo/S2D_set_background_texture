@@ -1,0 +1,228 @@
+Screen2D: Set Background Texture
+> PARAM {
+  key=project-data
+  obtain=obtain-project-data
+    > SYMBOL_DIALOG {
+      message=Select the project data type
+      symbol_type=struct
+      target_result_type=name
+      target_context_property=project-data
+    }
+}
+> PARAM {
+  key=tex-field-name
+  obtain=set-tex-field-name
+    > FUNCTION {
+      MCcall(mc_mo_set_top_context_cstr(process_stack, "tex-field-name", "tex_background"));
+    }
+}
+> PARAM {
+  key=project-node
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
+}
+> PARAM {
+  key=texture-filepath
+  obtain=obtain-texture-filepath
+    > FILE_DIALOG {
+      message=Select the texture file
+      initial_filename={CSTR:NULL}
+      initial_folder={CSTR:NULL}
+      target_context_property=texture-filepath
+    }
+}
+> FUNCTION {
+  const char *data_name, *tex_fn, *tex_filepath;
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_fn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &tex_filepath));
+
+  // Get the data struct
+  struct_info *si = NULL;
+  MCcall(find_struct_info(data_name, &si));
+  if(!si) {
+    MCerror(7563, "TODO");
+  }
+
+  // Obtain the current project data
+  mc_node *app_node;
+  MCcall(mc_mo_get_context_ptr(process_stack, "project-node", true, (void **)&app_node));
+
+  printf("app_node=%p  ->data=%p\n", app_node, app_node->data);
+
+  // Insert the texture field into the data
+  mcr_texture_image **p_new_field;
+  MCcall(mcs_append_field_to_struct_and_remap(si, "mcr_texture_image", 1, tex_fn, &app_node->data, (void **)&p_new_field));
+  *p_new_field = NULL;
+  MCcall(mcr_load_texture_resource(tex_filepath, p_new_field));
+  while (!*p_new_field) {
+   // puts("wait");
+   usleep(100);
+  }
+  // printf("loaded: %p\n", *p_new_field);
+}
+> PARAM {
+  key=project-init-source-filepath
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
+}
+> PARAM {
+  key=project-init-header-filepath
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
+}
+> PARAM {
+  key=project-load-resources-function
+  obtain=required-context
+    > FUNCTION {
+      // Check if a load-resources function exists, and if not, create it
+      char lrcn_buf[64], buf[512];
+      const char *lrcn, *init_function_name, *data_name;
+      function_info *fi, *init_fi;
+      char param[64];
+
+      // Create the function
+      // -- Obtain the project name
+      MCcall(mc_mo_get_context_cstr(process_stack, "project-name", true, &lrcn));
+      if(!lrcn) {
+        puts("Error - require project-name context to initailize the load_resources function");
+        return 8;
+      }
+
+      // -- Make the function name
+      sprintf(lrcn_buf, "_%s_load_resources", lrcn);
+      lrcn = lrcn_buf;
+
+      // -- Obtain the init source file name
+      const char *init_source_filepath;
+      MCcall(mc_mo_get_context_cstr(process_stack, "project-init-source-filepath", true, &init_source_filepath));
+      if(!init_source_filepath) {
+        return 9;
+      }
+      mc_source_file_info *init_source_file;
+      MCcall(mcs_obtain_source_file_info(init_source_filepath, true, &init_source_file));
+      if(!init_source_file)
+        return 10;
+      
+      // -- Insert a somewhat empty function into the source file
+      strcpy(buf, "{ return 0; }");
+
+      // -- Ensure new function doesn't exist
+      MCcall(find_function_info(lrcn, &fi));
+      if(fi)
+        return 11;
+
+      // -- Create the new resources-load function
+      MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+      sprintf(param, "%s *data", data_name);
+      char *pparam = param;
+      puts(param);
+      MCcall(mcs_construct_function_definition(init_source_file, lrcn, "int", 0, 1, &pparam, buf));
+      puts("after construct function definition");
+
+      // Make a call to this created function inside the initialize function
+      MCcall(mc_mo_get_context_cstr(process_stack, "project-init-function-name", true, &init_function_name));
+      MCcall(find_function_info(init_function_name, &init_fi));
+      if(!init_fi)
+        return 14;
+
+      // TODO -- obtain the local data variable name
+      sprintf(buf, "\n  %s(data);\n", lrcn);
+      MCcall(mcs_attach_code_to_function(init_fi, buf));
+
+      MCcall(mc_mo_set_top_context_cstr(process_stack, "project-load-resources-function", lrcn));
+    }
+}
+> FUNCTION {
+  char lrcn_buf[64], buf[512];
+  function_info *fi, *init_fi;
+  const char *lrcn, *data_name, *tex_field_name, *tex_file_path;
+
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-load-resources-function", true, &lrcn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_field_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "texture-filepath", true, &tex_file_path));
+
+  // Get the function
+  MCcall(find_function_info(lrcn, &fi));
+  if(!fi)
+    return 12;
+
+  // TODO get the data > PARAM name
+
+  // Generate the code
+  sprintf(buf, "\n"
+               "  data->%s = NULL;\n"
+               "  mcr_load_texture_resource(\"%s\", &data->%s);\n"
+               "  // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??\n"
+               "  while(!data->%s) {\n"
+               "    usleep(100);\n"
+               "  }\n", tex_field_name, tex_file_path, tex_field_name, tex_field_name);
+
+  // Insert inside the load resources function
+  MCcall(mcs_add_include_to_source_file(fi->source, "<unistd.h>"));
+  MCcall(mcs_attach_code_to_function(fi, buf));
+}
+> PARAM {
+  key=project-render-function-name
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
+}
+> FUNCTION {
+  char buf[512];
+  const char *render_fn, *data_name, *tex_fn;
+  function_info *fi;
+
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-render-function-name", true, &render_fn));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "tex-field-name", true, &tex_fn));
+
+  // Get the function
+  MCcall(find_function_info(render_fn, &fi));
+  if(!fi)
+    return 15;
+
+  // TODO present options (resize application, stretch texture, center it(node or by plain math))
+  sprintf(buf, "\n"
+  "  puts(\"new-function!\");\n"
+  "  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x + 425U,\n"
+  "                                         10, 590, 880, %s->%s);\n", "data", tex_fn);
+
+  // Insert inside the load resources function
+  MCcall(mcs_attach_code_to_function(fi, buf));
+}
+> FUNCTION {
+  // Update the node layout to use the new function
+  // -- Obtain the current project data
+  mc_app_itp_data *itp_data;
+  mc_node *app_node;
+  char buf[256];
+  const char *render_fn;
+  void *p_render_fn;
+
+  MCcall(mc_mo_get_context_ptr(process_stack, "project-node", true, (void **)&app_node));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-render-function-name", true, &render_fn));
+  
+  mc_obtain_app_itp_data(&itp_data);
+
+  p_render_fn = tcci_get_symbol(itp_data->interpreter, render_fn);
+  if(!p_render_fn) {
+    return 214;
+  }
+
+  sprintf(buf, "((mc_node *)%p)->layout->render_present = (void *)%p;\n  return NULL;", app_node, p_render_fn);
+
+  const char *sut[] = {
+    "#include \"core/core_definitions.h\"",
+    "#include \"env/environment_definitions.h\"",
+  };
+  MCcall(tcci_execute_single_use_code(itp_data->interpreter, "screen2d-set-bg-texture", 2, sut, buf, NULL, NULL));
+}

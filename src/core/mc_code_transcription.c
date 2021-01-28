@@ -46,7 +46,7 @@ typedef struct mct_statement_transcription_info {
 } mct_statement_transcription_info;
 
 int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *syntax_node, bool function_root);
-int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node *syntax_node);
+int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node_list *syntax_node);
 int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node);
 int mct_transcribe_expression(mct_transcription_state *ts, mct_statement_transcription_info *st_info,
                               mc_syntax_node *syntax_node);
@@ -2799,20 +2799,12 @@ int mct_transcribe_statement(mct_transcription_state *ts, mc_syntax_node *syntax
   return 0;
 }
 
-int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node *syntax_node)
+int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node_list *statement_list)
 {
-  register_midge_error_tag("mct_transcribe_statement_list()");
-  // printf("mct_transcribe_statement_list()\n");
-  if (syntax_node->type != MC_SYNTAX_STATEMENT_LIST) {
-    printf("INVALID! tsl");
-    print_syntax_node(syntax_node, 0);
-    MCerror(1527, "INVALID ARGUMENT: %s '%s'", get_mc_syntax_token_type_name(syntax_node->type), syntax_node->text);
-  }
-
-  for (int i = 0; i < syntax_node->children->count; ++i) {
+  for (int i = 0; i < statement_list->count; ++i) {
     // printf ("h343\n");
     // printf("%p\n", syntax_node->children->items[i]);
-    mc_syntax_node *child = syntax_node->children->items[i];
+    mc_syntax_node *child = statement_list->items[i];
     {
       const char *tsl_type_name = get_mc_syntax_token_type_name(child->type);
       register_midge_error_tag("mct_transcribe_statement_list-L:%s", tsl_type_name);

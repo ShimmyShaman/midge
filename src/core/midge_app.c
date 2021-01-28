@@ -225,6 +225,9 @@ int midge_initialize_app(struct timespec *app_begin_time)
   // Asynchronously begin the render thread containing vulkan and xcb
   MCcall(begin_render_thread());
 
+  // // Set properties
+  // usleep(10000000);
+
   // Complete Initialization of the global root node
   MCcall(mca_init_node_layout(&app_info->global_node->layout));
   app_info->global_node->layout->__requires_rerender = true;
@@ -243,9 +246,9 @@ int midge_initialize_app(struct timespec *app_begin_time)
   int count = 0;
   while (!app_info->render_thread->render_thread_initialized || app_info->render_thread->resource_queue->count) {
     waited = !app_info->render_thread->render_thread_initialized;
-    usleep(1);
+    usleep(1000);
     ++count;
-    if (count % 100000 == 0) {
+    if (count > 2999 && count % 1000 == 0) {
       printf("app_info->render_thread = %p %i %u\n", app_info->render_thread,
              app_info->render_thread->render_thread_initialized, app_info->render_thread->resource_queue->count);
     }
@@ -263,8 +266,6 @@ int midge_initialize_app(struct timespec *app_begin_time)
   //   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   //   usleep(10);
   // }
-
-  // Set properties
 
   // Completed
   struct timespec load_complete_frametime;
@@ -336,9 +337,12 @@ void _add_timespecs(struct timespec *time, struct timespec *amount, struct times
   }
 }
 
-int mca_register_update_timer(unsigned int usecs_period, bool reset_timer_on_update, void *callback_state,
+int mca_register_update_timer(long usecs_period, bool reset_timer_on_update, void *callback_state,
                               int (*update_callback)(frame_time *, void *))
 {
+  // printf("mca_register_update_timer: %u %u %p fptr=%p\n", usecs_period, reset_timer_on_update, callback_state,
+  //        update_callback);
+  //  usleep(100000);
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
@@ -355,8 +359,8 @@ int mca_register_update_timer(unsigned int usecs_period, bool reset_timer_on_upd
 
   MCcall(append_to_collection((void ***)&app_info->update_timers.items, &app_info->update_timers.alloc,
                               &app_info->update_timers.count, callback_timer));
-  // printf("callback_timer=%p tv-sec=%li\n", callback_timer, callback_timer->next_update.tv_sec);
-  // printf("callback_timer ic=%p\n", app_info->update_timers.callbacks[0]);
+  // printf("callback_timer=%p tv-sec=%li -nsec=%li\n", update_callback, callback_timer->next_update.tv_sec,
+  //        callback_timer->next_update.tv_nsec);
 
   //   register_midge_error_tag("mca_register_update_timer(~)");
   return 0;
@@ -394,7 +398,7 @@ int midge_run_app()
     bool logic_update_due = false;
     {
       // TODO DEBUG
-      // usleep(10000);
+      usleep(100);
 
       long ms;  // Milliseconds
       time_t s; // Seconds

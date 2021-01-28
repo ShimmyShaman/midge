@@ -621,6 +621,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
 
 VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, mcr_texture_image **p_resource)
 {
+  puts("mvk_load_texture_from_file");
   VkResult res;
 
   int texWidth, texHeight, texChannels;
@@ -647,7 +648,7 @@ VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const f
   return res;
 }
 
-VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const uint width, const uint height,
+VkResult mvk_create_empty_render_target(vk_render_state *p_vkrs, const unsigned int width, const unsigned int height,
                                         mvk_image_sampler_usage image_usage, mcr_texture_image **p_resource)
 {
   VkResult res;

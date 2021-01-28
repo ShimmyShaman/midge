@@ -6089,7 +6089,7 @@ int init_core_functions(mc_command_hub_v1 *command_hub)
 
   MCcall(clint_process("parse_mc_to_syntax_tree = &parse_mc_to_syntax_tree_v1;"));
   MCcall(clint_process("parse_mc_file_to_syntax_tree = &parse_mc_file_to_syntax_tree_v1;"));
-  MCcall(clint_process("parse_definition_to_syntax_tree = &parse_definition_to_syntax_tree_v1;"));
+  MCcall(clint_process("mcs_parse_definition_to_syntax_tree = &mcs_parse_definition_to_syntax_tree_v1;"));
   MCcall(clint_process("mcs_copy_syntax_node_to_text = &mcs_copy_syntax_node_to_text_v1;"));
 
   // mc_code_transcriber.c

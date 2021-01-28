@@ -87,67 +87,6 @@ size_t _mcl_save_text_to_file(char *filepath, char *text)
   return written;
 }
 
-static int _mcl_find_sequence_in_text_ignoring_empty_text(const char *text, const char *first, const char *second,
-                                                          const char *third, int *index)
-{
-  for (int i = 0;; ++i) {
-
-    if (text[i] == '\0') {
-      break;
-    }
-
-    // First
-    int s;
-    for (s = 0; first; ++s) {
-      if (first[s] == '\0') {
-        break;
-      }
-      if (text[i + s] != first[s]) {
-        s = -1;
-        break;
-      }
-    }
-    if (s < 0) {
-      continue;
-    }
-
-    // Second
-    int t = s;
-    for (s = 0; second; ++s) {
-      if (second[s] == '\0') {
-        break;
-      }
-      if (text[i + t + s] != second[s]) {
-        s = -1;
-        break;
-      }
-    }
-    if (s < 0) {
-      continue;
-    }
-
-    // Third
-    t = t + s;
-    for (s = 0; third; ++s) {
-      if (third[s] == '\0') {
-        break;
-      }
-      if (text[i + t + s] != third[s]) {
-        s = -1;
-        break;
-      }
-    }
-    if (s < 0) {
-      continue;
-    }
-
-    *index = i;
-    return 0;
-  }
-
-  MCerror(60, "Could not find '%s'>'%s'>'%s'", first, second, third);
-}
-
 // TODO -- delete these arrays - dont' believe they have any use anymore
 const char *_mcl_core_structs[] = {
     // midge_common.h
@@ -181,7 +120,7 @@ const char *_mcl_core_structs[] = {
     "mc_syntax_node_type",
     "mc_token_type",
     "mc_syntax_node_list",
-    "parsing_state",
+    "mcs_parsing_state",
 
     // mc_code_transcription.c
     "mct_transcription_scope_variable",
@@ -339,7 +278,7 @@ const char *_mcl_core_functions[] = {
     "mcs_register_struct_declaration",
     "mcs_register_struct_definition",
 
-    "parse_file_to_syntax_tree",
+    "mcs_parse_file_to_syntax_tree",
     "mc_init_source_file_info",
     "release_struct_id",
     "release_syntax_node",
@@ -398,7 +337,7 @@ const char *_mcl_core_functions[] = {
     "update_or_register_struct_info_from_syntax",
     "register_sub_type_syntax_to_field_info",
     "transcribe_struct_to_mc",
-    "parse_definition_to_syntax_tree",
+    "mcs_parse_definition_to_syntax_tree",
 
     // "METHOD_HERE",
 
@@ -509,10 +448,12 @@ const char *_mcl_remainder_source_files[] = {
 
 static int mcl_load_source_through_midge(TCCInterpState *tmp_itp)
 {
+  // printf("tcci_get_symbol:%p\n", &tcci_get_symbol);
   int (*mcs_interpret_file)(const char *) = tcci_get_symbol(tmp_itp, "mcs_interpret_file");
   if (!mcs_interpret_file) {
     MCerror(1240, "Couldn't obtain mcs_interpret_file");
   }
+  // printf("mcs_interpret_file:%p\n", mcs_interpret_file);
 
   for (int i = 0; i < sizeof(_mcl_core_header_files) / sizeof(const char *); ++i) {
     MCcall(mcs_interpret_file(_mcl_core_header_files[i]));
@@ -588,14 +529,15 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     MCcall(tcci_add_include_path(midge_itp, "src"));
     MCcall(tcci_add_include_path(midge_itp, "dep"));
 
-    tcci_set_symbol(midge_itp, "tcci_add_include_path", &tcci_add_include_path);
-    tcci_set_symbol(midge_itp, "tcci_add_library", &tcci_add_library);
-    tcci_set_symbol(midge_itp, "tcci_add_files", &tcci_add_files);
-    tcci_set_symbol(midge_itp, "tcci_add_string", &tcci_add_string);
-    tcci_set_symbol(midge_itp, "tcci_define_symbol", &tcci_define_symbol);
-    tcci_set_symbol(midge_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
-    tcci_set_symbol(midge_itp, "tcci_set_symbol", &tcci_set_symbol);
-    tcci_set_symbol(midge_itp, "tcci_get_symbol", &tcci_get_symbol);
+    tcci_set_global_symbol(midge_itp, "tcci_add_include_path", &tcci_add_include_path);
+    tcci_set_global_symbol(midge_itp, "tcci_add_library", &tcci_add_library);
+    tcci_set_global_symbol(midge_itp, "tcci_add_files", &tcci_add_files);
+    tcci_set_global_symbol(midge_itp, "tcci_add_string", &tcci_add_string);
+    tcci_set_global_symbol(midge_itp, "tcci_define_symbol", &tcci_define_symbol);
+    tcci_set_global_symbol(midge_itp, "tcci_undefine_symbol", &tcci_undefine_symbol);
+    tcci_set_global_symbol(midge_itp, "tcci_set_global_symbol", &tcci_set_global_symbol);
+    tcci_set_global_symbol(midge_itp, "tcci_get_symbol", &tcci_get_symbol);
+    tcci_set_global_symbol(midge_itp, "tcci_execute_single_use_code", &tcci_execute_single_use_code);
 
     // Allow obtaining of the midge interpreter from both interpreter states
     // char buf[128];
@@ -628,7 +570,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     // printf("obtain_midge_global_root(before):%p %p\n", obtain_midge_global_root, data);
 
     int (*mdg_init_app_itp_data)(mc_app_itp_data **) = tcci_get_symbol(midge_itp, "mc_obtain_app_itp_data");
-    tcci_set_symbol(itp, "mc_obtain_app_itp_data", mdg_init_app_itp_data);
+    tcci_set_global_symbol(itp, "mc_obtain_app_itp_data", mdg_init_app_itp_data);
 
     // mdg_obtain_midge_global_root(&data);
     // printf("mdg_obtain_midge_global_root(after):%p %p\n", mdg_obtain_midge_global_root, data);
@@ -648,7 +590,9 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 
   // Begin loading into the midge interpreter state using the preload interpreter state
   puts("[mcl_load_source_through_midge]");
+  // printf("mcl_load_source_through_midge:%p\n", &mcl_load_source_through_midge);
   MCcall(mcl_load_source_through_midge(itp));
+  // puts("[after]");
 
   // Replace the temporary interpreter with the app version
   // -- Conclude the temporary interpreter
