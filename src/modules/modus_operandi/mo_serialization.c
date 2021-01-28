@@ -40,7 +40,7 @@ int mc_mo_parse_past(const char **str, const char *expect)
     }
 
     if (*c != *expect) {
-      MCcall(print_parse_error(*str, c - *str, "mc_mo_parse_past", ""));
+      print_parse_error(*str, c - *str, "mc_mo_parse_past", "");
       MCerror(3735, "expected:'%c' got:'%c'", *expect, *c);
     }
     ++expect;

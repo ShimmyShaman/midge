@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <poll.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -236,6 +237,12 @@ int midge_initialize_app(struct timespec *app_begin_time)
   MCcall(initialize_midge_state());
   printf("midge components initialized\n");
 
+  // Begin inotify
+  app_info->inotify_fd = inotify_init();
+  if (app_info->inotify_fd < 0) {
+    MCerror(5867, "inotify did not initialize successfully");
+  }
+
   // Begin the async load thread of modules -then- projects
   mthread_info *modules_load_thr_info;
   MCcall(begin_mthread(&mca_load_modules_then_project_async, &modules_load_thr_info, NULL));
@@ -376,17 +383,21 @@ int midge_run_app()
   // printf("defaultfont-0:%u\n", app_info->default_font_resource);
   // printf("app_info->ui_state:%p\n", app_info->ui_state);
 
+  struct timespec debug_start_time, debug_end_time;
+  int ui = 0, mc_ires, a, n;
+  long ms;  // Milliseconds
+  time_t s; // Seconds
+  bool exit_gracefully;
+  char inotify_event_buf[INOTIFY_EVENT_BUF_LEN];
+
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);
   clock_gettime(CLOCK_REALTIME, &logic_update_frametime);
-
-  struct timespec debug_start_time, debug_end_time;
 
   int DEBUG_secs_of_last_5sec_update = 0;
 
   app_info->elapsed = (frame_time *)calloc(sizeof(frame_time), 1);
   frame_time *elapsed = app_info->elapsed;
-  int ui = 0, mc_ires;
   mc_update_timer *timer;
   while (1) {
     if (app_info->render_thread->thread_info->has_concluded) {
@@ -400,8 +411,6 @@ int midge_run_app()
       // TODO DEBUG
       usleep(100);
 
-      long ms;  // Milliseconds
-      time_t s; // Seconds
       memcpy(&prev_frametime, &current_frametime, sizeof(struct timespec));
       clock_gettime(CLOCK_REALTIME, &current_frametime);
 
@@ -439,9 +448,9 @@ int midge_run_app()
       // }
 
       // Update Timers
-      bool exit_gracefully = false;
-      for (int i = 0; i < !exit_gracefully && app_info->update_timers.count; ++i) {
-        timer = app_info->update_timers.items[i];
+      exit_gracefully = false;
+      for (a = 0; a < !exit_gracefully && app_info->update_timers.count; ++a) {
+        timer = app_info->update_timers.items[a];
 
         if (current_frametime.tv_sec < timer->next_update.tv_sec ||
             (current_frametime.tv_sec == timer->next_update.tv_sec &&
@@ -482,6 +491,62 @@ int midge_run_app()
     }
 
     // Update State
+    // File Notification
+    struct pollfd fds;
+    fds.fd = app_info->inotify_fd;
+    fds.events = POLLIN | POLLPRI;
+
+    n = poll(&fds, 1UL, 0);
+    if (n < 0) {
+      MCerror(9557, "Error Reading INOTIFY buffer");
+    }
+    else if (n > 0) {
+      if (fds.revents & POLLIN) {
+        n = (int)read(app_info->inotify_fd, inotify_event_buf, INOTIFY_EVENT_SIZE);
+        a = 0;
+        // printf("n:%i\n", n);
+
+        while (a < n) {
+          struct inotify_event *event = (struct inotify_event *)&inotify_event_buf[a];
+          if (event->wd < 0 || event->wd >= app_info->wds_size) {
+            MCerror(7555, "TODO");
+          }
+          mc_source_file_info *sf = app_info->wds[event->wd];
+          // printf("event--mask:%u wd:%i file:'%s' %u %u %c\n", event->mask, event->wd,
+          //        app_info->wds[event->wd]->filepath, event->cookie, event->len, event->name);
+
+          // if (event->mask & IN_CREATE) {
+          //   if (event->mask & IN_ISDIR) {
+          //     printf("New directory  created.\n");
+          //   }
+          //   else {
+          //     printf("New file %s created.\n", event->name);
+          //   }
+          // }
+          // else if (event->mask & IN_DELETE) {
+          //   if (event->mask & IN_ISDIR) {
+          //     printf("Directory %s deleted.\n", event->name);
+          //   }
+          //   else {
+          //     printf("File %s deleted.\n", event->name);
+          //   }
+          // }
+          // else
+          if (event->mask & IN_MODIFY) {
+            // if (event->mask & IN_ISDIR) {
+            //   printf("Directory %s modified.\n", event->name);
+            // }
+            // else {
+            printf("File %s modified.\n", sf->file_update);
+            // }
+          }
+          a += INOTIFY_EVENT_SIZE + event->len;
+        }
+      }
+      else if (fds.revents & POLLPRI) {
+        MCerror(7480, "TODO POLLPRI revents");
+      }
+    }
 
     // Handle Input
     if (app_info->input_state_requires_update || app_info->render_thread->input_buffer.event_count) {
@@ -516,7 +581,7 @@ int midge_run_app()
         // puts("layout-locked");
         global_root_node->layout->__requires_layout_update = false;
 
-        for (int a = 0; a < app_info->global_node->children->count; ++a) {
+        for (a = 0; a < app_info->global_node->children->count; ++a) {
           mc_node *child = app_info->global_node->children->items[a];
           if (child->layout && child->layout->determine_layout_extents) {
             // TODO fptr casting
@@ -529,7 +594,7 @@ int midge_run_app()
         // Update the layout
         global_root_node->layout->__bounds =
             (mc_rectf){0.f, 0.f, (float)app_info->screen.width, (float)app_info->screen.height};
-        for (int a = 0; a < global_root_node->children->count; ++a) {
+        for (a = 0; a < global_root_node->children->count; ++a) {
           mc_node *child = global_root_node->children->items[a];
 
           if (child->layout && child->layout->update_layout) {
@@ -576,7 +641,7 @@ int midge_run_app()
 
       // Rerender headless images
       // printf("headless\n");
-      for (int a = 0; a < global_root_node->children->count; ++a) {
+      for (a = 0; a < global_root_node->children->count; ++a) {
         mc_node *child = global_root_node->children->items[a];
         // printf("child-type:%i '%s'\n", child->type, child->name);
         if (child->layout && child->layout->visible && child->layout->render_headless &&
@@ -617,6 +682,8 @@ void midge_cleanup_app()
   mc_obtain_midge_app_info(&app_info);
 
   // TODO invoke release resources on children...
+  if (app_info->inotify_fd > 0)
+    close(app_info->inotify_fd);
 
   // End render thread
   end_mthread(app_info->render_thread->thread_info);

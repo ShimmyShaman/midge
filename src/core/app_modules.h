@@ -1,6 +1,11 @@
 #ifndef APP_MODULES_H
 #define APP_MODULES_H
 
+#include <sys/inotify.h>
+
+#define INOTIFY_EVENT_SIZE (sizeof(struct inotify_event))
+#define INOTIFY_EVENT_BUF_LEN (1024 * (INOTIFY_EVENT_SIZE + 16))
+
 // #include "core/core_definitions.h"
 // #include "env/environment_definitions.h"
 // #include "ui/ui_definitions.h"

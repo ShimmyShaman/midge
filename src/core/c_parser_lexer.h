@@ -480,7 +480,7 @@ struct mc_syntax_node {
 
 struct mcs_parsing_state;
 
-int print_parse_error(const char *text, int index, const char *const function_name, const char *section_id);
+void print_parse_error(const char *text, int index, const char *const function_name, const char *section_id);
 int print_syntax_node(mc_syntax_node *syntax_node, int depth);
 int mcs_append_syntax_node_to_mc_str(mc_str *str, mc_syntax_node *syntax_node);
 int mcs_copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output);

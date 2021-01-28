@@ -50,6 +50,9 @@ typedef struct midge_app_info {
 
   unsigned int uid_counter;
 
+  int inotify_fd, wds_size;
+  mc_source_file_info **wds;
+
   render_thread_info *render_thread;
   frame_time *elapsed;
 

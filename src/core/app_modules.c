@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <dirent.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "tinycc/libtccinterp.h"
@@ -15,6 +16,8 @@
 #include "m_threads.h"
 #include "mc_str.h"
 #include "midge_error_handling.h"
+
+#include "core/app_modules.h"
 
 int _mca_load_module(const char *base_path, const char *module_name)
 {
@@ -156,6 +159,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
 
   // Parse each file in the build list
   char *c = &bltxt[0], *s;
+  int wd;
   for (; *c != '\0'; ++c) {
     sprintf(buf, "%s/", project->path_src);
     s = &buf[0] + strlen(buf);
@@ -175,6 +179,24 @@ int _mca_load_project(const char *base_path, const char *project_name)
 
     MCcall(append_to_collection((void ***)&project->source_files.items, &project->source_files.capacity,
                                 &project->source_files.count, sf));
+
+    wd = inotify_add_watch(app_info->inotify_fd, sf->filepath, IN_MODIFY);
+    if (wd < 0) {
+      MCerror(8472, "Error adding watch descriptor for:'%s'", sf->filepath);
+    }
+    if (wd >= app_info->wds_size) {
+      if (wd > app_info->wds_size + 5) {
+        MCerror(8527, "Need to change the way this is allocated if this is the case wd=%i", wd);
+      }
+
+      app_info->wds_size *= 2;
+      app_info->wds =
+          (mc_source_file_info **)realloc(app_info->wds, app_info->wds_size * sizeof(mc_source_file_info *));
+      if (app_info->wds) {
+        MCerror(7709, "TODO");
+      }
+    }
+    app_info->wds[wd] = sf;
 
     if (*c == '\0')
       break;
@@ -222,6 +244,8 @@ int _mca_load_project(const char *base_path, const char *project_name)
   MCcall(mca_register_loaded_project(project));
 
   app_info->projects.active = project;
+  MCcall(mca_focus_node(project->root_node));
+
   // MCcall(mcs_interpret_file(buf));
 
   // // Initialize the module

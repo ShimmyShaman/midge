@@ -28,6 +28,12 @@ void mc_init_midge_app_info()
 
   __mc_midge_app_info->_exit_requested = false;
 
+  // File Watch Descriptors
+  __mc_midge_app_info->inotify_fd = 0;
+  __mc_midge_app_info->wds_size = 256;
+  __mc_midge_app_info->wds =
+      (mc_source_file_info **)calloc(__mc_midge_app_info->wds_size, sizeof(mc_source_file_info *));
+
   // Update timers
   __mc_midge_app_info->update_timers.alloc = 8U;
   __mc_midge_app_info->update_timers.count = 0U;
