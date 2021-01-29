@@ -682,8 +682,14 @@ void midge_cleanup_app()
   mc_obtain_midge_app_info(&app_info);
 
   // TODO invoke release resources on children...
-  if (app_info->inotify_fd > 0)
+  if (app_info->inotify_fd > 0) {
+    for (int a = 0; a < app_info->wds_size; ++a)
+      if (app_info->wds[a]) {
+        inotify_rm_watch(app_info->inotify_fd, a);
+        app_info->wds[a] = NULL;
+      }
     close(app_info->inotify_fd);
+  }
 
   // End render thread
   end_mthread(app_info->render_thread->thread_info);

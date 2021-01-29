@@ -189,12 +189,15 @@ int _mca_load_project(const char *base_path, const char *project_name)
         MCerror(8527, "Need to change the way this is allocated if this is the case wd=%i", wd);
       }
 
-      app_info->wds_size *= 2;
+      // Realloc
       app_info->wds =
-          (mc_source_file_info **)realloc(app_info->wds, app_info->wds_size * sizeof(mc_source_file_info *));
+          (mc_source_file_info **)realloc(app_info->wds, app_info->wds_size * 2 * sizeof(mc_source_file_info *));
       if (app_info->wds) {
         MCerror(7709, "TODO");
       }
+      for (int a = app_info->wds_size; a < app_info->wds_size * 2; ++a)
+        app_info->wds[a] = NULL;
+      app_info->wds_size *= 2;
     }
     app_info->wds[wd] = sf;
 
