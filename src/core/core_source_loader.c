@@ -494,8 +494,8 @@ static int mcl_load_source_through_midge(TCCInterpState *tmp_itp)
 
 /* Builds a loader on the passed in interpreter state, using that to load midge into another
      initialized interpreter state which is then returned in the pointer reference. Note: Cleanup
-     of the passed in interpreter will be dealt with by this method. Only freeing/deletion of the
-     returned interpreter state is required by the caller. */
+     of the passed in interpreter (@itp) will be dealt with by this method. Only freeing/deletion of the
+     returned interpreter state (*@mc_interp) is required by the caller. */
 int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc_interp_error_thread_index)
 {
   // mcl_exp();

@@ -20,12 +20,14 @@
 int init_source_editor(mc_node *app_root)
 {
   MCcall(mcs_interpret_file("src/modules/source_editor/source_editor.h"));
+  MCcall(mcs_interpret_file("src/modules/source_editor/modification_watcher.h"));
   MCcall(mcs_interpret_file("src/modules/source_editor/source_editor.c"));
-  // MCcall(mcs_interpret_file("src/modules/source_editor/source_line.c"));
+  MCcall(mcs_interpret_file("src/modules/source_editor/modification_watcher.c"));
   // MCcall(mcs_interpret_file("src/modules/source_editor/function_editor.c"));
   // MCcall(mcs_interpret_file("src/modules/source_editor/source_editor_pool.c"));
 
   MCitpCall(mc_se_init_source_editor, "mc_se_init_source_editor");
+  MCitpCall(mc_se_init_modification_watcher, "mc_se_init_modification_watcher");
 
   return 0;
 }

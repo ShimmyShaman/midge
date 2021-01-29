@@ -158,6 +158,7 @@ int mc_save_source_file_info_to_disk(mc_source_file_info *source_file)
   }
 
   MCcall(save_text_to_file(source_file->filepath, str->text));
+  clock_gettime(CLOCK_REALTIME, &source_file->recent_disk_sync);
 
   release_mc_str(str, true);
 

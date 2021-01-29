@@ -8,6 +8,10 @@
 
 #include "tinycc/libtccinterp.h"
 
+#ifndef CLOCK_REALTIME
+#define CLOCK_REALTIME 0
+#endif
+
 // TODO seperate node and event stuff from source stuff
 
 typedef enum mc_source_entity_focus_options {
@@ -28,6 +32,8 @@ typedef enum mc_app_event_type {
   MC_APP_EVENT_PROJECT_LOADED,
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
   MC_APP_EVENT_SOURCE_FILE_OPEN_REQ,
+  // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_source_file_info *modified_file}
+  MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY,
   // int (*event_handler)(void *handler_state, void *event_args)
   // - event_args is void *[] { const char *entity_name, mc_source_entity_focus_options *options}
   MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ,
@@ -314,7 +320,7 @@ typedef struct mc_source_file_code_segment_list {
 
 typedef struct mc_source_file_info {
   struct_id *type_id;
-  struct timespec file_update;
+  struct timespec recent_disk_sync;
   char *filepath;
   mc_source_file_code_segment_list segments;
 } mc_source_file_info;

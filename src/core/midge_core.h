@@ -9,8 +9,6 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "rendering/node_render.h"
-
 #define _POSIX_C_SOURCE 200809L
 #ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME 0

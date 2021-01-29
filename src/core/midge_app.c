@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <poll.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -384,6 +385,7 @@ int midge_run_app()
   // printf("app_info->ui_state:%p\n", app_info->ui_state);
 
   struct timespec debug_start_time, debug_end_time;
+  struct timespec current_time;
   int ui = 0, mc_ires, a, n;
   long ms;  // Milliseconds
   time_t s; // Seconds
@@ -533,12 +535,16 @@ int midge_run_app()
           // }
           // else
           if (event->mask & IN_MODIFY) {
-            // if (event->mask & IN_ISDIR) {
-            //   printf("Directory %s modified.\n", event->name);
-            // }
-            // else {
-            printf("File %s modified.\n", sf->file_update);
-            // }
+
+            struct stat attr;
+            int res = stat(sf->filepath, &attr);
+            if (res) {
+              MCerror(4209, "Odd? TODO print errno");
+            }
+
+            if (sf->recent_disk_sync.tv_sec < attr.st_mtime) {
+              MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY, sf));
+            }
           }
           a += INOTIFY_EVENT_SIZE + event->len;
         }
