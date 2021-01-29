@@ -583,18 +583,6 @@ int mcs_process_ast_root_children(mc_source_file_info *source_file, mc_syntax_no
       case MC_SYNTAX_STRUCT_DECL: {
         // print_syntax_node(child->type_alias.type_descriptor, 0);
         MCcall(mcs_register_struct_declaration(source_file, child->type_alias.type_descriptor));
-        // MCerror(1151, "TODO");
-        // struct_info *info;
-        // instantiate_definition(definitions_owner, NULL, child->type_alias.type_descriptor, NULL, (void **)&info);
-        // info->source->source_file = source_file;
-        // // printf("--defined: struct '%s'\n", child->type_alias.type_descriptor->struct_decl.type_name->text);
-        // // sprintf(buf,
-        // //         "#ifndef %s\n"
-        // //         // "#undef %s\n"
-        // //         "#define %s struct %s\n"
-        // //         "#endif\n",
-        // //         info->name, info->name, info->mc_declared_name);
-        // // clint_process(buf);
       } break;
       case MC_SYNTAX_ENUM_DECL: {
         // register_external_enum_declaration(definitions_owner, child->type_alias.type_descriptor);
@@ -841,6 +829,9 @@ int mcs_interpret_source_file(const char *filepath, mc_source_file_info **source
       return mc_res;
     }
   }
+
+  // Set the sync time
+  clock_gettime(CLOCK_REALTIME, &sf->recent_disk_sync);
 
   // Cleanup
   free(code);

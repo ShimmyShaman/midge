@@ -175,7 +175,7 @@ typedef struct mc_source_editor {
 // extern "C" {
 
 // source_editor/source_editor.c
-int mc_se_init_source_editor(void);
+int mc_se_init_source_editor(mc_node *app_root);
 // int mce_activate_source_editor_for_definition(mc_source_definition *definition);
 
 // // source_editor/source_line.c

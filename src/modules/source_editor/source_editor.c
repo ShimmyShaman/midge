@@ -553,10 +553,8 @@ int _mc_se_init_data(mc_node *node)
   return 0;
 }
 
-int mc_se_init_source_editor()
+int mc_se_init_source_editor(mc_node *app_root)
 {
-  midge_app_info *app_info;
-  mc_obtain_midge_app_info(&app_info);
   //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
 
   mc_node *node;
@@ -594,6 +592,6 @@ int mc_se_init_source_editor()
   MCcall(_mc_se_load_resources(node));
 
   // Attach to midge hierarchy & return
-  MCcall(mca_attach_node_to_hierarchy(app_info->global_node, node));
+  MCcall(mca_attach_node_to_hierarchy(app_root, node));
   return 0;
 }

@@ -97,20 +97,22 @@ void mcc_issue_keyboard_event(window_input_event_type event_type, int button_cod
   mc_node *focused_node;
   mca_obtain_focused_node(&focused_node);
 
+  mca_node_layout *layout;
   while (focused_node && !input_event.handled) {
+    layout = focused_node->layout;
 
-    if (focused_node->layout && focused_node->layout->handle_input_event) {
+    if (layout && layout->visible && layout->handle_input_event) {
       // TODO fptr casting
-      void (*handle_input_event)(mc_node *, mci_input_event *) = (void (*)(
-          mc_node *, mci_input_event *))focused_node->layout->handle_input_event; // TODO add type of mouse event
+      void (*handle_input_event)(mc_node *, mci_input_event *) =
+          (void (*)(mc_node *, mci_input_event *))layout->handle_input_event; // TODO add type of mouse event
       handle_input_event(focused_node, &input_event);
-    }
 
-    printf("keyboard_event delegated to node: %s%s%s%s%s\n",
-           (focused_node->parent && focused_node->parent->parent) ? focused_node->parent->parent->name : "",
-           (focused_node->parent && focused_node->parent->parent) ? "->" : "",
-           focused_node->parent ? focused_node->parent->name : "", focused_node->parent ? "->" : "",
-           focused_node->name);
+      printf("keyboard_event delegated to node: %s%s%s%s%s\n",
+             (focused_node->parent && focused_node->parent->parent) ? focused_node->parent->parent->name : "",
+             (focused_node->parent && focused_node->parent->parent) ? "->" : "",
+             focused_node->parent ? focused_node->parent->name : "", focused_node->parent ? "->" : "",
+             focused_node->name);
+    }
 
     focused_node = focused_node->parent;
   }

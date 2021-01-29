@@ -302,25 +302,25 @@ int _mc_mo_activate_next_stack_step(mc_mo_process_stack *process_stack)
   const char *str;
   void **vary;
   int sidx = process_stack->index;
-  printf("activate-step: %i\n", sidx);
+  // printf("activate-step: %i\n", sidx);
   mo_operational_step *step = process_stack->steps[sidx];
 
   if (!step) {
     // First step
     step = process_stack->steps[sidx] = process_stack->processes[sidx]->first;
-    printf("first step:%i %p\n", step->action, step);
+    // printf("first step:%i %p\n", step->action, step);
   }
   else {
     if (!step->next) {
       // No Next step
-      puts("No Next step\n");
+      // puts("No Next step\n");
       MCcall(_mc_mo_return_from_stack_process(process_stack));
       return 0;
     }
 
     // Continue onto next linked step
     step = process_stack->steps[sidx] = step->next;
-    printf("next step:%i\n", step->action);
+    // printf("next step:%i\n", step->action);
   }
 
   bool free_ctx_arg;
