@@ -5,6 +5,7 @@
 #include "core/c_parser_lexer.h"
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
+#include "midge_error_handling.h"
 
 #include "modules/ui_elements/ui_elements.h"
 
@@ -15,12 +16,12 @@ typedef enum _mc_smw_mdf_state {
   MC_SMW_MDF_STATE_DISCOVERED,
 } _mc_smw_mdf_state;
 
-typedef struct _mc_smw_mdf_func_info {
+typedef struct _mc_smw_modified_func_info {
   mc_source_file_info *source_file;
   _mc_smw_mdf_state state;
   function_info *function_info;
   char *disk_code;
-} _mc_smw_mdf_func_info;
+} _mc_smw_modified_func_info;
 
 typedef struct mc_source_modification_data {
   mc_node *node;
@@ -31,9 +32,12 @@ typedef struct mc_source_modification_data {
 
   struct {
     int count, size;
-    _mc_smw_mdf_func_info *items;
+    _mc_smw_modified_func_info *items;
   } modified_functions;
-  //   mcu_textblock *message_textblock;
+
+  int ui_info_element_count;
+  mcu_textblock **info_textblocks;
+  mcu_button **info_buttons;
   //   struct {
   //     unsigned int capacity, count, utilized;
   //     mcu_button **items;
@@ -52,6 +56,69 @@ typedef struct mc_source_modification_data {
   //   } callback;
 
 } mc_source_modification_data;
+
+typedef struct _mc_smw_button_tag {
+  mc_source_modification_data *md;
+  _mc_smw_modified_func_info *mfi;
+} _mc_smw_button_tag;
+
+int _mc_smw_update_node_layout(mc_node *node, const mc_rectf *available_area)
+{
+  mc_source_modification_data *md = (mc_source_modification_data *)node->data;
+
+  // Useless Check
+  if (!md->modified_functions.count) {
+    node->layout->visible = false;
+    return 0;
+  }
+
+  // Set the node data appropriately
+  int a;
+  _mc_smw_modified_func_info *mfi;
+  mcu_button *button;
+  mcu_textblock *textblock;
+  for (a = 0; a < md->ui_info_element_count && a < md->modified_functions.count; ++a) {
+    printf("a=%i\n", a);
+    mfi = &md->modified_functions.items[a];
+    textblock = md->info_textblocks[a];
+    button = md->info_buttons[a];
+
+    MCcall(set_mc_str(textblock->str, ""));
+    MCcall(append_to_mc_strf(textblock->str, "%s :: %s", mfi->source_file->filepath, mfi->function_info->name));
+
+    // Update textblock
+    textblock->node->layout->visible = true;
+    textblock->node->layout->__requires_layout_update = true;
+    MCcall(mca_set_node_requires_rerender(textblock->node));
+
+    ((_mc_smw_button_tag *)button->tag)->mfi = mfi;
+    switch (mfi->state) {
+    case MC_SMW_MDF_STATE_DISCOVERED: {
+      button->node->layout->visible = true;
+
+      // Set & Rerender
+      MCcall(set_mc_str(button->str, "Interpret"));
+      MCcall(mca_set_node_requires_rerender(button->node));
+    } break;
+    default:
+      MCerror(9952, "TODO : %i", mfi->state);
+    }
+  }
+
+  // Hide the rest
+  for (; a < md->ui_info_element_count; ++a) {
+    textblock = md->info_textblocks[a];
+    textblock->node->layout->visible = false;
+
+    button = md->info_buttons[a];
+    button->node->layout->visible = false;
+  }
+
+  // Update
+  MCcall(mca_update_typical_node_layout(node, available_area));
+
+  return 0;
+}
 
 void _mc_render_source_modification_headless(render_thread_info *render_thread, mc_node *node)
 {
@@ -132,12 +199,33 @@ void _mc_handle_source_modification_input(mc_node *node, mci_input_event *input_
 //   mca_set_node_requires_rerender(md->node);
 // }
 
+int _mc_smw_exit_dialog_clicked(mci_input_event *input_event, mcu_button *button)
+{
+  mc_source_modification_data *md = (mc_source_modification_data *)button->tag;
+
+  // Wrap Up
+  md->node->layout->visible = false;
+
+  mca_set_node_requires_rerender(md->node);
+
+  return 0;
+}
+
+int _mc_smw_info_button_clicked(mci_input_event *input_event, mcu_button *button)
+{
+  _mc_smw_button_tag *tag = (_mc_smw_button_tag *)button->tag;
+
+  printf("here interpret %s :: %s\n", tag->mfi->source_file->filepath, tag->mfi->function_info->name);
+
+  return 0;
+}
+
 int _mc_smw_analyze_function_differences(mc_source_modification_data *md, mc_source_file_info *sf, mc_syntax_node *fast)
 {
   int a, b, n;
   char *exc;
   mc_source_file_code_segment *seg;
-  _mc_smw_mdf_func_info *mfn;
+  _mc_smw_modified_func_info *mfn;
 
   // Find the function info in the source file
   for (a = 0; a < sf->segments.count; ++a) {
@@ -181,10 +269,12 @@ int _mc_smw_analyze_function_differences(mc_source_modification_data *md, mc_sou
       // Capacity Check
       md->modified_functions.size *= 2;
       md->modified_functions.items =
-          realloc(md->modified_functions.items, sizeof(_mc_smw_mdf_func_info) * md->modified_functions.size);
+          realloc(md->modified_functions.items, sizeof(_mc_smw_modified_func_info) * md->modified_functions.size);
       if (!md->modified_functions.items) {
         MCerror(5981, "realloc error TODO");
       }
+
+      MCcall(mca_set_node_requires_layout_update(md->node));
     }
 
     mfn = &md->modified_functions.items[md->modified_functions.count++];
@@ -292,11 +382,11 @@ int _mc_smw_source_file_modified(void *handler_state, void *event_args)
   mc_source_file_info *sf = (mc_source_file_info *)event_args;
   mc_source_modification_data *md = (mc_source_modification_data *)handler_state;
 
-  // printf("sf-modified:%s\n", sf->filepath);
-  // MCcall(_mc_smw_analyze_modified_source_file(md, sf));
+  printf("sf-modified:%s\n", sf->filepath);
+  MCcall(_mc_smw_analyze_modified_source_file(md, sf));
 
-  // md->node->layout->visible = true;
-  // mca_set_node_requires_layout_update(md->node);
+  md->node->layout->visible = true;
+  mca_set_node_requires_layout_update(md->node);
 
   return 0;
 }
@@ -311,7 +401,8 @@ int mc_smw_init_data(mc_node *module_node)
 
   md->modified_functions.count = 0;
   md->modified_functions.size = 4;
-  md->modified_functions.items = malloc(sizeof(_mc_smw_mdf_func_info) * md->modified_functions.size);
+  md->modified_functions.items =
+      (_mc_smw_modified_func_info *)malloc(sizeof(_mc_smw_modified_func_info) * md->modified_functions.size);
   // TODO--malloc check just like everywhere
 
   //   MCcall(init_mc_str(&md->current_directory));
@@ -341,8 +432,10 @@ int mc_smw_init_ui(mc_node *module_node)
 
   //   // Locals
   //   char buf[64];
+  int a;
   mca_node_layout *layout;
-  //   mcu_button *button;
+  mcu_button *button;
+  mcu_textblock *textblock;
 
   // Panel
   MCcall(mcu_init_panel(module_node, &md->panel));
@@ -354,7 +447,53 @@ int mc_smw_init_ui(mc_node *module_node)
 
   md->panel->background_color = (render_color){0.35f, 0.35f, 0.35f, 1.f};
 
-  //   // Message Block
+  // Info Text-Blocks
+  md->ui_info_element_count = 11;
+  md->info_textblocks = (mcu_textblock **)malloc(sizeof(mcu_textblock *) * md->ui_info_element_count);
+  md->info_buttons = (mcu_button **)malloc(sizeof(mcu_button *) * md->ui_info_element_count);
+  _mc_smw_button_tag *tags = (_mc_smw_button_tag *)malloc(sizeof(_mc_smw_button_tag) * md->ui_info_element_count);
+  for (a = 0; a < md->ui_info_element_count; ++a) {
+    MCcall(mcu_init_textblock(md->panel->node, &textblock));
+    md->info_textblocks[a] = textblock;
+
+    layout = textblock->node->layout;
+    layout->visible = false;
+    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    layout->padding = (mc_paddingf){8, 8 + 26 * a, 136, 8};
+
+    MCcall(mcu_init_button(md->panel->node, &button));
+    md->info_buttons[a] = button;
+
+    _mc_smw_button_tag *tag = tags + a;
+    button->tag = tag;
+    tag->md = md;
+    tag->mfi = NULL;
+    button->left_click = &_mc_smw_info_button_clicked;
+
+    layout = button->node->layout;
+    layout->visible = false;
+    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    layout->padding = (mc_paddingf){8, 8 + 26 * a, 8, 8};
+    layout->preferred_width = 120;
+  }
+
+  // Exit Button
+  MCcall(mcu_init_button(md->panel->node, &button));
+
+  layout = button->node->layout;
+  layout->preferred_width = 16;
+  layout->preferred_height = 16;
+  layout->padding = (mc_paddingf){4, 4, 4, 4};
+  layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+  layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+
+  button->background_color = COLOR_MIDNIGHT_EXPRESS;
+  MCcall(set_mc_str(button->str, "X"));
+  button->tag = md;
+  button->left_click = (void *)&_mc_smw_exit_dialog_clicked;
+
   //   MCcall(mcu_init_textblock(md->panel->node, &md->message_textblock));
 
   //   layout = md->message_textblock->node->layout;
@@ -427,7 +566,7 @@ int mc_se_init_modification_watcher(mc_node *app_root)
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
-  node->layout->update_layout = (void *)&mca_update_typical_node_layout;
+  node->layout->update_layout = (void *)&_mc_smw_update_node_layout;
   node->layout->render_headless = (void *)&_mc_render_source_modification_headless;
   node->layout->render_present = (void *)&_mc_render_source_modification_present;
   node->layout->handle_input_event = (void *)&_mc_handle_source_modification_input;

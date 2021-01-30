@@ -12,6 +12,7 @@ typedef struct mc_str {
 int init_mc_str(mc_str **ptr);
 int init_mc_str_with_specific_capacity(mc_str **ptr, unsigned int specific_capacity);
 int set_mc_str(mc_str *str, const char *text);
+int set_mc_strf(mc_str *str, const char *fmt, ...);
 int set_mc_strn(mc_str *str, const char *text, int len);
 int append_char_to_mc_str(mc_str *str, char c);
 int append_to_mc_str(mc_str *str, const char *text);
