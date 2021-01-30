@@ -7,6 +7,8 @@
 #include "env/environment_definitions.h"
 #include "midge_error_handling.h"
 
+#include "modules/mc_io/mc_file.h"
+#include "modules/mc_io/mc_source_extensions.h"
 #include "modules/ui_elements/ui_elements.h"
 
 #include "modules/source_editor/modification_watcher.h"
@@ -74,6 +76,7 @@ int _mc_smw_update_node_layout(mc_node *node, const mc_rectf *available_area)
 
   // Set the node data appropriately
   int a;
+  char rel[256];
   _mc_smw_modified_func_info *mfi;
   mcu_button *button;
   mcu_textblock *textblock;
@@ -83,8 +86,10 @@ int _mc_smw_update_node_layout(mc_node *node, const mc_rectf *available_area)
     textblock = md->info_textblocks[a];
     button = md->info_buttons[a];
 
+    MCcall(mcf_obtain_path_relative_to_cwd(mfi->source_file->filepath, rel, 256));
+
     MCcall(set_mc_str(textblock->str, ""));
-    MCcall(append_to_mc_strf(textblock->str, "%s :: %s", mfi->source_file->filepath, mfi->function_info->name));
+    MCcall(append_to_mc_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
 
     // Update textblock
     textblock->node->layout->visible = true;
@@ -215,7 +220,24 @@ int _mc_smw_info_button_clicked(mci_input_event *input_event, mcu_button *button
 {
   _mc_smw_button_tag *tag = (_mc_smw_button_tag *)button->tag;
 
-  printf("here interpret %s :: %s\n", tag->mfi->source_file->filepath, tag->mfi->function_info->name);
+  mc_source_modification_data *md = tag->md;
+  _mc_smw_modified_func_info *mfi = tag->mfi;
+
+  int res = mc_redefine_function_provisionally(mfi->function_info, mfi->disk_code);
+  if (res) {
+    printf("Code for function '%s' was not successfully interpreted.\n", mfi->function_info->name);
+  }
+  else {
+    // Remove the mfi
+    int a = md->modified_functions.count - (tag->mfi - md->modified_functions.items) - 1;
+    for (; a > 0; ++a) {
+      *mfi = *(mfi + 1);
+      ++mfi;
+    }
+    --md->modified_functions.count;
+  }
+
+  MCcall(mca_set_node_requires_layout_update(md->node));
 
   return 0;
 }

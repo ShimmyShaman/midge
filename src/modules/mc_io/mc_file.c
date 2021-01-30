@@ -193,8 +193,7 @@ int mcf_obtain_path_relative(const char *path, const char *comparative_path, cha
 
       if (!strlen(f)) {
         if (dest_size < 1 + 1) {
-          // MCerror(4288, "destination buffer is too small");
-          exit(88);
+          MCerror(4788, "destination buffer is too small");
         }
         strcpy(dest, ".");
         printf("mcf_obtain_path_relative: '%s':'%s' => '%s'\n\n", path, comparative_path, dest);
@@ -202,8 +201,7 @@ int mcf_obtain_path_relative(const char *path, const char *comparative_path, cha
       }
       else {
         if (strlen(f) + 1 > dest_size) {
-          // MCerror(4287, "destination buffer is too small");
-          exit(88);
+          MCerror(4789, "destination buffer is too small");
         }
         strcpy(dest, f);
       }
@@ -216,8 +214,7 @@ int mcf_obtain_path_relative(const char *path, const char *comparative_path, cha
     if (*f == '\0') {
       if (*(c + 1) == '\0') {
         if (dest_size < 1 + 1) {
-          // MCerror(4288, "destination buffer is too small");
-          exit(88);
+          MCerror(4790, "destination buffer is too small");
         }
         strcpy(dest, ".");
         printf("mcf_obtain_path_relative: '%s':'%s' => '%s'\n\n", path, comparative_path, dest);
@@ -245,8 +242,7 @@ int mcf_obtain_path_relative(const char *path, const char *comparative_path, cha
 
   int req_len = (backtrack == 0 ? 0 : (1 + 2 * backtrack + backtrack - 1)) + strlen(f);
   if (dest_size < 1 + 1) {
-    // MCerror(4288, "destination buffer is too small");
-    exit(44);
+    MCerror(4791, "destination buffer is too small");
   }
 
   d = dest;
