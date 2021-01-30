@@ -229,7 +229,7 @@ int mcs_insert_segment_judiciously_in_source_file(mc_source_file_info *source_fi
     // printf("seg:%i p:%i\n", seg->type, sp);
     if (sp > 0 && sp < priority) {
       // Heres a good place
-      printf("inserted segment at index %i\n", a);
+      // printf("inserted segment at index %i\n", a);
 
       MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
                                   &source_file->segments.count, a + 1, ins_seg));
@@ -240,7 +240,7 @@ int mcs_insert_segment_judiciously_in_source_file(mc_source_file_info *source_fi
     }
   }
   if (!inserted) {
-    printf("inserted segment at index 0\n");
+    // printf("inserted segment at index 0\n");
     MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
                                 &source_file->segments.count, 0, ins_seg));
     MCcall(insert_in_collection((void ***)&source_file->segments.items, &source_file->segments.capacity,
@@ -343,7 +343,7 @@ int mcs_ensure_header_include_for_type(mc_source_file_info *sf, const char *type
     if (!getcwd(cwd, 256)) {
       MCerror(7912, "CWD FAILED TODO");
     }
-    printf("cwd:'%s'\n", cwd);
+    // printf("cwd:'%s'\n", cwd);
     m = strlen(cwd);
     if (strncmp(cwd, type_sf->filepath, m)) {
       MCerror(4728, "TODO '%s' isn't part of '%s'", cwd, type_sf->filepath);
@@ -425,7 +425,7 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
           si->name);
   MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, 2, su_includes, buf, &before_size, NULL));
 
-  printf("structure %s had a size before of %lu\n", si->name, before_size);
+  // printf("structure %s had a size before of %lu\n", si->name, before_size);
 
   // puts("a");
   field_info *f = (field_info *)malloc(sizeof(field_info *));
@@ -459,13 +459,13 @@ int mcs_append_field_to_struct_and_remap(struct_info *si, const char *type_name,
           si->name);
   MCcall(tcci_execute_single_use_code(app_info->itp_data->interpreter, nme, 2, su_includes, buf, &after_size, NULL));
 
-  printf("structure %s had a size after of %lu\n", si->name, after_size);
+  // printf("structure %s had a size after of %lu\n", si->name, after_size);
 
   // Remap the data
   void *new_data = (void *)malloc(after_size);
   memcpy(new_data, *data, before_size);
 
-  printf("replacing data at %p with data at %p\n", *data, new_data);
+  // printf("replacing data at %p with data at %p\n", *data, new_data);
   void *t = *data;
   *data = new_data;
   free(t);
@@ -479,7 +479,7 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
                                       unsigned int return_type_deref, int parameter_count, const char **parameters,
                                       const char *code)
 {
-  puts("mcs_construct_function_definition");
+  // puts("mcs_construct_function_definition");
   source_entity_info sei;
   function_info *fi;
   parameter_info *pp;
@@ -489,8 +489,8 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
     MCerror(4592, "Another symbol already possesses this name");
   }
 
-  printf("name'%s'\n", name);
-  printf("return_type_name'%s'\n", return_type_name);
+  // printf("name'%s'\n", name);
+  // printf("return_type_name'%s'\n", return_type_name);
 
   fi = (function_info *)calloc(1, sizeof(function_info));
   fi->name = strdup(name);
@@ -552,9 +552,9 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
   fi->code = strdup(code);
 
   MCcall(mc_register_function_info_to_app(fi));
-  printf("constfd:%i\n", source_file->segments.count);
+  // printf("constfd:%i\n", source_file->segments.count);
   MCcall(mcs_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
-  printf("constfd:%i\n", source_file->segments.count);
+  // printf("constfd:%i\n", source_file->segments.count);
   MCcall(mc_redefine_function(fi));
 
   return 0;
@@ -658,16 +658,16 @@ int mcs_add_include_to_source_file(mc_source_file_info *source_file, const char 
 
 int mc_redefine_function(function_info *function)
 {
-  printf("function:%p\n", function);
-  printf("function->source:%p\n", function->source);
-  printf("function->source->segments:%i\n", function->source->segments.count);
+  // printf("function:%p\n", function);
+  // printf("function->source:%p\n", function->source);
+  // printf("function->source->segments:%i\n", function->source->segments.count);
   int a, b, c;
   mc_str *str;
   MCcall(init_mc_str(&str));
 
   MCcall(mc_transcribe_specific_function_source(str, function));
 
-  printf("mc_redefine_function-gen:\n%s||\n", str->text);
+  // printf("mc_redefine_function-gen:\n%s||\n", str->text);
 
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);

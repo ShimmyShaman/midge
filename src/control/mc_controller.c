@@ -107,11 +107,11 @@ void mcc_issue_keyboard_event(window_input_event_type event_type, int button_cod
           (void (*)(mc_node *, mci_input_event *))layout->handle_input_event; // TODO add type of mouse event
       handle_input_event(focused_node, &input_event);
 
-      printf("keyboard_event delegated to node: %s%s%s%s%s\n",
-             (focused_node->parent && focused_node->parent->parent) ? focused_node->parent->parent->name : "",
-             (focused_node->parent && focused_node->parent->parent) ? "->" : "",
-             focused_node->parent ? focused_node->parent->name : "", focused_node->parent ? "->" : "",
-             focused_node->name);
+      // printf("keyboard_event delegated to node: %s%s%s%s%s\n",
+      //        (focused_node->parent && focused_node->parent->parent) ? focused_node->parent->parent->name : "",
+      //        (focused_node->parent && focused_node->parent->parent) ? "->" : "",
+      //        focused_node->parent ? focused_node->parent->name : "", focused_node->parent ? "->" : "",
+      //        focused_node->name);
     }
 
     focused_node = focused_node->parent;

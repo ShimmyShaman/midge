@@ -1043,7 +1043,7 @@ int _mc_mo_load_project_context(modus_operandi_data *mod, mc_project_info *proje
   free(ft);
 
   // Set ptr data
-  printf("setting %p to ptr_project_node\n", project->root_node);
+  // printf("setting %p to ptr_project_node\n", project->root_node);
   MCcall(mc_mo_set_specific_context_ptr(project_context, "project-node", project->root_node));
 
   return 0;

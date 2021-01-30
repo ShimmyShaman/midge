@@ -77,6 +77,6 @@ add-update-timer
   };
   void *update_func_addr = tcci_get_symbol(midge_app_info->itp_data->interpreter, update_func_name);
   MCcall(mc_mo_get_context_ptr(process_stack, "project-node", true, (void **)&app_node));
-  sprintf(buf, "\n  mca_register_update_timer(0L, true, vargs, (int (*)(frame_time *, void *))%p);\n  puts(\"sus-registered\");\n  return NULL;\n", update_func_addr);
+  sprintf(buf, "\n  mca_register_update_timer(0L, true, vargs, (int (*)(frame_time *, void *))%p);\n  return NULL;\n", update_func_addr);
   MCcall(tcci_execute_single_use_code(midge_app_info->itp_data->interpreter, "MO:add_update_timer", 3, sut, buf, app_node->data, NULL));
 }

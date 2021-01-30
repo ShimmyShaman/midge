@@ -292,11 +292,11 @@ int _mc_smw_source_file_modified(void *handler_state, void *event_args)
   mc_source_file_info *sf = (mc_source_file_info *)event_args;
   mc_source_modification_data *md = (mc_source_modification_data *)handler_state;
 
-  printf("sf-modified:%s\n", sf->filepath);
-  MCcall(_mc_smw_analyze_modified_source_file(md, sf));
+  // printf("sf-modified:%s\n", sf->filepath);
+  // MCcall(_mc_smw_analyze_modified_source_file(md, sf));
 
-  md->node->layout->visible = true;
-  mca_set_node_requires_layout_update(md->node);
+  // md->node->layout->visible = true;
+  // mca_set_node_requires_layout_update(md->node);
 
   return 0;
 }

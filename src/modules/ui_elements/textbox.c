@@ -71,7 +71,7 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
       int click_relative_x =
           input_event->input_state->mouse.x -
           (int)(node->layout->__bounds.x + textbox->content_padding.left - textbox->font_horizontal_stride * 0.5f);
-      printf("click_relative_x:%i\n", click_relative_x);
+      // printf("click_relative_x:%i\n", click_relative_x);
       if (click_relative_x < 0 && click_relative_x > -2)
         click_relative_x = 0;
       if (click_relative_x >= 0) {
