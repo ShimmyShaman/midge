@@ -476,29 +476,62 @@ int debugstuff(TCCInterpState *itp)
   return 0;
 };
 
+int mcf_obtain_path_relative(const char *path, const char *comparative_path, char *dest, int dest_size)
+{
+  return 0;
+}
+
 void dbht(void)
 {
-  hash_table_t ht;
-  init_hash_table(10, &ht);
+  char b[256], c[256], d[256];
 
-  const char *words[] = {
-      "one",    "two",  "three",  "four",   "five", "six",   "seven", "eight", "onde",   "f",    "ef",     "fotteur",
-      "fivebb", "siwx", "sedven", "eigqht", "onfe", "twefo", "efef",  "te",    "fivhhe", "esix", "sevxen", "w",
-  };
+  strcpy(b, "/home/jason/midge");
+  strcpy(c, "/home/jason/midge/src/app/main.c");
+  mcf_obtain_path_relative(c, b, d, 256);
 
-  for (int a = 0; a < 9; ++a) {
-    hash_table_set_by_hash(hash_djb2(words[a]), (void *)words[a], &ht);
+  strcpy(b, "/home/jason/midge");
+  strcpy(c, "/home/jason/midge/readme.md");
+  mcf_obtain_path_relative(c, b, d, 256);
 
-    printf("a:%i -", a);
-    for (int a = 0; a < ht.n; ++a) {
-      printf("HT:%lu ", ht.hashes[a]);
-    }
-    puts("");
-  }
+  strcpy(b, "/home/jason/midge");
+  strcpy(c, "/home/jason/midge");
+  mcf_obtain_path_relative(c, b, d, 256);
 
-  for (int a = 0; a < ht.n; ++a) {
-    printf("HT:%lu\n", ht.hashes[a]);
-  }
+  strcpy(b, "/home/jason/midge");
+  strcpy(c, "/home/jason/midge/");
+  mcf_obtain_path_relative(c, b, d, 256);
+
+  strcpy(b, "/home/jason/midge/");
+  strcpy(c, "/home/jason/midge");
+  mcf_obtain_path_relative(c, b, d, 256);
+
+  strcpy(b, "/home/jason/midge/");
+  strcpy(c, "/home/jason/midge/");
+  mcf_obtain_path_relative(c, b, d, 256);
+
+  strcpy(b, "/home/jason/midge/src");
+  strcpy(c, "/home/jason/midge/dep/tinycc/tcc.h");
+  mcf_obtain_path_relative(c, b, d, 256);
+
+  strcpy(b, "/home/jason/midge/src/");
+  strcpy(c, "/home/jason/midge/dep/tinycc/tcc.h");
+  mcf_obtain_path_relative(c, b, d, 256);
+
+  strcpy(b, "/home/jason/midge/src/app");
+  strcpy(c, "/home/jason/temp/midge/dep/tinycc/tcc.h");
+  mcf_obtain_path_relative(c, b, d, 256);
+
+  strcpy(b, "/home/jason/midge/src/app");
+  strcpy(c, "/home/jason/midge");
+  mcf_obtain_path_relative(c, b, d, 256);
+
+  strcpy(b, "/home/jason/midge/src");
+  strcpy(c, "/home/jason/midge");
+  mcf_obtain_path_relative(c, b, d, 256);
+
+  strcpy(b, "/home/jason/midge/src");
+  strcpy(c, "/home/jason/midge/tmp");
+  mcf_obtain_path_relative(c, b, d, 256);
 
   exit(0);
 }
