@@ -270,7 +270,7 @@ int mcf_obtain_path_relative(const char *path, const char *comparative_path, cha
   return 0;
 }
 
-int mcf_obtain_path_relative_to_cwd(const char *full_path, char *dest, int dest_size);
+int mcf_obtain_path_relative_to_cwd(const char *full_path, char *dest, int dest_size)
 {
   char buf[256];
   if (!getcwd(buf, 256)) {
