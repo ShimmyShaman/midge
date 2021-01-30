@@ -387,8 +387,8 @@ int midge_run_app()
   struct timespec debug_start_time, debug_end_time;
   struct timespec current_time;
   int ui = 0, mc_ires, a, n;
-  long ms;  // Milliseconds
-  time_t s; // Seconds
+  long ms;                         // Milliseconds
+  time_t s, recent_file_poll = 0L; // Seconds
   bool exit_gracefully;
   char inotify_event_buf[INOTIFY_EVENT_BUF_LEN];
 
@@ -493,64 +493,67 @@ int midge_run_app()
     }
 
     // Update State
-    // File Notification
-    struct pollfd fds;
-    fds.fd = app_info->inotify_fd;
-    fds.events = POLLIN | POLLPRI;
+    if (current_frametime.tv_sec > recent_file_poll) {
+      recent_file_poll = current_frametime.tv_sec;
+      // File Notification
+      struct pollfd fds;
+      fds.fd = app_info->inotify_fd;
+      fds.events = POLLIN | POLLPRI;
 
-    n = poll(&fds, 1UL, 0);
-    if (n < 0) {
-      MCerror(9557, "Error Reading INOTIFY buffer");
-    }
-    else if (n > 0) {
-      if (fds.revents & POLLIN) {
-        n = (int)read(app_info->inotify_fd, inotify_event_buf, INOTIFY_EVENT_SIZE);
-        a = 0;
-        // printf("n:%i\n", n);
-
-        while (a < n) {
-          struct inotify_event *event = (struct inotify_event *)&inotify_event_buf[a];
-          if (event->wd < 0 || event->wd >= app_info->wds_size) {
-            MCerror(7555, "TODO");
-          }
-          mc_source_file_info *sf = app_info->wds[event->wd];
-          // printf("event--mask:%u wd:%i file:'%s' %u %u %c\n", event->mask, event->wd,
-          //        app_info->wds[event->wd]->filepath, event->cookie, event->len, event->name);
-
-          // if (event->mask & IN_CREATE) {
-          //   if (event->mask & IN_ISDIR) {
-          //     printf("New directory  created.\n");
-          //   }
-          //   else {
-          //     printf("New file %s created.\n", event->name);
-          //   }
-          // }
-          // else if (event->mask & IN_DELETE) {
-          //   if (event->mask & IN_ISDIR) {
-          //     printf("Directory %s deleted.\n", event->name);
-          //   }
-          //   else {
-          //     printf("File %s deleted.\n", event->name);
-          //   }
-          // }
-          // else
-          if (event->mask & IN_MODIFY) {
-
-            struct stat attr;
-            int res = stat(sf->filepath, &attr);
-            if (res) {
-              MCerror(4209, "Odd? TODO print errno");
-            }
-
-            if (sf->recent_disk_sync.tv_sec < attr.st_mtime) {
-              MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY, sf));
-            }
-          }
-          a += INOTIFY_EVENT_SIZE + event->len;
-        }
+      n = poll(&fds, 1UL, 0);
+      if (n < 0) {
+        MCerror(9557, "Error Reading INOTIFY buffer");
       }
-      else if (fds.revents & POLLPRI) {
-        MCerror(7480, "TODO POLLPRI revents");
+      else if (n > 0) {
+        if (fds.revents & POLLIN) {
+          n = (int)read(app_info->inotify_fd, inotify_event_buf, INOTIFY_EVENT_SIZE);
+          a = 0;
+          // printf("n:%i\n", n);
+
+          while (a < n) {
+            struct inotify_event *event = (struct inotify_event *)&inotify_event_buf[a];
+            if (event->wd < 0 || event->wd >= app_info->wds_size) {
+              MCerror(7555, "TODO");
+            }
+            mc_source_file_info *sf = app_info->wds[event->wd];
+            // printf("event--mask:%u wd:%i file:'%s' %u %u %c\n", event->mask, event->wd,
+            //        app_info->wds[event->wd]->filepath, event->cookie, event->len, event->name);
+
+            // if (event->mask & IN_CREATE) {
+            //   if (event->mask & IN_ISDIR) {
+            //     printf("New directory  created.\n");
+            //   }
+            //   else {
+            //     printf("New file %s created.\n", event->name);
+            //   }
+            // }
+            // else if (event->mask & IN_DELETE) {
+            //   if (event->mask & IN_ISDIR) {
+            //     printf("Directory %s deleted.\n", event->name);
+            //   }
+            //   else {
+            //     printf("File %s deleted.\n", event->name);
+            //   }
+            // }
+            // else
+            if (event->mask & IN_MODIFY) {
+
+              struct stat attr;
+              int res = stat(sf->filepath, &attr);
+              if (res) {
+                MCerror(4209, "Odd? TODO print errno");
+              }
+
+              if (sf->recent_disk_sync.tv_sec < attr.st_mtime) {
+                MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY, sf));
+              }
+            }
+            a += INOTIFY_EVENT_SIZE + event->len;
+          }
+        }
+        else if (fds.revents & POLLPRI) {
+          MCerror(7480, "TODO POLLPRI revents");
+        }
       }
     }
 
