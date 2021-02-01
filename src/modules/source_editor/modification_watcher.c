@@ -244,7 +244,7 @@ int _mc_smw_info_button_clicked(mci_input_event *input_event, mcu_button *button
 
 int _mc_smw_analyze_function_differences(mc_source_modification_data *md, mc_source_file_info *sf, mc_syntax_node *fast)
 {
-  int a, b, n;
+  int a, b;
   char *exc;
   mc_source_file_code_segment *seg;
   _mc_smw_modified_func_info *mfn;
@@ -262,8 +262,7 @@ int _mc_smw_analyze_function_differences(mc_source_modification_data *md, mc_sou
     // TODO -- parameters
 
     MCcall(mcs_copy_syntax_node_to_text(fast->function.code_block, &exc));
-    n = strlen(exc);
-    if (n == strlen(seg->function->code)) {
+    if (!strcmp(seg->function->code, exc)) {
       free(exc);
     mc_smw_loop_continue:
       continue;
@@ -309,11 +308,100 @@ int _mc_smw_analyze_function_differences(mc_source_modification_data *md, mc_sou
   return 0;
 }
 
+int _mc_smw_find_equivalent_child_in_info(mc_source_file_info *source_file, mc_source_file_code_segment_type type,
+                                          int int1, void *data1, void **info)
+{
+  int a;
+  mc_source_file_code_segment *seg;
+
+  for (a = 0; a < source_file->segments.count; ++a) {
+    seg = source_file->segments.items[a];
+
+    if (seg->type != type)
+      continue;
+
+    switch (seg->type) {
+    case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE: {
+      if (seg->include->is_system_search != (bool)int1)
+        continue;
+      if (strcmp(seg->include->filepath, (const char *)data1))
+        continue;
+
+      *info = seg;
+      return 0;
+    }
+    default:
+      break;
+    }
+  }
+
+  *info = NULL;
+
+  return 0;
+}
+
+int _mc_smw_find_equivalent_child_in_ast(mc_syntax_node_list *children, mc_syntax_node_type type, int int1, void *data1,
+                                         mc_syntax_node **node)
+{
+  int a;
+  mc_syntax_node *child;
+
+  for (a = 0; a < children->count; ++a) {
+    child = children->items[a];
+
+    if (child->type != type)
+      continue;
+
+    switch (child->type) {
+    case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
+      if (child->include_directive.is_system_header_search != (bool)int1)
+        continue;
+      if (strcmp(child->include_directive.filepath->text, (const char *)data1))
+        continue;
+
+      *node = child;
+      return 0;
+    }
+    default:
+      break;
+    }
+  }
+
+  *node = NULL;
+
+  return 0;
+}
+
 int _mc_smw_analyze_children_differences(mc_source_modification_data *md, mc_source_file_info *sf,
                                          mc_syntax_node_list *children)
 {
+  int a;
   mc_syntax_node *child;
-  for (int a = 0; a < children->count; ++a) {
+  mc_source_file_code_segment *seg;
+
+  // Search for removals
+  for (a = 0; a < sf->segments.count; ++a) {
+    seg = sf->segments.items[a];
+
+    switch (seg->type) {
+    case MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE: {
+      MCcall(_mc_smw_find_equivalent_child_in_ast(children, MC_SYNTAX_PP_DIRECTIVE_INCLUDE,
+                                                  (int)seg->include->is_system_search, (void *)seg->include->filepath,
+                                                  &child));
+      if (child) {
+        // printf("found include:'%s'\n", seg->include->filepath);
+        continue;
+      }
+
+      printf("TODO -- removal of include from file. How to handle this? :'%s'\n", seg->include->filepath);
+    } break;
+    default:
+      break;
+    }
+  }
+
+  // Search for modifications and additions
+  for (a = 0; a < children->count; ++a) {
     child = children->items[a];
     switch (child->type) {
     case MC_SYNTAX_FUNCTION: {
@@ -357,7 +445,16 @@ int _mc_smw_analyze_children_differences(mc_source_modification_data *md, mc_sou
       MCcall(_mc_smw_analyze_children_differences(md, sf, child->preprocess_ifndef.groupopt));
     } break;
     case MC_SYNTAX_PP_DIRECTIVE_INCLUDE: {
-      // TODO...??
+      // Determine if this is an addition
+      void *info;
+      MCcall(_mc_smw_find_equivalent_child_in_info(sf, MC_SOURCE_SEGMENT_INCLUDE_DIRECTIVE,
+                                                   child->include_directive.is_system_header_search,
+                                                   (void *)child->include_directive.filepath->text, &info));
+      if (info)
+        continue;
+
+      printf("TODO : include '%s' is new to file -- recompile whole thing\n", child->include_directive.filepath->text);
+
     } break;
     default: {
       switch ((mc_token_type)child->type) {
