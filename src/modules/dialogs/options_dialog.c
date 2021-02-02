@@ -72,7 +72,7 @@ void _mc_render_options_dialog_present(image_render_details *image_render_queue,
       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, obd->shade_color);
 
   // Children
-  mca_render_typical_nodes_children_present(image_render_queue, node->children);
+  mca_render_node_list_present(image_render_queue, node->children);
 }
 
 void _mc_handle_options_dialog_input(mc_node *node, mci_input_event *input_event)

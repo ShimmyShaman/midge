@@ -891,7 +891,7 @@ int mca_set_node_requires_rerender(mc_node *node)
   return 0;
 }
 
-int mca_render_typical_nodes_children_headless(render_thread_info *render_thread, mc_node_list *children)
+int mca_render_node_list_headless(render_thread_info *render_thread, mc_node_list *children)
 {
   mc_node *child;
   for (int a = 0; a < children->count; ++a) {
@@ -907,7 +907,7 @@ int mca_render_typical_nodes_children_headless(render_thread_info *render_thread
   return 0;
 }
 
-int mca_render_typical_nodes_children_present(image_render_details *image_render_queue, mc_node_list *children)
+int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *children)
 {
   mc_node *child;
   for (int a = 0; a < children->count; ++a) {
@@ -919,6 +919,27 @@ int mca_render_typical_nodes_children_present(image_render_details *image_render
       render_node_present(image_render_queue, child);
     }
   }
+  return 0;
+}
+
+int mca_render_typical_node_present(image_render_details *image_render_queue, mc_node *node)
+{
+  if (node->layout && node->layout->visible && node->layout->render_present) {
+    // TODO fptr casting
+    void (*render_node_present)(image_render_details *, mc_node *) =
+        (void (*)(image_render_details *, mc_node *))node->layout->render_present;
+    render_node_present(image_render_queue, node);
+  }
+
+  return 0;
+}
+
+int mca_render_typical_node_headless(render_thread_info *render_thread, mc_node *node)
+{
+  if (node->children) {
+    mca_render_node_list_headless(render_thread, node->children);
+  }
+
   return 0;
 }
 

@@ -2558,13 +2558,13 @@ int mct_transcribe_if_statement(mct_transcription_state *ts, mct_statement_trans
     // }
   }
 
-  register_midge_error_tag("mct_transcribe_if_statement(~)");
+  // register_midge_error_tag("mct_transcribe_if_statement(~)");
   return 0;
 }
 
 int mct_transcribe_switch_statement(mct_transcription_state *ts, mc_syntax_node *syntax_node)
 {
-  register_midge_error_tag("mct_transcribe_switch_statement()");
+  // register_midge_error_tag("mct_transcribe_switch_statement()");
 
   mct_transcribe_text_with_indent(ts, "switch (");
   mct_transcribe_expression(ts, NULL, syntax_node->switch_statement.conditional);
@@ -2809,6 +2809,10 @@ int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node_li
       const char *tsl_type_name = get_mc_syntax_token_type_name(child->type);
       register_midge_error_tag("mct_transcribe_statement_list-L:%s", tsl_type_name);
     }
+
+    // if (!strcmp(ts->function_name, "_render_peon_profile")) {
+    //   puts(get_mc_syntax_token_type_name(child->type));
+    // }
     // printf("@%i/%i@%s\n", i, syntax_node->children->count, get_mc_syntax_token_type_name(child->type));
 
     switch ((mc_token_type)child->type) {

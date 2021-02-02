@@ -29,7 +29,7 @@ void _mc_mo_cpd_render_headless(render_thread_info *render_thread, mc_node *node
   mc_create_process_dialog_data *cpd = (mc_create_process_dialog_data *)node->data;
 
   // Children
-  mca_render_typical_nodes_children_headless(render_thread, node->children);
+  mca_render_node_list_headless(render_thread, node->children);
 
   // mcr_submit_image_render_request(app_info->render_thread, irq);
 }
@@ -58,7 +58,7 @@ void _mc_mo_cpd_render_present(image_render_details *image_render_queue, mc_node
   //       cpd->background_color);
 
   // Children
-  mca_render_typical_nodes_children_present(image_render_queue, node->children);
+  mca_render_node_list_present(image_render_queue, node->children);
 
   // mc_mo_cpd_step_data *cell;
   // for (cell = cpd->cells.ary; cell < &cpd->cells.ary[cpd->cells.size]; ++cell) {

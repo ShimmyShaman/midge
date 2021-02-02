@@ -85,7 +85,7 @@ void mc_mww_render_present(image_render_details *image_render_queue, mc_node *no
                                         (unsigned int)node->layout->__bounds.height, wwwata->background_color);
 
   // Children
-  mca_render_typical_nodes_children_present(image_render_queue, node->children);
+  mca_render_node_list_present(image_render_queue, node->children);
 }
 
 void mc_mww_handle_input(mc_node *node, mci_input_event *input_event)

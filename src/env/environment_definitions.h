@@ -141,9 +141,6 @@ int mca_update_typical_node_layout_partially(mc_node *node, mc_rectf const *avai
                                              bool update_y, bool update_width, bool update_height,
                                              bool update_children);
 
-int mca_render_node_list_headless(render_thread_info *render_thread, mc_node_list *node_list);
-int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *node_list);
-
 int mca_attach_to_ancestor_root(mc_node *ancestor, mc_node *node_to_attach);
 int mca_detach_from_parent(mc_node *node);
 
@@ -152,8 +149,14 @@ int mca_set_node_requires_layout_update(mc_node *node);
 int mca_set_descendents_require_layout_update(mc_node_list *node_descendents_list);
 int mca_set_node_requires_rerender(mc_node *node);
 
-int mca_render_typical_nodes_children_headless(render_thread_info *render_thread, mc_node_list *children);
-int mca_render_typical_nodes_children_present(image_render_details *image_render_queue, mc_node_list *children);
+int mca_render_node_list_headless(render_thread_info *render_thread, mc_node_list *children);
+int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *children);
+int mca_render_typical_node_present(image_render_details *image_render_queue, mc_node *node);
+/*
+ * Renders a typical node with no headless image targets for itself, but which may have children who have headless
+ * rendering to perform.
+ */
+int mca_render_typical_node_headless(render_thread_info *render_thread, mc_node *node);
 
 int mca_focus_node(mc_node *node);
 int mca_obtain_focused_node(mc_node **node);

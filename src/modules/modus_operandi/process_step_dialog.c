@@ -75,7 +75,7 @@ void _mc_mocsd_render_present(image_render_details *image_render_queue, mc_node 
   //       psdd->background_color);
 
   // Children
-  mca_render_typical_nodes_children_present(image_render_queue, node->children);
+  mca_render_node_list_present(image_render_queue, node->children);
 }
 
 void _mc_mocsd_handle_input(mc_node *node, mci_input_event *input_event)

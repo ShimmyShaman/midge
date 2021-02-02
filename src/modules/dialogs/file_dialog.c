@@ -100,7 +100,7 @@ void _mc_render_file_dialog_present(image_render_details *image_render_queue, mc
       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, fd->shade_color);
 
   // Children
-  mca_render_typical_nodes_children_present(image_render_queue, node->children);
+  mca_render_node_list_present(image_render_queue, node->children);
 }
 
 // TODO -- because 'private static' symbols have to be public in TCC for now -- these names are longer and more

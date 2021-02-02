@@ -21,7 +21,7 @@ void _mcu_render_panel_present(image_render_details *image_render_queue, mc_node
       (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, panel->background_color);
 
   if (node->children && node->children->count) {
-    mca_render_typical_nodes_children_present(image_render_queue, node->children);
+    mca_render_node_list_present(image_render_queue, node->children);
   }
 }
 

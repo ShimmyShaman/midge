@@ -109,7 +109,7 @@ void _mc_render_source_modification_present(image_render_details *image_render_q
   //       md->background_color);
 
   // Children
-  mca_render_typical_nodes_children_present(image_render_queue, node->children);
+  mca_render_node_list_present(image_render_queue, node->children);
 }
 
 void _mc_handle_source_modification_input(mc_node *node, mci_input_event *input_event)

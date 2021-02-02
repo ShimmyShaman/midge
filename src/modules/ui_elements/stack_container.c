@@ -272,7 +272,7 @@
 //                                         (unsigned int)node->layout->__bounds.height, stack_container->background_color);
 
 //   if (node->children && node->children->count) {
-//     mca_render_typical_nodes_children_present(image_render_queue, node->children);
+//     mca_render_node_list_present(image_render_queue, node->children);
 //   }
 // }
 
