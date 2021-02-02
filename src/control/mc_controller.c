@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "core/core_definitions.h"
 #include "ui/ui_definitions.h"
 
 #include "control/mc_controller.h"
@@ -49,7 +48,7 @@ int mcc_input_state_activate_kb_state_tracking()
 //   MOUSE_EVENT_LEFT_DOWN,
 // } mci_mouse_event_type;
 
-void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
+int mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
 {
   midge_app_info *global_data;
   mc_obtain_midge_app_info(&global_data);
@@ -61,29 +60,41 @@ void mcc_issue_mouse_event(window_input_event_type event_type, int button_code)
   input_event.handled = false;
 
   mc_node_list *node_hit_list;
-  mcu_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
-                                     &node_hit_list);
+  MCcall(mcu_get_interactive_nodes_at_point(global_data->input_state->mouse.x, global_data->input_state->mouse.y,
+                                            &node_hit_list));
 
   // printf("mouse_event nhl:%i\n", node_hit_list->count);
-  for (int a = 0; a < node_hit_list->count && !input_event.handled; ++a) {
+  for (int a = 0; a < node_hit_list->count; ++a) {
     // printf("node_hit_list[%i]=%s\n", a, node_hit_list->items[a]->name);
     mc_node *node = node_hit_list->items[a];
     if (node->layout && node->layout->visible && node->layout->handle_input_event) {
-      // printf("mouse_event delegated to node: %s%s%s->%s...\n",
+
+      // printf("mouse_event delegated to node: %s%s%s%s%s\n",
       //        (node->parent && node->parent->parent) ? node->parent->parent->name : "",
-      //        (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "", node->name);
+      //        (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "",
+      //        node->parent ? "->" : "", node->name);
 
       // TODO fptr casting
+      input_event.focus_successor = (event_type == INPUT_EVENT_MOUSE_PRESS) ? node : NULL;
       void (*handle_input_event)(mc_node *, mci_input_event *) =
           (void (*)(mc_node *, mci_input_event *))node->layout->handle_input_event; // TODO add type of mouse event
       handle_input_event(node, &input_event);
 
-      // printf("%s by\n", input_event.handled ? "HANDLED" : "ignored");
+      // printf("%s by event delegate\n", input_event.handled ? "HANDLED" : "ignored");
+      if (input_event.handled) {
+        if (input_event.focus_successor) {
+          // Set the focus successor
+          MCcall(mca_focus_node(input_event.focus_successor));
+        }
+        break;
+      }
     }
   }
+
+  return 0;
 }
 
-void mcc_issue_keyboard_event(window_input_event_type event_type, int button_code)
+int mcc_issue_keyboard_event(window_input_event_type event_type, int button_code)
 {
   midge_app_info *global_data;
   mc_obtain_midge_app_info(&global_data);
@@ -94,28 +105,41 @@ void mcc_issue_keyboard_event(window_input_event_type event_type, int button_cod
   input_event.input_state = global_data->input_state;
   input_event.handled = false;
 
-  mc_node *focused_node;
-  mca_obtain_focused_node(&focused_node);
+  mc_node *node;
+  mca_obtain_focused_node(&node);
 
   mca_node_layout *layout;
-  while (focused_node && !input_event.handled) {
-    layout = focused_node->layout;
+  while (node) {
+    layout = node->layout;
 
     if (layout && layout->visible && layout->handle_input_event) {
+      input_event.focus_successor = NULL;
+
+      // printf("keyboard_event delegated to node: %s%s%s%s%s\n",
+      //        (node->parent && node->parent->parent) ? node->parent->parent->name : "",
+      //        (node->parent && node->parent->parent) ? "->" : "",
+      //        node->parent ? node->parent->name : "", node->parent ? "->" : "",
+      //        node->name);
+
       // TODO fptr casting
       void (*handle_input_event)(mc_node *, mci_input_event *) =
           (void (*)(mc_node *, mci_input_event *))layout->handle_input_event; // TODO add type of mouse event
-      handle_input_event(focused_node, &input_event);
+      handle_input_event(node, &input_event);
 
-      // printf("keyboard_event delegated to node: %s%s%s%s%s\n",
-      //        (focused_node->parent && focused_node->parent->parent) ? focused_node->parent->parent->name : "",
-      //        (focused_node->parent && focused_node->parent->parent) ? "->" : "",
-      //        focused_node->parent ? focused_node->parent->name : "", focused_node->parent ? "->" : "",
-      //        focused_node->name);
+      // printf("%s by event delegate\n", input_event.handled ? "HANDLED" : "ignored");
+      if (input_event.handled) {
+        if (input_event.focus_successor) {
+          // Set the focus successor
+          MCcall(mca_focus_node(input_event.focus_successor));
+        }
+        break;
+      }
     }
 
-    focused_node = focused_node->parent;
+    node = node->parent;
   }
+
+  return 0;
 }
 
 void _mcc_set_button_state(bool is_down, bool is_event, int *output)
@@ -135,7 +159,7 @@ void _mcc_set_button_state(bool is_down, bool is_event, int *output)
 }
 
 // Handles all input from the X11/xcb? platform
-void mcc_handle_xcb_input()
+int mcc_handle_xcb_input()
 {
   // printf("mcc_handle_xcb_input\n");
   midge_app_info *global_data;
@@ -176,7 +200,7 @@ void mcc_handle_xcb_input()
         break;
       }
 
-      mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button);
+      MCcall(mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button));
     } break;
     case INPUT_EVENT_MOUSE_RELEASE: {
       input_state->mouse.x = xcb_input->detail.mouse.x;
@@ -195,7 +219,7 @@ void mcc_handle_xcb_input()
         break;
       }
 
-      mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button);
+      MCcall(mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button));
     } break;
     case INPUT_EVENT_FOCUS_IN:
     case INPUT_EVENT_FOCUS_OUT: {
@@ -262,7 +286,7 @@ void mcc_handle_xcb_input()
           continue;
         }
 
-        mcc_issue_keyboard_event(xcb_input->type, (int)xcb_input->detail.keyboard.key);
+        MCcall(mcc_issue_keyboard_event(xcb_input->type, (int)xcb_input->detail.keyboard.key));
 
         // if ((input_state->ctrl_function & BUTTON_STATE_DOWN) && (input_state->shift_function & BUTTON_STATE_DOWN) &&
         //     xcb_input->detail.keyboard.key == KEY_CODE_N) {
@@ -316,9 +340,11 @@ void mcc_handle_xcb_input()
   // Reset render thread input buffer
   global_data->render_thread->input_buffer.event_count = 0;
   // printf("</mcc_handle_xcb_input>\n");
+
+  return 0;
 }
 
-void mcc_update_xcb_input()
+int mcc_update_xcb_input()
 {
   midge_app_info *global_data;
   mc_obtain_midge_app_info(&global_data);
@@ -344,8 +370,10 @@ void mcc_update_xcb_input()
 
   // Handle new input
   if (global_data->render_thread->input_buffer.event_count > 0) {
-    mcc_handle_xcb_input();
+    MCcall(mcc_handle_xcb_input());
 
     global_data->input_state_requires_update = true;
   }
+
+  return 0;
 }

@@ -98,8 +98,6 @@ void mc_tid_handle_input(mc_node *node, mci_input_event *input_event)
 {
   input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
-    input_event->handled = true;
-    mca_focus_node(node);
   }
 }
 

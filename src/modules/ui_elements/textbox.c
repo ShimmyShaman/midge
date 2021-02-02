@@ -88,7 +88,7 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
     //   void (*left_click)(mcu_textbox *, mc_point) = (void (*)(mcu_textbox *, mc_point))textbox->left_click;
     //   left_click(textbox, (mc_point){input_event->input_state->mouse.x, input_event->input_state->mouse.y});
     // }
-    mca_focus_node(node);
+    // mca_focus_node(node);
   } break;
   case INPUT_EVENT_KEY_RELEASE: {
     switch (input_event->button_code) {

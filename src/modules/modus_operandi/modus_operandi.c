@@ -42,10 +42,7 @@ typedef struct modus_operandi_data {
 
   mc_mo_process_stack process_stack;
 
-  struct {
-    unsigned int capacity, count;
-    mo_operational_process **items;
-  } all_ops;
+  mo_operational_process_list all_processes;
 
   mcu_textbox *search_textbox;
   struct {
@@ -119,10 +116,8 @@ void _mc_mo_handle_input(mc_node *node, mci_input_event *input_event)
 {
   // printf("_mc_mo_handle_input\n");
   input_event->handled = true;
-  if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
-    input_event->handled = true;
-    mca_focus_node(node);
-  }
+  // if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
+  // }
 }
 
 int _mc_mo_process_step_dialog_result(void *invoker_state, mc_process_step_dialog_result result)
@@ -573,7 +568,8 @@ int _mc_mo_load_operations(mc_node *module_node)
   //   }
 
   //   step->next = NULL;
-  //   MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
+  //   MCcall(append_to_collection((void ***)&mod->all_processes.items, &mod->all_processes.capacity,
+  //   &mod->all_processes.count,
   //                               define_struct_process));
   // }
 
@@ -680,7 +676,8 @@ int _mc_mo_load_operations(mc_node *module_node)
       //   // }
 
       //   step->next = NULL;
-      //   MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
+      //   MCcall(append_to_collection((void ***)&mod->all_processes.items, &mod->all_processes.capacity,
+      //   &mod->all_processes.count,
       //                               define_struct_process));
   }
 
@@ -797,7 +794,8 @@ int _mc_mo_load_operations(mc_node *module_node)
     //   }
 
     //   step->next = NULL;
-    //   MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
+    //   MCcall(append_to_collection((void ***)&mod->all_processes.items, &mod->all_processes.capacity,
+    //   &mod->all_processes.count,
     //                               steps_example_process));
   }
 
@@ -852,7 +850,8 @@ int _mc_mo_load_operations(mc_node *module_node)
   //   }
 
   //   step->next = NULL;
-  //   MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count,
+  //   MCcall(append_to_collection((void ***)&mod->all_processes.items, &mod->all_processes.capacity,
+  //   &mod->all_processes.count,
   //                               create_op_process));
   // }
 
@@ -884,6 +883,7 @@ void _mc_mo_operational_process_selected(mci_input_event *input_event, mcu_butto
 
     _mc_mo_begin_op_process(mopp, NULL);
 
+    input_event->focus_successor = NULL;
     input_event->handled = true;
   }
 }
@@ -898,9 +898,9 @@ int _mc_mo_update_options_display(modus_operandi_data *mod)
   int a;
   mcu_button *button;
   mo_operational_process *mopp;
-  for (a = 0; a < mod->all_ops.count && a < mod->options_buttons.count; ++a) {
+  for (a = 0; a < mod->all_processes.count && a < mod->options_buttons.count; ++a) {
     button = mod->options_buttons.items[a];
-    mopp = mod->all_ops.items[a];
+    mopp = mod->all_processes.items[a];
 
     MCcall(set_mc_str(button->str, mopp->name));
 
@@ -948,7 +948,8 @@ int _mc_mo_parse_directory_for_mop_files(modus_operandi_data *mod, const char *m
       free(file_text);
 
       // Attach the process to the system
-      MCcall(append_to_collection((void ***)&mod->all_ops.items, &mod->all_ops.capacity, &mod->all_ops.count, process));
+      MCcall(append_to_collection((void ***)&mod->all_processes.items, &mod->all_processes.capacity,
+                                  &mod->all_processes.count, process));
 
       MCcall(_mc_mo_update_options_display(mod));
     }
@@ -1086,10 +1087,11 @@ int mc_mo_load_resources(mc_node *module_node)
   mod->node = module_node;
 
   mod->options_buttons.capacity = mod->options_buttons.count = 0U;
-  mod->all_ops.capacity = mod->all_ops.count = 0U;
+  mod->all_processes.capacity = mod->all_processes.count = 0U;
 
   mod->process_stack.index = -1;
   mod->process_stack.state_arg = (void *)mod;
+  mod->process_stack.all_processes = &mod->all_processes;
   MCcall(init_hash_table(64, &mod->process_stack.global_context));
   MCcall(init_hash_table(4, &mod->process_stack.project_contexts));
   for (a = 0; a < MO_OP_PROCESS_STACK_SIZE; ++a) {

@@ -371,6 +371,38 @@ int mc_mo_parse_context_arg(const char *str, mo_op_step_context_arg *dest)
   return 0;
 }
 
+int mc_mo_parse_parameter_obtain_config(mc_mo_process_stack *pstack, const char **serialization,
+                                        mo_operational_step *step)
+{
+  const char *s = *serialization;
+  char process_name[MC_MO_EOL_BUF_SIZE];
+  MCcall(mc_mo_parse_past(&s, "obtain="));
+  MCcall(mc_mo_parse_past_empty_space(&s));
+  if (*s == '@') {
+    ++s;
+    mc_mo_parse_line(process_name, &s, false);
+
+    step->context_parameter.obtain_value_subprocess = NULL;
+    for (int a = 0; a < pstack->all_processes->count; ++a) {
+      if (!strcmp(process_name, pstack->all_processes->items[a]->name)) {
+        step->context_parameter.obtain_value_subprocess = pstack->all_processes->items[a];
+        break;
+      }
+    }
+    if (!step->context_parameter.obtain_value_subprocess) {
+      MCerror(7419,
+              "Could not find delegate process @%s\nTODO -- Some kind of required dependency checking or parse delay "
+              "system",
+              process_name);
+    }
+  }
+  else
+    MCcall(_mc_mo_parse_serialized_process(pstack, &s, &step->context_parameter.obtain_value_subprocess));
+
+  *serialization = s;
+  return 0;
+}
+
 int _mc_mo_parse_serialized_parameter_step(mc_mo_process_stack *pstack, mo_operational_step *step,
                                            const char **serialization)
 {
@@ -400,8 +432,7 @@ int _mc_mo_parse_serialized_parameter_step(mc_mo_process_stack *pstack, mo_opera
     MCcall(mc_mo_parse_past_empty_space(&s));
 
     // Obtain Sub-process
-    MCcall(mc_mo_parse_past(&s, "obtain="));
-    MCcall(_mc_mo_parse_serialized_process(pstack, &s, &step->context_parameter.obtain_value_subprocess));
+    MCcall(mc_mo_parse_parameter_obtain_config(pstack, &s, step));
 
     MCcall(mc_mo_parse_past_empty_space(&s));
     MCcall(mc_mo_parse_past(&s, "}"));
@@ -415,8 +446,7 @@ int _mc_mo_parse_serialized_parameter_step(mc_mo_process_stack *pstack, mo_opera
     step->context_parameter.presence = MO_STEP_CTXP_PRESENCE_OBTAIN_AVAILABLE;
 
     // Obtain Sub-process
-    MCcall(mc_mo_parse_past(&s, "obtain="));
-    MCcall(_mc_mo_parse_serialized_process(pstack, &s, &step->context_parameter.obtain_value_subprocess));
+    MCcall(mc_mo_parse_parameter_obtain_config(pstack, &s, step));
 
     MCcall(mc_mo_parse_past_empty_space(&s));
     MCcall(mc_mo_parse_past(&s, "}"));

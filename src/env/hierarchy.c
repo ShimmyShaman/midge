@@ -945,6 +945,10 @@ int mca_render_typical_node_headless(render_thread_info *render_thread, mc_node 
 
 int mca_focus_node(mc_node *node)
 {
+  printf("focusing node: %s%s%s%s%s\n", (node->parent && node->parent->parent) ? node->parent->parent->name : "",
+         (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "",
+         node->parent ? "->" : "", node->name);
+         
   // Set layout update required on all ancestors of the node
   while (node) {
     // DEBUG?
@@ -1002,7 +1006,7 @@ int mca_focus_node(mc_node *node)
   return 0;
 }
 
-int mca_obtain_focused_node(mc_node **node)
+void mca_obtain_focused_node(mc_node **node)
 {
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
@@ -1012,8 +1016,6 @@ int mca_obtain_focused_node(mc_node **node)
   while ((*node)->layout && (*node)->layout->focused_child) {
     (*node) = (*node)->layout->focused_child;
   }
-
-  return 0;
 }
 
 int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state)

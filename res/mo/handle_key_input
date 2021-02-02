@@ -1,0 +1,8 @@
+handle-key-input
+> PARAM {
+  key=project>input-handler.name
+  obtain=@add-input-handler
+}
+> FUNCTION {
+  puts("TODO handle-key-input");
+}
