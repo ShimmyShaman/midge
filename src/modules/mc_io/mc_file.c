@@ -159,7 +159,7 @@ int mcf_ensure_directory_exists(const char *path)
   return 0;
 }
 
-int mcf_obtain_full_path(const char *relative_path, char *dest, int max_len)
+int mcf_obtain_full_path(const char *relative_path, char *dest, int dest_size)
 {
   if (relative_path[0] == '/') {
     strcpy(dest, relative_path);
@@ -167,18 +167,113 @@ int mcf_obtain_full_path(const char *relative_path, char *dest, int max_len)
   }
 
   // Given filepath is relative -- convert to absolute
-  if (!getcwd(dest, max_len)) {
+  if (!getcwd(dest, dest_size)) {
     MCerror(6120, "getcwd failed");
   }
   int n = strlen(dest);
 
-  if (n + strlen(relative_path) >= max_len) {
+  if (n + strlen(relative_path) >= dest_size) {
     MCerror(6133, "full path exceeds buffer bounds");
   }
 
-  MCcall(mcf_concat_filepath(dest, max_len, relative_path));
+  MCcall(mcf_concat_filepath(dest, dest_size, relative_path));
 
   return 0;
+}
+
+int mcf_obtain_path_relative(const char *path, const char *comparative_path, char *dest, int dest_size)
+{
+  const char *c = comparative_path, *f = path;
+  char *d;
+  int backtrack = 0;
+  while (1) {
+    if (*c == '\0') {
+      if (*f == '\\' || *f == '/')
+        ++f;
+
+      if (!strlen(f)) {
+        if (dest_size < 1 + 1) {
+          MCerror(4788, "destination buffer is too small");
+        }
+        strcpy(dest, ".");
+        printf("mcf_obtain_path_relative: '%s':'%s' => '%s'\n\n", path, comparative_path, dest);
+        return 0;
+      }
+      else {
+        if (strlen(f) + 1 > dest_size) {
+          MCerror(4789, "destination buffer is too small");
+        }
+        strcpy(dest, f);
+      }
+
+      printf("mcf_obtain_path_relative: '%s':'%s' => '%s'\n\n", path, comparative_path, dest);
+
+      return 0;
+    }
+
+    if (*f == '\0') {
+      if (*(c + 1) == '\0') {
+        if (dest_size < 1 + 1) {
+          MCerror(4790, "destination buffer is too small");
+        }
+        strcpy(dest, ".");
+        printf("mcf_obtain_path_relative: '%s':'%s' => '%s'\n\n", path, comparative_path, dest);
+        return 0;
+      }
+      --backtrack;
+      break;
+    }
+
+    if (*c != *f)
+      break;
+
+    ++c;
+    ++f;
+  }
+
+  if (*c != '\0') {
+    ++backtrack;
+    while (*c != '\0') {
+      if (*c == '\\' || *c == '/')
+        ++backtrack;
+      ++c;
+    }
+  }
+
+  int req_len = (backtrack == 0 ? 0 : (1 + 2 * backtrack + backtrack - 1)) + strlen(f);
+  if (dest_size < 1 + 1) {
+    MCerror(4791, "destination buffer is too small");
+  }
+
+  d = dest;
+  if (backtrack) {
+    strcpy(d, "..");
+    c += 2;
+    while (backtrack > 1) {
+      strcpy(d, "/..");
+      c += 3;
+      --backtrack;
+    }
+    if (*f != '\0') {
+      strcpy(d, "/");
+      ++c;
+    }
+  }
+  strcpy(d, f);
+
+  printf("mcf_obtain_path_relative: '%s':'%s' => '%s'\n\n", path, comparative_path, dest);
+
+  return 0;
+}
+
+int mcf_obtain_path_relative_to_cwd(const char *full_path, char *dest, int dest_size)
+{
+  char buf[256];
+  if (!getcwd(buf, 256)) {
+    MCerror(6844, "getcwd failed");
+  }
+
+  return mcf_obtain_path_relative(full_path, buf, dest, dest_size);
 }
 
 // int mcf_create_directory(const char *path, const char *directory_name)

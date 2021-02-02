@@ -21,7 +21,17 @@ int mcf_file_exists(const char *path, bool *exists);
  */
 int mcf_ensure_directory_exists(const char *path);
 
-int mcf_obtain_full_path(const char *relative_path, char *dest, int max_len);
+int mcf_obtain_full_path(const char *relative_path, char *dest, int dest_size);
+/*
+ * @path is assumed to be a full-path
+ * @comparative_path is assumed to be a directory full-path
+ */
+int mcf_obtain_path_relative(const char *path, const char *comparative_path, char *dest, int dest_size);
+/*
+ * @path is assumed to be a full path
+ * Fills @dest with the path that is relative to the current working directory.
+ */
+int mcf_obtain_path_relative_to_cwd(const char *path, char *dest, int dest_size);
 
 int mcf_obtain_file_extension(const char *path, char *buf, int max_len);
 int mcf_obtain_filename(const char *path, char *buf, int max_len);

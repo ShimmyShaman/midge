@@ -681,6 +681,43 @@ int mc_redefine_function(function_info *function)
   return 0;
 }
 
+int mc_redefine_function_provisionally(function_info *function, const char *code)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  // printf("function:%p\n", function);
+  // printf("function->source:%p\n", function->source);
+  // printf("function->source->segments:%i\n", function->source->segments.count);
+  mc_str *str;
+  MCcall(init_mc_str(&str));
+
+  // Swap
+  char *old_code = function->code;
+  function->code = (char *)code;
+
+  // Call
+  MCcall(mc_transcribe_specific_function_source(str, function));
+
+  char tempfn[128];
+  sprintf(tempfn, "%s::%s", function->source->filepath, function->name);
+  int res = tcci_add_string(app_info->itp_data->interpreter, tempfn, str->text);
+  if (res) {
+    // Re-set old code
+    function->code = old_code;
+  }
+  else {
+    // Release old code
+    free(old_code);
+
+    // Duplicate New Code to function
+    function->code = strdup(code);
+  }
+
+  release_mc_str(str, true);
+  return res;
+}
+
 int mc_redefine_structure(struct_info *structure)
 {
   // Can only handle .h & .c files atm

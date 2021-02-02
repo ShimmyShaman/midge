@@ -192,7 +192,6 @@ Screen2D: Set Background Texture
 
   // TODO present options (resize application, stretch texture, center it(node or by plain math))
   sprintf(buf, "\n"
-  "  puts(\"new-function!\");\n"
   "  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x + 425U,\n"
   "                                         10, 590, 880, %s->%s);\n", "data", tex_fn);
 

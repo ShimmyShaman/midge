@@ -35,7 +35,14 @@ int set_mc_str(mc_str *str, const char *src)
 {
   str->len = 0;
   str->text[0] = '\0';
-  append_to_mc_str(str, src);
+  MCcall(append_to_mc_str(str, src));
+
+  return 0;
+}
+
+int set_mc_strf(mc_str *str, const char *fmt, ...)
+{
+  MCerror(2828, "TODO");
 
   return 0;
 }

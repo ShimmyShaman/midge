@@ -244,9 +244,6 @@ struct mc_syntax_node {
           mc_syntax_node_list *groupopt;
         } preprocess_ifndef, preprocess_ifdef;
         struct {
-
-        } preprocess_include;
-        struct {
           preprocessor_define_type statement_type;
           mc_syntax_node_list *replacement_list;
           mc_syntax_node *identifier;

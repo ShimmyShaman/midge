@@ -23,8 +23,8 @@ int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_
 int mcs_insert_segment_judiciously_in_source_file(mc_source_file_info *source_file,
                                                   mc_source_file_code_segment_type type, void *data);
 
-                                                  // Source Manipulation
-                                                  int mcs_add_include_to_source_file(mc_source_file_info *source_file, const char *include_stanza);
+// Source Manipulation
+int mcs_add_include_to_source_file(mc_source_file_info *source_file, const char *include_stanza);
 
 // Struct Manipulation
 int mcs_construct_struct_declaration(mc_source_file_info *source_file, const char *name);
@@ -42,5 +42,10 @@ int mcs_attach_code_to_function(function_info *fi, const char *code);
 
 // Redefinition
 int mc_redefine_function(function_info *function);
+/*
+ * Redefines the function with provisional code (block). If the function successfully compiles than the code string will be
+ * duplicated and set to the function and the previous code will be released.
+ */
+int mc_redefine_function_provisionally(function_info *function, const char *provisional_code);
 int mc_redefine_structure(struct_info *structure);
 #endif // mc_source_extensions_H
