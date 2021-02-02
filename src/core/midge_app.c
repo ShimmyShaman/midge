@@ -562,7 +562,7 @@ int midge_run_app()
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
 
       MCcall(pthread_mutex_lock(&app_info->render_thread->input_buffer.mutex));
-      mcc_update_xcb_input();
+      MCcall(mcc_update_xcb_input());
       MCcall(pthread_mutex_unlock(&app_info->render_thread->input_buffer.mutex));
 
       clock_gettime(CLOCK_REALTIME, &debug_end_time);

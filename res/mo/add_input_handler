@@ -1,0 +1,79 @@
+add-input-handler
+> PARAM {
+  key=project>input-handler.name
+  unset
+  obtain=obtain-project-input-handler-function-name
+    > TEXT_INPUT {
+      message=Set the input handler function name
+      target_context_property=project>input-handler.name
+    }
+}
+> PARAM {
+  key=project-init-source-filepath
+  obtain=required-context
+    > MESSAGE_BOX {
+      message=NotYetImplemented
+    }
+}
+> FUNCTION {
+  // Create the input handler function
+  const char *input_handler_func_name, *init_source_filepath, *data_name;
+  mc_source_file_info *init_source_file;
+  function_info *fi;
+  char buf[256];
+
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-data", true, &data_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project>input-handler.name", true, &input_handler_func_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-init-source-filepath", true, &init_source_filepath));
+
+  MCcall(find_function_info(input_handler_func_name, &fi));  
+  if(fi) {
+    return 88;
+  }
+
+  MCcall(mcs_obtain_source_file_info(init_source_filepath, true, &init_source_file));
+  if(!init_source_file)
+    return 89;
+      
+  // -- Insert a somewhat empty function into the source file
+  sprintf(buf, "{\n"
+               "  %s *data = (%s *)node->data;\n"
+               "\n"
+               "  return 0;\n"
+               "}", data_name, data_name);
+
+  // -- Create the new function
+  char *params[2];
+  params[0] = "mc_node *node";
+  params[1] = "mci_input_event *input_event";
+  MCcall(mcs_construct_function_definition(init_source_file, input_handler_func_name, "int", 0, 2, params, buf));
+}
+> FUNCTION {
+  // Register the input handler function in the initialize function
+  const char *init_func_name, *input_handler_func_name;
+  function_info *init_fi;
+  char buf[512];
+  mc_node *app_node;
+
+  MCcall(mc_mo_get_context_cstr(process_stack, "project-init-function-name", true, &init_func_name));
+  MCcall(mc_mo_get_context_cstr(process_stack, "project>input-handler.name", true, &input_handler_func_name));
+
+  MCcall(find_function_info(init_func_name, &init_fi));
+  if(!init_fi)
+    return 14;
+  // TODO -- obtain the name of the app_root node parameter
+  sprintf(buf, "\n  app_root->layout->handle_input_event = (void *)&%s;\n", "data", input_handler_func_name);
+  MCcall(mcs_attach_code_to_function(init_fi, buf));
+
+  // Because initialize has already been called, make a seperate scripted call to register the
+  // method for this session
+  const char *sut[] = {
+      "#include <stdio.h>",
+      "#include \"core/core_definitions.h\"",
+      "#include \"env/environment_definitions.h\""
+  };
+  void *addr = tcci_get_symbol(midge_app_info->itp_data->interpreter, input_handler_func_name);
+  MCcall(mc_mo_get_context_ptr(process_stack, "project-node", true, (void **)&app_node));
+  sprintf(buf, "\n  ((mc_node *)%p)->layout->handle_input_event = (void *)%p;\n  return NULL;\n", app_node, addr);
+  MCcall(tcci_execute_single_use_code(midge_app_info->itp_data->interpreter, "MO:add_input_handler", 3, sut, buf, NULL, NULL));
+}

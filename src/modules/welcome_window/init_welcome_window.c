@@ -92,10 +92,8 @@ void mc_mww_handle_input(mc_node *node, mci_input_event *input_event)
 {
   // printf("_mco_handle_input\n");
   input_event->handled = true;
-  if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
-    input_event->handled = true;
-    mca_focus_node(node);
-  }
+  // if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
+  // }
 }
 
 void _mc_mww_on_new_project(mci_input_event *input_event, mcu_button *button)
@@ -104,7 +102,7 @@ void _mc_mww_on_new_project(mci_input_event *input_event, mcu_button *button)
 
   // Make the input textbox visible
   ww->input_textbox->node->layout->visible = true;
-  mca_focus_node(ww->input_textbox->node);
+  input_event->focus_successor = ww->input_textbox->node;
   mca_set_node_requires_rerender(ww->input_textbox->node);
 }
 

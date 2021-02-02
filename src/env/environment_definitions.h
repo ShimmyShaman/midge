@@ -159,7 +159,7 @@ int mca_render_typical_node_present(image_render_details *image_render_queue, mc
 int mca_render_typical_node_headless(render_thread_info *render_thread, mc_node *node);
 
 int mca_focus_node(mc_node *node);
-int mca_obtain_focused_node(mc_node **node);
+void mca_obtain_focused_node(mc_node **node);
 
 int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state);
 int mca_fire_event(mc_app_event_type event_type, void *event_arg);

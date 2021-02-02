@@ -31,10 +31,15 @@ typedef enum mo_op_step_context_arg_type {
 
 typedef enum mo_op_step_context_parameter_presence_type {
   MO_STEP_CTXP_PRESENCE_NULL = 0,
+  /* Indicates the context argument is required to exist */
   MO_STEP_CTXP_PRESENCE_REQUIRED,
+  /* Indicates the context argument is required to NOT exist and a process to obtain it is configured */
   MO_STEP_CTXP_PRESENCE_EMPTY_OBTAIN,
+  /* Indicates the context argument is required to NOT exist and a default value is configured */
   MO_STEP_CTXP_PRESENCE_EMPTY_DEFAULT,
+  /* Indicates the context argument may or may not exist, but a default value is configured */
   MO_STEP_CTXP_PRESENCE_DEFAULT_AVAILABLE,
+  /* Indicates the context argument may or may not exist, but a process to obtain it is configured */
   MO_STEP_CTXP_PRESENCE_OBTAIN_AVAILABLE,
 } mo_op_step_context_parameter_presence_type;
 
@@ -108,9 +113,15 @@ typedef struct mo_operational_process {
   mo_operational_step *first;
 } mo_operational_process;
 
+typedef struct mo_operational_process_list {
+  unsigned int capacity, count;
+  mo_operational_process **items;
+} mo_operational_process_list;
+
 typedef struct mc_mo_process_stack {
   int index;
   void *state_arg;
+  mo_operational_process_list *all_processes;
 
   hash_table_t global_context;
   hash_table_t project_contexts;

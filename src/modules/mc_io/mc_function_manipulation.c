@@ -18,6 +18,17 @@ typedef struct mc_function_code_cursor {
 
 } mc_function_code_cursor;
 
+int mcs_init_function_code_cursor(function_info *function, mc_function_code_cursor *cursor)
+{
+  cursor->function = function;
+
+  MCcall(mcs_parse_code_block_to_syntax_tree(cursor->function->code, &cursor->root_block));
+  cursor->pos = cursor->root_block;
+  cursor->depth = 0;
+
+  return 0;
+}
+
 int _mcs_attach_token(mc_syntax_node *parent, mc_token_type type, const char *text,
                       mc_syntax_node **additional_destination)
 {
@@ -118,6 +129,52 @@ int mcs_fc_move_into_only_switch_statement(mc_function_code_cursor *cursor)
   cursor->pos = sn;
   return 0;
 }
+
+// /*
+//  * @returns 0 for success, -1 for no statement found.
+//  * @error 5201 if in invalid position
+//  */
+// int mcs_fc_move_into_switch_statement_condition_type(mc_function_code_cursor *cursor, const char *condii)
+// {
+//   int a;
+
+//   mc_syntax_node *sn = NULL, *tn;
+
+//   switch (cursor->pos->type) {
+//   case MC_SYNTAX_CODE_BLOCK: {
+//     mc_syntax_node_list *stn = cursor->pos->code_block.statement_list;
+
+//     for (a = 0; a < stn->count; ++a) {
+//       if (stn->items[a]->type == MC_SYNTAX_SWITCH_STATEMENT) {
+//         if (sn) {
+//           return -2;
+//         }
+//         sn = stn->items[a];
+//       }
+//     }
+//   } break;
+//   case MC_SYNTAX_FOR_STATEMENT: {
+//     tn = cursor->pos;
+//     cursor->pos = cursor->pos->for_statement.loop_statement;
+//     a = mcs_fc_move_into_only_switch_statement(cursor);
+//     if (a) {
+//       cursor->pos = tn;
+//       MCerror(4827, "HERE");
+//     }
+//     return 0;
+//   }
+//   default:
+//     MCerror(5201, "TODO : %s", get_mc_syntax_token_type_name(cursor->pos->type));
+//   }
+
+//   if (!sn) {
+//     // No Statement Found
+//     return -1;
+//   }
+
+//   cursor->pos = sn;
+//   return 0;
+// }
 
 /*
  * @returns 0 for success, -1 for case label already exists.
@@ -286,27 +343,17 @@ int mcs_fc_add_statement(mc_function_code_cursor *cursor, const char *statement)
 // int debug_test_code_cursor()
 // {
 //   mc_function_code_cursor cursor;
-//   MCcall(find_function_info("_mc_transcribe_segment_list", &cursor.function));
-//   if (!cursor.function) {
-//     MCerror(8527, "doe");
-//   }
-
-//   // printf("code:\n%s||\n", cursor.function->code);
-
-//   MCcall(mcs_parse_code_block_to_syntax_tree(cursor.function->code, &cursor.root_block));
-//   cursor.pos = cursor.root_block;
-//   cursor.depth = 0;
 
 //   // DO STUFF
-//   MCcall(mcs_fc_move_into_only_for_loop(&cursor));
-//   MCcall(mcs_fc_move_into_only_switch_statement(&cursor));
-//   MCcall(mcs_fc_add_switch_case_label(&cursor, "MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT"));
-//   MCcall(mcs_fc_move_into_switch_section(&cursor, "MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT"));
-//   MCcall(mcs_fc_add_statement(&cursor, "MCcall(append_to_mc_str(str, (const char *)seg->data));"));
+//   MCcall(mcs_fc_move_into_switch_statement_condition_type(&cursor, "window_input_event_type"));
+//   //   MCcall(mcs_fc_move_into_only_switch_statement(&cursor));
+//   //   MCcall(mcs_fc_add_switch_case_label(&cursor, "MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT"));
+//   //   MCcall(mcs_fc_move_into_switch_section(&cursor, "MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT"));
+//   //   MCcall(mcs_fc_add_statement(&cursor, "MCcall(append_to_mc_str(str, (const char *)seg->data));"));
 
-//   MCcall(print_syntax_node(cursor.pos, 0));
+//   //   MCcall(print_syntax_node(cursor.pos, 0));
 
-//   MCerror(7522, "PROGRESS");
+//   //   MCerror(7522, "PROGRESS");
 
 //   return 0;
 // }

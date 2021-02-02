@@ -45,7 +45,7 @@ typedef enum ui_element_type {
 void mcu_initialize_ui_state(mcu_ui_state **p_ui_state);
 // void mcu_initialize_core_ui_components();
 
-void mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list);
+int mcu_get_interactive_nodes_at_point(int screen_x, int screen_y, mc_node_list **layered_hit_list);
 
 // void mcu_handle_mouse_left_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);
 // void mcu_handle_mouse_right_click(mc_node *ui_node, int screen_x, int screen_y, bool *handled);

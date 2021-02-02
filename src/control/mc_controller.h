@@ -3,6 +3,7 @@
 #ifndef MC_CONTROLLER_H
 #define MC_CONTROLLER_H
 
+#include "core/core_definitions.h"
 #include "platform/mc_xcb.h"
 #include "render/render_thread.h"
 
@@ -40,10 +41,20 @@ typedef struct mci_input_event {
   mci_input_state *input_state;
 
   bool handled;
+
+  /* In the event the input event is handled this field is set to assign focus to this node (assuming
+   * this node does NOT already have focus). The default depends on the mouse event type: If it is a
+   * INPUT_EVENT_MOUSE_PRESS it is set to be the node that handles the input event first, otherwise it
+   * will be set to NULL.
+   * Valid:
+   * - NULL -- indicating no change in focus will be applied after the handler has completed.
+   * - Node: The node to gain focus following the completion of the function that handles the event.
+   */
+  mc_node *focus_successor;
 } mci_input_event;
 
 int mcc_initialize_input_state();
 int mcc_input_state_activate_kb_state_tracking();
-void mcc_update_xcb_input();
+int mcc_update_xcb_input();
 
 #endif // MC_CONTROLLER_H
