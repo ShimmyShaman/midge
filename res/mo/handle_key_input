@@ -4,5 +4,20 @@ handle-key-input
   obtain=@add-input-handler
 }
 > FUNCTION {
-  puts("TODO handle-key-input");
+  // Ensure a switch exists to handle key inputs
+  // -- Obtain the cursor
+  const char *input_handler_func_name;
+
+  MCcall(mc_mo_get_context_cstr(process_stack, "project>input-handler.name", true, &input_handler_func_name));
+
+  // function_info *ih_fi;
+  // find_function_info(input_handler_func_name, &ih_fi);
+  // if(!ih_fi) {
+  // MCerror(5858, "TODO");
+  // }
+
+  // mc_function_code_cursor cursor;
+  // mcs_init_function_code_cursor(ih_fi, &cursor);
+
+  // 
 }
