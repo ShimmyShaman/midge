@@ -486,8 +486,13 @@ int _mc_smw_analyze_modified_source_file(mc_source_modification_data *md, mc_sou
   MCcall(read_file_text(sf->filepath, &file_text));
 
   mc_syntax_node *ast;
-  MCcall(mcs_parse_file_to_syntax_tree(file_text, &ast));
+  int res = mcs_parse_file_to_syntax_tree(file_text, &ast);
   free(file_text);
+
+  if (res) {
+    puts("\nnew file did not parse succesfully...");
+    return 0;
+  }
 
   // printf("ast:'%s'\n", child->function.name->text);
   // print_syntax_node(ast, 1);
