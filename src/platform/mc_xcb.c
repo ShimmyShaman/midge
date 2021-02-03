@@ -220,6 +220,10 @@ int get_key_input_code_char(bool shift, mc_key_code code, char *c)
 
 int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSizeY)
 {
+  // Set
+  p_wnfo->width = surfaceSizeX;
+  p_wnfo->height = surfaceSizeY;
+
   // Create connection to X11 server
   const xcb_setup_t *setup = 0;
 
@@ -261,7 +265,7 @@ int mxcb_init_window(mxcb_window_info *p_wnfo, int surfaceSizeX, int surfaceSize
   value_list[0] = p_wnfo->screen->black_pixel;
   value_list[1] = XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE | XCB_EVENT_MASK_BUTTON_PRESS |
                   XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_EXPOSURE |
-                  XCB_EVENT_MASK_FOCUS_CHANGE;
+                  XCB_EVENT_MASK_FOCUS_CHANGE | XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
   // uint32_t mask = XCB_KB_AUTO_REPEAT_MODE;
   // uint32_t values[] = {XCB_AUTO_REPEAT_MODE_ON};
@@ -345,13 +349,29 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
     switch (event->response_type & ~0x80) {
     case XCB_CLIENT_MESSAGE:
       // for (int i = 0; i < 10; ++i)
-      //   printf("ERROR XCB_CLIENT_MESSAGE!!!!!\n");
+      printf("ERROR XCB_CLIENT_MESSAGE!!!!!\n");
       if (((xcb_client_message_event_t *)event)->data.data32[0] == p_wnfo->atom_window_reply->atom) {
         p_wnfo->input_requests_exit = 1;
       }
       break;
+    case XCB_MAP_NOTIFY:
+    case XCB_REPARENT_NOTIFY:
     case XCB_EXPOSE: {
       // Nothing?
+    } break;
+    case XCB_CONFIGURE_NOTIFY: {
+      xcb_configure_notify_event_t *cne = (xcb_configure_notify_event_t *)event;
+      if (cne->width != p_wnfo->width || cne->height != p_wnfo->height) {
+        printf("TODO: %u x %u ==> %u x %u\n", p_wnfo->width, p_wnfo->height, cne->width, cne->height);
+        uint32_t prev_width = p_wnfo->width;
+        uint32_t prev_height = p_wnfo->height;
+        p_wnfo->width = cne->width;
+        p_wnfo->height = cne->height;
+        if (p_wnfo->window_resized_callback.delegate) {
+          p_wnfo->window_resized_callback.delegate(p_wnfo, prev_width, prev_height,
+                                                   p_wnfo->window_resized_callback.state);
+        }
+      }
     } break;
     case XCB_FOCUS_IN: {
       pthread_mutex_lock(&input_buffer->mutex);

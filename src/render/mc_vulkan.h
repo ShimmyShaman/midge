@@ -59,7 +59,7 @@ typedef struct vk_render_state {
   unsigned int presentation_updates;
 
   mxcb_window_info *xcb_winfo;
-  uint32_t window_width, window_height;
+  // uint32_t window_width, window_height;
   uint32_t maximal_image_width, maximal_image_height;
 
   struct {
@@ -223,6 +223,7 @@ bool mvk_get_properties_memory_type_index(vk_render_state *p_vkrs, uint32_t type
                                           uint32_t *typeIndex);
 VkResult mvk_allocate_dynamic_render_data_memory(vk_render_state *p_vkrs, int min_buffer_size);
 
+VkResult mvk_recreate_swapchain(vk_render_state *vkrs);
 void mvk_destroy_vulkan(vk_render_state *vkrs);
 // }
 

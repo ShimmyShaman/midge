@@ -452,8 +452,8 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
   if (surfCapabilities.currentExtent.width == 0xFFFFFFFF) {
     // If the surface size is undefined, the size is set to
     // the size of the images requested.
-    p_vkrs->swap_chain.extents.width = p_vkrs->window_width;
-    p_vkrs->swap_chain.extents.height = p_vkrs->window_height;
+    p_vkrs->swap_chain.extents.width = p_vkrs->xcb_winfo->width;
+    p_vkrs->swap_chain.extents.height = p_vkrs->xcb_winfo->height;
     if (p_vkrs->swap_chain.extents.width < surfCapabilities.minImageExtent.width) {
       p_vkrs->swap_chain.extents.width = surfCapabilities.minImageExtent.width;
     }
@@ -2422,7 +2422,7 @@ VkResult mvk_init_depth_buffer(vk_render_state *p_vkrs)
   return res;
 }
 
-VkResult mvk_init_framebuffers(vk_render_state *p_vkrs /*, bool include_depth*/)
+VkResult mvk_init_swapchain_framebuffers(vk_render_state *p_vkrs /*, bool include_depth*/)
 {
   /* DEPENDS on init_depth_buffer(), init_renderpass() and
    * init_swapchain_extension() */
@@ -2437,8 +2437,8 @@ VkResult mvk_init_framebuffers(vk_render_state *p_vkrs /*, bool include_depth*/)
   fb_info.renderPass = p_vkrs->present_render_pass;
   fb_info.attachmentCount = 1;
   fb_info.pAttachments = attachments;
-  fb_info.width = p_vkrs->window_width;
-  fb_info.height = p_vkrs->window_height;
+  fb_info.width = p_vkrs->xcb_winfo->width;
+  fb_info.height = p_vkrs->xcb_winfo->height;
   fb_info.layers = 1;
 
   uint32_t i;
@@ -2479,6 +2479,34 @@ VkResult mvk_init_descriptor_pool(vk_render_state *p_vkrs)
   return res;
 }
 
+void mvk_swapchain_resize_cleanup(vk_render_state *vkrs);
+
+VkResult mvk_recreate_swapchain(vk_render_state *vkrs)
+{
+  VkResult res;
+
+  // TODO -- Check vulkan-tutorial.com to make sure vkdevicewaitidle is used properly elsewhere it should be
+  res = vkDeviceWaitIdle(vkrs->device);
+  VK_CHECK(res, "vkDeviceWaitIdle");
+
+  mvk_swapchain_resize_cleanup(vkrs);
+
+  res = mvk_init_swapchain_data(vkrs);
+  VK_CHECK(res, "mvk_init_swapchain_data");
+
+  res = mvk_init_present_renderpass(vkrs);
+  VK_CHECK(res, "mvk_init_present_renderpass");
+  res = mvk_init_offscreen_renderpass_2d(vkrs);
+  VK_CHECK(res, "mvk_init_offscreen_renderpass_2d");
+  res = mvk_init_offscreen_renderpass_3d(vkrs);
+  VK_CHECK(res, "mvk_init_offscreen_renderpass_3d");
+
+  res = mvk_init_swapchain_framebuffers(vkrs);
+  VK_CHECK(res, "mvk_init_swapchain_framebuffers");
+
+  return res;
+}
+
 /* ###################################################
    #               Vulkan Entry Point                #
    #               Initializes Vulkan                #
@@ -2495,7 +2523,7 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   VK_CHECK(res, "mvk_init_physical_devices");
 
   // printf
-  int init_window_res = mxcb_init_window(vkrs->xcb_winfo, vkrs->window_width, vkrs->window_height);
+  int init_window_res = mxcb_init_window(vkrs->xcb_winfo, APPLICATION_SET_WIDTH, APPLICATION_SET_HEIGHT);
   MCassert(init_window_res == 0, "mxcb_init_window");
   MCassert(vkrs->xcb_winfo->connection != 0, "CHECK");
 
@@ -2531,15 +2559,15 @@ VkResult mvk_init_vulkan(vk_render_state *vkrs)
   res = mvk_init_mesh_render_prog(vkrs);
   VK_CHECK(res, "mvk_init_mesh_render_prog");
 
-  res = mvk_init_framebuffers(vkrs);
-  VK_CHECK(res, "mvk_init_framebuffers");
+  res = mvk_init_swapchain_framebuffers(vkrs);
+  VK_CHECK(res, "mvk_init_swapchain_framebuffers");
   res = mvk_init_descriptor_pool(vkrs);
   VK_CHECK(res, "mvk_init_descriptor_pool");
 
   return VK_SUCCESS;
 }
 
-void mvk_destroy_framebuffers(vk_render_state *p_vkrs)
+void mvk_destroy_swapchain_framebuffers(vk_render_state *p_vkrs)
 {
   for (uint32_t i = 0; i < p_vkrs->swap_chain.size_count; i++) {
     vkDestroyFramebuffer(p_vkrs->device, p_vkrs->swap_chain.framebuffers[i], NULL);
@@ -2606,7 +2634,7 @@ void mvk_destroy_headless_image(vk_render_state *p_vkrs)
   vkFreeMemory(p_vkrs->device, p_vkrs->headless.memory, NULL);
 }
 
-void mvk_destroy_swapchain_frame_buffers(vk_render_state *p_vkrs)
+void mvk_destroy_swapchain_data(vk_render_state *p_vkrs)
 {
   // Image Views
   if (p_vkrs->swap_chain.image_views) {
@@ -2709,12 +2737,12 @@ void mvk_cleanup_global_layer_properties(vk_render_state *p_vkrs)
 
 /* ###################################################
    #                 Vulkan CLEANUP                  #
-   #               Initializes Vulkan                #
+   #                 Destroys Vulkan                 #
    ################################################### */
 void mvk_destroy_vulkan(vk_render_state *vkrs)
 {
   vkDestroyDescriptorPool(vkrs->device, vkrs->descriptor_pool, NULL);
-  mvk_destroy_framebuffers(vkrs);
+  mvk_destroy_swapchain_framebuffers(vkrs);
 
   vkDestroyPipelineCache(vkrs->device, vkrs->pipelineCache, NULL);
   mvk_destroy_all_render_programs(vkrs);
@@ -2725,7 +2753,7 @@ void mvk_destroy_vulkan(vk_render_state *vkrs)
   mvk_destroy_uniform_buffer(vkrs);
   mvk_destroy_depth_buffer(vkrs);
   mvk_destroy_headless_image(vkrs);
-  mvk_destroy_swapchain_frame_buffers(vkrs);
+  mvk_destroy_swapchain_data(vkrs);
 
   mvk_destroy_command_pool(vkrs);
   mvk_destroy_xcb_surface(vkrs);
@@ -2737,4 +2765,17 @@ void mvk_destroy_vulkan(vk_render_state *vkrs)
   mvk_destroy_instance(vkrs);
   mvk_cleanup_device_extension_names(vkrs);
   mvk_cleanup_global_layer_properties(vkrs);
+}
+
+void mvk_swapchain_resize_cleanup(vk_render_state *vkrs)
+{
+  mvk_destroy_swapchain_framebuffers(vkrs);
+
+  // These images because maybe change in imageformat
+  // mvk_destroy_depth_buffer(vkrs);
+  // mvk_destroy_headless_image(vkrs);
+
+  mvk_destroy_renderpasses(vkrs);
+
+  mvk_destroy_swapchain_data(vkrs);
 }

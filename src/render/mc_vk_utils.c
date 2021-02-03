@@ -1178,8 +1178,9 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
   }
 
   // Register the render program
-  append_to_collection((void ***)&p_vkrs->loaded_render_programs.items, &p_vkrs->loaded_render_programs.alloc,
-                       &p_vkrs->loaded_render_programs.count, render_program);
+  res = append_to_collection((void ***)&p_vkrs->loaded_render_programs.items, &p_vkrs->loaded_render_programs.alloc,
+                             &p_vkrs->loaded_render_programs.count, render_program);
+  VK_CHECK(res, "append_to_collection :: Error adding render program to index");
 
   // Set
   *out_render_program = render_program;

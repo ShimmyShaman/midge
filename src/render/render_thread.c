@@ -18,6 +18,26 @@
 #include "render/mc_vk_utils.h"
 #include "render/render_thread.h"
 
+struct _mrt_resize_args {
+  render_thread_info *rt;
+  vk_render_state *vkrs;
+};
+
+int _mrt_handle_window_resize(mxcb_window_info *xcb_winfo, uint32_t prev_width, uint32_t prev_height, void *state)
+{
+  VkResult res;
+
+  struct _mrt_resize_args *args = (struct _mrt_resize_args *)state;
+
+  res = mvk_recreate_swapchain(args->vkrs);
+  VK_CHECK(res, "mvk_recreate_swapchain");
+
+  args->rt->window_surface_modified = true;
+
+  printf("mvk-handle-window-resize\n");
+  return 0;
+}
+
 VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resource_queue)
 {
   VkResult res;
@@ -69,7 +89,12 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
       VK_CHECK(res, "mvk_load_index_buffer");
 
     } break;
+    // case RESOURCE_COMMAND_RECREATE_SWAPCHAIN: {
+    //   res = mvk_recreate_swapchain(p_vkrs);
+    //   VK_CHECK(res, "mvk_recreate_swapchain");
 
+    //   printf("recreated swapchain\n");
+    // } break;
     default:
       printf("COULD NOT HANDLE RESOURCE COMMAND TYPE=%i\n", resource_cmd->type);
       continue;
@@ -1210,8 +1235,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   // printf("mrt-rul-1\n");
   int wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
   // printf("mrt-rul-2\n");
-  global_data->screen.width = vkrs->window_width;
-  global_data->screen.height = vkrs->window_height;
+  global_data->screen.width = vkrs->xcb_winfo->width;
+  global_data->screen.height = vkrs->xcb_winfo->height;
   printf("Vulkan Initialized!\n");
 
   VK_CHECK((VkResult)wures, "mxcb_update_window");
@@ -1264,10 +1289,10 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     // TODO
     usleep(100);
   }
-  
+
   end_mthread(input_thr);
   printf("Leaving Render-Thread loop...\n--total_rendered_frames = %i\n", vkrs->presentation_updates);
-  
+
   return VK_SUCCESS;
 }
 
@@ -1276,8 +1301,6 @@ void _mrt_init_vk_render_state(vk_render_state *p_vkrs)
   // Set initial values
   p_vkrs->presentation_updates = 0;
   p_vkrs->resource_uid_counter = 300;
-  p_vkrs->window_width = APPLICATION_SET_WIDTH;
-  p_vkrs->window_height = APPLICATION_SET_HEIGHT;
   p_vkrs->maximal_image_width = 2048;
   p_vkrs->maximal_image_height = 2048;
 }
@@ -1293,14 +1316,18 @@ void *midge_render_thread(void *vargp)
   // printf("mrt-2: %p\n", thr);
 
   // -- States
-  mxcb_window_info winfo;
-  winfo.input_requests_exit = 0;
+  mxcb_window_info winfo = {};
+  // winfo.input_requests_exit = 0;
 
   vk_render_state vkrs = {};
   _mrt_init_vk_render_state(&vkrs);
   vkrs.xcb_winfo = &winfo;
 
   // vkrs.textures.allocated = 0;
+  // Handle Window Resize
+  struct _mrt_resize_args rza = (struct _mrt_resize_args){render_thread, &vkrs};
+  winfo.window_resized_callback.delegate = &_mrt_handle_window_resize;
+  winfo.window_resized_callback.state = (void *)&rza;
 
   // Vulkan Initialize
   VkResult res = mvk_init_vulkan(&vkrs);

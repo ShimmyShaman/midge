@@ -167,6 +167,12 @@ typedef struct mxcb_window_info {
   xcb_window_t window;
   xcb_intern_atom_reply_t *atom_window_reply;
   bool input_requests_exit;
+
+  uint32_t width, height;
+  struct {
+    void *state;
+    int (*delegate)(struct mxcb_window_info *wnfo, uint32_t prev_width, uint32_t prev_height, void *callback_state);
+  } window_resized_callback;
 } mxcb_window_info;
 
 // TODO -- naming / correct file placement

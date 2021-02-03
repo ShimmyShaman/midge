@@ -329,7 +329,7 @@ typedef struct render_thread_info {
   resource_queue *resource_queue;
   // ptr reference only no need to release
   loaded_font_list *loaded_fonts;
-  bool render_thread_initialized;
+  bool render_thread_initialized, window_surface_modified;
   window_input_buffer input_buffer;
 } render_thread_info;
 

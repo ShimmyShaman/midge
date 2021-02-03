@@ -53,9 +53,10 @@ int begin_render_thread()
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
-  app_info->render_thread = (render_thread_info *)malloc(sizeof(render_thread_info));
+  app_info->render_thread = (render_thread_info *)calloc(1, sizeof(render_thread_info));
   // printf("app_info->render_thread = %p\n", app_info->render_thread);
   app_info->render_thread->render_thread_initialized = false;
+  app_info->render_thread->window_surface_modified = false;
   {
     // Resource Queue
     app_info->render_thread->resource_queue = (resource_queue *)malloc(sizeof(resource_queue));
@@ -631,7 +632,11 @@ int midge_run_app()
       break;
 
     // Render State Changes
-    // TODO -- do not know how to eloquently handle render update requests outpacing the render thread
+    // TODO -- do not know how to eloquently handle render update requests outpacing the render
+    if (app_info->render_thread->window_surface_modified) {
+      global_root_node->layout->__requires_rerender = true;
+      app_info->render_thread->window_surface_modified = false;
+    }
     if (global_root_node->layout->__requires_rerender && !app_info->render_thread->image_queue->count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
 
