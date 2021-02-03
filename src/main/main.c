@@ -439,7 +439,7 @@
   {                                                                \
     int mc_res = function;                                         \
     if (mc_res) {                                                  \
-      printf("--" #function "line:%i:ERR:%i\n", __LINE__, mc_res); \
+      printf("-]" #function "line:%i:ERR:%i\n", __LINE__, mc_res); \
       exit(mc_res);                                                \
     }                                                              \
   }
@@ -476,10 +476,7 @@ int debugstuff(TCCInterpState *itp)
   return 0;
 };
 
-int mcf_obtain_path_relative(const char *path, const char *comparative_path, char *dest, int dest_size)
-{
-  return 0;
-}
+int mcf_obtain_path_relative(const char *path, const char *comparative_path, char *dest, int dest_size) { return 0; }
 
 void dbht(void)
 {

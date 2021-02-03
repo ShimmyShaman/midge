@@ -420,7 +420,7 @@ static void handler(int sig)
       printf("\nThread-Id:%lu\n", threades->thread_id);
 
       for (int i = 0; i <= threades->stack_index; ++i) {
-        printf("[%i]@%s :(file='%s:%i')\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
+        printf("[%i]%s :(file='%s:%i')\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
                threades->stack[i].line);
       }
       // if(MIDGE_ERROR_STACK_ACTIVITY_LINE >= 0)

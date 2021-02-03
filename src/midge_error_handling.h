@@ -10,7 +10,7 @@
     register_midge_stack_invocation(#function, __FILE__, __LINE__, &mc_error_stack_index); \
     int mc_res = function;                                                                 \
     if (mc_res) {                                                                          \
-      printf("--" #function "line:%i:ERR:%i\n", __LINE__, mc_res);                         \
+      printf("-]" #function "line:%i:ERR:%i\n", __LINE__, mc_res);                         \
       return mc_res;                                                                       \
     }                                                                                      \
     register_midge_stack_return(mc_error_stack_index);                                     \
@@ -20,7 +20,7 @@
   {                                                                \
     int mc_res = function;                                         \
     if (mc_res) {                                                  \
-      printf("--" #function "line:%i:ERR:%i\n", __LINE__, mc_res); \
+      printf("-]" #function "line:%i:ERR:%i\n", __LINE__, mc_res); \
       return mc_res;                                               \
     }                                                              \
   }

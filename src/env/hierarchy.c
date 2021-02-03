@@ -945,9 +945,9 @@ int mca_render_typical_node_headless(render_thread_info *render_thread, mc_node 
 
 int mca_focus_node(mc_node *node)
 {
-  printf("focusing node: %s%s%s%s%s\n", (node->parent && node->parent->parent) ? node->parent->parent->name : "",
-         (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "",
-         node->parent ? "->" : "", node->name);
+  // printf("focusing node: %s%s%s%s%s\n", (node->parent && node->parent->parent) ? node->parent->parent->name : "",
+  //        (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "",
+  //        node->parent ? "->" : "", node->name);
          
   // Set layout update required on all ancestors of the node
   while (node) {
