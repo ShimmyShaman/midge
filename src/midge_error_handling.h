@@ -59,9 +59,13 @@ void register_midge_stack_invocation(const char *function_name, const char *file
                                      int *midge_error_stack_index);
 void register_midge_stack_return(int midge_error_stack_index);
 void register_midge_thread_creation(unsigned int *midge_error_thread_index, const char *base_function_name,
-                                    const char *file_name, int line, int *midge_error_stack_index);
+                                    const char *file_name, int line, const char *thread_name,
+                                    int *midge_error_stack_index);
 void register_midge_thread_conclusion(unsigned int midge_error_thread_index);
 
 void midge_error_print_thread_stack_trace();
+void midge_error_print_thread_info();
+void midge_error_set_thread_name(const char *name);
 void initialize_midge_error_handling();
+
 #endif // MIDGE_ERROR_HANDLING_H

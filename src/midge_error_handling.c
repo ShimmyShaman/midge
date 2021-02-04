@@ -27,6 +27,7 @@ struct __mce_thread_entry_stack {
   struct __mce_stack_entry stack[MIDGE_ERROR_STACK_MAX_SIZE];
   int stack_index;
   int stack_activity_line;
+  char name[64];
 };
 
 pthread_mutex_t MIDGE_ERROR_THREAD_MUTEX;
@@ -170,8 +171,7 @@ void register_midge_error_tag(const char *fmt, ...)
   }
 }
 
-void register_midge_stack_function_entry(const char *function_name, const char *file_name, int line,
-                                         int *midge_error_stack_index)
+static struct __mce_thread_entry_stack *_midge_error_get_threades()
 {
   struct __mce_thread_entry_stack *threades = NULL;
   pthread_t tid = pthread_self();
@@ -185,9 +185,17 @@ void register_midge_stack_function_entry(const char *function_name, const char *
     }
   }
   if (!threades) {
-    printf("ERROR (0)could not find stack for thread with id %lu >>'%s'\n", tid, function_name);
-    exit(996);
+    printf("ERROR (3333)could not find stack for thread with id %lu\n", tid);
+    exit(998);
   }
+
+  return threades;
+}
+
+void register_midge_stack_function_entry(const char *function_name, const char *file_name, int line,
+                                         int *midge_error_stack_index)
+{
+  struct __mce_thread_entry_stack *threades = _midge_error_get_threades();
 
   threades->stack_activity_line = -1;
   if (threades->stack_index + 1 >= MIDGE_ERROR_STACK_MAX_SIZE) {
@@ -217,21 +225,7 @@ void register_midge_stack_function_entry(const char *function_name, const char *
 void register_midge_stack_invocation(const char *function_name, const char *file_name, int line,
                                      int *midge_error_stack_index)
 {
-  struct __mce_thread_entry_stack *threades = NULL;
-  pthread_t tid = pthread_self();
-  for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
-    if (tid == MIDGE_ERROR_THREAD_STACKS[t]->thread_id) {
-      threades = MIDGE_ERROR_THREAD_STACKS[t];
-      break;
-    }
-    else if (tid == (pthread_t)0) {
-      break;
-    }
-  }
-  if (!threades) {
-    printf("ERROR (1)could not find stack for thread with id %lu\n", tid);
-    exit(997);
-  }
+  struct __mce_thread_entry_stack *threades = _midge_error_get_threades();
 
   threades->stack_activity_line = -1;
   if (threades->stack_index + 1 >= MIDGE_ERROR_STACK_MAX_SIZE) {
@@ -260,28 +254,15 @@ void register_midge_stack_invocation(const char *function_name, const char *file
 
 void register_midge_stack_return(int midge_error_stack_index)
 {
-  struct __mce_thread_entry_stack *threades = NULL;
-  pthread_t tid = pthread_self();
-  for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
-    if (tid == MIDGE_ERROR_THREAD_STACKS[t]->thread_id) {
-      threades = MIDGE_ERROR_THREAD_STACKS[t];
-      break;
-    }
-    else if (tid == (pthread_t)0) {
-      break;
-    }
-  }
-  if (!threades) {
-    printf("ERROR (2)could not find stack for thread with id %lu\n", tid);
-    exit(999);
-  }
+  struct __mce_thread_entry_stack *threades = _midge_error_get_threades();
 
   threades->stack_activity_line = threades->stack[threades->stack_index].line;
   threades->stack_index = midge_error_stack_index - 1;
 }
 
 void register_midge_thread_creation(unsigned int *midge_error_thread_index, const char *base_function_name,
-                                    const char *file_name, int line, int *midge_error_stack_index)
+                                    const char *file_name, int line, const char *thread_name,
+                                    int *midge_error_stack_index)
 {
   pthread_mutex_lock(&MIDGE_ERROR_THREAD_MUTEX);
 
@@ -300,15 +281,30 @@ void register_midge_thread_creation(unsigned int *midge_error_thread_index, cons
   threades->thread_id = pthread_self();
   threades->historical_index = MIDGE_ERROR_THREAD_HISTORICAL_COUNT++;
 
+  if (strlen(thread_name) > 63)
+    strncpy(threades->name, thread_name, 63);
+  else
+    strcpy(threades->name, thread_name);
+
   pthread_mutex_unlock(&MIDGE_ERROR_THREAD_MUTEX);
 
-  printf("thread %u begun [%lu]\n", threades->historical_index, threades->thread_id);
+  printf("thread '%s'[%u] begun [tid=%lu]\n", threades->name, threades->historical_index, threades->thread_id);
 
   // TODO -- int / unsigned long ugliness
   *midge_error_thread_index = (unsigned int)threades->thread_id;
 
   threades->stack_index = -1;
   register_midge_stack_invocation(base_function_name, file_name, line, midge_error_stack_index);
+}
+
+void midge_error_set_thread_name(const char *thread_name)
+{
+  struct __mce_thread_entry_stack *threades = _midge_error_get_threades();
+
+  if (strlen(thread_name) > 63)
+    strncpy(threades->name, thread_name, 63);
+  else
+    strcpy(threades->name, thread_name);
 }
 
 void register_midge_thread_conclusion(unsigned int midge_error_thread_index)
@@ -325,7 +321,7 @@ void register_midge_thread_conclusion(unsigned int midge_error_thread_index)
     if ((unsigned int)MIDGE_ERROR_THREAD_STACKS[i]->thread_id == midge_error_thread_index) {
       // Move the thread at this index to a higher index
       struct __mce_thread_entry_stack *t = MIDGE_ERROR_THREAD_STACKS[i];
-      printf("thread %u concluded [%lu]\n", t->historical_index, t->thread_id);
+      printf("thread '%s'[%u] concluded [tid=%lu]\n", t->name, t->historical_index, t->thread_id);
       t->thread_id = 0;
 
       MIDGE_ERROR_THREAD_STACKS[i] = MIDGE_ERROR_THREAD_STACKS[MIDGE_ERROR_THREAD_INDEX - 1];
@@ -343,30 +339,22 @@ void register_midge_thread_conclusion(unsigned int midge_error_thread_index)
   pthread_mutex_unlock(&MIDGE_ERROR_THREAD_MUTEX);
 }
 
+void midge_error_print_thread_info()
+{
+  struct __mce_thread_entry_stack *threades = _midge_error_get_threades();
+  printf("Thread-Id:'%s' [id=%lu]\n", threades->name, threades->thread_id);
+}
+
 void midge_error_print_thread_stack_trace()
 {
-  struct __mce_thread_entry_stack *threades = NULL;
-  pthread_t tid = pthread_self();
-  for (int t = 0; t < MIDGE_ERROR_MAX_THREAD_COUNT; ++t) {
-    if (tid == MIDGE_ERROR_THREAD_STACKS[t]->thread_id) {
-      threades = MIDGE_ERROR_THREAD_STACKS[t];
-      break;
-    }
-    else if (tid == (pthread_t)0) {
-      break;
-    }
-  }
-  if (!threades) {
-    printf("ERROR (3)could not find stack for thread with id %lu\n", tid);
-    exit(998);
-  }
+  struct __mce_thread_entry_stack *threades = _midge_error_get_threades();
 
   printf("\n---------------################------------\n");
   printf("---------------  Stack Trace   ------------\n");
   printf("---------------Most Recent Last------------\n\n");
   // printf("size:%i\n", MIDGE_ERROR_STACK_INDEX);
 
-  printf("\nThread-Id:%lu\n", threades->thread_id);
+  printf("\nThread-Id:'%s' (%lu)\n", threades->name, threades->thread_id);
 
   for (int i = 0; i <= threades->stack_index; ++i) {
     printf("[%i]%s :(file='%s:%i')\n", i, threades->stack[i].function_name, threades->stack[i].file_name,
@@ -417,7 +405,7 @@ static void handler(int sig)
       if (threades->thread_id == (pthread_t)0) {
         break;
       }
-      printf("\nThread-Id:%lu\n", threades->thread_id);
+      printf("\nThread-Id:'%s' (%lu)\n", threades->name, threades->thread_id);
 
       for (int i = 0; i <= threades->stack_index; ++i) {
         printf("[%i]%s :(file='%s:%i')\n", i, threades->stack[i].function_name, threades->stack[i].file_name,

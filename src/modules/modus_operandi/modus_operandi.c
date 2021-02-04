@@ -1185,6 +1185,14 @@ int mc_mo_init_ui(mc_node *module_node)
   return 0;
 }
 
+// void _mupl(mc_node *node, mc_rectf const *available_area)
+// {
+//   mca_update_typical_node_layout(node, available_area);
+//   printf("modus _bounds: {%.2f, %.2f, %.2f, %.2f} <= {%.2f, %.2f, %.2f, %.2f}\n", node->layout->__bounds.x,
+//          node->layout->__bounds.y, node->layout->__bounds.width, node->layout->__bounds.height, available_area->x,
+//          available_area->y, available_area->width, available_area->height);
+// }
+
 int init_modus_operandi_system(mc_node *app_root)
 {
   midge_app_info *global_data;

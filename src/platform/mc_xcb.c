@@ -362,7 +362,7 @@ int mxcb_update_window(mxcb_window_info *p_wnfo, window_input_buffer *input_buff
     case XCB_CONFIGURE_NOTIFY: {
       xcb_configure_notify_event_t *cne = (xcb_configure_notify_event_t *)event;
       if (cne->width != p_wnfo->width || cne->height != p_wnfo->height) {
-        printf("TODO: %u x %u ==> %u x %u\n", p_wnfo->width, p_wnfo->height, cne->width, cne->height);
+        // printf("TODO: %u x %u ==> %u x %u\n", p_wnfo->width, p_wnfo->height, cne->width, cne->height);
         uint32_t prev_width = p_wnfo->width;
         uint32_t prev_height = p_wnfo->height;
         p_wnfo->width = cne->width;

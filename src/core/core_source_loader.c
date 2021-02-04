@@ -507,10 +507,10 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 
   unsigned int temp_source_error_thread_index;
   int temp_source_error_stack_index;
-  void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, int *) =
+  void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, const char *, int *) =
       tcci_get_symbol(itp, "register_midge_thread_creation");
   {
-    register_midge_thread_creation(&temp_source_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463,
+    register_midge_thread_creation(&temp_source_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463, "temp_source_loader",
                                    &temp_source_error_stack_index);
   }
 
@@ -610,7 +610,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   {
     // Resume thread error handling
     int dummy_int;
-    register_midge_thread_creation(mc_interp_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1555,
+    register_midge_thread_creation(mc_interp_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1555, "main-interp-thread",
                                    &dummy_int);
   }
 

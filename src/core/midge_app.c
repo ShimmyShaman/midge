@@ -56,7 +56,7 @@ int begin_render_thread()
   app_info->render_thread = (render_thread_info *)calloc(1, sizeof(render_thread_info));
   // printf("app_info->render_thread = %p\n", app_info->render_thread);
   app_info->render_thread->render_thread_initialized = false;
-  app_info->render_thread->window_surface_modified = false;
+  app_info->render_thread->window_surface.modified = false;
   {
     // Resource Queue
     app_info->render_thread->resource_queue = (resource_queue *)malloc(sizeof(resource_queue));
@@ -581,6 +581,17 @@ int midge_run_app()
     }
 
     // Update Visible Layout
+    if (app_info->render_thread->window_surface.modified) {
+      global_root_node->layout->__requires_rerender = true;
+
+      // TODO this notification process isn't very thread-safe (not particulary unsafe either atm but still...)
+      app_info->screen.width = app_info->render_thread->window_surface.width;
+      app_info->screen.height = app_info->render_thread->window_surface.height;
+      app_info->render_thread->window_surface.modified = false;
+
+      MCcall(mca_set_descendents_require_layout_update(global_root_node->children));
+      MCcall(mca_set_node_requires_layout_update(global_root_node));
+    }
     {
       // As is global node update despite any requirement
       // mca_update_node_list_logic(app_info->global_node->children);
@@ -633,10 +644,6 @@ int midge_run_app()
 
     // Render State Changes
     // TODO -- do not know how to eloquently handle render update requests outpacing the render
-    if (app_info->render_thread->window_surface_modified) {
-      global_root_node->layout->__requires_rerender = true;
-      app_info->render_thread->window_surface_modified = false;
-    }
     if (global_root_node->layout->__requires_rerender && !app_info->render_thread->image_queue->count) {
       clock_gettime(CLOCK_REALTIME, &debug_start_time);
 

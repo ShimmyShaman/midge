@@ -27,14 +27,20 @@ int _mrt_handle_window_resize(mxcb_window_info *xcb_winfo, uint32_t prev_width, 
 {
   VkResult res;
 
+  // puts("_mrt_handle_window_resize:");
+  // midge_error_print_thread_info();
+
   struct _mrt_resize_args *args = (struct _mrt_resize_args *)state;
 
-  res = mvk_recreate_swapchain(args->vkrs);
-  VK_CHECK(res, "mvk_recreate_swapchain");
-
-  args->rt->window_surface_modified = true;
-
-  printf("mvk-handle-window-resize\n");
+  if (xcb_winfo->width != args->vkrs->swap_chain.extents.width ||
+      xcb_winfo->height != args->vkrs->swap_chain.extents.height) {
+    // Invalidate the swap chain
+    pthread_mutex_lock(&args->vkrs->swap_chain.surface_specs.mutex);
+    args->vkrs->swap_chain.surface_specs.width = xcb_winfo->width;
+    args->vkrs->swap_chain.surface_specs.height = xcb_winfo->height;
+    args->vkrs->swap_chain.surface_specs.valid = false;
+    pthread_mutex_unlock(&args->vkrs->swap_chain.surface_specs.mutex);
+  }
   return 0;
 }
 
@@ -878,10 +884,14 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
     // }
 
     // printf("image_render: rt:%i cmd_count:%i\n", image_render->render_target, image_render->command_count);
+    bool skip_render_presents = false;
 
     switch (image_render->render_target) {
     case NODE_RENDER_TARGET_PRESENT: {
       // printf("NODE_RENDER_TARGET_PRESENT\n");
+      if (skip_render_presents)
+        break;
+
       VkSemaphore imageAcquiredSemaphore;
       VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
       imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -928,8 +938,10 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       rp_begin.framebuffer = p_vkrs->swap_chain.framebuffers[p_vkrs->swap_chain.current_index];
       rp_begin.renderArea.offset.x = 0;
       rp_begin.renderArea.offset.y = 0;
-      rp_begin.renderArea.extent.width = image_render->image_width;
-      rp_begin.renderArea.extent.height = image_render->image_height;
+      // rp_begin.renderArea.extent.width = image_render->image_width;
+      // rp_begin.renderArea.extent.height = image_render->image_height;
+      rp_begin.renderArea.extent.width = min(p_vkrs->xcb_winfo->width, image_render->image_width);
+      rp_begin.renderArea.extent.height = min(p_vkrs->xcb_winfo->height, image_render->image_height);
       rp_begin.clearValueCount = 1;
       rp_begin.pClearValues = clear_values;
 
@@ -988,7 +1000,17 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       VK_CHECK(res, "vkResetFences");
 
       res = vkQueuePresentKHR(p_vkrs->present_queue, &present);
-      VK_CHECK(res, "vkQueuePresentKHR");
+      if (res == VK_ERROR_OUT_OF_DATE_KHR) {
+        // For now assume this is because the xcb window has resized while this render queue was being processed.
+        // swapchain->surface_specs will then be set accordingly requiring no more action from us.
+
+        // Maybe return (but then any headless image renders will be lost to the wind and they might not get redone on
+        // swapchain recreation), so just skip any further render-present calls. There shouldn't be any, but...
+        skip_render_presents = true;
+      }
+      else {
+        VK_CHECK(res, "vkQueuePresentKHR");
+      }
 
       vkDestroySemaphore(p_vkrs->device, imageAcquiredSemaphore, NULL);
       vkDestroyFence(p_vkrs->device, drawFence, NULL);
@@ -1060,8 +1082,8 @@ VkResult render_through_queue(vk_render_state *p_vkrs, image_render_list *image_
       rp_begin.framebuffer = target_image->framebuffer;
       rp_begin.renderArea.offset.x = 0;
       rp_begin.renderArea.offset.y = 0;
-      rp_begin.renderArea.extent.width = target_image->width;
-      rp_begin.renderArea.extent.height = target_image->height;
+      rp_begin.renderArea.extent.width = min(p_vkrs->xcb_winfo->width, target_image->width);
+      rp_begin.renderArea.extent.height = min(p_vkrs->xcb_winfo->height, target_image->height);
       rp_begin.clearValueCount = 2;
       rp_begin.pClearValues = clear_values;
 
@@ -1235,8 +1257,8 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   // printf("mrt-rul-1\n");
   int wures = mxcb_update_window(vkrs->xcb_winfo, &render_thread->input_buffer);
   // printf("mrt-rul-2\n");
-  global_data->screen.width = vkrs->xcb_winfo->width;
-  global_data->screen.height = vkrs->xcb_winfo->height;
+  global_data->screen.width = vkrs->swap_chain.extents.width;
+  global_data->screen.height = vkrs->swap_chain.extents.height;
   printf("Vulkan Initialized!\n");
 
   VK_CHECK((VkResult)wures, "mxcb_update_window");
@@ -1261,6 +1283,18 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     // TODO DEBUG
     // printf("mrt-rul-3:loop\n");
     // usleep(1000);
+    if (!vkrs->swap_chain.surface_specs.valid) {
+      while (!vkrs->swap_chain.surface_specs.valid) {
+        pthread_mutex_lock(&vkrs->swap_chain.surface_specs.mutex);
+        res = mvk_recreate_swapchain(vkrs);
+        VK_CHECK(res, "mvk_recreate_swapchain");
+        pthread_mutex_unlock(&vkrs->swap_chain.surface_specs.mutex);
+      }
+
+      render_thread->window_surface.width = vkrs->swap_chain.extents.width;
+      render_thread->window_surface.height = vkrs->swap_chain.extents.height;
+      render_thread->window_surface.modified = true;
+    }
 
     // Resource Commands
     // usleep(700000);
@@ -1303,6 +1337,10 @@ void _mrt_init_vk_render_state(vk_render_state *p_vkrs)
   p_vkrs->resource_uid_counter = 300;
   p_vkrs->maximal_image_width = 2048;
   p_vkrs->maximal_image_height = 2048;
+
+  // Surface Recreation
+  pthread_mutex_init(&p_vkrs->swap_chain.surface_specs.mutex, NULL);
+  p_vkrs->swap_chain.surface_specs.valid = false;
 }
 
 // TODO -- look into the use of the volatile keyword with multi-threaded-access-variables
@@ -1311,6 +1349,7 @@ void *midge_render_thread(void *vargp)
   render_thread_info *render_thread = (render_thread_info *)vargp;
 
   printf("~~midge_render_thread called!~~\n");
+  midge_error_set_thread_name("render-thread");
 
   mthread_info *thr = render_thread->thread_info;
   // printf("mrt-2: %p\n", thr);

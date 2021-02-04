@@ -450,10 +450,13 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
 
   // width and height are either both 0xFFFFFFFF, or both not 0xFFFFFFFF.
   if (surfCapabilities.currentExtent.width == 0xFFFFFFFF) {
+    // Set from specs
+    p_vkrs->swap_chain.extents.width = p_vkrs->swap_chain.surface_specs.width;
+    p_vkrs->swap_chain.extents.height = p_vkrs->swap_chain.surface_specs.height;
+    p_vkrs->swap_chain.surface_specs.valid = true;
+
     // If the surface size is undefined, the size is set to
     // the size of the images requested.
-    p_vkrs->swap_chain.extents.width = p_vkrs->xcb_winfo->width;
-    p_vkrs->swap_chain.extents.height = p_vkrs->xcb_winfo->height;
     if (p_vkrs->swap_chain.extents.width < surfCapabilities.minImageExtent.width) {
       p_vkrs->swap_chain.extents.width = surfCapabilities.minImageExtent.width;
     }
@@ -471,6 +474,9 @@ VkResult mvk_init_swapchain_data(vk_render_state *p_vkrs)
   else {
     // If the surface size is defined, the swap chain size must match
     p_vkrs->swap_chain.extents = surfCapabilities.currentExtent;
+
+    // TODO??
+    p_vkrs->swap_chain.surface_specs.valid = true;
   }
 
   // The FIFO present mode is guaranteed by the spec to be supported
@@ -2437,8 +2443,8 @@ VkResult mvk_init_swapchain_framebuffers(vk_render_state *p_vkrs /*, bool includ
   fb_info.renderPass = p_vkrs->present_render_pass;
   fb_info.attachmentCount = 1;
   fb_info.pAttachments = attachments;
-  fb_info.width = p_vkrs->xcb_winfo->width;
-  fb_info.height = p_vkrs->xcb_winfo->height;
+  fb_info.width = p_vkrs->swap_chain.extents.width;
+  fb_info.height = p_vkrs->swap_chain.extents.height;
   fb_info.layers = 1;
 
   uint32_t i;

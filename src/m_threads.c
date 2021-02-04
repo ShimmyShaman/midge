@@ -12,7 +12,7 @@ void *_mca_thread_entry_wrap(void *state)
 {
   unsigned int mc_error_thread_index;
   int base_error_stack_index;
-  register_midge_thread_creation(&mc_error_thread_index, "_mca_thread_entry_wrap", "m_threads.c", 13,
+  register_midge_thread_creation(&mc_error_thread_index, "_mca_thread_entry_wrap", "m_threads.c", 13, "unnamed",
                                  &base_error_stack_index);
 
   void **state_args = (void **)state;

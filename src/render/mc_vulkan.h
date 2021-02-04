@@ -3,6 +3,12 @@
 #ifndef MC_VULKAN_H
 #define MC_VULKAN_H
 
+// TODO -- stdatomic usage in tcc appears to be worked on atm in tinycc-mob : give it some time to flesh out and attempt
+// to use it down the line -- also he hasn't signed the relicensing document ('Dmitry Selyutin')
+// be un-threadsafe-ish until then
+#define atomic_bool bool
+// #include <stdatomic.h>
+
 #include <vulkan/vulkan_core.h>
 
 #include "cglm/include/cglm/types-struct.h"
@@ -107,6 +113,11 @@ typedef struct vk_render_state {
     VkImage *images;
     VkImageView *image_views;
     VkFramebuffer *framebuffers;
+    struct {
+      pthread_mutex_t mutex;
+      uint32_t width, height;
+      bool valid;
+    } surface_specs;
   } swap_chain;
 
   struct {
