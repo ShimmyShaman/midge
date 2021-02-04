@@ -1221,11 +1221,13 @@ VkResult mrt_process_render_queues(render_thread_info *render_thread, vk_render_
   return VK_SUCCESS;
 }
 
-void *input_thread_loop(void *state)
+void *window_events_loop(void *state)
 {
   mthread_info *thr = *(mthread_info **)((void **)state)[0];
   mxcb_window_info *winfo = (mxcb_window_info *)((void **)state)[1];
   window_input_buffer *wib = (window_input_buffer *)((void **)state)[2];
+
+  midge_error_set_thread_name("window-events-thread");
 
   int wures;
   while (!thr->should_exit) {
@@ -1270,12 +1272,12 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
   rt_render_queue.count = 0;
 
   // Begin the input thread
-  mthread_info *input_thr;
+  mthread_info *window_events_thr;
   void *itargs[3];
-  itargs[0] = (void *)&input_thr;
+  itargs[0] = (void *)&window_events_thr;
   itargs[1] = (void *)vkrs->xcb_winfo;
   itargs[2] = (void *)&render_thread->input_buffer;
-  MCcall(begin_mthread(&input_thread_loop, &input_thr, itargs));
+  MCcall(begin_mthread(&window_events_loop, &window_events_thr, itargs));
 
   // printf("mrt-2: %p\n", thr);
   // printf("mrt-2: %p\n", &winfo);
@@ -1324,7 +1326,7 @@ VkResult mrt_run_update_loop(render_thread_info *render_thread, vk_render_state 
     usleep(100);
   }
 
-  end_mthread(input_thr);
+  end_mthread(window_events_thr);
   printf("Leaving Render-Thread loop...\n--total_rendered_frames = %i\n", vkrs->presentation_updates);
 
   return VK_SUCCESS;
