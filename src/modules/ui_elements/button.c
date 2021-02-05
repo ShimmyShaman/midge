@@ -64,23 +64,43 @@ void __mcu_render_button_present(image_render_details *image_render_queue, mc_no
   mcu_button *button = (mcu_button *)node->data;
 
   // Background
-  mcr_issue_render_command_colored_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                        (unsigned int)node->layout->__bounds.y,
-                                        (unsigned int)node->layout->__bounds.width,
-                                        (unsigned int)node->layout->__bounds.height, button->background_color);
+  render_color color = button->background_color;
+  if (button->enabled) {
+    if (button->__state.highlighted) {
+      color.r *= button->highlight_multiplier;
+      color.g *= button->highlight_multiplier;
+      color.b *= button->highlight_multiplier;
+    }
+  }
+  else {
+    color.r *= button->disabled_multiplier;
+    color.g *= button->disabled_multiplier;
+    color.b *= button->disabled_multiplier;
+  }
+  mcr_issue_render_command_colored_quad(
+      image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,
+      (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, color);
 
   // Text
+  color = button->font_color;
+  if (!button->enabled) {
+    color.r *= button->disabled_multiplier;
+    color.g *= button->disabled_multiplier;
+    color.b *= button->disabled_multiplier;
+  }
   // printf("renderbutton- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font->name);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y, button->str->text, button->font,
-                                button->font_color);
+                                (unsigned int)node->layout->__bounds.y, button->str->text, button->font, color);
 }
 
 void _mcu_button_handle_input_event(mc_node *button_node, mci_input_event *input_event)
 {
   // printf("_mcu_button_handle_input_event\n");
   mcu_button *button = (mcu_button *)button_node->data;
+
+  if (!button->enabled)
+    return;
 
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
     // printf("_mcu_button_handle_input_event-1\n");
@@ -127,6 +147,7 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   node->data = button;
 
   // printf("mcu-ib-3\n");
+  button->enabled = true;
   button->tag = NULL;
   button->left_click = NULL;
 
@@ -136,6 +157,10 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   button->font_color = COLOR_GHOST_WHITE;
 
   button->background_color = COLOR_DIM_GRAY;
+  button->disabled_multiplier = 0.7f;
+  button->highlight_multiplier = 1.43;
+
+  button->__state.highlighted = false;
 
   // Set to out pointer
   *p_button = button;

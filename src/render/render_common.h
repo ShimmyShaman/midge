@@ -22,6 +22,7 @@ typedef struct render_color {
   float r, g, b, a;
 } render_color;
 
+// TODO -- change these divisions below to actual float numbers :: Performance cost
 #define COLOR_TRANSPARENT \
   (render_color) { 0.0f, 0.0f, 0.0f, 0.0f }
 #define COLOR_CORNFLOWER_BLUE \
@@ -84,8 +85,12 @@ typedef struct render_color {
   (render_color) { 1.f, 1.f, 0.f, 1.f }
 #define COLOR_RED \
   (render_color) { 1.f, 0.f, 0.f, 1.f }
+#define COLOR_MAROON \
+  (render_color) { 0.5f, 0.f, 0.f, 1.f }
+#define COLOR_TYRIAN_PURPLE \
+  (render_color) { 0.4f, 0.01f, 0.24f, 1.f }
 #define COLOR_LIGHT_YELLOW \
-  (render_color) { 1.f, 1.f, 102.f / 255.f, 1.f }
+  (render_color) { 1.f, 1.f, 0.4f, 1.f }
 
 typedef enum element_render_command_type {
   RENDER_COMMAND_NONE = 1,

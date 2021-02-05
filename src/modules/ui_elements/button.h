@@ -13,6 +13,8 @@ typedef struct mcu_button {
 
   void *tag;
 
+  bool enabled;
+
   // int (*left_click)(mci_input_event *, mcu_button *); (TODO why can't I declare this with TCC??)
   void *left_click;
 
@@ -21,6 +23,12 @@ typedef struct mcu_button {
   render_color font_color;
 
   render_color background_color;
+  float disabled_multiplier;
+  float highlight_multiplier;
+
+  struct {
+    bool highlighted;
+  } __state;
 } mcu_button;
 
 int mcu_init_button(mc_node *parent, mcu_button **p_button);

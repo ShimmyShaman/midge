@@ -143,7 +143,7 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
   textblock->font = NULL;
   textblock->font_color = COLOR_GHOST_WHITE;
 
-  textblock->background_color = COLOR_DIM_GRAY;
+  textblock->background_color = COLOR_TRANSPARENT;
 
   // Set to out pointer
   *p_textblock = textblock;

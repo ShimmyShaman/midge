@@ -16,14 +16,22 @@
 typedef enum _mc_smw_mdf_state {
   MC_SMW_MDF_STATE_NULL = 0,
   MC_SMW_MDF_STATE_DISCOVERED,
+  MC_SMW_MDF_STATE_PARSE_ERROR,
+  MC_SMW_MDF_STATE_COMPILATION_ERROR,
 } _mc_smw_mdf_state;
 
-typedef struct _mc_smw_modified_func_info {
+typedef struct _mc_smw_tracked_modification {
   mc_source_file_info *source_file;
   _mc_smw_mdf_state state;
   function_info *function_info;
   char *disk_code;
-} _mc_smw_modified_func_info;
+} _mc_smw_tracked_modification;
+
+typedef struct _mc_smw_ui_entry {
+  mcu_panel *panel;
+  mcu_textblock *label_textblock;
+  mcu_button *button;
+} _mc_smw_ui_entry;
 
 typedef struct mc_source_modification_data {
   mc_node *node;
@@ -34,12 +42,11 @@ typedef struct mc_source_modification_data {
 
   struct {
     int count, size;
-    _mc_smw_modified_func_info *items;
+    _mc_smw_tracked_modification *items;
   } modified_functions;
 
-  int ui_info_element_count;
-  mcu_textblock **info_textblocks;
-  mcu_button **info_buttons;
+  int ui_entries_size;
+  _mc_smw_ui_entry *ui_entries;
   //   struct {
   //     unsigned int capacity, count, utilized;
   //     mcu_button **items;
@@ -61,7 +68,8 @@ typedef struct mc_source_modification_data {
 
 typedef struct _mc_smw_button_tag {
   mc_source_modification_data *md;
-  _mc_smw_modified_func_info *mfi;
+  _mc_smw_tracked_modification *mfi;
+  mcu_textblock *label_textblock;
 } _mc_smw_button_tag;
 
 int _mc_smw_update_node_layout(mc_node *node, const mc_rectf *available_area)
@@ -77,46 +85,55 @@ int _mc_smw_update_node_layout(mc_node *node, const mc_rectf *available_area)
   // Set the node data appropriately
   int a;
   char rel[256];
-  _mc_smw_modified_func_info *mfi;
+  _mc_smw_tracked_modification *mfi;
+  _mc_smw_ui_entry *entry;
   mcu_button *button;
   mcu_textblock *textblock;
-  for (a = 0; a < md->ui_info_element_count && a < md->modified_functions.count; ++a) {
-    printf("a=%i\n", a);
+  for (a = 0; a < md->ui_entries_size && a < md->modified_functions.count; ++a) {
+    // printf("a=%i\n", a);
     mfi = &md->modified_functions.items[a];
-    textblock = md->info_textblocks[a];
-    button = md->info_buttons[a];
-
     MCcall(mcf_obtain_path_relative_to_cwd(mfi->source_file->filepath, rel, 256));
 
-    MCcall(set_mc_str(textblock->str, ""));
-    MCcall(append_to_mc_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
+    entry = &md->ui_entries[a];
+    textblock = entry->label_textblock;
+    button = entry->button;
+
+    // Set Visible
+    entry->panel->node->layout->visible = true;
 
     // Update textblock
-    textblock->node->layout->visible = true;
+    MCcall(set_mc_str(textblock->str, ""));
     textblock->node->layout->__requires_layout_update = true;
-    MCcall(mca_set_node_requires_rerender(textblock->node));
 
     ((_mc_smw_button_tag *)button->tag)->mfi = mfi;
     switch (mfi->state) {
     case MC_SMW_MDF_STATE_DISCOVERED: {
-      button->node->layout->visible = true;
-
-      // Set & Rerender
-      MCcall(set_mc_str(button->str, "Interpret"));
-      MCcall(mca_set_node_requires_rerender(button->node));
+      entry->panel->background_color = COLOR_MIDNIGHT_EXPRESS;
+      MCcall(append_to_mc_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
+      button->enabled = true;
+    } break;
+    case MC_SMW_MDF_STATE_PARSE_ERROR: {
+      entry->panel->background_color = COLOR_TYRIAN_PURPLE;
+      MCcall(append_to_mc_strf(textblock->str, "%s", rel));
+      button->enabled = false;
+    } break;
+    case MC_SMW_MDF_STATE_COMPILATION_ERROR: {
+      entry->panel->background_color = COLOR_MAROON;
+      MCcall(append_to_mc_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
+      button->enabled = false;
     } break;
     default:
       MCerror(9952, "TODO : %i", mfi->state);
     }
+    MCcall(mca_set_node_requires_rerender(button->node));
+    MCcall(mca_set_node_requires_rerender(textblock->node));
   }
 
   // Hide the rest
-  for (; a < md->ui_info_element_count; ++a) {
-    textblock = md->info_textblocks[a];
-    textblock->node->layout->visible = false;
+  for (; a < md->ui_entries_size; ++a) {
+    entry = &md->ui_entries[a];
 
-    button = md->info_buttons[a];
-    button->node->layout->visible = false;
+    entry->panel->node->layout->visible = false;
   }
 
   // Update
@@ -221,11 +238,17 @@ int _mc_smw_info_button_clicked(mci_input_event *input_event, mcu_button *button
   _mc_smw_button_tag *tag = (_mc_smw_button_tag *)button->tag;
 
   mc_source_modification_data *md = tag->md;
-  _mc_smw_modified_func_info *mfi = tag->mfi;
+  _mc_smw_tracked_modification *mfi = tag->mfi;
 
   int res = mc_redefine_function_provisionally(mfi->function_info, mfi->disk_code);
   if (res) {
     printf("Code for function '%s' was not successfully interpreted.\n", mfi->function_info->name);
+
+    // tag->label_textblock->background_color = COLOR_MAROON;
+    mfi->state = MC_SMW_MDF_STATE_COMPILATION_ERROR;
+
+    // button->background_color = COLOR_RED;
+    // MCcall(set_mc_str(button->str, "Reinterpret"));
   }
   else {
     // Remove the mfi
@@ -242,12 +265,26 @@ int _mc_smw_info_button_clicked(mci_input_event *input_event, mcu_button *button
   return 0;
 }
 
+int _mc_smw_check_modfuncary_capacity(mc_source_modification_data *md)
+{
+  if (md->modified_functions.count + 1 > md->modified_functions.size) {
+    // Capacity Check
+    md->modified_functions.size *= 2;
+    md->modified_functions.items =
+        realloc(md->modified_functions.items, sizeof(_mc_smw_tracked_modification) * md->modified_functions.size);
+    if (!md->modified_functions.items) {
+      MCerror(5981, "realloc error TODO");
+    }
+  }
+  return 0;
+}
+
 int _mc_smw_analyze_function_differences(mc_source_modification_data *md, mc_source_file_info *sf, mc_syntax_node *fast)
 {
   int a, b;
   char *exc;
   mc_source_file_code_segment *seg;
-  _mc_smw_modified_func_info *mfn;
+  _mc_smw_tracked_modification *mfn;
 
   // Find the function info in the source file
   for (a = 0; a < sf->segments.count; ++a) {
@@ -286,17 +323,7 @@ int _mc_smw_analyze_function_differences(mc_source_modification_data *md, mc_sou
     }
 
     // Set Anew
-    if (md->modified_functions.count >= md->modified_functions.size) {
-      // Capacity Check
-      md->modified_functions.size *= 2;
-      md->modified_functions.items =
-          realloc(md->modified_functions.items, sizeof(_mc_smw_modified_func_info) * md->modified_functions.size);
-      if (!md->modified_functions.items) {
-        MCerror(5981, "realloc error TODO");
-      }
-
-      MCcall(mca_set_node_requires_layout_update(md->node));
-    }
+    MCcall(_mc_smw_check_modfuncary_capacity(md));
 
     mfn = &md->modified_functions.items[md->modified_functions.count++];
     mfn->source_file = sf;
@@ -482,18 +509,43 @@ int _mc_smw_analyze_children_differences(mc_source_modification_data *md, mc_sou
 
 int _mc_smw_analyze_modified_source_file(mc_source_modification_data *md, mc_source_file_info *sf)
 {
+  int a, b;
   char *file_text;
-  MCcall(read_file_text(sf->filepath, &file_text));
-
   mc_syntax_node *ast;
-  int res = mcs_parse_file_to_syntax_tree(file_text, &ast);
-  free(file_text);
 
+  // Remove all entries related to this source file
+  _mc_smw_tracked_modification *mfi;
+  for (a = md->modified_functions.count - 1; a >= 0; --a) {
+    mfi = &md->modified_functions.items[a];
+
+    if (mfi->source_file != sf)
+      continue;
+
+    // Move down one
+    for (b = a + 1; b < md->modified_functions.count; ++b) {
+      md->modified_functions.items[b - 1] = md->modified_functions.items[b];
+    }
+    --md->modified_functions.count;
+  }
+
+  // Read & Parse the source file
+  MCcall(read_file_text(sf->filepath, &file_text));
+  int res = mcs_parse_file_to_syntax_tree(file_text, &ast);
   if (res) {
-    puts("\nnew file did not parse succesfully...");
+    // Track the WHOLE source File (not just a function)
+    MCcall(_mc_smw_check_modfuncary_capacity(md));
+    mfi = &md->modified_functions.items[md->modified_functions.count];
+    ++md->modified_functions.count;
+
+    mfi->source_file = sf;
+    mfi->state = MC_SMW_MDF_STATE_PARSE_ERROR;
+    mfi->disk_code = NULL;
+    mfi->function_info = NULL;
+
     return 0;
   }
 
+  free(file_text);
   // printf("ast:'%s'\n", child->function.name->text);
   // print_syntax_node(ast, 1);
   MCcall(_mc_smw_analyze_children_differences(md, sf, ast->children));
@@ -526,7 +578,7 @@ int mc_smw_init_data(mc_node *module_node)
   md->modified_functions.count = 0;
   md->modified_functions.size = 4;
   md->modified_functions.items =
-      (_mc_smw_modified_func_info *)malloc(sizeof(_mc_smw_modified_func_info) * md->modified_functions.size);
+      (_mc_smw_tracked_modification *)malloc(sizeof(_mc_smw_tracked_modification) * md->modified_functions.size);
   // TODO--malloc check just like everywhere
 
   //   MCcall(init_mc_str(&md->current_directory));
@@ -558,6 +610,7 @@ int mc_smw_init_ui(mc_node *module_node)
   //   char buf[64];
   int a;
   mca_node_layout *layout;
+  mcu_panel *panel;
   mcu_button *button;
   mcu_textblock *textblock;
 
@@ -565,41 +618,52 @@ int mc_smw_init_ui(mc_node *module_node)
   MCcall(mcu_init_panel(module_node, &md->panel));
 
   layout = md->panel->node->layout;
-  layout->max_width = 640;
+  layout->max_width = 840;
   layout->padding = (mc_paddingf){40, 40, 40, 40};
-  layout->max_height = 480;
+  layout->max_height = 420;
 
   md->panel->background_color = (render_color){0.35f, 0.35f, 0.35f, 1.f};
 
   // Info Text-Blocks
-  md->ui_info_element_count = 11;
-  md->info_textblocks = (mcu_textblock **)malloc(sizeof(mcu_textblock *) * md->ui_info_element_count);
-  md->info_buttons = (mcu_button **)malloc(sizeof(mcu_button *) * md->ui_info_element_count);
-  _mc_smw_button_tag *tags = (_mc_smw_button_tag *)malloc(sizeof(_mc_smw_button_tag) * md->ui_info_element_count);
-  for (a = 0; a < md->ui_info_element_count; ++a) {
-    MCcall(mcu_init_textblock(md->panel->node, &textblock));
-    md->info_textblocks[a] = textblock;
+  md->ui_entries_size = 11;
+  md->ui_entries = (_mc_smw_ui_entry *)malloc(sizeof(_mc_smw_ui_entry) * md->ui_entries_size);
+  _mc_smw_button_tag *tags = (_mc_smw_button_tag *)malloc(sizeof(_mc_smw_button_tag) * md->ui_entries_size);
+  for (a = 0; a < md->ui_entries_size; ++a) {
+    MCcall(mcu_init_panel(md->panel->node, &panel));
+    md->ui_entries[a].panel = panel;
+
+    panel->background_color = COLOR_DARK_SLATE_GRAY;
+
+    layout = panel->node->layout;
+    layout->visible = false;
+    layout->padding = (mc_paddingf){2, 32 + 31 * a, 2, 2};
+    layout->preferred_height = 30;
+    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+
+    MCcall(mcu_init_textblock(panel->node, &textblock));
+    md->ui_entries[a].label_textblock = textblock;
 
     layout = textblock->node->layout;
-    layout->visible = false;
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
-    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-    layout->padding = (mc_paddingf){8, 8 + 26 * a, 136, 8};
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+    layout->padding = (mc_paddingf){2, 2, 148, 2};
 
-    MCcall(mcu_init_button(md->panel->node, &button));
-    md->info_buttons[a] = button;
+    MCcall(mcu_init_button(panel->node, &button));
+    md->ui_entries[a].button = button;
+    MCcall(set_mc_str(button->str, "Interpret"));
+    button->left_click = &_mc_smw_info_button_clicked;
 
     _mc_smw_button_tag *tag = tags + a;
     button->tag = tag;
     tag->md = md;
     tag->mfi = NULL;
-    button->left_click = &_mc_smw_info_button_clicked;
+    tag->label_textblock = textblock;
 
     layout = button->node->layout;
-    layout->visible = false;
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
-    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-    layout->padding = (mc_paddingf){8, 8 + 26 * a, 8, 8};
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+    layout->padding = (mc_paddingf){2, 2, 2, 2};
     layout->preferred_width = 120;
   }
 
