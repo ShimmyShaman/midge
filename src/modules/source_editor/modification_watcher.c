@@ -405,7 +405,7 @@ int _mc_smw_analyze_children_differences(mc_source_modification_data *md, mc_sou
     child = children->items[a];
     switch (child->type) {
     case MC_SYNTAX_FUNCTION: {
-      printf("childfunc:'%s'\n", child->function.name->text);
+      // printf("childfunc:'%s'\n", child->function.name->text);
       if (child->function.code_block) {
         // More than just a declaration
         MCcall(_mc_smw_analyze_function_differences(md, sf, child));
@@ -419,7 +419,7 @@ int _mc_smw_analyze_children_differences(mc_source_modification_data *md, mc_sou
         // TODO...?
       } break;
       default:
-        print_syntax_node(child->type_alias.type_descriptor, 0);
+        MCcall(print_syntax_node(child->type_alias.type_descriptor, 0));
         MCerror(3547, "Unhandled type_alias-descriptor-syntax-type:%s",
                 get_mc_syntax_token_type_name(child->type_alias.type_descriptor->type));
         break;
