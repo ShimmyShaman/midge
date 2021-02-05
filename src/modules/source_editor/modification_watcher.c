@@ -5,7 +5,7 @@
 #include "core/c_parser_lexer.h"
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "modules/mc_io/mc_file.h"
 #include "modules/mc_io/mc_source_extensions.h"

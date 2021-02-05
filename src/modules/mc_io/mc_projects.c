@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"

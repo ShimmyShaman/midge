@@ -6,7 +6,7 @@
 
 #include <ctype.h>
 
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "core/midge_app.h"
 

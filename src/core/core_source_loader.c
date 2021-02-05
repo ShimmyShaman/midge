@@ -11,7 +11,7 @@
 
 #include "core_definitions.h"
 #include "mc_str.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "tinycc/libtccinterp.h"
 
@@ -400,7 +400,7 @@ const char *_mcl_core_header_files[] = {
 #define MCL_CORE_SOURCE_FILE_COUNT 4
 const char *_mcl_core_source_files[] = {
     // "dep/tinycc/lib/va_list.c", // TODO -- this
-    // "src/midge_error_handling.c",
+    // "src/mc_error_handling.c",
     "src/core/core_definitions.c",
     "src/core/c_parser_lexer.c",
     "src/core/mc_code_transcription.c",
@@ -502,7 +502,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   // exit(8);
 
   // Begin error handling for the temp source loading
-  void (*init_error_handling)(void) = tcci_get_symbol(itp, "initialize_midge_error_handling");
+  void (*init_error_handling)(void) = tcci_get_symbol(itp, "initialize_mc_error_handling");
   init_error_handling();
 
   unsigned int temp_source_error_thread_index;
@@ -552,7 +552,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 
     const char *initial_compile_list[] = {
         "dep/tinycc/lib/va_list.c", // TODO -- this
-        "src/midge_error_handling.c",
+        "src/mc_error_handling.c",
         "src/core/mc_app_itp_data.c",
         "src/mc_str.c",
     };
@@ -600,7 +600,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   register_midge_thread_conclusion(temp_source_error_thread_index);
 
   // -- Switch error handling to be monitored by the mc loaded source interpreter
-  init_error_handling = tcci_get_symbol(midge_itp, "initialize_midge_error_handling");
+  init_error_handling = tcci_get_symbol(midge_itp, "initialize_mc_error_handling");
   init_error_handling();
   register_midge_thread_creation = tcci_get_symbol(midge_itp, "register_midge_thread_creation");
 

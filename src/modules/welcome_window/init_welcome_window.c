@@ -9,7 +9,7 @@
 
 #include "core/app_modules.h"
 #include "core/midge_app.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 #include "render/render_common.h"
 
 #include "modules/mc_io/mc_projects.h"

@@ -6,7 +6,7 @@
 // #include <sys/stat.h>
 #include <unistd.h>
 
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "core/c_parser_lexer.h"
 #include "core/mc_code_transcription.h"

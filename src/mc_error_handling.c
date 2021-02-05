@@ -1,4 +1,4 @@
-/* midge_error_handling */
+/* mc_error_handling */
 
 #include <pthread.h>
 #include <signal.h>
@@ -8,7 +8,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 char *MIDGE_ERROR_TAG[MIDGE_ERROR_TAG_MAX_SIZE];
 unsigned int MIDGE_ERROR_TAG_STR_LEN[MIDGE_ERROR_TAG_MAX_SIZE];
@@ -429,7 +429,7 @@ static void handler(int sig)
   exit(0);
 }
 
-void initialize_midge_error_handling()
+void initialize_mc_error_handling()
 {
   signal(SIGSEGV, handler); // register our handler
 

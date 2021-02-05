@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "m_threads.h"
 

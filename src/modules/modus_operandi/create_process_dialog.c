@@ -10,7 +10,7 @@
 
 #include "core/app_modules.h"
 #include "core/midge_app.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 #include "render/render_common.h"
 
 #include "modules/ui_elements/ui_elements.h"

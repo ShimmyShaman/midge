@@ -50,16 +50,26 @@ typedef struct mct_expression_type_info {
 } mct_expression_type_info;
 
 typedef struct mct_function_transcription_options {
-
+  // Setting to true enables midge to keep track of the call stack (which reports on illegal memory access and such)
   bool report_function_entry_exit_to_stack;
+  // NOT USED
   bool report_simple_args_to_error_stack;
+  // Tags on function entry/exit - another form of 'stack tracing' if you also use tags to track where in the function
+  // code gets to before error
   bool tag_on_function_entry, tag_on_function_exit;
 
+  // If set, enables variable value reporting every time a variable value is set (or used?). NULL otherwise.
   mct_function_variable_report_index *report_variable_values;
 
 } mct_function_transcription_options;
 
 int mct_transcribe_file_ast(mc_syntax_node *file_root, mct_function_transcription_options *options, char **generated);
+
+/*
+ * Transcribes an isolated code block ast and appends it to the given mc_str.
+ */
+int mct_transcribe_isolated_code_block(mc_syntax_node *code_block_ast, const char *function_name,
+                                       mct_function_transcription_options *options, mc_str *str);
 // int mct_transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function_ast,
 //                                   mct_function_transcription_options *options, char **mc_transcription);
 // int transcribe_enumeration_to_mc(enumeration_info *enum_info, mc_syntax_node *enumeration_ast, char

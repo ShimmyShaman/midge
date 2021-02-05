@@ -4,11 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/c_parser_lexer.h"
 #include "core/core_definitions.h"
+#include "core/mc_code_transcription.h"
 #include "core/mc_source.h"
 #include "core/midge_app.h"
 #include "mc_str.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "modules/mc_io/mc_file.h"
 #include "modules/mc_io/mc_info_transcription.h"
@@ -175,7 +177,7 @@ int _mc_transcribe_function_declaration(mc_str *str, function_info *function)
   return 0;
 }
 
-int _mc_transcribe_function_info(mc_str *str, function_info *function)
+int _mc_transcribe_function_info(mc_str *str, function_info *function, bool use_midge_c_instead)
 {
   // printf("_mc_transcribe_function_info: function:%p (%s) code:%p\n", function, function ? function->name : "(null)",
   //        function ? function->code : NULL);
@@ -183,7 +185,20 @@ int _mc_transcribe_function_info(mc_str *str, function_info *function)
   MCcall(_mc_transcribe_function_header(str, function));
 
   MCcall(append_char_to_mc_str(str, ' '));
-  MCcall(append_to_mc_str(str, function->code));
+  if (use_midge_c_instead) {
+    mc_syntax_node *code_ast;
+    MCcall(mcs_parse_code_block_to_syntax_tree(function->code, &code_ast));
+
+    mct_function_transcription_options opt = {};
+    opt.report_function_entry_exit_to_stack = true;
+
+    MCcall(mct_transcribe_isolated_code_block(code_ast, function->name, &opt, str));
+
+    MCcall(release_syntax_node(code_ast));
+  }
+  else {
+    MCcall(append_to_mc_str(str, function->code));
+  }
   MCcall(append_char_to_mc_str(str, '\n'));
 
   return 0;
@@ -217,7 +232,7 @@ int _mc_transcribe_segment_list(mc_str *str, mc_source_file_code_segment_list *s
       MCcall(append_char_to_mc_str(str, '\n'));
       break;
     case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
-      MCcall(_mc_transcribe_function_info(str, seg->function));
+      MCcall(_mc_transcribe_function_info(str, seg->function, false));
       break;
     case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:
       MCcall(_mc_transcribe_function_declaration(str, seg->function));
@@ -304,7 +319,7 @@ int mc_generate_c_source(mc_source_file_info *source_file, mc_str *str)
   return 0;
 }
 
-int mc_transcribe_specific_function_source(mc_str *str, function_info *function)
+int mc_transcribe_specific_function_source(mc_str *str, function_info *function, bool use_midge_c_instead)
 {
   int a, b, c;
 
@@ -343,7 +358,7 @@ int mc_transcribe_specific_function_source(mc_str *str, function_info *function)
       break;
     case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION: {
       if (!strcmp(seg->function->name, function->name)) {
-        MCcall(_mc_transcribe_function_info(str, function));
+        MCcall(_mc_transcribe_function_info(str, function, use_midge_c_instead));
       }
       else {
         // Transcribe the declaration

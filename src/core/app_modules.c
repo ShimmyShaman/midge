@@ -15,7 +15,7 @@
 #include "core/midge_app.h"
 #include "m_threads.h"
 #include "mc_str.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "core/app_modules.h"
 

@@ -11,7 +11,7 @@
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
 #include "mc_str.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "modules/modus_operandi/mo_serialization.h"
 
@@ -282,7 +282,7 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, mo_operational
   MCcall(append_to_mc_str(fc, "#include <unistd.h>\n"));
   MCcall(append_to_mc_str(fc, "#include <pthread.h>\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
-  MCcall(append_to_mc_str(fc, "#include \"midge_error_handling.h\"\n"));
+  MCcall(append_to_mc_str(fc, "#include \"mc_error_handling.h\"\n"));
   MCcall(append_to_mc_str(fc, "#include \"core/midge_app.h\"\n"));
   MCcall(append_char_to_mc_str(fc, '\n'));
   MCcall(append_to_mc_str(fc, "#include \"modules/modus_operandi/mo_types.h\"\n"));

@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "core/midge_app.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 #include "render/render_common.h"
 
 #include "modules/collections/hash_table.h"

@@ -1,7 +1,7 @@
-/* midge_error_handling */
+/* mc_error_handling */
 
-#ifndef MIDGE_ERROR_HANDLING_H
-#define MIDGE_ERROR_HANDLING_H
+#ifndef MC_ERROR_HANDLING_H
+#define MC_ERROR_HANDLING_H
 
 #ifdef MC_TEMP_SOURCE_LOAD
 #define MCcall(function)                                                                   \
@@ -66,6 +66,6 @@ void register_midge_thread_conclusion(unsigned int midge_error_thread_index);
 void midge_error_print_thread_stack_trace();
 void midge_error_print_thread_info();
 void midge_error_set_thread_name(const char *name);
-void initialize_midge_error_handling();
+void initialize_mc_error_handling();
 
-#endif // MIDGE_ERROR_HANDLING_H
+#endif // MC_ERROR_HANDLING_H

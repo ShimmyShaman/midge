@@ -7,7 +7,7 @@
 
 #include "core/core_definitions.h"
 #include "env/environment_definitions.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 #include "render/render_common.h"
 #include "ui/ui_definitions.h"
 

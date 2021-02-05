@@ -194,8 +194,8 @@ int _midge_run()
 
   //   // Load non-MC App source
   //   printf("<AppSourceLoading>\n");
-  // clint->loadFile("src/midge_error_handling.h");
-  // mcc_interpret_file_on_disk("src/midge_error_handling.h");
+  // clint->loadFile("src/mc_error_handling.h");
+  // mcc_interpret_file_on_disk("src/mc_error_handling.h");
   //   clint->loadFile("src/core/core_source_loader.c");
 
   //   struct timespec library_base_complete_time;
@@ -204,7 +204,7 @@ int _midge_run()
   //          library_base_complete_time.tv_sec - app_begin_time.tv_sec +
   //              1e-9 * (library_base_complete_time.tv_nsec - app_begin_time.tv_nsec));
 
-  if (mcc_interpret_file_on_disk("src/midge_error_handling.h"))
+  if (mcc_interpret_file_on_disk("src/mc_error_handling.h"))
     goto error_exit;
   if (mcc_interpret_file_on_disk("src/core/core_source_loader.c"))
     goto error_exit;
@@ -215,10 +215,10 @@ int _midge_run()
          error_handling_read_time.tv_sec - app_begin_time.tv_sec +
              1e-9 * (error_handling_read_time.tv_nsec - app_begin_time.tv_nsec));
 
-  void (*vfptr)(void) = mcc_get_global_symbol("initialize_midge_error_handling");
+  void (*vfptr)(void) = mcc_get_global_symbol("initialize_mc_error_handling");
   //   // Error Handling
   //   clint->process("{\n"
-  //                  "  initialize_midge_error_handling();\n"
+  //                  "  initialize_mc_error_handling();\n"
   //                  "  unsigned int dummy_uint;\n"
   //                  "  int dummy_int;\n"
   //                  "  register_midge_thread_creation(&dummy_uint, \"_midge_run\", \"midge.h\", 131,

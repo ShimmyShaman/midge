@@ -10,7 +10,7 @@
 
 #include "core/mc_source.h"
 #include "core/midge_app.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "modules/mc_io/mc_file.h"
 #include "modules/mc_io/mc_info_transcription.h"
@@ -665,7 +665,7 @@ int mc_redefine_function(function_info *function)
   mc_str *str;
   MCcall(init_mc_str(&str));
 
-  MCcall(mc_transcribe_specific_function_source(str, function));
+  MCcall(mc_transcribe_specific_function_source(str, function, true));
 
   // printf("mc_redefine_function-gen:\n%s||\n", str->text);
 
@@ -697,7 +697,7 @@ int mc_redefine_function_provisionally(function_info *function, const char *code
   function->code = (char *)code;
 
   // Call
-  MCcall(mc_transcribe_specific_function_source(str, function));
+  MCcall(mc_transcribe_specific_function_source(str, function, true));
 
   char tempfn[128];
   sprintf(tempfn, "%s::%s", function->source->filepath, function->name);

@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "core/c_parser_lexer.h"
 

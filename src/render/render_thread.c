@@ -14,7 +14,7 @@
 #include "core/core_definitions.h"
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 #include "render/mc_vk_utils.h"
 #include "render/render_thread.h"
 

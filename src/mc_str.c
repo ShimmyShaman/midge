@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "mc_str.h"
 

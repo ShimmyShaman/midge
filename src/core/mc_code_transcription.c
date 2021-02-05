@@ -6,7 +6,7 @@
 
 #include <ctype.h>
 
-#include "midge_error_handling.h"
+#include "mc_error_handling.h"
 
 #include "core/mc_code_transcription.h"
 
@@ -3576,7 +3576,7 @@ int mct_transcribe_file_ast(mc_syntax_node *file_root, mct_function_transcriptio
   ts.options = options;
   ts.transcription_root = file_root;
   ts.indent = 0;
-  init_mc_str(&ts.str);
+  MCcall(init_mc_str(&ts.str));
 
   // -- scope
   mct_transcription_scope scope[MCT_TS_MAX_SCOPE_DEPTH];
@@ -3589,11 +3589,41 @@ int mct_transcribe_file_ast(mc_syntax_node *file_root, mct_function_transcriptio
   ts.scope[ts.scope_index].variable_count = 0;
 
   // Transcribe
-  append_to_mc_str(ts.str, "#include \"midge_error_handling.h\"\n\n");
+  if (options->report_function_entry_exit_to_stack || options->tag_on_function_entry || options->tag_on_function_exit ||
+      options->report_simple_args_to_error_stack) {
+    MCcall(append_to_mc_str(ts.str, "#include \"mc_error_handling.h\"\n\n"));
+  }
   MCcall(mct_transcribe_file_root_children(&ts, file_root->children));
   *generated = ts.str->text;
 
   release_mc_str(ts.str, false);
+
+  return 0;
+}
+
+int mct_transcribe_isolated_code_block(mc_syntax_node *code_block_ast, const char *function_name,
+                                       mct_function_transcription_options *options, mc_str *str)
+{
+  mct_transcription_state ts = {};
+  ts.function_name = function_name;
+  ts.indent = 0;
+  ts.recent_function_exit_handled = false;
+  ts.options = options;
+  ts.transcription_root = code_block_ast;
+  ts.str = str;
+
+  // -- scope
+  mct_transcription_scope scope[MCT_TS_MAX_SCOPE_DEPTH];
+  mct_transcription_scope_variable scope_variables[MCT_TS_MAX_SCOPE_DEPTH * MCT_TS_MAX_VARIABLES];
+  for (int a = 0; a < MCT_TS_MAX_SCOPE_DEPTH; ++a) {
+    scope[a].variables = &scope_variables[a * MCT_TS_MAX_VARIABLES];
+  }
+  ts.scope = &scope[0];
+  ts.scope_index = 0;
+  ts.scope[ts.scope_index].variable_count = 0;
+
+  // Do
+  MCcall(mct_transcribe_code_block(&ts, code_block_ast, true));
 
   return 0;
 }
