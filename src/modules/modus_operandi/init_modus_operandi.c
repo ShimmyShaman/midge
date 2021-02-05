@@ -15,11 +15,13 @@ int init_modus_operandi(mc_node *app_root)
   MCcall(mcs_interpret_file("src/modules/modus_operandi/create_process_dialog.h"));
   MCcall(mcs_interpret_file("src/modules/modus_operandi/process_step_dialog.h"));
   MCcall(mcs_interpret_file("src/modules/modus_operandi/mo_serialization.h"));
+  MCcall(mcs_interpret_file("src/modules/modus_operandi/mo_context_viewer.h"));
 
   MCcall(mcs_interpret_file("src/modules/modus_operandi/mo_util.c"));
   MCcall(mcs_interpret_file("src/modules/modus_operandi/create_process_dialog.c"));
   MCcall(mcs_interpret_file("src/modules/modus_operandi/process_step_dialog.c"));
   MCcall(mcs_interpret_file("src/modules/modus_operandi/mo_serialization.c"));
+  MCcall(mcs_interpret_file("src/modules/modus_operandi/mo_context_viewer.c"));
   MCcall(mcs_interpret_file("src/modules/modus_operandi/modus_operandi.c"));
 
   mc_app_itp_data *itp_data;

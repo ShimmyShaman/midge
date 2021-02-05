@@ -17,6 +17,7 @@
 #include "modules/ui_elements/ui_elements.h"
 
 #include "modules/modus_operandi/create_process_dialog.h"
+#include "modules/modus_operandi/mo_context_viewer.h"
 #include "modules/modus_operandi/mo_serialization.h"
 #include "modules/modus_operandi/mo_types.h"
 #include "modules/modus_operandi/mo_util.h"
@@ -49,6 +50,8 @@ typedef struct modus_operandi_data {
     unsigned int capacity, count;
     mcu_button **items;
   } options_buttons;
+
+  mc_node *context_viewer_node;
 
 } modus_operandi_data;
 
@@ -876,6 +879,17 @@ void _mc_mo_create_process_clicked(mci_input_event *input_event, mcu_button *but
   }
 }
 
+void _mc_mo_toggle_context_viewer_clicked(mci_input_event *input_event, mcu_button *button)
+{
+  if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
+    modus_operandi_data *mod = (modus_operandi_data *)button->tag;
+    
+    mc_mo_toggle_context_viewer_visibility(mod->context_viewer_node);
+
+    input_event->handled = true;
+  }
+}
+
 void _mc_mo_operational_process_selected(mci_input_event *input_event, mcu_button *button)
 {
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
@@ -1159,7 +1173,6 @@ int mc_mo_init_ui(mc_node *module_node)
 
   // Add process button
   MCcall(mcu_init_button(module_node, &button));
-
   if (button->node->name) {
     free(button->node->name);
     button->node->name = NULL;
@@ -1169,18 +1182,40 @@ int mc_mo_init_ui(mc_node *module_node)
   button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
   button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
   button->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
-  button->node->layout->max_width = 32U;
+  button->node->layout->max_width = 16U;
+  button->node->layout->max_height = 16U;
   button->tag = mod;
 
   button->left_click = (void *)&_mc_mo_create_process_clicked;
 
   MCcall(set_mc_str(button->str, "+"));
 
+  // Show Context Viewer button
+  MCcall(mcu_init_button(module_node, &button));
+  if (button->node->name) {
+    free(button->node->name);
+    button->node->name = NULL;
+  }
+  button->node->name = strdup("mo-show-context-viewer-button");
+
+  button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+  button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+  button->node->layout->padding = (mc_paddingf){6, 2, 6, 2};
+  button->node->layout->max_width = 18U;
+  button->node->layout->max_height = 18U;
+  button->tag = mod;
+
+  button->left_click = (void *)&_mc_mo_toggle_context_viewer_clicked;
+
+  MCcall(set_mc_str(button->str, "oo"));
+
   // // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   // while (!mod->render_target.image) {
   //   // puts("wait");
   //   usleep(100);
   // }
+
+  MCcall(init_mo_context_viewer(&mod->process_stack, &mod->context_viewer_node));
 
   return 0;
 }

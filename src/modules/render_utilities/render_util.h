@@ -4,6 +4,6 @@
 #include "core/core_definitions.h"
 #include "render/render_common.h"
 
-int mc_render_border(image_render_details *irq, mc_node *node, unsigned int thickness, render_color color);
+int mcr_render_border(image_render_details *irq, mc_node *node, unsigned int thickness, render_color color);
 
 #endif // RENDER_UTIL_H

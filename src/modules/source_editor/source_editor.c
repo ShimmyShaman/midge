@@ -155,7 +155,7 @@ void _mc_se_render_present(image_render_details *image_render_queue, mc_node *no
                                          (unsigned int)(node->layout->__bounds.y + se->border.size),
                                          se->tab_index.width, se->tab_index.height, se->tab_index.image);
 
-  mc_render_border(image_render_queue, node, se->border.size, se->border.color);
+  mcr_render_border(image_render_queue, node, se->border.size, se->border.color);
 }
 
 void _mc_se_handle_input(mc_node *node, mci_input_event *input_event)
