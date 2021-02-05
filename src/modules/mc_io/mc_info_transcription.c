@@ -9,8 +9,8 @@
 #include "core/mc_code_transcription.h"
 #include "core/mc_source.h"
 #include "core/midge_app.h"
-#include "mc_str.h"
 #include "mc_error_handling.h"
+#include "mc_str.h"
 
 #include "modules/mc_io/mc_file.h"
 #include "modules/mc_io/mc_info_transcription.h"
@@ -177,6 +177,11 @@ int _mc_transcribe_function_declaration(mc_str *str, function_info *function)
   return 0;
 }
 
+/* Transcribes the function info in code.
+ * @use_midge_c_instead: A flag indicating whether to use mct_transcription on the code block (enabling stack tracing
+ * and other options)
+ * TODO -- this should probably be replaced by a nullable mct_function_transcription_options argument in the future.
+ */
 int _mc_transcribe_function_info(mc_str *str, function_info *function, bool use_midge_c_instead)
 {
   // printf("_mc_transcribe_function_info: function:%p (%s) code:%p\n", function, function ? function->name : "(null)",
@@ -343,6 +348,11 @@ int mc_transcribe_specific_function_source(mc_str *str, function_info *function,
   // Generate the preamble
   MCcall(append_to_mc_strf(str, "/* %s.c */\n", filename));
   MCcall(append_char_to_mc_str(str, '\n'));
+
+  if (use_midge_c_instead) {
+    // Add mc_error_handling header
+    MCcall(append_to_mc_str(str, "#include \"mc_error_handling.h\"\n\n"));
+  }
 
   // Transcribe the segment list
   // -- except declare all functions without definition but for the specified function
