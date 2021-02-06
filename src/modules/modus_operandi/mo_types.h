@@ -2,6 +2,7 @@
 #define MO_TYPES_H
 
 #include "core/core_definitions.h"
+#include "mc_str.h"
 
 #include "modules/collections/hash_table.h"
 
@@ -42,6 +43,22 @@ typedef enum mo_op_step_context_parameter_presence_type {
   /* Indicates the context argument may or may not exist, but a process to obtain it is configured */
   MO_STEP_CTXP_PRESENCE_OBTAIN_AVAILABLE,
 } mo_op_step_context_parameter_presence_type;
+
+typedef enum mc_mo_context_data_value_type {
+  MC_MO_CONTEXT_DATA_VALUE_NULL = 0,
+  MC_MO_CONTEXT_DATA_VALUE_MC_STR,
+  MC_MO_CONTEXT_DATA_VALUE_PTR,
+} mc_mo_context_data_value_type;
+
+typedef struct mc_mo_context_data {
+  const char *key;
+
+  mc_mo_context_data_value_type value_type;
+  union {
+    mc_str str;
+    void *value;
+  };
+} mc_mo_context_data;
 
 typedef struct mo_op_step_context_arg {
   mo_op_step_context_arg_type type;
@@ -101,7 +118,6 @@ typedef struct mo_operational_step {
 } mo_operational_step;
 
 struct mc_mo_process_stack;
-
 typedef struct mo_operational_process {
   struct mc_mo_process_stack *stack;
 

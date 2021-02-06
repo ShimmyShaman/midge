@@ -10,10 +10,11 @@
 #include "core/mc_source.h"
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
-#include "mc_str.h"
 #include "mc_error_handling.h"
+#include "mc_str.h"
 
 #include "modules/modus_operandi/mo_serialization.h"
+#include "modules/modus_operandi/mo_util.h"
 
 #define MC_MO_EOL_BUF_SIZE 256
 
@@ -752,12 +753,9 @@ int mc_mo_parse_context_file(hash_table_t *context, const char *serialization)
     }
 
     // Set the context property
-    mc_str *str = (mc_str *)hash_table_get(prop_name, context);
-    if (!str) {
-      MCcall(init_mc_str(&str));
-      hash_table_set(prop_name, (void *)str, context);
-    }
-    MCcall(set_mc_str(str, buf));
+    puts("A");
+    MCcall(mc_mo_set_specific_context_cstr(context, prop_name, buf));
+    puts("B");
   }
 
   return 0;

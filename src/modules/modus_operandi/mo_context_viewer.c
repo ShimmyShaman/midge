@@ -11,10 +11,24 @@
 #include "modules/render_utilities/render_util.h"
 #include "modules/ui_elements/ui_elements.h"
 
+typedef struct _mc_mo_cv_context_row {
+
+  char *key;
+  char *value;
+
+  mcu_panel *panel;
+  mcu_textblock *key_textblock, *value_textblock;
+} _mc_mo_cv_context_row;
+
 typedef struct mc_mo_context_viewer_data {
   mc_node *node;
 
   mc_mo_process_stack *process_stack;
+
+  struct {
+    int size;
+    _mc_mo_cv_context_row *items;
+  } rows;
 
   render_color background_color;
 } mc_mo_context_viewer_data;
@@ -69,15 +83,48 @@ void _mc_mo_cv_render_present(image_render_details *irq, mc_node *node)
   // }
 }
 
+int _mc_mo_refresh_context_viewer_display(mc_mo_context_viewer_data *cv)
+{
+  puts("_mc_mo_refresh_context_viewer_display");
+  int a;
+  _mc_mo_cv_context_row *row;
+  hash_table_entry_t *cte, *end;
+  mc_mo_context_data *ctx;
+
+  // Search through projects
+  cte = cv->process_stack->project_contexts.entries;
+  end = cv->process_stack->project_contexts.entries + cv->process_stack->project_contexts.capacity;
+
+  for (; cte < end; ++cte) {
+    if (!cte->filled)
+      continue;
+
+    ctx = (mc_mo_context_data *)cte->value;
+
+    printf("--'%s':", ctx->key);
+    switch (ctx->value_type) {
+    case MC_MO_CONTEXT_DATA_VALUE_MC_STR:
+      printf("'%s'\n", ((mc_str *)ctx->value)->text);
+      break;
+    default:
+      printf("[not-mc-str]\n");
+    }
+  }
+  puts("== END ==");
+
+  return 0;
+}
+
+////////////////////////////////////////////////////////////
+////////////////      Input Handling      //////////////////
+////////////////////////////////////////////////////////////
+
 void _mc_mo_cv_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  input_event->handled = true;
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
-    input_event->handled = true;
-    mca_focus_node(node);
-
-    input_event->handled = true;
+    mc_mo_context_viewer_data *cv = (mc_mo_context_viewer_data *)node->data;
   }
+  input_event->handled = true;
 }
 
 void _mc_mo_cv_cancel_clicked(mci_input_event *input_event, mcu_button *button)
@@ -89,7 +136,11 @@ void _mc_mo_cv_cancel_clicked(mci_input_event *input_event, mcu_button *button)
 }
 
 ////////////////////////////////////////////////////////////
+/////
+////////////////////////////////////////////////////////////
 ////////////////      Initialization      //////////////////
+////////////////////////////////////////////////////////////
+///////////      Initialization      //////////////////
 ////////////////////////////////////////////////////////////
 
 int _mc_mo_cv_init_data(mc_node *module_node, mc_mo_process_stack *process_stack)
@@ -133,98 +184,50 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
   int a, b;
   // char buf[64];
   mca_node_layout *layout;
-  // mcu_panel *panel;
+  mcu_panel *panel;
   mcu_button *button;
   // mcu_textbox *textbox;
-  // mcu_textblock *textblock;
+  mcu_textblock *textblock;
   // mcu_dropdown *dropdown;
   // mc_mo_cv_step_data *cell;
 
-  // // Panel
-  // MCcall(mcu_init_panel(module_node, &cv->panel));
+  // Rows
+  cv->rows.size = 16;
+  cv->rows.items = (_mc_mo_cv_context_row *)malloc(sizeof(_mc_mo_cv_context_row) * cv->rows.size);
+  for (_mc_mo_cv_context_row *row = cv->rows.items; row < cv->rows.items + cv->rows.size; ++row) {
+    row->key = NULL;
+    row->value = NULL;
 
-  // layout = cv->panel->node->layout;
-  // layout->padding = (mc_paddingf){60, 40, 60, 40};
-  // // TODO -- set up extents override so the dialog can adjust to the size of the message
-  // // layout->max_width = 520;
-  // // layout->max_height = 360;
+    MCcall(mcu_init_panel(module_node, &panel));
+    row->panel = panel;
 
-  // cv->panel->background_color = (render_color){0.28f, 0.28f, 0.21f, 1.f};
+    panel->background_color = COLOR_DARK_SLATE_GRAY;
 
-  // // Cells
-  // for (a = 0; a < cv->cells.size; ++a) {
-  //   cell = &cv->cells.ary[a];
+    layout = panel->node->layout;
+    layout->visible = false;
+    layout->padding = (mc_paddingf){2, 32 + 31 * a, 2, 2};
+    layout->preferred_height = 30;
+    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
-  //   cell->type = MO_STEP_NULL;
+    MCcall(mcu_init_textblock(panel->node, &textblock));
+    row->key_textblock = textblock;
 
-  //   MCcall(mcu_init_panel(cv->panel->node, &cell->panel));
-  //   panel = cell->panel;
+    layout = textblock->node->layout;
+    layout->preferred_width = 180;
+    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+    layout->padding = (mc_paddingf){1, 1, 1, 1};
 
-  //   layout = panel->node->layout;
-  //   layout->visible = false;
-  //   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
-  //   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+    MCcall(mcu_init_textblock(panel->node, &textblock));
+    row->value_textblock = textblock;
 
-  //   MCcall(mcu_init_dropdown(panel->node, &cell->dropdown));
-  //   dropdown = cell->dropdown;
-
-  //   dropdown->tag = cell;
-  //   dropdown->selection = (void *)&_mc_mo_cv_cell_dropdown_selection;
-
-  //   layout = dropdown->node->layout;
-  //   layout->padding = (mc_paddingf){4, 4, 4, 4};
-  //   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-  //   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-
-  //   cell->textblocks = (mcu_textblock **)malloc(sizeof(mcu_textblock *) * MO_cv_CELL_TEXTBLOCK_COUNT);
-  //   for (b = 0; b < MO_cv_CELL_TEXTBLOCK_COUNT; ++b) {
-  //     MCcall(mcu_init_textblock(panel->node, &textblock));
-  //     cell->textblocks[b] = textblock;
-
-  //     textblock->background_color.a = 0.f;
-
-  //     layout = textblock->node->layout;
-  //     layout->padding = (mc_paddingf){4, 4, 4, 4};
-  //     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-  //     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-  //   }
-
-  //   MCcall(mcu_init_textbox(panel->node, &cell->textbox));
-  //   textbox = cell->textbox;
-
-  //   layout = textbox->node->layout;
-  //   layout->padding = (mc_paddingf){4, 4, 4, 4};
-  //   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-  //   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-
-  //   MCcall(mcu_init_button(panel->node, &cell->delegate_button));
-  //   button = cell->delegate_button;
-
-  //   layout = button->node->layout;
-  //   layout->preferred_width = 60;
-  //   layout->preferred_height = 16;
-  //   layout->padding = (mc_paddingf){4, 4, 4, 0};
-  //   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
-  //   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-
-  //   MCcall(set_mc_str(button->str, "obtain->"));
-  //   button->tag = cell;
-  //   button->left_click = (void *)&_mc_mo_cv_cell_delegate_clicked;
-
-  //   MCcall(mcu_init_button(panel->node, &cell->continue_button));
-  //   button = cell->continue_button;
-
-  //   layout = button->node->layout;
-  //   layout->preferred_width = 16;
-  //   layout->preferred_height = 16;
-  //   layout->padding = (mc_paddingf){4, 4, 4, 0};
-  //   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
-  //   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
-
-  //   MCcall(set_mc_str(button->str, "+"));
-  //   button->tag = cell;
-  //   button->left_click = (void *)&_mc_mo_cv_cell_continue_clicked;
-  // }
+    layout = textblock->node->layout;
+    layout->preferred_width = 180;
+    layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+    layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
+    layout->padding = (mc_paddingf){1, 1, 1, 1};
+  }
 
   // Exit Button
   MCcall(mcu_init_button(cv->node, &button));
@@ -250,6 +253,8 @@ int mc_mo_toggle_context_viewer_visibility(mc_node *node)
 
   node->layout->visible = !node->layout->visible;
 
+  MCcall(_mc_mo_refresh_context_viewer_display((mc_mo_context_viewer_data *)node->data));
+
   return 0;
 }
 
@@ -269,7 +274,7 @@ int init_mo_context_viewer(mc_mo_process_stack *process_stack, mc_node **p_conte
   MCcall(mca_init_node_layout(&node->layout));
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
-  node->layout->max_width = 320;
+  node->layout->max_width = 360;
   node->layout->max_height = 480;
 
   node->layout->visible = false;
