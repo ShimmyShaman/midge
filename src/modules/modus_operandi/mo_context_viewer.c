@@ -13,9 +13,6 @@
 
 typedef struct _mc_mo_cv_context_row {
 
-  char *key;
-  char *value;
-
   mcu_panel *panel;
   mcu_textblock *key_textblock, *value_textblock;
 } _mc_mo_cv_context_row;
@@ -83,34 +80,74 @@ void _mc_mo_cv_render_present(image_render_details *irq, mc_node *node)
   // }
 }
 
+int _mc_mo_cv_set_context_row(mc_mo_context_viewer_data *cv, _mc_mo_cv_context_row **p_row, const char *key,
+                              const char *value)
+{
+  _mc_mo_cv_context_row *row = *p_row;
+
+  // Show
+  row->panel->node->layout->visible = true;
+
+  // Set
+  MCcall(mc_set_str(row->key_textblock->str, key));
+  MCcall(mca_set_node_requires_rerender(row->key_textblock->node));
+
+  MCcall(mc_set_str(row->value_textblock->str, value));
+  MCcall(mca_set_node_requires_rerender(row->value_textblock->node));
+
+  *p_row = row + 1;
+
+  return 0;
+}
+
 int _mc_mo_refresh_context_viewer_display(mc_mo_context_viewer_data *cv)
 {
   puts("_mc_mo_refresh_context_viewer_display");
-  int a;
-  _mc_mo_cv_context_row *row;
-  hash_table_entry_t *cte, *end;
+  _mc_mo_cv_context_row *row = cv->rows.items;
+
+  hash_table_entry_t *pje, *pjn, *cte, *ctn;
+  hash_table_t *pjc;
   mc_mo_context_data *ctx;
 
   // Search through projects
-  cte = cv->process_stack->project_contexts.entries;
-  end = cv->process_stack->project_contexts.entries + cv->process_stack->project_contexts.capacity;
+  pje = cv->process_stack->project_contexts.entries;
+  pjn = cv->process_stack->project_contexts.entries + cv->process_stack->project_contexts.capacity;
 
-  for (; cte < end; ++cte) {
-    if (!cte->filled)
+  for (; pje < pjn; ++pje) {
+    if (!pje->filled)
       continue;
 
-    ctx = (mc_mo_context_data *)cte->value;
+    pjc = (hash_table_t *)pje->value;
 
-    printf("--'%s':", ctx->key);
-    switch (ctx->value_type) {
-    case MC_MO_CONTEXT_DATA_VALUE_MC_STR:
-      printf("'%s'\n", ((mc_str *)ctx->value)->text);
-      break;
-    default:
-      printf("[not-mc-str]\n");
+    cte = pjc->entries;
+    ctn = pjc->entries + pjc->capacity;
+    for (; cte < ctn; ++cte) {
+      if (!cte->filled)
+        continue;
+
+      ctx = (mc_mo_context_data *)cte->value;
+
+      // printf("--'%s':", ctx->key);
+      switch (ctx->value_type) {
+      case MC_MO_CONTEXT_DATA_VALUE_MC_STR:
+        MCcall(_mc_mo_cv_set_context_row(cv, &row, ctx->key, ctx->str.text));
+        break;
+      default:
+        MCcall(_mc_mo_cv_set_context_row(cv, &row, ctx->key, "{data}"));
+        break;
+      }
+
+      if (row >= cv->rows.items + cv->rows.size)
+        goto end_fill_rows;
     }
   }
   puts("== END ==");
+
+end_fill_rows:
+  // Hide any remaining rows
+  for (; row < cv->rows.items + cv->rows.size; ++row) {
+    row->panel->node->layout->visible = false;
+  }
 
   return 0;
 }
@@ -136,11 +173,7 @@ void _mc_mo_cv_cancel_clicked(mci_input_event *input_event, mcu_button *button)
 }
 
 ////////////////////////////////////////////////////////////
-/////
-////////////////////////////////////////////////////////////
 ////////////////      Initialization      //////////////////
-////////////////////////////////////////////////////////////
-///////////      Initialization      //////////////////
 ////////////////////////////////////////////////////////////
 
 int _mc_mo_cv_init_data(mc_node *module_node, mc_mo_process_stack *process_stack)
@@ -190,13 +223,13 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
   mcu_textblock *textblock;
   // mcu_dropdown *dropdown;
   // mc_mo_cv_step_data *cell;
+  _mc_mo_cv_context_row *row;
 
   // Rows
   cv->rows.size = 16;
   cv->rows.items = (_mc_mo_cv_context_row *)malloc(sizeof(_mc_mo_cv_context_row) * cv->rows.size);
-  for (_mc_mo_cv_context_row *row = cv->rows.items; row < cv->rows.items + cv->rows.size; ++row) {
-    row->key = NULL;
-    row->value = NULL;
+  for (a = 0; a < cv->rows.size; ++a) {
+    row = cv->rows.items + a;
 
     MCcall(mcu_init_panel(module_node, &panel));
     row->panel = panel;
@@ -204,7 +237,7 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
     panel->background_color = COLOR_DARK_SLATE_GRAY;
 
     layout = panel->node->layout;
-    layout->visible = false;
+    // layout->visible = false;
     layout->padding = (mc_paddingf){2, 32 + 31 * a, 2, 2};
     layout->preferred_height = 30;
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
@@ -249,7 +282,7 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
 
 int mc_mo_toggle_context_viewer_visibility(mc_node *node)
 {
-  // mc_mo_context_viewer_data *cv = (mc_mo_context_viewer_data *)module_node->data;
+  mc_mo_context_viewer_data *cv = (mc_mo_context_viewer_data *)node->data;
 
   node->layout->visible = !node->layout->visible;
 
@@ -288,10 +321,6 @@ int init_mo_context_viewer(mc_mo_process_stack *process_stack, mc_node **p_conte
 
   MCcall(_mc_mo_cv_init_data(node, process_stack));
   MCcall(_mc_mo_cv_init_ui(node));
-
-  // MCcall(mca_register_event_handler(MC_APP_EVENT_create_process_dialog_REQUESTED,
-  // _mc_mo_create_process_dialog_requested,
-  //                                   node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_info->global_node, node));
   *p_context_viewer = node;

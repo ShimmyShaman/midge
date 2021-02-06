@@ -111,7 +111,7 @@ int mc_mo_set_specific_context_cstr(hash_table_t *context, const char *key, cons
 
   printf(".set-context:'%s':MC_STR='%s'\n", key, value);
   data->value_type = MC_MO_CONTEXT_DATA_VALUE_MC_STR;
-  printf("str: %u %u\n", data->str.alloc, data->str.len);
+  // printf("str: %u %u\n", data->str.alloc, data->str.len);
   MCcall(mc_set_str(&data->str, value));
 
   return 0;

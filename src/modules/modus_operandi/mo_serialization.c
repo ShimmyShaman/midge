@@ -750,7 +750,7 @@ int mc_mo_parse_context_file(hash_table_t *context, const char *serialization)
     MCcall(mc_mo_parse_past_empty_space(&c));
     // TODO -- allow this to handle end-of-file
     MCcall(_mc_mo_parse_property_line(prop_name, buf, true, &c));
-    printf("c:'%c'\n", *c);
+    // printf("c:'%c'\n", *c);
 
     if (strlen(prop_name) == 0) {
       MCerror(8572, "Property name should exist");
