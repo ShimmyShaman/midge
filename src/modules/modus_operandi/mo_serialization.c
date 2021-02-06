@@ -88,7 +88,7 @@ int mc_mo_parse_line(char *dest, const char **str, bool permit_end_of_file)
  * Error if end-of-file occurs or size limit equals or dest_prop_name exceeds 64 chars, or dest_value exceeds
  * MC_MO_EOL_BUF_SIZE.
  */
-int _mc_mo_parse_property_line(char *dest_prop_name, char *dest_value, const char **str)
+int _mc_mo_parse_property_line(char *dest_prop_name, char *dest_value, bool allow_end_of_file, const char **str)
 {
   mc_mo_parse_past_empty_space(str);
 
@@ -113,10 +113,12 @@ int _mc_mo_parse_property_line(char *dest_prop_name, char *dest_value, const cha
   strncpy(dest_prop_name, *str, c - *str);
   dest_prop_name[c - *str] = '\0';
 
-  // Property name
+  // Property value
   *str = ++c;
   while (*c != '\n') {
     if (*c == '\0') {
+      if (allow_end_of_file)
+        break;
       MCerror(6898, "Unexpected end-of-file or new-line");
     }
 
@@ -129,7 +131,7 @@ int _mc_mo_parse_property_line(char *dest_prop_name, char *dest_value, const cha
   strncpy(dest_value, *str, c - *str);
   dest_value[c - *str] = '\0';
 
-  *str = c + 1;
+  *str = c + (*c != '\0' ? 1 : 0);
   return 0;
 }
 
@@ -419,7 +421,7 @@ int _mc_mo_parse_serialized_parameter_step(mc_mo_process_stack *pstack, mo_opera
   MCcall(mc_mo_parse_past_empty_space(&s));
 
   // Name
-  MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+  MCcall(_mc_mo_parse_property_line(prop_name, prop_value, false, &s));
   if (strcmp(prop_name, "key")) {
     MCerror(3883, "process context parameters are to begin with key={$context-param-key$} instead:'%.20s...'", s);
   }
@@ -491,7 +493,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     MCcall(mc_mo_parse_past_empty_space(&s));
 
     while (*s != '}') {
-      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, false, &s));
 
       if (!strcmp(prop_name, "message")) {
         step->file_dialog.message = strdup(prop_value);
@@ -536,7 +538,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     MCcall(mc_mo_parse_past_empty_space(&s));
 
     while (*s != '}') {
-      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, false, &s));
 
       if (!strcmp(prop_name, "message")) {
         step->message_box_dialog.message = strdup(prop_value);
@@ -559,7 +561,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     MCcall(mc_mo_parse_past_empty_space(&s));
 
     while (*s != '}') {
-      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, false, &s));
 
       if (!strcmp(prop_name, "message")) {
         step->symbol_dialog.message = strdup(prop_value);
@@ -591,7 +593,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     MCcall(mc_mo_parse_past_empty_space(&s));
 
     while (*s != '}') {
-      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, false, &s));
 
       if (!strcmp(prop_name, "message")) {
         step->options_dialog.message = strdup(prop_value);
@@ -636,7 +638,7 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
     MCcall(mc_mo_parse_past_empty_space(&s));
 
     while (*s != '}') {
-      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, &s));
+      MCcall(_mc_mo_parse_property_line(prop_name, prop_value, false, &s));
 
       step->text_input_dialog.default_text.type = MO_STEP_CTXARG_CSTR;
       step->text_input_dialog.default_text.data = "";
@@ -746,16 +748,16 @@ int mc_mo_parse_context_file(hash_table_t *context, const char *serialization)
 
   while (*c != '\0') {
     MCcall(mc_mo_parse_past_empty_space(&c));
-    MCcall(_mc_mo_parse_property_line(prop_name, buf, &c));
+    // TODO -- allow this to handle end-of-file
+    MCcall(_mc_mo_parse_property_line(prop_name, buf, true, &c));
+    printf("c:'%c'\n", *c);
 
     if (strlen(prop_name) == 0) {
       MCerror(8572, "Property name should exist");
     }
 
     // Set the context property
-    puts("A");
     MCcall(mc_mo_set_specific_context_cstr(context, prop_name, buf));
-    puts("B");
   }
 
   return 0;
