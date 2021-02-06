@@ -240,7 +240,7 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "X"));
+  MCcall(mc_set_str(button->str, "X"));
   button->tag = cv;
   button->left_click = (void *)&_mc_mo_cv_cancel_clicked;
 

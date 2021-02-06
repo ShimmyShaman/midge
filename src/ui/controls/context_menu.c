@@ -155,7 +155,7 @@ void mcu_init_context_menu(mc_node *parent, mcu_context_menu **p_context_menu)
 void mcu_context_menu_clear_options(mcu_context_menu *context_menu)
 {
   for (int i = 0; i < context_menu->_buttons.count; ++i) {
-    set_mc_str(context_menu->_buttons.items[i]->str, "");
+    mc_set_str(context_menu->_buttons.items[i]->str, "");
     context_menu->_buttons.items[i]->node->layout->visible = false;
   }
   context_menu->_buttons.count = 0;
@@ -206,7 +206,7 @@ void mcu_context_menu_add_option(mcu_context_menu *menu, const char *option_text
     }
   }
 
-  set_mc_str(menu->_buttons.items[menu->_buttons.count]->str, option_text);
+  mc_set_str(menu->_buttons.items[menu->_buttons.count]->str, option_text);
   menu->_buttons.items[menu->_buttons.count]->node->layout->visible = true;
   ++menu->_buttons.count;
 }

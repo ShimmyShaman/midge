@@ -138,8 +138,8 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
   textblock->tag = NULL;
   textblock->left_click = NULL; // TODO -- remove this textblocks shouldn't be able to be clicked? they're not buttons
 
-  MCcall(init_mc_str(&textblock->str));
-  MCcall(set_mc_str(textblock->str, "textblock"));
+  MCcall(mc_alloc_str(&textblock->str));
+  MCcall(mc_set_str(textblock->str, "textblock"));
   textblock->font = NULL;
   textblock->font_color = COLOR_GHOST_WHITE;
 

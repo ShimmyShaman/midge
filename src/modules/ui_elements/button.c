@@ -151,8 +151,8 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   button->tag = NULL;
   button->left_click = NULL;
 
-  MCcall(init_mc_str(&button->str));
-  MCcall(set_mc_str(button->str, "button"));
+  MCcall(mc_alloc_str(&button->str));
+  MCcall(mc_set_str(button->str, "button"));
   button->font = NULL;
   button->font_color = COLOR_GHOST_WHITE;
 

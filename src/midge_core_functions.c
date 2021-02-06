@@ -2592,14 +2592,14 @@ int code_editor_update_v1(int argc, void **argv)
 int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
 {
   mc_str *code_from_code_editor;
-  MCcall(init_mc_str(&code_from_code_editor));
+  MCcall(mc_alloc_str(&code_from_code_editor));
 
   int s = 0;
   char *code = state->code.rtf->text;
   for (int i = 0;; ++i) {
     if (code[i] == '\0') {
       if (i - s > 0) {
-        append_to_mc_strn(code_from_code_editor, code + s, i - s);
+        mc_append_to_strn(code_from_code_editor, code + s, i - s);
       }
       break;
     }
@@ -2609,7 +2609,7 @@ int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
         continue;
       }
       if (i - s > 0) {
-        append_to_mc_strn(code_from_code_editor, code + s, i - s);
+        mc_append_to_strn(code_from_code_editor, code + s, i - s);
       }
 
       // Find the close bracket
@@ -2630,7 +2630,7 @@ int read_editor_text_into_cstr(mc_code_editor_state_v1 *state, char **output)
   // printf("read_editor_text_into_cstr:\n%s||\n", code_from_code_editor->text);
   *output = code_from_code_editor->text;
 
-  release_mc_str(code_from_code_editor, false);
+  mc_release_str(code_from_code_editor, false);
 
   return 0;
 }

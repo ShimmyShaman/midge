@@ -94,20 +94,20 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
     switch (input_event->button_code) {
     case KEY_CODE_BACKSPACE: {
       if (input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) {
-        restrict_mc_str(textbox->contents, 0);
+        mc_restrict_str(textbox->contents, 0);
         textbox->cursor.col = 0;
       }
       else if (textbox->cursor.col > 0) {
-        remove_from_mc_str(textbox->contents, textbox->cursor.col - 1, 1);
+        mc_remove_from_str(textbox->contents, textbox->cursor.col - 1, 1);
         --textbox->cursor.col;
       }
     } break;
     case KEY_CODE_DELETE: {
       if (input_event->input_state->ctrl_function & BUTTON_STATE_DOWN) {
-        restrict_mc_str(textbox->contents, textbox->cursor.col);
+        mc_restrict_str(textbox->contents, textbox->cursor.col);
       }
       else {
-        remove_from_mc_str(textbox->contents, textbox->cursor.col, 1);
+        mc_remove_from_str(textbox->contents, textbox->cursor.col, 1);
       }
     } break;
     case KEY_CODE_ENTER:
@@ -122,7 +122,7 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
         switch (input_event->button_code) {
         case KEY_CODE_A: {
           // Can't select at the moment so just wipe everything out
-          set_mc_str(textbox->contents, "");
+          mc_set_str(textbox->contents, "");
           textbox->cursor.col = 0;
 
         } break;
@@ -137,7 +137,7 @@ void _mcu_textbox_handle_input_event(mc_node *node, mci_input_event *input_event
         c[1] = '\0';
 
         if (!res) {
-          insert_into_mc_str(textbox->contents, c, textbox->cursor.col);
+          mc_insert_into_str(textbox->contents, c, textbox->cursor.col);
           ++textbox->cursor.col;
         }
       }
@@ -164,7 +164,7 @@ int _mcu_init_textbox_data(mc_node *node)
   textbox->content_padding.left = 1;
   textbox->content_padding.top = 1;
 
-  MCcall(init_mc_str(&textbox->contents));
+  MCcall(mc_alloc_str(&textbox->contents));
   textbox->font = NULL;
   textbox->font_color = COLOR_LIGHT_YELLOW;
   textbox->font_horizontal_stride = 9.2794f;

@@ -129,11 +129,11 @@ int _mcm_pjxp_set_entry_textblock(project_explorer_data *pjxp, mcu_textblock *tb
                                   const char *name, const char *full_path, int indent, bool collapsed)
 {
   mcm_pjxp_entry *ent = (mcm_pjxp_entry *)tb->tag;
-  MCcall(set_mc_str(ent->name, name));
+  MCcall(mc_set_str(ent->name, name));
   ent->type = type;
   ent->indent = indent;
   ent->hash = hash_djb2(full_path);
-  MCcall(set_mc_str(ent->path, full_path));
+  MCcall(mc_set_str(ent->path, full_path));
   ent->collapsed = collapsed;
 
   // printf("_mcm_pjxp_set_entry_textblock tb:%p type:%i name:'%s' full_path:'%s'\n", tb, type, name, full_path);
@@ -161,7 +161,7 @@ int _mcm_pjxp_set_entry_textblock(project_explorer_data *pjxp, mcu_textblock *tb
   }
   }
   strcat(dsp_name, name);
-  MCcall(set_mc_str(tb->str, dsp_name));
+  MCcall(mc_set_str(tb->str, dsp_name));
 
   return 0;
 }
@@ -536,12 +536,12 @@ int _mcm_pjxp_init_ui(mc_node *pjxp_node)
     tb->background_color = COLOR_TRANSPARENT;
     tb->font_color = COLOR_BLACK;
 
-    MCcall(set_mc_str(tb->str, "(null)"));
+    MCcall(mc_set_str(tb->str, "(null)"));
 
     // tb->left_click = (void *)&_mcm_pjxp_textblock_left_click;
     mcm_pjxp_entry *ent = tb->tag = (void *)malloc(sizeof(mcm_pjxp_entry));
-    MCcall(init_mc_str(&ent->path));
-    MCcall(init_mc_str(&ent->name)); // TODO -- think this is still a redundant field - probably some others are too
+    MCcall(mc_alloc_str(&ent->path));
+    MCcall(mc_alloc_str(&ent->name)); // TODO -- think this is still a redundant field - probably some others are too
 
     MCcall(append_to_collection((void ***)&pjxp->textblocks.items, &pjxp->textblocks.capacity, &pjxp->textblocks.count,
                                 tb));

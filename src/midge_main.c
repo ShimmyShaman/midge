@@ -2287,12 +2287,12 @@ int submit_user_command(int argc, void **argsv);
 int mc_main(int argc, const char *const *argv)
 {
   // mc_str *str;
-  // init_mc_str(&str);
-  // set_mc_str(str, "holo");
+  // mc_alloc_str(&str);
+  // mc_set_str(str, "holo");
   // printf("strbef:'%s'\n", str->text);
-  // insert_into_mc_str(str, "bo", 2);
+  // mc_insert_into_str(str, "bo", 2);
   // printf("straft:'%s'\n", str->text);
-  // insert_into_mc_str(str, "mo", 4);
+  // mc_insert_into_str(str, "mo", 4);
   // printf("strlat:'%s'\n", str->text);
   // return 0;
 

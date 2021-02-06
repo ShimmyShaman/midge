@@ -29,13 +29,13 @@ int mcf_concat_filepath(char *buf, int buf_size, const char *appendage)
 int mcf_concat_filepath_str(mc_str *path_prefix, const char *appendage)
 {
   if (path_prefix->text[path_prefix->len - 1] != '\\' && path_prefix->text[path_prefix->len - 1] != '/') {
-    MCcall(append_char_to_mc_str(path_prefix, '/'));
+    MCcall(mc_append_char_to_str(path_prefix, '/'));
   }
-  MCcall(append_to_mc_str(path_prefix, appendage));
+  MCcall(mc_append_to_str(path_prefix, appendage));
 
   // if(appendage)
   // if (path_prefix->text[path_prefix->len - 1] != '\\' || path_prefix->text[path_prefix->len - 1] != '/') {
-  //   MCcall(append_char_to_mc_str(path_prefix, '/'));
+  //   MCcall(mc_append_char_to_str(path_prefix, '/'));
   // }
 
   return 0;
@@ -55,7 +55,7 @@ int mcf_restrict_parent_directory_str(mc_str *path)
     }
   }
 
-  MCcall(restrict_mc_str(path, (int)(c - path->text)));
+  MCcall(mc_restrict_str(path, (int)(c - path->text)));
   printf("mcf_restrict_parent_directory_str: '%s'\n", path);
   return 0;
 }
@@ -133,8 +133,8 @@ int mcf_ensure_directory_exists(const char *path)
   const char *c, *s;
   bool exists;
   mc_str *str;
-  MCcall(init_mc_str(&str));
-  MCcall(set_mc_str(str, path));
+  MCcall(mc_alloc_str(&str));
+  MCcall(mc_set_str(str, path));
 
   // Ensure each parent directory exists
   s = path;
@@ -145,7 +145,7 @@ int mcf_ensure_directory_exists(const char *path)
     while (*c != '/' && *c != '\\' && *c != '\0')
       ++c;
 
-    MCcall(set_mc_strn(str, path, c - path));
+    MCcall(mc_set_strn(str, path, c - path));
 
     MCcall(mcf_directory_exists(str->text, &exists));
     if (!exists) {
@@ -154,7 +154,7 @@ int mcf_ensure_directory_exists(const char *path)
     s = c;
   }
 
-  release_mc_str(str, true);
+  mc_release_str(str, true);
 
   return 0;
 }

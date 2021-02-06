@@ -102,24 +102,24 @@ int _mc_smw_update_node_layout(mc_node *node, const mc_rectf *available_area)
     entry->panel->node->layout->visible = true;
 
     // Update textblock
-    MCcall(set_mc_str(textblock->str, ""));
+    MCcall(mc_set_str(textblock->str, ""));
     textblock->node->layout->__requires_layout_update = true;
 
     ((_mc_smw_button_tag *)button->tag)->mfi = mfi;
     switch (mfi->state) {
     case MC_SMW_MDF_STATE_DISCOVERED: {
       entry->panel->background_color = COLOR_MIDNIGHT_EXPRESS;
-      MCcall(append_to_mc_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
+      MCcall(mc_append_to_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
       button->enabled = true;
     } break;
     case MC_SMW_MDF_STATE_PARSE_ERROR: {
       entry->panel->background_color = COLOR_TYRIAN_PURPLE;
-      MCcall(append_to_mc_strf(textblock->str, "%s", rel));
+      MCcall(mc_append_to_strf(textblock->str, "%s", rel));
       button->enabled = false;
     } break;
     case MC_SMW_MDF_STATE_COMPILATION_ERROR: {
       entry->panel->background_color = COLOR_MAROON;
-      MCcall(append_to_mc_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
+      MCcall(mc_append_to_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
       button->enabled = false;
     } break;
     default:
@@ -248,7 +248,7 @@ int _mc_smw_info_button_clicked(mci_input_event *input_event, mcu_button *button
     mfi->state = MC_SMW_MDF_STATE_COMPILATION_ERROR;
 
     // button->background_color = COLOR_RED;
-    // MCcall(set_mc_str(button->str, "Reinterpret"));
+    // MCcall(mc_set_str(button->str, "Reinterpret"));
   }
   else {
     // Remove the mfi
@@ -581,7 +581,7 @@ int mc_smw_init_data(mc_node *module_node)
       (_mc_smw_tracked_modification *)malloc(sizeof(_mc_smw_tracked_modification) * md->modified_functions.size);
   // TODO--malloc check just like everywhere
 
-  //   MCcall(init_mc_str(&md->current_directory));
+  //   MCcall(mc_alloc_str(&md->current_directory));
   //   md->callback.state = NULL;
   //   md->callback.result_delegate = NULL;
 
@@ -651,7 +651,7 @@ int mc_smw_init_ui(mc_node *module_node)
 
     MCcall(mcu_init_button(panel->node, &button));
     md->ui_entries[a].button = button;
-    MCcall(set_mc_str(button->str, "Interpret"));
+    MCcall(mc_set_str(button->str, "Interpret"));
     button->left_click = &_mc_smw_info_button_clicked;
 
     _mc_smw_button_tag *tag = tags + a;
@@ -678,7 +678,7 @@ int mc_smw_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "X"));
+  MCcall(mc_set_str(button->str, "X"));
   button->tag = md;
   button->left_click = (void *)&_mc_smw_exit_dialog_clicked;
 
@@ -703,7 +703,7 @@ int mc_smw_init_ui(mc_node *module_node)
   //   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   //   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  //   MCcall(set_mc_str(button->str, "Select Current Folder"));
+  //   MCcall(mc_set_str(button->str, "Select Current Folder"));
   //   button->tag = md;
   //   button->left_click = (void *)&_mc_md_open_current_clicked;
 
@@ -726,7 +726,7 @@ int mc_smw_init_ui(mc_node *module_node)
   //     button->tag = md;
   //     button->left_click = (void *)&_mc_md_item_selected;
 
-  //     MCcall(set_mc_str(button->str, "button"));
+  //     MCcall(mc_set_str(button->str, "button"));
 
   //     MCcall(append_to_collection((void ***)&md->displayed_items.items, &md->displayed_items.capacity,
   //                                 &md->displayed_items.count, button));

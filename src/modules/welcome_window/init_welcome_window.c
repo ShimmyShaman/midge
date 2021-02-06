@@ -174,7 +174,7 @@ int mc_mww_init_data(mc_node *module_node)
   MCcall(mcu_init_button(module_node, &ww->new_project_button));
   ww->new_project_button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   ww->new_project_button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
-  set_mc_str(ww->new_project_button->str, "New Project");
+  mc_set_str(ww->new_project_button->str, "New Project");
   ww->new_project_button->node->layout->preferred_width = 120;
   ww->new_project_button->node->layout->preferred_height = 28;
   ww->new_project_button->left_click = &_mc_mww_on_new_project;
@@ -183,7 +183,7 @@ int mc_mww_init_data(mc_node *module_node)
   ww->input_textbox->node->layout->visible = false;
   ww->input_textbox->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   ww->input_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
-  set_mc_str(ww->new_project_button->str, "New Project");
+  mc_set_str(ww->new_project_button->str, "New Project");
   ww->input_textbox->node->layout->preferred_width = 160;
   ww->input_textbox->node->layout->preferred_height = 32;
   ww->input_textbox->submit = &_mc_mww_textbox_submit;
@@ -258,12 +258,12 @@ int init_welcome_window(mc_node *app_root)
   // layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
   // layout->padding = {150, 300, 0, 0};
 
-  // set_mc_str(text_block->str, "");
+  // mc_set_str(text_block->str, "");
   // for (int a = 32; a < 128; ++a) {
   //   char buf[2];
   //   buf[0] = (char)a;
   //   buf[1] = '\0';
-  //   append_to_mc_str(text_block->str, buf);
+  //   mc_append_to_str(text_block->str, buf);
   // }
   // text_block->font_color = COLOR_LIGHT_YELLOW;
 

@@ -349,7 +349,7 @@ int mcs_fc_add_statement(mc_function_code_cursor *cursor, const char *statement)
 //   //   MCcall(mcs_fc_move_into_only_switch_statement(&cursor));
 //   //   MCcall(mcs_fc_add_switch_case_label(&cursor, "MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT"));
 //   //   MCcall(mcs_fc_move_into_switch_section(&cursor, "MC_SOURCE_SEGMENT_SINGLE_LINE_COMMENT"));
-//   //   MCcall(mcs_fc_add_statement(&cursor, "MCcall(append_to_mc_str(str, (const char *)seg->data));"));
+//   //   MCcall(mcs_fc_add_statement(&cursor, "MCcall(mc_append_to_str(str, (const char *)seg->data));"));
 
 //   //   MCcall(print_syntax_node(cursor.pos, 0));
 

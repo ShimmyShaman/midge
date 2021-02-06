@@ -146,7 +146,7 @@ int mc_save_source_file_info_to_disk(mc_source_file_info *source_file)
 
   // Generate the source file text & persist it to disk
   mc_str *str;
-  MCcall(init_mc_str(&str));
+  MCcall(mc_alloc_str(&str));
   if (source_file->filepath[n - 1] == 'h') {
     MCcall(mc_generate_header_source(source_file, str));
   }
@@ -160,7 +160,7 @@ int mc_save_source_file_info_to_disk(mc_source_file_info *source_file)
   MCcall(save_text_to_file(source_file->filepath, str->text));
   clock_gettime(CLOCK_REALTIME, &source_file->recent_disk_sync);
 
-  release_mc_str(str, true);
+  mc_release_str(str, true);
 
   // Reinterpret the file
   // MCcall(mcs_interpret_file(source_file->filepath));
@@ -663,7 +663,7 @@ int mc_redefine_function(function_info *function)
   // printf("function->source->segments:%i\n", function->source->segments.count);
   int a, b, c;
   mc_str *str;
-  MCcall(init_mc_str(&str));
+  MCcall(mc_alloc_str(&str));
 
   MCcall(mc_transcribe_specific_function_source(str, function, true));
 
@@ -676,7 +676,7 @@ int mc_redefine_function(function_info *function)
   sprintf(tempfn, "%s::%s", function->source->filepath, function->name);
   MCcall(tcci_add_string(app_info->itp_data->interpreter, tempfn, str->text));
 
-  release_mc_str(str, true);
+  mc_release_str(str, true);
 
   return 0;
 }
@@ -690,7 +690,7 @@ int mc_redefine_function_provisionally(function_info *function, const char *code
   // printf("function->source:%p\n", function->source);
   // printf("function->source->segments:%i\n", function->source->segments.count);
   mc_str *str;
-  MCcall(init_mc_str(&str));
+  MCcall(mc_alloc_str(&str));
 
   // Swap
   char *old_code = function->code;
@@ -714,7 +714,7 @@ int mc_redefine_function_provisionally(function_info *function, const char *code
     function->code = strdup(code);
   }
 
-  release_mc_str(str, true);
+  mc_release_str(str, true);
   return res;
 }
 
@@ -728,7 +728,7 @@ int mc_redefine_structure(struct_info *structure)
 
   // Generate the source file text & persist it to disk
   mc_str *str;
-  MCcall(init_mc_str(&str));
+  MCcall(mc_alloc_str(&str));
   if (structure->source_file->filepath[n - 1] == 'h') {
     MCcall(mc_generate_header_source(structure->source_file, str));
   }
@@ -738,7 +738,7 @@ int mc_redefine_structure(struct_info *structure)
 
   // Save to file
   MCcall(save_text_to_file(structure->source_file->filepath, str->text));
-  release_mc_str(str, true);
+  mc_release_str(str, true);
 
   // TODO -- header dependencies
 
@@ -750,7 +750,7 @@ int mc_redefine_structure(struct_info *structure)
   //     MCcall(_mc_transcribe_include_directive_info(str, seg->include));
   //     break;
   //   case MC_SOURCE_SEGMENT_NEWLINE_SEPERATOR:
-  //     MCcall(append_char_to_mc_str(str, '\n'));
+  //     MCcall(mc_append_char_to_str(str, '\n'));
   //     break;
   //   case MC_SOURCE_SEGMENT_FUNCTION_DEFINITION:
   //   case MC_SOURCE_SEGMENT_FUNCTION_DECLARATION:

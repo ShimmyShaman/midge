@@ -274,35 +274,35 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, mo_operational
 
   // Form the delegate function
   mc_str *fc;
-  MCcall(init_mc_str(&fc));
+  MCcall(mc_alloc_str(&fc));
 
-  MCcall(append_to_mc_str(fc, "#include <stdlib.h>\n"));
-  MCcall(append_to_mc_str(fc, "#include <stdio.h>\n"));
-  MCcall(append_to_mc_str(fc, "#include <string.h>\n"));
-  MCcall(append_char_to_mc_str(fc, '\n'));
-  MCcall(append_to_mc_str(fc, "#include <unistd.h>\n"));
-  MCcall(append_to_mc_str(fc, "#include <pthread.h>\n"));
-  MCcall(append_char_to_mc_str(fc, '\n'));
-  MCcall(append_to_mc_str(fc, "#include \"mc_error_handling.h\"\n"));
-  MCcall(append_to_mc_str(fc, "#include \"core/midge_app.h\"\n"));
-  MCcall(append_char_to_mc_str(fc, '\n'));
-  MCcall(append_to_mc_str(fc, "#include \"modules/modus_operandi/mo_types.h\"\n"));
-  MCcall(append_to_mc_str(fc, "#include \"modules/modus_operandi/mo_util.h\"\n"));
-  MCcall(append_to_mc_str(fc, "#include \"modules/mc_io/mc_source_extensions.h\"\n"));
-  MCcall(append_char_to_mc_str(fc, '\n'));
-  MCcall(append_to_mc_strf(fc, "int %s() {\n", del_func_name));
-  MCcall(append_to_mc_str(fc, "  midge_app_info *midge_app_info;\n"));
-  MCcall(append_to_mc_str(fc, "  mc_obtain_midge_app_info(&midge_app_info);\n"));
-  MCcall(append_to_mc_strf(fc, "  mc_mo_process_stack *process_stack = (mc_mo_process_stack *)%p;\n", process_stack));
-  // MCcall(append_to_mc_strf(fc, "  modus_operandi_data *modus_operandi = (modus_operandi_data *)%p;\n",
+  MCcall(mc_append_to_str(fc, "#include <stdlib.h>\n"));
+  MCcall(mc_append_to_str(fc, "#include <stdio.h>\n"));
+  MCcall(mc_append_to_str(fc, "#include <string.h>\n"));
+  MCcall(mc_append_char_to_str(fc, '\n'));
+  MCcall(mc_append_to_str(fc, "#include <unistd.h>\n"));
+  MCcall(mc_append_to_str(fc, "#include <pthread.h>\n"));
+  MCcall(mc_append_char_to_str(fc, '\n'));
+  MCcall(mc_append_to_str(fc, "#include \"mc_error_handling.h\"\n"));
+  MCcall(mc_append_to_str(fc, "#include \"core/midge_app.h\"\n"));
+  MCcall(mc_append_char_to_str(fc, '\n'));
+  MCcall(mc_append_to_str(fc, "#include \"modules/modus_operandi/mo_types.h\"\n"));
+  MCcall(mc_append_to_str(fc, "#include \"modules/modus_operandi/mo_util.h\"\n"));
+  MCcall(mc_append_to_str(fc, "#include \"modules/mc_io/mc_source_extensions.h\"\n"));
+  MCcall(mc_append_char_to_str(fc, '\n'));
+  MCcall(mc_append_to_strf(fc, "int %s() {\n", del_func_name));
+  MCcall(mc_append_to_str(fc, "  midge_app_info *midge_app_info;\n"));
+  MCcall(mc_append_to_str(fc, "  mc_obtain_midge_app_info(&midge_app_info);\n"));
+  MCcall(mc_append_to_strf(fc, "  mc_mo_process_stack *process_stack = (mc_mo_process_stack *)%p;\n", process_stack));
+  // MCcall(mc_append_to_strf(fc, "  modus_operandi_data *modus_operandi = (modus_operandi_data *)%p;\n",
   // process_stack->state_arg));
-  MCcall(append_to_mc_str(fc, "  hash_table_t *context = &process_stack->context_maps[process_stack->index];\n"));
+  MCcall(mc_append_to_str(fc, "  hash_table_t *context = &process_stack->context_maps[process_stack->index];\n"));
 
-  MCcall(append_char_to_mc_str(fc, '\n'));
-  MCcall(append_to_mc_str(fc, fcode));
+  MCcall(mc_append_char_to_str(fc, '\n'));
+  MCcall(mc_append_to_str(fc, fcode));
   free(fcode);
 
-  MCcall(append_to_mc_str(fc, "\n  return 0;\n}"));
+  MCcall(mc_append_to_str(fc, "\n  return 0;\n}"));
 
   // TODO -- do this in mc_source maybe?
   mc_app_itp_data *app_itp_data;
@@ -328,7 +328,7 @@ int mc_mo_parse_delegate_code(mc_mo_process_stack *process_stack, mo_operational
   }
 
   // Cleanup
-  release_mc_str(fc, true);
+  mc_release_str(fc, true);
 
   *str = c;
   return 0;
@@ -676,14 +676,14 @@ int mc_mo_parse_serialized_process_step(mc_mo_process_stack *pstack, mo_operatio
 int mc_mo_serialize_process(mo_operational_process *process, const char **serialization)
 {
   mc_str *str;
-  MCcall(init_mc_str(&str));
+  MCcall(mc_alloc_str(&str));
 
   // TODO
-  MCcall(append_to_mc_str(str, process->name));
+  MCcall(mc_append_to_str(str, process->name));
   MCerror(4466, "TODO");
 
   *serialization = str->text;
-  release_mc_str(str, false);
+  mc_release_str(str, false);
   return 0;
 }
 

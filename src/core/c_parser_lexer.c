@@ -22,7 +22,7 @@ typedef struct mcs_parsing_state {
 } mcs_parsing_state;
 
 // extern "C" {
-// int init_mc_str(mc_str **ptr);
+// int mc_alloc_str(mc_str **ptr);
 // }
 
 int mcs_parse_type_identifier(mcs_parsing_state *ps, mc_syntax_node *parent, mc_syntax_node **additional_destination);
@@ -504,7 +504,7 @@ int mcs_append_syntax_node_to_mc_str(mc_str *cstr, mc_syntax_node *syntax_node)
     // printf("cstr:%p\n", cstr);
     // printf("syntax_node->text:%p\n", syntax_node->text);
     // printf("syntax_node->text:%s\n", syntax_node->text);
-    append_to_mc_str(cstr, syntax_node->text);
+    mc_append_to_str(cstr, syntax_node->text);
     // printf("cstr->text:%s\n", cstr->text);
     // printf("syntax_node:%p\n", syntax_node);
     // usleep(10000);
@@ -525,12 +525,12 @@ int mcs_append_syntax_node_to_mc_str(mc_str *cstr, mc_syntax_node *syntax_node)
 int mcs_copy_syntax_node_to_text(mc_syntax_node *syntax_node, char **output)
 {
   mc_str *cstr;
-  init_mc_str(&cstr);
+  mc_alloc_str(&cstr);
 
   mcs_append_syntax_node_to_mc_str(cstr, syntax_node);
 
   *output = cstr->text;
-  release_mc_str(cstr, false);
+  mc_release_str(cstr, false);
 
   return 0;
 }

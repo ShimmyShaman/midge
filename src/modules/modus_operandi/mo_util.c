@@ -91,11 +91,19 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *key, 
   return 0;
 }
 
+int _mc_mo_alloc_context_data(mc_mo_context_data **data)
+{
+  *data = (mc_mo_context_data *)calloc(sizeof(mc_mo_context_data), 1);
+  MCcall(mc_init_str(&(*data)->str, 64));
+
+  return 0;
+}
+
 int mc_mo_set_specific_context_cstr(hash_table_t *context, const char *key, const char *value)
 {
   mc_mo_context_data *data = (mc_mo_context_data *)hash_table_get(key, context);
   if (!data) {
-    data = (mc_mo_context_data *)calloc(sizeof(mc_mo_context_data), 1);
+    MCcall(_mc_mo_alloc_context_data(&data));
     data->key = strdup(key);
 
     hash_table_set(key, data, context);
@@ -104,7 +112,7 @@ int mc_mo_set_specific_context_cstr(hash_table_t *context, const char *key, cons
   printf(".set-context:'%s':MC_STR='%s'\n", key, value);
   data->value_type = MC_MO_CONTEXT_DATA_VALUE_MC_STR;
   printf("str: %u %u\n", data->str.alloc, data->str.len);
-  MCcall(set_mc_str(&data->str, value));
+  MCcall(mc_set_str(&data->str, value));
 
   return 0;
 }
@@ -155,7 +163,7 @@ int mc_mo_set_specific_context_ptr(hash_table_t *context, const char *key, void 
 {
   mc_mo_context_data *data = (mc_mo_context_data *)hash_table_get(key, context);
   if (!data) {
-    data = (mc_mo_context_data *)calloc(sizeof(mc_mo_context_data), 1);
+    MCcall(_mc_mo_alloc_context_data(&data));
     data->key = strdup(key);
 
     hash_table_set(key, data, context);

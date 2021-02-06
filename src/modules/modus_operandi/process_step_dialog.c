@@ -152,11 +152,11 @@ int mc_mocsd_activate_process_step_dialog(mc_process_step_dialog_data *psdd, cha
   psdd->callback.result_delegate = callback_delegate;
 
   // Reset the type dropdown
-  MCcall(set_mc_str(psdd->step_type_dropdown->selected_str, ""));
+  MCcall(mc_set_str(psdd->step_type_dropdown->selected_str, ""));
   MCcall(mca_set_node_requires_rerender(psdd->step_type_dropdown->node));
 
   // Set the message
-  MCcall(set_mc_str(psdd->message_textblock->str, message == NULL ? "" : message));
+  MCcall(mc_set_str(psdd->message_textblock->str, message == NULL ? "" : message));
   MCcall(mca_set_node_requires_layout_update(psdd->message_textblock->node));
 
   // Display
@@ -226,7 +226,7 @@ int _mc_mocsd_init_text_input_dialog_ui(mc_process_step_dialog_data *psdd)
 
   // Prompt Message
   MCcall(mcu_init_textblock(panel->node, &textblock));
-  MCcall(set_mc_str(textblock->str, "Prompt Message:"));
+  MCcall(mc_set_str(textblock->str, "Prompt Message:"));
 
   layout = textblock->node->layout;
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
@@ -290,7 +290,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   psdd->step_type_dropdown->background_color = COLOR_MIDNIGHT_EXPRESS;
-  // MCcall(set_mc_str(psdd->step_type_dropdown->selected_str, "(none)")); TODO
+  // MCcall(mc_set_str(psdd->step_type_dropdown->selected_str, "(none)")); TODO
   psdd->step_type_dropdown->selection = (void *)&_mc_mocsd_type_selection;
   psdd->step_type_dropdown->tag = psdd;
   psdd->step_type_dropdown->extension_panel->node->layout->max_height = 8 + 27 * 5;
@@ -321,7 +321,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "< Previous"));
+  MCcall(mc_set_str(button->str, "< Previous"));
   button->tag = psdd;
   button->left_click = (void *)&_mc_mocsd_button_submit;
 
@@ -336,7 +336,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "Finish"));
+  MCcall(mc_set_str(button->str, "Finish"));
   button->tag = psdd;
   button->left_click = (void *)&_mc_mocsd_button_submit;
 
@@ -351,7 +351,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "Next >"));
+  MCcall(mc_set_str(button->str, "Next >"));
   button->tag = psdd;
   button->left_click = (void *)&_mc_mocsd_button_submit;
 
@@ -410,12 +410,12 @@ int mc_mocsd_init_process_step_dialog(mc_node *app_root, mc_process_step_dialog_
   // layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
   // layout->padding = {150, 300, 0, 0};
 
-  // set_mc_str(text_block->str, "");
+  // mc_set_str(text_block->str, "");
   // for (int a = 32; a < 128; ++a) {
   //   char buf[2];
   //   buf[0] = (char)a;
   //   buf[1] = '\0';
-  //   append_to_mc_str(text_block->str, buf);
+  //   mc_append_to_str(text_block->str, buf);
   // }
   // text_block->font_color = COLOR_LIGHT_YELLOW;
 

@@ -156,7 +156,7 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     layout->visible = true;
     layout->padding = (mc_paddingf){4, 4, 4, 4};
 
-    MCcall(set_mc_str(cell->textbox->contents, "process-title"));
+    MCcall(mc_set_str(cell->textbox->contents, "process-title"));
     cell->textbox->cursor.col = strlen("process-title");
 
     // Layout Updates
@@ -186,7 +186,7 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     cell->panel->background_color = (render_color){0.04f, 0.24f, 0.06f, 1.f};
 
     // Title
-    MCcall(set_mc_str(cell->textblocks[0]->str, "Context Parameter"));
+    MCcall(mc_set_str(cell->textblocks[0]->str, "Context Parameter"));
 
     layout = cell->textblocks[0]->node->layout;
     layout->visible = true;
@@ -194,7 +194,7 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
 
     // Param Label
-    MCcall(set_mc_str(cell->textblocks[1]->str, "key:"));
+    MCcall(mc_set_str(cell->textblocks[1]->str, "key:"));
 
     layout = cell->textblocks[1]->node->layout;
     layout->visible = true;
@@ -202,7 +202,7 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
 
     // Textbox
-    MCcall(set_mc_str(cell->textbox->contents, ""));
+    MCcall(mc_set_str(cell->textbox->contents, ""));
     cell->textbox->cursor.col = strlen("");
 
     layout = cell->textbox->node->layout;
@@ -443,7 +443,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
-    MCcall(set_mc_str(button->str, "obtain->"));
+    MCcall(mc_set_str(button->str, "obtain->"));
     button->tag = cell;
     button->left_click = (void *)&_mc_mo_cpd_cell_delegate_clicked;
 
@@ -457,7 +457,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
-    MCcall(set_mc_str(button->str, "+"));
+    MCcall(mc_set_str(button->str, "+"));
     button->tag = cell;
     button->left_click = (void *)&_mc_mo_cpd_cell_continue_clicked;
   }
@@ -473,7 +473,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "X"));
+  MCcall(mc_set_str(button->str, "X"));
   button->tag = cpd;
   button->left_click = (void *)&_mc_mo_cpd_cancel_clicked;
 

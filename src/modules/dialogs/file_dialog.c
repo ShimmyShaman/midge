@@ -161,14 +161,14 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
   mcu_button *button;
 
   if (starting_directory) {
-    MCcall(set_mc_str(fd->current_directory, starting_directory));
+    MCcall(mc_set_str(fd->current_directory, starting_directory));
   }
   else {
     if (fd->current_directory->len == 0) {
       if (!getcwd(path, 256)) {
         MCerror(9135, "Current Working Directory too large for this pretty big buffer");
       }
-      MCcall(set_mc_str(fd->current_directory, path));
+      MCcall(mc_set_str(fd->current_directory, path));
     }
   }
 
@@ -206,7 +206,7 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
       button = fd->displayed_items.items[fd->displayed_items.utilized++];
       button->font_color = is_dir ? COLOR_LIGHT_YELLOW : COLOR_WHITE;
       button->node->layout->visible = true;
-      MCcall(set_mc_str(button->str, ent->d_name));
+      MCcall(mc_set_str(button->str, ent->d_name));
     }
     closedir(dir);
   }
@@ -236,7 +236,7 @@ void _mc_file_dialog_item_selected(mci_input_event *input_event, mcu_button *but
     _mc_file_dialog_open_directory(fd, buf);
 
     if (fd->specified_path_set_from_folder_item) {
-      set_mc_str(fd->input_textbox->contents, "");
+      mc_set_str(fd->input_textbox->contents, "");
       mca_set_node_requires_rerender(fd->input_textbox->node);
     }
   }
@@ -256,7 +256,7 @@ void _mc_file_dialog_item_selected(mci_input_event *input_event, mcu_button *but
       _mc_file_dialog_open_directory(fd, buf);
 
       if (fd->specified_path_set_from_folder_item) {
-        set_mc_str(fd->input_textbox->contents, "");
+        mc_set_str(fd->input_textbox->contents, "");
         mca_set_node_requires_rerender(fd->input_textbox->node);
       }
     }
@@ -267,7 +267,7 @@ void _mc_file_dialog_item_selected(mci_input_event *input_event, mcu_button *but
       }
 
       // Set the file name to the textbox
-      set_mc_str(fd->input_textbox->contents, button->str->text);
+      mc_set_str(fd->input_textbox->contents, button->str->text);
       mca_set_node_requires_rerender(fd->input_textbox->node);
       fd->specified_path_set_from_folder_item = true;
     }
@@ -287,7 +287,7 @@ int _mc_file_dialog_requested(void *handler_state, void *event_args)
   fd->callback.result_delegate = vary[3];
 
   // Set the message
-  MCcall(set_mc_str(fd->message_textblock->str, message == NULL ? "" : message));
+  MCcall(mc_set_str(fd->message_textblock->str, message == NULL ? "" : message));
 
   // TODO -- set starting filename
   fd->specified_path_set_from_folder_item = false;
@@ -311,7 +311,7 @@ int _mc_init_file_dialog_data(mc_node *module_node)
 
   fd->shade_color = (render_color){0.13f, 0.12f, 0.17f, 0.8f};
 
-  MCcall(init_mc_str(&fd->current_directory));
+  MCcall(mc_alloc_str(&fd->current_directory));
   fd->callback.state = NULL;
   fd->callback.result_delegate = NULL;
 
@@ -383,7 +383,7 @@ int _mc_init_file_dialog_ui(mc_node *module_node)
     button->tag = fd;
     button->left_click = (void *)&_mc_file_dialog_item_selected;
 
-    MCcall(set_mc_str(button->str, "button"));
+    MCcall(mc_set_str(button->str, "button"));
 
     MCcall(append_to_collection((void ***)&fd->displayed_items.items, &fd->displayed_items.capacity,
                                 &fd->displayed_items.count, button));
@@ -413,7 +413,7 @@ int _mc_init_file_dialog_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "Open"));
+  MCcall(mc_set_str(button->str, "Open"));
   button->tag = fd;
   button->left_click = (void *)&_mc_file_dialog_submit_clicked;
 

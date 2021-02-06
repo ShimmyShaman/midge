@@ -532,14 +532,14 @@ void _mce_transcribe_syntax_to_function_debug_display(mc_syntax_node *syntax_nod
     // case MC_TOKEN_LINE_COMMENT:
     case MC_TOKEN_NEW_LINE: {
       mce_function_debug_line *new_line = (mce_function_debug_line *)malloc(sizeof(mce_function_debug_line));
-      init_mc_str(&new_line->str);
+      mc_alloc_str(&new_line->str);
       new_line->next = NULL;
 
       (*line)->next = new_line;
       *line = new_line;
     } break;
     default:
-      append_to_mc_str((*line)->str, syntax_node->text);
+      mc_append_to_str((*line)->str, syntax_node->text);
       break;
       // print_syntax_node(syntax_node, 0);
       // MCerror(9216, "TODO:%i", syntax_node->type);
@@ -579,7 +579,7 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
 
   // Transcribe
   mce_function_debug_line *line = (mce_function_debug_line *)malloc(sizeof(mce_function_debug_line));
-  init_mc_str(&line->str);
+  mc_alloc_str(&line->str);
   line->next = NULL;
 
   fdebug->code.first_line = line;
@@ -602,8 +602,8 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
 
   // Instantiate new transcription
   mc_str *str;
-  init_mc_str(&str); // TODO -- maybe init with char*
-  set_mc_str(str, mc_transcription);
+  mc_alloc_str(&str); // TODO -- maybe init with char*
+  mc_set_str(str, mc_transcription);
   free(mc_transcription);
 
   int i;
@@ -614,7 +614,7 @@ void _mce_set_function_to_function_debugger(mce_function_debug *fdebug, function
   }
   char buf[256];
   sprintf(buf, "_fld%u", fdebug->fld_instantiation_uid);
-  insert_into_mc_str(str, buf, i);
+  mc_insert_into_str(str, buf, i);
 
   // printf("fdebug.mc_transcription:\n%s||\n", str->text);
   clint_declare(str->text);

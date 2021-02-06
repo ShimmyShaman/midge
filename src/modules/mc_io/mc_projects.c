@@ -25,53 +25,53 @@
 int _mc_construct_project_file_header(const char *subdir, const char *project_name)
 {
   mc_str *str;
-  MCcall(init_mc_str(&str));
+  MCcall(mc_alloc_str(&str));
 
   // Preamble
-  MCcall(append_to_mc_strf(str, "/* %s.h */\n", project_name));
+  MCcall(mc_append_to_strf(str, "/* %s.h */\n", project_name));
 
   // Include Guard
-  MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_str(str, "#ifndef "));
+  MCcall(mc_append_to_str(str, "\n"));
+  MCcall(mc_append_to_str(str, "#ifndef "));
   char *c = (char *)&project_name[0];
   while (*c) {
-    MCcall(append_char_to_mc_str(str, toupper(*c)));
+    MCcall(mc_append_char_to_str(str, toupper(*c)));
     ++c;
   }
-  MCcall(append_to_mc_str(str, "_H\n"
+  MCcall(mc_append_to_str(str, "_H\n"
                                "#define "));
   c = (char *)project_name;
   while (*c) {
-    MCcall(append_char_to_mc_str(str, toupper(*c)));
+    MCcall(mc_append_char_to_str(str, toupper(*c)));
     ++c;
   }
-  MCcall(append_to_mc_str(str, "_H\n"));
+  MCcall(mc_append_to_str(str, "_H\n"));
 
   // Includes
-  MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_str(str, "#include \"core/core_definitions.h\"\n"));
+  MCcall(mc_append_to_str(str, "\n"));
+  MCcall(mc_append_to_str(str, "#include \"core/core_definitions.h\"\n"));
 
   // Basic App-Data Structure
-  MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_strf(str,
+  MCcall(mc_append_to_str(str, "\n"));
+  MCcall(mc_append_to_strf(str,
                            "typedef struct %s_data {\n"
                            "  mc_node *app_root;\n"
                            "} %s_data;\n",
                            project_name, project_name));
 
   // Function Declaration
-  MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_strf(str, "/* %s-Initialization */\n", project_name));
-  MCcall(append_to_mc_strf(str, "int initialize_%s(mc_node *app_root);\n", project_name));
+  MCcall(mc_append_to_str(str, "\n"));
+  MCcall(mc_append_to_strf(str, "/* %s-Initialization */\n", project_name));
+  MCcall(mc_append_to_strf(str, "int initialize_%s(mc_node *app_root);\n", project_name));
 
   // #Endif
-  MCcall(append_to_mc_str(str, "\n#endif // "));
+  MCcall(mc_append_to_str(str, "\n#endif // "));
   c = (char *)project_name;
   while (*c) {
-    MCcall(append_char_to_mc_str(str, toupper(*c)));
+    MCcall(mc_append_char_to_str(str, toupper(*c)));
     ++c;
   }
-  MCcall(append_to_mc_str(str, "_H"));
+  MCcall(mc_append_to_str(str, "_H"));
 
   // Write the file
   char path[256];
@@ -79,37 +79,37 @@ int _mc_construct_project_file_header(const char *subdir, const char *project_na
   MCcall(save_text_to_file(path, str->text));
 
   // Cleanup & return
-  release_mc_str(str, true);
+  mc_release_str(str, true);
   return 0;
 }
 
 int _mc_construct_project_file_source(const char *subdir, const char *project_name)
 {
   mc_str *str;
-  MCcall(init_mc_str(&str));
+  MCcall(mc_alloc_str(&str));
 
   // Preamble
-  MCcall(append_to_mc_strf(str, "/* %s.c */\n", project_name));
+  MCcall(mc_append_to_strf(str, "/* %s.c */\n", project_name));
 
   // Base System Includes
   // TODO -- I dream one-day of only including the stuff that needs including, till then
-  MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_str(str, "#include <stdlib.h>\n"));
-  MCcall(append_to_mc_str(str, "#include <stdio.h>\n"));
-  MCcall(append_to_mc_str(str, "#include <string.h>\n"));
+  MCcall(mc_append_to_str(str, "\n"));
+  MCcall(mc_append_to_str(str, "#include <stdlib.h>\n"));
+  MCcall(mc_append_to_str(str, "#include <stdio.h>\n"));
+  MCcall(mc_append_to_str(str, "#include <string.h>\n"));
 
   // Midge Includes
-  MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_str(str, "#include \"core/midge_app.h\"\n"));
-  MCcall(append_to_mc_str(str, "#include \"render/render_common.h\"\n"));
+  MCcall(mc_append_to_str(str, "\n"));
+  MCcall(mc_append_to_str(str, "#include \"core/midge_app.h\"\n"));
+  MCcall(mc_append_to_str(str, "#include \"render/render_common.h\"\n"));
 
   // Initialize Header
-  MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_strf(str, "#include \"../projects/%s/src/app/%s.h\"\n", project_name, project_name));
+  MCcall(mc_append_to_str(str, "\n"));
+  MCcall(mc_append_to_strf(str, "#include \"../projects/%s/src/app/%s.h\"\n", project_name, project_name));
 
   // Basic Render Function
-  MCcall(append_to_mc_str(str, "\n"));
-  MCcall(append_to_mc_strf(
+  MCcall(mc_append_to_str(str, "\n"));
+  MCcall(mc_append_to_strf(
       str,
       "void _%s_render_present(image_render_details *image_render_queue, mc_node *node)\n"
       "{\n"
@@ -123,9 +123,9 @@ int _mc_construct_project_file_source(const char *subdir, const char *project_na
       project_name, project_name, project_name));
 
   // Initialize Definition
-  MCcall(append_to_mc_str(str, "\n"));
+  MCcall(mc_append_to_str(str, "\n"));
   MCcall(
-      append_to_mc_strf(str,
+      mc_append_to_strf(str,
                         "int initialize_%s(mc_node *app_root)\n"
                         "{\n"
                         "  mca_init_node_layout(&app_root->layout);\n"
@@ -160,7 +160,7 @@ int _mc_construct_project_file_source(const char *subdir, const char *project_na
   MCcall(save_text_to_file(path, str->text));
 
   // Cleanup & return
-  release_mc_str(str, true);
+  mc_release_str(str, true);
   return 0;
 }
 

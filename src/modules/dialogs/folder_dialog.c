@@ -130,13 +130,13 @@ int _mc_fd_open_directory(mc_folder_dialog_data *fd, const char *starting_direct
   struct dirent *ent;
   if ((dir = opendir(starting_directory)) != NULL) {
     if (starting_directory) {
-      MCcall(set_mc_str(fd->current_directory, starting_directory));
+      MCcall(mc_set_str(fd->current_directory, starting_directory));
     }
     else {
       if (!getcwd(path, 256)) {
         MCerror(9135, "Current Working Directory too large for this pretty big buffer");
       }
-      MCcall(set_mc_str(fd->current_directory, path));
+      MCcall(mc_set_str(fd->current_directory, path));
     }
     // printf("_mc_fd_open_directory:'%s'\n", fd->current_directory->text);
 
@@ -173,7 +173,7 @@ int _mc_fd_open_directory(mc_folder_dialog_data *fd, const char *starting_direct
       // Assign entry
       button = fd->displayed_items.items[fd->displayed_items.utilized++];
       button->node->layout->visible = true;
-      MCcall(set_mc_str(button->str, ent->d_name));
+      MCcall(mc_set_str(button->str, ent->d_name));
     }
     closedir(dir);
   }
@@ -247,7 +247,7 @@ int _mc_fd_on_folder_dialog_request(void *handler_state, void *event_args)
   fd->callback.result_delegate = vary[3];
 
   // Set the message
-  MCcall(set_mc_str(fd->message_textblock->str,  message == NULL ? "" : message));
+  MCcall(mc_set_str(fd->message_textblock->str,  message == NULL ? "" : message));
 
   // Open The Dialog at the starting path
   fd->mode = MC_FD_MODE_DIRECTORIES_ONLY;
@@ -267,7 +267,7 @@ int mc_fd_init_data(mc_node *module_node)
 
   fd->shade_color = (render_color){0.13f, 0.12f, 0.17f, 0.8f};
 
-  MCcall(init_mc_str(&fd->current_directory));
+  MCcall(mc_alloc_str(&fd->current_directory));
   fd->callback.state = NULL;
   fd->callback.result_delegate = NULL;
 
@@ -329,7 +329,7 @@ int mc_fd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "Select Current Folder"));
+  MCcall(mc_set_str(button->str, "Select Current Folder"));
   button->tag = fd;
   button->left_click = (void *)&_mc_fd_open_current_clicked;
 
@@ -352,7 +352,7 @@ int mc_fd_init_ui(mc_node *module_node)
     button->tag = fd;
     button->left_click = (void *)&_mc_fd_item_selected;
 
-    MCcall(set_mc_str(button->str, "button"));
+    MCcall(mc_set_str(button->str, "button"));
 
     MCcall(append_to_collection((void ***)&fd->displayed_items.items, &fd->displayed_items.capacity,
                                 &fd->displayed_items.count, button));

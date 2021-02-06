@@ -147,10 +147,10 @@ int _mc_tid_text_input_dialog_requested(void *handler_state, void *event_args)
   tid->callback.result_delegate = vary[3];
 
   // Reset the textbox
-  MCcall(set_mc_str(tid->textbox->contents, default_value ? default_value : ""));
+  MCcall(mc_set_str(tid->textbox->contents, default_value ? default_value : ""));
 
   // Set the message
-  MCcall(set_mc_str(tid->message_textblock->str,  message == NULL ? "" : message));
+  MCcall(mc_set_str(tid->message_textblock->str,  message == NULL ? "" : message));
 
   // printf("_mc_tid_text_input_dialog_requested:tc'%s' %p %p '%s'\n", tid->textbox->contents->text,
   //        tid->textbox->contents->text, default_value, default_value);
@@ -244,7 +244,7 @@ int mc_tid_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(set_mc_str(button->str, "Enter"));
+  MCcall(mc_set_str(button->str, "Enter"));
   button->tag = tid;
   button->left_click = (void *)&_mc_tid_button_submit;
 
@@ -302,12 +302,12 @@ int mc_tid_init_text_input_dialog(mc_node *app_root)
   // layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
   // layout->padding = {150, 300, 0, 0};
 
-  // set_mc_str(text_block->str, "");
+  // mc_set_str(text_block->str, "");
   // for (int a = 32; a < 128; ++a) {
   //   char buf[2];
   //   buf[0] = (char)a;
   //   buf[1] = '\0';
-  //   append_to_mc_str(text_block->str, buf);
+  //   mc_append_to_str(text_block->str, buf);
   // }
   // text_block->font_color = COLOR_LIGHT_YELLOW;
 

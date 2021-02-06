@@ -916,7 +916,7 @@ int _mc_mo_update_options_display(modus_operandi_data *mod)
     button = mod->options_buttons.items[a];
     mopp = mod->all_processes.items[a];
 
-    MCcall(set_mc_str(button->str, mopp->name));
+    MCcall(mc_set_str(button->str, mopp->name));
 
     button->tag = mopp;
 
@@ -998,34 +998,34 @@ int _mc_mo_project_created(void *handler_state, void *event_args)
 
   // Create the context file and its initial data
   mc_str *str;
-  MCcall(init_mc_str(&str));
+  MCcall(mc_alloc_str(&str));
 
   // Project info context
-  MCcall(append_to_mc_strf(str, "%s=%s\n", "project-name", project_name));
-  MCcall(append_to_mc_strf(str, "%s=%s\n", "project-dir", project_dir));
-  MCcall(append_to_mc_strf(str, "%s=%s_data\n", "project-data", project_name));
-  MCcall(append_to_mc_strf(str, "%s=_%s_render_present\n", "project-render-function-name", project_name));
+  MCcall(mc_append_to_strf(str, "%s=%s\n", "project-name", project_name));
+  MCcall(mc_append_to_strf(str, "%s=%s\n", "project-dir", project_dir));
+  MCcall(mc_append_to_strf(str, "%s=%s_data\n", "project-data", project_name));
+  MCcall(mc_append_to_strf(str, "%s=_%s_render_present\n", "project-render-function-name", project_name));
 
   strcpy(buf, project_dir);
   MCcall(mcf_concat_filepath(buf, 256, "src"));
   MCcall(mcf_concat_filepath(buf, 256, "app"));
   MCcall(mcf_concat_filepath(buf, 256, project_name));
   strcat(buf, ".c");
-  MCcall(append_to_mc_strf(str, "%s=%s\n", "project-init-source-filepath", buf));
+  MCcall(mc_append_to_strf(str, "%s=%s\n", "project-init-source-filepath", buf));
 
   strcpy(buf, project_dir);
   MCcall(mcf_concat_filepath(buf, 256, "src"));
   MCcall(mcf_concat_filepath(buf, 256, "app"));
   MCcall(mcf_concat_filepath(buf, 256, project_name));
   strcat(buf, ".h");
-  MCcall(append_to_mc_strf(str, "%s=%s\n", "project-init-header-filepath", buf));
+  MCcall(mc_append_to_strf(str, "%s=%s\n", "project-init-header-filepath", buf));
 
-  MCcall(append_to_mc_strf(str, "%s=initialize_%s\n", "project-init-function-name", project_name));
+  MCcall(mc_append_to_strf(str, "%s=initialize_%s\n", "project-init-function-name", project_name));
 
   MCcall(mcf_concat_filepath(modir, 256, "context"));
   MCcall(save_text_to_file(modir, str->text));
 
-  release_mc_str(str, true);
+  mc_release_str(str, true);
 
   return 0;
 }
@@ -1165,7 +1165,7 @@ int mc_mo_init_ui(mc_node *module_node)
 
     button->left_click = (void *)&_mc_mo_operational_process_selected;
 
-    MCcall(set_mc_str(button->str, "button"));
+    MCcall(mc_set_str(button->str, "button"));
 
     MCcall(append_to_collection((void ***)&mod->options_buttons.items, &mod->options_buttons.capacity,
                                 &mod->options_buttons.count, button));
@@ -1188,7 +1188,7 @@ int mc_mo_init_ui(mc_node *module_node)
 
   button->left_click = (void *)&_mc_mo_create_process_clicked;
 
-  MCcall(set_mc_str(button->str, "+"));
+  MCcall(mc_set_str(button->str, "+"));
 
   // Show Context Viewer button
   MCcall(mcu_init_button(module_node, &button));
@@ -1207,7 +1207,7 @@ int mc_mo_init_ui(mc_node *module_node)
 
   button->left_click = (void *)&_mc_mo_toggle_context_viewer_clicked;
 
-  MCcall(set_mc_str(button->str, "oo"));
+  MCcall(mc_set_str(button->str, "oo"));
 
   // // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   // while (!mod->render_target.image) {

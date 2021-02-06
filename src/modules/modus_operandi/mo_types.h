@@ -54,10 +54,8 @@ typedef struct mc_mo_context_data {
   const char *key;
 
   mc_mo_context_data_value_type value_type;
-  union {
-    mc_str str;
-    void *value;
-  };
+  mc_str str;
+  void *value;
 } mc_mo_context_data;
 
 typedef struct mo_op_step_context_arg {

@@ -233,7 +233,7 @@ int _mc_load_focused_editing_source(mc_source_editor *se)
     // printf("ls %u \n", ls->alloc);
     // printf("ls %u \n", ls->len);
     // printf("ls %s \n", ls->text);
-    MCcall(append_to_mc_strn(ls, s, c - s));
+    MCcall(mc_append_to_strn(ls, s, c - s));
     // puts("bbb");
 
     if (*c == '\n')

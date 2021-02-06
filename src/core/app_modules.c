@@ -339,7 +339,7 @@ int mca_load_previously_open_projects()
 
   char project_name[256];
   mc_str *str;
-  init_mc_str(&str);
+  mc_alloc_str(&str);
 
   int i = 0, s = 0;
   bool eof = false;

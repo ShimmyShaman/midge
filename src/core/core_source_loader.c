@@ -170,17 +170,17 @@ const char *_mcl_core_functions[] = {
     "tcci_add_string",
 
     // midge_common
-    "init_mc_str",
-    "init_mc_str_with_specific_capacity",
-    "set_mc_str",
-    "set_mc_strn",
-    "release_mc_str",
-    "append_char_to_mc_str",
-    "append_to_mc_str",
-    "append_to_mc_strn",
-    "append_to_mc_strf",
-    "insert_into_mc_str",
-    "restrict_mc_str",
+    "mc_alloc_str",
+    "mc_alloc_str_with_specific_capacity",
+    "mc_set_str",
+    "mc_set_strn",
+    "mc_release_str",
+    "mc_append_char_to_str",
+    "mc_append_to_str",
+    "mc_append_to_strn",
+    "mc_append_to_strf",
+    "mc_insert_into_str",
+    "mc_restrict_str",
 
     // core_definitions
     "obtain_midge_global_root",

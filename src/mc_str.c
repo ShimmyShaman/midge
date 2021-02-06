@@ -9,54 +9,57 @@
 
 #include "mc_str.h"
 
-int init_mc_str(mc_str **ptr)
+int mc_init_str(mc_str *str, int specific_capacity)
 {
-  (*ptr) = (mc_str *)malloc(sizeof(mc_str));
-  (*ptr)->alloc = 2;
-  (*ptr)->len = 0;
-  (*ptr)->text = (char *)malloc(sizeof(char) * (*ptr)->alloc);
-  (*ptr)->text[0] = '\0';
+  str->alloc = specific_capacity;
+  str->len = 0;
+  str->text = (char *)malloc(sizeof(char) * str->alloc);
+  str->text[0] = '\0';
 
   return 0;
 }
 
-int init_mc_str_with_specific_capacity(mc_str **ptr, unsigned int specific_capacity)
+int mc_alloc_str(mc_str **ptr)
 {
-  (*ptr) = (mc_str *)malloc(sizeof(mc_str));
-  (*ptr)->alloc = specific_capacity;
-  (*ptr)->len = 0;
-  (*ptr)->text = (char *)malloc(sizeof(char) * (*ptr)->alloc);
-  (*ptr)->text[0] = '\0';
+  MCcall(mc_alloc_str_with_specific_capacity(ptr, 16));
 
   return 0;
 }
 
-int set_mc_str(mc_str *str, const char *src)
+int mc_alloc_str_with_specific_capacity(mc_str **ptr, int specific_capacity)
+{
+  *ptr = (mc_str *)malloc(sizeof(mc_str));
+  MCcall(mc_init_str(*ptr, specific_capacity));
+
+  return 0;
+}
+
+int mc_set_str(mc_str *str, const char *src)
 {
   str->len = 0;
   str->text[0] = '\0';
-  MCcall(append_to_mc_str(str, src));
+  MCcall(mc_append_to_str(str, src));
 
   return 0;
 }
 
-int set_mc_strf(mc_str *str, const char *fmt, ...)
+int mc_set_strf(mc_str *str, const char *fmt, ...)
 {
   MCerror(2828, "TODO");
 
   return 0;
 }
 
-int set_mc_strn(mc_str *str, const char *src, int len)
+int mc_set_strn(mc_str *str, const char *src, int len)
 {
   str->len = 0;
   str->text[0] = '\0';
-  append_to_mc_strn(str, src, len);
+  mc_append_to_strn(str, src, len);
 
   return 0;
 }
 
-void release_mc_str(mc_str *ptr, bool free_char_string_also)
+void mc_release_str(mc_str *ptr, bool free_char_string_also)
 {
   if (ptr->alloc > 0 && free_char_string_also && ptr->text) {
     free(ptr->text);
@@ -65,17 +68,17 @@ void release_mc_str(mc_str *ptr, bool free_char_string_also)
   free(ptr);
 }
 
-// TODO -- this should be faster then append_to_mc_str
-int append_char_to_mc_str(mc_str *str, char c)
+// TODO -- this should be faster then mc_append_to_str
+int mc_append_char_to_str(mc_str *str, char c)
 {
   char buf[2];
   buf[0] = c;
   buf[1] = '\0';
-  append_to_mc_str(str, buf);
+  mc_append_to_str(str, buf);
   return 0;
 }
 
-int append_to_mc_str(mc_str *str, const char *text)
+int mc_append_to_str(mc_str *str, const char *text)
 {
   // printf("str:%p\n", str);
   // printf("str->len:%u\n", str->len);
@@ -115,7 +118,7 @@ int append_to_mc_str(mc_str *str, const char *text)
   return 0;
 }
 
-int append_to_mc_strn(mc_str *str, const char *text, int n)
+int mc_append_to_strn(mc_str *str, const char *text, int n)
 {
   if (str->len + n + 1 >= str->alloc) {
     unsigned int new_allocated_size = str->alloc + n + 16 + (str->alloc) / 2;
@@ -139,9 +142,9 @@ int append_to_mc_strn(mc_str *str, const char *text, int n)
   return 0;
 }
 
-int append_to_mc_strf(mc_str *str, const char *fmt, ...)
+int mc_append_to_strf(mc_str *str, const char *fmt, ...)
 {
-  // register_midge_error_tag("append_to_mc_strf()");
+  // register_midge_error_tag("mc_append_to_strf()");
   // printf("atcs-0\n");
   int chunk_size = 4;
   int i = 0;
@@ -207,7 +210,7 @@ int append_to_mc_strf(mc_str *str, const char *fmt, ...)
             }
             // printf("atcs-5d buf:'%s'\n", buf);
             // printf("atcs-5e\n");
-            append_to_mc_str(str, buf);
+            mc_append_to_str(str, buf);
             // printf("atcs-5f\n");
           } break;
           // case 'l': {
@@ -218,7 +221,7 @@ int append_to_mc_strf(mc_str *str, const char *fmt, ...)
 
           //     char buf[24];
           //     sprintf(buf, "%li", value);
-          //     append_to_mc_str(str, buf);
+          //     mc_append_to_str(str, buf);
           //   } break;
           //   default:
           //     MCerror(99, "TODO:l'%c'", format[i + 1]);
@@ -229,7 +232,7 @@ int append_to_mc_strf(mc_str *str, const char *fmt, ...)
 
             char buf[18];
             sprintf(buf, "%p", value);
-            append_to_mc_str(str, buf);
+            mc_append_to_str(str, buf);
           } break;
           case 's': {
             char *value = va_arg(valist, char *);
@@ -238,17 +241,17 @@ int append_to_mc_strf(mc_str *str, const char *fmt, ...)
             // printf("atcs-7c value:'%s'\n", value);
             // str->text[i] = '\0';
             // --str->len;
-            append_to_mc_str(str, value);
+            mc_append_to_str(str, value);
             // printf("atcs-7b cstrtext:'%s'\n", str->text);
           } break;
           case 'u': {
             unsigned int value = va_arg(valist, unsigned int);
 
-            // printf("append_to_mc_strf-arg=%u\n", value);
+            // printf("mc_append_to_strf-arg=%u\n", value);
 
             char buf[18];
             sprintf(buf, "%u", value);
-            append_to_mc_str(str, buf);
+            mc_append_to_str(str, buf);
           } break;
           default: {
             MCerror(99, "TODO:%c", fmt[i]);
@@ -270,7 +273,7 @@ int append_to_mc_strf(mc_str *str, const char *fmt, ...)
   }
 }
 
-int insert_into_mc_str(mc_str *str, const char *text, int index)
+int mc_insert_into_str(mc_str *str, const char *text, int index)
 {
   if (index > str->len) {
     midge_error_print_thread_stack_trace();
@@ -316,7 +319,7 @@ int insert_into_mc_str(mc_str *str, const char *text, int index)
   return 0;
 }
 
-int remove_from_mc_str(mc_str *str, int index, int len)
+int mc_remove_from_str(mc_str *str, int index, int len)
 {
   if (index < 0 || index >= str->len)
     return 0;
@@ -336,7 +339,7 @@ int remove_from_mc_str(mc_str *str, int index, int len)
   return 0;
 }
 
-int restrict_mc_str(mc_str *str, int len)
+int mc_restrict_str(mc_str *str, int len)
 {
   if (len > str->len)
     return 0;
@@ -348,7 +351,7 @@ int restrict_mc_str(mc_str *str, int len)
 }
 
 // TODO -- non-essential core method in a core file
-int append_uppercase_to_mc_str(mc_str *str, const char *text)
+int mc_append_uppercase_to_str(mc_str *str, const char *text)
 {
   int len = strlen(text);
   if (str->len + len + 1 >= str->alloc) {
@@ -383,7 +386,7 @@ int append_uppercase_to_mc_str(mc_str *str, const char *text)
 }
 
 // TODO -- non-essential core method in a core file
-int append_lowercase_to_mc_str(mc_str *str, const char *text)
+int mc_append_lowercase_to_str(mc_str *str, const char *text)
 {
   int len = strlen(text);
   if (str->len + len + 1 >= str->alloc) {

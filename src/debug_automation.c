@@ -66,7 +66,7 @@ void create_hello_world_visual_app()
                           "  mcu_text_block *text_block;\n"
                           "  mcu_init_text_block(p_node, &text_block);\n"
                           "\n"
-                          "  set_mc_str(text_block->text, \"Hello Universe\");\n"
+                          "  mc_set_str(text_block->text, \"Hello Universe\");\n"
                           "  text_block->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;\n"
                           "  text_block->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;\n"
                           "\n"

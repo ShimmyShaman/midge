@@ -873,8 +873,8 @@ int mcs_interpret_file(const char *filepath)
 // {
 //   char *code;
 //   mcs_copy_syntax_node_to_text(child, &code);
-//   append_to_mc_str(file_context, code);
-//   append_char_to_mc_str(file_context, '\n');
+//   mc_append_to_str(file_context, code);
+//   mc_append_char_to_str(file_context, '\n');
 //   free(code);
 // }
 
@@ -954,10 +954,10 @@ int mcs_interpret_file(const char *filepath)
 
 //   structure_info->is_union = struct_ast->type == MC_SYNTAX_UNION_DECL;
 //   mc_str *mc_func_name;
-//   init_mc_str(&mc_func_name);
-//   append_to_mc_strf(mc_func_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
+//   mc_alloc_str(&mc_func_name);
+//   mc_append_to_strf(mc_func_name, "%s_mc_v%u", structure_info->name, structure_info->latest_iteration);
 //   structure_info->mc_declared_name = mc_func_name->text;
-//   release_mc_str(mc_func_name, false);
+//   mc_release_str(mc_func_name, false);
 
 //   // Set the values parsed
 //   if (struct_ast->struct_decl.fields) {

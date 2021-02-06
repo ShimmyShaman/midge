@@ -399,7 +399,7 @@ void build_code_editor()
     // Source
     state->source_data = NULL;
     state->code.syntax = NULL;
-    init_mc_str(&state->code.rtf);
+    mc_alloc_str(&state->code.rtf);
     state->code.syntax_updated = false;
   }
 
@@ -419,8 +419,8 @@ void build_code_editor()
 
     state->render_lines[i]->index = i;
     state->render_lines[i]->requires_render_update = true;
-    MCcall(init_mc_str(&state->render_lines[i]->rtf));
-    // MCcall(set_mc_str(state->render_lines[i]->rtf, ""));
+    MCcall(mc_alloc_str(&state->render_lines[i]->rtf));
+    // MCcall(mc_set_str(state->render_lines[i]->rtf, ""));
     //  "!this is twenty nine letters! "
     //  "!this is twenty nine letters! "
     //  "!this is twenty nine letters! ";
@@ -554,7 +554,7 @@ void load_existing_struct_into_code_editor(mc_struct_info_v1 *structure)
   mc_code_editor_state_v1 *cestate = (mc_code_editor_state_v1 *)code_editor->extra;
   cestate->source_data = structure->source;
 
-  set_mc_str(cestate->code.rtf, structure->source->code);
+  mc_set_str(cestate->code.rtf, structure->source->code);
 
   mce_update_rendered_text(cestate);
 }

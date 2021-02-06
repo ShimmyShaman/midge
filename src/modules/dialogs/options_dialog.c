@@ -118,14 +118,14 @@ int _mc_obd_on_options_dialog_request(void *handler_state, void *event_args)
   obd->callback.result_delegate = vary[4];
 
   // Set the message
-  MCcall(set_mc_str(obd->message_textblock->str, message == NULL ? "" : message));
+  MCcall(mc_set_str(obd->message_textblock->str, message == NULL ? "" : message));
 
   int a;
   mcu_button *b;
   for (a = 0; a < option_count && a < obd->displayed_items.count; ++a) {
     b = obd->displayed_items.items[a];
 
-    MCcall(set_mc_str(b->str, options[a]));
+    MCcall(mc_set_str(b->str, options[a]));
     b->node->layout->visible = true;
 
     mca_set_node_requires_rerender(b->node);
@@ -208,7 +208,7 @@ int mc_obd_init_ui(mc_node *module_node)
     button->tag = obd;
     button->left_click = (void *)&_mc_obd_item_selected;
 
-    MCcall(set_mc_str(button->str, "button"));
+    MCcall(mc_set_str(button->str, "button"));
 
     MCcall(append_to_collection((void ***)&obd->displayed_items.items, &obd->displayed_items.capacity,
                                 &obd->displayed_items.count, button));

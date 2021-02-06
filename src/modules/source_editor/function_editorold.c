@@ -621,10 +621,10 @@ void mce_delete_selection(mce_function_editor *fedit)
         remaining = strdup(del_token->str->text + start_col - accumulate_line_len + delete_amount);
       }
       printf("stra:'%s'\n", del_token->str->text);
-      restrict_mc_str(del_token->str, start_col - accumulate_line_len);
+      mc_restrict_str(del_token->str, start_col - accumulate_line_len);
       printf("strb:'%s'\n", del_token->str->text);
       if (remaining) {
-        append_to_mc_str(del_token->str, remaining);
+        mc_append_to_str(del_token->str, remaining);
         free(remaining);
       }
       printf("strc:'%s'\n", del_token->str->text);
@@ -653,7 +653,7 @@ void mce_delete_selection(mce_function_editor *fedit)
     // Delete the first section of the token
     del_token->type = MCE_SE_UNPROCESSED_TEXT;
     char *remaining = strdup(del_token->str->text + delete_char_count);
-    set_mc_str(del_token->str, remaining);
+    mc_set_str(del_token->str, remaining);
     free(remaining);
     break;
   }
@@ -711,7 +711,7 @@ void mce_delete_selection(mce_function_editor *fedit)
       del_token->type = MCE_SE_UNPROCESSED_TEXT;
       char *remaining = strdup(del_token->str->text + delete_char_count);
       printf("mds-4h remaining:'%s'\n", remaining);
-      set_mc_str(del_token->str, remaining);
+      mc_set_str(del_token->str, remaining);
       free(remaining);
 
       break;
@@ -779,7 +779,7 @@ int mce_obtain_source_token_from_pool(mce_source_editor_pool *source_editor_pool
 {
   if (!source_editor_pool->source_tokens.count) {
     *token = (mce_source_token *)malloc(sizeof(mce_source_token));
-    init_mc_str(&(*token)->str);
+    mc_alloc_str(&(*token)->str);
   }
   else {
     --source_editor_pool->source_tokens.count;
@@ -806,7 +806,7 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
     line->first = token;
 
     token->type = MCE_SE_UNPROCESSED_TEXT;
-    set_mc_str(token->str, "");
+    mc_set_str(token->str, "");
     token->next = NULL;
   }
   int accumulate_line_len = 0;
@@ -829,10 +829,10 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
     mce_source_token *second;
     mce_obtain_source_token_from_pool(fedit->source_editor_pool, &second);
     second->type = MCE_SE_UNPROCESSED_TEXT;
-    set_mc_str(second->str, token->str->text + offset_in_next_str);
+    mc_set_str(second->str, token->str->text + offset_in_next_str);
 
     token->type = MCE_SE_UNPROCESSED_TEXT;
-    restrict_mc_str(token->str, offset_in_next_str);
+    mc_restrict_str(token->str, offset_in_next_str);
 
     second->next = token->next;
     token->next = second;
@@ -857,7 +857,7 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
 
       mce_obtain_source_token_from_pool(fedit->source_editor_pool, &new_line->first);
       new_line->first->type = MCE_SE_UNPROCESSED_TEXT;
-      set_mc_str(new_line->first->str, "");
+      mc_set_str(new_line->first->str, "");
 
       if (token) {
         new_line->first->next = token->next;
@@ -868,7 +868,7 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
       token = line->first;
     }
     else {
-      append_char_to_mc_str(token->str, *c);
+      mc_append_char_to_str(token->str, *c);
       ++fedit->cursor.col;
     }
 
@@ -898,7 +898,7 @@ void mce_insert_string_at_cursor(mce_function_editor *fedit, const char *str)
 void mce_read_text_from_function_editor(mce_function_editor *fedit, char **code)
 {
   mc_str *str;
-  init_mc_str(&str);
+  mc_alloc_str(&str);
 
   mce_source_line_token *line = fedit->code.first_line;
   mce_source_token *token;
@@ -906,7 +906,7 @@ void mce_read_text_from_function_editor(mce_function_editor *fedit, char **code)
   while (line) {
     token = line->first;
     while (token) {
-      append_to_mc_str(str, token->str->text);
+      mc_append_to_str(str, token->str->text);
 
       token = token->next;
     }
@@ -915,7 +915,7 @@ void mce_read_text_from_function_editor(mce_function_editor *fedit, char **code)
   }
 
   *code = str->text;
-  release_mc_str(str, false);
+  mc_release_str(str, false);
 }
 
 void _mce_function_editor_handle_input(mc_node *node, mci_input_event *input_event)
@@ -1122,7 +1122,7 @@ int mce_init_function_editor(mc_node *parent_node, mce_source_editor_pool *sourc
   function_editor->code.count = 0;
   function_editor->code.first_line = NULL;
 
-  // init_mc_str(&function_editor->code.rtf);
+  // mc_alloc_str(&function_editor->code.rtf);
   // function_editor->code.syntax = NULL;
 
   function_editor->lines.count = 0;
@@ -1156,14 +1156,14 @@ void _mce_set_function_editor_code_with_plain_text(mce_function_editor *fedit, c
     line_tk->len = 0;
     if (!line_tk->first) {
       mce_obtain_source_token_from_pool(fedit->source_editor_pool, &line_tk->first);
-      set_mc_str(line_tk->first->str, "");
+      mc_set_str(line_tk->first->str, "");
       line_tk->first->next = NULL;
     }
 
     mce_source_token *token = line_tk->first;
     token->type = MCE_SE_UNPROCESSED_TEXT;
     while (*c != '\n' && *c != '\0') {
-      append_char_to_mc_str(token->str, *c);
+      mc_append_char_to_str(token->str, *c);
       ++line_tk->len;
       ++c;
 
