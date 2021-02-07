@@ -540,6 +540,41 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     q.y0 += font->draw_vertical_offset;
     q.y1 += font->draw_vertical_offset;
 
+    // Determine the clip
+    VkRect2D clip = {(int32_t)(q.x0 < 0 ? 0 : q.x0), (int32_t)(q.y0 < 0 ? 0 : q.y0), (uint32_t)width, (uint32_t)height};
+    {
+      mc_rect *cc = &cmd->print_text.clip;
+      // printf("clbb:%i %i %u %u || cc:%i %i %u %u\n", clip.offset.x, clip.offset.y, clip.extent.width,
+      //        clip.extent.height, cc->offset.x, cc->offset.y, cc->extents.width, cc->extents.height);
+      if (cc->extents.width && cc->extents.height) {
+        if (clip.offset.x < cc->offset.x)
+          clip.offset.x = cc->offset.x;
+        if (clip.offset.y < cc->offset.y)
+          clip.offset.y = cc->offset.y;
+        if (clip.offset.x + clip.extent.width > cc->offset.x + cc->extents.width) {
+          if (cc->offset.x + cc->extents.width <= clip.offset.x)
+            clip.extent.width = 0U;
+          else
+            clip.extent.width = cc->offset.x + cc->extents.width - clip.offset.x;
+        }
+        if (clip.offset.y + clip.extent.height > cc->offset.y + cc->extents.height) {
+          if (cc->offset.y + cc->extents.height <= clip.offset.y)
+            clip.extent.height = 0U;
+          else
+            clip.extent.height = cc->offset.y + cc->extents.height - clip.offset.y;
+        }
+      }
+
+      if (clip.extent.width <= 0U || clip.extent.height <= 0U)
+        continue;
+      if (clip.offset.x >= image_render->image_width || clip.offset.y >= image_render->image_height)
+        continue;
+
+      // if (clip.extent.width > 4444) {
+      //   printf("clip:%i %i %u %u || cc:%i %i %u %u\n", clip.offset.x, clip.offset.y, clip.extent.width,
+      //          clip.extent.height, cc->offset.x, cc->offset.y, cc->extents.width, cc->extents.height);
+      // }
+    }
     // printf("baked_quad: s0=%.2f s1==%.2f t0=%.2f t1=%.2f x0=%.2f x1=%.2f y0=%.2f y1=%.2f xoff=%.2f yoff=%.2f\n",
     // q.s0,
     //        q.s1, q.t0, q.t1, q.x0, q.x1, q.y0, q.y1, font->char_data->xoff, font->char_data->yoff);
@@ -578,8 +613,8 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     // Setup viewport and clip
     // printf("image_render : %f, %f\n",  (float)image_render->image_width,  (float)image_render->image_height);
     set_viewport_cmd(command_buffer, 0.f, 0.f, (float)image_render->image_width, (float)image_render->image_height);
-    set_scissor_cmd(command_buffer, (int32_t)(q.x0 < 0 ? 0 : q.x0), (int32_t)(q.y0 < 0 ? 0 : q.y0), (uint32_t)width,
-                    (uint32_t)height);
+    vkCmdSetScissor(command_buffer, 0, 1, &clip);
+    // set_scissor_cmd(command_buffer, clip.offset.x, clip.offset.y, clip.extent.width, clip.extent.height);
 
     // printf("mrt-4\n");
     // Allocate the descriptor set from the pool.

@@ -86,9 +86,16 @@ void _mcu_render_textblock_present(image_render_details *image_render_queue, mc_
   }
 
   // Text
+  mc_rect rb;
+  if (textblock->clip_text_to_bounds) {
+    rb.offset.x = (int)node->layout->__bounds.x;
+    rb.offset.y = (int)node->layout->__bounds.y;
+    rb.extents.width = (unsigned int)node->layout->__bounds.width;
+    rb.extents.height = (unsigned int)node->layout->__bounds.height;
+  }
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y, textblock->str->text, textblock->font,
-                                textblock->font_color);
+                                (unsigned int)node->layout->__bounds.y, textblock->clip_text_to_bounds ? &rb : NULL,
+                                textblock->str->text, textblock->font, textblock->font_color);
 }
 
 void _mcu_textblock_handle_input_event(mc_node *textblock_node, mci_input_event *input_event)
@@ -144,6 +151,7 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
   textblock->font_color = COLOR_GHOST_WHITE;
 
   textblock->background_color = COLOR_TRANSPARENT;
+  textblock->clip_text_to_bounds = false;
 
   // Set to out pointer
   *p_textblock = textblock;

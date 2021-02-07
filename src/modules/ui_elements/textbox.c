@@ -30,7 +30,7 @@ void _mcu_render_textbox_present(image_render_details *image_render_queue, mc_no
   //        (unsigned int)node->layout->__bounds.y, textbox->str->text, textbox->font->resource_uid);
   mcr_issue_render_command_text(image_render_queue,
                                 (unsigned int)(node->layout->__bounds.x + textbox->content_padding.left),
-                                (unsigned int)(node->layout->__bounds.y + textbox->content_padding.top),
+                                (unsigned int)(node->layout->__bounds.y + textbox->content_padding.top), NULL,
                                 textbox->contents->text, textbox->font, textbox->font_color);
 
   // TODO -- a better way to determine if the node is focused...

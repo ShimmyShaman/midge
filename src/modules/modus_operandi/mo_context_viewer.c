@@ -68,6 +68,16 @@ void _mc_mo_cv_render_present(image_render_details *irq, mc_node *node)
   // Children
   mca_render_node_list_present(irq, node->children);
 
+  // _mc_mo_cv_context_row *row = cv->rows.items;
+  // mc_rectf *ba, *bb;
+  // while (row->panel->node->layout->visible) {
+  //   ba = &row->key_textblock->node->layout->__bounds;
+  //   bb = &row->value_textblock->node->layout->__bounds;
+  //   mcr_issue_render_command_colored_quad(irq, (unsigned int)(ba->x + ba->width), (unsigned int)ba->y,
+  //                                         (unsigned int)(bb->y - (ba->x + ba->width)), (unsigned int)ba->height,
+  //                                         cv->background_color);
+  // }
+
   // mc_mo_cv_step_data *cell;
   // for (cell = cv->cells.ary; cell < &cv->cells.ary[cv->cells.size]; ++cell) {
 
@@ -245,18 +255,22 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
 
     MCcall(mcu_init_textblock(panel->node, &textblock));
     row->key_textblock = textblock;
+    textblock->background_color = (render_color){0.06f, 0.06f, 0.13f, 1.f};
+    textblock->clip_text_to_bounds = true;
 
     layout = textblock->node->layout;
-    layout->preferred_width = 180;
+    layout->preferred_width = 210;
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
     layout->padding = (mc_paddingf){1, 1, 1, 1};
 
     MCcall(mcu_init_textblock(panel->node, &textblock));
     row->value_textblock = textblock;
+    textblock->background_color = (render_color){0.06f, 0.06f, 0.13f, 1.f};
+    textblock->clip_text_to_bounds = true;
 
     layout = textblock->node->layout;
-    layout->preferred_width = 180;
+    layout->preferred_width = 310;
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
     layout->padding = (mc_paddingf){1, 1, 1, 1};
@@ -307,7 +321,7 @@ int init_mo_context_viewer(mc_mo_process_stack *process_stack, mc_node **p_conte
   MCcall(mca_init_node_layout(&node->layout));
   node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
-  node->layout->max_width = 360;
+  node->layout->max_width = 540;
   node->layout->max_height = 480;
 
   node->layout->visible = false;

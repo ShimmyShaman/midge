@@ -20,6 +20,7 @@ typedef struct mcu_textblock {
   render_color font_color;
 
   render_color background_color;
+  bool clip_text_to_bounds;
 } mcu_textblock;
 
 int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock);

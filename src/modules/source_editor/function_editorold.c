@@ -284,7 +284,7 @@ void _mce_render_function_editor_present(image_render_details *image_render_queu
         (unsigned int)(node->layout->__bounds.x + fedit->lines.padding.left +
                        fedit->font_horizontal_stride * ((float)fedit->cursor.col - 0.5f)),
         (unsigned int)(node->layout->__bounds.y + fedit->lines.padding.top +
-                       fedit->lines.vertical_stride * (fedit->cursor.line - fedit->lines.display_index_offset)),
+                       fedit->lines.vertical_stride * (fedit->cursor.line - fedit->lines.display_index_offset)), NULL,
         "|", NULL, cursor_color);
   }
 

@@ -46,7 +46,7 @@ int _mc_se_render_tab_list_headless(render_thread_info *render_thread, mc_node *
 
   mcr_issue_render_command_colored_quad(irq, left, top, tw + 8 + 5, se->tab_index.height, COLOR_BLACKCURRANT);
 
-  mcr_issue_render_command_text(irq, left + 4, top + 4, buf, NULL, COLOR_SILVER);
+  mcr_issue_render_command_text(irq, left + 4, top + 4, NULL, buf, NULL, COLOR_SILVER);
 
   mcr_submit_image_render_request(render_thread, irq);
 
@@ -95,7 +95,7 @@ int _mc_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *n
       irq->data.target_image.screen_offset_coordinates.x = 0;
       irq->data.target_image.screen_offset_coordinates.y = 0;
 
-      MCcall(mcr_issue_render_command_text(irq, 0, 0, str, NULL, COLOR_LIGHT_SKY_BLUE));
+      MCcall(mcr_issue_render_command_text(irq, 0, 0,  NULL,str, NULL, COLOR_LIGHT_SKY_BLUE));
 
       MCcall(mcr_submit_image_render_request(render_thread, irq));
     }

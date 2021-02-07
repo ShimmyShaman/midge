@@ -133,6 +133,11 @@ typedef struct mc_size {
   unsigned int width, height;
 } mc_size;
 
+typedef struct mc_rect {
+  mc_point offset;
+  mc_size extents;
+} mc_rect;
+
 typedef struct mc_rectf {
   float x, y;
   float width, height;
@@ -216,6 +221,7 @@ typedef struct element_render_command {
       char *text;
       mcr_font_resource *font;
       render_color color;
+      mc_rect clip;
     } print_text;
     struct {
       unsigned int width, height;
@@ -371,7 +377,7 @@ int mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *t
                                           float *text_height);
 
 int mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                  const char *text, mcr_font_resource *font, render_color font_color);
+                                  mc_rect *clip, const char *text, mcr_font_resource *font, render_color font_color);
 int mcr_issue_render_command_colored_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,
                                           unsigned int width, unsigned int height, render_color color);
 int mcr_issue_render_command_textured_quad(image_render_details *image_render_queue, unsigned int x, unsigned int y,

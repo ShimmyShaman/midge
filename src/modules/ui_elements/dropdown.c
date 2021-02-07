@@ -55,7 +55,7 @@ void _mcu_update_dropdown_extension_layout(mc_node *node, mc_rectf const *availa
 //   // // printf("renderdropdown- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
 //   // //        (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text, dropdown->font);
 //   // mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-//   //                               (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text,
+//   //                               (unsigned int)node->layout->__bounds.y,  NULL,dropdown->selected_str->text,
 //   dropdown->font,
 //   //                               dropdown->font_color);
 // }
@@ -96,7 +96,7 @@ void _mcu_render_dropdown_present(image_render_details *image_render_queue, mc_n
   // printf("renderdropdown- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text, dropdown->font);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text, dropdown->font,
+                                (unsigned int)node->layout->__bounds.y,  NULL,dropdown->selected_str->text, dropdown->font,
                                 dropdown->font_color);
 }
 

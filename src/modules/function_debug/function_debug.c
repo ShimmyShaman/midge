@@ -197,7 +197,7 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
   for (unsigned int y = (unsigned int)(node->layout->__bounds.y + fdebug->lines.padding.top);
        line && y < (unsigned int)(node->layout->__bounds.y + node->layout->__bounds.height); y += 22U) {
 
-    mcr_issue_render_command_text(image_render_queue, (unsigned int)(node->layout->__bounds.x + horizontal_offset), y,
+    mcr_issue_render_command_text(image_render_queue, (unsigned int)(node->layout->__bounds.x + horizontal_offset), y, NULL,
                                   line->str->text, NULL, font_color);
     line = line->next;
   }
@@ -210,7 +210,7 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
   //                        fdebug->font_horizontal_stride * ((float)fdebug->cursor.col - 0.5f)),
   //         (unsigned int)(node->layout->__bounds.y + fdebug->lines.padding.top +
   //                        fdebug->lines.vertical_stride * (fdebug->cursor.line -
-  //                        fdebug->lines.display_index_offset)),
+  //                        fdebug->lines.display_index_offset)), NULL,
   //         "|", NULL, cursor_color);
   //   }
 
@@ -258,7 +258,7 @@ void _mce_render_function_debug_present(image_render_details *image_render_queue
                                           (unsigned int)30, back_color);
 
     font_color = COLOR_GHOST_WHITE;
-    mcr_issue_render_command_text(image_render_queue, x_draw_pos + 4, y_draw_pos + 4 + 22U * 0, buf, NULL, font_color);
+    mcr_issue_render_command_text(image_render_queue, x_draw_pos + 4, y_draw_pos + 4 + 22U * 0, NULL, buf, NULL, font_color);
   }
 }
 

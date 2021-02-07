@@ -91,7 +91,7 @@ void __mcu_render_button_present(image_render_details *image_render_queue, mc_no
   // printf("renderbutton- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font->name);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y, button->str->text, button->font, color);
+                                (unsigned int)node->layout->__bounds.y, NULL, button->str->text, button->font, color);
 }
 
 void _mcu_button_handle_input_event(mc_node *button_node, mci_input_event *input_event)

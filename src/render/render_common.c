@@ -268,13 +268,18 @@ int mcr_load_vertex_buffer(float *vertices, unsigned int vertex_count, bool rele
 
 // Ensure this function is accessed within a thread mutex lock of the @image_render_queue
 int mcr_issue_render_command_text(image_render_details *image_render_queue, unsigned int x, unsigned int y,
-                                  const char *text, mcr_font_resource *font, render_color font_color)
+                                  mc_rect *clip, const char *text, mcr_font_resource *font, render_color font_color)
 {
   element_render_command *render_cmd;
   mcr_obtain_element_render_command(image_render_queue, &render_cmd);
   render_cmd->type = RENDER_COMMAND_PRINT_TEXT;
   render_cmd->x = x;
   render_cmd->y = y;
+  if (clip)
+    render_cmd->print_text.clip = *clip;
+  else
+    render_cmd->print_text.clip.extents.width = render_cmd->print_text.clip.extents.height = 0U;
+
   // printf("mcu_rtb-3 %p '%s' %u %u\n", render_cmd, text, render_cmd->x, render_cmd->y);
 
   // TODO -- make the render cmd a mc_str??

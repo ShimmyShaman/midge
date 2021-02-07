@@ -161,7 +161,7 @@ void _mce_render_source_line_headless(render_thread_info *render_thread, mc_node
 
     // printf("source-line text:(%i)'%s'\n", horizontal_offset, token->str->text);
     mcr_issue_render_command_text(rq, (unsigned int)(node->layout->__bounds.x + horizontal_offset),
-                                  (unsigned int)(node->layout->__bounds.y), token->str->text, source_line->font,
+                                  (unsigned int)(node->layout->__bounds.y),  NULL,token->str->text, source_line->font,
                                   font_color);
     // ++debug_token_count;
 
