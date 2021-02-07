@@ -30,7 +30,7 @@ typedef struct mc_mo_context_viewer_data {
   render_color background_color;
 } mc_mo_context_viewer_data;
 
-void _mc_mo_cv_render_headless(render_thread_info *render_thread, mc_node *node)
+static void _mc_mo_cv_render_headless(render_thread_info *render_thread, mc_node *node)
 {
   // mc_mo_context_viewer_data *cv = (mc_mo_context_viewer_data *)node->data;
 

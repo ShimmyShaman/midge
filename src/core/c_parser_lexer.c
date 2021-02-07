@@ -5588,21 +5588,104 @@ int mcs_parse_extern_c_block(mcs_parsing_state *ps, mc_syntax_node *parent, mc_s
   return 0;
 }
 
+typedef enum mcs_root_statement_determine_stage {
+  MCS_RSD_STG_ROOT,
+  MCS_RSD_STG_IDENTIFIER_ONLY,
+  MCS_RSD_STG_VOID_ONLY,
+  MCS_RSD_STG_IDENTIFIER_AFTER_TYPE,
+  MCS_RSD_STG_DEREFERENCING_TYPE,
+} mcs_root_statement_determine_stage;
+
 int mcs_determine_root_statement_type(mcs_parsing_state *ps, mc_syntax_node_type *statement_type)
 {
   mc_token_type token_type;
-  int stg = 0, peek = 1;
+  mcs_root_statement_determine_stage stg = MCS_RSD_STG_ROOT;
+  int peek = 1;
   while (1) {
     MCcall(mcs_peek_token_type(ps, false, peek++, &token_type));
     switch (token_type) {
+    case MC_TOKEN_VOID_KEYWORD: {
+      stg = MCS_RSD_STG_VOID_ONLY;
+    } break;
+      // case MC_TOKEN_INT_KEYWORD:
+      // case MC_TOKEN_CHAR_KEYWORD:
+      // case MC_TOKEN_STRUCT_KEYWORD:
+      // case MC_TOKEN_CONST_KEYWORD:
+      // case MC_TOKEN_LONG_KEYWORD:
+      // case MC_TOKEN_SHORT_KEYWORD:
+      // case MC_TOKEN_FLOAT_KEYWORD:
+      // case MC_TOKEN_SIGNED_KEYWORD:
+      // case MC_TOKEN_UNSIGNED_KEYWORD:
+      // int peek_ahead = 1;
+
+      //   bool is_modifier = true;
+      //   while (is_modifier) {
+      //     switch (token_type) {
+      //     case MC_TOKEN_CONST_KEYWORD:
+      //     case MC_TOKEN_UNSIGNED_KEYWORD:
+      //     case MC_TOKEN_SIGNED_KEYWORD: {
+      //       ++peek_ahead;
+      //       mcs_peek_token_type(ps, false, peek_ahead, &token_type);
+      //       continue;
+      //     }
+      //     case MC_TOKEN_STRUCT_KEYWORD: {
+      //       ++peek_ahead;
+      //       mcs_peek_token_type(ps, false, peek_ahead, &token_type);
+      //       if (token_type != MC_TOKEN_IDENTIFIER) {
+      //         MCerror(2890, "Unexpected Identifier");
+      //       }
+      //       ++peek_ahead;
+      //     } break;
+      //     case MC_TOKEN_INT_KEYWORD:
+      //     case MC_TOKEN_CHAR_KEYWORD:
+      //     case MC_TOKEN_LONG_KEYWORD:
+      //     case MC_TOKEN_FLOAT_KEYWORD:
+      //     case MC_TOKEN_VOID_KEYWORD:
+      //       ++peek_ahead;
+      //       break;
+      //     default:
+      //       print_parse_error(ps->code, ps->index, "parse_bracket", "is_fptr");
+      //       MCerror(2648, "TODO:%s", get_mc_token_type_name(token_type));
+      //     }
+
+      //     // While-is-modifier
+      //     break;
+      //   }
+
+      //   mcs_peek_token_type(ps, false, peek_ahead, &token_type);
+      //   switch (token_type) {
+      //   case MC_TOKEN_STAR_CHARACTER: {
+      //     do {
+      //       ++peek_ahead;
+      //       mcs_peek_token_type(ps, false, peek_ahead, &token_type);
+      //     } while (token_type == MC_TOKEN_STAR_CHARACTER);
+
+      //     switch (token_type) {
+      //     // case MC_TOKEN_CLOSING_BRACKET: {
+      //     //   MCcall(mcs_parse_cast_expression(ps, parent, false, additional_destination));
+      //     // } break;
+      //     // case MC_TOKEN_OPENING_BRACKET: {
+      //     //   MCcall(mcs_parse_cast_expression(ps, parent, true, additional_destination));
+      //     // } break;
+      //     default:
+      //       // print_syntax_node(cast_expression, 0);
+      //       print_parse_error(ps->code, ps->index, "mcs_determine_root_statement_type", "");
+      //       MCerror(5412, "TODO:%s", get_mc_token_type_name(token_type));
+      //       break;
+      //     }
+      // }
+      // break;
     case MC_TOKEN_IDENTIFIER: {
       switch (stg) {
-      case 0: {
-        stg = 1;
+      case MCS_RSD_STG_ROOT: {
+        stg = MCS_RSD_STG_IDENTIFIER_ONLY;
       } break;
-      case 1:
-      case 2: {
-        stg = 3;
+      case MCS_RSD_STG_VOID_ONLY:
+        *statement_type = MC_SYNTAX_FUNCTION;
+        return 0;
+      case MCS_RSD_STG_IDENTIFIER_ONLY:
+      case MCS_RSD_STG_DEREFERENCING_TYPE: {
+        stg = MCS_RSD_STG_IDENTIFIER_AFTER_TYPE;
       } break;
       default:
         MCerror(5399, "IDENTIFIER, stg=%i", stg);
@@ -5610,9 +5693,9 @@ int mcs_determine_root_statement_type(mcs_parsing_state *ps, mc_syntax_node_type
     } break;
     case MC_TOKEN_STAR_CHARACTER: {
       switch (stg) {
-      case 1:
-      case 2: {
-        stg = 2;
+      case MCS_RSD_STG_IDENTIFIER_ONLY:
+      case MCS_RSD_STG_DEREFERENCING_TYPE: {
+        stg = MCS_RSD_STG_DEREFERENCING_TYPE;
       } break;
       default:
         MCerror(5412, "STAR_CHARACTER, stg=%i", stg);
@@ -5620,7 +5703,7 @@ int mcs_determine_root_statement_type(mcs_parsing_state *ps, mc_syntax_node_type
     } break;
     case MC_TOKEN_OPENING_BRACKET: {
       switch (stg) {
-      case 3:
+      case MCS_RSD_STG_IDENTIFIER_AFTER_TYPE:
         *statement_type = MC_SYNTAX_FUNCTION;
         return 0;
       default:
@@ -5629,7 +5712,7 @@ int mcs_determine_root_statement_type(mcs_parsing_state *ps, mc_syntax_node_type
     } break;
     case MC_TOKEN_SEMI_COLON: {
       switch (stg) {
-      case 3:
+      case MCS_RSD_STG_IDENTIFIER_AFTER_TYPE:
         *statement_type = MC_SYNTAX_FIELD_DECLARATION;
         return 0;
       default:
