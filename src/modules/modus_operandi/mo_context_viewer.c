@@ -12,7 +12,6 @@
 #include "modules/ui_elements/ui_elements.h"
 
 typedef struct _mc_mo_cv_context_row {
-
   mcu_panel *panel;
   mcu_textblock *key_textblock, *value_textblock;
 } _mc_mo_cv_context_row;
@@ -110,50 +109,65 @@ int _mc_mo_cv_set_context_row(mc_mo_context_viewer_data *cv, _mc_mo_cv_context_r
   return 0;
 }
 
+int _mc_mo_cv_iterate_fill_context_rows(mc_mo_context_viewer_data *cv, _mc_mo_cv_context_row **row,
+                                        hash_table_entry_t *cte, hash_table_entry_t *ctn)
+{
+  mc_mo_context_data *ctx;
+  for (; cte < ctn; ++cte) {
+    if (!cte->filled)
+      continue;
+
+    ctx = (mc_mo_context_data *)cte->value;
+
+    // printf("--'%s':", ctx->key);
+    switch (ctx->value_type) {
+    case MC_MO_CONTEXT_DATA_VALUE_MC_STR:
+      MCcall(_mc_mo_cv_set_context_row(cv, row, ctx->key, ctx->str.text));
+      break;
+    default:
+      MCcall(_mc_mo_cv_set_context_row(cv, row, ctx->key, "{data}"));
+      break;
+    }
+
+    if (*row >= cv->rows.items + cv->rows.size)
+      break;
+  }
+
+  return 0;
+}
+
 int _mc_mo_refresh_context_viewer_display(mc_mo_context_viewer_data *cv)
 {
-  puts("_mc_mo_refresh_context_viewer_display");
+  // puts("_mc_mo_refresh_context_viewer_display");
   _mc_mo_cv_context_row *row = cv->rows.items;
 
-  hash_table_entry_t *pje, *pjn, *cte, *ctn;
+  hash_table_entry_t *pje, *pjn;
   hash_table_t *pjc;
   mc_mo_context_data *ctx;
 
-  // Search through projects
-  pje = cv->process_stack->project_contexts.entries;
-  pjn = cv->process_stack->project_contexts.entries + cv->process_stack->project_contexts.capacity;
+  // Search global
+  MCcall(_mc_mo_cv_iterate_fill_context_rows(cv, &row, cv->process_stack->global_context.entries,
+                                             cv->process_stack->global_context.entries +
+                                                 cv->process_stack->global_context.capacity));
 
-  for (; pje < pjn; ++pje) {
-    if (!pje->filled)
-      continue;
+  // Project Context
+  if (row < cv->rows.items + cv->rows.size) {
+    // Search through projects
+    pje = cv->process_stack->project_contexts.entries;
+    pjn = cv->process_stack->project_contexts.entries + cv->process_stack->project_contexts.capacity;
 
-    pjc = (hash_table_t *)pje->value;
-
-    cte = pjc->entries;
-    ctn = pjc->entries + pjc->capacity;
-    for (; cte < ctn; ++cte) {
-      if (!cte->filled)
+    for (; pje < pjn; ++pje) {
+      if (!pje->filled)
         continue;
 
-      ctx = (mc_mo_context_data *)cte->value;
+      pjc = (hash_table_t *)pje->value;
 
-      // printf("--'%s':", ctx->key);
-      switch (ctx->value_type) {
-      case MC_MO_CONTEXT_DATA_VALUE_MC_STR:
-        MCcall(_mc_mo_cv_set_context_row(cv, &row, ctx->key, ctx->str.text));
-        break;
-      default:
-        MCcall(_mc_mo_cv_set_context_row(cv, &row, ctx->key, "{data}"));
-        break;
-      }
-
+      MCcall(_mc_mo_cv_iterate_fill_context_rows(cv, &row, pjc->entries, pjc->entries + pjc->capacity));
       if (row >= cv->rows.items + cv->rows.size)
-        goto end_fill_rows;
+        break;
     }
   }
-  puts("== END ==");
 
-end_fill_rows:
   // Hide any remaining rows
   for (; row < cv->rows.items + cv->rows.size; ++row) {
     row->panel->node->layout->visible = false;
@@ -255,7 +269,7 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
 
     MCcall(mcu_init_textblock(panel->node, &textblock));
     row->key_textblock = textblock;
-    textblock->background_color = (render_color){0.06f, 0.06f, 0.13f, 1.f};
+    textblock->background_color = (render_color){0.10f, 0.10f, 0.22f, 1.f};
     textblock->clip_text_to_bounds = true;
 
     layout = textblock->node->layout;
@@ -266,7 +280,7 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
 
     MCcall(mcu_init_textblock(panel->node, &textblock));
     row->value_textblock = textblock;
-    textblock->background_color = (render_color){0.06f, 0.06f, 0.13f, 1.f};
+    textblock->background_color = (render_color){0.10f, 0.10f, 0.22f, 1.f};
     textblock->clip_text_to_bounds = true;
 
     layout = textblock->node->layout;

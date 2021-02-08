@@ -877,12 +877,6 @@ VkResult render_sequence(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
       VK_CHECK(res, "mrt_render_text");
     } break;
 
-      // case RENDER_COMMAND_INDEXED_MESH: {
-      //   // printf("RENDER_COMMAND_INDEXED_MESH\n");
-      //   res = mrt_render_indexed_mesh(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);
-      //   VK_CHECK(res, "mrt_render_indexed_mesh");
-      // } break;
-
     case RENDER_COMMAND_PROGRAM: {
       // printf("RENDER_COMMAND_PROGRAM\n");
       res = mrt_render_render_program(p_vkrs, command_buffer, image_render, cmd, &copy_buffer);

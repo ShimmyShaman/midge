@@ -976,8 +976,8 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
   VkPipelineShaderStageCreateInfo shaderStages[SHADER_STAGE_MODULES];
   {
     {
-      char *vertex_shader_code;
-      read_file_text(create_info->vertex_shader_filepath, &vertex_shader_code);
+      // char *vertex_shader_code;
+      // read_file_text(create_info->vertex_shader_filepath, &vertex_shader_code);
 
       VkPipelineShaderStageCreateInfo *shaderStateCreateInfo = &shaderStages[0];
       shaderStateCreateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -988,9 +988,13 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
       shaderStateCreateInfo->pName = "main";
 
       unsigned int *vtx_spv, vtx_spv_size;
-      VkResult res = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_code, &vtx_spv, &vtx_spv_size);
-      VK_CHECK(res, "GLSLtoSPV");
-      free(vertex_shader_code);
+      VkResult res = mvk_glsl_file_to_spv(VK_SHADER_STAGE_VERTEX_BIT, create_info->vertex_shader_filepath, &vtx_spv,
+                                          &vtx_spv_size);
+      VK_CHECK(res, "mvk_glsl_file_to_spv");
+
+      // mvk_glsl_to_spv(VK_SHADER_STAGE_VERTEX_BIT, vertex_shader_code, &vtx_spv, &vtx_spv_size);
+      // VK_CHECK(res, "mvk_glsl_to_spv");
+      // free(vertex_shader_code);
 
       VkShaderModuleCreateInfo moduleCreateInfo;
       moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -1005,8 +1009,8 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
       free(vtx_spv);
     }
     {
-      char *fragment_shader_code;
-      read_file_text(create_info->fragment_shader_filepath, &fragment_shader_code);
+      // char *fragment_shader_code;
+      // read_file_text(create_info->fragment_shader_filepath, &fragment_shader_code);
 
       VkPipelineShaderStageCreateInfo *shaderStateCreateInfo = &shaderStages[1];
       shaderStateCreateInfo->sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1017,9 +1021,12 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
       shaderStateCreateInfo->pName = "main";
 
       unsigned int *vtx_spv, vtx_spv_size;
-      VkResult res = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_code, &vtx_spv, &vtx_spv_size);
-      VK_CHECK(res, "GLSLtoSPV");
-      free(fragment_shader_code);
+      // VkResult res = mvk_glsl_to_spv(VK_SHADER_STAGE_FRAGMENT_BIT, fragment_shader_code, &vtx_spv, &vtx_spv_size);
+      // VK_CHECK(res, "mvk_glsl_to_spv");
+      VkResult res = mvk_glsl_file_to_spv(VK_SHADER_STAGE_FRAGMENT_BIT, create_info->fragment_shader_filepath, &vtx_spv,
+                                          &vtx_spv_size);
+      VK_CHECK(res, "mvk_glsl_file_to_spv");
+      // free(fragment_shader_code);
 
       VkShaderModuleCreateInfo moduleCreateInfo;
       moduleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

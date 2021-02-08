@@ -97,7 +97,6 @@ typedef enum element_render_command_type {
   RENDER_COMMAND_COLORED_QUAD,
   RENDER_COMMAND_TEXTURED_QUAD,
   RENDER_COMMAND_PRINT_TEXT,
-  // RENDER_COMMAND_INDEXED_MESH,
   RENDER_COMMAND_PROGRAM,
 } element_render_command_type;
 

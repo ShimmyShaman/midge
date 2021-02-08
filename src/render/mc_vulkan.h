@@ -228,8 +228,13 @@ typedef struct vk_render_state {
 // extern "C" {
 VkResult mvk_init_vulkan(vk_render_state *vkrs);
 
-VkResult GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *p_shader_text, unsigned int **spirv,
-                   unsigned int *spirv_size);
+/*
+ * @dest_spv_filepath: may be NULL, indicating the generated intermediary file is not saved.
+ */
+VkResult mvk_glsl_to_spv(const VkShaderStageFlagBits shader_type, const char *p_shader_text, unsigned int **spirv,
+                         unsigned int *spirv_size, const char *dest_spv_filepath);
+VkResult mvk_glsl_file_to_spv(const VkShaderStageFlagBits shader_type, const char *shader_filepath,
+                              unsigned int **spirv, unsigned int *spirv_size);
 bool mvk_get_properties_memory_type_index(vk_render_state *p_vkrs, uint32_t typeBits, VkFlags requirements_mask,
                                           uint32_t *typeIndex);
 VkResult mvk_allocate_dynamic_render_data_memory(vk_render_state *p_vkrs, int min_buffer_size);

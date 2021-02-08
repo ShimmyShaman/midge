@@ -7,6 +7,7 @@ dep/**
 test/**
 res/**
 !res/font**
+!res/shaders**
 !res/mo/
 !res/mo/**
 daily_clarity.md
