@@ -158,6 +158,8 @@ int initialize_midge_state()
 
 void *mca_load_modules_then_project_async(void *state)
 {
+  midge_error_set_thread_name("modules-projects-load-thread");
+
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 

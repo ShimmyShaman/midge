@@ -1291,7 +1291,7 @@ VkResult obtain_cached_shader_spv(const char *shader_filepath, unsigned int **sp
 
   // Compare the rest of the cached filename with the modified time
   sprintf(b, "_%li.spv", stats.st_mtime);
-  printf("shader_cache_name='%s'\n", cache_spv_buf);
+  // printf("shader_cache_name='%s'\n", cache_spv_buf);
 
   DIR *dir;
   struct dirent *ent;
@@ -1319,7 +1319,7 @@ VkResult obtain_cached_shader_spv(const char *shader_filepath, unsigned int **sp
           while (fread(&code, sizeof(uint32_t), 1, fp) == 1) {
             if (*spirv_size + 1 >= spirv_alloc) {
               spirv_alloc += 256 + spirv_alloc / 2;
-              printf("reallocing to %u\n", spirv_alloc);
+              // printf("reallocing to %u\n", spirv_alloc);
 
               *spirv = (uint32_t *)realloc(*spirv, sizeof(uint32_t) * spirv_alloc);
               MCassert(*spirv, "realloc error spirv 1087");
@@ -1342,7 +1342,7 @@ VkResult obtain_cached_shader_spv(const char *shader_filepath, unsigned int **sp
   else {
     /* could not open directory */
     perror("");
-    MCerror(8528, "Could not open directory 'bin/cache/spv'");
+    MCerror(7445, "Could not open directory 'bin/cache/spv':\n You can just simply create it...");
     // return EXIT_FAILURE;
   }
 
@@ -1357,7 +1357,7 @@ VkResult mvk_glsl_file_to_spv(const VkShaderStageFlagBits shader_type, const cha
   // Check for a cache version of this file
   char cache_spv_fp[256];
   res = obtain_cached_shader_spv(shader_filepath, spirv, spirv_size, cache_spv_fp);
-  VK_CHECK(res, "mvk_glsl_to_spv");
+  VK_CHECK(res, "obtain_cached_shader_spv");
   if (*spirv) {
     return VK_SUCCESS;
   }

@@ -14,8 +14,8 @@
 #include "core/mc_source.h"
 #include "core/midge_app.h"
 #include "m_threads.h"
-#include "mc_str.h"
 #include "mc_error_handling.h"
+#include "mc_str.h"
 
 #include "core/app_modules.h"
 
@@ -272,6 +272,8 @@ int _mca_load_project(const char *base_path, const char *project_name)
 
 void *_mca_load_project_async_thread(void *state)
 {
+  midge_error_set_thread_name("load-project-async-thread");
+
   char *project_parent_dir = (char *)((void **)state)[0];
   char *project_name = (char *)((void **)state)[1];
 

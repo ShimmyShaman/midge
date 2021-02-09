@@ -19,7 +19,7 @@ void main() {
     outColor = texture(texSampler, texCoords);
     if(outColor.r < 0.01)
         discard;
-    // outColor.a = 0.3 + 0.7 * outColor.r;
+
     outColor.a = min(max(0, outColor.r - 0.2) * 0.2f + outColor.r * 1.5, 1.0);
     outColor.rgb = element.tint.rgb * outColor.a;
     outColor.a = 1.0f;
