@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <dirent.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -1202,7 +1204,7 @@ VkResult mvk_glsl_to_spv(const VkShaderStageFlagBits shader_type, const char *p_
     uint32_t code;
     while (fread(&code, sizeof(uint32_t), 1, fp) == 1) {
       if (*spirv_size + 1 >= spirv_alloc) {
-        spirv_alloc = spirv_alloc + 16 + spirv_alloc / 2;
+        spirv_alloc = 64 + spirv_alloc * 2;
         // printf("reallocing to %u\n", spirv_alloc);
 
         *spirv = (uint32_t *)realloc(*spirv, sizeof(uint32_t) * spirv_alloc);
@@ -1243,26 +1245,130 @@ VkResult mvk_glsl_to_spv(const VkShaderStageFlagBits shader_type, const char *p_
   return VK_SUCCESS;
 }
 
+// const char *generate_cached_spv_filepath(const char *shader_filepath) {
+//   unsigned long hash = 5381;
+//   {
+//     const char *fp = shader_filepath;
+//     char c;
+//     while ((c = *fp++)) {
+//       hash = ((hash << 5) + hash) + (unsigned long)(c);
+//     }
+//   }
+
+// }
+
+VkResult obtain_cached_shader_spv(const char *shader_filepath, unsigned int **spirv, unsigned int *spirv_size,
+                                  char *cache_spv_buf)
+{
+  // Init NULL
+  *spirv = NULL;
+
+  unsigned long hash = 5381;
+  {
+    const char *fp = shader_filepath;
+    char c;
+    while ((c = *fp++)) {
+      hash = ((hash << 5) + hash) + (unsigned long)(c);
+    }
+  }
+
+  strcpy(cache_spv_buf, "bin/cache/spv/");
+  char *fnp, *b;
+  fnp = b = cache_spv_buf + strlen(cache_spv_buf);
+  while (hash) {
+    *b = 'a' + hash % 26;
+    hash /= 26;
+    ++b;
+  }
+  *b = '\0';
+
+  // Obtain the last modified time of the given shader
+  struct stat stats;
+  int res = stat(shader_filepath, &stats);
+  if (res) {
+    MCerror(1919, "Odd? TODO print errno");
+  }
+
+  // Compare the rest of the cached filename with the modified time
+  sprintf(b, "_%li.spv", stats.st_mtime);
+  printf("shader_cache_name='%s'\n", cache_spv_buf);
+
+  DIR *dir;
+  struct dirent *ent;
+  if ((dir = opendir("bin/cache/spv")) != NULL) {
+    /* print all the files and directories within directory */
+    while ((ent = readdir(dir)) != NULL) {
+      // Compare the name hash
+      if (strncmp(ent->d_name, fnp, b - fnp))
+        continue;
+
+      if (!strcmp(ent->d_name, fnp)) {
+        // Use the cached file
+        FILE *fp = fopen(cache_spv_buf, "r");
+        if (!fp) {
+          printf("obtain_cached_shader_spv: couldn't open file: %s", cache_spv_buf);
+          return VK_ERROR_UNKNOWN;
+        }
+        {
+          uint32_t spirv_alloc = 512;
+          *spirv = (uint32_t *)malloc(sizeof(uint32_t) * spirv_alloc);
+          MCassert(*spirv, "malloc error spirv 1120");
+          *spirv_size = 0;
+
+          uint32_t code;
+          while (fread(&code, sizeof(uint32_t), 1, fp) == 1) {
+            if (*spirv_size + 1 >= spirv_alloc) {
+              spirv_alloc += 256 + spirv_alloc / 2;
+              printf("reallocing to %u\n", spirv_alloc);
+
+              *spirv = (uint32_t *)realloc(*spirv, sizeof(uint32_t) * spirv_alloc);
+              MCassert(*spirv, "realloc error spirv 1087");
+            }
+            (*spirv)[*spirv_size] = code;
+            ++*spirv_size;
+          }
+        }
+        fclose(fp);
+
+        return VK_SUCCESS;
+      }
+
+      // Delete the cached file
+      remove(cache_spv_buf);
+      printf("removed cached shader '%s'\n", cache_spv_buf);
+    }
+    closedir(dir);
+  }
+  else {
+    /* could not open directory */
+    perror("");
+    MCerror(8528, "Could not open directory 'bin/cache/spv'");
+    // return EXIT_FAILURE;
+  }
+
+  return VK_SUCCESS;
+}
+
 VkResult mvk_glsl_file_to_spv(const VkShaderStageFlagBits shader_type, const char *shader_filepath,
                               unsigned int **spirv, unsigned int *spirv_size)
 {
+  VkResult res;
+
+  // Check for a cache version of this file
+  char cache_spv_fp[256];
+  res = obtain_cached_shader_spv(shader_filepath, spirv, spirv_size, cache_spv_fp);
+  VK_CHECK(res, "mvk_glsl_to_spv");
+  if (*spirv) {
+    return VK_SUCCESS;
+  }
+
   char *code;
   if (read_file_text(shader_filepath, &code)) {
     puts("-]read_file_text");
     return VK_ERROR_UNKNOWN;
   }
 
-  // TODO
-  // unsigned long hash = 5381;
-  // {
-  //   const char *fp = shader_filepath;
-  //   char c;
-  //   while ((c = *fp++)) {
-  //     hash = ((hash << 5) + hash) + (unsigned long)(c);
-  //   }
-  // }
-
-  VkResult res = mvk_glsl_to_spv(shader_type, code, spirv, spirv_size, NULL);
+  res = mvk_glsl_to_spv(shader_type, code, spirv, spirv_size, cache_spv_fp);
   VK_CHECK(res, "mvk_glsl_to_spv");
   free(code);
 
