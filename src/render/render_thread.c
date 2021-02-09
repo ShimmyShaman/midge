@@ -58,43 +58,50 @@ VkResult handle_resource_commands(vk_render_state *p_vkrs, resource_queue *resou
 
       // TODO manage the freeing or strdup of the path char string
       VK_CHECK(res, "load_texture_from_file");
-
     } break;
+
     case RESOURCE_COMMAND_CREATE_TEXTURE: {
       res = mvk_create_empty_render_target(
           p_vkrs, resource_cmd->create_texture.width, resource_cmd->create_texture.height,
           resource_cmd->create_texture.image_usage, (mcr_texture_image **)resource_cmd->p_resource);
       VK_CHECK(res, "create_empty_render_target");
-
     } break;
+
     case RESOURCE_COMMAND_LOAD_FONT: {
       // printf("hrc-resource_cmd->font.height:%f\n", resource_cmd->font.height);
       res = mvk_load_font(p_vkrs, resource_cmd->font.path, resource_cmd->font.height,
                           (mcr_font_resource **)resource_cmd->p_resource);
       VK_CHECK(res, "load_font");
-
     } break;
+
     case RESOURCE_COMMAND_CREATE_RENDER_PROGRAM: {
       // printf("hrc-resource_cmd->font.height:%f\n", resource_cmd->font.height);
       res = mvk_create_render_program(p_vkrs, &resource_cmd->create_render_program.create_info,
                                       (mcr_render_program **)resource_cmd->p_resource);
       VK_CHECK(res, "load_font");
-
     } break;
+
     case RESOURCE_COMMAND_LOAD_VERTEX_BUFFER: {
       res = mvk_load_vertex_data_buffer(p_vkrs, resource_cmd->load_mesh.p_data, resource_cmd->load_mesh.data_count,
                                         resource_cmd->load_mesh.release_original_data_on_copy,
                                         (mcr_vertex_buffer **)resource_cmd->p_resource);
       VK_CHECK(res, "mvk_load_vertex_data_buffer");
-
     } break;
+
     case RESOURCE_COMMAND_LOAD_INDEX_BUFFER: {
       res = mvk_load_index_buffer(p_vkrs, resource_cmd->load_indices.p_data, resource_cmd->load_indices.data_count,
                                   resource_cmd->load_indices.release_original_data_on_copy,
                                   (mcr_index_buffer **)resource_cmd->p_resource);
       VK_CHECK(res, "mvk_load_index_buffer");
-
     } break;
+
+    case RESOURCE_COMMAND_MAP_MEMORY: {
+      res = mvk_remap_mem(p_vkrs, resource_cmd->map_mem.mem, resource_cmd->map_mem.buf_info->offset,
+                          resource_cmd->map_mem.buf_info->range, resource_cmd->map_mem.data,
+                          resource_cmd->map_mem.data_size_in_bytes);
+      VK_CHECK(res, "mvk_remap_mem");
+    } break;
+
     // case RESOURCE_COMMAND_RECREATE_SWAPCHAIN: {
     //   res = mvk_recreate_swapchain(p_vkrs);
     //   VK_CHECK(res, "mvk_recreate_swapchain");
@@ -814,7 +821,11 @@ VkResult mrt_render_render_program(vk_render_state *p_vkrs, VkCommandBuffer comm
   const VkDeviceSize offsets[1] = {0};
   vkCmdBindVertexBuffers(command_buffer, 0, 1, &cmd->render_program.data->vertices->buf, offsets);
   // vkCmdDraw(command_buffer, 3 * 2 * 6, 1, 0, 0);
-  vkCmdDrawIndexed(command_buffer, indices->count, 1, 0, 0, 0);
+  int index_draw_count = cmd->render_program.data->specific_index_draw_count;
+  if (!index_draw_count)
+    index_draw_count = cmd->render_program.data->indices->capacity;
+  vkCmdDrawIndexed(command_buffer, index_draw_count, 1, 0, 0, 0);
+  // vkCmdDrawIndexed()
 
   return res;
 }

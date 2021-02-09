@@ -866,7 +866,7 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, un
 
   mcr_index_buffer *index_buffer = (mcr_index_buffer *)malloc(sizeof(mcr_index_buffer));
   index_buffer->resource_uid = p_vkrs->resource_uid_counter++;
-  index_buffer->count = data_count;
+  index_buffer->capacity = data_count;
 
   const int data_size_in_bytes = sizeof(unsigned int) * data_count;
 
@@ -898,14 +898,15 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, un
       &alloc_info.memoryTypeIndex);
   MCassert(pass, "No mappable, coherent memory");
 
-  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &(index_buffer->mem));
+  res = vkAllocateMemory(p_vkrs->device, &alloc_info, NULL, &index_buffer->mem);
   VK_CHECK(res, "vkAllocateMemory");
   index_buffer->buffer_info.range = mem_reqs.size;
   index_buffer->buffer_info.offset = 0;
 
   // Bind
   uint8_t *p_mapped_mem;
-  res = vkMapMemory(p_vkrs->device, index_buffer->mem, 0, mem_reqs.size, 0, (void **)&p_mapped_mem);
+  res = vkMapMemory(p_vkrs->device, index_buffer->mem, index_buffer->buffer_info.offset,
+                    index_buffer->buffer_info.range, 0, (void **)&p_mapped_mem);
   VK_CHECK(res, "vkMapMemory");
 
   memcpy(p_mapped_mem, p_data, data_size_in_bytes);
@@ -925,6 +926,23 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, un
   if (release_original_data_on_copy) {
     free(p_data);
   }
+
+  return res;
+}
+
+VkResult mvk_remap_mem(vk_render_state *p_vkrs, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize range, void *data,
+                       size_t data_size_in_bytes)
+{
+  VkResult res;
+
+  // Bind
+  uint8_t *p_mapped_mem;
+  res = vkMapMemory(p_vkrs->device, mem, offset, range, 0, (void **)&p_mapped_mem);
+  VK_CHECK(res, "vkMapMemory");
+
+  memcpy(p_mapped_mem, data, data_size_in_bytes);
+
+  vkUnmapMemory(p_vkrs->device, mem);
 
   return res;
 }

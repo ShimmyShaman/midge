@@ -220,7 +220,7 @@ int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_r
   return 0;
 }
 
-int mcr_load_index_buffer(unsigned int *indices, unsigned int index_count, bool release_original_data_on_creation,
+int mcr_load_index_buffer(unsigned int *indices, unsigned int indices_size, bool release_original_data_on_creation,
                           mcr_index_buffer **p_index_buffer)
 {
   *p_index_buffer = NULL;
@@ -235,7 +235,7 @@ int mcr_load_index_buffer(unsigned int *indices, unsigned int index_count, bool 
   command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
   command->p_resource = (void *)p_index_buffer;
   command->load_indices.p_data = indices;
-  command->load_indices.data_count = index_count;
+  command->load_indices.data_count = indices_size;
   command->load_indices.release_original_data_on_copy = release_original_data_on_creation; // TODO -- toggle to true?
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
@@ -260,6 +260,28 @@ int mcr_load_vertex_buffer(float *vertices, unsigned int vertex_count, bool rele
   command->load_mesh.p_data = vertices;
   command->load_mesh.data_count = vertex_count;
   command->load_mesh.release_original_data_on_copy = release_original_data_on_creation; // TODO -- toggle to true?
+
+  pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
+
+  return 0;
+}
+
+int mcr_remap_buffer_memory(VkDescriptorBufferInfo *buffer, VkDeviceMemory memory, void *new_data,
+                            size_t data_size_in_bytes)
+{
+  midge_app_info *global_data;
+  mc_obtain_midge_app_info(&global_data);
+
+  pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);
+
+  resource_command *command;
+  mcr_obtain_resource_command(global_data->render_thread->resource_queue, &command);
+  command->type = RESOURCE_COMMAND_MAP_MEMORY;
+  command->p_resource = NULL;
+  command->map_mem.mem = memory;
+  command->map_mem.buf_info = buffer;
+  command->map_mem.data = new_data;
+  command->map_mem.data_size_in_bytes = data_size_in_bytes;
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);
 

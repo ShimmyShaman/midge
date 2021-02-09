@@ -21,6 +21,8 @@ VkResult mvk_load_vertex_data_buffer(vk_render_state *p_vkrs, float *vertices, u
                                      bool release_original_data_on_copy, mcr_vertex_buffer **p_resource);
 VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, unsigned int data_count,
                                bool release_original_data_on_copy, mcr_index_buffer **p_resource);
+VkResult mvk_remap_mem(vk_render_state *p_vkrs, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize range, void *data,
+                       size_t data_size_in_bytes);
 VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_create_info *create_info,
                                    mcr_render_program **out_render_program);
 

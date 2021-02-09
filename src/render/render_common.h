@@ -107,6 +107,7 @@ typedef enum resource_command_type {
   RESOURCE_COMMAND_LOAD_FONT,
   RESOURCE_COMMAND_LOAD_VERTEX_BUFFER,
   RESOURCE_COMMAND_LOAD_INDEX_BUFFER,
+  RESOURCE_COMMAND_MAP_MEMORY,
   RESOURCE_COMMAND_CREATE_RENDER_PROGRAM,
 } resource_command_type;
 
@@ -174,7 +175,7 @@ typedef struct mcr_vertex_buffer {
 
 typedef struct mcr_index_buffer {
   unsigned int resource_uid;
-  unsigned int count;
+  unsigned int capacity;
   VkBuffer buf;
   VkDeviceMemory mem;
   VkDescriptorBufferInfo buffer_info;
@@ -184,7 +185,8 @@ typedef struct mcr_render_program_data {
   void **input_buffers;
   mcr_index_buffer *indices;
   mcr_vertex_buffer *vertices;
-
+  /* Draw Index Count */
+  int specific_index_draw_count;
 } mcr_render_program_data;
 
 typedef struct mcr_texture_image {
@@ -307,6 +309,12 @@ typedef struct resource_command {
       bool release_original_data_on_copy;
     } load_indices;
     struct {
+      VkDescriptorBufferInfo *buf_info;
+      VkDeviceMemory mem;
+      void *data;
+      size_t data_size_in_bytes;
+    } map_mem;
+    struct {
       mcr_render_program_create_info create_info;
     } create_render_program;
   };
@@ -367,10 +375,12 @@ int mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
 int mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                              mcr_font_resource **font);
 int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_program);
-int mcr_load_index_buffer(unsigned int *indices, unsigned int index_count, bool release_original_data_on_creation,
-                          mcr_index_buffer **p_index_buffer);
+int mcr_load_index_buffer(unsigned int *indices, unsigned int specific_index_draw_count,
+                          bool release_original_data_on_creation, mcr_index_buffer **p_index_buffer);
 int mcr_load_vertex_buffer(float *vertices, unsigned int vertex_count, bool release_original_data_on_creation,
                            mcr_vertex_buffer **p_vertex_buffer);
+int mcr_remap_buffer_memory(VkDescriptorBufferInfo *buffer, VkDeviceMemory memory, void *new_data,
+                            size_t data_size_in_bytes);
 
 int mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *text, float *text_width,
                                           float *text_height);
