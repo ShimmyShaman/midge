@@ -321,7 +321,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(mc_set_str(button->str, "< Previous"));
+  MCcall(mc_set_str(&button->str, "< Previous"));
   button->tag = psdd;
   button->left_click = (void *)&_mc_mocsd_button_submit;
 
@@ -336,7 +336,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(mc_set_str(button->str, "Finish"));
+  MCcall(mc_set_str(&button->str, "Finish"));
   button->tag = psdd;
   button->left_click = (void *)&_mc_mocsd_button_submit;
 
@@ -351,7 +351,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(mc_set_str(button->str, "Next >"));
+  MCcall(mc_set_str(&button->str, "Next >"));
   button->tag = psdd;
   button->left_click = (void *)&_mc_mocsd_button_submit;
 

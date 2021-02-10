@@ -5594,6 +5594,7 @@ typedef enum mcs_root_statement_determine_stage {
   MCS_RSD_STG_VOID_ONLY,
   MCS_RSD_STG_IDENTIFIER_AFTER_TYPE,
   MCS_RSD_STG_DEREFERENCING_TYPE,
+  MCS_RSD_STG_VALUE_TYPE_ONLY,
 } mcs_root_statement_determine_stage;
 
 int mcs_determine_root_statement_type(mcs_parsing_state *ps, mc_syntax_node_type *statement_type)
@@ -5607,13 +5608,15 @@ int mcs_determine_root_statement_type(mcs_parsing_state *ps, mc_syntax_node_type
     case MC_TOKEN_VOID_KEYWORD: {
       stg = MCS_RSD_STG_VOID_ONLY;
     } break;
-      // case MC_TOKEN_INT_KEYWORD:
-      // case MC_TOKEN_CHAR_KEYWORD:
+    case MC_TOKEN_INT_KEYWORD:
+    case MC_TOKEN_CHAR_KEYWORD:
+    case MC_TOKEN_LONG_KEYWORD:
+    case MC_TOKEN_SHORT_KEYWORD:
+    case MC_TOKEN_FLOAT_KEYWORD: {
+      stg = MCS_RSD_STG_VALUE_TYPE_ONLY;
+    } break;
       // case MC_TOKEN_STRUCT_KEYWORD:
       // case MC_TOKEN_CONST_KEYWORD:
-      // case MC_TOKEN_LONG_KEYWORD:
-      // case MC_TOKEN_SHORT_KEYWORD:
-      // case MC_TOKEN_FLOAT_KEYWORD:
       // case MC_TOKEN_SIGNED_KEYWORD:
       // case MC_TOKEN_UNSIGNED_KEYWORD:
       // int peek_ahead = 1;
@@ -5683,6 +5686,7 @@ int mcs_determine_root_statement_type(mcs_parsing_state *ps, mc_syntax_node_type
       case MCS_RSD_STG_VOID_ONLY:
         *statement_type = MC_SYNTAX_FUNCTION;
         return 0;
+      case MCS_RSD_STG_VALUE_TYPE_ONLY:
       case MCS_RSD_STG_IDENTIFIER_ONLY:
       case MCS_RSD_STG_DEREFERENCING_TYPE: {
         stg = MCS_RSD_STG_IDENTIFIER_AFTER_TYPE;

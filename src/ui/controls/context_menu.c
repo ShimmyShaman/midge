@@ -171,7 +171,7 @@ void mcu_context_menu_option_clicked(mci_input_event *input_event, mcu_button *b
     // Fire the event handler
     // TODO fptr casting
     void (*option_selected_event)(const char *) = (void (*)(const char *))context_menu->option_selected;
-    option_selected_event(button->str->text);
+    option_selected_event(button->str.text);
   }
 
   // Hide the context menu

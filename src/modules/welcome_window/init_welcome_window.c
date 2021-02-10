@@ -174,7 +174,7 @@ int mc_mww_init_data(mc_node *module_node)
   MCcall(mcu_init_button(module_node, &ww->new_project_button));
   ww->new_project_button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   ww->new_project_button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
-  mc_set_str(ww->new_project_button->str, "New Project");
+  mc_set_str(&ww->new_project_button->str, "New Project");
   ww->new_project_button->node->layout->preferred_width = 120;
   ww->new_project_button->node->layout->preferred_height = 28;
   ww->new_project_button->left_click = &_mc_mww_on_new_project;
@@ -183,7 +183,7 @@ int mc_mww_init_data(mc_node *module_node)
   ww->input_textbox->node->layout->visible = false;
   ww->input_textbox->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   ww->input_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
-  mc_set_str(ww->new_project_button->str, "New Project");
+  mc_set_str(&ww->new_project_button->str, "New Project");
   ww->input_textbox->node->layout->preferred_width = 160;
   ww->input_textbox->node->layout->preferred_height = 32;
   ww->input_textbox->submit = &_mc_mww_textbox_submit;

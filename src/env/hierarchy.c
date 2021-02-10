@@ -13,6 +13,15 @@
 
 #include "core/midge_app.h"
 
+void mc_print_node_name(mc_node *node)
+{
+  if (node->parent) {
+    mc_print_node_name(node->parent);
+    printf("->");
+  }
+  printf("%s", node->name);
+}
+
 void exit_app(mc_node *node_scope, int result)
 {
   switch (node_scope->type) {
@@ -208,169 +217,7 @@ int mca_init_mc_node(node_type type, const char *name, mc_node **node)
   return 0;
 }
 
-// void mca_logic_update_node_list(mc_node_list *node_list)
-// {
-//   for (int nl_index = 0; nl_index < node_list->count; ++nl_index) {
-//     mc_node *node = node_list->items[nl_index];
-//     switch (node->type) {
-//     case NODE_TYPE_VISUAL_PROJECT: {
-//       // Update despite requirements
-//       mca_update_visual_project(node);
-//     } break;
-//     case NODE_TYPE_UI: {
-//       mcu_ui_element *element = (mcu_ui_element *)node->data;
-//       // Nothing for the moment -- TODO?
-//     } break;
-//     default:
-//       MCerror(9617, "mca_update_node_list::Unsupported node type:%i", node->type);
-//     }
-//   }
-// }
-// void mca_update_node_layout_location(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints) {}
-
-// void mca_update_child_node_layout(mc_node *node, mc_rectf *available_area, layout_extent_restraints restraints)
-// {
-//   switch (node->type) {
-//   case NODE_TYPE_UI: {
-//     mcu_ui_element *element = (mcu_ui_element *)node->data;
-//     switch (element->type) {
-//     case UI_ELEMENT_TEXT_BLOCK: {
-//       mca_node_layout *layout = element->layout;
-
-//       // Preferred value > padding (within min/max if set)
-
-//       mc_rectf bounds;
-
-//       // Width
-//       if (layout->preferred_width) {
-//         // Set to preferred width
-//         bounds.width = layout->preferred_width;
-//       }
-//       else {
-//         if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
-//           if (layout->min_width)
-//             bounds.width += layout->min_width;
-//           else {
-//             layout->__bounds.width = 0;
-//             break;
-//           }
-//         }
-//         else {
-//           // padding adjusted from available
-//           bounds.width = available_area->width - layout->padding.right - layout->padding.left;
-
-//           // Specified bounds
-//           if (layout->min_width && bounds.width < layout->min_width) {
-//             bounds.width = layout->min_width;
-//           }
-//           if (layout->max_width && bounds.width > layout->max_width) {
-//             bounds.width = layout->max_width;
-//           }
-
-//           if (bounds.width < 0) {
-//             bounds.width = 0;
-//           }
-//         }
-//       }
-
-//       // Height
-//       if (layout->preferred_height) {
-//         // Set to preferred height
-//         bounds.height = layout->preferred_height;
-//       }
-//       else {
-//         if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
-//           if (layout->min_height)
-//             bounds.height += layout->min_height;
-//           else {
-//             layout->__bounds.height = 0;
-//             break;
-//           }
-//         }
-//         else {
-//           // padding adjusted from available
-//           bounds.height = available_area->height - layout->padding.bottom - layout->padding.top;
-
-//           // Specified bounds
-//           if (layout->min_height && bounds.height < layout->min_height) {
-//             bounds.height = layout->min_height;
-//           }
-//           if (layout->max_height && bounds.height > layout->max_height) {
-//             bounds.height = layout->max_height;
-//           }
-
-//           if (bounds.height < 0) {
-//             bounds.height = 0;
-//           }
-//         }
-//       }
-
-//       if (!bounds.width || !bounds.height) {
-//         layout->__bounds = bounds;
-//         break;
-//       }
-
-//       // X
-//       switch (layout->horizontal_alignment) {
-//       case HORIZONTAL_ALIGNMENT_LEFT: {
-//         bounds.x = available_area->x + layout->padding.left;
-//       } break;
-//       case HORIZONTAL_ALIGNMENT_RIGHT: {
-//         bounds.x = available_area->x + available_area->width - layout->padding.right - bounds.width;
-//       } break;
-//       case HORIZONTAL_ALIGNMENT_CENTRED: {
-//         bounds.x = available_area->x + layout->padding.left +
-//                    (available_area->width - layout->padding.right - bounds.width) / 2.f;
-//       } break;
-//       default:
-//         MCerror(7180, "NotSupported:%i", layout->horizontal_alignment);
-//       }
-
-//       // Y
-//       switch (layout->vertical_alignment) {
-//       case VERTICAL_ALIGNMENT_TOP: {
-//         bounds.y = available_area->y + layout->padding.top;
-//       } break;
-//       case VERTICAL_ALIGNMENT_BOTTOM: {
-//         bounds.y = available_area->y + available_area->height - layout->padding.bottom - bounds.height;
-//       } break;
-//       case VERTICAL_ALIGNMENT_CENTRED: {
-//         bounds.y = available_area->y + layout->padding.top +
-//                    (available_area->height - layout->padding.bottom - bounds.height) / 2.f;
-//       } break;
-//       default:
-//         MCerror(7195, "NotSupported:%i", layout->vertical_alignment);
-//       }
-
-//       printf("bounds = {%.3f, %.3f, %.3f, %.3f}\n", bounds.x, bounds.y, bounds.width, bounds.height);
-
-//       if (bounds.x != layout->__bounds.x || bounds.y != layout->__bounds.y || bounds.width != layout->__bounds.width
-//       ||
-//           bounds.height != layout->__bounds.height) {
-//         layout->__bounds = bounds;
-//         mca_set_node_requires_rerender(node);
-//       }
-//     } break;
-//     case UI_ELEMENT_CONTEXT_MENU: {
-//       // mcu_update_context_menu_layout(node, available_area, restraints);
-//       mcu_context_menu *context_menu = (mcu_context_menu *)element->data;
-
-//       // Determine the maximum width requested by child controls and the cumulative height
-
-//       // Ensure they lie within min & max width parameters
-
-//       // Set accordingly
-//     } break;
-//     default:
-//       MCerror(9117, "mca_update_node_layout_extents::Unsupported element type:%i", element->type);
-//     }
-//   } break;
-//   default:
-//     MCerror(9121, "mca_update_node_layout_extents::Unsupported node type:%i", node->type);
-//   }
-// }
-
-int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints)
+int mca_determine_typical_node_extents_halt_propagation(mc_node *node, layout_extent_restraints restraints)
 {
   const float MAX_EXTENT_VALUE = 100000.f;
   mca_node_layout *layout = node->layout;
@@ -433,19 +280,6 @@ int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints r
 
       if (layout->determined_extents.height < 0) {
         layout->determined_extents.height = 0;
-      }
-    }
-  }
-
-  // Children
-  if (node->children) {
-    for (int a = 0; a < node->children->count; ++a) {
-      mc_node *child = node->children->items[a];
-      if (child->layout && child->layout->determine_layout_extents) {
-        // TODO fptr casting
-        void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
-            (void (*)(mc_node *, layout_extent_restraints))child->layout->determine_layout_extents;
-        determine_layout_extents(child, LAYOUT_RESTRAINT_NONE); // TODO -- does a child inherit its parents restraints?
       }
     }
   }
@@ -453,76 +287,19 @@ int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints r
   return 0;
 }
 
-int mca_determine_typical_node_extents_partially(mc_node *node, layout_extent_restraints restraints,
-                                                 bool determine_children)
+int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints)
 {
-  const float MAX_EXTENT_VALUE = 100000.f;
-  mca_node_layout *layout = node->layout;
+  // DEBUG
+  // Ensure only that which is updated gets called
+  // printf("ExtentsDet:'");
+  // mc_print_node_name(node);
+  // printf("'\n");
+  // DEBUG
 
-  // Width
-  if (layout->preferred_width) {
-    // Set to preferred width
-    layout->determined_extents.width = layout->preferred_width;
-  }
-  else {
-    if (restraints & LAYOUT_RESTRAINT_HORIZONTAL) {
-      if (layout->min_width)
-        layout->determined_extents.width = layout->min_width;
-      else {
-        layout->determined_extents.width = 0;
-      }
-    }
-    else {
-      // padding adjusted from available
-      layout->determined_extents.width = MAX_EXTENT_VALUE;
-
-      // Specified bounds
-      if (layout->min_width && layout->determined_extents.width < layout->min_width) {
-        layout->determined_extents.width = layout->min_width;
-      }
-      if (layout->max_width && layout->determined_extents.width > layout->max_width) {
-        layout->determined_extents.width = layout->max_width;
-      }
-
-      if (layout->determined_extents.width < 0) {
-        layout->determined_extents.width = 0;
-      }
-    }
-  }
-
-  // Height
-  if (layout->preferred_height) {
-    // Set to preferred height
-    layout->determined_extents.height = layout->preferred_height;
-  }
-  else {
-    if (restraints & LAYOUT_RESTRAINT_VERTICAL) {
-      if (layout->min_height)
-        layout->determined_extents.height = layout->min_height;
-      else {
-        layout->determined_extents.height = 0;
-      }
-    }
-    else {
-      // padding adjusted from available
-      layout->determined_extents.height = MAX_EXTENT_VALUE;
-
-      // Specified bounds
-      if (layout->min_height && layout->determined_extents.height < layout->min_height) {
-        layout->determined_extents.height = layout->min_height;
-      }
-      if (layout->max_height && layout->determined_extents.height > layout->max_height) {
-        layout->determined_extents.height = layout->max_height;
-      }
-
-      if (layout->determined_extents.height < 0) {
-        layout->determined_extents.height = 0;
-      }
-    }
-  }
+  MCcall(mca_determine_typical_node_extents_halt_propagation(node, restraints));
 
   // Children
-  if (determine_children && node->children) {
+  if (node->children) {
     for (int a = 0; a < node->children->count; ++a) {
       mc_node *child = node->children->items[a];
       if (child->layout && child->layout->determine_layout_extents) {
@@ -541,6 +318,13 @@ int mca_determine_typical_node_extents_partially(mc_node *node, layout_extent_re
 // TODO -- make this return int success and all delegates etc
 int mca_update_typical_node_layout(mc_node *node, mc_rectf const *available_area)
 {
+  // DEBUG
+  // Ensure only that which is updated gets called
+  // printf("LayoutUpdate:'");
+  // mc_print_node_name(node);
+  // printf("'\n");
+  // DEBUG
+
   // Preferred value > padding (within min/max if set)
   mc_rectf bounds;
   mca_node_layout *layout = node->layout;
@@ -626,77 +410,20 @@ int mca_update_typical_node_layout(mc_node *node, mc_rectf const *available_area
   }
 
   // Children
+  mc_node *child;
+  mca_node_layout *child_layout;
   if (node->children) {
     for (int a = 0; a < node->children->count; ++a) {
-      mc_node *child = node->children->items[a];
-      if (child->layout && child->layout->update_layout) {
+      child = node->children->items[a];
+      child_layout = child->layout;
+
+      if (child_layout && child_layout->update_layout && child_layout->__requires_layout_update) {
         // TODO fptr casting
-        void (*update_layout)(mc_node *, mc_rectf *) = (void (*)(mc_node *, mc_rectf *))child->layout->update_layout;
+        void (*update_layout)(mc_node *, mc_rectf *) = (void (*)(mc_node *, mc_rectf *))child_layout->update_layout;
         update_layout(child, &layout->__bounds);
       }
     }
   }
-
-  return 0;
-}
-
-int mca_attach_to_ancestor_root(mc_node *ancestor, mc_node *node_to_attach)
-{
-  // Search up the ancestoral root of the given parent
-  unsigned int ancestoral_marker;
-  do {
-    ancestoral_marker = *(unsigned int *)ancestor->data;
-
-    if (ancestoral_marker == MIDGE_APP_INFO_ROOT_UID) {
-      // Found
-      break;
-    }
-  } while (ancestor = ancestor->parent);
-
-  if (!ancestor) {
-    MCerror(8657, "Could not find a root ancestor.");
-  }
-
-  // Insert it appropriately according to its z-index
-  mc_node_list *children = ancestor->children;
-  int a;
-  mc_node *oc;
-  for (a = children->count; a > 0; --a) {
-    oc = children->items[a - 1];
-
-    if (oc->layout && oc->layout->z_layer_index <= node_to_attach->layout->z_layer_index) {
-      MCcall(insert_in_collection((void ***)&children->items, &children->alloc, &children->count, a, node_to_attach));
-      break;
-    }
-  }
-  if (!a) {
-    MCcall(insert_in_collection((void ***)&children->items, &children->alloc, &children->count, a, node_to_attach));
-  }
-  node_to_attach->parent = ancestor;
-
-  MCcall(mca_set_node_requires_layout_update(node_to_attach));
-  if (node_to_attach->children) {
-    MCcall(mca_set_descendents_require_layout_update(node_to_attach->children));
-  }
-
-  return 0;
-}
-
-int mca_detach_from_parent(mc_node *node)
-{
-  midge_app_info *app_info;
-  mc_obtain_midge_app_info(&app_info);
-
-  for (int a = app_info->global_node->children->count; a >= 0; --a) {
-    // Only add unique items
-    if (node == app_info->global_node->children->items[a]) {
-      MCcall(remove_from_collection((void ***)&app_info->global_node->children->items,
-                                    &app_info->global_node->children->count, a));
-      break;
-    }
-  }
-
-  node->parent = NULL;
 
   return 0;
 }
@@ -820,6 +547,67 @@ int mca_update_typical_node_layout_partially(mc_node *node, mc_rectf const *avai
       }
     }
   }
+
+  return 0;
+}
+
+int mca_attach_to_ancestor_root(mc_node *ancestor, mc_node *node_to_attach)
+{
+  // Search up the ancestoral root of the given parent
+  unsigned int ancestoral_marker;
+  do {
+    ancestoral_marker = *(unsigned int *)ancestor->data;
+
+    if (ancestoral_marker == MIDGE_APP_INFO_ROOT_UID) {
+      // Found
+      break;
+    }
+  } while (ancestor = ancestor->parent);
+
+  if (!ancestor) {
+    MCerror(8657, "Could not find a root ancestor.");
+  }
+
+  // Insert it appropriately according to its z-index
+  mc_node_list *children = ancestor->children;
+  int a;
+  mc_node *oc;
+  for (a = children->count; a > 0; --a) {
+    oc = children->items[a - 1];
+
+    if (oc->layout && oc->layout->z_layer_index <= node_to_attach->layout->z_layer_index) {
+      MCcall(insert_in_collection((void ***)&children->items, &children->alloc, &children->count, a, node_to_attach));
+      break;
+    }
+  }
+  if (!a) {
+    MCcall(insert_in_collection((void ***)&children->items, &children->alloc, &children->count, a, node_to_attach));
+  }
+  node_to_attach->parent = ancestor;
+
+  MCcall(mca_set_node_requires_layout_update(node_to_attach));
+  if (node_to_attach->children) {
+    MCcall(mca_set_descendents_require_layout_update(node_to_attach->children));
+  }
+
+  return 0;
+}
+
+int mca_detach_from_parent(mc_node *node)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  for (int a = app_info->global_node->children->count; a >= 0; --a) {
+    // Only add unique items
+    if (node == app_info->global_node->children->items[a]) {
+      MCcall(remove_from_collection((void ***)&app_info->global_node->children->items,
+                                    &app_info->global_node->children->count, a));
+      break;
+    }
+  }
+
+  node->parent = NULL;
 
   return 0;
 }
@@ -948,7 +736,7 @@ int mca_focus_node(mc_node *node)
   // printf("focusing node: %s%s%s%s%s\n", (node->parent && node->parent->parent) ? node->parent->parent->name : "",
   //        (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "",
   //        node->parent ? "->" : "", node->name);
-         
+
   // Set layout update required on all ancestors of the node
   while (node) {
     // DEBUG?

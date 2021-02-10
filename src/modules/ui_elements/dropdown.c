@@ -23,7 +23,7 @@ void _mcu_update_dropdown_extension_layout(mc_node *node, mc_rectf const *availa
     button = (mcu_button *)button_node->data;
 
     button_node->layout->visible = true;
-    mc_set_str(button->str, dropdown->options.items[a]);
+    mc_set_str(&button->str, dropdown->options.items[a]);
     mca_set_node_requires_rerender(button_node);
   }
   extension->node->layout->determined_extents.height = 2 + a * 27 + 2; // TODO...
@@ -96,8 +96,8 @@ void _mcu_render_dropdown_present(image_render_details *image_render_queue, mc_n
   // printf("renderdropdown- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, dropdown->selected_str->text, dropdown->font);
   mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y,  NULL,dropdown->selected_str->text, dropdown->font,
-                                dropdown->font_color);
+                                (unsigned int)node->layout->__bounds.y, NULL, dropdown->selected_str->text,
+                                dropdown->font, dropdown->font_color);
 }
 
 int _mcu_set_dropdown_extension_panel_visibility(mcu_dropdown *dropdown, bool visibility)
@@ -161,7 +161,7 @@ void _mcu_dropdown_on_option_clicked(mci_input_event *input_event, mcu_button *b
 {
   mcu_dropdown *dropdown = button->tag;
 
-  mc_set_str(dropdown->selected_str, button->str->text);
+  mc_set_str(dropdown->selected_str, button->str.text);
 
   // Propagate
   if (dropdown->selection) {
@@ -247,7 +247,7 @@ int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_dropdown)
     button->background_color = COLOR_TRANSPARENT;
     button->tag = dropdown;
     button->left_click = (void *)&_mcu_dropdown_on_option_clicked;
-    mc_set_str(button->str, "button option");
+    MCcall(mc_set_str(&button->str, "button option"));
 
     sprintf(buf, "dropdown-option-button-%i", a);
     if (button->node->name)

@@ -325,8 +325,8 @@ void init_hierarchy_viewer()
     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
     layout->padding = {4, (float)(i * 24), 0, 0};
 
-    mc_set_str(button->str, "text");
-    mc_append_to_strf(button->str, "%i", i);
+    mc_set_str(&button->str, "text");
+    mc_append_to_strf(&button->str, "%i", i);
     button->background_color = COLOR_TRANSPARENT;
     button->font_color = COLOR_GHOST_WHITE;
   }

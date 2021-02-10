@@ -173,7 +173,7 @@ int _mc_fd_open_directory(mc_folder_dialog_data *fd, const char *starting_direct
       // Assign entry
       button = fd->displayed_items.items[fd->displayed_items.utilized++];
       button->node->layout->visible = true;
-      MCcall(mc_set_str(button->str, ent->d_name));
+      MCcall(mc_set_str(&button->str, ent->d_name));
     }
     closedir(dir);
   }
@@ -219,12 +219,12 @@ void _mc_fd_item_selected(mci_input_event *input_event, mcu_button *button)
   mc_folder_dialog_data *fd = (mc_folder_dialog_data *)button->tag;
 
   char buf[256];
-  if (!strcmp(button->str->text, "..")) {
+  if (!strcmp(button->str.text, "..")) {
     mcf_get_parent_directory(buf, 256, fd->current_directory->text);
   }
   else {
     strcpy(buf, fd->current_directory->text);
-    mcf_concat_filepath(buf, 256, button->str->text);
+    mcf_concat_filepath(buf, 256, button->str.text);
     if (access(buf, F_OK) == -1) {
       // File doesn't exist!
       puts("ERROR TODO 8195");
@@ -329,7 +329,7 @@ int mc_fd_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(mc_set_str(button->str, "Select Current Folder"));
+  MCcall(mc_set_str(&button->str, "Select Current Folder"));
   button->tag = fd;
   button->left_click = (void *)&_mc_fd_open_current_clicked;
 
@@ -352,7 +352,7 @@ int mc_fd_init_ui(mc_node *module_node)
     button->tag = fd;
     button->left_click = (void *)&_mc_fd_item_selected;
 
-    MCcall(mc_set_str(button->str, "button"));
+    MCcall(mc_set_str(&button->str, "button"));
 
     MCcall(append_to_collection((void ***)&fd->displayed_items.items, &fd->displayed_items.capacity,
                                 &fd->displayed_items.count, button));

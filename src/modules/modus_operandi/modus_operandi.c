@@ -916,7 +916,7 @@ int _mc_mo_update_options_display(modus_operandi_data *mod)
     button = mod->options_buttons.items[a];
     mopp = mod->all_processes.items[a];
 
-    MCcall(mc_set_str(button->str, mopp->name));
+    MCcall(mc_set_str(&button->str, mopp->name));
 
     button->tag = mopp;
 
@@ -1165,7 +1165,7 @@ int mc_mo_init_ui(mc_node *module_node)
 
     button->left_click = (void *)&_mc_mo_operational_process_selected;
 
-    MCcall(mc_set_str(button->str, "button"));
+    MCcall(mc_set_str(&button->str, "button"));
 
     MCcall(append_to_collection((void ***)&mod->options_buttons.items, &mod->options_buttons.capacity,
                                 &mod->options_buttons.count, button));
@@ -1188,7 +1188,7 @@ int mc_mo_init_ui(mc_node *module_node)
 
   button->left_click = (void *)&_mc_mo_create_process_clicked;
 
-  MCcall(mc_set_str(button->str, "+"));
+  MCcall(mc_set_str(&button->str, "+"));
 
   // Show Context Viewer button
   MCcall(mcu_init_button(module_node, &button));
@@ -1207,7 +1207,7 @@ int mc_mo_init_ui(mc_node *module_node)
 
   button->left_click = (void *)&_mc_mo_toggle_context_viewer_clicked;
 
-  MCcall(mc_set_str(button->str, "oo"));
+  MCcall(mc_set_str(&button->str, "oo"));
 
   // // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   // while (!mod->render_target.image) {

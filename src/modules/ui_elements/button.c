@@ -16,7 +16,7 @@
 
 //   float str_width, str_height;
 //   if (!node->layout->preferred_width || !node->layout->preferred_height)
-//     mcr_determine_text_display_dimensions(button->font, button->str->text, &str_width, &str_height);
+//     mcr_determine_text_display_dimensions(button->font, button->str.text, &str_width, &str_height);
 
 //   // Width
 //   if (node->layout->preferred_width)
@@ -38,26 +38,46 @@
 //   }
 // }
 
-// void __mcu_update_button_layout(mc_node *node,mc_rectf const *available_area
-// {
-//   mcu_button *button = (mcu_button *)node->data;
+void _mcu_update_button_layout(mc_node *node, mc_rectf const *available_area)
+{
+  mcu_button *button = (mcu_button *)node->data;
 
-//   mc_rectf new_bounds = node->layout->__bounds;
-//   new_bounds.x = available_area->x + node->layout->padding.left;
-//   new_bounds.y = available_area->y + node->layout->padding.top;
+  mca_update_typical_node_layout(node, available_area);
 
-//   // Determine if the new bounds is worth setting
-//   if (new_bounds.x != node->layout->__bounds.x || new_bounds.y != node->layout->__bounds.y ||
-//       new_bounds.width != node->layout->__bounds.width || new_bounds.height != node->layout->__bounds.height) {
-//     node->layout->__bounds = new_bounds;
-//     mca_set_node_requires_rerender(node);
-//   }
+  float text_width, text_height;
+  mcr_determine_text_display_dimensions(button->font, button->str.text, &text_width, &text_height);
 
-//   node->layout->__requires_layout_update = false;
+  // Align the button text
+  switch (button->text_align.horizontal) {
+  case HORIZONTAL_ALIGNMENT_LEFT:
+    button->text_align.__x = 0.f;
+    break;
+  case HORIZONTAL_ALIGNMENT_CENTRED:
+    button->text_align.__x = max(0.f, (node->layout->__bounds.width - text_width) / 2);
+    break;
+  case HORIZONTAL_ALIGNMENT_RIGHT:
+    button->text_align.__x = max(0.f, node->layout->__bounds.width - text_width);
+    break;
+  default:
+    MCVerror(5877, "Not Supported : %i", button->text_align.horizontal);
+  }
+  switch (button->text_align.vertical) {
+  case VERTICAL_ALIGNMENT_TOP:
+    button->text_align.__y = 0.f;
+    break;
+  case VERTICAL_ALIGNMENT_CENTRED:
+    button->text_align.__y = max(0.f, (node->layout->__bounds.height - text_height) / 2);
+    break;
+  case VERTICAL_ALIGNMENT_BOTTOM:
+    button->text_align.__y = max(0.f, node->layout->__bounds.height - text_height);
+    break;
+  default:
+    MCVerror(5877, "Not Supported : %i", button->text_align.vertical);
+  }
 
-//   // Set rerender anyway because text could've changed
-//   mca_set_node_requires_rerender(node);
-// }
+  // Set rerender anyway because text could've changed
+  mca_set_node_requires_rerender(node);
+}
 
 void __mcu_render_button_present(image_render_details *image_render_queue, mc_node *node)
 {
@@ -89,9 +109,10 @@ void __mcu_render_button_present(image_render_details *image_render_queue, mc_no
     color.b *= button->disabled_multiplier;
   }
   // printf("renderbutton- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, button->str->text, button->font->name);
-  mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y, NULL, button->str->text, button->font, color);
+  //        (unsigned int)node->layout->__bounds.y, button->str.text, button->font->name);
+  mcr_issue_render_command_text(image_render_queue, (unsigned int)(node->layout->__bounds.x + button->text_align.__x),
+                                (unsigned int)(node->layout->__bounds.y + button->text_align.__y), NULL,
+                                button->str.text, button->font, color);
 }
 
 void _mcu_button_handle_input_event(mc_node *button_node, mci_input_event *input_event)
@@ -130,7 +151,7 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   // Layout
   MCcall(mca_init_node_layout(&node->layout));
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
-  node->layout->update_layout = (void *)&mca_update_typical_node_layout;
+  node->layout->update_layout = (void *)&_mcu_update_button_layout;
   node->layout->render_headless = NULL;
   node->layout->render_present = (void *)&__mcu_render_button_present;
   node->layout->handle_input_event = (void *)&_mcu_button_handle_input_event;
@@ -151,10 +172,13 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   button->tag = NULL;
   button->left_click = NULL;
 
-  MCcall(mc_alloc_str(&button->str));
-  MCcall(mc_set_str(button->str, "button"));
+  MCcall(mc_init_str(&button->str, 8));
+  MCcall(mc_set_str(&button->str, "button"));
   button->font = NULL;
   button->font_color = COLOR_GHOST_WHITE;
+
+  button->text_align.horizontal = HORIZONTAL_ALIGNMENT_CENTRED;
+  button->text_align.vertical = VERTICAL_ALIGNMENT_CENTRED;
 
   button->background_color = COLOR_DIM_GRAY;
   button->disabled_multiplier = 0.7f;

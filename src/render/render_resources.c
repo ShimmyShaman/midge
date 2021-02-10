@@ -18,9 +18,10 @@ int mcr_determine_text_display_dimensions(mcr_font_resource *font, const char *t
   }
 
   midge_app_info *global_data;
-  mc_obtain_midge_app_info(&global_data);
 
   if (!font) {
+    mc_obtain_midge_app_info(&global_data);
+
     // Use the global default font resource
     font = global_data->ui_state->default_font_resource;
   }

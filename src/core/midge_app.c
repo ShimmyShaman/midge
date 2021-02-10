@@ -394,6 +394,7 @@ int midge_run_app()
   time_t s, recent_file_poll = 0L; // Seconds
   bool exit_gracefully;
   char inotify_event_buf[INOTIFY_EVENT_BUF_LEN];
+  mc_node *child;
 
   struct timespec prev_frametime, current_frametime, logic_update_frametime;
   clock_gettime(CLOCK_REALTIME, &current_frametime);
@@ -605,8 +606,8 @@ int midge_run_app()
         global_root_node->layout->__requires_layout_update = false;
 
         for (a = 0; a < app_info->global_node->children->count; ++a) {
-          mc_node *child = app_info->global_node->children->items[a];
-          if (child->layout && child->layout->determine_layout_extents) {
+          child = app_info->global_node->children->items[a];
+          if (child->layout && child->layout->determine_layout_extents && child->layout->__requires_layout_update) {
             // TODO fptr casting
             void (*determine_layout_extents)(mc_node *, layout_extent_restraints) =
                 (void (*)(mc_node *, layout_extent_restraints))child->layout->determine_layout_extents;
@@ -618,9 +619,9 @@ int midge_run_app()
         global_root_node->layout->__bounds =
             (mc_rectf){0.f, 0.f, (float)app_info->screen.width, (float)app_info->screen.height};
         for (a = 0; a < global_root_node->children->count; ++a) {
-          mc_node *child = global_root_node->children->items[a];
+          child = global_root_node->children->items[a];
 
-          if (child->layout && child->layout->update_layout) {
+          if (child->layout && child->layout->update_layout && child->layout->__requires_layout_update) {
             // TODO fptr casting
             // printf("ulay-child-type:%i '%s'\n", child->type, child->name);
             void (*update_node_layout)(mc_node *, mc_rectf *) =
@@ -665,7 +666,7 @@ int midge_run_app()
       // Rerender headless images
       // printf("headless\n");
       for (a = 0; a < global_root_node->children->count; ++a) {
-        mc_node *child = global_root_node->children->items[a];
+        child = global_root_node->children->items[a];
         // printf("child-type:%i '%s'\n", child->type, child->name);
         if (child->layout && child->layout->visible && child->layout->render_headless &&
             child->layout->__requires_rerender) {

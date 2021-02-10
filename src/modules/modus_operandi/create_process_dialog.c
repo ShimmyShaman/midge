@@ -443,7 +443,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
-    MCcall(mc_set_str(button->str, "obtain->"));
+    MCcall(mc_set_str(&button->str, "obtain->"));
     button->tag = cell;
     button->left_click = (void *)&_mc_mo_cpd_cell_delegate_clicked;
 
@@ -457,7 +457,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
-    MCcall(mc_set_str(button->str, "+"));
+    MCcall(mc_set_str(&button->str, "+"));
     button->tag = cell;
     button->left_click = (void *)&_mc_mo_cpd_cell_continue_clicked;
   }
@@ -473,7 +473,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(mc_set_str(button->str, "X"));
+  MCcall(mc_set_str(&button->str, "X"));
   button->tag = cpd;
   button->left_click = (void *)&_mc_mo_cpd_cancel_clicked;
 

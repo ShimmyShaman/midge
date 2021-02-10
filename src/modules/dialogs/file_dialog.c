@@ -12,8 +12,8 @@
 #include "core/midge_app.h"
 #include "render/render_common.h"
 
-#include "modules/ui_elements/ui_elements.h"
 #include "modules/mc_io/mc_file.h"
+#include "modules/ui_elements/ui_elements.h"
 
 // #include "env/environment_definitions.h"
 // #include "render/render_thread.h"
@@ -206,7 +206,7 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
       button = fd->displayed_items.items[fd->displayed_items.utilized++];
       button->font_color = is_dir ? COLOR_LIGHT_YELLOW : COLOR_WHITE;
       button->node->layout->visible = true;
-      MCcall(mc_set_str(button->str, ent->d_name));
+      MCcall(mc_set_str(&button->str, ent->d_name));
     }
     closedir(dir);
   }
@@ -231,7 +231,7 @@ void _mc_file_dialog_item_selected(mci_input_event *input_event, mcu_button *but
   mc_file_dialog_data *fd = (mc_file_dialog_data *)button->tag;
 
   char buf[256];
-  if (!strcmp(button->str->text, "..")) {
+  if (!strcmp(button->str.text, "..")) {
     mcf_get_parent_directory(buf, 256, fd->current_directory->text);
     _mc_file_dialog_open_directory(fd, buf);
 
@@ -242,7 +242,7 @@ void _mc_file_dialog_item_selected(mci_input_event *input_event, mcu_button *but
   }
   else {
     strcpy(buf, fd->current_directory->text);
-    mcf_concat_filepath(buf, 256, button->str->text);
+    mcf_concat_filepath(buf, 256, button->str.text);
 
     struct stat stats;
     int res = stat(buf, &stats);
@@ -267,7 +267,7 @@ void _mc_file_dialog_item_selected(mci_input_event *input_event, mcu_button *but
       }
 
       // Set the file name to the textbox
-      mc_set_str(fd->input_textbox->contents, button->str->text);
+      mc_set_str(fd->input_textbox->contents, button->str.text);
       mca_set_node_requires_rerender(fd->input_textbox->node);
       fd->specified_path_set_from_folder_item = true;
     }
@@ -383,7 +383,7 @@ int _mc_init_file_dialog_ui(mc_node *module_node)
     button->tag = fd;
     button->left_click = (void *)&_mc_file_dialog_item_selected;
 
-    MCcall(mc_set_str(button->str, "button"));
+    MCcall(mc_set_str(&button->str, "button"));
 
     MCcall(append_to_collection((void ***)&fd->displayed_items.items, &fd->displayed_items.capacity,
                                 &fd->displayed_items.count, button));
@@ -413,7 +413,7 @@ int _mc_init_file_dialog_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(mc_set_str(button->str, "Open"));
+  MCcall(mc_set_str(&button->str, "Open"));
   button->tag = fd;
   button->left_click = (void *)&_mc_file_dialog_submit_clicked;
 

@@ -244,7 +244,7 @@ int mc_tid_init_ui(mc_node *module_node)
   layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
   button->background_color = COLOR_MIDNIGHT_EXPRESS;
-  MCcall(mc_set_str(button->str, "Enter"));
+  MCcall(mc_set_str(&button->str, "Enter"));
   button->tag = tid;
   button->left_click = (void *)&_mc_tid_button_submit;
 

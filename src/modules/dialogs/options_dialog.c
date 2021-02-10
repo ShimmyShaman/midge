@@ -94,7 +94,7 @@ void _mc_obd_item_selected(mci_input_event *input_event, mcu_button *button)
   int (*result_delegate)(void *invoker_state, char *selected_folder) =
       (int (*)(void *, char *))obd->callback.result_delegate;
   if (result_delegate) {
-    result_delegate(obd->callback.state, button->str->text);
+    result_delegate(obd->callback.state, button->str.text);
   }
   obd->callback.state = NULL;
   obd->callback.result_delegate = NULL;
@@ -125,7 +125,7 @@ int _mc_obd_on_options_dialog_request(void *handler_state, void *event_args)
   for (a = 0; a < option_count && a < obd->displayed_items.count; ++a) {
     b = obd->displayed_items.items[a];
 
-    MCcall(mc_set_str(b->str, options[a]));
+    MCcall(mc_set_str(&b->str, options[a]));
     b->node->layout->visible = true;
 
     mca_set_node_requires_rerender(b->node);
@@ -208,7 +208,7 @@ int mc_obd_init_ui(mc_node *module_node)
     button->tag = obd;
     button->left_click = (void *)&_mc_obd_item_selected;
 
-    MCcall(mc_set_str(button->str, "button"));
+    MCcall(mc_set_str(&button->str, "button"));
 
     MCcall(append_to_collection((void ***)&obd->displayed_items.items, &obd->displayed_items.capacity,
                                 &obd->displayed_items.count, button));

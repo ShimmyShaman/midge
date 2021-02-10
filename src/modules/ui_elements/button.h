@@ -5,6 +5,7 @@
 
 #include "control/mc_controller.h"
 #include "core/core_definitions.h"
+#include "env/environment_definitions.h"
 #include "mc_str.h"
 #include "render/render_common.h"
 
@@ -18,9 +19,15 @@ typedef struct mcu_button {
   // int (*left_click)(mci_input_event *, mcu_button *); (TODO why can't I declare this with TCC??)
   void *left_click;
 
-  mc_str *str;
+  mc_str str;
   mcr_font_resource *font;
   render_color font_color;
+
+  struct {
+    horizontal_alignment_type horizontal;
+    vertical_alignment_type vertical;
+    float __x, __y;
+  } text_align;
 
   render_color background_color;
   float disabled_multiplier;
