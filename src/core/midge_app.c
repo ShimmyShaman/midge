@@ -707,7 +707,6 @@ void midge_cleanup_app()
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
-  // TODO invoke release resources on children...
   if (app_info->inotify_fd > 0) {
     for (int a = 0; a < app_info->wds_size; ++a)
       if (app_info->wds[a]) {
@@ -716,6 +715,9 @@ void midge_cleanup_app()
       }
     close(app_info->inotify_fd);
   }
+
+  // Destroy the hierarchy
+  mca_destroy_node(app_info->global_node);
 
   // End render thread
   end_mthread(app_info->render_thread->thread_info);

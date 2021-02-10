@@ -143,11 +143,22 @@ void _mcu_button_handle_input_event(mc_node *button_node, mci_input_event *input
   input_event->handled = true;
 }
 
+static void _mcu_button_destroy_data(void *data)
+{
+  mcu_button *button = (mcu_button *)data;
+
+  if (button->str.text)
+    free(button->str.text);
+
+  free(data);
+}
+
 int mcu_init_button(mc_node *parent, mcu_button **p_button)
 {
   // Node
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_MCU_BUTTON, "unnamed-button", &node));
+  node->destroy_data = (void *)&_mcu_button_destroy_data;
 
   // printf("mcu_init_button->node:%p name:%p '%s'-%i\n", node, node->name, node->name, strlen(node->name));
 
@@ -199,9 +210,12 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   return 0;
 }
 
-// void mca_init_button_context_menu_options()
+// void mcu_destroy_button(mcu_button *button)
 // {
-//   // // TODO this void * casting business
-//   // void *arg = (void *)&mca_visual_project_create_add_button;
-//   // mca_global_context_menu_add_option_to_node_context(NODE_TYPE_BUTTON, "change text", arg);
+//   // Destroy Node from Hierarchy
+//   if (button->node) {
+//     mca_destroy_mc_node(button->node);
+//     button->node = NULL;
+//   }
+
 // }

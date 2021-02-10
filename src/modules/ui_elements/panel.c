@@ -25,11 +25,19 @@ void _mcu_render_panel_present(image_render_details *image_render_queue, mc_node
   }
 }
 
+static void _mcu_panel_destroy_data(void *data)
+{
+  // mcu_panel *panel = (mcu_panel *)data;
+
+  free(data);
+}
+
 int mcu_init_panel(mc_node *parent, mcu_panel **p_panel)
 {
   // Node
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-panel", &node));
+  node->destroy_data = (void *)&_mcu_panel_destroy_data;
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
   node->children->alloc = 0;

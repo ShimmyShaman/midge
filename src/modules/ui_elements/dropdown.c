@@ -175,11 +175,23 @@ void _mcu_dropdown_on_option_clicked(mci_input_event *input_event, mcu_button *b
   input_event->handled = true;
 }
 
+static void _mcu_dropdown_destroy_data(void *data)
+{
+  mcu_dropdown *dropdown = (mcu_dropdown *)data;
+
+  // if (textblock->str.text)
+  //   free(textblock->str.text);
+  mc_release_str(dropdown->selected_str, true);
+
+  free(data);
+}
+
 int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_dropdown)
 {
   // Node
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-dropdown", &node));
+  node->destroy_data = (void *)&_mcu_dropdown_destroy_data;
 
   // printf("mcu_init_dropdown->node:%p name:%p '%s'-%i\n", node, node->name, node->name, strlen(node->name));
 

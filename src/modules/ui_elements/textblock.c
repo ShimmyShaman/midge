@@ -118,11 +118,23 @@ void _mcu_textblock_handle_input_event(mc_node *textblock_node, mci_input_event 
   }
 }
 
+static void _mcu_textblock_destroy_data(void *data)
+{
+  mcu_textblock *textblock = (mcu_textblock *)data;
+
+  // if (textblock->str.text)
+  //   free(textblock->str.text);
+  mc_release_str(textblock->str, true);
+
+  free(data);
+}
+
 int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
 {
   // Node
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-textblock", &node));
+  node->destroy_data = (void *)&_mcu_textblock_destroy_data;
 
   // Layout
   MCcall(mca_init_node_layout(&node->layout));

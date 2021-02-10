@@ -342,6 +342,7 @@ typedef struct mc_node {
   struct mca_node_layout *layout;
 
   void *data;
+  void (*destroy_data)(void *data);
 } mc_node;
 
 typedef struct mc_app_itp_data {

@@ -212,9 +212,42 @@ int mca_init_mc_node(node_type type, const char *name, mc_node **node)
   (*node)->children = NULL;
 
   (*node)->data = NULL;
+  (*node)->destroy_data = NULL;
   (*node)->parent = NULL;
 
   return 0;
+}
+
+void mca_destroy_node(mc_node *node)
+{
+  if (node->children) {
+    for (int a = 0; a < node->children->count; ++a) {
+      mca_destroy_node(node->children->items[a]);
+    }
+
+    free(node->children);
+  }
+
+  if (node->destroy_data && node->data) {
+    void (*destroy_data)(void *data) = (void (*)(void *))node->destroy_data;
+    destroy_data(node->data);
+  }
+  else if (node->data) {
+    // // TODO -- warnings atm
+    // printf("Warning: Node without destroy_data impl:'");
+    // mc_print_node_name(node);
+    // puts("'");
+  }
+
+  if (node->name) {
+    free(node->name);
+  }
+
+  if (node->layout) {
+    free(node->layout);
+  }
+
+  free(node);
 }
 
 int mca_determine_typical_node_extents_halt_propagation(mc_node *node, layout_extent_restraints restraints)

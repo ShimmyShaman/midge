@@ -176,11 +176,23 @@ int _mcu_init_textbox_data(mc_node *node)
   return 0;
 }
 
+static void _mcu_textbox_destroy_data(void *data)
+{
+  mcu_textbox *textbox = (mcu_textbox *)data;
+
+  // if (textblock->str.text)
+  //   free(textblock->str.text);
+  mc_release_str(textbox->contents, true);
+
+  free(data);
+}
+
 int mcu_init_textbox(mc_node *parent, mcu_textbox **p_textbox)
 {
   // Node
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-textbox", &node));
+  node->destroy_data = (void *)&_mcu_textbox_destroy_data;
 
   // Layout
   MCcall(mca_init_node_layout(&node->layout));
