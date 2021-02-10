@@ -50,26 +50,28 @@ void _mcu_update_button_layout(mc_node *node, mc_rectf const *available_area)
   // Align the button text
   switch (button->text_align.horizontal) {
   case HORIZONTAL_ALIGNMENT_LEFT:
-    button->text_align.__x = 0.f;
+    button->__state.text_offset_x = button->text_align.horizontal_margin;
     break;
   case HORIZONTAL_ALIGNMENT_CENTRED:
-    button->text_align.__x = max(0.f, (node->layout->__bounds.width - text_width) / 2);
+    button->__state.text_offset_x = max(0.f, (node->layout->__bounds.width - text_width) / 2);
     break;
   case HORIZONTAL_ALIGNMENT_RIGHT:
-    button->text_align.__x = max(0.f, node->layout->__bounds.width - text_width);
+    button->__state.text_offset_x =
+        max(0.f, node->layout->__bounds.width - text_width) - button->text_align.horizontal_margin;
     break;
   default:
     MCVerror(5877, "Not Supported : %i", button->text_align.horizontal);
   }
   switch (button->text_align.vertical) {
   case VERTICAL_ALIGNMENT_TOP:
-    button->text_align.__y = 0.f;
+    button->__state.text_offset_y = button->text_align.vertical_margin;
     break;
   case VERTICAL_ALIGNMENT_CENTRED:
-    button->text_align.__y = max(0.f, (node->layout->__bounds.height - text_height) / 2);
+    button->__state.text_offset_y = max(0.f, (node->layout->__bounds.height - text_height) / 2);
     break;
   case VERTICAL_ALIGNMENT_BOTTOM:
-    button->text_align.__y = max(0.f, node->layout->__bounds.height - text_height);
+    button->__state.text_offset_y =
+        max(0.f, node->layout->__bounds.height - text_height) - button->text_align.vertical_margin;
     break;
   default:
     MCVerror(5877, "Not Supported : %i", button->text_align.vertical);
@@ -110,8 +112,9 @@ void __mcu_render_button_present(image_render_details *image_render_queue, mc_no
   }
   // printf("renderbutton- %u %u '%s' %s\n", (unsigned int)node->layout->__bounds.x,
   //        (unsigned int)node->layout->__bounds.y, button->str.text, button->font->name);
-  mcr_issue_render_command_text(image_render_queue, (unsigned int)(node->layout->__bounds.x + button->text_align.__x),
-                                (unsigned int)(node->layout->__bounds.y + button->text_align.__y), NULL,
+  mcr_issue_render_command_text(image_render_queue,
+                                (unsigned int)(node->layout->__bounds.x + button->__state.text_offset_x),
+                                (unsigned int)(node->layout->__bounds.y + button->__state.text_offset_y), NULL,
                                 button->str.text, button->font, color);
 }
 
@@ -179,6 +182,8 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
 
   button->text_align.horizontal = HORIZONTAL_ALIGNMENT_CENTRED;
   button->text_align.vertical = VERTICAL_ALIGNMENT_CENTRED;
+  button->text_align.horizontal_margin = 2;
+  button->text_align.vertical_margin = 2;
 
   button->background_color = COLOR_DIM_GRAY;
   button->disabled_multiplier = 0.7f;

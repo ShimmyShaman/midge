@@ -883,7 +883,7 @@ void _mc_mo_toggle_context_viewer_clicked(mci_input_event *input_event, mcu_butt
 {
   if (input_event->type == INPUT_EVENT_MOUSE_PRESS) {
     modus_operandi_data *mod = (modus_operandi_data *)button->tag;
-    
+
     mc_mo_toggle_context_viewer_visibility(mod->context_viewer_node);
 
     input_event->handled = true;
@@ -1147,7 +1147,7 @@ int mc_mo_init_ui(mc_node *module_node)
   char buf[64];
   mcu_button *button;
 
-  // unsigned int y = (unsigned int)(24 + 8 + 4);
+  // Visible Options Buttons
   for (int a = 0; a < 12; ++a) {
     MCcall(mcu_init_button(module_node, &button));
 
@@ -1157,6 +1157,7 @@ int mc_mo_init_ui(mc_node *module_node)
     }
     sprintf(buf, "mo-options-button-%i", a);
     button->node->name = strdup(buf);
+    button->text_align.horizontal = HORIZONTAL_ALIGNMENT_LEFT;
 
     button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
     button->node->layout->padding = (mc_paddingf){6, 24 + 8 + a * 27, 6, 0};

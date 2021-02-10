@@ -16,25 +16,30 @@ typedef struct mcu_button {
 
   bool enabled;
 
-  // int (*left_click)(mci_input_event *, mcu_button *); (TODO why can't I declare this with TCC??)
+  // (TODO why can't I declare this with TCC??)
+  // int (*left_click)(mci_input_event *input_event, mcu_button *button);
   void *left_click;
 
-  mc_str str;
+  /* May be NULL indicating the usage of the default font & size by midge-app */
   mcr_font_resource *font;
   render_color font_color;
 
+  mc_str str;
   struct {
     horizontal_alignment_type horizontal;
     vertical_alignment_type vertical;
-    float __x, __y;
+    // The margins (if alignments are to one side or another only, not centered) between the text and the button bounds
+    float horizontal_margin, vertical_margin;
   } text_align;
 
   render_color background_color;
   float disabled_multiplier;
   float highlight_multiplier;
 
+  // State Variables -- Not to be directly set, will be set by handler functions
   struct {
     bool highlighted;
+    float text_offset_x, text_offset_y;
   } __state;
 } mcu_button;
 

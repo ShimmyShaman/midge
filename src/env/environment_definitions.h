@@ -133,12 +133,13 @@ int mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_i
 int mca_init_node_layout(mca_node_layout **layout);
 int mca_init_mc_node(node_type type, const char *name, mc_node **node);
 
-/* Determines typical node only extents, does not propagate this determination to children. */
+/* Determines typical node extents only, does not propagate this determination to children. */
 int mca_determine_typical_node_extents_halt_propagation(mc_node *node, layout_extent_restraints restraints);
 /* Determines a typical nodes extents and then propagates this determination to all children */
 int mca_determine_typical_node_extents(mc_node *node, layout_extent_restraints restraints);
 /* Updates the nodes layout in a 'typical fashion' and propagates this update to all children */
 int mca_update_typical_node_layout(mc_node *node, mc_rectf const *available_area);
+/* Updates the nodes layout in a customizeable 'typical fashion'. */
 int mca_update_typical_node_layout_partially(mc_node *node, mc_rectf const *available_area, bool update_x,
                                              bool update_y, bool update_width, bool update_height,
                                              bool update_children);
