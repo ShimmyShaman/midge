@@ -621,7 +621,7 @@ VkResult mvk_load_image_sampler(vk_render_state *p_vkrs, const int texWidth, con
 
 VkResult mvk_load_texture_from_file(vk_render_state *p_vkrs, const char *const filepath, mcr_texture_image **p_resource)
 {
-  puts("mvk_load_texture_from_file");
+  // puts("mvk_load_texture_from_file");
   VkResult res;
 
   int texWidth, texHeight, texChannels;
@@ -849,7 +849,7 @@ VkResult mvk_load_vertex_data_buffer(vk_render_state *p_vkrs, float *p_data, uns
                        &p_vkrs->loaded_vertex_data.count, mesh);
 
   *p_resource = mesh;
-  printf("vertex_data resource %u loaded\n", mesh->resource_uid);
+  // printf("vertex_data resource %u loaded\n", mesh->resource_uid);
 
   if (release_original_data_on_copy) {
     free(p_data);
@@ -921,7 +921,7 @@ VkResult mvk_load_index_buffer(vk_render_state *p_vkrs, unsigned int *p_data, un
                        &p_vkrs->loaded_index_data.count, index_buffer);
 
   *p_resource = index_buffer;
-  printf("index_data resource %u loaded\n", index_buffer->resource_uid);
+  // printf("index_data resource %u loaded\n", index_buffer->resource_uid);
 
   if (release_original_data_on_copy) {
     free(p_data);
@@ -1209,7 +1209,7 @@ VkResult mvk_create_render_program(vk_render_state *p_vkrs, mcr_render_program_c
 
   // Set
   *out_render_program = render_program;
-  printf("render_program resource %u loaded\n", render_program->resource_uid);
+  // printf("render_program resource %u loaded\n", render_program->resource_uid);
 
   return res;
 }

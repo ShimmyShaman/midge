@@ -121,6 +121,8 @@ int _mca_set_project_state(char *base_path, char *module_name)
 
 int _mca_load_project(const char *base_path, const char *project_name)
 {
+  printf("Loading Project '%s'...\n", project_name);
+
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
@@ -324,7 +326,7 @@ int mca_load_previously_open_projects()
   char *open_list_text;
   MCcall(read_file_text(opl_filepath, &open_list_text));
 
-  printf("open_list_text:'%s'\n", open_list_text);
+  // printf("open_list_text:'%s'\n", open_list_text);
 
   // The current working directory
   char projects_dir[256];

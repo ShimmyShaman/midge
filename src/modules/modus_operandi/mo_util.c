@@ -109,7 +109,7 @@ int mc_mo_set_specific_context_cstr(hash_table_t *context, const char *key, cons
     hash_table_set(key, data, context);
   }
 
-  printf(".set-context:'%s':MC_STR='%s'\n", key, value);
+  // printf(".set-context:'%s':MC_STR='%s'\n", key, value);
   data->value_type = MC_MO_CONTEXT_DATA_VALUE_MC_STR;
   // printf("str: %u %u\n", data->str.alloc, data->str.len);
   MCcall(mc_set_str(&data->str, value));
@@ -169,7 +169,7 @@ int mc_mo_set_specific_context_ptr(hash_table_t *context, const char *key, void 
     hash_table_set(key, data, context);
   }
 
-  printf(".set-context:'%s':VALUE_PTR=%p\n", key, value);
+  // printf(".set-context:'%s':VALUE_PTR=%p\n", key, value);
   data->value_type = MC_MO_CONTEXT_DATA_VALUE_PTR;
   data->value = value;
 

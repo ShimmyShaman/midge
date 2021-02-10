@@ -634,8 +634,9 @@ int midge_run_app()
         // puts("layout-unlock");
 
         clock_gettime(CLOCK_REALTIME, &debug_end_time);
-        printf("LayoutUpdate took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
-                                                 1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+        if (debug_end_time.tv_sec - debug_start_time.tv_sec > 1)
+          printf("LayoutUpdate took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+                                                   1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
       }
 
       // TODO Get rid of this field maybe?
@@ -686,9 +687,10 @@ int midge_run_app()
       // puts("rerender-unlock");
 
       // Release lock and allow rendering
-      // clock_gettime(CLOCK_REALTIME, &debug_end_time);
-      // printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
-      //                                      1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
+      clock_gettime(CLOCK_REALTIME, &debug_end_time);
+      if (debug_end_time.tv_sec - debug_start_time.tv_sec > 1)
+        printf("Rerender took %.2fms\n", 1000.f * (debug_end_time.tv_sec - debug_start_time.tv_sec) +
+                                             1e-6 * (debug_end_time.tv_nsec - debug_start_time.tv_nsec));
     }
   }
 
