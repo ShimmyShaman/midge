@@ -452,9 +452,15 @@ struct mc_syntax_node {
           mc_syntax_node *expression;
         } parenthesized_expression;
         struct {
-          mc_syntax_node *type_identifier;
-          // May be null indicating no dereference operators
-          mc_syntax_node *type_dereference;
+          bool is_expression;
+          union {
+            struct {
+              mc_syntax_node *identifier;
+              // May be null indicating no dereference operators
+              mc_syntax_node *dereference;
+            } type;
+            mc_syntax_node *expr;
+          };
         } sizeof_expression;
         struct {
           mc_syntax_node *type_identifier;

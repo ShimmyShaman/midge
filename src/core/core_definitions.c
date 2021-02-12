@@ -82,7 +82,7 @@ int append_to_collection(void ***collection, unsigned int *collection_capacity, 
                          void *item)
 {
   if (*collection_count + 1 > *collection_capacity) {
-    unsigned int recapacity_amount = *collection_capacity + 8 + *collection_capacity / 3;
+    unsigned int recapacity_amount = 4 + *collection_capacity * 2;
     // printf("recapacity collection size %i->%i\n", *collection_capacity, recapacity_amount);
     void **new_collection = (void **)malloc(sizeof(void *) * recapacity_amount);
     if (new_collection == NULL) {
