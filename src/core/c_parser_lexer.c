@@ -2448,6 +2448,16 @@ int mcs_parse_type_identifier(mcs_parsing_state *ps, mc_syntax_node *parent, mc_
       MCerror(1507, "FORMAT ERROR: expected struct identifier");
     }
   }
+  else if (token_type == MC_TOKEN_ENUM_KEYWORD) {
+    MCerror(2452, "TODO Not Yet Supported");
+    type_root->type_identifier.has_enum_prepend = true;
+    MCcall(mcs_parse_through_token(ps, type_root, MC_TOKEN_ENUM_KEYWORD, NULL));
+    mcs_parse_through_supernumerary_tokens(ps, type_root);
+    mcs_peek_token_type(ps, false, 0, &token_type);
+    if (token_type != MC_TOKEN_IDENTIFIER) {
+      MCerror(1507, "FORMAT ERROR: expected enum identifier");
+    }
+  }
 
   switch (token_type) {
   case MC_TOKEN_IDENTIFIER: {
@@ -5314,6 +5324,7 @@ int mcs_parse_struct_declaration_list(mcs_parsing_state *ps, mc_syntax_node *par
     case MC_TOKEN_FLOAT_KEYWORD:
     case MC_TOKEN_VOID_KEYWORD:
     case MC_TOKEN_SIGNED_KEYWORD:
+    case MC_TOKEN_ENUM_KEYWORD:
     case MC_TOKEN_UNSIGNED_KEYWORD: {
       mc_syntax_node *field_declaration;
       MCcall(mcs_parse_field_declaration(ps, parent, &field_declaration));

@@ -432,7 +432,7 @@ struct mc_syntax_node {
           mc_syntax_node *identifier;
           bool is_const;
           bool is_static;
-          bool has_struct_prepend;
+          bool has_struct_prepend, has_enum_prepend;
           // -1 for unspecified (implicit signed), 0 for unsigned, 1 for explicit signed
           int is_signed;
           mc_syntax_node *size_modifiers;

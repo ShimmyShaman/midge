@@ -7,6 +7,7 @@
 #include "platform/mc_xcb.h"
 #include "render/render_thread.h"
 
+// TODO buttonstateUP == 0?
 typedef enum mci_button_state {
   BUTTON_STATE_NULL = 0,
   BUTTON_STATE_DOWN = 1,

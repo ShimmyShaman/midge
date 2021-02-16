@@ -500,6 +500,12 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
   float align_x = cmd->x;
   float align_y = cmd->y;
 
+  char letter;
+  VkRect2D clip;
+  mc_rect *cc;
+  stbtt_aligned_quad q;
+  float width, height, scale_multiplier;
+
   // printf("mrt-1 %s\n", cmd->print_text.text);
   int text_length = strlen(cmd->print_text.text);
   for (int c = 0; c < text_length; ++c) {
@@ -508,7 +514,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     //   break;
     // }
 
-    char letter = cmd->print_text.text[c];
+    letter = cmd->print_text.text[c];
     if (letter < 32 || letter > 127) {
       printf("TODO character not supported.\n");
       return VK_SUCCESS;
@@ -516,7 +522,6 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     // printf("printing character '%c' %i\n", letter, (int)letter);
 
     // Source texture bounds
-    stbtt_aligned_quad q;
 
     // printf("garbagein: %i %i %f %f %i\n", (int)font_image->width, (int)font_image->height, align_x, align_y,
     //        letter - 32);
@@ -541,16 +546,19 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     //   q.y1 += (q.y1 - q.y0);
     //   q.y0 = t;
     // }
-    float width = q.x1 - q.x0;
-    float height = q.y1 - q.y0;
+    width = q.x1 - q.x0;
+    height = q.y1 - q.y0;
 
     q.y0 += font->draw_vertical_offset;
     q.y1 += font->draw_vertical_offset;
 
     // Determine the clip
-    VkRect2D clip = {(int32_t)(q.x0 < 0 ? 0 : q.x0), (int32_t)(q.y0 < 0 ? 0 : q.y0), (uint32_t)width, (uint32_t)height};
+    clip.offset.x = (int32_t)(q.x0 < 0 ? 0 : q.x0);
+    clip.offset.y = (int32_t)(q.y0 < 0 ? 0 : q.y0);
+    clip.extent.width = (uint32_t)width;
+    clip.extent.height = (uint32_t)height;
     {
-      mc_rect *cc = &cmd->print_text.clip;
+      cc = &cmd->print_text.clip;
       // printf("clbb:%i %i %u %u || cc:%i %i %u %u\n", clip.offset.x, clip.offset.y, clip.extent.width,
       //        clip.extent.height, cc->offset.x, cc->offset.y, cc->extents.width, cc->extents.height);
       if (cc->extents.width && cc->extents.height) {
@@ -594,7 +602,7 @@ VkResult mrt_render_text(vk_render_state *p_vkrs, VkCommandBuffer command_buffer
     MCassert(copy_buffer->index < MRT_SEQUENCE_COPY_BUFFER_SIZE, "BUFFER TOO SMALL");
     // printf("mrt-2a\n");
 
-    float scale_multiplier =
+    scale_multiplier =
         1.f / (float)(image_render->image_width < image_render->image_height ? image_render->image_width
                                                                              : image_render->image_height);
     vert_ubo_data->scale.x = 2.f * width * scale_multiplier;

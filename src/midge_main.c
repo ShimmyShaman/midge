@@ -1626,7 +1626,7 @@ int mcqck_translate_script_code(void *nodespace, mc_script_v1 *script, char *cod
         } break;
         default:
           MCcall(print_parse_error(code, i, "mcqck_translate_script_code", "if>comparator-switch"));
-          return 858528;
+          return 4751;
         }
         MCcall(parse_past(code, &i, " "));
 
