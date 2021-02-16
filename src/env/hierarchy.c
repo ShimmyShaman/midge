@@ -743,7 +743,7 @@ int mca_render_node_list_present(image_render_details *image_render_queue, mc_no
   return 0;
 }
 
-int mca_render_typical_node_present(image_render_details *image_render_queue, mc_node *node)
+int mca_render_present_delegate(image_render_details *image_render_queue, mc_node *node)
 {
   if (node->layout && node->layout->visible && node->layout->render_present) {
     // TODO fptr casting

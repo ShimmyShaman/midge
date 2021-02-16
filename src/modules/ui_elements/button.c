@@ -210,6 +210,17 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   return 0;
 }
 
+int mcu_set_button_text(mcu_button *button, const char *text)
+{
+  if (!strcmp(button->str.text, text))
+    return 0;
+
+  MCcall(mc_set_str(&button->str, text));
+  MCcall(mca_set_node_requires_layout_update(button->node));
+
+  return 0;
+}
+
 // void mcu_destroy_button(mcu_button *button)
 // {
 //   // Destroy Node from Hierarchy

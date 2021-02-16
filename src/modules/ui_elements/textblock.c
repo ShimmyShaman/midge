@@ -173,6 +173,17 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
   return 0;
 }
 
+int mcu_set_textblock_text(mcu_textblock *textblock, const char *text)
+{
+  if (!strcmp(textblock->str->text, text))
+    return 0;
+
+  MCcall(mc_set_str(textblock->str, text));
+  MCcall(mca_set_node_requires_layout_update(textblock->node));
+
+  return 0;
+}
+
 // void mca_init_textblock_context_menu_options()
 // {
 //   // // TODO this void * casting business

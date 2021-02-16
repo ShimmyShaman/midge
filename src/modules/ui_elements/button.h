@@ -44,5 +44,6 @@ typedef struct mcu_button {
 } mcu_button;
 
 int mcu_init_button(mc_node *parent, mcu_button **p_button);
+int mcu_set_button_text(mcu_button *button, const char *text);
 
 #endif // BUTTON_H

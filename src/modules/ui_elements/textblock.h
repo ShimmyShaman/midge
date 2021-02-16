@@ -24,5 +24,6 @@ typedef struct mcu_textblock {
 } mcu_textblock;
 
 int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock);
+int mcu_set_textblock_text(mcu_textblock *textblock, const char *text);
 
 #endif // TEXTBLOCK_H

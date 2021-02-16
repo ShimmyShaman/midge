@@ -156,7 +156,7 @@ int mca_set_node_requires_rerender(mc_node *node);
 
 int mca_render_node_list_headless(render_thread_info *render_thread, mc_node_list *children);
 int mca_render_node_list_present(image_render_details *image_render_queue, mc_node_list *children);
-int mca_render_typical_node_present(image_render_details *image_render_queue, mc_node *node);
+int mca_render_present_delegate(image_render_details *image_render_queue, mc_node *node);
 /*
  * Renders a typical node with no headless image targets for itself, but which may have children who have headless
  * rendering to perform.
