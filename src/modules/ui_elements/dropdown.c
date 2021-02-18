@@ -250,7 +250,7 @@ int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_dropdown)
   char buf[64];
   mcu_button *button;
   for (int a = 0; a < 8; ++a) {
-    MCcall(mcu_init_button(dropdown->extension_panel->node, &button));
+    MCcall(mcu_alloc_button(dropdown->extension_panel->node, &button));
 
     // button->node->layout->preferred_height = 26;
     button->node->layout->padding = (mc_paddingf){2, 2 + (26 + 1) * a, 2, 2};

@@ -191,7 +191,7 @@ int mc_obd_init_ui(mc_node *module_node)
 
   // Buttons to display items
   for (int a = 0; a < 10; ++a) {
-    MCcall(mcu_init_button(obd->panel->node, &button));
+    MCcall(mcu_alloc_button(obd->panel->node, &button));
 
     if (button->node->name) {
       free(button->node->name);

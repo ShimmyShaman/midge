@@ -187,7 +187,7 @@ void mcu_context_menu_add_option(mcu_context_menu *menu, const char *option_text
     reallocate_collection((void ***)&menu->_buttons.items, &menu->_buttons.alloc, 0, 0);
 
     for (int a = prev_alloc; a < menu->_buttons.alloc; ++a) {
-      mcu_init_button(menu->node, &menu->_buttons.items[a]);
+      mcu_alloc_button(menu->node, &menu->_buttons.items[a]);
       menu->_buttons.items[a]->node->layout->visible = false;
 
       menu->_buttons.items[a]->node->layout->padding = {2, 2, 2, 2};

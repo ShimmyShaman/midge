@@ -289,7 +289,7 @@ int _mc_mo_cv_init_ui(mc_node *module_node)
   }
 
   // Exit Button
-  MCcall(mcu_init_button(cv->node, &button));
+  MCcall(mcu_alloc_button(cv->node, &button));
 
   layout = button->node->layout;
   layout->preferred_width = 16;

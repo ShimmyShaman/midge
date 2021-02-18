@@ -319,7 +319,7 @@ int mc_fd_init_ui(mc_node *module_node)
   fd->message_textblock->background_color = COLOR_GRAPE;
 
   // Open Button
-  MCcall(mcu_init_button(fd->panel->node, &button));
+  MCcall(mcu_alloc_button(fd->panel->node, &button));
 
   layout = button->node->layout;
   layout->preferred_width = 200;
@@ -335,7 +335,7 @@ int mc_fd_init_ui(mc_node *module_node)
 
   // Textblocks to display items
   for (int a = 0; a < 12; ++a) {
-    MCcall(mcu_init_button(fd->panel->node, &button));
+    MCcall(mcu_alloc_button(fd->panel->node, &button));
 
     if (button->node->name) {
       free(button->node->name);

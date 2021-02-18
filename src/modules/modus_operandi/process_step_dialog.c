@@ -310,7 +310,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   // psdd->step_type_dropdown->selection = (void *)&_mc_mocsd_button_submit;
 
   // Previous Button
-  MCcall(mcu_init_button(psdd->panel->node, &psdd->previous_button));
+  MCcall(mcu_alloc_button(psdd->panel->node, &psdd->previous_button));
   button = psdd->previous_button;
 
   layout = button->node->layout;
@@ -325,7 +325,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   button->left_click = (void *)&_mc_mocsd_button_submit;
 
   // Complete Button
-  MCcall(mcu_init_button(psdd->panel->node, &psdd->finish_button));
+  MCcall(mcu_alloc_button(psdd->panel->node, &psdd->finish_button));
   button = psdd->finish_button;
 
   layout = button->node->layout;
@@ -340,7 +340,7 @@ int _mc_mocsd_init_ui(mc_node *module_node)
   button->left_click = (void *)&_mc_mocsd_button_submit;
 
   // Next Button
-  MCcall(mcu_init_button(psdd->panel->node, &psdd->next_button));
+  MCcall(mcu_alloc_button(psdd->panel->node, &psdd->next_button));
   button = psdd->next_button;
 
   layout = button->node->layout;

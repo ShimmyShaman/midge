@@ -234,7 +234,7 @@ int mc_tid_init_ui(mc_node *module_node)
   tid->textbox->submit = (void *)_mc_tid_textbox_submit;
 
   // Complete Button
-  MCcall(mcu_init_button(tid->panel->node, &button));
+  MCcall(mcu_alloc_button(tid->panel->node, &button));
 
   layout = button->node->layout;
   layout->preferred_width = 64;

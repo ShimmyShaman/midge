@@ -161,7 +161,12 @@ int mca_render_present_delegate(image_render_details *image_render_queue, mc_nod
  * Renders a typical node with no headless image targets for itself, but which may have children who have headless
  * rendering to perform.
  */
-int mca_render_typical_node_headless(render_thread_info *render_thread, mc_node *node);
+int mca_render_container_node_headless(render_thread_info *render_thread, mc_node *node);
+/*
+ * Renders a typical node with no draw calls for itself, but which may have children who have
+ * rendering to perform.
+ */
+int mca_render_container_node_present(image_render_details *image_render_queue, mc_node *node);
 
 int mca_focus_node(mc_node *node);
 void mca_obtain_focused_node(mc_node **node);

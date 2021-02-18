@@ -364,7 +364,7 @@ int _mc_init_file_dialog_ui(mc_node *module_node)
 
   // Buttons to display items
   for (int a = 0; a < 18; ++a) {
-    MCcall(mcu_init_button(fd->panel->node, &button));
+    MCcall(mcu_alloc_button(fd->panel->node, &button));
 
     if (button->node->name) {
       free(button->node->name);
@@ -403,7 +403,7 @@ int _mc_init_file_dialog_ui(mc_node *module_node)
   fd->input_textbox->submit = (void *)&_mc_file_dialog_textbox_submit;
 
   // Open Button
-  MCcall(mcu_init_button(fd->panel->node, &button));
+  MCcall(mcu_alloc_button(fd->panel->node, &button));
 
   layout = button->node->layout;
   layout->preferred_width = 120;

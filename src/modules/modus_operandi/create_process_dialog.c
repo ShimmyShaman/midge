@@ -430,7 +430,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
     layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
 
-    MCcall(mcu_init_button(panel->node, &cell->delegate_button));
+    MCcall(mcu_alloc_button(panel->node, &cell->delegate_button));
     button = cell->delegate_button;
 
     layout = button->node->layout;
@@ -444,7 +444,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
     button->tag = cell;
     button->left_click = (void *)&_mc_mo_cpd_cell_delegate_clicked;
 
-    MCcall(mcu_init_button(panel->node, &cell->continue_button));
+    MCcall(mcu_alloc_button(panel->node, &cell->continue_button));
     button = cell->continue_button;
 
     layout = button->node->layout;
@@ -460,7 +460,7 @@ int _mc_mo_init_cpd_ui(mc_node *module_node)
   }
 
   // Exit Button
-  MCcall(mcu_init_button(cpd->panel->node, &button));
+  MCcall(mcu_alloc_button(cpd->panel->node, &button));
 
   layout = button->node->layout;
   layout->preferred_width = 16;

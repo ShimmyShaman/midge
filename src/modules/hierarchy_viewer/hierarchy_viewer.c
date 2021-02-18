@@ -316,7 +316,7 @@ void init_hierarchy_viewer()
 
   for (int i = 0; i < hv_state->text_lines.size; ++i) {
     mcu_button *button;
-    mcu_init_button(hv_state->root_node, &button);
+    mcu_alloc_button(hv_state->root_node, &button);
     hv_state->text_lines.items[i] = button->node;
     // button->left_click = &__mc_hv_text_line_left_click_handler; TODO
 

@@ -18,6 +18,7 @@ typedef struct mcu_button {
 
   // (TODO why can't I declare this with TCC??)
   // int (*left_click)(mci_input_event *input_event, mcu_button *button);
+  // -- its still processed as returning void
   void *left_click;
 
   /* May be NULL indicating the usage of the default font & size by midge-app */
@@ -43,7 +44,8 @@ typedef struct mcu_button {
   } __state;
 } mcu_button;
 
-int mcu_init_button(mc_node *parent, mcu_button **p_button);
+int mcu_alloc_button(mc_node *parent, mcu_button **p_button);
+int mcu_init_button(mc_node *parent, mcu_button *p_button);
 int mcu_set_button_text(mcu_button *button, const char *text);
 
 #endif // BUTTON_H

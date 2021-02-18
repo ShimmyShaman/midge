@@ -755,10 +755,19 @@ int mca_render_present_delegate(image_render_details *image_render_queue, mc_nod
   return 0;
 }
 
-int mca_render_typical_node_headless(render_thread_info *render_thread, mc_node *node)
+int mca_render_container_node_headless(render_thread_info *render_thread, mc_node *node)
 {
   if (node->children) {
     mca_render_node_list_headless(render_thread, node->children);
+  }
+
+  return 0;
+}
+
+int mca_render_container_node_present(image_render_details *image_render_queue, mc_node *node)
+{
+  if (node->children) {
+    mca_render_node_list_present(image_render_queue, node->children);
   }
 
   return 0;

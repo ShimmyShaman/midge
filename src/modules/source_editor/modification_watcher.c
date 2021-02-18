@@ -650,7 +650,7 @@ int mc_smw_init_ui(mc_node *module_node)
     layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
     layout->padding = (mc_paddingf){2, 2, 148, 2};
 
-    MCcall(mcu_init_button(panel->node, &button));
+    MCcall(mcu_alloc_button(panel->node, &button));
     md->ui_entries[a].button = button;
     MCcall(mc_set_str(&button->str, "Interpret"));
     button->left_click = &_mc_smw_info_button_clicked;
@@ -669,7 +669,7 @@ int mc_smw_init_ui(mc_node *module_node)
   }
 
   // Exit Button
-  MCcall(mcu_init_button(md->panel->node, &button));
+  MCcall(mcu_alloc_button(md->panel->node, &button));
 
   layout = button->node->layout;
   layout->preferred_width = 16;
@@ -694,7 +694,7 @@ int mc_smw_init_ui(mc_node *module_node)
   //   md->message_textblock->background_color = COLOR_GRAPE;
 
   //   // Open Button
-  //   MCcall(mcu_init_button(md->panel->node, &button));
+  //   MCcall(mcu_alloc_button(md->panel->node, &button));
 
   //   layout = button->node->layout;
   //   layout->preferred_width = 200;
@@ -710,7 +710,7 @@ int mc_smw_init_ui(mc_node *module_node)
 
   //   // Textblocks to display items
   //   for (int a = 0; a < 12; ++a) {
-  //     MCcall(mcu_init_button(md->panel->node, &button));
+  //     MCcall(mcu_alloc_button(md->panel->node, &button));
 
   //     if (button->node->name) {
   //       free(button->node->name);

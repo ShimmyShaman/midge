@@ -171,7 +171,7 @@ int mc_mww_init_data(mc_node *module_node)
 
   ww->background_color = COLOR_CORNFLOWER_BLUE;
 
-  MCcall(mcu_init_button(module_node, &ww->new_project_button));
+  MCcall(mcu_alloc_button(module_node, &ww->new_project_button));
   ww->new_project_button->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
   ww->new_project_button->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_CENTRED;
   mc_set_str(&ww->new_project_button->str, "New Project");

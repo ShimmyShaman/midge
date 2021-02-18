@@ -6,7 +6,7 @@
 // void mca_visual_project_create_add_button(mc_node *context_node, mc_point context_location, const char *selected_text)
 // {
 //   mcu_button *button;
-//   mcu_init_button(context_node, &button);
+//   mcu_alloc_button(context_node, &button);
 
 //   visual_project_data *visual_project = (visual_project_data *)context_node->data;
 

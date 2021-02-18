@@ -1149,7 +1149,7 @@ int mc_mo_init_ui(mc_node *module_node)
 
   // Visible Options Buttons
   for (int a = 0; a < 12; ++a) {
-    MCcall(mcu_init_button(module_node, &button));
+    MCcall(mcu_alloc_button(module_node, &button));
 
     if (button->node->name) {
       free(button->node->name);
@@ -1173,7 +1173,7 @@ int mc_mo_init_ui(mc_node *module_node)
   }
 
   // Add process button
-  MCcall(mcu_init_button(module_node, &button));
+  MCcall(mcu_alloc_button(module_node, &button));
   if (button->node->name) {
     free(button->node->name);
     button->node->name = NULL;
@@ -1192,7 +1192,7 @@ int mc_mo_init_ui(mc_node *module_node)
   MCcall(mc_set_str(&button->str, "+"));
 
   // Show Context Viewer button
-  MCcall(mcu_init_button(module_node, &button));
+  MCcall(mcu_alloc_button(module_node, &button));
   if (button->node->name) {
     free(button->node->name);
     button->node->name = NULL;

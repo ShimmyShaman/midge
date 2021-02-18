@@ -154,14 +154,14 @@ static void _mcu_button_destroy_data(void *data)
   free(data);
 }
 
-int mcu_init_button(mc_node *parent, mcu_button **p_button)
+int mcu_init_button(mc_node *parent, mcu_button *p_button)
 {
   // Node
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_MCU_BUTTON, "unnamed-button", &node));
   node->destroy_data = (void *)&_mcu_button_destroy_data;
 
-  // printf("mcu_init_button->node:%p name:%p '%s'-%i\n", node, node->name, node->name, strlen(node->name));
+  // printf("mcu_alloc_button->node:%p name:%p '%s'-%i\n", node, node->name, node->name, strlen(node->name));
 
   // Layout
   MCcall(mca_init_node_layout(&node->layout));
@@ -178,35 +178,39 @@ int mcu_init_button(mc_node *parent, mcu_button **p_button)
   node->layout->max_height = 24;
 
   // Control
-  mcu_button *button = (mcu_button *)malloc(sizeof(mcu_button)); // TODO -- malloc check
-  button->node = node;
-  node->data = button;
+  p_button->node = node;
+  node->data = p_button;
 
   // printf("mcu-ib-3\n");
-  button->enabled = true;
-  button->tag = NULL;
-  button->left_click = NULL;
+  p_button->enabled = true;
+  p_button->tag = NULL;
+  p_button->left_click = NULL;
 
-  MCcall(mc_init_str(&button->str, 8));
-  MCcall(mc_set_str(&button->str, "button"));
-  button->font = NULL;
-  button->font_color = COLOR_GHOST_WHITE;
+  MCcall(mc_init_str(&p_button->str, 8));
+  MCcall(mc_set_str(&p_button->str, "button"));
+  p_button->font = NULL;
+  p_button->font_color = COLOR_GHOST_WHITE;
 
-  button->text_align.horizontal = HORIZONTAL_ALIGNMENT_CENTRED;
-  button->text_align.vertical = VERTICAL_ALIGNMENT_CENTRED;
-  button->text_align.horizontal_margin = 2;
-  button->text_align.vertical_margin = 2;
+  p_button->text_align.horizontal = HORIZONTAL_ALIGNMENT_CENTRED;
+  p_button->text_align.vertical = VERTICAL_ALIGNMENT_CENTRED;
+  p_button->text_align.horizontal_margin = 2;
+  p_button->text_align.vertical_margin = 2;
 
-  button->background_color = COLOR_DIM_GRAY;
-  button->disabled_multiplier = 0.7f;
-  button->highlight_multiplier = 1.43;
+  p_button->background_color = COLOR_DIM_GRAY;
+  p_button->disabled_multiplier = 0.7f;
+  p_button->highlight_multiplier = 1.43;
 
-  button->__state.highlighted = false;
-
-  // Set to out pointer
-  *p_button = button;
+  p_button->__state.highlighted = false;
 
   MCcall(mca_attach_node_to_hierarchy(parent, node));
+
+  return 0;
+}
+
+int mcu_alloc_button(mc_node *parent, mcu_button **p_button)
+{
+  *p_button = (mcu_button *)malloc(sizeof(mcu_button)); // TODO -- malloc check
+  MCcall(mcu_init_button(parent, *p_button));
 
   return 0;
 }
