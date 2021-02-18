@@ -161,7 +161,7 @@ int _mcm_pjxp_set_entry_textblock(project_explorer_data *pjxp, mcu_textblock *tb
   }
   }
   strcat(dsp_name, name);
-  MCcall(mc_set_str(tb->str, dsp_name));
+  MCcall(mcu_set_textblock_text(tb, dsp_name));
 
   return 0;
 }
@@ -536,7 +536,7 @@ int _mcm_pjxp_init_ui(mc_node *pjxp_node)
     tb->background_color = COLOR_TRANSPARENT;
     tb->font_color = COLOR_BLACK;
 
-    MCcall(mc_set_str(tb->str, "(null)"));
+    MCcall(mcu_set_textblock_text(tb, "(null)"));
 
     // tb->left_click = (void *)&_mcm_pjxp_textblock_left_click;
     mcm_pjxp_entry *ent = tb->tag = (void *)malloc(sizeof(mcm_pjxp_entry));

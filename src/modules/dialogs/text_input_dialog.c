@@ -150,7 +150,7 @@ int _mc_tid_text_input_dialog_requested(void *handler_state, void *event_args)
   MCcall(mc_set_str(tid->textbox->contents, default_value ? default_value : ""));
 
   // Set the message
-  MCcall(mc_set_str(tid->message_textblock->str,  message == NULL ? "" : message));
+  MCcall(mcu_set_textblock_text(tid->message_textblock, message == NULL ? "" : message));
 
   // printf("_mc_tid_text_input_dialog_requested:tc'%s' %p %p '%s'\n", tid->textbox->contents->text,
   //        tid->textbox->contents->text, default_value, default_value);
@@ -159,7 +159,6 @@ int _mc_tid_text_input_dialog_requested(void *handler_state, void *event_args)
   tid->node->layout->visible = true;
 
   MCcall(mca_set_node_requires_rerender(tid->textbox->node));
-  MCcall(mca_set_node_requires_layout_update(tid->message_textblock->node));
 
   MCcall(mca_focus_node(tid->textbox->node));
 

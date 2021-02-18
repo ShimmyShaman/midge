@@ -247,7 +247,7 @@ int _mc_fd_on_folder_dialog_request(void *handler_state, void *event_args)
   fd->callback.result_delegate = vary[3];
 
   // Set the message
-  MCcall(mc_set_str(fd->message_textblock->str,  message == NULL ? "" : message));
+  MCcall(mcu_set_textblock_text(fd->message_textblock,  message == NULL ? "" : message));
 
   // Open The Dialog at the starting path
   fd->mode = MC_FD_MODE_DIRECTORIES_ONLY;

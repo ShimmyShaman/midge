@@ -15,7 +15,7 @@ typedef struct mcu_textblock {
   // void (*left_click)(mci_input_event *, mcu_textblock *); (TODO why can't I declare this with TCC??)
   void *left_click;
 
-  mc_str *str;
+  mc_str str;
   mcr_font_resource *font;
   render_color font_color;
 

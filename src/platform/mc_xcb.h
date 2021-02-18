@@ -10,10 +10,10 @@
 #define APPLICATION_SET_HEIGHT 900
 
 #ifndef max
-#define max(x, y) (x) < (y) ? (y) : (x)
+#define max(x, y) ((x) < (y) ? (y) : (x))
 #endif
 #ifndef min
-#define min(x, y) (x) > (y) ? (y) : (x)
+#define min(x, y) ((x) > (y) ? (y) : (x))
 #endif
 
 #define MAX_QUEUED_KEY_EVENTS 128

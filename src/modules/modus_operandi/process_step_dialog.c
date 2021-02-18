@@ -156,8 +156,7 @@ int mc_mocsd_activate_process_step_dialog(mc_process_step_dialog_data *psdd, cha
   MCcall(mca_set_node_requires_rerender(psdd->step_type_dropdown->node));
 
   // Set the message
-  MCcall(mc_set_str(psdd->message_textblock->str, message == NULL ? "" : message));
-  MCcall(mca_set_node_requires_layout_update(psdd->message_textblock->node));
+  MCcall(mcu_set_textblock_text(psdd->message_textblock, message == NULL ? "" : message));
 
   // Display
   // puts("mc_mocsd_activate_process_step_dialog");
@@ -226,7 +225,7 @@ int _mc_mocsd_init_text_input_dialog_ui(mc_process_step_dialog_data *psdd)
 
   // Prompt Message
   MCcall(mcu_init_textblock(panel->node, &textblock));
-  MCcall(mc_set_str(textblock->str, "Prompt Message:"));
+  MCcall(mcu_set_textblock_text(textblock, "Prompt Message:"));
 
   layout = textblock->node->layout;
   layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT;

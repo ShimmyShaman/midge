@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "control/mc_controller.h"
 #include "env/environment_definitions.h"

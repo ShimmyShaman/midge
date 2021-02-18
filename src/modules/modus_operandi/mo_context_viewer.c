@@ -98,11 +98,9 @@ int _mc_mo_cv_set_context_row(mc_mo_context_viewer_data *cv, _mc_mo_cv_context_r
   row->panel->node->layout->visible = true;
 
   // Set
-  MCcall(mc_set_str(row->key_textblock->str, key));
-  MCcall(mca_set_node_requires_rerender(row->key_textblock->node));
+  MCcall(mcu_set_textblock_text(row->key_textblock, key));
 
-  MCcall(mc_set_str(row->value_textblock->str, value));
-  MCcall(mca_set_node_requires_rerender(row->value_textblock->node));
+  MCcall(mcu_set_textblock_text(row->value_textblock, value));
 
   *p_row = row + 1;
 

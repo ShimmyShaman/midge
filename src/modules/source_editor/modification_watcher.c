@@ -86,6 +86,7 @@ int _mc_smw_update_node_layout(mc_node *node, const mc_rectf *available_area)
   // Set the node data appropriately
   int a;
   char rel[256];
+  char dis[512];
   _mc_smw_tracked_modification *mfi;
   _mc_smw_ui_entry *entry;
   mcu_button *button;
@@ -103,31 +104,30 @@ int _mc_smw_update_node_layout(mc_node *node, const mc_rectf *available_area)
     entry->panel->node->layout->visible = true;
 
     // Update textblock
-    MCcall(mc_set_str(textblock->str, ""));
-    textblock->node->layout->__requires_layout_update = true;
+    dis[0] = '\0';
 
     ((_mc_smw_button_tag *)button->tag)->mfi = mfi;
     switch (mfi->state) {
     case MC_SMW_MDF_STATE_DISCOVERED: {
       entry->panel->background_color = COLOR_MIDNIGHT_EXPRESS;
-      MCcall(mc_append_to_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
+      sprintf(dis, "%s :: %s", rel, mfi->function_info->name);
       button->enabled = true;
     } break;
     case MC_SMW_MDF_STATE_PARSE_ERROR: {
       entry->panel->background_color = COLOR_TYRIAN_PURPLE;
-      MCcall(mc_append_to_strf(textblock->str, "%s", rel));
+      sprintf(dis, "%s", rel);
       button->enabled = false;
     } break;
     case MC_SMW_MDF_STATE_COMPILATION_ERROR: {
       entry->panel->background_color = COLOR_MAROON;
-      MCcall(mc_append_to_strf(textblock->str, "%s :: %s", rel, mfi->function_info->name));
+      sprintf(dis, "%s :: %s", rel, mfi->function_info->name);
       button->enabled = false;
     } break;
     default:
       MCerror(9952, "TODO : %i", mfi->state);
     }
     MCcall(mca_set_node_requires_rerender(button->node));
-    MCcall(mca_set_node_requires_rerender(textblock->node));
+    MCcall(mcu_set_textblock_text(textblock, dis));
   }
 
   // Hide the rest

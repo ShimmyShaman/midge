@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "control/mc_controller.h"
 #include "env/environment_definitions.h"
@@ -26,7 +27,7 @@ void _mcu_determine_textblock_extents(mc_node *node, layout_extent_restraints re
     layout->determined_extents.width = layout->preferred_width;
   }
   else {
-    mcr_determine_text_display_dimensions(textblock->font, textblock->str->text, &str_width, &str_height);
+    mcr_determine_text_display_dimensions(textblock->font, textblock->str.text, &str_width, &str_height);
     text_determined = true;
 
     layout->determined_extents.width = str_width;
@@ -51,7 +52,7 @@ void _mcu_determine_textblock_extents(mc_node *node, layout_extent_restraints re
   }
   else {
     if (!text_determined) {
-      mcr_determine_text_display_dimensions(textblock->font, textblock->str->text, &str_width, &str_height);
+      mcr_determine_text_display_dimensions(textblock->font, textblock->str.text, &str_width, &str_height);
     }
 
     layout->determined_extents.height = str_height;
@@ -75,7 +76,7 @@ void _mcu_render_textblock_present(image_render_details *image_render_queue, mc_
   mcu_textblock *textblock = (mcu_textblock *)node->data;
 
   // printf("rendertextblock- %u %u %s\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, textblock->str->text);
+  //        (unsigned int)node->layout->__bounds.y, textblock->str.text);
 
   // Background
   if (textblock->background_color.a) {
@@ -86,16 +87,18 @@ void _mcu_render_textblock_present(image_render_details *image_render_queue, mc_
   }
 
   // Text
-  mc_rect rb;
-  if (textblock->clip_text_to_bounds) {
-    rb.offset.x = (int)node->layout->__bounds.x;
-    rb.offset.y = (int)node->layout->__bounds.y;
-    rb.extents.width = (unsigned int)node->layout->__bounds.width;
-    rb.extents.height = (unsigned int)node->layout->__bounds.height;
+  if (textblock->str.text[0]) {
+    mc_rect rb;
+    if (textblock->clip_text_to_bounds) {
+      rb.offset.x = (int)node->layout->__bounds.x;
+      rb.offset.y = (int)node->layout->__bounds.y;
+      rb.extents.width = (unsigned int)node->layout->__bounds.width;
+      rb.extents.height = (unsigned int)node->layout->__bounds.height;
+    }
+    mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
+                                  (unsigned int)node->layout->__bounds.y, textblock->clip_text_to_bounds ? &rb : NULL,
+                                  textblock->str.text, textblock->font, textblock->font_color);
   }
-  mcr_issue_render_command_text(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                (unsigned int)node->layout->__bounds.y, textblock->clip_text_to_bounds ? &rb : NULL,
-                                textblock->str->text, textblock->font, textblock->font_color);
 }
 
 void _mcu_textblock_handle_input_event(mc_node *textblock_node, mci_input_event *input_event)
@@ -122,9 +125,8 @@ static void _mcu_textblock_destroy_data(void *data)
 {
   mcu_textblock *textblock = (mcu_textblock *)data;
 
-  // if (textblock->str.text)
-  //   free(textblock->str.text);
-  mc_release_str(textblock->str, true);
+  if (textblock->str.text)
+    free(textblock->str.text);
 
   free(data);
 }
@@ -157,8 +159,8 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
   textblock->tag = NULL;
   textblock->left_click = NULL; // TODO -- remove this textblocks shouldn't be able to be clicked? they're not buttons
 
-  MCcall(mc_alloc_str(&textblock->str));
-  MCcall(mc_set_str(textblock->str, "textblock"));
+  MCcall(mc_init_str(&textblock->str, 16));
+  MCcall(mcu_set_textblock_text(textblock, "textblock"));
   textblock->font = NULL;
   textblock->font_color = COLOR_GHOST_WHITE;
 
@@ -175,10 +177,10 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
 
 int mcu_set_textblock_text(mcu_textblock *textblock, const char *text)
 {
-  if (!strcmp(textblock->str->text, text))
+  if (!strcmp(textblock->str.text, text))
     return 0;
 
-  MCcall(mc_set_str(textblock->str, text));
+  MCcall(mc_set_str(&textblock->str, text));
   MCcall(mca_set_node_requires_layout_update(textblock->node));
 
   return 0;

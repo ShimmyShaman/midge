@@ -287,7 +287,7 @@ int _mc_file_dialog_requested(void *handler_state, void *event_args)
   fd->callback.result_delegate = vary[3];
 
   // Set the message
-  MCcall(mc_set_str(fd->message_textblock->str, message == NULL ? "" : message));
+  MCcall(mcu_set_textblock_text(fd->message_textblock, message == NULL ? "" : message));
 
   // TODO -- set starting filename
   fd->specified_path_set_from_folder_item = false;

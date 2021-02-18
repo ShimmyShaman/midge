@@ -177,6 +177,12 @@ int mcc_handle_xcb_input()
 
     window_input_event_type event_type;
     switch (xcb_input->type) {
+    case INPUT_EVENT_MOUSE_MOVE: {
+      input_state->mouse.x = xcb_input->detail.mouse.x;
+      input_state->mouse.y = xcb_input->detail.mouse.y;
+
+      MCcall(mcc_issue_mouse_event(xcb_input->type, xcb_input->detail.mouse.button));
+    } break;
     case INPUT_EVENT_MOUSE_PRESS: {
       input_state->mouse.x = xcb_input->detail.mouse.x;
       input_state->mouse.y = xcb_input->detail.mouse.y;

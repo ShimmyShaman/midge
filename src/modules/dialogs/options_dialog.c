@@ -118,7 +118,7 @@ int _mc_obd_on_options_dialog_request(void *handler_state, void *event_args)
   obd->callback.result_delegate = vary[4];
 
   // Set the message
-  MCcall(mc_set_str(obd->message_textblock->str, message == NULL ? "" : message));
+  MCcall(mcu_set_textblock_text(obd->message_textblock, message == NULL ? "" : message));
 
   int a;
   mcu_button *b;

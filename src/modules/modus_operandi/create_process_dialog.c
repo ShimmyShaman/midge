@@ -186,7 +186,7 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     cell->panel->background_color = (render_color){0.04f, 0.24f, 0.06f, 1.f};
 
     // Title
-    MCcall(mc_set_str(cell->textblocks[0]->str, "Context Parameter"));
+    MCcall(mcu_set_textblock_text(cell->textblocks[0], "Context Parameter"));
 
     layout = cell->textblocks[0]->node->layout;
     layout->visible = true;
@@ -194,7 +194,7 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
 
     // Param Label
-    MCcall(mc_set_str(cell->textblocks[1]->str, "key:"));
+    MCcall(mcu_set_textblock_text(cell->textblocks[1], "key:"));
 
     layout = cell->textblocks[1]->node->layout;
     layout->visible = true;
@@ -215,9 +215,6 @@ int _mc_mo_cpd_set_cell(mc_mo_cpd_step_data *cell, mo_op_step_action_type type)
     layout->padding = (mc_paddingf){4, 56, 4, 4};
 
     // Layout Updates
-    MCcall(mca_set_node_requires_layout_update(cell->textblocks[0]->node));
-    MCcall(mca_set_node_requires_layout_update(cell->textblocks[1]->node));
-    MCcall(mca_set_node_requires_layout_update(cell->textblocks[2]->node));
     MCcall(mca_set_node_requires_layout_update(cell->delegate_button->node));
     MCcall(mca_set_node_requires_layout_update(cell->textbox->node));
   } break;
