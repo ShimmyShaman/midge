@@ -150,8 +150,15 @@ static void _mcu_button_destroy_data(void *data)
 
   if (button->str.text)
     free(button->str.text);
+}
 
-  free(data);
+static void _mcu_button_destroy(void *data)
+{
+  mcu_button *button = (mcu_button *)data;
+
+  _mcu_button_destroy_data(button);
+
+  free(button);
 }
 
 int mcu_init_button(mc_node *parent, mcu_button *p_button)
@@ -210,7 +217,9 @@ int mcu_init_button(mc_node *parent, mcu_button *p_button)
 int mcu_alloc_button(mc_node *parent, mcu_button **p_button)
 {
   *p_button = (mcu_button *)malloc(sizeof(mcu_button)); // TODO -- malloc check
+
   MCcall(mcu_init_button(parent, *p_button));
+  (*p_button)->node->destroy_data = (void *)&_mcu_button_destroy;
 
   return 0;
 }
