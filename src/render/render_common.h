@@ -41,6 +41,8 @@ typedef struct render_color {
   (render_color) { 0.0f, 0.75f, 0.0f, 1.f }
 #define COLOR_LIME \
   (render_color) { 0.0f, 1.f, 0.0f, 1.f }
+#define COLOR_OLIVE \
+  (render_color) { 0.5f, 0.5f, 0.0f, 1.f }
 #define COLOR_FUNCTION_GREEN \
   (render_color) { 40.f / 255.f, 235.f / 255.f, 40.f / 255.f, 1.f }
 #define COLOR_FUNCTION_RED \

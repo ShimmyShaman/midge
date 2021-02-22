@@ -2707,8 +2707,11 @@ void mvk_destroy_command_pool(vk_render_state *p_vkrs)
 
 void mvk_destroy_logical_device(vk_render_state *p_vkrs)
 {
+  puts("...vkDeviceWaitIdle");
   vkDeviceWaitIdle(p_vkrs->device);
+  puts("...vkDestroyDevice");
   vkDestroyDevice(p_vkrs->device, NULL);
+  puts("...mvk_destroy_logical_device() complete~");
 }
 
 void mvk_destroy_xcb_surface(vk_render_state *p_vkrs) { vkDestroySurfaceKHR(p_vkrs->instance, p_vkrs->surface, NULL); }

@@ -248,6 +248,8 @@ int midge_initialize_app(struct timespec *app_begin_time)
   }
 
   // Begin the async load thread of modules -then- projects
+  // TODO -- the intended lifetime of this thread exceeds this function execution
+  // -- It is necessary to properly ensure its closure in midge_cleanup_app() -- TODO
   mthread_info *modules_load_thr_info;
   MCcall(begin_mthread(&mca_load_modules_then_project_async, &modules_load_thr_info, NULL));
 
@@ -720,6 +722,7 @@ void midge_cleanup_app()
   mca_destroy_node(app_info->global_node);
 
   // End render thread
+  // TODO -- error when render-thread won't close, have to solve that and handling of that circumstance properly
   end_mthread(app_info->render_thread->thread_info);
 
   // Destroy render thread resources
