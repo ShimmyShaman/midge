@@ -1502,7 +1502,7 @@ VkResult mvk_init_tint_render_prog(vk_render_state *p_vkrs)
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkDynamicState dynamicStateEnables[2]; /*Viewport + Scissor*/
     VkPipelineDynamicStateCreateInfo dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof(dynamicStateEnables));
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -1746,7 +1746,7 @@ VkResult mvk_init_textured_render_prog(vk_render_state *p_vkrs)
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkDynamicState dynamicStateEnables[2]; /*Viewport + Scissor*/
     VkPipelineDynamicStateCreateInfo dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof(dynamicStateEnables));
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -1989,7 +1989,7 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkDynamicState dynamicStateEnables[2]; /*Viewport + Scissor*/
     VkPipelineDynamicStateCreateInfo dynamicState = {};
     memset(dynamicStateEnables, 0, sizeof(dynamicStateEnables));
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -2271,7 +2271,7 @@ VkResult mvk_init_font_render_prog(vk_render_state *p_vkrs)
 //     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 //     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-//     VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
+//     VkDynamicState dynamicStateEnables[2]; /*Viewport + Scissor*/
 //     VkPipelineDynamicStateCreateInfo dynamicState = {};
 //     memset(dynamicStateEnables, 0, sizeof(dynamicStateEnables));
 //     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
