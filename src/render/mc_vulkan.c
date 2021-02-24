@@ -1295,56 +1295,77 @@ VkResult obtain_cached_shader_spv(const char *shader_filepath, unsigned int **sp
 
   DIR *dir;
   struct dirent *ent;
-  if ((dir = opendir("bin/cache/spv")) != NULL) {
-    /* print all the files and directories within directory */
-    while ((ent = readdir(dir)) != NULL) {
-      // Compare the name hash
-      if (strncmp(ent->d_name, fnp, b - fnp))
-        continue;
 
-      if (!strcmp(ent->d_name, fnp)) {
-        // Use the cached file
-        FILE *fp = fopen(cache_spv_buf, "r");
-        if (!fp) {
-          printf("obtain_cached_shader_spv: couldn't open file: %s", cache_spv_buf);
-          return VK_ERROR_UNKNOWN;
-        }
-        {
-          uint32_t spirv_alloc = 512;
-          *spirv = (uint32_t *)malloc(sizeof(uint32_t) * spirv_alloc);
-          MCassert(*spirv, "malloc error spirv 1120");
-          *spirv_size = 0;
-
-          uint32_t code;
-          while (fread(&code, sizeof(uint32_t), 1, fp) == 1) {
-            if (*spirv_size + 1 >= spirv_alloc) {
-              spirv_alloc += 256 + spirv_alloc / 2;
-              // printf("reallocing to %u\n", spirv_alloc);
-
-              *spirv = (uint32_t *)realloc(*spirv, sizeof(uint32_t) * spirv_alloc);
-              MCassert(*spirv, "realloc error spirv 1087");
-            }
-            (*spirv)[*spirv_size] = code;
-            ++*spirv_size;
-          }
-        }
-        fclose(fp);
-
-        return VK_SUCCESS;
-      }
-
-      // Delete the cached file
-      remove(cache_spv_buf);
-      printf("removed cached shader '%s'\n", cache_spv_buf);
+  dir = opendir("bin/cache/spv");
+  if (dir == NULL) {
+    // Ensure the folder 'bin/cache/spv' exists
+    if (dir = opendir("bin")) {
+      closedir(dir);
     }
-    closedir(dir);
+    else {
+      mkdir("bin", 0700);
+    }
+    if (dir = opendir("bin/cache")) {
+      closedir(dir);
+    }
+    else {
+      mkdir("bin/cache", 0700);
+    }
+    if (dir = opendir("bin/cache/spv")) {
+      closedir(dir);
+    }
+    else {
+      mkdir("bin/cache/spv", 0700);
+    }
+
+    dir = opendir("bin/cache/spv");
+    if (dir == NULL) {
+      MCerror(7445, "Could not open directory 'bin/cache/spv' and could not generate it. Unknown reason.");
+    }
   }
-  else {
-    /* could not open directory */
-    perror("");
-    MCerror(7445, "Could not open directory 'bin/cache/spv':\n You can just simply create it...");
-    // return EXIT_FAILURE;
+
+  /* print all the files and directories within directory */
+  while ((ent = readdir(dir)) != NULL) {
+    // Compare the name hash
+    if (strncmp(ent->d_name, fnp, b - fnp))
+      continue;
+
+    if (!strcmp(ent->d_name, fnp)) {
+      // Use the cached file
+      FILE *fp = fopen(cache_spv_buf, "r");
+      if (!fp) {
+        printf("obtain_cached_shader_spv: couldn't open file: %s", cache_spv_buf);
+        return VK_ERROR_UNKNOWN;
+      }
+      {
+        uint32_t spirv_alloc = 512;
+        *spirv = (uint32_t *)malloc(sizeof(uint32_t) * spirv_alloc);
+        MCassert(*spirv, "malloc error spirv 1120");
+        *spirv_size = 0;
+
+        uint32_t code;
+        while (fread(&code, sizeof(uint32_t), 1, fp) == 1) {
+          if (*spirv_size + 1 >= spirv_alloc) {
+            spirv_alloc += 256 + spirv_alloc / 2;
+            // printf("reallocing to %u\n", spirv_alloc);
+
+            *spirv = (uint32_t *)realloc(*spirv, sizeof(uint32_t) * spirv_alloc);
+            MCassert(*spirv, "realloc error spirv 1087");
+          }
+          (*spirv)[*spirv_size] = code;
+          ++*spirv_size;
+        }
+      }
+      fclose(fp);
+
+      return VK_SUCCESS;
+    }
+
+    // Delete the cached file
+    remove(cache_spv_buf);
+    printf("removed cached shader '%s'\n", cache_spv_buf);
   }
+  closedir(dir);
 
   return VK_SUCCESS;
 }
@@ -1362,12 +1383,15 @@ VkResult mvk_glsl_file_to_spv(const VkShaderStageFlagBits shader_type, const cha
     return VK_SUCCESS;
   }
 
+  // Cached version does not exist or is out-of-date
+  // Read code from given filepath
   char *code;
   if (read_file_text(shader_filepath, &code)) {
     puts("-]read_file_text");
     return VK_ERROR_UNKNOWN;
   }
 
+  // Generate spv from the glsl code
   res = mvk_glsl_to_spv(shader_type, code, spirv, spirv_size, cache_spv_fp);
   VK_CHECK(res, "mvk_glsl_to_spv");
   free(code);
