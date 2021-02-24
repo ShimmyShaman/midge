@@ -39,8 +39,12 @@ in any immediate future._
 
 ## Installation
 
->0. Have Ubuntu (or Linux in general, not tested).
->1. Ensure the Vulkan SDK has been installed.
->2. git clone --recurse-submodules [https://github.com/ShimmyShaman/midge.git](https://github.com/ShimmyShaman/midge.git)
->3. Create a new folder named _glslang_ in the folder midge/dep/
->4. Extract the contents of the appropriate package from [https://github.com/KhronosGroup/glslang/releases/tag/master-tot](https://github.com/KhronosGroup/glslang/releases/tag/master-tot) to midge/dep/glslang
+>* Have Ubuntu (or Linux in general, not tested).  
+>* Ensure the Vulkan SDK has been installed.
+
+```bash
+git clone --recurse-submodules https://github.com/ShimmyShaman/midge.git
+```
+
+>* Create a new folder named _glslang_ in the folder midge/dep/
+>* Extract the contents of the appropriate package from [https://github.com/KhronosGroup/glslang/releases/tag/master-tot](https://github.com/KhronosGroup/glslang/releases/tag/master-tot) to midge/dep/glslang
