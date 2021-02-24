@@ -43,8 +43,13 @@ in any immediate future._
 >* Ensure the Vulkan SDK has been installed.
 
 ```bash
-git clone --recurse-submodules https://github.com/ShimmyShaman/midge.git
+      git clone --recurse-submodules https://github.com/ShimmyShaman/midge.git
 ```
 
 >* Create a new folder named _glslang_ in the folder midge/dep/
 >* Extract the contents of the appropriate package from [https://github.com/KhronosGroup/glslang/releases/tag/master-tot](https://github.com/KhronosGroup/glslang/releases/tag/master-tot) to midge/dep/glslang
+
+```bash
+      cd midge
+      ./run.sh
+```
