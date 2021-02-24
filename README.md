@@ -30,11 +30,17 @@ of the development environment by using the development environment.
 _This project is still very much in the discovery process and no useful releases are
 in any immediate future._
 
+## Dependencies
+
+>* [glslangValidator](https://github.com/KhronosGroup/glslang)
+>* [TinyCC for midge](https://github.com/ShimmyShaman/tinycc)
+>* [cglm](https://github.com/recp/cglm)
+>* [vulkan sdk](https://www.lunarg.com/vulkan-sdk/)
+
 ## Installation
 
-_no concrete instructions yet_
-
-* __Requires:__
-- [TinyCC for midge](https://github.com/ShimmyShaman/tinycc)
-- [cglm](https://github.com/recp/cglm)
-- [vulkan sdk](https://www.lunarg.com/vulkan-sdk/)
+>0. Have Ubuntu (or Linux in general, not tested).
+>1. Ensure the Vulkan SDK has been installed.
+>2. git clone --recurse-submodules [https://github.com/ShimmyShaman/midge.git](https://github.com/ShimmyShaman/midge.git)
+>3. Create a new folder named _glslang_ in the folder midge/dep/
+>4. Extract the contents of the appropriate package from [https://github.com/KhronosGroup/glslang/releases/tag/master-tot](https://github.com/KhronosGroup/glslang/releases/tag/master-tot) to midge/dep/glslang
