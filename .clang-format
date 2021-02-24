@@ -12,7 +12,3 @@ PointerAlignment: Right
 ColumnLimit: 120
 BreakStringLiterals: true
 BreakBeforeBraces: Stroustrup
----
-Language: CSharp
-# Use 100 columns for C#.
-ColumnLimit: 100

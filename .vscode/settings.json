@@ -1,5 +1,4 @@
 {
-    "C_Cpp.clang_format_path": "",
     "files.associations": {
         "fstream": "cpp",
         "*.tcc": "cpp",
@@ -70,4 +69,9 @@
         "*.mc": "c",
         "*.def": "c"
     },
+    "editor.defaultFormatter": "xaver.clang-format",
+    "C_Cpp.clang_format_path": ".clang-format",
+    "C_Cpp.clang_format_style": "file",
+    "C_Cpp.clang_format_fallbackStyle": "none",
+    "editor.formatOnSave": true,
 }
