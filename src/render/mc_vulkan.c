@@ -1139,6 +1139,13 @@ VkResult mvk_glsl_to_spv(const VkShaderStageFlagBits shader_type, const char *p_
     return VK_ERROR_UNKNOWN;
   }
 
+  char cwd[256];
+  if(getcwd(cwd, 256) != cwd) {
+    puts("mvk_glsl_to_spv: couldn't get current working directory");
+    return VK_ERROR_UNKNOWN;
+  }
+  printf("cwd:'%s'", cwd);
+
   const char *wd = "dep/glslang/bin/";
   char execOutput[1024];
   strcpy(execOutput, wd);
@@ -1170,8 +1177,10 @@ VkResult mvk_glsl_to_spv(const VkShaderStageFlagBits shader_type, const char *p_
     /* This is done by the child process. */
     execv(argv[0], argv);
 
-    printf("mvk_glsl_to_spv: error occured during conversion.\n");
+    // printf("mvk_glsl_to_spv: error occured during conversion. argv[0]='%s', argv[1]='%s', argv[2]='%s'\n",
+    //   argv[0], argv[1], argv[2]);
     perror("execv");
+    printf("Ensure glslangValidator is able to be executed\n--eg. 'sudo chmod +x dep/glslang/bin/glslangValidator'\n");
     return VK_ERROR_UNKNOWN;
   }
   else {
