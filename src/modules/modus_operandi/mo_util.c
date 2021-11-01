@@ -84,7 +84,7 @@ int mc_mo_get_context_cstr(mc_mo_process_stack *process_stack, const char *key, 
   }
 
   if (data->value_type != MC_MO_CONTEXT_DATA_VALUE_MC_STR) {
-    MCerror(8822, "TODO : %i", data->value_type);
+    MCerror(8822, "TODO : %i", data->value_type, data->value_type);
   }
 
   *result = data->str.text;

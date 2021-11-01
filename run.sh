@@ -66,6 +66,8 @@ if ! test -d "$BIN"; then
 fi
 
 
+# # export LD_LIBRARY_PATH='/home/jason/cling/obj/lib'
+
 gcc -o bin/midge                \
 -Idep/                          \
 dep/tinycc/libtcc.c             \
@@ -87,8 +89,6 @@ else
     # export EXTRA_CLING_ARGS='-Wmacro-redefined'
     ./bin/midge
     # -x c
-    # chmod u=rwx ./bin/vulkanexp
-    # ./bin/vulkanexp
     retval=$?
     echo "#######################"
     echo "Program Exited: $retval"

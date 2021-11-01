@@ -1140,7 +1140,7 @@ VkResult mvk_glsl_to_spv(const VkShaderStageFlagBits shader_type, const char *p_
   }
 
   char cwd[256];
-  if(getcwd(cwd, 256) != cwd) {
+  if (getcwd(cwd, 256) != cwd) {
     puts("mvk_glsl_to_spv: couldn't get current working directory");
     return VK_ERROR_UNKNOWN;
   }
@@ -1295,7 +1295,9 @@ VkResult obtain_cached_shader_spv(const char *shader_filepath, unsigned int **sp
   struct stat stats;
   int res = stat(shader_filepath, &stats);
   if (res) {
-    MCerror(1919, "Odd? TODO print errno");
+    printf("shader_filepath=%s\n", shader_filepath);
+    perror("stat");
+    MCerror(1245, "stat error above");
   }
 
   // Compare the rest of the cached filename with the modified time

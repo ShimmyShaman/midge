@@ -197,7 +197,7 @@ int _mc_file_dialog_open_directory(mc_file_dialog_data *fd, const char *starting
       struct stat stats;
       int res = stat(path, &stats);
       if (res) {
-        MCerror(1919, "Odd? TODO print errno");
+        MCerror(4915, "Odd? TODO print errno");
       }
 
       bool is_dir = S_ISDIR(stats.st_mode);

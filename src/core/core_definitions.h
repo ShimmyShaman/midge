@@ -1,7 +1,7 @@
 /* core_definitions.h */
 
-#ifndef CORE_DEFINITIONS_H
-#define CORE_DEFINITIONS_H
+#ifndef CORE_DEFINITIONS
+#define CORE_DEFINITIONS
 
 #include <stdbool.h>
 #include <time.h>
@@ -418,4 +418,4 @@ int release_field_info(field_info *ptr);
 int release_field_info_list(field_info_list *ptr);
 int release_parameter_info(parameter_info *ptr);
 
-#endif // CORE_DEFINITIONS_H
+#endif /* CORE_DEFINITIONS */

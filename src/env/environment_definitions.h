@@ -1,5 +1,5 @@
-#ifndef MC_UTIL_H
-#define MC_UTIL_H
+#ifndef ENVIRONMENT_DEFINITIONS
+#define ENVIRONMENT_DEFINITIONS
 
 #include "core/core_definitions.h"
 #include "render/render_common.h"
@@ -210,4 +210,4 @@ void mca_hide_global_context_menu();
 
 // global_root.c
 void mca_init_global_node_context_menu_options();
-#endif // MC_UTIL_H
+#endif /* ENVIRONMENT_DEFINITIONS */

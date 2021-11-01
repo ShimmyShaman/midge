@@ -67,11 +67,14 @@
         "mvk_core.h": "c",
         "*.inc": "c",
         "*.mc": "c",
-        "*.def": "c"
+        "*.def": "c",
+        "environment_definitions.h": "c",
+        "core_definitions.h": "c",
+        "render_common.h": "c"
     },
-    "editor.defaultFormatter": "xaver.clang-format",
-    "C_Cpp.clang_format_path": ".clang-format",
-    "C_Cpp.clang_format_style": "file",
-    "C_Cpp.clang_format_fallbackStyle": "none",
+    // "editor.defaultFormatter": "clang",
+    // "C_Cpp.clang_format_path": ".clang-format",
+    // "C_Cpp.clang_format_style": "file",
+    // "C_Cpp.clang_format_fallbackStyle": "none",
     "editor.formatOnSave": true,
 }

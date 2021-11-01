@@ -553,7 +553,7 @@ int main(int argc, const char *const *argv)
   if (1) {
     struct stat stats;
 
-    const char *dirdel = "projects/tetris";
+    const char *dirdel = "projects/ct";
     res = stat(dirdel, &stats);
     if (!res && S_ISDIR(stats.st_mode)) {
       char db[256];

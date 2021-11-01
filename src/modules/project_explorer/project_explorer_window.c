@@ -205,7 +205,7 @@ int _mcm_pjxp_update_entries_display_from_subdirectory(project_explorer_data *pj
       struct stat stats;
       int res = stat(path, &stats);
       if (res) {
-        MCerror(1919, "Odd? TODO print errno");
+        MCerror(7464, "Odd? TODO print errno");
       }
 
       if (S_ISDIR(stats.st_mode)) {

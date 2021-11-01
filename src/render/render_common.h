@@ -1,8 +1,8 @@
 
 /* render_thread.h */
 
-#ifndef MC_RENDER_COMMON_H
-#define MC_RENDER_COMMON_H
+#ifndef RENDER_COMMON
+#define RENDER_COMMON
 
 #include <pthread.h>
 
@@ -397,4 +397,4 @@ int mcr_issue_render_command_render_program(image_render_details *image_render_q
                                             mcr_render_program_data *program_data);
 // }
 
-#endif // MC_RENDER_COMMON_H
+#endif /* RENDER_COMMON */
