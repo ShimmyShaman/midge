@@ -581,6 +581,7 @@ int main(int argc, const char *const *argv)
 
   tcci_set_global_symbol(loader_itp, "tcci_add_include_path", &tcci_add_include_path);
   tcci_set_global_symbol(loader_itp, "tcci_add_library", &tcci_add_library);
+  tcci_set_global_symbol(loader_itp, "tcci_add_library_path", &tcci_add_library_path);
   tcci_set_global_symbol(loader_itp, "tcci_add_files", &tcci_add_files);
   tcci_set_global_symbol(loader_itp, "tcci_add_string", &tcci_add_string);
   tcci_set_global_symbol(loader_itp, "tcci_define_symbol", &tcci_define_symbol);
@@ -607,7 +608,7 @@ int main(int argc, const char *const *argv)
   const char *initial_compile_list[] = {
       "src/main/platform_prereq.c",
       "dep/tinycc/lib/va_list.c", // TODO -- this
-      "src/mc_error_handling.c", "src/core/mc_app_itp_data.c", "src/mc_str.c", "src/core/core_source_loader.c",
+      "src/mc_error_handling.c",    "src/core/mc_app_itp_data.c", "src/mc_str.c", "src/core/core_source_loader.c",
   };
 
   // TODO -- remember why I split them up into 2 compiles -- maybe comment it for next time

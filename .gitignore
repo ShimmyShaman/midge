@@ -1,3 +1,12 @@
+
+
+# Personal
+&&&.md
+daily_clarity.md
+mcmd.txt
+
+
+# General
 bin/**
 dep/**
 !dep/cglm
@@ -10,10 +19,7 @@ res/**
 !res/shaders**
 !res/mo/
 !res/mo/**
-daily_clarity.md
-mcmd.txt
 **.spv
-&&&.md
 working.md
 notes.md
 src/temp/todelete.h

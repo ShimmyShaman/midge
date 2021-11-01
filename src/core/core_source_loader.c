@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 #include "core_definitions.h"
-#include "mc_str.h"
 #include "mc_error_handling.h"
+#include "mc_str.h"
 
 #include "tinycc/libtccinterp.h"
 
@@ -492,6 +492,19 @@ static int mcl_load_source_through_midge(TCCInterpState *tmp_itp)
 // KEEP TILL BUG FIGURED OUT
 // KEEP TILL BUG FIGURED OUT
 
+// int mcl_load_config(char *p_vulkan_sdk_dir)
+// {
+#define MC_CONFIG_RELATIVE_FILE_PATH "./midge.cfg"
+//   char *contents;
+//   puts("a");
+//   MCcall(_mcl_read_all_file_text(MC_CONFIG_RELATIVE_FILE_PATH, &contents));
+
+//   printf("config:\ncontents\n", contents);
+
+//   free(contents);
+//   return 0;
+// }
+
 /* Builds a loader on the passed in interpreter state, using that to load midge into another
      initialized interpreter state which is then returned in the pointer reference. Note: Cleanup
      of the passed in interpreter (@itp) will be dealt with by this method. Only freeing/deletion of the
@@ -500,6 +513,58 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 {
   // mcl_exp();
   // exit(8);
+
+  // Temp TODO
+  char vulkan_sdk_dir[256];
+  char vulkan_sdk_include_dir[256];
+  char vulkan_sdk_lib_dir[256];
+  {
+    // Load the text from the core functions directory
+    FILE *f = fopen(MC_CONFIG_RELATIVE_FILE_PATH, "rb");
+    if (!f) {
+      MCerror(44, "Could not open config file:'%s'", MC_CONFIG_RELATIVE_FILE_PATH);
+    }
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET); /* same as rewind(f); */
+
+    char *contents = (char *)malloc(fsize + 1);
+    fread(contents, sizeof(char), fsize, f);
+    fclose(f);
+
+    contents[fsize] = '\0';
+
+    // printf("config:\n%s\n", contents);
+    vulkan_sdk_dir[0] = '\0';
+    for (int a = 0; a < fsize; ++a) {
+      if (!strncmp(contents + a, "vulkan_sdk = \"", 14)) {
+        for (int b = a + 14; b < fsize + 1; ++b) {
+          if (contents[b] == '\0') {
+            MCerror(5882, "Expected end-quote in config file");
+          }
+          else if (contents[b] == '"') {
+            strncpy(vulkan_sdk_dir, contents + a + 14, sizeof(char) * b - (a + 14));
+            break;
+          }
+        }
+      }
+    }
+
+    int n = strlen(vulkan_sdk_dir);
+    if (vulkan_sdk_dir[n] != '/') {
+      vulkan_sdk_dir[n] = '/';
+      vulkan_sdk_dir[n + 1] = '\0';
+    }
+    printf("[Config] vulkan_sdk_dir='%s'\n", vulkan_sdk_dir);
+    strcpy(vulkan_sdk_include_dir, vulkan_sdk_dir);
+    strcat(vulkan_sdk_include_dir, "x86_64/include");
+    strcpy(vulkan_sdk_lib_dir, vulkan_sdk_dir);
+    strcat(vulkan_sdk_lib_dir, "x86_64/lib");
+    printf("[Config] vulkan_sdk_include_dir='%s'\n", vulkan_sdk_include_dir);
+
+    free(contents);
+  }
+  // MCcall(mcl_load_config(vulkan_sdk_dir));
 
   // Begin error handling for the temp source loading
   void (*init_error_handling)(void) = tcci_get_symbol(itp, "initialize_mc_error_handling");
@@ -510,8 +575,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   void (*register_midge_thread_creation)(unsigned int *, const char *, const char *, int, const char *, int *) =
       tcci_get_symbol(itp, "register_midge_thread_creation");
   {
-    register_midge_thread_creation(&temp_source_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463, "temp_source_loader",
-                                   &temp_source_error_stack_index);
+    register_midge_thread_creation(&temp_source_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1463,
+                                   "temp_source_loader", &temp_source_error_stack_index);
   }
 
   // Used by the MCcall macro
@@ -528,9 +593,11 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     // Add Include Paths & tcc symbols
     MCcall(tcci_add_include_path(midge_itp, "src"));
     MCcall(tcci_add_include_path(midge_itp, "dep"));
+    MCcall(tcci_add_include_path(midge_itp, vulkan_sdk_include_dir));
 
     tcci_set_global_symbol(midge_itp, "tcci_add_include_path", &tcci_add_include_path);
     tcci_set_global_symbol(midge_itp, "tcci_add_library", &tcci_add_library);
+    tcci_set_global_symbol(midge_itp, "tcci_add_library_path", &tcci_add_library_path);
     tcci_set_global_symbol(midge_itp, "tcci_add_files", &tcci_add_files);
     tcci_set_global_symbol(midge_itp, "tcci_add_string", &tcci_add_string);
     tcci_set_global_symbol(midge_itp, "tcci_define_symbol", &tcci_define_symbol);
@@ -580,6 +647,7 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
 
     tcci_add_library(midge_itp, "xcb");
     tcci_add_library(midge_itp, "vulkan");
+    tcci_add_library_path(midge_itp, vulkan_sdk_lib_dir);
     tcci_define_symbol(midge_itp, "VK_USE_PLATFORM_XCB_KHR", NULL);
   }
 
@@ -610,8 +678,8 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
   {
     // Resume thread error handling
     int dummy_int;
-    register_midge_thread_creation(mc_interp_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1555, "main-interp-thread",
-                                   &dummy_int);
+    register_midge_thread_creation(mc_interp_error_thread_index, "mcl_load_app_source", "core_source_loader.c", 1555,
+                                   "main-interp-thread", &dummy_int);
   }
 
   void (*mdg_init_midge_app_info)() = tcci_get_symbol(midge_itp, "mc_init_midge_app_info");
