@@ -84,9 +84,11 @@ retval=$?
 if [ $retval -ne 0 ]; then
     echo "Compilation Failed : $retval"
 else
-    echo Running
+    echo "#######################"
+    echo Compilation Succeeded -- Running...
     echo "#######################"
     # export EXTRA_CLING_ARGS='-Wmacro-redefined'
+    # set PATH=/home/
     ./bin/midge
     # -x c
     retval=$?

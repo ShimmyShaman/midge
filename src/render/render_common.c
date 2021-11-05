@@ -220,7 +220,7 @@ int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_r
   return 0;
 }
 
-int mcr_load_index_buffer(unsigned int *indices, unsigned int indices_size, bool release_original_data_on_creation,
+int mcr_load_index_buffer(unsigned int *indices, unsigned int index_count, bool release_original_data_on_creation,
                           mcr_index_buffer **p_index_buffer)
 {
   *p_index_buffer = NULL;
@@ -235,7 +235,7 @@ int mcr_load_index_buffer(unsigned int *indices, unsigned int indices_size, bool
   command->type = RESOURCE_COMMAND_LOAD_INDEX_BUFFER;
   command->p_resource = (void *)p_index_buffer;
   command->load_indices.p_data = indices;
-  command->load_indices.data_count = indices_size;
+  command->load_indices.data_count = index_count;
   command->load_indices.release_original_data_on_copy = release_original_data_on_creation; // TODO -- toggle to true?
 
   pthread_mutex_unlock(&global_data->render_thread->resource_queue->mutex);

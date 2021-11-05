@@ -478,60 +478,60 @@ int debugstuff(TCCInterpState *itp)
 
 int mcf_obtain_path_relative(const char *path, const char *comparative_path, char *dest, int dest_size) { return 0; }
 
-void dbht(void)
-{
-  char b[256], c[256], d[256];
+// void dbht(void)
+// {
+//   char b[256], c[256], d[256];
 
-  strcpy(b, "/home/jason/midge");
-  strcpy(c, "/home/jason/midge/src/app/main.c");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge");
+//   strcpy(c, "/home/jason/midge/src/app/main.c");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge");
-  strcpy(c, "/home/jason/midge/readme.md");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge");
+//   strcpy(c, "/home/jason/midge/readme.md");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge");
-  strcpy(c, "/home/jason/midge");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge");
+//   strcpy(c, "/home/jason/midge");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge");
-  strcpy(c, "/home/jason/midge/");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge");
+//   strcpy(c, "/home/jason/midge/");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge/");
-  strcpy(c, "/home/jason/midge");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge/");
+//   strcpy(c, "/home/jason/midge");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge/");
-  strcpy(c, "/home/jason/midge/");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge/");
+//   strcpy(c, "/home/jason/midge/");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge/src");
-  strcpy(c, "/home/jason/midge/dep/tinycc/tcc.h");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge/src");
+//   strcpy(c, "/home/jason/midge/dep/tinycc/tcc.h");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge/src/");
-  strcpy(c, "/home/jason/midge/dep/tinycc/tcc.h");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge/src/");
+//   strcpy(c, "/home/jason/midge/dep/tinycc/tcc.h");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge/src/app");
-  strcpy(c, "/home/jason/temp/midge/dep/tinycc/tcc.h");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge/src/app");
+//   strcpy(c, "/home/jason/temp/midge/dep/tinycc/tcc.h");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge/src/app");
-  strcpy(c, "/home/jason/midge");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge/src/app");
+//   strcpy(c, "/home/jason/midge");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge/src");
-  strcpy(c, "/home/jason/midge");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge/src");
+//   strcpy(c, "/home/jason/midge");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  strcpy(b, "/home/jason/midge/src");
-  strcpy(c, "/home/jason/midge/tmp");
-  mcf_obtain_path_relative(c, b, d, 256);
+//   strcpy(b, "/home/jason/midge/src");
+//   strcpy(c, "/home/jason/midge/tmp");
+//   mcf_obtain_path_relative(c, b, d, 256);
 
-  exit(0);
-}
+//   exit(0);
+// }
 
 int main(int argc, const char *const *argv)
 {
@@ -543,9 +543,9 @@ int main(int argc, const char *const *argv)
   // // printf("res=%i\n", doit(3));
   // test_itp();
 
-  // // printf("sizeof(unsigned long)=%zu\n"
-  // //        "sizeof(void *)=%zu\n",
-  // //        sizeof(unsigned long), sizeof(void *));
+  // printf("sizeof(unsigned long)=%zu\n"
+  //        "sizeof(void *)=%zu\n",
+  //        sizeof(unsigned long), sizeof(void *));
   // return 0;
   // // DEBUG
 
@@ -570,9 +570,9 @@ int main(int argc, const char *const *argv)
 
   // Begin
   clock_gettime(CLOCK_REALTIME, &app_begin_time);
-
   // Initialize the interpreter
   TCCInterpState *loader_itp = tcci_new();
+  puts("main~b");
   tcci_set_Werror(loader_itp, 1);
 
   // Add Include Paths

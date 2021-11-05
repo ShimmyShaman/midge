@@ -537,13 +537,13 @@ int mcl_load_app_source(TCCInterpState *itp, TCCInterpState **mc_interp, int *mc
     // printf("config:\n%s\n", contents);
     vulkan_sdk_dir[0] = '\0';
     for (int a = 0; a < fsize; ++a) {
-      if (!strncmp(contents + a, "vulkan_sdk = \"", 14)) {
-        for (int b = a + 14; b < fsize + 1; ++b) {
+      if (!strncmp(contents + a, "\nvulkan_sdk = \"", 15)) {
+        for (int b = a + 15; b < fsize + 1; ++b) {
           if (contents[b] == '\0') {
             MCerror(5882, "Expected end-quote in config file");
           }
           else if (contents[b] == '"') {
-            strncpy(vulkan_sdk_dir, contents + a + 14, sizeof(char) * b - (a + 14));
+            strncpy(vulkan_sdk_dir, contents + a + 15, sizeof(char) * b - (a + 15));
             break;
           }
         }

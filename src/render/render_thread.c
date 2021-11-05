@@ -760,17 +760,17 @@ VkResult mrt_render_render_program(vk_render_state *p_vkrs, VkCommandBuffer comm
   setAllocInfo.pSetLayouts = &render_prog->descriptor_layout;
 
   unsigned int descriptor_set_index = p_vkrs->descriptor_sets_count;
-  printf("descriptor_set_index=%u &p_vkrs->descriptor_sets[descriptor_set_index]=%p\n", descriptor_set_index,
-         &p_vkrs->descriptor_sets[descriptor_set_index]);
+  // printf("descriptor_set_index=%u &p_vkrs->descriptor_sets[descriptor_set_index]=%p\n", descriptor_set_index,
+  //        &p_vkrs->descriptor_sets[descriptor_set_index]);
   res = vkAllocateDescriptorSets(p_vkrs->device, &setAllocInfo, &p_vkrs->descriptor_sets[descriptor_set_index]);
-  printf("res=%i\n", (int)res);
+  // printf("res=%i\n", (int)res);
   VK_CHECK(res, "vkAllocateDescriptorSets");
 
-  printf("mrt_rcq-0c\n");
+  // printf("mrt_rcq-0c\n");
   VkDescriptorSet desc_set = p_vkrs->descriptor_sets[descriptor_set_index];
   p_vkrs->descriptor_sets_count += setAllocInfo.descriptorSetCount;
 
-  printf("mrt_rcq-1\n");
+  // printf("mrt_rcq-1\n");
   // Queue Buffer and Descriptor Writes
   VkWriteDescriptorSet writes[render_prog->layout_binding_count];
   VkDescriptorBufferInfo buffer_infos[render_prog->layout_binding_count];
@@ -781,7 +781,7 @@ VkResult mrt_render_render_program(vk_render_state *p_vkrs, VkCommandBuffer comm
   for (int i = 0; i < render_prog->layout_binding_count; ++i) {
     switch (render_prog->layout_bindings[i].type) {
     case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER: {
-      printf("mrt_rcq-2\n");
+      // printf("mrt_rcq-2\n");
       mcr_texture_image *image_sampler = (mcr_texture_image *)cmd->render_program.data->input_buffers[i];
       VkDescriptorImageInfo *image_sampler_info = &image_sampler_infos[i];
       image_sampler_info->imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -838,6 +838,12 @@ VkResult mrt_render_render_program(vk_render_state *p_vkrs, VkCommandBuffer comm
   int index_draw_count = cmd->render_program.data->specific_index_draw_count;
   if (!index_draw_count)
     index_draw_count = cmd->render_program.data->indices->capacity;
+
+  // printf("index_draw_count=%i\n", index_draw_count);
+  // printf("cmd->render_program.data->indices->capacity=%i\n", cmd->render_program.data->indices->capacity);
+  // printf("cmd->render_program.data->specific_index_draw_count=%i\n",
+  //        cmd->render_program.data->specific_index_draw_count);
+
   vkCmdDrawIndexed(command_buffer, index_draw_count, 1, 0, 0, 0);
   // vkCmdDrawIndexed()
 

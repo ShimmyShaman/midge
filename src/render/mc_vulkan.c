@@ -133,13 +133,19 @@ void mvk_init_device_extension_names(vk_render_state *p_vkrs)
 
 int mvk_check_layer_support(vk_render_state *p_vkrs)
 {
+  puts("Available Layers:");
+  for (int b = 0; b < p_vkrs->instance_layer_properties.size; ++b) {
+    layer_properties *layer_props = p_vkrs->instance_layer_properties.items[b];
+    printf("--%s\n", layer_props->properties.layerName);
+  }
+
   for (int a = 0; a < p_vkrs->instance_layer_names.size; ++a) {
     const char *layer_name = p_vkrs->instance_layer_names.items[a];
     bool layer_found = false;
 
     for (int b = 0; b < p_vkrs->instance_layer_properties.size; ++b) {
       layer_properties *layer_props = p_vkrs->instance_layer_properties.items[b];
-      if (strcmp(layer_name, layer_props->properties.layerName) == 0) {
+      if (!strcmp(layer_name, layer_props->properties.layerName)) {
         layer_found = true;
         break;
       }

@@ -377,8 +377,8 @@ int mcr_load_texture_resource(const char *path, mcr_texture_image **p_texture);
 int mcr_obtain_font_resource(resource_queue *resource_queue, const char *font_path, float font_height,
                              mcr_font_resource **font);
 int mcr_create_render_program(mcr_render_program_create_info *create_info, mcr_render_program **p_program);
-int mcr_load_index_buffer(unsigned int *indices, unsigned int specific_index_draw_count,
-                          bool release_original_data_on_creation, mcr_index_buffer **p_index_buffer);
+int mcr_load_index_buffer(unsigned int *indices, unsigned int index_count, bool release_original_data_on_creation,
+                          mcr_index_buffer **p_index_buffer);
 int mcr_load_vertex_buffer(float *vertices, unsigned int vertex_count, bool release_original_data_on_creation,
                            mcr_vertex_buffer **p_vertex_buffer);
 int mcr_remap_buffer_memory(VkDescriptorBufferInfo *buffer, VkDeviceMemory memory, void *new_data,
