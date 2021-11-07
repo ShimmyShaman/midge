@@ -39,7 +39,7 @@ in any immediate future._
 
 ## Installation
 
->* Have Ubuntu (or Linux in general, not tested).  
+>* Have Ubuntu with XCB/XLIB (has to be installed seperately with Ubuntu-20).  
 >* Ensure the Vulkan SDK has been installed.
 
 ```bash

@@ -191,6 +191,12 @@ int _mc_transcribe_function_info(mc_str *str, function_info *function, bool use_
 
   MCcall(mc_append_char_to_str(str, ' '));
   if (use_midge_c_instead) {
+    // mc_syntax_node function_ast;
+    // function_ast.function.name = function->name;
+
+    // mc_syntax_node function_return_type_ast;
+    // function_ast.function.return_type_identifier->type_identifier. = function->return_type.
+
     mc_syntax_node *code_ast;
     MCcall(mcs_parse_code_block_to_syntax_tree(function->code, &code_ast));
 

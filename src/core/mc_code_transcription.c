@@ -2847,11 +2847,13 @@ int mct_transcribe_statement_list(mct_transcription_state *ts, mc_syntax_node_li
 
 int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *syntax_node, bool function_root)
 {
+  // puts("mct_transcribe_code_block");
   register_midge_error_tag("mct_transcribe_code_block()");
   mc_append_to_str(ts->str, "{\n");
   mct_increment_scope_depth(ts);
   ++ts->indent;
 
+  // puts("tcb-1");
   if (function_root && ts->options->report_function_entry_exit_to_stack &&
       strcmp("_mca_thread_entry_wrap", ts->function_name)) {
     mct_transcribe_text_with_indent(ts, "int midge_error_stack_index;\n");
@@ -2866,8 +2868,25 @@ int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *synta
     mc_append_to_str(ts->str, "\n");
   }
 
+  // puts("tcb-2");
+  // print_syntax_node(syntax_node, 0);
   if (function_root && ts->options->report_function_entry_exit_to_stack &&
       strcmp("_mca_thread_entry_wrap", ts->function_name) && !ts->recent_function_exit_handled) {
+    // puts("tcb-2a");
+    // printf("syntax_node=%p\n",
+    //   syntax_node);
+    // printf("syntax_node->parent=%p\n",
+    //   syntax_node->parent);
+    // printf("syntax_node->parent->function=%p\n",
+    //   syntax_node->parent->function);
+    // printf("syntax_node->parent->function.return_type_identifier=%p\n",
+    //   syntax_node->parent->function.return_type_identifier);
+    // printf("syntax_node->parent->function.return_type_identifier->type_identifier=%p\n",
+    //   syntax_node->parent->function.return_type_identifier->type_identifier);
+    // printf("syntax_node->parent->function.return_type_identifier->type_identifier.identifier=%p\n",
+    //   syntax_node->parent->function.return_type_identifier->type_identifier.identifier);
+    // printf("syntax_node->parent->function.return_type_identifier->type_identifier.identifier->text=%p\n",
+    //   syntax_node->parent->function.return_type_identifier->type_identifier.identifier->text);
     if (strcmp(syntax_node->parent->function.return_type_identifier->type_identifier.identifier->text, "void") ||
         syntax_node->parent->function.return_type_dereference) {
       // print_syntax_node(syntax_node->parent->function.return_type_identifier, 0);
@@ -2875,12 +2894,15 @@ int mct_transcribe_code_block(mct_transcription_state *ts, mc_syntax_node *synta
       MCerror(2878, "Are you missing a return for this function?  '%s'", syntax_node->parent->function.name->text);
     }
 
+    // puts("tcb-2b");
     MCcall(mct_transcribe_function_return(ts, NULL));
   }
 
+  // puts("tcb-3");
   mct_decrement_scope_depth(ts);
   --ts->indent;
   mct_transcribe_text_with_indent(ts, "}\n");
+  // puts("tcb-4");
 
   register_midge_error_tag("mct_transcribe_code_block(~)");
   return 0;
@@ -3630,8 +3652,9 @@ int mct_transcribe_isolated_code_block(mc_syntax_node *code_block_ast, const cha
   ts.scope_index = 0;
   ts.scope[ts.scope_index].variable_count = 0;
 
-  // Do
-  MCcall(mct_transcribe_code_block(&ts, code_block_ast, true));
+  // TODO -- I switched this to false to do something temporarly, it shouldn't be false. When transcribing an
+  // isolated block, having some kind of check on the code would be good (its used at least by the code changing at runtime system).
+  MCcall(mct_transcribe_code_block(&ts, code_block_ast, false));
 
   return 0;
 }

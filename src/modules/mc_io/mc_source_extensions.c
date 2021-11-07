@@ -93,6 +93,7 @@ int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_
 
   // Determine if the header already exists
   mc_source_file_info *sf;
+  printf("obtsrcf:'%s'\n", path);
   for (int a = 0; a < app_itp_data->source_files.count; ++a) {
     sf = app_itp_data->source_files.items[a];
 
