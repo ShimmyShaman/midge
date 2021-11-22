@@ -39,6 +39,10 @@ in any immediate future._
 
 ## Installation
 
+> ### _Disclaimer_
+> _This project is developed deeply and not broadly. I make it work on my computer
+   so I can discover what can become of it. It won't probably won't work on a different setup_
+
 >* Have Ubuntu with XCB/XLIB (has to be installed seperately with Ubuntu-20).  
 >* Ensure the Vulkan SDK has been installed.
 

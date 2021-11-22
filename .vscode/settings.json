@@ -72,6 +72,8 @@
         "core_definitions.h": "c",
         "render_common.h": "c"
     },
+    "powermode.enabled": true,
+    "powermode.enableShake": false
     // "editor.defaultFormatter": "clang",
     // "C_Cpp.clang_format_path": ".clang-format",
     // "C_Cpp.clang_format_style": "file",

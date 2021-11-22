@@ -578,6 +578,9 @@ int parse_float(const char **token, float *result)
   val = 0.0;
   int res = try_parse_double((*token), end, &val);
   if (res) {
+    char buf[256];
+    strncpy(buf, *token, 128);
+    printf("len_until_space=%i\n*token='%s'...\n", len_until_space, buf);
     MCerror(7600, "couldn't parse double");
   }
 
@@ -592,6 +595,10 @@ int parse_float(const char **token, float *result)
 // TODO -- move this to a util module
 int my_atoi(const char **c)
 {
+  // if((**c) < '0' || (**c) > '9') {
+  //   printf("-%c-\n", **c);
+  // }
+
   int value = 0;
   int sign = 1;
   if (**c == '+' || **c == '-') {
@@ -667,13 +674,13 @@ int wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info 
   // DEBUG
 
   char *vc = file_text + cmd.begin + 2;
-  parse_float(&vc, &vertex_data[(*vi)++]);
+  MCcall(parse_float(&vc, &vertex_data[(*vi)++]));
   // printf(" %.3f", vertex_data[(*vi) - 1]);
   _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-  parse_float(&vc, &vertex_data[(*vi)++]);
+  MCcall(parse_float(&vc, &vertex_data[(*vi)++]));
   // printf(" %.3f", vertex_data[(*vi) - 1]);
   _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-  parse_float(&vc, &vertex_data[(*vi)++]);
+  MCcall(parse_float(&vc, &vertex_data[(*vi)++]));
   // printf(" %.3f", vertex_data[(*vi) - 1]);
   // _WVF_OBJ_CPTR_SKIP_SPACE(vc);
 
@@ -689,12 +696,12 @@ int wvf_obj_parse_vertex_info_to_data(char *file_text, _wvf_obj_parsed_obj_info 
 
   // "Flip" texture coords to accommodate vulkans right-hand-coordinate usage & objs left-hand-coordinate output
   float vt;
-  parse_float(&vc, &vt);
+  MCcall(parse_float(&vc, &vt));
   vertex_data[(*vi)++] = 1.f - vt;
   // parse_float(&vc, &vertex_data[(*vi)++]);
   // printf(" %.3f", vertex_data[(*vi) - 1]);
   _WVF_OBJ_CPTR_SKIP_SPACE(vc);
-  parse_float(&vc, &vt);
+  MCcall(parse_float(&vc, &vt));
   vertex_data[(*vi)++] = 1.f - vt;
   // parse_float(&vc, &vertex_data[(*vi)++]);
   // printf(" %.3f", vertex_data[(*vi) - 1]);
@@ -764,11 +771,11 @@ int _wvf_obj_load_vert_index_data(const char *obj_path, float **vertices, unsign
       // printf("codeb:'%.20s'\n", code);
 
       // printf("%i %i\n", i0.v_idx, i0.vt_idx);
-      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i0, *vertices, &vi, *indices, &ii);
+      MCcall(wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i0, *vertices, &vi, *indices, &ii));
       // printf("%i %i\n", i1.v_idx, i1.vt_idx);
-      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i1, *vertices, &vi, *indices, &ii);
+      MCcall(wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i1, *vertices, &vi, *indices, &ii));
       // printf("%i %i\n", i2.v_idx, i2.vt_idx);
-      wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i2, *vertices, &vi, *indices, &ii);
+      MCcall(wvf_obj_parse_vertex_info_to_data(file_text, &fli, &i2, *vertices, &vi, *indices, &ii));
     }
     // command->num_f = 3 * n;
     // command->num_f_num_verts = n;
@@ -793,7 +800,7 @@ int mcr_load_wavefront_obj(const char *obj_path, mcr_vertex_buffer **vertex_buff
   // Load the obj data
   float *vertices;
   unsigned int *indices, vertex_count, index_count;
-  _wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count);
+  MCcall(_wvf_obj_load_vert_index_data(obj_path, &vertices, &vertex_count, &indices, &index_count));
 
   // Construct the model and load its resources
   pthread_mutex_lock(&global_data->render_thread->resource_queue->mutex);

@@ -115,6 +115,7 @@ int _mc_construct_project_file_source(const char *subdir, const char *project_na
       "{\n"
       "  %s_data *data = (%s_data *)node->data;\n"
       "\n"
+      "  // Render a background colored quad\n"
       "  mcr_issue_render_command_colored_quad(\n"
       "    image_render_queue, (unsigned int)node->layout->__bounds.x, (unsigned int)node->layout->__bounds.y,\n"
       "    (unsigned int)node->layout->__bounds.width, (unsigned int)node->layout->__bounds.height, \n"
@@ -128,6 +129,7 @@ int _mc_construct_project_file_source(const char *subdir, const char *project_na
       mc_append_to_strf(str,
                         "int initialize_%s(mc_node *app_root)\n"
                         "{\n"
+                        "  // Configure the node layout\n"
                         "  mca_init_node_layout(&app_root->layout);\n"
                         "  app_root->children = (mc_node_list *)malloc(sizeof(mc_node_list));\n"
                         "  app_root->children->count = 0;\n"
@@ -146,10 +148,10 @@ int _mc_construct_project_file_source(const char *subdir, const char *project_na
                         "  app_root->data = data;\n"
                         "  data->app_root = app_root;\n"
                         "\n"
-                        "  puts(\"\\nDEBUG\");\n"
-                        "  printf(\"app_root=%%p %s_data=%%p\\n\", app_root, data);\n"
-                        "  puts(\"DEBUG\\n\");\n"
-                        "\n"
+                        // "  puts(\"\\nDEBUG\");\n"
+                        // "  printf(\"app_root=%%p %s_data=%%p\\n\", app_root, data);\n"
+                        // "  puts(\"DEBUG\\n\");\n"
+                        // "\n"
                         "  return 0;\n"
                         "}",
                         project_name, project_name, project_name, project_name, project_name, project_name));
