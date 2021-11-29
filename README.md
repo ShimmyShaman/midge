@@ -1,34 +1,58 @@
  # __midge__
 
-A graphical development framework and editor environment intended for innovative development of interactive visual applications.
+A graphical development framework and editor environment intended for innovative development
+of interactive visual applications.
 
-#### Focus on visualization of data and errors
-Allows quick evaluation and fixing of problems and iterative progression.
+### Purpose
 
-#### Automation of process and workflow generation
+An experimental project intended to investigate, explore and innovate the techniques and
+workflows involved in future application development. Encroaching upon the era of
+machine-assisted application development, this project intends to add to the future of IDE
+and game-engine feature-sets to improve development speed and capabilities and, ultimately,
+end-user experiences.
 
-Using historical tracking of utilized actions and processes for statistical
-suggestion for collaboration with the user to construct workflow processes. These
-processes can be used for guidance and prediction of future user behaviour through
-repeatable tasks and workflows. This reduces mechanical and cognitive expense to the
-developer to increase productivity.
+### Primary Feature-Set Pillars
+
+#### Machine-Assisted Collaborative Development
+
+Utilising advancements and techniques in machine learning and optimization algorithms to
+produce tools and workflows that offer developers increased productivity. Providing developers
+the ability to customize and specify process enhancements
+
+#### Development and Production Automation
+
+Utilising historical tracking and data science along with statistical methods of employed
+actions and processes for suggestion and automation. Reducing repeatable tasks and workflows
+and, consequently, mechanical and cognitive expense to the developer to increase productivity.
 
 #### Dynamic recompilation
 
-Utilizing [TinyCC](https://bellard.org/tcc/tcc-doc.html) to enable dynamic
-interpretation and quicker readjustments of projects.
+Utilizing [TinyCC](https://bellard.org/tcc/tcc-doc.html) and in-built semantic system to
+enable better internal representation and selective recompilation of source code. The ability
+to offer the power of dynamic interpretation of runtime-active project applications, whilst
+seeking to avoid their thorny details, to allow quicker preview and increase iterative
+productivity.
 
 #### Maximal configuration of development environment
 
-The development environment itself (as much as possible) is run inside the same 
-process used to develop projects. Utilizing the dynamic recompilation allows
-reconfiguration by the developer however it may serve best. This allows editing
-of the development environment by using the development environment.
+The development environment itself (as much as possible) is run inside the same process used
+to develop projects. Utilizing the dynamic recompilation allows reconfiguration by the
+developer however it may serve best. This allows editing of the development environment in the
+process of using the development environment.
+
+#### Monitoring and Visualization of data and errors
+
+Allow quick evaluation and identification of problems and errors in any development project.
 
 ## Progress
 
-_This project is still very much in the discovery process and no useful releases are
-in any immediate future._
+_This project is actively in iterative prototype development._
+
+## Contributions
+
+Ideas, relevant links and concepts are most welcome.
+
+[![ko-fi](res/funding/sponsor.png)](https://ko-fi.com/X8X56BHQG)
 
 ## Dependencies
 
@@ -41,7 +65,8 @@ in any immediate future._
 
 > ### _Disclaimer_
 > _This project is developed deeply and not broadly. I make it work on my computer
-   so I can discover what can become of it. It won't probably won't work on a different setup_
+   so I can discover what can become of it. It won't probably won't work on a different setup
+   (and sometimes doesn't work on my setup)._
 
 >* Have Ubuntu with XCB/XLIB (has to be installed seperately with Ubuntu-20).  
 >* Ensure the Vulkan SDK has been installed.
