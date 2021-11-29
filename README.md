@@ -52,6 +52,8 @@ _This project is actively in iterative prototype development._
 
 Ideas, relevant links and concepts are most welcome.
 
+Discussion available on [Discord](https://discord.gg/TSu23fw8ES)
+
 [![ko-fi](res/funding/sponsor.png)](https://ko-fi.com/X8X56BHQG)
 
 ## Dependencies
