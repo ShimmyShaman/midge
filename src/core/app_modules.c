@@ -68,10 +68,11 @@ int mca_load_modules()
       "dialogs",
       "obj_loader",
       "welcome_window",
-      "modus_operandi",
+      // "modus_operandi",
       "project_explorer",
       // And all before...
       "source_editor",
+      "commander",
       NULL,
   };
 

@@ -70,7 +70,10 @@
         "*.def": "c",
         "environment_definitions.h": "c",
         "core_definitions.h": "c",
-        "render_common.h": "c"
+        "render_common.h": "c",
+        "stdio.h": "c",
+        "mc_error_handling.h": "c",
+        "midge_app.h": "c"
     },
     "powermode.enabled": true,
     "powermode.enableShake": false

@@ -285,6 +285,7 @@ void _mc_hv_update_hierarchy_viewer_layout(mc_node *node,mc_rectf const *availab
 
 void init_hierarchy_viewer()
 {
+  printf("init_hierarchy_viewer()\n");
   mc_global_data *global_data;
   obtain_midge_global_root(&global_data);
 
