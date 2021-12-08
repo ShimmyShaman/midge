@@ -164,6 +164,8 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
   pthread_mutex_unlock(&app_info->hierarchy_mutex);
   // puts("hierarchy-unlock");
 
+  MCcall(mca_fire_event(MC_APP_EVENT_HIERARCHY_UPDATED, node_to_attach));
+
   return 0;
 }
 
@@ -622,6 +624,8 @@ int mca_attach_to_ancestor_root(mc_node *ancestor, mc_node *node_to_attach)
   if (node_to_attach->children) {
     MCcall(mca_set_descendents_require_layout_update(node_to_attach->children));
   }
+
+  MCcall(mca_fire_event(MC_APP_EVENT_HIERARCHY_UPDATED, node_to_attach));
 
   return 0;
 }

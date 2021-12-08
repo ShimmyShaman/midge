@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 // #include <dirent.h>
 #include <unistd.h>
 
@@ -14,22 +19,32 @@
 // #include "modules/collections/hash_table.h"
 // #include "modules/mc_io/mc_file.h"
 // #include "modules/render_utilities/render_util.h"
-// #include "modules/ui_elements/ui_elements.h"
+#include "modules/ui_elements/ui_elements.h"
 
-// #include "modules/modus_operandi/create_process_dialog.h"
-// #include "modules/modus_operandi/mo_context_viewer.h"
-// #include "modules/modus_operandi/mo_serialization.h"
-// #include "modules/modus_operandi/mo_types.h"
-// #include "modules/modus_operandi/mo_util.h"
-// #include "modules/modus_operandi/process_step_dialog.h"
+#define PORT 8080
 
 typedef struct commander_data {
   mc_node *node;
 
   struct {
+    mthread_info *thr_info;
+    pthread_mutex_t thr_lock;
+
+    bool connected, status_updated;
+    mc_str cmd_str, status_str;
+
+    int sockfd, connfd;
+    struct sockaddr_in servaddr, cli;
+   
+  } icp_conn;
+
+  struct {
     unsigned int width, height;
     mcr_texture_image *image;
   } render_target;
+
+  mcu_textblock *status_block;
+  mcu_textbox *cmd_textbox;
 
 //   mc_create_process_dialog_data *create_process_dialog;
 //   mc_process_step_dialog_data *create_step_dialog;
@@ -48,7 +63,7 @@ typedef struct commander_data {
 
 } commander_data;
 
-void _mc_cmdr_render_mod_headless(render_thread_info *render_thread, mc_node *node)
+void _mcm_cmdr_render_mod_headless(render_thread_info *render_thread, mc_node *node)
 {
   commander_data *data = (commander_data *)node->data;
 
@@ -81,6 +96,7 @@ void _mc_cmdr_render_mod_headless(render_thread_info *render_thread, mc_node *no
   irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
   // Children
+  // printf("childcount:%i\n", node->children->count);
   for (int a = 0; a < node->children->count; ++a) {
     mc_node *child = node->children->items[a];
     if (child->layout && child->layout->visible && child->layout->render_present) {
@@ -94,7 +110,7 @@ void _mc_cmdr_render_mod_headless(render_thread_info *render_thread, mc_node *no
   mcr_submit_image_render_request(global_data->render_thread, irq);
 }
 
-void _mc_cmdr_render_present(image_render_details *image_render_queue, mc_node *node)
+void _mcm_cmdr_render_present(image_render_details *image_render_queue, mc_node *node)
 {
   commander_data *data = (commander_data *)node->data;
 
@@ -103,21 +119,180 @@ void _mc_cmdr_render_present(image_render_details *image_render_queue, mc_node *
                                          data->render_target.height, data->render_target.image);
 }
 
-void _mc_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
+void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  // printf("_mc_mo_handle_input\n");
+  // printf("_mcm_mo_handle_input\n");
   input_event->handled = true;
   // if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
   // }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// Client Server Connection ////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int mc_cmdr_init_ui(mc_node *module_node)
+int __mcm_cmdr_set_connection_status(commander_data *data, bool connected, mc_str *str, const char *text) {
+  pthread_mutex_lock(&data->icp_conn.thr_lock);
+
+  MCcall(mc_set_str(str, text));
+  data->icp_conn.connected = connected;
+  data->icp_conn.status_updated = true;
+
+  pthread_mutex_unlock(&data->icp_conn.thr_lock);
+
+  return 0;
+}
+
+void *__mcm_cmdr_async_connect_to_server(void *state)
+{
+  midge_error_set_thread_name("mcm_cmdr_connection_thread");
+
+  commander_data *data = (commander_data *)state;
+
+  // socket create and verification
+  data->icp_conn.sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (data->icp_conn.sockfd == -1) {
+    __mcm_cmdr_set_connection_status(data, false, &data->icp_conn.status_str, "Socket creation failed.");
+  }
+  else {
+    __mcm_cmdr_set_connection_status(data, true, &data->icp_conn.status_str, "Socket successfully created.");
+  }
+  bzero(&data->icp_conn.servaddr, sizeof(data->icp_conn.servaddr));
+   
+  // assign IP, PORT
+  data->icp_conn.servaddr.sin_family = AF_INET;
+  data->icp_conn.servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  data->icp_conn.servaddr.sin_port = htons(PORT);
+   
+  // connect the client socket to server socket
+  if (connect(data->icp_conn.sockfd, (struct sockaddr*)&data->icp_conn.servaddr, sizeof(data->icp_conn.servaddr)) != 0) {
+    __mcm_cmdr_set_connection_status(data, false, &data->icp_conn.status_str, "Connection with the server failed.");
+
+    // close the socket
+    shutdown(data->icp_conn.sockfd, SHUT_RDWR);
+  }
+  else {
+    __mcm_cmdr_set_connection_status(data, true, &data->icp_conn.status_str, "Connected to the server.");
+  }
+
+  return NULL;
+}
+
+void *__mcm_cmdr_async_shutdown_connection(void *state)
+{
+  midge_error_set_thread_name("mcm_cmdr_connection_thread");
+
+  commander_data *data = (commander_data *)state;
+
+  // close the socket
+  shutdown(data->icp_conn.sockfd, SHUT_RDWR);
+  
+  __mcm_cmdr_set_connection_status(data, true, &data->icp_conn.status_str, "Server shutdown.");
+
+  return NULL;
+}
+
+void * __mcm_cmdr_async_icpconn_send(void *state) {
+  commander_data *data = (commander_data *)state;
+  
+  pthread_mutex_lock(&data->icp_conn.thr_lock);
+  if(!data->icp_conn.connected) {
+    return NULL;
+  }
+  if(!data->icp_conn.cmd_str.len) {
+    return NULL;
+  }
+  
+  // function for chat
+  char buf[512];
+  ssize_t res;
+  {
+    printf("Sending to server:'%s'\n", data->icp_conn.cmd_str.text);
+    res = send(data->icp_conn.sockfd, data->icp_conn.cmd_str.text, sizeof(char) * data->icp_conn.cmd_str.len, 0);
+    if(res == -1) {
+      perror("send");
+    }
+    printf("Sent to server: %zu bytes\n", res);
+
+    bzero(buf, sizeof(buf));
+    res = recv(data->icp_conn.sockfd, buf, sizeof(buf), 0);
+    if(res == -1) {
+      perror("recv");
+    }
+    printf("recv: %zu\n", res);
+
+    printf("From Server : %s\n", buf);
+    if ((strncmp(buf, "exit", 4)) == 0) {
+      printf("Client Exit...\n");
+    }
+  }
+
+  pthread_mutex_unlock(&data->icp_conn.thr_lock);
+
+  return NULL;
+}
+
+int _mcm_cmdr_send_command(commander_data *data, const char *command) {
+  pthread_mutex_lock(&data->icp_conn.thr_lock);
+  
+  MCcall(mc_set_str(&data->icp_conn.cmd_str, command));
+
+  MCcall(begin_mthread(&__mcm_cmdr_async_icpconn_send, &data->icp_conn.thr_info, data));
+  
+  pthread_mutex_unlock(&data->icp_conn.thr_lock);
+
+  return 0;
+}
+
+// int __mcm_cmdr_update_connection_callback() {
+//   return 0;
+// }
+
+int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
+  commander_data *data = (commander_data *)state;
+
+  pthread_mutex_lock(&data->icp_conn.thr_lock);
+  if(data->icp_conn.status_updated) {
+    MCcall(mcu_set_textblock_text(data->status_block, data->icp_conn.status_str.text));
+
+    data->icp_conn.status_updated = false;
+  }
+  pthread_mutex_unlock(&data->icp_conn.thr_lock);
+
+  return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////// Initialization /////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void __mcm_cmd_textbox_submit(mci_input_event *event, mcu_textbox *textbox) {
+  commander_data *data = (commander_data *)textbox->node->parent->data;
+
+  if(!textbox->contents->len) {
+    // Ignore
+    return;
+  }
+  
+  _mcm_cmdr_send_command(data, textbox->contents->text);
+
+  // Reset text
+  mcu_set_textbox_text(data->cmd_textbox, "");
+}
+
+int mcm_cmdr_init_ui(mc_node *module_node)
 {
   commander_data *data = (commander_data *)module_node->data;
+
+  MCcall(mcu_init_textblock(module_node, &data->status_block));
+  MCcall(mcu_set_textblock_text(data->status_block, "Default Status"));
+  data->status_block->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+  // data->status_block->node->layout->padding = (mc_paddingf){6, 2, 42, 2};
+
+  MCcall(mcu_init_textbox(module_node, &data->cmd_textbox));
+  data->cmd_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  data->cmd_textbox->node->layout->padding = (mc_paddingf){6, 8, 42, 2};
+  data->cmd_textbox->submit = &__mcm_cmd_textbox_submit;
 
 //   MCcall(mcu_init_textbox(module_node, &mod->search_textbox));
 //   mod->search_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
@@ -143,7 +318,7 @@ int mc_cmdr_init_ui(mc_node *module_node)
 //     button->node->layout->max_width = 0U;
 //     button->node->layout->visible = false;
 
-//     button->left_click = (void *)&_mc_mo_operational_process_selected;
+//     button->left_click = (void *)&_mcm_mo_operational_process_selected;
 
 //     MCcall(mc_set_str(&button->str, "button"));
 
@@ -166,7 +341,7 @@ int mc_cmdr_init_ui(mc_node *module_node)
 //   button->node->layout->max_height = 16U;
 //   button->tag = mod;
 
-//   button->left_click = (void *)&_mc_mo_create_process_clicked;
+//   button->left_click = (void *)&_mcm_mo_create_process_clicked;
 
 //   MCcall(mc_set_str(&button->str, "+"));
 
@@ -185,7 +360,7 @@ int mc_cmdr_init_ui(mc_node *module_node)
 //   button->node->layout->max_height = 18U;
 //   button->tag = mod;
 
-//   button->left_click = (void *)&_mc_mo_toggle_context_viewer_clicked;
+//   button->left_click = (void *)&_mcm_mo_toggle_context_viewer_clicked;
 
 //   MCcall(mc_set_str(&button->str, "oo"));
 
@@ -246,9 +421,9 @@ int init_commander_system(mc_node *app_root) {
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
-  node->layout->render_headless = (void *)&_mc_cmdr_render_mod_headless;
-  node->layout->render_present = (void *)&_mc_cmdr_render_present;
-  node->layout->handle_input_event = (void *)&_mc_cmdr_handle_input;
+  node->layout->render_headless = (void *)&_mcm_cmdr_render_mod_headless;
+  node->layout->render_present = (void *)&_mcm_cmdr_render_present;
+  node->layout->handle_input_event = (void *)&_mcm_cmdr_handle_input;
 
   // TODO
   // node->layout->visible = false;
@@ -257,19 +432,25 @@ int init_commander_system(mc_node *app_root) {
   MCcall(mc_cmdr_load_resources(node));
   commander_data *data = (commander_data *)node->data;
 
-//   MCcall(mc_cmdr_init_ui(node));
+  MCcall(mcm_cmdr_init_ui(node));
 
-//   MCcall(_mc_mo_load_operations(node));
+//   MCcall(_mcm_mo_load_operations(node));
 
 //   // Create Process Step Dialog
 //   MCcall(mc_mo_init_create_process_dialog(app_root, &mod->create_process_dialog));
 //   MCcall(mc_mocsd_init_process_step_dialog(app_root, &mod->create_step_dialog));
 
   // Event Registers
-//   MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_STRUCTURE_CREATION, &_mc_mo_project_created, node->data));
-//   MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_LOADED, &_mc_mo_project_loaded, node->data));
-  // TODO -- register for project closed/shutdown
+//   MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_STRUCTURE_CREATION, &_mcm_mo_project_created, node->data));
+//   MCcall(mca_register_event_handler(MC_APP_EVENT_PROJECT_LOADED, &_mcm_mo_project_loaded, node->data));
 
+  // ML Client Server Connection Thread
+  MCcall(mc_init_str(&data->icp_conn.cmd_str, 256));
+  data->icp_conn.connected = false;
+  MCcall(mc_init_str(&data->icp_conn.status_str, 256));
+  MCcall(begin_mthread(&__mcm_cmdr_async_connect_to_server, &data->icp_conn.thr_info, data));
+  long one_hundred_milliseconds = 100000L;
+  MCcall(mca_register_update_timer(one_hundred_milliseconds, true, data, &_mcm_cmdr_update_connection));
 
   // TODO -- mca_attach_node_to_hierarchy_pending_resource_acquisition ??
   while (!data->render_target.image) {

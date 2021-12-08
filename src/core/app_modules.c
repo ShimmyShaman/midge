@@ -69,9 +69,10 @@ int mca_load_modules()
       "obj_loader",
       "welcome_window",
       // "modus_operandi",
-      "project_explorer",
+      "hierarchy_viewer",
+      // "project_explorer",
       // And all before...
-      "source_editor",
+      // "source_editor",
       "commander",
       NULL,
   };

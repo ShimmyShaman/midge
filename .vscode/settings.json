@@ -73,7 +73,9 @@
         "render_common.h": "c",
         "stdio.h": "c",
         "mc_error_handling.h": "c",
-        "midge_app.h": "c"
+        "midge_app.h": "c",
+        "m_threads.h": "c",
+        "pthread.h": "c"
     },
     "powermode.enabled": true,
     "powermode.enableShake": false

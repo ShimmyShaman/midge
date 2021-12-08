@@ -193,7 +193,7 @@ void *mca_load_modules_then_project_async(void *state)
   res = mca_fire_event(MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED, NULL);
   if (res) {
     printf("--"
-           "mca_load_previously_open_projects"
+           "mca_fire_event"
            " line:%i:ERR:%i\n",
            __LINE__ - 5, res);
 

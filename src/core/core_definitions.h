@@ -25,6 +25,8 @@ typedef enum mc_app_event_type {
   MC_APP_EVENT_POST_INITIALIZATION,
   // int (*event_handler)(void *handler_state, void *event_args) {event_args is NULL}
   MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED,
+  // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_node *last_attached_node (NULL if removed)}
+  MC_APP_EVENT_HIERARCHY_UPDATED,
   // int (*event_handler)(void *handler_state, void *event_args)
   // - event_args is void *[] { const char *project_directory, const char *project_name }
   MC_APP_EVENT_PROJECT_STRUCTURE_CREATION,

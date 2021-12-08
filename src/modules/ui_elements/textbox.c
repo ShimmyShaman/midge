@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "control/mc_controller.h"
 #include "env/environment_definitions.h"
@@ -214,6 +215,17 @@ int mcu_init_textbox(mc_node *parent, mcu_textbox **p_textbox)
   *p_textbox = (mcu_textbox *)node->data;
 
   MCcall(mca_attach_node_to_hierarchy(parent, node));
+
+  return 0;
+}
+
+int mcu_set_textbox_text(mcu_textbox *textbox, const char *text)
+{
+  if (!strcmp(textbox->contents->text, text))
+    return 0;
+
+  MCcall(mc_set_str(textbox->contents, text));
+  MCcall(mca_set_node_requires_layout_update(textbox->node));
 
   return 0;
 }
