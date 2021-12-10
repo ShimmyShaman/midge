@@ -490,24 +490,57 @@ void _mcm_hvwr_handle_input(mc_node *node, mci_input_event *input_event)
   }
 }
 
-int _mcm_hvwr_project_loaded(void *handler_state, void *event_args)
-{
-  // Args
+int _mcm_hvwr_print_node(mc_node *node, bool print_name, bool print_type, int print_children_depth, int _recur) {
+  
+  char buf[512];
+  strcpy(buf, ">");
+  int r = _recur;
+  while(r > 0) {
+    strcat(buf, "  ");
+    --r;
+  }
+  strcat(buf, "--");
+
+  strcat(buf, " ");
+  if(print_name)
+    strcat(buf, node->name);
+
+  if(print_type) {
+    char n[33];
+    sprintf(n, "%i", (int)node->type);
+    if(print_name)
+      strcat(buf, ":");
+    strcat(buf, n);
+  }
+  puts(buf);
+
+  // printf("node->children:%p\n", node->children);
+  // if(node->children)
+  //   printf("node->children->count:%i\n", node->children->count);
+  if(print_children_depth > 0 && node->children && node->children->count) {
+    for(int i = 0; i < node->children->count; ++i) {
+      mc_node *child = node->children->items[i];
+      if(child->layout && child->layout->visible) {
+        MCcall(_mcm_hvwr_print_node(node->children->items[i], print_name, print_type, print_children_depth - 1, _recur + 1));
+      }
+    }
+  }
+
+  return 0;
+}
+
+int __mcm_hvwr_hierarchy_updated(void *handler_state, void *event_args) {
+  mc_node *last_attached_node = (mc_node *)event_args;
+
   hierarchy_viewer_data *hvwr = (hierarchy_viewer_data *)handler_state;
-  mc_project_info *project = (mc_project_info *)event_args;
 
-  // Ensure node is shown - now at least one project is being tracked
-  hvwr->node->layout->visible = true;
+  mc_node *root = hvwr->node;
+  while(root->parent)
+    root = root->parent;
 
-  MCcall(
-      append_to_collection((void ***)&hvwr->projects.items, &hvwr->projects.capacity, &hvwr->projects.count, project));
-
-  // // Update Entry Info
-  // MCcall(_mcm_hvwr_update_entries_representation(hvwr));
-  // printf("hierarchy_viewer: %u entries loaded\n", hvwr->entries.count);
-
-  // Reset the entries displayed
-  mca_set_node_requires_layout_update(hvwr->node);
+  puts("hierarchy-updated:");
+  printf("[node trigger:%s-%i\n", last_attached_node->name, last_attached_node->type);
+  MCcall(_mcm_hvwr_print_node(root, true, true, INT32_MAX, 0));
 
   return 0;
 }
@@ -587,7 +620,7 @@ int mcm_init_hierarchy_viewer(mc_node *app_root)
 
   // TODO -- get rid of node type
   mc_node *node;
-  mca_init_mc_node(NODE_TYPE_ABSTRACT, "project-explorer-root", &node);
+  mca_init_mc_node(NODE_TYPE_ABSTRACT, "hierarchy-viewer-root", &node);
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
@@ -612,53 +645,8 @@ int mcm_init_hierarchy_viewer(mc_node *app_root)
 
   MCcall(_mcm_hvwr_init_ui(node));
 
-  MCcall(mca_register_event_handler(MC_APP_EVENT_HIERARCHY_UPDATED, (void *)__mcm_hvwr_hierarchy_updated, (void *)node->data));
+  // MCcall(mca_register_event_handler(MC_APP_EVENT_VISUAL_HIERARCHY_UPDATED, (void *)__mcm_hvwr_hierarchy_updated, (void *)node->data));
 
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
   return 0;
-}
-
-int _mcm_hvwr_print_node(mc_node *node, bool print_name, bool print_type, int print_children_depth, int _recur) {
-
-  char buf[512];
-  strcpy(buf, ">");
-  int r = _recur;
-  while(r > 0) {
-    strcat(buf, "  ");
-  }
-  strcat(buf, "--");
-
-  strcat(buf, " ");
-  if(print_name)
-    strcat(buf, node->name);
-
-  if(print_type) {
-    char n[33];
-    sprintf(n, "%i", (int)node->type);
-    if(print_name)
-      strcat(buf, ":");
-    strcat(buf, n);
-  }
-  puts(buf);
-
-  if(print_children_depth > 0 && node->children && node->children->count) {
-    for(int i = 0; i < node->children->count; ++i) {
-      MCcall(_mcm_hvwr_print_node(node->children->items[i], print_name, print_type, print_children_depth - 1, _recur + 1));
-    }
-  }
-
-  return 0;
-}
-
-int __mcm_hvwr_hierarchy_updated(void *handler_state, void *event_args) {
-  mc_node *last_attached_node = (mc_node *)event_args;
-
-  hierarchy_viewer_data *hvwr = (hierarchy_viewer_data *)handler_state;
-
-  mc_node *root = hvwr->node;
-  while(root->parent)
-    root = root->parent;
-
-  puts("hierarchy-updated:");
-  MCcall(_mcm_hvwr_print_node(root, true, true, INT32_MAX, 0));
 }

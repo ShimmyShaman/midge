@@ -127,7 +127,11 @@ typedef struct mcu_ui_state {
 // hierarchy.c
 void exit_app(mc_node *hierarchical_call_scope, int result);
 
-int mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list);
+
+int mca_find_hierarchy_node_descendant(mc_node *ancestor, const char *target_node_path, mc_node **out_result);
+int mca_find_hierarchy_node_any(mc_node *any_hierarchy_node, const char *target_node_path, mc_node **out_result);
+
+// int mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list);
 int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attach);
 int mca_modify_z_layer_index(mc_node *hierarchy_node, unsigned int new_z_layer_index);
 int mca_init_node_layout(mca_node_layout **layout);

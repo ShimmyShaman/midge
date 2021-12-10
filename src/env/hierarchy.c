@@ -42,6 +42,80 @@ void exit_app(mc_node *node_scope, int result)
   }
 }
 
+int mca_find_hierarchy_node_in_descendants(mc_node *ancestor, const char *target_node_path, mc_node **out_result) {
+    FIX THIS FUNCTION
+  int lgt = -1;
+  const char *c = target_node_path;
+  while(1) {
+    if(*c == '\0') {
+      if((c - target_node_path) && strncmp(ancestor->name, target_node_path, (int)(c - 1 - target_node_path))) {
+        char substr[512];
+        strncpy(substr, target_node_path, (int)(c - 1 - target_node_path));
+        MCerror(55231, "target node path could not find root named '%s', only '%s'", substr, ancestor->name);
+      }
+
+      // Result is root
+      printf ("result is found>'%s'\n", ancestor->name);
+      *out_result = ancestor;
+      return 0;
+    }
+    if(*c == '>') {
+      lgt = (int)(c - target_node_path);
+      break;
+    }
+    ++c;
+  }
+
+  if(lgt == -1) {
+    printf("node '%s' isn't '%s'\n", ancestor->name, target_node_path);
+    *out_result = NULL;
+    return 0;
+  }
+
+  if(!ancestor->children || !ancestor->children->count) {
+    *out_result = NULL;
+    printf("node '%s' doesn't have any descendants\n", target_node_path);
+  }
+
+  char child_name[512];
+  strncpy(child_name, target_node_path, lgt);
+  for(int i = 0; i < ancestor->children->count; ++i) {
+    mc_node *child = ancestor->children->items[i];
+    if(child->name)
+  }
+  puts("couldn't find child '%s'\n", child_name);
+
+
+  puts ("going deeper");
+  MCcall(mca_find_hierarchy_node_descendant(ancestor, target_node_path + lgt + 1, out_result));
+
+  return 0;
+}
+
+int mca_find_hierarchy_node_any(mc_node *any_hierarchy_node, const char *target_node_path, mc_node **out_result) {
+  printf("target_node_path:'%s'\n", target_node_path);
+  mc_node *root = any_hierarchy_node;
+  while(root->parent)
+    root = root->parent;
+
+  if(!strcmp(root->name, "midge-root")) {
+    MCerror(9528, "Root of the given node should be 'midge-root'");
+  }
+
+  if(!strcmp(root->name, target_node_path)) {
+    *out_result = root;
+    return 0;
+  }
+
+  if(strncmp(root->name, target_node_path, 10)) {
+    MCerror(9534, "start of the target node path should begin with 'midge-root'");
+  }
+
+  MCcall(mca_find_hierarchy_node_in_descendants(root, target_node_path, out_result));
+
+  return 0;
+}
+
 // void mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list)
 // {
 //   switch (hierarchy_node->type) {
@@ -165,6 +239,8 @@ int mca_attach_node_to_hierarchy(mc_node *hierarchy_node, mc_node *node_to_attac
   // puts("hierarchy-unlock");
 
   MCcall(mca_fire_event(MC_APP_EVENT_HIERARCHY_UPDATED, node_to_attach));
+  if(node_to_attach->layout && node_to_attach->layout->visible)
+    MCcall(mca_fire_event(MC_APP_EVENT_VISUAL_HIERARCHY_UPDATED, node_to_attach));
 
   return 0;
 }
@@ -626,6 +702,8 @@ int mca_attach_to_ancestor_root(mc_node *ancestor, mc_node *node_to_attach)
   }
 
   MCcall(mca_fire_event(MC_APP_EVENT_HIERARCHY_UPDATED, node_to_attach));
+  if(node_to_attach->layout && node_to_attach->layout->visible)
+    MCcall(mca_fire_event(MC_APP_EVENT_VISUAL_HIERARCHY_UPDATED, node_to_attach));
 
   return 0;
 }

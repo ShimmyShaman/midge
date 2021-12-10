@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "core/app_modules.h"
+#include "core/mc_source.h"
 #include "core/midge_app.h"
 #include "mc_error_handling.h"
 #include "render/render_common.h"
@@ -96,14 +97,25 @@ void mc_mww_handle_input(mc_node *node, mci_input_event *input_event)
   // }
 }
 
+void mcm_wwn_raise_new_project_dialog(mc_node *ww_node, const char *project_name)
+{
+  welcome_window_data *ww = (welcome_window_data *)ww_node->data;
+
+  // Make the input textbox visible
+  ww_node->layout->visible = true;
+  ww->input_textbox->node->layout->visible = true;
+  
+  mca_set_node_requires_rerender(ww->input_textbox->node);
+}
+
 void _mc_mww_on_new_project(mci_input_event *input_event, mcu_button *button)
 {
   welcome_window_data *ww = (welcome_window_data *)button->node->parent->data;
 
-  // Make the input textbox visible
-  ww->input_textbox->node->layout->visible = true;
   input_event->focus_successor = ww->input_textbox->node;
-  mca_set_node_requires_rerender(ww->input_textbox->node);
+  input_event->handled = true;
+
+  mcm_wwn_raise_new_project_dialog(ww->node, NULL);
 }
 
 void _mc_mww_textbox_submit(mci_input_event *input_event, mcu_textbox *textbox)
@@ -207,12 +219,13 @@ int init_welcome_window(mc_node *app_root)
 {
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
-  //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
+  
+  MCcall(mcs_interpret_file("src/modules/welcome_window/welcome_window.h"));
 
   // TODO -- get rid of node type
 
   mc_node *node;
-  mca_init_mc_node(NODE_TYPE_ABSTRACT, "welcome_window-root", &node);
+  mca_init_mc_node(NODE_TYPE_ABSTRACT, "welcome-window", &node);
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;

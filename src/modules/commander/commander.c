@@ -19,6 +19,7 @@
 // #include "modules/collections/hash_table.h"
 // #include "modules/mc_io/mc_file.h"
 // #include "modules/render_utilities/render_util.h"
+#include "modules/welcome_window/welcome_window.h"
 #include "modules/ui_elements/ui_elements.h"
 
 #define PORT 8080
@@ -35,6 +36,11 @@ typedef struct commander_data {
 
     int sockfd, connfd;
     struct sockaddr_in servaddr, cli;
+
+    struct {
+      unsigned int capacity, count;
+      char **items;
+    }server_responses;
    
   } icp_conn;
 
@@ -196,22 +202,20 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
   commander_data *data = (commander_data *)state;
   
   pthread_mutex_lock(&data->icp_conn.thr_lock);
-  if(!data->icp_conn.connected) {
+  if(!data->icp_conn.connected || !data->icp_conn.cmd_str.len) {
+    pthread_mutex_unlock(&data->icp_conn.thr_lock);
     return NULL;
   }
-  if(!data->icp_conn.cmd_str.len) {
-    return NULL;
-  }
-  
+
   // function for chat
   char buf[512];
   ssize_t res;
-  {
-    printf("Sending to server:'%s'\n", data->icp_conn.cmd_str.text);
-    res = send(data->icp_conn.sockfd, data->icp_conn.cmd_str.text, sizeof(char) * data->icp_conn.cmd_str.len, 0);
-    if(res == -1) {
-      perror("send");
-    }
+  printf("Sending to server:'%s'\n", data->icp_conn.cmd_str.text);
+  res = send(data->icp_conn.sockfd, data->icp_conn.cmd_str.text, sizeof(char) * data->icp_conn.cmd_str.len, 0);
+  if(res == -1) {
+    perror("send");
+  }
+  else {
     printf("Sent to server: %zu bytes\n", res);
 
     bzero(buf, sizeof(buf));
@@ -219,11 +223,15 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
     if(res == -1) {
       perror("recv");
     }
-    printf("recv: %zu\n", res);
+    else {
+      printf("recv: %zu\n", res);
 
-    printf("From Server : %s\n", buf);
-    if ((strncmp(buf, "exit", 4)) == 0) {
-      printf("Client Exit...\n");
+      printf("From Server : %s\n", buf);
+
+      char *str = (char *)malloc(sizeof(char) * (strlen(buf) + 1));
+      strcpy(str, buf);
+      append_to_collection((void ***)&data->icp_conn.server_responses.items, &data->icp_conn.server_responses.capacity,
+        &data->icp_conn.server_responses.count, str);
     }
   }
 
@@ -256,6 +264,28 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
     MCcall(mcu_set_textblock_text(data->status_block, data->icp_conn.status_str.text));
 
     data->icp_conn.status_updated = false;
+  }
+
+  // printf("cc:%u\n", data->icp_conn.server_responses.count);
+  while (data->icp_conn.server_responses.count) {
+    char *rsp = data->icp_conn.server_responses.items[0];
+    MCcall(remove_from_collection((void ***)&data->icp_conn.server_responses.items, &data->icp_conn.server_responses.count, 0));
+
+    if(!strncmp(rsp, "raise-create-project-dialog", 27)) {
+      printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
+
+      mc_node *ww_node;
+      MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
+      if(!ww_node) {
+        puts ("couldn't find welcome window ???? 58358");
+      } else {
+        puts("raising dialog");
+        mcm_wwn_raise_new_project_dialog(ww_node, NULL);
+        puts("DONE raising dialog");
+      }
+    }
+
+    free(rsp);
   }
   pthread_mutex_unlock(&data->icp_conn.thr_lock);
 
@@ -375,6 +405,11 @@ int mc_cmdr_load_resources(mc_node *module_node)
   commander_data *data = (commander_data *)malloc(sizeof(commander_data));
   module_node->data = data;
   data->node = module_node;
+  
+  pthread_mutex_init(&data->icp_conn.thr_lock, NULL);
+  data->icp_conn.server_responses.capacity = 0;
+  data->icp_conn.server_responses.count = 0;
+  data->icp_conn.server_responses.items = NULL;
 
 //   mod->options_buttons.capacity = mod->options_buttons.count = 0U;
 //   mod->all_processes.capacity = mod->all_processes.count = 0U;
