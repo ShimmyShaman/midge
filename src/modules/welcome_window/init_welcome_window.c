@@ -104,6 +104,8 @@ void mcm_wwn_raise_new_project_dialog(mc_node *ww_node, const char *project_name
   // Make the input textbox visible
   ww_node->layout->visible = true;
   ww->input_textbox->node->layout->visible = true;
+
+  mca_focus_node(ww->input_textbox->node);
   
   mca_set_node_requires_rerender(ww->input_textbox->node);
 }

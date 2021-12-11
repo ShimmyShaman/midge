@@ -36,7 +36,7 @@ int mcu_init_panel(mc_node *parent, mcu_panel **p_panel)
 {
   // Node
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-panel", &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_MCU_PANEL, "unnamed-panel", &node));
   node->destroy_data = (void *)&_mcu_panel_destroy_data;
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;

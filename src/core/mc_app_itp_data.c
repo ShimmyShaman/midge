@@ -16,7 +16,7 @@ int mc_init_app_itp_data(TCCInterpState *tis)
   mc_node *global = (mc_node *)calloc(sizeof(mc_node), 1);
   global->type = NODE_TYPE_GLOBAL_ROOT;
 
-  global->name = strdup("midge-root");
+  global->name = strdup(MIDGE_ROOT_NODE_NAME);
   global->parent = NULL;
   global->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   global->children->count = 0;

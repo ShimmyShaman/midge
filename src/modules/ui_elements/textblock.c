@@ -135,7 +135,7 @@ int mcu_init_textblock(mc_node *parent, mcu_textblock **p_textblock)
 {
   // Node
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-textblock", &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_MCU_TEXT_BLOCK, "unnamed-textblock", &node));
   node->destroy_data = (void *)&_mcu_textblock_destroy_data;
 
   // Layout

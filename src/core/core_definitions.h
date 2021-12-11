@@ -12,6 +12,8 @@
 #define CLOCK_REALTIME 0
 #endif
 
+#define MIDGE_ROOT_NODE_NAME "midge-root"
+
 // TODO seperate node and event stuff from source stuff
 
 typedef enum mc_source_entity_focus_options {
@@ -90,10 +92,17 @@ typedef enum node_type {
   NODE_TYPE_GLOBAL_ROOT,
   NODE_TYPE_CONSOLE_APP,
   NODE_TYPE_VISUAL_PROJECT,
+
+  // Not sure any of the below should exist
+  NODE_TYPE_MODULE_ROOT,
+  
   NODE_TYPE_MCU_PANEL,
   NODE_TYPE_MCU_CONTEXT_MENU,
   NODE_TYPE_MCU_BUTTON,
+  NODE_TYPE_MCU_DROPDOWN,
+  NODE_TYPE_MCU_PANEL,
   NODE_TYPE_MCU_TEXT_BLOCK,
+  NODE_TYPE_MCU_TEXTBOX,
 
   NODE_TYPE_FUNCTION_EDITOR,
   NODE_TYPE_STRUCT_EDITOR,
@@ -103,7 +112,6 @@ typedef enum node_type {
   NODE_TYPE_3D_PORTAL,
 
   NODE_TYPE_ABSTRACT,
-  NODE_TYPE_DOESNT_MATTER,
   NODE_TYPE_MIDGE_EXCLUSIVE_MAXIMUM = 3000,
 } node_type;
 

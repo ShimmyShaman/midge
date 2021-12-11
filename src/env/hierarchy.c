@@ -13,11 +13,11 @@
 
 #include "core/midge_app.h"
 
-void mc_print_node_name(mc_node *node)
+void mc_print_node_path(mc_node *node)
 {
   if (node->parent) {
-    mc_print_node_name(node->parent);
-    printf("->");
+    mc_print_node_path(node->parent);
+    printf(">");
   }
   printf("%s", node->name);
 }
@@ -43,23 +43,12 @@ void exit_app(mc_node *node_scope, int result)
 }
 
 int mca_find_hierarchy_node_in_descendants(mc_node *ancestor, const char *target_node_path, mc_node **out_result) {
-    FIX THIS FUNCTION
   int lgt = -1;
   const char *c = target_node_path;
+  bool final_path = false;
   while(1) {
-    if(*c == '\0') {
-      if((c - target_node_path) && strncmp(ancestor->name, target_node_path, (int)(c - 1 - target_node_path))) {
-        char substr[512];
-        strncpy(substr, target_node_path, (int)(c - 1 - target_node_path));
-        MCerror(55231, "target node path could not find root named '%s', only '%s'", substr, ancestor->name);
-      }
-
-      // Result is root
-      printf ("result is found>'%s'\n", ancestor->name);
-      *out_result = ancestor;
-      return 0;
-    }
-    if(*c == '>') {
+    if(*c == '\0' || *c == '>') {
+      final_path = (*c == '\0');
       lgt = (int)(c - target_node_path);
       break;
     }
@@ -67,27 +56,32 @@ int mca_find_hierarchy_node_in_descendants(mc_node *ancestor, const char *target
   }
 
   if(lgt == -1) {
-    printf("node '%s' isn't '%s'\n", ancestor->name, target_node_path);
+    MCerror(8274, "Could not discern target node path:'%s'\n", target_node_path);
     *out_result = NULL;
     return 0;
   }
 
   if(!ancestor->children || !ancestor->children->count) {
     *out_result = NULL;
-    printf("node '%s' doesn't have any descendants\n", target_node_path);
+    printf("[2421] mca_find_hierarchy_node_in_descendants: node '%s' doesn't have any descendants\n", target_node_path);
+  }
+
+  for(int i = 0; i < ancestor->children->count; ++i) {
+    mc_node *child = ancestor->children->items[i];
+    if(!strncmp(child->name, target_node_path, lgt)) {
+      if(final_path)
+        *out_result = child;
+      else {
+        MCcall(mca_find_hierarchy_node_in_descendants(ancestor, target_node_path + lgt + 1, out_result));
+      }
+
+      return 0;
+    }
   }
 
   char child_name[512];
   strncpy(child_name, target_node_path, lgt);
-  for(int i = 0; i < ancestor->children->count; ++i) {
-    mc_node *child = ancestor->children->items[i];
-    if(child->name)
-  }
-  puts("couldn't find child '%s'\n", child_name);
-
-
-  puts ("going deeper");
-  MCcall(mca_find_hierarchy_node_descendant(ancestor, target_node_path + lgt + 1, out_result));
+  printf("[2424] mca_find_hierarchy_node_in_descendants: couldn't find child '%s' from target_node_path='%s'\n", child_name, target_node_path);
 
   return 0;
 }
@@ -98,11 +92,12 @@ int mca_find_hierarchy_node_any(mc_node *any_hierarchy_node, const char *target_
   while(root->parent)
     root = root->parent;
 
-  if(!strcmp(root->name, "midge-root")) {
-    MCerror(9528, "Root of the given node should be 'midge-root'");
+  if(strcmp(root->name, MIDGE_ROOT_NODE_NAME)) {
+    MCerror(9578, "Deepest ancestor of the arg any_hierarchy_node must be 'midge-root', but is instead '%s'", root->name);
   }
 
   if(!strcmp(root->name, target_node_path)) {
+    // Result is just midge-app
     *out_result = root;
     return 0;
   }
@@ -111,7 +106,7 @@ int mca_find_hierarchy_node_any(mc_node *any_hierarchy_node, const char *target_
     MCerror(9534, "start of the target node path should begin with 'midge-root'");
   }
 
-  MCcall(mca_find_hierarchy_node_in_descendants(root, target_node_path, out_result));
+  MCcall(mca_find_hierarchy_node_in_descendants(root, target_node_path + strlen(MIDGE_ROOT_NODE_NAME), out_result));
 
   return 0;
 }
@@ -857,9 +852,9 @@ int mca_render_container_node_present(image_render_details *image_render_queue, 
 
 int mca_focus_node(mc_node *node)
 {
-  // printf("focusing node: %s%s%s%s%s\n", (node->parent && node->parent->parent) ? node->parent->parent->name : "",
-  //        (node->parent && node->parent->parent) ? "->" : "", node->parent ? node->parent->name : "",
-  //        node->parent ? "->" : "", node->name);
+  printf("focusing node:");
+  mc_print_node_path(node);
+  puts("");
 
   // Set layout update required on all ancestors of the node
   while (node) {

@@ -192,7 +192,7 @@ int mcu_init_textbox(mc_node *parent, mcu_textbox **p_textbox)
 {
   // Node
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-textbox", &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_MCU_TEXTBOX, "unnamed-textbox", &node));
   node->destroy_data = (void *)&_mcu_textbox_destroy_data;
 
   // Layout

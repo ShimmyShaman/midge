@@ -224,9 +224,7 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
       perror("recv");
     }
     else {
-      printf("recv: %zu\n", res);
-
-      printf("From Server : %s\n", buf);
+      printf("recv: %zu bytes From Server:'%s'\n", res, buf);
 
       char *str = (char *)malloc(sizeof(char) * (strlen(buf) + 1));
       strcpy(str, buf);
@@ -273,6 +271,18 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
 
     if(!strncmp(rsp, "raise-create-project-dialog", 27)) {
       printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
+
+      mc_node *ww_node;
+      MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
+      if(!ww_node) {
+        puts ("couldn't find welcome window ???? 58358");
+      } else {
+        puts("raising dialog");
+        mcm_wwn_raise_new_project_dialog(ww_node, NULL);
+        puts("DONE raising dialog");
+      }
+    } else if(!strncmp(rsp, "add-panel", 27)) {
+      printf("COMMAND RESPONSE: %s\n", "add-panel");
 
       mc_node *ww_node;
       MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
@@ -440,7 +450,7 @@ int init_commander_system(mc_node *app_root) {
   mc_obtain_midge_app_info(&global_data);
 
   mc_node *node;
-  mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "commander-root", &node);
+  mca_init_mc_node(NODE_TYPE_MODULE_ROOT, "commander-root", &node);
   mca_init_node_layout(&node->layout);
 
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
@@ -493,6 +503,8 @@ int init_commander_system(mc_node *app_root) {
     usleep(100);
   }
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
+
+  MCcall(mca_focus_node(data->cmd_textbox->node));
 
   return 0;
 }

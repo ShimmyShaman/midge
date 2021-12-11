@@ -90,6 +90,8 @@ typedef struct mcu_ui_state {
   mc_node_list *cache_layered_hit_list;
   mcr_font_resource *default_font_resource;
 
+  mc_node *workspace_focused_node;
+
   // Modules
   struct {
     mc_node *node;
@@ -128,7 +130,7 @@ typedef struct mcu_ui_state {
 void exit_app(mc_node *hierarchical_call_scope, int result);
 
 
-int mca_find_hierarchy_node_descendant(mc_node *ancestor, const char *target_node_path, mc_node **out_result);
+int mca_find_hierarchy_node_in_descendants(mc_node *ancestor, const char *target_node_path, mc_node **out_result);
 int mca_find_hierarchy_node_any(mc_node *any_hierarchy_node, const char *target_node_path, mc_node **out_result);
 
 // int mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list);

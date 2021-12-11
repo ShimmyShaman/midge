@@ -190,7 +190,7 @@ int mcu_init_dropdown(mc_node *parent, mcu_dropdown **p_dropdown)
 {
   // Node
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_DOESNT_MATTER, "unnamed-dropdown", &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_MCU_DROPDOWN, "unnamed-dropdown", &node));
   node->destroy_data = (void *)&_mcu_dropdown_destroy_data;
 
   // printf("mcu_init_dropdown->node:%p name:%p '%s'-%i\n", node, node->name, node->name, strlen(node->name));
