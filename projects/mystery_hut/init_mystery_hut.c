@@ -295,7 +295,7 @@ int init_mystery_hut(mc_node *app_root)
 
   //   module_node->
   mc_node *node;
-  mca_init_mc_node(NODE_TYPE_ABSTRACT, "mystery_hut", &node);
+  mca_init_mc_node(NODE_TYPE_VISUAL_PROJECT, "mystery_hut", &node);
 
   mca_init_node_layout(&node->layout);
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));

@@ -28,6 +28,12 @@ void mc_init_midge_app_info()
 
   __mc_midge_app_info->_exit_requested = false;
 
+  // Focus Status
+  __mc_midge_app_info->focus_status.module = NULL;
+  __mc_midge_app_info->focus_status.module_target = NULL;
+  __mc_midge_app_info->focus_status.project = NULL;
+  __mc_midge_app_info->focus_status.project_target = NULL;
+
   // File Watch Descriptors
   __mc_midge_app_info->inotify_fd = 0;
   __mc_midge_app_info->wds_size = 256;

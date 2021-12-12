@@ -44,6 +44,13 @@ typedef struct midge_app_info {
   unsigned int ROOT_UID;
   mc_app_itp_data *itp_data;
   mc_node *global_node;
+  
+  struct {
+    mc_node *module;
+    mc_node *module_target;
+    mc_node *project;
+    mc_node *project_target;
+  } focus_status;
 
   struct timespec *app_begin_time;
   bool _exit_requested;

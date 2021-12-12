@@ -325,7 +325,7 @@ int init_mo_context_viewer(mc_mo_process_stack *process_stack, mc_node **p_conte
 
   // TODO -- get rid of node type
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_ABSTRACT, "context-viewer", &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_MODULE_ROOT, "context-viewer", &node));
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
   node->children->alloc = 0;

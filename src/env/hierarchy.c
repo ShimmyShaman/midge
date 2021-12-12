@@ -15,6 +15,11 @@
 
 void mc_print_node_path(mc_node *node)
 {
+  if(!node) {
+    printf("NULL");
+    return;
+  }
+
   if (node->parent) {
     mc_print_node_path(node->parent);
     printf(">");
@@ -850,37 +855,42 @@ int mca_render_container_node_present(image_render_details *image_render_queue, 
   return 0;
 }
 
-int mca_focus_node(mc_node *node)
+int mca_focus_node(mc_node *node_to_focus)
 {
-  printf("focusing node:");
-  mc_print_node_path(node);
+  printf("mca_focus_node():\n - node_to_focus:");
+  mc_print_node_path(node_to_focus);
   puts("");
 
-  // Set layout update required on all ancestors of the node
-  while (node) {
-    // DEBUG?
-    if (!node->layout) {
-      MCerror(8523, "Can't set an update for a node with a parent with no layout");
+  if(!node_to_focus->parent) {
+    if(node_to_focus->type == NODE_TYPE_GLOBAL_ROOT) {
+      MCerror(8581, "TODO");
+    } else {
+      MCerror(8571, "Cannot focus node not attached to the midge hierarchy");
     }
+  }
 
-    // Set
-    node->layout->__requires_rerender = true;
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
 
-    if (!node->parent) {
-      break;
-    }
-    if (!node->parent->layout) {
+  // Set Focus Status on all parent nodes
+  mc_node *hnode = node_to_focus, *hn_parent;
+  do {
+    hn_parent = hnode->parent;
+
+    // Set Child Focus
+    if (!hn_parent->layout) {
       MCerror(9664, "Cannot set focus to node with an ancestor without an initialized layout");
     }
+    hn_parent->layout->focused_child = hnode;
 
-    node->parent->layout->focused_child = node;
-
+    // Update layout
+    hn_parent->layout->__requires_rerender = true;
+    
     // Find the child in the parents children and set it to the highest index amongst its z-index equals or lessers
-    mc_node_list *parents_children = node->parent->children;
-    // DEBUG CHECK
+    mc_node_list *parents_children = hn_parent->children;
     bool found = false;
     for (int i = 0; i < parents_children->count; ++i) {
-      if (parents_children->items[i] == node) {
+      if (parents_children->items[i] == hnode) {
         found = true;
 
         if (i + 1 == parents_children->count)
@@ -889,7 +899,7 @@ int mca_focus_node(mc_node *node)
         int j = i + 1;
         for (; j < parents_children->count; ++j) {
           if (parents_children->items[j]->layout &&
-              node->layout->z_layer_index < parents_children->items[j]->layout->z_layer_index) {
+              hnode->layout->z_layer_index < parents_children->items[j]->layout->z_layer_index) {
             break;
           }
         }
@@ -901,14 +911,63 @@ int mca_focus_node(mc_node *node)
             parents_children->items[k] = parents_children->items[k + 1];
           }
 
-          parents_children->items[j] = node;
+          parents_children->items[j] = hnode;
         }
       }
     }
 
-    // Move upwards through the ancestry
-    node = node->parent;
-  }
+    if(!found) {
+      puts("! Couldn't find node in parents children !");
+      printf(" - node_to_focus:");
+      mc_print_node_path(node_to_focus);
+      puts("");
+      printf(" - parent:");
+      mc_print_node_path(hn_parent);
+      puts("");
+      printf(" - node:");
+      mc_print_node_path(hnode);
+      puts("");
+
+      MCerror(5857, "Couldn't find node in parents children");
+    }
+
+    // Set the midge-root focus status information
+    if(hn_parent->type == NODE_TYPE_GLOBAL_ROOT) {
+      switch (hnode->type)
+      {
+      case NODE_TYPE_CONSOLE_APP:
+      case NODE_TYPE_VISUAL_PROJECT:
+        app_info->focus_status.project = hnode;
+        app_info->focus_status.project_target = node_to_focus;
+        break;
+      case NODE_TYPE_MODULE_ROOT:
+        app_info->focus_status.module = hnode;
+        app_info->focus_status.module_target = node_to_focus;
+        break;
+      default:
+      puts("******************");
+      printf(" - parent:");
+      mc_print_node_path(hn_parent);
+      puts("");
+      printf(" - node:");
+      mc_print_node_path(hnode);
+      puts("");
+        MCerror(5857, "Nodes attached to global root should only be a project node or module node: '%i'", hnode->type);
+      }
+      break;
+    }
+
+    // Continue
+    hnode = hn_parent;
+
+  } while(1);
+
+  printf(" - module_focus:");
+  mc_print_node_path(app_info->focus_status.module_target);
+  puts("");
+  printf(" - project_focus:");
+  mc_print_node_path(app_info->focus_status.project_target);
+  puts("");
 
   return 0;
 }

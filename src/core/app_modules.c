@@ -244,7 +244,7 @@ int _mca_load_project(const char *base_path, const char *project_name)
 
   mc_node *project_root;
   sprintf(buf, "%s_root", project_name);
-  MCcall(mca_init_mc_node(NODE_TYPE_ABSTRACT, buf, &project_root));
+  MCcall(mca_init_mc_node(NODE_TYPE_VISUAL_PROJECT, buf, &project_root));
   MCcall(initialize_project(project_root));
 
   MCcall(mca_attach_node_to_hierarchy(app_info->global_node, project_root));

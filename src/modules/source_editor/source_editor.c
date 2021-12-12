@@ -558,7 +558,7 @@ int mc_se_init_source_editor(mc_node *app_root)
   //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
 
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_ABSTRACT, "source-editor", &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_MODULE_ROOT, "source-editor", &node));
   MCcall(mca_init_node_layout(&node->layout));
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;

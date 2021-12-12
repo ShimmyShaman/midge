@@ -448,23 +448,22 @@ typedef struct mc_command_hub_v1 {
   unsigned int error_definition_index;
 } mc_command_hub_v1;
 
-typedef enum node_type {
-  NODE_TYPE_NONE = 1,
-  NODE_TYPE_GLOBAL_ROOT,
-  NODE_TYPE_CONSOLE_APP,
-  NODE_TYPE_VISUAL_PROJECT,
-  NODE_TYPE_VISUAL,
-  NODE_TYPE_ABSTRACT,
-} node_type;
+// typedef enum node_type {
+//   NODE_TYPE_NONE = 1,
+//   NODE_TYPE_GLOBAL_ROOT,
+//   NODE_TYPE_CONSOLE_APP,
+//   NODE_TYPE_VISUAL_PROJECT,
+//   NODE_TYPE_ABSTRACT,
+// } node_type;
 
-typedef struct console_app_info {
-  mc_function_info_v1 *initialize_app;
-} console_app_info;
+// typedef struct console_app_info {
+//   mc_function_info_v1 *initialize_app;
+// } console_app_info;
 
-typedef struct visual_app_info {
-  mc_function_info_v1 *initialize_app;
-  mc_function_info_v1 *update_app;
-} visual_app_info;
+// typedef struct visual_app_info {
+//   mc_function_info_v1 *initialize_app;
+//   mc_function_info_v1 *update_app;
+// } visual_app_info;
 
 typedef struct mc_input_event_v1 {
   bool shiftDown, ctrlDown, altDown;

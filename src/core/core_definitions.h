@@ -89,18 +89,25 @@ typedef enum mc_source_definition_type {
 
 typedef enum node_type {
   NODE_TYPE_NONE = 1,
+
+  // Midge Global Root
   NODE_TYPE_GLOBAL_ROOT,
+
+  // Project Nodes
   NODE_TYPE_CONSOLE_APP,
   NODE_TYPE_VISUAL_PROJECT,
 
-  // Not sure any of the below should exist
+  // Module Nodes
   NODE_TYPE_MODULE_ROOT,
+
+  // Non-Visual Nodes
+  NODE_TYPE_ABSTRACT,
+  // Not sure any of the below should exist
   
   NODE_TYPE_MCU_PANEL,
   NODE_TYPE_MCU_CONTEXT_MENU,
   NODE_TYPE_MCU_BUTTON,
   NODE_TYPE_MCU_DROPDOWN,
-  NODE_TYPE_MCU_PANEL,
   NODE_TYPE_MCU_TEXT_BLOCK,
   NODE_TYPE_MCU_TEXTBOX,
 
@@ -111,7 +118,6 @@ typedef enum node_type {
 
   NODE_TYPE_3D_PORTAL,
 
-  NODE_TYPE_ABSTRACT,
   NODE_TYPE_MIDGE_EXCLUSIVE_MAXIMUM = 3000,
 } node_type;
 

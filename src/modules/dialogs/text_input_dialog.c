@@ -258,7 +258,7 @@ int mc_tid_init_text_input_dialog(mc_node *app_root)
   // TODO -- get rid of node type
 
   mc_node *node;
-  MCcall(mca_init_mc_node(NODE_TYPE_ABSTRACT, "text-input-dialog", &node));
+  MCcall(mca_init_mc_node(NODE_TYPE_MODULE_ROOT, "text-input-dialog", &node));
   MCcall(mca_init_node_layout(&node->layout));
   node->children = (mc_node_list *)malloc(sizeof(mc_node_list));
   node->children->count = 0;
