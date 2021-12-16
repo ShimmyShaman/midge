@@ -24,6 +24,8 @@
 
 #define PORT 8080
 
+#define SERVER_RESPONSE_ITEM_CAPACITY 10
+
 typedef struct commander_data {
   mc_node *node;
 
@@ -38,9 +40,12 @@ typedef struct commander_data {
     struct sockaddr_in servaddr, cli;
 
     struct {
-      unsigned int capacity, count;
-      char **items;
-    }server_responses;
+      unsigned int query_id, count;
+      struct {
+        mc_str action_name, action_detail;
+        float prob;
+      } items[SERVER_RESPONSE_ITEM_CAPACITY];
+    } server_responses;
    
   } icp_conn;
 
@@ -68,6 +73,27 @@ typedef struct commander_data {
 //   mc_node *context_viewer_node;
 
 } commander_data;
+
+void _mcm_cmdr_render_mod(image_render_details *irq, mc_node *node) {
+  commander_data *data = (commander_data *)node->data;
+
+  mcr_issue_render_command_colored_quad(irq, (unsigned int)node->layout->__bounds.x,
+                                         (unsigned int)node->layout->__bounds.y, 
+                                         (unsigned int)node->layout->__bounds.width,
+                                         (unsigned int)node->layout->__bounds.height, COLOR_OLIVE);
+
+  // Children
+  // printf("childcount:%i\n", node->children->count);
+  for (int a = 0; a < node->children->count; ++a) {
+    mc_node *child = node->children->items[a];
+    if (child->layout && child->layout->visible && child->layout->render_present) {
+      // TODO fptr casting
+      void (*render_node_present)(image_render_details *, mc_node *) =
+          (void (*)(image_render_details *, mc_node *))child->layout->render_present;
+      render_node_present(irq, child);
+    }
+  }
+}
 
 void _mcm_cmdr_render_mod_headless(render_thread_info *render_thread, mc_node *node)
 {
@@ -101,28 +127,19 @@ void _mcm_cmdr_render_mod_headless(render_thread_info *render_thread, mc_node *n
   irq->data.target_image.screen_offset_coordinates.x = (unsigned int)node->layout->__bounds.x;
   irq->data.target_image.screen_offset_coordinates.y = (unsigned int)node->layout->__bounds.y;
 
-  // Children
-  // printf("childcount:%i\n", node->children->count);
-  for (int a = 0; a < node->children->count; ++a) {
-    mc_node *child = node->children->items[a];
-    if (child->layout && child->layout->visible && child->layout->render_present) {
-      // TODO fptr casting
-      void (*render_node_present)(image_render_details *, mc_node *) =
-          (void (*)(image_render_details *, mc_node *))child->layout->render_present;
-      render_node_present(irq, child);
-    }
-  }
+  _mcm_cmdr_render_mod(irq, node);
 
   mcr_submit_image_render_request(global_data->render_thread, irq);
 }
 
-void _mcm_cmdr_render_present(image_render_details *image_render_queue, mc_node *node)
+void _mcm_cmdr_render_present(image_render_details *irq, mc_node *node)
 {
   commander_data *data = (commander_data *)node->data;
 
-  mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
-                                         (unsigned int)node->layout->__bounds.y, data->render_target.width,
-                                         data->render_target.height, data->render_target.image);
+  // mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)node->layout->__bounds.x,
+  //                                        (unsigned int)node->layout->__bounds.y, data->render_target.width,
+  //                                        data->render_target.height, data->render_target.image);
+  _mcm_cmdr_render_mod(irq, node);
 }
 
 void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
@@ -207,6 +224,10 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
     return NULL;
   }
 
+  // Reset previous query cache
+  ++data->icp_conn.server_responses.query_id;
+  data->icp_conn.server_responses.count = 0;
+
   // function for chat
   char buf[512];
   ssize_t res;
@@ -226,10 +247,42 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
     else {
       printf("recv: %zu bytes From Server:'%s'\n", res, buf);
 
-      char *str = (char *)malloc(sizeof(char) * (strlen(buf) + 1));
-      strcpy(str, buf);
-      append_to_collection((void ***)&data->icp_conn.server_responses.items, &data->icp_conn.server_responses.capacity,
-        &data->icp_conn.server_responses.count, str);
+      char *c = buf;
+      unsigned int *i = &data->icp_conn.server_responses.count;
+      while(1) {
+        if(*c == '\0')
+          break;
+        
+        // Get the action name
+        char *a = c;
+        while(*a != ':')
+          ++a;
+        mc_set_strn(&data->icp_conn.server_responses.items[*i].action_name, c, a - c);
+        printf("aname:'%s'\n", data->icp_conn.server_responses.items[*i].action_name.text);
+        
+        // Get the probability
+        a = c = ++a;
+        while(*a != ':')
+          ++a;
+        char fbuf[16];
+        strncpy(fbuf, c, a - c);
+        data->icp_conn.server_responses.items[*i].prob = (float)atof(fbuf);
+        printf("aprob:'%f'\n", data->icp_conn.server_responses.items[*i].prob);
+        
+        // Get the action name
+        a = c = ++a;
+        while(*a != ';')
+          ++a;
+        mc_set_strn(&data->icp_conn.server_responses.items[*i].action_detail, c, a - c);
+        printf("adet:'%s'\n", data->icp_conn.server_responses.items[*i].action_detail.text);
+
+        c = ++a;
+        ++*i;
+      }
+      // char *str = (char *)malloc(sizeof(char) * (strlen(buf) + 1));
+      // strcpy(str, buf);
+      // append_to_collection((void ***)&data->icp_conn.server_responses.items, &data->icp_conn.server_responses.capacity,
+        // &data->icp_conn.server_responses.count, str);
     }
   }
 
@@ -266,36 +319,41 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
 
   // printf("cc:%u\n", data->icp_conn.server_responses.count);
   while (data->icp_conn.server_responses.count) {
-    char *rsp = data->icp_conn.server_responses.items[0];
-    MCcall(remove_from_collection((void ***)&data->icp_conn.server_responses.items, &data->icp_conn.server_responses.count, 0));
 
-    if(!strncmp(rsp, "raise-create-project-dialog", 27)) {
-      printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
+    printf("server responded with %u possible actions. Highest prob: %i\n", data->icp_conn.server_responses.count,
+      (int)(data->icp_conn.server_responses.items[0].prob * 100));
+    data->icp_conn.server_responses.count = 0;
+    
+    // if(!strncmp(rsp, "raise-create-project-dialog", 27)) {
+    //   printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
 
-      mc_node *ww_node;
-      MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
-      if(!ww_node) {
-        puts ("couldn't find welcome window ???? 58358");
-      } else {
-        puts("raising dialog");
-        mcm_wwn_raise_new_project_dialog(ww_node, NULL);
-        puts("DONE raising dialog");
-      }
-    } else if(!strncmp(rsp, "add-panel", 27)) {
-      printf("COMMAND RESPONSE: %s\n", "add-panel");
+    //   mc_node *ww_node;
+    //   MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
+    //   if(!ww_node) {
+    //     puts ("couldn't find welcome window ???? 58358");
+    //   } else {
+    //     puts("raising dialog");
+    //     mcm_wwn_raise_new_project_dialog(ww_node, NULL);
+    //     puts("DONE raising dialog");
+    //   }
+    // } else if(!strncmp(rsp, "add-panel", 27)) {
+    //   printf("COMMAND RESPONSE: %s\n", "add-panel");
 
-      mc_node *ww_node;
-      MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
-      if(!ww_node) {
-        puts ("couldn't find welcome window ???? 58358");
-      } else {
-        puts("raising dialog");
-        mcm_wwn_raise_new_project_dialog(ww_node, NULL);
-        puts("DONE raising dialog");
-      }
-    }
+    //   midge_app_info *mapp_info;
+    //   mc_obtain_midge_app_info(&mapp_info);
+      
+    //   mc_node *ww_node;
+    //   MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
+    //   if(!ww_node) {
+    //     puts ("couldn't find welcome window ???? 58358");
+    //   } else {
+    //     puts("raising dialog");
+    //     mcm_wwn_raise_new_project_dialog(ww_node, NULL);
+    //     puts("DONE raising dialog");
+    //   }
+    // }
 
-    free(rsp);
+    // free(rsp);
   }
   pthread_mutex_unlock(&data->icp_conn.thr_lock);
 
@@ -417,9 +475,12 @@ int mc_cmdr_load_resources(mc_node *module_node)
   data->node = module_node;
   
   pthread_mutex_init(&data->icp_conn.thr_lock, NULL);
-  data->icp_conn.server_responses.capacity = 0;
   data->icp_conn.server_responses.count = 0;
-  data->icp_conn.server_responses.items = NULL;
+  data->icp_conn.server_responses.query_id = 0;
+  for(int i = 0; i < SERVER_RESPONSE_ITEM_CAPACITY; ++i) {
+    MCcall(mc_init_str(&data->icp_conn.server_responses.items[i].action_name, 16));
+    MCcall(mc_init_str(&data->icp_conn.server_responses.items[i].action_detail, 16));
+  }
 
 //   mod->options_buttons.capacity = mod->options_buttons.count = 0U;
 //   mod->all_processes.capacity = mod->all_processes.count = 0U;
@@ -435,11 +496,11 @@ int mc_cmdr_load_resources(mc_node *module_node)
 //     mod->process_stack.steps[a] = NULL;
 //   }
 
-  data->render_target.image = NULL;
-  data->render_target.width = module_node->layout->preferred_width;
-  data->render_target.height = module_node->layout->preferred_height;
-  MCcall(mcr_create_texture_resource(data->render_target.width, data->render_target.height,
-                                     MVK_IMAGE_USAGE_RENDER_TARGET_2D, &data->render_target.image));
+  // data->render_target.image = NULL;
+  // data->render_target.width = module_node->layout->preferred_width;
+  // data->render_target.height = module_node->layout->preferred_height;
+  // MCcall(mcr_create_texture_resource(data->render_target.width, data->render_target.height,
+  //                                    MVK_IMAGE_USAGE_RENDER_TARGET_2D, &data->render_target.image));
 
   return 0;
 }
@@ -457,7 +518,7 @@ int init_commander_system(mc_node *app_root) {
   node->children->count = 0;
   node->children->alloc = 0;
   node->layout->preferred_width = 349;
-  node->layout->preferred_height = 140;
+  node->layout->preferred_height = 66;
 
   node->layout->padding.left = 2;
   node->layout->padding.bottom = 2;
@@ -466,7 +527,7 @@ int init_commander_system(mc_node *app_root) {
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;
-  node->layout->render_headless = (void *)&_mcm_cmdr_render_mod_headless;
+  // node->layout->render_headless = (void *)&_mcm_cmdr_render_mod_headless;
   node->layout->render_present = (void *)&_mcm_cmdr_render_present;
   node->layout->handle_input_event = (void *)&_mcm_cmdr_handle_input;
 

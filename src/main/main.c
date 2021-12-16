@@ -565,6 +565,19 @@ int main(int argc, const char *const *argv)
         return 0;
       }
     }
+
+    const char *dirdel2 = "projects/crc";
+    res = stat(dirdel2, &stats);
+    if (!res && S_ISDIR(stats.st_mode)) {
+      char db[256];
+      sprintf(db, "rm -rf %s", dirdel2);
+      system(db);
+      printf("DEBUG removed '%s'\n", dirdel2);
+      if (res) {
+        printf("DEBUG rmdir:%i\n", res);
+        return 0;
+      }
+    }
   }
   // DEBUG
 
