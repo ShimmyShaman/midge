@@ -68,7 +68,7 @@ int mca_load_modules()
       "dialogs",
       "obj_loader",
       "welcome_window",
-      // "modus_operandi",
+      "modus_operandi",
       "hierarchy_viewer",
       // "project_explorer",
       // And all before...
