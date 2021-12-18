@@ -131,6 +131,7 @@ void exit_app(mc_node *hierarchical_call_scope, int result);
 
 
 int mca_find_hierarchy_node_in_descendants(mc_node *ancestor, const char *target_node_path, mc_node **out_result);
+// Find any node in the hierarchy with the given path, given any other node in the hierarchy.
 int mca_find_hierarchy_node_any(mc_node *any_hierarchy_node, const char *target_node_path, mc_node **out_result);
 
 // int mca_get_sub_hierarchy_node_list(mc_node *hierarchy_node, mc_node_list **sub_node_list);

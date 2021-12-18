@@ -76,6 +76,13 @@ typedef struct commander_data {
 
 } commander_data;
 
+typedef struct action_button_data {
+  commander_data *cmdr_data;
+  int index;
+  float prob;
+  mc_str suggested_action, action_detail;
+} action_button_data;
+
 void _mcm_cmdr_render_mod(image_render_details *irq, mc_node *node) {
   commander_data *data = (commander_data *)node->data;
 
@@ -158,6 +165,40 @@ void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
 
 int _mcm_cmdr_action_option_selected(mci_input_event *ie, mcu_button *button)
 {
+  action_button_data *abd = (action_button_data *) button->tag;
+
+  if(abd->suggested_action.len) {
+     if(!strcmp(abd->suggested_action.text, "raise-create-project-dialog")) {
+      printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
+
+      mc_node *ww_node;
+      MCcall(mca_find_hierarchy_node_any(button->node, "midge-root>welcome-window", &ww_node));
+      if(!ww_node) {
+        puts ("couldn't find welcome window ???? 58358");
+      } else {
+        puts("raising dialog");
+        mcm_wwn_raise_new_project_dialog(ww_node, NULL);
+        puts("DONE raising dialog");
+      }
+    }
+    //  else if(!strncmp(rsp, "add-panel", 27)) {
+    //   printf("COMMAND RESPONSE: %s\n", "add-panel");
+
+    //   midge_app_info *mapp_info;
+    //   mc_obtain_midge_app_info(&mapp_info);
+      
+    //   mc_node *ww_node;
+    //   MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
+    //   if(!ww_node) {
+    //     puts ("couldn't find welcome window ???? 58358");
+    //   } else {
+    //     puts("raising dialog");
+    //     mcm_wwn_raise_new_project_dialog(ww_node, NULL);
+    //     puts("DONE raising dialog");
+    //   }
+    // }
+  }
+
   return 0;
 }
 
@@ -240,7 +281,7 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
   data->icp_conn.server_responses.count = 0;
 
   // Function for chat
-  char buf[512];
+  char buf[1024];
   ssize_t res;
   printf("Sending to server:'%s'\n", data->icp_conn.cmd_str.text);
   res = send(data->icp_conn.sockfd, data->icp_conn.cmd_str.text, sizeof(char) * data->icp_conn.cmd_str.len, 0);
@@ -305,7 +346,23 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
 int _mcm_cmdr_send_command(commander_data *data, const char *command) {
   pthread_mutex_lock(&data->icp_conn.thr_lock);
   
-  MCcall(mc_set_str(&data->icp_conn.cmd_str, command));
+  MCcall(mc_set_str(&data->icp_conn.cmd_str, "c]"));
+  MCcall(mc_append_to_str(&data->icp_conn.cmd_str, command));
+
+  MCcall(begin_mthread(&__mcm_cmdr_async_icpconn_send, &data->icp_conn.thr_info, data));
+  
+  pthread_mutex_unlock(&data->icp_conn.thr_lock);
+
+  return 0;
+}
+
+int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char *expected_action) {
+  pthread_mutex_lock(&data->icp_conn.thr_lock);
+  
+  MCcall(mc_set_str(&data->icp_conn.cmd_str, "s]"));
+  MCcall(mc_append_to_str(&data->icp_conn.cmd_str, command));
+  MCcall(mc_append_to_str(&data->icp_conn.cmd_str, "|=|"));
+  MCcall(mc_append_to_str(&data->icp_conn.cmd_str, expected_action));
 
   MCcall(begin_mthread(&__mcm_cmdr_async_icpconn_send, &data->icp_conn.thr_info, data));
   
@@ -337,14 +394,25 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
     data->prompt_panel->node->layout->visible = true;
 
     // Show me the way
+    action_button_data *abd = (action_button_data *)data->options_buttons.items[0]->tag;
     MCcall(mcu_set_button_text(data->options_buttons.items[0], "Explain how to do that"));
+    MCcall(mc_set_str(&abd->suggested_action, ""));
 
     // Fill the buttons
     char buf[256];
     for(int a = 0; a < data->icp_conn.server_responses.count && a + 1 < data->options_buttons.count; ++a) {
-      sprintf(buf, "%i%% - %s", (int)(data->icp_conn.server_responses.items[a].prob * 100.f),
-       data->icp_conn.server_responses.items[a].action_name.text);
+      action_button_data *abd = (action_button_data *)data->options_buttons.items[a + 1]->tag;
+
+      sprintf(buf, "%i%%", (int)(data->icp_conn.server_responses.items[a].prob * 100.f));
+      while(strlen(buf) < 4)
+        strcat(buf, " ");
+      strcat(buf, "- ");
+      strcat(buf, data->icp_conn.server_responses.items[a].action_name.text);
       MCcall(mcu_set_button_text(data->options_buttons.items[a + 1], buf));
+
+      MCcall(mc_set_str(&abd->suggested_action, data->icp_conn.server_responses.items[a].action_name.text));
+      MCcall(mc_set_str(&abd->action_detail, data->icp_conn.server_responses.items[a].action_detail.text));
+      abd->prob = data->icp_conn.server_responses.items[a].prob;
     }
     
     data->icp_conn.server_responses.count = 0;
@@ -430,7 +498,12 @@ int mcm_cmdr_init_ui(mc_node *module_node)
     button->node->layout->max_width = 0U;
     // button->node->layout->visible = false;
     
-    button->tag = (void *)(long)a;
+    action_button_data *abd = (action_button_data *)malloc(sizeof(action_button_data));
+    abd->cmdr_data = data;
+    abd->index = a;
+    MCcall(mc_init_str(&abd->suggested_action, 128));
+    MCcall(mc_init_str(&abd->action_detail, 64));
+    button->tag = abd;
 
     button->left_click = (void *)&_mcm_cmdr_action_option_selected;
 
