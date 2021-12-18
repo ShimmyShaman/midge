@@ -43,13 +43,16 @@ typedef struct mci_input_event {
 
   bool handled;
 
-  /* In the event the input event is handled this field is set to assign focus to this node (assuming
-   * this node does NOT already have focus). The default depends on the mouse event type: If it is a
-   * INPUT_EVENT_MOUSE_PRESS it is set to be the node that handles the input event first, otherwise it
-   * will be set to NULL.
+  /* In the event the input event is handled by a control this field is set to assign focus to the node.
+   *  (assuming
+   * The default depends on the mouse event type: If it is a INPUT_EVENT_MOUSE_PRESS it is set to be the
+   *  node that handles the input event first, otherwise it will be set to NULL.
    * Valid:
    * - NULL -- indicating no change in focus will be applied after the handler has completed.
    * - Node: The node to gain focus following the completion of the function that handles the event.
+   * Notes:
+   * - If you wish to assign focus to another node from the event node, focus the node through mca_set_focus
+   * and then set this field to NULL.
    */
   mc_node *focus_successor;
 } mci_input_event;

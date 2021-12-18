@@ -155,6 +155,13 @@ void _mcm_cmdr_render_present(image_render_details *irq, mc_node *node)
 //////////////////////////////////// Input / UI Logic /////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void _mcm_cmdr_hide_action_popup(commander_data *data)
+{
+  data->prompt_panel->node->layout->visible = false;
+
+  mca_set_node_requires_layout_update(data->prompt_panel->node);
+}
+
 void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
 {
   // printf("_mcm_mo_handle_input\n");
@@ -163,40 +170,40 @@ void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
   // }
 }
 
+int _mcm_cmdr_execute_process(commander_data *data, const char *process_name)
+{
+  if(!strcmp(abd->suggested_action.text, "raise-create-project-dialog")) {
+    printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
+
+    mc_node *ww_node;
+    MCcall(mca_find_hierarchy_node_any(button->node, "midge-root>welcome-window", &ww_node));
+    if(!ww_node) {
+      puts ("couldn't find welcome window ???? 58358");
+    } else {
+
+      _mcm_cmdr_hide_action_popup(abd->cmdr_data);
+      ie->focus_successor = NULL;
+      mcm_wwn_raise_new_project_dialog(ww_node, NULL);
+      puts("DONE raising dialog");
+    }
+  }
+  else {
+    printf("[2918] ERROR mcm-commander: Unrecoginized process:'%s'", process_name);
+  }
+
+  return 0;
+}
+
 int _mcm_cmdr_action_option_selected(mci_input_event *ie, mcu_button *button)
 {
+  ie->handled = true;
+
   action_button_data *abd = (action_button_data *) button->tag;
 
   if(abd->suggested_action.len) {
-     if(!strcmp(abd->suggested_action.text, "raise-create-project-dialog")) {
-      printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
-
-      mc_node *ww_node;
-      MCcall(mca_find_hierarchy_node_any(button->node, "midge-root>welcome-window", &ww_node));
-      if(!ww_node) {
-        puts ("couldn't find welcome window ???? 58358");
-      } else {
-        puts("raising dialog");
-        mcm_wwn_raise_new_project_dialog(ww_node, NULL);
-        puts("DONE raising dialog");
-      }
-    }
-    //  else if(!strncmp(rsp, "add-panel", 27)) {
-    //   printf("COMMAND RESPONSE: %s\n", "add-panel");
-
-    //   midge_app_info *mapp_info;
-    //   mc_obtain_midge_app_info(&mapp_info);
-      
-    //   mc_node *ww_node;
-    //   MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
-    //   if(!ww_node) {
-    //     puts ("couldn't find welcome window ???? 58358");
-    //   } else {
-    //     puts("raising dialog");
-    //     mcm_wwn_raise_new_project_dialog(ww_node, NULL);
-    //     puts("DONE raising dialog");
-    //   }
-    // }
+    MCcall(_mcm_cmdr_execute_function(abd->suggested_action.text));
+  } else {
+    puts("[2919] ERROR mcm-commander: TODO");
   }
 
   return 0;
