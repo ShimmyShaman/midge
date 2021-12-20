@@ -16,7 +16,7 @@
 #include "mc_error_handling.h"
 #include "render/render_common.h"
 
-// #include "modules/collections/hash_table.h"
+#include "modules/collections/hash_table.h"
 // #include "modules/mc_io/mc_file.h"
 // #include "modules/render_utilities/render_util.h"
 #include "modules/welcome_window/welcome_window.h"
@@ -76,15 +76,8 @@ typedef struct commander_data {
   mcu_panel *config_panel;
   mcu_textblock *config_textblock;
 
+  hash_table_t basal_ops;
 
-//   mc_create_process_dialog_data *create_process_dialog;
-//   mc_process_step_dialog_data *create_step_dialog;
-
-//   mc_mo_process_stack process_stack;
-
-//   mo_operational_process_list all_processes;
-
-//   mcu_textbox *search_textbox;
   char prompt_cmd[512];
   mcu_panel *prompt_panel;
   struct {
@@ -211,16 +204,31 @@ int _mcm_cmdr_configure_command(commander_data *cd)
   command_configuring *cmd_cfg = (command_configuring *)malloc(sizeof(command_configuring));
   cmd_cfg->parent = cd->configuring_command;
   cmd_cfg->command_text = strdup(cd->prompt_cmd);
-  // puts("TODO 9582");
+  cmd_cfg->sequence.capacity = cmd_cfg->sequence.count = 0U;
+    
+  cd->configuring_command = cmd_cfg;
+
+  // Update the display
+  cd->config_panel->node->layout->visible = true;
+  char buf[512];
+  sprintf(buf, "Configuring '%s'...", cd->prompt_cmd);
+  MCcall(mcu_set_textblock_text(cd->config_textblock, buf));
+  MCcall(mca_set_node_requires_layout_update(cd->config_panel->node));
 
   return 0;
 }
 
 int _mcm_process_command(commander_data *cd, const char *cmd, bool *handled)
 {
-  // 
-  
+  // Basal Function Creation
+  if(!strcmp(cmd, "create basal function")) {
 
+    
+
+    *handled = true;
+  }
+  
+  puts("h525h2");
 
   *handled = false;
   return 0;
@@ -362,10 +370,11 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
 
       *i = 0;
       while(*i < SERVER_RESPONSE_ITEM_CAPACITY) {
-        if(*c == '\0')
+        if(*a == '\0')
           break;
         
         // Get the action name
+        a = c = ++a;
         while(*a != ':')
           ++a;
         mc_set_strn(&data->icp_conn.server_responses.items[*i].action_name, c, a - c);
@@ -442,8 +451,8 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
 
   // printf("cc:%u\n", data->icp_conn.server_responses.count);
   if (data->icp_conn.server_responses.count) {
-    printf("server responded with %u possible actions for cmd:'%s'. Highest prob: %i\n", data->icp_conn.server_responses.cmd,
-      data->icp_conn.server_responses.count, (int)(data->icp_conn.server_responses.items[0].prob * 100));
+    printf("server responded with %u possible actions for cmd:'%s'. Highest prob: %i\n", data->icp_conn.server_responses.count,
+      data->icp_conn.server_responses.cmd, (int)(data->icp_conn.server_responses.items[0].prob * 100));
 
     // No longer hide
     strcpy(data->prompt_cmd, data->icp_conn.server_responses.cmd);
@@ -456,7 +465,8 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
 
     // Fill the buttons
     char buf[256];
-    for(int a = 0; a < data->icp_conn.server_responses.count && a + 1 < data->options_buttons.count; ++a) {
+    int a;
+    for(a = 0; a < data->icp_conn.server_responses.count && a + 1 < data->options_buttons.count; ++a) {
       action_button_data *abd = (action_button_data *)data->options_buttons.items[a + 1]->tag;
 
       sprintf(buf, "%i%%", (int)(data->icp_conn.server_responses.items[a].prob * 100.f));
@@ -469,6 +479,10 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
       MCcall(mc_set_str(&abd->suggested_action, data->icp_conn.server_responses.items[a].action_name.text));
       MCcall(mc_set_str(&abd->action_detail, data->icp_conn.server_responses.items[a].action_detail.text));
       abd->prob = data->icp_conn.server_responses.items[a].prob;
+    }
+    for(; a + 1 < data->options_buttons.count; ++a) {
+      data->options_buttons.items[a + 1]->node->layout->visible = false;
+      MCcall(mca_set_node_requires_layout_update(data->options_buttons.items[a + 1]->node));
     }
     
     data->icp_conn.server_responses.count = 0;
@@ -490,19 +504,20 @@ void __mcm_cmd_textbox_submit(mci_input_event *event, mcu_textbox *textbox) {
     return;
   }
   
-  char cmd[512];
-  int n = snprintf(cmd, 511, "%s", textbox->contents->text);
-  if(n >= 511) {
-    puts("[8811] Warning! Entered Command Too Long");
-  }
+  // // Obtain (& reset) text
+  // char cmd[512];
+  // int n = snprintf(cmd, 511, "%s", textbox->contents->text);
+  // if(n >= 511) {
+  //   puts("[8811] Warning! Entered Command Too Long");
+  // }
 
+  // Attempt to process the command internally, otherwise send it to the server
   bool handled;
-  _mcm_process_command(data, cmd, &handled);
+  _mcm_process_command(data, textbox->contents->text, &handled);
   if(!handled) {
     _mcm_cmdr_send_command(data, textbox->contents->text);
   }
 
-  // Reset text
   mcu_set_textbox_text(data->cmd_textbox, "");
 }
 
@@ -583,9 +598,9 @@ int mcm_cmdr_init_ui(mc_node *module_node)
   MCcall(mcu_init_panel(module_node, &panel));
   data->config_panel = panel;
   panel->background_color = COLOR_DARK_GREEN;
-  panel->node->layout->preferred_width = 349;
-  panel->node->layout->preferred_height = 200;
-  panel->node->layout->padding = (mc_paddingf){2, 2, 2, 270 + 2};
+  panel->node->layout->preferred_width = 309;
+  panel->node->layout->preferred_height = 40;
+  panel->node->layout->padding = (mc_paddingf){20, 2, 20, 270 + 2};
   panel->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
   panel->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
   panel->node->layout->visible = false;
@@ -653,6 +668,8 @@ int mc_cmdr_load_resources(mc_node *module_node)
   }
 
   data->configuring_command = NULL;
+  MCcall(init_hash_table(32, &data->basal_ops));
+  // hash_table_set("create basal function", (void *)project_context, &data->basal_ops);
 
   data->options_buttons.capacity = data->options_buttons.count = 0U;
 //   mod->all_processes.capacity = mod->all_processes.count = 0U;
