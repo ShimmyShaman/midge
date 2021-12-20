@@ -26,6 +26,18 @@
 
 #define SERVER_RESPONSE_ITEM_CAPACITY 10
 
+struct command_configuring;
+typedef struct command_configuring {
+  struct command_configuring *parent;
+  char *command_text;
+
+  struct {
+    uint32_t count, capacity;
+    char **items;
+  } sequence;
+
+} command_configuring;
+
 typedef struct commander_data {
   mc_node *node;
 
@@ -41,6 +53,7 @@ typedef struct commander_data {
 
     struct {
       unsigned int query_id, count;
+      char cmd[512];
       struct {
         mc_str action_name, action_detail;
         float prob;
@@ -48,6 +61,8 @@ typedef struct commander_data {
     } server_responses;
    
   } icp_conn;
+  
+  command_configuring *configuring_command;
 
   struct {
     unsigned int width, height;
@@ -58,6 +73,10 @@ typedef struct commander_data {
   mcu_textblock *status_block;
   mcu_textbox *cmd_textbox;
 
+  mcu_panel *config_panel;
+  mcu_textblock *config_textblock;
+
+
 //   mc_create_process_dialog_data *create_process_dialog;
 //   mc_process_step_dialog_data *create_step_dialog;
 
@@ -66,6 +85,7 @@ typedef struct commander_data {
 //   mo_operational_process_list all_processes;
 
 //   mcu_textbox *search_textbox;
+  char prompt_cmd[512];
   mcu_panel *prompt_panel;
   struct {
     unsigned int capacity, count;
@@ -155,13 +175,6 @@ void _mcm_cmdr_render_present(image_render_details *irq, mc_node *node)
 //////////////////////////////////// Input / UI Logic /////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void _mcm_cmdr_hide_action_popup(commander_data *data)
-{
-  data->prompt_panel->node->layout->visible = false;
-
-  mca_set_node_requires_layout_update(data->prompt_panel->node);
-}
-
 void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
 {
   // printf("_mcm_mo_handle_input\n");
@@ -170,41 +183,70 @@ void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
   // }
 }
 
-int _mcm_cmdr_execute_process(commander_data *data, const char *process_name)
+int _mcm_cmdr_execute_process(commander_data *data, mci_input_event *ie, const char *process_name)
 {
-  if(!strcmp(abd->suggested_action.text, "raise-create-project-dialog")) {
+  if(!strcmp(process_name, "raise-create-project-dialog")) {
     printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
 
     mc_node *ww_node;
-    MCcall(mca_find_hierarchy_node_any(button->node, "midge-root>welcome-window", &ww_node));
+    MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
     if(!ww_node) {
       puts ("couldn't find welcome window ???? 58358");
     } else {
 
-      _mcm_cmdr_hide_action_popup(abd->cmdr_data);
-      ie->focus_successor = NULL;
       mcm_wwn_raise_new_project_dialog(ww_node, NULL);
       puts("DONE raising dialog");
     }
   }
   else {
-    printf("[2918] ERROR mcm-commander: Unrecoginized process:'%s'", process_name);
+    printf("[2918] ERROR mcm-commander: Unrecoginized process:'%s'\n", process_name);
   }
 
+  return 0;
+}
+
+int _mcm_cmdr_configure_command(commander_data *cd)
+{
+  // cd->configuring_command
+  command_configuring *cmd_cfg = (command_configuring *)malloc(sizeof(command_configuring));
+  cmd_cfg->parent = cd->configuring_command;
+  cmd_cfg->command_text = strdup(cd->prompt_cmd);
+  // puts("TODO 9582");
+
+  return 0;
+}
+
+int _mcm_process_command(commander_data *cd, const char *cmd, bool *handled)
+{
+  // 
+  
+
+
+  *handled = false;
   return 0;
 }
 
 int _mcm_cmdr_action_option_selected(mci_input_event *ie, mcu_button *button)
 {
   ie->handled = true;
+  ie->focus_successor = NULL;
 
   action_button_data *abd = (action_button_data *) button->tag;
+  commander_data *cd = (commander_data *)abd->cmdr_data;
 
   if(abd->suggested_action.len) {
-    MCcall(_mcm_cmdr_execute_function(abd->suggested_action.text));
+    MCcall(_mcm_cmdr_execute_process(abd->cmdr_data, ie, abd->suggested_action.text));
   } else {
-    puts("[2919] ERROR mcm-commander: TODO");
+    // Increase configuration depth
+    MCcall(_mcm_cmdr_configure_command(cd));
+
+    cd->config_panel->node->layout->visible = true;
+    MCcall(mca_set_node_requires_layout_update(cd->config_panel->node));
   }
+
+  // Hide the prompt panel
+  cd->prompt_panel->node->layout->visible = false;
+  MCcall(mca_set_node_requires_layout_update(cd->prompt_panel->node));
 
   return 0;
 }
@@ -308,12 +350,22 @@ void * __mcm_cmdr_async_icpconn_send(void *state) {
 
       char *c = buf;
       unsigned int *i = &data->icp_conn.server_responses.count;
-      while(1) {
+
+      // Obtain the processed command
+      char *a = c;
+      while(*a != ';' && *a != '\0') {
+        ++a;
+      }
+      // TODO -- no checking the string at all
+      strncpy(data->icp_conn.server_responses.cmd, c, a - c);
+      data->icp_conn.server_responses.cmd[a - c] = '\0';
+
+      *i = 0;
+      while(*i < SERVER_RESPONSE_ITEM_CAPACITY) {
         if(*c == '\0')
           break;
         
         // Get the action name
-        char *a = c;
         while(*a != ':')
           ++a;
         mc_set_strn(&data->icp_conn.server_responses.items[*i].action_name, c, a - c);
@@ -378,10 +430,6 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
   return 0;
 }
 
-// int __mcm_cmdr_update_connection_callback() {
-//   return 0;
-// }
-
 int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
   commander_data *data = (commander_data *)state;
 
@@ -394,15 +442,16 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
 
   // printf("cc:%u\n", data->icp_conn.server_responses.count);
   if (data->icp_conn.server_responses.count) {
-    printf("server responded with %u possible actions. Highest prob: %i\n", data->icp_conn.server_responses.count,
-      (int)(data->icp_conn.server_responses.items[0].prob * 100));
+    printf("server responded with %u possible actions for cmd:'%s'. Highest prob: %i\n", data->icp_conn.server_responses.cmd,
+      data->icp_conn.server_responses.count, (int)(data->icp_conn.server_responses.items[0].prob * 100));
 
     // No longer hide
+    strcpy(data->prompt_cmd, data->icp_conn.server_responses.cmd);
     data->prompt_panel->node->layout->visible = true;
 
     // Show me the way
     action_button_data *abd = (action_button_data *)data->options_buttons.items[0]->tag;
-    MCcall(mcu_set_button_text(data->options_buttons.items[0], "Explain how to do that"));
+    MCcall(mcu_set_button_text(data->options_buttons.items[0], "Configure Command"));
     MCcall(mc_set_str(&abd->suggested_action, ""));
 
     // Fill the buttons
@@ -441,7 +490,17 @@ void __mcm_cmd_textbox_submit(mci_input_event *event, mcu_textbox *textbox) {
     return;
   }
   
-  _mcm_cmdr_send_command(data, textbox->contents->text);
+  char cmd[512];
+  int n = snprintf(cmd, 511, "%s", textbox->contents->text);
+  if(n >= 511) {
+    puts("[8811] Warning! Entered Command Too Long");
+  }
+
+  bool handled;
+  _mcm_process_command(data, cmd, &handled);
+  if(!handled) {
+    _mcm_cmdr_send_command(data, textbox->contents->text);
+  }
 
   // Reset text
   mcu_set_textbox_text(data->cmd_textbox, "");
@@ -480,7 +539,7 @@ int mcm_cmdr_init_ui(mc_node *module_node)
   panel->background_color = COLOR_DARK_GREEN;
   panel->node->layout->preferred_width = 349;
   panel->node->layout->preferred_height = 200;
-  panel->node->layout->padding = (mc_paddingf){2, 2, 2, 2 + data->cmd_panel->node->layout->preferred_height + 2};
+  panel->node->layout->padding = (mc_paddingf){2, 2, 2, 2 + 66 + 2};
   panel->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
   panel->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
   panel->node->layout->visible = false;
@@ -519,6 +578,21 @@ int mcm_cmdr_init_ui(mc_node *module_node)
     MCcall(append_to_collection((void ***)&data->options_buttons.items, &data->options_buttons.capacity,
                                 &data->options_buttons.count, button));
   }
+
+  // Configuration Panel
+  MCcall(mcu_init_panel(module_node, &panel));
+  data->config_panel = panel;
+  panel->background_color = COLOR_DARK_GREEN;
+  panel->node->layout->preferred_width = 349;
+  panel->node->layout->preferred_height = 200;
+  panel->node->layout->padding = (mc_paddingf){2, 2, 2, 270 + 2};
+  panel->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
+  panel->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+  panel->node->layout->visible = false;
+
+  MCcall(mcu_init_textblock(panel->node, &data->config_textblock));
+  MCcall(mcu_set_textblock_text(data->config_textblock, "NULL"));
+  // data->config_textblock->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
 //   // Add process button
 //   MCcall(mcu_alloc_button(module_node, &button));
@@ -577,6 +651,8 @@ int mc_cmdr_load_resources(mc_node *module_node)
     MCcall(mc_init_str(&data->icp_conn.server_responses.items[i].action_name, 16));
     MCcall(mc_init_str(&data->icp_conn.server_responses.items[i].action_detail, 16));
   }
+
+  data->configuring_command = NULL;
 
   data->options_buttons.capacity = data->options_buttons.count = 0U;
 //   mod->all_processes.capacity = mod->all_processes.count = 0U;
