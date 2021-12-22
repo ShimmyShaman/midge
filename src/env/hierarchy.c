@@ -1041,6 +1041,45 @@ int mca_fire_event_and_release_data(mc_app_event_type event_type, void *event_ar
   return 0;
 }
 
+int mca_provoke_handling(mc_app_event_type event_type, void *event_arg)
+{
+  // TODO when this is made UI-thread-safe align mca_fire_event_and_release_data also
+  // printf("mca_fire_event:%i\n", event_type);
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  event_handler_array *eha = app_info->event_handlers.items[event_type];
+  for (int a = 0; a < eha->count; ++a) {
+    // puts("mca_fire_event_execute");
+    int (*event_handler)(void *, void *) = (int (*)(void *, void *))eha->handlers[a]->delegate;
+    MCcall(event_handler(eha->handlers[a]->state, event_arg));
+  }
+
+  return 0;
+}
+
+int mca_provoke_handling_and_release_data(mc_app_event_type event_type, void *event_arg, int release_count, ...)
+{
+  MCcall(mca_fire_event(event_type, event_arg));
+
+  if (release_count) {
+    puts("TODO -- mca_fire_event_and_release_data va_arg/va_list fix");
+    // TODO -- make this work
+    // va_list ptrs_list;
+    // va_start(ptrs_list, release_count);
+    // for (int a = 0; a < release_count; ++a) {
+    //   void *ptr = va_arg(ptrs_list, void *);
+    //   if (ptr) {
+    //     printf("mca_fire_event_and_release_data: %p released\n", ptr);
+    //     free(ptr);
+    //   }
+    // }
+    // va_end(ptrs_list);
+  }
+
+  return 0;
+}
+
 int mca_register_loaded_project(mc_project_info *project)
 {
   midge_app_info *app_info;

@@ -181,6 +181,16 @@ void mca_obtain_focused_node(mc_node **node);
 int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state);
 int mca_fire_event(mc_app_event_type event_type, void *event_arg);
 int mca_fire_event_and_release_data(mc_app_event_type event_type, void *event_arg, int release_count, ...);
+
+/*
+ * Registers and provokes handling. Like the event system above, the difference lies in that events activate
+ * all handlers registered as event listeners. Provocations are fed to handlers in order of focus and can be
+ * handled (handled flag set to true) indicating that no other handlers will invoked by the event.
+ */
+int mca_register_provoke_handler(const char *provocation_code, void *handler_delegate, void *handler_state);
+int mca_provoke_handling(const char *provocation_code, void *event_arg, bool *handled);
+int mca_provoke_handling_and_release_data(const char *provocation_code, void *event_arg, bool *handled, int release_count, ...);
+
 int mca_register_loaded_project(mc_project_info *project);
 
 // /* Implemented in midge_app.c */

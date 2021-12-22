@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #define APPLICATION_SET_WIDTH 1760
-#define APPLICATION_SET_HEIGHT 900
+#define APPLICATION_SET_HEIGHT 840
 
 #ifndef max
 #define max(x, y) ((x) < (y) ? (y) : (x))

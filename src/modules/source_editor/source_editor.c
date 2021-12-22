@@ -6,6 +6,7 @@
 
 #include <unistd.h>
 
+#include "mc_error_handling.h"
 #include "control/mc_controller.h"
 #include "core/midge_app.h"
 #include "env/environment_definitions.h"
@@ -53,13 +54,21 @@ int _mc_se_render_tab_list_headless(render_thread_info *render_thread, mc_node *
   return 0;
 }
 
-int _mc_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *node)
+int _mcm_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *node)
 {
   // Data
   mc_source_editor *se = (mc_source_editor *)node->data;
   mc_source_editor_file *esf = se->source_files.focus;
   mc_source_editor_line_group *lg = &se->line_images;
   mc_source_editor_line *rln;
+
+  puts("111");
+  printf("%p\n", node);
+  printf("%p\n", node->layout);
+  printf("%p\n", esf);
+  printf("se%p\n", se);
+  // printf("%.2f %u %u %u %p \n", node->layout->__bounds.y, se->border.size, se->content_padding.top, se->tab_index.height,
+  //                          esf);
 
   // For each visible line
   unsigned int top = (int)(node->layout->__bounds.y + se->border.size + se->content_padding.top + se->tab_index.height -
@@ -69,9 +78,11 @@ int _mc_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *n
             MC_SE_LINE_STRIDE /* TODO -- render partial bottom line sometime */);
   unsigned int y;
 
+  puts("222");
   char *str;
   int li = (esf->scroll_offset) / MC_SE_LINE_STRIDE, ri = 0;
 
+  puts("333");
   for (y = top; y < bottom; y += MC_SE_LINE_STRIDE) {
     if (li >= esf->lines.count)
       break;
@@ -103,6 +114,7 @@ int _mc_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *n
     ++li;
     ++ri;
   }
+  puts("444");
   for (; ri < lg->lines_size; ++ri) {
     lg->lines[ri].active = false;
   }
@@ -126,7 +138,7 @@ int _mc_se_render_headless(render_thread_info *render_thread, mc_node *node)
   //     render_node_headless(render_thread, child);
   //   }
   // }
-  MCcall(_mc_se_rerender_lines_headless(render_thread, node));
+  MCcall(_mcm_se_rerender_lines_headless(render_thread, node));
 
   if (se->tab_index.requires_rerender) {
     MCcall(_mc_se_render_tab_list_headless(render_thread, node));
@@ -255,50 +267,50 @@ int _mc_load_focused_editing_source(mc_source_editor *se)
 
 int _mc_se_open_filepath(mc_source_editor *se, const char *filepath)
 {
-  // mc_app_itp_data *app_itp;
-  // mc_obtain_app_itp_data(&app_itp);
+  mc_app_itp_data *app_itp;
+  mc_obtain_app_itp_data(&app_itp);
 
-  // int a;
-  // mc_source_editor_file *esf, *xesf;
-  // mc_source_file_info *sf;
-  // char fp[256];
+  int a;
+  mc_source_editor_file *esf, *xesf;
+  mc_source_file_info *sf;
+  char fp[256];
 
-  // // Obtain the completed esf for the filepath
-  // MCcall(mcf_obtain_full_path(filepath, fp, 256));
+  // Obtain the completed esf for the filepath
+  MCcall(mcf_obtain_full_path(filepath, fp, 256));
 
-  // xesf = se->source_files.items + se->source_files.size;
-  // for (esf = se->source_files.items; esf < xesf; ++esf) {
-  //   if (!esf->sf)
-  //     break;
-  //   if (!strcmp(esf->sf->filepath, fp))
-  //     break;
-  // }
-  // if (esf == xesf) {
-  //   MCerror(9528, "TODO resize array and set sf");
-  // }
-  // if (!esf->sf) {
-  //   // Find and set the source file
-  //   for (a = 0; a < app_itp->source_files.count; ++a) {
-  //     sf = app_itp->source_files.items[a];
-  //     if (!strcmp(sf->filepath, fp)) {
-  //       esf->sf = sf;
-  //       esf->scroll_offset = 0;
-  //       break;
-  //     }
-  //   }
-  //   if (!esf->sf) {
-  //     MCerror(4728, "couldn't find source file for path TODO");
-  //   }
-  //   ++se->source_files.used;
-  // }
+  xesf = se->source_files.items + se->source_files.size;
+  for (esf = se->source_files.items; esf < xesf; ++esf) {
+    if (!esf->sf)
+      break;
+    if (!strcmp(esf->sf->filepath, fp))
+      break;
+  }
+  if (esf == xesf) {
+    MCerror(9528, "TODO resize array and set sf");
+  }
+  if (!esf->sf) {
+    // Find and set the source file
+    for (a = 0; a < app_itp->source_files.count; ++a) {
+      sf = app_itp->source_files.items[a];
+      if (!strcmp(sf->filepath, fp)) {
+        esf->sf = sf;
+        esf->scroll_offset = 0;
+        break;
+      }
+    }
+    if (!esf->sf) {
+      MCerror(4728, "couldn't find source file for path TODO");
+    }
+    ++se->source_files.used;
+  }
 
-  // // Open
-  // se->source_files.focus = esf;
-  // MCcall(_mc_load_focused_editing_source(se));
+  // Open
+  se->source_files.focus = esf;
+  MCcall(_mc_load_focused_editing_source(se));
 
-  // // // Update Tabs
-  // se->tab_index.requires_rerender = true;
-  // MCcall(mca_set_node_requires_rerender(se->node));
+  // // Update Tabs
+  se->tab_index.requires_rerender = true;
+  MCcall(mca_set_node_requires_rerender(se->node));
 
   return 0;
 }
@@ -309,15 +321,15 @@ int _mc_se_handle_source_file_open_request(void *handler_state, void *event_args
   mc_source_editor *se = (mc_source_editor *)handler_state;
   const char *filepath = (const char *)event_args;
 
-  // MCcall(_mc_se_open_filepath(se, filepath));
+  MCcall(_mc_se_open_filepath(se, filepath));
 
-  // Just Open in VS code
-  char buf[256];
-  sprintf(buf, "code --goto %s", filepath);
-  system(buf);
+  // // Just Open in VS code
+  // char buf[256];
+  // sprintf(buf, "code --goto %s", filepath);
+  // system(buf);
 
-  // se->node->layout->visible = true;
-  // MCcall(mca_focus_node(se->node));
+  se->node->layout->visible = true;
+  MCcall(mca_focus_node(se->node));
   return 0;
 }
 
@@ -497,7 +509,7 @@ int _mc_se_handle_source_entity_focus_request(void *handler_state, void *event_a
   return 0;
 }
 
-int _mc_se_load_resources(mc_node *node)
+int _mcm_se_init_ui(mc_node *node)
 {
   // Data
   mc_source_editor *se = (mc_source_editor *)node->data;
@@ -530,7 +542,7 @@ int _mc_se_load_resources(mc_node *node)
   return 0;
 }
 
-int _mc_se_init_data(mc_node *node)
+int _mcm_se_init_data(mc_node *node)
 {
   mc_source_editor *se = (mc_source_editor *)malloc(sizeof(mc_source_editor));
   node->data = (void *)se;
@@ -555,8 +567,6 @@ int _mc_se_init_data(mc_node *node)
 
 int mc_se_init_source_editor(mc_node *app_root)
 {
-  //   instantiate_all_definitions_from_file(app_root, "src/modules/source_editor/source_line.c", NULL);
-
   mc_node *node;
   MCcall(mca_init_mc_node(NODE_TYPE_MODULE_ROOT, "source-editor", &node));
   MCcall(mca_init_node_layout(&node->layout));
@@ -580,16 +590,16 @@ int mc_se_init_source_editor(mc_node *app_root)
   node->layout->visible = false;
 
   // Source Editor Data
-  MCcall(_mc_se_init_data(node));
+  MCcall(_mcm_se_init_data(node));
+
+  // Graphical resources
+  MCcall(_mcm_se_init_ui(node));
 
   // Event Registers
   MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, &_mc_se_handle_source_file_open_request,
                                     node->data));
   MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ, &_mc_se_handle_source_entity_focus_request,
                                     node->data));
-
-  // Graphical resources
-  MCcall(_mc_se_load_resources(node));
 
   // Attach to midge hierarchy & return
   MCcall(mca_attach_node_to_hierarchy(app_root, node));

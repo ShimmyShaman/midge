@@ -61,19 +61,23 @@ int mca_load_modules()
   // // Get all directories in folder
   // // TODO
   const char *module_directories[] = {
-      "mc_io",
-      "collections",
-      "render_utilities",
-      "ui_elements",
-      "dialogs",
-      "obj_loader",
-      "welcome_window",
-      "modus_operandi",
-      "hierarchy_viewer",
+    // Framework Components
+    "mc_io",
+    "collections",
+    "render_utilities",
+    "ui_elements",
+    "dialogs",
+    "obj_loader",
+
+    // Active Modules
+      // "welcome_window",
+      // "modus_operandi",
+      // "hierarchy_viewer",
       // "project_explorer",
       // And all before...
-      // "source_editor",
+      "source_editor",
       "commander",
+      
       NULL,
   };
 

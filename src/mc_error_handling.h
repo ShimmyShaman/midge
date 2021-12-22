@@ -24,6 +24,14 @@
       return mc_res;                                               \
     }                                                              \
   }
+#define MCVcall(function)                                          \
+  {                                                                \
+    int mc_res = function;                                         \
+    if (mc_res) {                                                  \
+      printf("-]" #function "line:%i:ERR:%i\n", __LINE__, mc_res); \
+      return;                                                      \
+    }                                                              \
+  }
 #endif
 
 #define MCVerror(error_code, error_message, ...)                         \
@@ -39,6 +47,14 @@
     printf("ASSERT FAIL[" #condition "] :" #message "\n"); \
     return -37373;                                         \
   }
+
+#define MCProgress(progress_code)                           \
+  printf("\n\n##### PROGRESS [%i] #####\n", progress_code); \
+  return progress_code;
+
+#define MCVProgress(progress_code)                          \
+  printf("\n\n##### PROGRESS [%i] #####\n", progress_code); \
+  return;
 
 #define IGNORE_MIDGE_ERROR_REPORT 0
 

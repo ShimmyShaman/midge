@@ -170,30 +170,32 @@ void _mcm_cmdr_render_present(image_render_details *irq, mc_node *node)
 
 void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  // printf("_mcm_mo_handle_input\n");
-  input_event->handled = true;
+  // if
+
+  // // input_event->handled = true;
   // if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
+  // printf("_mcm_mo_handle_input\n");
   // }
 }
 
 int _mcm_cmdr_execute_process(commander_data *data, mci_input_event *ie, const char *process_name)
 {
-  if(!strcmp(process_name, "raise-create-project-dialog")) {
-    printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
+  // if(!strcmp(process_name, "raise-create-project-dialog")) {
+  //   printf("COMMAND RESPONSE: %s\n", "raise-create-project-dialog");
 
-    mc_node *ww_node;
-    MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
-    if(!ww_node) {
-      puts ("couldn't find welcome window ???? 58358");
-    } else {
+  //   // mc_node *ww_node;
+  //   // MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
+  //   // if(!ww_node) {
+  //   //   puts ("couldn't find welcome window ???? 58358");
+  //   // } else {
 
-      mcm_wwn_raise_new_project_dialog(ww_node, NULL);
-      puts("DONE raising dialog");
-    }
-  }
-  else {
+  //   //   mcm_wwn_raise_new_project_dialog(ww_node, NULL);
+  //   //   puts("DONE raising dialog");
+  //   // }
+  // }
+  // else {
     printf("[2918] ERROR mcm-commander: Unrecoginized process:'%s'\n", process_name);
-  }
+  // }
 
   return 0;
 }
@@ -220,17 +222,31 @@ int _mcm_cmdr_configure_command(commander_data *cd)
 
 int _mcm_process_command(commander_data *cd, const char *cmd, bool *handled)
 {
-  // Basal Function Creation
-  if(!strcmp(cmd, "create basal function")) {
+  *handled = false;
 
-    
+  // Basal Function Creation
+  if(!strcmp(cmd, ".create-basal-function")) {
+
+    MCerror(8100, "TODO");
 
     *handled = true;
-  }
-  
-  puts("h525h2");
+  } else if (!strncmp(cmd, ".open-source-file ", 17)) {
+    
+    MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, "src/modules/ui_elements/textbox.c"));
 
-  *handled = false;
+    *handled = true;
+  } else if (!strncmp(cmd, ".go-to ", 6)) {
+
+    // Assumes source file editor is opened and focused
+
+    const char *event = "FIND_PARTIAL_IN_SOURCE_FILE";
+    MCcall(mca_provoke_handling(event, "set textbox text", handled));
+    if(!handled) {
+      MCerror(8582, "Provocation Handler does not exist for event:'%s'", event);
+    }
+    // MCcall(MC_APP_EVENT_SOURCE_FILE_FIND, "set textbox text");
+  }
+
   return 0;
 }
 
@@ -513,12 +529,12 @@ void __mcm_cmd_textbox_submit(mci_input_event *event, mcu_textbox *textbox) {
 
   // Attempt to process the command internally, otherwise send it to the server
   bool handled;
-  _mcm_process_command(data, textbox->contents->text, &handled);
+  MCVcall(_mcm_process_command(data, textbox->contents->text, &handled));
   if(!handled) {
-    _mcm_cmdr_send_command(data, textbox->contents->text);
+    MCVcall(_mcm_cmdr_send_command(data, textbox->contents->text));
   }
 
-  mcu_set_textbox_text(data->cmd_textbox, "");
+  MCVcall(mcu_set_textbox_text(data->cmd_textbox, ""));
 }
 
 int mcm_cmdr_init_ui(mc_node *module_node)
@@ -753,6 +769,8 @@ int init_commander_system(mc_node *app_root) {
   MCcall(mca_attach_node_to_hierarchy(app_root, node));
 
   MCcall(mca_focus_node(data->cmd_textbox->node));
+
+  MCcall(mcu_set_textbox_text(data->cmd_textbox, "open-source-file src/modules/ui_elements/textbox.c"));
 
   return 0;
 }
