@@ -17,6 +17,7 @@
 #include "render/render_common.h"
 
 #include "modules/collections/hash_table.h"
+#include "modules/source_editor/source_editor.h"
 // #include "modules/mc_io/mc_file.h"
 // #include "modules/render_utilities/render_util.h"
 #include "modules/welcome_window/welcome_window.h"
@@ -230,20 +231,21 @@ int _mcm_process_command(commander_data *cd, const char *cmd, bool *handled)
     MCerror(8100, "TODO");
 
     *handled = true;
-  } else if (!strncmp(cmd, ".open-source-file ", 17)) {
+  } else if (!strncmp(cmd, ".open-source-file ", 18)) {
     
-    MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, "src/modules/ui_elements/textbox.c"));
+    MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, (void *)(cmd + 18)));
 
     *handled = true;
-  } else if (!strncmp(cmd, ".go-to ", 6)) {
+  } else if (!strncmp(cmd, ".goto-source-function ", 22)) {
 
     // Assumes source file editor is opened and focused
 
-    const char *event = "FIND_PARTIAL_IN_SOURCE_FILE";
-    MCcall(mca_provoke_handling(event, "set textbox text", handled));
-    if(!handled) {
-      MCerror(8582, "Provocation Handler does not exist for event:'%s'", event);
-    }
+    const char *event = "FIND_FUNCTION_IN_SOURCE_FILE";
+    MCcall(mca_fire_event(MCM_SE_FIND_FUNCTION_PARTIAL, (void *)(cmd + 18)));
+    // MCcall(mca_provoke_handling(event, "set textbox text", handled));
+    // if(!handled) {
+    //   MCerror(8582, "Provocation Handler does not exist for event:'%s'", event);
+    // }
     // MCcall(MC_APP_EVENT_SOURCE_FILE_FIND, "set textbox text");
   }
 
@@ -770,7 +772,7 @@ int init_commander_system(mc_node *app_root) {
 
   MCcall(mca_focus_node(data->cmd_textbox->node));
 
-  MCcall(mcu_set_textbox_text(data->cmd_textbox, "open-source-file src/modules/ui_elements/textbox.c"));
+  MCcall(mcu_set_textbox_text(data->cmd_textbox, ".open-source-file src/modules/ui_elements/textbox.c"));
 
   return 0;
 }

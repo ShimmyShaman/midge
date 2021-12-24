@@ -34,7 +34,7 @@ typedef struct event_handler_info {
 } event_handler_info;
 
 typedef struct event_handler_array {
-  mc_app_event_type event_type;
+  char *event_code;
   unsigned int count;
   unsigned int capacity;
   event_handler_info **handlers;
@@ -82,7 +82,7 @@ typedef struct midge_app_info {
     mc_update_timer **items;
   } update_timers;
   struct {
-    unsigned int alloc, count;
+    unsigned int capacity, count;
     event_handler_array **items;
   } event_handlers;
   struct {

@@ -984,13 +984,60 @@ void mca_obtain_focused_node(mc_node **node)
   }
 }
 
-int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state)
+int mca_register_event(const char *event_code)
 {
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
-  // printf("app_info->event_handlers.count:%u\n", app_info->event_handlers.count);
-  event_handler_array *eha = app_info->event_handlers.items[event_type];
+  // Obtain the handler array for the current event
+  event_handler_array *eha = NULL;
+  for(int a = 0; a < app_info->event_handlers.count; ++a) {
+    if(!strcmp(event_code, app_info->event_handlers.items[a]->event_code)) {
+      eha = app_info->event_handlers.items[a];
+      break;
+    }
+  }
+  if(eha) {
+    // Already exists, return
+    return 0;
+  }
+
+  eha = (event_handler_array *)malloc(sizeof(event_handler_array));
+  eha->event_code = strdup(event_code);
+  eha->capacity = eha->count = 0U;
+
+  MCcall(append_to_collection((void ***)&app_info->event_handlers.items, &app_info->event_handlers.capacity,
+    &app_info->event_handlers.count, eha));
+
+  return 0;
+}
+
+int mca_register_event_handler(const char *event_code, void *handler_delegate, void *handler_state)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  // Obtain the handler array for the current event
+  event_handler_array *eha = NULL;
+  for(int a = 0; a < app_info->event_handlers.count; ++a) {
+    if(!strcmp(event_code, app_info->event_handlers.items[a]->event_code)) {
+      eha = app_info->event_handlers.items[a];
+      break;
+    }
+  }
+  if(!eha) {
+    MCcall(mca_register_event(event_code));
+    
+    for(int a = 0; a < app_info->event_handlers.count; ++a) {
+      if(!strcmp(event_code, app_info->event_handlers.items[a]->event_code)) {
+        eha = app_info->event_handlers.items[a];
+        break;
+      }
+    }
+    if(!eha) {
+      MCerror(4811, "should exist, just created it");
+    }
+  }
 
   event_handler_info *eh = (event_handler_info *)malloc(sizeof(event_handler_info));
   eh->delegate = handler_delegate;
@@ -1002,14 +1049,27 @@ int mca_register_event_handler(mc_app_event_type event_type, void *handler_deleg
   return 0;
 }
 
-int mca_fire_event(mc_app_event_type event_type, void *event_arg)
+int mca_fire_event(const char *event_code, void *event_arg)
 {
   // TODO when this is made UI-thread-safe align mca_fire_event_and_release_data also
   // printf("mca_fire_event:%i\n", event_type);
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);
 
-  event_handler_array *eha = app_info->event_handlers.items[event_type];
+  // Obtain the handler array for the current event
+  event_handler_array *eha = NULL;
+  for(int a = 0; a < app_info->event_handlers.count; ++a) {
+    if(!strcmp(event_code, app_info->event_handlers.items[a]->event_code)) {
+      eha = app_info->event_handlers.items[a];
+      break;
+    }
+  }
+  if(!eha) {
+    MCerror(9582, "The event='%s' has not been registered first.", event_code);
+    // puts("Warning: No event handlers for the given event");
+    return 0;
+  }
+
   for (int a = 0; a < eha->count; ++a) {
     // puts("mca_fire_event_execute");
     int (*event_handler)(void *, void *) = (int (*)(void *, void *))eha->handlers[a]->delegate;
@@ -1019,48 +1079,9 @@ int mca_fire_event(mc_app_event_type event_type, void *event_arg)
   return 0;
 }
 
-int mca_fire_event_and_release_data(mc_app_event_type event_type, void *event_arg, int release_count, ...)
+int mca_fire_event_and_release_data(const char *event_code, void *event_arg, int release_count, ...)
 {
-  MCcall(mca_fire_event(event_type, event_arg));
-
-  if (release_count) {
-    puts("TODO -- mca_fire_event_and_release_data va_arg/va_list fix");
-    // TODO -- make this work
-    // va_list ptrs_list;
-    // va_start(ptrs_list, release_count);
-    // for (int a = 0; a < release_count; ++a) {
-    //   void *ptr = va_arg(ptrs_list, void *);
-    //   if (ptr) {
-    //     printf("mca_fire_event_and_release_data: %p released\n", ptr);
-    //     free(ptr);
-    //   }
-    // }
-    // va_end(ptrs_list);
-  }
-
-  return 0;
-}
-
-int mca_provoke_handling(mc_app_event_type event_type, void *event_arg)
-{
-  // TODO when this is made UI-thread-safe align mca_fire_event_and_release_data also
-  // printf("mca_fire_event:%i\n", event_type);
-  midge_app_info *app_info;
-  mc_obtain_midge_app_info(&app_info);
-
-  event_handler_array *eha = app_info->event_handlers.items[event_type];
-  for (int a = 0; a < eha->count; ++a) {
-    // puts("mca_fire_event_execute");
-    int (*event_handler)(void *, void *) = (int (*)(void *, void *))eha->handlers[a]->delegate;
-    MCcall(event_handler(eha->handlers[a]->state, event_arg));
-  }
-
-  return 0;
-}
-
-int mca_provoke_handling_and_release_data(mc_app_event_type event_type, void *event_arg, int release_count, ...)
-{
-  MCcall(mca_fire_event(event_type, event_arg));
+  MCcall(mca_fire_event(event_code, event_arg));
 
   if (release_count) {
     puts("TODO -- mca_fire_event_and_release_data va_arg/va_list fix");

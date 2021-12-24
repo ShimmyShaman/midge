@@ -347,7 +347,7 @@ int mcs_ensure_header_include_for_type(mc_source_file_info *sf, const char *type
     // printf("cwd:'%s'\n", cwd);
     m = strlen(cwd);
     if (strncmp(cwd, type_sf->filepath, m)) {
-      MCerror(4728, "TODO '%s' isn't part of '%s'", cwd, type_sf->filepath);
+      MCerror(4738, "TODO '%s' isn't part of '%s'", cwd, type_sf->filepath);
     }
     c = type_sf->filepath + m;
     if (*c == '/' || *c == '\\')

@@ -579,6 +579,15 @@ int main(int argc, const char *const *argv)
       }
     }
   }
+
+  // # Start Recording Reminder #
+  // ** Comment this if you have no clue what it is **
+  int days_since_this_code_fragment_was_written = 0;
+  clock_gettime(CLOCK_REALTIME, &app_begin_time);
+  if(app_begin_time.tv_sec < 1640300000L + 0 * 60 * 60 * 24) {
+    puts("\n\n### Reminder to Start Recording ###\n\n");
+    return;
+  }
   // DEBUG
 
   // Begin

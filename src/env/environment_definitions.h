@@ -178,9 +178,10 @@ int mca_render_container_node_present(image_render_details *image_render_queue, 
 int mca_focus_node(mc_node *node);
 void mca_obtain_focused_node(mc_node **node);
 
-int mca_register_event_handler(mc_app_event_type event_type, void *handler_delegate, void *handler_state);
-int mca_fire_event(mc_app_event_type event_type, void *event_arg);
-int mca_fire_event_and_release_data(mc_app_event_type event_type, void *event_arg, int release_count, ...);
+int mca_register_event(const char *event_code);
+int mca_register_event_handler(const char *event_type, void *handler_delegate, void *handler_state);
+int mca_fire_event(const char *event_type, void *event_arg);
+int mca_fire_event_and_release_data(const char *event_type, void *event_arg, int release_count, ...);
 
 /*
  * Registers and provokes handling. Like the event system above, the difference lies in that events activate

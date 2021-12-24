@@ -49,22 +49,10 @@ void mc_init_midge_app_info()
   // Event Handlers
   // TODO -- if any non-MCApp Events are to be added or .. making an event handler array for each seems wrong
   // Maybe make a linked-list / binary or hash search system in the future. Not too high priority but not optimal...
-  __mc_midge_app_info->event_handlers.alloc = (unsigned int)MC_APP_EXCLUSIVE_MAX;
+  __mc_midge_app_info->event_handlers.capacity = 32U;
   __mc_midge_app_info->event_handlers.count = 0U;
   __mc_midge_app_info->event_handlers.items =
-      (event_handler_array **)malloc(sizeof(event_handler_array *) * __mc_midge_app_info->event_handlers.alloc);
-  __mc_midge_app_info->event_handlers.items[0] = NULL;
-
-  event_handler_array *eha;
-  for (int a = 1; a < MC_APP_EXCLUSIVE_MAX; ++a) {
-    eha = (event_handler_array *)malloc(sizeof(event_handler_array));
-    __mc_midge_app_info->event_handlers.items[a] = eha;
-
-    eha->capacity = 0;
-    eha->count = 0;
-    eha->event_type = (mc_app_event_type)a;
-    eha->handlers = NULL;
-  }
+      (event_handler_array **)malloc(sizeof(event_handler_array *) * __mc_midge_app_info->event_handlers.capacity);
 
   // Projects
   __mc_midge_app_info->projects.active = NULL;
@@ -90,15 +78,16 @@ void mc_destroy_midge_app_info()
   free(__mc_midge_app_info->update_timers.items);
 
   // Event Handlers
-  event_handler_array *eha;
-  for (a = 1; a < MC_APP_EXCLUSIVE_MAX; ++a) {
-    eha = __mc_midge_app_info->event_handlers.items[a];
-    for (b = 0; b < eha->count; ++b) {
-      free(eha->handlers[b]);
-    }
-    free(eha);
-  }
-  free(__mc_midge_app_info->event_handlers.items);
+  puts("TODO mc_destroy_midge_app_info() event_handlers");
+  // event_handler_array *eha;
+  // for (a = 0; a < MC_APP_EXCLUSIVE_MAX; ++a) {
+  //   eha = __mc_midge_app_info->event_handlers.items[a];
+  //   for (b = 0; b < eha->count; ++b) {
+  //     free(eha->handlers[b]);
+  //   }
+  //   free(eha);
+  // }
+  // free(__mc_midge_app_info->event_handlers.items);
 
   // Hierarchy Mutex
   pthread_mutexattr_destroy(&__mc_midge_app_info->hierarchy_mutex_attr);

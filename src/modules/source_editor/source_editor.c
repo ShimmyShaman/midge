@@ -299,7 +299,7 @@ int _mc_se_open_filepath(mc_source_editor *se, const char *filepath)
       }
     }
     if (!esf->sf) {
-      MCerror(4728, "couldn't find source file for path TODO");
+      MCerror(4754, "couldn't find source file for path='%s'", filepath);
     }
     ++se->source_files.used;
   }

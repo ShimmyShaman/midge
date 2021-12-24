@@ -153,6 +153,11 @@ int initialize_midge_state()
   MCcall(mcc_initialize_input_state());
 
   mcu_initialize_ui_state(&app_info->ui_state);
+
+  // -- Register App Events
+  mca_register_event(MC_APP_EVENT_HIERARCHY_UPDATED);
+  mca_register_event(MC_APP_EVENT_VISUAL_HIERARCHY_UPDATED);
+  mca_register_event(MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED);
   return 0;
 }
 

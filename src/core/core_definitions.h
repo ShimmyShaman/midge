@@ -21,56 +21,74 @@ typedef enum mc_source_entity_focus_options {
   MC_SRC_FOC_ENT_REFACTOR_RENAME = 1 << 0,
 } mc_source_entity_focus_options;
 
+
+// App Events
+
 // TODO -- identify & document the parameters that need releasing by the event handler functions
-typedef enum mc_app_event_type {
-  MC_APP_EVENT_NULL = 0,
-  MC_APP_EVENT_POST_INITIALIZATION,
-  // int (*event_handler)(void *handler_state, void *event_args) {event_args is NULL}
-  MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED,
-  // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_node *last_attached_node (NULL if removed)}
-  MC_APP_EVENT_HIERARCHY_UPDATED,
-  // Event fired when the visual hierarchical layout has changed (visible node added/removed or node becomes visible/invisible)
-  // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_node *last_attached_node (NULL if removed)}
-  MC_APP_EVENT_VISUAL_HIERARCHY_UPDATED,
-  // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void *[] { const char *project_directory, const char *project_name }
-  MC_APP_EVENT_PROJECT_STRUCTURE_CREATION,
-  // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_project_info *project}
-  MC_APP_EVENT_PROJECT_LOADED,
-  // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
-  MC_APP_EVENT_SOURCE_FILE_OPEN_REQ,
-  // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_source_file_info *modified_file}
-  MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY,
-  // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void *[] { const char *entity_name, mc_source_entity_focus_options *options}
-  MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ,
-  // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void*[] { const char *dialog_msg, const char *starting_directory, void *invoker_state,
-  //    int (*invoker_result_delegate)(void *invoker_state, char *selected_folder)}
-  // -* starting_directory may be NULL indicating use of current-working-directory
-  // -** selected_folder may be NULL if user cancels
-  MC_APP_EVENT_FOLDER_DIALOG_REQUESTED,
-  // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void*[] { const char *dialog_msg, const char *starting_directory, void *invoker_state,
-  //    int (*invoker_result_delegate)(void *invoker_state, char *filepath)}
-  // -* starting_directory may be NULL indicating use of current-working-directory
-  // -** filepath may be NULL if user cancels
-  MC_APP_EVENT_FILE_DIALOG_REQUESTED,
-  // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void*[] { const char *prompt_message, const char *default_value, void *invoker_state,
-  //    int (*invoker_result_delegate)(void *invoker_state, char *input_text)}
-  // -* prompt_message and default_value may be NULL indicating an empty message and value
-  // -** input_text may be NULL if user cancels
-  MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED,
-  // int (*event_handler)(void *handler_state, void *event_args)
-  // - event_args is void*[] { const char *prompt_message, unsigned int *option_count, const char **options, void
-  // *invoker_state,
-  //    int (*invoker_result_delegate)(void *invoker_state, char *selected_option)}
-  // -* prompt_message may be NULL indicating an empty message
-  // -** selected_option may be NULL if user cancels
-  MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED,
-  MC_APP_EXCLUSIVE_MAX,
-} mc_app_event_type;
+// typedef enum mc_app_event_type {
+  // MC_APP_EVENT_NULL = 0,
+#define MC_APP_EVENT_POST_INITIALIZATION "MC_APP_EVENT_POST_INITIALIZATION"
+
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is NULL}
+#define MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED "MC_APP_EVENT_INITIAL_MODULES_PROJECTS_LOADED"
+
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_node *last_attached_node (NULL if removed)}
+#define MC_APP_EVENT_HIERARCHY_UPDATED "MC_APP_EVENT_HIERARCHY_UPDATED"
+
+// Event fired when the visual hierarchical layout has changed (visible node added/removed or node becomes visible/invisible)
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_node *last_attached_node (NULL if removed)}
+#define MC_APP_EVENT_VISUAL_HIERARCHY_UPDATED "MC_APP_EVENT_VISUAL_HIERARCHY_UPDATED"
+
+// int (*event_handler)(void *handler_state, void *event_args)
+// - event_args is void *[] { const char *project_directory, const char *project_name }
+#define MC_APP_EVENT_PROJECT_STRUCTURE_CREATION "MC_APP_EVENT_PROJECT_STRUCTURE_CREATION"
+
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_project_info *project}
+#define MC_APP_EVENT_PROJECT_LOADED "MC_APP_EVENT_PROJECT_LOADED"
+
+// TODO -- move these below somewhere else?
+
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
+#define MC_APP_EVENT_SOURCE_FILE_OPEN_REQ "MC_APP_EVENT_SOURCE_FILE_OPEN_REQ"
+
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_source_file_info *modified_file}
+#define MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY "MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY"
+
+// int (*event_handler)(void *handler_state, void *event_args)
+// - event_args is void *[] { const char *entity_name, mc_source_entity_focus_options *options}
+#define MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ "MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ"
+
+// int (*event_handler)(void *handler_state, void *event_args)
+// - event_args is void*[] { const char *dialog_msg, const char *starting_directory, void *invoker_state,
+//    int (*invoker_result_delegate)(void *invoker_state, char *selected_folder)}
+// -* starting_directory may be NULL indicating use of current-working-directory
+// -** selected_folder may be NULL if user cancels
+#define MC_APP_EVENT_FOLDER_DIALOG_REQUESTED "MC_APP_EVENT_FOLDER_DIALOG_REQUESTED"
+
+// int (*event_handler)(void *handler_state, void *event_args)
+// - event_args is void*[] { const char *dialog_msg, const char *starting_directory, void *invoker_state,
+//    int (*invoker_result_delegate)(void *invoker_state, char *filepath)}
+// -* starting_directory may be NULL indicating use of current-working-directory
+// -** filepath may be NULL if user cancels
+#define MC_APP_EVENT_FILE_DIALOG_REQUESTED "MC_APP_EVENT_FILE_DIALOG_REQUESTED"
+
+// int (*event_handler)(void *handler_state, void *event_args)
+// - event_args is void*[] { const char *prompt_message, const char *default_value, void *invoker_state,
+//    int (*invoker_result_delegate)(void *invoker_state, char *input_text)}
+// -* prompt_message and default_value may be NULL indicating an empty message and value
+// -** input_text may be NULL if user cancels
+#define MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED "MC_APP_EVENT_TEXT_INPUT_DIALOG_REQUESTED"
+
+// int (*event_handler)(void *handler_state, void *event_args)
+// - event_args is void*[] { const char *prompt_message, unsigned int *option_count, const char **options, void
+// *invoker_state,
+//    int (*invoker_result_delegate)(void *invoker_state, char *selected_option)}
+// -* prompt_message may be NULL indicating an empty message
+// -** selected_option may be NULL if user cancels
+#define MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED "MC_APP_EVENT_OPTIONS_DIALOG_REQUESTED"
+
+  // MC_APP_EXCLUSIVE_MAX,
+// } mc_app_event_type;
 
 typedef enum source_file_type {
   SOURCE_FILE_NULL = 0,
