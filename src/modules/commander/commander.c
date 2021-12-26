@@ -187,16 +187,16 @@ int _mcm_cmdr_execute_process(commander_data *data, mci_input_event *ie, const c
   //   // mc_node *ww_node;
   //   // MCcall(mca_find_hierarchy_node_any(data->node, "midge-root>welcome-window", &ww_node));
   //   // if(!ww_node) {
-  //   //   puts ("couldn't find welcome window ???? 58358");
+
+   //   //   puts ("couldn't find welcome window ??jjjjjjjjjjjjjjjjjj;;,olnkkn,j ykkkkkkkkkkkkkkkkkkkkkkk;\imn;IU|N ?? 58358");
   //   // } else {
 
   //   //   mcm_wwn_raise_new_project_dialog(ww_node, NULL);
   //   //   puts("DONE raising dialog");
   //   // }
   // }
-  // else {
-    printf("[2918] ERROR mcm-commander: Unrecoginized process:'%s'\n", process_name);
-  // }
+  // else 
+  printf("[2918] ERROR mcm-commander: Unrecoginized process:'%s'\n", process_name);
 
   return 0;
 }
@@ -226,28 +226,57 @@ int _mcm_process_command(commander_data *cd, const char *cmd, bool *handled)
   *handled = false;
 
   // Basal Function Creation
-  if(!strcmp(cmd, ".create-basal-function")) {
+  if(!strncmp(cmd, ".", 1)) {
+    if(!strncmp(cmd, ".create-basal-function.", 23)) {
+      MCerror(8100, "TODO");
+    } else {
+      // TODO -- search through a hash-table of basal functions
 
-    MCerror(8100, "TODO");
+      // Could not find the basal function, offer to create it
+      // Update Prompt Panel
+      cd->prompt_panel->node->layout->visible = true;
+      action_button_data *abd = (action_button_data *)cd->options_buttons.items[0]->tag;
+      MCcall(mcu_set_button_text(cd->options_buttons.items[0], "Not Found. Create?"));
+      MCcall(mc_set_str(&abd->suggested_action, ".create_basal_function."));
+      MCcall(mc_append_to_strn(&abd->suggested_action, cmd + 1, strlen(cmd + 1) - (cmd[strlen(cmd) - 1] == '.' ? 1 : 0)));
+
+      // Hide the rest of the options
+      for(int a = 1; a < cd->options_buttons.count; ++a) {
+        cd->options_buttons.items[a]->node->layout->visible = false;
+        MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a]->node));
+      }
+
+      // // Update Config Panel
+      // cd->config_panel->node->layout->visible = true;
+      // char buf[512];
+      // sprintf(buf, "creating %s", cmd + 22); // TODO
+      // MCcall(mcu_set_textblock_text(cd->config_textblock, buf));
+    }
 
     *handled = true;
-  } else if (!strncmp(cmd, ".open-source-file ", 18)) {
+  }
+  // if(!strcmp(cmd, ".create-basal-function.")) {
+
+  //   MCerror(8100, "TODO");
+
+  //   *handled = true;
+  // } else if (!strncmp(cmd, ".open-source-file.", 18)) {
     
-    MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, (void *)(cmd + 18)));
+  //   MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, (void *)(cmd + 18)));
 
-    *handled = true;
-  } else if (!strncmp(cmd, ".goto-source-function ", 22)) {
+  //   *handled = true;
+  // } else if (!strncmp(cmd, ".find-in-file.", 14)) {
 
     // Assumes source file editor is opened and focused
 
-    const char *event = "FIND_FUNCTION_IN_SOURCE_FILE";
-    MCcall(mca_fire_event(MCM_SE_FIND_FUNCTION_PARTIAL, (void *)(cmd + 18)));
+    // const char *event = "FIND_FUNCTION_IN_SOURCE_FILE";
+    // MCcall(mca_fire_event(MCM_SE_FIND_FUNCTION_PARTIAL, (void *)(cmd + 18)));
     // MCcall(mca_provoke_handling(event, "set textbox text", handled));
     // if(!handled) {
-    //   MCerror(8582, "Provocation Handler does not exist for event:'%s'", event);
+      // MCerror(8582, "Provocation Handler does not exist for event:'%s'", event);
     // }
     // MCcall(MC_APP_EVENT_SOURCE_FILE_FIND, "set textbox text");
-  }
+  // }
 
   return 0;
 }
@@ -260,14 +289,17 @@ int _mcm_cmdr_action_option_selected(mci_input_event *ie, mcu_button *button)
   action_button_data *abd = (action_button_data *) button->tag;
   commander_data *cd = (commander_data *)abd->cmdr_data;
 
-  if(abd->suggested_action.len) {
-    MCcall(_mcm_cmdr_execute_process(abd->cmdr_data, ie, abd->suggested_action.text));
-  } else {
+  printf("action option selected:'%s'\n", abd->suggested_action.text);
+
+  if(!abd->suggested_action.len || abd->suggested_action.text[0] == '.') {
     // Increase configuration depth
     MCcall(_mcm_cmdr_configure_command(cd));
 
     cd->config_panel->node->layout->visible = true;
     MCcall(mca_set_node_requires_layout_update(cd->config_panel->node));
+  }
+  else {
+    MCcall(_mcm_cmdr_execute_process(abd->cmdr_data, ie, abd->suggested_action.text));
   }
 
   // Hide the prompt panel
@@ -772,7 +804,7 @@ int init_commander_system(mc_node *app_root) {
 
   MCcall(mca_focus_node(data->cmd_textbox->node));
 
-  MCcall(mcu_set_textbox_text(data->cmd_textbox, ".open-source-file src/modules/ui_elements/textbox.c"));
+  MCcall(mcu_set_textbox_text(data->cmd_textbox, "find source file"));
 
   return 0;
 }

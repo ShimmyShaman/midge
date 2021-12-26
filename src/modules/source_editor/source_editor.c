@@ -62,11 +62,10 @@ int _mcm_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *
   mc_source_editor_line_group *lg = &se->line_images;
   mc_source_editor_line *rln;
 
-  puts("111");
-  printf("%p\n", node);
-  printf("%p\n", node->layout);
-  printf("%p\n", esf);
-  printf("se%p\n", se);
+  // printf("%p\n", node);
+  // printf("%p\n", node->layout);
+  // printf("%p\n", esf);
+  // printf("se%p\n", se);
   // printf("%.2f %u %u %u %p \n", node->layout->__bounds.y, se->border.size, se->content_padding.top, se->tab_index.height,
   //                          esf);
 
@@ -78,11 +77,9 @@ int _mcm_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *
             MC_SE_LINE_STRIDE /* TODO -- render partial bottom line sometime */);
   unsigned int y;
 
-  puts("222");
   char *str;
   int li = (esf->scroll_offset) / MC_SE_LINE_STRIDE, ri = 0;
 
-  puts("333");
   for (y = top; y < bottom; y += MC_SE_LINE_STRIDE) {
     if (li >= esf->lines.count)
       break;
@@ -114,7 +111,6 @@ int _mcm_se_rerender_lines_headless(render_thread_info *render_thread, mc_node *
     ++li;
     ++ri;
   }
-  puts("444");
   for (; ri < lg->lines_size; ++ri) {
     lg->lines[ri].active = false;
   }
@@ -163,6 +159,18 @@ void _mc_se_render_present(image_render_details *image_render_queue, mc_node *no
         sel->draw_offset_y, sel->width, sel->height, sel->image);
   }
 
+  if (se->source_files.focus && se->cursor_visible) {
+    render_color cursor_color = COLOR_GHOST_WHITE;
+
+    // TODO HERE
+    // mcr_issue_render_command_text(image_render_queue, (unsigned int)(node->layout->__bounds.x + se->border.size + se->content_padding.left),
+    //   se->source_files.focus->scroll_offset se->
+    //                    fedit->font_horizontal_stride * ((float)fedit->cursor.col - 0.5f)),
+    //     (unsigned int)(node->layout->__bounds.y + fedit->lines.padding.top +
+    //                    fedit->lines.vertical_stride * (fedit->cursor.line - fedit->lines.display_index_offset)), NULL,
+    //     "|", NULL, cursor_color);
+  }
+
   mcr_issue_render_command_textured_quad(image_render_queue, (unsigned int)(node->layout->__bounds.x + se->border.size),
                                          (unsigned int)(node->layout->__bounds.y + se->border.size),
                                          se->tab_index.width, se->tab_index.height, se->tab_index.image);
@@ -193,7 +201,26 @@ void _mc_se_handle_input(mc_node *node, mci_input_event *input_event)
         mca_set_node_requires_rerender(node);
       }
     } break;
+    case MOUSE_BUTTON_LEFT: {
+      if(input_event->type == INPUT_EVENT_MOUSE_RELEASE)
+        break;
+
+      mca_node_layout *nl = se->node->layout;
+      mc_point cp = (mc_point) { input_event->input_state->mouse.x - nl->__bounds.x, input_event->input_state->mouse.y - nl->__bounds.y };
+      
+      if(cp.y < se->border.size)
+        break;
+      if(cp.y <= se->tab_index.height) {
+          puts("SE TAB CLICK");
+          break;
+      }
+      
+      // se->line_images
+      int line = (cp.y - se->border.size - se->tab_index.height) / MC_SE_LINE_STRIDE;
+      printf("line: %i\n", line);
+    } break;
     default:
+      printf("code:%i\n", input_event->button_code);
       break;
     }
     mca_focus_node(node);
@@ -201,6 +228,7 @@ void _mc_se_handle_input(mc_node *node, mci_input_event *input_event)
   } break;
   case INPUT_EVENT_KEY_PRESS:
   case INPUT_EVENT_KEY_RELEASE: {
+      printf("kcode:%i\n", input_event->button_code);
   } break;
   default:
     break;
@@ -600,6 +628,8 @@ int mc_se_init_source_editor(mc_node *app_root)
                                     node->data));
   MCcall(mca_register_event_handler(MC_APP_EVENT_SOURCE_ENTITY_FOCUS_REQ, &_mc_se_handle_source_entity_focus_request,
                                     node->data));
+  // MCcall(mca_register_event_handler(MCM_SE_EVENT_FIND_IN_FILE, &_mc_se_handle_find_in_file_request,
+  //                                   node->data));
 
   // Attach to midge hierarchy & return
   MCcall(mca_attach_node_to_hierarchy(app_root, node));

@@ -857,9 +857,9 @@ int mca_render_container_node_present(image_render_details *image_render_queue, 
 
 int mca_focus_node(mc_node *node_to_focus)
 {
-  printf("mca_focus_node():\n - node_to_focus:");
-  mc_print_node_path(node_to_focus);
-  puts("");
+  // printf("mca_focus_node():\n - node_to_focus:");
+  // mc_print_node_path(node_to_focus);
+  // puts("");
 
   if(!node_to_focus->parent) {
     if(node_to_focus->type == NODE_TYPE_GLOBAL_ROOT) {
@@ -917,6 +917,7 @@ int mca_focus_node(mc_node *node_to_focus)
     }
 
     if(!found) {
+      printf("mca_focus_node():\n - node_to_focus:");
       puts("! Couldn't find node in parents children !");
       printf(" - node_to_focus:");
       mc_print_node_path(node_to_focus);
@@ -945,13 +946,13 @@ int mca_focus_node(mc_node *node_to_focus)
         app_info->focus_status.module_target = node_to_focus;
         break;
       default:
-      puts("******************");
-      printf(" - parent:");
-      mc_print_node_path(hn_parent);
-      puts("");
-      printf(" - node:");
-      mc_print_node_path(hnode);
-      puts("");
+      // puts("******************");
+      // printf(" - parent:");
+      // mc_print_node_path(hn_parent);
+      // puts("");
+      // printf(" - node:");
+      // mc_print_node_path(hnode);
+      // puts("");
         MCerror(5857, "Nodes attached to global root should only be a project node or module node: '%i'", hnode->type);
       }
       break;
@@ -962,12 +963,12 @@ int mca_focus_node(mc_node *node_to_focus)
 
   } while(1);
 
-  printf(" - module_focus:");
-  mc_print_node_path(app_info->focus_status.module_target);
-  puts("");
-  printf(" - project_focus:");
-  mc_print_node_path(app_info->focus_status.project_target);
-  puts("");
+  // printf(" - module_focus:");
+  // mc_print_node_path(app_info->focus_status.module_target);
+  // puts("");
+  // printf(" - project_focus:");
+  // mc_print_node_path(app_info->focus_status.project_target);
+  // puts("");
 
   return 0;
 }

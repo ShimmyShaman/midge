@@ -48,9 +48,6 @@ typedef enum mc_source_entity_focus_options {
 
 // TODO -- move these below somewhere else?
 
-// int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
-#define MC_APP_EVENT_SOURCE_FILE_OPEN_REQ "MC_APP_EVENT_SOURCE_FILE_OPEN_REQ"
-
 // int (*event_handler)(void *handler_state, void *event_args) {event_args is mc_source_file_info *modified_file}
 #define MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY "MC_APP_EVENT_SOURCE_FILE_MODIFIED_EXTERNALLY"
 

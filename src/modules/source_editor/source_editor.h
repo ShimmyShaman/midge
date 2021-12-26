@@ -7,6 +7,14 @@
 
 #include "modules/collections/hash_table.h"
 
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
+#define MC_APP_EVENT_SOURCE_FILE_OPEN_REQ "MC_APP_EVENT_SOURCE_FILE_OPEN_REQ"
+
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *space_delimited_search_str}
+#define MCM_SE_EVENT_FIND_IN_FILE "MCM_SE_EVENT_FIND_IN_FILE"
+
+
+
 // typedef enum mce_source_token_type {
 //   MCE_SE_NULL = 0,
 //   MCE_SE_UNPROCESSED_TEXT,
@@ -140,7 +148,7 @@ typedef struct mc_source_editor {
   // float font_horizontal_stride;
 
   // struct {
-  //   bool visible;
+    bool cursor_visible;
 
   //   int zen_col;
   //   int line, col;
