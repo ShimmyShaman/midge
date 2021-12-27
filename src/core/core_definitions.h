@@ -353,7 +353,7 @@ typedef struct mc_source_file_code_segment_list {
 } mc_source_file_code_segment_list;
 
 typedef struct mc_source_file_info {
-  struct_id *type_id;
+  // struct_id *type_id;
   struct timespec recent_disk_sync;
   char *filepath;
   mc_source_file_code_segment_list segments;

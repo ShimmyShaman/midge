@@ -77,7 +77,8 @@
         "m_threads.h": "c",
         "pthread.h": "c",
         "render_util.h": "c",
-        "mc_source.h": "c"
+        "mc_source.h": "c",
+        "mc_file.h": "c"
     },
     "powermode.enabled": true,
     "powermode.enableShake": false

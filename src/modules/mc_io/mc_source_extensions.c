@@ -119,15 +119,16 @@ int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_
       MCcall(mcs_interpret_source_file(full_path, &sf));
     }
     else {
-      MCerror(5883, "PROGRESS");
-      // sf = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
-      // sf->filepath = strdup(path);
-      // sf->segments.capacity = sf->segments.count = 0U;
+      sf = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
+      sf->filepath = strdup(path);
+      sf->segments.capacity = sf->segments.count = 0U;
+      sf->recent_disk_sync = (struct timespec){ 0L, 0L };
 
-      // // Register & persist
-      // MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
-      //                             &app_itp_data->source_files.count, sf));
-      // MCcall(mc_save_source_file_from_updated_info(sf));
+      // Register & persist
+      MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
+                                  &app_itp_data->source_files.count, sf));
+      MCcall(mc_save_source_file_info_to_disk(sf));
+
     }
   }
 

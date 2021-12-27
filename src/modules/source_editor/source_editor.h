@@ -8,6 +8,7 @@
 #include "modules/collections/hash_table.h"
 
 // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *path}
+// const char *MC_APP_EVENT_SOURCE_FILE_OPEN_REQ = "MC_APP_EVENT_SOURCE_FILE_OPEN_REQ";
 #define MC_APP_EVENT_SOURCE_FILE_OPEN_REQ "MC_APP_EVENT_SOURCE_FILE_OPEN_REQ"
 
 // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *space_delimited_search_str}

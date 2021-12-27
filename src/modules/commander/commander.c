@@ -18,7 +18,7 @@
 
 #include "modules/collections/hash_table.h"
 #include "modules/source_editor/source_editor.h"
-// #include "modules/mc_io/mc_file.h"
+#include "modules/mc_io/mc_source_extensions.h"
 // #include "modules/render_utilities/render_util.h"
 #include "modules/welcome_window/welcome_window.h"
 #include "modules/ui_elements/ui_elements.h"
@@ -74,13 +74,14 @@ typedef struct commander_data {
   mcu_textblock *status_block;
   mcu_textbox *cmd_textbox;
 
-  mcu_panel *config_panel;
+  mcu_panel *cfg_status_panel;
   mcu_textblock *config_textblock;
 
   hash_table_t basal_ops;
 
   char prompt_cmd[512];
   mcu_panel *prompt_panel;
+  mcu_textblock *prompt_textblock;
   struct {
     unsigned int capacity, count;
     mcu_button **items;
@@ -166,7 +167,83 @@ void _mcm_cmdr_render_present(image_render_details *irq, mc_node *node)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////// Input / UI Logic /////////////////////////////////////////////////
+//////////////////////////////////// Functional Logic /////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int _mcm_cmdr_begin_create_basal_function(commander_data *cd, const char *fname)
+{
+  // Create the path
+  char source_path[512];
+  sprintf(source_path, "res/cmdr/%s.c", fname);
+  
+  // Ensure the Function does not exist
+  function_info *fi;
+  MCcall(find_function_info(fname, &fi));  
+  if(fi) {
+    return 88;
+  }
+
+  mc_source_file_info *source_file;
+  // TODO -- only create if it DOESN'T exist: need more than a boolean -- TODO
+  MCcall(mcs_obtain_source_file_info(source_path, true, &source_file));
+  if(!source_file)
+  {
+    MCerror(4788, "TODO");
+  }
+  
+  // -- Insert a somewhat empty function into the source file
+  char source[512];
+  sprintf(source, "{\n"
+                  "  return 0;\n"
+                  "}");
+
+  // -- Create the new function
+  char *params[1];
+  // params[0] = "frame_time *ft";
+  // params[1] = "void *callback_state";
+  MCcall(mcs_construct_function_definition(source_file, fname, "int", 0, 0, params, source));
+
+  MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, source_path));
+
+  // MCerror(9428, "TODO:'%s'", fname);
+
+  // }
+  // > FUNCTION {
+  //   // Register the update function in the initialize function
+  //   const char *init_func_name, *update_func_name;
+  //   function_info *init_fi;
+  //   char buf[512];
+  //   mc_node *app_node;
+
+  //   MCcall(mc_mo_get_context_cstr(process_stack, "project-init-function-name", true, &init_func_name));
+  //   MCcall(mc_mo_get_context_cstr(process_stack, "project-update-function-name", true, &update_func_name));
+
+  //   MCcall(find_function_info(init_func_name, &init_fi));
+  //   if(!init_fi)
+  //     return 14;
+  //   // TODO -- obtain the local data variable name
+  //   sprintf(buf, "\n  mca_register_update_timer(0, true, %s, &%s);\n", "data", update_func_name);
+  //   MCcall(mcs_attach_code_to_function(init_fi, buf));
+
+  //   // Because initialize has already been called, make a seperate scripted call to register the
+  //   // method for this session
+  //   char fd[256];
+  //   sprintf(fd, "extern int %s(frame_time *ft, void *callback_state);", update_func_name);
+  //   const char *sut[] = {
+  //       "#include <stdio.h>",
+  //       "#include \"core/midge_app.h\"",
+  //       fd,
+  //   };
+  //   void *update_func_addr = tcci_get_symbol(midge_app_info->itp_data->interpreter, update_func_name);
+  //   MCcall(mc_mo_get_context_ptr(process_stack, "project-node", true, (void **)&app_node));
+  //   sprintf(buf, "\n  mca_register_update_timer(0L, true, vargs, (int (*)(frame_time *, void *))%p);\n  return NULL;\n", update_func_addr);
+  //   MCcall(tcci_execute_single_use_code(midge_app_info->itp_data->interpreter, "MO:add_update_timer", 3, sut, buf, app_node->data, NULL));
+
+  return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////// Input / UI Response //////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
@@ -212,31 +289,45 @@ int _mcm_cmdr_configure_command(commander_data *cd)
   cd->configuring_command = cmd_cfg;
 
   // Update the display
-  cd->config_panel->node->layout->visible = true;
+  cd->cfg_status_panel->node->layout->visible = true;
   char buf[512];
   sprintf(buf, "Configuring '%s'...", cd->prompt_cmd);
   MCcall(mcu_set_textblock_text(cd->config_textblock, buf));
-  MCcall(mca_set_node_requires_layout_update(cd->config_panel->node));
+  MCcall(mca_set_node_requires_layout_update(cd->cfg_status_panel->node));
 
   return 0;
 }
 
-int _mcm_process_command(commander_data *cd, const char *cmd, bool *handled)
+int _mcm_cmdr_process_command(commander_data *cd, const char *cmd, bool *handled)
 {
   *handled = false;
 
   // Basal Function Creation
   if(!strncmp(cmd, ".", 1)) {
-    if(!strncmp(cmd, ".create-basal-function.", 23)) {
-      MCerror(8100, "TODO");
+    if(!strncmp(cmd, ".create_basal_function.", 23)) {
+      const char *bf_name;
+      if(strlen(cmd) > 23) {
+        // Set to command parameter
+        bf_name = cmd + 23;
+      } else {
+        MCerror(8492, "TODO -- obtain the basal function name");
+      }
+
+      MCcall(_mcm_cmdr_begin_create_basal_function(cd, bf_name));
     } else {
       // TODO -- search through a hash-table of basal functions
+      char buf[64];
 
       // Could not find the basal function, offer to create it
       // Update Prompt Panel
       cd->prompt_panel->node->layout->visible = true;
+
+      sprintf(buf, "[%s]", cmd);
+      MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
+
       action_button_data *abd = (action_button_data *)cd->options_buttons.items[0]->tag;
-      MCcall(mcu_set_button_text(cd->options_buttons.items[0], "Not Found. Create?"));
+      snprintf(buf, 36, "Not Found. Create %.14s%s?", cmd, strlen(cmd) > 14 ? "..." : "");
+      MCcall(mcu_set_button_text(cd->options_buttons.items[0], buf));
       MCcall(mc_set_str(&abd->suggested_action, ".create_basal_function."));
       MCcall(mc_append_to_strn(&abd->suggested_action, cmd + 1, strlen(cmd + 1) - (cmd[strlen(cmd) - 1] == '.' ? 1 : 0)));
 
@@ -245,12 +336,6 @@ int _mcm_process_command(commander_data *cd, const char *cmd, bool *handled)
         cd->options_buttons.items[a]->node->layout->visible = false;
         MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a]->node));
       }
-
-      // // Update Config Panel
-      // cd->config_panel->node->layout->visible = true;
-      // char buf[512];
-      // sprintf(buf, "creating %s", cmd + 22); // TODO
-      // MCcall(mcu_set_textblock_text(cd->config_textblock, buf));
     }
 
     *handled = true;
@@ -289,22 +374,35 @@ int _mcm_cmdr_action_option_selected(mci_input_event *ie, mcu_button *button)
   action_button_data *abd = (action_button_data *) button->tag;
   commander_data *cd = (commander_data *)abd->cmdr_data;
 
-  printf("action option selected:'%s'\n", abd->suggested_action.text);
+  printf("action option selected:'%s' > %p\n", abd->suggested_action.text, button);
 
-  if(!abd->suggested_action.len || abd->suggested_action.text[0] == '.') {
+  if(!abd->suggested_action.len) {
     // Increase configuration depth
     MCcall(_mcm_cmdr_configure_command(cd));
 
-    cd->config_panel->node->layout->visible = true;
-    MCcall(mca_set_node_requires_layout_update(cd->config_panel->node));
+    // Hide the prompt panel
+    cd->prompt_panel->node->layout->visible = false;
+    MCcall(mca_set_node_requires_layout_update(cd->prompt_panel->node));
+
+    // Show the config-status panel
+    cd->cfg_status_panel->node->layout->visible = true;
+    MCcall(mca_set_node_requires_layout_update(cd->cfg_status_panel->node));
   }
   else {
-    MCcall(_mcm_cmdr_execute_process(abd->cmdr_data, ie, abd->suggested_action.text));
-  }
+    if(abd->suggested_action.text[0] == '.') {
+      bool handled;
+      MCcall(_mcm_cmdr_process_command(cd, abd->suggested_action.text, &handled));
+      if(!handled) {
+        MCerror(9010, "Should always be handled");
+      }
+    } else {
+      MCcall(_mcm_cmdr_execute_process(abd->cmdr_data, ie, abd->suggested_action.text));
 
-  // Hide the prompt panel
-  cd->prompt_panel->node->layout->visible = false;
-  MCcall(mca_set_node_requires_layout_update(cd->prompt_panel->node));
+      // Hide the prompt panel
+      cd->prompt_panel->node->layout->visible = false;
+      MCcall(mca_set_node_requires_layout_update(cd->prompt_panel->node));
+    }
+  }
 
   return 0;
 }
@@ -490,54 +588,57 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
 }
 
 int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
-  commander_data *data = (commander_data *)state;
+  commander_data *cd = (commander_data *)state;
 
-  pthread_mutex_lock(&data->icp_conn.thr_lock);
-  if(data->icp_conn.status_updated) {
-    MCcall(mcu_set_textblock_text(data->status_block, data->icp_conn.status_str.text));
+  pthread_mutex_lock(&cd->icp_conn.thr_lock);
+  if(cd->icp_conn.status_updated) {
+    MCcall(mcu_set_textblock_text(cd->status_block, cd->icp_conn.status_str.text));
 
-    data->icp_conn.status_updated = false;
+    cd->icp_conn.status_updated = false;
   }
 
-  // printf("cc:%u\n", data->icp_conn.server_responses.count);
-  if (data->icp_conn.server_responses.count) {
-    printf("server responded with %u possible actions for cmd:'%s'. Highest prob: %i\n", data->icp_conn.server_responses.count,
-      data->icp_conn.server_responses.cmd, (int)(data->icp_conn.server_responses.items[0].prob * 100));
+  // printf("cc:%u\n", cd->icp_conn.server_responses.count);
+  if (cd->icp_conn.server_responses.count) {
+    printf("server responded with %u possible actions for cmd:'%s'. Highest prob: %i\n", cd->icp_conn.server_responses.count,
+      cd->icp_conn.server_responses.cmd, (int)(cd->icp_conn.server_responses.items[0].prob * 100));
 
-    // No longer hide
-    strcpy(data->prompt_cmd, data->icp_conn.server_responses.cmd);
-    data->prompt_panel->node->layout->visible = true;
+    // Update and show the prompt panel
+    strcpy(cd->prompt_cmd, cd->icp_conn.server_responses.cmd);
+    cd->prompt_panel->node->layout->visible = true;
+
+    char buf[256];
+    sprintf(buf, "[%s]", cd->icp_conn.server_responses.cmd);
+    MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
 
     // Show me the way
-    action_button_data *abd = (action_button_data *)data->options_buttons.items[0]->tag;
-    MCcall(mcu_set_button_text(data->options_buttons.items[0], "Configure Command"));
+    action_button_data *abd = (action_button_data *)cd->options_buttons.items[0]->tag;
+    MCcall(mcu_set_button_text(cd->options_buttons.items[0], "Configure Command"));
     MCcall(mc_set_str(&abd->suggested_action, ""));
 
     // Fill the buttons
-    char buf[256];
     int a;
-    for(a = 0; a < data->icp_conn.server_responses.count && a + 1 < data->options_buttons.count; ++a) {
-      action_button_data *abd = (action_button_data *)data->options_buttons.items[a + 1]->tag;
+    for(a = 0; a < cd->icp_conn.server_responses.count && a + 1 < cd->options_buttons.count; ++a) {
+      action_button_data *abd = (action_button_data *)cd->options_buttons.items[a + 1]->tag;
 
-      sprintf(buf, "%i%%", (int)(data->icp_conn.server_responses.items[a].prob * 100.f));
+      sprintf(buf, "%i%%", (int)(cd->icp_conn.server_responses.items[a].prob * 100.f));
       while(strlen(buf) < 4)
         strcat(buf, " ");
       strcat(buf, "- ");
-      strcat(buf, data->icp_conn.server_responses.items[a].action_name.text);
-      MCcall(mcu_set_button_text(data->options_buttons.items[a + 1], buf));
+      strcat(buf, cd->icp_conn.server_responses.items[a].action_name.text);
+      MCcall(mcu_set_button_text(cd->options_buttons.items[a + 1], buf));
 
-      MCcall(mc_set_str(&abd->suggested_action, data->icp_conn.server_responses.items[a].action_name.text));
-      MCcall(mc_set_str(&abd->action_detail, data->icp_conn.server_responses.items[a].action_detail.text));
-      abd->prob = data->icp_conn.server_responses.items[a].prob;
+      MCcall(mc_set_str(&abd->suggested_action, cd->icp_conn.server_responses.items[a].action_name.text));
+      MCcall(mc_set_str(&abd->action_detail, cd->icp_conn.server_responses.items[a].action_detail.text));
+      abd->prob = cd->icp_conn.server_responses.items[a].prob;
     }
-    for(; a + 1 < data->options_buttons.count; ++a) {
-      data->options_buttons.items[a + 1]->node->layout->visible = false;
-      MCcall(mca_set_node_requires_layout_update(data->options_buttons.items[a + 1]->node));
+    for(; a + 1 < cd->options_buttons.count; ++a) {
+      cd->options_buttons.items[a + 1]->node->layout->visible = false;
+      MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a + 1]->node));
     }
     
-    data->icp_conn.server_responses.count = 0;
+    cd->icp_conn.server_responses.count = 0;
   }
-  pthread_mutex_unlock(&data->icp_conn.thr_lock);
+  pthread_mutex_unlock(&cd->icp_conn.thr_lock);
 
   return 0;
 }
@@ -563,7 +664,7 @@ void __mcm_cmd_textbox_submit(mci_input_event *event, mcu_textbox *textbox) {
 
   // Attempt to process the command internally, otherwise send it to the server
   bool handled;
-  MCVcall(_mcm_process_command(data, textbox->contents->text, &handled));
+  MCVcall(_mcm_cmdr_process_command(data, textbox->contents->text, &handled));
   if(!handled) {
     MCVcall(_mcm_cmdr_send_command(data, textbox->contents->text));
   }
@@ -576,6 +677,10 @@ int mcm_cmdr_init_ui(mc_node *module_node)
   commander_data *data = (commander_data *)module_node->data;
 
   mcu_panel *panel;
+  mcu_textblock *textblock;
+  mcu_button *button;
+
+  // Command Panel
   MCcall(mcu_init_panel(module_node, &panel));
   data->cmd_panel = panel;
   panel->background_color = COLOR_BURLY_WOOD;
@@ -585,20 +690,18 @@ int mcm_cmdr_init_ui(mc_node *module_node)
   panel->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT;
   panel->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
 
-  MCcall(mcu_init_textblock(panel->node, &data->status_block));
+  MCcall(mcu_init_textblock(panel->node, &textblock));
+  data->status_block = textblock;
   MCcall(mcu_set_textblock_text(data->status_block, "Default Status"));
-  data->status_block->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
-  // data->status_block->node->layout->padding = (mc_paddingf){6, 2, 42, 2};
+  textblock->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
+  // textblock->node->layout->padding = (mc_paddingf){6, 2, 42, 2};
 
   MCcall(mcu_init_textbox(panel->node, &data->cmd_textbox));
   data->cmd_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
   data->cmd_textbox->node->layout->padding = (mc_paddingf){6, 8, 42, 2};
   data->cmd_textbox->submit = &__mcm_cmd_textbox_submit;
 
-//   MCcall(mcu_init_textbox(module_node, &mod->search_textbox));
-//   mod->search_textbox->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
-//   mod->search_textbox->node->layout->padding = (mc_paddingf){6, 2, 42, 2};
-
+  // Prompt Panel
   MCcall(mcu_init_panel(module_node, &panel));
   data->prompt_panel = panel;
   panel->background_color = COLOR_DARK_GREEN;
@@ -609,9 +712,15 @@ int mcm_cmdr_init_ui(mc_node *module_node)
   panel->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
   panel->node->layout->visible = false;
 
+  MCcall(mcu_init_textblock(panel->node, &textblock));
+  data->prompt_textblock = textblock;
+  MCcall(mcu_set_textblock_text(textblock, "--"));
+  textblock->node->layout->vertical_alignment = VERTICAL_ALIGNMENT_TOP;
+  textblock->node->layout->horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTRED;
+  textblock->node->layout->padding = (mc_paddingf){2, 8, 2, 6};
+
   // Visible Options Buttons
   char buf[64];
-  mcu_button *button;
   for (int a = 0; a < 4; ++a) {
     MCcall(mcu_alloc_button(panel->node, &button));
 
@@ -646,7 +755,7 @@ int mcm_cmdr_init_ui(mc_node *module_node)
 
   // Configuration Panel
   MCcall(mcu_init_panel(module_node, &panel));
-  data->config_panel = panel;
+  data->cfg_status_panel = panel;
   panel->background_color = COLOR_DARK_GREEN;
   panel->node->layout->preferred_width = 309;
   panel->node->layout->preferred_height = 40;
