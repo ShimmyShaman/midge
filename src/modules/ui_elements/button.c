@@ -235,6 +235,35 @@ int mcu_set_button_text(mcu_button *button, const char *text)
   return 0;
 }
 
+int mcu_invoke_button_click(mcu_button *button)
+{
+  mci_input_state mis;
+  mis.shift_function = false;
+  mis.alt_function = false;
+  mis.ctrl_function = false;
+  mis.mouse.aux_1 = BUTTON_STATE_NULL;
+  mis.mouse.aux_2 = BUTTON_STATE_NULL;
+  mis.mouse.left = BUTTON_STATE_NULL;
+  mis.mouse.middle = BUTTON_STATE_NULL;
+  mis.mouse.right = BUTTON_STATE_NULL;
+  mis.mouse.x = -1;
+  mis.mouse.y = -1;
+
+  mci_input_event mie;
+  mie.type = INPUT_EVENT_PROGRAMMATIC_INVOCATION;
+  mie.button_code = 0;
+  mie.focus_successor = NULL;
+  mie.handled = false;
+  mie.input_state = &mis;
+
+  if (button->left_click) {
+    void (*left_click)(mci_input_event *, mcu_button *) = (void (*)(mci_input_event *, mcu_button *))button->left_click;
+    left_click(&mie, button);
+  }
+
+  return 0;
+}
+
 // void mcu_destroy_button(mcu_button *button)
 // {
 //   // Destroy Node from Hierarchy

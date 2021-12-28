@@ -596,7 +596,28 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
   return 0;
 }
 
-#define AUTO_COMMANDS "find source file\r"
+#define AUTO_COMMANDS "+700find source file+700\r" "+700!0" \
+                      "+700.begin_search_file+700\r" "+700!0" "\0"
+
+// DEBUG
+int __mcm_cmdr_debug_get_autocommand_nb (int *idx)
+{
+  const char *c = AUTO_COMMANDS;
+  c += *idx + 1;
+  const char *n = c;
+
+  while(*n < '9' && *n >= '0')
+    ++n;
+
+  char buf[16];
+  snprintf(buf, n - c + 1, "%s", c);
+  int v = atoi(buf);
+
+  *idx += n - c + 1;
+
+  return v;
+}
+// DEBUG
 
 int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
   commander_data *cd = (commander_data *)state;
@@ -652,25 +673,37 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
   pthread_mutex_unlock(&cd->icp_conn.thr_lock);
 
   // Auto Commands
-  if(cd->auto_command.cidx < strlen(AUTO_COMMANDS)) {
+  if(ft->app_secsf > cd->auto_command.last_stroke + 0.05f) {
+    // Update time
+    cd->auto_command.last_stroke = ft->app_secsf;
+
+    // Process Command
     switch (AUTO_COMMANDS[cd->auto_command.cidx]) {
       case '\0':
-      case '|':
         break;
+      case '+': {
+        // Delay the following time in ms
+        int delay = __mcm_cmdr_debug_get_autocommand_nb(&cd->auto_command.cidx);
+        cd->auto_command.last_stroke += (float)delay / 1000.f;
+      } break;
+      case '!': {
+        // Invoke a prompt button
+        int btn_idx = __mcm_cmdr_debug_get_autocommand_nb(&cd->auto_command.cidx);
+
+        MCcall(mcu_invoke_button_click(cd->options_buttons.items[btn_idx]));
+        
+      } break;
       case '\r': {
         MCcall(mcu_invoke_textbox_submit(cd->cmd_textbox));
+        ++cd->auto_command.cidx;
       } break;
       default: {
-        if(ft->app_secsf > cd->auto_command.last_stroke + 0.25f) {
-          cd->auto_command.last_stroke = ft->app_secsf;
-            
-          char buf[512];
-          sprintf(buf, "%s%c", cd->cmd_textbox->contents->text, AUTO_COMMANDS[cd->auto_command.cidx]);
-          printf("setting '%s'\n", buf);
-          MCcall(mcu_set_textbox_text(cd->cmd_textbox, buf));
+        // Keystroke
+        char buf[512];
+        sprintf(buf, "%s%c", cd->cmd_textbox->contents->text, AUTO_COMMANDS[cd->auto_command.cidx]);
+        MCcall(mcu_set_textbox_text(cd->cmd_textbox, buf));
 
-          ++cd->auto_command.cidx;
-        }
+        ++cd->auto_command.cidx;
       } break;
     }
   }
