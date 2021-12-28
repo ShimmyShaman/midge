@@ -26,9 +26,13 @@ void _mcu_render_textbox_present(image_render_details *image_render_queue, mc_no
         (unsigned int)(node->layout->__bounds.y + textbox->content_padding.top - 0), 2, 18 - 2, COLOR_GHOST_WHITE);
   }
 
+  // // DEBUG
+  // printf("rendertextbox- %u %u %s %s\n", (unsigned int)(node->layout->__bounds.x + textbox->content_padding.left),
+  //                               (unsigned int)(node->layout->__bounds.y + textbox->content_padding.top), textbox->contents->text,
+  //                               textbox->font ? textbox->font->name : "NULL");
+  // // DEBUG
+
   // Text
-  // printf("rendertextbox- %u %u %s %u\n", (unsigned int)node->layout->__bounds.x,
-  //        (unsigned int)node->layout->__bounds.y, textbox->str->text, textbox->font->resource_uid);
   mcr_issue_render_command_text(image_render_queue,
                                 (unsigned int)(node->layout->__bounds.x + textbox->content_padding.left),
                                 (unsigned int)(node->layout->__bounds.y + textbox->content_padding.top), NULL,
@@ -227,6 +231,9 @@ int mcu_set_textbox_text(mcu_textbox *textbox, const char *text)
   MCcall(mc_set_str(textbox->contents, text));
   MCcall(mca_set_node_requires_layout_update(textbox->node));
 
+  // TODO ?? why is this needed?
+  MCcall(mca_set_node_requires_rerender(textbox->node));
+
   return 0;
 }
 
@@ -236,3 +243,31 @@ int mcu_set_textbox_text(mcu_textbox *textbox, const char *text)
 //   // void *arg = (void *)&mca_visual_project_create_add_textbox;
 //   // mca_global_context_menu_add_option_to_node_context(NODE_TYPE_textbox, "change text", arg);
 // }
+
+int mcu_invoke_textbox_submit(mcu_textbox *textbox) {
+  mci_input_state mis;
+  mis.shift_function = false;
+  mis.alt_function = false;
+  mis.ctrl_function = false;
+  mis.mouse.aux_1 = BUTTON_STATE_NULL;
+  mis.mouse.aux_2 = BUTTON_STATE_NULL;
+  mis.mouse.left = BUTTON_STATE_NULL;
+  mis.mouse.middle = BUTTON_STATE_NULL;
+  mis.mouse.right = BUTTON_STATE_NULL;
+  mis.mouse.x = -1;
+  mis.mouse.y = -1;
+
+  mci_input_event mie;
+  mie.type = INPUT_EVENT_PROGRAMMATIC_INVOCATION;
+  mie.button_code = 0;
+  mie.focus_successor = NULL;
+  mie.handled = false;
+  mie.input_state = &mis;
+
+  if (textbox->submit) {
+    void (*submit)(mci_input_event *, mcu_textbox *) = (void (*)(mci_input_event *, mcu_textbox *))textbox->submit;
+    submit(&mie, textbox);
+  }
+
+  return 0;
+}

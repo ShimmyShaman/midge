@@ -69,7 +69,7 @@ int mct_transcribe_file_ast(mc_syntax_node *file_root, mct_function_transcriptio
  * Transcribes an isolated code block ast and appends it to the given mc_str.
  */
 int mct_transcribe_isolated_code_block(mc_syntax_node *code_block_ast, const char *function_name,
-                                       mct_function_transcription_options *options, mc_str *str);
+                                       mct_function_transcription_options *options, bool is_function_root, mc_str *str);
 // int mct_transcribe_function_to_mc(function_info *func_info, mc_syntax_node *function_ast,
 //                                   mct_function_transcription_options *options, char **mc_transcription);
 // int transcribe_enumeration_to_mc(enumeration_info *enum_info, mc_syntax_node *enumeration_ast, char

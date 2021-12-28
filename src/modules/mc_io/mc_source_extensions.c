@@ -93,7 +93,7 @@ int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_
 
   // Determine if the header already exists
   mc_source_file_info *sf;
-  printf("obtsrcf:'%s'\n", path);
+  // printf("obtsrcf:'%s'\n", path);
   for (int a = 0; a < app_itp_data->source_files.count; ++a) {
     sf = app_itp_data->source_files.items[a];
 
@@ -120,9 +120,8 @@ int mcs_obtain_source_file_info(const char *path, bool create_if_not_exists, mc_
     }
     else {
       sf = (mc_source_file_info *)malloc(sizeof(mc_source_file_info));
-      sf->filepath = strdup(path);
+      sf->filepath = strdup(full_path);
       sf->segments.capacity = sf->segments.count = 0U;
-      sf->recent_disk_sync = (struct timespec){ 0L, 0L };
 
       // Register & persist
       MCcall(append_to_collection((void ***)&app_itp_data->source_files.items, &app_itp_data->source_files.alloc,
@@ -557,6 +556,7 @@ int mcs_construct_function_definition(mc_source_file_info *source_file, const ch
   // printf("constfd:%i\n", source_file->segments.count);
   MCcall(mcs_insert_segment_judiciously_in_source_file(source_file, MC_SOURCE_SEGMENT_FUNCTION_DEFINITION, fi));
   // printf("constfd:%i\n", source_file->segments.count);
+  printf("fi->code:%s\n", fi->code);
   MCcall(mc_redefine_function(fi));
 
   return 0;
@@ -669,7 +669,7 @@ int mc_redefine_function(function_info *function)
 
   MCcall(mc_transcribe_specific_function_source(str, function, true));
 
-  // printf("mc_redefine_function-gen:\n%s||\n", str->text);
+  printf("mc_redefine_function-gen:\n%s||\n", str->text);
 
   midge_app_info *app_info;
   mc_obtain_midge_app_info(&app_info);

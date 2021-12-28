@@ -203,7 +203,7 @@ int _mc_transcribe_function_info(mc_str *str, function_info *function, bool use_
     mct_function_transcription_options opt = {};
     opt.report_function_entry_exit_to_stack = true;
 
-    MCcall(mct_transcribe_isolated_code_block(code_ast, function->name, &opt, str));
+    MCcall(mct_transcribe_isolated_code_block(code_ast, function->name, &opt, true, str));
 
     MCcall(release_syntax_node(code_ast));
   }
@@ -377,6 +377,7 @@ int mc_transcribe_specific_function_source(mc_str *str, function_info *function,
         MCcall(_mc_transcribe_function_info(str, function, use_midge_c_instead));
       }
       else {
+      puts("som");
         // Transcribe the declaration
         MCcall(mc_append_to_str(str, seg->function->return_type.name));
         MCcall(mc_append_char_to_str(str, ' '));

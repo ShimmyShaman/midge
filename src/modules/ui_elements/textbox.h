@@ -39,4 +39,5 @@ typedef struct mcu_textbox {
 
 int mcu_init_textbox(mc_node *parent, mcu_textbox **p_textbox);
 int mcu_set_textbox_text(mcu_textbox *textbox, const char *text);
+int mcu_invoke_textbox_submit(mcu_textbox *textbox);
 #endif // TEXTBOX_H

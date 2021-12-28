@@ -3632,7 +3632,7 @@ int mct_transcribe_file_ast(mc_syntax_node *file_root, mct_function_transcriptio
 }
 
 int mct_transcribe_isolated_code_block(mc_syntax_node *code_block_ast, const char *function_name,
-                                       mct_function_transcription_options *options, mc_str *str)
+                                       mct_function_transcription_options *options, bool is_function_root, mc_str *str)
 {
   mct_transcription_state ts = {};
   ts.function_name = function_name;
@@ -3652,9 +3652,9 @@ int mct_transcribe_isolated_code_block(mc_syntax_node *code_block_ast, const cha
   ts.scope_index = 0;
   ts.scope[ts.scope_index].variable_count = 0;
 
-  // TODO -- I switched this to false to do something temporarly, it shouldn't be false. When transcribing an
+  // TODO -- I switched this to false to do something temporarily, it shouldn't be false. When transcribing an
   // isolated block, having some kind of check on the code would be good (its used at least by the code changing at runtime system).
-  MCcall(mct_transcribe_code_block(&ts, code_block_ast, false));
+  MCcall(mct_transcribe_code_block(&ts, code_block_ast, is_function_root));
 
   return 0;
 }

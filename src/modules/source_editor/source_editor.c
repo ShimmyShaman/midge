@@ -301,10 +301,10 @@ int _mc_se_open_filepath(mc_source_editor *se, const char *filepath)
   int a;
   mc_source_editor_file *esf, *xesf;
   mc_source_file_info *sf;
-  char fp[256];
+  char fp[512];
 
   // Obtain the completed esf for the filepath
-  MCcall(mcf_obtain_full_path(filepath, fp, 256));
+  MCcall(mcf_obtain_full_path(filepath, fp, 512));
 
   xesf = se->source_files.items + se->source_files.size;
   for (esf = se->source_files.items; esf < xesf; ++esf) {
@@ -327,7 +327,7 @@ int _mc_se_open_filepath(mc_source_editor *se, const char *filepath)
       }
     }
     if (!esf->sf) {
-      MCerror(4754, "couldn't find source file for path='%s'", filepath);
+      MCerror(4754, "couldn't find source file for path='%s' fullpath='%s'", filepath, fp);
     }
     ++se->source_files.used;
   }

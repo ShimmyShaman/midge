@@ -26,6 +26,7 @@ typedef enum window_input_event_type {
   INPUT_EVENT_MOUSE_PRESS,
   INPUT_EVENT_MOUSE_RELEASE,
   INPUT_EVENT_MOUSE_MOVE,
+  INPUT_EVENT_PROGRAMMATIC_INVOCATION,
 } window_input_event_type;
 
 typedef enum mc_key_code {

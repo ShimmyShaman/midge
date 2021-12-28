@@ -560,10 +560,6 @@ int main(int argc, const char *const *argv)
       sprintf(db, "rm -rf %s", dirdel);
       system(db);
       printf("DEBUG removed '%s'\n", dirdel);
-      if (res) {
-        printf("DEBUG rmdir:%i\n", res);
-        return 0;
-      }
     }
 
     const char *dirdel2 = "projects/crc";
@@ -573,10 +569,15 @@ int main(int argc, const char *const *argv)
       sprintf(db, "rm -rf %s", dirdel2);
       system(db);
       printf("DEBUG removed '%s'\n", dirdel2);
-      if (res) {
-        printf("DEBUG rmdir:%i\n", res);
-        return 0;
-      }
+    }
+
+    const char *filedel = "res/cmdr/begin_search_file.c";
+    res = stat(filedel, &stats);
+    if (!res) {
+      char db[256];
+      sprintf(db, "rm -rf %s", filedel);
+      system(db);
+      printf("DEBUG removed '%s'\n", filedel);
     }
   }
 
@@ -584,7 +585,7 @@ int main(int argc, const char *const *argv)
   // ** Comment this if you have no clue what it is **
   int days_since_this_code_fragment_was_written = 0;
   clock_gettime(CLOCK_REALTIME, &app_begin_time);
-  if(app_begin_time.tv_sec > 1640344000L + 3 * 3600 * 24 + 0 * 3600) {
+  if(app_begin_time.tv_sec > 1640344000L + 4 /*days*/ * 3600 * 24 + 0 /*hours*/ * 3600) {
     puts("\n\n### Reminder to Start Recording ###\n\n");
     return 0;
   }

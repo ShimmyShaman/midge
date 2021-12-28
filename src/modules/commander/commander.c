@@ -88,6 +88,12 @@ typedef struct commander_data {
   } options_buttons;
 
 //   mc_node *context_viewer_node;
+  // DEBUG
+  struct {
+    int cidx;
+    float last_stroke;
+  } auto_command;
+  // DEBUG
 
 } commander_data;
 
@@ -194,8 +200,11 @@ int _mcm_cmdr_begin_create_basal_function(commander_data *cd, const char *fname)
   // -- Insert a somewhat empty function into the source file
   char source[512];
   sprintf(source, "{\n"
+                  "  MCerror(9999, \"NotYetImplemented - %s()\");\n"
                   "  return 0;\n"
-                  "}");
+                  "}", fname);
+
+  MCcall(mcs_add_include_to_source_file(source_file, "<stdio.h>"));
 
   // -- Create the new function
   char *params[1];
@@ -587,6 +596,8 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
   return 0;
 }
 
+#define AUTO_COMMANDS "find source file\r"
+
 int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
   commander_data *cd = (commander_data *)state;
 
@@ -639,6 +650,30 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
     cd->icp_conn.server_responses.count = 0;
   }
   pthread_mutex_unlock(&cd->icp_conn.thr_lock);
+
+  // Auto Commands
+  if(cd->auto_command.cidx < strlen(AUTO_COMMANDS)) {
+    switch (AUTO_COMMANDS[cd->auto_command.cidx]) {
+      case '\0':
+      case '|':
+        break;
+      case '\r': {
+        MCcall(mcu_invoke_textbox_submit(cd->cmd_textbox));
+      } break;
+      default: {
+        if(ft->app_secsf > cd->auto_command.last_stroke + 0.25f) {
+          cd->auto_command.last_stroke = ft->app_secsf;
+            
+          char buf[512];
+          sprintf(buf, "%s%c", cd->cmd_textbox->contents->text, AUTO_COMMANDS[cd->auto_command.cidx]);
+          printf("setting '%s'\n", buf);
+          MCcall(mcu_set_textbox_text(cd->cmd_textbox, buf));
+
+          ++cd->auto_command.cidx;
+        }
+      } break;
+    }
+  }
 
   return 0;
 }
@@ -913,7 +948,10 @@ int init_commander_system(mc_node *app_root) {
 
   MCcall(mca_focus_node(data->cmd_textbox->node));
 
-  MCcall(mcu_set_textbox_text(data->cmd_textbox, "find source file"));
+  // DEBUG
+  data->auto_command.cidx = 0;
+  data->auto_command.last_stroke = 0.f;
+  // DEBUG
 
   return 0;
 }
