@@ -27,6 +27,8 @@
 
 #define SERVER_RESPONSE_ITEM_CAPACITY 10
 
+#define MAX_COMMAND_STR_LEN 512
+
 struct command_configuring;
 typedef struct command_configuring {
   struct command_configuring *parent;
@@ -38,6 +40,24 @@ typedef struct command_configuring {
   } sequence;
 
 } command_configuring;
+
+typedef enum cmdi_state_type {
+  CST_NULL = 0,
+  CST_USER_SUBMITTED,
+  CST_FULFILLED,
+  CST_BAMBOOZLED
+} cmdi_state_type;
+
+struct cmdi_state;
+typedef struct cmdi_state {
+  cmdi_state_type status;
+
+  struct cmdi_state *parent, *prev, *next;
+
+  union {
+    char str[512];
+  };
+} cmdi_state;
 
 typedef struct commander_data {
   mc_node *node;
@@ -94,6 +114,8 @@ typedef struct commander_data {
     float last_stroke;
   } auto_command;
   // DEBUG
+
+  cmdi_state *state;
 
 } commander_data;
 
@@ -268,8 +290,6 @@ int _mcm_cmdr_begin_create_basal_function(commander_data *cd, const char *fname,
 
 void _mcm_cmdr_handle_input(mc_node *node, mci_input_event *input_event)
 {
-  // if
-
   // // input_event->handled = true;
   // if (input_event->type == INPUT_EVENT_MOUSE_PRESS || input_event->type == INPUT_EVENT_MOUSE_RELEASE) {
   // printf("_mcm_mo_handle_input\n");
@@ -318,82 +338,124 @@ int _mcm_cmdr_configure_command(commander_data *cd)
   return 0;
 }
 
-int _mcm_cmdr_process_command(commander_data *cd, const char *cmd, bool *handled)
+int _mcm_cmdr_process_state(commander_data *cd)
 {
-  *handled = false;
-
-  // Basal Function Creation
-  if(!strncmp(cmd, ".", 1)) {
-    if(!strncmp(cmd, ".create_basal_function.", 23)) {
-      char bf_name[256];
-      int param_count = 0;
-
-      if(strlen(cmd) > 23) {
-        // Set to command parameter
-        const char *c = cmd + 23;
-        while(*c != '\0' && *c != '.')
-          ++c;
-        snprintf(bf_name, c + 1 - (cmd + 23), "%s", cmd + 23);
-
-        while(*c != '\0') {
-          ++param_count;
-          ++c;
-          while(*c != '\0' && *c != '.')
-            ++c;
-        }
-      } else {
-        MCerror(8492, "TODO -- obtain the basal function name");
-      }
-
-      MCcall(_mcm_cmdr_begin_create_basal_function(cd, bf_name, param_count));
-    } else {
-      // TODO -- search through a hash-table of basal functions
-      char buf[64];
-
-      // Could not find the basal function, offer to create it
-      // Update Prompt Panel
-      cd->prompt_panel->node->layout->visible = true;
-
-      sprintf(buf, "[%s]", cmd);
-      MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
-
-      action_button_data *abd = (action_button_data *)cd->options_buttons.items[0]->tag;
-      snprintf(buf, 36, "Not Found. Create %.14s%s?", cmd, strlen(cmd) > 14 ? "..." : "");
-      MCcall(mcu_set_button_text(cd->options_buttons.items[0], buf));
-      MCcall(mc_set_str(&abd->suggested_action, ".create_basal_function."));
-      MCcall(mc_append_to_strn(&abd->suggested_action, cmd + 1, strlen(cmd + 1) - (cmd[strlen(cmd) - 1] == '.' ? 1 : 0)));
-
-      // Hide the rest of the options
-      for(int a = 1; a < cd->options_buttons.count; ++a) {
-        cd->options_buttons.items[a]->node->layout->visible = false;
-        MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a]->node));
-      }
-    }
-
-    *handled = true;
+  if(cd->state->status != CST_USER_SUBMITTED) {
+    MCerror(9921, "TODO");
   }
-  // if(!strcmp(cmd, ".create-basal-function.")) {
+  
+  printf("cd:'%s'\n", cd->state->str);
+  MCProgress(4242);
 
-  //   MCerror(8100, "TODO");
+  return 0;
+}
 
-  //   *handled = true;
-  // } else if (!strncmp(cmd, ".open-source-file.", 18)) {
-    
-  //   MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, (void *)(cmd + 18)));
+int _mcm_cmdr_submit_command(commander_data *cd, const char *submitted_cmd)
+{
+  // Validate Submitted Command
+  int cmd_len = strlen(submitted_cmd);
+  if(cmd_len < 0) {
+    // Do nothing
+    return 0;
+  } else if(cmd_len >= MAX_COMMAND_STR_LEN) {
+    MCerror(4142, "Entered Command Too Long");
+  }
 
-  //   *handled = true;
-  // } else if (!strncmp(cmd, ".find-in-file.", 14)) {
+  // Copy Command
+  cmdi_state *cmd = (cmdi_state *)malloc(sizeof(cmdi_state));
+  cmd->status = CST_USER_SUBMITTED;
+  strcpy(cmd->str, submitted_cmd);
 
-    // Assumes source file editor is opened and focused
+  // TODO -- go async from here?
 
-    // const char *event = "FIND_FUNCTION_IN_SOURCE_FILE";
-    // MCcall(mca_fire_event(MCM_SE_FIND_FUNCTION_PARTIAL, (void *)(cmd + 18)));
-    // MCcall(mca_provoke_handling(event, "set textbox text", handled));
-    // if(!handled) {
-      // MCerror(8582, "Provocation Handler does not exist for event:'%s'", event);
-    // }
-    // MCcall(MC_APP_EVENT_SOURCE_FILE_FIND, "set textbox text");
+  // Set new state
+  if(!cd->state) {
+    // New Process
+    cmd->parent = cmd->prev = cmd->next = NULL;
+
+    cd->state = cmd;
+  } else {
+    switch (cd->state->status)
+    {
+    default: {
+      MCerror(8858, "TODO");
+      } break;
+    }
+  }
+
+  MCcall(_mcm_cmdr_process_state(cd));
+  
+
+  // // Basal Function Creation
+  // if(!strncmp(cmd, ".", 1)) {
+  //   if(!strncmp(cmd, ".create_basal_function.", 23)) {
+  //     char bf_name[256];
+  //     int param_count = 0;
+
+  //     if(strlen(cmd) > 23) {
+  //       // Set to command parameter
+  //       const char *c = cmd + 23;
+  //       while(*c != '\0' && *c != '.')
+  //         ++c;
+  //       snprintf(bf_name, c + 1 - (cmd + 23), "%s", cmd + 23);
+
+  //       while(*c != '\0') {
+  //         ++param_count;
+  //         ++c;
+  //         while(*c != '\0' && *c != '.')
+  //           ++c;
+  //       }
+  //     } else {
+  //       MCerror(8492, "TODO -- obtain the basal function name");
+  //     }
+
+  //     MCcall(_mcm_cmdr_begin_create_basal_function(cd, bf_name, param_count));
+  //   } else {
+  //     // TODO -- search through a hash-table of basal functions
+  //     char buf[64];
+
+  //     // Could not find the basal function, offer to create it
+  //     // Update Prompt Panel
+  //     cd->prompt_panel->node->layout->visible = true;
+
+  //     sprintf(buf, "[%s]", cmd);
+  //     MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
+
+  //     action_button_data *abd = (action_button_data *)cd->options_buttons.items[0]->tag;
+  //     snprintf(buf, 36, "Not Found. Create %.14s%s?", cmd, strlen(cmd) > 14 ? "..." : "");
+  //     MCcall(mcu_set_button_text(cd->options_buttons.items[0], buf));
+  //     MCcall(mc_set_str(&abd->suggested_action, ".create_basal_function."));
+  //     MCcall(mc_append_to_strn(&abd->suggested_action, cmd + 1, strlen(cmd + 1) - (cmd[strlen(cmd) - 1] == '.' ? 1 : 0)));
+
+  //     // Hide the rest of the options
+  //     for(int a = 1; a < cd->options_buttons.count; ++a) {
+  //       cd->options_buttons.items[a]->node->layout->visible = false;
+  //       MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a]->node));
+  //     }
+  //   }
   // }
+  // // if(!strcmp(cmd, ".create-basal-function.")) {
+
+  // //   MCerror(8100, "TODO");
+
+  // //   *handled = true;
+  // // } else if (!strncmp(cmd, ".open-source-file.", 18)) {
+    
+  // //   MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, (void *)(cmd + 18)));
+
+  // //   *handled = true;
+  // // } else if (!strncmp(cmd, ".find-in-file.", 14)) {
+
+  //   // Assumes source file editor is opened and focused
+
+  //   // const char *event = "FIND_FUNCTION_IN_SOURCE_FILE";
+  //   // MCcall(mca_fire_event(MCM_SE_FIND_FUNCTION_PARTIAL, (void *)(cmd + 18)));
+  //   // MCcall(mca_provoke_handling(event, "set textbox text", handled));
+  //   // if(!handled) {
+  //     // MCerror(8582, "Provocation Handler does not exist for event:'%s'", event);
+  //   // }
+  //   // MCcall(MC_APP_EVENT_SOURCE_FILE_FIND, "set textbox text");
+  // // }
 
   return 0;
 }
@@ -423,7 +485,7 @@ int _mcm_cmdr_action_option_selected(mci_input_event *ie, mcu_button *button)
   else {
     if(abd->suggested_action.text[0] == '.') {
       bool handled;
-      MCcall(_mcm_cmdr_process_command(cd, abd->suggested_action.text, &handled));
+      MCcall(_mcm_cmdr_submit_command(cd, abd->suggested_action.text));
       if(!handled) {
         MCerror(9010, "Should always be handled");
       }
@@ -619,9 +681,12 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
   return 0;
 }
 
-#define AUTO_COMMANDS "+700find source file+700\r" "+700!0" \
-                      "+700.fire_app_event.MCM_SE_FIND_SOURCE_FILE.NULL+700\r" "+700!0" \
+#define AUTO_COMMANDS "+700goto source file+700\r" "+700!0" \
+                      "+700.begin_search_source_file+700\r" "+700!0" \
                       "\0"
+                      // "+700MCM_SE_FIND_SOURCE_FILE+700\r" \
+                      // "+700NULL+700\r" \
+                      // "\0"
 
 // DEBUG
 int __mcm_cmdr_debug_get_autocommand_nb (int *idx)
@@ -697,7 +762,8 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
   pthread_mutex_unlock(&cd->icp_conn.thr_lock);
 
   // Auto Commands
-  if(ft->app_secsf > cd->auto_command.last_stroke + 0.05f) {
+  if((!cd->state || cd->state->status != CST_USER_SUBMITTED)
+    && ft->app_secsf > cd->auto_command.last_stroke + 0.05f) {
     // Update time
     cd->auto_command.last_stroke = ft->app_secsf;
 
@@ -740,28 +806,17 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void __mcm_cmd_textbox_submit(mci_input_event *event, mcu_textbox *textbox) {
-  commander_data *data = (commander_data *)textbox->node->parent->parent->data;
+  commander_data *cd = (commander_data *)textbox->node->parent->parent->data;
 
   if(!textbox->contents->len) {
     // Ignore
     return;
   }
-  
-  // // Obtain (& reset) text
-  // char cmd[512];
-  // int n = snprintf(cmd, 511, "%s", textbox->contents->text);
-  // if(n >= 511) {
-  //   puts("[8811] Warning! Entered Command Too Long");
-  // }
 
-  // Attempt to process the command internally, otherwise send it to the server
-  bool handled;
-  MCVcall(_mcm_cmdr_process_command(data, textbox->contents->text, &handled));
-  if(!handled) {
-    MCVcall(_mcm_cmdr_send_command(data, textbox->contents->text));
-  }
+  // Submit command
+  MCVcall(_mcm_cmdr_submit_command(cd, textbox->contents->text));
 
-  MCVcall(mcu_set_textbox_text(data->cmd_textbox, ""));
+  MCVcall(mcu_set_textbox_text(cd->cmd_textbox, ""));
 }
 
 int mcm_cmdr_init_ui(mc_node *module_node)
@@ -920,27 +975,13 @@ int mc_cmdr_load_resources(mc_node *module_node)
 
   data->configuring_command = NULL;
   MCcall(init_hash_table(32, &data->basal_ops));
-  // hash_table_set("create basal function", (void *)project_context, &data->basal_ops);
 
   data->options_buttons.capacity = data->options_buttons.count = 0U;
-//   mod->all_processes.capacity = mod->all_processes.count = 0U;
 
-//   mod->process_stack.index = -1;
-//   mod->process_stack.state_arg = (void *)mod;
-//   mod->process_stack.all_processes = &mod->all_processes;
-//   MCcall(init_hash_table(64, &mod->process_stack.global_context));
+  data->state = NULL;
+
+  // hash_table_set("create basal function", (void *)project_context, &data->basal_ops);
 //   MCcall(init_hash_table(4, &mod->process_stack.project_contexts));
-//   for (a = 0; a < MO_OP_PROCESS_STACK_SIZE; ++a) {
-//     MCcall(init_hash_table(8, &mod->process_stack.context_maps[a]));
-//     mod->process_stack.processes[a] = NULL;
-//     mod->process_stack.steps[a] = NULL;
-//   }
-
-  // data->render_target.image = NULL;
-  // data->render_target.width = module_node->layout->preferred_width;
-  // data->render_target.height = module_node->layout->preferred_height;
-  // MCcall(mcr_create_texture_resource(data->render_target.width, data->render_target.height,
-  //                                    MVK_IMAGE_USAGE_RENDER_TARGET_2D, &data->render_target.image));
 
   return 0;
 }
