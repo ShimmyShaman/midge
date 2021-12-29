@@ -571,7 +571,7 @@ int main(int argc, const char *const *argv)
       printf("DEBUG removed '%s'\n", dirdel2);
     }
 
-    const char *filedel = "res/cmdr/begin_search_file.c";
+    const char *filedel = "res/cmdr/fire_app_event.c";
     res = stat(filedel, &stats);
     if (!res) {
       char db[256];

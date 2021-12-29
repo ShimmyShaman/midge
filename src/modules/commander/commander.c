@@ -176,7 +176,7 @@ void _mcm_cmdr_render_present(image_render_details *irq, mc_node *node)
 //////////////////////////////////// Functional Logic /////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int _mcm_cmdr_begin_create_basal_function(commander_data *cd, const char *fname)
+int _mcm_cmdr_begin_create_basal_function(commander_data *cd, const char *fname, int param_count)
 {
   // Create the path
   char source_path[512];
@@ -207,12 +207,23 @@ int _mcm_cmdr_begin_create_basal_function(commander_data *cd, const char *fname)
   MCcall(mcs_add_include_to_source_file(source_file, "<stdio.h>"));
 
   // -- Create the new function
-  char *params[1];
+  char **params = (char **)malloc(sizeof(char *) * param_count);
+  char buf[256];
+  for(int a = 0; a < param_count; ++a) {
+    sprintf(buf, "const char *param_%i", a);
+    params[a] = strdup(buf);
+  }
   // params[0] = "frame_time *ft";
   // params[1] = "void *callback_state";
   MCcall(mcs_construct_function_definition(source_file, fname, "int", 0, 0, params, source));
 
   MCcall(mca_fire_event(MC_APP_EVENT_SOURCE_FILE_OPEN_REQ, source_path));
+
+  // Free parameter declarations
+  for(int a = 0; a < param_count; ++a)
+    free(params[a]);
+  free(params);
+
 
   // MCerror(9428, "TODO:'%s'", fname);
 
@@ -314,15 +325,27 @@ int _mcm_cmdr_process_command(commander_data *cd, const char *cmd, bool *handled
   // Basal Function Creation
   if(!strncmp(cmd, ".", 1)) {
     if(!strncmp(cmd, ".create_basal_function.", 23)) {
-      const char *bf_name;
+      char bf_name[256];
+      int param_count = 0;
+
       if(strlen(cmd) > 23) {
         // Set to command parameter
-        bf_name = cmd + 23;
+        const char *c = cmd + 23;
+        while(*c != '\0' && *c != '.')
+          ++c;
+        snprintf(bf_name, c + 1 - (cmd + 23), "%s", cmd + 23);
+
+        while(*c != '\0') {
+          ++param_count;
+          ++c;
+          while(*c != '\0' && *c != '.')
+            ++c;
+        }
       } else {
         MCerror(8492, "TODO -- obtain the basal function name");
       }
 
-      MCcall(_mcm_cmdr_begin_create_basal_function(cd, bf_name));
+      MCcall(_mcm_cmdr_begin_create_basal_function(cd, bf_name, param_count));
     } else {
       // TODO -- search through a hash-table of basal functions
       char buf[64];
@@ -597,7 +620,8 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
 }
 
 #define AUTO_COMMANDS "+700find source file+700\r" "+700!0" \
-                      "+700.begin_search_file+700\r" "+700!0" "\0"
+                      "+700.fire_app_event.MCM_SE_FIND_SOURCE_FILE.NULL+700\r" "+700!0" \
+                      "\0"
 
 // DEBUG
 int __mcm_cmdr_debug_get_autocommand_nb (int *idx)
@@ -938,6 +962,7 @@ int init_commander_system(mc_node *app_root) {
   node->layout->vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM;
   node->layout->padding.left = 2;
   node->layout->padding.bottom = 2;
+  node->layout->z_layer_index = 7U;
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
   node->layout->update_layout = (void *)&mca_update_typical_node_layout;

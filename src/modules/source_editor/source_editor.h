@@ -14,6 +14,10 @@
 // int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *space_delimited_search_str}
 #define MCM_SE_EVENT_FIND_IN_FILE "MCM_SE_EVENT_FIND_IN_FILE"
 
+// int (*event_handler)(void *handler_state, void *event_args) {event_args is const char *filepath}
+// - filepath may be NULL or partially complete indicating the best match will be displayed in a file search window
+//     on top of the source editor.
+#define MCM_SE_FIND_SOURCE_FILE "MCM_SE_FIND_SOURCE_FILE"
 
 
 // typedef enum mce_source_token_type {
