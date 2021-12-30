@@ -41,23 +41,48 @@ typedef struct command_configuring {
 
 } command_configuring;
 
-typedef enum cmdi_state_type {
-  CST_NULL = 0,
-  CST_USER_SUBMITTED,
-  CST_FULFILLED,
-  CST_BAMBOOZLED
-} cmdi_state_type;
+typedef enum mcm_cmdi_type {
+  MCT_NULL = 0,
+  MCT_USER_COMMAND,
+  MCT_IDE_RESPONSE,
+  MCT_FULFILLED,
+  MCT_SEQUENCE,
+} mcm_cmdi_type;
 
-struct cmdi_state;
-typedef struct cmdi_state {
-  cmdi_state_type status;
+typedef enum mcm_response_kind {
+  MCR_NULL = 0,
+  MCR_SUGGEST_CONFIGURE_ONLY,
+} mcm_response_kind;
 
-  struct cmdi_state *parent, *prev, *next;
+struct mcm_cmdi;
+typedef struct mcm_cmdi {
+  mcm_cmdi_type type;
 
   union {
-    char str[512];
+    // Command
+    struct {
+      struct mcm_cmdi *parent, *prev, *next;
+
+      char str[512];
+    } c;
+
+    // Sequence
+    struct {
+      struct mcm_cmdi *parent;
+
+      struct {
+        uint32_t *count, capacity;
+        struct mcm_cmdi **items;
+      } constituents;
+    } s;
+
+    // Response
+    struct {
+      struct mcm_cmdi *provocation;
+      mcm_response_kind kind;
+    } r;
   };
-} cmdi_state;
+} mcm_cmdi;
 
 typedef struct commander_data {
   mc_node *node;
@@ -115,7 +140,7 @@ typedef struct commander_data {
   } auto_command;
   // DEBUG
 
-  cmdi_state *state;
+  mcm_cmdi *hub;
 
 } commander_data;
 
@@ -126,13 +151,68 @@ typedef struct action_button_data {
   mc_str suggested_action, action_detail;
 } action_button_data;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////// Rendering /////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+int _mcm_cmdr_update_node_layout(mc_node *node, mc_rectf const *available_area) {
+  // puts("_mcm_cmdr_update_node_layout");
+  MCcall(mca_update_typical_node_layout_partially(node, available_area, true, true, true, true, false));
+
+  // TODO -- thread lock for async?
+  commander_data *cd = (commander_data *)node->data;
+
+  // if(!cd->hub) {
+  //   // Display just the thing
+  //   cd->prompt_panel->node->layout->visible = false;
+  //   cd->cfg_status_panel->node->layout->visible = false;
+  // } else {
+  //   cd->cfg_status_panel->node->layout->visible = false;
+
+  //   switch (cd->hub->type)
+  //   {
+  //     case MCT_IDE_RESPONSE: {
+  //       cd->prompt_panel->node->layout->visible = true;
+
+  //       cd->prompt_panel.
+
+
+  //     } break;
+  //   default:
+  //     MCProgress(2222);
+  //   }
+  // }
+
+  // Children
+  mc_node *child;
+  mca_node_layout *layout = node->layout, *child_layout;
+  if (node->children) {
+    for (int a = 0; a < node->children->count; ++a) {
+      child = node->children->items[a];
+      child_layout = child->layout;
+
+      if (child_layout && child_layout->update_layout && child_layout->__requires_layout_update) {
+        // TODO fptr casting
+        void (*update_layout)(mc_node *, mc_rectf *) = (void (*)(mc_node *, mc_rectf *))child_layout->update_layout;
+        update_layout(child, &layout->__bounds);
+      }
+    }
+  }
+  
+  return 0;
+}
+
+
 void _mcm_cmdr_render_mod(image_render_details *irq, mc_node *node) {
-  commander_data *data = (commander_data *)node->data;
+  commander_data *cd = (commander_data *)node->data;
 
   // mcr_issue_render_command_colored_quad(irq, (unsigned int)node->layout->__bounds.x,
   //                                        (unsigned int)node->layout->__bounds.y, 
   //                                        (unsigned int)node->layout->__bounds.width,
   //                                        (unsigned int)node->layout->__bounds.height, COLOR_OLIVE);
+
+  printf("v:%i\n", cd->prompt_panel->node->layout->visible);
 
   // Children
   // printf("childcount:%i\n", node->children->count);
@@ -338,14 +418,101 @@ int _mcm_cmdr_configure_command(commander_data *cd)
   return 0;
 }
 
-int _mcm_cmdr_process_state(commander_data *cd)
+int _mcm_cmdr_update_ui_after_hub_set(commander_data *cd)
 {
-  if(cd->state->status != CST_USER_SUBMITTED) {
+  // cd->prompt_panel->node->layout->visible = false;
+  // cd->cfg_status_panel->node->layout->visible = false;
+
+  mcm_cmdi *hub = cd->hub;
+  switch (hub->type)
+  {
+    case MCT_USER_COMMAND: {
+      // cd->prompt_panel->node->layout->visible = true;
+
+      // cd->prompt_panel.
+    } break;
+    case MCT_IDE_RESPONSE: {
+      switch (hub->r.kind)
+      {
+        // // Fill the buttons
+        // int a;
+        // for(a = 0; a < cd->icp_conn.server_responses.count && a + 1 < cd->options_buttons.count; ++a) {
+        //   action_button_data *abd = (action_button_data *)cd->options_buttons.items[a + 1]->tag;
+
+        //   sprintf(buf, "%i%%", (int)(cd->icp_conn.server_responses.items[a].prob * 100.f));
+        //   while(strlen(buf) < 4)
+        //     strcat(buf, " ");
+        //   strcat(buf, "- ");
+        //   strcat(buf, cd->icp_conn.server_responses.items[a].action_name.text);
+        //   MCcall(mcu_set_button_text(cd->options_buttons.items[a + 1], buf));
+
+        //   MCcall(mc_set_str(&abd->suggested_action, cd->icp_conn.server_responses.items[a].action_name.text));
+        //   MCcall(mc_set_str(&abd->action_detail, cd->icp_conn.server_responses.items[a].action_detail.text));
+        //   abd->prob = cd->icp_conn.server_responses.items[a].prob;
+        // }
+        // for(; a + 1 < cd->options_buttons.count; ++a) {
+        //   cd->options_buttons.items[a + 1]->node->layout->visible = false;
+        //   MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a + 1]->node));
+        // }
+
+      case MCR_SUGGEST_CONFIGURE_ONLY:{
+        // Update and show the prompt panel
+        cd->prompt_panel->node->layout->visible = true;
+
+        char buf[256];
+        sprintf(buf, "[%s]", hub->r.provocation->c.str);
+        MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
+
+        // Show me the way
+        mcu_button *button = (mcu_button *)cd->options_buttons.items[0];
+        action_button_data *abd = (action_button_data *)button->tag;
+        MCcall(mcu_set_button_text(button, "Configure..."));
+        MCcall(mc_set_str(&abd->suggested_action, ""));
+        MCcall(mca_set_node_requires_layout_update(button->node));
+
+        // Hide the remaining buttons
+        for(int a = 1; a < cd->options_buttons.count; ++a) {
+          button = (mcu_button *)cd->options_buttons.items[a];
+
+          button->node->layout->visible = false;
+          MCcall(mca_set_node_requires_layout_update(button->node));
+        }
+  printf("vvv:%i\n", cd->prompt_panel->node->layout->visible);
+      } break;
+      default:
+        printf("%i", hub->r.kind);
+        MCProgress(3333);
+      }
+    } break;
+  default:
+    printf("%i", hub->type);
+    MCProgress(2222);
+  }
+  puts("done");
+
+  return 0;
+}
+
+int _mcm_cmdr_process_hub(commander_data *cd)
+{
+  if(cd->hub->type != MCT_USER_COMMAND) {
     MCerror(9921, "TODO");
   }
   
-  printf("cd:'%s'\n", cd->state->str);
-  MCProgress(4242);
+  mcm_cmdi *cmd = cd->hub;
+  printf("user-command:'%s'\n", cmd->c.str);
+
+  if(!strcmp(cmd->c.str, "ss")) {
+    MCerror(58528, "TODO");
+  }
+
+  mcm_cmdi *rsp = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
+  rsp->type = MCT_IDE_RESPONSE;
+  rsp->r.provocation = cd->hub;
+  rsp->r.kind = MCR_SUGGEST_CONFIGURE_ONLY;
+
+  cd->hub = rsp;
+  MCcall(_mcm_cmdr_update_ui_after_hub_set(cd));
 
   return 0;
 }
@@ -361,29 +528,25 @@ int _mcm_cmdr_submit_command(commander_data *cd, const char *submitted_cmd)
     MCerror(4142, "Entered Command Too Long");
   }
 
+  // TODO Validate state is okay for new user command
+
   // Copy Command
-  cmdi_state *cmd = (cmdi_state *)malloc(sizeof(cmdi_state));
-  cmd->status = CST_USER_SUBMITTED;
-  strcpy(cmd->str, submitted_cmd);
+  mcm_cmdi *cmd = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
+  cmd->type = MCT_USER_COMMAND;
+  strcpy(cmd->c.str, submitted_cmd);
+  cmd->c.parent = NULL;
+  cmd->c.next = NULL;
+  cmd->c.prev = cd->hub;
+
+  if(cd->hub) {
+    MCProgress(1111);
+  }
+  
+  cd->hub = cmd;
+
+  MCcall(_mcm_cmdr_update_ui_after_hub_set(cd));
 
   // TODO -- go async from here?
-
-  // Set new state
-  if(!cd->state) {
-    // New Process
-    cmd->parent = cmd->prev = cmd->next = NULL;
-
-    cd->state = cmd;
-  } else {
-    switch (cd->state->status)
-    {
-    default: {
-      MCerror(8858, "TODO");
-      } break;
-    }
-  }
-
-  MCcall(_mcm_cmdr_process_state(cd));
   
 
   // // Basal Function Creation
@@ -682,8 +845,8 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
 }
 
 #define AUTO_COMMANDS "+700goto source file+700\r" "+700!0" \
-                      "+700.begin_search_source_file+700\r" "+700!0" \
                       "\0"
+                      // "+700.begin_search_source_file+700\r" "+700!0" \
                       // "+700MCM_SE_FIND_SOURCE_FILE+700\r" \
                       // "+700NULL+700\r" \
                       // "\0"
@@ -706,7 +869,7 @@ int __mcm_cmdr_debug_get_autocommand_nb (int *idx)
 
   return v;
 }
-// DEBUG
+// DEBUG5
 
 int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
   commander_data *cd = (commander_data *)state;
@@ -723,46 +886,18 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
     printf("server responded with %u possible actions for cmd:'%s'. Highest prob: %i\n", cd->icp_conn.server_responses.count,
       cd->icp_conn.server_responses.cmd, (int)(cd->icp_conn.server_responses.items[0].prob * 100));
 
-    // Update and show the prompt panel
-    strcpy(cd->prompt_cmd, cd->icp_conn.server_responses.cmd);
-    cd->prompt_panel->node->layout->visible = true;
-
-    char buf[256];
-    sprintf(buf, "[%s]", cd->icp_conn.server_responses.cmd);
-    MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
-
-    // Show me the way
-    action_button_data *abd = (action_button_data *)cd->options_buttons.items[0]->tag;
-    MCcall(mcu_set_button_text(cd->options_buttons.items[0], "Configure Command"));
-    MCcall(mc_set_str(&abd->suggested_action, ""));
-
-    // Fill the buttons
-    int a;
-    for(a = 0; a < cd->icp_conn.server_responses.count && a + 1 < cd->options_buttons.count; ++a) {
-      action_button_data *abd = (action_button_data *)cd->options_buttons.items[a + 1]->tag;
-
-      sprintf(buf, "%i%%", (int)(cd->icp_conn.server_responses.items[a].prob * 100.f));
-      while(strlen(buf) < 4)
-        strcat(buf, " ");
-      strcat(buf, "- ");
-      strcat(buf, cd->icp_conn.server_responses.items[a].action_name.text);
-      MCcall(mcu_set_button_text(cd->options_buttons.items[a + 1], buf));
-
-      MCcall(mc_set_str(&abd->suggested_action, cd->icp_conn.server_responses.items[a].action_name.text));
-      MCcall(mc_set_str(&abd->action_detail, cd->icp_conn.server_responses.items[a].action_detail.text));
-      abd->prob = cd->icp_conn.server_responses.items[a].prob;
-    }
-    for(; a + 1 < cd->options_buttons.count; ++a) {
-      cd->options_buttons.items[a + 1]->node->layout->visible = false;
-      MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a + 1]->node));
-    }
+    MCProgress(8471);
     
     cd->icp_conn.server_responses.count = 0;
   }
   pthread_mutex_unlock(&cd->icp_conn.thr_lock);
 
+  if(cd->hub && cd->hub->type == MCT_USER_COMMAND) {
+    MCcall(_mcm_cmdr_process_hub(cd));
+  }
+
   // Auto Commands
-  if((!cd->state || cd->state->status != CST_USER_SUBMITTED)
+  if((!cd->hub || cd->hub->type != MCT_USER_COMMAND)
     && ft->app_secsf > cd->auto_command.last_stroke + 0.05f) {
     // Update time
     cd->auto_command.last_stroke = ft->app_secsf;
@@ -978,7 +1113,7 @@ int mc_cmdr_load_resources(mc_node *module_node)
 
   data->options_buttons.capacity = data->options_buttons.count = 0U;
 
-  data->state = NULL;
+  data->hub = NULL;
 
   // hash_table_set("create basal function", (void *)project_context, &data->basal_ops);
 //   MCcall(init_hash_table(4, &mod->process_stack.project_contexts));
@@ -1006,7 +1141,7 @@ int init_commander_system(mc_node *app_root) {
   node->layout->z_layer_index = 7U;
 
   node->layout->determine_layout_extents = (void *)&mca_determine_typical_node_extents;
-  node->layout->update_layout = (void *)&mca_update_typical_node_layout;
+  node->layout->update_layout = (void *)&mca_update_typical_node_layout;//_mcm_cmdr_update_node_layout;
   // node->layout->render_headless = (void *)&_mcm_cmdr_render_mod_headless;
   node->layout->render_present = (void *)&_mcm_cmdr_render_present;
   node->layout->handle_input_event = (void *)&_mcm_cmdr_handle_input;

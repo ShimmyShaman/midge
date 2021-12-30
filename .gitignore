@@ -27,3 +27,6 @@ projects/**
 !projects/cube_template**
 !projects/empty_project**
 background copy.jpg
+
+# Temp
+src/main/main.c
