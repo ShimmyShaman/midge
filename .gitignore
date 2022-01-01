@@ -29,4 +29,4 @@ projects/**
 background copy.jpg
 
 # Temp
-src/main/main.c
+main/main.c

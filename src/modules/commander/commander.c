@@ -44,9 +44,8 @@ typedef struct command_configuring {
 typedef enum mcm_cmdi_type {
   MCT_NULL = 0,
   MCT_USER_COMMAND,
-  MCT_IDE_RESPONSE,
-  MCT_FULFILLED,
-  MCT_SEQUENCE,
+  MCT_IDE_UNCERTAINTY,
+  MCT_IDE_QUERY,
 } mcm_cmdi_type;
 
 typedef enum mcm_response_kind {
@@ -57,28 +56,16 @@ typedef enum mcm_response_kind {
 struct mcm_cmdi;
 typedef struct mcm_cmdi {
   mcm_cmdi_type type;
+  struct mcm_cmdi *prev, *next;
 
   union {
     // Command
     struct {
-      struct mcm_cmdi *parent, *prev, *next;
-
       char str[512];
     } c;
 
-    // Sequence
-    struct {
-      struct mcm_cmdi *parent;
-
-      struct {
-        uint32_t *count, capacity;
-        struct mcm_cmdi **items;
-      } constituents;
-    } s;
-
     // Response
     struct {
-      struct mcm_cmdi *provocation;
       mcm_response_kind kind;
     } r;
   };
@@ -124,7 +111,6 @@ typedef struct commander_data {
 
   hash_table_t basal_ops;
 
-  char prompt_cmd[512];
   mcu_panel *prompt_panel;
   mcu_textblock *prompt_textblock;
   struct {
@@ -212,7 +198,7 @@ void _mcm_cmdr_render_mod(image_render_details *irq, mc_node *node) {
   //                                        (unsigned int)node->layout->__bounds.width,
   //                                        (unsigned int)node->layout->__bounds.height, COLOR_OLIVE);
 
-  printf("v:%i\n", cd->prompt_panel->node->layout->visible);
+  // printf("v:%i\n", cd->prompt_panel->node->layout->visible);
 
   // Children
   // printf("childcount:%i\n", node->children->count);
@@ -403,7 +389,7 @@ int _mcm_cmdr_configure_command(commander_data *cd)
   // cd->configuring_command
   command_configuring *cmd_cfg = (command_configuring *)malloc(sizeof(command_configuring));
   cmd_cfg->parent = cd->configuring_command;
-  cmd_cfg->command_text = strdup(cd->prompt_cmd);
+  cmd_cfg->command_text = strdup(cd->hub->c.str);
   cmd_cfg->sequence.capacity = cmd_cfg->sequence.count = 0U;
     
   cd->configuring_command = cmd_cfg;
@@ -411,7 +397,7 @@ int _mcm_cmdr_configure_command(commander_data *cd)
   // Update the display
   cd->cfg_status_panel->node->layout->visible = true;
   char buf[512];
-  sprintf(buf, "Configuring '%s'...", cd->prompt_cmd);
+  sprintf(buf, "Configuring '%s'...", cmd_cfg->command_text);
   MCcall(mcu_set_textblock_text(cd->config_textblock, buf));
   MCcall(mca_set_node_requires_layout_update(cd->cfg_status_panel->node));
 
@@ -431,7 +417,7 @@ int _mcm_cmdr_update_ui_after_hub_set(commander_data *cd)
 
       // cd->prompt_panel.
     } break;
-    case MCT_IDE_RESPONSE: {
+    case MCT_IDE_UNCERTAINTY: {
       switch (hub->r.kind)
       {
         // // Fill the buttons
@@ -460,14 +446,14 @@ int _mcm_cmdr_update_ui_after_hub_set(commander_data *cd)
         cd->prompt_panel->node->layout->visible = true;
 
         char buf[256];
-        sprintf(buf, "[%s]", hub->r.provocation->c.str);
+        sprintf(buf, "[%s]", hub->prev->c.str);
         MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
 
         // Show me the way
         mcu_button *button = (mcu_button *)cd->options_buttons.items[0];
         action_button_data *abd = (action_button_data *)button->tag;
         MCcall(mcu_set_button_text(button, "Configure..."));
-        MCcall(mc_set_str(&abd->suggested_action, ""));
+        MCcall(mc_set_str(&abd->suggested_action, ".configure"));
         MCcall(mca_set_node_requires_layout_update(button->node));
 
         // Hide the remaining buttons
@@ -477,7 +463,6 @@ int _mcm_cmdr_update_ui_after_hub_set(commander_data *cd)
           button->node->layout->visible = false;
           MCcall(mca_set_node_requires_layout_update(button->node));
         }
-  printf("vvv:%i\n", cd->prompt_panel->node->layout->visible);
       } break;
       default:
         printf("%i", hub->r.kind);
@@ -502,16 +487,29 @@ int _mcm_cmdr_process_hub(commander_data *cd)
   mcm_cmdi *cmd = cd->hub;
   printf("user-command:'%s'\n", cmd->c.str);
 
-  if(!strcmp(cmd->c.str, "ss")) {
-    MCerror(58528, "TODO");
+  if(!strcmp(cmd->c.str, ".configure")) {
+    if(!cmd->prev || cmd->prev->type != MCT_IDE_UNCERTAINTY || cmd->prev->prev->type != MCT_USER_COMMAND) {
+      MCerror(9488, "TODO");
+    }
+
+    // Reverse to the command and configure it
+    cd->hub = cmd->prev->prev;
+    free(cmd->prev);
+    free(cmd);
+
+    _mcm_cmdr_configure_command(cd);
+  }
+  else {
+    mcm_cmdi *rsp = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
+    rsp->prev = cd->hub;
+    cd->hub->next = rsp->prev;
+
+    rsp->type = MCT_IDE_UNCERTAINTY;
+    rsp->r.kind = MCR_SUGGEST_CONFIGURE_ONLY;
+
+    cd->hub = rsp;
   }
 
-  mcm_cmdi *rsp = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
-  rsp->type = MCT_IDE_RESPONSE;
-  rsp->r.provocation = cd->hub;
-  rsp->r.kind = MCR_SUGGEST_CONFIGURE_ONLY;
-
-  cd->hub = rsp;
   MCcall(_mcm_cmdr_update_ui_after_hub_set(cd));
 
   return 0;
@@ -532,18 +530,24 @@ int _mcm_cmdr_submit_command(commander_data *cd, const char *submitted_cmd)
 
   // Copy Command
   mcm_cmdi *cmd = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
-  cmd->type = MCT_USER_COMMAND;
+  cmd->prev = cd->hub;
   strcpy(cmd->c.str, submitted_cmd);
-  cmd->c.parent = NULL;
-  cmd->c.next = NULL;
-  cmd->c.prev = cd->hub;
-
-  if(cd->hub) {
-    MCProgress(1111);
-  }
+  cmd->type = MCT_USER_COMMAND;
   
-  cd->hub = cmd;
+  if(cd->hub) {
+    cd->hub->next = cmd;
+    // switch (cd->hub->type)
+    // {
+    //   case MCT_IDE_UNCERTAINTY: {
+    //   } break;
+    //   default: {
+    //     MCerror(8491, "TODO: %i", (int)cd->hub->type);
+    //   } break;
+    // }
+  } else {
+  }
 
+  cd->hub = cmd;
   MCcall(_mcm_cmdr_update_ui_after_hub_set(cd));
 
   // TODO -- go async from here?
@@ -844,7 +848,8 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
   return 0;
 }
 
-#define AUTO_COMMANDS "+700goto source file+700\r" "+700!0" \
+#define AUTO_COMMANDS "+700goto source file+700\r" \
+                      "+700.configure+700\r" \
                       "\0"
                       // "+700.begin_search_source_file+700\r" "+700!0" \
                       // "+700MCM_SE_FIND_SOURCE_FILE+700\r" \
@@ -916,7 +921,6 @@ int _mcm_cmdr_update_connection(frame_time *ft, void *state) {
         int btn_idx = __mcm_cmdr_debug_get_autocommand_nb(&cd->auto_command.cidx);
 
         MCcall(mcu_invoke_button_click(cd->options_buttons.items[btn_idx]));
-        
       } break;
       case '\r': {
         MCcall(mcu_invoke_textbox_submit(cd->cmd_textbox));

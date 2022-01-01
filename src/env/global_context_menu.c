@@ -90,7 +90,7 @@ void mca_global_context_menu_create_context_list(node_type node_type,
   // Argument check for duplicates
   for (int i = 0; i < global_data->ui_state->global_context_menu.context_options.count; ++i) {
     if (global_data->ui_state->global_context_menu.context_options.items[i]->node_type == node_type) {
-      MCerror(7874, "context menu options list already exists for node-type:%i", node_type);
+      MCerror(7875, "context menu options list already exists for node-type:%i", node_type);
     }
   }
 
