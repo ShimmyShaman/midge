@@ -78,7 +78,9 @@
         "pthread.h": "c",
         "render_util.h": "c",
         "mc_source.h": "c",
-        "mc_file.h": "c"
+        "mc_file.h": "c",
+        "in.h": "c",
+        "c_parser_lexer.h": "c"
     },
     "powermode.enabled": true,
     "powermode.enableShake": false

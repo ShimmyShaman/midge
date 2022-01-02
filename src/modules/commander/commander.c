@@ -9,10 +9,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-// #include <dirent.h>
+#include <dirent.h>
 #include <unistd.h>
 
 #include "core/midge_app.h"
+#include "core/mc_source.h"
 #include "mc_error_handling.h"
 #include "render/render_common.h"
 
@@ -29,23 +30,12 @@
 
 #define MAX_COMMAND_STR_LEN 512
 
-struct command_configuring;
-typedef struct command_configuring {
-  struct command_configuring *parent;
-  char *command_text;
-
-  struct {
-    uint32_t count, capacity;
-    char **items;
-  } sequence;
-
-} command_configuring;
-
 typedef enum mcm_cmdi_type {
   MCT_NULL = 0,
   MCT_USER_COMMAND,
   MCT_IDE_UNCERTAINTY,
   MCT_IDE_QUERY,
+  MCT_COMMAND_CONFIG,
 } mcm_cmdi_type;
 
 typedef enum mcm_response_kind {
@@ -63,6 +53,16 @@ typedef struct mcm_cmdi {
     struct {
       char str[512];
     } c;
+
+    // Configure
+    struct {
+      struct mcm_cmdi *cmd;
+
+      struct {
+        uint32_t count, capacity;
+        char **items;
+      } sequence;
+    } f;
 
     // Response
     struct {
@@ -95,7 +95,7 @@ typedef struct commander_data {
    
   } icp_conn;
   
-  command_configuring *configuring_command;
+  // command_configuring *configuring_command;
 
   struct {
     unsigned int width, height;
@@ -125,6 +125,11 @@ typedef struct commander_data {
     float last_stroke;
   } auto_command;
   // DEBUG
+
+  struct {
+    uint32_t count, capacity;
+    mcm_cmdi **items;
+  } config_stack;
 
   mcm_cmdi *hub;
 
@@ -384,96 +389,109 @@ int _mcm_cmdr_execute_process(commander_data *data, mci_input_event *ie, const c
   return 0;
 }
 
-int _mcm_cmdr_configure_command(commander_data *cd)
+int _mcm_cmdr_update_ui_after_hub_set(commander_data *cd)
 {
-  // cd->configuring_command
-  command_configuring *cmd_cfg = (command_configuring *)malloc(sizeof(command_configuring));
-  cmd_cfg->parent = cd->configuring_command;
-  cmd_cfg->command_text = strdup(cd->hub->c.str);
-  cmd_cfg->sequence.capacity = cmd_cfg->sequence.count = 0U;
-    
-  cd->configuring_command = cmd_cfg;
+  mcm_cmdi *hub = cd->hub;
+  if(!hub) {
+    cd->prompt_panel->node->layout->visible = false;
+    cd->cfg_status_panel->node->layout->visible = cd->config_stack.count;
+  } else {
+    switch (hub->type)
+    {
+      case MCT_USER_COMMAND: {
+        cd->prompt_panel->node->layout->visible = false;
+        // Don't change
+        // atm...
+      } break;
+      case MCT_IDE_UNCERTAINTY: {
+        switch (hub->r.kind)
+        {
+          // // Fill the buttons
+          // int a;
+          // for(a = 0; a < cd->icp_conn.server_responses.count && a + 1 < cd->options_buttons.count; ++a) {
+          //   action_button_data *abd = (action_button_data *)cd->options_buttons.items[a + 1]->tag;
 
-  // Update the display
-  cd->cfg_status_panel->node->layout->visible = true;
-  char buf[512];
-  sprintf(buf, "Configuring '%s'...", cmd_cfg->command_text);
-  MCcall(mcu_set_textblock_text(cd->config_textblock, buf));
-  MCcall(mca_set_node_requires_layout_update(cd->cfg_status_panel->node));
+          //   sprintf(buf, "%i%%", (int)(cd->icp_conn.server_responses.items[a].prob * 100.f));
+          //   while(strlen(buf) < 4)
+          //     strcat(buf, " ");
+          //   strcat(buf, "- ");
+          //   strcat(buf, cd->icp_conn.server_responses.items[a].action_name.text);
+          //   MCcall(mcu_set_button_text(cd->options_buttons.items[a + 1], buf));
+
+          //   MCcall(mc_set_str(&abd->suggested_action, cd->icp_conn.server_responses.items[a].action_name.text));
+          //   MCcall(mc_set_str(&abd->action_detail, cd->icp_conn.server_responses.items[a].action_detail.text));
+          //   abd->prob = cd->icp_conn.server_responses.items[a].prob;
+          // }
+          // for(; a + 1 < cd->options_buttons.count; ++a) {
+          //   cd->options_buttons.items[a + 1]->node->layout->visible = false;
+          //   MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a + 1]->node));
+          // }
+
+        case MCR_SUGGEST_CONFIGURE_ONLY:{
+          // Update and show the prompt panel
+          cd->prompt_panel->node->layout->visible = true;
+
+          char buf[256];
+          sprintf(buf, "[%s]", hub->prev->c.str);
+          MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
+
+          // Show me the way
+          mcu_button *button = (mcu_button *)cd->options_buttons.items[0];
+          action_button_data *abd = (action_button_data *)button->tag;
+          MCcall(mcu_set_button_text(button, "Configure..."));
+          MCcall(mc_set_str(&abd->suggested_action, ".configure"));
+          MCcall(mca_set_node_requires_layout_update(button->node));
+
+          // Hide the remaining buttons
+          for(int a = 1; a < cd->options_buttons.count; ++a) {
+            button = (mcu_button *)cd->options_buttons.items[a];
+
+            button->node->layout->visible = false;
+            MCcall(mca_set_node_requires_layout_update(button->node));
+          }
+        } break;
+        default:
+          printf("%i", hub->r.kind);
+          MCProgress(3333);
+        }
+      } break;
+    default:
+      printf("%i", hub->type);
+      MCProgress(2222);
+    }
+  }
+  
+  if(cd->config_stack.count) {
+    cd->cfg_status_panel->node->layout->visible = true;
+
+    mcm_cmdi *top_cfg_cmd = cd->config_stack.items[cd->config_stack.count - 1];
+
+    char buf[64];
+    sprintf(buf, "[%i->]Cfg:'%s'...", cd->config_stack.count - 1, top_cfg_cmd->f.cmd->c.str);
+    MCcall(mcu_set_textblock_text(cd->config_textblock, buf));
+    MCcall(mca_set_node_requires_layout_update(cd->cfg_status_panel->node));
+  } else {
+    cd->cfg_status_panel->node->layout->visible = false;
+  }
 
   return 0;
 }
 
-int _mcm_cmdr_update_ui_after_hub_set(commander_data *cd)
+int _mcm_cmdr_configure_command(commander_data *cd, mcm_cmdi *command_to_configure)
 {
-  // cd->prompt_panel->node->layout->visible = false;
-  // cd->cfg_status_panel->node->layout->visible = false;
+  // Construct the cfg cmd
+  mcm_cmdi *cfg_cmd = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
+  cfg_cmd->type = MCT_COMMAND_CONFIG;
+  cfg_cmd->prev = cd->hub;
+  cfg_cmd->f.cmd = command_to_configure;
+  cfg_cmd->f.sequence.capacity = cfg_cmd->f.sequence.count = 0U;
 
-  mcm_cmdi *hub = cd->hub;
-  switch (hub->type)
-  {
-    case MCT_USER_COMMAND: {
-      // cd->prompt_panel->node->layout->visible = true;
+  // Add the current command chain to the configure stack and begin anew
+  MCcall(append_to_collection((void ***)&cd->config_stack.items, &cd->config_stack.capacity,
+    &cd->config_stack.count, cfg_cmd));
+  cd->hub = NULL;
 
-      // cd->prompt_panel.
-    } break;
-    case MCT_IDE_UNCERTAINTY: {
-      switch (hub->r.kind)
-      {
-        // // Fill the buttons
-        // int a;
-        // for(a = 0; a < cd->icp_conn.server_responses.count && a + 1 < cd->options_buttons.count; ++a) {
-        //   action_button_data *abd = (action_button_data *)cd->options_buttons.items[a + 1]->tag;
-
-        //   sprintf(buf, "%i%%", (int)(cd->icp_conn.server_responses.items[a].prob * 100.f));
-        //   while(strlen(buf) < 4)
-        //     strcat(buf, " ");
-        //   strcat(buf, "- ");
-        //   strcat(buf, cd->icp_conn.server_responses.items[a].action_name.text);
-        //   MCcall(mcu_set_button_text(cd->options_buttons.items[a + 1], buf));
-
-        //   MCcall(mc_set_str(&abd->suggested_action, cd->icp_conn.server_responses.items[a].action_name.text));
-        //   MCcall(mc_set_str(&abd->action_detail, cd->icp_conn.server_responses.items[a].action_detail.text));
-        //   abd->prob = cd->icp_conn.server_responses.items[a].prob;
-        // }
-        // for(; a + 1 < cd->options_buttons.count; ++a) {
-        //   cd->options_buttons.items[a + 1]->node->layout->visible = false;
-        //   MCcall(mca_set_node_requires_layout_update(cd->options_buttons.items[a + 1]->node));
-        // }
-
-      case MCR_SUGGEST_CONFIGURE_ONLY:{
-        // Update and show the prompt panel
-        cd->prompt_panel->node->layout->visible = true;
-
-        char buf[256];
-        sprintf(buf, "[%s]", hub->prev->c.str);
-        MCcall(mcu_set_textblock_text(cd->prompt_textblock, buf));
-
-        // Show me the way
-        mcu_button *button = (mcu_button *)cd->options_buttons.items[0];
-        action_button_data *abd = (action_button_data *)button->tag;
-        MCcall(mcu_set_button_text(button, "Configure..."));
-        MCcall(mc_set_str(&abd->suggested_action, ".configure"));
-        MCcall(mca_set_node_requires_layout_update(button->node));
-
-        // Hide the remaining buttons
-        for(int a = 1; a < cd->options_buttons.count; ++a) {
-          button = (mcu_button *)cd->options_buttons.items[a];
-
-          button->node->layout->visible = false;
-          MCcall(mca_set_node_requires_layout_update(button->node));
-        }
-      } break;
-      default:
-        printf("%i", hub->r.kind);
-        MCProgress(3333);
-      }
-    } break;
-  default:
-    printf("%i", hub->type);
-    MCProgress(2222);
-  }
-  puts("done");
+  MCcall(_mcm_cmdr_update_ui_after_hub_set(cd));
 
   return 0;
 }
@@ -497,7 +515,8 @@ int _mcm_cmdr_process_hub(commander_data *cd)
     free(cmd->prev);
     free(cmd);
 
-    _mcm_cmdr_configure_command(cd);
+    printf("back-to:'%s'\n", cd->hub->c.str);
+    MCcall(_mcm_cmdr_configure_command(cd, cd->hub));
   }
   else {
     mcm_cmdi *rsp = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
@@ -639,15 +658,16 @@ int _mcm_cmdr_action_option_selected(mci_input_event *ie, mcu_button *button)
 
   if(!abd->suggested_action.len) {
     // Increase configuration depth
-    MCcall(_mcm_cmdr_configure_command(cd));
+    MCProgress(84881);
+    // MCcall(_mcm_cmdr_configure_command(cd));
 
-    // Hide the prompt panel
-    cd->prompt_panel->node->layout->visible = false;
-    MCcall(mca_set_node_requires_layout_update(cd->prompt_panel->node));
+    // // Hide the prompt panel
+    // cd->prompt_panel->node->layout->visible = false;
+    // MCcall(mca_set_node_requires_layout_update(cd->prompt_panel->node));
 
-    // Show the config-status panel
-    cd->cfg_status_panel->node->layout->visible = true;
-    MCcall(mca_set_node_requires_layout_update(cd->cfg_status_panel->node));
+    // // Show the config-status panel
+    // cd->cfg_status_panel->node->layout->visible = true;
+    // MCcall(mca_set_node_requires_layout_update(cd->cfg_status_panel->node));
   }
   else {
     if(abd->suggested_action.text[0] == '.') {
@@ -848,10 +868,13 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
   return 0;
 }
 
-#define AUTO_COMMANDS "+700goto source file+700\r" \
+#define AUTO_COMMANDS \
+                      "+700go to set textbox text+700\r" \
                       "+700.configure+700\r" \
+                      "+700open textbox.c+700\r" \
+                      "+700.configure+700\r" \
+                      "+700.begin_search_source_file+700\r" \
                       "\0"
-                      // "+700.begin_search_source_file+700\r" "+700!0" \
                       // "+700MCM_SE_FIND_SOURCE_FILE+700\r" \
                       // "+700NULL+700\r" \
                       // "\0"
@@ -958,7 +981,7 @@ void __mcm_cmd_textbox_submit(mci_input_event *event, mcu_textbox *textbox) {
   MCVcall(mcu_set_textbox_text(cd->cmd_textbox, ""));
 }
 
-int mcm_cmdr_init_ui(mc_node *module_node)
+int _mcm_cmdr_init_ui(mc_node *module_node)
 {
   commander_data *data = (commander_data *)module_node->data;
 
@@ -1095,32 +1118,103 @@ int mcm_cmdr_init_ui(mc_node *module_node)
   return 0;
 }
 
-int mc_cmdr_load_resources(mc_node *module_node)
+int _mcm_cmdr_interpret_basal_source(commander_data *cd)
+{
+  midge_app_info *app_info;
+  mc_obtain_midge_app_info(&app_info);
+
+  const char *basal_fn_dir = "res/cmdr";
+
+  DIR *dir;
+  struct dirent *ent;
+  char buf[256];
+  if ((dir = opendir(basal_fn_dir)) != NULL) {
+    /* print all the files and directories within directory */
+    while ((ent = readdir(dir)) != NULL) {
+      // Ignore the . / .. entries
+      if (!strncmp(ent->d_name, ".", 1))
+        continue;
+
+      // // Ignore the context data file
+      // if (!strcmp(ent->d_name, "context"))
+      //   continue;
+
+      if(strncmp(ent->d_name + strlen(ent->d_name) - 2, ".c", 3)) {
+        continue;
+      }
+      
+      sprintf(buf, "%s/%s", basal_fn_dir, ent->d_name);
+      printf("file-found:'%s'\n", buf);
+
+      MCcall(mcs_interpret_file(buf));
+
+      function_info *fi;
+
+      snprintf(buf, strlen(ent->d_name) - 2, "%s", ent->d_name);
+      MCcall(find_function_info(buf, &fi));
+
+      printf("fi = %p\n");
+      if(fi) {
+        printf("fi: %s\n", fi->name);
+      }
+
+      // // Read the file
+      // sprintf(buf, "%s/%s", basal_fn_dir, ent->d_name);
+      // char *file_text;
+      // MCcall(read_file_text(buf, &file_text));
+
+      // // Parse the process
+      // mo_operational_process *process;
+      // printf("interpreting mo process...'%s'\n", ent->d_name);
+      // MCcall(mc_mo_parse_serialized_process(&mod->process_stack, file_text, &process));
+      // free(file_text);
+
+      // // Attach the process to the system
+      // MCcall(append_to_collection((void ***)&mod->all_processes.items, &mod->all_processes.capacity,
+      //                             &mod->all_processes.count, process));
+
+      // MCcall(_mc_mo_update_options_display(mod));
+    }
+    closedir(dir);
+  }
+  else {
+    // Directory doesn't exist
+    // -- there are no MOs for this project
+
+    // perror("could not open directory");
+    // MCerror(7918, "Could not open directory '%s'", modir);
+    // return EXIT_FAILURE;
+  }
+
+  return 0;
+}
+
+int _mcm_cmdr_load_resources(mc_node *module_node)
 {
   int a;
 
   // Initialize
-  commander_data *data = (commander_data *)malloc(sizeof(commander_data));
-  module_node->data = data;
-  data->node = module_node;
+  commander_data *cd = (commander_data *)malloc(sizeof(commander_data));
+  module_node->data = cd;
+  cd->node = module_node;
   
-  pthread_mutex_init(&data->icp_conn.thr_lock, NULL);
-  data->icp_conn.server_responses.count = 0;
-  data->icp_conn.server_responses.query_id = 0;
+  pthread_mutex_init(&cd->icp_conn.thr_lock, NULL);
+  cd->icp_conn.server_responses.count = 0;
+  cd->icp_conn.server_responses.query_id = 0;
   for(int i = 0; i < SERVER_RESPONSE_ITEM_CAPACITY; ++i) {
-    MCcall(mc_init_str(&data->icp_conn.server_responses.items[i].action_name, 16));
-    MCcall(mc_init_str(&data->icp_conn.server_responses.items[i].action_detail, 16));
+    MCcall(mc_init_str(&cd->icp_conn.server_responses.items[i].action_name, 16));
+    MCcall(mc_init_str(&cd->icp_conn.server_responses.items[i].action_detail, 16));
   }
 
-  data->configuring_command = NULL;
-  MCcall(init_hash_table(32, &data->basal_ops));
+  // data->configuring_command = NULL;
+  MCcall(init_hash_table(32, &cd->basal_ops));
 
-  data->options_buttons.capacity = data->options_buttons.count = 0U;
+  cd->options_buttons.capacity = cd->options_buttons.count = 0U;
 
-  data->hub = NULL;
+  cd->hub = NULL;
 
-  // hash_table_set("create basal function", (void *)project_context, &data->basal_ops);
-//   MCcall(init_hash_table(4, &mod->process_stack.project_contexts));
+  // Load basal source functions
+  MCcall(_mcm_cmdr_interpret_basal_source(cd));
 
   return 0;
 }
@@ -1154,10 +1248,10 @@ int init_commander_system(mc_node *app_root) {
   // node->layout->visible = false;
   // TODO
 
-  MCcall(mc_cmdr_load_resources(node));
+  MCcall(_mcm_cmdr_load_resources(node));
   commander_data *data = (commander_data *)node->data;
 
-  MCcall(mcm_cmdr_init_ui(node));
+  MCcall(_mcm_cmdr_init_ui(node));
 
 //   MCcall(_mcm_mo_load_operations(node));
 
