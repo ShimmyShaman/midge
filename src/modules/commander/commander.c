@@ -17,6 +17,8 @@
 #include "mc_error_handling.h"
 #include "render/render_common.h"
 
+#include "tinycc/libtccinterp.h"
+
 #include "modules/collections/hash_table.h"
 #include "modules/source_editor/source_editor.h"
 #include "modules/mc_io/mc_source_extensions.h"
@@ -1146,17 +1148,37 @@ int _mcm_cmdr_interpret_basal_source(commander_data *cd)
       sprintf(buf, "%s/%s", basal_fn_dir, ent->d_name);
       printf("file-found:'%s'\n", buf);
 
-      MCcall(mcs_interpret_file(buf));
+      // MCcall(mcs_interpret_file(buf));
+      mc_source_file_info *sfi;
+      MCcall(mcs_interpret_source_file(buf, &sfi));
 
-      function_info *fi;
-
-      snprintf(buf, strlen(ent->d_name) - 2, "%s", ent->d_name);
-      MCcall(find_function_info(buf, &fi));
-
-      printf("fi = %p\n");
-      if(fi) {
-        printf("fi: %s\n", fi->name);
+      function_info *named_fi = NULL;
+      snprintf(buf, strlen(ent->d_name) - 1, "%s", ent->d_name);
+      for(int a = 0; a < sfi->segments.count; ++a) {
+        if(sfi->segments.items[a]->type == MC_SOURCE_SEGMENT_FUNCTION_DEFINITION
+          && !strcmp(buf, sfi->segments.items[a]->function->name)) {
+          named_fi = sfi->segments.items[a]->function;
+          break;
+        }
       }
+
+      if(!named_fi) {
+        MCerror(3798, "namesake function info could not be found for '%s/%s'", basal_fn_dir, ent->d_name);
+      }
+
+      int (*fptr)(void) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
+      fptr();
+
+
+      // function_info *fi;
+
+      // snprintf(buf, strlen(ent->d_name) - 2, "%s", ent->d_name);
+      // MCcall(find_function_info(buf, &fi));
+
+      // printf("fi = %p\n");
+      // if(fi) {
+      //   printf("fi: %s\n", fi->name);
+      // }
 
       // // Read the file
       // sprintf(buf, "%s/%s", basal_fn_dir, ent->d_name);
