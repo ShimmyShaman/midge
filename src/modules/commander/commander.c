@@ -45,6 +45,11 @@ typedef enum mcm_response_kind {
   MCR_SUGGEST_CONFIGURE_ONLY,
 } mcm_response_kind;
 
+typedef struct basal_function {
+  function_info *fi;
+  void *fptr;
+} basal_function;
+
 struct mcm_cmdi;
 typedef struct mcm_cmdi {
   mcm_cmdi_type type;
@@ -498,6 +503,12 @@ int _mcm_cmdr_configure_command(commander_data *cd, mcm_cmdi *command_to_configu
   return 0;
 }
 
+void free_cmdi(mcm_cmdi *pcmdi) {
+  free(pcmdi);
+
+  puts("TODO release rsp->r.param_queries[a]");
+}
+
 int _mcm_cmdr_process_hub(commander_data *cd)
 {
   if(cd->hub->type != MCT_USER_COMMAND) {
@@ -507,18 +518,49 @@ int _mcm_cmdr_process_hub(commander_data *cd)
   mcm_cmdi *cmd = cd->hub;
   printf("user-command:'%s'\n", cmd->c.str);
 
-  if(!strcmp(cmd->c.str, ".configure")) {
-    if(!cmd->prev || cmd->prev->type != MCT_IDE_UNCERTAINTY || cmd->prev->prev->type != MCT_USER_COMMAND) {
-      MCerror(9488, "TODO");
+  if(!strncmp(cmd->c.str, ".", 1)) {
+    if(!strcmp(cmd->c.str + 1, "configure")) {
+      if(!cmd->prev || cmd->prev->type != MCT_IDE_UNCERTAINTY || cmd->prev->prev->type != MCT_USER_COMMAND) {
+        MCerror(9488, "TODO");
+      }
+
+      // Reverse to the command and configure it
+      cd->hub = cmd->prev->prev;
+      free(cmd->prev);
+      free(cmd);
+
+      printf("back-to:'%s'\n", cd->hub->c.str);
+      MCcall(_mcm_cmdr_configure_command(cd, cd->hub));
+    } else {
+      basal_function *bf = hash_table_get(cmd->c.str + 1, &cd->basal_ops);
+
+      mcm_cmdi *rsp = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
+      rsp->prev = cd->hub;
+      cd->hub->next = rsp->prev;
+      
+      if(bf) {
+        if(!bf->fi->parameters.count) {
+          // Execute
+          MCProgress(9188);
+        }
+        else {
+          rsp->type = MCT_IDE_BASAL_ARGS;
+          struct param_query {
+            char *str;
+            bool answered;
+          }
+          
+          rsp->r.b.fi = bf;
+          rsp->r.b.args = (char **)malloc(sizeof(char *) * bf->fi->parameters.count);
+        }
+      } else {
+
+        rsp->type = MCT_IDE_UNCERTAINTY;
+        rsp->r.kind = MCR_SUGGEST_CONFIGURE_ONLY;
+
+        cd->hub = rsp;
+      }
     }
-
-    // Reverse to the command and configure it
-    cd->hub = cmd->prev->prev;
-    free(cmd->prev);
-    free(cmd);
-
-    printf("back-to:'%s'\n", cd->hub->c.str);
-    MCcall(_mcm_cmdr_configure_command(cd, cd->hub));
   }
   else {
     mcm_cmdi *rsp = (mcm_cmdi *)malloc(sizeof(mcm_cmdi));
@@ -871,11 +913,9 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
 }
 
 #define AUTO_COMMANDS \
-                      "+700go to set textbox text+700\r" \
+                      "+700open source file+700\r" \
                       "+700.configure+700\r" \
-                      "+700open textbox.c+700\r" \
-                      "+700.configure+700\r" \
-                      "+700.begin_search_source_file+700\r" \
+                      "+700.open_source_file_se+700\r" \
                       "\0"
                       // "+700MCM_SE_FIND_SOURCE_FILE+700\r" \
                       // "+700NULL+700\r" \
@@ -1166,8 +1206,12 @@ int _mcm_cmdr_interpret_basal_source(commander_data *cd)
         MCerror(3798, "namesake function info could not be found for '%s/%s'", basal_fn_dir, ent->d_name);
       }
 
-      int (*fptr)(void) = tcci_get_symbol(app_info->itp_data->interpreter, buf);
-      fptr();
+      basal_function *bf = (basal_function *)malloc(sizeof(basal_function));
+      bf->fi = named_fi;
+      bf->fptr = tcci_get_symbol(app_info->itp_data->interpreter, buf);
+
+      MCcall(hash_table_insert(hash_djb2(named_fi->name), bf, &cd->basal_ops));
+
 
 
       // function_info *fi;
