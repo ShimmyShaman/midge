@@ -37,6 +37,7 @@ typedef enum mcm_cmdi_type {
   MCT_USER_COMMAND,
   MCT_IDE_UNCERTAINTY,
   MCT_IDE_QUERY,
+  MCT_IDE_BASAL_ARGS,
   MCT_COMMAND_CONFIG,
 } mcm_cmdi_type;
 
@@ -74,6 +75,14 @@ typedef struct mcm_cmdi {
     // Response
     struct {
       mcm_response_kind kind;
+      
+      // Basal Ops
+      union {
+        struct {
+          basal_function *bf;
+          char **args;
+        } b;
+      };
     } r;
   };
 } mcm_cmdi;
@@ -545,13 +554,12 @@ int _mcm_cmdr_process_hub(commander_data *cd)
         }
         else {
           rsp->type = MCT_IDE_BASAL_ARGS;
-          struct param_query {
-            char *str;
-            bool answered;
-          }
           
-          rsp->r.b.fi = bf;
+          rsp->r.b.bf = bf;
           rsp->r.b.args = (char **)malloc(sizeof(char *) * bf->fi->parameters.count);
+          for(int a = 0; a < bf->fi->parameters.count; ++a) {
+            rsp->r.b.args[a] = NULL;
+          }
         }
       } else {
 
@@ -913,10 +921,10 @@ int _mcm_cmdr_send_sample(commander_data *data, const char *command, const char 
 }
 
 #define AUTO_COMMANDS \
-                      "+700open source file+700\r" \
-                      "+700.configure+700\r" \
-                      "+700.open_source_file_se+700\r" \
                       "\0"
+                      // "+700open source file+700\r" \
+                      // "+700.configure+700\r" \
+                      // "+700.open_source_file_se+700\r" \
                       // "+700MCM_SE_FIND_SOURCE_FILE+700\r" \
                       // "+700NULL+700\r" \
                       // "\0"

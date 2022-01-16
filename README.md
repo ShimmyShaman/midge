@@ -46,7 +46,7 @@ Allow quick evaluation and identification of problems and errors in any developm
 
 ## Progress
 
-_This project is actively in iterative prototype development._
+_This project is in an abandoned status again..._
 
 ## Contributions
 
